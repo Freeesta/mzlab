@@ -118,40 +118,23 @@ fn rust_routes_match_python() {
                 .join("&");
             let got = if path == "/api/fileinfo" || path == "/api/mrm" {
                 let size = std::fs::metadata(line).unwrap().len();
-                let mut mz =
-                    mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
+                let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
                 if path == "/api/mrm" {
                     let end = routes.idx.scans.last().map_or(0, |s| s.end);
                     let chroms = mz.chromatograms(end).unwrap();
-                    Some(mzlab_core::fileroutes::mrm_files(&[(
-                        0,
-                        mzlab_core::fileroutes::mrm_transitions(&mut mz, &chroms).unwrap(),
-                    )]))
+                    Some(mzlab_core::fileroutes::mrm_files(&[(0, mzlab_core::fileroutes::mrm_transitions(&mut mz, &chroms).unwrap())]))
                 } else {
                     let head = mz.info_head().unwrap();
-                    let name = PathBuf::from(line)
-                        .file_name()
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string();
-                    Some(
-                        mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head)
-                            .unwrap_or_else(|e| panic!("{what}: {e}")),
-                    )
+                    let name = PathBuf::from(line).file_name().unwrap().to_string_lossy().to_string();
+                    Some(mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head).unwrap_or_else(|e| panic!("{what}: {e}")))
                 }
-            } else if matches!(path, "/api/method" | "/api/delay" | "/api/analog")
-                || q.get("kind").is_some_and(|k| k == "pda")
-            {
+            } else if matches!(path, "/api/method" | "/api/delay" | "/api/analog") || q.get("kind").is_some_and(|k| k == "pda") {
                 item_answer(&mut routes, line, path, q, r, &what)
             } else if path == "/api/chrom" && !routes.has_scans() {
                 Some(mrm_chrom_answer(line, q))
             } else if path == "/api/scaninfo" {
                 let sid = q["sid"].as_str().unwrap().parse().unwrap();
-                Some(
-                    routes
-                        .scaninfo(sid, &mut mzml)
-                        .unwrap_or_else(|e| panic!("{what}: {e}")),
-                )
+                Some(routes.scaninfo(sid, &mut mzml).unwrap_or_else(|e| panic!("{what}: {e}")))
             } else if path == "/api/xic" {
                 let f = |k: &str| q[k].as_str().unwrap().parse::<f64>().unwrap();
                 Some(routes.xic(f("mz"), f("tol"), f("level") as u8).unwrap())
@@ -195,49 +178,20 @@ fn mrm_chrom_answer(line: &str, q: &serde_json::Map<String, Value>) -> String {
     let size = std::fs::metadata(line).unwrap().len();
     let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
     let chroms = mz.chromatograms(0).unwrap();
-    mzlab_core::itemroutes::mrm_chrom(
-        &mut mz,
-        &chroms,
-        q.get("kind").and_then(Value::as_str).unwrap_or("tic"),
-    )
-    .unwrap()
+    mzlab_core::itemroutes::mrm_chrom(&mut mz, &chroms, q.get("kind").and_then(Value::as_str).unwrap_or("tic")).unwrap()
 }
 
 /// The routes of one item (`method`, `delay`, `analog`, the PDA trace): the answer of Rust, `None` when it declines (as Python fails).
-fn item_answer(
-    routes: &mut Routes<std::fs::File>,
-    line: &str,
-    path: &str,
-    q: &serde_json::Map<String, Value>,
-    r: &Value,
-    what: &str,
-) -> Option<String> {
+fn item_answer(routes: &mut Routes<std::fs::File>, line: &str, path: &str, q: &serde_json::Map<String, Value>, r: &Value, what: &str) -> Option<String> {
     let size = std::fs::metadata(line).unwrap().len();
     let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
-    let chroms = mz
-        .chromatograms(routes.idx.scans.last().map_or(0, |s| s.end))
-        .unwrap();
-    let name = r["file"].as_str().map_or_else(
-        || {
-            PathBuf::from(line)
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string()
-        },
-        String::from,
-    );
+    let chroms = mz.chromatograms(routes.idx.scans.last().map_or(0, |s| s.end)).unwrap();
+    let name = r["file"].as_str().map_or_else(|| PathBuf::from(line).file_name().unwrap().to_string_lossy().to_string(), String::from);
     let num = |k: &str| q[k].as_str().unwrap().parse::<i64>().unwrap();
     let res = match path {
-        "/api/method" => mzlab_core::itemroutes::item_method(&routes.idx, &mut mz, &name)
-            .and_then(|d| mzlab_core::labmethods::method_json(&d, &[], &name)),
+        "/api/method" => mzlab_core::itemroutes::item_method(&routes.idx, &mut mz, &name).and_then(|d| mzlab_core::labmethods::method_json(&d, &[], &name)),
         "/api/delay" => routes.delay(&mut mz, &chroms),
-        "/api/analog" => mzlab_core::itemroutes::analog(
-            &mut mz,
-            &chroms,
-            num("i"),
-            q.get("n").map_or(2000, |_| num("n")),
-        ),
+        "/api/analog" => mzlab_core::itemroutes::analog(&mut mz, &chroms, num("i"), q.get("n").map_or(2000, |_| num("n"))),
         _ => mzlab_core::itemroutes::pda_trace(&mut mz, &chroms),
     };
     match res {

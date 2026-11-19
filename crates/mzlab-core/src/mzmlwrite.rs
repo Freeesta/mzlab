@@ -30,12 +30,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Options {
-            livello: ZLIB_LEVEL,
-            numpress: false,
-            thread: default_threads(),
-            dad: false,
-        }
+        Options { livello: ZLIB_LEVEL, numpress: false, thread: default_threads(), dad: false }
     }
 }
 
@@ -53,18 +48,11 @@ impl<W: Write> MzmlWriter<W> {
     fn start(out: W, h: &Header, opz: Options, indexed: bool) -> Result<Self> {
         let indexed = indexed && cfg!(any(not(target_family = "wasm"), feature = "indice"));
         let s = head_text(h, indexed);
-        let mut w = MzmlWriter {
-            out,
-            spectra: 0,
-            chroms: 0,
-            opz,
-            enc: Encoding::new(opz),
-            text: String::new(),
-            idx: indexed.then(index::Index::new),
-        };
+        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Encoding::new(opz), text: String::new(), idx: indexed.then(index::Index::new) };
         w.put(s.as_bytes())?;
         Ok(w)
     }
+
 
     /// The number of threads the writer encodes with (`Opzioni::thread`).
     pub fn thread(&self) -> usize {
@@ -72,10 +60,7 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     pub fn open_spectra(&mut self, count: usize) -> Result<()> {
-        self.put(
-            format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n")
-                .as_bytes(),
-        )
+        self.put(format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
     }
 
     pub fn close_spectra(&mut self) -> Result<()> {
@@ -83,12 +68,7 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     pub fn open_chromatograms(&mut self, count: usize) -> Result<()> {
-        self.put(
-            format!(
-                "<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n"
-            )
-            .as_bytes(),
-        )
+        self.put(format!("<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
     }
 
     pub fn close_chromatograms(&mut self) -> Result<()> {
@@ -113,18 +93,8 @@ impl<W: Write> MzmlWriter<W> {
 
     /// Every trace of a reader: the mass-spectrometer kinds with their term, the other ones (pressure, detector, device) as `chromatogram type` with the unit in a userParam.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
-        let mut s = format!(
-            "<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}",
-            self.chroms,
-            esc(&c.id),
-            c.time.len(),
-            chromatogram_kind(c)
-        );
-        if matches!(
-            c.kind,
-            ChromKind::Pressure | ChromKind::Analog | ChromKind::Other | ChromKind::Pda
-        ) && !c.unit.is_empty()
-        {
+        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}", self.chroms, esc(&c.id), c.time.len(), chromatogram_kind(c));
+        if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other | ChromKind::Pda) && !c.unit.is_empty() {
             s += &format!("<userParam name=\"unità\" value=\"{}\"/>", esc(&c.unit));
         }
         s += chromatogram_polarity(&c.id);
@@ -136,13 +106,8 @@ impl<W: Write> MzmlWriter<W> {
         s += "<binaryDataArrayList count=\"2\">\n";
         self.enc.array(&mut s, "time", "time", Data::F64(&c.time))?;
         // a pressure in pascal is a `pressure array` with its unit (the term PSI-MS gives the unit to); every other trace keeps the counts and its unit in `unità`
-        let (kind, unit) = if c.kind == ChromKind::Pressure && c.unit == "pascal" {
-            ("pressure", "pascal")
-        } else {
-            ("intensity", "counts")
-        };
-        self.enc
-            .array(&mut s, kind, unit, Data::F64(&c.intensity))?;
+        let (kind, unit) = if c.kind == ChromKind::Pressure && c.unit == "pascal" { ("pressure", "pascal") } else { ("intensity", "counts") };
+        self.enc.array(&mut s, kind, unit, Data::F64(&c.intensity))?;
         s += "</binaryDataArrayList></chromatogram>\n";
         self.chroms += 1;
         self.mark(false, &c.id);
@@ -207,18 +172,7 @@ pub struct ProcStep {
 /// The `software` elements of the steps, `step1`, `step2`, ... (the first id the methods refer to).
 #[cfg(not(target_family = "wasm"))]
 fn step_software(steps: &[ProcStep]) -> String {
-    let one = |(i, p): (usize, &ProcStep)| {
-        format!(
-            "<software id=\"step{}\" version=\"{}\">{}</software>",
-            i + 1,
-            esc(&p.version),
-            cv(
-                "MS:1000799",
-                "custom unreleased software tool",
-                esc(&p.software)
-            )
-        )
-    };
+    let one = |(i, p): (usize, &ProcStep)| format!("<software id=\"step{}\" version=\"{}\">{}</software>", i + 1, esc(&p.version), cv("MS:1000799", "custom unreleased software tool", esc(&p.software)));
     steps.iter().enumerate().map(one).collect()
 }
 
@@ -228,17 +182,8 @@ fn step_methods(h: &Header) -> String {
     let first = 1 + h.centroided as usize;
     let mut s = String::new();
     for (i, p) in h.steps.iter().enumerate() {
-        s += &format!(
-            "</processingMethod><processingMethod order=\"{}\" softwareRef=\"step{}\">{}",
-            first + i,
-            i + 1,
-            cv(&p.accession, &p.name, "")
-        );
-        s += &p
-            .params
-            .iter()
-            .map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v)))
-            .collect::<String>();
+        s += &format!("</processingMethod><processingMethod order=\"{}\" softwareRef=\"step{}\">{}", first + i, i + 1, cv(&p.accession, &p.name, ""));
+        s += &p.params.iter().map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v))).collect::<String>();
     }
     s
 }
@@ -287,26 +232,13 @@ pub struct SpectrumExtra {
 /// The header of the mzML up to the `userParam`s of `<run>`; not generic over the writer, so one copy whatever `W`.
 fn head_text(h: &Header, indexed: bool) -> String {
     let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-    if indexed {
-        s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n";
-    }
+    if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
     s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
     s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{CV_VERSION}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n");
-    let content = cv("MS:1000579", "MS1 spectrum", "")
-        + &h.content
-            .iter()
-            .map(|(a, n)| cv(a, n, ""))
-            .collect::<String>();
-    s += &format!(
-        "<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n",
-        source_list(h)
-    );
+    let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
+    s += &format!("<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n", source_list(h));
     if let Some((id, name)) = &h.sample {
-        s += &format!(
-            "<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n",
-            esc(id),
-            esc(name)
-        );
+        s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
     }
     s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len() + h.steps.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
         h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), header_term(a, n))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() } + &step_software(&h.steps));
@@ -320,10 +252,7 @@ fn head_text(h: &Header, indexed: bool) -> String {
     s += "<dataProcessingList count=\"1\"><dataProcessing id=\"conversion\"><processingMethod order=\"0\" softwareRef=\"mzlab\">";
     s += &cv("MS:1000544", "Conversion to mzML", "");
     if h.centroided {
-        s += &format!(
-            "</processingMethod><processingMethod order=\"1\" softwareRef=\"mzlab-centroidi\">{}",
-            cv("MS:1000035", "peak picking", "")
-        );
+        s += &format!("</processingMethod><processingMethod order=\"1\" softwareRef=\"mzlab-centroidi\">{}", cv("MS:1000035", "peak picking", ""));
     }
     s += &step_methods(h);
     s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\"{}>\n", esc(&h.run), h.acquired.as_ref().map(|t| format!(" startTimeStamp=\"{}\"", esc(t))).unwrap_or_default());
@@ -369,16 +298,9 @@ fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
 
 /// The scan polarity of a chromatogram whose id spells it (`polarity=positive|negative`, the SRM and SIM ids of the `.wiff` reader), else nothing.
 fn chromatogram_polarity(id: &str) -> &'static str {
-    match id
-        .split_whitespace()
-        .find_map(|w| w.strip_prefix("polarity="))
-    {
-        Some("positive") => {
-            "<cvParam cvRef=\"MS\" accession=\"MS:1000130\" name=\"positive scan\" value=\"\"/>"
-        }
-        Some("negative") => {
-            "<cvParam cvRef=\"MS\" accession=\"MS:1000129\" name=\"negative scan\" value=\"\"/>"
-        }
+    match id.split_whitespace().find_map(|w| w.strip_prefix("polarity=")) {
+        Some("positive") => "<cvParam cvRef=\"MS\" accession=\"MS:1000130\" name=\"positive scan\" value=\"\"/>",
+        Some("negative") => "<cvParam cvRef=\"MS\" accession=\"MS:1000129\" name=\"negative scan\" value=\"\"/>",
         _ => "",
     }
 }
@@ -386,10 +308,7 @@ fn chromatogram_polarity(id: &str) -> &'static str {
 /// The dwell time (as for SRM) and the precursor of a SIM chromatogram: its Q1 as the isolation window target, with no activation (nothing is fragmented).
 fn sim_window(c: &Chromatogram, q1: f64) -> String {
     let dwell = crate::mzmlsrm::dwell_param(&c.id);
-    format!(
-        "{dwell}<precursor><isolationWindow>{}</isolationWindow><activation/></precursor>",
-        mz_cv("MS:1000827", "isolation window target m/z", q1)
-    )
+    format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation/></precursor>", mz_cv("MS:1000827", "isolation window target m/z", q1))
 }
 
 /// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
@@ -397,11 +316,7 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
     match c.kind {
         ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
         ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
-        ChromKind::Srm => cv(
-            "MS:1001473",
-            "selected reaction monitoring chromatogram",
-            "",
-        ),
+        ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
         ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
         ChromKind::Pda => cv("MS:1000812", "absorption chromatogram", ""),
         ChromKind::Pressure => cv("MS:1003019", "pressure chromatogram", ""),
@@ -499,11 +414,7 @@ fn source_list(h: &Header) -> String {
         if let Some(x) = h.source_sha1.get(i) {
             inner += &cv("MS:1000569", "SHA-1", esc(x));
         }
-        s += &format!(
-            "<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>",
-            i + 1,
-            esc(f)
-        );
+        s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>", i + 1, esc(f));
     }
     s + "</sourceFileList>"
 }
@@ -515,27 +426,23 @@ fn component_list(h: &Header) -> String {
     }
     let mut s = format!("<componentList count=\"{}\">", h.components.len());
     for (i, (kind, acc, name)) in h.components.iter().enumerate() {
-        s += &format!(
-            "<{kind} order=\"{}\">{}</{kind}>",
-            i + 1,
-            header_term(acc, name)
-        );
+        s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, header_term(acc, name));
     }
     s + "</componentList>"
 }
 
-mod compression;
 mod encoding;
+mod compression;
 pub use compression::compression_options;
 mod matrix;
-mod thread;
 #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 mod uv;
-use encoding::{Data, Encoding};
+mod thread;
 pub use thread::default_threads;
-mod head;
+use encoding::{Encoding, Data};
 #[cfg(not(target_family = "wasm"))]
 mod pool;
+mod head;
 pub(crate) use head::{spectrum_head, spectrum_head_into};
 #[cfg(feature = "precursori")]
 mod spectrum;
@@ -566,11 +473,11 @@ use text::{header_term, instrument_terms};
 mod tests;
 #[cfg(test)]
 mod tests_index;
-#[cfg(all(test, not(target_family = "wasm")))]
-mod tests_pool;
 #[cfg(all(test, feature = "precursori"))]
 mod tests_precursors;
 #[cfg(test)]
-mod tests_xmlchar;
-#[cfg(test)]
 mod tests_xsd;
+#[cfg(test)]
+mod tests_xmlchar;
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests_pool;

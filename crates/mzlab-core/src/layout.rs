@@ -166,15 +166,10 @@ mod tests {
     fn two_hashes_never_share_a_layout_and_no_hash_shares_nothing() {
         let a = Layout::of("aa11", 3, 900);
         let b = Layout::of("bb22", 3, 900);
-        assert!(
-            !Arc::ptr_eq(&a.0, &b.0),
-            "different sha256, different layout"
-        );
+        assert!(!Arc::ptr_eq(&a.0, &b.0), "different sha256, different layout");
         assert!(Arc::ptr_eq(&a.0, &Layout::of("aa11", 3, 900).0));
         assert!(!Arc::ptr_eq(&a.0, &Layout::of("aa11", 4, 900).0));
-        assert!(!Arc::ptr_eq(
-            &Layout::of("", 3, 900).0,
-            &Layout::of("", 3, 900).0
-        ));
+        let (x, y) = (Layout::of("", 3, 900), Layout::of("", 3, 900));
+        assert!(!Arc::ptr_eq(&x.0, &y.0));
     }
 }

@@ -336,13 +336,7 @@ fn one_period(ole: &Ole, sample: u32) -> Result<()> {
     Ok(())
 }
 
-fn open_wiff(
-    ole: &Ole,
-    name: &str,
-    scan_len: Option<u64>,
-    sample: u32,
-    with_dad: bool,
-) -> Result<Wiff> {
+fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32, with_dad: bool) -> Result<Wiff> {
     let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
     let table = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
@@ -383,11 +377,7 @@ fn open_wiff(
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
-    let dad = if with_dad {
-        dad::DadData::read(ole, sample)
-    } else {
-        None
-    };
+    let dad = if with_dad { dad::DadData::read(ole, sample) } else { None };
     let (model, created, serial, source_type) = crate::method_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
         sample,
