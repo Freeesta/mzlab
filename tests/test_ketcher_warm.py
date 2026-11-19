@@ -19,7 +19,7 @@ function make(o) {
       return { querySelectorAll: () => [Object.assign(el(), { attrs: { src: "./assets/a.js", crossorigin: "" } })] }; } },
     navigator: { onLine: o.online !== false, connection: o.saveData ? { saveData: true } : undefined },
     fetch: (u, i) => { log.fetches.push([u, i && i.priority]); return Promise.resolve({ text: () => Promise.resolve("<html>"), arrayBuffer: () => { throw new Error("body read"); } }); },
-    addEventListener: (n, f) => { (ev[n] = ev[n] || []).push(f); }, setTimeout: (f, d) => tm.push([now + d, f]), Date: { now: () => now } };
+    addEventListener: (n, f) => { (ev[n] = ev[n] || []).push(f); }, setTimeout: (f, d) => tm.push([now + d, f]), setInterval: () => 1, clearInterval() {}, Date: { now: () => now } };
   ctx.window.addEventListener = ctx.addEventListener;
   require("vm").runInNewContext(src, Object.assign(ctx, win));
   return { ctx, log, byId, fire: n => (ev[n] || []).forEach(f => f({})),
