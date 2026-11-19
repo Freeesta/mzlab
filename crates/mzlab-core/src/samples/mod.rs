@@ -297,6 +297,8 @@ pub fn route_all(op: &str, input: &str) -> Result<String> {
         "csv_write" => csv_write(input),
         "variables" => variables::route_variables(input),
         "group_name" => variables::route_group_name(input),
+        // the experimental design (`design/1`) rides the same route: `design_propose`, `design_validate`, `design_canonical`, `design_digest`
+        _ if op.starts_with("design_") => crate::design::route(&op["design_".len()..], input),
         _ => route(op, input),
     }
 }

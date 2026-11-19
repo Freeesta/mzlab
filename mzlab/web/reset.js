@@ -3,7 +3,7 @@
 // app in the Cache API and the service worker) and the preferences (localStorage) in THIS browser, so a reload - even Cmd/Ctrl+Shift+R, which only skips the HTTP
 // cache - brings the files back. This file removes them, by NAME (what the browser lists, never a fixed list: other parts of the program add their own folders and
 // databases), and reloads. Variants: "all" (everything, as if the program had never run here) and "files" (the files, their indexes and the session; the
-// preferences, language, theme and the saved libraries stay), both offered by the question of ask(); also "cold" and "cold" (below). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
+// preferences, language, theme and the saved libraries stay), both offered by the question of ask(); also "cold" (below) and "engine" (engine-recupera.js: only the app caches and the worker, nothing the user stored). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
 const RESET = (function () {
   "use strict";
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
@@ -58,7 +58,7 @@ const RESET = (function () {
     }));
   }
   async function caches_(mode, rep) {
-    await Promise.all((await caches.keys()).filter(k => mode === "all" || k.startsWith(NOMI.CACHE_BIG) || k.startsWith("qqq-big-")).map(async k => { if (await caches.delete(k)) rep.caches.push(k); }));
+    await Promise.all((await caches.keys()).filter(k => mode === "all" || (mode === "engine" ? k.startsWith(NOMI.CACHE_APP) : k.startsWith(NOMI.CACHE_BIG) || k.startsWith("qqq-big-"))).map(async k => { if (await caches.delete(k)) rep.caches.push(k); }));
   }
   // safety net a little above the deadline: if opfs() itself hangs (a stuck call), say so
   async function opfsGuard(mode, rep) {
@@ -71,12 +71,13 @@ const RESET = (function () {
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
     // OPFS, IndexedDB, caches and the worker registration are independent: they go at the same time, each with its own timeout
     await Promise.all([
-      navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? opfsGuard(mode, rep) : null,
-      window.indexedDB ? wait(idb(mode, rep), 12000) : null,
+      mode !== "engine" && navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? opfsGuard(mode, rep) : null,
+      mode !== "engine" && window.indexedDB ? wait(idb(mode, rep), 12000) : null,
       window.caches ? wait(caches_(mode, rep)) : null,
-      mode === "all" && navigator.serviceWorker ? wait((async () => { await Promise.all((await navigator.serviceWorker.getRegistrations()).map(async r => { await r.unregister(); rep.sw++; })); })(), 2500) : null,
+      (mode === "all" || mode === "engine") && navigator.serviceWorker ? wait((async () => { await Promise.all((await navigator.serviceWorker.getRegistrations()).map(async r => { await r.unregister(); rep.sw++; })); })(), 2500) : null,
     ]);
-    if (mode === "all") {
+    if (mode === "engine") { /* the stored copy of the site only: files, notebook and preferences stay (engine-recupera.js) */ }
+    else if (mode === "all") {
       try {
         localStorage.clear(); sessionStorage.clear();
       } catch (e) { rep.errors.push("storage"); }
@@ -110,7 +111,7 @@ const RESET = (function () {
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
     if (opt.mark || (mode === "files" && inRun)) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); const back = backstop(mode, rep); if (back) u.searchParams.set("riparti", back); }
+    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else if (mode === "engine") u.searchParams.set("ripn", Date.now().toString(36)); else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); const back = backstop(mode, rep); if (back) u.searchParams.set("riparti", back); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
     if (u.href === location.href) location.reload(); else location.replace(u.href);
     return rep;

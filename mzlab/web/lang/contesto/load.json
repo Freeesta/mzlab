@@ -1,4 +1,6 @@
 {
+  "load.err.engineStartPurged": "Error banner at startup: the engine still does not start after the one automatic cache purge and reload; Full reset is offered.",
+  "load.engine.refreshing": "Status line of the waiting screen while the page purges the site cache after the engine died at start, then reloads once.",
   "load.err.engineStart": "Serious error at startup, on the waiting screen: the engine does not start (the technical detail goes to the console).",
   "load.tprov.win": "Status line under the provisional TIC after a zoom: time window shown; {a}, {b} = ends in minutes.",
   "load.tprov.hand": "Notice when the first panel opens on the window chosen on the provisional TIC; {a}, {b} = ends in minutes.",

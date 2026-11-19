@@ -1,0 +1,14 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "design_canonical/1",
+ "title": "design_canonical/1: the canonical bytes of a design and their SHA-256",
+ "description": "The answer of `mzlab-cli sample design canonical`: the design/1 in canonical form (keys in alphabetical order, factors sorted by name, batches by SHA-256 then file: equal designs give equal bytes), the count of those bytes and their SHA-256, which `prov/1` records. `--out` writes the bare canonical design/1 plus a final newline. Code: crates/mzlab-cli/src/design_cmd.rs.",
+ "type": "object",
+ "required": ["schema", "sha256", "bytes", "design"],
+ "properties": {
+  "schema": {"const": "design_canonical/1"},
+  "sha256": {"type": "string", "description": "of the canonical JSON without the final newline"},
+  "bytes": {"type": "integer", "description": "length of that JSON"},
+  "design": {"$ref": "design/1"}
+ }
+}

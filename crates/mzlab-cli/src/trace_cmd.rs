@@ -56,6 +56,10 @@ fn tail(file: &str, s: &Sample) -> String {
 /// The document or CSV of `a` inside `win`.
 fn render(a: Answer, s: &Sample, win: Option<(f64, f64)>, csv: bool, id: &str) -> Result<String> {
     if a.schema == "uvband/1" {
+        if csv {
+            // the band is a document of its own (uvband/1): no rt,intensity table to print
+            return Err(Error::new("err.cli.format.csvNotUvAuto"));
+        }
         return Ok(format!(
             "{{\"schema\":\"uvband/1\",\"id\":{},{},{},{}}}",
             extract::jstr(id),

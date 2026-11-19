@@ -45,7 +45,7 @@ A single engine worker serves ALL requests (`rust-worker.js` `handle`): a long c
 
 The site engine has in its registry only base Agilent `.D` and SCIEX `.wiff` (`readers.rs` 270, `Limiti::sito()` 192 MB); every other family is a separate `.wasm` (`crates/mzlab-lettori-wasm`), loaded only when a file of that family arrives (`lettori-modulo.js`, `lettori-worker.js`: ONE worker for the conversions, no internal parallelism found). Module→engine transport: `transport.rs` (`PROTOCOLLO` 2, binary columns).
 
-Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members into OPFS (no mzML), then `build_mzidx_native` writes the v2 index (phases copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` recognises an already loaded `.wiff` pair or `.raw` ("from cache"). Details: `native-reading.md`.
+Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members into OPFS (no mzML), then `build_mzidx_native` writes the vendor-file index (version 3 with READER_FLAG) (phases copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` recognises an already loaded `.wiff` pair or `.raw` ("from cache"). Details: `native-reading.md`.
 
 ## 3. Desktop app
 
