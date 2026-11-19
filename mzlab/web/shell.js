@@ -1,11 +1,10 @@
 // @ts-strict
 // @ts-noany
-// Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
+// Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views; fmtFormula / fmtAdduct (subscripts, superscripts) are defined in explore.js, loaded before this script.
 const $=(/** @type {string} */ s)=>document.querySelector(s);
 const fmt=(/** @type {number} */ v)=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=(/** @type {string} */ n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=(/** @type {unknown} */ t)=>String(t).replace(/[&<>"]/g,c=>(/** @type {Record<string, string>} */ ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}))[c]);
-// fmtFormula / fmtAdduct (subscripts, superscripts) are defined in explore.js, loaded before this script
 async function api(/** @type {string} */ u){const r=await fetch(u);const j=await r.json();if(j.error)throw I18N.err(j);return j}
 // an error of any shape (Error, answer of api/, text) or nothing
 /** @param {unknown} [e_] */ function fail(e_){const e=/** @type {{ message?: string } | undefined} */(e_);$("#err").textContent=e?String(e.message||e):""}
@@ -28,6 +27,7 @@ function smooth(/** @type {number[]} */ y,/** @type {number} */ k){if(!k)return 
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 async function init(){try{await bootSession();await Promise.all(E.panels.map((/** @type {{ ready?: unknown }} */ p)=>p.ready).filter(Boolean)).catch(()=>{});
   const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();restoreRows(d);applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
+
 // ------------------------------------------------------------------ views: Dati (landing, loading table or panels), Disegno
 let _addY=/** @type {number | null} */ (null),_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
