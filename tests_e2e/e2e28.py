@@ -61,7 +61,7 @@ try:
                 assert pg.locator("#lst-view-seg").count() == 0 and pg.is_visible("#lst-tol") and not pg.is_visible("#lst-cont-signs")
                 assert pg.locator("#lst-unit button.on").inner_text() == "Da" and pg.input_value("#lst-tol") == "0.5", "unit resolution: Da, as in Adducts & losses"
                 import re
-                mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z with 4 decimals in LR too
+                mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr:not(#lst-more) td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z with 4 decimals in LR too
                 pg.fill("#lst-q", "63,3"); t = pg.inner_text("#lst-tbody"); assert "63." in t and "PEG" in t, t[:200]      # comma decimals rank by m/z
                 pg.fill("#lst-q", "peg"); t2 = pg.inner_text("#lst-tbody"); assert "PEG" in t2, t2[:200]      # text filters by name
                 assert pg.locator("#lst-pol-seg").count() == 0 and pg.locator("#lst-txt").count() == 0, "one field, no polarity toggle"
