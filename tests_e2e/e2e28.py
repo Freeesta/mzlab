@@ -87,7 +87,8 @@ try:
             assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calcqui'))).unit.hr") == "da" and pg.evaluate("CALCQUI.st.da") == "0.05", "remembered like the Adducts & losses panel"
             hits = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr')].map(r => r.innerText)")
             assert any("Da" in h for h in hits) and "match" in pg.inner_text("#lst-count"), (hits[:2], pg.inner_text("#lst-count"))
-            assert pg.evaluate("LISTE.find(LISTE.ensure(), 0, %s, 5).length" % q) == n_ppm, "ppm window of the engine unchanged"
+            n_eng = pg.evaluate("LISTE.find(LISTE.ensure(), 0, %s, 5).length" % q)
+            assert n_eng == n_ppm, f"ppm window of the engine unchanged (engine {n_eng}, table {n_ppm}, q {q}, count {pg.inner_text('#lst-count')!r})"
             pg.fill("#lst-tol", "0.00001"); wait_for_js(pg, "CALCQUI.st.da === '0.00001'", 5000)
             assert pg.locator("#lst-tbody tr .pol").count() <= n_ppm
             pg.evaluate("CALCQUI.set({ppm:'5', da:'0.5', unit:{hr:null, lr:null}})")
