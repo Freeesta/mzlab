@@ -323,3 +323,23 @@ fn file_index_of_an_unknown_sample_is_exit_5() {
     assert_eq!(bad.code, 5, "{}", bad.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn db_normative_keeps_its_own_cache_flag() {
+    let (dir, _) = scratch("normative");
+    let c = dir.join("sources").display().to_string();
+    // normative's parser answers, not the index cache's ("--cache needs a folder")
+    let bare = execute(&args(&["db", "normative", "build", "--cache"]));
+    assert_eq!(bare.code, 2);
+    assert!(
+        bare.stderr.contains("--cache needs a value"),
+        "{}",
+        bare.stderr
+    );
+    // its folder reached it (no `--out` is its own usage error) and no index cache was made there
+    let o = execute(&args(&["db", "normative", "build", "--cache", &c]));
+    assert!(!o.stderr.contains("needs a folder"), "{}", o.stderr);
+    assert!(o.stderr.contains("--out"), "{}", o.stderr);
+    assert!(!Path::new(&c).exists(), "no index cache folder");
+    let _ = std::fs::remove_dir_all(&dir);
+}

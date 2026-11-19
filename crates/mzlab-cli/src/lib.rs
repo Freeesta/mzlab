@@ -468,7 +468,10 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         return ("", o);
     };
     let mut rest = args[n..].to_vec();
-    if let Err(m) = idx_cache::take_flag(&mut rest) {
+    // `db normative` has its own `--cache` (sources folder): it keeps it and never sets the index cache
+    if e.name.starts_with("db normative") {
+        idx_cache::set(None);
+    } else if let Err(m) = idx_cache::take_flag(&mut rest) {
         return (e.name, Outcome::fail(&m));
     }
     if cmd::wants_help(&rest) {
