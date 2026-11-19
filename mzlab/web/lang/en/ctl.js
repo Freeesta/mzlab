@@ -179,5 +179,6 @@ I18N.add("en", {
   "ctl.map.ms.ev": "Estimate {v} min from {n} peaks, correlation {c} (DAD total trace against TIC, file {file})",
   "ctl.map.ms.ev.none": "No estimate: too little shared time or too few peaks",
   "ctl.map.ms.ev.busy": "Estimating…",
+  "ctl.map.ms.xic.log": "EIC m/z {mz} ± {tol}, MS level {lv} (fixed window)",
   "ctl.map.ms.used": "Offset set to the estimate, {v} min (chosen by you; the estimate was {n} peaks, correlation {c})"
 });

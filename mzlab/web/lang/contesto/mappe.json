@@ -20,6 +20,9 @@
   "mappa.uv.botDiff": "Title of the bottom strip of a subtracted DAD map; {lo},{hi} = band in nm, {max} = largest absolute value.",
   "mappa.ms.side": "Title of the right strip of a DAD map in MS mode: {file} file, {rt} MS retention time, {dad} cursor time, {off} signed offset.",
   "mappa.ms.sideNone": "Right strip of a DAD map in MS mode when the file has no scan there.",
+  "mappa.ms.fail": "Shown in an MS strip of a DAD map when the engine could not read the MS; {file} the file name.",
+  "mappa.ms.noAxis": "Shown in an MS strip of a DAD map when the file has no MS scan list; {file} the file name.",
+  "mappa.ms.noMz": "Shown in the bottom strip of a DAD map when the EIC is chosen but no m/z is typed.",
   "mappa.ms.bot": "Title of the bottom strip of a DAD map in MS mode: {kind} trace name, {file} file, {off} offset.",
   "mappa.ms.mz": "Axis label of the MS1 spectrum in the right strip.",
   "mappa.ms.wait": "Placeholder of the strips while the MS is read."

@@ -69,6 +69,17 @@ try:
             pg.evaluate(f"(() => {{ const p = {M}; p.msFrom = 'b'; draw(p); }})()")
             u = hover(1.0); assert u["k"] == 1 and scan_of(u, 500) in range(20, 27), u
         step("subtracted map: the MS is the first file's, the reference's when asked", subd)
+        def traces():
+            u = hover(1.0); mz = u["mz"][max(range(len(u["y"])), key=lambda i: u["y"][i])]
+            pg.evaluate(f"(() => {{ const p = {M}; p.msTrace = 'bpc'; ctl(p); draw(p); }})()")
+            wait_for_js(pg, f"{M}._mz.msCh && {M}._mz.msCh.key === {M}._mz.shown.ms.k + 'bpc'")
+            pg.evaluate(f"(() => {{ const p = {M}; p.msTrace = 'xic'; p.msMz = ''; ctl(p); draw(p); }})()")
+            wait_for_js(pg, f"{M}._mz.errCh === 'mappa.ms.noMz'")                 # no m/z typed: the reason is shown, not an endless wait
+            pg.evaluate(f"(() => {{ const p = {M}; p.msMz = {mz}; ctl(p); draw(p); }})()")
+            wait_for_js(pg, f"{M}._mz.errCh === null && {M}._mz.msCh && {M}._mz.msCh.key === {M}._mz.shown.ms.k + 'xic'")
+            assert pg.evaluate(f"{M}._msLog.some(l => l.includes('MS level 1'))"), "the EIC window is logged"
+            pg.evaluate(f"(() => {{ const p = {M}; p.msTrace = 'tic'; ctl(p); draw(p); }})()")
+        step("BPC and EIC strips; an EIC without m/z says why; the EIC window is logged", traces)
         def back():
             pg.evaluate(f"(() => {{ const p = {M}; p.stripMs = 'uv'; ctl(p); draw(p); }})()")
             pg.mouse.move(300, 300); pg.mouse.move(310, 310); ready(pg)

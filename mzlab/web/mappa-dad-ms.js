@@ -4,6 +4,10 @@
 // Interface only; loaded with mappa-dad.js. Classic globals by name: E, I18N, getSpec, getChrom, getXic.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 const f2 = (/** @type {number} */ v) => (+v).toFixed(2);
+/** The EIC window the strip asks the engine for: ± m/z and MS level; shown in the strip title and logged, not a hidden constant. */
+const XIC_TOL = 0.5, XIC_LEVEL = 1;
+/** A failed read: the strip shows the reason (a lang key) instead of waiting for ever. */
+const fail = (/** @type {string} */ err) => ({ err });
 
 /** The signed offset in minutes and where it comes from (default, typed, or the accepted estimate). @param {any} p */
 export const offset = p => p.msOffset != null && isFinite(p.msOffset) ? { v: +p.msOffset, src: p._msUsed != null && +p.msOffset === p._msUsed ? "estimated" : "user" } : { v: 0, src: "default" };
@@ -31,24 +35,27 @@ export function ms(p, pt, K) {
   const s = K.st(p), a = p._a, f = file(p), o = offset(p), rt = pt.rt + o.v, key = `${f.k}|${rt.toFixed(3)}`;
   s.shown = { pt, uv: null, ms: { k: f.k, rt, off: o.v } };
   const tr = p.msTrace || "tic", mz = tr === "xic" ? +p.msMz : NaN;
-  const trace = tr === "xic" ? (isFinite(mz) && mz > 0 ? getXic(f.k, mz, 0.5, 1) : Promise.resolve(null)) : getChrom(f.k, tr, 1);
+  const trace = tr === "xic" ? (isFinite(mz) && mz > 0 ? getXic(f.k, mz, XIC_TOL, XIC_LEVEL) : Promise.resolve(fail("mappa.ms.noMz"))) : getChrom(f.k, tr, 1);
+  if (tr === "xic" && isFinite(mz) && mz > 0 && p._xicLog !== mz) { p._xicLog = mz; (p._msLog || (p._msLog = [])).push(T("ctl.map.ms.xic.log", { mz: mz.toFixed(2), tol: XIC_TOL, lv: XIC_LEVEL })); }
   s.msq = key;                                                              // a late answer for an older cursor is dropped
-  Promise.all([scan(K, f, rt).catch(() => null), trace.catch(() => null)]).then(([sp, ch]) => { if (s.msq === key && p._a === a) { side(p, pt, K, f, o, rt, sp); bottom(p, pt, K, f, o, tr, ch); } });
+  Promise.all([scan(K, f, rt).catch(() => fail("mappa.ms.fail")), trace.catch(() => fail("mappa.ms.fail"))]).then(([sp, ch]) => { if (s.msq === key && p._a === a) { side(p, pt, K, f, o, rt, sp); bottom(p, pt, K, f, o, tr, ch); } });
   side(p, pt, K, f, o, rt, s.msSp && s.msSp.k === f.k ? s.msSp : null); bottom(p, pt, K, f, o, tr, s.msCh && s.msCh.key === f.k + tr ? s.msCh : null);
   return true;
 }
 
 /** The MS1 scan nearest to the MS time `rt` (the scan list of the file comes from mappa.js). */
 async function scan(/** @type {any} */ K, /** @type {any} */ f, /** @type {number} */ rt) {
-  const ax = await K.axisWait(f); if (!ax) return null;
+  const ax = await K.axisWait(f); if (!ax) return fail("mappa.ms.noAxis");
   return K.getScan(f, ax, K.MIRINO.nearest(ax.rt, rt));
 }
 
 function side(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ K, /** @type {any} */ f, /** @type {any} */ o, /** @type {number} */ rt, /** @type {any} */ sp) {
   const s = K.st(p), a = p._a; if (s.sp.hidden) return;
-  if (sp) s.msSp = { ...sp, k: f.k };
+  s.errSp = sp && sp.err || null;                                           // the reason shown, for the tests
+  if (sp && !sp.err) s.msSp = { ...sp, k: f.k };
   const { g, W, H } = K.canvasOf(s.sp), ink = K.ecss("--muted"), r = K.MAPMARGINI.rel(p.cv, s.sp), top = r.y + K.M.t, bot = r.y + p.cv.clientHeight - K.M.b;
   g.font = K.fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(6.5, top); g.lineTo(6.5, bot); g.stroke();
+  if (sp && sp.err) { g.fillText(T(sp.err, { file: fname(f) }), 10, Math.max(10, top + 10)); return; }
   if (!sp || !sp.mz || !sp.mz.length) { g.fillText(T(sp === null ? "mappa.ms.wait" : "mappa.ms.sideNone", { rt: f2(rt), file: fname(f) }), 10, Math.max(10, top + 10)); return; }
   const lo = sp.mz[0], hi = sp.mz[sp.mz.length - 1], span = hi - lo || 1, Y = (/** @type {number} */ v) => bot - (v - lo) / span * (bot - top), x1 = W - 8;
   let ymax = 0; for (let i = 0; i < sp.y.length; i++) if (sp.y[i] > ymax) ymax = sp.y[i];
@@ -63,11 +70,13 @@ function side(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ K,
 
 function bottom(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ K, /** @type {any} */ f, /** @type {any} */ o, /** @type {string} */ tr, /** @type {any} */ ch) {
   const s = K.st(p), a = p._a; if (s.xc.hidden) return;
-  if (ch && ch.rt) s.msCh = { key: f.k + tr, rt: ch.rt, y: ch.y };
+  s.errCh = ch && ch.err || null;
+  if (ch && !ch.err && ch.rt) s.msCh = { key: f.k + tr, rt: ch.rt, y: ch.y };
   const { g, W, H } = K.canvasOf(s.xc), ink = K.ecss("--muted"), mt = 10, mb = 22, r = K.MAPMARGINI.rel(p.cv, s.xc), ml = r.x + K.M.l, mr = r.x + p.cv.clientWidth - K.M.r;
   const X = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * (mr - ml);
   g.font = K.fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
   K.XICDRAW.axis(g, X, a.x0, a.x1, { base: H - mb, labelY: H - mb + 13, lo: 1, hi: W - 1, color: ink, font: K.fpx(11) });
+  if (ch && ch.err) { g.textAlign = "left"; g.fillText(T(ch.err, { file: fname(f) }), ml + 4, mt + 8); return; }
   const d = s.msCh && s.msCh.key === f.k + tr ? s.msCh : null;
   if (!d) { g.textAlign = "left"; g.fillText(T("mappa.ms.wait"), ml + 4, mt + 8); return; }
   const t = Array.from(d.rt, (/** @type {number} */ v) => v - o.v);           // the MS time axis put on the DAD time axis of the map
@@ -77,7 +86,7 @@ function bottom(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ 
   for (let i = 0; i < t.length; i++) { const x = X(t[i]); if (x < ml - 1 || x > mr + 1) continue; g.lineTo(x, Y(d.y[i])); if (i === 0) g.moveTo(x, Y(d.y[i])); }
   g.stroke();
   const x = Math.round(X(pt.rt)) + .5; g.strokeStyle = K.ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x, mt); g.lineTo(x, H - mb); g.stroke(); g.setLineDash([]);
-  g.fillStyle = ink; g.textAlign = "left"; g.fillText(T("mappa.ms.bot", { kind: tr === "xic" ? `${T("ctl.map.ms.xic")} ${(+p.msMz).toFixed(2)}` : T(tr === "bpc" ? "ctl.map.ms.bpc" : "ctl.map.ms.tic"), file: fname(f), off: f2(o.v) }), ml + 4, mt + 8);
+  g.fillStyle = ink; g.textAlign = "left"; g.fillText(T("mappa.ms.bot", { kind: tr === "xic" ? `${T("ctl.map.ms.xic")} ${(+p.msMz).toFixed(2)} ± ${XIC_TOL}` : T(tr === "bpc" ? "ctl.map.ms.bpc" : "ctl.map.ms.tic"), file: fname(f), off: f2(o.v) }), ml + 4, mt + 8);
 }
 
 /** The options of the popover of a DAD map: what the strips show, the signed DAD→MS offset with its source and the evidence of the estimate. */

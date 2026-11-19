@@ -58,5 +58,6 @@
   "ctl.map.ms.ev": "Evidence of the offset estimate: {v} minutes, {n} peaks matched, {c} correlation, {file} file name.",
   "ctl.map.ms.ev.none": "Note when the estimate is not available.",
   "ctl.map.ms.ev.busy": "Note while the estimate is computed.",
-  "ctl.map.ms.used": "Log line of an automatic choice the user accepted; {v} minutes, {n} peaks, {c} correlation."
+  "ctl.map.ms.used": "Log line of an automatic choice the user accepted; {v} minutes, {n} peaks, {c} correlation.",
+  "ctl.map.ms.xic.log": "Log line when the EIC strip of a DAD map asks for a new m/z; {mz} m/z, {tol} the half window in m/z, {lv} the MS level."
 }
