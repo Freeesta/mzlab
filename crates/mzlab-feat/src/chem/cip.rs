@@ -324,7 +324,7 @@ pub fn cip_json(request: &str) -> Result<String> {
         },
     };
     let mut o = Out::default();
-    o.raw("{\"format\":\"cip/1\",\"atoms\":[");
+    o.raw("{\"schema\":\"cip/1\",\"atoms\":[");
     for (i, (at, label)) in l.atoms.iter().enumerate() {
         o.raw(if i > 0 { ",{\"atom\":" } else { "{\"atom\":" });
         o.int(i64::from(*at)).raw(",\"label\":").str(label).raw("}");

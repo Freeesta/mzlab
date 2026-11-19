@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "substructure_db/1",
+  "title": "substructure_db/1: where a substructure occurs in a structure list",
+  "description": "The answer of `mzlab-cli mol search --sub QUERY --db LIST`. Code: crates/mzlab-feat/src/chem/substructure.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "atoms",
+    "stereo",
+    "source",
+    "total",
+    "skipped",
+    "hits",
+    "errors"
+  ],
+  "properties": {
+    "schema": {
+      "const": "substructure_db/1"
+    },
+    "atoms": {
+      "type": "integer"
+    },
+    "stereo": {
+      "type": "boolean"
+    },
+    "source": {
+      "type": "string"
+    },
+    "total": {
+      "type": "integer"
+    },
+    "skipped": {
+      "type": "integer"
+    },
+    "hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "n",
+          "maps"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "n": {
+            "type": "integer"
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "structure": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "error"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

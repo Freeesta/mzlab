@@ -52,6 +52,7 @@
   "help.start.body": "Help text (guide) for the student; contains HTML. The names in quotation marks are interface labels: render them as in lang/en.js.",
   "lst.compatible": "Header row of the box that opens on the peak (high resolution).",
   "lst.count.cut": "Line above the known-contaminants table when the search has more matches than rows shown: m = all matches, n = rows shown; both are numbers.",
+  "lst.lookupFailed": "Line above the known-contaminants table when the lookup in the engine fails; why is the error message of the engine.",
   "lst.count": "Line above the known-contaminants table: how many entries match the search; n is a number.",
   "lst.th.err": "Column header of the table: the distance of the typed m/z from the theoretical one, in Da or ppm.",
   "lst.more": "In the peak box: how many other compatible entries are not shown.",

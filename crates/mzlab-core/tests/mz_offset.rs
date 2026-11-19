@@ -11,7 +11,7 @@ fn get(f: &str, a: &str) -> Value {
 fn a_bare_mz_takes_the_shift() {
     let j = get("288.2+16", "");
     assert_eq!(j["mz"].as_f64().unwrap(), 304.2);
-    assert_eq!(j["offset"].as_f64().unwrap(), 16.0);
+    assert_eq!(j["offset_da"].as_f64().unwrap(), 16.0);
     assert_eq!(get("288,2 - 18", "")["mz"].as_f64().unwrap(), 270.2);
 }
 
@@ -23,7 +23,7 @@ fn a_formula_takes_the_shift_after_the_adduct() {
     assert_eq!(j["adduct"], "[M+H]+");
     let na = get("C9H8O4+Na", "none")["mz5"].as_f64().unwrap();
     assert!((get("C9H8O4+Na-18", "none")["mz5"].as_f64().unwrap() - (na - 18.0)).abs() < 1e-9);
-    assert!(get("C9H8O4", "[M+H]+").get("offset").is_none());
+    assert!(get("C9H8O4", "[M+H]+").get("offset_da").is_none());
 }
 
 #[test]

@@ -1,6 +1,6 @@
 // @ts-check
 // «Formula analysis» card of Draw (`#anal-card`, a closed <details>): formula, exact, nominal and average mass, mass % and, on a click, the theoretical
-// isotope pattern of the drawn structure. Every number comes from the Rust `anal/1` (`analysis` of the grafo .wasm, `feat/grafo` with kind "analysis" in
+// isotope pattern of the drawn structure. Every number comes from the Rust `analysis/1` (`analysis` of the grafo .wasm, `feat/grafo` with kind "analysis" in
 // the app, `mzlab-cli mol anal`); this module only draws. The pattern is theory for the formula, never compared with a spectrum; Composition does the scoring.
 import { carica } from "./disegno-frammenti.js";
 import { atomOf, formulaParts } from "./disegno-etichette.js";

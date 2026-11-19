@@ -1,4 +1,4 @@
-//! `etich/1` against reference values of RDKit 2026.09 (monoisotopic masses, formulas with isotopes): [13CH4], CD3OH, cisplatin, a dianion, the
+//! `label/1` against reference values of RDKit 2026.09 (monoisotopic masses, formulas with isotopes): [13CH4], CD3OH, cisplatin, a dianion, the
 //! arrow benzene -> [13C]benzene (an isotopologue), and the errors of an R group and of an unknown isotope.
 use mzlab_feat::chem::labels::labels_json;
 
@@ -66,18 +66,18 @@ fn an_arrow_between_isotopologues() {
 fn errors_name_the_label() {
     let s = labels_json(r#"{"structures":[[{"el":"R#"}],[{"el":"C","iso":99}],[{"el":"O","h":2}]],"arrows":[[0,2]]}"#).unwrap();
     assert!(
-        s.contains(r#"{"error":"error.etich.element","label":"R#"}"#),
+        s.contains(r#"{"error":"error.label.element","label":"R#"}"#),
         "{s}"
     );
     assert!(
-        s.contains(r#"{"error":"error.etich.isotope","label":"C"}"#),
+        s.contains(r#"{"error":"error.label.isotope","label":"C"}"#),
         "{s}"
     );
     assert!(
         s.contains(r#""formula":"H2O""#) && s.ends_with(r#""arrows":[null]}"#),
         "{s}"
     );
-    assert_eq!(labels_json("nope").unwrap_err().key, "error.etich.request");
+    assert_eq!(labels_json("nope").unwrap_err().key, "error.label.request");
 }
 
 #[test]

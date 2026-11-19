@@ -41,7 +41,7 @@ fn unit_resolution_is_half_a_dalton_without_decimals() {
     assert!(has(&h, "loss", "H2O") && has(&h, "adduct", "[M+NH4]+"));
     assert!(!has(&h, "loss", "NH3") && !has(&h, "loss", "CO"));
     let out = match_number(&format!(r#"{{"x":18,{TABLES}}}"#)).unwrap();
-    assert!(out.contains("\"delta_da\":null") && out.contains("\"ppm\":null"));
+    assert!(out.contains("\"error_mda\":null") && out.contains("\"error_ppm\":null"));
 }
 
 #[test]

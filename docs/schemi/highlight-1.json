@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "highlight/1",
+  "title": "highlight/1: the atoms an evidence colours",
+  "description": "The answer of `mzlab-cli mol hilite`: one layer per moiety, site or cut; `skip` says why a layer was left out. Code: crates/mzlab-feat/src/chem/hilite.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "layers"
+  ],
+  "properties": {
+    "schema": {
+      "const": "highlight/1"
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "atoms": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "bonds": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "skip": {
+      "type": "string"
+    }
+  }
+}

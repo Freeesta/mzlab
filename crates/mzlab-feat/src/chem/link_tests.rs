@@ -19,7 +19,7 @@ fn pct_encodes_every_reserved_byte() {
 fn whole_drawing_prefers_exact_and_part_prefers_substructure() {
     let w = link_json(r#"{"smiles":"CCO","part":false}"#).unwrap();
     assert!(
-        w.starts_with(r#"{"format":"link/1","part":false,"preferred":"pubchem-exact","#),
+        w.starts_with(r#"{"schema":"link/1","part":false,"preferred":"pubchem-exact","#),
         "{w}"
     );
     let p = link_json(r#"{"smiles":"CCO","part":true}"#).unwrap();

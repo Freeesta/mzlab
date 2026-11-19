@@ -46,7 +46,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | experimental design from the CLI (`sample design propose|validate|canonical`, `design/1`, `design_proposal/1`, `design_check/1`, `design_canonical/1`, problems by key, `design_*` ops of the samples route, port `schema` in `flow steps`) | `docs/agenti/design-cli.md` |
 | MS2 pseudo-spectra from DIA (`dia.rs`, `spectra.ms2` with `dia_pseudo`) | `docs/agenti/dia.md` |
 | file read errors: short cause, "Details", "Copy diagnosis" (`diagnosi.js`), synthetic msconvert-style mzML | `docs/agenti/diagnosis.md` |
-| Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `sel/1`, `link/1`) | `docs/agenti/drawing-menu.md` |
+| Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `selection/1`, `link/1`) | `docs/agenti/drawing-menu.md` |
 | Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/drawing-unsaved.md` |
 | Drawing (Ketcher) | `docs/agenti/drawing.md` |
 | English in code (identifiers, comments, file and folder names): measured inventory, `tools/check_english.py`, `tools/italian_words.tsv`, rename map (`tools/english_rename_map.py`), batch plan | `docs/agenti/english.md` |
@@ -153,7 +153,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | reader modules, one per family (`crates/mzlab-lettori*`, separate `.wasm` in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, rule R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, ceilings) | `docs/agenti/readers-module.md` |
 | "aperti" module (mzML with numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/readers-open.md` |
 | Thermo `.raw`: activation, "unknown", rejected event table, damaged scans and controllers (`warn.raw.damaged`), precursors (target, selected ion, MSn chains, SPS, MSX, SRM from the event) | `docs/agenti/readers-thermo-precursors.md` |
-| Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli db db ref-list` | `docs/agenti/reference-lists.md` |
+| Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli db ref-list` | `docs/agenti/reference-lists.md` |
 | release: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, single version, SBOM, gate (`gate_release.py`); Dependabot, CodeQL, security settings to turn on by hand | `docs/agenti/release.md` |
 | browser reset measurements (full reset, Files, `qqHardReset`; `tests_e2e/misura_reset.py`, probe `lib_reset.py`), MISURA reset_* rows | `docs/agenti/reset-measurements.md` |
 | native mzFinder (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-desktop-finder.md` |

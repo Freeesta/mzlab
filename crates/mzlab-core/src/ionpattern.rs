@@ -109,12 +109,12 @@ pub fn ion_counts(formula: &str, adduct: &str) -> Result<(BTreeMap<String, i64>,
     Ok((n, i32::from(z)))
 }
 
-/// `api/ion_pattern`: `{"n":{element:count},"z":charge,"peaks":[{"off","mz","rel"}]}` for a formula and an adduct name.
+/// `api/ion_pattern`: `{"schema","n":{element:count},"z":charge,"peaks":[{"off","mz","abundance_pct"}]}` for a formula and an adduct name.
 pub fn route(formula: &str, adduct: &str) -> Result<String> {
     let (n, z) = ion_counts(formula, adduct)?;
     let peaks = unit_pattern(&n, z)?;
     let mut o = Out::default();
-    o.raw("{\"n\":{");
+    o.raw("{\"schema\":\"ion_pattern/1\",\"n\":{");
     for (i, (el, k)) in n.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(el).raw(":").int(*k);
     }
@@ -124,7 +124,7 @@ pub fn route(formula: &str, adduct: &str) -> Result<String> {
             .int(i64::from(p.off));
         o.raw(",\"mz\":")
             .num(p.mz)
-            .raw(",\"rel\":")
+            .raw(",\"abundance_pct\":")
             .num(p.rel)
             .raw("}");
     }

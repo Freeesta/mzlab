@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "reflist/1",
   "title": "reflist/1: a CSV list of reference ions read by the engine",
-  "description": "The answer of `mzlab-cli db ref-list FILE.csv` and of the page route: the rows read as `items` and every wrong row as an `errors` entry with its line (exit 1 when there are errors). With `--match X` the CLI adds `match` (mz-match/1). Code: crates/mzlab-core/src/reflist.rs.",
+  "description": "The answer of `mzlab-cli db ref-list FILE.csv` and of the page route: the rows read as `items` and every wrong row as an `errors` entry with its line (exit 1 when there are errors). With `--match X` the CLI adds `match` (reflist-match/1: `hits` with the position `i` of each entry in `items`, `diff` in Da, `err` in ppm). Code: crates/mzlab-core/src/reflist.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -22,7 +22,14 @@
       "type": "integer"
     },
     "match": {
-      "type": "object"
+      "type": "object",
+      "required": ["schema", "unit", "tol", "hits"],
+      "properties": {
+        "schema": {"const": "reflist-match/1"},
+        "unit": {"enum": ["ppm", "da"]},
+        "tol": {"type": "number"},
+        "hits": {"type": "array", "items": {"type": "object", "required": ["i", "diff", "err"], "properties": {"i": {"type": "integer"}, "diff": {"type": "number"}, "err": {"type": "number"}}}}
+      }
     },
     "items": {
       "type": "array",

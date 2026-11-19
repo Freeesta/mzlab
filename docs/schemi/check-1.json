@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "check/1",
+  "title": "check/1: what is wrong in a drawing",
+  "description": "The answer of `mzlab-cli mol check`: warnings (level warn) and notes about the drawing only; atoms are 0-based in molfile order. Code: crates/mzlab-feat/src/chem/check.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "atoms",
+    "pieces",
+    "warnings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "check/1"
+    },
+    "atoms": {
+      "type": "integer"
+    },
+    "pieces": {
+      "type": "integer"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "level"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "warn",
+              "note"
+            ]
+          },
+          "atoms": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "bonds": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  }
+}

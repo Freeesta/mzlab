@@ -51,9 +51,13 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
   `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
   `--set shifts=true` and `--set auto=true` answer JSON.
 
-- `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `mz-match/1`): `reference-lists.md`.
+- `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `reflist-match/1`): `reference-lists.md`.
 
 - `peak auto` and `peak auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
+
+## Chemistry commands (`mol *`, `ion *`)
+- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
+- Exit codes: 2 for a formula, adduct or SMILES that does not parse or a bad option value; 1 for a valid request the chemistry cannot satisfy (adduct removes more atoms than exist, m/z below 1, cut of an aromatic bond, bond that is not in the molfile); 4 for a missing file or a request/molfile that cannot be read. 6 for an unwritable `--out`. Failures are one `error/1`. `mol export` prints text (no schema, no `--json`); `mol search` answers `substructure/1`, or `substructure_db/1` with `--db`. `error_mda` is in mDa. Schemas: `docs/schemi/*-1.json`.
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

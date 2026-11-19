@@ -69,7 +69,7 @@ async function ricForNumber(x, q) {
   if (!r || r.error || !Array.isArray(r.hits)) return [];
   const cat = await CALCADD.catalog();
   const lossName = (/** @type {string} */ f) => { const l = (typeof LOSSES !== "undefined" ? LOSSES : []).find((/** @type {any} */ z) => z.f === f); return l ? ricT(l.name) : ""; };
-  const detail = (/** @type {any} */ h) => (hr ? ricT("pal.d.hr", { d: ricSg(h.delta_da), ppm: (h.ppm >= 0 ? "+" : "−") + Math.abs(h.ppm).toFixed(1) }) : ricT("pal.d.lr"));
+  const detail = (/** @type {any} */ h) => (hr ? ricT("pal.d.hr", { d: ricSg(h.error_mda / 1000), ppm: (h.error_ppm >= 0 ? "+" : "−") + Math.abs(h.error_ppm).toFixed(1) }) : ricT("pal.d.lr"));
   /** @type {RicRow[]} */
   const rows = r.hits.map((/** @type {any} */ h) => {
     const d = detail(h);
@@ -120,7 +120,7 @@ async function ricForFormula(q) {
   }
   const j = await call("");
   if (!j) return [];
-  const M = hr ? Number(j.neutral).toFixed(4) : String(j.neutral0);
+  const M = hr ? Number(j.neutral_da).toFixed(4) : String(j.neutral0);
   rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.formula"), html: `${ricSub(j.formula)} <span class="pal-d">${EH(ricT("pal.formula.mass", { m: M }))}</span>`, detail: "", aria: `${ricT("pal.k.formula")}: ${j.formula}, ${ricT("pal.formula.mass", { m: M })}`, run: go(j.formula) });
   const view = (await CALCADD.table(j.formula, "", "", "")).rows.map(a => ({ ...a, mz: hr ? String(a.mz4) : String(a.nominal) }));
   const pol = typeof E !== "undefined" && E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "negative") && !E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "positive") ? -1 : 1;
