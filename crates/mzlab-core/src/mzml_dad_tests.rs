@@ -3,7 +3,7 @@ use crate::itemroutes::{pda_map, pda_spectrum, pda_wavelength};
 use base64::Engine;
 use std::io::Write;
 
-fn b64(vals: &[f64], f64s: bool, zlib: bool) -> String {
+pub(super) fn b64(vals: &[f64], f64s: bool, zlib: bool) -> String {
     let raw: Vec<u8> = vals
         .iter()
         .flat_map(|&v| {
@@ -80,7 +80,7 @@ fn spectra_with_twc(n: usize) -> Vec<u8> {
         .into_bytes()
 }
 
-fn mz(bytes: Vec<u8>) -> Mzml<Vec<u8>> {
+pub(super) fn mz(bytes: Vec<u8>) -> Mzml<Vec<u8>> {
     let n = bytes.len() as u64;
     Mzml::new(bytes, n)
 }
