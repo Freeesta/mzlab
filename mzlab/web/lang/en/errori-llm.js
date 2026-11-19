@@ -29,5 +29,7 @@ I18N.add("en", {
   "err.llm.assist.call": "The assistant request is incomplete: “{field}” is missing.",
   "err.llm.inspection.invalid": "{from} is not an inspection/1 document: pass the output of llm inspect.",
   "err.llm.inspection.settled": "The budget and the hidden names are part of the inspection: give them to llm inspect, not to llm params.",
+  "err.llm.eval.case": "The evaluation case {file} is not valid: {field}.",
+  "err.llm.eval.loop": "The recording for case {case} ends before the case is done.",
   "err.llm.inputs.twice": "The file {path} was given more than once (also inside a named folder): list each file once."
 });

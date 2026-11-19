@@ -51,12 +51,13 @@ fn the_turn_follows_the_conversation() {
 }
 
 #[test]
-fn strict_wants_a_recorded_request_and_errors_exit_with_2() {
+fn strict_wants_a_recorded_request_and_errors_take_the_codes_of_the_contract() {
+    // a recording in the wrong format is integrity (3), one with no turn left is data (1), no arguments is usage (2)
     let o = replay(&["--strict"], "conv_turn0.json");
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 3);
     assert!(o.stderr.contains("err.llm.replay.format"), "{}", o.stderr);
     let o = replay(&["--turn", "9"], "conv_turn0.json");
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 1);
     assert!(
         o.stderr.contains("err.llm.replay.exhausted"),
         "{}",

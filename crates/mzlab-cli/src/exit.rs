@@ -16,58 +16,68 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 
+const INPUT_KEYS: &[&str] = &[
+    "err.cli.input.missing",
+    "err.cli.input.twice",
+    "err.cli.file",
+    "err.flow.io",
+    "err.flow.input.missing",
+    "err.flow.input.sha",
+    "err.session.fileNotFound",
+    "err.normative.input",
+    "error.badIndex",
+];
+const OUTPUT_KEYS: &[&str] = &[
+    "err.cli.out",
+    "err.normative.io",
+    "err.normative.fetch",
+    "err.normative.large",
+    "err.normative.parse",
+];
+const SELECTOR_KEYS: &[&str] = &[
+    "err.sample.unknown",
+    "err.canali.unknown",
+    "err.scan.unknown",
+    "err.msn.node",
+    "err.flow.step.unknown",
+    "err.cli.command.unknown",
+    "err.cli.schema.unknown",
+    "err.flow.instance",
+    "err.llm.tool.unknown",
+];
+const INTEGRITY_PREFIXES: &[&str] = &[
+    "err.flow.format",
+    "err.flow.json",
+    "err.flow.check",
+    "err.flow.lineage",
+    "err.flow.port.",
+    "err.flow.param.unknown",
+    "err.flow.algorithm.unknown",
+    "err.flow.preset.unknown",
+    "err.flow.ref.",
+    "err.flow.instance.",
+    "err.flow.step",
+    "err.flow.input.",
+    "err.flow.unknownStep",
+    "err.mzrun.",
+    "err.llm.eval.case",
+    "err.llm.replay.format",
+    "err.normative.pin",
+    "err.normative.sources",
+];
+const DATA_KEYS: &[&str] = &[
+    "err.pda.none",
+    "err.flow.cancelled",
+    "err.run.data",
+    "err.llm.eval.loop",
+    "err.llm.replay.mismatch",
+    "err.llm.replay.exhausted",
+];
+
 /// The exit code of the engine error `key`: the one mapping of keys onto the table (exact keys first, then prefixes). A key that names no
 /// class is the engine refusing what the command line asked (a formula, a molecule, a setting it cannot use): usage (2). The errors about
 /// the data a command read (nothing overlaps, a run cancelled) are listed as data (1).
 pub fn code_of_key(key: &str) -> u8 {
-    const INPUT_KEYS: &[&str] = &[
-        "err.cli.input.missing",
-        "err.cli.input.twice",
-        "err.cli.file",
-        "err.flow.io",
-        "err.flow.input.missing",
-        "err.flow.input.sha",
-        "err.session.fileNotFound",
-        "err.normative.input",
-        "error.badIndex",
-    ];
-    const OUTPUT_KEYS: &[&str] = &[
-        "err.cli.out",
-        "err.normative.io",
-        "err.normative.fetch",
-        "err.normative.large",
-        "err.normative.parse",
-    ];
-    const SELECTOR_KEYS: &[&str] = &[
-        "err.sample.unknown",
-        "err.canali.unknown",
-        "err.scan.unknown",
-        "err.msn.node",
-        "err.flow.step.unknown",
-        "err.cli.command.unknown",
-        "err.cli.schema.unknown",
-        "err.flow.instance",
-        "err.llm.tool.unknown",
-    ];
-    const INTEGRITY_PREFIXES: &[&str] = &[
-        "err.flow.format",
-        "err.flow.json",
-        "err.flow.check",
-        "err.flow.lineage",
-        "err.flow.port.",
-        "err.flow.param.unknown",
-        "err.flow.algorithm.unknown",
-        "err.flow.preset.unknown",
-        "err.flow.ref.",
-        "err.flow.instance.",
-        "err.flow.step",
-        "err.flow.input.",
-        "err.flow.unknownStep",
-        "err.mzrun.",
-        "err.normative.pin",
-        "err.normative.sources",
-    ];
-    const DATA_KEYS: &[&str] = &["err.pda.none", "err.flow.cancelled", "err.run.data"];
     match key {
         "err.run.integrity" => return INTEGRITY,
         "err.run.input" => return INPUT,

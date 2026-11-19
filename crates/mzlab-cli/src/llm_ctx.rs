@@ -7,6 +7,7 @@ use std::path::Path;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::flow::Platform;
 use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::Error;
 use mzlab_llm::context::build;
 use mzlab_llm::eval::{run, score, Case};
 use mzlab_llm::fake::Replay;
@@ -130,18 +131,22 @@ pub(crate) fn context(args: Vec<String>) -> Outcome {
     }
 }
 
-fn cases(dir: &str) -> Result<Vec<Case>, String> {
+fn cases(dir: &str) -> Result<Vec<Case>, Error> {
+    let io = |p: &Path| {
+        let p = p.display().to_string();
+        move |e: std::io::Error| Error::new("err.cli.file").with("path", format!("{p}: {e}"))
+    };
     let mut files: Vec<_> = std::fs::read_dir(dir)
-        .map_err(|e| format!("{dir}: {e}"))?
+        .map_err(io(Path::new(dir)))?
         .flatten()
         .map(|e| e.path())
         .collect();
     files.retain(|p| p.extension().is_some_and(|e| e == "json"));
     files.sort();
-    let read = |p: &Path| std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display()));
+    let read = |p: &Path| std::fs::read_to_string(p).map_err(io(p));
     files
         .iter()
-        .map(|p| Case::parse(&read(p)?).map_err(|e| format!("{}: {e}", p.display())))
+        .map(|p| Case::parse(&read(p)?).map_err(|e| e.with("file", p.display().to_string())))
         .collect()
 }
 
@@ -153,14 +158,20 @@ struct Scored {
     failed: Vec<String>,
 }
 
-fn evaluate(dir: &str, replay: &str) -> Result<Vec<Scored>, String> {
+/// Every case against its recording: a file that cannot be read is an input error (4), a case or recording of the wrong format an integrity
+/// error (3), a recording that does not answer its case a data error (1, as an `error/1`: the verdict document is only for scored cases).
+fn evaluate(dir: &str, replay: &str) -> Result<Vec<Scored>, Error> {
     let mut v = Vec::new();
     for case in cases(dir)? {
         let path = Path::new(replay).join(format!("{}.jsonl", case.id));
-        let reg = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut rep = Replay::parse(&reg, false).map_err(|e| e.to_string())?;
+        let reg = std::fs::read_to_string(&path).map_err(|e| {
+            Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
+        })?;
+        let mut rep =
+            Replay::parse(&reg, false).map_err(|e| e.with("file", path.display().to_string()))?;
         let tools = catalog(&steps(), UI_TOOLS, &executable);
-        let plan = run(&case, &mut rep, tools, steps()).map_err(|e| format!("{}: {e}", case.id))?;
+        let plan =
+            run(&case, &mut rep, tools, steps()).map_err(|e| e.with("case", case.id.clone()))?;
         let s = score(&plan, &case);
         v.push(Scored {
             id: case.id.clone(),
@@ -228,7 +239,7 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
         return Outcome::fail("usage: mzlab-cli llm eval CASES_DIR --replay DIR");
     };
     match evaluate(&dir, &replay) {
-        Err(e) => Outcome::fail(&e),
+        Err(e) => Outcome::fail_error(&e),
         Ok(cases) => Outcome {
             code: u8::from(cases.iter().any(|c| !c.failed.is_empty())),
             stdout: evalrun_json(&cases).into_bytes(),

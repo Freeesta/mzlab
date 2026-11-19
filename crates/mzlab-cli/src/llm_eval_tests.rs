@@ -168,3 +168,50 @@ fn a_failed_case_keeps_its_document_at_exit_1() {
     assert!(t.contains("\"failed\":[\"") && t.ends_with('\n'), "{t}");
     std::fs::remove_dir_all(dir).ok();
 }
+
+/// What goes wrong before a case is scored is one `error/1` (never an `evalrun/1`): a case or recording of the wrong format is integrity
+/// (3), a recording that runs out before the case is done is data (1), a missing file is input (4).
+#[test]
+fn eval_errors_before_scoring_take_the_codes_of_the_contract() {
+    let dir = std::env::temp_dir().join(format!("mzlab-evalcodes-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let (cases, rec) = (dir.join("cases"), dir.join("rec"));
+    std::fs::create_dir_all(&cases).unwrap();
+    std::fs::create_dir_all(&rec).unwrap();
+    let first = PathBuf::from(data("eval")).join("E1.json");
+    std::fs::copy(&first, cases.join("E1.json")).unwrap();
+    let eval = |case_dir: &std::path::Path| {
+        let o = run(&[
+            "llm",
+            "eval",
+            case_dir.to_str().unwrap(),
+            "--replay",
+            rec.to_str().unwrap(),
+            "--json",
+        ]);
+        (o.code, String::from_utf8(o.stdout).unwrap())
+    };
+    // no recording of the case: input
+    assert_eq!(eval(&cases).0, 4);
+    // a recording that is not one: integrity
+    std::fs::write(rec.join("E1.jsonl"), "not json\n").unwrap();
+    let (code, t) = eval(&cases);
+    assert_eq!(code, 3, "{t}");
+    assert!(t.contains("\"error_key\":\"err.llm.replay.format\""), "{t}");
+    // a recording with no turn left: data, an error document and not a verdict
+    std::fs::write(rec.join("E1.jsonl"), "").unwrap();
+    let (code, t) = eval(&cases);
+    assert_eq!(code, 1, "{t}");
+    assert!(
+        t.starts_with("{\"schema\":\"error/1\"") && t.ends_with('\n'),
+        "{t}"
+    );
+    // a case that is not one: integrity
+    let bad = dir.join("bad");
+    std::fs::create_dir_all(&bad).unwrap();
+    std::fs::write(bad.join("X.json"), "{}").unwrap();
+    let (code, t) = eval(&bad);
+    assert_eq!(code, 3, "{t}");
+    assert!(t.contains("\"error_key\":\"err.llm.eval.case\""), "{t}");
+    std::fs::remove_dir_all(dir).ok();
+}

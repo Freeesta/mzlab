@@ -181,7 +181,8 @@ impl<'a> Cx<'a> {
 }
 
 /// One line of the report for the expected product (`mz`, `rt`).
-fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
+/// The cells of one expected product after its id: only numbers and fixed stage names, never free text.
+fn explain(cx: &Cx, mz: f64, rt: f64, a: &Args) -> String {
     let (t, facts) = (cx.t, &cx.facts);
     let dist = |r: usize| ((t.mz[r] - mz) / mz * 1e6, t.rt[r] - rt);
     let in_mz: Vec<usize> = (0..t.len()).filter(|&r| dist(r).0.abs() <= a.ppm).collect();
@@ -207,7 +208,7 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
     };
     let near = (0..t.len()).min_by(|&x, &y| dist(x).0.abs().total_cmp(&dist(y).0.abs()));
     let (np, nd) = near.map_or((f64::NAN, f64::NAN), dist);
-    let mut s = format!("{id},{mz:.4},{rt:.2},{},{}", in_mz.len(), rows_in.len());
+    let mut s = format!("{mz:.4},{rt:.2},{},{}", in_mz.len(), rows_in.len());
     match &best {
         Some(b) => {
             let (det, fil, h, ar) = cells(t, b.row);
@@ -294,10 +295,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         let (t, _) = mzlab_feat::store::read_table(&bytes).map_err(|e| e.to_string())?;
         let text =
             std::fs::read_to_string(&a.expected).map_err(|e| format!("{}: {e}", a.expected))?;
-        let mut r = report(&t, &read_expected(&text), a.ppm, a.rt_tol);
-        if json {
-            r = json_of(&r);
-        }
+        let rows = rows(&t, &read_expected(&text), a.ppm, a.rt_tol);
+        let r = if json { json_of(&rows) } else { csv_of(&rows) };
         match &a.out {
             None => Ok(Outcome::ok(r.into_bytes())),
             Some(p) => Ok(std::fs::write(p, r).map_or_else(
@@ -313,29 +312,33 @@ pub fn run(args: Vec<String>) -> Outcome {
     go().unwrap_or_else(|e| Outcome::fail(&e))
 }
 
-/// `explain-missing/1`: the CSV report as `columns` and `rows` (every cell as text, the empty ones empty), one document.
-fn json_of(csv: &str) -> String {
-    let mut lines = csv.lines();
-    let cells = |l: &str| {
-        l.split(',')
-            .map(mzlab_core::jsonb::text)
-            .collect::<Vec<_>>()
+/// `explain-missing/1`: the report as `columns` and `rows` (every cell as text, the empty ones empty), one document.
+fn json_of(rows: &[Vec<String>]) -> String {
+    let cells = |c: &mut dyn Iterator<Item = &str>| {
+        mzlab_core::json::Value::Arr(c.map(mzlab_core::jsonb::text).collect())
     };
-    let columns = cells(lines.next().unwrap_or(""));
-    let rows = lines
-        .map(|l| mzlab_core::json::Value::Arr(cells(l)))
+    let rows = rows
+        .iter()
+        .map(|r| cells(&mut r.iter().map(String::as_str)))
         .collect();
     mzlab_core::jsonb::write(
         &mzlab_core::jsonb::Obj::new()
             .put("schema", mzlab_core::jsonb::text("explain-missing/1"))
-            .put("columns", mzlab_core::json::Value::Arr(columns))
+            .put("columns", cells(&mut COLUMNS.split(',')))
             .put("rows", mzlab_core::json::Value::Arr(rows))
             .done(),
     ) + "\n"
 }
 
-/// The whole report (header and one line per expected product).
-pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f64) -> String {
+const COLUMNS: &str = "id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3,kin_rank,kin_size,singles_above,view_single_pct,absorbed_row,absorbed_mz,absorbed_rt";
+
+/// The cells of every expected product (the id first, as given), before any CSV quoting.
+pub fn rows(
+    t: &Aligned,
+    expected: &[(String, f64, f64)],
+    ppm: f64,
+    rt_tol: f64,
+) -> Vec<Vec<String>> {
     let a = Args {
         table: String::new(),
         expected: String::new(),
@@ -344,12 +347,38 @@ pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f6
         out: None,
     };
     let cx = Cx::new(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3,kin_rank,kin_size,singles_above,view_single_pct,absorbed_row,absorbed_mz,absorbed_rt\n");
-    for (id, mz, rt) in expected {
-        out.push_str(&explain(&cx, id, *mz, *rt, &a));
+    expected
+        .iter()
+        .map(|(id, mz, rt)| {
+            let rest = explain(&cx, *mz, *rt, &a);
+            std::iter::once(id.clone())
+                .chain(rest.split(',').map(str::to_string))
+                .collect()
+        })
+        .collect()
+}
+
+/// A CSV field: quoted when it holds a comma, a quote or a line break.
+fn csv_field(c: &str) -> String {
+    if c.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", c.replace('"', "\"\""))
+    } else {
+        c.to_string()
+    }
+}
+
+fn csv_of(rows: &[Vec<String>]) -> String {
+    let mut out = format!("{COLUMNS}\n");
+    for r in rows {
+        out.push_str(&r.iter().map(|c| csv_field(c)).collect::<Vec<_>>().join(","));
         out.push('\n');
     }
     out
+}
+
+/// The whole report (header and one line per expected product).
+pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f64) -> String {
+    csv_of(&rows(t, expected, ppm, rt_tol))
 }
 
 #[cfg(test)]

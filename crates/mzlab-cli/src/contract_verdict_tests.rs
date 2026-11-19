@@ -23,6 +23,7 @@ fn the_table_of_verdict_commands_names_entries_and_each_keeps_its_document_at_ex
     for v in crate::contract::VERDICT {
         assert!(entries().any(|e| e.name == *v), "{v} is not a command");
     }
+    assert!(crate::contract::VERDICT.contains(&"llm eval"));
     // a pair with no companion, an mzML with an error, a list with a wrong row: exit 1 is the answer, the document stays on stdout
     let (d1, lone) = scratch("verdict_pair", "lone.wiff", b"x");
     let (d2, bad) = scratch("verdict_validate", "bad.mzML", b"<mzML>");
@@ -182,4 +183,28 @@ fn a_non_verdict_command_at_exit_3_is_one_error_with_its_document_as_report() {
     assert_eq!(v["error_key"], "err.flow.check");
     assert!(v["problems"].as_array().is_some_and(|p| !p.is_empty()));
     let _ = std::fs::remove_dir_all(dir);
+}
+
+/// The commands that gained a `--json` form take it (they do not answer `err.cli.json.unsupported`) and fail as one `error/1` with their own code.
+#[test]
+fn flow_command_and_explain_missing_take_json() {
+    for (a, code) in [
+        (
+            vec!["flow", "command", "/nonexistent/plan.json", "--json"],
+            4,
+        ),
+        (
+            vec![
+                "explain-missing",
+                "/nonexistent/t.mzfeat",
+                "/nonexistent/e.csv",
+                "--json",
+            ],
+            4,
+        ),
+        (vec!["llm", "eval", "--bogus", "--json"], 2),
+    ] {
+        let v = one_error(&run(&a), code, &a.join(" "));
+        assert_ne!(v["error_key"], "err.cli.json.unsupported", "{a:?}");
+    }
 }

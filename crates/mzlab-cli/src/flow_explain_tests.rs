@@ -67,37 +67,82 @@ fn a_family_member_is_absorbed_not_missing() {
     assert_eq!(l[1][28..], ["", "", ""]);
 }
 
-/// `--json` is the CSV as one document: the same cells, and an id with spaces and quotes kept whole.
+/// `--json` is the report as one document: the same cells as the CSV, and an id with a comma, a quote or a space keeps its one cell.
 #[test]
-fn json_is_the_csv_as_one_document() {
-    let e = read_expected("id,mz,rt\n\"p 1\",300.0005,5.1\nb,400.0,5.0\n");
-    let csv = report(&table(), &e, 5.0, 0.3);
-    let text = json_of(&csv);
+fn json_is_the_report_as_one_document() {
+    let ids = ["p 1", "a,b", "say \"x\""];
+    let e: Vec<(String, f64, f64)> = ids.iter().map(|i| (i.to_string(), 300.0005, 5.1)).collect();
+    let rows = rows(&table(), &e, 5.0, 0.3);
+    let text = json_of(&rows);
     assert!(
         text.starts_with("{\"schema\":\"explain-missing/1\",\"columns\":[\"id\",\"mz\""),
         "{text}"
     );
     assert!(text.ends_with("}\n") && !text.ends_with("\n\n"));
     let v: serde_json::Value = serde_json::from_str(&text).unwrap();
-    let want: Vec<Vec<&str>> = csv
-        .lines()
-        .skip(1)
-        .map(|l| l.split(',').collect())
-        .collect();
-    let rows = v["rows"].as_array().unwrap();
-    assert_eq!(rows.len(), want.len());
-    for (got, want) in rows.iter().zip(&want) {
-        let got: Vec<&str> = got
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|c| c.as_str().unwrap())
-            .collect();
-        assert_eq!(&got, want);
+    let n = v["columns"].as_array().unwrap().len();
+    let got = v["rows"].as_array().unwrap();
+    assert_eq!(got.len(), ids.len());
+    for (row, id) in got.iter().zip(ids) {
+        assert_eq!(row.as_array().unwrap().len(), n, "{row}");
+        assert_eq!(row[0], id);
     }
-    assert_eq!(rows[0][0], "\"p 1\"");
-    assert_eq!(
-        v["columns"].as_array().unwrap().len(),
-        rows[0].as_array().unwrap().len()
+    // the CSV quotes what needs it and has the same cell count once parsed back
+    let csv = report(&table(), &e, 5.0, 0.3);
+    assert!(csv.contains("\"a,b\",300.0005,"), "{csv}");
+    assert!(csv.contains("\"say \"\"x\"\"\",300.0005,"), "{csv}");
+    assert_eq!(csv.lines().count(), 1 + ids.len());
+}
+
+/// `execute(["explain-missing", T, E, "--json"])` end to end on a real `.mzfeat`: stdout and `--out` carry the same document, one trailing newline.
+#[test]
+fn explain_missing_json_runs_end_to_end() {
+    let dir = std::env::temp_dir().join(format!("mzlab-explainjson-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let table_path = dir.join("t.mzfeat");
+    struct Texts;
+    impl mzlab_feat::store::RecipeTexts for Texts {
+        fn file_text(&self) -> String {
+            "{}".into()
+        }
+        fn table_text(&self) -> String {
+            "{}".into()
+        }
+    }
+    let bytes =
+        mzlab_feat::store::write_table(&table(), &Texts, &mzlab_feat::store::Origin::default());
+    std::fs::write(&table_path, bytes).unwrap();
+    let expected = dir.join("e.csv");
+    std::fs::write(&expected, "id,mz,rt\np1,300.0005,5.1\nb,400.0,5.0\n").unwrap();
+    let run = |extra: &[&str]| {
+        let mut a: Vec<String> = [
+            "explain-missing",
+            table_path.to_str().unwrap(),
+            expected.to_str().unwrap(),
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        a.extend(extra.iter().map(|s| s.to_string()));
+        crate::execute(&a)
+    };
+    let o = run(&["--json"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let text = String::from_utf8(o.stdout).unwrap();
+    assert!(
+        text.starts_with("{\"schema\":\"explain-missing/1\""),
+        "{text}"
     );
+    assert!(text.ends_with("}\n") && !text.ends_with("\n\n"));
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(v["rows"].as_array().unwrap().len(), 2);
+    let out = dir.join("r.json");
+    let o = run(&["--json", "--out", out.to_str().unwrap()]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stdout.is_empty());
+    assert_eq!(std::fs::read_to_string(&out).unwrap(), text);
+    // without --json: the CSV, one line more than the products
+    let csv = String::from_utf8(run(&[]).stdout).unwrap();
+    assert_eq!(csv.lines().count(), 3);
+    std::fs::remove_dir_all(dir).ok();
 }
