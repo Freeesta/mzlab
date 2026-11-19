@@ -454,11 +454,11 @@ jobs:
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: sito-e2e-${{ runner.os }}-
-      # the checkout gave every source a new mtime, so cargo would compile the whole workspace again before the first CLI call: restore the old mtime of the unchanged files (tools/ci_cargo_mtime.py); the `browser` job saves this cache and its record
+      # the checkout gave every source a new mtime, so cargo would compile the whole workspace again before the first CLI call: restore the old mtime of the unchanged files (tools/ci_cargo_mtime.py); the `browser-shard` jobs save this cache and its record (named after the job that wrote them)
       - name: Reuse the compiled crates of the cache
         if: steps.scelta.outputs.e2e != ''
         env:
-          MZLAB_CACHE_JOB: browser
+          MZLAB_CACHE_JOB: browser-shard
         run: python3 tools/ci_cargo_mtime.py restore
       - name: Install
         if: steps.scelta.outputs.e2e != ''
