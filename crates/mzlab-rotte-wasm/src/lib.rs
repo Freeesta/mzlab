@@ -44,7 +44,7 @@ pub fn molecules(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::molecules::route(op, input).map_err(|e| error_json(&e))
 }
 
-/// `op` is `propose`, `propose2`, `validate`, `per_tp`, `canonical`, `digest`, `migrate`, `model`, `from_file`, `csv_read` or `csv_write` (see `samples::route`); JSON in, JSON out, an error is JSON with a key.
+/// `op` is `propose`, `validate`, `per_tp`, `canonical`, `digest`, `model`, `from_file`, `csv_read` or `csv_write` (see `samples::route`); JSON in, JSON out, an error is JSON with a key.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::samples::route_all(op, input).map_err(|e| error_json(&e))

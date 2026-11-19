@@ -9,7 +9,7 @@ const CDOC = /** @type {any} */ ((() => {
   const BASE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", calibration: "standard", qc: "sample" });
   // QA/QC vocabulary -> samples/1
   const QROLE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", qc: "qc", standard: "std", dark: "dark" });
-  // the roles the program writes; a document of the old shape may also say `t0` (a sample at 0) or a `blank_kind` (ignored)
+  // the roles the Data view writes; `t0` (a sample at 0 minutes) is also a role of samples/1 (the engine proposes it, a Flow table can say it), read as a sample at 0; the Data view does not edit `blank_kind`
   const KINDS = ["sample", "blank", "dark", "infusion", "std", "calibration", "qc"];
   const known = (/** @type {string} */ k) => k === "t0" || KINDS.includes(k);
   const TIMED = new Set(["sample", "dark"]);
@@ -42,7 +42,7 @@ const CDOC = /** @type {any} */ ((() => {
   const doc = (/** @type {any[]} */ files) => ({ schema: "samples/1", samples: session(files).map(({ rep, ...e }) => e) });
   /** the fields of E.files an entry gives */
   function fields(/** @type {any} */ e) {
-    // old documents: `t0` = a sample at 0 minutes, `blank_kind` is dropped
+    // `t0` = a sample at 0 minutes; `blank_kind` is not edited here and is not read
     const k = e.kind === "calibration" ? "std" : e.kind === "t0" ? "sample" : e.kind;
     const tm = e.kind === "t0" ? 0 : TIMED.has(k) ? e.time_min ?? null : null;
     return { role: k, type: BASE[k] || "sample", time: k === "dark" ? darkTime(tm) : tm, tconf: tm == null || e.kind === "t0" || e.time_confirmed !== false,

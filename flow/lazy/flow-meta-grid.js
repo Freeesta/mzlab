@@ -192,7 +192,7 @@
         if (a.severity === "error") e++; else if (a.severity === "warning") w++;
         if (a.code === "timeUnconfirmed" && a.file != null) mg.guessed.add(a.file);
         if (a.file == null) { if (a.severity !== "info") series.push(`${MSG[a.code] || a.code}${a.series ? " in " + a.series : ""}`); continue; }
-        const col = a.colonna ? (FIXED.some(f => f.id === a.colonna) ? a.colonna : "x:" + a.colonna) : CELL_OF[a.code] || "file", k = a.file + "|" + col;
+        const col = a.column ? (FIXED.some(f => f.id === a.column) ? a.column : "x:" + a.column) : CELL_OF[a.code] || "file", k = a.file + "|" + col;
         mg.warns.set(k, [...(mg.warns.get(k) || []), { code: a.code, sev: a.severity }]);
         if (a.code === "pairMissing") mg.pairRows.add(a.file);
       }

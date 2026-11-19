@@ -12,7 +12,7 @@ pub fn run_order() -> Step {
     };
     Step {
         ins: vec![
-            Port::new("samples", DataType::Samples, "Sample table: role, injection order, batch (samples/1 or /3)"),
+            Port::new("samples", DataType::Samples, "Sample table: role, injection order, batch (samples/1)"),
             optional(Port::new("design", DataType::Design, "Batches of the files; without it the batch of the sample table, else one batch")),
         ],
         outs: vec![Port::new("runorder", DataType::Qc, "Counts and warnings of the injection sequence (runorder/1)")],

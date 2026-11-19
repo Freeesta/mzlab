@@ -200,61 +200,105 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// The JSON of `vars`, `table` and `group` has no key of the old Italian formats (the saved formats are English only).
+/// Every key of a JSON document, whatever its depth.
+fn keys_of(v: &mzlab_core::json::Value, out: &mut std::collections::BTreeSet<String>) {
+    use mzlab_core::json::Value;
+    match v {
+        Value::Obj(o) => {
+            for (k, x) in o {
+                out.insert(k.clone());
+                keys_of(x, out);
+            }
+        }
+        Value::Arr(a) => a.iter().for_each(|x| keys_of(x, out)),
+        _ => {}
+    }
+}
+
+/// The names the `properties` of a JSON Schema declare, at any depth.
+fn schema_keys(file: &str) -> std::collections::BTreeSet<String> {
+    let path = format!("{}/../../docs/schemi/{file}", env!("CARGO_MANIFEST_DIR"));
+    let doc = mzlab_core::json::parse(&std::fs::read(path).unwrap()).unwrap();
+    let mut all = std::collections::BTreeSet::new();
+    keys_of(&doc, &mut all);
+    let mut declared = std::collections::BTreeSet::new();
+    fn walk(v: &mzlab_core::json::Value, d: &mut std::collections::BTreeSet<String>) {
+        use mzlab_core::json::Value;
+        match v {
+            Value::Obj(o) => {
+                for (k, x) in o {
+                    if k == "properties" {
+                        if let Value::Obj(p) = x {
+                            p.iter().for_each(|(n, _)| {
+                                d.insert(n.clone());
+                            });
+                        }
+                    }
+                    walk(x, d);
+                }
+            }
+            Value::Arr(a) => a.iter().for_each(|x| walk(x, d)),
+            _ => {}
+        }
+    }
+    walk(&doc, &mut declared);
+    declared
+}
+
+/// The JSON of `vars`, `table` and `group` has no key outside the English schema: `table` only the keys of `samples-1.json`, `vars` and `group` only the
+/// ones of `sample-vars/1` (saved formats are English only).
 #[test]
-fn the_json_has_no_italian_key() {
-    const OLD: &[&str] = &[
-        "campioni",
-        "composto",
-        "concentrazione",
-        "ordine_iniezione",
-        "replica",
-        "serie",
-        "tempo",
-        "tempo_min",
-        "tempo_confermato",
-        "tipo",
-        "tipo_bianco",
-        "unita",
-        "unita_tempo",
-        "comune",
-        "variabili",
-        "copertura",
-        "punteggio",
-        "senza",
-        "valori",
-        "chiave",
-        "etichetta",
-        "classe",
-        "fine",
-        "inizio",
-        "testo",
-        "nome",
-        "manuale",
-        "multipli",
-        "campione_id",
-        "polarita",
-        "matrice",
-        "lotto",
-        "gruppo",
-        "colonne",
-    ];
+fn the_json_has_only_the_keys_of_the_english_schema() {
+    let vars: std::collections::BTreeSet<String> = [
+        "schema",
+        "common",
+        "files",
+        "name",
+        "tokens",
+        "class",
+        "start",
+        "end",
+        "text",
+        "variables",
+        "id",
+        "kind",
+        "coverage",
+        "score",
+        "values",
+        "key",
+        "label",
+        "without",
+        "manual",
+        "multiple",
+    ]
+    .iter()
+    .map(|k| k.to_string())
+    .collect();
+    let table = schema_keys("samples-1.json");
+    let group: std::collections::BTreeSet<String> = ["name".to_string()].into();
     let f = names_file("it");
     let names = f.to_str().unwrap();
-    for args in [
-        vec!["samples", "vars", "--names", names],
-        vec!["samples", "vars", "--names", names, "--pos", "1"],
-        vec!["samples", "table", "--names", names],
-        vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+    for (args, allowed) in [
+        (vec!["samples", "vars", "--names", names], &vars),
+        (
+            vec!["samples", "vars", "--names", names, "--pos", "1"],
+            &vars,
+        ),
+        (vec!["samples", "table", "--names", names], &table),
+        (
+            vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+            &group,
+        ),
     ] {
         let (code, out, err) = run(&args);
         assert_eq!(code, 0, "{err}");
-        for w in OLD {
-            assert!(
-                !out.contains(&format!("\"{w}\"")),
-                "{args:?}: `{w}` in the output"
-            );
-        }
+        let mut got = std::collections::BTreeSet::new();
+        keys_of(&mzlab_core::json::parse(out.as_bytes()).unwrap(), &mut got);
+        let extra: Vec<_> = got.difference(allowed).collect();
+        assert!(
+            extra.is_empty(),
+            "{args:?}: keys outside the schema: {extra:?}"
+        );
     }
     std::fs::remove_file(f).unwrap();
 }

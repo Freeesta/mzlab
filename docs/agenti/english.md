@@ -53,7 +53,7 @@ Counts per area. `identifiers` and `keys` are distinct names per file, summed ov
 
 ## Scope (decisions)
 - Out of scope: the Markdown prose of `docs/` stays Italian (15100 lines); only `docs/` file and directory names are renamed, and only those without the `GITHUB` note.
-- Kept as they are, never renamed: serialized names (schema names and JSON keys of saved files such as `samples/1`, `corsa/1`, `metodo/1`, `mzflow/1` keys `formato`, `programma`, `operazioni`; OPFS paths; IndexedDB and `localStorage` keys; regex literals that read old Italian session titles). Renaming them would break files users already saved.
+- Serialized names (schema names and JSON keys of saved files, OPFS paths, IndexedDB and `localStorage` keys, regex literals that read old Italian session titles) are English only: the ones of `samples/1` and `design/1` already are, the rest (`corsa/1`, `metodo/1`, `mzflow/1` keys `formato`, `programma`, `operazioni`, ...) are renamed format by format and the rename is deferred, not permanent. A file saved under an old name is not read after its format is renamed (no converter).
 - The 49 `GITHUB` paths (workflows, `docs/agenti`, `docs/schemi`, `docs/utenti`, `mzlab-lettori`, `mzlab-feat-grafo-wasm`, tools run by workflows, `fuzz/regressioni`, `tests/golden/librerie`, `tools/banco_wasm`, `tools/tipi`) are a separate final batch, started only with the owner's explicit approval at that point.
 - Queue gates: identifier batches go one area per PR while fewer than 7 PRs are open; `git mv` renames only while fewer than 4 are open. One English PR at a time.
 

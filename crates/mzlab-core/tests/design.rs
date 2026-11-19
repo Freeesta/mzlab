@@ -232,28 +232,46 @@ fn fits(v: &Value, s: &Value) -> bool {
     checks.iter().all(|c| *c)
 }
 
-/// A `design/1` round trip carries no key of the old Italian format.
+/// The keys of a JSON document, at any depth.
+fn keys_of(v: &serde_json::Value, out: &mut std::collections::BTreeSet<String>) {
+    match v {
+        serde_json::Value::Object(o) => {
+            for (k, x) in o {
+                out.insert(k.clone());
+                keys_of(x, out);
+            }
+        }
+        serde_json::Value::Array(a) => a.iter().for_each(|x| keys_of(x, out)),
+        _ => {}
+    }
+}
+
+/// A `design/1` round trip is stable and has only the keys `design-1.json` declares (the saved formats are English only); the factor levels of a
+/// condition are free names and are not keys of the format.
 #[test]
-fn the_round_trip_has_no_italian_key() {
-    const OLD: &[&str] = &[
-        "condizioni",
-        "confronti",
-        "fattori",
-        "lotti",
-        "riferimento",
-        "livelli",
-        "repliche",
-        "lotto",
-        "nome",
-        "valori",
-        "tipo",
-    ];
+fn the_round_trip_has_only_the_keys_of_the_english_schema() {
     let cs = series(&["a_t5", "a_t10", "b_t5", "b_t10"]);
     let json = to_json(&design::propose(&cs));
     let back = to_json(&from_json(json.as_bytes()).unwrap());
     assert_eq!(json, back);
     assert!(json.starts_with("{\"schema\":\"design/1\","), "{json}");
-    for w in OLD {
-        assert!(!json.contains(&format!("\"{w}\"")), "`{w}` in {json}");
+    let schema: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../docs/schemi/design-1.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut declared = std::collections::BTreeSet::new();
+    keys_of(&schema["properties"], &mut declared);
+    declared.insert("schema".into());
+    let mut got = std::collections::BTreeSet::new();
+    let mut doc: serde_json::Value = serde_json::from_str(&json).unwrap();
+    for c in doc["conditions"].as_array_mut().unwrap() {
+        c["levels"] = serde_json::Value::Null;
     }
+    keys_of(&doc, &mut got);
+    let extra: Vec<_> = got.iter().filter(|k| !declared.contains(*k)).collect();
+    assert!(extra.is_empty(), "keys outside the schema: {extra:?}");
 }

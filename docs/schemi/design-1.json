@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "design/1",
  "title": "design/1: the experimental design of a series",
- "description": "Conditions, reference, comparisons, factors and batches as data of the plan (mzlab-core design). Proposed from a samples/1 by `propose`, confirmed by the user, checked by `validate` (codes only). Canonical JSON: keys in alphabetical order, factors sorted by name, batches sorted by sha256 then file; its SHA-256 enters prov/1. Field names in Italian, values in English, as samples/1.",
+ "description": "Conditions, reference, comparisons, factors and batches as data of the plan (mzlab-core design). Proposed from a samples/1 by `propose`, confirmed by the user, checked by `validate` (codes only). Canonical JSON: keys in alphabetical order, factors sorted by name, batches sorted by sha256 then file; its SHA-256 enters prov/1. Field names and values in English, as samples/1.",
  "type": "object",
  "required": ["conditions", "comparisons", "factors", "batches", "reference", "schema"],
  "properties": {
