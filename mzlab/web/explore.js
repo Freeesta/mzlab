@@ -850,6 +850,7 @@ function renderFileList() {
   bindFileReorder(); syncGroupBy();
   renderNav();
   syncWorkEmpty();
+  document.dispatchEvent(new CustomEvent("filelist"));
 }
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off

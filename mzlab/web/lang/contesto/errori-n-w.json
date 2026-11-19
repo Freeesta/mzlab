@@ -67,5 +67,9 @@
   "error.posiz.transform": "Engine error message; {transform} = transformation.",
   "error.qc.tooFew": "Engine error message; {have} = how many there are.",
   "error.rowNotFound": "Engine error message; {id} = identifier.",
-  "error.stats.condition": "Engine error message; {name} = name."
+  "error.stats.condition": "Engine error message; {name} = name.",
+  "err.reflist.adduct": "Row error of a CSV list: the adduct column holds a name the program does not know; {value} = the text read.",
+  "err.reflist.formula": "Row error of a CSV list: the formula column cannot be read; {value} = the text read.",
+  "err.reflist.mz": "Row error of a CSV list: the m/z column is not a number above 0; {value} = the text read.",
+  "err.reflist.polarity": "Row error of a CSV list: the polarity column holds an unknown word; {value} = the text read."
 }

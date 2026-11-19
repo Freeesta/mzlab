@@ -116,13 +116,13 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, name: &str) -> Option<Infusio
     let levels = scans.iter().map(|s| s.level).max().unwrap_or(1);
     crate::sortc::slice_ord(&mut nominal);
     nominal.dedup();
-    let nodi = nominal.len();
+    let n_nodes = nominal.len();
     let n_keys = keys.iter().collect::<std::collections::HashSet<_>>().len();
-    let out = |motivo| {
+    let out = |reason| {
         Some(Infusione {
-            reason: motivo,
+            reason,
             levels,
-            nodes: nodi,
+            nodes: n_nodes,
             keys: n_keys,
         })
     };

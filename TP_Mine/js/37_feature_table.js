@@ -188,7 +188,7 @@
     Promise.resolve(L.call("list")).then((/** @type {any} */ l) => { if (l && l.libs && l.libs.length) { go.hidden = false; if (st.res) paint(); } }, () => { /* no library module: no button */ });
   }
 
-  /** mounts the step in `box`. o = { extraCols (columns added after the built-in ones), extraTabs ([{key, label, fill(panel, row)}] tabs added to the open row; `redraw()` of the result draws the rows again), session (PIPEQC.open), names, gate, say, cs (campioni/2 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
+  /** mounts the step in `box`. o = { extraCols (columns added after the built-in ones), extraTabs ([{key, label, fill(panel, row)}] tabs added to the open row; `redraw()` of the result draws the rows again), session (PIPEQC.open), names, gate, say, cs (samples/1 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
   function mount(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
     box.innerHTML = html();
     const q = (/** @type {string} */ s) => /** @type {any} */ (box.querySelector(s)), chips = /** @type {Set<string>} */ (new Set()), n = o.names.length;

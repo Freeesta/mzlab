@@ -186,6 +186,7 @@ impl State {
             "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
             "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
             "lr_ricerca" => text(mzlab_core::search::match_number(s("body"))?),
+            "lr_reflist" => text(mzlab_core::reflist::route(s("body"))?),
             "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))),
             "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),
             "lr_kv_set" => {

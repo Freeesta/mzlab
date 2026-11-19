@@ -66,11 +66,18 @@ def expand(entry: dict, list_id: str = "keller") -> list[dict]:
     return out
 
 
+def info(meta: dict, items: list[dict]) -> dict:
+    """Provenance of a built-in list: where it comes from, its version or date (None when not documented), what it covers."""
+    return {"url": meta.get("url"), "doi": meta.get("doi"), "version": meta.get("version"), "date": meta.get("date"),
+            "source_known": meta.get("source_known", True), "provenance": meta.get("provenance"),
+            "compounds": len({i["id"] for i in items}), "classes": len({i["cls"] for i in items if i["cls"]})}
+
+
 @lru_cache(maxsize=1)
 def builtin() -> dict:
     d = json.loads(PATH.read_text(encoding="utf-8"))
     items = [i for e in d["entries"] for i in expand(e, d["id"])]
-    return {"id": d["id"], "name": d["name"], "source": d["source"], "license": d["license"], "builtin": True, "items": items}
+    return {"id": d["id"], "name": d["name"], "source": d["source"], "license": d["license"], "builtin": True, "info": info(d, items), "items": items}
 
 
 @lru_cache(maxsize=1)
@@ -86,7 +93,7 @@ def pesticides() -> dict:
         for ad in r["ions"].split("|"):
             sh, z = ion_shift(ad)
             items.append({**base, "adduct": ad, "z": z, "mz": round((mass(f) + sh) / z, 5), "pol": 1 if ad.endswith("+") else -1})
-    return {"id": meta["id"], "name": meta["name"], "source": meta["source"], "license": meta["license"], "builtin": True, "background": False, "items": items}
+    return {"id": meta["id"], "name": meta["name"], "source": meta["source"], "license": meta["license"], "builtin": True, "background": False, "info": info(meta, items), "items": items}
 
 
 def lists() -> list[dict]:
