@@ -61,7 +61,7 @@ def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
     """`sample_default` (site) and `sample select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
     (work / "d.js").write_text(DEFAULT, encoding="utf-8")
     sized = subprocess.run(cli_argv("sample", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
-    smp = json.loads(sized.stdout)["samples"]
+    smp = json.loads(sized.stdout)["files"][0]["samples"]
     ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
     for mb in (1024, 0.0001, 0):                   # 0 is the default budget: the same answer from both
         site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
