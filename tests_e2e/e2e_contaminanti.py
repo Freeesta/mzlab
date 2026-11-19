@@ -251,7 +251,7 @@ try:
             assert "Unit resolution" not in body_txt
             assert "Unit resolution" in pg.evaluate("HELP.liste[1]") and "siloxanes" in pg.evaluate("HELP.liste[1]")
             # Results table is populated and sorted
-            assert pg.locator("#lst-tbody tr").count() > 0
+            pg.wait_for_selector("#lst-tbody tr", timeout=5000); assert pg.locator("#lst-tbody tr").count() > 0
             import re
             mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)")
             assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z, 4 decimals, never rounded
