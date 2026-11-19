@@ -87,8 +87,16 @@ fn replicates(cs: &[Sample], name: &str) -> u32 {
         .unwrap_or(0)
 }
 
+/// The codes `reference_rule` can give, in the order of its rules.
+pub const REFERENCE_RULES: [&str; 4] = [
+    "prefixRef",
+    "containsReference",
+    "containsControl",
+    "containsNoGas",
+];
+
 /// Why `name` is likely the reference: the code of the first rule it meets (`prefixRef`, `containsReference`, `containsControl`,
-/// `containsNoGas`), None when no rule does. The texts are `err.design.why.reference.<code>` in `lang/en`.
+/// `containsNoGas`), None when no rule does. The texts are `err.design.why.<code>` in `lang/en`.
 pub fn reference_rule(name: &str) -> Option<&'static str> {
     let l = name.to_lowercase();
     if l.starts_with("ref") {

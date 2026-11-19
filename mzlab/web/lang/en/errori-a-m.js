@@ -83,6 +83,7 @@ I18N.add("en", {
   "err.design.why.containsNoGas": "The first condition whose name contains “no gas” ({name}).",
   "err.design.why.containsReference": "The first condition whose name contains “reference” ({name}).",
   "err.design.why.defaultBatch": "A file with no batch in the sample table is given the default batch.",
+  "err.design.why.given": "The reference is the condition the design names ({name}).",
   "err.design.why.noReference": "No condition name starts with “ref” or contains “reference”, “control” or “no gas”.",
   "err.design.why.nothingToCompare": "There is no reference condition, or one condition only: nothing to compare against.",
   "err.design.why.prefixRef": "The first condition whose name starts with “ref” ({name}).",
