@@ -395,6 +395,8 @@ fn build_dry_run_checks_every_row_and_writes_nothing() {
         ("STD-1\tC14H14N3O5\t[M+H]+\tgone.mzML", "a missing file"),
         ("STD-1\t\t[M+H]+\tmsn.mzML", "no formula"),
         ("STD-1\tC14H14N3O5\t\tmsn.mzML", "no adduct"),
+        ("STD-1\tC14Q14\t[M+H]+\tmsn.mzML", "a bad formula"),
+        ("STD-1\tC14H14N3O5\t[M+X]+\tmsn.mzML", "a bad adduct"),
     ] {
         std::fs::write(&m, format!("{head}{row}\n")).unwrap();
         let o = run(&["msn", "lib", "build", m.to_str().unwrap(), "--dry-run"]);

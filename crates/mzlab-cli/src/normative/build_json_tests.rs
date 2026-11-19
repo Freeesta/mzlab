@@ -41,6 +41,15 @@ fn normative_build_json_carries_sources_pins_and_stale_lists() {
     assert_eq!(v.get("pins_updated").and_then(|x| x.bool()), Some(false));
 }
 
+/// The arguments as the dispatcher passes them to the contract: the command path first.
+fn full(args: &[String]) -> Vec<String> {
+    ["db", "normative"]
+        .iter()
+        .map(|s| s.to_string())
+        .chain(args.iter().cloned())
+        .collect()
+}
+
 /// A second cache that sees `net` instead of the pinned sources.
 fn other_cache(w: &Work, extra: &[&str]) -> Vec<String> {
     let mut a = w.args(extra);
@@ -59,9 +68,16 @@ fn a_stale_list_is_exit_1_with_the_document_on_stdout() {
     );
     let net = Fake::standard();
     net.drop_page("ppp?page=2");
-    let r = run_with(other_cache(&w, &["--json"]), net);
+    let args = other_cache(&w, &["--json"]);
+    // through the contract, as the binary runs it: a verdict keeps its own document on stdout
+    let r = crate::contract::finish(
+        &full(&args),
+        "db normative build",
+        run_with(args.clone(), net),
+    );
     assert_eq!(r.code, 1, "{}", r.stderr);
     let text = String::from_utf8(r.stdout).unwrap();
+    assert!(!text.contains("\"schema\":\"error/1\""), "{text}");
     assert!(text.starts_with("{\"schema\":\"normative-build/1\"") && text.ends_with("}\n"));
     let v = mzlab_core::json::parse(text.as_bytes()).unwrap();
     assert!(v.get("stale_lists").and_then(|x| x.f64()).unwrap() >= 1.0);
@@ -89,7 +105,11 @@ fn a_pin_mismatch_is_exit_3_with_one_error_document() {
             .into_bytes(),
     );
     let args = other_cache(&w, &["--json"]);
-    let o = crate::contract::finish(&args, "db normative build", run_with(args.clone(), net));
+    let o = crate::contract::finish(
+        &full(&args),
+        "db normative build",
+        run_with(args.clone(), net),
+    );
     assert_eq!(o.code, 3, "{}", o.stderr);
     let text = String::from_utf8(o.stdout).unwrap();
     assert!(
@@ -121,7 +141,11 @@ fn a_refused_download_is_exit_6() {
     }
     let w = Work::new("jsonlarge");
     let args = w.args(&["--json"]);
-    let o = crate::contract::finish(&args, "db normative build", run_with(args.clone(), TooBig));
+    let o = crate::contract::finish(
+        &full(&args),
+        "db normative build",
+        run_with(args.clone(), TooBig),
+    );
     assert_eq!(o.code, 6, "{}", o.stderr);
     let text = String::from_utf8(o.stdout).unwrap();
     assert!(

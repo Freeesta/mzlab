@@ -32,6 +32,7 @@ pub use breaks::{
     breaks_json, with_breaks, Breaks, EdgeBreak, Hypothesis, NodeBreak, SpectrumBreak,
 };
 pub use export::{esporta, from_export_request, Format};
+pub use formulas::ion_is_valid;
 pub use from_peaks::graph_from_peaks;
 pub use interpret::{
     interpreta, interpretation_json, known_losses, with_interpretation, EdgeInterp, EdgeLoss,

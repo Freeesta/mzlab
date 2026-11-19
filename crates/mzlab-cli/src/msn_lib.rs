@@ -4,10 +4,9 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::elements::parse_formula;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
-use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
+use mzlab_core::msngraph::{aggiungi, cerca, ion_is_valid, Options, OpzioniCerca};
 
 use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
@@ -172,13 +171,15 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<(String, String)> {
         if neutral.is_empty() || adduct.is_empty() {
             return Err(Error::new("err.msnlib.noIon"));
         }
-        parse_formula(neutral)?;
+        let ion = format!("{neutral} {adduct}");
+        if !ion_is_valid(&ion) {
+            return Err(Error::new("err.msnlib.badIon").with("ion", ion));
+        }
         if dry {
             // every file of the manifest must be there; no graph is made
             std::fs::metadata(folder.join(file)).map_err(io)?;
             continue;
         }
-        let ion = format!("{neutral} {adduct}");
         let none = |s: &str| (!s.is_empty()).then(|| s.to_string());
         let o = Options {
             formula: Some(ion),
