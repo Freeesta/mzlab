@@ -17,25 +17,25 @@ const FILES: [&str; 7] = [
     "trt_t005min_3.mzML",
 ];
 
-fn run(args: &[&str]) -> crate::Outcome {
+pub(super) fn run(args: &[&str]) -> crate::Outcome {
     let a: Vec<String> = args.iter().map(|s| s.to_string()).collect();
     crate::execute(&a)
 }
 
-fn ok(args: &[&str]) -> String {
+pub(super) fn ok(args: &[&str]) -> String {
     let o = run(args);
     assert_eq!(o.code, 0, "{args:?}: {}", o.stderr);
     String::from_utf8(o.stdout).unwrap()
 }
 
-fn dir(tag: &str) -> PathBuf {
+pub(super) fn dir(tag: &str) -> PathBuf {
     let d = std::env::temp_dir().join(format!("mzlab_cli_design_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d
 }
 
-fn p(d: &Path, name: &str) -> String {
+pub(super) fn p(d: &Path, name: &str) -> String {
     d.join(name).to_string_lossy().into_owned()
 }
 
@@ -47,7 +47,7 @@ fn samples_file(d: &Path) -> String {
     p(d, "samples.json")
 }
 
-fn propose(d: &Path) -> (String, String) {
+pub(super) fn propose(d: &Path) -> (String, String) {
     let s = samples_file(d);
     let out = ok(&[
         "sample",
@@ -88,12 +88,13 @@ fn propose_gives_the_engine_design_with_each_choice_and_its_evidence() {
             .unwrap()
     };
     assert_eq!(choice("reference").get("value").unwrap().str(), Some("ref"));
-    assert!(choice("reference")
-        .get("why")
-        .unwrap()
-        .str()
-        .unwrap()
-        .contains("starts with ref"));
+    let why = choice("reference");
+    assert_eq!(why.get("why").unwrap().str(), Some("prefixRef"));
+    let reason = why.get("reason").unwrap().str().unwrap();
+    assert!(
+        reason.contains("starts with") && reason.contains("ref"),
+        "{reason}"
+    );
     assert_eq!(
         choice("comparisons").get("value").unwrap().str(),
         Some("vs_reference")
@@ -188,7 +189,7 @@ fn validate_keeps_the_warnings_of_the_route_byte_for_byte() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-fn problems_of(o: &crate::Outcome) -> Vec<(String, String)> {
+pub(super) fn problems_of(o: &crate::Outcome) -> Vec<(String, String)> {
     let v = parse(&o.stdout).unwrap();
     assert_eq!(v.get("schema").unwrap().str(), Some("error/1"));
     v.get("problems")

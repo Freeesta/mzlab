@@ -58,10 +58,7 @@ fn render(a: Answer, s: &Sample, win: Option<(f64, f64)>, csv: bool, id: &str) -
     if a.schema == "uvband/1" {
         if csv {
             // the band is a document of its own (uvband/1): no rt,intensity table to print
-            return Err(Error::new("err.cli.usage").with(
-                "message",
-                "--format csv does not apply to uv:auto (uvband/1 is JSON only)",
-            ));
+            return Err(Error::new("err.cli.format.csvNotUvAuto"));
         }
         return Ok(format!(
             "{{\"schema\":\"uvband/1\",\"id\":{},{},{},{}}}",

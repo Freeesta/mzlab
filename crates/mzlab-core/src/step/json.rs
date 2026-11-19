@@ -431,3 +431,34 @@ pub fn registry_json(steps: &[Step]) -> String {
     let lines: Vec<String> = steps.iter().map(step_json).collect();
     format!("[\n{}\n]\n", lines.join(",\n"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::step::DataType;
+
+    /// Only the two JSON documents of their own name a schema, in `DataType::schema` and in the port JSON.
+    #[test]
+    fn samples_and_design_ports_name_their_schema_and_no_other_does() {
+        for t in DataType::ALL {
+            let mut o = Out::default();
+            port(&mut o, &Port::new("p", t, "t"));
+            let want = match t {
+                DataType::Samples => Some("samples/1"),
+                DataType::Design => Some("design/1"),
+                _ => None,
+            };
+            assert_eq!(t.schema(), want, "{}", t.name());
+            assert_eq!(
+                o.0.contains("\"schema\":"),
+                want.is_some(),
+                "{}: {}",
+                t.name(),
+                o.0
+            );
+            if let Some(s) = want {
+                assert!(o.0.contains(&format!("\"schema\":\"{s}\"")), "{}", o.0);
+            }
+        }
+    }
+}

@@ -4,8 +4,9 @@
 use super::{read, DesignComparison, SCHEMA};
 use crate::json::Value;
 
-/// One fault: `key` is the path of the bad member, `code` one of `missing`, `wrongType`, `badNumber`, `wrongSchema`, `badKind`, `duplicate` or
-/// `unknownCondition` (the texts are `err.design.problem.<code>` in `lang/en`).
+/// One fault: `key` is the path of the bad member, `code` one of `missing`, `wrongType`, `badNumber`, `wrongSchema`, `badKind`, `duplicate`,
+/// `unknownCondition` or `refMissing` ("all against the reference" with no reference), or the engine error key when `read` refuses
+/// (the texts are `err.design.problem.<code>` in `lang/en`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Problem {
     pub key: String,
@@ -139,9 +140,13 @@ pub fn problems(doc: &Value) -> Vec<Problem> {
     if !out.is_empty() {
         return out;
     }
-    let Ok(d) = read(doc) else {
-        push(&mut out, "$".into(), "wrongType");
-        return out;
+    // the structure is sound here, so `read` has no fault of its own left; if it ever has, its error key is the problem
+    let d = match read(doc) {
+        Ok(d) => d,
+        Err(e) => {
+            push(&mut out, "$".into(), e.key);
+            return out;
+        }
     };
     let known = |n: &str| d.conditions.iter().any(|c| c.name == n);
     for (i, c) in d.conditions.iter().enumerate() {
@@ -151,6 +156,9 @@ pub fn problems(doc: &Value) -> Vec<Problem> {
     }
     if d.reference.as_deref().is_some_and(|r| !known(r)) {
         push(&mut out, "reference".into(), "unknownCondition");
+    }
+    if d.reference.is_none() && d.comparisons.contains(&DesignComparison::VsReference) {
+        push(&mut out, "reference".into(), "refMissing");
     }
     for (i, c) in d.comparisons.iter().enumerate() {
         if let DesignComparison::Pair(a, b) = c {

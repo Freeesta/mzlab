@@ -238,8 +238,24 @@ fn uv_auto_refuses_csv() {
         "csv",
     ]);
     assert_eq!(o.code, 2, "{}", o.stderr);
-    assert!(o.stdout.is_empty() || String::from_utf8_lossy(&o.stdout).contains("error/1"));
     assert!(o.stderr.contains("uv:auto"), "{}", o.stderr);
+    let j = run(&[
+        "trace",
+        "chrom",
+        &f.to_string_lossy(),
+        "--id",
+        "uv:auto",
+        "--format",
+        "csv",
+        "--json",
+    ]);
+    assert_eq!(j.code, 2, "{}", j.stderr);
+    let out = String::from_utf8_lossy(&j.stdout);
+    assert!(out.starts_with("{\"schema\":\"error/1\""), "{out}");
+    assert!(
+        out.contains("err.cli.format.csvNotUvAuto") && out.contains("\"code\":2"),
+        "{out}"
+    );
 }
 
 fn b64(v: &[f64]) -> String {

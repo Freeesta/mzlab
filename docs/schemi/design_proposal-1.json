@@ -13,11 +13,12 @@
    "description": "conditions, reference, comparisons and batches, in that order",
    "items": {
     "type": "object",
-    "required": ["choice", "value", "why"],
+    "required": ["choice", "value", "why", "reason"],
     "properties": {
      "choice": {"enum": ["conditions", "reference", "comparisons", "batches"]},
      "value": {"description": "conditions: the names; reference: a name or null; comparisons: vs_reference or none; batches: the default batch"},
-     "why": {"type": "string"}
+     "why": {"enum": ["series", "prefixRef", "containsReference", "containsControl", "containsNoGas", "noReference", "nothingToCompare", "allAgainstReference", "defaultBatch"], "description": "the stable code of the reason"},
+     "reason": {"type": "string", "description": "the sentence of that code (lang/en err.design.why.<code>)"}
     }
    }
   },

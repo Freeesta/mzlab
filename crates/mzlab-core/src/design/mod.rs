@@ -87,17 +87,18 @@ fn replicates(cs: &[Sample], name: &str) -> u32 {
         .unwrap_or(0)
 }
 
-/// Why `name` is likely the reference: the first rule it meets (`ref…`, `reference`, `control`, `nogas`), None when no rule does.
+/// Why `name` is likely the reference: the code of the first rule it meets (`prefixRef`, `containsReference`, `containsControl`,
+/// `containsNoGas`), None when no rule does. The texts are `err.design.why.reference.<code>` in `lang/en`.
 pub fn reference_rule(name: &str) -> Option<&'static str> {
     let l = name.to_lowercase();
     if l.starts_with("ref") {
-        Some("starts with ref")
+        Some("prefixRef")
     } else if l.contains("reference") {
-        Some("contains reference")
+        Some("containsReference")
     } else if l.contains("control") {
-        Some("contains control")
+        Some("containsControl")
     } else if l.replace(['_', '-', ' '], "").contains("nogas") {
-        Some("contains no gas")
+        Some("containsNoGas")
     } else {
         None
     }
