@@ -1,13 +1,13 @@
 //! `samples::relink`: files renamed, moved and replaced are found by SHA-256; by name only when a SHA-256 is unknown, and flagged.
 
-use mzlab_core::samples::{self, proponi, relink, Sample};
+use mzlab_core::samples::{self, propose, relink, Sample};
 
 fn series(files: &[(&str, &str)]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = files
         .iter()
         .map(|(n, h)| (n.to_string(), h.to_string(), String::new()))
         .collect();
-    proponi(&v)
+    propose(&v)
 }
 
 fn cand(v: &[(&str, &str)]) -> Vec<(String, String)> {
@@ -94,11 +94,11 @@ fn copies_ambiguous_names_and_order() {
 fn the_route_answers_in_json() {
     let cs = series(&[("a_t5.mzML", "aa")]);
     let input = format!(
-        "{{\"campioni\":{},\"file\":[{{\"percorso\":\"/n/z.mzML\",\"sha256\":\"aa\"}}]}}",
+        "{{\"samples\":{},\"file\":[{{\"path\":\"/n/z.mzML\",\"sha256\":\"aa\"}}]}}",
         samples::to_json(&cs)
     );
     assert_eq!(
-        samples::route("ricollega", &input).unwrap(),
-        "{\"abbinati\":[{\"indice\":0,\"per_nome\":false,\"percorso\":\"/n/z.mzML\"}]}"
+        samples::route("relink", &input).unwrap(),
+        "{\"matches\":[{\"index\":0,\"by_name\":false,\"path\":\"/n/z.mzML\"}]}"
     );
 }

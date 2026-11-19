@@ -1,9 +1,9 @@
-//! What a file says about itself, put into `campioni/3` (`dal_file`): polarity, date and time of the acquisition, instrument model, method name,
+//! What a file says about itself, put into `samples/1` (`from_file`): polarity, date and time of the acquisition, instrument model, method name,
 //! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`summary_from_scans`,
 //! the `.mzidx`) and from its `metodo/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
-//! the replaced values are reported (`discordanze`).
+//! the replaced values are reported (`mismatches`).
 
-use super::{table_from_value, to_json3, FileData, Sample, Table};
+use super::{table_from_value, table_to_json, FileData, Sample, Table};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::{parse, Out, Value};
@@ -111,9 +111,9 @@ fn method_mz(m: &Value) -> Option<(f64, f64)> {
 
 /// The summary of one entry of the binding: what it says outright wins over what its `metodo_json` (a `metodo/1`) gives.
 fn summary(e: &Value) -> FileSummary {
-    let m = e.get("metodo_json");
+    let m = e.get("method_json");
     let pols: Vec<i8> = e
-        .get("polarita")
+        .get("polarity")
         .map(|a| a.arr())
         .unwrap_or_default()
         .iter()
@@ -126,21 +126,21 @@ fn summary(e: &Value) -> FileSummary {
         polarity: first.filter(|f| pols.iter().all(|p| p == f)),
         rt: pair(e, "rt_min", "rt_max"),
         mz: pair(e, "mz_min", "mz_max").or_else(|| m.and_then(method_mz)),
-        scans: e.get("scansioni").and_then(|x| x.f64()).map(|x| x as u32),
-        acquired: text(e, &["acquisito"])
+        scans: e.get("scans").and_then(|x| x.f64()).map(|x| x as u32),
+        acquired: text(e, &["acquired"])
             .or_else(|| m.and_then(|m| text(m, &["origine", "file_creato"])))
             .and_then(|t| iso(&t)),
-        instrument: text(e, &["modello"])
+        instrument: text(e, &["instrument"])
             .or_else(|| m.and_then(|m| text(m, &["strumento", "modello"])))
             .unwrap_or_default(),
-        method: text(e, &["metodo"])
+        method: text(e, &["method"])
             .or_else(|| m.and_then(|m| text(m, &["campione", "metodo_file"])))
             .unwrap_or_default(),
     }
 }
 
 /// A change of a value the names had proposed.
-struct Discordanza {
+struct Mismatch {
     index: usize,
     field: &'static str,
     before: String,
@@ -163,14 +163,14 @@ pub fn apply(
     };
     if r.polarity.is_some() {
         note(
-            "polarita",
+            "polarity",
             c.polarity.map(|p| p.to_string()),
             &r.polarity.map(|p| p.to_string()),
         );
         c.polarity = r.polarity;
     }
     if r.acquired.is_some() {
-        note("acquisito", c.acquired.clone(), &r.acquired);
+        note("acquired", c.acquired.clone(), &r.acquired);
         c.acquired = r.acquired.clone();
     }
     c.file_data = Some(FileData {
@@ -185,23 +185,23 @@ pub fn apply(
 
 fn find(t: &Table, e: &Value) -> Option<usize> {
     let sha = text(e, &["sha256"]);
-    let name = text(e, &["nome"]);
-    t.campioni.iter().position(|c| match (&sha, &name) {
+    let name = text(e, &["name"]);
+    t.samples.iter().position(|c| match (&sha, &name) {
         (Some(s), _) if !c.sha256.is_empty() => c.sha256 == *s,
         (_, Some(n)) => c.file == *n,
         _ => false,
     })
 }
 
-/// The binding: `{"campioni": <campioni/2 or /3>, "file":[{"nome"?,"sha256"?,"polarita":[..],"rt_min","rt_max","mz_min","mz_max","scansioni","acquisito"?,
-/// "modello"?,"metodo"?,"metodo_json"?}]}` → `{"campioni":<campioni/3>,"discordanze":[{"indice","campo","prima","dopo"}],"senza_campione":[index of the entries]}`.
+/// The binding: `{"samples": <samples/1 or /2>, "file":[{"name"?,"sha256"?,"polarity":[..],"rt_min","rt_max","mz_min","mz_max","scans","acquired"?,
+/// "instrument"?,"method"?,"method_json"?}]}` → `{"samples":<samples/1>,"mismatches":[{"index","field","before","after"}],"unmatched":[index of the entries]}`.
 pub fn from_file(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let mut t = table_from_value(
-        v.get("campioni")
-            .ok_or_else(|| Error::new("error.badCampioni"))?,
+        v.get("samples")
+            .ok_or_else(|| Error::new("error.badSamples"))?,
     )?;
-    let mut disc: Vec<Discordanza> = Vec::new();
+    let mut disc: Vec<Mismatch> = Vec::new();
     let mut missing = Vec::new();
     for (n, e) in v
         .get("file")
@@ -214,11 +214,11 @@ pub fn from_file(input: &str) -> Result<String> {
             missing.push(n);
             continue;
         };
-        if t.campioni[i].sha256.is_empty() {
-            t.campioni[i].sha256 = text(e, &["sha256"]).unwrap_or_default();
+        if t.samples[i].sha256.is_empty() {
+            t.samples[i].sha256 = text(e, &["sha256"]).unwrap_or_default();
         }
-        for (index, field, before, after) in apply(&mut t.campioni[i], i, &summary(e)) {
-            disc.push(Discordanza {
+        for (index, field, before, after) in apply(&mut t.samples[i], i, &summary(e)) {
+            disc.push(Mismatch {
                 index,
                 field,
                 before,
@@ -227,19 +227,19 @@ pub fn from_file(input: &str) -> Result<String> {
         }
     }
     let mut j = Out::default();
-    j.raw("{\"campioni\":")
-        .raw(&to_json3(&t))
-        .raw(",\"discordanze\":[");
+    j.raw("{\"samples\":")
+        .raw(&table_to_json(&t))
+        .raw(",\"mismatches\":[");
     for (k, d) in disc.iter().enumerate() {
-        j.raw(if k > 0 { ",{\"campo\":" } else { "{\"campo\":" })
+        j.raw(if k > 0 { ",{\"field\":" } else { "{\"field\":" })
             .str(d.field);
-        j.raw(",\"dopo\":")
+        j.raw(",\"after\":")
             .str(&d.after)
-            .raw(",\"indice\":")
+            .raw(",\"index\":")
             .int(d.index as i64);
-        j.raw(",\"prima\":").str(&d.before).raw("}");
+        j.raw(",\"before\":").str(&d.before).raw("}");
     }
-    j.raw("],\"senza_campione\":[");
+    j.raw("],\"unmatched\":[");
     for (k, n) in missing.iter().enumerate() {
         j.raw(if k > 0 { "," } else { "" }).int(*n as i64);
     }

@@ -171,14 +171,14 @@ pub fn proposals(names: &[&str]) -> Vec<Value> {
         .iter()
         .map(|n| format!("{{\"name\":{}}}", quoted(n)))
         .collect();
-    let out = samples::route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
-    j(&out).get("campioni").unwrap().arr().to_vec()
+    let out = samples::route("propose", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    j(&out).get("samples").unwrap().arr().to_vec()
 }
 
 pub fn sample_text(c: &Value, order: usize) -> String {
     format!(
         "{{\"tipo\":{},\"ordine_iniezione\":{order}}}",
-        quoted(c.get("tipo").unwrap().str().unwrap())
+        quoted(c.get("kind").unwrap().str().unwrap())
     )
 }
 

@@ -13,7 +13,7 @@ The site runs some of the steps with the web executor (`F.runners.web`, "This br
 ## Table
 | Tabui function | mzFlow step / model | Status | What is needed |
 |---|---|---|---|
-| Files and sample roles (1 · Files, times, blanks) | `convert.mzml`, `index.mzidx`, input `samples` (`campioni/2`) | Covered and executable (app, CLI); `import.raw` recognises the set with the registry reader and passes it on unchanged | Site: web executor. The `table.filter` step that uses `samples` now runs (`flow_table.rs`) |
+| Files and sample roles (1 · Files, times, blanks) | `convert.mzml`, `index.mzidx`, input `samples` (`samples/1`) | Covered and executable (app, CLI); `import.raw` recognises the set with the registry reader and passes it on unchanged | Site: web executor. The `table.filter` step that uses `samples` now runs (`flow_table.rs`) |
 | Parent fields (name, neutral formula, SMILES) | Input `parent` of `tp.generate`, `tp.position`, `structure.*` | `tp.generate` executable (formula, SMILES or JSON); the other steps not | Register the Tabui steps in the CLI and write the executors |
 | Search by name (`composti.csv`, PubChem) | No step | Missing (it is interface) | A field in the parent inspector; the engine does not change |
 | Structure / SMILES / Draw | `structure.draw`, `structure.render` | `draw`: not executable by nature (editor, `native: false`); `render`: executable (`drawings/1` from `sites/1` and parent) | For `draw` a file input is needed |
@@ -43,7 +43,7 @@ The site runs some of the steps with the web executor (`F.runners.web`, "This br
 ## Export
 `export.table_csv` and `export.mztab` call `table_file`, the same function the page asks the table `.wasm` for (`export_table`): same bytes for columns, order, names and number format, proved by `flow_bentazone_export_tests.rs` on a table detected from the plan (positive and negative) and by `flow_export_tests.rs`. The polarity that `table_file` writes (mzTab-M, MS2) is decided by the files when the plan does not write it: ``export_job` reads it from the indexes of the table chain (the table recipe, like the page's, does not write it).
 
-Known differences: samples go from `campioni/2` to `campioni/1` (`flow_table::samples_text`, group = role for non-samples); the export of a `table.filter` view writes the kept rows (`origine` of the view); the `tp.link@2` table (TP status columns) is not an input of `export.table_csv`.
+Known differences: the table reads the `samples/1` as it is (`flow_table::samples_text`; its group is the role for non-samples, derived when read); the export of a `table.filter` view writes the kept rows (`origine` of the view); the `tp.link@2` table (TP status columns) is not an input of `export.table_csv`.
 
 ## Bentazone model
 The "Bentazone / transformation products" model (palette, under "More templates"): the whole TP chain. `templatePlan` connects `index` to `tp.generate` (polarity and resolution are decided by the files) and `tp.network` to the rows and samples of `tp.link` (a `tp.filter` view is not a table); test: `tests/flow_modelli_partenza.js` and `flow_bentazone_tests.rs` (same wiring, executed).

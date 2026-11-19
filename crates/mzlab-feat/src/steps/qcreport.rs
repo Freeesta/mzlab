@@ -12,7 +12,7 @@ pub fn run_order() -> Step {
     };
     Step {
         ins: vec![
-            Port::new("samples", DataType::Samples, "Sample table: role, injection order, batch (campioni/2 or /3)"),
+            Port::new("samples", DataType::Samples, "Sample table: role, injection order, batch (samples/1)"),
             optional(Port::new("design", DataType::Design, "Batches of the files; without it the batch of the sample table, else one batch")),
         ],
         outs: vec![Port::new("runorder", DataType::Qc, "Counts and warnings of the injection sequence (runorder/1)")],
@@ -38,7 +38,7 @@ pub fn run_order() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badCampioni", "error.badDisegno"],
+        errors: vec!["error.badSamples", "error.badDesign"],
         ..Step::core(
             "qc.run_order",
             "Check run order",

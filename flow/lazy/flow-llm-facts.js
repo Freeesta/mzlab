@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (profile «ricerca»): the facts of the open files that need no model. It collects from the engine routes (the same in the site and in the app: `api/session`, `api/scan_stats`,
-// `api/mrm`, `api/metodo`, `api/campioni/proponi`) the sources of `ispezione/1`, asks Rust (llm/ worker, no conversation, nothing leaves the site) for the inspection and the proposals
+// `api/mrm`, `api/metodo`, `api/samples/propose`) the sources of `ispezione/1`, asks Rust (llm/ worker, no conversation, nothing leaves the site) for the inspection and the proposals
 // of the parameters, and shows them as the «Files» card with «Apply»/«Discard» (one entry of S.undo each). It also gives the readers of the assistant their inputs (`readerInput`) and the
 // charts their sources (`F.chartSources`). Loaded by flow-shell.js in the profile «ricerca», with or without the assistant. English only.
 (() => {
@@ -48,7 +48,7 @@
   const collect = async hide => {
     const files = await openFiles();
     let samples = /** @type {any[]} */ ([]);
-    try { samples = (await J("api/campioni/proponi", { files: files.map(([name]) => ({ name })) })).campioni || []; } catch (_) { /* no proposal: every file is a sample */ }
+    try { samples = (await J("api/samples/propose", { files: files.map(([name]) => ({ name })) })).samples || []; } catch (_) { /* no proposal: every file is a sample */ }
     const out = [];
     for (let i = 0; i < files.length; i++) {
       const [name, parts] = files[i], k = parts[0].k;
@@ -58,7 +58,7 @@
         if (srm) o.mrm = (await J("api/mrm?k=" + srm.k)).files[0].transitions;
         const doc = ((await J("api/metodo?k=" + k)) || {}).metodo;
         if (doc) o.method = doc;
-        o.sample = { tipo: (samples[i] && samples[i].tipo) || "sample", ordine_iniezione: i + 1 };
+        o.sample = { tipo: (samples[i] && samples[i].kind) || "sample", ordine_iniezione: i + 1 };
         out.push(o);
       } catch (e) { out.push({ name, error: { error_key: (/** @type {any} */ (e) && /** @type {any} */ (e).error_key) || "err.file.unreadable" } }); }
     }

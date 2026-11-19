@@ -413,7 +413,7 @@ const OPS = {
   },
   async align(m) {
     const f = await openAll(m.paths), out = memSink();
-    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, m.weak ? m.weak.map(w => (w ? new Uint8Array(w) : null)) : undefined, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }
+    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.samples || undefined, m.weak ? m.weak.map(w => (w ? new Uint8Array(w) : null)) : undefined, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async hypotheses(m) {
     if (hypo) { hypo.free(); hypo = null; }
@@ -428,7 +428,7 @@ const OPS = {
     if (hypo) hypo.free();
     hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
     const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
-    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined);
+    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.samples || undefined);
     return { bytes: out.bytes() };
   },
   async ms2file(m) {

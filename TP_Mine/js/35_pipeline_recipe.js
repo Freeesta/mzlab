@@ -25,8 +25,8 @@
     };
   }
 
-  /** the operation «campioni» of the log (next to «feature_pipeline»): the canonical campioni/2 of the run and its SHA-256, both of the Rust (finder-ruoli.js `canonical`) */
-  function campioniOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, campioni: d.campioni, sha256: c.sha256 }; }
+  /** the operation «samples» of the log (next to «feature_pipeline»): the canonical samples/1 of the run and its SHA-256, both of the Rust (finder-ruoli.js `canonical`) */
+  function campioniOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, samples: d.samples, sha256: c.sha256 }; }
 
   /** the last operation feature_pipeline of the log that can be re-applied (null when none) */
   function lastOp(ops, check) {

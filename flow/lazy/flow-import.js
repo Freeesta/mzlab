@@ -6,8 +6,8 @@
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the columns a table may carry, by the names a lab sheet is likely to use */
   const COLS = /** @type {Record<string, RegExp>} */ ({
-    file: /^(file|filename|file name|name|sample name|sample)$/i, tipo: /^(role|type|tipo|kind)$/i, tempo_min: /^(time|time \(min\)|time_min|minutes|min|tempo|t)$/i,
-    serie: /^(series|serie|group|condition)$/i, replica: /^(replicate|replica|rep)$/i,
+    file: /^(file|filename|file name|name|sample name|sample)$/i, kind: /^(role|type|kind)$/i, time_min: /^(time|time \(min\)|time_min|minutes|min|t)$/i,
+    series: /^(series|group|condition)$/i, replicate: /^(replicate|rep)$/i,
   });
 
   /** the cells of a delimited text: tab, semicolon or comma (the one most frequent in the first line), quotes with doubled quotes inside @param {string} text @returns {string[][]} */
@@ -35,10 +35,10 @@
     if (at.file < 0) return { rows: [], unknown: [], error: "The table needs a column named File (or Name)." };
     const unknown = /** @type {string[]} */ ([]), rows = t.slice(1).map(r => {
       const o = /** @type {Record<string, any>} */ ({ file: (r[at.file] || "").trim() });
-      if (at.tipo >= 0 && (r[at.tipo] || "").trim()) { const k = r[at.tipo].trim().toLowerCase(); if (kinds.includes(k)) o.tipo = k; else if (!unknown.includes(k)) unknown.push(k); }
-      if (at.tempo_min >= 0 && (r[at.tempo_min] || "").trim() !== "" && Number.isFinite(Number(r[at.tempo_min]))) o.tempo_min = Number(r[at.tempo_min]);
-      if (at.serie >= 0) o.serie = (r[at.serie] || "").trim();
-      if (at.replica >= 0 && Number.isInteger(Number(r[at.replica])) && Number(r[at.replica]) > 0) o.replica = Number(r[at.replica]);
+      if (at.kind >= 0 && (r[at.kind] || "").trim()) { const k = r[at.kind].trim().toLowerCase(); if (kinds.includes(k)) o.kind = k; else if (!unknown.includes(k)) unknown.push(k); }
+      if (at.time_min >= 0 && (r[at.time_min] || "").trim() !== "" && Number.isFinite(Number(r[at.time_min]))) o.time_min = Number(r[at.time_min]);
+      if (at.series >= 0) o.series = (r[at.series] || "").trim();
+      if (at.replicate >= 0 && Number.isInteger(Number(r[at.replicate])) && Number(r[at.replicate]) > 0) o.replicate = Number(r[at.replicate]);
       return o;
     }).filter(o => o.file);
     return { rows, unknown, error: rows.length ? "" : "The table has no rows." };
@@ -49,13 +49,13 @@
   /** the metadata of the files open in Data with the patches of a table laid over them; files the table names but Data does not have are added from the table alone
    * @param {any} base the current document @param {Record<string, any>[]} patches @returns {any} */
   const applyMetadata = (base, patches) => {
-    const rows = /** @type {any[]} */ ([...(base.campioni || [])]);
+    const rows = /** @type {any[]} */ ([...(base.samples || [])]);
     patches.forEach(p => {
       const at = rows.findIndex(r => r.file === p.file), { file, ...rest } = p;
-      if (at >= 0) rows[at] = { ...rows[at], ...rest, ...("tempo_min" in rest ? { tempo: rest.tempo_min, tempo_confermato: true } : {}) };
-      else rows.push({ ...F.sampleBlank(rows.length), file, ...rest, ...("tempo_min" in rest ? { tempo: rest.tempo_min, tempo_confermato: true } : {}) });
+      if (at >= 0) rows[at] = { ...rows[at], ...rest, ...("time_min" in rest ? { time: rest.time_min, time_confirmed: true } : {}) };
+      else rows.push({ ...F.sampleBlank(rows.length), file, ...rest, ...("time_min" in rest ? { time: rest.time_min, time_confirmed: true } : {}) });
     });
-    return { ...base, campioni: rows };
+    return { ...base, samples: rows };
   };
   F.applyMetadata = applyMetadata;
 

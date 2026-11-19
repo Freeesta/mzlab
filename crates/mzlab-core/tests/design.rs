@@ -1,19 +1,19 @@
-//! `disegno/1`: the proposal from `campioni/2`, canonical bytes for any order of the files, the findings of `valida` on five cases and the schema.
+//! `design/1`: the proposal from `samples/1`, canonical bytes for any order of the files, the findings of `validate` on five cases and the schema.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-use mzlab_core::drawing::{self, digest, from_json, to_json, validate, Confronto, Design};
-use mzlab_core::samples::{proponi, Sample};
+use mzlab_core::design::{self, digest, from_json, to_json, validate, Design, DesignComparison};
+use mzlab_core::samples::{propose, Sample};
 use serde_json::Value;
 
-/// Files with a name, a SHA-256 made from the position and the roles `proponi` guesses.
+/// Files with a name, a SHA-256 made from the position and the roles `propose` guesses.
 fn series(names: &[&str]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = names
         .iter()
         .enumerate()
         .map(|(i, n)| (n.to_string(), format!("{i:02x}"), String::new()))
         .collect();
-    let mut cs = proponi(&v);
+    let mut cs = propose(&v);
     for c in &mut cs {
         c.time_confirmed = true;
     }
@@ -58,38 +58,38 @@ fn proposal_from_the_names() {
         "gas_t005_b",
         "QC_1",
     ]);
-    let d = drawing::propose(&cs);
+    let d = design::propose(&cs);
     let names: Vec<&str> = d.conditions.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, ["ref", "gas"]);
     assert_eq!(d.reference.as_deref(), Some("ref"));
-    assert_eq!(d.comparisons, [Confronto::VsReference]);
+    assert_eq!(d.comparisons, [DesignComparison::VsReference]);
     assert_eq!(d.conditions[0].replicates, 2);
     assert!(d.batches.iter().all(|l| l.batch == "1") && d.batches.len() == cs.len());
     // one series without a name: one condition called ""
-    let one = drawing::propose(&series(&["a_t5", "a_t10"]));
+    let one = design::propose(&series(&["a_t5", "a_t10"]));
     assert_eq!((one.conditions.len(), one.reference.is_none()), (1, true));
 }
 
 #[test]
 fn canonical_for_every_permutation_of_the_files() {
     let cs = series(&FULL);
-    let want = to_json(&drawing::propose(&cs));
-    let sha = digest(&drawing::propose(&cs));
+    let want = to_json(&design::propose(&cs));
+    let sha = digest(&design::propose(&cs));
     assert_eq!(sha.len(), 64);
     for k in 1..cs.len() {
         let mut p = cs.clone();
         p.rotate_left(k);
-        assert_eq!(to_json(&drawing::propose(&p)), want, "rotation {k}");
+        assert_eq!(to_json(&design::propose(&p)), want, "rotation {k}");
         p.reverse();
-        assert_eq!(to_json(&drawing::propose(&p)), want, "reversed {k}");
+        assert_eq!(to_json(&design::propose(&p)), want, "reversed {k}");
     }
     let back = from_json(want.as_bytes()).unwrap();
     assert_eq!(to_json(&back), want);
-    assert_eq!(drawing::route("canonico", &want).unwrap(), want);
-    assert_eq!(drawing::route("digest", &want).unwrap(), sha);
+    assert_eq!(design::route("canonical", &want).unwrap(), want);
+    assert_eq!(design::route("digest", &want).unwrap(), sha);
     assert_eq!(
-        drawing::route("nope", "{}").unwrap_err().key,
-        "error.badDisegno"
+        design::route("nope", "{}").unwrap_err().key,
+        "error.badDesign"
     );
 }
 
@@ -97,7 +97,7 @@ fn canonical_for_every_permutation_of_the_files() {
 fn five_cases_of_findings() {
     // 1: complete, nothing to say
     let cs = series(&FULL);
-    let d = drawing::propose(&cs);
+    let d = design::propose(&cs);
     assert_eq!(codes(&d, &cs), []);
     // 2: two replicates
     let cs2 = series(&[
@@ -110,7 +110,7 @@ fn five_cases_of_findings() {
         "QC_2",
     ]);
     assert_eq!(
-        codes(&drawing::propose(&cs2), &cs2),
+        codes(&design::propose(&cs2), &cs2),
         code_list(&[("fewReplicates", "ref")])
     );
     // 3: no QC at the end of the batch
@@ -124,11 +124,11 @@ fn five_cases_of_findings() {
         "gas_t005_c",
     ]);
     assert_eq!(
-        codes(&drawing::propose(&cs3), &cs3),
+        codes(&design::propose(&cs3), &cs3),
         code_list(&[("batchNoQc", "1")])
     );
     // 4: a second batch without QC
-    let mut d4 = drawing::propose(&cs);
+    let mut d4 = design::propose(&cs);
     for l in d4.batches.iter_mut().filter(|l| l.file.starts_with("gas")) {
         l.batch = "2".into();
     }
@@ -136,10 +136,10 @@ fn five_cases_of_findings() {
     d4.comparisons.clear();
     assert_eq!(codes(&d4, &cs), code_list(&[("batchNoQc", "2")]));
     // 5: comparisons with an empty condition and without reference
-    let mut d5 = drawing::propose(&cs);
-    d5.comparisons = vec![Confronto::Pair("ref".into(), "ghost".into())];
+    let mut d5 = design::propose(&cs);
+    d5.comparisons = vec![DesignComparison::Pair("ref".into(), "ghost".into())];
     assert_eq!(codes(&d5, &cs), code_list(&[("emptyComparison", "ghost")]));
-    d5.comparisons = vec![Confronto::VsReference];
+    d5.comparisons = vec![DesignComparison::VsReference];
     d5.reference = None;
     assert_eq!(codes(&d5, &cs), code_list(&[("refMissing", "")]));
     d5.reference = Some("ghost".into());
@@ -149,26 +149,26 @@ fn five_cases_of_findings() {
 #[test]
 fn route_valida_and_schema() {
     let cs = series(&FULL);
-    let d = drawing::propose(&cs);
+    let d = design::propose(&cs);
     let camp = mzlab_core::samples::to_json(&cs);
     let j = to_json(&d);
-    let out = drawing::route(
-        "valida",
-        &format!("{{\"campioni\":{camp},\"disegno\":{j}}}"),
+    let out = design::route(
+        "validate",
+        &format!("{{\"samples\":{camp},\"design\":{j}}}"),
     )
     .unwrap();
-    assert_eq!(out, "{\"avvisi\":[],\"bloccante\":false}");
+    assert_eq!(out, "{\"warnings\":[],\"blocking\":false}");
     let schema: Value = serde_json::from_str(
         &std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../docs/schemi/disegno-1.json"
+            "/../../docs/schemi/design-1.json"
         ))
         .unwrap(),
     )
     .unwrap();
     let mut doc: Value = serde_json::from_str(&j).unwrap();
-    doc["fattori"] = serde_json::json!([{"nome": "gas", "valori": ["air", "N2"]}]);
-    doc["condizioni"][1]["livelli"] = serde_json::json!({"gas": "N2"});
+    doc["factors"] = serde_json::json!([{"name": "gas", "values": ["air", "N2"]}]);
+    doc["conditions"][1]["levels"] = serde_json::json!({"gas": "N2"});
     assert!(fits(&doc, &schema));
     let again = from_json(doc.to_string().as_bytes()).unwrap();
     assert_eq!(again.factors[0].values, ["air", "N2"]);
@@ -177,15 +177,15 @@ fn route_valida_and_schema() {
         [("gas".to_string(), "N2".to_string())]
     );
     let mut bad = doc.clone();
-    bad["confronti"][0]["tipo"] = "all".into();
+    bad["comparisons"][0]["kind"] = "all".into();
     assert!(!fits(&bad, &schema));
     assert!(from_json(bad.to_string().as_bytes()).is_err());
     let mut bad = doc.clone();
-    bad["schema"] = "disegno/2".into();
+    bad["schema"] = "design/2".into();
     assert!(from_json(bad.to_string().as_bytes()).is_err());
 }
 
-/// The few keywords of JSON Schema that `docs/schemi/disegno-1.json` uses.
+/// The few keywords of JSON Schema that `docs/schemi/design-1.json` uses.
 fn fits(v: &Value, s: &Value) -> bool {
     let ty = |t: &str| match t {
         "object" => v.is_object(),
@@ -230,4 +230,48 @@ fn fits(v: &Value, s: &Value) -> bool {
             .is_none_or(|i| v.as_array().unwrap().iter().all(|x| fits(x, i))),
     ];
     checks.iter().all(|c| *c)
+}
+
+/// The keys of a JSON document, at any depth.
+fn keys_of(v: &serde_json::Value, out: &mut std::collections::BTreeSet<String>) {
+    match v {
+        serde_json::Value::Object(o) => {
+            for (k, x) in o {
+                out.insert(k.clone());
+                keys_of(x, out);
+            }
+        }
+        serde_json::Value::Array(a) => a.iter().for_each(|x| keys_of(x, out)),
+        _ => {}
+    }
+}
+
+/// A `design/1` round trip is stable and has only the keys `design-1.json` declares (the saved formats are English only); the factor levels of a
+/// condition are free names and are not keys of the format.
+#[test]
+fn the_round_trip_has_only_the_keys_of_the_english_schema() {
+    let cs = series(&["a_t5", "a_t10", "b_t5", "b_t10"]);
+    let json = to_json(&design::propose(&cs));
+    let back = to_json(&from_json(json.as_bytes()).unwrap());
+    assert_eq!(json, back);
+    assert!(json.starts_with("{\"schema\":\"design/1\","), "{json}");
+    let schema: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../docs/schemi/design-1.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut declared = std::collections::BTreeSet::new();
+    keys_of(&schema["properties"], &mut declared);
+    declared.insert("schema".into());
+    let mut got = std::collections::BTreeSet::new();
+    let mut doc: serde_json::Value = serde_json::from_str(&json).unwrap();
+    for c in doc["conditions"].as_array_mut().unwrap() {
+        c["levels"] = serde_json::Value::Null;
+    }
+    keys_of(&doc, &mut got);
+    let extra: Vec<_> = got.iter().filter(|k| !declared.contains(*k)).collect();
+    assert!(extra.is_empty(), "keys outside the schema: {extra:?}");
 }

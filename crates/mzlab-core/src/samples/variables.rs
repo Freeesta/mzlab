@@ -1,5 +1,5 @@
-//! `variabili` and `nome_gruppo`: how the NAMES of a set of files split them (matrix, condition, time, role, concentration, replicate), ranked as grouping keys
-//! (`nomivar/1`, `docs/agenti/samples.md`). Role, time and concentration come from the parser of `names.rs`; the pieces are cut by `variable_classes.rs`.
+//! `variables` and `group_name`: how the NAMES of a set of files split them (matrix, condition, time, role, concentration, replicate), ranked as grouping keys
+//! (`sample-vars/1`, `docs/agenti/samples.md`). Role, time and concentration come from the parser of `names.rs`; the pieces are cut by `variable_classes.rs`.
 //! The same answer for every order of the files (the order only decides the order of `files[]` and the indices that follow it).
 
 use super::names::role_and_time;
@@ -15,7 +15,7 @@ use crate::json::{fmt_g, parse, Out, Value};
 use crate::project::guess_conc;
 use std::collections::BTreeMap;
 
-pub const VARNAME_SCHEMA: &str = "nomivar/1";
+pub const VARNAME_SCHEMA: &str = "sample-vars/1";
 const MAX_NAMES: usize = 5000;
 const MAX_LEN: usize = 256;
 /// The automatic variables in the order they are listed when their score is good.
@@ -57,13 +57,13 @@ pub(super) struct Var {
 }
 
 fn bad(op: &str) -> Error {
-    Error::new("error.badCampioni").with("op", op)
+    Error::new("error.badSamples").with("op", op)
 }
 
 pub(super) fn names_of(v: &Value, key: &str, op: &str) -> Result<Vec<String>> {
     let list = v.get(key).map(|a| a.arr()).unwrap_or_default();
     if list.len() > MAX_NAMES {
-        return Err(Error::new("error.badCampioni").with("limite", MAX_NAMES));
+        return Err(Error::new("error.badSamples").with("limit", MAX_NAMES));
     }
     list.iter()
         .map(|f| {
@@ -74,7 +74,7 @@ pub(super) fn names_of(v: &Value, key: &str, op: &str) -> Result<Vec<String>> {
             };
             let s = s.ok_or_else(|| bad(op))?;
             if s.chars().count() > MAX_LEN {
-                return Err(Error::new("error.badCampioni").with("limite", MAX_LEN));
+                return Err(Error::new("error.badSamples").with("limit", MAX_LEN));
             }
             Ok(s.to_string())
         })
@@ -407,16 +407,20 @@ fn variables(fs: &[Fl]) -> Vec<Var> {
     all
 }
 
-/// `campioni(op="variabili", {"files":[{"name"}], "manuale"?: {"pos", "sep"?} | {"has": [terms], "substring"?}})` → `nomivar/1`.
-pub(super) fn route_variabili(input: &str) -> Result<String> {
+/// `samples(op="variables", {"files":[{"name"}], "manual"?: {"pos", "sep"?} | {"has": [terms], "substring"?}})` → `sample-vars/1`.
+pub(super) fn route_variables(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
-    let names = names_of(&v, "files", "variabili")?;
+    let names = names_of(&v, "files", "variables")?;
     let mut fs: Vec<Fl> = names.iter().map(|n| read_file(n)).collect();
     classify(&mut fs);
     let n = fs.len();
     let folders = fs.iter().any(|g| g.dir != fs[0].dir);
     let mut o = Out::default();
-    o.raw("{\"comune\":").str(&common(&fs)).raw(",\"files\":[");
+    o.raw("{\"schema\":")
+        .str(VARNAME_SCHEMA)
+        .raw(",\"common\":")
+        .str(&common(&fs))
+        .raw(",\"files\":[");
     for (i, (f, name)) in fs.iter().zip(&names).enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"name\":")
@@ -435,23 +439,23 @@ pub(super) fn route_variabili(input: &str) -> Result<String> {
             .chain(f.toks.iter().map(|t| (t.a, t.b, t.class)));
         for (j, (a, b, c)) in all.enumerate() {
             o.raw(if j > 0 { "," } else { "" })
-                .raw("{\"classe\":")
+                .raw("{\"class\":")
                 .str(c);
-            o.raw(",\"fine\":")
+            o.raw(",\"end\":")
                 .int(b as i64)
-                .raw(",\"inizio\":")
+                .raw(",\"start\":")
                 .int(a as i64);
-            o.raw(",\"testo\":").str(&text(&f.chars, a, b)).raw("}");
+            o.raw(",\"text\":").str(&text(&f.chars, a, b)).raw("}");
         }
         o.raw("]}");
     }
     o.raw("]");
-    if let Some(m) = v.get("manuale").filter(|m| !m.is_null()) {
+    if let Some(m) = v.get("manual").filter(|m| !m.is_null()) {
         let var = if let Some(p) = m.get("pos") {
             let p = p
                 .f64()
                 .filter(|p| p.fract() == 0.0 && *p != 0.0)
-                .ok_or_else(|| bad("variabili"))?;
+                .ok_or_else(|| bad("variables"))?;
             let sep = m.get("sep").and_then(|s| s.str()).unwrap_or("_-. ");
             by_position(&fs, p as i64, sep)
         } else if let Some(t) = m.get("has") {
@@ -466,14 +470,12 @@ pub(super) fn route_variabili(input: &str) -> Result<String> {
                 m.get("substring").and_then(|b| b.bool()).unwrap_or(false),
             )
         } else {
-            return Err(bad("variabili"));
+            return Err(bad("variables"));
         };
-        o.raw(",\"manuale\":");
+        o.raw(",\"manual\":");
         write_var(&mut o, &var, n);
     }
-    o.raw(",\"schema\":")
-        .str(VARNAME_SCHEMA)
-        .raw(",\"variabili\":[");
+    o.raw(",\"variables\":[");
     for (i, var) in variables(&fs).iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         write_var(&mut o, var, n);

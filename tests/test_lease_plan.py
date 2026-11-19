@@ -38,7 +38,7 @@ const load = async legacy => {
   for (const n of NAMES) await A.lease("idx", n + ".mzidx");
   await A.parkAll();
   const first = opens; opens = 0;
-  for (let i = 0; i < 30; i++) await serve({ op: "lr_campioni", cop: "proponi" }, legacy);
+  for (let i = 0; i < 30; i++) await serve({ op: "lr_samples", cop: "propose" }, legacy);
   for (const n of NAMES) await serve({ op: "lr_items", name: n }, legacy);
   return [first, opens];
 };
@@ -56,7 +56,7 @@ def test_a_14_file_load_opens_one_handle_per_item_request_and_none_for_the_sampl
     first, before = got["before"]
     assert first == 14
     assert before == 14 * 44          # every one of the 44 requests woke the 14 leases
-    assert got["after"][1] == 14      # lr_campioni wakes nothing; each lr_items opens only its own file
+    assert got["after"][1] == 14      # lr_samples wakes nothing; each lr_items opens only its own file
 
 
 def test_a_slot_op_wakes_only_the_lease_of_its_file_and_an_unknown_op_wakes_all():

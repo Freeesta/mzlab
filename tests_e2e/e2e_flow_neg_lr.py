@@ -66,12 +66,12 @@ def mzml(k, pol, hr):
 
 def sample(n, t):
     kind = "blank" if t is None else "t0" if t == 0 else "sample"
-    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": kind, "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
+    return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": NAMES.index(n) + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
+            "time_min": t, "kind": kind, "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
 # the series in the order of injection: the browser runner lists the indexes of OPFS by name, and every step puts the samples in the order of the files
 # of the table by name (`samples::order_like`), so both sides give the same files whatever the order
 ORDER = NAMES
-SAMPLES = json.dumps({"campioni": [sample(n, TIMES[NAMES.index(n)]) for n in ORDER], "schema": "campioni/2"}, separators=(",", ":"))
+SAMPLES = json.dumps({"samples": [sample(n, TIMES[NAMES.index(n)]) for n in ORDER], "schema": "samples/1"}, separators=(",", ":"))
 
 # the plan leaves the polarity and the unit mass unwritten: the browser runner and `flow run` take them from the indexes (`mzlab_feat::nature`);
 # NEG_LR_WRITTEN=1 runs the variant that writes them, as the page does from the files open in Data (`inheritNature`)

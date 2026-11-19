@@ -2288,7 +2288,7 @@
                   {
                     "enum":["all","batch","matrix"],
                     "default":"all",
-                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"
+                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"
                   },
                   {
                     "type":"boolean",

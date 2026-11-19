@@ -22,13 +22,13 @@ fn names_file(tag: &str) -> std::path::PathBuf {
 const BODY: &str = r#"{"files":[{"name":"MQ_H2O2_T00"},{"name":"MQ_H2O2_T05"},{"name":"TW_H2O2_T00"},{"name":"TW_H2O2_T05"}]"#;
 
 #[test]
-fn variabili_is_the_route_answer() {
+fn variables_is_the_route_answer() {
     let f = names_file("a");
     let (code, out, err) = run(&["samples", "vars", "--names", f.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(
         out,
-        route("variabili", &format!("{BODY}}}")).unwrap() + "\n"
+        route("variables", &format!("{BODY}}}")).unwrap() + "\n"
     );
     assert!(out.contains("\"id\":\"matrix\""));
     let (_, out, _) = run(&[
@@ -42,8 +42,8 @@ fn variabili_is_the_route_answer() {
         "_",
     ]);
     let want = route(
-        "variabili",
-        &format!("{BODY},\"manuale\":{{\"pos\":-1,\"sep\":\"_\"}}}}"),
+        "variables",
+        &format!("{BODY},\"manual\":{{\"pos\":-1,\"sep\":\"_\"}}}}"),
     )
     .unwrap();
     assert_eq!(out, want + "\n");
@@ -57,11 +57,13 @@ fn variabili_is_the_route_answer() {
         "--substring",
     ]);
     let want = route(
-        "variabili",
-        &format!("{BODY},\"manuale\":{{\"has\":[\"O2\",\"N2\"],\"substring\":true}}}}"),
+        "variables",
+        &format!("{BODY},\"manual\":{{\"has\":[\"O2\",\"N2\"],\"substring\":true}}}}"),
     )
     .unwrap();
     assert_eq!(out, want + "\n");
+    // the manual variable really is in the answer (a rule the engine ignored would give the same bytes on both sides)
+    assert!(out.contains("\"manual\":{"), "{out}");
     std::fs::remove_file(f).unwrap();
 }
 
@@ -80,7 +82,7 @@ const TIME_NAMES: [&str; 9] = [
 
 #[test]
 fn table_is_the_route_answer_with_the_time_points() {
-    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-nomi-tempo.txt", std::process::id()));
+    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-names-time.txt", std::process::id()));
     std::fs::write(&p, TIME_NAMES.join("\n")).unwrap();
     let (code, out, err) = run(&["samples", "table", "--names", p.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
@@ -88,11 +90,11 @@ fn table_is_the_route_answer_with_the_time_points() {
         .iter()
         .map(|n| format!("{{\"name\":\"{n}\",\"sha256\":\"\",\"kind\":\"\"}}"))
         .collect();
-    let want = route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    let want = route("propose", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
     assert_eq!(out, want + "\n");
     // the minutes of every name, in the order of the names (null: no time point)
     let minutes: Vec<String> = out
-        .split("\"tempo_min\":")
+        .split("\"time_min\":")
         .skip(1)
         .map(|r| r.split([',', '}']).next().unwrap().to_string())
         .collect();
@@ -104,11 +106,11 @@ fn table_is_the_route_answer_with_the_time_points() {
 }
 
 #[test]
-fn nome_gruppo_is_the_route_answer() {
+fn group_name_is_the_route_answer() {
     let (code, out, _) = run(&["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
-    assert_eq!((code, out.as_str()), (0, "{\"nome\":\"MQ_H2O2\"}\n"));
+    assert_eq!((code, out.as_str()), (0, "{\"name\":\"MQ_H2O2\"}\n"));
     let (_, out, _) = run(&["samples", "group"]);
-    assert_eq!(out, "{\"nome\":\"\"}\n");
+    assert_eq!(out, "{\"name\":\"\"}\n");
 }
 
 #[test]
@@ -199,4 +201,105 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     assert_eq!(run(&["samples", "list", "--json"]).0, 2);
     assert_eq!(run(&["samples", "list", &at("totale"), "--bogus"]).0, 2);
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Every key of a JSON document, whatever its depth.
+fn keys_of(v: &mzlab_core::json::Value, out: &mut std::collections::BTreeSet<String>) {
+    use mzlab_core::json::Value;
+    match v {
+        Value::Obj(o) => {
+            for (k, x) in o {
+                out.insert(k.clone());
+                keys_of(x, out);
+            }
+        }
+        Value::Arr(a) => a.iter().for_each(|x| keys_of(x, out)),
+        _ => {}
+    }
+}
+
+/// The names the `properties` of a JSON Schema declare, at any depth.
+fn schema_keys(file: &str) -> std::collections::BTreeSet<String> {
+    let path = format!("{}/../../docs/schemi/{file}", env!("CARGO_MANIFEST_DIR"));
+    let doc = mzlab_core::json::parse(&std::fs::read(path).unwrap()).unwrap();
+    let mut all = std::collections::BTreeSet::new();
+    keys_of(&doc, &mut all);
+    let mut declared = std::collections::BTreeSet::new();
+    fn walk(v: &mzlab_core::json::Value, d: &mut std::collections::BTreeSet<String>) {
+        use mzlab_core::json::Value;
+        match v {
+            Value::Obj(o) => {
+                for (k, x) in o {
+                    if let (true, Value::Obj(p)) = (k == "properties", x) {
+                        p.iter().for_each(|(n, _)| {
+                            d.insert(n.clone());
+                        });
+                    }
+                    walk(x, d);
+                }
+            }
+            Value::Arr(a) => a.iter().for_each(|x| walk(x, d)),
+            _ => {}
+        }
+    }
+    walk(&doc, &mut declared);
+    declared
+}
+
+/// The JSON of `vars`, `table` and `group` has no key outside the English schema: `table` only the keys of `samples-1.json`, `vars` and `group` only the
+/// ones of `sample-vars/1` (saved formats are English only).
+#[test]
+fn the_json_has_only_the_keys_of_the_english_schema() {
+    let vars: std::collections::BTreeSet<String> = [
+        "schema",
+        "common",
+        "files",
+        "name",
+        "tokens",
+        "class",
+        "start",
+        "end",
+        "text",
+        "variables",
+        "id",
+        "kind",
+        "coverage",
+        "score",
+        "values",
+        "key",
+        "label",
+        "without",
+        "manual",
+        "multiple",
+    ]
+    .iter()
+    .map(|k| k.to_string())
+    .collect();
+    let table = schema_keys("samples-1.json");
+    let group: std::collections::BTreeSet<String> = ["name".to_string()].into();
+    let f = names_file("it");
+    let names = f.to_str().unwrap();
+    for (args, allowed) in [
+        (vec!["samples", "vars", "--names", names], &vars),
+        (
+            vec!["samples", "vars", "--names", names, "--pos", "1"],
+            &vars,
+        ),
+        (vec!["samples", "table", "--names", names], &table),
+        (
+            vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+            &group,
+        ),
+    ] {
+        let (code, out, err) = run(&args);
+        assert_eq!(code, 0, "{err}");
+        let mut got = std::collections::BTreeSet::new();
+        keys_of(&mzlab_core::json::parse(out.as_bytes()).unwrap(), &mut got);
+        let extra: Vec<_> = got.difference(allowed).collect();
+        assert!(
+            extra.is_empty(),
+            "{args:?}: keys outside the schema: {extra:?}"
+        );
+    }
+    std::fs::remove_file(f).unwrap();
 }

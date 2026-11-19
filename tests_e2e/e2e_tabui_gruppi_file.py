@@ -1,6 +1,6 @@
-"""Tabui: the table of the files with role, condition, time and replicate (TP_Mine/lazy/gruppi-campioni.js, campioni/2), alone on a test page (a container the test adds; Tabui does not use it yet).
+"""Tabui: the table of the files with role, condition, time and replicate (TP_Mine/lazy/gruppi-campioni.js, samples/1), alone on a test page (a container the test adds; Tabui does not use it yet).
 Names of two conditions (G_O2_t30, G_O2_t60, G_N2_t30, G_N2_t60) and a shared blank. Checks: opening Tabui downloads nothing from lazy/ (TPLAZY.load brings the script once); the conditions are proposed from the names (yellow until «Confirm conditions»), the blank is shared; «Set condition…» on two files, the reference condition, keyboard (Tab,
-arrows in a select, Enter on «Confirm conditions»); the notebook (NB.campioni, NB.gruppi_opts) holds it and a reload gives the same table; MZLAB_LR_MISS empty. Builds the site
+arrows in a select, Enter on «Confirm conditions»); the notebook (NB.samples, NB.gruppi_opts) holds it and a reload gives the same table; MZLAB_LR_MISS empty. Builds the site
 (SKIP without cargo or wasm-bindgen); MZLAB_PIPE_SITE=<built site with the engine .wasm> reuses one. Run from the repo root."""
 import os, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
@@ -66,7 +66,7 @@ try:
             await window.nbEnsure();                                       // the notebook is read first, or a save would be refused
             await window.TPLAZY.load("gruppi-campioni.js"); await window.TPLAZY.load("gruppi-campioni.js");
             const R = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })));
-            const call = async (op, j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
+            const call = async (op, j) => { const r = await fetch("api/samples/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
             let el = document.getElementById("tp-gfiles"); if (el) { el.textContent = ""; } else { el = document.createElement("div"); el.id = "tp-gfiles"; document.body.prepend(el); }
             window.GRCHANGES = [];
             window.GRCTL = await window.TPGRUPPI_FILES.mount(el, names, { R, call, nb: NB, save: nbSave, onChange: r => window.GRCHANGES.push(r) });
@@ -112,7 +112,7 @@ try:
             assert "Air" in opts and "" in opts, opts
             pg.select_option(f"{G} select[aria-label='Reference condition']", "Air")
             pg.wait_for_function("NB.gruppi_opts && NB.gruppi_opts.reference === 'Air'", timeout=20000)
-            assert pg.evaluate("NB.campioni.campioni.length") == len(NAMES)
+            assert pg.evaluate("NB.samples.samples.length") == len(NAMES)
             assert pg.evaluate("window.GRCHANGES.at(-1).reference") == "Air"
         step("the reference condition is chosen, kept in NB.gruppi_opts and given to the page", reference)
 
@@ -134,12 +134,12 @@ try:
         def reload():
             before = pg.evaluate(BYNAME); roles = pg.evaluate(f"[...document.querySelectorAll('{G} .tpg-role')].map(e => e.value)")
             pg.evaluate("nbSave(true)")
-            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(j => 'campioni' in j && 'gruppi_opts' in j)", timeout=20000)
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(j => 'samples' in j && 'gruppi_opts' in j)", timeout=20000)
             kept = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(j => Object.keys(j))")
-            assert "campioni" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
+            assert "samples" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             pg.wait_for_function("typeof window.nbEnsure === 'function'", timeout=120000); pg.evaluate("window.nbEnsure()")
-            try: pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.campioni && window.QTOOLS.ctx.files['finder-ruoli.js']", timeout=30000)
+            try: pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.samples && window.QTOOLS.ctx.files['finder-ruoli.js']", timeout=30000)
             except Exception: raise AssertionError("NB after the reload: " + pg.evaluate("JSON.stringify([Object.keys(NB), !!(window.QTOOLS && QTOOLS.ctx)])"))
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
             assert pg.evaluate(BYNAME) == before, (before, pg.evaluate(BYNAME))

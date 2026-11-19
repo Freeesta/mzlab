@@ -1,4 +1,4 @@
-//! `build`: the `mzrun/2` record of a finished run, from the `mzflow/2` plan, the `prov/1` the run left and the roles of the files (`campioni/2`).
+//! `build`: the `mzrun/2` record of a finished run, from the `mzflow/2` plan, the `prov/1` the run left and the roles of the files (`samples/1`).
 
 use super::{results_digest, self_sha256};
 use crate::budget::sha256_hex;

@@ -15,10 +15,10 @@ pub struct FileLr {
     pub time: Option<f64>,
     pub kind_type: String,
     pub kind: String,
-    /// The condition (`serie` of `campioni/2`); empty = shared.
+    /// The condition (`series` of `samples/1`); empty = shared.
     pub cond: String,
     pub replica: Option<u32>,
-    /// Position of the injection (`ordine_iniezione`) when `campioni/2` gave it, 0 when unknown.
+    /// Position of the injection (`injection_order`) when `samples/1` gave it, 0 when unknown.
     pub order: u32,
 }
 
@@ -131,12 +131,12 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
 }
 
 /// The files as the page passes them to `api.run` (`kind` from `classify`; a file without one counts as full scan): a list, or
-/// `{"files": [...], "campioni": <campioni/2>}` when the page keeps the roles, times, conditions and replicates in the canonical model
-/// (they then win over the fields `type`, `time`, `cond` and `replica` of each file).
+/// `{"files": [...], "samples": <samples/1>}` when the page keeps the roles, times, conditions and replicates in the canonical model
+/// (they then win over the fields `type`, `time`, `cond` and `replica` of each file (the page's own file entries)).
 pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
     let v = json::parse(files_json.as_bytes()).map_err(|e| e.to_string())?;
     let (list, camp) = match v.get("files") {
-        Some(l) => (l, v.get("campioni")),
+        Some(l) => (l, v.get("samples")),
         None => (&v, None),
     };
     let camp = match camp {
@@ -175,7 +175,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
         .collect())
 }
 
-/// The role, time, condition and replicate of `campioni/2` over a file (a role the Dig does not use keeps the page's type).
+/// The role, time, condition and replicate of `samples/1` over a file (a role the Dig does not use keeps the page's type).
 fn apply_sample(x: &mut FileLr, c: &mzlab_core::samples::Sample) {
     match c.role() {
         "sample" | "t0" => x.kind_type = "sample".into(),

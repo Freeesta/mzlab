@@ -46,7 +46,7 @@ pub fn table_of_view(table: &[u8], view: &str) -> Result<Vec<u8>> {
 pub fn table_of_view_from<R: ReadAt>(r: &mut R, size: u64, view: &str) -> Result<Vec<u8>> {
     let o = origin(view)?;
     let (sha, spec) = view_origin(view)?;
-    let samples_text = o.get("campioni").and_then(|x| x.str()).ok_or_else(bad)?;
+    let samples_text = o.get("samples").and_then(|x| x.str()).ok_or_else(bad)?;
     let mut bytes = vec![0u8; usize::try_from(size).map_err(|_| bad())?];
     r.read_at(0, &mut bytes)?;
     if mzlab_core::budget::sha256_hex(&bytes) != sha {

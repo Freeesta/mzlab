@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const wasm = require(path.join(process.argv[2], "mzlab_wasm.js"));
 const { Engine } = wasm;
-// the statistics, campioni and Flow command routes live in the lazy module `rotte` (crates/mzlab-rotte-wasm), built into the same folder; loaded on first use
+// the statistics, samples and Flow command routes live in the lazy module `rotte` (crates/mzlab-rotte-wasm), built into the same folder; loaded on first use
 let rotteMod; const rotte = () => rotteMod || (rotteMod = require(path.join(process.argv[2], "mzlab_rotte_wasm.js")));
 // api/tic_background lives in the lazy module `ticfondo` (crates/mzlab-ticfondo-wasm), which opens the index itself
 let ticMod; const tic = () => ticMod || (ticMod = require(path.join(process.argv[2], "mzlab_ticfondo_wasm.js")));
@@ -39,7 +39,7 @@ const run = s => {
     case "lr_elements": return { s: wasm.elements() };
     case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };
     case "lr_stat": return { s: rotte().stat_post(s.path, s.body) };
-    case "lr_campioni": return { s: rotte().samples(s.cop, s.body) };
+    case "lr_samples": return { s: rotte().samples(s.cop, s.body) };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };
     case "tic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
     case "xic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.xic(s.slot, s.level, s.mz, s.tol, s.px || 0, out), out); }

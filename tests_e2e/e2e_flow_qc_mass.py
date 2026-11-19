@@ -20,9 +20,9 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
 NAMES = ["FullScan_t00", "FullScan_t05", "FullScan_t10", "FullScan_t15", "FullScan_t30"]
 TIMES = [0, 5, 10, 15, 30]
 def sample(n, t):
-    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": "t0" if t == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(n, t) for n, t in zip(NAMES, TIMES)], "schema": "campioni/2"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": NAMES.index(n) + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
+            "time_min": t, "kind": "t0" if t == 0 else "sample", "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES, TIMES)], "schema": "samples/1"}, separators=(",", ":"))
 # five steady ions of high-resolution files (qc.mass_accuracy asks for scan indexes of resolving power; the unit-resolution demo files are refused by the plan check)
 IONS = [("a", 201.1234, 2.0), ("b", 285.2345, 4.0), ("c", 367.3456, 6.0), ("d", 449.4567, 8.0), ("e", 531.5678, 10.0)]
 REFS = "name,ion,role\n" + "".join("%s,%s,reference\n" % (n, m) for n, m, _ in IONS)

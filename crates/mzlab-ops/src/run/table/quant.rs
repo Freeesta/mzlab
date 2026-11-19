@@ -183,7 +183,7 @@ fn flag_of(measured: f64, c: &Curve) -> &'static str {
     }
 }
 
-/// The sample types to quantify, each one a type of `campioni/1`.
+/// The sample types to quantify, each one a type of `samples/1`.
 fn kinds_of(params: &[(String, Value)]) -> Result<Vec<String>> {
     let kinds: Vec<String> = param(params, "kinds")
         .and_then(|v| v.str())
@@ -252,7 +252,7 @@ pub fn quant_text(
     let kinds = kinds_of(params)?;
     let (t, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
     let files = origin_from_meta(&meta).inputs;
-    let roles = samples::from_json(super::pol::samples_v1(samples)?.as_bytes())?;
+    let roles = samples::from_json(samples)?;
     let mut warnings: Vec<String> = Vec::new();
     let (cols, listed) = quantified_columns(&files, &roles, &kinds);
     if !listed {

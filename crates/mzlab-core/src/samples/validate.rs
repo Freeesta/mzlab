@@ -1,5 +1,5 @@
 //! What a series lacks, as stable codes (the pages put the words), and what the TP path needs: indices by role and the minutes of
-//! `feature_pipeline/1` (`genitore.minuti`: the time of a sample or a time zero, null otherwise; the infusion is never a control).
+//! `feature_pipeline/1` (`genitore.minutes`: the time of a sample or a time zero, null otherwise; the infusion is never a control).
 
 use super::Sample;
 use crate::json::Out;
@@ -114,30 +114,26 @@ pub fn validate(cs: &[Sample]) -> Vec<Warning> {
     out
 }
 
-/// `{"avvisi":[{"codice","gravita","file","serie"[,"colonna"]}],"bloccante"}`: `bloccante` when one finding is an error (mzFinder does not start).
+/// `{"warnings":[{"code","severity","file","series"[,"column"]}],"blocking"}`: `blocking` when one finding is an error (mzFinder does not start).
 pub fn validate_json(a: &[Warning]) -> String {
     let mut j = Out::default();
-    j.raw("{\"avvisi\":[");
+    j.raw("{\"warnings\":[");
     for (i, x) in a.iter().enumerate() {
-        j.raw(if i > 0 {
-            ",{\"codice\":"
-        } else {
-            "{\"codice\":"
-        })
-        .str(x.code);
-        j.raw(",\"gravita\":").str(x.severity).raw(",\"file\":");
+        j.raw(if i > 0 { ",{\"code\":" } else { "{\"code\":" })
+            .str(x.code);
+        j.raw(",\"severity\":").str(x.severity).raw(",\"file\":");
         match x.file {
             Some(f) => j.int(f as i64),
             None => j.raw("null"),
         };
-        j.raw(",\"serie\":").str(&x.series);
+        j.raw(",\"series\":").str(&x.series);
         if !x.column.is_empty() {
-            j.raw(",\"colonna\":").str(&x.column);
+            j.raw(",\"column\":").str(&x.column);
         }
         j.raw("}");
     }
     let blocks = a.iter().any(|x| x.severity == "error");
-    j.raw("],\"bloccante\":")
+    j.raw("],\"blocking\":")
         .raw(if blocks { "true" } else { "false" })
         .raw("}");
     j.0
@@ -155,7 +151,7 @@ pub struct PerTp {
     /// Standards and calibration.
     pub std: Vec<usize>,
     pub qc: Vec<usize>,
-    /// Samples without a usable time (`valida` reports them).
+    /// Samples without a usable time (`validate` reports them).
     pub untimed: Vec<usize>,
     /// The time of a treated file or 0 for a time zero; None for every other file (controls, infusion, standards, QC, untimed).
     pub minutes: Vec<Option<f64>>,
@@ -197,10 +193,10 @@ fn ints(j: &mut Out, key: &str, v: &[usize]) {
     j.raw("]");
 }
 
-/// `{"schema":"campioni/2","treated":[...],...,"minuti":[...]}`.
+/// `{"schema":"samples/1","treated":[...],...,"minutes":[...]}`.
 pub fn per_tp_json(p: &PerTp) -> String {
     let mut j = Out::default();
-    j.raw("{\"schema\":\"campioni/2\"");
+    j.raw("{\"schema\":\"samples/1\"");
     for (k, v) in [
         ("treated", &p.treated),
         ("t0", &p.t0),
@@ -213,7 +209,7 @@ pub fn per_tp_json(p: &PerTp) -> String {
     ] {
         ints(&mut j, k, v);
     }
-    j.raw(",\"minuti\":[");
+    j.raw(",\"minutes\":[");
     for (i, m) in p.minutes.iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" }).opt(*m);
     }

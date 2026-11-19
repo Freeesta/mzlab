@@ -1,14 +1,14 @@
-//! `campioni/2`: the table of the names, the same minutes and roles as `project::guess_sample` on the generated names of `project_parity`,
-//! the findings of `valida`, the migration of `da_legacy`, the indices of `per_tp`, the canonical JSON and its schema.
+//! `samples/1`: the table of the names, the same minutes and roles as `project::guess_sample` on the generated names of `project_parity`,
+//! the findings of `validate`, the indices of `per_tp`, the canonical JSON and its schema.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::project::guess_sample;
-use mzlab_core::samples::{self, da_legacy, from_json, per_tp, proponi, to_json, validate, Sample};
+use mzlab_core::samples::{self, from_json, per_tp, propose, to_json, validate, Sample};
 use serde_json::Value;
 
 fn one(name: &str, kind: &str) -> Sample {
-    proponi(&[(name.to_string(), "ab".to_string(), kind.to_string())]).remove(0)
+    propose(&[(name.to_string(), "ab".to_string(), kind.to_string())]).remove(0)
 }
 
 fn many(names: &[&str]) -> Vec<Sample> {
@@ -16,7 +16,7 @@ fn many(names: &[&str]) -> Vec<Sample> {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    proponi(&v)
+    propose(&v)
 }
 
 /// (name, kind of the file, role, time as written, unit, minutes, replicate)
@@ -255,7 +255,7 @@ fn findings() {
         .any(|g| g.0 == "noT0" || g.0 == "noDark" || g.0 == "noInfusion"));
     let ok = confirmed(many(&names));
     assert_eq!(codes(&ok), [("noBlank", None, String::new())]);
-    assert!(samples::validate_json(&validate(&ok)).ends_with("\"bloccante\":false}"));
+    assert!(samples::validate_json(&validate(&ok)).ends_with("\"blocking\":false}"));
     assert_eq!(
         codes(&confirmed(many(&["x", "t0"])))[0],
         ("timeMissing", Some(0), String::new())
@@ -328,62 +328,12 @@ fn indices_for_the_tp_path() {
     );
     let j = samples::route("per_tp", &to_json(&cs)).unwrap();
     assert!(
-        j.ends_with("\"minuti\":[0,5,30,null,null,null,null,null,null]}"),
+        j.ends_with("\"minutes\":[0,5,30,null,null,null,null,null,null]}"),
         "{j}"
     );
 }
 
-#[test]
-fn migration_of_the_old_places() {
-    let input = r#"{"session":[{"file":"a_t0.mzML","time":0,"type":"sample"},{"file":"a_t5.mzML","time":5,"type":"sample","rep":2},
-      {"file":"d.mzML","time":null,"type":"sample"},{"file":"std.mzML","type":"standard","conc":5,"cunit":"mg/L"}],
-      "qaqc":{"roles":{"d.mzML":"dark","q.mzML":"qc"}},
-      "mzflow":{"files":[{"nome":"q.mzML","sha256":"ff","tipo":"sample","tempo":null}]},
-      "campioni1":{"schema":"campioni/1","campioni":[{"file":"a_t5.mzML","sha256":"aa","tipo":"sample","tempo_min":7,"replica":1,"gruppo":"",
-      "concentrazione":null,"unita":null,"ordine_iniezione":2,"istd":true,"note":"n"},{"file":"c1.mzML","sha256":"cc","tipo":"dark","tempo_min":60,
-      "replica":1,"gruppo":"dark","concentrazione":null,"unita":null,"ordine_iniezione":3,"istd":false,"note":""}]}}"#;
-    let cs = da_legacy(input.as_bytes()).unwrap();
-    let files: Vec<&str> = cs.iter().map(|c| c.file.as_str()).collect();
-    assert_eq!(
-        files,
-        [
-            "a_t0.mzML",
-            "a_t5.mzML",
-            "d.mzML",
-            "std.mzML",
-            "q.mzML",
-            "c1.mzML"
-        ]
-    );
-    let kinds: Vec<&str> = cs.iter().map(|c| c.kind.as_str()).collect();
-    assert_eq!(kinds, ["t0", "sample", "dark", "std", "qc", "dark"]);
-    let a = &cs[1];
-    assert_eq!(
-        (
-            a.sha256.as_str(),
-            a.time_min,
-            a.time_confirmed,
-            a.replicate,
-            a.istd,
-            a.note.as_str()
-        ),
-        ("aa", Some(5.0), true, 2, true, "n")
-    );
-    assert!(cs[0].time_confirmed && cs[0].time_min == Some(0.0));
-    assert_eq!(
-        (cs[3].conc, cs[3].unit.as_deref()),
-        (Some(5.0), Some("mg/L"))
-    );
-    assert_eq!(cs[4].sha256, "ff");
-    assert_eq!((cs[5].time_min, cs[5].time_confirmed), (Some(60.0), false));
-    assert_eq!(
-        cs.iter().map(|c| c.order).collect::<Vec<_>>(),
-        [1, 2, 3, 4, 5, 6]
-    );
-    assert!(da_legacy(b"{}").unwrap().is_empty());
-}
-
-/// The few keywords of JSON Schema that `docs/schemi/campioni-2.json` uses.
+/// The few keywords of JSON Schema that `docs/schemi/samples-1.json` uses.
 pub(crate) fn fits(v: &Value, s: &Value) -> bool {
     let ty = |t: &str| match t {
         "object" => v.is_object(),
@@ -449,44 +399,45 @@ fn canonical_json_and_schema() {
     let schema: Value = serde_json::from_str(
         &std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../docs/schemi/campioni-2.json"
+            "/../../docs/schemi/samples-1.json"
         ))
         .unwrap(),
     )
     .unwrap();
     let doc: Value = serde_json::from_str(&j).unwrap();
     assert!(fits(&doc, &schema));
-    let first = &j[..j.find('}').unwrap()];
+    let from = j.find("\"samples\":[{").unwrap();
+    let first = &j[from..from + j[from..].find("\"time_unit\"").unwrap() + "\"time_unit\"".len()];
     let mut keys: Vec<&str> = first
         .split('"')
         .skip(1)
         .step_by(2)
-        .filter(|k| doc["campioni"][0].get(*k).is_some())
+        .filter(|k| doc["samples"][0].get(*k).is_some())
         .collect();
     keys.dedup();
     assert!(
-        keys.windows(2).all(|w| w[0] < w[1]) && keys.len() == 16,
+        keys.windows(2).all(|w| w[0] < w[1]) && keys.len() == 25,
         "{keys:?}"
     );
     let mut bad = doc.clone();
-    bad["campioni"][0]["tipo"] = "control".into();
+    bad["samples"][0]["kind"] = "control".into();
     assert!(!fits(&bad, &schema));
     assert!(from_json(bad.to_string().as_bytes()).is_err());
     let input =
         r#"{"files":[{"name":"t0","sha256":"ab"},{"name":"X_parent","sha256":"cd","kind":"msn"}]}"#;
-    let p = from_json(samples::route("proponi", input).unwrap().as_bytes()).unwrap();
+    let p = from_json(samples::route("propose", input).unwrap().as_bytes()).unwrap();
     assert_eq!((p[0].kind.as_str(), p[1].kind.as_str()), ("t0", "infusion"));
-    assert!(samples::route("valida", &j)
+    assert!(samples::route("validate", &j)
         .unwrap()
-        .contains("\"codice\":\"timeUnconfirmed\""));
-    assert_eq!(samples::route("canonico", &j).unwrap(), j);
+        .contains("\"code\":\"timeUnconfirmed\""));
+    assert_eq!(samples::route("canonical", &j).unwrap(), j);
     assert_eq!(
         samples::route("digest", &j).unwrap(),
         samples::digest(&from_json(j.as_bytes()).unwrap())
     );
     assert_eq!(
         samples::route("nope", "{}").unwrap_err().key,
-        "error.badCampioni"
+        "error.badSamples"
     );
 }
 

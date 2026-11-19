@@ -169,7 +169,7 @@ fn plan() -> Vec<Value> {
     steps
 }
 
-/// The name operations of `campioni` (`variabili`, `nome_gruppo`): the worked list of the study, the manual variables, a long name and a bad operation.
+/// The name operations of `samples` (`variables`, `group_name`): the worked list of the study, the manual variables, a long name and a bad operation.
 fn name_steps() -> Vec<Value> {
     let mut names: Vec<String> = [
         "MQ_blk",
@@ -193,24 +193,24 @@ fn name_steps() -> Vec<Value> {
     }
     let files: Vec<Value> = names.iter().map(|n| json!({"name": n})).collect();
     let step =
-        |cop: &str, body: Value| json!({"op": "lr_campioni", "cop": cop, "body": body.to_string()});
+        |cop: &str, body: Value| json!({"op": "lr_samples", "cop": cop, "body": body.to_string()});
     vec![
-        step("proponi", json!({"files": files})), // the time points of the names, `3h` and `1 h 30` included
-        step("variabili", json!({"files": files})),
+        step("propose", json!({"files": files})), // the time points of the names, `3h` and `1 h 30` included
+        step("variables", json!({"files": files})),
         step(
-            "variabili",
-            json!({"files": files, "manuale": {"pos": -1, "sep": "_"}}),
+            "variables",
+            json!({"files": files, "manual": {"pos": -1, "sep": "_"}}),
         ),
         step(
-            "variabili",
-            json!({"files": files, "manuale": {"has": ["O2", "H2O2"], "substring": true}}),
+            "variables",
+            json!({"files": files, "manual": {"has": ["O2", "H2O2"], "substring": true}}),
         ),
         step(
-            "nome_gruppo",
+            "group_name",
             json!({"names": ["MQ_H2O2_T00", "MQ_H2O2_T01"]}),
         ),
-        step("variabili", json!({"files": [{"name": "x".repeat(257)}]})),
-        step("nome_gruppo", json!({"names": [1]})),
+        step("variables", json!({"files": [{"name": "x".repeat(257)}]})),
+        step("group_name", json!({"names": [1]})),
         step("nope", json!({})),
     ]
 }
