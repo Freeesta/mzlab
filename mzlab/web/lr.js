@@ -26,6 +26,7 @@ import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
 import { RESET_FILES } from "./qqq-db.js";
 import { W } from "./nativo-fasi.js";
 import { validaMzml } from "./valida-mzml.js";
+import { retryLost } from "./engine-recupera.js";
 
 /** @type {Map<string, any>} */
 const earlyTics = new Map();
@@ -73,7 +74,7 @@ export function createLr({ rb }) {
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);
     if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
-    if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
+    if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error, dead: !!r.dead, lost: !!r.dead && !r.error });
     return r;
   };
   const json = (obj, status = 200) => ({ status, text: JSON.stringify(obj) });
@@ -93,7 +94,7 @@ export function createLr({ rb }) {
   api.reset = async (scope = "all") => { await rpc(scope === "files" ? { op: "lr_clear", scope, drop: RESET_FILES } : { op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; if (rb.clearNative) rb.clearNative(); };      // "files": the reset «Files» finished by the new page (?riparti=file); RESET_FILES travels along for the desktop app's native store
 
   api.boot = async (fresh) => {                                          // fresh: «start from scratch» (the database may be held by another tab: it is not read)
-    const r = await rpc({ op: "lr_boot", fresh });
+    const r = await retryLost(rb, () => rpc({ op: "lr_boot", fresh }));
     const list = JSON.parse(r.info);
     for (const [name, file] of r.files || []) rb.noteUpload(name, file);
     for (const f of list) {

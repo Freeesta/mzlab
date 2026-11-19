@@ -70,5 +70,5 @@ export function forgetFaults(/** @type {any} */ state) {
 
 // The engine stops for good: every file is marked bad and the page is told why (`key`).
 export function off(/** @type {any} */ api, /** @type {any[]} */ slots, /** @type {(key: string) => void} */ notify, /** @type {string} */ key) {
-  api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(key);
+  api.disabled = true; api.offKey = key; slots.forEach(s => { if (s) s.bad = true; }); notify(key);
 }

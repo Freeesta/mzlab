@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "design_check/1",
+ "title": "design_check/1: a design that passed `sample design validate`",
+ "description": "The answer of `mzlab-cli sample design validate` at exit 0: the SHA-256 of the canonical design and, with `--samples`, the warnings of the engine's `design_validate` route (codes only: fewReplicates, batchNoQc), byte for byte. A design with a bad key or a blocking fault is exit 3 and an error/1 whose `problems` name each key. Code: crates/mzlab-cli/src/design_cmd.rs.",
+ "type": "object",
+ "required": ["schema", "valid", "sha256", "samples_checked", "warnings", "blocking"],
+ "properties": {
+  "schema": {"const": "design_check/1"},
+  "valid": {"const": true},
+  "sha256": {"type": "string", "description": "of the canonical JSON (what prov/1 records)"},
+  "samples_checked": {"type": "boolean", "description": "whether `--samples` was given"},
+  "warnings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["code", "severity", "file", "series"],
+    "properties": {
+     "code": {"type": "string"},
+     "severity": {"enum": ["warning", "error"]},
+     "file": {"type": ["integer", "null"]},
+     "series": {"type": "string", "description": "the condition or batch the code is about"}
+    }
+   }
+  },
+  "blocking": {"const": false}
+ }
+}
