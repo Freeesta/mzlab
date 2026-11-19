@@ -161,8 +161,11 @@ fn render(hits: Vec<Hit>, q: &Req) -> String {
         let o = Obj::new()
             .put("kind", text(name))
             .put("id", text(&h.id))
-            .put("delta_da", opt(q.hr.then_some(h.delta)))
-            .put("ppm", opt(q.hr.then_some(h.delta / h.reference * 1e6)));
+            .put("error_mda", opt(q.hr.then_some(h.delta * 1e3)))
+            .put(
+                "error_ppm",
+                opt(q.hr.then_some(h.delta / h.reference * 1e6)),
+            );
         shown.push(o.done());
     }
     write(

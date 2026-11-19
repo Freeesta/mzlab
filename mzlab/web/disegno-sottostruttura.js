@@ -1,6 +1,6 @@
 // @ts-check
 // «Substructure search» of Draw: the right-click rows send the selection (or the whole drawing) as a query to the Rust search over a structure list
-// (`substructure` of the molkit .wasm, `subdb/1`; the app asks `feat/grafo`, kind `sub`): the catalogue of the program or a file the user picks, read
+// (`substructure` of the molkit .wasm, `substructure_db/1`; the app asks `feat/grafo`, kind `sub`): the catalogue of the program or a file the user picks, read
 // in memory. The hits are candidates to check, never identifications; «Show» draws one, selects its matched atoms and colours the moiety
 // (`disegno-evidenza.js`), «Back» restores the drawing.
 import { carica } from "./disegno-verifica.js";
@@ -9,7 +9,7 @@ import { molfileOf } from "./disegno-molfile.js";
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => I18N.t(k, p);
 const SHOWN = 200;                                   // rows listed at once; the data table keeps them all
 /** @type {{query: string, atoms: number, what: string} | null} */ let query = null;
-/** @type {any} */ let last = null;                  // the last subdb/1 answer
+/** @type {any} */ let last = null;                  // the last substructure_db/1 answer
 /** @type {string | null} */ let saved = null;       // the drawing (KET) before the first «Show»
 /** @type {{name: string, text: string} | null} */ let file = null;
 let run = 0;
@@ -20,7 +20,7 @@ async function ketcher() {
   return /** @type {any} */ (document.querySelector("#kframe")).contentWindow.ketcher;
 }
 
-/** `subdb/1` text of a request: the native engine in the app, the molkit .wasm on the site */
+/** `substructure_db/1` text of a request: the native engine in the app, the molkit .wasm on the site */
 async function ask(/** @type {string} */ request) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";

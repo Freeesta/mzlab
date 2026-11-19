@@ -129,7 +129,7 @@ fn bond_ids(m: &Mol, pairs: &[(usize, usize)]) -> Result<Vec<usize>> {
                 let bd = &m.bonds[*k];
                 (bd.a, bd.b) == (a, b) || (bd.a, bd.b) == (b, a)
             })
-            .ok_or_else(|| Error::new("error.grafo.molfile"))?;
+            .ok_or_else(|| Error::new("error.grafo.cut.bond"))?;
         if m.bonds[k].order == 1.5 {
             return Err(Error::new("error.grafo.cut.aromatic"));
         }
@@ -299,7 +299,7 @@ fn shifts(
         .collect()
 }
 
-/// `cut/1` of a request (see `Request`): `{"format","mode","atoms":[{i, charge, radical, h, pin}],"pieces":[{atoms, shift:[dx,dy], formula, text, charge,
+/// `cut/1` of a request (see `Request`): `{"schema","mode","atoms":[{i, charge, radical, h, pin}],"pieces":[{atoms, shift:[dx,dy], formula, text, charge,
 /// mass, nominal, mz, unpaired, electrons, odd, kind}]}`. `atoms` lists the atoms the cut changes (the page sets them on its drawing; `pin`: the valence rule would give another H count, so `h` is written on the atom); `shift` is in
 /// the units and axes of the molfile (y up). Pieces are candidates: no cut is preferred to another.
 pub fn cut_json(text: &str) -> Result<String> {
@@ -313,7 +313,7 @@ pub fn cut_json(text: &str) -> Result<String> {
     let sh = shifts(&m, &ks, &ps, &xy, r.gap);
     let fill = by_valence(&r.mf, n, &ks, &st)?;
     let mut o = Out::default();
-    o.raw("{\"format\":\"cut/1\",\"mode\":")
+    o.raw("{\"schema\":\"cut/1\",\"mode\":")
         .str(r.mode.name())
         .raw(",\"atoms\":[");
     let mut first = true;

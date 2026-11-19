@@ -1,11 +1,11 @@
-//! `mzlab-cli mol hilite REQUEST.json|- [--out PATH]`: the `hilite/1` of a drawing (the atoms and bonds a piece of evidence points at, layer by
+//! `mzlab-cli mol hilite REQUEST.json|- [--out PATH]`: the `highlight/1` of a drawing (the atoms and bonds a piece of evidence points at, layer by
 //! layer), byte for byte what the evidence colours of Draw show on the page and in the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (hilite/1).
+pub const HELP: &str = "mzlab-cli mol hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (highlight/1).
 
 usage: mzlab-cli mol hilite REQUEST.json|- [--out PATH]
 
@@ -14,7 +14,7 @@ usage: mzlab-cli mol hilite REQUEST.json|- [--out PATH]
 
 A layer is {kind: \"moiety\", query} (a SMILES or molfile found in the drawing), {kind: \"sites\", smiles, atoms} or {kind: \"cuts\", smiles,
 bonds: [[a, b]]} (numbered from 0 on that SMILES, carried onto the drawing through a match of it), each with an optional label. The answer is
-{\"format\": \"hilite/1\", \"layers\": [{kind, label, atoms, bonds}]} with atoms 0-based in the order of the molfile; \"skip\" (noMatch, lr,
+{\"schema\": \"highlight/1\", \"layers\": [{kind, label, atoms, bonds}]} with atoms 0-based in the order of the molfile; \"skip\" (noMatch, lr,
 tooBig) says why a layer is empty. In the LR world only the selected atoms are kept. A coloured atom is where the evidence points, not a proof.";
 
 pub fn run(args: Vec<String>) -> Outcome {

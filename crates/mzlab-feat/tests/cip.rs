@@ -71,7 +71,7 @@ fn molfiles_match_rdkit() {
     for e in list {
         let req = serde_json::json!({ "molfile": e["molfile"] }).to_string();
         let out: Value = serde_json::from_str(&cip_json(&req).unwrap()).unwrap();
-        assert_eq!(out["format"], "cip/1");
+        assert_eq!(out["schema"], "cip/1");
         let atoms: Vec<String> = out["atoms"]
             .as_array()
             .unwrap()
@@ -94,7 +94,7 @@ fn drawings_without_labels_say_why() {
     let out = cip_json(&serde_json::json!({ "molfile": query }).to_string()).unwrap();
     assert_eq!(
         out,
-        r#"{"format":"cip/1","atoms":[],"bonds":[],"skip":"query"}"#
+        r#"{"schema":"cip/1","atoms":[],"bonds":[],"skip":"query"}"#
     );
     assert_eq!(cip_json("{}").unwrap_err().key, "error.cip.request");
     assert_eq!(

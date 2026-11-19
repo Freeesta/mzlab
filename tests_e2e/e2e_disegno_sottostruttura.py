@@ -1,4 +1,4 @@
-"""Disegno, substructure search (`subdb/1` of the molkit .wasm): the right-click row of the whole drawing (or of a selection) opens the search card;
+"""Disegno, substructure search (`substructure_db/1` of the molkit .wasm): the right-click row of the whole drawing (or of a selection) opens the search card;
 the catalogue gives candidates (never identifications), «Show» draws one with its matched atoms selected and «Back» restores the drawing; a file the user
 picks (a synthetic SMILES list) is searched in memory, an unreadable entry is counted; the data table (TDATI) lists every candidate.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""

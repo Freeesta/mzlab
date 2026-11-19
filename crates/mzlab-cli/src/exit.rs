@@ -16,6 +16,59 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 
+/// The chemistry keys that are not usage, one rule: content that cannot be read (a request, a molfile, a structure list) is input (4); a valid
+/// request the chemistry cannot satisfy, or one over a size limit (`*.tooBig`, `error.sub.dbSize`), is data (1); formula, adduct and SMILES
+/// syntax of an argument or option falls through to usage (2).
+fn chem_code(key: &str) -> Option<u8> {
+    const CHEM_DATA_KEYS: &[&str] = &[
+        "err.formula.mzLow",
+        "err.formula.noIon",
+        "err.iso.element",
+        "err.iso.adductTooMany",
+        "error.grafo.delta.neg",
+        "error.grafo.tooBig",
+        "error.grafo.element",
+        "error.grafo.mixture",
+        "error.grafo.ring",
+        "error.grafo.mech.atom",
+        "error.grafo.cut.bond",
+        "error.grafo.cut.aromatic",
+        "error.grafo.cut.order",
+        "error.grafo.cut.radical",
+        "error.check.tooBig",
+        "error.sdf.tooBig",
+        "error.sub.dbSize",
+        "error.anal.abundance",
+        "error.anal.empty",
+        "error.hilite.query",
+    ];
+    const CHEM_INPUT_KEYS: &[&str] = &[
+        "error.label.request",
+        "error.anal.request",
+        "error.check.request",
+        "error.check.molfile",
+        "error.cip.request",
+        "error.cip.molfile",
+        "error.hilite.request",
+        "error.hilite.molfile",
+        "error.link.request",
+        "error.sel.request",
+        "error.sdf.molfile",
+        "error.grafo.molfile",
+        "error.grafo.mech.request",
+        "error.sub.db",
+        "error.sub.column",
+        "err.search.request",
+    ];
+    if CHEM_DATA_KEYS.contains(&key) {
+        Some(DATA)
+    } else if CHEM_INPUT_KEYS.contains(&key) {
+        Some(INPUT)
+    } else {
+        None
+    }
+}
+
 /// The exit code of the engine error `key`: the one mapping of keys onto the table (exact keys first, then prefixes). A key that names no
 /// class is the engine refusing what the command line asked (a formula, a molecule, a setting it cannot use): usage (2). The errors about
 /// the data a command read (nothing overlaps, a run cancelled) are listed as data (1).
@@ -77,13 +130,13 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.run.output" => return OUTPUT,
         _ => {}
     }
-    if INPUT_KEYS.contains(&key) || key.starts_with("err.file.") {
+    if INPUT_KEYS.contains(&key) || key.starts_with("err.file.") || chem_code(key) == Some(INPUT) {
         INPUT
     } else if OUTPUT_KEYS.contains(&key) {
         OUTPUT
     } else if SELECTOR_KEYS.contains(&key) {
         SELECTOR
-    } else if DATA_KEYS.contains(&key) {
+    } else if DATA_KEYS.contains(&key) || chem_code(key) == Some(DATA) {
         DATA
     } else if INTEGRITY_PREFIXES.iter().any(|p| key.starts_with(p)) {
         INTEGRITY
@@ -140,5 +193,40 @@ mod tests {
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
+    }
+
+    #[test]
+    fn chemistry_keys_split_syntax_impossible_and_unreadable() {
+        for k in [
+            "err.formula.unreadable",
+            "err.formula.element",
+            "err.adduct.unknown",
+            "error.grafo.smiles",
+            "error.grafo.cut.mode",
+            "error.sub.query",
+        ] {
+            assert_eq!(code_of_key(k), USAGE, "{k}");
+        }
+        for k in [
+            "err.formula.mzLow",
+            "error.grafo.cut.aromatic",
+            "error.hilite.query",
+            "error.grafo.cut.bond",
+            "err.iso.adductTooMany",
+            "error.sub.dbSize",
+            "error.grafo.tooBig",
+        ] {
+            assert_eq!(code_of_key(k), DATA, "{k}");
+        }
+        for k in [
+            "error.label.request",
+            "error.grafo.molfile",
+            "error.sdf.molfile",
+            "error.check.molfile",
+            "err.search.request",
+            "error.sub.db",
+        ] {
+            assert_eq!(code_of_key(k), INPUT, "{k}");
+        }
     }
 }

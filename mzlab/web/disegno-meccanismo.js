@@ -1,7 +1,7 @@
 // @ts-check
 // Mechanism notation of the Drawing: curved arrows (full head = an electron pair, half head = one electron), lone-pair dots and the «•+» radical cation.
 // Arrows and lone pairs are data S-groups of Ketcher (fieldName MZLAB_MECH / MZLAB_LP), so they travel in the .ket; they are drawn over the canvas and
-// in the exported image here. The Rust engine (`mech` of the grafo .wasm, `mecc/1`) says whether each arrow is well formed, never which mechanism is right.
+// in the exported image here. The Rust engine (`mech` of the grafo .wasm, `mechanism/1`) says whether each arrow is well formed, never which mechanism is right.
 import { carica } from "./disegno-frammenti.js";
 import { ketIndex } from "./disegno-parziali.js";
 import { atomAt } from "./disegno-radicale.js";
@@ -209,7 +209,7 @@ export function addExportMech(/** @type {any} */ K, /** @type {string} */ svgTex
   return new XMLSerializer().serializeToString(doc);
 }
 
-/** the `mecc/1` request of the drawing: every atom (Ketcher order, explicit H too) and the arrows and lone pairs as positions in it */
+/** the `mechanism/1` request of the drawing: every atom (Ketcher order, explicit H too) and the arrows and lone pairs as positions in it */
 export function requestOf(/** @type {any} */ K, /** @type {Helpers} */ h) {
   const ids = h.pieces().flatMap(p => p.ids), mf = ids.length ? h.pieceMolfile(ids) : null;
   if (!mf) return null;
@@ -242,7 +242,7 @@ function words(/** @type {() => any} */ K, /** @type {Helpers} */ h) {
   return { name, endText, rowText };
 }
 
-/** the list: one row per arrow with its check (`r`, the `mecc/1` answer or null) and a button that removes it; the status line under it */
+/** the list: one row per arrow with its check (`r`, the `mechanism/1` answer or null) and a button that removes it; the status line under it */
 function fillList(/** @type {any} */ K, /** @type {Helpers} */ h, /** @type {HTMLElement} */ list, /** @type {HTMLElement} */ note, /** @type {any} */ r) {
   const t = h.t, { name, rowText } = words(() => K, h);
   const as = arrows(K); list.textContent = "";

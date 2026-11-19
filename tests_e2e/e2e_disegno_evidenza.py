@@ -1,5 +1,5 @@
-"""Disegno, evidence colours (`hilite/1` of the molkit .wasm, `disegno-evidenza.js`): `TPDraw.highlight(layers)` on the synthetic 4-chlorophenol of
-tests/dati/hilite_disegno.json gives the `hilite/1` of the fixture (the bytes `mzlab-cli mol hilite` and the app give), in the LR world only on the
+"""Disegno, evidence colours (`highlight/1` of the molkit .wasm, `disegno-evidenza.js`): `TPDraw.highlight(layers)` on the synthetic 4-chlorophenol of
+tests/dati/hilite_disegno.json gives the `highlight/1` of the fixture (the bytes `mzlab-cli mol hilite` and the app give), in the LR world only on the
 selected atoms and with nothing selected nowhere; in the HR world every layer is painted with Ketcher's highlights in the colours of the CSS
 variables, listed in a legend with words and in a data table (TDATI); an edit of the drawing and «Remove colours» (keyboard, 24 px) take them off.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""
@@ -18,7 +18,7 @@ r = Run(port=8996, wd="/tmp/wd_disegno_evidenza")
 KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 FX = json.load(open(os.path.join(HERE, "..", "tests", "dati", "hilite_disegno.json"), encoding="utf-8"))
 MOL, LAYERS = FX["request"]["molfile"], FX["request"]["layers"]
-# draws the fixture, selects `sel` (Ketcher ids = molfile order), asks the colours; resolves with the hilite/1 answer
+# draws the fixture, selects `sel` (Ketcher ids = molfile order), asks the colours; resolves with the highlight/1 answer
 ASK = """async ([mol, layers, sel]) => {
   const K = %s; await K.setMolecule(mol); await new Promise(r => setTimeout(r, 300));
   const ids = [...K.editor.struct().atoms.keys()];
@@ -45,7 +45,7 @@ try:
             got = pg.evaluate(ASK, [MOL, LAYERS, [0, 1]])
             assert got == json.loads(FX["hilite_lr"]), got
             assert len(pg.evaluate(PAINTED)) == 3, pg.evaluate(PAINTED)
-        step("LR world, Cl and C1 selected: the hilite/1 of the fixture (= mol hilite and the app), three layers painted", lr_selected)
+        step("LR world, Cl and C1 selected: the highlight/1 of the fixture (= mol hilite and the app), three layers painted", lr_selected)
 
         def hr_all():
             pg.evaluate("window.HR = true; window.__on = BANCO.on; BANCO.on = () => true")

@@ -1,12 +1,12 @@
-//! `mzlab-cli mol label REQUEST.json|- [--out PATH]`: the `etich/1` of the structures of a drawing (formula with isotopes, charge, monoisotopic
+//! `mzlab-cli mol label REQUEST.json|- [--out PATH]`: the `label/1` of the structures of a drawing (formula with isotopes, charge, monoisotopic
 //! and nominal mass, m/z, and what changes across each arrow), byte for byte what the Draw labels of the page and the app show; `mol anal` the same
-//! way gives the `anal/1` of one structure (the analysis card of Draw: average mass, mass %, theoretical isotope pattern).
+//! way gives the `analysis/1` of one structure (the analysis card of Draw: average mass, mass %, theoretical isotope pattern).
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (etich/1).
+pub const HELP: &str = "mzlab-cli mol label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (label/1).
 
 usage: mzlab-cli mol label REQUEST.json|- [--out PATH]
 
@@ -15,17 +15,17 @@ usage: mzlab-cli mol label REQUEST.json|- [--out PATH]
                 optional \"deltas\": [\"+O\", ...] by structure: the delta of its brackets, added to formula and masses
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"etich/1\", \"structures\": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
+The answer is {\"schema\": \"label/1\", \"structures\": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
 \"arrows\": [{gain, loss, isotopologue, dm, dnominal} or null]}.";
 
-pub const HELP_ANAL: &str = "mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).
+pub const HELP_ANAL: &str = "mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (analysis/1).
 
 usage: mzlab-cli mol anal REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"atoms\": [{\"el\", \"iso\", \"h\", \"q\", \"r\"}, ...]}: the atoms of one structure as mol label reads them; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"anal/1\", \"structure\": {the etich/1 fields}, \"average\", \"composition\": [{el, count, pct}],
+The answer is {\"schema\": \"analysis/1\", \"structure\": {the label/1 fields}, \"average\", \"composition\": [{el, count, pct}],
 \"pattern\": [{off, mz, rel, abund}]}: sticks grouped by nominal mass, m/z of the ion (mass of a neutral), % of the tallest and of the total.
 Theory for the drawn formula: nothing is compared with a spectrum.";
 

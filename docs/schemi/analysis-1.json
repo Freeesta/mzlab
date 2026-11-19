@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis/1",
+  "title": "analysis/1: average mass, mass % and isotope pattern of one drawn structure",
+  "description": "The answer of `mzlab-cli mol anal`: theory for the drawn formula, nothing is compared with a spectrum. Code: crates/mzlab-feat/src/chem/analysis.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "structure",
+    "average",
+    "composition",
+    "pattern"
+  ],
+  "properties": {
+    "schema": {
+      "const": "analysis/1"
+    },
+    "structure": {
+      "type": "object",
+      "required": [
+        "formula",
+        "text",
+        "charge",
+        "mass",
+        "nominal"
+      ],
+      "properties": {
+        "formula": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "charge": {
+          "type": "integer"
+        },
+        "mass": {
+          "type": "number"
+        },
+        "nominal": {
+          "type": "integer"
+        },
+        "mz": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unpaired": {
+          "type": "integer"
+        },
+        "electrons": {
+          "type": "integer"
+        },
+        "odd": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "delta": {
+          "type": "string"
+        }
+      }
+    },
+    "average": {
+      "type": "number"
+    },
+    "composition": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "el",
+          "count",
+          "pct"
+        ],
+        "properties": {
+          "el": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "pct": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "ions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ion": {
+            "type": "string"
+          },
+          "mz": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "pattern": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "off",
+          "mz",
+          "rel",
+          "abund"
+        ],
+        "properties": {
+          "off": {
+            "type": "integer"
+          },
+          "mz": {
+            "type": "number"
+          },
+          "rel": {
+            "type": "number",
+            "description": "% of the tallest stick"
+          },
+          "abund": {
+            "type": "number",
+            "description": "% of the total"
+          }
+        }
+      }
+    }
+  }
+}
