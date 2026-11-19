@@ -43,6 +43,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | RT×m/z map, crosshair, navigation | `docs/agenti/data-map.md` |
 | lists, correction, workflow, QA/QC, statistics, report | `docs/agenti/data-tools.md` |
 | low-resolution Data view: loading, tabs, TIC/XIC/spectrum (default XIC window `xicWin`), integration | `docs/agenti/data.md` |
+| experimental design from the CLI (`sample design propose|validate|canonical`, `design/1`, `design_proposal/1`, `design_check/1`, `design_canonical/1`, problems by key, `design_*` ops of the samples route, port `schema` in `flow steps`) | `docs/agenti/design-cli.md` |
 | MS2 pseudo-spectra from DIA (`dia.rs`, `spectra.ms2` with `dia_pseudo`) | `docs/agenti/dia.md` |
 | file read errors: short cause, "Details", "Copy diagnosis" (`diagnosi.js`), synthetic msconvert-style mzML | `docs/agenti/diagnosis.md` |
 | Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `sel/1`, `link/1`) | `docs/agenti/drawing-menu.md` |
