@@ -1,6 +1,6 @@
 """Disegno, chemistry of the selection: the SMILES of selected atoms keeps isotopes ([13CH4], [2H]), radicals and stereo (@/@@ of L-alanine, as the canvas SMILES),
 because the piece molfile carries M  ISO, M  RAD, wedge/hash bonds and atom parity. The labels under the structures and above the arrows come from the engine
-(`etich/1`): isotopes, every element (Pt), «nominal mass»/«exact mass», «isotopologue» across an arrow, the copied formula of a dianion in brackets.
+(`label/1`): isotopes, every element (Pt), «nominal mass»/«exact mass», «isotopologue» across an arrow, the copied formula of a dianion in brackets.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static."""
 # covers: mzlab/web/disegno-molfile.js, mzlab/web/disegno-etichette.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -11,7 +11,7 @@ fn no_adduct_takes_the_formula_as_the_ion() {
     let neutral = get("C14H12F4N3O4S", "[M+H]+");
     let none = get("C14H12F4N3O4S", "none");
     assert_eq!(none["adduct"], "");
-    assert_eq!(none["mz"], none["neutral"]);
+    assert_eq!(none["mz"], none["neutral_da"]);
     assert!(neutral["mz"].as_f64().unwrap() - none["mz"].as_f64().unwrap() > 1.0);
 }
 

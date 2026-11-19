@@ -1,4 +1,4 @@
-"""Independent reference of `anal/1` (Draw analysis card): average mass, mass % of every element and the isotope pattern grouped by nominal mass.
+"""Independent reference of `analysis/1` (Draw analysis card): average mass, mass % of every element and the isotope pattern grouped by nominal mass.
 
     python3 tools/analisi_riferimento.py [--scrivi]
 

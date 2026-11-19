@@ -31,7 +31,7 @@ const XICNOMI = (() => {
       if (!(hi > lo)) throw new Error(I18N.t("xic.rangeBad"));
       return { label: "", range: true, win: [lo, hi], ex: null, note: I18N.t("xic.range") + " " };
     }
-    const off = f.offset ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
+    const off = f.offset_da ?? null, sh = off == null ? "" : (off < 0 ? "-" : "+") + String(Math.abs(off));
     const interp = f.formula && off == null && t.replace(/\s+/g, "") !== f.formula ? I18N.t("xic.interpreted", { formula: fmtFormula(f.formula) }) + " " : "";
     const shown = off == null ? "" : I18N.t("xic.shifted", { base: String(rh(f.mz - off, 4)), shift: sh, mz: String(rh(f.mz, 4)) }) + " ";
     return { label: !f.formula ? t.replace(/\s+/g, "") : (f.adduct ? `${f.formula} ${f.adduct}` : `${f.formula} ion`) + sh, win: xicWin(f.mz, false), ex: hr ? f.mz5 ?? f.mz : null, note: interp + shown };

@@ -62,7 +62,7 @@ fn mz_of(mass: f64, z: i32) -> f64 {
 
 /// `{"atoms":[..],"formula","mass","mz"}` of one side of a cut: the side closes with `h` hydrogens (the bond order, as in `cleavages`). A neutral side gives
 /// `mz` of [F+H]+; a side with a formal charge is the ion itself (no extra H+) and says its `charge`. A side with an odd electron count (a radical mark
-/// drawn on it) says `odd`: the neutral is a radical and its ion an odd-electron one (M+•), as `etich/1` counts it.
+/// drawn on it) says `odd`: the neutral is a radical and its ion an odd-electron one (M+•), as `label/1` counts it.
 fn side_json(o: &mut Out, m: &Mol, keep: &[bool], h: u64) {
     let f = add_h(m.formula_of(keep), h, 0);
     let z: i32 = m
@@ -113,7 +113,7 @@ fn cuts_json(m: &Mol, a: i32, b: i32) -> Result<String> {
         })
         .collect();
     if one && ks.is_empty() {
-        return Err(Error::new("error.grafo.molfile"));
+        return Err(Error::new("error.grafo.cut.bond"));
     }
     if one && on_ring[ks[0]] {
         return Err(Error::new("error.grafo.ring"));

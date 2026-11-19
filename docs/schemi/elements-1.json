@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "elements/1",
+  "title": "elements/1: the periodic table for mass spectrometry",
+  "description": "The answer of `mzlab-cli ion elements`: mono = exact mass of the most abundant isotope, avg = abundance-weighted mean mass, abund in percent, m2_rel = M+2 / main intensity when it is 0.04 or more. Code: crates/mzlab-core/src/periodic.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "classes",
+    "elements"
+  ],
+  "properties": {
+    "schema": {
+      "const": "elements/1"
+    },
+    "classes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "code",
+          "name"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "z",
+          "symbol",
+          "name",
+          "class",
+          "mono",
+          "avg",
+          "mono_only",
+          "m2_rel",
+          "isotopes"
+        ],
+        "properties": {
+          "z": {
+            "type": "integer"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string"
+          },
+          "mono": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "avg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mono_only": {
+            "type": "boolean"
+          },
+          "m2_rel": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "isotopes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "a",
+                "mass",
+                "abund"
+              ],
+              "properties": {
+                "a": {
+                  "type": "integer"
+                },
+                "mass": {
+                  "type": "number"
+                },
+                "abund": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

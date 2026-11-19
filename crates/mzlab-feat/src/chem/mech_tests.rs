@@ -1,4 +1,4 @@
-//! Tests of `mecc/1` (`mech.rs`): the arrows of an α-cleavage and of a McLafferty rearrangement are well formed, each kind of malformed arrow and
+//! Tests of `mechanism/1` (`mech.rs`): the arrows of an α-cleavage and of a McLafferty rearrangement are well formed, each kind of malformed arrow and
 //! of lone pairs that do not fit is named, and bad requests are errors.
 
 use super::*;
@@ -35,7 +35,7 @@ fn alpha_cleavage_is_well_formed() {
     let j = mech_json(&req(&acetone_ion(), arrows, "[[2,1]]")).unwrap();
     assert_eq!(
         j,
-        "{\"format\":\"mecc/1\",\"arrows\":[{\"kind\":\"single\",\"from\":\"radical\",\"to\":\"bond\",\"electrons\":1,\"ok\":true},\
+        "{\"schema\":\"mechanism/1\",\"arrows\":[{\"kind\":\"single\",\"from\":\"radical\",\"to\":\"bond\",\"electrons\":1,\"ok\":true},\
 {\"kind\":\"single\",\"from\":\"bond\",\"to\":\"bond\",\"electrons\":1,\"ok\":true},\
 {\"kind\":\"single\",\"from\":\"bond\",\"to\":\"atom\",\"electrons\":1,\"ok\":true}],\
 \"lone\":[{\"atom\":2,\"pairs\":1,\"max\":1,\"ok\":true}],\"ok\":true}"
@@ -131,7 +131,7 @@ fn lone_pairs_must_fit_the_atom() {
     let j = mech_json(&req(&mf, "[]", "[[2,2],[0,1]]")).unwrap();
     assert_eq!(
         j,
-        "{\"format\":\"mecc/1\",\"arrows\":[],\"lone\":[{\"atom\":2,\"pairs\":2,\"max\":1,\"ok\":false},{\"atom\":0,\"pairs\":1,\"max\":0,\"ok\":false}],\"ok\":false}"
+        "{\"schema\":\"mechanism/1\",\"arrows\":[],\"lone\":[{\"atom\":2,\"pairs\":2,\"max\":1,\"ok\":false},{\"atom\":0,\"pairs\":1,\"max\":0,\"ok\":false}],\"ok\":false}"
     );
     // neutral water: two lone pairs on O
     let w = molfile(&[("O", 0.0, 0.0)], &[], &[]);

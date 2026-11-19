@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mechanism/1",
+  "title": "mechanism/1: form check of curved arrows",
+  "description": "The answer of `mzlab-cli mol mech`: whether each arrow is well formed, never which mechanism is right. Code: crates/mzlab-feat/src/chem/mech.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "arrows",
+    "lone",
+    "ok"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mechanism/1"
+    },
+    "arrows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "from",
+          "to",
+          "electrons",
+          "ok"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "electrons": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "problem": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "lone": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "atom",
+          "pairs",
+          "ok"
+        ],
+        "properties": {
+          "atom": {
+            "type": "integer"
+          },
+          "pairs": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "ok": {
+      "type": "boolean"
+    }
+  }
+}

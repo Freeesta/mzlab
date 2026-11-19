@@ -122,7 +122,7 @@ async function fillCuts(/** @type {HTMLElement} */ host, /** @type {any} */ n) {
   }));
 }
 
-/** Opens Draw with the SMILES of the tab, marks the bond between two atoms (their order in the SMILES) and colours it as a cut (evidence colours, `hilite/1`). */
+/** Opens Draw with the SMILES of the tab, marks the bond between two atoms (their order in the SMILES) and colours it as a cut (evidence colours, `highlight/1`). */
 async function showCut(/** @type {number[]} */ atoms, /** @type {string} */ bond) {
   if (typeof setView === "function") setView("draw");
   try {

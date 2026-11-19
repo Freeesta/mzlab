@@ -1,6 +1,6 @@
 // @ts-check
 // «Evidence colours» of Draw: other pages (and the substructure card) ask `TPDraw.highlight(layers)` to colour on the canvas the atoms and bonds a piece of
-// evidence points at: a moiety (`moiety`), reactive sites (`sites`) or cuts supported by peaks (`cuts`). The Rust `hilite/1` (`hilite` of the molkit .wasm;
+// evidence points at: a moiety (`moiety`), reactive sites (`sites`) or cuts supported by peaks (`cuts`). The Rust `highlight/1` (`hilite` of the molkit .wasm;
 // the app asks `feat/grafo`) carries them onto the drawing; this file only paints them with Ketcher's highlights in Okabe-Ito colours and lists them in a
 // legend and a data table, so colour is never the only channel. In the LR world only the atoms the student selected are coloured.
 import { ask, ketcher, message } from "./disegno-verifica.js";
@@ -9,7 +9,7 @@ import { molfileOf } from "./disegno-molfile.js";
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => I18N.t(k, p);
 /** @type {Record<string, string>} */ const KIND = { moiety: "draw.ev.kind.moiety", sites: "draw.ev.kind.sites", cuts: "draw.ev.kind.cuts" };
 /** @type {Record<string, string>} */ const SKIP = { noMatch: "draw.ev.skip.noMatch", lr: "draw.ev.skip.lr", tooBig: "draw.ev.skip.tooBig" };
-/** @type {any} */ let last = null;           // the last hilite/1 answer with the names of its atoms
+/** @type {any} */ let last = null;           // the last highlight/1 answer with the names of its atoms
 /** @type {{kind: string, atoms: number[], bonds: number[]}[]} */ let strokes = [];   // what is painted, in Ketcher ids, for a repaint in new colours
 let painted = false, listening = false;
 
@@ -94,7 +94,7 @@ export async function clear() {
 
 /**
  * Colours the evidence `layers` (`{kind: "moiety", query} | {kind: "sites", smiles, atoms} | {kind: "cuts", smiles, bonds}`, each with an optional `label`)
- * on the drawing and fills the card; resolves with the `hilite/1` answer, or null when the canvas is empty or the request fails (the card says why).
+ * on the drawing and fills the card; resolves with the `highlight/1` answer, or null when the canvas is empty or the request fails (the card says why).
  */
 export async function highlight(/** @type {any[]} */ layers) {
   const c = card(), status = /** @type {HTMLElement} */ (c.querySelector("#ev-status"));
