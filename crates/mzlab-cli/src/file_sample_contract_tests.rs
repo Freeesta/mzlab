@@ -5,7 +5,7 @@ use std::path::Path;
 
 use mzlab_core::json::{parse, Value};
 
-use crate::convert_fixtures::{folder, makers, wiff};
+use crate::convert_fixtures::{folder, makers};
 use crate::{execute, Outcome};
 
 fn run(args: &[&str]) -> Outcome {
@@ -141,13 +141,9 @@ fn file_list_and_pair_failures_are_error_1() {
 
 #[test]
 fn sample_select_and_dad_name_the_selector_and_the_file() {
-    let dir = folder("contract_dad");
-    if !wiff(&dir, "two", 2) {
-        let _ = std::fs::remove_dir_all(&dir);
-        return;
-    }
-    let w = dir.join("two.wiff");
-    let w = w.to_str().unwrap();
+    // the fixture is mandatory: `wiff` panics when it cannot be built, so these checks never skip
+    let (dir, w) = crate::contract_tests::wiff("file_sample_dad");
+    let w = w.as_str();
     is_error(
         &run(&["dad", "delay", w, "--sample", "9", "--json"]),
         5,

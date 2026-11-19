@@ -290,6 +290,7 @@ fn derived_exits(name: &str, c: &serde_json::Value) -> Vec<u8> {
     if has("--sample")
         || has("--id")
         || name.starts_with("sample ")
+        || name.starts_with("dad ")
         || name.starts_with("msn graph")
     {
         v.push(5);

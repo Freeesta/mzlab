@@ -109,6 +109,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
         has("--sample")
             || has("--id")
             || e.name.starts_with("sample ")
+            || e.name.starts_with("dad ")
             || e.name.starts_with("msn graph"),
         exit::SELECTOR,
     );
@@ -226,7 +227,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_help_note", text("a flag with no help of its own takes it from flag_help"))
-            .put("exit_codes_note", text("a command with no exit_codes ends with 0, 1 and 2, plus 3 when its path starts with `flow ` or is a verdict command (VERDICT in crates/mzlab-cli/src/contract.rs), 4 when it has a path or rest argument or a path flag other than --out, 5 when it has --sample or --id or its path starts with `sample ` or `msn graph`, 6 when it has --out; `commands --json PATH` gives the codes of one command"))
+            .put("exit_codes_note", text("a command with no exit_codes ends with 0, 1 and 2, plus 3 when its path starts with `flow ` or is a verdict command (VERDICT in crates/mzlab-cli/src/contract.rs), 4 when it has a path or rest argument or a path flag other than --out, 5 when it has --sample or --id or its path starts with `sample `, `dad ` or `msn graph`, 6 when it has --out; `commands --json PATH` gives the codes of one command"))
             .put("examples_note", text("a command with no examples has the one example `mzlab-cli ` + its synopsis without the [optional] groups (a word with a bracket inside is kept) and without `...` tokens"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"
