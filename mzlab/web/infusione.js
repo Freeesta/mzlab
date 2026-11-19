@@ -14,12 +14,12 @@ const INF = (() => {
   const tree = (/** @type {number} */ k) => treeFor(k, O.tol, O.ce);
   /** The same where only text fits (the options of a list): superscript digits. */
   const msTxt = (/** @type {number | string} */ l) => "MS" + String(l).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[+d]);
-  const prec = (/** @type {any} */ n) => `${+n.prec.toFixed(4)}`;
+  const prec = (/** @type {any} */ n) => `${+n.precursor.toFixed(4)}`;
   /** Nodes of a tree in the order of the display (depth first), each with its depth and the path of precursors from the survey. */
   function rows(/** @type {any} */ j) {
     /** @type {Map<string | null, any[]>} */
     const kids = new Map();
-    j.nodi.forEach((/** @type {any} */ n) => { const l = kids.get(n.genitore) || []; l.push(n); kids.set(n.genitore, l); });
+    j.nodes.forEach((/** @type {any} */ n) => { const l = kids.get(n.parent) || []; l.push(n); kids.set(n.parent, l); });
     /** @type {any[]} */
     const out = [];
     const walk = (/** @type {string | null} */ id, /** @type {number} */ depth, /** @type {string[]} */ path) => (kids.get(id) || []).forEach(n => {
@@ -33,7 +33,7 @@ const INF = (() => {
   /** The nodes as the entries of the scan-filter menu of a cell: [{key, level, n, label, msn}] (the survey is the empty choice of the menu). */
   async function groups(/** @type {number} */ k) {
     const j = await tree(k);
-    return rows(j).map(r => ({ key: "msn:" + r.n.id, level: r.n.livello, n: r.n.n, label: `${msTxt(r.n.livello)} ${r.path}${r.n.ce != null ? ` · CE ${r.n.ce}` : ""}`, msn: r.n }));
+    return rows(j).map(r => ({ key: "msn:" + r.n.id, level: r.n.level, n: r.n.n, label: `${msTxt(r.n.level)} ${r.path}${r.n.ce != null ? ` · CE ${r.n.ce}` : ""}`, msn: r.n }));
   }
   /** Adds the grouping (and the sum) of the tree to a request that names a node: the one place that knows the options. */
   const qs = (/** @type {string} */ url) => {
@@ -42,8 +42,8 @@ const INF = (() => {
     if (O.sum && /^(\.\/)?api\/(spectrum|spectra|scanavg)\b/.test(u)) u += "&modo=somma";
     return u;
   };
-  const node = (/** @type {any} */ j, /** @type {string | null | undefined} */ filt) => (filt && filt.startsWith("msn:") ? j.nodi.find((/** @type {any} */ n) => "msn:" + n.id === filt) || null : null);
-  const richest = (/** @type {any} */ j) => j.nodi.reduce((/** @type {any} */ b, /** @type {any} */ n) => (!b || n.n > b.n ? n : b), null);
+  const node = (/** @type {any} */ j, /** @type {string | null | undefined} */ filt) => (filt && filt.startsWith("msn:") ? j.nodes.find((/** @type {any} */ n) => "msn:" + n.id === filt) || null : null);
+  const richest = (/** @type {any} */ j) => j.nodes.reduce((/** @type {any} */ b, /** @type {any} */ n) => (!b || n.n > b.n ? n : b), null);
   /** The chromatogram cell and the spectrum cells that go with a cell. */
   function cells(/** @type {any} */ p) {
     const c = p.type === "chrom" ? p : E.panels.find(q => q.id === (p.link ?? p.src)) || null;

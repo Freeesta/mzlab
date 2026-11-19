@@ -70,7 +70,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(Filter::Node(Arc::new(mask))))
     }
 
-    /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn_albero/1`.
+    /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn-tree/1`.
     pub(crate) fn msn_tree_route(&mut self, q: &Query) -> Result<Option<String>> {
         let r = group_of(q, "tol", "ce")?;
         let a = self.tree_per(&r);
@@ -82,7 +82,7 @@ impl<R: ReadAt> Routes<R> {
             ix.map(|i| scans[i].rt).fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), t| (a.min(t), b.max(t)))
         };
         let mut o = Out::default();
-        o.raw("{\"formato\":\"msn_albero/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
+        o.raw("{\"schema\":\"msn-tree/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
         let (t0, t1) = span(&mut a.ms1.iter().copied());
         o.raw(",\"rt0\":").opt(t0.is_finite().then(|| round(t0, 4))).raw(",\"rt1\":").opt(t1.is_finite().then(|| round(t1, 4)));
         // mean total ion current per scan of a group of scans
@@ -91,26 +91,26 @@ impl<R: ReadAt> Routes<R> {
         let mut levels: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
         crate::sortc::slice_ord(&mut levels);
         levels.dedup();
-        o.raw("},\"livelli\":[").raw(&levels.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodi\":[");
+        o.raw("},\"levels\":[").raw(&levels.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodes\":[");
         for (k, (n, bl)) in a.nodi.iter().zip(blocks(&a, scans.len())).enumerate() {
             let (m, act, ce) = n.key.last().cloned().unwrap_or((0.0, String::new(), f64::NAN));
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"id\":").str(&n.id).raw(",\"genitore\":");
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"id\":").str(&n.id).raw(",\"parent\":");
             match n.genitore {
                 Some(g) => o.str(&a.nodi[g].id),
                 None => o.raw("null"),
             };
-            o.raw(",\"salto\":").int(n.salto as i64).raw(",\"livello\":").int(n.livello as i64);
-            o.raw(",\"prec\":").num(m).raw(",\"att\":").str(&act).raw(",\"ce\":").opt((!ce.is_nan()).then_some(ce));
+            o.raw(",\"skip\":").int(n.salto as i64).raw(",\"level\":").int(n.livello as i64);
+            o.raw(",\"precursor\":").num(m).raw(",\"activation\":").str(&act).raw(",\"ce\":").opt((!ce.is_nan()).then_some(ce));
             let (t0, t1) = span(&mut n.scansioni.iter().copied());
             o.raw(",\"n\":").int(n.scansioni.len() as i64).raw(",\"rt0\":").num(round(t0, 4)).raw(",\"rt1\":").num(round(t1, 4));
             o.raw(",\"tic\":").num(round(mean_tic(&n.scansioni), 1));
-            o.raw(",\"blocchi\":[");
+            o.raw(",\"blocks\":[");
             for (j, (b0, b1)) in bl.iter().enumerate() {
                 o.raw(if j > 0 { ",[" } else { "[" }).num(round(scans[*b0].rt, 4)).raw(",").num(round(scans[*b1].rt, 4)).raw("]");
             }
             o.raw("]}");
         }
-        o.raw("],\"scartate\":").int(a.scartate as i64).raw("}");
+        o.raw("],\"discarded\":").int(a.scartate as i64).raw("}");
         Ok(Some(o.0))
     }
 }
