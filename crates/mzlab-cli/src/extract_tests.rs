@@ -116,6 +116,17 @@ fn the_documents_have_the_keys_of_their_schemas() {
         |v: &mzlab_core::json::Value| v.entries().iter().map(|e| e.0.clone()).collect::<Vec<_>>();
     let props = |b: &[u8]| keys(parse(b).unwrap().get("properties").unwrap());
     let (d, f) = mzml_file("schema_keys");
+    // every document and CSV ends with a newline
+    for a in [
+        vec!["trace", "chrom", &f, "--id", "tic"],
+        vec!["trace", "chrom", &f, "--id", "tic", "--format", "csv"],
+        vec!["trace", "xic", &f, "--mz", "241.3", "--ppm", "10"],
+        vec!["spectrum", "get", &f, "--rt", "3"],
+        vec!["spectrum", "list", &f],
+        vec!["file", "info", &f],
+    ] {
+        assert!(run(&a).stdout.ends_with(b"\n"), "{a:?}");
+    }
     let doc =
         |a: &[&str]| parse(String::from_utf8(run(a).stdout).unwrap().trim().as_bytes()).unwrap();
     assert_eq!(
