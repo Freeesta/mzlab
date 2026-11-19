@@ -318,7 +318,7 @@ fn json_of(csv: &str) -> String {
     let mut lines = csv.lines();
     let cells = |l: &str| {
         l.split(',')
-            .map(|c| mzlab_core::jsonb::text(c))
+            .map(mzlab_core::jsonb::text)
             .collect::<Vec<_>>()
     };
     let columns = cells(lines.next().unwrap_or(""));
