@@ -460,6 +460,11 @@ def main() -> None:
         ok = [r for r in results if r[1] == "OK"]
         print("\n".join([lines[0], ""] + [l for l in lines[2:] if not l.startswith("- OK")] +
                          [f"OK: {len(ok)} checks (list in .verifica/ultimo.md)"]))
+    if fails:      # the last lines of the log name the failing checks, whoever reads only the tail of the job log
+        names = ", ".join(r[0] for r in fails)
+        print(f"FAILED: {len(fails)} check(s): {names}")
+        if os.environ.get("GITHUB_ACTIONS"):
+            print(f"::error title=verifica::{len(fails)} check(s) failed: {names}")
     sys.exit(1 if fails else 0)
 
 
