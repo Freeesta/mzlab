@@ -764,8 +764,19 @@ pub fn facts_from<M: ReadAt>(
     n_chromatograms: i64,
     need_mrm: bool,
 ) -> Result<Facts> {
-    use crate::json::round;
     let chroms = m.chromatograms(scans_end)?;
+    facts_with(m, &chroms, scans_end, n_chromatograms, need_mrm)
+}
+
+/// `facts_from` over the chromatogram list already read.
+pub(crate) fn facts_with<M: ReadAt>(
+    m: &mut crate::mzmlhead::Mzml<M>,
+    chroms: &[crate::mzmlhead::Chrom],
+    scans_end: u64,
+    n_chromatograms: i64,
+    need_mrm: bool,
+) -> Result<Facts> {
+    use crate::json::round;
     let mut f = Facts {
         instrument: m.metadata()?.instrument,
         n_chromatograms,
@@ -798,9 +809,22 @@ pub fn facts_from<M: ReadAt>(
     }
     f.lc = crate::infusion::raw_lc(m)?;
     f.ims = crate::mzmlhead::mobility_kind(m)?;
+    if need_mrm {
+        add_mrm(m, chroms, scans_end, &mut f)?;
+    }
+    Ok(f)
+}
+
+/// The part of `facts_from` that `need_mrm` asks for.
+pub(crate) fn add_mrm<M: ReadAt>(
+    m: &mut crate::mzmlhead::Mzml<M>,
+    chroms: &[crate::mzmlhead::Chrom],
+    scans_end: u64,
+    f: &mut Facts,
+) -> Result<()> {
     // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
     // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.
-    if need_mrm && (scans_end == 0 || f.srm > 0) {
+    if scans_end == 0 || f.srm > 0 {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
         let srm: Vec<_> = chroms.iter().filter(|c| c.kind == "srm").collect();
@@ -821,7 +845,7 @@ pub fn facts_from<M: ReadAt>(
         })?;
         f.srm_rt = lo.zip(hi);
     }
-    Ok(f)
+    Ok(())
 }
 
 #[cfg(test)]

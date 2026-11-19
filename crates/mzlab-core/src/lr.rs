@@ -3,7 +3,7 @@
 
 use crate::error::Result;
 use crate::idxread::{Index, ReadAt};
-use crate::iteminfo::{facts_from, file_parts, item_info, Meta};
+use crate::iteminfo::{file_parts, item_info, Meta};
 use crate::json::{self, Out, Value};
 use crate::mzmlhead::Mzml;
 use crate::project::{guess_conc, guess_sample};
@@ -32,7 +32,7 @@ pub fn file_entry<R: ReadAt, M: ReadAt>(
         .and_then(Value::f64)
         .unwrap_or(0.0) as i64;
     let scans_end = idx.scans.last().map_or(0, |s| s.end);
-    let facts = facts_from(m, scans_end, n_chrom, idx.scans.is_empty())?;
+    let facts = idx.layout.clone().facts(m, scans_end, n_chrom, idx.scans.is_empty())?;
     let sniffed = sniff(idx, m, &facts, name)?;
     let sha = idx
         .source
@@ -100,7 +100,7 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
         .and_then(Value::f64)
         .unwrap_or(0.0) as i64;
     let scans_end = idx.scans.last().map_or(0, |x| x.end);
-    let facts = facts_from(m, scans_end, n_chrom, true)?;
+    let facts = idx.layout.clone().facts(m, scans_end, n_chrom, true)?;
     let sha = idx
         .source
         .get("sha256")
