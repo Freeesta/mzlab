@@ -314,11 +314,11 @@ def last_failed() -> set[str]:
 T0 = time.time()
 
 
-def parte_di(names: list[str], k: int, n: int) -> list[str]:
+def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
     """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call.
     Part 1 also runs syntax, texts, pytest and prova_hr: it gets one slot per two rounds of the others, and the slowest e2e (SLOW, first in the rank) go to the other parts."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 else [1]
+    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 and not plain else [*range(1, n + 1)]      # plain (--fumo): no part carries syntax and pytest, so the parts are equal
     return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 
@@ -329,12 +329,12 @@ def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bo
             "builds the site with Pyodide: run it apart (--solo)" if "sito" in need and not only and not sito_pronto else "")
 
 
-def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False) -> None:
+def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False, plain: bool = False) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
         names = [n for n in names if n in only]
     if parte:
-        keep = set(parte_di(names, *parte))
+        keep = set(parte_di(names, *parte, plain=plain))
         names = [n for n in names if n in keep]
     if not browser_ok():
         results.append(("e2e", "SKIP", 0, ["Playwright/Chromium not available: python3 tools/verifica.py --setup"])); return
@@ -437,7 +437,7 @@ def main() -> None:
             results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
-            e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto)
+            e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto, plain=a.fumo)
     known = known_reds()
     extra = known_greens(results, known)
     results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known and not (notes and notes[0].startswith("TIMEOUT budget")) else
