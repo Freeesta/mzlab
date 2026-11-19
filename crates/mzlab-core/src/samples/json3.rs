@@ -1,14 +1,12 @@
-//! The canonical JSON of `samples/2` (`docs/schemi/samples-2.json`) and its reader, which also migrates a `samples/1`: keys in alphabetical
+//! The canonical JSON of `samples/1` (`docs/schemi/samples-1.json`) and its reader: `schema` first, then the keys in alphabetical
 //! order, files sorted by injection order (then by their own bytes), columns and free values by name, so equal metadata give the same bytes
 //! and the same SHA-256 whatever the order they were written in.
 
 use super::json::{bad, number, opt_text, text};
-use super::{Cell, Column, ColumnType, FileData, Sample, Table};
+use super::{Cell, Column, ColumnType, FileData, Sample, Table, SCHEMA};
 use crate::budget::sha256_hex;
 use crate::error::Result;
 use crate::json::{parse, Out, Value};
-
-pub const SCHEMA3: &str = "samples/2";
 
 fn opt_str(j: &mut Out, v: Option<&str>) {
     match v {
@@ -103,14 +101,14 @@ fn column(j: &mut Out, c: &Column) {
     j.raw("}");
 }
 
-/// `{"schema":"samples/2","columns":[...],"samples":[...]}`; the files are sorted by `injection_order`, then by their own bytes.
-pub fn to_json3(t: &Table) -> String {
+/// `{"schema":"samples/1","columns":[...],"samples":[...]}`; the files are sorted by `injection_order`, then by their own bytes.
+pub fn table_to_json(t: &Table) -> String {
     let mut files: Vec<(u32, String)> = t.samples.iter().map(|c| (c.order, one(c))).collect();
     crate::sortc::slice_ord(&mut files);
     let mut cols: Vec<&Column> = t.columns.iter().collect();
     crate::sortc::slice_by(&mut cols, |a, b| a.name.cmp(&b.name));
     let mut j = Out::default();
-    j.raw("{\"schema\":").str(SCHEMA3).raw(",\"columns\":[");
+    j.raw("{\"schema\":").str(SCHEMA).raw(",\"columns\":[");
     for (i, c) in cols.into_iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" });
         column(&mut j, c);
@@ -124,8 +122,8 @@ pub fn to_json3(t: &Table) -> String {
 }
 
 /// SHA-256 of the canonical JSON.
-pub fn digest3(t: &Table) -> String {
-    sha256_hex(to_json3(t).as_bytes())
+pub fn table_digest(t: &Table) -> String {
+    sha256_hex(table_to_json(t).as_bytes())
 }
 
 fn polarity(v: &Value) -> Result<Option<i8>> {
@@ -148,7 +146,7 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
     Ok(number(d, lo)?.zip(number(d, hi)?))
 }
 
-/// The fields `samples/2` adds, all optional (a `samples/1` has none): read into `c`.
+/// The fields `samples/1` adds, all optional (a `samples/1` has none): read into `c`.
 pub(super) fn read_new(v: &Value, c: &mut Sample) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
     c.sub = s("sub_sample")?;
@@ -191,7 +189,7 @@ fn read_column(v: &Value) -> Result<Column> {
     Ok(c)
 }
 
-/// Reads a `samples/2` document or migrates a `samples/1` one (the new fields empty, no columns): files in the order written.
+/// Reads a `samples/1` document: the files in the order written, the declared columns (none when the document has no `columns`).
 pub fn table_from_value(doc: &Value) -> Result<Table> {
     let samples = super::from_value(doc)?;
     let columns = doc

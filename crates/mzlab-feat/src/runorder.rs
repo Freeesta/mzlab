@@ -1,4 +1,4 @@
-//! The text of `qc.run_order@1`: the facts of the injection sequence of the sample table (`samples/1` or `/3`) per batch: the count of each role, the largest gap between two QC injections,
+//! The text of `qc.run_order@1`: the facts of the injection sequence of the sample table (`samples/1`) per batch: the count of each role, the largest gap between two QC injections,
 //! the blanks and the distinct standard levels, plus `warn.qc.runorder.*` keys. It reports facts and never a verdict. Bytes in, text out: `flow run` (`mzlab-cli`) and the browser module
 //! `flowtab` (`mzlab-feat-wasm`) both call it, so they write the same `runorder/1` bytes.
 
@@ -302,7 +302,7 @@ fn batches_for(cs: &[samples::Sample], design: Option<&[u8]>) -> Result<Vec<Stri
     })
 }
 
-/// The `runorder/1` text for the sample table `samples` (`samples/1` or `/3`); the batches come from `design` (`design/1`) when it is given, else from the batch of each file, else one batch.
+/// The `runorder/1` text for the sample table `samples` (`samples/1`); the batches come from `design` (`design/1`) when it is given, else from the batch of each file, else one batch.
 /// `params` are the parameters of the step.
 pub fn runorder_text(
     params: &[(String, Value)],

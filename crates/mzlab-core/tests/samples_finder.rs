@@ -6,15 +6,12 @@ use mzlab_core::samples;
 fn route_finder_same_bytes_as_route() {
     let files = r#"{"files":[{"name":"blank_01.mzML","sha256":"","kind":""},{"name":"qc_pool_02.mzML","sha256":"","kind":""}]}"#;
     let doc = samples::route("propose", files).unwrap();
-    let doc3 = samples::route("propose2", files).unwrap();
     for (op, input) in [
         ("propose", files),
         ("validate", doc.as_str()),
         ("per_tp", doc.as_str()),
         ("canonical", doc.as_str()),
         ("digest", doc.as_str()),
-        ("canonical", doc3.as_str()),
-        ("digest", doc3.as_str()),
     ] {
         assert_eq!(
             samples::route_finder(op, input).unwrap(),
@@ -22,8 +19,7 @@ fn route_finder_same_bytes_as_route() {
             "{op}"
         );
     }
-    assert!(samples::route("migrate", &doc).is_ok());
-    for op in ["propose_explained", "propose2", "relink", "migrate"] {
+    for op in ["propose_explained", "relink"] {
         assert_eq!(
             samples::route_finder(op, files).unwrap_err().key,
             "error.badSamples",

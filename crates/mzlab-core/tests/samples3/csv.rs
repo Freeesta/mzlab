@@ -1,12 +1,12 @@
-//! CSV of `samples/2`: round trip both ways, the three separators, quotes and newlines, synonyms of the headers, typed free columns, errors.
+//! CSV of `samples/1`: round trip both ways, the three separators, quotes and newlines, synonyms of the headers, typed free columns, errors.
 
 use super::{many, rich};
 use mzlab_core::samples::{self, csv_read, csv_write, Cell, ColumnType, Table};
-use mzlab_core::samples::{table_from_json, to_json3};
+use mzlab_core::samples::{table_from_json, table_to_json};
 use serde_json::{json, Value};
 
 fn written(t: &Table, sep: &str) -> String {
-    let doc = to_json3(t);
+    let doc = table_to_json(t);
     let r: Value = serde_json::from_str(
         &csv_write(
             &json!({"samples": serde_json::from_str::<Value>(&doc).unwrap(), "separator": sep})
@@ -19,7 +19,7 @@ fn written(t: &Table, sep: &str) -> String {
 }
 
 fn read(text: &str, sep: &str, cols: &Table) -> Table {
-    let doc: Value = serde_json::from_str(&to_json3(cols)).unwrap();
+    let doc: Value = serde_json::from_str(&table_to_json(cols)).unwrap();
     let input = json!({"text": text, "separator": sep, "columns": doc["columns"]});
     table_from_json(csv_read(&input.to_string()).unwrap().as_bytes()).unwrap()
 }
@@ -36,10 +36,10 @@ fn what_is_written_is_read_back_unchanged() {
     for sep in [",", ";", "\t"] {
         let text = written(&t, sep);
         let back = read(&text, sep, &t);
-        assert_eq!(to_json3(&back), to_json3(&t), "sep {sep:?}");
+        assert_eq!(table_to_json(&back), table_to_json(&t), "sep {sep:?}");
         assert_eq!(written(&back, sep), text);
         // the separator is found by itself
-        assert_eq!(to_json3(&read(&text, "", &t)), to_json3(&t));
+        assert_eq!(table_to_json(&read(&text, "", &t)), table_to_json(&t));
     }
 }
 

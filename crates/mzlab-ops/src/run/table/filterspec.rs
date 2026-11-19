@@ -55,7 +55,7 @@ fn wants_labels(job: &[(String, Value)]) -> bool {
         )
 }
 
-/// The batch, matrix, series and group of every file of a `samples/1` or `/3` document; empty for `sample-meta/1`, which has none.
+/// The batch, matrix, series and group of every file of a `samples/1` document.
 fn labels_of(samples: &[u8]) -> Labels {
     let Ok(list) = samples::from_json(samples) else {
         return Labels::default();

@@ -1,8 +1,7 @@
-//! Roles and times of the files of a series, `samples/1` (`docs/schemi/samples-1.json`): the one model of the Data view and of mzFinder.
-//! `propose` reads the names (one parser, times never confirmed), `validate` gives stable codes (the pages put the words), `legacy migration` migrates the
-//! notebook v1, the QA/QC roles, `samples/1` and the files of a `.mzflow`, `per_tp` gives the indices by role and the minutes of `feature_pipeline/1`.
-//! `samples/2` (`docs/schemi/samples-2.json`) adds the physical sample, polarity, matrix, batch, date, group and free typed columns: `columns`, `json3`
-//! (canonical form, migration of a `/2`), `validate3`, `csv`, `model` (name models, `regex`) and `from_file` (what the file says about itself).
+//! Roles and times of the files of a series, `samples/1` (`docs/schemi/samples-1.json`): the one model of the Data view and of mzFinder, with the physical
+//! sample, polarity, matrix, batch, date, group and the free typed columns. `propose` reads the names (one parser, times never confirmed), `validate` gives stable
+//! codes (the pages put the words), `per_tp` gives the indices by role and the minutes of `feature_pipeline/1`; `json3` is the canonical form (`table_to_json`),
+//! `csv`, `model` (name models, `regex`) and `from_file` (what the file says about itself) read and fill it.
 
 mod blank_words;
 mod columns;
@@ -33,9 +32,9 @@ pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{digest, from_json, from_value, to_json};
-pub use json3::{digest3, table_from_json, table_from_value, to_json3, SCHEMA3};
+pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};
 pub use model::{apply_model, Applied};
-pub use names::{kind_v1, propose, propose_explained, role_and_minutes};
+pub use names::{propose, propose_explained, role_and_minutes, table_kind_of_name};
 pub use order::order_like;
 pub use positions::{proposals_json, Position, Proposal};
 pub use relink::{relink, relink_json, RelinkMatch};
@@ -96,7 +95,7 @@ pub struct Sample {
     pub note: String,
     /// For an infusion: formula or name of the parent (filled by mzFinder).
     pub compound: String,
-    // `samples/2` (docs/agenti/samples.md): sample, +1/-1 polarity, matrix, batch (design/1), ISO date and time, group, free columns (sorted by name), what the file says
+    // `samples/1` (docs/agenti/samples.md): sample, +1/-1 polarity, matrix, batch (design/1), ISO date and time, group, free columns (sorted by name), what the file says
     pub sample_id: String,
     pub polarity: Option<i8>,
     pub matrix: String,
@@ -222,22 +221,14 @@ fn number_replicates_pairwise(cs: &mut [Sample]) {
     }
 }
 
-/// The bindings (a `samples/1` or `/2` document is read by every operation that takes one; `canonical` and `digest` keep its schema, `migrate` makes a `/2`;
-/// `validate` also gives the findings of `/2`; `route_all` adds `model`, `from_file`, `csv_read` and `csv_write`): `op` is `propose` or `propose_explained`
-/// (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `propose2`, `validate`, `per_tp`, `canonical` or `digest` (a `samples/1`),
-/// `relink` (`{"samples","file":[{"path","sha256"}]}`) or `migrate`; JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
+/// The bindings (a `samples/1` document is read by every operation that takes one; `route_all` adds `model`, `from_file`, `csv_read` and `csv_write`): `op` is
+/// `propose` or `propose_explained` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `validate`, `per_tp`, `canonical` or `digest`
+/// (a `samples/1`) or `relink` (`{"samples","file":[{"path","sha256"}]}`); JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
         "propose_explained" => {
             let files = files_of(input)?;
             Ok(proposals_json(&propose_explained(&files)))
-        }
-        "propose2" => {
-            let table = Table {
-                samples: propose(&files_of(input)?),
-                columns: Vec::new(),
-            };
-            Ok(to_json3(&table))
         }
         "relink" => {
             let v = crate::json::parse(input.as_bytes())?;
@@ -255,7 +246,6 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .collect();
             Ok(relink_json(&relink(&cs, &cand)))
         }
-        "migrate" => canonical(op, input),
         _ => route_finder(op, input),
     }
 }
@@ -273,21 +263,18 @@ fn files_of(input: &str) -> Result<Vec<(String, String, String)>> {
         .collect())
 }
 
-/// `canonical`, `digest` and `migrate`: the table read from the document, written back (or hashed) in its own schema; `migrate` always gives a `/2`.
+/// `canonical` and `digest`: the table read from the document, written back (or hashed) in its canonical form.
 fn canonical(op: &str, input: &str) -> Result<String> {
-    let doc = crate::json::parse(input.as_bytes())?;
-    let t = table_from_value(&doc)?;
-    let v3 = op == "migrate" || doc.get("schema").and_then(|v| v.str()) == Some(SCHEMA3);
-    Ok(match (op, v3) {
-        ("digest", true) => digest3(&t),
-        ("digest", false) => digest(&t.samples),
-        (_, true) => to_json3(&t),
-        _ => to_json(&t.samples),
+    let t = table_from_value(&crate::json::parse(input.as_bytes())?)?;
+    Ok(if op == "digest" {
+        table_digest(&t)
+    } else {
+        table_to_json(&t)
     })
 }
 
 /// The operations mzFinder calls through the `table` .wasm (`TP_Mine/files/finder-ruoli.js`): `propose`, `validate`, `per_tp`, `canonical`, `digest`.
-/// Its .wasm has a cap, so the rest of `route` (`propose_explained`, `propose2`, `relink`, `migrate`) is served by `rotte` in the browser; same bytes, same code.
+/// Its .wasm has a cap, so the rest of `route` (`propose_explained`, `relink`) is served by `rotte` in the browser; same bytes, same code.
 pub fn route_finder(op: &str, input: &str) -> Result<String> {
     match op {
         "propose" => Ok(to_json(&propose(&files_of(input)?))),

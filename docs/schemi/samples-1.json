@@ -1,34 +1,250 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "samples/1",
- "title": "samples/1: roles and times of the files of a series",
- "description": "One entry per file, in the order of injection: the one model of the roles and times of the Data view and of mzFinder (mzlab-core samples). Proposed from the names by `propose` (times never confirmed), checked by `validate`, read by the TP path through `per_tp`. Canonical JSON: keys in alphabetical order, so the same metadata give the same bytes and the same SHA-256.",
+ "title": "samples/1: metadata of the files of a series",
+ "description": "One entry per file, in the order of injection: the roles and times (kind, time, time_unit, time_min, time_confirmed, series, replicate, concentration), the physical sample, polarity, matrix, batch, acquisition date, group, the file data and the free typed columns of the table. The one model of the Data view, mzFinder, Flow and the CLI (mzlab-core samples). A physical sample measured in both polarities is two files with the same sample_id. Proposed from the names by `propose` (times never confirmed), read from CSV by `csv_read`, from the names by `model`, completed from the files by `from_file`, checked by `validate`. Canonical JSON: `schema` first, then the keys in alphabetical order, files sorted by injection_order, so the same metadata give the same bytes and the same SHA-256. A document with another schema is refused.",
  "type": "object",
- "required": ["samples", "schema"],
+ "required": [
+  "schema",
+  "columns",
+  "samples"
+ ],
  "properties": {
-  "schema": {"const": "samples/1"},
+  "schema": {
+   "const": "samples/1"
+  },
+  "columns": {
+   "type": "array",
+   "description": "the declared free columns; the values of the files are in `extra`",
+   "items": {
+    "type": "object",
+    "required": [
+     "name",
+     "kind"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "text",
+       "number",
+       "category"
+      ]
+     },
+     "values": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "the allowed values of a category (sorted)"
+     },
+     "required": {
+      "type": "boolean",
+      "description": "every file must have a value (missingValue); absent = false"
+     }
+    }
+   }
+  },
   "samples": {
    "type": "array",
    "items": {
     "type": "object",
-    "required": ["compound", "concentration", "file", "istd", "note", "injection_order", "replicate", "series", "sha256", "time", "time_confirmed", "time_min", "kind", "blank_kind", "concentration_unit", "time_unit"],
+    "required": [
+     "acquired",
+     "sub_sample",
+     "sample_id",
+     "compound",
+     "concentration",
+     "extra",
+     "file",
+     "group",
+     "istd",
+     "batch",
+     "matrix",
+     "note",
+     "injection_order",
+     "polarity",
+     "reinjection",
+     "replicate",
+     "series",
+     "sha256",
+     "time",
+     "time_confirmed",
+     "time_min",
+     "kind",
+     "blank_kind",
+     "concentration_unit",
+     "time_unit"
+    ],
     "properties": {
-     "file": {"type": "string"},
-     "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
-     "kind": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
-     "blank_kind": {"enum": ["solvent", "procedure", "wash", null], "description": "optional, only for a blank: solvent and procedure blanks are subtracted the same way; a wash is no reference"},
-     "time": {"type": ["number", "null"], "description": "the time as written or confirmed, in time_unit"},
-     "time_unit": {"enum": ["s", "min", "h", "d"]},
-     "time_min": {"type": ["number", "null"], "description": "derived from time and time_unit: the only time used in the computations; 0 for a t0"},
-     "time_confirmed": {"type": "boolean", "description": "false for a time proposed from the name: never used before the user confirms it"},
-     "series": {"type": "string", "description": "the experiment the file belongs to; empty = the only one, or shared by all"},
-     "replicate": {"type": "integer", "minimum": 1},
-     "concentration": {"type": ["number", "null"]},
-     "concentration_unit": {"type": ["string", "null"]},
-     "injection_order": {"type": "integer", "minimum": 1},
-     "istd": {"type": "boolean", "description": "the file is an internal standard"},
-     "note": {"type": "string"},
-     "compound": {"type": "string", "description": "for an infusion: formula or name of the parent"}
+     "file": {
+      "type": "string"
+     },
+     "sha256": {
+      "type": "string",
+      "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"
+     },
+     "sub_sample": {
+      "type": "string",
+      "description": "the sample inside a file that holds several (index or inner name); empty when the file is one sample"
+     },
+     "sample_id": {
+      "type": "string",
+      "description": "the physical sample; the two polarities of one sample share it"
+     },
+     "polarity": {
+      "enum": [
+       1,
+       -1,
+       null
+      ],
+      "description": "from the file (from_file) or proposed by a name model"
+     },
+     "matrix": {
+      "type": "string"
+     },
+     "batch": {
+      "type": "string",
+      "description": "the batch of design/1; empty = the default batch"
+     },
+     "acquired": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "ISO YYYY-MM-DDTHH:MM[:SS], local time of the instrument PC, from the file"
+     },
+     "group": {
+      "type": "string"
+     },
+     "extra": {
+      "type": "object",
+      "description": "free columns: name -> text or number, typed by `columns`"
+     },
+     "file_data": {
+      "type": "object",
+      "description": "what the file says about itself (from_file), never edited by the user; present only when read from the file",
+      "properties": {
+       "modello": {
+        "type": "string"
+       },
+       "method": {
+        "type": "string"
+       },
+       "mz_min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "mz_max": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "rt_min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "rt_max": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "scans": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      }
+     },
+     "kind": {
+      "enum": [
+       "sample",
+       "t0",
+       "blank",
+       "dark",
+       "infusion",
+       "std",
+       "calibration",
+       "qc",
+       "pool"
+      ]
+     },
+     "blank_kind": {
+      "enum": [
+       "solvent",
+       "procedure",
+       "wash",
+       null
+      ]
+     },
+     "time": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "time_unit": {
+      "enum": [
+       "s",
+       "min",
+       "h",
+       "d"
+      ]
+     },
+     "time_min": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "time_confirmed": {
+      "type": "boolean"
+     },
+     "series": {
+      "type": "string"
+     },
+     "reinjection": {
+      "type": "boolean",
+      "description": "a re-injection (ID suffix -R): a distinct injection, left out of the kinetics by the pages"
+     },
+     "replicate": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "concentration": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "concentration_unit": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "injection_order": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "istd": {
+      "type": "boolean"
+     },
+     "note": {
+      "type": "string"
+     },
+     "compound": {
+      "type": "string"
+     }
     }
    }
   }

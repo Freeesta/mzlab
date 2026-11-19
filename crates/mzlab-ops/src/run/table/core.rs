@@ -98,7 +98,7 @@ pub fn view_json<R: ReadAt>(
     Ok(o.0)
 }
 
-/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>,"campioni":<the samples>}` after it,
+/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>,"samples":<the samples>}` after it,
 /// so that an export that reads the view finds the table in the run and writes the rows the view keeps, and any other step reads `table_of_view`.
 pub fn view_json_origin<R: ReadAt>(
     r: &mut R,
@@ -184,7 +184,7 @@ pub fn tp_table_cond_json<R: ReadAt>(
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
 }
 
-/// The `sample-meta/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
+/// The `samples/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
 pub fn samples_json(files_json: &str) -> Result<String> {
     let v = mzlab_core::json::parse(files_json.as_bytes())?;
     let files: Vec<(String, String)> = v

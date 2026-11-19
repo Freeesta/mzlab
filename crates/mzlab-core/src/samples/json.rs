@@ -1,64 +1,16 @@
-//! The canonical JSON of `samples/1` (keys in alphabetical order: the same metadata give the same bytes and the same SHA-256), its reader,
-//! and the migration of the old places where roles and times were kept.
+//! The files of a `samples/1` document: the reader of its entries and the canonical JSON of a plain list (the writer is `json3.rs`).
 
-use super::{Sample, BLANK_TYPES, SCHEMA, TIME_UNITS, TYPES};
+use super::{Sample, Table, BLANK_TYPES, SCHEMA, TIME_UNITS, TYPES};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
-use crate::json::{parse, Out, Value};
+use crate::json::{parse, Value};
 
-fn opt_str(j: &mut Out, v: Option<&str>) {
-    match v {
-        Some(s) => j.str(s),
-        None => j.raw("null"),
-    };
-}
-
-fn one(j: &mut Out, c: &Sample) {
-    j.raw("{\"blank_kind\":");
-    opt_str(j, c.blank_kind.as_deref());
-    j.raw(",\"compound\":")
-        .str(&c.compound)
-        .raw(",\"concentration\":")
-        .opt(c.conc);
-    j.raw(",\"concentration_unit\":");
-    opt_str(j, c.unit.as_deref());
-    j.raw(",\"file\":")
-        .str(&c.file)
-        .raw(",\"injection_order\":")
-        .int(c.order as i64);
-    j.raw(",\"istd\":")
-        .raw(if c.istd { "true" } else { "false" });
-    j.raw(",\"kind\":")
-        .str(&c.kind)
-        .raw(",\"note\":")
-        .str(&c.note);
-    j.raw(",\"replicate\":")
-        .int(c.replicate as i64)
-        .raw(",\"series\":")
-        .str(&c.series);
-    j.raw(",\"sha256\":")
-        .str(&c.sha256)
-        .raw(",\"time\":")
-        .opt(c.time);
-    j.raw(",\"time_confirmed\":")
-        .raw(if c.time_confirmed { "true" } else { "false" });
-    j.raw(",\"time_min\":")
-        .opt(c.time_min)
-        .raw(",\"time_unit\":")
-        .str(&c.time_unit)
-        .raw("}");
-}
-
-/// `{"schema":"samples/1","samples":[...]}`: `schema` first, then the keys of every file in alphabetical order.
+/// `samples/1` of `cs` with no declared column: `{"schema":"samples/1","columns":[],"samples":[...]}`, the one canonical form (see `json3.rs`).
 pub fn to_json(cs: &[Sample]) -> String {
-    let mut j = Out::default();
-    j.raw("{\"schema\":").str(SCHEMA).raw(",\"samples\":[");
-    for (i, c) in cs.iter().enumerate() {
-        j.raw(if i > 0 { "," } else { "" });
-        one(&mut j, c);
-    }
-    j.raw("]}");
-    j.0
+    super::table_to_json(&Table {
+        samples: cs.to_vec(),
+        columns: Vec::new(),
+    })
 }
 
 /// SHA-256 of the canonical JSON (what the `samples` operation of the `.mzflow` records).
@@ -133,7 +85,7 @@ fn read_one(v: &Value) -> Result<Sample> {
     Ok(c)
 }
 
-/// Reads a `samples/1` (or `/3`, the new fields apart) document: the roles, kinds of blank and units must be the ones of the schema; `time_min` is derived again from
+/// Reads a `samples/1` document: the roles, kinds of blank and units must be the ones of the schema; `time_min` is derived again from
 /// `time` and `time_unit` (a time zero without a time has 0 minutes).
 pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
     from_value(&parse(bytes)?)
@@ -141,10 +93,7 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
 
 /// The same as `from_json` on a document already parsed (a part of a larger document).
 pub fn from_value(doc: &Value) -> Result<Vec<Sample>> {
-    if !matches!(
-        doc.get("schema").and_then(|v| v.str()),
-        Some(SCHEMA) | Some(super::SCHEMA3)
-    ) {
+    if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
         return Err(bad());
     }
     doc.get("samples")
@@ -155,8 +104,8 @@ pub fn from_value(doc: &Value) -> Result<Vec<Sample>> {
         .collect()
 }
 
-/// A role of the old vocabularies (Data view, QA/QC, `samples/1`, Dig) in `samples/1`; None when unknown.
-pub(super) fn legacy_kind(t: &str) -> Option<&'static str> {
+/// A role written as a synonym (`standard`, `control`, ...) in the roles the program knows; None when unknown.
+pub(super) fn role_alias(t: &str) -> Option<&'static str> {
     Some(match t {
         "sample" => "sample",
         "blank" => "blank",

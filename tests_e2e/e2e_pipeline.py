@@ -394,7 +394,7 @@ try:
             assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
             assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
-            c = [x for x in wf["operazioni"] if x["op"] == "campioni"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
+            c = [x for x in wf["operazioni"] if x["op"] == "samples"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
         step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
 

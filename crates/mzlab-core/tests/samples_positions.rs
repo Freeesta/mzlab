@@ -135,7 +135,7 @@ fn route_with_spans() {
     let input = r#"{"files":[{"name":"X_t5.mzML","sha256":"ab"}]}"#;
     let out = samples::route("propose_explained", input).unwrap();
     assert!(
-        out.starts_with("{\"samples\":{\"schema\":\"samples/1\",\"samples\":["),
+        out.starts_with("{\"samples\":{\"schema\":\"samples/1\",\"columns\":[],\"samples\":["),
         "{out}"
     );
     assert!(

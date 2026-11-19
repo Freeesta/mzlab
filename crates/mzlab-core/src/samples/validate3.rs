@@ -1,4 +1,4 @@
-//! The checks `samples/2` adds to `validate`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
+//! The checks `samples/1` adds to `validate`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
 //! polarities of a physical sample (`pairMissing`, `pairMismatch`). Stable codes; the pages put the words.
 
 use super::{sample_id, validate, Sample, Table, Warning};
@@ -94,7 +94,7 @@ fn pairs(out: &mut Vec<Warning>, cs: &[Sample]) {
     }
 }
 
-/// The findings of `validate` plus the ones of `samples/2`, in that order.
+/// The findings of `validate` plus the ones of `samples/1`, in that order.
 pub fn validate3(t: &Table) -> Vec<Warning> {
     let mut out = validate(&t.samples);
     duplicates(&mut out, &t.samples);

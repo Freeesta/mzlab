@@ -1,6 +1,6 @@
 //! wasm-bindgen bridge of the table of `mzlab-feat`: the view (normalisation and filters), the report and the files that leave the table (CSV full,
 //! FBMN quantification table, MGF, SIRIUS `.ms`). A `.wasm` of its own, so the engine of the pipeline (`mzlab-feat-wasm`) does not carry it: the page loads
-//! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `sample-meta/1` and the parameters of the view
+//! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `samples/1` and the parameters of the view
 //! come as JSON text, the `.mzidx` of the files (only for MGF and `.ms`) as `read(k, offset, length)`. Errors are JSON `{"error_key", "params"}` strings.
 #![forbid(unsafe_code)]
 use js_sys::{Function, Uint8Array};
@@ -142,7 +142,7 @@ pub fn rete_build(
     .map_err(js_err)
 }
 
-/// The `sample-meta/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
+/// The `samples/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
 #[wasm_bindgen]
 pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
     core::samples_json(files_json).map_err(js_err)
@@ -257,7 +257,7 @@ pub fn export_table_auto(
             ix.push(i);
         }
     }
-    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let samples = samples_json.clone();
     let pol =
         pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
     core::table_file(
@@ -286,7 +286,7 @@ pub fn table_view_auto(
         samples_json.as_bytes(),
     )
     .map_err(js_err)?;
-    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let samples = samples_json.clone();
     let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes())
         .map_err(js_err)?;
     core::view_json_origin(&mut table_reader(table_read), size as u64, &samples, &spec)

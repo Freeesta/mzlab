@@ -1,9 +1,9 @@
-//! What a file says about itself, put into `samples/2` (`from_file`): polarity, date and time of the acquisition, instrument model, method name,
+//! What a file says about itself, put into `samples/1` (`from_file`): polarity, date and time of the acquisition, instrument model, method name,
 //! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`summary_from_scans`,
 //! the `.mzidx`) and from its `metodo/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
 //! the replaced values are reported (`mismatches`).
 
-use super::{table_from_value, to_json3, FileData, Sample, Table};
+use super::{table_from_value, table_to_json, FileData, Sample, Table};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::{parse, Out, Value};
@@ -194,7 +194,7 @@ fn find(t: &Table, e: &Value) -> Option<usize> {
 }
 
 /// The binding: `{"samples": <samples/1 or /2>, "file":[{"name"?,"sha256"?,"polarity":[..],"rt_min","rt_max","mz_min","mz_max","scans","acquired"?,
-/// "instrument"?,"method"?,"method_json"?}]}` → `{"samples":<samples/2>,"mismatches":[{"index","field","before","after"}],"unmatched":[index of the entries]}`.
+/// "instrument"?,"method"?,"method_json"?}]}` → `{"samples":<samples/1>,"mismatches":[{"index","field","before","after"}],"unmatched":[index of the entries]}`.
 pub fn from_file(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let mut t = table_from_value(
@@ -228,7 +228,7 @@ pub fn from_file(input: &str) -> Result<String> {
     }
     let mut j = Out::default();
     j.raw("{\"samples\":")
-        .raw(&to_json3(&t))
+        .raw(&table_to_json(&t))
         .raw(",\"mismatches\":[");
     for (k, d) in disc.iter().enumerate() {
         j.raw(if k > 0 { ",{\"field\":" } else { "{\"field\":" })

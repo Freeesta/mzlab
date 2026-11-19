@@ -406,7 +406,8 @@ fn canonical_json_and_schema() {
     .unwrap();
     let doc: Value = serde_json::from_str(&j).unwrap();
     assert!(fits(&doc, &schema));
-    let first = &j[..j.find('}').unwrap()];
+    let from = j.find("\"samples\":[{").unwrap();
+    let first = &j[from..from + j[from..].find("\"time_unit\"").unwrap()];
     let mut keys: Vec<&str> = first
         .split('"')
         .skip(1)
@@ -415,7 +416,7 @@ fn canonical_json_and_schema() {
         .collect();
     keys.dedup();
     assert!(
-        keys.windows(2).all(|w| w[0] < w[1]) && keys.len() == 16,
+        keys.windows(2).all(|w| w[0] < w[1]) && keys.len() == 25,
         "{keys:?}"
     );
     let mut bad = doc.clone();

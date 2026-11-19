@@ -66,7 +66,7 @@ pub struct TpRoles {
     pub blank_kinds: Vec<String>,
     /// Minutes of every file: the time of a treated file, 0 for a t0, NaN for every other one.
     pub minutes: Vec<f64>,
-    /// With two or more conditions (`serie` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
+    /// With two or more conditions (`series` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
     /// its correlations inside each condition.
     pub conditions: Vec<Vec<usize>>,
 }

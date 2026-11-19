@@ -136,7 +136,7 @@ try:
             pg.evaluate("nbSave(true)")
             pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(j => 'samples' in j && 'gruppi_opts' in j)", timeout=20000)
             kept = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(j => Object.keys(j))")
-            assert "campioni" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
+            assert "samples" in kept and "gruppi_opts" in kept, ("the notebook did not keep it", kept)
             pg.reload(); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             pg.wait_for_function("typeof window.nbEnsure === 'function'", timeout=120000); pg.evaluate("window.nbEnsure()")
             try: pg.wait_for_function("window.QTOOLS && window.QTOOLS.ctx && NB.samples && window.QTOOLS.ctx.files['finder-ruoli.js']", timeout=30000)

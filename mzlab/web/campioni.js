@@ -5,7 +5,7 @@
 // The values are the ones the file name gave (project.py, read at loading) and can be edited here; the table is the only place that
 // writes them after loading (`apply`, the only writer): f.role / f.type / f.time (minutes) / f.tconf / f.conc / f.cunit / f.rep of E.files,
 // the server copy (/api/meta), the notebook (uiSave: NB.session in the format samples/1, campioni-doc.js) and the .mzflow file (operation
-// `campioni`). Export and import of the table as TSV (mzmine column names, the columns of samples/1 at the end).
+// `samples`). Export and import of the table as TSV (mzmine column names, the columns of samples/1 at the end).
 // The pure functions at the top (TSV, replicate groups, time scale) are also run by node in tests/test_campioni.py.
 const CAMPIONI = (() => {
   // sample_type of the table (an old export may say «t0»: a sample at 0 minutes)
@@ -169,7 +169,7 @@ const CAMPIONI = (() => {
   }
   /** the document samples/1 of the open files (entries of NB.session plus `rep`, the keys of the schema in the order of the Rust) */
   const docNow = () => CDOC.doc(files());
-  /** the entries of a samples/1 document (the operation `campioni` of a .mzflow, or NB.session) applied to the open files; returns how many */
+  /** the entries of a samples/1 document (the operation `samples` of a .mzflow, or NB.session) applied to the open files; returns how many */
   function importDoc(d) {
     const list = d && Array.isArray(d.samples) ? d.samples : [];
     return apply(list.filter(e => e && e.file && CDOC.known(e.kind)).map(e => { const x = CDOC.fields(e); const o = { file: e.file, role: x.role, time: x.time, tconf: x.tconf, conc: x.conc, rep: x.rep || "" }; if (x.conc != null) o.cunit = x.cunit; return o; }), true);

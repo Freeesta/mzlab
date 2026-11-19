@@ -66,8 +66,8 @@ fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
     }
 }
 
-/// The role of `samples/1` for a name (no infusion there): what `samples.rs` writes.
-pub fn kind_v1(name: &str) -> &'static str {
+/// The role a name gets in the table model of mzlab-feat, which has no infusion role: the one `propose` would give without the infusion words.
+pub fn table_kind_of_name(name: &str) -> &'static str {
     let (_, time, guess) = guess_sample(name);
     base_kind(&name.to_lowercase(), guess, time)
 }

@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the sample list of a plan (input type `samples`, a samples/2 document) kept in memory (S.samples[input name]) with its SHA-256 (the canonical form of the Rust of mzlab-core),
+// Flow (administrator mode): the sample list of a plan (input type `samples`, a samples/1 document) kept in memory (S.samples[input name]) with its SHA-256 (the canonical form of the Rust of mzlab-core),
 // which the plan records; the editor is the metadata grid (flow-meta-grid.js). Also the plan to run from the files open in Data.
 (() => {
   "use strict";

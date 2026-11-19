@@ -36,7 +36,7 @@ fn v2(cs: &[Sample]) -> Vec<u8> {
 }
 
 fn v3(cs: &[Sample]) -> Vec<u8> {
-    samples::to_json3(&Table {
+    samples::table_to_json(&Table {
         samples: cs.to_vec(),
         columns: Vec::new(),
     })
@@ -123,7 +123,7 @@ fn a_batch_without_qc_is_reported_and_the_limits_are_parameters() {
     let cs = batch("A", 1, 12, 100, true, &[1.0, 2.0]);
     assert_eq!(
         keys(&runorder_text(&[], &v2(&cs), None).unwrap()),
-        ["warn.qc.runorder.no_qc:1"]
+        ["warn.qc.runorder.no_qc:A"]
     );
     let off = vec![
         ("blank_per_batch".to_string(), Value::Bool(false)),
@@ -131,12 +131,12 @@ fn a_batch_without_qc_is_reported_and_the_limits_are_parameters() {
     ];
     assert_eq!(
         keys(&runorder_text(&off, &v2(&cs), None).unwrap()),
-        ["warn.qc.runorder.no_qc:1", "warn.qc.runorder.std_levels:1"]
+        ["warn.qc.runorder.no_qc:A", "warn.qc.runorder.std_levels:A"]
     );
     let wide = batch("A", 1, 30, 12, true, &[1.0, 2.0]);
     assert_eq!(
         keys(&runorder_text(&[], &v2(&wide), None).unwrap()),
-        ["warn.qc.runorder.qc_gap:1"]
+        ["warn.qc.runorder.qc_gap:A"]
     );
     let loose = vec![("qc_every_max".to_string(), Value::Num(12.0))];
     assert!(keys(&runorder_text(&loose, &v2(&wide), None).unwrap()).is_empty());

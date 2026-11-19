@@ -1,4 +1,4 @@
-//! `samples/2`: migration of the `/2`, canonical bytes under permutations, `validate` (columns, keys, pairs), CSV both ways, the name model
+//! `samples/1`: a plain list as a table, canonical bytes under permutations, `validate` (columns, keys, pairs), CSV both ways, the name model
 //! (regex and template, spans, the generated names) and `from_file`; schema check.
 
 mod csv;
@@ -6,7 +6,7 @@ mod model;
 mod series;
 
 use mzlab_core::samples::{
-    self, from_json, per_tp, table_from_json, to_json, to_json3, validate, Cell, Column,
+    self, from_json, per_tp, table_from_json, table_to_json, to_json, validate, Cell, Column,
     ColumnType, Table,
 };
 use mzlab_core::samples::{propose, Sample};
@@ -21,7 +21,7 @@ pub fn many(names: &[&str]) -> Vec<Sample> {
 }
 
 fn codes(t: &Table) -> Vec<String> {
-    let j = samples::route("validate", &to_json3(t)).unwrap();
+    let j = samples::route("validate", &table_to_json(t)).unwrap();
     let v: Value = serde_json::from_str(&j).unwrap();
     v["warnings"]
         .as_array()
@@ -42,7 +42,7 @@ fn table(names: &[&str]) -> Table {
 }
 
 #[test]
-fn a_campioni_2_migrates_with_the_same_per_tp() {
+fn a_plain_list_is_a_table_without_columns() {
     let cs = many(&[
         "X_t000min",
         "X_t005min",
@@ -51,21 +51,26 @@ fn a_campioni_2_migrates_with_the_same_per_tp() {
         "X_dark",
         "std_5ppm",
     ]);
-    let v2 = to_json(&cs);
-    let t = table_from_json(v2.as_bytes()).unwrap();
+    let doc = to_json(&cs);
+    assert!(
+        doc.starts_with("{\"schema\":\"samples/1\",\"columns\":[],"),
+        "{doc}"
+    );
+    let t = table_from_json(doc.as_bytes()).unwrap();
     assert_eq!(t.samples, cs);
     assert_eq!(
         per_tp(&t.samples),
-        per_tp(&from_json(v2.as_bytes()).unwrap())
+        per_tp(&from_json(doc.as_bytes()).unwrap())
     );
-    let v3 = samples::route("migrate", &v2).unwrap();
-    assert!(v3.contains("\"schema\":\"samples/2\""));
-    let back = table_from_json(v3.as_bytes()).unwrap();
-    assert_eq!(per_tp(&back.samples), per_tp(&cs));
-    // a /2 asked for its canonical form stays a /2, a /3 stays a /3
-    assert_eq!(samples::route("canonical", &v2).unwrap(), v2);
-    assert_eq!(samples::route("canonical", &v3).unwrap(), v3);
-    assert_eq!(samples::route("digest", &v3).unwrap().len(), 64);
+    // the canonical form of a document is itself, and there is one schema: another one is refused
+    assert_eq!(samples::route("canonical", &doc).unwrap(), doc);
+    assert_eq!(samples::route("digest", &doc).unwrap().len(), 64);
+    let other = doc.replace("samples/1", "samples/9");
+    assert_eq!(
+        samples::route("canonical", &other).unwrap_err().key,
+        "error.badSamples"
+    );
+    assert!(samples::route("migrate", &doc).is_err());
 }
 
 fn rich() -> Table {
@@ -111,11 +116,11 @@ fn permutations(n: usize) -> Vec<Vec<usize>> {
 #[test]
 fn canonical_bytes_do_not_depend_on_the_order_written() {
     let t = rich();
-    let want = to_json3(&t);
+    let want = table_to_json(&t);
     let schema: Value = serde_json::from_str(
         &std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../docs/schemi/samples-2.json"
+            "/../../docs/schemi/samples-1.json"
         ))
         .unwrap(),
     )
@@ -128,7 +133,7 @@ fn canonical_bytes_do_not_depend_on_the_order_written() {
             u.samples = p.iter().map(|&i| t.samples[i].clone()).collect();
             u.columns = q.iter().map(|&i| t.columns[i].clone()).collect();
             u.samples.iter_mut().for_each(|c| c.extra.reverse());
-            assert_eq!(to_json3(&u), want);
+            assert_eq!(table_to_json(&u), want);
         }
     }
     assert_eq!(
@@ -136,8 +141,8 @@ fn canonical_bytes_do_not_depend_on_the_order_written() {
         "alfa"
     );
     assert_eq!(
-        samples::digest3(&t),
-        samples::digest3(&table_from_json(want.as_bytes()).unwrap())
+        samples::table_digest(&t),
+        samples::table_digest(&table_from_json(want.as_bytes()).unwrap())
     );
 }
 
@@ -177,11 +182,11 @@ fn valida_checks_columns_keys_and_pairs() {
     let mut z = rich();
     z.samples[3].kind = "qc".into();
     assert!(codes(&z).contains(&"pairMismatch".into()));
-    // a samples/1 document is checked as before
-    let v2 = to_json(&many(&["X_t000min", "X_t005min"]));
+    // a plain list is checked like a table without columns
+    let doc = to_json(&many(&["X_t000min", "X_t005min"]));
     assert_eq!(
-        samples::route("validate", &v2).unwrap(),
-        samples::route("validate", &samples::route("migrate", &v2).unwrap()).unwrap()
+        samples::route("validate", &doc).unwrap(),
+        samples::route("validate", &samples::route("canonical", &doc).unwrap()).unwrap()
     );
     assert!(!validate(&many(&["X_t000min", "X_t005min"])).is_empty());
 }
@@ -197,7 +202,7 @@ fn from_file_fills_what_the_file_says() {
         {{"sha256":"aa","polarity":[1,1],"rt_min":0.1,"rt_max":9.9,"mz_min":50,"mz_max":600,"scans":420,"acquired":"2025-04-01 08:30:15.123","instrument":"QTRAP 3200","method":"m1.dam"}},
         {{"name":"{}","polarity":[-1],"method_json":{{"origine":{{"file_creato":"2025-04-01T09:00:00"}},"strumento":{{"modello":"3200 QTRAP"}},"campione":{{"metodo_file":"neg.dam"}},"ms":{{"periodi":[{{"esperimenti":[{{"mz":[100,900]}},{{"mz":[80,400]}}]}}]}}}}}},
         {{"name":"unknown.mzML","polarity":[1]}}]}}"#,
-        to_json3(&t),
+        table_to_json(&t),
         t.samples[1].file
     );
     let out: Value =

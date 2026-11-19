@@ -1,4 +1,4 @@
-//! The name model of `samples/2`: template and regex, the spans, a model that does not match, the free columns, the 30 000 generated names.
+//! The name model of `samples/1`: template and regex, the spans, a model that does not match, the free columns, the 30 000 generated names.
 
 use super::many;
 use mzlab_core::samples::{self, table_from_json, Cell};

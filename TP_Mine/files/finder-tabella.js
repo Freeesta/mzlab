@@ -1,14 +1,14 @@
 // @ts-check
 // @ts-strict
 // TPMINE-PRIVATE  The numbers of the table of the products for the page: the .wasm «table» of wasm-feat/manifest.json (route tp_table) read over the .mzfeat of the last Dig.
-// The roles of the files (treated, t0, blank) go to Rust as a sample-meta/1 built in ONE place, samplesOf, from the model samples/1 of finder-ruoli.js. Imported by tpmine-worker.js on the first request.
+// The roles of the files (treated, t0, blank) go to Rust as a samples/1 built in ONE place, samplesOf, from the model samples/1 of finder-ruoli.js. Imported by tpmine-worker.js on the first request.
 
 import * as ruoli from "./finder-ruoli.js";
 
 /** @type {any} */ let mod = null;
 
 /**
- * sample-meta/1 of the files of a Dig, in the order of the table, for the Rust of the table. The roles and the minutes are those of samples/1 (finder-ruoli.js, the Rust
+ * samples/1 of the files of a Dig, in the order of the table, for the Rust of the table. The roles and the minutes are those of samples/1 (finder-ruoli.js, the Rust
  * `per_tp`): the type and the time the user set on the page are written into the model as explicit choices, and the model gives the indices per role.
  * @param {(op: string, json: string) => string | Promise<string>} call the operation `samples`: the table .wasm (synchronous) or the native route of the desktop app (asynchronous)
  * @param {string[]} lc names of the files of the series, in the order of the table
@@ -30,10 +30,9 @@ export async function samplesOf(call, lc, files) {
   for (const k of p.t0) kind.set(k, "t0");
   for (const k of p.blank) kind.set(k, "blank");
   for (const k of p.dark) kind.set(k, "dark");
-  return JSON.stringify({
-    schema: "sample-meta/1",
-    samples: lc.map((name, k) => ({ file: name, sha256: "", kind: kind.get(k) || "std", time_min: p.minutes[k], replicate: 1, group: "", concentration: null, concentration_unit: null, injection_order: k + 1, istd: false, note: "" })),
-  });
+  const entry = (/** @type {string} */ name, /** @type {number} */ k) => ({ blank_kind: null, compound: "", concentration: null, concentration_unit: null, file: name, injection_order: k + 1, istd: false, kind: kind.get(k) || "std",
+    note: "", replicate: 1, series: "", sha256: "", time: p.minutes[k], time_confirmed: p.minutes[k] != null, time_min: p.minutes[k], time_unit: "min" });
+  return JSON.stringify({ schema: "samples/1", samples: lc.map(entry) });
 }
 
 /**

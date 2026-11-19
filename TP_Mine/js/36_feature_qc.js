@@ -36,13 +36,13 @@
     return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {});
   };
 
-  /** the sample-meta/1 of the engine with the roles and times the user confirmed (samples/1, same order of the files): the types of sample-meta/1 have no infusion, which counts as a sample without a time */
+  /** the samples/1 the engine proposes with the roles and times the user confirmed (same order of the files): the table has no infusion role, so an infusion counts as a sample without a time */
   function withRoles(/** @type {string} */ proposed, /** @type {any[]} */ cs) {
     const doc = JSON.parse(proposed);
     if (doc.samples.length !== cs.length) return proposed;
     doc.samples.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
       const c = cs[i], inf = c.kind === "infusion";
-      s.kind = inf ? "sample" : c.kind; s.time_min = inf ? null : c.time_min;
+      s.kind = inf ? "sample" : c.kind; s.time_min = s.time = inf ? null : c.time_min; s.time_unit = "min"; s.time_confirmed = s.time != null;
     });
     return JSON.stringify(doc);
   }

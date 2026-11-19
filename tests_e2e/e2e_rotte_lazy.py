@@ -35,7 +35,7 @@ try:
         # a second use of every kind of route: no new fetch of the module
         st, txt = call("api/molecules/cerca", json.dumps({"q": "paracetamol"}))
         assert st == 200 and json.loads(txt)[0]["nome"] == "acetaminophen", txt[:200]
-        st, txt = call("api/samples/propose", json.dumps({"files": [{"name": "a_t01.mzML", "sha256": "", "kind": "campione"}]}))
+        st, txt = call("api/samples/propose", json.dumps({"files": [{"name": "a_t01.mzML", "sha256": "", "kind": "sample"}]}))
         assert st == 200 and '"samples' in txt, (st, txt[:200])
         st, txt = call("api/stat/profile", "{}")
         assert st in (200, 400), st                          # the route exists in the module; an empty body is a keyed error

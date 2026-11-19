@@ -2,7 +2,7 @@
 //! compared on ONE alignment. Input: the matrix rows x files, the metadata of the rows and the canonical `samples/1`; output: per row and condition
 //! the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as "Prev." suggestions, the exact
 //! sets of conditions and the decay of the parent per condition. The module reads no file and never realigns: it uses the rows it receives.
-//! A condition is a non-empty `serie` of a `sample`; `serie == ""` marks a control shared by all conditions, and a control of the condition wins.
+//! A condition is a non-empty `series` of a `sample`; `series == ""` marks a control shared by all conditions, and a control of the condition wins.
 
 mod json;
 mod presence;

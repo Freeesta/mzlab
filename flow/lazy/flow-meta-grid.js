@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the metadata grid over a samples/2 document (virtual rows, ARIA grid). The cells, the checks (`validate`), the name patterns (`model`), the CSV (`csv_*`) and the data read
+// Flow (administrator mode): the metadata grid over a samples/1 document (virtual rows, ARIA grid). The cells, the checks (`validate`), the name patterns (`model`), the CSV (`csv_*`) and the data read
 // from the files (`from_file`) are all the Rust of mzlab-core reached through CDOC.post("<op>"); this file only lays the cells out and moves the keyboard focus. Used by flow-samples.js (F.samplesEditor)
 // and flow-import.js (F.metaImport). The document lives in S.samples[input name]; its SHA-256 is the canonical one (F.samplesSet). English only. Docs: docs/agenti/flow-graphics.md.
 (() => {
@@ -37,14 +37,14 @@
 
   const blankRow = (/** @type {number} */ n) => ({ acquired: null, sub_sample: "", sample_id: "", compound: "", concentration: null, extra: {}, file: "", group: "", istd: false, batch: "", matrix: "", note: "", injection_order: n, polarity: null,
     reinjection: false, replicate: 1, series: "", sha256: "", time: null, time_confirmed: false, time_min: null, kind: "sample", blank_kind: null, concentration_unit: null, time_unit: "min" });
-  const emptyDoc = () => ({ schema: "samples/2", columns: [], samples: [] });
+  const emptyDoc = () => ({ schema: "samples/1", columns: [], samples: [] });
   const call = async (/** @type {string} */ op, /** @type {any} */ body) => {
     const r = await G.CDOC.post(op, body);
     if (r && r.error) throw new Error(String(r.error_key || r.error));
     return r;
   };
-  /** any samples document → samples/2 (the Rust migrates) @param {any} d */
-  const toV3 = async d => (d && d.schema === "samples/2" ? d : d ? call("migrate", d) : emptyDoc());
+  /** a samples/1 document as it is; any other document is not one, so the grid starts empty @param {any} d */
+  const asDoc = async d => (d && d.schema === "samples/1" ? d : emptyDoc());
   /** the sample rows of a document and their number (kept out of template strings: the English-only guard reads those) */
   const rowsOf = (/** @type {any} */ d) => d.samples;
   const keyOf = (/** @type {any} */ r) => (r.sha256 || r.file) + "\0" + (r.sub_sample || "");
@@ -56,12 +56,12 @@
     name: String(f.file), sha256: f.sha256 || "", polarity: f.polarity === "positive" ? [1] : f.polarity === "negative" ? [-1] : f.polarity === "mixed" ? [1, -1] : [], rt_min: f.rt_min ?? null, rt_max: f.rt_max ?? null,
     mz_min: f.mz_min ?? null, mz_max: f.mz_max ?? null, scans: (f.ms1 || 0) + (f.ms2 || 0) || null, instrument: f.instrument || "" }));
 
-  /** the rows of Data with what their names say added (`propose2`: series, matrix, group, kind of blank, and role, time and replicate where Data's user has not set them);
+  /** the rows of Data with what their names say added (`propose`: series, matrix, group, kind of blank, and role, time and replicate where Data's user has not set them);
    * what was set in the Data tab (a role, a time, a replicate) stays @param {any} v3 */
   const withNames = async v3 => {
     const open = (typeof E !== "undefined" && Array.isArray(E.files) ? E.files : []).filter((/** @type {any} */ f) => f && !f.gone && f.file), by = new Map(open.map((/** @type {any} */ f) => [String(f.file).split("#")[0], f]));
     let prop;
-    try { prop = await call("propose2", { files: open.map((/** @type {any} */ f) => ({ name: String(f.file).split("#")[0], sha256: f.sha256 || "", kind: f.kind === "infusion" ? "msn" : "" })) }); } catch (_) { return v3; }
+    try { prop = await call("propose", { files: open.map((/** @type {any} */ f) => ({ name: String(f.file).split("#")[0], sha256: f.sha256 || "", kind: f.kind === "infusion" ? "msn" : "" })) }); } catch (_) { return v3; }
     const named = new Map(prop.samples.map((/** @type {any} */ p) => [p.file, p]));
     const rows = v3.samples.map((/** @type {any} */ r) => {
       const p = /** @type {any} */ (named.get(r.file)), f = /** @type {any} */ (by.get(r.file));
@@ -79,7 +79,7 @@
   /** the document of the files open in Data, completed from the files; null when none is open */
   const fromData = async () => {
     const d = F.samplesFromData(); if (!d) return null;
-    const v3 = await withNames(await toV3(d)), info = fileInfo();
+    const v3 = await withNames(await asDoc(d)), info = fileInfo();
     if (!info.length) return v3;
     try { return (await call("from_file", { samples: v3, file: info })).samples; } catch (_) { return v3; }
   };
@@ -102,8 +102,8 @@
   F.metaImport = async (S, input, text) => {
     const lines = text.replace(/^﻿/, "").split(/\r?\n/), sep = ["\t", ";", ","].map(c => [c, lines[0].split(c).length]).sort((a, b) => /** @type {number} */ (b[1]) - /** @type {number} */ (a[1]))[0][0];
     lines[0] = lines[0].split(/** @type {string} */ (sep)).map(h => { const t = h.trim().replace(/^"|"$/g, ""); const k = Object.entries(F.META_HEADERS || {}).find(([, re]) => /** @type {RegExp} */ (re).test(t)); return k ? k[0] : h; }).join(/** @type {string} */ (sep));
-    const add = await call("csv_read", { text: lines.join("\n"), separatore: sep });
-    const cur = (S.samples && S.samples[input.name] && (await toV3(S.samples[input.name]))) || (await fromData()) || emptyDoc();
+    const add = await call("csv_read", { text: lines.join("\n"), separator: sep });
+    const cur = (S.samples && S.samples[input.name] && (await asDoc(S.samples[input.name]))) || (await fromData()) || emptyDoc();
     const open = new Set(F.dataFiles()), doc = merge(cur, add);
     await F.samplesSet(S, input, doc);
     return { count: add.samples.length, absent: add.samples.filter((/** @type {any} */ r) => !open.has(r.file)).length, doc };
@@ -452,7 +452,7 @@
       try { const r = await call("from_file", { samples: mg.doc, file: info }), missing = r.unmatched; mg.commit(r.samples); mg.say.textContent = `File data read.` + (r.mismatches.length ? ` ${r.mismatches.length} values replaced.` : "") + (missing.length ? ` ${missing.length} files have no row.` : ""); } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
     };
     mg.exportCsv = async () => {
-      try { const r = await call("csv_write", { samples: mg.doc, separatore: mg.sepSel.value }); G.ATTRIBUTIO_CORE.download(`${mg.input.name || "samples"}.csv`, r.text, "text/csv;charset=utf-8"); mg.say.textContent = `${rowsOf(mg.doc).length} rows exported.`; } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
+      try { const r = await call("csv_write", { samples: mg.doc, separator: mg.sepSel.value }); G.ATTRIBUTIO_CORE.download(`${mg.input.name || "samples"}.csv`, r.text, "text/csv;charset=utf-8"); mg.say.textContent = `${rowsOf(mg.doc).length} rows exported.`; } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
     };
   };
 
@@ -475,7 +475,7 @@
     (async () => {
       try {
         const own = mg.S.samples && mg.S.samples[mg.input.name];
-        mg.doc = own ? await toV3(own) : (await fromData()) || emptyDoc();
+        mg.doc = own ? await asDoc(own) : (await fromData()) || emptyDoc();
         if (!own && mg.doc.samples.length) mg.say.textContent = "Taken from the files open in Data.";
         mg.fillSelects(); mg.chipsDraw(); mg.commit(mg.doc);
       } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }

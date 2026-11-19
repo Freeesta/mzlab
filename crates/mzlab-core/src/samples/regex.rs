@@ -1,4 +1,4 @@
-//! A small backtracking regular expression for the name models of `samples/2` (no dependency: the size of the .wasm). Supports literals, `.`,
+//! A small backtracking regular expression for the name models of `samples/1` (no dependency: the size of the .wasm). Supports literals, `.`,
 //! classes (`[a-z]`, `[^_]`, `\d \w \s` and their negations), groups (`(...)`, `(?:...)`, `(?P<name>...)`, `(?<name>...)`), `|`, `* + ? {n} {n,} {n,m}`
 //! (lazy with a trailing `?`), `^`, `$` and a leading `(?i)`. A match is always of the whole text; a step budget and a length limit stop any blow-up.
 

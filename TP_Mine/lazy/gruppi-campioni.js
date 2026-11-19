@@ -35,7 +35,7 @@
     });
   }
 
-  /** one row of the table; `more`: the entries carry samples/2 fields (sample ID, matrix), shown read-only @param {any} R @param {string} id @param {Sample} c @param {number} i @param {string} n name, escaped @param {boolean} checked @param {boolean} seen the user already saw the condition */
+  /** one row of the table; `more`: the entries carry samples/1 fields (sample ID, matrix), shown read-only @param {any} R @param {string} id @param {Sample} c @param {number} i @param {string} n name, escaped @param {boolean} checked @param {boolean} seen the user already saw the condition */
   function rowHtml(R, id, c, i, n, checked, seen, more) {
       const timed = TIMED.includes(c.kind), tprop = timed && c.time != null && !c.time_confirmed, cprop = !!c.series && !seen;
       return `<tr${tprop || cprop ? ' class="tpg-prop"' : ""}><td><input type="checkbox" id="${id}-s${i}" class="tpg-sel" data-i="${i}" aria-label="Select ${n}"${checked ? " checked" : ""}></td><td>${n}</td>`

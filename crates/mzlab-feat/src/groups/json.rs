@@ -1,5 +1,5 @@
 //! `gruppi/1` as text (keys in English, fixed order) and the input of the module as a JSON document:
-//! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "campioni": samples/1, "opts": {...}}` (the matrices as lists of rows).
+//! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "samples": samples/1, "opts": {...}}` (the matrices as lists of rows).
 
 use super::{build, CondOut, GroupOpts, GroupTable, GroupsOut, RowMeta, RowOut};
 use mzlab_core::error::{Error, Result};

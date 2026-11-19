@@ -1,4 +1,4 @@
-//! The metadata of `samples/2` as a CSV table (`,` `;` or tab): one row per file, the header the names of the fields (`file`, `sha256`, `sample_id`,
+//! The metadata of `samples/1` as a CSV table (`,` `;` or tab): one row per file, the header the names of the fields (`file`, `sha256`, `sample_id`,
 //! `polarity`, ..., then one column per free column); `condition`, `replicate`, `injection_order`, `role` (`control` = dark, `standard` = std),
 //! `time` (minutes), `dose` (`25 ppm`) and the like are read too, and an unknown column becomes a free column (a number when every value is one).
 //! What `csv_write` writes `csv_read` reads back unchanged (`time_min` is derived, `file_data` is not in the table).
@@ -7,9 +7,9 @@ use std::borrow::Cow;
 
 use super::columns::infer;
 use super::csv_fields::{records, Cells};
-use super::json::legacy_kind;
+use super::json::role_alias;
 use super::{
-    number_replicates, table_from_value, to_json3, Cell, Column, ColumnType, Sample, Table,
+    number_replicates, table_from_value, table_to_json, Cell, Column, ColumnType, Sample, Table,
 };
 use crate::error::{Error, Result};
 use crate::json::{parse, Out};
@@ -158,7 +158,7 @@ fn put(c: &mut Sample, f: &str, v: &str) -> bool {
         "concentration_unit" => c.unit = (!v.is_empty()).then(|| v.into()),
         "polarity" => return v.is_empty() || pol(v).map(|p| c.polarity = Some(p)).is_some(),
         "kind" => {
-            return v.is_empty() || legacy_kind(&lower(v)).map(|k| c.kind = k.into()).is_some()
+            return v.is_empty() || role_alias(&lower(v)).map(|k| c.kind = k.into()).is_some()
         }
         "blank_kind" => {
             return v.is_empty()
@@ -422,7 +422,7 @@ fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
     }
 }
 
-/// `{"text", "separator"?, "columns"?: [declared columns]}` → a `samples/2`.
+/// `{"text", "separator"?, "columns"?: [declared columns]}` → a `samples/1`.
 pub fn csv_read(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let text = v
@@ -434,14 +434,14 @@ pub fn csv_read(input: &str) -> Result<String> {
             let mut o = Out::default();
             crate::json::write_value(&mut o, c);
             let doc = format!(
-                "{{\"samples\":[],\"columns\":{},\"schema\":\"samples/2\"}}",
+                "{{\"samples\":[],\"columns\":{},\"schema\":\"samples/1\"}}",
                 o.0
             );
             table_from_value(&parse(doc.as_bytes())?)?.columns
         }
         None => Vec::new(),
     };
-    Ok(to_json3(&read(text, sep_of(&v)?, &declared)?))
+    Ok(table_to_json(&read(text, sep_of(&v)?, &declared)?))
 }
 
 /// `{"samples": <samples/1 or /2>, "separator"?}` → `{"text": "..."}`.

@@ -43,7 +43,7 @@ The site runs some of the steps with the web executor (`F.runners.web`, "This br
 ## Export
 `export.table_csv` and `export.mztab` call `table_file`, the same function the page asks the table `.wasm` for (`export_table`): same bytes for columns, order, names and number format, proved by `flow_bentazone_export_tests.rs` on a table detected from the plan (positive and negative) and by `flow_export_tests.rs`. The polarity that `table_file` writes (mzTab-M, MS2) is decided by the files when the plan does not write it: ``export_job` reads it from the indexes of the table chain (the table recipe, like the page's, does not write it).
 
-Known differences: samples go from `samples/1` to `sample-meta/1` (`flow_table::samples_text`, group = role for non-samples); the export of a `table.filter` view writes the kept rows (`origine` of the view); the `tp.link@2` table (TP status columns) is not an input of `export.table_csv`.
+Known differences: the table reads the `samples/1` as it is (`flow_table::samples_text`; its group is the role for non-samples, derived when read); the export of a `table.filter` view writes the kept rows (`origine` of the view); the `tp.link@2` table (TP status columns) is not an input of `export.table_csv`.
 
 ## Bentazone model
 The "Bentazone / transformation products" model (palette, under "More templates"): the whole TP chain. `templatePlan` connects `index` to `tp.generate` (polarity and resolution are decided by the files) and `tp.network` to the rows and samples of `tp.link` (a `tp.filter` view is not a table); test: `tests/flow_modelli_partenza.js` and `flow_bentazone_tests.rs` (same wiring, executed).

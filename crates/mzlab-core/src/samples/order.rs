@@ -1,4 +1,4 @@
-//! Puts the files of a samples document (`samples/1`, `/2` or `/3`) in the order of the files of a table, matched by file name: the readers of the
+//! Puts the files of a samples document (`samples/1`) in the order of the files of a table, matched by file name: the readers of the
 //! roles pair the samples with the files by position, so every step that holds a table calls `order_like` first (`docs/agenti/samples.md`).
 
 use super::json::bad;

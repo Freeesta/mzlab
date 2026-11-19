@@ -21,7 +21,7 @@ pub struct Origin {
     pub inputs: Vec<(String, String)>,
     /// How each input was acquired (meta `columns`, same order as `inputs`); empty when not read.
     pub facts: Vec<FileFacts>,
-    /// SHA-256 of the `sample-meta/1` document of the series (meta `samples`), when there is one.
+    /// SHA-256 of the `samples/1` document of the series (meta `samples`), when there is one.
     pub samples: Option<String>,
     /// `(step, seconds)`; leave empty to get the same bytes in two runs.
     pub times: Vec<(String, f64)>,

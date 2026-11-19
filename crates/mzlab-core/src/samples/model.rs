@@ -1,13 +1,13 @@
-//! The name model of `samples/2`: a regex with named groups (`(?P<sample_id>[A-Z]\d+)_(?P<polarity>pos|neg)`) or a template with placeholders
+//! The name model of `samples/1`: a regex with named groups (`(?P<sample_id>[A-Z]\d+)_(?P<polarity>pos|neg)`) or a template with placeholders
 //! (`{sample_id}_{polarity}_{time}min_r{replicate}`) read against the name of each file (folders and extension left out). A group named
 //! like a field gives it (`sample_id`, `polarity`, `matrix`, `batch`, `group`, `series`, `time`, `time_unit`, `replicate`, `concentration`, `concentration_unit`,
 //! `kind`, `injection_order`, `note`, `compound`), any other name goes to a free column. Each value comes with the part of the name that gave it,
 //! in characters of the whole name, end excluded, as in `propose_explained`. Times stay unconfirmed; a name the model does not match is left as it was.
 
-use super::json::legacy_kind;
+use super::json::role_alias;
 use super::regex::Regex;
 use super::{
-    names::propose, number_replicates, table_from_value, to_json3, Cell, Column, ColumnType,
+    names::propose, number_replicates, table_from_value, table_to_json, Cell, Column, ColumnType,
     Sample, Table,
 };
 use crate::error::{Error, Result};
@@ -124,7 +124,7 @@ fn set_field(c: &mut Sample, name: &str, v: &str, cols: &[Column]) -> bool {
         "injection_order" => return whole(v).map(|n| c.order = n).is_some(),
         "concentration" => return num(v).map(|x| c.conc = Some(x)).is_some(),
         "kind" => {
-            return legacy_kind(&v.to_lowercase())
+            return role_alias(&v.to_lowercase())
                 .map(|k| c.kind = k.into())
                 .is_some()
         }
@@ -232,7 +232,7 @@ pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
 }
 
 /// The binding: `{"model", "samples": <samples/1 or /2>}` or `{"model", "files":[{"name","sha256","kind"}]}` (proposed from the names first)
-/// → `{"samples":<samples/2>,"positions":[[{"field","end","start"}]],"unmatched":[index]}`.
+/// → `{"samples":<samples/1>,"positions":[[{"field","end","start"}]],"unmatched":[index]}`.
 pub fn apply_model(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let model = v
@@ -260,7 +260,7 @@ pub fn apply_model(input: &str) -> Result<String> {
     };
     let a = apply(model, t)?;
     let mut j = Out::default();
-    j.raw("{\"samples\":").raw(&to_json3(&a.table));
+    j.raw("{\"samples\":").raw(&table_to_json(&a.table));
     j.raw(",\"positions\":[");
     for (i, x) in a.positions.iter().enumerate() {
         j.raw(if i > 0 { ",[" } else { "[" });

@@ -1,12 +1,11 @@
 //! `table.stats@1` in a plan: a `.mzfeat` written by the real store on invented areas (a blank, a reference of three files, a treatment of three) with
-//! its samples (`samples/1` and `sample-meta/1`) and design gives the `stat/1` of the engine called by hand and of its JSON entry (`stats_json`).
+//! its samples (`samples/1`) and design gives the `stat/1` of the engine called by hand and of its JSON entry (`stats_json`).
 
 use std::path::Path;
 
 use mzlab_core::design::{self, Condition, Design, DesignComparison};
 use mzlab_core::samples::{self as core_samples, Sample};
 use mzlab_feat::recipe::Recipe;
-use mzlab_feat::samples;
 use mzlab_feat::stat::{compare, stats_json, write_stats, Layout, StatsOpts};
 use mzlab_feat::store::{write_table, Origin};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
@@ -151,30 +150,6 @@ fn the_pseudocount_parameter_reaches_the_engine() {
     let got = run(&d, r#"{"pseudocount":500}"#);
     assert_eq!(got, engine(Some(500.0)));
     assert_ne!(got, engine(None));
-    let _ = std::fs::remove_dir_all(&d);
-}
-
-#[test]
-fn campioni_1_gives_the_same_statistics() {
-    let d = dir("v1");
-    let v1: Vec<samples::Sample> = campioni_2()
-        .into_iter()
-        .map(|c| samples::Sample {
-            kind: c.kind.clone(),
-            group: c.series.clone(),
-            file: c.file,
-            sha256: c.sha256,
-            time_min: None,
-            replicate: 1,
-            conc: None,
-            unit: None,
-            order: c.order,
-            istd: false,
-            note: String::new(),
-        })
-        .collect();
-    std::fs::write(d.join("samples.json"), samples::to_json(&v1)).unwrap();
-    assert_eq!(run(&d, "{}"), engine(None));
     let _ = std::fs::remove_dir_all(&d);
 }
 

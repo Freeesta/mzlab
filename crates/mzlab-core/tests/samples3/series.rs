@@ -87,10 +87,10 @@ fn several_samples_in_one_file_are_not_duplicates() {
     let ok = t(&["0", "1", "2"]);
     assert!(!codes(&ok).iter().any(|c| c == "duplicateKey"));
     assert!(codes(&t(&["1", "1"])).iter().any(|c| c == "duplicateKey"));
-    let again = samples::to_json3(&ok);
+    let again = samples::table_to_json(&ok);
     assert!(again.contains("\"sub_sample\":\"2\""));
     assert_eq!(
-        samples::to_json3(&table_from_json(again.as_bytes()).unwrap()),
+        samples::table_to_json(&table_from_json(again.as_bytes()).unwrap()),
         again
     );
 }
@@ -248,11 +248,11 @@ fn a_single_first_word_proposes_no_matrix() {
 }
 
 #[test]
-fn proponi3_gives_a_campioni_3_with_the_matrix() {
+fn propose_gives_the_matrix_and_the_group() {
     let input = r#"{"files":[{"name":"TW_PMS_T00.mzML"},{"name":"TW_PMS_T05.mzML"},{"name":"TW_blk.mzML"},{"name":"MQ_PMS_T00.mzML"},{"name":"MQ_PMS_T05.mzML"},{"name":"MQ_Wash_1.mzML"}]}"#;
     let v: serde_json::Value =
-        serde_json::from_str(&mzlab_core::samples::route("propose2", input).unwrap()).unwrap();
-    assert_eq!(v["schema"], "samples/2");
+        serde_json::from_str(&mzlab_core::samples::route("propose", input).unwrap()).unwrap();
+    assert_eq!(v["schema"], "samples/1");
     let cs = v["samples"].as_array().unwrap();
     let f = |i: usize, k: &str| cs[i][k].clone();
     assert_eq!(

@@ -1,4 +1,4 @@
-//! The parts of `samples/2` that `samples/1` does not have: free typed columns (`Column`, `Cell`), the document that carries them
+//! The parts of `samples/1` that `samples/1` does not have: free typed columns (`Column`, `Cell`), the document that carries them
 //! (`Table`) and what the file says about itself (`FileData`). Used by `json3`, `csv`, `model` and `validate3`.
 
 use super::Sample;
@@ -77,7 +77,7 @@ pub struct FileData {
     pub scans: Option<u32>,
 }
 
-/// A `samples/2` document: the files and the declared free columns.
+/// A `samples/1` document: the files and the declared free columns.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Table {
     pub samples: Vec<Sample>,
