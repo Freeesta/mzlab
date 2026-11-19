@@ -93,8 +93,10 @@ fn sel_route_equals_the_function() {
 #[test]
 fn mech_route_gives_the_bytes_of_the_fixture() {
     let st = State::new();
-    let fx: serde_json::Value =
-        serde_json::from_str(include_str!("../../../tests/dati/mechanism_mclafferty.json")).unwrap();
+    let fx: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../tests/dati/mechanism_mclafferty.json"
+    ))
+    .unwrap();
     let got = text(
         st.rpc(
             "feat/grafo",
