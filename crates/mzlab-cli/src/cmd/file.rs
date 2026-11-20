@@ -45,7 +45,7 @@ pub(crate) static TABLE: &[Entry] = &[
         .schema("design_canonical/1")
         .exits(&[0, 2, 3, 4, 6])
         .examples(&["mzlab-cli sample design canonical d.json"]),
-    Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
+    Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
     Entry::new("trace xic", "mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV", crate::trace_cmd::xic)

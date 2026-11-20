@@ -61,7 +61,8 @@ export async function markSaved() {
 
 /** @param {Hooks} h `K` gives Ketcher (or null), `save(kind)` is the panel's own export (true = the download was triggered) */
 export function mount(h) {
-  hooks = h;
+  const again = !!hooks; hooks = h;
+  if (again) return;                                  // a start tried again: the close question is registered once
   const tau = /** @type {any} */ (window).__TAURI__, w = tau && tau.window && typeof tau.window.getCurrentWindow === "function" ? tau.window.getCurrentWindow() : null;
   if (w && typeof w.onCloseRequested === "function") {          // desktop app: the same question on the window's close button (the permission to destroy the window is in capabilities/default.json)
     w.onCloseRequested(async (/** @type {{ preventDefault: () => void }} */ ev) => { if (await check()) { ev.preventDefault(); if (await confirmDiscard("close")) await w.destroy(); } });

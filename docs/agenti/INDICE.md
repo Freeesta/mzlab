@@ -95,6 +95,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
 | acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
+| own 2D layout of a structure (`mzlab-mol::layout`, `layout_2d`), `mol draw` molfile and `draw/1` scene (`chem/draw.rs`: smiles, molfile, name, InChIKey), quality gates against RDKit, `draw_d1.json` parity | `docs/agenti/mol-draw.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecules/catalogue.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |
 | infusion MSn fragmentation graph (`msn-graph/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msn-lib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |
@@ -120,7 +121,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzFinder input: `.mzidx` for every chosen file or from IndexedDB (`TP_Mine/files/finder-idx.js`), user transformation list in Rust | `docs/agenti/mzfinder-input.md` |
 | LR dig (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-lr.md` |
 | MS2 interface and rule, MS2 targets and step "1 · Files" (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-ms2.md` |
-| mzFinder: HR products table (`TPTAB`, `TPRIGA`, `TPDEC`), live Dig (`js/24_tpmine_diretta.js`, `TPLIVE`), parent-TP pairs and HR interface (`js/21_tpmine_hr.js`, `mass_network`, prediction) | `docs/agenti/mzfinder-table.md` |
+| mzFinder: HR products table (`TPTAB`, `TPRIGA`, `TPDEC`), engine progress, parent-TP pairs (`mass_network`, prediction) | `docs/agenti/mzfinder-table.md` |
 | untargeted tables, identity and third-party table readers (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-untargeted.md` |
 | validation (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-validation.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` |
@@ -184,6 +185,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
 | full binary specification and what a sample is made of (area: `.wiff` + `.wiff.scan` reader `crates/mzlab-core/src/wiff/`; read-only `file inventory|verify`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli file pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
+| copying only the byte ranges of the chosen samples of a big `.wiff.scan` into OPFS (`readers::ranges`, `sample select --ranges`, `sample_ranges`, `putSparse`, partial identity Q4 left open) | `docs/agenti/wiff-range-copy.md` |
 | choosing samples of a `.wiff` (or other multi-sample file): listing, `selection::suggest`, `--sample LIST`, the page dialog `wiff-choose.js`, what is not built | `docs/agenti/wiff-sample-choice.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |

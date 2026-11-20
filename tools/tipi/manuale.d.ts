@@ -17,7 +17,6 @@ declare var clipboardCopy: (parts: Record<string, string | Blob | Promise<string
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;
-declare var MAPFEAT: any;
 declare var IMPCOMP: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are samples/1 `kind` and `blank_kind`, `time` is in minutes, `gR`, `gT` = role and time proposed from the name (until the student edits them). */

@@ -2,7 +2,8 @@
 `mol cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
 molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `highlight/1` of the evidence colours like
-`mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""
+`mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json); the 2D layout of a spec (`draw`, `draw/1` scene and molfile) like `mzlab-cli mol draw`
+and the app (tests/dati/draw_d1.json, 30 specs). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -114,6 +115,33 @@ def test_hilite_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
         assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == key
 
 
+def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
+    fx = json.loads((ROOT / "tests" / "dati" / "draw_d1.json").read_text(encoding="utf-8"))
+    build("-p", "mzlab-cli")
+    db = tmp_path / "db.csv"
+    db.write_text(fx["db"], encoding="utf-8")
+    assert len(fx["cases"]) == 30
+    for c in fx["cases"]:
+        r = c["request"]
+        sets = [x for k in ("layout", "name") if k in r for x in ("--set", f"{k}={r[k]}")] + (["--set", f"db={db}"] if "db" in r else [])
+        multi = "\n" in r["spec"]
+        for fmt, want in (("scene", c["scene"]), ("molfile", c["molfile"])):
+            p = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**r, "format": fmt}), "draw"], cwd=ROOT, capture_output=True, encoding="utf-8")
+            assert (p.returncode == 0) == (c["exit"] == 0), c["name"]
+            args = ["mol", "draw", "-" if multi else r["spec"], *sets, *(["--json"] if fmt == "scene" else [])]
+            q = subprocess.run([str(ROOT / "target" / "release" / "mzlab-cli"), *args], cwd=ROOT, input=r["spec"] if multi else None, capture_output=True, encoding="utf-8")
+            if c["exit"]:
+                # the same failure everywhere: the key of the wasm, the key of the CLI and its exit code
+                assert json.loads(p.stderr)["error_key"] == c["error_key"], c["name"]
+                assert q.returncode == c["exit"], (c["name"], fmt)
+                if fmt == "scene":
+                    err = [x for x in (q.stdout + "\n" + q.stderr).splitlines() if x.startswith('{"schema":"error/1"')]
+                    assert json.loads(err[0])["error_key"] == c["error_key"], c["name"]
+                continue
+            assert p.stdout == want + "\n", (c["name"], fmt)  # the node runner adds one newline
+            assert q.stdout == want + ("\n" if fmt == "scene" else ""), (c["name"], fmt)  # the CLI ends a JSON answer with a newline
+    assert sorted(c["exit"] for c in fx["cases"] if c["exit"]) == [2, 2, 5]
+
 def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(pkg, tmp_path):
     """`open/1` of a structure file: the `.wasm` and `mzlab-cli mol open` give the same bytes for the CDXML files of tests/dati/cdxml and for the variants
     of one of them (byte-order mark, UTF-16 both ways, 8-bit text, CRLF, no declaration, binary CDX, text that is not XML)."""
@@ -126,6 +154,8 @@ def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(
         "utf16le": b"\xff\xfe" + decl("UTF-16").encode("utf-16-le"),
         "utf16be": b"\xfe\xff" + decl("UTF-16").encode("utf-16-be"),
         "latin1": note.replace('encoding="UTF-8"', 'encoding="ISO-8859-1"').encode("latin-1"),
+        "utf16le_nomark": decl("UTF-16").encode("utf-16-le"),
+        "utf8_bad_bytes": b'<?xml version="1.0" encoding="utf-8"?><CDXML a=""><s>\xff</s></CDXML>',
         "crlf": base.replace("\n", "\r\n").encode(),
         "cdx": b"VjCD0100\x03\x04\x02\x01" + bytes(range(0, 250)),
         "text": b"this is not a structure\n",
@@ -143,10 +173,36 @@ def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(
         assert changed.stdout == site and changed.returncode == (1 if got["changes"] else 0), name
     # what each change does to the text
     empty = json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "aromatics.cdxml"), "open"))
-    assert empty["changes"] == [{"fix": "empty", "names": "BondLength"}] and "BondLength" not in empty["text"]
+    assert empty["changes"] == [{"fix": "empty", "names": ["BondLength"]}] and "BondLength" not in empty["text"]
     assert json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "utf16le.bin"), "open"))["changes"][0] == {"fix": "charset", "charset": "UTF-16"}
+    nomark = json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "utf16le_nomark.bin"), "open"))
+    assert nomark["changes"][0] == {"fix": "charset", "charset": "UTF-16LE"} and 'encoding="UTF-8"' in nomark["text"]
+    bad = json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "utf8_bad_bytes.bin"), "open"))
+    assert bad["changes"] == [{"fix": "charset", "charset": "utf-8"}, {"fix": "replaced", "count": 1}, {"fix": "empty", "names": ["a"]}]
     latin = json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "latin1.bin"), "open"))
     assert latin["changes"][0] == {"fix": "charset", "charset": "ISO-8859-1"} and "Zürich" in latin["text"]
     cdx = json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "cdx.bin"), "open"))
     assert cdx["changes"] == [] and base64.b64decode(cdx["text"]) == variants["cdx"]
     assert json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), str(tmp_path / "empty.bin"), "open")) == {"schema": "open/1", "text": "", "changes": []}
+
+
+def test_open_refuses_a_file_over_the_limit_the_same_way_in_the_wasm_and_the_cli(pkg, tmp_path):
+    """8 MiB is the limit of `open/1`: the `.wasm` throws `error.open.tooBig` with the size, the CLI answers one `error/1` with exit 1."""
+    big = tmp_path / "big.cdxml"
+    size = (8 << 20) + 1000
+    big.write_bytes(b" " * size)
+    refusal = {"error_key": "error.open.tooBig", "params": {"size": str(size), "limit": str(8 << 20)}}
+    site = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), str(big), "open"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert site.returncode == 1 and json.loads(site.stderr) == refusal
+    # the size alone, as the page asks it before reading a dropped file: the same refusal, and the limit when the file is read
+    asked = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), str(size), "size"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert asked.returncode == 1 and json.loads(asked.stderr) == refusal
+    assert json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), "1000", "size")) == {"limit": 8 << 20}
+    # a size that is no size is no request, as on the app's route
+    for bad in ("-1", "NaN"):
+        r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), bad, "size"], cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.open.request", bad
+    c = subprocess.run(cli_argv("mol", "open", str(big)), cwd=ROOT, capture_output=True, encoding="utf-8")
+    e = json.loads(c.stdout)
+    assert c.returncode == 1 and e["schema"] == "error/1" and e["error_key"] == "error.open.tooBig", c.stdout
+    assert e["params"] == refusal["params"], c.stdout

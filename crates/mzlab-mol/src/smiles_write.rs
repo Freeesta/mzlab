@@ -4,7 +4,8 @@
 
 use crate::codec::MolError;
 use crate::model::{GroupKind, Mol, Parity, Status, Stereo};
-use std::collections::BTreeMap;
+use crate::sortm::SortM;
+use crate::sortm::SortedVec;
 
 impl Mol {
     /// SMILES (with a CXSMILES tail when there are stereo groups) and, for every written atom, its index in this record.
@@ -18,7 +19,7 @@ impl Mol {
                 if !text.is_empty() {
                     text.push('.');
                 }
-                w.emit(s, &mut BTreeMap::new(), &mut text);
+                w.emit(s, &mut SortedVec::new(), &mut text);
             }
         }
         text.push_str(&w.tail());
@@ -40,7 +41,7 @@ impl<'a> Walk<'a> {
             adj[b.b as usize].push((b.a, b.o));
         }
         for v in &mut adj {
-            v.sort_unstable();
+            v.sortm();
         }
         Walk {
             m,
@@ -50,7 +51,7 @@ impl<'a> Walk<'a> {
             children: vec![Vec::new(); n],
             closures: vec![Vec::new(); n],
             order: Vec::new(),
-            up: BTreeMap::new(),
+            up: SortedVec::new(),
         }
     }
 
@@ -127,7 +128,7 @@ impl<'a> Walk<'a> {
     /// Neighbours of `u` in the order the text lists them: predecessor, ring digits, branches and chain.
     fn written_neighbours(&self, u: usize) -> Vec<usize> {
         let mut ring = self.closures[u].clone();
-        ring.sort_by_key(|&p| self.pos[p]);
+        ring.sortm_by_key(|&p| self.pos[p]);
         self.parent[u]
             .into_iter()
             .chain(ring)
@@ -208,16 +209,16 @@ impl<'a> Walk<'a> {
     }
 
     /// Writes the subtree at `u`. `open` maps a ring bond (lower position, higher position) to its digit while it is open.
-    fn emit(&self, u: usize, open: &mut BTreeMap<(usize, usize), usize>, out: &mut String) {
+    fn emit(&self, u: usize, open: &mut SortedVec<(usize, usize), usize>, out: &mut String) {
         out.push_str(&self.atom_text(u));
         let mut ring = self.closures[u].clone();
-        ring.sort_by_key(|&p| self.pos[p]);
+        ring.sortm_by_key(|&p| self.pos[p]);
         for p in ring {
             let key = (self.pos[u].min(self.pos[p]), self.pos[u].max(self.pos[p]));
             if let Some(n) = open.remove(&key) {
                 out.push_str(&Self::ring_digit(n));
             } else {
-                let n = (1..).find(|n| !open.values().any(|v| v == n)).unwrap_or(1);
+                let n = (1..).find(|n| !open.iter().any(|e| e.1 == *n)).unwrap_or(1);
                 open.insert(key, n);
                 out.push_str(self.bond_symbol(u, p));
                 out.push_str(&Self::ring_digit(n));
@@ -242,7 +243,7 @@ impl<'a> Walk<'a> {
         let mut parts = Vec::new();
         for g in &self.m.groups {
             let mut at: Vec<usize> = g.atoms.iter().map(|&a| self.pos[a as usize]).collect();
-            at.sort_unstable();
+            at.sortm();
             let list: Vec<String> = at.iter().map(usize::to_string).collect();
             let head = match g.kind {
                 GroupKind::Abs => "a".to_string(),
@@ -275,7 +276,7 @@ struct Walk<'a> {
     closures: Vec<Vec<usize>>,
     order: Vec<usize>,
     /// For a directional bond `(lo, hi)`: whether `hi` sits above `lo`.
-    up: BTreeMap<(u32, u32), bool>,
+    up: SortedVec<(u32, u32), bool>,
 }
 
 fn fail<T>(msg: impl Into<String>) -> Result<T, MolError> {
