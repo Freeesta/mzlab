@@ -2,8 +2,8 @@
 // @ts-noany
 // Quick draw box (Disegno): the SMILES field is also a search box over the molecules database (name, synonym, formula; the one search of the engine).
 // A text that reads as a SMILES is never searched; choosing a suggestion puts its SMILES in the field and draws it with the «Draw» button, as a pasted SMILES.
-import { campo } from "./molecole-campo.js";
-import { pronto, cerca } from "./molecole-archivio.js";
+import { field } from "./molecules-field.js";
+import { ready, search } from "./molecules-archive.js";
 
 /** True when `t` is made only of SMILES tokens (atoms, bonds, branches, ring digits, charges): "CC(=O)O", "c1ccccc1", "[Na+].[Cl-]". A name such as "caffeine" has letters no SMILES atom uses. */
 export function looksLikeSmiles(/** @type {string} */ t) {
@@ -20,7 +20,7 @@ export const isStructureText = (/** @type {string} */ t) => looksLikeSmiles(t) |
  * @param {string} text @param {(text: string) => void} note @param {(key: string) => string} t translator */
 export async function nameToSmiles(text, note, t) {
   if (isStructureText(text)) return text;
-  const r = await cerca(withoutAccents(text.trim()), 8, 5).catch(() => []);
+  const r = await search(withoutAccents(text.trim()), 8, 5).catch(() => []);
   if (!r.length) { note(t("draw.quick.notFound")); return null; }
   if (!r[0].smiles) { /** @type {HTMLInputElement} */ (document.getElementById("ex-smi")).value = ""; note(t("draw.quick.noStructure")); return null; }
   return r[0].smiles;
@@ -44,20 +44,20 @@ export function initCerca(t, note) {
   if (started) return;
   started = true;
   const smi = /** @type {HTMLInputElement} */ (document.getElementById("ex-smi")), load = /** @type {HTMLButtonElement} */ (document.getElementById("ex-load"));
-  campo(/** @type {HTMLElement} */ (smi.parentElement), {
+  field(/** @type {HTMLElement} */ (smi.parentElement), {
     input: smi,
-    testi: { label: t("draw.quick.label"), none: t("draw.quick.none"), count: n => t("draw.quick.count", { n }) },
-    gestisci: null,
-    limite: 8,
+    texts: { label: t("draw.quick.label"), none: t("draw.quick.none"), count: n => t("draw.quick.count", { n }) },
+    manage: null,
+    limit: 8,
     ppm: 5,
-    salta: looksLikeSmiles,
-    interroga: async q => withoutAccents(q),
-    onScegli: m => {
+    skip: looksLikeSmiles,
+    prepare: async q => withoutAccents(q),
+    onPick: m => {
       if (!m.smiles) { smi.value = ""; note(t("draw.quick.noStructure")); return; }
       smi.value = m.smiles;
       load.click();
     },
   });
-  smi.addEventListener("focus", () => { pronto().catch(() => { /* the search tries again when the user types */ }); }, { once: true });
+  smi.addEventListener("focus", () => { ready().catch(() => { /* the search tries again when the user types */ }); }, { once: true });
   smi.addEventListener("keydown", e => { if (e.key === "Enter" && !e.defaultPrevented) load.click(); });   // after the combobox's own handler; a name with no highlighted row is resolved by the button's handler (first suggestion)
 }

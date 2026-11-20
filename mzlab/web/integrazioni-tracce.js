@@ -22,7 +22,7 @@ function build() {
     for (const it of p.ints) {
       const s = p._a.sr.find(q => q.key === it.key), f = E.files[it.k];
       if (!s || !f || f.gone || !s.x || s.x.length < 2) continue;
-      const kind = CAMPIONI.kindOf(f), conc = (kind === "std" || kind === "qc") && f.conc != null;
+      const kind = SAMPLES.kindOf(f), conc = (kind === "std" || kind === "qc") && f.conc != null;
       let e = files.get(it.k);
       if (!e) { e = { i: files.size, name: f.file || "", time: f.time ?? null, conc: conc ? f.conc : null, cunit: conc ? f.cunit || "" : "", trs: [], idx: new Map() }; files.set(it.k, e); }
       const panel = ptitle(p.title), label = String(it.ion || it.name || ""), tk = `${panel}|${it.key}`;

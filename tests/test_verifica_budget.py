@@ -31,12 +31,18 @@ def test_the_slowest_e2e_are_not_in_part_one():
     assert not [x for x in verifica.parte_di(names, 1, 5) if x in verifica.SLOW]
 
 
-def test_plain_parts_cover_every_test_once_and_the_slowest_is_in_part_one():
-    names = ["e2e_giro_intestazione", "e2e_tpmine_lr_rust"] + [f"e2e_{i:03d}" for i in range(40)]
-    assert verifica.SLOW[0] == "e2e_giro_intestazione"
+def test_plain_parts_cover_every_test_once_and_take_about_the_same_time():
+    names = [*verifica.WEIGHT] + [f"e2e_{i:03d}" for i in range(20)]
+    cost = lambda part: sum(verifica.WEIGHT.get(x, verifica.WEIGHT_DEFAULT) for x in part)
     for n in (1, 2, 3):
         parts = [verifica.parte_di(names, k, n, plain=True) for k in range(1, n + 1)]
         assert sorted(x for p in parts for x in p) == sorted(names)
-        assert "e2e_giro_intestazione" in parts[0]
-        if n > 1:
-            assert len(parts[0]) <= -(-len(names) // (3 * (n - 1) + 1)) + 1
+        assert max(map(cost, parts)) - min(map(cost, parts)) <= max(verifica.WEIGHT.values())
+        assert parts == [verifica.parte_di(names, k, n, plain=True) for k in range(1, n + 1)]   # the same on every call
+
+
+def test_the_weighted_and_smoke_e2e_exist():
+    smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX)
+    for name in [*verifica.WEIGHT, *verifica.SMOKE_CHROMIUM_LINUX]:
+        assert (verifica.E2E / f"{name}.py").exists(), name
+    assert set(verifica.WEIGHT) <= smoke

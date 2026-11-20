@@ -35,7 +35,7 @@ try:
             if touch: k.update(has_touch=True, is_mobile=True)
             pg = b.new_context(**k).new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.click('#nav button[data-v="flow"]'); pg.wait_for_selector(".flx-tpl.show", timeout=30000)
             wait_for_js(pg, "document.querySelectorAll('.fl-insp .fl-form label').length >= 3")

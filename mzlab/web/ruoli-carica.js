@@ -52,9 +52,9 @@ const RUOLI = /** @type {any} */ ((() => {
     }
     return changed;
   }
-  /** the roles and times of the table go to the files just opened (CAMPIONI.apply is the only writer) */
+  /** the roles and times of the table go to the files just opened (SAMPLES.apply is the only writer) */
   function commit(/** @type {Voce[]} */ F) {
-    CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
+    SAMPLES.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
   }
   /** Repaints and proposals for a table fed by many merges. `soon()` asks one repaint per animation frame (a hidden tab has no frame: `flush()` paints it); `flush(force)` paints now and asks
    *  the proposals once for every entry merged since (only when something was merged, unless `force`). `raf`/`caf` default to FRAME.next/FRAME.cancel. The table of a loading repaints per frame and asks the proposals once when the loading flushes; a merge outside a loading flushes at once.

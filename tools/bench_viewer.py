@@ -423,7 +423,7 @@ def main():
             if a.g7_site:
                 prof = wd / "profile_g7"; shutil.rmtree(prof, ignore_errors=True)
                 ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950}, args=["--enable-precise-memory-info"], locale="en-US")
-                ctx.set_default_timeout(OPEN_MS); ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
+                ctx.set_default_timeout(OPEN_MS); ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}" + INIT)
                 try:
                     pg = ctx.pages[0] if ctx.pages else ctx.new_page()
                     try: r = g7_site(pg, a.port, a.g7_site)
@@ -439,7 +439,7 @@ def main():
                 ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950},
                                                            args=["--enable-precise-memory-info", "--js-flags=--expose-gc"], locale="en-US")
                 ctx.set_default_timeout(OPEN_MS)
-                ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
+                ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}" + INIT)
                 pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
                 signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError("the case did not finish within its time cap")))
                 signal.alarm(int(2 * OPEN_MS / 1000) + 900)                                  # a hung browser must not stall the whole run

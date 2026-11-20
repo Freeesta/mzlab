@@ -107,7 +107,7 @@ def wait_cache(pg, app, timeout=150):
     raise AssertionError("the cache of " + app + " was not filled in time")
 
 
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 try:
     if not (SITE / "sw.js").is_file(): raise SystemExit("build the site first: python tools/build_site.py")
     shutil.copytree(SITE, work / "n0")

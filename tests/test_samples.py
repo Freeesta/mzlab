@@ -1,4 +1,4 @@
-"""Sample metadata (mzlab/web/campioni.js, pure functions run by node) and their change in an open session (Session.set_meta)."""
+"""Sample metadata (mzlab/web/samples.js, pure functions run by node) and their change in an open session (Session.set_meta)."""
 import json
 import shutil
 import subprocess
@@ -27,7 +27,7 @@ const C=ctx.C;
 
 
 def js(code):
-    src = LOADER % (str(WEB / "ordine.js"), str(WEB / "campioni.js")) + code
+    src = LOADER % (str(WEB / "ordine.js"), str(WEB / "samples.js")) + code
     out = subprocess.run(["node", "-e", src], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
@@ -69,7 +69,7 @@ def test_old_export_t0_and_blank_type_still_import_and_dark_time_is_signed():
     assert r[0]["type"] == "sample" and r[0]["time"] == 0
     assert r[1]["type"] == "blank" and "sub" not in r[1]
     assert r[2]["type"] == "dark" and r[2]["time"] == -30                  # the dark takes a negative time
-    assert r[3]["time"] == 45                                              # a positive one is read as typed here; CAMPIONI.apply turns it into -45
+    assert r[3]["time"] == 45                                              # a positive one is read as typed here; SAMPLES.apply turns it into -45
     assert js("console.log(JSON.stringify(C.parseTsv('filename\\tsample_type\\ttime\\nx.mzML\\tsample\\t-5')))")["rows"][0]["time"] is None   # a sample takes no sign
 
 

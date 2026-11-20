@@ -32,7 +32,11 @@ fn golden(rel: &str, got: &str) {
 
 /// A folder with the three files, `None` without python3 and numpy.
 fn folder() -> Option<PathBuf> {
-    let all = std::env::temp_dir().join(format!("mzlab-fatti-{}", std::process::id()));
+    // One directory per call: tests run in parallel, and a shared one was rewritten by the generator while another test read it.
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let all = std::env::temp_dir().join(format!("mzlab-fatti-{}-{n}", std::process::id()));
+    std::fs::remove_dir_all(&all).ok();
     let ok = Command::new("python3")
         .current_dir(root())
         .arg("tools/dati_sintetici.py")

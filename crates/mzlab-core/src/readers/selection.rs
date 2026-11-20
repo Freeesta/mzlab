@@ -52,11 +52,11 @@ pub fn resolve(present: &[u32], wanted: &[u32]) -> Result<Vec<u32>> {
         .collect())
 }
 
-/// `{"samples":[1,3,5]}`: the ids that `text` selects among `present`; the route the site calls before it opens only those samples.
+/// `{"schema":"sample-select/1","samples":[1,3,5]}`: the ids that `text` selects among `present`; the route the site calls before it opens only those samples.
 pub fn selection_json(present: &[u32], text: &str) -> Result<String> {
     let ids = resolve(present, &parse(text)?)?;
     let mut o = Out::default();
-    o.raw("{\"samples\":[");
+    o.raw("{\"schema\":\"sample-select/1\",\"samples\":[");
     for (k, i) in ids.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw(&i.to_string());
     }
@@ -97,7 +97,7 @@ pub fn suggest_json(ids: &[u32], sizes: &[u64], budget_bytes: u64) -> String {
         .map(|i| sizes.get(i).copied().unwrap_or(0))
         .collect();
     let mut o = Out::default();
-    o.raw("{\"samples\":[");
+    o.raw("{\"schema\":\"sample-select/1\",\"samples\":[");
     for (k, i) in suggest(ids, &sized, budget_bytes).iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw(&i.to_string());
     }
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(e.key, "err.sample.unknown");
         assert_eq!(
             selection_json(&[1, 2, 3], "3,1").unwrap(),
-            "{\"samples\":[1,3]}"
+            "{\"schema\":\"sample-select/1\",\"samples\":[1,3]}"
         );
     }
 
@@ -133,8 +133,14 @@ mod tests {
     fn small_sets_are_ticked_and_big_ones_are_not() {
         assert_eq!(suggest(&[1, 2], &[10, 20], 400), [1, 2]);
         assert!(suggest(&[1, 2], &[10, 20], 100).is_empty());
-        assert_eq!(suggest_json(&[1, 2], &[10], 400), "{\"samples\":[1,2]}");
-        assert_eq!(suggest_json(&[1], &[500], 400), "{\"samples\":[]}");
+        assert_eq!(
+            suggest_json(&[1, 2], &[10], 400),
+            "{\"schema\":\"sample-select/1\",\"samples\":[1,2]}"
+        );
+        assert_eq!(
+            suggest_json(&[1], &[500], 400),
+            "{\"schema\":\"sample-select/1\",\"samples\":[]}"
+        );
     }
 
     #[test]

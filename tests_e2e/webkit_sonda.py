@@ -71,7 +71,7 @@ def site():
     try:
         with sync_playwright() as pw:
             close, pg = open_page(pw, viewport={"width": 1500, "height": 1000})
-            pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
             if cores: pg.add_init_script(f"Object.defineProperty(navigator,'hardwareConcurrency',{{get:()=>{int(cores)}}})")
             pg.on("console", lambda m: log.append(f"{m.type}: {m.text}"[:300]) if m.type in ("error", "warning", "debug") else None)
             pg.on("pageerror", lambda e: errs.append(str(e)[:300]))

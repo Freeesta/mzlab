@@ -13,7 +13,7 @@ def load(pg):
 def fresh(p, tour_state=True, hint=None):
     r = Run(port=8872, wd="/tmp/wd_hint"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce"); pg = ctx.new_page()
-    init = "try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));" if tour_state else "") + (f"localStorage.setItem('mzlab.barra.hint','{hint}');" if hint else "") + "}catch(_){}"
+    init = "try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));" if tour_state else "") + (f"localStorage.setItem('mzlab.barra.hint','{hint}');" if hint else "") + "}catch(_){}"
     pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")
     return r, ctx, pg
 vis = lambda pg: pg.evaluate("(() => { const e = document.getElementById('bar-hint'); if (!e) return null; const b = e.getBoundingClientRect(), s = document.getElementById('stbar').getBoundingClientRect(); return {w: b.width, below: b.top >= s.bottom, live: e.getAttribute('aria-live'), role: e.getAttribute('role'), inside: b.right <= innerWidth && b.left >= 0}; })()")

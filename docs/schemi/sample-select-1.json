@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sample-select/1",
+  "title": "sample-select/1: the sample ids a selection picks",
+  "description": "The answer of `mzlab-cli sample select --json`: the ids `--sample LIST` or `--default` picks, ascending. An id the file does not have is exit 5 with an `error/1`. Code: crates/mzlab-cli/src/samples_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "samples"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sample-select/1"
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    }
+  }
+}

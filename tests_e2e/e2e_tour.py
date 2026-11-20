@@ -62,7 +62,7 @@ try:
         pg.mouse.click(300, 300)
         wait_for_js(pg, "!document.querySelector('#tour-later')", 3000)
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
-        assert st["stato"] == "invitato", st
+        assert st["state"] == "invited", st
 
         # Reload: invitation does not come back (the session is saved first: the reload resumes from the notebook)
         saved(pg)
@@ -193,12 +193,12 @@ try:
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Step 2 of 9 · Tools and moving around" in hd, hd
 
-        # Escape exits and saves saltato
+        # Escape exits and saves skipped
         pg.keyboard.press("Escape")
         pg.wait_for_selector("#tour-dialog", state="hidden", timeout=10000)
         assert not pg.is_visible("#tour-dialog"), "dialog closed by Escape"
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
-        assert st["stato"] == "saltato", st
+        assert st["state"] == "skipped", st
         # Focus returned to gear
         focused_id = pg.evaluate("document.activeElement.id")
         assert focused_id == "np-set", f"expected focus on np-set, got {focused_id}"
@@ -259,12 +259,12 @@ try:
         pg.wait_for_selector("#tour-dialog", state="hidden", timeout=10000)
         assert not pg.is_visible("#tour-dialog")
         st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr'))")
-        assert st["stato"] == "fatto", st
-        steps.append(("chapter 2 steps completed with Fine, saves stato fatto", "ok"))
+        assert st["state"] == "done", st
+        steps.append(("chapter 2 steps completed with Fine, saves state done", "ok"))
 
         # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
         pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg)
-        pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({stato:'saltato'}))")
+        pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({state:'skipped'}))")
         pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 9)):

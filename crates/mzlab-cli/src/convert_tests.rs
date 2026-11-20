@@ -1,8 +1,7 @@
 //! `mzlab-cli file convert` on a folder of synthetic vendor files: valid indexed mzML, the failed file named with its cause and code 1, the bytes of `flow run`
 //! with a `convert.mzml` plan, the same bytes with 1 and 3 workers, the cache of the second run, a sample per mzML, the usage errors.
 
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 use mzlab_core::json::{parse, Value};
 
@@ -81,7 +80,8 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
     assert_eq!(String::from_utf8(o.stdout).unwrap().lines().count(), 3);
 
     let report = parse(&std::fs::read(&rep).unwrap()).unwrap();
-    let list = report.arr();
+    assert_eq!(report.get("schema").and_then(Value::str), Some("convert/1"));
+    let list = report.get("items").unwrap().arr();
     assert_eq!(list.len(), 4);
     let failed: Vec<&Value> = list.iter().filter(|r| r.get("error").is_some()).collect();
     assert_eq!(failed.len(), 1);
@@ -304,8 +304,8 @@ fn usage_errors_and_a_missing_input_have_their_codes() {
     // an output over its own input
     let o = convert(&[p(&src), "--out", p(&src)]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let o = convert(&[p(&src.join("a.mzML")), "--out", p(&src)]);
-    assert_eq!(o.code, 2, "{}", o.stderr);
+    let o = convert(&[p(&src.join("a.mzML")), "--out", p(&src)]); // own key, covered in file_sample_contract_tests
+    assert_eq!(o.code, 4, "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
 

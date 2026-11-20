@@ -88,7 +88,7 @@ fn a_cut_file_is_in_the_record_of_the_run_with_its_counts() {
     let conv = crate::execute(&a);
     assert_eq!(conv.code, 3, "{}", conv.stderr);
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let c1 = r.arr()[0].get("conversion").unwrap();
+    let c1 = r.get("items").unwrap().arr()[0].get("conversion").unwrap();
     let n = |k: &str| c1.get(k).and_then(Value::f64).unwrap();
     let want = (
         vec!["warn.file.truncated".to_string()],

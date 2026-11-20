@@ -66,7 +66,7 @@
       $("#tp-rmall").hidden = false; $("#tp-files").querySelectorAll("[data-rm]").forEach(b => b.onclick = () => removeFiles([Number(/** @type {HTMLElement} */ (b).dataset.rm)]));
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
-    // ---- conditions of the files (several conditions of the same degradation): the table of roles, conditions, times and replicates is TP_Mine/lazy/gruppi-campioni.js (loaded when the section is opened);
+    // ---- conditions of the files (several conditions of the same degradation): the table of roles, conditions, times and replicates is TP_Mine/lazy/groups-samples.js (loaded when the section is opened);
     // with two conditions or more it rules the roles and times of the Dig, which then compares the conditions (gruppi/1). With one condition (or none) nothing changes.
     const TYPE_OF = { sample: "sample", t0: "sample", blank: "blank", std: "standard", dark: "control" };
     const useCond = () => !!(st.cond && st.cond.conditions.length >= 2);
@@ -80,7 +80,7 @@
     async function mountConds() {
       const W = /** @type {any} */ (window), names = condFiles().map(f => f.name), box = $("#tp-cfiles");
       try {
-        await Promise.all([W.nbEnsure ? W.nbEnsure() : 0, W.TPLAZY.load("gruppi-campioni.js")]);
+        await Promise.all([W.nbEnsure ? W.nbEnsure() : 0, W.TPLAZY.load("groups-samples.js")]);
         const R = await import(URL.createObjectURL(new Blob([ctx().files["finder-ruoli.js"]], { type: "text/javascript" })));
         const call = async (/** @type {string} */ op, /** @type {string} */ j) => { const r = await fetch("api/samples/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
         if (st.gctl) st.gctl.unmount();

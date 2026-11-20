@@ -1,4 +1,4 @@
-# covers: mzlab/web/gruppi-tab.js, mzlab/web/gruppi-nome.js, mzlab/web/gruppi.js, mzlab/web/colonne-campioni.js
+# covers: mzlab/web/gruppi-tab.js, mzlab/web/gruppi-nome.js, mzlab/web/gruppi.js, mzlab/web/columns-samples.js
 """Sample table: double click on a group header renames it in place (Enter saves, Esc cancels, blur saves, empty = default name, a duplicate is refused with an inline message,
 F2/Enter on the focused name starts it, a double click does not fold the group); «Ungrouped» can get a label of its own; the name survives a reload of the session;
 the «+» at the end of the header row opens the «Columns» chooser, a column added there appears in the table."""

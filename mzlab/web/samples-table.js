@@ -1,16 +1,16 @@
 // @ts-strict
 "use strict";
-// The «Sample metadata» section of the «Statistica» panel (first section): the table of CAMPIONI (campioni.js), one row per file, with the TSV export and import.
-// Every edit goes through CAMPIONI.apply, the only writer of roles, subtypes, times and their confirmation.
+// The «Sample metadata» section of the «Statistica» panel (first section): the table of SAMPLES (samples.js), one row per file, with the TSV export and import.
+// Every edit goes through SAMPLES.apply, the only writer of roles, subtypes, times and their confirmation.
 // the metadata of the files (type, time, concentration, replicate) are one undoable action (comandi.js): the snapshot is the table of all the open files
 COMANDI.gestore("samples.meta", {
-  leggi: () => JSON.stringify(CAMPIONI.files().map(f => [f.file, CAMPIONI.kindOf(f), f.time ?? null, f.tconf !== false, f.conc ?? null, f.cunit ?? null, f.rep ?? null])),
-  applica: (_p, snap) => { CAMPIONI.apply(JSON.parse(snap).map(([file, role, time, tconf, conc, cunit, rep]) => ({ file, role, time, tconf, conc, cunit, rep }))); },
+  leggi: () => JSON.stringify(SAMPLES.files().map(f => [f.file, SAMPLES.kindOf(f), f.time ?? null, f.tconf !== false, f.conc ?? null, f.cunit ?? null, f.rep ?? null])),
+  applica: (_p, snap) => { SAMPLES.apply(JSON.parse(snap).map(([file, role, time, tconf, conc, cunit, rep]) => ({ file, role, time, tconf, conc, cunit, rep }))); },
 });
-/** Edits the metadata of the files (CAMPIONI.apply) as one undo step. @param {any[]} entries */
-function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => CAMPIONI.apply(entries)); }
+/** Edits the metadata of the files (SAMPLES.apply) as one undo step. @param {any[]} entries */
+function samplesEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => SAMPLES.apply(entries)); }
 (() => {
-  const { files, apply, selVal, kindOf, shownRep, importTsv, gradientLegend, toTsv, rows } = CAMPIONI;
+  const { files, apply, selVal, kindOf, shownRep, importTsv, gradientLegend, toTsv, rows } = SAMPLES;
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const T_UNITS = ["min", "h", "d"];
@@ -67,13 +67,13 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
         if (Number.isNaN(v)) { paint(box); msg(box, t("meta.err.num"), true); return; }
         if (m === "time") ent.time = timeStored(v, tunitGet()); else { ent.conc = v; if (v != null) ent.cunit = (box.querySelector(`select[data-f="${CSS.escape(f)}"][data-m=cunit]`) || {}).value || "mg/L"; }
       }
-      campioniEdit([ent]); paint(box);
+      samplesEdit([ent]); paint(box);
     };
     box.onkeydown = e => {
       const el = e.target;
       if (e.key !== "Enter" || !el.dataset || el.dataset.m !== "time" || el.disabled) return;
       const v = parseDecimal(el.value, isDark(el.dataset.f));
-      if (v != null && !Number.isNaN(v)) { campioniEdit([{ file: el.dataset.f, time: timeStored(v, tunitGet()), tconf: true }]); paint(box); }
+      if (v != null && !Number.isNaN(v)) { samplesEdit([{ file: el.dataset.f, time: timeStored(v, tunitGet()), tconf: true }]); paint(box); }
     };
     box.onclick = e => {
       if (e.target.id === "cmp-exp") {
@@ -85,5 +85,5 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
   }
 
   if (typeof STAT !== "undefined") STAT.add({ id: "meta", title: "meta.title", visible: () => true, mount });
-  Object.assign(CAMPIONI, { mount, paint });
+  Object.assign(SAMPLES, { mount, paint });
 })();

@@ -8,8 +8,8 @@ WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 # the tabular exports of the program: file -> number of calls that must carry the provenance
 DLX = {"pannelli.js": 1, "bianco.js": 1, "pca.js": 1, "kmd.js": 1, "pfas.js": 1, "profilo.js": 1, "origine.js": 1,
        "composizione.js": 2, "libreria-corpo.js": 1, "libreria-finestra.js": 2, "riferimento-corpo.js": 1, "mappa-tabella.js": 1, "integrazioni-manuali.js": 1}
-DL = {"riferimento-corpo.js": 1, "liste.js": 2, "campioni-tabella.js": 1}                       # CSV / TSV files
-CLIP = {"banco.js": 1, "mappa-tabella.js": 1, "tdati.js": 1, "libreria-corpo.js": 1, "libreria-finestra.js": 1, "campioni-tabella.js": 1, "profilo.js": 1}      # tables copied to the clipboard
+DL = {"riferimento-corpo.js": 1, "liste.js": 2, "samples-table.js": 1}                       # CSV / TSV files
+CLIP = {"banco.js": 1, "mappa-tabella.js": 1, "tdati.js": 1, "libreria-corpo.js": 1, "libreria-finestra.js": 1, "samples-table.js": 1, "profilo.js": 1}      # tables copied to the clipboard
 
 
 def call(src, i):
@@ -59,7 +59,7 @@ def test_one_helper_and_the_engine_writes_the_line():
 
 
 def test_own_imports_skip_the_provenance_line():
-    assert 'startsWith("#")' in (WEB / "campioni.js").read_text(encoding="utf-8")
+    assert 'startsWith("#")' in (WEB / "samples.js").read_text(encoding="utf-8")
     # the CSV of a list is read in Rust, where the `#` provenance line is skipped: tested by `wrong_rows_carry_their_file_line` (crates/mzlab-core/src/reflist/tests.rs)
 
 

@@ -154,11 +154,24 @@ pub fn json_file(o: &mut Out, file: &str, r: &Report) {
     o.raw("]}");
 }
 
-/// What `mzlab-cli file validate FILE --json` prints for one file that could be read: the array of its object and a newline.
+/// The document `mzlab-cli file validate --json` prints, `{"schema":"mzml-validation/1","files":[...]}` and a newline: one object per file, in the
+/// order given. The page and the app ask for one file, the command for any number: the same bytes for the same file.
+pub fn json_files(files: &[(String, Report)]) -> String {
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"mzml-validation/1\",\"files\":[");
+    for (i, (name, r)) in files.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" });
+        json_file(&mut o, name, r);
+    }
+    o.raw("]}\n");
+    o.0
+}
+
+/// `json_files` of one file: what the page and the app show.
 pub fn json_un_file(file: &str, r: &Report) -> String {
     let mut o = Out::default();
-    o.raw("[");
+    o.raw("{\"schema\":\"mzml-validation/1\",\"files\":[");
     json_file(&mut o, file, r);
-    o.raw("]\n");
+    o.raw("]}\n");
     o.0
 }

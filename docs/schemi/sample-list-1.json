@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sample-list/1",
+  "title": "sample-list/1: what the files hold, sample by sample",
+  "description": "The answer of `mzlab-cli sample list --json`: one entry per file, in the order given. An entry is the `samples_list/1` document the site and the app also use (format, bytes, scan, samples with id, name, scans, size, kinds, polarity, rt, tic, why, refused), or, for a file the reader refuses, an `error/1` document. Exit 1 when a sample or a file is refused or a .wiff.scan is cut (the document stays on stdout); a file that is missing or unreadable is one `error/1` (exit 4). Code: crates/mzlab-cli/src/samples_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sample-list/1"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema"
+        ],
+        "properties": {
+          "schema": {
+            "enum": [
+              "samples_list/1",
+              "error/1"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

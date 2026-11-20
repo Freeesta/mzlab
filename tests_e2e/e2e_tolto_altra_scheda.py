@@ -11,7 +11,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tolto_altra_scheda.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split())[:400]))
 N = 2
-INIT = ("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));"
+INIT = ("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));"
         "localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
 COPIES = ("async () => { const r = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'); let n = 0;"
           " try { for await (const _ of (await r.getDirectoryHandle('files')).keys()) n++; } catch (_) {} return n; }")

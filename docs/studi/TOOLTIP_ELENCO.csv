@@ -315,8 +315,8 @@ id,area,label,key,file_line,text,chars,flags,source
 314,liste,,bug.dl.tip,mzlab/web/bug-report.js:72,Saves the same content as a .json file,38,,i18n-title
 315,liste,,bug.mail.tip,mzlab/web/bug-report.js:72,Opens your mail with the report,31,,i18n-title
 316,liste,,bug.open.tip,mzlab/web/bug-report.js:72,New GitHub issue with this text,31,,i18n-title
-317,liste,,load.cols.bad,mzlab/web/colonne-campioni.js:138,Enter a number,14,,site
-318,liste,+,load.cols.plus,mzlab/web/colonne-campioni.js:33,Add column,10,,site
+317,liste,,load.cols.bad,mzlab/web/columns-samples.js:138,Enter a number,14,,site
+318,liste,+,load.cols.plus,mzlab/web/columns-samples.js:33,Add column,10,,site
 319,liste,,conv.cancel.title,mzlab/web/conversione-carta.js:18,Cancel the conversion of the .raw files,39,,site
 320,liste,,conv.dl.title,mzlab/web/conversione.js:22,Save the converted mzML,23,,site
 321,liste,?,common.help,mzlab/web/conversione.js:326,Help,4,,site
@@ -627,9 +627,9 @@ id,area,label,key,file_line,text,chars,flags,source
 626,tabui,←,,TP_Mine/js/52_attributio_banco.js:275,Previous feature,16,,site
 627,tabui,→,,TP_Mine/js/52_attributio_banco.js:275,Next feature,12,,site
 628,tabui,Close,,TP_Mine/js/52_attributio_banco.js:275,Close Bench 2b,14,,site
-629,tabui,Condition of ${n},,TP_Mine/lazy/gruppi-campioni.js:43,Proposed from the name: Confirm conditions keeps it,51,,site
-630,tabui,Time of ${n},,TP_Mine/lazy/gruppi-campioni.js:44,Proposed from the name: Enter confirms,38,,site
-631,tabui,Confirm conditions,,TP_Mine/lazy/gruppi-campioni.js:96,Keeps the conditions and the times proposed from the names,58,,site
+629,tabui,Condition of ${n},,TP_Mine/lazy/groups-samples.js:43,Proposed from the name: Confirm conditions keeps it,51,,site
+630,tabui,Time of ${n},,TP_Mine/lazy/groups-samples.js:44,Proposed from the name: Enter confirms,38,,site
+631,tabui,Confirm conditions,,TP_Mine/lazy/groups-samples.js:96,Keeps the conditions and the times proposed from the names,58,,site
 632,tabui,,,TP_Mine/lazy/gruppi-vista.js:155,area,4,,site
 633,tabui,,,TP_Mine/lazy/gruppi-vista.js:155,area of the filled cell,23,,site
 634,tabui,(−),,TP_Mine/lazy/gruppi-vista.js:166,negative polarity,17,,site

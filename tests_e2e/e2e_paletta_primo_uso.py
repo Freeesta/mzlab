@@ -9,7 +9,7 @@ def step(name, fn):
 def fresh(p):
     r = Run(port=8873, wd="/tmp/wd_paletta_primo"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 900}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}))}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}))}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached"); wait_for_js(pg, "typeof CMD !== 'undefined'")
     return r, ctx, pg
 with sync_playwright() as p:

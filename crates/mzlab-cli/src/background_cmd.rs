@@ -95,6 +95,13 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
+    if let Some(f) = std::iter::once(&c.file)
+        .chain(c.blank.iter())
+        .find(|f| !f.exists())
+    {
+        let e = Error::new("err.session.fileNotFound").with("name", f.display());
+        return Outcome::fail_error(&e).with_hint("check the path");
+    }
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-background{k}", std::process::id()));

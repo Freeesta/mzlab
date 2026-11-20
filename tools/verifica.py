@@ -54,7 +54,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
-SLOW = ["e2e_giro_intestazione", "e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione", "e2e_disegno_click", "e2e_budget_avvio"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it), disegno_click times the slowest event of a click at CPU x4 (96-152 ms alone, up to 208 ms beside three busy processes, 216-696 ms on the CI pool); budget_avvio takes the best long task at CPU x4 (113 ms in the pool of a slow CI runner against a 100 ms budget, 10 s test; the rounds of the same run spread 110-164 ms), so it runs alone like disegno_click; the tests beside them never starve
+SLOW = ["e2e_giro_intestazione", "e2e_giro_intestazione_flow", "e2e_giro_intestazione_campione", "e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione", "e2e_disegno_click", "e2e_budget_avvio"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it), disegno_click times the slowest event of a click at CPU x4 (96-152 ms alone, up to 208 ms beside three busy processes, 216-696 ms on the CI pool); budget_avvio takes the best long task at CPU x4 (113 ms in the pool of a slow CI runner against a 100 ms budget, 10 s test; the rounds of the same run spread 110-164 ms), so it runs alone like disegno_click; the tests beside them never starve
 # A test that is long by construction gets a cap of its own (seconds), never lower than --timeout: e2e_impaginazione sweeps 16 page configurations
 # (13 with an MRM panel, 3 full scan) and every menu of each; 179 s on a fast machine (129 + 50), over the 150 s of `e2e-cambiati` on a CI runner.
 CAP_PROPRIO = {"e2e_impaginazione": 420}
@@ -66,7 +66,7 @@ NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 SMOKE = ["e2e3", "e2e_opfs_promote", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2",
          "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati", "e2e_safari_ipad", "e2e_safari_mac", "e2e_safari_canvas"]
 # Tabui, the guided tour, the header walk, the two-part catalog, the integration drags and the start-up budget join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
-SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_lingua_parti", "e2e_integrazioni", "e2e_budget_avvio"]
+SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_giro_intestazione_flow", "e2e_giro_intestazione_campione", "e2e_giro_intestazione_tempo", "e2e_lingua_parti", "e2e_integrazioni", "e2e_budget_avvio"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"'reqfail', '[^']*/static/vendor/ketcher/[^']*', 'NS_BINDING_ABORTED'", r"JavaScript Error: \"Failed to load \S*\. A ServiceWorker intercepted the request and encountered an unexpected error\.\" \{file: \"[^\"]*/sw\.js\"", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded", r"cross-world service worker resource mismatch",
@@ -314,12 +314,23 @@ def last_failed() -> set[str]:
 T0 = time.time()
 
 
+# measured seconds of the e2e that last more than a few seconds in the smoke round (Chromium/Linux CI); every other test counts WEIGHT_DEFAULT
+WEIGHT = {"e2e_giro_intestazione": 123, "e2e_giro_intestazione_flow": 116, "e2e_giro_intestazione_campione": 128, "e2e_giro_intestazione_tempo": 30}
+WEIGHT_DEFAULT = 6
+
+
 def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
-    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt in turn, so the parts take about the same time and are the same on every call.
-    Night (the CI of notte.yml): part 1 also runs syntax, texts and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
-    plain (--fumo --parte): no part has that extra work; part 1 takes one slot per 3(n-1)+1, starting with rank[0] (e2e_giro_intestazione on chromium/Linux)."""
+    """Part k of n (1-based) of the e2e `names`, the same on every call.
+    Night (the CI of notte.yml): the slow ones first, dealt in turn; part 1 also runs syntax, texts and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
+    plain (--fumo --parte): longest first (WEIGHT, else WEIGHT_DEFAULT; ties by name), each test to the part with the least time so far, so the parts take about the same time."""
+    if plain:
+        load, out = [0] * n, []
+        for x in sorted(names, key=lambda x: (-WEIGHT.get(x, WEIGHT_DEFAULT), x)):
+            j = load.index(min(load)); load[j] += WEIGHT.get(x, WEIGHT_DEFAULT)
+            if j + 1 == k: out.append(x)
+        return out
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 and not plain else [1, *range(2, n + 1), *range(2, n + 1), *range(2, n + 1)]
+    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 else [1]
     return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 

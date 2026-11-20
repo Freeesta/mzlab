@@ -21,7 +21,7 @@ try:
             """CLS of a first load in a fresh context (empty cache and storage) with a 4x slower CPU."""
             c = r.b.new_context(viewport={"width": 1300, "height": 900}, locale="it-IT", **ctx_args); q = c.new_page()
             q.add_init_script(OBSERVE)
-            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             c.new_cdp_session(q).send("Emulation.setCPUThrottlingRate", {"rate": 4})
             q.goto(url); wait_for_js(q, ready, timeout=90000); frames(q, 30)
             cls, shifts = q.evaluate("() => [window.__cls, window.__shifts]"); c.close()

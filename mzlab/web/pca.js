@@ -22,8 +22,8 @@ const PCA = (() => {
   async function run() {
     const tb = TABELLA.table;
     if (!tb) throw new Error(t("pca.needtable"));
-    const files = TABELLA.fileObjs(), roles = files.map(f => CAMPIONI.roleOf(f)), bp = BIANCO.params;
-    const groups = files.map(f => CAMPIONI.repKey(f, CAMPIONI.roleOf(f)));
+    const files = TABELLA.fileObjs(), roles = files.map(f => SAMPLES.roleOf(f)), bp = BIANCO.params;
+    const groups = files.map(f => SAMPLES.repKey(f, SAMPLES.roleOf(f)));
     const j = await fetch("api/stat/pca", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ matrix: TABELLA.matrix(), roles, groups,
       factor: bp.factor, stat: bp.stat, min_detect: bp.min, min_intensity: st.min, min_samples: st.k, transform: st.transform, scaling: st.scaling }) }).then(r => r.json());
     if (j.error) throw I18N.err(j);
@@ -45,7 +45,7 @@ const PCA = (() => {
     list.forEach(o => { o.time = o.times.length ? o.times.reduce((a, b) => a + b, 0) / o.times.length : null; });
     const times = list.map(o => o.time).filter(x => x != null);
     let c = 0;
-    list.forEach(o => { o.color = o.time != null ? seqColor(CAMPIONI.timeFrac(o.time, times) ?? 0.5) : PAL[c++ % PAL.length]; });
+    list.forEach(o => { o.color = o.time != null ? seqColor(SAMPLES.timeFrac(o.time, times) ?? 0.5) : PAL[c++ % PAL.length]; });
     return list;
   }
 
@@ -126,7 +126,7 @@ const PCA = (() => {
     if (!el) return;
     if (!res) { el.innerHTML = ""; return; }
     el.innerHTML = `${stepsHtml()}<h4 class="sm" style="margin:8px 0 2px">${t("pca.scores")} <button type="button" id="pca-help" class="pca-q" aria-expanded="false" aria-controls="pca-help-text" aria-label="${eh(t("pca.help"))}" title="${eh(t("pca.help"))}">?</button></h4>
-<p class="sm" id="pca-help-text" hidden>${t("pca.help.text")}</p>${scoresSvg()}${CAMPIONI.gradientLegend()}<p class="sm">${t("pca.traj")}</p>
+<p class="sm" id="pca-help-text" hidden>${t("pca.help.text")}</p>${scoresSvg()}${SAMPLES.gradientLegend()}<p class="sm">${t("pca.traj")}</p>
 <h4 class="sm" style="margin:8px 0 2px">${t("pca.loadings")}</h4>${loadingsSvg()}<p class="sm">${t("pca.stab.note")}</p>${tableHtml()}
 <div class="qq-form"><button type="button" id="pca-xlsx">Excel</button></div>`;
   }
@@ -180,7 +180,7 @@ const PCA = (() => {
   }
   function xlsx() {
     const r = res.r, nc = r.explained.length;
-    const sc = r.samples.map((si, row) => { const f = res.files[si]; return [f.label || f.file, CAMPIONI.roleName(res.roles[si]), f.time == null ? "" : timeShown(f.time, tunitGet()), res.groups[si].replace(/\|/g, " ")].concat(r.scores[row]); });
+    const sc = r.samples.map((si, row) => { const f = res.files[si]; return [f.label || f.file, SAMPLES.roleName(res.roles[si]), f.time == null ? "" : timeShown(f.time, tunitGet()), res.groups[si].replace(/\|/g, " ")].concat(r.scores[row]); });
     const ld = r.features.map((_, i) => [res.feats[i].id, res.feats[i].mz, res.feats[i].rt].concat(r.loadings[i], [r.stability[i]]));
     const pcs = Array.from({ length: nc }, (_, i) => "PC" + (i + 1));
     dlx("pca.xlsx", [{ name: "Scores", head: [t("qaqc.col.file"), t("qaqc.col.type"), t("meta.time"), t("meta.rep")].concat(pcs), rows: sc, widths: [28, 12, 10, 18] },

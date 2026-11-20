@@ -39,7 +39,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
     let o = run(&["sample", "select", &wiff, "--sample", "3,1", "--json"]);
     assert_eq!(
         (o.code, String::from_utf8_lossy(&o.stdout).as_ref()),
-        (0, "{\"samples\":[1,3]}\n"),
+        (0, "{\"schema\":\"sample-select/1\",\"samples\":[1,3]}\n"),
         "{}",
         o.stderr
     );
@@ -207,7 +207,7 @@ fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
     let big = run(&["sample", "select", &wiff, "--default", "--json"]);
     assert_eq!(
         (big.code, String::from_utf8_lossy(&big.stdout).trim()),
-        (0, "{\"samples\":[1,2,3]}")
+        (0, "{\"schema\":\"sample-select/1\",\"samples\":[1,2,3]}")
     );
     let tight = run(&[
         "sample",
@@ -220,7 +220,7 @@ fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
     ]);
     assert_eq!(
         String::from_utf8_lossy(&tight.stdout).trim(),
-        "{\"samples\":[]}"
+        "{\"schema\":\"sample-select/1\",\"samples\":[]}"
     );
     // exactly one of the two ways to choose
     assert_eq!(

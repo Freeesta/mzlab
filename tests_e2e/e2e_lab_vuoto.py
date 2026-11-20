@@ -25,7 +25,7 @@ while True:          # the server listens (state, not a pause)
     except OSError: pass
 URL = f"http://127.0.0.1:{port}/"
 INIT = ("(()=>{const R=Date,t=R.parse('2026-10-29T12:00:00Z');class D extends R{constructor(...a){a.length?super(...a):super(t)}static now(){return t}};window.Date=D})();"      # before the expiry
-        "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}))}catch(_){}")
+        "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}))}catch(_){}")
 # what can be clicked or typed in, outside the header tabs and the Ketcher frame; every element gets a stable mark
 CONTROLS = """(root) => [...document.querySelectorAll(root + ' :is(button, [role=button], [role=tab], [role=menuitem], [role=option], summary, input, select, textarea)')]
   .filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !e.disabled && e.type !== 'file' && !e.closest('#nav, #kframe, #tour-dialog'))

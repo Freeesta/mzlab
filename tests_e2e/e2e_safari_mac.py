@@ -13,7 +13,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_safari_mac.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 r = Run(port=8829, wd="/tmp/wd_safari_mac")
-SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
+SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
 # Chromium and Firefox have no GestureEvent: a stand-in, so compat.js installs the pinch as on a Mac
 GESTURE = "if(!window.GestureEvent){window.GestureEvent=function GestureEvent(){};}"
 # a gesture event as WebKit sends it (scale is cumulative from gesturestart); returns whether the page zoom was stopped

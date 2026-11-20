@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the metadata grid over a samples/1 document (virtual rows, ARIA grid). The cells, the checks (`validate`), the name patterns (`model`), the CSV (`csv_*`) and the data read
-// from the files (`from_file`) are all the Rust of mzlab-core reached through CDOC.post("<op>"); this file only lays the cells out and moves the keyboard focus. Used by flow-samples.js (F.samplesEditor)
+// from the files (`from_file`) are all the Rust of mzlab-core reached through SAMPLES_DOC.post("<op>"); this file only lays the cells out and moves the keyboard focus. Used by flow-samples.js (F.samplesEditor)
 // and flow-import.js (F.metaImport). The document lives in S.samples[input name]; its SHA-256 is the canonical one (F.samplesSet). English only. Docs: docs/agenti/flow-graphics.md.
 (() => {
   "use strict";
@@ -39,7 +39,7 @@
     reinjection: false, replicate: 1, series: "", sha256: "", time: null, time_confirmed: false, time_min: null, kind: "sample", blank_kind: null, concentration_unit: null, time_unit: "min" });
   const emptyDoc = () => ({ schema: "samples/1", columns: [], samples: [] });
   const call = async (/** @type {string} */ op, /** @type {any} */ body) => {
-    const r = await G.CDOC.post(op, body);
+    const r = await G.SAMPLES_DOC.post(op, body);
     if (r && r.error) throw new Error(String(r.error_key || r.error));
     return r;
   };

@@ -16,7 +16,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_safari_ipad.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 r = Run(port=8853, wd="/tmp/wd_safari_ipad")
-SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
+SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
 # what Safari before 17.4 / 26 lacks, taken away before any script of the page runs
 TAKE_AWAY = "try{delete AbortSignal.any;delete FileSystemFileHandle.prototype.createWritable;}catch(_){}"
 # a private window of Safari: the private storage of the site is refused

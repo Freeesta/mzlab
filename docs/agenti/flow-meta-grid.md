@@ -1,10 +1,10 @@
 # Sample metadata grid (Flow, `flow/lazy/flow-meta-grid.js`)
 
-English only. A virtual-row ARIA grid (`role=grid`, `aria-rowcount`, `aria-colindex`; 28 px rows, a window of about 13 rows plus 4 of margin, the active row always exists) on top of a `samples/1` document (`samples.md`). All logic is Rust, reached with `CDOC.post("<op>")` (`api/samples/<op>`): the file lays out the cells and moves the focus.
+English only. A virtual-row ARIA grid (`role=grid`, `aria-rowcount`, `aria-colindex`; 28 px rows, a window of about 13 rows plus 4 of margin, the active row always exists) on top of a `samples/1` document (`samples.md`). All logic is Rust, reached with `SAMPLES_DOC.post("<op>")` (`api/samples/<op>`): the file lays out the cells and moves the focus.
 
 ## Document and saving
 - `F.metaGrid(S, input)` (`F.samplesEditor` calls it): the document lives in `S.samples[input.name]`; any other document is not a `samples/1` and the grid starts empty. With no document and with files open in Data, it opens by itself: `F.samplesFromData` → `propose` → `from_file` with polarity, ranges, scans and instrument read from `E.files`.
-- Every edit shows at once; 120 ms after `F.samplesSet` it computes the canonical SHA-256 (`CDOC.canonical`, in `input.sha256`) and `validate` redraws the warnings. The saved document therefore has the same SHA as `CDOC.canonical`.
+- Every edit shows at once; 120 ms after `F.samplesSet` it computes the canonical SHA-256 (`SAMPLES_DOC.canonical`, in `input.sha256`) and `validate` redraws the warnings. The saved document therefore has the same SHA as `SAMPLES_DOC.canonical`.
 - `F.metaImport(S, input, text)`: `csv_read` (`,` `;` tab; `F.META_HEADERS` renames "Time (min)", "Series"...) and merge by file+sample or SHA-256: known rows are overwritten keeping the file data, new ones are added, free columns are merged.
 
 ## Columns

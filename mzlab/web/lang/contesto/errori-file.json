@@ -38,6 +38,8 @@
   "err.file.brukerNoBin": "{name} = name of the .d folder; {file} = the missing file (analysis.tdf_bin or analysis.tsf_bin).",
   "err.file.notAccepted": "{name} = file name.",
   "err.file.nativeStopped": "The engine worker was lost (or returned text without a key) while reading a vendor file. {name} = name of the file or .d folder; {detail} = error text, «–» if there is none.",
+  "err.file.nativeStopped.native": "The command line and the app variant of the previous key. {name} = name of the file or .d folder; {detail} = error text.",
+  "err.file.alreadyMzml": "A file given to convert or to the sample list is an mzML already, so there is nothing to convert. {name} = file name.",
   "err.file.notMzml": "{name} = file name.",
   "err.file.notDam": "{name} = file name.",
   "err.file.cdfDamaged": "No placeholder in the text. The error carries {detail} (which part of the header does not add up, in English from the reader): the CLI writes it in parentheses after the key, the page does not.",

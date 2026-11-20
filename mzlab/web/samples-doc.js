@@ -3,9 +3,9 @@
 "use strict";
 // The `samples/1` document of the open files (roles, subtypes, times and their confirmation): this file packs E.files into the entries of the notebook
 // (NB.session) and of the .mzflow, and reads them back; the Rust of mzlab-core (`api/samples/<op>`) canonicalises and hashes.
-// The only writer of the fields is CAMPIONI.apply (campioni.js); an entry of E.files keeps `role` (samples/1 `kind`), `tconf`
+// The only writer of the fields is SAMPLES.apply (samples.js); an entry of E.files keeps `role` (samples/1 `kind`), `tconf`
 // (the time is confirmed: undefined = yes, it was written by the user) and `cx` (the fields the table does not edit: istd, note, compound, series).
-const CDOC = /** @type {any} */ ((() => {
+const SAMPLES_DOC = /** @type {any} */ ((() => {
   const BASE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", calibration: "standard", qc: "sample" });
   // QA/QC vocabulary -> samples/1
   const QROLE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", qc: "qc", standard: "std", dark: "dark" });
@@ -52,4 +52,4 @@ const CDOC = /** @type {any} */ ((() => {
   async function canonical(/** @type {any} */ d) { return { json: await raw("canonical", d), sha256: (await raw("digest", d)).trim() }; }
   return { KINDS, known, BASE, QROLE, TIMED, post, kindOf, entry, number, session, doc, fields, canonical };
 })());
-window.CDOC = CDOC;
+window.SAMPLES_DOC = SAMPLES_DOC;
