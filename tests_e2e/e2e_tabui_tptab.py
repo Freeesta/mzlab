@@ -7,6 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
+from lib import open_mzfinder  # noqa: E402
 from lib import axe_path  # noqa: E402
 
 steps = []
@@ -70,11 +71,10 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         def load():
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav button[data-v=\"tpmine\"]", state="attached", timeout=120000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
             pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")     # the component needs no engine: a build without the .wasm must not block the test
             pg.wait_for_function("window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=60000); pg.evaluate("() => window.QTOOLS.ensure()")      # no engine here, so no qqReady: ask for the package like the idle start does
             pg.wait_for_function("typeof window.TPTAB === 'object' && typeof window.TPHELP === 'object' && typeof window.TPRIGA === 'object'", timeout=120000)       # before the click: the view attaches the help to what exists when it is built
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
             pg.evaluate(MOUNT); pg.wait_for_selector("#tt-t tr.clk")
         load()
         W = "#tt-host .tpt-wrap"

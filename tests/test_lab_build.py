@@ -120,8 +120,8 @@ def test_guard_before_the_date_hides_the_admin_mode_and_adds_no_banner():
     assert r.get("banner") is None
 
 
-def test_tabui_and_flow_are_ungated_in_the_normal_build_and_skipped_in_the_lab():
-    """Tabui and mzFlow are always on (no administrator flag, no logo clicks); the only thing that keeps them out of the lab is window.MZLAB_LAB,
+def test_flow_is_ungated_in_the_normal_build_and_skipped_in_the_lab():
+    """mzFlow is always on (no administrator flag, no logo clicks); the only thing that keeps it out of the lab is window.MZLAB_LAB,
     set by lab.js and read by the loader (the e2e_lab.py run checks the built pages)."""
     web = ROOT / "mzlab" / "web"
     loader, load = (web / "tpmine-loader.js").read_text(encoding="utf-8"), (web / "carica.js").read_text(encoding="utf-8")
@@ -140,7 +140,7 @@ def test_guard_hides_the_example_entry_points():
 
 
 @needs_node
-@pytest.mark.parametrize("h,want", [("#/flow", "#/data"), ("#/tpmine", "#/data"), ("#/attributio", "#/data"), ("#/theory", "#/data"), ("#/practice/3", "#/data"), ("#/data", "#/data"), ("#/draw", "#/draw"), ("", "")])
+@pytest.mark.parametrize("h,want", [("#/flow", "#/data"), ("#/attributio", "#/data"), ("#/theory", "#/data"), ("#/practice/3", "#/data"), ("#/data", "#/data"), ("#/draw", "#/draw"), ("", "")])
 def test_guard_addresses(h, want):
     assert guard(hash=h)["hash"] == want
 
