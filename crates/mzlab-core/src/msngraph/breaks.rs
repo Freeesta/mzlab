@@ -42,7 +42,7 @@ pub struct EdgeBreak {
 /// The intensity of one spectrum (% of its base peak, summed) and the part of it on explained arcs.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpectrumBreak {
-    pub albero: String,
+    pub tree: String,
     pub explained: f64,
     pub total: f64,
 }
@@ -153,7 +153,7 @@ pub fn breaks_json(r: &Breaks) -> String {
     for (i, s) in r.spettri.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"tree\":")
-            .str(&s.albero)
+            .str(&s.tree)
             .raw(",\"explained\":")
             .num(round(s.explained, 1))
             .raw(",\"total\":")

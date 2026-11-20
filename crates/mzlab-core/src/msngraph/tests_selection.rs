@@ -48,8 +48,8 @@ fn counts(shift: f64) -> (usize, usize) {
     let con = |n: &&GNode| n.formula.as_ref().is_some_and(|f| !f.candidates.is_empty());
     let unique = |n: &&GNode| n.formula.as_ref().is_some_and(|f| f.choice.is_some());
     (
-        g.nodi.iter().filter(con).count(),
-        g.nodi.iter().filter(unique).count(),
+        g.nodes.iter().filter(con).count(),
+        g.nodes.iter().filter(unique).count(),
     )
 }
 
@@ -81,7 +81,7 @@ fn mixed(shift: f64) -> (usize, usize) {
     };
     let g = graph_from_peaks((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
     let found = |(m, _): &(f64, f64)| {
-        g.nodi
+        g.nodes
             .iter()
             .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
     };
@@ -105,7 +105,7 @@ fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
 /// The infusion of a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A must keep its formula, it is under the root.
 fn coisolated_graph() -> Graph {
-    use crate::msntree_build::{albero_di, Grouping};
+    use crate::msntree_build::{tree_of, Grouping};
     let step = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
         v.iter().map(|&(m, a, c)| (m, a.to_string(), c)).collect()
     };
@@ -130,9 +130,9 @@ fn coisolated_graph() -> Graph {
             scans.push(((p.len() + 1) as u8, Some(&p[..])));
         }
     }
-    let al = albero_di(scans, &Grouping::default());
+    let al = tree_of(scans, &Grouping::default());
     let per_node: Vec<Spettro> = al
-        .nodi
+        .nodes
         .iter()
         .map(|n| match n.id.as_str() {
             "195@cid30" => ms2.clone(),
@@ -145,10 +145,10 @@ fn coisolated_graph() -> Graph {
     };
     build(
         &Input {
-            albero: &al,
+            tree: &al,
             ms1: Some(&ms1),
             spettri: &per_node,
-            widths: &vec![None; al.nodi.len()],
+            widths: &vec![None; al.nodes.len()],
             polarita: 1,
         },
         &o,
@@ -159,12 +159,12 @@ fn coisolated_graph() -> Graph {
 fn a_fragment_under_the_root_survives_a_precursor_it_is_not_under() {
     let g = coisolated_graph();
     let m = ion("C4H7N2");
-    let n = g.nodi.iter().find(|n| (n.mz - m).abs() < 1e-4);
+    let n = g.nodes.iter().find(|n| (n.mz - m).abs() < 1e-4);
     let f = n.and_then(|n| n.formula.as_ref());
     assert_eq!(
         f.and_then(|f| f.choice.as_deref()),
         Some("C4H7N2"),
         "{:?}",
-        g.nodi.iter().map(|n| n.mz).collect::<Vec<_>>()
+        g.nodes.iter().map(|n| n.mz).collect::<Vec<_>>()
     );
 }

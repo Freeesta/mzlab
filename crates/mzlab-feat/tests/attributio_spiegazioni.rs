@@ -606,7 +606,7 @@ fn the_fragmenter_agrees_with_the_reference_tool() {
     let g = golden("sintetica", "frammenti.json");
     let (mut total, mut equal, mut bonds_equal, mut bonds_total) = (0usize, 0usize, 0usize, 0usize);
     let mut below: Vec<String> = Vec::new();
-    for m in g["molecole"].as_array().expect("molecules") {
+    for m in g["molecules"].as_array().expect("molecules") {
         if !m["ok"].as_bool().unwrap_or(false) {
             continue;
         }

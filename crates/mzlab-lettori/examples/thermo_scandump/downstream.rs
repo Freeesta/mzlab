@@ -8,7 +8,7 @@ use serde_json::{json, Map, Value};
 
 use super::{put, Scans};
 
-/// `<mz>@<act><energy>` tokens of a Thermo filter: the chain of precursors, as `msnalbero` reads it.
+/// `<mz>@<act><energy>` tokens of a Thermo filter: the chain of precursors, as `msntree_build` reads it.
 fn chain_of(filter: &str) -> Vec<(f64, String, f64)> {
     filter
         .split_whitespace()

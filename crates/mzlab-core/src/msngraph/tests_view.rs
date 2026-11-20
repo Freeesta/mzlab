@@ -1,4 +1,4 @@
-use super::layout::{albero, baricentro_pos, incroci, Network};
+use super::layout::{baricentro_pos, incroci, tree, Network};
 use super::layout_radial::radiale;
 use super::tests::*;
 use super::view::{paths, read, Data, EdgeD};
@@ -234,21 +234,21 @@ fn layered(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, u
 #[test]
 fn the_swaps_remove_crossings_and_no_two_nodes_share_a_place() {
     for (levels, per) in [(5, 6), (8, 10)] {
-        let (livello, mz, archi) = layered(levels, per);
+        let (level, mz, archi) = layered(levels, per);
         let r = Network {
-            level: &livello,
+            level: &level,
             mz: &mz,
             edges: &archi,
         };
-        let (before, after) = (baricentro_pos(&r), albero(&r));
+        let (before, after) = (baricentro_pos(&r), tree(&r));
         let (a, b) = (incroci(&r, &before), incroci(&r, &after));
-        println!("{} nodes: crossings {a} -> {b}", livello.len());
+        println!("{} nodes: crossings {a} -> {b}", level.len());
         assert!(b <= a / 2 + 1, "{a} -> {b}");
         let mut p = after.clone();
         p.sort();
         p.dedup();
-        assert_eq!(p.len(), livello.len());
-        assert_eq!(albero(&r), after);
+        assert_eq!(p.len(), level.len());
+        assert_eq!(tree(&r), after);
     }
 }
 

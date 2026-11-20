@@ -69,7 +69,7 @@ const METODO_DOC = (() => {
   async function html(/** @type {{ k: number, dda?: any }} */ f) {
     const title = `<h4>${EH(T("method.doc.title"))}</h4>`;
     let d;
-    try { d = ((await J("api/metodo?k=" + f.k)) || {}).metodo; } catch (_) { d = null; }
+    try { d = ((await J("api/metodo?k=" + f.k)) || {}).method; } catch (_) { d = null; }
     if (!d) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.doc.none"))}</div></section>`;
     const rows = head(d) + ms(d);
     return `<section class="msec">${title}${notes(d)}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;

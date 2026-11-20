@@ -112,7 +112,7 @@ fn plan() -> Vec<Value> {
         r("/api/dda", "?k=0"),
         r("/api/dda_window", "?k=0&r0=0&r1=5"),
         r("/api/dda_window", "?k=0&r0=0"),
-        r("/api/msn_albero", "?k=0"),
+        r("/api/msn_tree", "?k=0"),
         r("/api/scan_stats", "?k=0"),
         r("/api/nope", ""),
         json!({"op": "route", "slot": 9, "path": "/api/chrom", "query": ""}),

@@ -85,7 +85,7 @@ pub fn files_json(made: &[PathBuf]) -> String {
 /// without its extension. Returns the `msn-figures/1` document for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut view) =
-        (None, None, vec![Format::Svg, Format::Html], View::Albero);
+        (None, None, vec![Format::Svg, Format::Html], View::Tree);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),

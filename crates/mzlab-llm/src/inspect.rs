@@ -152,8 +152,8 @@ fn put_role(
     rank: Option<usize>,
     confirmed: bool,
 ) -> (Option<String>, Option<f64>) {
-    let role = text(sample.get("tipo"));
-    let order = num(sample.get("ordine_iniezione")).or(rank.map(|r| r as f64));
+    let role = text(sample.get("kind"));
+    let order = num(sample.get("injection_order")).or(rank.map(|r| r as f64));
     o.put("role", role.clone().map(Value::Str));
     if role.is_some() {
         o.put(

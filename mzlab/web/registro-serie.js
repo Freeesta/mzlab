@@ -18,7 +18,7 @@ async function ask(f) {
   await CHROM1.ready;
   /** @type {Voce[] | null} */ let list = null;
   try {
-    const d = ((await J(`api/metodo?k=${f.k}`)) || {}).metodo;
+    const d = ((await J(`api/metodo?k=${f.k}`)) || {}).method;
     const l = d && Array.isArray(d.log_series) ? d.log_series : [];
     if (l.length) {
       // the list is in the document of any file that came from a .raw; the series are served only when the file is read by the engine as such: one request tells

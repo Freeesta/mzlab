@@ -44,7 +44,7 @@ fn mixed(shift: f64) -> (usize, usize) {
     };
     let g = graph_from_peaks((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
     let found = |(m, _): &(f64, f64)| {
-        g.nodi
+        g.nodes
             .iter()
             .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
     };
@@ -56,7 +56,7 @@ fn mixed(shift: f64) -> (usize, usize) {
 /// The co-isolated infusion (a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A is under the root), with invented peaks `esche` added to every spectrum.
 fn coisolated_graph(decoys: &[f64]) -> Graph {
-    use crate::msntree_build::{albero_di, Grouping};
+    use crate::msntree_build::{tree_of, Grouping};
     let step = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
         v.iter().map(|&(m, a, c)| (m, a.to_string(), c)).collect()
     };
@@ -88,9 +88,9 @@ fn coisolated_graph(decoys: &[f64]) -> Graph {
             scans.push(((p.len() + 1) as u8, Some(&p[..])));
         }
     }
-    let al = albero_di(scans, &Grouping::default());
+    let al = tree_of(scans, &Grouping::default());
     let per_node: Vec<Spettro> = al
-        .nodi
+        .nodes
         .iter()
         .map(|n| match n.id.as_str() {
             "195@cid30" => ms2.clone(),
@@ -103,10 +103,10 @@ fn coisolated_graph(decoys: &[f64]) -> Graph {
     };
     build(
         &Input {
-            albero: &al,
+            tree: &al,
             ms1: Some(&ms1),
             spettri: &per_node,
-            widths: &vec![None; al.nodi.len()],
+            widths: &vec![None; al.nodes.len()],
             polarita: 1,
         },
         &o,
@@ -119,7 +119,7 @@ fn invented_peaks_get_no_formula_where_a_co_isolated_fragment_keeps_it() {
     let decoys = [97.45, 110.48, 123.41, 136.46, 149.43];
     let g = coisolated_graph(&decoys);
     let con = |m: f64| {
-        g.nodi
+        g.nodes
             .iter()
             .filter(|n| (n.mz - m).abs() < 1e-4)
             .any(|n| n.formula.as_ref().is_some_and(|f| !f.candidates.is_empty()))
@@ -198,7 +198,7 @@ fn mixed_s(n: usize, d: f64) -> (usize, usize) {
     };
     let g = graph_from_peaks((ion("C22H31N6O7S"), 1), ("CID", 30.0), &peaks, &o);
     let found = |(m, _): &(f64, f64)| {
-        g.nodi.iter().any(|n| {
+        g.nodes.iter().any(|n| {
             (n.mz - m).abs() < 1e-4 && n.formula.as_ref().is_some_and(|f| !f.candidates.is_empty())
         })
     };

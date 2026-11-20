@@ -12,8 +12,8 @@ def step(name, fn):
 D = HERE / "shots" / "gradiente_metodo_tmp"; D.mkdir(parents=True, exist_ok=True)
 F = D / "GRADM_t0.mzML"; ds.full_scan(F, 0, np.random.default_rng(3))
 STUB = """window.__gm = null; const f0 = window.fetch; window.fetch = (u, o) => String(u).startsWith('api/metodo') && window.__gm
-  ? Promise.resolve(new Response(JSON.stringify({metodo: {lc: window.__gm}}), {headers: {'content-type': 'application/json'}})) : f0(u, o); 0"""
-LC = "{gradiente: [{t_min: 0, B_pct: 10, flusso_mL_min: 0.3}, {t_min: 2, B_pct: 10, flusso_mL_min: 0.3}, {t_min: 12, B_pct: 90, flusso_mL_min: 0.3}], durata_min: 15}"
+  ? Promise.resolve(new Response(JSON.stringify({method: {lc: window.__gm}}), {headers: {'content-type': 'application/json'}})) : f0(u, o); 0"""
+LC = "{gradient: [{t_min: 0, B_pct: 10, flow_mL_min: 0.3}, {t_min: 2, B_pct: 10, flow_mL_min: 0.3}, {t_min: 12, B_pct: 90, flow_mL_min: 0.3}], duration_min: 15}"
 r = Run(port=8866, wd="/tmp/wd_gradiente_metodo")
 try:
     with sync_playwright() as p:

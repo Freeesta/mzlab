@@ -109,7 +109,7 @@ mod tests {
             ..Graph::default()
         };
         g.spettri.push(SpettroG {
-            albero: "195".into(),
+            tree: "195".into(),
             level: 2,
             att: att.into(),
             ce: 30.0,

@@ -10,7 +10,7 @@ const nameOf = (/** @type {FileAperto} */ f) => f.file.split("#")[0];
 // The pump program that the file's own method document (method/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
 async function fromMethod(/** @type {FileAperto} */ f) {
   let lc = null;
-  try { lc = (((await J("api/metodo?k=" + f.k)) || {}).metodo || {}).lc; } catch (_) { return null; }
+  try { lc = (((await J("api/metodo?k=" + f.k)) || {}).method || {}).lc; } catch (_) { return null; }
   const pts = ((lc && lc.gradient) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flow_mL_min != null ? { flow: +q.flow_mL_min } : {}) }));
   return pts.length > 1 ? { source: "file", points: pts, run_time: lc.duration_min != null ? +lc.duration_min : pts[pts.length - 1].t } : null;
 }

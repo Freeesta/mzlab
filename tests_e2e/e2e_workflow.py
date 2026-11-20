@@ -45,14 +45,14 @@ try:
         with open(wf_path, "r", encoding="utf-8") as fh:
             wf_data = json.load(fh)
 
-        assert wf_data.get("formato") == "mzflow/1", f"Wrong format: {wf_data.get('formato')}"
+        assert wf_data.get("format") == "mzflow/1", f"Wrong format: {wf_data.get('format')}"
         assert wf_data["parametri"]["ppm"] == 8, f"PPM not exported: {wf_data['parametri']}"
         assert wf_data["parametri"]["dec"] == 5, f"Dec not exported: {wf_data['parametri']}"
         assert wf_data["parametri"]["tema"] == "dark", f"Theme not exported: {wf_data['parametri']}"
         assert len(wf_data["file"]) == 1
         assert wf_data["file"][0]["sha256"] == sha
-        assert "programma" in wf_data and "versione" in wf_data["programma"]
-        assert len(wf_data.get("operazioni", [])) >= 1
+        assert "program" in wf_data and "version" in wf_data["program"]
+        assert len(wf_data.get("operations", [])) >= 1
         steps.append(("export of .mzflow with sha256 and parameters", "ok"))
 
         # 5. Restore the parameters and re-apply the workflow
@@ -115,16 +115,16 @@ try:
         assert "Num Peaks: 2" in msp_out
         steps.append(("MGF and MSP formatting follows Principle 1 (LR)", "ok"))
 
-        # 7. No entry in the interface (the function stays in the code); the old name is still read
+        # 7. No entry in the interface (the function stays in the code); the old name is refused
         assert pg.query_selector("#session-menu-btn") is None, "the session menu arrow is gone"
-        old = dict(wf_data, formato="mzworkflow/1")
-        assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'vecchio.mzworkflow')", old) is True
-        steps.append(("reading of the old mzworkflow/1 format", "ok"))
+        old = dict(wf_data, format="mzworkflow/1")
+        assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'old.mzworkflow')", old) is False
+        steps.append(("the old mzworkflow/1 format is refused", "ok"))
         # 8. Unknown operations: ignored (with a notice), the rest is applied
-        fut = dict(wf_data, operazioni=[{"op": "export_report", "t": "x"}, {"op": "operazione_futura", "t": "y"}])
+        fut = dict(wf_data, operations=[{"op": "export_report", "t": "x"}, {"op": "future_operation", "t": "y"}])
         assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'f.mzflow')", fut) is True
         ops = pg.evaluate("() => NB.ops.map(o => o.op)")
-        assert "operazione_futura" not in ops and "export_report" in ops, ops
+        assert "future_operation" not in ops and "export_report" in ops, ops
         steps.append(("unknown operations ignored with a notice", "ok"))
 
         print("OK: all checks passed")

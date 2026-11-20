@@ -152,7 +152,7 @@ pub fn parse_args(
     let (mut structures, mut rot) = (None, Rot::default());
     let (mut interpret, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
-    let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigure::View::Albero);
+    let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigure::View::Tree);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -267,9 +267,9 @@ fn hill(f: &str) -> String {
 /// Nodes of each MS level, and the peaks of the spectra of each level: kept (with a node) and discarded (unexplained).
 fn per_level(o: &mut Out, g: &Graph) {
     o.raw("\"per_level\":{");
-    let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
+    let max = g.nodes.iter().map(|n| n.level).max().unwrap_or(0);
     for l in 1..=max {
-        let k = g.nodi.iter().filter(|n| n.livello == l).count();
+        let k = g.nodes.iter().filter(|n| n.level == l).count();
         o.raw(if l > 1 { "," } else { "" })
             .str(&l.to_string())
             .raw(":")
@@ -306,14 +306,14 @@ fn per_level(o: &mut Out, g: &Graph) {
 pub fn summary(g: &Graph, truth: Option<&str>) -> Result<String> {
     let mut o = Out::default();
     o.raw("{\"schema\":\"msn-summary/1\",\"nodes\":")
-        .int(g.nodi.len() as i64);
+        .int(g.nodes.len() as i64);
     o.raw(",\"arcs\":").int(g.archi.len() as i64);
     o.raw(",\"roots\":").int(g.radici.len() as i64);
     o.raw(",\"polarity\":").int(i64::from(g.polarita));
     if let Some(t) = truth {
         truth_keys(&mut o, g, &parse(t.as_bytes())?);
     }
-    let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
+    let annotated = g.nodes.iter().filter(|n| n.formula.is_some()).count();
     o.raw(",\"annotated_fragments\":")
         .int(annotated.saturating_sub(1) as i64);
     o.raw(",\"discarded_heavy\":")
@@ -349,9 +349,9 @@ fn truth_keys(o: &mut Out, g: &Graph, v: &mzlab_core::json::Value) {
     let (mut found, mut between, mut single, mut ppm_max) = (0, 0, 0, 0.0f64);
     for (p, f) in &expected {
         let Some(n) = g
-            .nodi
+            .nodes
             .iter()
-            .find(|n| n.albero.iter().any(|t| file_path(t) == *p))
+            .find(|n| n.tree.iter().any(|t| file_path(t) == *p))
         else {
             continue;
         };

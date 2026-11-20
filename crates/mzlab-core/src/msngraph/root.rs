@@ -30,7 +30,7 @@ pub fn root_candidates(g: &Graph, o: &Options) -> Vec<RootCandidate> {
         max_results: MAX,
         ..Opts::default()
     };
-    let Some(v) = compose(g.nodi[r].mz, &c)
+    let Some(v) = compose(g.nodes[r].mz, &c)
         .ok()
         .and_then(|t| parse(t.as_bytes()).ok())
     else {

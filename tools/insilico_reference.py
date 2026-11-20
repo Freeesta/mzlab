@@ -20,7 +20,7 @@ def weight(mz, it):
 
 def main():
     out = []
-    for k, m in enumerate(json.loads(SRC.read_text())["molecole"]):
+    for k, m in enumerate(json.loads(SRC.read_text())["molecules"]):
         if not m.get("ok"):
             continue
         peaks = [p for p in m["peaks"] if p > 0]
@@ -30,7 +30,7 @@ def main():
         w_exp = sum(weight(p, i) for p, i in zip(peaks, ints) if p in explained)
         out.append({"smiles": m["smiles"], "pol": m["pol"], "peaks": peaks, "intensities": ints,
                     "explained": explained, "score": w_exp / w_all if w_all else 0.0})
-    OUT.write_text(json.dumps({"molecole": out}))
+    OUT.write_text(json.dumps({"molecules": out}))
     print(len(out), "molecules")
 
 

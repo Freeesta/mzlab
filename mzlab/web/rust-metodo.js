@@ -27,7 +27,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
       case "lr_metodo_wiff": return register(m);
       // a *.m method folder: its files come in one buffer
       case "lr_metodo_m": return { info: engine().agilent_m_metodo(m.name, m.names, m.lens, m.data) };
-      case "lr_metodo": {                    // { source: "mzml" | "wiff" | "dam" | "none", metodo: {...} }
+      case "lr_metodo": {                    // { source: "mzml" | "wiff" | "dam" | "none", method: {...} }
         await sync();
         const o = await open(m), e = engine();
         // a sample of a maker's file: from its reader
@@ -37,7 +37,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
         // an mzML written by another program: its header (a part of a DDA file, «name#MS1», reads the header of its file)
         const file = String(m.name).split("#")[0];
         if (!doc && /\.mzml$/i.test(file)) { doc = e.mzml_head_metodo(file, o.f.size, o.rd); if (doc) source = "mzml"; }
-        return { info: `{"source":"${source}","metodo":${doc || "null"}}` };
+        return { info: `{"source":"${source}","method":${doc || "null"}}` };
       }
     }
     return undefined;

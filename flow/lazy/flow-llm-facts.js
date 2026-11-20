@@ -56,9 +56,9 @@
         /** @type {any} */ const o = { name, items: parts.map(p => p.item), scan_stats: await J("api/scan_stats?k=" + k) };
         const srm = parts.find(p => +p.item.srm > 0);
         if (srm) o.mrm = (await J("api/mrm?k=" + srm.k)).files[0].transitions;
-        const doc = ((await J("api/metodo?k=" + k)) || {}).metodo;
+        const doc = ((await J("api/metodo?k=" + k)) || {}).method;
         if (doc) o.method = doc;
-        o.sample = { tipo: (samples[i] && samples[i].kind) || "sample", ordine_iniezione: i + 1 };
+        o.sample = { kind: (samples[i] && samples[i].kind) || "sample", injection_order: i + 1 };
         out.push(o);
       } catch (e) { out.push({ name, error: { error_key: (/** @type {any} */ (e) && /** @type {any} */ (e).error_key) || "err.file.unreadable" } }); }
     }

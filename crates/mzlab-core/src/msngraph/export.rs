@@ -36,7 +36,7 @@ pub fn from_export_request(
 /// m/z of the precursor of a spectrum (0 for an MS1-less root).
 fn precursore(g: &Graph, s: &SpettroG) -> f64 {
     s.precursore
-        .and_then(|n| g.nodi.get(n))
+        .and_then(|n| g.nodes.get(n))
         .map_or(0.0, |n| n.mz)
 }
 
@@ -52,7 +52,7 @@ fn csv(g: &Graph, sel: &[&SpettroG], clean: bool) -> String {
             let n = node.map_or(String::new(), |n| n.to_string());
             t += &format!(
                 "{},{},{},{},{:.5},{:.5},{:.2},{}\n",
-                s.albero, s.level, s.att, s.ce, pre, mz, rel, n
+                s.tree, s.level, s.att, s.ce, pre, mz, rel, n
             );
         }
     }
@@ -64,7 +64,7 @@ fn blocks(g: &Graph, sel: &[&SpettroG], clean: bool, mgf: bool) -> String {
     let load = if g.polarita < 0 { "1-" } else { "1+" };
     for s in sel {
         let pre = precursore(g, s);
-        let titolo = format!("{} MS{} {} CE{}", s.albero, s.level, s.att, s.ce);
+        let titolo = format!("{} MS{} {} CE{}", s.tree, s.level, s.att, s.ce);
         let pk: Vec<_> = peaks(s, clean).collect();
         if mgf {
             t += &format!("BEGIN IONS\nTITLE={titolo}\nPEPMASS={pre:.5}\nCHARGE={load}\n");
@@ -83,7 +83,7 @@ fn blocks(g: &Graph, sel: &[&SpettroG], clean: bool, mgf: bool) -> String {
 }
 
 /// Whether a spectrum is kept by `nodo`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
-/// the spectra of that node of the tree (`SpettroG::albero`); `all`, empty or absent = all.
+/// the spectra of that node of the tree (`SpettroG::tree`); `all`, empty or absent = all.
 fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
     let Some(n) = node.filter(|n| !n.is_empty() && *n != "all") else {
         return true;
@@ -91,7 +91,7 @@ fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
     if let Some(k) = n.strip_prefix('n').and_then(|k| k.parse::<usize>().ok()) {
         return s.precursore == Some(k);
     }
-    s.albero == n.strip_prefix("msn:").unwrap_or(n)
+    s.tree == n.strip_prefix("msn:").unwrap_or(n)
 }
 
 /// The text of the export; `nodo` as in `voluto`.
@@ -111,7 +111,7 @@ mod tests {
     fn graph() -> Graph {
         let mut g = Graph::default();
         g.spettri.push(SpettroG {
-            albero: "195>138".into(),
+            tree: "195>138".into(),
             level: 2,
             att: "hcd".into(),
             ce: 30.0,
