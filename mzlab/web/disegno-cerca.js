@@ -26,8 +26,14 @@ export async function nameToSmiles(text, note, t) {
   return r[0].smiles;
 }
 
-/** True for one line that Ketcher's reader would turn into query atoms: not a SMILES or InChI, not the start of a KET ("{"), of an XML file ("<") or of a base64 CDX ("VmpDRD"). A compound name, or junk. */
-export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:[{<]|VmpDRD)/.test(t) && !isStructureText(t); };
+/** True for one line that is a structure as written: a SMILES or InChI, a reaction SMILES ("CC=O.OCC>>CC(=O)OCC"), either one followed by a title (a .smi line, "CCO ethanol") or by a CXSMILES block ("|...|"). */
+const isStructureLine = (/** @type {string} */ t) => {
+  const first = t.split(/\s+/)[0], parts = first.split(">");
+  return isStructureText(t) || isStructureText(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || looksLikeSmiles(x)));
+};
+
+/** True for one line that Ketcher's reader would turn into query atoms: not a structure line, not the start of a KET ("{"), of an XML file ("<") or of a base64 CDX ("VmpDRD"). A compound name, or junk. */
+export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:[{<]|VmpDRD)/.test(t) && !isStructureLine(t); };
 
 /** Watches the paste events of the editor document: a single line on the canvas that is a name (`isNameLine`) is not handed to Ketcher, which would draw query atoms; `note` says so.
  * A paste inside one of Ketcher's own fields (text tool, Open dialog, atom label) is that field's business.

@@ -89,6 +89,16 @@ try:
             assert smi() == "CCO", smi()
         step("a SMILES dropped on the canvas is still drawn", dropped_smiles)
 
+        def dropped_lines():
+            for how, text, atoms in (("text", "CC=O.OCC>>CC(=O)OCC", 12), ("file", "CC=O.OCC>>CC(=O)OCC\n", 12), ("text", "CCO ethanol", 3), ("file", "CCO ethanol\n", 3), ("text", "C[C@H](N)C(=O)O |a:1|", 6), ("file", "C[C@H](N)C(=O)O |a:1|\n", 6)):
+                clear()
+                if how == "text": pg.evaluate(DROP_TEXT, text)
+                else: pg.evaluate(DROP_FILE, [b64(text.encode()), "line.smi"])
+                wait_for_js(pg, f"!{KJ}.editor.struct().isBlank() || !document.getElementById('smi-warn').hidden", timeout=15000)
+                assert note() == "", (how, text, note())
+                assert pg.evaluate(f"{KJ}.editor.struct().atoms.size") == atoms, (how, text, pg.evaluate(f"{KJ}.editor.struct().atoms.size"))
+        step("a dropped one-line reaction SMILES, titled .smi line or CXSMILES is drawn, as text and as a file", dropped_lines)
+
         def empty_file():
             for raw in (b"", b" \r\n\t\n"):
                 clear(); pg.evaluate(DROP_FILE, [b64(raw), "empty.mol"])
