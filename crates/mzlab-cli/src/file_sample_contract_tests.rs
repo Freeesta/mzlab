@@ -255,6 +255,20 @@ fn assert_listed(seen: &std::collections::BTreeMap<&str, std::collections::BTree
     }
 }
 
+/// `sample list` on a pair whose `.scan` is still being written (started right here, so it is still growing when probed) is exit 7.
+fn probe_growing(
+    wiff: &str,
+    dir: &Path,
+    seen: &mut std::collections::BTreeMap<&str, std::collections::BTreeSet<u8>>,
+) {
+    let (live, writer) =
+        crate::manual_table_cmd::guard_tests::growing_pair(Path::new(wiff), &dir.join("live"));
+    let r = run(&["sample", "list", &live]);
+    assert_eq!(r.code, 7, "{}", r.stderr);
+    seen.entry("sample list").or_default().insert(r.code);
+    writer.join().unwrap();
+}
+
 /// Every explicit `.exits()` list of the file and sample entries is exactly the set of codes the command produces: each code is probed, none is left unlisted.
 #[test]
 fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
@@ -319,12 +333,7 @@ fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
         assert_eq!(r.code, *code, "{a:?}: {}", r.stderr);
         seen.entry(name).or_default().insert(r.code);
     }
-    // a pair whose `.scan` is still being written (started now, so it is still growing when probed): exit 7
-    let (live, writer) =
-        crate::manual_table_cmd::guard_tests::growing_pair(Path::new(&w), &dir.join("live"));
-    let r = run(&["sample", "list", &live]);
-    assert_eq!(r.code, 7, "{}", r.stderr);
-    seen.entry("sample list").or_default().insert(r.code);
+    probe_growing(&w, &dir, &mut seen);
     // a valid mzML (the one `convert` wrote) is exit 0 of `validate`
     let written = std::fs::read_dir(&out)
         .unwrap()
@@ -337,7 +346,6 @@ fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
     ]);
     assert_eq!(v.code, 0, "{}", v.stderr);
     seen.entry("file validate").or_default().insert(0);
-    writer.join().unwrap();
     assert_listed(&seen);
     let _ = std::fs::remove_dir_all(&dir);
 }
