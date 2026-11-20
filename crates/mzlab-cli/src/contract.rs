@@ -46,7 +46,7 @@ pub(crate) const VERDICT: &[&str] = &[
 ];
 
 /// Whether the arguments start with the path of a verdict command (`sample list ...`, `file verify ...`).
-fn is_verdict(args: &[String]) -> bool {
+pub(crate) fn is_verdict(args: &[String]) -> bool {
     VERDICT.iter().any(|v| {
         let words: Vec<&str> = v.split(' ').collect();
         args.len() >= words.len() && args.iter().zip(&words).all(|(a, w)| a == w)
