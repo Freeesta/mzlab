@@ -1,4 +1,4 @@
-//! `mzlab-cli dad subtract|spectrum|trace|ms-at|delay`: the DAD / PDA matrix of a file for agents, the same engine routes as the site and the app (`itemroutes`,
+//! `mzlab-cli dad subtract|spectrum|trace|ms-at|delay|peaks`: the DAD / PDA matrix of a file for agents, the same engine routes as the site and the app (`itemroutes`,
 //! `wiff::dad_ops`). Every answer is JSON on stdout with stable keys; progress and errors go to stderr; with `--json` an error is also an `error/1` on stdout.
 //! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps, no scan or peak found), 2 usage, 4 a file that is missing, 5 a `--sample` the file does not have.
 
@@ -7,12 +7,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::idxread::ReadAt;
 use mzlab_core::itemroutes::{pda_dad, pda_sub_args, pda_subtract_data, PdaView};
-use mzlab_core::mzmlhead::{Chrom, Mzml};
-use mzlab_core::routes::{Query, Routes};
+use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::pdapeaks::MsOpts;
+use mzlab_core::routes::Query;
 use mzlab_core::wiff::dad::DadData;
+use mzlab_core::wiff::dad_peaks::PeakOpts;
 
+use crate::dad_ms::with_ms;
 use crate::dad_msat::{delay_evidence, has_peaks, nearest};
 use crate::Outcome;
 
@@ -23,6 +25,7 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
        mzlab-cli dad trace FILE --nm N0[,N1] [--minus B [--scale S] [--shift MIN]] [--format json|csv]
        mzlab-cli dad ms-at FILE --rt T [--offset MIN] [--level N]
        mzlab-cli dad delay FILE
+       mzlab-cli dad peaks FILE [--nm N0[,N1]] [--top N] [--offset MIN|auto] [--level N] [--format json|csv]
 
   subtract    A minus B: B is interpolated onto the grid of A, what B does not cover is dropped; the answer's `sub` says every step (ranges, steps, rows and
               columns kept, shift, scale, warnings). The default view is the report alone; map, spectrum and trace add the data of the difference
@@ -32,8 +35,11 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
               `warnings` say which scan was taken; an empty spectrum or a time outside the scans is exit 1, never an empty answer
   delay       the offset the engine estimates by matching the UV peaks with the TIC (`delay`, `peaks`, `corr`): evidence to accept or not, never applied;
               no matching peak, or traces too short to compare, is exit 1
+  peaks       the peaks of the UV trace (total, or the band --nm) with their lambda-max (the apex spectrum less the rows at the peak's edges) and, for each, the
+              --top (default 5) strongest ions of the MS scan nearest to its time + the DAD-MS delay: --offset auto (default) is the engine's estimate, logged on
+              stderr and kept in `offset`, a number is minutes; `rt_ms`, `scan_rt`, `gap_min` and `warnings` say which scan was taken; csv has a row per ion
   --sample ID the sample of a file with several (.wiff); --minus-sample ID the same for B
-  --format F  trace only: json (default) or csv with the header rt_min,intensity, the input of every `peak` command (a difference: its rows too)
+  --format F  trace: json (default) or csv with the header rt_min,intensity, the input of every `peak` command (a difference: its rows too); peaks: a row per ion
   --json      accepted; every answer is JSON, and an error is also an error/1 document on stdout
   --out PATH  write there instead of the standard output
 exit codes: 0 done, 1 data error (no DAD, nothing overlaps, no scan or peak found), 2 usage, 4 a file missing or unreadable, 5 a sample id the file does not have";
@@ -50,6 +56,9 @@ struct Req {
     rt: Option<(f64, f64)>,
     nm: Option<(f64, f64)>,
     offset: f64,
+    offset_auto: bool,
+    offset_given: bool,
+    top: usize,
     level: u8,
     csv: bool,
     json: bool,
@@ -99,7 +108,23 @@ fn option(
         }
         "--scale" => r.scale = val("--scale")?,
         "--shift" => r.shift = minutes(val("--shift")?, "--shift")?,
-        "--offset" => r.offset = minutes(val("--offset")?, "--offset")?,
+        "--offset" => {
+            let v = val("--offset")?;
+            r.offset_auto = v == "auto";
+            r.offset_given = true;
+            r.offset = if r.offset_auto {
+                0.0
+            } else {
+                minutes(v, "--offset")?
+            };
+        }
+        "--top" => {
+            r.top = val("--top")?
+                .parse()
+                .ok()
+                .filter(|n| *n > 0)
+                .ok_or("--top needs a number above 0")?
+        }
         "--level" => {
             r.level = val("--level")?
                 .parse()
@@ -119,7 +144,7 @@ fn option(
 
 /// The checks that need the whole command line: the verb, the number of files, and the options that belong to one verb only.
 fn check(r: &mut Req) -> std::result::Result<(), String> {
-    if !["subtract", "spectrum", "trace", "ms-at", "delay"].contains(&r.verb.as_str()) {
+    if !["subtract", "spectrum", "trace", "ms-at", "delay", "peaks"].contains(&r.verb.as_str()) {
         return Err(format!("unknown dad verb {}", r.verb));
     }
     let want = if r.verb == "subtract" { 2 } else { 1 };
@@ -133,8 +158,11 @@ fn check(r: &mut Req) -> std::result::Result<(), String> {
     if r.verb == "subtract" {
         r.minus = r.files.pop();
     }
-    if r.csv && r.verb != "trace" {
-        return Err("--format is for dad trace".into());
+    if r.csv && !["trace", "peaks"].contains(&r.verb.as_str()) {
+        return Err("--format is for dad trace and dad peaks".into());
+    }
+    if r.offset_auto && r.verb != "peaks" {
+        return Err("--offset auto is for dad peaks".into());
     }
     if r.verb != "subtract" && r.view != "report" {
         return Err("--view is for dad subtract".into());
@@ -149,7 +177,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
     let mut it = args.into_iter();
     let verb = it
         .next()
-        .ok_or("dad needs a verb: subtract, spectrum, trace, ms-at or delay")?;
+        .ok_or("dad needs a verb: subtract, spectrum, trace, ms-at, delay or peaks")?;
     if verb == "--help" || verb == "-h" {
         return Ok(None);
     }
@@ -165,6 +193,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
         rt: None,
         nm: None,
         offset: 0.0,
+        offset_auto: false,
+        offset_given: false,
+        top: 5,
         level: 1,
         csv: false,
         json: false,
@@ -179,12 +210,12 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
     Ok(Some(r))
 }
 
-fn idx_err(e: std::io::Error) -> Error {
+pub(crate) fn idx_err(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
 /// The position of the sample `sample` (none: the first) among `ids`; `err.sample.unknown` (exit 5) naming the ids the file has when it is not there.
-fn sample_at(ids: &[u32], sample: Option<u32>) -> Result<usize> {
+pub(crate) fn sample_at(ids: &[u32], sample: Option<u32>) -> Result<usize> {
     let Some(id) = sample else { return Ok(0) };
     mzlab_core::readers::selection::resolve(ids, &[id])?;
     Ok(ids.iter().position(|&s| s == id).unwrap_or(0))
@@ -216,111 +247,20 @@ fn dad_of(file: &Path, sample: Option<u32>) -> Result<Arc<DadData>> {
         .ok_or_else(|| Error::new("err.pda.none"))
 }
 
-/// The routes and the mzML (or its shell) of `file`, for the MS side (`ms-at`, `delay`); `body` runs with them while the temporary index lives.
-fn with_ms<T>(
-    file: &Path,
-    sample: Option<u32>,
-    body: &mut dyn FnMut(&mut dyn MsSide) -> Result<T>,
-) -> Result<T> {
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-dad{k}", std::process::id()));
-    std::fs::create_dir_all(&tmp).map_err(idx_err)?;
-    let r = ms_inner(file, sample, &tmp, body);
-    let _ = std::fs::remove_dir_all(&tmp);
-    r
-}
-
-trait MsSide {
-    fn spectrum(&mut self, q: &Query) -> Result<String>;
-    fn tic(&mut self, q: &Query) -> Result<String>;
-    fn delay(&mut self) -> Result<String>;
-    /// The times (minutes) of the scans of `level`, for the choice of the one nearest to a time.
-    fn scan_times(&mut self, level: u8) -> Result<Vec<f64>>;
-    /// Whether the file has an optical trace to compare with the TIC.
-    fn has_uv(&self) -> bool;
-}
-
-struct Side<'a, R: ReadAt, M: ReadAt> {
-    r: &'a mut Routes<R>,
-    m: &'a mut Mzml<M>,
-    chroms: &'a [Chrom],
-}
-
-impl<R: ReadAt, M: ReadAt> MsSide for Side<'_, R, M> {
-    fn spectrum(&mut self, q: &Query) -> Result<String> {
-        Ok(self
-            .r
-            .handle("/api/spectrum", q)?
-            .unwrap_or_else(|| "null".into()))
-    }
-    fn tic(&mut self, q: &Query) -> Result<String> {
-        Ok(self
-            .r
-            .handle("/api/chrom", q)?
-            .unwrap_or_else(|| "null".into()))
-    }
-    fn delay(&mut self) -> Result<String> {
-        self.r.delay(self.m, self.chroms)
-    }
-    fn scan_times(&mut self, level: u8) -> Result<Vec<f64>> {
-        let pol = self.r.pol;
-        match self.r.idx.section_of(level, pol) {
-            Some(si) => Ok(self.r.idx.arrays(si)?.rt.clone()),
-            None => Ok(Vec::new()),
-        }
-    }
-    fn has_uv(&self) -> bool {
-        self.chroms.iter().any(|c| c.kind == "pda")
-    }
-}
-
-fn ms_inner<T>(
-    file: &Path,
-    sample: Option<u32>,
-    tmp: &Path,
-    body: &mut dyn FnMut(&mut dyn MsSide) -> Result<T>,
-) -> Result<T> {
-    let name = file
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let label = sample.map_or(String::new(), |id| format!("{name}@{id}"));
-    let mzml = name.to_lowercase().ends_with(".mzml");
-    let idx = tmp.join("0.mzidx");
-    crate::flow_pace::build_index_of(
-        file,
-        &label,
-        &idx,
-        mzlab_core::budget_auto::native_index_budget(),
-    )?;
-    let mut r = Routes::new(crate::open(&idx)?);
-    let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
-    if mzml {
-        let f = File::open(file).map_err(idx_err)?;
-        let size = f.metadata().map_err(idx_err)?.len();
-        let mut m = Mzml::new(f, size);
-        let chroms = m.chromatograms(end)?;
-        return body(&mut Side {
-            r: &mut r,
-            m: &mut m,
-            chroms: &chroms,
-        });
-    }
-    let mut l = mzlab_lettori::apri(
-        crate::flow_set::file_set(file)?,
-        &mzlab_core::readers::Limits::desktop(),
-    )?;
-    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
-    let k = sample_at(&ids, sample)?;
-    let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), k)?;
-    let size = shell.len() as u64;
-    let mut m = Mzml::new(shell, size);
-    let chroms = m.chromatograms(end)?;
-    body(&mut Side {
-        r: &mut r,
-        m: &mut m,
-        chroms: &chroms,
-    })
+/// `dad peaks`: the optical matrix of the file, then the engine route with the MS side of the same file.
+fn peaks_answer(c: &Req) -> Result<String> {
+    let da = dad_of(&c.files[0], c.sample)?;
+    let po = PeakOpts {
+        nm: c.nm,
+        ..PeakOpts::default()
+    };
+    let offset = (!c.offset_auto && c.offset_given).then_some(c.offset);
+    let mo = MsOpts {
+        level: c.level,
+        top: c.top,
+        offset,
+    };
+    with_ms(&c.files[0], c.sample, &mut |s| s.peaks(&da, &po, &mo))
 }
 
 fn run_req(c: &Req) -> Result<String> {
@@ -396,6 +336,7 @@ fn run_req(c: &Req) -> Result<String> {
                 ))
             })
         }
+        "peaks" => peaks_answer(c),
         _ => with_ms(a, c.sample, &mut |s| delay_evidence(s.delay()?, s.has_uv())),
     }
 }
@@ -424,9 +365,23 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let answer = run_req(&c).and_then(|t| if c.csv { trace_csv(&t) } else { Ok(t + "\n") });
+    let mut note = String::new();
+    let answer = run_req(&c).and_then(|t| {
+        if c.verb == "peaks" {
+            note = crate::dad_msat::offset_note(&t);
+        }
+        match (c.csv, c.verb.as_str()) {
+            (true, "peaks") => crate::dad_msat::peaks_csv(&t),
+            (true, _) => trace_csv(&t),
+            _ => Ok(t + "\n"),
+        }
+    });
     match answer {
-        Ok(t) => crate::emit(t, &c.out),
+        Ok(t) => {
+            let mut o = crate::emit(t, &c.out);
+            o.stderr += &note;
+            o
+        }
         Err(e) => Outcome::fail_error(&e).with_hint(match e.key {
             "err.sample.unknown" => "list the samples with `mzlab-cli sample list FILE --json`",
             "err.session.fileNotFound" => "check the path",

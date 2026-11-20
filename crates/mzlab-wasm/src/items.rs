@@ -160,6 +160,18 @@ impl Engine {
         mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, kind).map_err(|e| error_json(&e))
     }
 
+    /// `dad peaks` of the item `item` of the file at `slot`: the UV peaks (total trace, or the band `nm0`..`nm1`) with their lambda-max and the top `top` ions of the MS
+    /// scan at each time less the delay (`offset` in minutes; a non-finite one is the engine's estimate).
+    #[allow(clippy::too_many_arguments)]
+    pub fn item_pda_peaks(&mut self, slot: u32, item: &str, size: f64, read: Function, nm0: f64, nm1: f64, top: u32, level: u32, offset: f64) -> Result<String, JsValue> {
+        let r = self.idx.get_mut(&slot).ok_or_else(no_index)?;
+        let end = r.idx.scans.last().map_or(0, |s| s.end);
+        let mut m = self.nat.mzml(slot, read, size)?;
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
+        let (po, mo) = (mzlab_core::wiff::dad_peaks::PeakOpts::from_args(nm0, nm1), mzlab_core::pdapeaks::MsOpts::from_args(top, level, offset));
+        r.pda_peaks_item(&mut m, &chroms, item, &po, &mo).map_err(|e| error_json(&e))
+    }
+
     /// `/api/delay` of the item `item` of the file at `slot`.
     pub fn item_delay(
         &mut self,

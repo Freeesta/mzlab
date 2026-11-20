@@ -14,6 +14,8 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_ops;
 #[cfg(feature = "mappa-dad")]
+pub mod dad_peaks;
+#[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 mod devices;
 pub mod idx;
