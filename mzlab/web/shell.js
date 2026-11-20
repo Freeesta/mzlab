@@ -109,7 +109,7 @@ function pullOpen(){const open=new Map(SAMPLES.files().map((/** @type {any} */ g
     if(isCal(f)&&g.conc!=null){const a=Object.keys(CU).find(k=>CU[k][0]===g.cunit);f.conc=a?roundc(g.conc*CU[a][1]/CU[ST.unit][1]):g.conc}}}
 document.addEventListener("filelist",()=>{const el=$("#flist");if(!el||el.contains(document.activeElement))return;pullOpen();renderFiles()});
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
-function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el=$("#flist");
+function renderFiles(){if(window.GROUPSTAB&&GROUPSTAB.pre())return;const F=ST.files,el=$("#flist");
   const xh=(/** @type {string} */ h)=>window.COLS?COLS.head(h):h,xr=(/** @type {FileRiga} */ f,/** @type {string} */ h)=>window.COLS?COLS.row(f,h):h,hasCal=F.some((/** @type {FileRiga} */ f)=>f.use&&(isCal(f)||(f.conc!=null&&f.conc!==""))),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
   const xc=window.COLS?COLS.n():0,ncol=7+(hasCal?1:0)+xc,GUESS=` title="${I18N.t("load.guess.title")}"`;
@@ -120,7 +120,7 @@ function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm dlic" data-dl="${esc(f.name)}" aria-haspopup="menu" aria-label="${I18N.t("conv.dl")}" title="${I18N.t("conv.dl.title")}">${CONV.ICON}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`)})});
-  const R=window.GRUTAB?GRUTAB.rows(ents,ncol):ents.map(x=>x.h);
+  const R=window.GROUPSTAB?GROUPSTAB.rows(ents,ncol):ents.map(x=>x.h);
   // above 500 rows the body comes in chunks of 200 per frame (1000 rows in one go cost 150 ms); the handlers are wired once the last chunk is in
   const tok=FILECHUNK.t={},big=R.length>500;rows=(big?R.slice(0,200):R).join("");
   const head=F.length?`<p class="sm samphead"><b>${I18N.t("load.samples.head",{n:F.length})}</b> ${window.COLS?COLS.button():""}</p>`:"";
@@ -132,7 +132,7 @@ const FILECHUNK={t:{}};
 // «Remove all files» of the toolbar: asks once, then removes them like the list's menu does (lista-file.js: one «Removed · Undo» entry takes them all back)
 async function confirmRemoveAll(){const n=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone).length+unopenedRows().length;if(n&&await yesno(I18N.t("load.table.removeAll.ask",{n})))removeAllFiles()}
 function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
-  CONVROWS.wire(el);if(window.COLS)COLS.wire(el);else if(F.length)loadScript("columns-samples.js").then(renderFiles);if(window.GRUTAB)GRUTAB.wire(el);else if(F.length)loadScript("gruppi-tab.js").then(renderFiles);
+  CONVROWS.wire(el);if(window.COLS)COLS.wire(el);else if(F.length)loadScript("columns-samples.js").then(renderFiles);if(window.GROUPSTAB)GROUPSTAB.wire(el);else if(F.length)loadScript("groups-tab.js").then(renderFiles);
   el.querySelectorAll("[data-open]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>soloFile(E.files.find((/** @type {FileAperto} */ x)=>!x.gone&&x.file.split("#")[0]===b.dataset.open)));
   el.querySelectorAll("[data-exp]").forEach((/** @type {CampoDati} */ x)=>x.onchange=()=>expSet([x.dataset.exp],x.value===x.dataset.auto?null:x.value));
   el.querySelectorAll("[data-k]").forEach((/** @type {CampoDati} */ x)=>{
@@ -449,7 +449,7 @@ const dropReady=()=>!!(S.sess&&!$("#v-data").hidden);
 function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);if(on)$("#fl-dz").hidden=false;else syncWork(true)}
 // one target for the side list (the session and the landing before it) and one for the work area, whose overlay shows while panels or the sample-table page are in view (the method zone keeps its own)
 (()=>{const dz=$("#dfiles"),ws=$("#v-workspace"),ready=(/** @type {DragEvent} */ e)=>DROP.has(e)&&dropReady(),early=(/** @type {DragEvent} */ e)=>DROP.has(e)&&S.view==="data"&&!S.sess&&!S.opening;
-  DROP.target(dz,{ready:(/** @type {DragEvent} */ e)=>ready(e)||early(e),over:(/** @type {boolean} */ v)=>{if(v){dropZone(true);if(S.sess)loadScript("gruppi-dnd.js")}else dropZone(false)}});
+  DROP.target(dz,{ready:(/** @type {DragEvent} */ e)=>ready(e)||early(e),over:(/** @type {boolean} */ v)=>{if(v){dropZone(true);if(S.sess)loadScript("groups-dnd.js")}else dropZone(false)}});
   DROP.target(ws,{ready:(/** @type {DragEvent} */ e)=>DROP.has(e)&&!!S.sess&&S.view==="data"&&(ws.dataset.work==="panels"||(ws.dataset.work==="add"&&!(/** @type {Element} */ (e.target)).closest("#dropdam"))),over:(/** @type {boolean} */ v)=>{ws.classList.toggle("ws-drop",v);if(v)ws.dataset.dz=I18N.t("files.drop.zone")}});
   $("#addf").addEventListener("click",()=>directNote(""))})();
 // with a world open the button switches to the other one (OPENNOW.toWorld); before, it picks the world to open

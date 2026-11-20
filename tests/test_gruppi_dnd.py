@@ -1,4 +1,4 @@
-"""Dragging files between groups (mzlab/web/gruppi-dnd.js, run by node with the page globals stubbed): what is under the pointer of a list (header, row thirds, the gap after
+"""Dragging files between groups (mzlab/web/groups-dnd.js, run by node with the page globals stubbed): what is under the pointer of a list (header, row thirds, the gap after
 the last group), the files that travel with the dragged one, and the repaint that waits while a drag holds the list."""
 import json
 import shutil
@@ -23,7 +23,7 @@ globalThis.BOXES = [box("head", "MQ", 0, 24), box("row", "a", 24, 48), box("row"
 
 
 def run(code):
-    src = (WEB / "gruppi-dnd.js").read_text(encoding="utf-8")
+    src = (WEB / "groups-dnd.js").read_text(encoding="utf-8")
     js = STUBS + f"""
 require("vm").runInThisContext({json.dumps(src)});
 (async () => {{ {code} }})().catch(e => {{ console.error(e); process.exit(1); }});
@@ -97,7 +97,7 @@ def test_a_drag_that_went_silent_no_longer_holds_the_list():
 # a bound list of rows `h` px high (a: 0-h, b: h-2h): the live region is where the node tests read what is said
 ONTO = """
 const LIVE = { setAttribute() {} }; document.createElement = () => LIVE; document.addEventListener = () => {};
-globalThis.GRUPPI = { labelOf: k => k === "b" ? "G" : "" };
+globalThis.GROUPS = { labelOf: k => k === "b" ? "G" : "" };
 const rows = h => ["a", "b", "c"].map((k, i) => ({ dataset: { nm: k }, matches: () => false, classList: { add() {}, remove() {} }, getBoundingClientRect: () => ({ top: i * h, bottom: (i + 1) * h }) }));
 const list = h => ({ querySelectorAll: () => rows(h), addEventListener() {}, classList: { add() {}, remove() {} }, getBoundingClientRect: () => ({ top: 0, bottom: 3 * h }) });
 const bindAt = h => { GDND.bind(list(h), { host: list(h), rowSel: "tr", headSel: "tr.none", keyOf: r => r.dataset.nm, ticked: () => [], onDrop() {} }); };

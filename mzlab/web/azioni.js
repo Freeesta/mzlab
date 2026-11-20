@@ -30,13 +30,13 @@ const pulisciMenu = items => {
 };
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
-  const GRUPPI = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
+  const GROUPS = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
   /** @type {Azione[]} */
   const voci = [];
   /** @param {Azione} a */
   function registra(a) {
     if (voci.some(v => v.id === a.id)) throw new Error("AZIONI: id already registered: " + a.id);
-    if (!GRUPPI.includes(a.gruppo)) throw new Error("AZIONI: unknown group " + a.gruppo + " of " + a.id);
+    if (!GROUPS.includes(a.gruppo)) throw new Error("AZIONI: unknown group " + a.gruppo + " of " + a.id);
     // the icon of the action: its own key, else the table of azioni-icone.js
     if (!a.icona && typeof AZIONI_ICONE !== "undefined") a.icona = AZIONI_ICONE.POR_ID[a.id];
     voci.push(a);
@@ -55,7 +55,7 @@ const AZIONI = (() => {
   /** @param {Contesto} c @param {"menu" | "barra" | "tutte"} [dove] */
   function elenco(c, dove = "menu") {
     const l = voci.filter(a => mostra(a, c) && (dove === "tutte" || (dove === "menu" ? a.menu !== false : a.barra === true)));
-    return l.sort((a, b) => GRUPPI.indexOf(a.gruppo) - GRUPPI.indexOf(b.gruppo) || (a.ordine || 0) - (b.ordine || 0) || voci.indexOf(a) - voci.indexOf(b));
+    return l.sort((a, b) => GROUPS.indexOf(a.gruppo) - GROUPS.indexOf(b.gruppo) || (a.ordine || 0) - (b.ordine || 0) || voci.indexOf(a) - voci.indexOf(b));
   }
   // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups;
   // an action with `voci` gives several rows (one per open XIC, per measure…), all with its id
@@ -104,7 +104,7 @@ const AZIONI = (() => {
     esegui(l[0].id, c);
     return true;
   }
-  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, scarichi, pulisci: pulisciMenu, esegui, mostra, pronta, doppio, icona };
+  return { formato: "azioni/1", GROUPS, voci, registra, voce, elenco, per, scarichi, pulisci: pulisciMenu, esegui, mostra, pronta, doppio, icona };
 })();
 // ---- shortcuts: the field `scorciatoia` of an action, ONE keydown for all of them (the functions are also added to AZIONI)
 const TASTI = (() => {
