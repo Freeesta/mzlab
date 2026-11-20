@@ -19,7 +19,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | panel (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-pannello.md` |
 | review, matching and identity (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-revisione.md` |
 | Attributio in Rust (level cascade, Banco 2b, mzmine-style detection MZ binary: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` and `untargeted`) | `docs/agenti/attributio.md` |
-| audit of unused, dead or old files (report only: SAFE, PROBABLY-UNUSED, UNSURE, KEEP-BUT-OLD, with grep proof, bytes and date) | `docs/agenti/audit-unused-files.md` |
 | smeared peaks: synthetic batch, MZmine default/wide configurations, comparison table (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-wide-peaks.md` |
 | Bruker timsTOF `.d` reader (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, `tdf_bin`/`tsf_bin`, m/z calibration, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
 | calibration curve on integrated peaks (`quant.curve`: 1/x..1/y² weights, QR, internal standard, ICH LOD/LOQ and S/N, logged exclusions, `calibration/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibration.md` |
@@ -50,7 +49,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `selection/1`, `link/1`) | `docs/agenti/drawing-menu.md` |
 | Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/drawing-unsaved.md` |
 | Drawing (Ketcher) | `docs/agenti/drawing.md` |
-| English in code (identifiers, comments, file and folder names): measured inventory, `tools/check_english.py`, `tools/italian_words.tsv`, rename map (`tools/english_rename_map.py`), batch plan | `docs/agenti/english.md` |
 | export of all user data: browser storage inventory, ZIP writer (`zip.rs`); chunked exports in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenance, `export/` cleanup) | `docs/agenti/export-data.md` |
 | contract of the vendor readers (`readers.rs`, `Lettore` trait, registry, `Limiti`), adding a format | `docs/agenti/extending.md` |
 | "XIC" button in the spectrum bar, XIC lens on peak hover (`xic-lente.js`), bench and baseline table of viewer times (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/fast-viewer.md` |
@@ -62,7 +60,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Tabui coverage, package (area: graphical Flow (tab: step palette `step/1`, chain, modules…) | `docs/agenti/flow-package-tabui.md` |
 | Flow: names, groups and view cards of the MSn infusion model | `docs/agenti/flow-ux.md` |
 | web runner of the Flow ("This browser": `flow/lazy/flow-web-{run,ui,worker}.js`, `flow:web-step` events, `estimate_series` estimate, phone/tablet warning, Run off above the high level) | `docs/agenti/flow-web.md` |
-| map speed: gesture measurements (`tools/bench_map.py`), diagnosis and open work; 3D viewer (`mappa3d.js`, `failure3d`, commands and menu, `preload3d` preload) | `docs/agenti/fluid-map.md` |
 | external agents (Claude Code, Cowork) using `mzlab-cli` from the shell: sequence, the five tested chains (`workflow_tests.rs`), plan examples | `docs/agenti/for-agents.md` |
 | "Group by" of the file list (`#sb-by`, `gruppi.js`, `gruppi-per.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
 | experiment groups in Tabui: conditions, `gruppi/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/gruppi-vista.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
@@ -83,11 +80,8 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | LLM assistant parameter proposals: `param-proposal/1`, signals, rule ids `R-*`, acquisition-to-plan table (`params_rules*.rs`) | `docs/agenti/llm-params.md` |
 | subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `tools/1` catalog) | `docs/agenti/llm-subagents.md` |
 | LLM assistant: `tools/1` catalog | `docs/agenti/llm.md` |
+| 3D map viewer (`mappa3d.js`, `failure3d`, viewer commands and menu, `preload3d` preload) | `docs/agenti/map-3d.md` |
 | map of the open path of every file (click → screen, site and app, by format), strategies present/absent, file batches for external assistants (`tools/batch_gemini.py`) | `docs/agenti/map-loading.md` |
-| chromatogram drawing cost on dense traces (`tools/bench_charts.py`: 10^6 points, 20 files, wheel, drag, resize, line); 100,000-row HR table in "Statistics" (`tools/bench_table_hr.py`: KMD, click, "Data") | `docs/agenti/measurements-charts.md` |
-| V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 (headers stored with the copy, adopted, remeasured) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/measurements-code-cache.md` |
-| first file of a batch: site-copies gate (`createCopyGate`, `?copie=N`), K copies together, first chart and whole batch with 10 and 50 files, memory; critical-path verdicts (`rotte`, `thermo`, ten files) | `docs/agenti/measurements-copies.md` |
-| first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/measurements-first-package.md` |
 | Flow input formats (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-formats.md` |
 | page load (FCP, LCP, engine ready, KB before paint by scenario; `tests_e2e/misura_primo_paint.py`); first file vs ten files, `rotte`, `thermo`, memory (`misura_caricamento.py --scenarios`) | `docs/agenti/measurements-loading.md` |
 | measurement on slow computers (CPU throttled 1×/4×/6×, 2/4 cores: demo open, line drag, maps, XIC, memory; `tests_e2e/misura_macchine.py`) | `docs/agenti/measurements-machines.md` |
@@ -110,9 +104,12 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | list of MSn experiments of a DDA file, "MSn tree" window (Experiments/Tree tabs, `msn-elenco.js`, `lev`/`z` columns of `/api/dda`); MS3-only files (`msn_level`, level, `/api/ms2tr`, titles); MSn graph figure; rule tests (`msn rules`) | `docs/agenti/msn-manual.md` |
 | library (area: infusion MSn fragmentation graph (`msn-graph/1`: ions…) | `docs/agenti/msnlib.md` |
 | mutation tests (`cargo-mutants`) of `mzlab-lettori` and the wiff module: commands, samples, survivors and why they stay | `docs/agenti/mutants.md` |
+| mzDraw competitor study: editors, depictors, toolkits and Rust crates (matrix, sizes, licences, layout benchmarks, licence verdict, ideas to copy) | `docs/agenti/mzdraw-competitors.md` |
+| mzDraw formats: conformity matrix (read/write, what is lost, spec terms, public golden files), images and clipboard carrying the molecule, settings file `mzdraw-settings/1` and journal presets, document format `mzdraw/1`, annotations, import report | `docs/agenti/mzdraw-formats.md` |
+| mzDraw plan: feature priorities P0-P3, risks, owner decisions, ready implementation prompts (format catalog, settings, layout benchmark, images with molecule, RXN/RDF, CML/MRV) | `docs/agenti/mzdraw-plan.md` |
 | mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | broad bands (`broad.rs`), targeted pass options (`target.rs`: estimated peaks, /\ shape check, merging overlapping rows), RT correction and alignment (`rtmap.rs`, `rtwarp.rs`), kinetics as evidence (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
-| dependencies between `crates/mzlab-feat` modules (big cycle, back edges, cuts, splitting the attribution engine into a crate) | `docs/agenti/mzfeat-cycles.md` |
+| layering of `crates/mzlab-feat` modules (base modules, feature gates, rules for a new dependency edge) | `docs/agenti/mzfeat-cycles.md` |
 | low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
 | Feature table in the Pipeline (steps 5-6: QC, filter bar, `PIPET` with `TPTAB` and expanded row `TPRIGA`) | `docs/agenti/mzfeat-table-view.md` |
 | table, ids and samples (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-table.md` |
@@ -150,7 +147,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progress.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-mass.md` |
 | `.raw` → mzML conversion: bench `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, starting points V1-V9, causes of D8 and D11, synthetic dense case, parallel encoding (`convert_times`) | `docs/agenti/raw-mzml.md` |
-| what the raw files contain and we do not extract yet ("no loss" rule) | `docs/agenti/raw-not-extracted.md` |
+| register of raw-file fields: extracted or declared ("no loss" rule) | `docs/agenti/raw-not-extracted.md` |
 | validation on experimental sites and discarded experiments (area: parent reactivity engine (crates/mzlab-chem, .wasm chem,…) | `docs/agenti/reactivity-studies.md` |
 | parent reactivity engine (crates/mzlab-chem, .wasm chem, reatt/1, Tabui 3D viewer) | `docs/agenti/reactivity.md` |
 | "andi" module (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/readers-andi.md` |
@@ -159,7 +156,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Thermo `.raw`: activation, "unknown", rejected event table, damaged scans and controllers (`warn.raw.damaged`), precursors (target, selected ion, MSn chains, SPS, MSX, SRM from the event) | `docs/agenti/readers-thermo-precursors.md` |
 | Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli db ref-list` | `docs/agenti/reference-lists.md` |
 | release: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, single version, SBOM, gate (`gate_release.py`); Dependabot, CodeQL, security settings to turn on by hand | `docs/agenti/release.md` |
-| browser reset measurements (full reset, Files, `qqHardReset`; `tests_e2e/misura_reset.py`, probe `lib_reset.py`), MISURA reset_* rows | `docs/agenti/reset-measurements.md` |
+| full reset and Files mode of the browser reset: what is left in OPFS and storage, how to measure (`tools/prepara_sito.py`, `tests_e2e/misura_reset.py`) | `docs/agenti/reset.md` |
 | native mzFinder (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-desktop-finder.md` |
 | desktop (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-desktop.md` |
 | `mzflow/2` plans, check and `prov/1` (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-flow.md` |
@@ -167,7 +164,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | routes (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-routes.md` |
 | `step/1` descriptors (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-step.md` |
 | Rust engine (`crates/`, golden data `tools/golden.py`) | `docs/agenti/rust.md` |
-| `--sample 1,3,5` / `2-4` on `convert`, `channels`, `features`, `sample select` (dry run): semantics, exit 5, `readers::selection`, wasm `sample_selection` | `docs/agenti/sample-flag.md` |
 | sample file roles, times and metadata (`samples/1`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, indexes for the TP path) | `docs/agenti/samples.md` |
 | scandump, RFR oracle | `docs/agenti/scandump.md` |
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
@@ -176,15 +172,9 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | rows of the MS² spectrum card (notes, retention times, CE ± spread, sample), `mzlab-cli file items` | `docs/agenti/spectrum-rows.md` |
 | progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/startup.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
-| positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/study-competitors.md` |
-| study findings, area 2 (B1-B7): feature area on uneven MS1 spacing, CWT, S/N, `find_peak` FWHM, area units | `docs/agenti/study-science-chromatography.md` |
-| study findings, area 1 (A1-A6): masses and formulas, isotope grouping, mass-error sign, `[M]+`, `nominal`, mass tables | `docs/agenti/study-science-mass.md` |
-| study findings, areas 3-4 (C1-C3, D1-D2): spectral matching scores, replicate CV, PCA ellipses | `docs/agenti/study-science-matching-stats.md` |
-| scientific correctness study (report only): method, severity words, suspected findings, checked-correct list, coverage gaps; confirmed findings are in the three `study-science-*` files | `docs/agenti/study-science.md` |
+| scientific correctness study: fixed findings (one line each) and the open owner decisions A4, C2, D2 | `docs/agenti/study-science.md` |
 | security study: exploitable weaknesses with a crafted file or by probing the published site (Rust readers, front end, desktop app, supply chain), severity, `file:line`, how to reproduce, fix | `docs/agenti/study-security.md` |
 | spectral study on synthetic data: fragmentation tree generator, scenarios E0-E6, arms against the engine (calibrated null, coincidence p-value, sub-formulas, multi-shift analogs), MISURA studio_* rows | `docs/agenti/study-spectra.md` |
-| test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/study-tests.md` |
-| usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/study-ux.md` |
 | suspect index (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/suspects.md` |
 | where Tabui loses an expected product (`mzlab-cli explain-missing`); Tabui is hidden and to be DELETED entirely (owner decision): read its "Planned removal" section first | `docs/agenti/tabui-explain.md` |
 | test structure, new tests | `docs/agenti/test.md` |
@@ -192,15 +182,12 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | chemical background of the TIC/BPC (persistent background ions, per-ion baseline, quiet window, blank, excluded m/z windows: `ticbg.rs`, `api/tic_background`, `mzlab-cli trace background`) | `docs/agenti/tic-background.md` |
 | provisional TIC: zoom/pan of the RT axis while the index is being built, window handoff to the first panel | `docs/agenti/tic-provisional.md` |
 | SIM/MRM transition table of a triple quadrupole (`chrom.transitions`, `transitions/`, per-sample integration, RT candidates, example presets) | `docs/agenti/transitions.md` |
-| .wasm measurements (`misura` field of `tools/moduli/*.toml`, before → after line in PR, what costs most) | `docs/agenti/wasm-caps-measurements.md` |
-| mzFinder .wasm ceilings, merged modules (HR group and Attributio) | `docs/agenti/wasm-caps.md` |
+| .wasm ceilings: rules, where each ceiling and measurement lives (`tools/moduli/*.toml`), what costs most, move steps | `docs/agenti/wasm-caps.md` |
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
-| full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
+| full binary specification and what a sample is made of (area: `.wiff` + `.wiff.scan` reader `crates/mzlab-core/src/wiff/`; read-only `file inventory|verify`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli file pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
-| choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `sample list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
-| the page dialog «Choose samples» of a .wiff with several samples (`wiff-choose.js`, setting, `sample_default`, decisions, what is not done) | `docs/agenti/wiff-sample-dialog.md` |
+| choosing samples of a `.wiff` (or other multi-sample file): listing, `selection::suggest`, `--sample LIST`, the page dialog `wiff-choose.js`, what is not built | `docs/agenti/wiff-sample-choice.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
-| writing a `.wiff` + `.wiff.scan`: create, add or remove samples (design study, and the built read-only `mzlab-cli file inventory|verify` with the `wiffwrite` module: streams per sample, lossless copy, verification, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | signed offset after the m/z or formula in the "Extract ions" window (`288.2+16`), `split_offset`, `mzlab-cli ion mz`, `err.formula.offset`, `err.formula.mzLow`; "m/z from / to" fields and m/z / RT pairs (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-discard.md` |

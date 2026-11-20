@@ -109,7 +109,7 @@ impl Mol {
         Ok(m)
     }
 
-    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence (`smiles::valences`); a SMILES atom in brackets already says its hydrogens.
+    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence (`smiles::valence_for`); a SMILES atom in brackets already says its hydrogens.
     fn assemble(raw: Vec<RawAtom>, written: Vec<RawBond>, by_charge: bool) -> Mol {
         let bonds = typed_bonds(&raw, written);
         let atoms = smiles::fill(&raw, &bonds, by_charge);

@@ -31,7 +31,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 
 ## Record and preset
 - `record` replicates a run: same plan, same resolved parameters, same inputs (by SHA-256), same resources, same seeds and decisions. Nothing is a verdict about the chemistry.
-- `preset` is the pure function `to_preset(record)`: it keeps `engine`, `plan` (inputs turned into slots from `role`, `polarity` and the counts), `plan_sha256`, `resolved`, `resources`, `seeds`, `revisions`, `limits`, and drops `inputs` (aliases, hashes, bytes), `roles_sha256`, `decisions`, `prov`, `results`, `runs` and `related`. Same record, same bytes. It is uploaded to start a new analysis: the user fills each slot with files and the engine checks them against `type`, `role`, `polarity`, `min`, `max`.
+- A `preset` (schema contract only: no function builds one) keeps `engine`, `plan` (inputs turned into slots from `role`, `polarity` and the counts), `plan_sha256`, `resolved`, `resources`, `seeds`, `revisions`, `limits`, and drops `inputs` (aliases, hashes, bytes), `roles_sha256`, `decisions`, `prov`, `results`, `runs` and `related`. It is meant to be uploaded to start a new analysis: the user fills each slot with files and the engine checks them against `type`, `role`, `polarity`, `min`, `max`.
 
 ## Applying a preset written by another version
 - A parameter the running step has and the preset lacks (new): ALWAYS ask for confirmation, never silent; the answer goes in `compat.changes` (`confirmed`) and the limit `preset.param.new` is written.

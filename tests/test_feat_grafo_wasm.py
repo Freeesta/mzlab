@@ -153,6 +153,19 @@ def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
     assert round(r["label"]["mass"], 4) == 153.0590
 
 
+@pytest.mark.parametrize("el", ["O", "S"])
+def test_sel_of_an_aromatic_cation_through_wasm_equals_the_cli(pkg, tmp_path, el):
+    # pyrylium and thiopyrylium written with aromatic bonds: the charged O or S gives a ring electron and takes no hydrogen
+    ring = [(i + 1, (i + 1) % 6 + 1, 4) for i in range(6)]
+    req = tmp_path / "req.json"
+    atoms = "".join(f"{i:10.4f}{0:10.4f}{0:10.4f} {e:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for i, e in enumerate(el + "CCCCC"))
+    molfile = "\n  qqq\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n" + atoms + "".join("%3d%3d%3d  0  0  0  0\n" % b for b in ring) + "M  CHG  1   1   1\nM  END"
+    req.write_text(json.dumps({"molfile": molfile, "part": False}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
+    assert site == cli("mol", "sel", str(req), runner=run)
+    assert json.loads(site)["label"]["text"] == f"C5H5{el}+"
+
+
 def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
     # every golden molecule of tools/analisi_riferimento.py, plus CuCl2(NH3)2 (Cu: the abundances of `isotopi-tutti`, on in the .wasm as in the app)
     cases = [c["request"] for c in json.loads((ROOT / "tests/dati/anal_golden.json").read_text(encoding="utf-8"))]

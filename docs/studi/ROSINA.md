@@ -4,7 +4,7 @@ Status: decided, not done. The bench (R-00) is built; the reader packages R-01..
 ## Goal
 mzLab reads, on any computer, the files of every vendor, either natively or as an mzML converter (profile and centroids), and reads their metadata perfectly. Starting point: `docs/agenti/native-reading.md` (inventory and matrix). The real gap is not files but truth: most corpus files have no reference mzML, so this is first an oracle-and-truth project, then a reader project.
 
-## Census shares (public deposits, measured 2026-10-19)
+## A. Census shares (public deposits, measured 2026-10-19)
 - PRIDE (42 168 projects): Thermo Orbitrap/FT 81.4 %, Bruker timsTOF 5.5 %, SCIEX TOF 4.8 %, Waters 2.4 %, Bruker other 2.2 %, Thermo trap/QqQ 1.5 %, Agilent 0.5 %, SCIEX QTRAP/QqQ 0.2 %.
 - MetaboLights (3 546 studies), file formats: Thermo `.raw` 42.1 %, mzML 27.1 %, mzXML 11.9 %, SCIEX `.wiff` 10.2 %, `.d` 10.2 %, Waters 7.7 %, netCDF 6.6 %, mzData 1.2 %, MGF 1.1 %, Shimadzu 1.1 %, imzML 0.8 %, LECO 0.4 %.
 - MetaboLights, vendor from protocol text: Thermo 46.6 %, SCIEX 22.9 %, Agilent 14.9 %, Waters 11.7 %, Bruker 6.9 %, LECO 2.7 %, Shimadzu 1.7 %.
@@ -60,14 +60,14 @@ Outcome per file: `L` (F0-F5 against V1 or V2 evidence, see Evidence), `P` (a le
 - Local (Mac): F8 and the files in the big-files folder, with the same test and `MZLAB_DATI_GRANDI=<path>`.
 
 ### F.4 Edge cases (case x format; an empty cell is "no file", to be found)
-- Per-scan calibration / lock mass: Thermo LTQ Velos Pro and XL lock mass; Agilent Q-TOF `MSMassCal.bin`; Waters MTBLS1584, MTBLS178; Bruker temperature per frame.
+- Per-scan calibration / lock mass: Thermo LTQ Velos Pro and XL lock mass; Agilent Q-TOF `MSMassCal.bin`; Waters MTBLS1584, MTBLS178; Bruker temperature per frame; SCIEX and Shimadzu: no file.
 - Vendor centroids against profile: Thermo Q Exactive; SCIEX QTRAP profile (lab); Agilent ST003656 profile + centroids; Waters G2-S; Bruker TSF lines/profile; Shimadzu: no file.
 - Polarity switching: Thermo MTBLS7889, MTBLS1752; SCIEX Zenodo 22673685; Agilent, Waters, Shimadzu: no file.
 - Several scan events or periods: Thermo Tribrid DIA; SCIEX Z15679243 (16 experiments; multiple periods: no file); Agilent time segments; Waters functions; Shimadzu 2020 events.
 - Ion mobility: Thermo FAIMS and SCIEX SelexION: no file; Agilent MTBLS427 6560; Waters Synapt HDMS and cyclic; Bruker timsTOF.
 - Units: Thermo min; SCIEX s or min per experiment; Agilent min; Waters min; Bruker s with normalisation to 100 ms; Shimadzu ms.
 - Format versions: Thermo v57-v66 (count in R-02); SCIEX Analyst 1.4-1.7 / SCIEX OS; Agilent B.0x-12; Waters 4.1/4.2; Bruker timsControl 1-5; Shimadzu 5.x. An unseen version gives an error with the version in `detail`, never a guess.
-- Files over 4 GB: Thermo Astral/large Orbitrap; SCIEX `.wiff.scan` (largest held 1.1 GB); Agilent ST000044 2.1 GB; Waters PXD051707 7.9 GB; Bruker alphatims 1.9 GB.
+- Files over 4 GB: Thermo Astral/large Orbitrap; SCIEX `.wiff.scan` (largest held 1.1 GB); Agilent ST000044 2.1 GB; Waters PXD051707 7.9 GB; Bruker alphatims 1.9 GB; Shimadzu: no file.
 - Several samples per container: SCIEX Z22807392 (20 samples). Truncated or in-acquisition files: Bruker PXD074950 `-wal`; the rest to build. Endianness: all little-endian (Bruker SQLite big-endian).
 
 ## Method
