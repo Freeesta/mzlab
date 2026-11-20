@@ -13,7 +13,7 @@
     row: ["schema", "id", "mz", "rt", "rt_lo", "rt_hi", "charge", "quality", "iso_m1", "ms2", "ident", "cells"], rowQuality: ["shape", "snr", "fwhm", "flags"], rowMs2: ["file", "purity"], rowIdent: ["neutral", "adduct", "sources"], rowCell: ["file", "type", "time", "area", "height", "apex_rt", "width", "state"],
     traces: ["schema", "id", "mz", "ppm", "xic", "ms1", "ms2"], traceXic: ["file", "rt", "y"], traceMs1: ["file", "rt", "mz", "y"], traceMs2: ["file", "prec", "mz", "y"], counts: ["righe", "tenute", "scartate"],
     plausible: ["schema", "rows", "summary", "checks"], plausibleCheck: ["id", "flag", "count", "limit", "rows", "missing"],
-    report: ["crate", "table_sha256", "samples_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
+    report: ["crate", "tabella_sha256", "campioni_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
   /** @type {any} */ let mod = null;

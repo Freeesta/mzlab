@@ -80,8 +80,8 @@
   function provenance(r, p) {
     const q = p || {};
     return `<h2>Provenance</h2><table>${th(["Item", "Value"])}${kv("mzlab-feat", r.crate)}${kv("Rules", q.rules || "not recorded")}${kv("Profile", q.profile || "not recorded")}`
-      + `<tr><th scope="row">Recipe SHA-256</th><td><code>${esc(q.recipe_sha256 || "not recorded")}</code></td></tr><tr><th scope="row">Table SHA-256</th><td><code>${esc(r.table_sha256)}</code></td></tr>`
-      + `<tr><th scope="row">Samples SHA-256</th><td><code>${esc(r.samples_sha256)}</code></td></tr>${(q.inputs || []).map(x => `<tr><th scope="row">Input ${esc(x.name)}</th><td><code>${esc(x.sha256)}</code></td></tr>`).join("")}`
+      + `<tr><th scope="row">Recipe SHA-256</th><td><code>${esc(q.recipe_sha256 || "not recorded")}</code></td></tr><tr><th scope="row">Table SHA-256</th><td><code>${esc(r.tabella_sha256)}</code></td></tr>`
+      + `<tr><th scope="row">Samples SHA-256</th><td><code>${esc(r.campioni_sha256)}</code></td></tr>${(q.inputs || []).map(x => `<tr><th scope="row">Input ${esc(x.name)}</th><td><code>${esc(x.sha256)}</code></td></tr>`).join("")}`
       + `<tr><th scope="row">Date</th><td>${esc(new Date().toISOString().slice(0, 10))}</td></tr></table>`;
   }
 

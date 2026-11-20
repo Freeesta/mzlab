@@ -1,7 +1,7 @@
-// Writes tests/data/molecules_tabui_gold.json: every name that the name box of Tabui (csvRows/getList/suggest of TP_Mine/js/20_tpmine.js, run as they are) finds for
+// Writes tests/data/molecole_tabui_oro.json: every name that the name box of Tabui (csvRows/getList/suggest of TP_Mine/js/20_tpmine.js, run as they are) finds for
 // each query, in its order, as indices of the rows of TP_Mine/data/composti.csv. Only numbers are saved: the queries are rebuilt by the Rust test from the catalogue with
 // the same rule (prefixes of 2, 3 and 5 characters of every name, then 100 inner pieces), so no name is written in the file.
-// Run once, while the old list and the old code exist:  node tools/molecules_gold_tabui.mjs
+// Run once, while the old list and the old code exist:  node tools/molecole_oro_tabui.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -19,7 +19,7 @@ const list = getList();
 // the catalogue, read with the same rule as the Rust test (`;` delimiter, quotes)
 const rows = [];
 {
-  const t = readFileSync(root + "mzlab/web/molecules/catalogue.csv", "utf8");
+  const t = readFileSync(root + "mzlab/web/molecole/catalogo.csv", "utf8");
   let row = [], f = "", q = false;
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
@@ -53,5 +53,5 @@ for (let i = 0; i < 100; i++) {
 }
 const index = new Map(list.map((c, i) => [c, i]));
 const results = queries.map(q => suggest(q).map(c => index.get(c)));
-writeFileSync(root + "tests/data/molecules_tabui_gold.json", JSON.stringify({ rows: list.length, results }) + "\n");
+writeFileSync(root + "tests/data/molecole_tabui_oro.json", JSON.stringify({ righe: list.length, risultati: results }) + "\n");
 console.log(queries.length, "queries,", results.filter(r => r.length).length, "with results");
