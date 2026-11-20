@@ -12,7 +12,7 @@ WORKFLOWS = ("sito-rust", "pages", "release", "notte")
 
 
 def test_data_complete():
-    assert moduli.errori(moduli.carica()) == []
+    assert moduli.errori(moduli.loadScript()) == []
     r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla"], capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
 
@@ -26,7 +26,7 @@ def test_no_cap_in_the_scripts():
 
 def test_every_module_is_built_by_a_script():
     """Every module of part a, b or lettori has a package that exists in the workspace; the manifest keys are unique across the data."""
-    mod = moduli.carica()
+    mod = moduli.loadScript()
     for n, r in mod.items():
         if r["parte"] != "core":
             assert (ROOT / "crates" / r["pacchetto"] / "Cargo.toml").is_file(), n
@@ -37,7 +37,7 @@ def test_every_module_is_built_by_a_script():
 
 def test_workflow_caps_come_from_the_data():
     """The engine and libraries steps of the workflows (and the lab copy of pages.yml) take their cap from the data: no literal, the module name exists."""
-    mod = moduli.carica()
+    mod = moduli.loadScript()
     for wf in [f".github/workflows/{w}.yml" for w in WORKFLOWS] + ["tools/lab/qqq-pages.yml"]:
         testo = (ROOT / wf).read_text(encoding="utf-8")
         for nome, etichetta in (("motore", "engine"), ("librerie", "libraries")):
@@ -90,7 +90,7 @@ def _finto(tmp_path, monkeypatch, byte):
         (dati / f.name).write_bytes(f.read_bytes())
     monkeypatch.setattr(moduli, "DIR", dati)
     static = tmp_path / "static"
-    for r in moduli.carica().values():
+    for r in moduli.loadScript().values():
         w = static / r["uscita"] / f"{r['pacchetto'].replace('-', '_')}_bg.wasm"
         w.parent.mkdir(parents=True, exist_ok=True)
         w.write_bytes(b"\0" * byte)
@@ -99,27 +99,27 @@ def _finto(tmp_path, monkeypatch, byte):
 
 def test_measure_writes_and_a_repeat_changes_nothing(tmp_path, monkeypatch):
     dati, static = _finto(tmp_path, monkeypatch, 1234)
-    assert moduli.misure(moduli.carica(), static) == []
+    assert moduli.misure(moduli.loadScript(), static) == []
     prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
-    assert all(r["misura"] == 1234 for r in moduli.carica().values())
+    assert all(r["misura"] == 1234 for r in moduli.loadScript().values())
     assert all(t.count("misura = ") == 1 for t in prima.values())
-    assert moduli.misure(moduli.carica(), static) == []
+    assert moduli.misure(moduli.loadScript(), static) == []
     assert {f.name: f.read_text() for f in dati.glob("*.toml")} == prima       # the second run gives no diff
-    assert moduli.errori(moduli.carica()) == []
+    assert moduli.errori(moduli.loadScript()) == []
 
 
 def test_measure_does_not_write_if_missing_or_over(tmp_path, monkeypatch):
     dati, static = _finto(tmp_path, monkeypatch, 1234)
     prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
     next(static.rglob("*.wasm")).unlink()
-    assert moduli.misure(moduli.carica(), static)
+    assert moduli.misure(moduli.loadScript(), static)
     assert {f.name: f.read_text() for f in dati.glob("*.toml")} == prima       # nothing half-written
     dati2, static2 = _finto(tmp_path / "b", monkeypatch, 10 ** 8)
-    assert any("not below the cap" in e for e in moduli.misure(moduli.carica(), static2))
+    assert any("not below the cap" in e for e in moduli.misure(moduli.loadScript(), static2))
 
 
 def test_every_module_has_its_measure():
-    assert [n for n, r in moduli.carica().items() if "misura" not in r] == []
+    assert [n for n, r in moduli.loadScript().items() if "misura" not in r] == []
 
 
 def _mod(cap, exception=None):

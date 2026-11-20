@@ -210,7 +210,7 @@ const DDA = (() => {
   function decorate(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag} */ c) {
     try {
       if (p.dda == null && p.duo == null) return;
-      const K = window.DDAMARK; if (!K) { carica("m:dda-marcatori.js").then(() => drawSoon(p), (/** @type {unknown} */ e) => console.info("DDA markers", e)); return; }
+      const K = window.DDAMARK; if (!K) { loadScript("m:dda-marcatori.js").then(() => drawSoon(p), (/** @type {unknown} */ e) => console.info("DDA markers", e)); return; }
       if (p.dda != null) K.ms2(_in, p, g, X, Y, W); else K.full(_in, p, g, X, Y, W, c);
     } catch (e) { console.info("DDA decorate", e); }
   }

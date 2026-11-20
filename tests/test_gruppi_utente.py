@@ -28,7 +28,7 @@ def run(code):
     lf = (WEB / "lista-file.js").read_text(encoding="utf-8")
     gr = (WEB / "gruppi.js").read_text(encoding="utf-8")
     js = STUBS + f"""
-const vm = require("vm"); globalThis.carica = async () => {{}}; globalThis.renderFiles = () => {{}}; globalThis.flush = () => new Promise(r => setTimeout(r, 0));
+const vm = require("vm"); globalThis.loadScript = async () => {{}}; globalThis.renderFiles = () => {{}}; globalThis.flush = () => new Promise(r => setTimeout(r, 0));
 vm.runInThisContext({json.dumps(lf)}); vm.runInThisContext({json.dumps(gr)});
 globalThis.fileRemoval = f => ({{ take() {{ f.gone = true; removed.push(f.file); }}, back() {{}}, free() {{}} }});
 globalThis.E = {{ files: [

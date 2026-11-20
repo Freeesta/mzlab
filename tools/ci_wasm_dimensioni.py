@@ -11,7 +11,7 @@ import moduli  # noqa: E402
 
 def caps() -> dict[str, int]:
     """output folder (relative to site/static) -> cap, from tools/moduli/."""
-    return {r["uscita"]: r["tetto"] for r in moduli.carica().values()}
+    return {r["uscita"]: r["tetto"] for r in moduli.loadScript().values()}
 
 
 def misura(site: Path) -> dict[str, dict]:

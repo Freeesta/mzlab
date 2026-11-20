@@ -12,7 +12,7 @@ FAMIGLIE = ("aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu"
 
 
 def tabella():
-    return {n.removeprefix("lettori-"): r["tetto"] for n, r in moduli.carica().items() if r["parte"] == "lettori"}
+    return {n.removeprefix("lettori-"): r["tetto"] for n, r in moduli.loadScript().items() if r["parte"] == "lettori"}
 
 
 def test_the_families_have_their_data():
@@ -49,7 +49,7 @@ def test_extended_steps_one_list():
     """The extra wasm-opt passes live in tools/wasm_opt.sh only; the readers and the engine/libraries steps of the four workflows name them as `@motore` (the readers use `@estesi`)."""
     sh = (ROOT / "tools/wasm_opt.sh").read_text(encoding="utf-8")
     assert re.search(r'^estesi="--converge .*--low-memory-unused', sh, re.M)
-    assert all(r["wasm_opt"] == "@estesi" for n, r in moduli.carica().items() if r["parte"] == "lettori")
+    assert all(r["wasm_opt"] == "@estesi" for n, r in moduli.loadScript().items() if r["parte"] == "lettori")
     assert "--converge" not in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     for wf in ("pages", "sito-rust", "release", "notte"):
         rows = [r for r in (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8").splitlines() if "tools/wasm_opt.sh site/static" in r]

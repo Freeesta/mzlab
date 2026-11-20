@@ -366,7 +366,7 @@ def wasm_cap(man: dict, key: str) -> int:
     import sys
     sys.path.insert(0, str(ROOT / "tools"))
     import moduli
-    return next(r["tetto"] for r in moduli.carica().values() if key in r.get("chiavi", {}))
+    return next(r["tetto"] for r in moduli.loadScript().values() if key in r.get("chiavi", {}))
 
 def free_port() -> int:
     import socket

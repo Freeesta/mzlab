@@ -205,10 +205,10 @@ function bindListaFile() {
   if (!L.dataset.cap) L.addEventListener("keydown", e => {
     const row = /** @type {HTMLElement} */ (e.target).closest(".fl:not(.pr)");
     if (!row || !(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
-    e.preventDefault(); e.stopPropagation(); carica("gruppi-dnd.js").then(() => GDND.step(row, e.key === "ArrowDown" ? 1 : -1));
+    e.preventDefault(); e.stopPropagation(); loadScript("gruppi-dnd.js").then(() => GDND.step(row, e.key === "ArrowDown" ? 1 : -1));
   });
   L.dataset.cap = "1";
-  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => carica("gruppi.js").then(() => carica("gruppi-per.js")).then(() => GRUPPIPER.open());
+  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => loadScript("gruppi.js").then(() => loadScript("gruppi-per.js")).then(() => GRUPPIPER.open());
   // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
   L.querySelectorAll(".fgh[data-ug]").forEach(x => {
     const el = /** @type {HTMLElement} */ (x), fold = el.onclick, n = el.dataset.ug || "";
@@ -277,7 +277,7 @@ const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.fi
 function groupFiles() {
   const used = new Set(E.files.map(x => x.ugrp)); let n = 1;
   while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
-  carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
+  loadScript("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
 /** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
 const ugFlat = groups => (E.ugBy && E.ugBy.by === "flat") || groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
@@ -293,13 +293,13 @@ function syncGroupBy() {
   const by = document.getElementById("sb-by"); if (!by) return;
   const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GRUPPIPER?.close(false); };
   if (new Set(flSide().map((/** @type {any} */ f) => fileBase(f.file))).size < 2) return show(false);
-  carica("gruppi.js").then(() => GRUPPI.useful()).then(show);
+  loadScript("gruppi.js").then(() => GRUPPI.useful()).then(show);
 }
 // rename and ungroup also reach the labels of the loading table's rows: gruppi.js writes both
-const renameGroup = (/** @type {string} */ n) => carica("gruppi.js").then(() => GRUPPI.rename(n));
+const renameGroup = (/** @type {string} */ n) => loadScript("gruppi.js").then(() => GRUPPI.rename(n));
 function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
   e.stopPropagation();
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => carica("gruppi.js").then(() => GRUPPI.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => loadScript("gruppi.js").then(() => GRUPPI.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
 }
 /** Header of a user group: the markup of the automatic headers of renderFileList, plus the name for its menu (right click, Menu key, Shift+F10) and rename (double click, F2). */
 function ugHead(/** @type {{ g: string, fs: any[] }} */ G, /** @type {boolean} */ open) {

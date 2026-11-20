@@ -65,7 +65,7 @@ Sidebar, tools, tour and hints: `docs/agenti/data-bar.md`.
 - **Panel actions and keyboard menus** (`azioni.js`, after `esperimenti.js`): `docs/agenti/actions.md`.
 - **Smartphone** (`telefono.js` at the top of `index.html`): phone user agent or touch with short side < 500 px (iPad and tablets no; `?telefono=1|0` forces, choice in `sessionStorage` `mzlab.phone`).
   On the phone `carica.js` does NOT download the Data and Drawing scripts, nor the page shell (`shell.js`), nor engine or WASM: `telefono-scheda.js` arrives (card "You are on a smartphone", title + one line + "Open anyway" which reloads with the full site).
-  A new Data script file must be added to the list `L` of `carica.js`, which inserts them with `async=false` (list order), then `shell.js`, then the `m:` modules; `carica(name)` returns a Promise (script loaded only once). In `index.html` only the theme and address fragments stay inline at the top; the start-up veil (`#loading`) is in `avvio.js`. Games (except the oral questions) redirect to the computer.
+  A new Data script file must be added to the list `L` of `carica.js`, which inserts them with `async=false` (list order), then `shell.js`, then the `m:` modules; `loadScript(name)` returns a Promise (script loaded only once). In `index.html` only the theme and address fragments stay inline at the top; the start-up veil (`#loading`) is in `avvio.js`. Games (except the oral questions) redirect to the computer.
 
 - **Errors**: `errori.js` (module, first in the list of `carica.js`) shows every `error` and `unhandledrejection` in a box `#errbox` (`role=alert`, short text `errori.*`, "Copy details" = version, route, stack); `ERRORI.segnala(e, where)` for an error caught by a `catch`. No `alert()`: messages use `info()`/`ask()`.
 

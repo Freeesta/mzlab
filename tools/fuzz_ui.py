@@ -325,7 +325,7 @@ def leak(s, p):
                 b = pg.locator(f"#nav [data-v={v}]")
                 if b.count() and b.first.is_visible(): b.first.click(); s.quiet(20)
             pg.keyboard.press("Shift+?"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)          # the shortcuts panel
-            pg.evaluate("carica('m:molecules-ui.js').then(() => window.MOLDB.open())"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
+            pg.evaluate("loadScript('m:molecules-ui.js').then(() => window.MOLDB.open())"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
             n = pg.evaluate("E.panels.length")                  # a spectrum panel added and closed again
             if pg.locator("#np-spec").first.is_visible():
                 pg.click("#np-spec"); s.quiet(20)

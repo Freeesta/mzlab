@@ -15,7 +15,7 @@ window.DESKDEF = (() => {
     let r;
     try { r = await T().core.invoke("take_opened"); } catch (_) { return; }       // a binary without the command: nothing arrives
     const files = (r && r.files) || [], drawings = (r && r.drawings) || [];
-    if (drawings.length) await carica("predefinito-disegno.js").then(() => window.DESKDEFKET.open(drawings[drawings.length - 1]), () => {});   // lazy: rare
+    if (drawings.length) await loadScript("predefinito-disegno.js").then(() => window.DESKDEFKET.open(drawings[drawings.length - 1]), () => {});   // lazy: rare
     if (files.length && typeof window.MZLAB_TOFILE === "function") {
       for (let i = 0; i < 300 && typeof window.upload !== "function"; i++) await new Promise(ok => setTimeout(ok, 100));
       if (typeof window.upload === "function") window.upload(files.map(window.MZLAB_TOFILE), "data");

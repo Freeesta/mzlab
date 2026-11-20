@@ -2,7 +2,7 @@
 // The cut tool of the Drawing: a cut line drawn across bonds, or the selected bonds, breaks them the way the student chooses: homolytic (default, a
 // radical mark on each end), heterolytic (+ on one piece, − on the other) or the «+H» shorthand. The Rust engine (`cut` of the grafo .wasm, `cut/1`)
 // says which atoms change and how far each piece moves; the page writes that into the .ket (one undo step) and the labels under each piece follow.
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 import { ketIndex } from "./disegno-parziali.js";
 import { dots } from "./disegno-etichette.js";
 
@@ -13,7 +13,7 @@ import { dots } from "./disegno-etichette.js";
 
 /** the cut of a request, or `{error}` with the key the engine gave (`error.grafo.cut.*`), or null when the engine cannot answer */
 export async function cutOf(/** @type {Record<string, any>} */ req) {
-  try { return /** @type {Cut} */ (JSON.parse(await (await carica()).cut(JSON.stringify(req)))); }
+  try { return /** @type {Cut} */ (JSON.parse(await (await loadWasm()).cut(JSON.stringify(req)))); }
   catch (e) { try { return { error: /** @type {string} */ (JSON.parse(String(e)).error_key) }; } catch (_) { return null; } }
 }
 

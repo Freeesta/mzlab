@@ -2,7 +2,7 @@
 // @ts-noany
 "use strict";
 // Body of the library code (libreria.js keeps the stub): the worker supervisor, the folder of the libraries, the «Librerie» window, the downloads
-// and the low-resolution search window. Loaded by carica() on the first use of LIB; window.LIBCORE(S) is called once with the synchronous helpers of the stub.
+// and the low-resolution search window. Loaded by loadScript() on the first use of LIB; window.LIBCORE(S) is called once with the synchronous helpers of the stub.
 window.LIBCORE = (/** @type {Bag} */ S) => {
   const { queryOf, profOf, mirror, whatIs } = S;
   // Supervisor: if the worker dies (a trap of the WebAssembly engine, a lost memory) it is replaced and the request is tried once more; a second death within a

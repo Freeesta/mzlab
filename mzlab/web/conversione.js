@@ -384,7 +384,7 @@ const ConvUI = {
     };
   },
   /** the panel of one conversion inside `box` (conversione-carta.js) */
-  async card(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) { await carica("m:conversione-carta.js"); return /** @type {any} */ (window).CONVCARD(box, sizes, this.stops); },
+  async card(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) { await loadScript("m:conversione-carta.js"); return /** @type {any} */ (window).CONVCARD(box, sizes, this.stops); },
 };
 
 const convMB = (/** @type {number} */ b) => (b / 1048576).toFixed(b >= 1.048576e7 ? 0 : 1);
