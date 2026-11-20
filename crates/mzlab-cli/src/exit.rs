@@ -41,6 +41,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.scan.unknown",
     "err.msn.node",
     "err.mol.draw.not_found",
+    "err.mol.draw.not_found_bare",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
     "err.cli.schema.unknown",

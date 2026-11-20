@@ -1,6 +1,6 @@
 //! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
 //! drawing; `substructure` gives `substructure/1` (`substructure_db/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z;
-//! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene or molfile); `open_file` gives `open/1`, the text the editor reads for a structure file (charset, empty CDXML attributes, binary CDX as base64). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
+//! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene, molfile or SVG; `draw_png` the PNG file); `open_file` gives `open/1`, the text the editor reads for a structure file (charset, empty CDXML attributes, binary CDX as base64). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
 //! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`, `mol draw`, `mol open`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`, `draw`, `open`) run the same
 //! `mzlab_feat::chem` functions. `flow_moiety` is the Flow step `structure.moiety` (`moiety::moiety_text`, the function `flow run` calls).
 //! Errors are JSON `{"error_key", "params"}` strings.
@@ -35,6 +35,12 @@ pub fn substructure(request: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn draw(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::draw::draw_json(request).map_err(js_err)
+}
+
+/// The PNG file of a request `{"spec", "format": "png", ...}` (the picture settings of `draw`), the same bytes as `mzlab-cli mol draw --format png`.
+#[wasm_bindgen]
+pub fn draw_png(request: &str) -> std::result::Result<Vec<u8>, JsValue> {
+    mzlab_feat::chem::draw::draw_bytes(request).map_err(js_err)
 }
 
 /// `sdf/1` text of a request `{"molfile", "format", "ion", "name"}`, the same bytes as `mzlab-cli mol export`.

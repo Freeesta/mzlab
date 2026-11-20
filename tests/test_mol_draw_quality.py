@@ -1,11 +1,12 @@
 """Quality gates of `mzlab-cli mol draw` on the committed synthetic sets (tools/draw_quality.py): set A (200 molecules, 9 families) at least 90 % clean and
 no family below RDKit's own count (tests/dati/draw_reference.json), set B (100 E/Z double bonds) none drawn the wrong way, fragments at least 1.5 bonds apart,
-at most 9 atoms on a bond, the molfile of every drawing read back as the same `mol/1` core (cargo test, crates/mzlab-mol/tests/layout.rs), and the native
+at most 9 atoms on a bond, no two atom or CIP labels of the SVG overlapping and every label inside the image (set A, `draw-image/1`), the molfile of every drawing read back as the same `mol/1` core (cargo test, crates/mzlab-mol/tests/layout.rs), and the native
 release p95 of one layout (measured and printed; the limit is 1 ms, asserted with a x3 margin because CI machines are shared)."""
 import json
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -61,6 +62,32 @@ def test_no_double_bond_of_set_b_is_drawn_the_wrong_way(cli_built):
     assert len(rows) == 100
     wrong = [i for i, smi, ez in rows if dq.ez_wrong(dq.scene_measure(scene(smi))[0], ez)]
     assert wrong == []
+
+
+def picture(smiles):
+    p = subprocess.run([str(CLI), "mol", "draw", "smiles:" + smiles, "--format", "svg", "--json"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert p.returncode == 0, (smiles, p.stderr)
+    return json.loads(p.stdout)
+
+
+def test_no_labels_of_the_svg_overlap_in_set_a_and_all_are_inside_the_image(cli_built):
+    rows = dq.read_set("draw_set_a")
+    assert len(rows) == 200
+    bad = []
+    for _id, smi, _fam in rows:
+        img = picture(smi)
+        assert list(img)[0] == "schema" and img["schema"] == "draw-image/1" and img["format"] == "svg"
+        root = ET.fromstring(img["svg"])
+        assert root.tag.endswith("svg") and int(root.get("width")) == img["width_px"] and int(root.get("height")) == img["height_px"]
+        boxes = [(l["left_px"], l["top_px"], l["right_px"], l["bottom_px"]) for l in img["labels"]]
+        for i, b in enumerate(boxes):
+            if b[0] < 0 or b[1] < 0 or b[2] > img["width_px"] or b[3] > img["height_px"]:
+                bad.append((smi, "outside", img["labels"][i]["text"]))
+            for j in range(i):
+                c = boxes[j]
+                if b[0] < c[2] and c[0] < b[2] and b[1] < c[3] and c[1] < b[3]:
+                    bad.append((smi, "overlap", img["labels"][i]["text"], img["labels"][j]["text"]))
+    assert bad == [], bad[:5]
 
 
 def test_the_molfile_of_every_drawing_reads_back_as_the_same_record():

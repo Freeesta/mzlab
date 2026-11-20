@@ -14,6 +14,8 @@ mod drawing;
 mod elements;
 mod kekule;
 mod layout;
+/// The layout's own sine, cosine and angle (no libm): the 2D drawing code of `mzlab-feat` uses them so its bytes match in the `.wasm`.
+pub use layout::trig;
 mod model;
 mod molfile;
 mod molfile_stereo;

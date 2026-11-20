@@ -1,4 +1,4 @@
-# `mol draw`: own 2D layout and the `draw/1` scene (`mzlab-mol::layout`, `mzlab-feat::chem::draw`)
+# `mol draw`: own 2D layout, the `draw/1` scene, SVG and PNG pictures (`mzlab-mol::layout`, `mzlab-feat::chem::draw*`)
 
 A structure written as text (SMILES, molfile, a name or InChIKey of the molecule database) becomes a drawing: coordinates in angstrom, bond length 1.5, the same on the site (molkit `.wasm`), in the app (`feat/grafo`, `kind:"draw"`) and in the CLI (`mzlab-cli mol draw`). No code of other toolkits; RDKit is only the yardstick of the tests (`tools/draw_quality.py`, never a dependency).
 
@@ -23,7 +23,7 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 (an InChIKey with several rows in the db; the first is drawn, the names are listed). In molfile mode the CLI prints them on stderr as `choice: key = value` and `warning: ...`.
 
 ## CLI (`crates/mzlab-cli/src/mol_draw_cmd.rs`)
-`mzlab-cli mol draw SPEC [--set format=molfile|scene] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--out PATH] [--json]`. Plain output is the molfile; `--json` is the scene (`--json` with `--set format=molfile` is a usage error). SPEC is `-` for stdin; a path that exists is read.
+`mzlab-cli mol draw SPEC [--format molfile|scene|svg|png] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--set scale=PX] [--set cip=on|off] [--set highlight=LIST] [--out PATH] [--json]`. Plain output is the molfile; `--json` is the scene, or with svg/png the `draw-image/1` wrapper (`--json` with `--format molfile` is a usage error). `--set format=` still works. SPEC is `-` for stdin; a path that exists is read.
 
 | exit | meaning |
 |---|---|
@@ -31,7 +31,7 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 | 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`) |
 | 2 | unparseable SMILES, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
 | 4 | missing or unreadable file or db, a molfile or request that cannot be read (`err.mol.draw.molfile\|request`), a file with no `M  END` |
-| 5 | not in the db (`err.mol.draw.not_found`, hint: the nearest names) |
+| 5 | not in the db (`err.mol.draw.not_found` with the nearest names in the hint, or `err.mol.draw.not_found_bare` when none is near) |
 | 6 | unwritable `--out` |
 
 Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|smiles|molfile|needDb|inchi|db|not_found|tooBig` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
@@ -50,8 +50,16 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 
 What stays unclean: bridged and spiro cage molecules (cubane and adamantane types: ring-angle error 13-20 degrees, some crossings); RDKit draws the same ones unclean. `python3 tools/draw_quality.py --report` prints the table.
 
+## Pictures (`chem/draw_build.rs` figure, `draw_label.rs`, `draw_cip.rs`, `draw_hl.rs`, `draw_svg.rs`, `draw_png.rs`, `draw_font.rs`)
+One display list (lines, polygons, discs, stroked text) in pixels, built once from the layout and written twice: as SVG text and as PNG pixels, so both show the same figure. Only `+ - * /` and `sqrt` are used (angles from `mzlab_mol::trig`, numbers written with `mzlab_mol::fixed`), so site, app and CLI give the same bytes. No font file: the text is drawn with an own stroke font (small capitals for lowercase); the PNG is 4x4 supersampled RGB with stored zlib blocks.
+- Request keys: `format` (`svg`, `png`), `scale` (pixels per angstrom, 8 to 80, default 24), `cip` (`on`/`off`: R/S marks of stereocentres, E/Z of double bonds, both from the record), `highlight` (`0,1,0-1@red;5@blue`, or a JSON list: atoms, bonds `a-b`, a colour name: red orange yellow green cyan blue purple pink gray), `json` (wrap as `draw-image/1`).
+- Labels: carbon is a vertex unless charged, isotopic or alone; every other atom shows its symbol with its hydrogens (`OH`, `H2N`, `NH3+`), the hydrogens on the side without bonds; bonds stop at the label; wedges are solid, hashed or wavy; CIP marks (R/S/r/s, E/Z) go into the free angle beside their atom or bond; highlights are pale halos under the structure.
+- `draw-image/1` (`docs/schemi/draw-image-1.json`) lists every label box in image pixels, so a caller can check overlaps; `tests/test_mol_draw_quality.py` does it on the 200 molecules of set A (no overlap, all inside the image).
+- A picture over 4096 px on a side is drawn at a smaller scale instead (`choices`: `scale_reduced`, no refusal); the `images` of `draw_d1.json` include that case.
+
 ## Parity and tests
-`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
+`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives.
+`images` holds picture requests with options (scale, CIP, highlights, the wrapper): the SVG text, and for a PNG its length and CRC-32. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
 
 ## Large molecules
 The size limit (2000 atoms) is checked before any layout work. The cleaning step counts its own steps and stops at a fixed budget (never a clock, so the bytes stay the same everywhere); when it stops, `choices` carries `layout_budget`. Native release: 650- and 1950-atom polyphenylenes and 1900-atom chains draw in 0.18 s median, 0.26 s at most (before the budget: 23 s and over 300 s).

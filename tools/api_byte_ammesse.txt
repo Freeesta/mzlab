@@ -20,3 +20,5 @@ run_massacc.rs::table
 lib.rs::import_official
 # table of a table.filter view: no larger than the table the page already holds; the worker hands it straight to flow_group or flow_drift (F.liveJobs.tableOf)
 lib.rs::flow_table_of_view
+# mol draw PNG: one picture (stored zlib blocks, about 3 bytes per pixel: some hundred KB for a molecule), handed once to the page for a Blob; same bytes as the CLI
+lib.rs::draw_png
