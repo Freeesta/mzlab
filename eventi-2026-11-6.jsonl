@@ -24822,3 +24822,11 @@
 {"v":1,"ts_utc":"2026-11-20T17:11:54Z","azione":"push","titolo":"Use is_ok_and in the XIC emptiness check (clippy unnecessary_map_or)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3610,"sha":"b17c930e5c469f45b4526f7e0ce34ae8976eabe6"}
 {"v":1,"ts_utc":"2026-11-20T17:13:42Z","azione":"push","titolo":"release: macOS aarch64 mzlab-cli and a byte-for-byte smoke job","merge_main":false,"aree":{"workflow":1,"docs":3,"test":2,"tools":2},"tipo":"pr","pr":3614,"sha":"21f1ffeecde6f738023009692b137cb1a183b46f"}
 {"v":1,"ts_utc":"2026-11-20T17:34:04Z","azione":"push","titolo":"spectrum get: --minus FILE [--minus-sample ID] [--minus-rt A,B] subtracts a blank spectrum","merge_main":false,"aree":{"rust":8,"docs":2,"web":1},"tipo":"pr","pr":3616,"sha":"cf7ac8cde69b4535ffc57d6794abbb165e374a83"}
+{"v":1,"ts_utc":"2026-11-20T18:08:48Z","tipo":"conflitto","pr":3618,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c","pr_unita":3615,"file_comuni":["crates/mzlab-cli/src/dad_cmd.rs","crates/mzlab-cli/src/dad_tests.rs","docs/agenti/dad.md"],"n_file_comuni":3,"file_conflitto":["crates/mzlab-cli/src/dad_cmd.rs","crates/mzlab-cli/src/dad_tests.rs","docs/agenti/dad.md"]}
+{"v":1,"ts_utc":"2026-11-20T18:08:51Z","tipo":"conflitto_risolto","pr":3614,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c"}
+{"v":1,"ts_utc":"2026-11-20T18:08:51Z","tipo":"conflitto_risolto","pr":3612,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c"}
+{"v":1,"ts_utc":"2026-11-20T18:08:52Z","tipo":"conflitto_risolto","pr":3610,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c"}
+{"v":1,"ts_utc":"2026-11-20T18:08:53Z","tipo":"conflitto_risolto","pr":3609,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c"}
+{"v":1,"ts_utc":"2026-11-20T18:08:56Z","tipo":"conflitto","pr":3607,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c","pr_unita":3615,"file_comuni":["crates/mzlab-cli/src/dad_cmd.rs","crates/mzlab-cli/src/dad_tests.rs","docs/agenti/dad.md"],"n_file_comuni":3,"file_conflitto":["docs/agenti/dad.md"]}
+{"v":1,"ts_utc":"2026-11-20T18:08:57Z","tipo":"conflitto_risolto","pr":3586,"sha":"d5ed4746872de64a0d5921d8d517aa337539429c"}
+{"v":1,"ts_utc":"2026-11-20T18:12:33Z","tipo":"coda","k":"2026-11-20T18:12:33Z","aperte":12,"indietro":9,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":49793,"piu_vecchia_verde_s":null}
