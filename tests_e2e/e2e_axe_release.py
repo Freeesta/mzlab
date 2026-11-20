@@ -57,9 +57,6 @@ try:
             pg.click("#nav [data-v=flow]"); wait_for_js(pg, "!!document.querySelector('#flx-root .flx-bar')", 60000); axe_minor(pg, "flow")
         step("axe moderate/minor: Flow, light and dark", flow)
         step("axe moderate/minor: Drawing outside the Ketcher iframe, light and dark", lambda: axe_minor(pg, "draw", ["#kframe"]))
-        def tabui():
-            pg.click("#nav [data-v=tpmine]"); wait_for_js(pg, "!!document.querySelector('#tp-name')", 60000); axe_minor(pg, "tpmine")
-        step("axe moderate/minor: Tabui, light and dark", tabui)
         def tour():
             q = r.b.new_page(viewport={"width": 1500, "height": 1100}, reduced_motion="reduce")
             try:

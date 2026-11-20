@@ -169,7 +169,7 @@ jobs:
           if-no-files-found: ignore
 
   # The .wasm of the built site (engine, libraries, readers, mzFinder) as the three jobs of sito-rust.yml build them, with the same caches (the run on main fills them):
-  # without them the parts of `completa` would run on a site with only the engine (e2e_tpmine_rust, e2e_uv_spettro and the like fail for it).
+  # without them the parts of `completa` would run on a site with only the engine (e2e_uv_spettro and the like fail for it).
   sito:
     if: inputs.solo == ''
     name: sito (${{ matrix.parte }})

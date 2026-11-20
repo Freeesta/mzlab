@@ -1,4 +1,4 @@
-"""Writes docs/azioni.md, the encyclopedia of the actions that change state, from COMANDI_TAB in mzlab/web/comandi.js (never by hand).
+"""Writes docs/actions.md, the encyclopedia of the actions that change state, from COMANDI_TAB in mzlab/web/comandi.js (never by hand).
 
     python3 tools/doc_commands.py          # rewrite the page
     python3 tools/doc_commands.py --check  # exit 1 if the page is not the one the table gives (tests/test_comandi.py)
@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import lang_catalog  # noqa: E402
 JS = ROOT / "mzlab" / "web" / "comandi.js"
-OUT = ROOT / "docs" / "azioni.md"
+OUT = ROOT / "docs" / "actions.md"
 UNDO = {
     "istantanea": "undo with a snapshot (storia.js)", "comando": "command: do / undo handler (comandi.js)", "tolto": "removal with its own undo / redo (STORIA.tolto)",
     "layout": "arrangement of the panels (affianca.js)", "flow": "own stack of the Flow (S.undo)", "draw": "own stack of the editor (Ketcher)",

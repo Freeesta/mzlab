@@ -1,5 +1,5 @@
 //! `check/1`: what is wrong in a drawing, never in data. The page sends the molfile of the canvas; the answer lists warnings (valence, charge,
-//! isotope, wedges, aromatic rings that cannot alternate, query atoms, separate pieces), each with a code that names its `draw.check.*` texts
+//! isotope, wedges, aromatic rings that cannot alternate or whose hydrogen the reader placed, query atoms, separate pieces), each with a code that names its `draw.check.*` texts
 //! and the atoms (0-based, molfile order) to highlight. Valence rules come from `mzlab-mol` (the ones of its SMILES reader), isotopes from the
 //! nuclide table of `mzlab-core`. Same bytes in the grafo `.wasm`, the app (`feat/grafo`, `kind: "check"`) and `mzlab-cli mol check`.
 
@@ -188,6 +188,10 @@ pub fn check_json(request: &str) -> Result<String> {
     }
     if !d.kekule {
         out.push(Warning::new("kekule", "warn", d.arom_atoms.clone()));
+    }
+    if !d.aromatic_h.is_empty() {
+        // an automatic choice of the reader, said so that the user can move the hydrogen
+        out.push(Warning::new("aromaticH", "note", d.aromatic_h.clone()));
     }
     atoms(&d, &mut out);
     isotopes(&d, &mut out);

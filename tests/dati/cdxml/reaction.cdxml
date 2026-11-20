@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML CreationProgram="synthetic fixture" LabelFont="3" LabelSize="10"><fonttable><font id="3" charset="iso-8859-1" name="Arial"/></fonttable><colortable><color r="1" g="1" b="1"/><color r="0" g="0" b="0"/></colortable><page id="1"><fragment
+ id="10"
+><n
+ id="11"
+ p="75.06 114.40"
+/><n
+ id="12"
+ p="100.00 100.00"
+/><n
+ id="13"
+ p="100.00 71.20"
+ Element="8"
+/><n
+ id="14"
+ p="124.94 114.40"
+ Element="8"
+/><b
+ id="15"
+ B="11"
+ E="12"
+/><b
+ id="18"
+ B="12"
+ E="13"
+ Order="2"
+/><b
+ id="21"
+ B="12"
+ E="14"
+/></fragment><fragment
+ id="24"
+><n
+ id="25"
+ p="165.06 104.80"
+/><n
+ id="26"
+ p="190.00 90.40"
+/><n
+ id="27"
+ p="214.94 104.80"
+ Element="8"
+/><b
+ id="28"
+ B="25"
+ E="26"
+/><b
+ id="31"
+ B="26"
+ E="27"
+/></fragment><fragment
+ id="34"
+><n
+ id="35"
+ p="473.56 81.64"
+/><n
+ id="36"
+ p="450.91 99.43"
+/><n
+ id="37"
+ p="455.00 127.94"
+ Element="8"
+/><n
+ id="38"
+ p="424.18 88.71"
+ Element="8"
+/><n
+ id="39"
+ p="401.54 106.50"
+/><n
+ id="40"
+ p="374.80 95.78"
+/><b
+ id="41"
+ B="35"
+ E="36"
+/><b
+ id="44"
+ B="36"
+ E="37"
+ Order="2"
+/><b
+ id="47"
+ B="36"
+ E="38"
+/><b
+ id="50"
+ B="38"
+ E="39"
+/><b
+ id="53"
+ B="39"
+ E="40"
+/></fragment><arrow id="56" FillType="None" ArrowheadHead="Full" ArrowheadType="Solid" HeadSize="1000" ArrowheadCenterSize="875" ArrowheadWidth="250" Head3D="320 100 0" Tail3D="245 100 0"/><t id="58" p="270 90" LabelJustification="Left"><s font="3" size="10">H+</s></t><scheme id="59"><step id="57" ReactionStepReactants="10 24" ReactionStepProducts="34" ReactionStepArrows="56"/></scheme></page></CDXML>

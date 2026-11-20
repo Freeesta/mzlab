@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML
+ id="1"
+ BondLength=""
+><page
+ id="2"
+><fragment
+ id="3"
+><n
+ id="4"
+ p="0 -44.14"
+ Isotope="13"
+/><n
+ id="5"
+ p="28.80 -44.14"
+ Element="8"
+/><n
+ id="6"
+ p="117.08 -106.54"
+ Element="1"
+ Isotope="2"
+/><n
+ id="7"
+ p="92.14 -92.14"
+/><n
+ id="8"
+ p="67.20 -106.54"
+ Element="17"
+/><n
+ id="9"
+ p="92.14 -63.34"
+ Element="17"
+/><n
+ id="10"
+ p="241.88 0"
+ Element="9"
+ Isotope="18"
+/><n
+ id="11"
+ p="213.08 0"
+/><n
+ id="12"
+ p="198.68 -24.94"
+/><n
+ id="13"
+ p="169.88 -24.94"
+/><n
+ id="14"
+ p="155.48 0"
+/><n
+ id="15"
+ p="169.88 24.94"
+/><n
+ id="16"
+ p="198.68 24.94"
+/><b
+ id="17"
+ B="4"
+ E="5"
+/><b
+ id="18"
+ B="6"
+ E="7"
+/><b
+ id="19"
+ B="7"
+ E="8"
+/><b
+ id="20"
+ B="7"
+ E="9"
+/><b
+ id="21"
+ B="10"
+ E="11"
+/><b
+ id="22"
+ B="11"
+ E="12"
+ Order="2"
+/><b
+ id="23"
+ B="12"
+ E="13"
+/><b
+ id="24"
+ B="13"
+ E="14"
+ Order="2"
+/><b
+ id="25"
+ B="14"
+ E="15"
+/><b
+ id="26"
+ B="15"
+ E="16"
+ Order="2"
+/><b
+ id="27"
+ B="16"
+ E="11"
+/></fragment></page></CDXML>

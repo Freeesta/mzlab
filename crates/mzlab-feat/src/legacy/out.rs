@@ -1,4 +1,4 @@
-//! The JSON of `api.run` (HR) and `api.detail` that `TP_Mine/js/21_tpmine_hr.js` reads, and the inclusion list, written from a `Dig`.
+//! The JSON of `api.run` (HR) and `api.detail` that the former page read, and the inclusion list, written from a `Dig`.
 
 use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};

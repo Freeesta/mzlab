@@ -1,34 +1,9 @@
 // @ts-strict
-// TPMINE-PRIVATE  Tabui base: the helpers, the styles, the worker with its calls, the files of the Data tab and the small charts (used by 20_tpmine.js).
+// TPMINE-PRIVATE  Engine worker of the page (mzFinder): starts tpmine-worker.js and gives the other scripts `window.TPCALL(fn, ...args)` (the identities of the feature tables, the proofs of the origin of an ion).
 (() => {
   "use strict";
   const ctx = () => QTOOLS.ctx;
-  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal of the neighbours at ±1, ±2 Da and of the decoys at ±0.5 Da">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
-  const fmtA = v => /** @type {any} */ (window).TPTAB ? /** @type {any} */ (window).TPTAB.area(v) : String(Math.round(v));   // engineering notation, e.g. 821.43e+6
-  /** the same sample read from two sources (Data tab, chosen files) has one key: base name, no .mzML (repeated or not), lower case @param {string} n */
-  const fileKey = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/(\.mzml)+$/i, "").toLowerCase();
-  /** @param {string} n the name shown in a row: without the extension */
-  const fileLabel = n => String(n || "").replace(/(\.mzml)+$/i, "");
-  const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
-  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
-  /** the reactivity of the parent as told by TPREATT (`tp-reatt`): the heavy atoms with the highest Prev. f(−) go in the summary @type {{ smiles: string, atoms: any[] }|null} */
-  let fukR = null;
-  const fukHtml = () => {
-    const host = document.getElementById("tp-reatt");
-    if (!fukR || !host || host.dataset.smiles !== fukR.smiles) return "";
-    const top = fukR.atoms.filter(a => a.heavy_index != null && Number.isFinite(+a.f_minus)).sort((a, b) => b.f_minus - a.f_minus).slice(0, 3);
-    if (!top.length) return "";
-    const txt = top.map(a => `${esc(a.el)}${a.heavy_index + 1} ${(+a.f_minus).toFixed(3)}`).join(" · ");
-    return `<span class="hc" data-k="fukui"${/** @type {any} */ (window).TPHELP ? ' data-tt="ft.sum.fukui"' : ""} tabindex="0" aria-label="Prev. Fukui f minus, highest heavy atoms: ${txt}"><span class="hl">Prev. f(−)</span> <b>${txt}</b></span>`;
-  };
-  window.addEventListener("tp-reatt", (/** @type {any} */ e) => {
-    const d = e.detail || {};
-    fukR = d.reatt && Array.isArray(d.reatt.atoms) ? { smiles: d.smiles, atoms: d.reatt.atoms } : null;
-    const h = document.getElementById("tp-fuk"); if (h) h.innerHTML = fukHtml();
-  });
-  const LAB = { forte: "strong", possibile: "possible", debole: "weak", progenitore: "parent" };
-
+  // styles of the `.tp` views (tables, row panels): Flow views wrap their content in `.tp`, so they are added once with the package
   const CSS = `
 .tp{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start;padding:12px 16px}
 @media(max-width:1000px){.tp{grid-template-columns:1fr}}
@@ -52,7 +27,6 @@
 .tp .err{color:var(--bad)}.tp [aria-invalid="true"]{border:2px solid var(--bad);box-shadow:inset 4px 0 0 var(--bad)}.tp .row>.grow-in{flex:1;width:auto;min-width:0}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
-#qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
 .hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 18px}
 .tp .hero-b{min-width:0}.tp .hero h2{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}.tp .hero-i{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px}.tp #tp-cnt{display:contents}
 .tp .hero .hc{display:inline-flex;gap:4px;align-items:baseline;box-sizing:border-box;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:12px}.tp .hero .hl{color:var(--muted);font-size:12px}.tp .hero b{font-variant-numeric:tabular-nums}.tp .hero .hn{font-weight:600;border-color:transparent;padding-left:0}
@@ -87,7 +61,7 @@
 
 
 @media(prefers-reduced-motion:reduce){.tp *{animation:none!important;transition:none!important}}`;
-
+  if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
   // ---------------------------------------------------------------- worker and calls
   let worker = null, ready = null, seq = 0;
   const pending = new Map();
@@ -128,9 +102,9 @@
   }
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
-  window.TPCALL = call;                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
-  const callRaw = async (fn, ...args) => { await startWorker(); return send({ type: "call", fn, args }); };
-  window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
+  window.TPCALL = call;
+  // hands the bytes of a file to the engine worker (the desktop shim test uses it: the page that did this with a file chooser is gone)
+  call.put = async (/** @type {string} */ name, /** @type {ArrayBuffer} */ buf) => { await startWorker(); return send({ type: "put", name, buf }, [buf]); };                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
   const mzmls = new Map();                  // the mzML written for a sample (once, for the use that needs it: Pyodide, a profile sample to reduce)
@@ -147,84 +121,4 @@
     if (!mzmls.has(name)) mzmls.set(name, rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null);
     return mzmls.get(name);
   }
-  async function opfsFiles() {        // the files of the Data tab kept by the Rust engine (low resolution): OPFS mzlab/files/, as File objects (never read whole here)
-    try {
-      const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
-      const out = [];
-      for await (const [name, h] of /** @type {any} */ (d).entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: f, nat: !!(await stubOf(f)) }); }
-      return out;
-    } catch (_) { return []; }
-  }
-  async function pageFiles() {
-    const o = await opfsFiles(), have = new Set(o.map(f => fileKey(f.name)));
-    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it. A sample kept by both is one file
-    return o.concat((await idbFiles()).filter(f => !have.has(fileKey(f.name)))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
-  }
-  async function idbFiles() {
-    try {
-      // "qqq_lab" is the name of the browser database (kept from the old name: renaming it would lose the users' data)
-      const dbName = NOMI.DB;
-      if (!indexedDB.databases || !(await indexedDB.databases()).some(d => d.name === dbName)) return [];
-      return await new Promise(res => {
-        const r = indexedDB.open(dbName);
-        r.onerror = () => res([]);
-        r.onsuccess = () => {
-          const db = r.result;
-          if (!db.objectStoreNames.contains("files")) { db.close(); return res([]); }
-          const tx = db.transaction("files", "readonly"), s = tx.objectStore("files"), ks = s.getAllKeys(), vs = s.getAll();
-          tx.oncomplete = () => { db.close(); res(ks.result.map((k, i) => ({ name: String(k), buf: vs.result[i] })).filter(f => f.buf && /\.mzml$/i.test(f.name))); };
-          tx.onerror = () => { db.close(); res([]); };
-        };
-      });
-    } catch (_) { return []; }
-  }
-
-  // ---------------------------------------------------------------- charts (plain canvas)
-  function hue(i, n) { return `hsl(${Math.round(220 - 220 * (n > 1 ? i / (n - 1) : 0))},70%,45%)`; }
-  function chart(cv, series, o = {}) {
-    const dpr = devicePixelRatio || 1, w = cv.clientWidth || 400, h = cv.clientHeight || 210;
-    cv.width = w * dpr; cv.height = h * dpr;
-    const g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
-    const M = { l: 52, r: 10, t: 10, b: 30 }, pw = w - M.l - M.r, ph = h - M.t - M.b;
-    let x0 = Infinity, x1 = -Infinity, y1 = 0;
-    for (const s of series) s.x.forEach((x, i) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y1 = Math.max(y1, s.y[i]); });
-    if (o.x0 != null) x0 = o.x0; if (o.x1 != null) x1 = o.x1; if (!(x1 > x0)) { x0 -= 1; x1 += 1; } if (!(y1 > 0)) y1 = 1;
-    const X = x => M.l + (x - x0) / (x1 - x0) * pw, Y = y => M.t + ph - y / (y1 * 1.05) * ph;
-    const css = getComputedStyle(document.documentElement), ink = css.getPropertyValue("--muted") || "#666", line = css.getPropertyValue("--line") || "#ddd";
-    g.font = "11px system-ui"; g.fillStyle = ink; g.strokeStyle = line; g.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) { const v = y1 * 1.05 * i / 4, y = Y(v); g.beginPath(); g.moveTo(M.l, y); g.lineTo(w - M.r, y); g.stroke(); g.textAlign = "right"; g.fillText(fmtA(v), M.l - 4, y + 3); }
-    const step = niceStep((x1 - x0) / 6);
-    for (let v = Math.ceil(x0 / step) * step; v <= x1 + 1e-9; v += step) { g.textAlign = "center"; g.fillText(+v.toFixed(2), X(v), h - M.b + 14); }
-    g.textAlign = "center"; g.fillText(o.xlabel || "", M.l + pw / 2, h - 3);
-    if (o.shade) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(o.shade[0]), M.t, X(o.shade[1]) - X(o.shade[0]), ph); }
-    for (const s of series) {
-      g.strokeStyle = s.color; g.lineWidth = s.w || 1.4; g.setLineDash(s.dash || []); g.beginPath();
-      s.x.forEach((x, i) => i ? g.lineTo(X(x), Y(s.y[i])) : g.moveTo(X(x), Y(s.y[i]))); g.stroke(); g.setLineDash([]);
-      if (s.dots) { g.fillStyle = s.color; s.x.forEach((x, i) => { g.beginPath(); g.arc(X(x), Y(s.y[i]), 3, 0, 7); g.fill(); }); }
-      if (s.hollow) {                                         // points that are not found peaks (filled areas): an open circle, never a dot
-        const bg = css.getPropertyValue("--panel") || "#fff"; g.lineWidth = 1.8;
-        s.hollow.forEach(i => { g.beginPath(); g.arc(X(s.x[i]), Y(s.y[i]), 3.6, 0, 7); g.fillStyle = bg; g.fill(); g.stroke(); });
-      }
-    }
-    g.strokeStyle = ink; g.strokeRect(M.l, M.t, pw, ph);
-  }
-  function niceStep(r) { const p = Math.pow(10, Math.floor(Math.log10(r))), m = r / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
-  const spark = k => {
-    if (!k.length) return ""; const mx = Math.max(...k.map(p => p.area)) || 1, w = 70, h = 18;
-    const pts = k.map((p, i) => `${(i / Math.max(1, k.length - 1) * (w - 4) + 2).toFixed(1)},${(h - 2 - p.area / mx * (h - 4)).toFixed(1)}`).join(" ");
-    return `<svg width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
-  };
-
-  /** the worker is stopped for good (Cancel that did not answer); false when none runs. The caller starts a new one */
-  const killWorker = () => {
-    if (!worker) return false;
-    worker.terminate(); worker = null; ready = null;
-    for (const p of pending.values()) p.rej(new Error("Cancelled"));
-    pending.clear();
-    return true;
-  };
-  /** @param {(t?: any, f?: any, m?: any) => any} f who shows the progress of the worker (the open tab) */
-  const setProgress = f => { onProgress = f; };
-  window.TPBASE = { ctx, esc, specHtml, fmtA, fileKey, fileLabel, TYPES, KINDS, fukHtml, LAB, CSS, startWorker, send, call, callRaw, killWorker, setProgress,
-    mzmls, stubOf, asked, opfsFiles, pageFiles, idbFiles, hue, chart, niceStep, spark };
 })();

@@ -15,7 +15,7 @@ try:
         U = f"http://127.0.0.1:{r.port}/"
         def desktop():
             assert not pg.evaluate("document.documentElement.classList.contains('phone')")
-            # Tabui is hidden from the navigation on purpose (app.css, TABUI_VISIBLE): Data, Drawing, Flow
+            # the navigation shows three tabs: Data, Drawing, Flow
             assert pg.evaluate("[...document.querySelectorAll('#nav button')].filter(b => b.offsetParent !== null).map(b => b.dataset.v)") == ["data", "draw", "flow"] and pg.is_hidden("#phone")
         step("computer: three tabs, no phone card", desktop)
         for vw, vh, tag in [(390, 844, "portrait"), (844, 390, "landscape")]:
