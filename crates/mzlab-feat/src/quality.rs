@@ -95,6 +95,10 @@ fn median(v: &mut [f64]) -> f64 {
     }
 }
 
+/// The estimator named beside the S/N of this module (`min_snr` of `features.detect`).
+pub const SNR_ESTIMATOR: &str =
+    "apex over the flank median, divided by 1.4826 MAD of the raw flanks";
+
 /// (baseline, noise) from the flanks `y[..lo]` and `y[hi+1..]` without the points above half of the apex (the shoulder of a neighbouring
 /// ion or the tail of the peak itself is signal, not noise); without three flank points the edges give the baseline.
 fn flank_noise(y: &[f64], lo: usize, hi: usize, floor: f64) -> (f64, f64) {

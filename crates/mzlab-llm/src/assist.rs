@@ -1,5 +1,5 @@
 //! The subagents of the data assistant as data: `data/assist/assist-roles-1.json` says which prompt, model, effort and output limit each role has, and the
-//! prompt files (fetched by the page, never part of the program) are exact copies of the blocks of `docs/studi/assistente-dati/prompt/`. Nothing about a model is written in the code. Used by the agent.
+//! prompt files (fetched by the page, never part of the program) live in `crates/mzlab-llm/data/assist/`. Nothing about a model is written in the code. Used by the agent.
 //! With the provider of the public demo (`DEMO_PROVIDER`) every output limit is the smaller `demo_*` one, the cap the proxy enforces per role.
 
 use mzlab_core::budget::sha256_hex;

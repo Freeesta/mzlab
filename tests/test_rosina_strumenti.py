@@ -218,7 +218,7 @@ def test_the_metadata_map_covers_every_row_of_the_cards():
         name = tab.stem.removeprefix("SCHEDA_").lower()
         inside = False
         for row in tab.read_text(encoding="utf-8").splitlines():
-            if row.startswith("| Campo del produttore"):
+            if row.startswith("| Vendor field"):
                 inside = True
             elif inside and row.startswith("|---"):
                 continue

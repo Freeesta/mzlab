@@ -1,6 +1,6 @@
 # Flow measurements by input format
 
-Time of index → detect → align → gapfill on 12 synthetic files (1365 scans, 185544 peaks each, series of `tools/dati_sintetici.py`) rewritten in the format to be tested with `tools/measure_formats.py genera`; `tools/measure_formats.py misura BIN DIR...` makes a single `mzlab-cli flow run` with 4 workers and sums the per-instance `ms` of `prov.json`. Binary `--profile cli`, main `3e5dd52cc51d6b74305af40a1558a4de0d387e8a`, 4 CPUs, no SHA-NI, files in the system cache (a cold cache cannot be obtained in the container); the noise between two runs is ±15 %.
+Time of index → detect → align → gapfill on 12 synthetic files (1365 scans, 185544 peaks each, series of `tools/dati_sintetici.py`) rewritten in the format to be tested with `tools/measure_formats.py genera`; `tools/measure_formats.py misura BIN DIR...` makes a single `mzlab-cli flow run` with 4 workers and sums the per-instance `ms` of `prov.json`. Binary `--profile cli`, 4 CPUs, no SHA-NI, files in the system cache (a cold cache cannot be obtained in the container); the noise between two runs is ±15 %.
 
 | format | MB | index s | detect s | align s | gapfill s | total s (wall) | MB/s (wall) | index MB/s per core |
 |---|---|---|---|---|---|---|---|---|
@@ -15,7 +15,7 @@ Time of index → detect → align → gapfill on 12 synthetic files (1365 scans
 How to read the columns: the seconds per step are the sum over the 12 instances (CPU time, not wall time); "total" is the wall time of the whole run with 4 workers; "index MB/s per core" is MB / index s. (*) The .cdf is written by a CDF1 encoder in `measure_formats.py` (it is not an instrument file) and has no analyser: the detection recipe is the unit-resolution one, so detect, align and gapfill are NOT comparable with the other rows; only the index column is valid.
 
 ## The worst and why
-- **Slowest: mzXML with zlib, index step, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profile (callgrind, one file): `MzxmlReader::completa` runs 3 times for every scan (from `scansione`, `indice` and `cromatogramma`, 21 % each of the total) and every time it decodes base64 and inflates the peaks; in addition memset/memcpy 24 %, character search and UTF-8 conversion 12 %, SHA-256 + SHA-1 of the file 26 % (in mzML the SHA-1 is gone, and without SHA-NI the cost here is overestimated).
+- **Slowest: mzXML with zlib, index step, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profile (callgrind, one file): `MzxmlReader::complete` runs 3 times for every scan (from `scansione`, `indice` and `cromatogramma`, 21 % each of the total) and every time it decodes base64 and inflates the peaks; in addition memset/memcpy 24 %, character search and UTF-8 conversion 12 %, SHA-256 + SHA-1 of the file 26 % (in mzML the SHA-1 is gone, and without SHA-NI the cost here is overestimated).
 - The detect step is the same for all centroided formats (0.44-0.51 s): the format weighs only on the index.
 - Align and gapfill do not depend on the format.
 
@@ -28,12 +28,12 @@ How to read the columns: the seconds per step are the sum over the 12 instances 
 | index (TIC of the MS2: decoding of every frame) | 423 | — |
 | BPC | 245 | — |
 | all spectra | 910 | — |
-| mzML (`readers_mzml::scrivi`, new open) | 1 610 | 6 040 |
+| mzML (`readers_mzml::scrivi`, reopened file) | 1 610 | 6 040 |
 
-- Profile (callgrind, 88 frames, all phases): frame decoding is 50 % of the instructions and zstd is 58 % of that; the deflate of the written mzML 33 %. The merge by TOF index (11-bit radix of 1024 points, `spettri::sort_tof`) and the cut by scans (offset `Picchi::inizio`) weigh less than 10 %, against the 41 % of point-by-point sorting and filtering that was there before (same measures: index 670 → 423 ms, BPC 335 → 245, all spectra 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8.97 → 6.04 s, same SHA-256).
+- Profile (callgrind, 88 frames, all phases): frame decoding is 50 % of the instructions and zstd is 58 % of that; the deflate of the written mzML 33 %. The merge by TOF index (11-bit radix of 1024 points, `sort_tof` in `crates/mzlab-lettori/src/bruker/spectra.rs`) and the cut by scans weigh less than 10 %; point-by-point sorting and filtering (41 % of the instructions) is not used.
 - The index step decodes every PASEF frame once for the TIC of the MS2, and the conversion decodes them again: the double pass remains.
 
-## Not measured (the files of Federico's Mac are needed)
+## Not measured (real files from the lab are needed)
 Thermo .raw (our reader), Agilent .D, real Bruker .d, SCIEX .wiff/.wiff.scan, instrument .cdf and MGF: the container has no real files and no converters. The ratio with mzmine (series 23-29: 0.56-0.64) has no number in the repository, so it is not reported.
 
 ## Loading multi-sample SCIEX files (.wiff + .wiff.scan)

@@ -73,7 +73,12 @@ fn atom_line(line: &str) -> Result<(DraftAtom, i8, u8), MolError> {
 
 pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
     let counts = lines.get(3).copied().unwrap_or("");
-    let (na, nb) = (int(counts, 0, 3)? as usize, int(counts, 3, 6)? as usize);
+    // a negative count would wrap into a huge one
+    let count = |a, b| {
+        usize::try_from(int(counts, a, b)?)
+            .map_err(|_| fail(format!("the counts line {counts:?} has a negative count")))
+    };
+    let (na, nb) = (count(0, 3)?, count(3, 6)?);
     if lines.len() < 4 + na + nb {
         return Err(fail(
             "the atom and bond blocks are shorter than the counts line says",
@@ -176,7 +181,8 @@ fn property_pairs(line: &str, na: usize) -> Result<Vec<(usize, i32)>, MolError> 
                 .map_err(|_| fail(format!("{t:?} in property line {line:?}")))
         })
         .collect::<Result<_, _>>()?;
-    let n = nums.first().copied().unwrap_or(0) as usize;
+    let n = usize::try_from(nums.first().copied().unwrap_or(0))
+        .map_err(|_| fail(format!("property line {line:?} has a negative count")))?;
     let mut out = Vec::new();
     for k in 0..n {
         let (Some(&a), Some(&v)) = (nums.get(1 + 2 * k), nums.get(2 + 2 * k)) else {

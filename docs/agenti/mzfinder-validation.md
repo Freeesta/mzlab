@@ -3,7 +3,7 @@ The mzFinder core is in `mzfinder.md`. Tests: `tests/test_valida_tp.py`, `tests/
 
 - **Command**: `python3 tools/validate_feat.py` with one mode among `--cancello`, `--cancello-tp`, `--lr`, `--hr` (sections below); validation of the Rust engine tables is done by the gates.
   The truth (`{parent{mz,ion,rt_obs}, tps[{id,mz,ion,rt_obs[]}]}`) lives only in the private repository and is passed on the command line; none of it enters the public repository.
-- **Tables** (`tabelle.py`): `trova_serie` lists the files of the series; `leggi_mzmine` reads the CSV export (`row m/z`, `row retention time`, `datafile:<F>:area` or `<F> Peak area`) on the columns of the series.
+- **Tables** (`tabelle.py`): `find_series` lists the files of the series; `read_mzmine` reads the CSV export (`row m/z`, `row retention time`, `datafile:<F>:area` or `<F> Peak area`) on the columns of the series.
 - **Metrics** (`metriche.py`): rows and rows per file; sensitivity (thresholds `floor` and `min_height` × 0.8 and × 1.2); time and peak memory; rows present in the blanks.
 - **Isotopologues** (`isotopologhi.py`): reference peaks M, M+1, M+2 from the truth formula (the most abundant fine isotopologue of each nominal group, XIC ±5 ppm from the file where M is strongest); only those with height ≥ `min_height` count;
   completeness per table and relative error of M+1/M against the formula, on the table and on the reference traces.
@@ -29,9 +29,9 @@ The mzFinder core is in `mzfinder.md`. Tests: `tests/test_valida_tp.py`, `tests/
 - **Command** (the reference measurement uses `--debole 0.006`, the synthetic products at 3-10× the noise): `python3 tools/validate_feat.py --cancello [--serie CARTELLA --verita V.json] [--mzmine T.csv] [--sintetico piccolo|completo] [--seme N] [--debole F] [--data AAAA-MM-GG] [--lavoro DIR] [--cancello-json FILE] [--senza-wasm]`.
   - Builds `mzlab-feat-wasm --example native` (the site pipeline) on every series and writes `TP_Mine/data/cancello.json` (`cancello/2`: `crate_version`, `data`, `vista_tabella`, `vista_candidati`, `concordanza_mzmine`, `criteri[] {id, valore, soglia, ok}`).
   - In `--lavoro` it writes `cancello_rapporto.json` and `.md` with all the numbers: the report with the real series stays in `.verifica/`, only aggregate numbers and versions go in the public repository.
-  - The file is deterministic (sorted keys: same version, same data and same `--data`, same bytes); `valido(c, crate)` is the rule of `validated` in `PIPE.gateState`.
+  - The file is deterministic (sorted keys: same version, same data and same `--data`, same bytes); `valid(c, crate)` is the rule of `validated` in `PIPE.gateState`.
 - **Rule**: `vista_candidati` is true only if all criteria of `ID_RICHIESTI` are present and `ok` (thresholds unchanged); `vista_tabella` (L1-L7 table and exports) only if those of `ID_TABELLA` are (rows, recall, area, noise false positives, isomers, determinism), a subset of the former:
-  the criteria on kinetics, families, ISF, decoys and purity close only the candidates. `valido` and `valido_tabella` also read `cancello/1` (the table follows `vista_candidati`).
+  the criteria on kinetics, families, ISF, decoys and purity close only the candidates. `valid` and `valid_table` also read `cancello/1` (the table follows `vista_candidati`).
   - null `ok` = not measured: it closes the gate for the required ones, not for `mzmine_*` (optional: the CSV is missing) nor for `prestazioni_*` (speed and memory are not measured, by project decision).
   - Without a real series the four `timololo_*` stay not measured and the gate stays closed.
 - **Real series** (13 files and truth; the parent is the one of the truth, with its `smiles` if the truth gives it: the native example passes it as the page does, `--smiles`, and the breakage fragments and groups come from it; without `smiles` the breakage hypotheses are missing):
@@ -60,11 +60,11 @@ The mzFinder core is in `mzfinder.md`. Tests: `tests/test_valida_tp.py`, `tests/
 - **Synthetic series** (always, IDs `lr_sint_*`): full scan `TP_Mine/tests/lr_synth.py` and 6-level MRM (`lr_sintetici.py`). **Real series** (IDs `lr_*`): `B_MRM-*`, `B_FullMass-*` + `B_MS2-*` under `--serie-lr` or `$MZLAB_DATI/mzML`; the full-scan parent comes from the `parent` of `--verita`.
   Without a folder or without a parent the criteria stay null `ok` ("skipped", never "passed") and the view stays closed.
 - **Engine**: `nativo.esegui` (`mzlab-feat-wasm --example native`, recipe chosen on the first index as the site does) for the full scan, `--example native_mrm` for MRM (`lr_nativo.py`); times from the names `-t30`/`_t30` become `_t30min`.
-- **Full-scan reference**: the synthetic full scan is compared with the frozen ions of the old Python engine (`tests/golden/finder_lr_riferimento.json`: `forte`/`possibile` rows that are not the parent, extracted m/z): agreement within tolerances, never numerical parity.
+- **Full-scan reference**: the synthetic full scan is compared with the frozen ions of the Python reference engine (`tests/golden/finder_lr_riferimento.json`: `forte`/`possibile` rows that are not the parent, extracted m/z): agreement within tolerances, never numerical parity.
   On the real series there is no public reference: the full-scan criteria stay not measured and only determinism is measured.
 - **MRM** (`lr_criteri.criteri_mrm`): `lr_mrm_rilevate_livelli` = 1 (every transition with at least one detection in the standards is DETECTED at all levels above the lowest), `lr_mrm_area_cresce` ≥ 0.90 (Spearman = 1 over the detected levels),
   `lr_mrm_stati_coerenti` = 1 in the `-t*` files (detected or filled = finite area > 0, absent = no area, no targeted cell, every row with a detection). The log-log R² is reported in the details, it is not a criterion.
-- **Full scan** (`criteri_fullscan`): `lr_ioni_python_in_tabella` ≥ 0.95 (every frozen ion has a row at ±0.35 Da and ±0.25 min), `lr_candidati_con_prove` = 1 (candidate = identity with formula; evidence = at least one "in favour" contribution, all with type, sign and source),
+- **Full scan** (`criteria_fullscan`): `lr_ioni_python_in_tabella` ≥ 0.95 (every frozen ion has a row at ±0.35 Da and ±0.25 min), `lr_candidati_con_prove` = 1 (candidate = identity with formula; evidence = at least one "in favour" contribution, all with type, sign and source),
   `lr_isomeri_due_righe` = 1 (pairs with valley < 50 %: in the synthetics from the Gaussians, on real data not measured). `lr_determinismo` = 1: two runs, same SHA-256 of the containers.
 - **Rule**: `vista_tabella_lr` is true only if all criteria (real and synthetic) are measured and pass; thresholds are not tuned on the TPs or on the standards, a failing criterion reports its number.
 
