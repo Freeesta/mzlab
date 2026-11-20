@@ -12,26 +12,8 @@ use super::edit_op::fail;
 /// Bonds and atoms a V2000 molfile can count, the only form a wedge round trip is done in.
 const V2000_MAX: usize = 999;
 
-/// The record the slots and bonds make, with the stereo that survived; the second list is what was dropped.
-fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
-    let at: BTreeMap<u32, u32> = ed
-        .slots
-        .iter()
-        .enumerate()
-        .map(|(i, s)| (s.id, i as u32))
-        .collect();
-    let bonds = ed
-        .bonds
-        .iter()
-        .map(|&(a, b, o)| {
-            let (x, y) = (at[&a], at[&b]);
-            mzlab_mol::Bond {
-                a: x.min(y),
-                b: x.max(y),
-                o,
-            }
-        })
-        .collect();
+/// The stereo elements that survive the patch, renumbered, and the ids of the ones dropped.
+fn keep_stereo(d: &Drawn, ed: &Ed, at: &BTreeMap<u32, u32>) -> (Vec<Stereo>, Vec<String>) {
     let (mut dropped, mut stereo) = (Vec::new(), Vec::new());
     let hit = |x: u32| ed.sets.shape.contains(&x) || !at.contains_key(&x);
     for s in &d.mol.stereo {
@@ -85,6 +67,30 @@ fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
             }
         }
     }
+    (stereo, dropped)
+}
+
+/// The record the slots and bonds make, with the stereo that survived; the second list is what was dropped.
+fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
+    let at: BTreeMap<u32, u32> = ed
+        .slots
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.id, i as u32))
+        .collect();
+    let bonds = ed
+        .bonds
+        .iter()
+        .map(|&(a, b, o)| {
+            let (x, y) = (at[&a], at[&b]);
+            mzlab_mol::Bond {
+                a: x.min(y),
+                b: x.max(y),
+                o,
+            }
+        })
+        .collect();
+    let (stereo, dropped) = keep_stereo(d, ed, &at);
     let kept: BTreeSet<u32> = stereo
         .iter()
         .filter_map(|s| {
