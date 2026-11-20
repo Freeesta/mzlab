@@ -58,6 +58,7 @@ I18N.add("en", {
   "err.session.none": "No session open.",
   "err.origin.needFullScan": "Full scan files are needed.",
   "err.scan.none": "No scan in this file.",
+  "err.spectrum.minus": "The engine cannot subtract the blank from this spectrum (a profile level its index cannot answer, or a bin of zero).",
   "err.scan.unknown": "Scan {id} does not exist in this file.",
   "err.scan.mrm": "This file is MRM: it contains only transition chromatograms, no scans.",
   "err.scan.range": "Invalid scan range: i0 is greater than i1.",
