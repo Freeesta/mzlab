@@ -155,6 +155,23 @@ fn check_route_gives_the_bytes_of_the_fixture() {
             fx["check"].as_str().unwrap()
         );
     }
+    // the hydrogen of an aromatic ring: unstated it is reported with its atom, stated (`MRV_IMPLICIT_H`) it is counted by `selection/1` too
+    for (kind, request, answer) in [
+        ("check", "aromatic_request", "aromatic_check"),
+        ("check", "stated_request", "stated_check"),
+        ("sel", "stated_request", "stated_sel"),
+    ] {
+        let mut req = fx[request].clone();
+        if kind == "check" {
+            req = json!({"molfile": req["molfile"]});
+        }
+        let p = json!({"kind": kind, "request": req});
+        assert_eq!(
+            text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+            fx[answer].as_str().unwrap(),
+            "{answer}"
+        );
+    }
     let bad = st.rpc(
         "feat/grafo",
         &json!({"kind": "check", "request": {"molfile": "x"}}),

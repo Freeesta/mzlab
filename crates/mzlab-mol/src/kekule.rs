@@ -111,7 +111,12 @@ pub(crate) fn assign(
         }
     }
     let needs = |i: usize, extra_h: u32| {
-        in_ring[i] && needs_double(atoms[i].el, atoms[i].chg, total[i] + atoms[i].h + extra_h)
+        in_ring[i]
+            && needs_double(
+                atoms[i].el,
+                atoms[i].chg,
+                total[i].saturating_add(atoms[i].h).saturating_add(extra_h),
+            )
     };
     let needy: Vec<bool> = (0..n).map(|i| needs(i, 0)).collect();
     let pairs: Vec<(usize, usize)> = aromatic.iter().map(|&i| ends[i]).collect();
@@ -144,7 +149,9 @@ pub(crate) fn assign(
         } else {
             two.any(same)
         };
-        Some((doubles, if choice { given } else { Vec::new() }))
+        let mut given = if choice { given } else { Vec::new() };
+        given.sortm();
+        Some((doubles, given))
     })?;
     for &i in &aromatic {
         let (f, t) = ends[i];
