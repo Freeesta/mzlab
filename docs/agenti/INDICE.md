@@ -79,6 +79,8 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |
 | user lists (transformations, adducts, suspects: CSV with per-row errors, `liste/1`, SHA-256 for `prov/1`) | `docs/agenti/lists.md` |
 | LLM assistant and external agents: principles, choices, risks, unrealized proposals | `docs/agenti/llm-choices.md` |
+| LLM assistant evaluation: case sets (G/U/R/smoke), metrics, thresholds, `mzlab-cli llm eval`, red-team attack classes (`tests/data/assist/`) | `docs/agenti/llm-eval.md` |
+| LLM assistant parameter proposals: `param-proposal/1`, signals, rule ids `R-*`, acquisition-to-plan table (`params_rules*.rs`) | `docs/agenti/llm-params.md` |
 | subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `tools/1` catalog) | `docs/agenti/llm-subagents.md` |
 | LLM assistant: `tools/1` catalog | `docs/agenti/llm.md` |
 | map of the open path of every file (click → screen, site and app, by format), strategies present/absent, file batches for external assistants (`tools/batch_gemini.py`) | `docs/agenti/map-loading.md` |

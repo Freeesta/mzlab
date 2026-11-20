@@ -1,5 +1,5 @@
 //! The series sections of `inspection/1`: `qc/1` (the signals the QC files share, how their RT and area move with the order of injection, and the
-//! `rt_gap` rule R-rt-1 of `docs/studi/assistente-dati/03-parametri.md`) and the blank check (signals of a blank that no other file has). Plain
+//! `rt_gap` rule R-rt-1 of `docs/agenti/llm-params.md`) and the blank check (signals of a blank that no other file has). Plain
 //! arithmetic on the strongest traces the engine already found; the model reads these numbers and never computes them. Used by `inspect`.
 
 use mzlab_core::json::Value;
