@@ -1,11 +1,16 @@
 //! `open/1`: a structure file as the text the Draw editor (Ketcher, with Indigo inside) reads, and what was changed on the way. No format is
-//! parsed. Two changes to the text are made, each reported in `changes`: UTF-16 and 8-bit text is decoded as its byte-order mark or XML
+//! parsed. These changes to the text are made, each reported in `changes`: UTF-16 and 8-bit text is decoded as its byte-order mark or XML
 //! declaration says, and the attributes with an empty value are dropped from the start tags of a CDXML text (RDKit writes `BondLength=""` on
 //! the root and Indigo then draws nothing, without an error). Binary CDX (starts with `VjCD`) is passed on as base64, unchanged. Same bytes in
 //! the molkit `.wasm`, the app (`feat/grafo`, `kind: "open"`) and `mzlab-cli mol open`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out};
+use std::collections::BTreeSet;
+
+#[path = "structure_charset.rs"]
+mod charset;
+use charset::{declare_utf8, decode};
 
 const CDX_MAGIC: &[u8] = b"VjCD";
 
@@ -14,6 +19,8 @@ const CDX_MAGIC: &[u8] = b"VjCD";
 pub enum Change {
     /// The text was decoded as this charset (not plain UTF-8).
     Charset(String),
+    /// This many characters were not valid in the charset of the file and are replaced by U+FFFD.
+    Replaced(usize),
     /// These attribute names, each once in order of first sight, were dropped for having an empty value.
     Empty(Vec<String>),
 }
@@ -25,232 +32,280 @@ pub struct Opened {
     pub changes: Vec<Change>,
 }
 
-/// Drops the attributes with an empty value from every start tag of a CDXML text (a quoted value may hold `>`, `<` or the other quote; comments
-/// and CDATA sections are left as they are). Other text comes back unchanged. The names are each once, in order of first sight.
+/// Drops the attributes with an empty value from every start tag of a CDXML text, one pass and linear in the length: the root element must be
+/// `CDXML` (any other text comes back unchanged); comments, CDATA sections, processing instructions and the DOCTYPE with its internal subset are
+/// copied as they are; a quoted value may hold `>`, `<` or the other quote and is never edited. Text that never closes a comment, CDATA section,
+/// declaration or quote is malformed: the rest is copied unchanged. The names are each once, in order of first sight.
 pub fn tidy_cdxml(text: &str) -> (String, Vec<String>) {
-    let is_cdxml = text.match_indices("<CDXML").any(|(i, m)| {
-        matches!(text.as_bytes().get(i + m.len()), Some(b) if b.is_ascii_whitespace() || *b == b'>')
-    });
-    if !is_cdxml {
-        return (text.to_string(), Vec::new());
-    }
-    let (mut out, mut removed, mut i) = (String::with_capacity(text.len()), Vec::new(), 0);
+    let (mut out, mut removed, mut i, mut root) =
+        (String::with_capacity(text.len()), Vec::new(), 0, false);
+    let mut seen = BTreeSet::new(); // the names in `removed`, for a lookup that stays fast with many distinct names
     while i < text.len() {
         let rest = &text[i..];
-        if !rest.starts_with('<') {
-            let k = rest.find('<').unwrap_or(rest.len());
-            out.push_str(&rest[..k]);
-            i += k;
-            continue;
+        let k = rest.find('<').unwrap_or(rest.len());
+        out.push_str(&rest[..k]);
+        i += k;
+        let rest = &text[i..];
+        if rest.is_empty() {
+            break;
         }
         match markup(rest) {
-            Some((n, true)) => {
-                out.push_str(&strip_empty(&rest[..n], &mut removed));
-                i += n;
-            }
-            Some((n, false)) => {
+            Markup::Skip(n) => {
                 out.push_str(&rest[..n]);
                 i += n;
             }
-            None => {
+            Markup::Tag(n) => {
+                let tag = &rest[..n];
+                if !root {
+                    root = true;
+                    if !is_root(tag) {
+                        out.push_str(rest);
+                        return (out, removed);
+                    }
+                }
+                out.push_str(&strip_empty(tag, &mut removed, &mut seen));
+                i += n;
+            }
+            Markup::Text => {
                 out.push('<'); // not markup: the text goes on after the bracket
                 i += 1;
+            }
+            Markup::Unclosed => {
+                out.push_str(rest);
+                break;
             }
         }
     }
     (out, removed)
 }
 
-/// The comment, CDATA section (`false`) or start tag (`true`) that `s` begins with, and its length.
-fn markup(s: &str) -> Option<(usize, bool)> {
-    for (open, close) in [("<!--", "-->"), ("<![CDATA[", "]]>")] {
-        if let Some(rest) = s.strip_prefix(open) {
-            return rest
-                .find(close)
-                .map(|k| (open.len() + k + close.len(), false));
-        }
-    }
-    tag_len(s).map(|n| (n, true))
+/// What a `<` begins.
+enum Markup {
+    /// A comment, CDATA section, processing instruction or declaration, of this length: copied.
+    Skip(usize),
+    /// A start tag of this length.
+    Tag(usize),
+    /// Just a bracket in the text.
+    Text,
+    /// A construct that never closes: the rest of the text is copied as it is.
+    Unclosed,
 }
 
-/// The length of the start tag that `s` begins with (`<` and a letter, then quoted values and any other character but `<` and `>`), or `None`.
-fn tag_len(s: &str) -> Option<usize> {
-    let b = s.as_bytes();
-    if !b.get(1)?.is_ascii_alphabetic() {
-        return None;
+fn skip_to(s: &str, from: usize, close: &str) -> Markup {
+    s[from..]
+        .find(close)
+        .map_or(Markup::Unclosed, |k| Markup::Skip(from + k + close.len()))
+}
+
+fn markup(s: &str) -> Markup {
+    if s.starts_with("<!--") {
+        return skip_to(s, 4, "-->");
     }
-    let mut i = 2;
-    loop {
-        match *b.get(i)? {
-            q @ (b'"' | b'\'') => i += s[i + 1..].find(q as char)? + 2,
-            b'<' => return None,
-            b'>' => return Some(i + 1),
+    if s.starts_with("<![CDATA[") {
+        return skip_to(s, 9, "]]>");
+    }
+    if s.starts_with("<?") {
+        return skip_to(s, 2, "?>");
+    }
+    if s.starts_with("<!") {
+        return declaration(s);
+    }
+    tag_len(s)
+}
+
+/// A `<!...>` declaration (the DOCTYPE with an internal subset in brackets, quoted literals and comments inside it).
+fn declaration(s: &str) -> Markup {
+    let b = s.as_bytes();
+    let (mut i, mut depth) = (2, 0usize);
+    while i < b.len() {
+        match b[i] {
+            q @ (b'"' | b'\'') => match s[i + 1..].find(q as char) {
+                Some(k) => i += k + 2,
+                None => return Markup::Unclosed,
+            },
+            b'[' => {
+                depth += 1;
+                i += 1;
+            }
+            b']' => {
+                depth = depth.saturating_sub(1);
+                i += 1;
+            }
+            b'<' if s[i..].starts_with("<!--") => match s[i + 4..].find("-->") {
+                Some(k) => i += k + 7,
+                None => return Markup::Unclosed,
+            },
+            b'>' if depth == 0 => return Markup::Skip(i + 1),
             _ => i += 1,
         }
     }
+    Markup::Unclosed
 }
 
-/// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it); a quoted value is never read as an attribute.
-fn strip_empty(tag: &str, removed: &mut Vec<String>) -> String {
-    let (b, mut out, mut p, mut copied) = (tag.as_bytes(), String::new(), 0, 0);
+/// The start tag that `s` begins with (`<` and a letter, then quoted values and any other character but `<` and `>`).
+fn tag_len(s: &str) -> Markup {
+    let b = s.as_bytes();
+    if !b.get(1).is_some_and(u8::is_ascii_alphabetic) {
+        return Markup::Text;
+    }
+    let mut i = 2;
+    while let Some(&c) = b.get(i) {
+        match c {
+            q @ (b'"' | b'\'') => match s[i + 1..].find(q as char) {
+                Some(k) => i += k + 2,
+                None => return Markup::Unclosed, // no closing quote anywhere after: nothing later is well formed
+            },
+            b'<' => return Markup::Text,
+            b'>' => return Markup::Tag(i + 1),
+            _ => i += 1,
+        }
+    }
+    Markup::Text
+}
+
+pub(super) const NAME_CHARS: &[u8] = b"_.:-";
+
+pub(super) fn name_end(b: &[u8], mut i: usize) -> usize {
+    while b
+        .get(i)
+        .is_some_and(|c| c.is_ascii_alphanumeric() || NAME_CHARS.contains(c))
+    {
+        i += 1;
+    }
+    i
+}
+
+pub(super) fn blanks(b: &[u8], mut i: usize) -> usize {
+    while b.get(i).is_some_and(u8::is_ascii_whitespace) {
+        i += 1;
+    }
+    i
+}
+
+/// Whether the start tag is the `CDXML` root.
+fn is_root(tag: &str) -> bool {
+    let b = tag.as_bytes();
+    let e = name_end(b, 1);
+    &tag[1..e] == "CDXML"
+}
+
+/// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it). The tag is read left to right in
+/// tokens, a quoted string is skipped whole wherever it stands, so a quoted value is never read as attributes. An attribute glued to a dropped
+/// one (`a=""b=""`, no white space: malformed XML) is dropped too, so a second pass finds nothing more; a kept one gets one blank in front.
+fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>) -> String {
+    let b = tag.as_bytes();
+    let (mut out, mut copied, mut p) = (String::new(), 0, name_end(b, 1));
+    let mut owed = false;
     while p < b.len() {
-        let Some((end, name, empty)) = attribute(tag, p) else {
-            p += 1;
+        let start = blanks(b, p);
+        match b.get(start) {
+            None | Some(b'>') => break,
+            Some(&q @ (b'"' | b'\'')) => {
+                // a quoted string that is no attribute's value
+                p = tag[start + 1..]
+                    .find(q as char)
+                    .map_or(b.len(), |k| start + k + 2);
+                continue;
+            }
+            _ => {}
+        }
+        let end = name_end(b, start);
+        if end == start {
+            p = start + 1; // any other character
+            continue;
+        }
+        let eq = blanks(b, end);
+        if b.get(eq) != Some(&b'=') || (start == p && p != copied) {
+            p = eq.max(end);
+            continue;
+        }
+        let open = blanks(b, eq + 1);
+        let Some(&q) = b.get(open).filter(|c| **c == b'"' || **c == b'\'') else {
+            p = open;
             continue;
         };
-        if empty {
-            out.push_str(&tag[copied..p]);
-            copied = end;
-            if !removed.iter().any(|n| n == name) {
+        let close = open + 1 + tag[open + 1..].find(q as char).unwrap_or(b.len());
+        if close == open + 1 {
+            keep(&mut out, &tag[copied..p], &mut owed);
+            copied = close + 1;
+            // the token right after it (`a=""x="1"`) must not fuse with what came before: one blank is owed to it
+            owed = b
+                .get(close + 1)
+                .is_some_and(|c| !c.is_ascii_whitespace() && *c != b'>' && *c != b'/');
+            let name = &tag[start..end];
+            if seen.insert(name.to_string()) {
                 removed.push(name.to_string());
             }
         }
-        p = end;
+        p = close + 1;
     }
-    out.push_str(&tag[copied..]);
+    keep(&mut out, &tag[copied..], &mut owed);
     out
 }
 
-/// The attribute that starts with the white space at `p`: where it ends, its name, and whether its value is empty.
-fn attribute(tag: &str, p: usize) -> Option<(usize, &str, bool)> {
-    let b = tag.as_bytes();
-    let blanks = |mut i: usize| {
-        while b.get(i).is_some_and(u8::is_ascii_whitespace) {
-            i += 1;
+/// Adds kept text to the output, after the blank that is owed to it.
+fn keep(out: &mut String, text: &str, owed: &mut bool) {
+    if !text.is_empty() {
+        if std::mem::take(owed) {
+            out.push(' ');
         }
-        i
-    };
-    let start = blanks(p);
-    if start == p
-        || !b
-            .get(start)
-            .is_some_and(|c| c.is_ascii_alphabetic() || *c == b'_')
-    {
-        return None;
-    }
-    let mut end = start;
-    while b
-        .get(end)
-        .is_some_and(|c| c.is_ascii_alphanumeric() || b"_.:-".contains(c))
-    {
-        end += 1;
-    }
-    let eq = blanks(end);
-    if b.get(eq) != Some(&b'=') {
-        return None;
-    }
-    let open = blanks(eq + 1);
-    let q = *b.get(open).filter(|c| **c == b'"' || **c == b'\'')?;
-    let close = open + 1 + tag[open + 1..].find(q as char)?;
-    Some((close + 1, &tag[start..end], close == open + 1))
-}
-
-/// The text of the bytes and its charset (`""` for plain UTF-8), read as the byte-order mark or the XML declaration says.
-fn decode(bytes: &[u8]) -> (String, String) {
-    if bytes.starts_with(&[0xff, 0xfe]) || bytes.starts_with(&[0xfe, 0xff]) {
-        let le = bytes[0] == 0xff;
-        let units = bytes[2..].chunks_exact(2).map(|c| {
-            if le {
-                u16::from_le_bytes([c[0], c[1]])
-            } else {
-                u16::from_be_bytes([c[0], c[1]])
-            }
-        });
-        let mut text: String = char::decode_utf16(units)
-            .map(|r| r.unwrap_or('\u{fffd}'))
-            .collect();
-        if bytes.len() % 2 == 1 {
-            text.push('\u{fffd}'); // an odd byte at the end is no character
-        }
-        return (text, "UTF-16".to_string());
-    }
-    if let Ok(s) = std::str::from_utf8(bytes) {
-        return (s.to_string(), String::new());
-    }
-    let declared = declared_charset(bytes);
-    let named = declared.as_deref().unwrap_or("windows-1252");
-    match named.to_ascii_lowercase().as_str() {
-        "utf-8" | "utf8" => (
-            String::from_utf8_lossy(bytes).into_owned(),
-            named.to_string(),
-        ),
-        "iso-8859-1" | "iso8859-1" | "iso_8859-1" | "latin1" | "l1" | "us-ascii" | "ascii"
-        | "windows-1252" | "cp1252" | "x-cp1252" => (windows_1252(bytes), named.to_string()),
-        // a charset this reader has no table for: windows-1252, named as such in the notice
-        _ => (windows_1252(bytes), "windows-1252".to_string()),
+        out.push_str(text);
     }
 }
 
-/// The `encoding` of the XML declaration at the start of the bytes (first 200 read as one byte per character), as written.
-fn declared_charset(bytes: &[u8]) -> Option<String> {
-    let head: String = bytes[..bytes.len().min(200)]
-        .iter()
-        .map(|&b| char::from(b))
-        .collect();
-    let decl = head.trim_start().strip_prefix("<?xml")?;
-    let decl = &decl[..decl.find('>').unwrap_or(decl.len())];
-    let hits: Vec<usize> = decl.match_indices("encoding=").map(|(i, _)| i).collect();
-    hits.into_iter().rev().find_map(|i| {
-        let after = decl[i + "encoding=".len()..].strip_prefix(['"', '\''])?;
-        let n = after.find(|c: char| !(c.is_ascii_alphanumeric() || "_.:-".contains(c)))?;
-        (n > 0 && after[n..].starts_with(['"', '\''])).then(|| after[..n].to_string())
-    })
-}
+/// The largest structure file read (8 MiB): the engine runs on the page thread of the site, and no drawing file comes near it.
+pub const MAX_BYTES: usize = 8 << 20;
 
-/// windows-1252 (the web's reading of ISO-8859-1 and US-ASCII too): bytes 0x80-0x9F are the printable characters, never controls.
-fn windows_1252(bytes: &[u8]) -> String {
-    const HIGH: [char; 32] = [
-        '\u{20ac}', '\u{81}', '\u{201a}', '\u{192}', '\u{201e}', '\u{2026}', '\u{2020}',
-        '\u{2021}', '\u{2c6}', '\u{2030}', '\u{160}', '\u{2039}', '\u{152}', '\u{8d}', '\u{17d}',
-        '\u{8f}', '\u{90}', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}', '\u{2022}', '\u{2013}',
-        '\u{2014}', '\u{2dc}', '\u{2122}', '\u{161}', '\u{203a}', '\u{153}', '\u{9d}', '\u{17e}',
-        '\u{178}',
-    ];
-    bytes
-        .iter()
-        .map(|&b| {
-            if (0x80..0xa0).contains(&b) {
-                HIGH[usize::from(b - 0x80)]
-            } else {
-                char::from(b)
-            }
-        })
-        .collect()
-}
-
-/// An XML declaration that names UTF-16 for text that is UTF-8 now names UTF-8.
-fn declare_utf8(text: &str) -> String {
-    let mut from = 0;
-    while let Some(k) = text[from..].find("<?xml") {
-        let at = from + k;
-        let end = text[at..].find('>').map_or(text.len(), |e| at + e);
-        if let Some(e) = text[at..end]
-            .rfind("encoding=")
-            .map(|e| at + e + "encoding=".len())
-            && text[e..end].starts_with(['"', '\''])
-        {
-            let v = e + 1;
-            let n = text[v..end].find(['"', '\'']).unwrap_or(end - v);
-            return format!("{}UTF-8{}", &text[..v], &text[v + n..]);
-        }
-        from = at + 5;
+/// Refuses a file of this size (`error.open.tooBig`, the real size and the limit in the error): the one test the engine, the CLI (from the file
+/// metadata) and the site (from `file.size`, before the file is read) all run.
+pub fn check_size(size: u64) -> Result<()> {
+    if size > MAX_BYTES as u64 {
+        return Err(Error::new("error.open.tooBig")
+            .with("size", size)
+            .with("limit", MAX_BYTES));
     }
-    text.to_string()
+    Ok(())
 }
 
-/// What the editor reads for the bytes of a structure file, and what was changed on the way.
-pub fn open_bytes(bytes: &[u8]) -> Opened {
+/// The refusal of an input whose size is not known (standard input, a pipe): it was read up to the limit and is over it.
+pub fn too_big_unknown() -> Error {
+    Error::new("error.open.tooBig")
+        .with("size", format!("more than {MAX_BYTES}"))
+        .with("limit", MAX_BYTES)
+}
+
+/// `size_json` of the number the page sends: a size that is not a number or is negative is no request (`error.open.request`).
+pub fn size_json_f64(size: f64) -> Result<String> {
+    if size.is_nan() || size < 0.0 {
+        return Err(Error::new("error.open.request"));
+    }
+    size_json(size as u64)
+}
+
+/// `{"limit": L}` when a file of this size is read, else the `error.open.tooBig` of `check_size`.
+pub fn size_json(size: u64) -> Result<String> {
+    check_size(size)?;
+    Ok(format!("{{\"limit\":{MAX_BYTES}}}"))
+}
+
+/// What the editor reads for the bytes of a structure file, and what was changed on the way; a file over `MAX_BYTES` is refused
+/// (`error.open.tooBig`, the size and the limit in the error), never cut.
+pub fn open_bytes(bytes: &[u8]) -> Result<Opened> {
+    check_size(bytes.len() as u64)?;
     if bytes.starts_with(CDX_MAGIC) {
-        return Opened {
+        return Ok(Opened {
             text: base64(bytes),
             changes: Vec::new(),
-        };
+        });
     }
-    let (raw, charset) = decode(bytes);
+    let (raw, charset, bad) = decode(bytes);
     let (text, removed) = tidy_cdxml(raw.strip_prefix('\u{feff}').unwrap_or(&raw));
     let mut changes = Vec::new();
     if !charset.is_empty() {
         changes.push(Change::Charset(charset.clone()));
+    }
+    if bad > 0 {
+        changes.push(Change::Replaced(bad));
     }
     if !removed.is_empty() {
         changes.push(Change::Empty(removed));
@@ -260,37 +315,58 @@ pub fn open_bytes(bytes: &[u8]) -> Opened {
     } else {
         text
     };
-    Opened { text, changes }
+    Ok(Opened { text, changes })
+}
+
+impl Opened {
+    /// The `open/1` document.
+    pub fn json(&self) -> String {
+        let mut out = Out::default();
+        out.raw("{\"schema\":\"open/1\",\"text\":")
+            .str(&self.text)
+            .raw(",\"changes\":[");
+        for (i, c) in self.changes.iter().enumerate() {
+            out.raw(if i > 0 { "," } else { "" });
+            match c {
+                Change::Charset(c) => out.raw("{\"fix\":\"charset\",\"charset\":").str(c),
+                Change::Replaced(n) => out
+                    .raw("{\"fix\":\"replaced\",\"count\":")
+                    .raw(&n.to_string()),
+                Change::Empty(names) => {
+                    out.raw("{\"fix\":\"empty\",\"names\":[");
+                    for (k, n) in names.iter().enumerate() {
+                        out.raw(if k > 0 { "," } else { "" }).str(n);
+                    }
+                    out.raw("]")
+                }
+            };
+            out.raw("}");
+        }
+        out.raw("]}");
+        out.0
+    }
 }
 
 /// The `open/1` text of the bytes of a file.
-pub fn open_json_bytes(bytes: &[u8]) -> String {
-    let o = open_bytes(bytes);
-    let mut out = Out::default();
-    out.raw("{\"schema\":\"open/1\",\"text\":")
-        .str(&o.text)
-        .raw(",\"changes\":[");
-    for (i, c) in o.changes.iter().enumerate() {
-        out.raw(if i > 0 { "," } else { "" });
-        match c {
-            Change::Charset(c) => out.raw("{\"fix\":\"charset\",\"charset\":").str(c),
-            Change::Empty(names) => out
-                .raw("{\"fix\":\"empty\",\"names\":")
-                .str(&names.join(", ")),
-        };
-        out.raw("}");
-    }
-    out.raw("]}");
-    out.0
+pub fn open_json_bytes(bytes: &[u8]) -> Result<String> {
+    open_bytes(bytes).map(|o| o.json())
 }
 
-/// `open/1` of a request `{"data": "<the file, base64>"}` (the app has no binary request): the same text as `open_json_bytes`.
+/// `open/1` of a request `{"data": "<the file, base64>"}` (the app has no binary request): the same text as `open_json_bytes`. A request
+/// `{"size": N}` asks only whether a file of N bytes is read: `{"limit": L}` when it is, else the `error.open.tooBig` of `check_size`.
 pub fn open_json(request: &str) -> Result<String> {
     let bad = || Error::new("error.open.request");
     let v = json::parse(request.as_bytes()).map_err(|_| bad())?;
+    if let Some(n) = v.get("size").and_then(json::Value::f64) {
+        return if n >= 0.0 {
+            size_json(n as u64)
+        } else {
+            Err(bad())
+        };
+    }
     let bytes =
         unbase64(v.get("data").and_then(json::Value::str).ok_or_else(bad)?).ok_or_else(bad)?;
-    Ok(open_json_bytes(&bytes))
+    open_json_bytes(&bytes)
 }
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

@@ -56,4 +56,4 @@ What stays unclean: bridged and spiro cage molecules (cubane and adamantane type
 The size limit (2000 atoms) is checked before any layout work. The cleaning step counts its own steps and stops at a fixed budget (never a clock, so the bytes stay the same everywhere); when it stops, `choices` carries `layout_budget`. Native release: 650- and 1950-atom polyphenylenes and 1900-atom chains draw in 0.18 s median, 0.26 s at most (before the budget: 23 s and over 300 s).
 
 ## Sizes
-molkit `.wasm`: 283228 -> 361251 bytes (+78023, allowance 90000; base = main after the shared-sort change of #3595) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32985 bytes (guard 33000 in `catalog_tests.rs`).
+molkit `.wasm`: 304560 -> 369440 bytes (+64880, allowance 90000; base = main b27a03922, after the shared-sort change of #3595) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32441 bytes (guard 33000 in `catalog_tests.rs`).

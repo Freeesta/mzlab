@@ -192,7 +192,9 @@ def test_guard_no_relaxed_simd_in_build_files():
 
 
 # Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-caps.md, «Ordinamenti»).
-SORT_STD = re.compile(r"\.sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
+SORT_STD = re.compile(r"(\.|::)sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
+# a selection is another std instance per type: only `mzlab-mol` bans it (mzlab-feat selects medians with it on purpose)
+SELECT_STD = re.compile(r"select_nth_unstable")
 # folders that keep std sorts (raw-data detection, legacy reference)
 SORT_STD_ALLOWED = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
 
@@ -206,7 +208,8 @@ def test_guard_std_sorts_only_sortc_in_wasm_crates():
                 continue
             testo = f.read_text(encoding="utf-8").split("#[cfg(test)]")[0]
             for n, row in enumerate(testo.splitlines(), 1):
-                if SORT_STD.search(row) and not row.lstrip().startswith("//"):
+                banned = SORT_STD.search(row) or (crate == "mzlab-mol" and SELECT_STD.search(row))
+                if banned and not row.lstrip().startswith("//"):
                     found.append(f"{rel}:{n}")
     assert not found, f"use sortc (SortC::sortc_by...; mzlab-mol: SortM::sortm_by...) instead of std sorts: {found}"
 

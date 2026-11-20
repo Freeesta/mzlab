@@ -595,7 +595,6 @@ const TOUR = (() => {
     offri: () => {
       if (window.MZLAB_PHONE) return;
       if (window.BANCO && BANCO.on()) return;
-      if (window.TPMINE && TPMINE.on) return;
       if (typeof E === "undefined" || !E.files || !E.files.length) return;
       if (readState()) return;
       saveState("invited");   // the invitation appears once per browser, whatever the answer

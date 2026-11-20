@@ -187,19 +187,10 @@ fn a_non_verdict_command_at_exit_3_is_one_error_with_its_document_as_report() {
 
 /// The commands that gained a `--json` form take it (they do not answer `err.cli.json.unsupported`) and fail as one `error/1` with their own code.
 #[test]
-fn flow_command_and_explain_missing_take_json() {
+fn flow_command_takes_json() {
     for (a, code) in [
         (
             vec!["flow", "command", "/nonexistent/plan.json", "--json"],
-            4,
-        ),
-        (
-            vec![
-                "explain-missing",
-                "/nonexistent/t.mzfeat",
-                "/nonexistent/e.csv",
-                "--json",
-            ],
             4,
         ),
         (vec!["llm", "eval", "--bogus", "--json"], 2),

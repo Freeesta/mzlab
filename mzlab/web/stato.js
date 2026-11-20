@@ -5,8 +5,8 @@
 // Every transition fires "stato:cambiato" on document ({motivo, ...}); STATO.verifica() lists the broken invariants (tests_e2e/lib.py ready()).
 const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]), seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
-// addresses of the views: #/data, #/draw, #/tpmine (Tabui: no nav button while TABUI_VISIBLE is false in first-paint.js, this address still opens it)
-const VIEW_HASH = { data: "data", draw: "draw", tpmine: "tpmine" }, HASH_VIEW = { data: "data", draw: "draw", tpmine: "tpmine" };
+// addresses of the views: #/data, #/draw
+const VIEW_HASH = { data: "data", draw: "draw" }, HASH_VIEW = { data: "data", draw: "draw" };
 const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); return m && HASH_VIEW[m[1]] || null; };
 const S = { view: hashView() || "data", sess: null, adding: false, opening: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
 const ST = { files: [], methods: [] };

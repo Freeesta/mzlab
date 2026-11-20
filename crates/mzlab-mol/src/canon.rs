@@ -84,7 +84,7 @@ impl Search<'_> {
             d.len()
         };
         // Neighbour keys live in one flat buffer (one slice per atom) and the ranking sorts atom
-        // indices, so a round allocates nothing per atom.
+        // indices; a round allocates only the index lists of the ranking sort (the short neighbour slots sort on the stack).
         let mut start = vec![0usize; n + 1];
         for i in 0..n {
             start[i + 1] = start[i] + self.adj[i].len();

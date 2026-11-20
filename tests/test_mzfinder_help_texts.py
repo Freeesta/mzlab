@@ -66,15 +66,6 @@ def test_tabui_does_not_use_the_language_catalogs():
         assert "I18N" not in f.read_text(encoding="utf-8"), f.name
 
 
-def test_net_change_cell_has_subscripts_and_the_export_stays_plain():
-    src = (JS / "19_tpmine_results.js").read_text(encoding="utf-8")
-    assert '.replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>")' in src          # the cell of «Net change (formula)»
-    assert 'r.net_change ?? ""' in src                                      # the export keeps the plain text
-    if shutil.which("node"):
-        out = subprocess.run(["node", "-e", 'console.log("\\u2212C2H2 +O3".replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>"))'], check=True, capture_output=True, text=True, encoding="utf-8").stdout.strip()
-        assert out == "−C<sub>2</sub>H<sub>2</sub> +O<sub>3</sub>"
-
-
 def _lum(h):
     if len(h) == 4:
         h = "#" + "".join(ch * 2 for ch in h[1:])

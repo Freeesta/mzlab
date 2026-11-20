@@ -223,7 +223,7 @@ function table(/** @type {PannelloMappa} */ p) {
 
 // ---------------------------------------------------------------- high resolution only: the features that mzFinder has already found (read-only, switched off at the start)
 // window.MAPFEAT.features(file) -> [{ id, mz, rt, ppm, rt0?, rt1?, filters?: [{ key, label, thr, value?, from?: "height", cmp?: ">=" | "<=", unit?, note? }] }] or null;
-// it is written by mzFinder from the result it already holds (TP_Mine/js/31_map_features.js): nothing is computed again in the engine.
+// nothing writes MAPFEAT any more, so the overlay stays inert (Tabui, its only source, is deleted).
 const feats = (/** @type {PannelloMappa} */ p) => { const f = p._a && p._a.f; try { return (window.MAPFEAT && f && window.HR && HR.isHr(f, f.lv || 1) ? MAPFEAT.features(f) : null) || []; } catch (e) { return []; } };
 export function featOverlay(/** @type {PannelloMappa} */ p, /** @type {CanvasRenderingContext2D} */ g) {
   const a = p._a, s = MAPPA.st(p); if (!a) return; g.save();

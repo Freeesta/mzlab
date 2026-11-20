@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         wait_for_js(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
-        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
+        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]')")
         # ---- movement over time, on pages of their own (with motion on, the first opening of Flow, a high-resolution file)
         SAMPLE = """(sels) => { window.__mv = {}; (function f() { for (const [k, s] of Object.entries(sels)) { const e = document.querySelector(s); if (e && e.offsetWidth) (window.__mv[k] = window.__mv[k] || []).push(Math.round(e.getBoundingClientRect().x * 10) / 10); } window.__go !== false && requestAnimationFrame(f); })(); window.__go = true; }"""
         def spread(pg, key):

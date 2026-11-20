@@ -103,11 +103,6 @@ pub(crate) const MISSING: &[&[&str]] = &[
         "--at",
         "1",
     ],
-    &[
-        "explain-missing",
-        "/nonexistent/t.mzfeat",
-        "/nonexistent/e.csv",
-    ],
     &["ion", "match", "1", "--tables", "/nonexistent/t.json"],
     &["msn", "graph", "/nonexistent/g.json"],
     &["msn", "lib", "export", "/nonexistent/lib.json"],
@@ -359,7 +354,6 @@ fn an_unknown_option_is_exit_2_and_under_json_one_error_document_for_every_comma
 fn positional_commands_reject_unknown_options() {
     for a in [
         vec!["sample", "group", "a.mzML", "--bogus"],
-        vec!["explain-missing", "t.mzfeat", "e.csv", "--bogus"],
         vec!["db", "normative", "bogus"],
         vec!["db", "normative", "pack", "a", "b", "--bogus"],
         vec!["flow", "command", "plan.json", "--bogus"],

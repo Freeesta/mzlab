@@ -199,7 +199,7 @@ def view(pg, v):
 
 def first_useful(pg, v):
     """ms from navigation start until the view shows its useful content."""
-    sel = {"data": "#start:not([hidden]) #drop, #v-workspace .panel, #tools", "draw": "#v-draw:not([hidden]) iframe, #v-draw:not([hidden]) canvas", "tpmine": "#v-tpmine:not([hidden]) button", "flow": "#v-flow:not([hidden]) button", "theory": "#v-theory:not([hidden]) iframe"}[v]
+    sel = {"data": "#start:not([hidden]) #drop, #v-workspace .panel, #tools", "draw": "#v-draw:not([hidden]) iframe, #v-draw:not([hidden]) canvas", "flow": "#v-flow:not([hidden]) button", "theory": "#v-theory:not([hidden]) iframe"}[v]
     try:
         pg.wait_for_selector(sel, state="visible", timeout=60000)
         return pg.evaluate("Math.round(performance.now())")
@@ -232,7 +232,7 @@ def main():
     r = Run(fresh=True)
     res = []
     samples = {"none": [], "one": [mz("B_FullMass-t15")], "multi": [mz(f) for f in lib.FILES]}
-    views = ["data", "draw", "tpmine", "flow", "theory"]
+    views = ["data", "draw", "flow", "theory"]
     if QUICK: samples = {"none": [], "one": samples["one"]}
     try:
         with sync_playwright() as p:

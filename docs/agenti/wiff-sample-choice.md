@@ -26,6 +26,7 @@ Measured natively on synthetic pairs (`tools/wiff_grande.py`, page cache warm):
 - Only the container and the index are read to check the list; samples not chosen are never read.
 - An id the file does not have stops the command before anything is written: `err.sample.unknown` names the missing ids and the ids present, exit 5. A text that is not a list (`1,,2`, `3-1`, `x`): `err.sample.list`, exit 2. A dataset with one sample ignores the list; when no input has several samples the command stops with `err.sample.single` (exit 2), so a typo is never silent.
 - `sample select FILE --sample LIST [--json]`: the dry run; `{"schema":"sample-select/1","samples":[1,3]}` (ids on one line without `--json`); `error/1` on stdout with `--json` on failure; exit 0, 2, 4, 5.
+- `sample select FILE --sample LIST --ranges [--json]`: the byte ranges of the `.wiff`/`.wiff.scan` to copy for those samples (same plan as the site's `sample_ranges`; `wiff-range-copy.md`).
 - `sample select FILE --default [--budget-mb N] [--json]`: the samples the page dialog ticks first (`readers::selection::suggest`, the site's `sample_default`): all when their section bytes are at most a quarter of the budget (`SMALL_SHARE`, default 1024 MB), none otherwise. Exactly one of `--sample` and `--default`.
 - `convert INPUT... --out DIR --sample LIST`: one `NAME-ID.mzML` per chosen sample, byte for byte the file a run without `--sample` writes for that sample (a single chosen sample keeps its `NAME-ID` name).
 - `channels FILE --sample LIST`: one `channels/1` line per sample, in file order, each the bytes of its own single-sample run; the whole list is checked first. `trace chrom|xic|spectrum`, `dad` and `file info` read one sample (`--sample ID`; `file info` takes a list).
@@ -39,12 +40,11 @@ Measured natively on synthetic pairs (`tools/wiff_grande.py`, page cache warm):
 - Trigger: the dialog shows only when some file has several samples; a file with one sample opens straight away. Settings > Data > «Choose samples of a file»: «When a file has several» (default), «Always ask» (also a one-sample file), «Never, open all»; key `mzlab.pick` in localStorage (absent = default).
 - Default ticks: all when the sections add up to at most a quarter of the engine's memory budget, none otherwise; Open stays disabled until something is ticked, nothing is blocked (the user decides).
 - One dialog for all pairs of a loading; Cancel opens nothing from the loading and says so in a note; the choice is not remembered per file; no name filter, no per-file select buttons (global «Select all», «Select none», numbers field). A reopened file with a subset chosen skips the OPFS cache check (it would answer with every sample). A pair the readers module takes (`variante`) is filtered by the ids of its probe. A `.wiff` without its `.wiff.scan` keeps the existing wait and error (`load.wiffWait`, `err.file.wiffNoScan`).
-- The desktop app runs the same page dialog, fed by the native route (same bytes as the wasm one). On the site the whole pair is still copied to OPFS; the memory limit applies to what is opened.
+- The desktop app runs the same page dialog, fed by the native route (same bytes as the wasm one). On the site a chosen subset is copied to OPFS by byte ranges only (`wiff-range-copy.md`); the memory limit applies to what is opened.
 - Entry points all end in the same dialog: the Files picker, drag and drop, a dropped or picked folder (`cartella-carica.js`), and in the app the native open dialog or a file opened from the OS (`opening.rs`).
 - Tests: `tests_e2e/e2e_wiff_choose.py`.
 
 ## Not built
-- OPFS copy of only the byte ranges of the chosen samples (a huge pair still needs its whole copy on the site).
 - Per-file remembered choice, name filter, date, vial and plate columns (needs the strings above), a file-level chooser for the datasets of a dropped folder.
 - Partial identity of a partial open (mzML `source-identity`, `.mzidx`, cache keys): decided by the owner if ever needed.
 

@@ -21,7 +21,6 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes the input's)
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
-       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
@@ -129,7 +128,6 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes the input's)
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
-       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
@@ -237,7 +235,6 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes the input's)
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
-       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
@@ -919,20 +916,6 @@ usage: mzlab-cli peak window TRACE.csv|- --end MIN --other MIN (--at MIN | --ste
   --at         where the pointer is (the nearest point of the trace); --step N: N points from --end (negative = earlier), the keyboard
   --min/--max  the borders of the neighbouring integrations: the end may touch them, never cross them
   output       {"t":MIN,"i":INDEX}: a point of the trace, at least one point before (or after) --other
---- stderr
-
-=== mzlab-cli explain-missing --help
-exit 0
---- stdout
-mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]
-  TABLE.mzfeat   the table of a run (the output of tp.link or later)
-  EXPECTED.csv   one expected product per line: id,mz,rt (a header line is skipped)
-  --ppm N        mass window of a row for an expected m/z (default 5)
-  --rt-tol MIN   RT window in minutes (default 0.3)
-  --json         explain-missing/1: the same columns and rows as one JSON document
-output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
-  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | absorbed | no_row_mz | rt_off), nearest_ppm, nearest_drt,
-  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only), absorbed_row / absorbed_mz / absorbed_rt (stage absorbed: the family row that holds the expected ion as a member although its own m/z or RT is outside the windows; empty otherwise)
 --- stderr
 
 === mzlab-cli msn lib --help

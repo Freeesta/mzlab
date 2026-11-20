@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::elements::is_element;
 use crate::model::{Cfg, Mol, Parity, Status, Stereo, FORMAT};
-use crate::sortm::SortedVec;
+use crate::sortm::first_repeat;
 
 type Res = Result<(), MolError>;
 
@@ -33,35 +33,46 @@ impl Mol {
 
     fn check_bonds(&self) -> Res {
         let n = self.atoms.len() as u32;
-        let mut seen = SortedVec::new();
+        // A repeat is found by one sort after the loop (a sorted insert per bond is O(n^2) on a long unsorted list); it can only be
+        // among the bonds before the first malformed one, so it is reported first, as when each bond was checked in turn.
+        let mut keys = Vec::with_capacity(self.bonds.len());
+        let mut first_bad = None;
         for (i, b) in self.bonds.iter().enumerate() {
             if b.a >= b.b || b.b >= n {
-                return bad(format!(
+                first_bad = Some(format!(
                     "bonds[{i}] needs a < b < {n}, got {} and {}",
                     b.a, b.b
                 ));
+                break;
             }
             if !(1..=3).contains(&b.o) {
-                return bad(format!(
+                first_bad = Some(format!(
                     "bonds[{i}].o is {}, Kekulé orders are 1, 2 or 3",
                     b.o
                 ));
+                break;
             }
-            if !seen.add((b.a, b.b)) {
-                return bad(format!("bonds[{i}] repeats the bond {}-{}", b.a, b.b));
-            }
+            keys.push((b.a, b.b));
         }
-        Ok(())
+        if let Some(i) = first_repeat(&keys) {
+            let b = &self.bonds[i];
+            return bad(format!("bonds[{i}] repeats the bond {}-{}", b.a, b.b));
+        }
+        first_bad.map_or(Ok(()), bad)
     }
 
     fn check_stereo(&self, adj: &[Vec<u32>]) -> Res {
-        let mut centres = SortedVec::new();
+        let keys: Vec<(u8, u32, u32)> = self
+            .stereo
+            .iter()
+            .map(|s| match s {
+                Stereo::Tetra { c, .. } => (0, *c, 0),
+                Stereo::Db { a, b, .. } => (1, *a, *b),
+            })
+            .collect();
+        let repeat = first_repeat(&keys);
         for (i, s) in self.stereo.iter().enumerate() {
-            let fresh = match s {
-                Stereo::Tetra { c, .. } => centres.add((0u8, *c, 0)),
-                Stereo::Db { a, b, .. } => centres.add((1u8, *a, *b)),
-            };
-            if !fresh {
+            if repeat == Some(i) {
                 return bad(format!("stereo[{i}] repeats an earlier element"));
             }
             match s {
@@ -167,7 +178,13 @@ impl Mol {
     }
 
     fn check_groups(&self) -> Res {
-        let mut used = SortedVec::new();
+        let flat: Vec<u32> = self
+            .groups
+            .iter()
+            .flat_map(|g| g.atoms.iter().copied())
+            .collect();
+        let repeat = first_repeat(&flat);
+        let mut pos = 0;
         for (i, g) in self.groups.iter().enumerate() {
             if g.atoms.is_empty() || !ascending(&g.atoms) {
                 return bad(format!(
@@ -183,11 +200,12 @@ impl Mol {
                         "groups[{i}] lists atom {a}, which is not a defined tetrahedral centre"
                     ));
                 }
-                if !used.add(a) {
+                if repeat == Some(pos) {
                     return bad(format!(
                         "groups[{i}] lists atom {a}, already in another group"
                     ));
                 }
+                pos += 1;
             }
         }
         Ok(())

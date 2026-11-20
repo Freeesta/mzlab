@@ -98,6 +98,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.cut.radical",
         "error.check.tooBig",
         "error.sdf.tooBig",
+        "error.open.tooBig",
         "error.sub.dbSize",
         "error.anal.abundance",
         "error.anal.empty",
