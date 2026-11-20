@@ -154,7 +154,7 @@ function uipOpen(btn) {
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
   const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];
-  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button" title="${esc(T("settings.tour.tip"))}"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.impost.fai" : files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "";
+  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button" title="${esc(T("settings.tour.tip"))}"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.settings.do" : files.length ? "tour.settings.redo" : "tour.settings.example")}</button></div>` : "";
   const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`

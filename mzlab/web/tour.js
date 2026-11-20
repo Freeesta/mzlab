@@ -48,7 +48,7 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
 // Opening steps of «Your data», kept only when on screen as the tour starts (files waiting for the first click).
 const PASSI_INIZIALI = [
   { id: "samples", opt: true, target: () => document.getElementById("wtable") },
-  { id: "primo", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
+  { id: "first", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
 ];
 /** Drops the optional steps whose target is not visible now. @template {{ opt?: boolean, target: () => any }} T @param {T[]} lista @returns {T[]} */
 const passiVisibili = lista => lista.filter(st => !st.opt || (el => !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0)(st.target()));
@@ -63,7 +63,7 @@ const TOUR = (() => {
       target: () => document.getElementById("sb-pane")
     },
     {
-      id: "gruppi",
+      id: "groups",
       prep: openFileDrawer,
       target: () => document.querySelector("#flst .fgh")
     },
@@ -72,7 +72,7 @@ const TOUR = (() => {
       target: () => document.querySelector(".pnl.chrom") || (typeof E !== "undefined" && E.panels && E.panels.find(p => p.type === "chrom")?.el)
     },
     {
-      id: "istante",
+      id: "instant",
       target: () => document.querySelector(".pnl.chrom canvas"),
       prova: true,
       initProva: () => {
@@ -86,7 +86,7 @@ const TOUR = (() => {
       }
     },
     {
-      id: "spettro",
+      id: "spectrum",
       target: () => document.querySelector(".pnl.spec") || (typeof E !== "undefined" && E.panels && E.panels.find(p => p.type === "spec")?.el)
     },
     {
@@ -114,7 +114,7 @@ const TOUR = (() => {
       target: () => document.querySelector('.pnl.chrom [data-a="izoom"]')?.closest(".tbg") || document.querySelector('.pnl.chrom [data-a="izoom"]') || document.querySelector(".pnl.chrom .tbg")
     },
     {
-      id: "tasti",
+      id: "keys",
       target: () => [...document.querySelectorAll(".pnl.chrom .clh")].find(el => el.offsetParent) || document.querySelector(".pnl.chrom canvas")
     },
     {
@@ -122,27 +122,27 @@ const TOUR = (() => {
       target: () => document.getElementById("g-file")
     },
     {
-      id: "aggiungi",
+      id: "add",
       target: () => document.getElementById("g-add")
     },
     {
-      id: "affianca",
+      id: "side_by_side",
       target: () => [...document.querySelectorAll(".aff-grip")].find(el => !el.hidden && el.offsetParent) || document.querySelector(".pnl.chrom .hd")
     },
     {
-      id: "pannello",
+      id: "panel",
       target: () => document.querySelector(".pnl.chrom .tbs") || document.querySelector(".pnl.chrom .hd")
     },
     {
-      id: "barra",
+      id: "bar",
       target: () => document.getElementById("stbar")
     },
     {
-      id: "metodo",
+      id: "method",
       target: () => document.getElementById("np-method")
     },
     {
-      id: "ingranaggio",
+      id: "gear",
       target: () => document.getElementById("np-set")
     }
   ];
@@ -169,12 +169,12 @@ const TOUR = (() => {
     return () => { if (shut) document.dispatchEvent(new CustomEvent("mzlab-card-fold", { detail: c })); if (hid && v && b && !v.classList.contains("noside")) b.click(); };
   };
   const STEPS_D = [
-    { id: "d_tela", target: () => document.getElementById("kframe") },
+    { id: "d_canvas", target: () => document.getElementById("kframe") },
     { id: "d_zoom", target: () => frameBox(['[data-testid="zoom-in-tp"]', '[data-testid="zoom-out-tp"]', '[data-testid="zoom-reset-tp"]']) },
-    { id: "d_riquadri", target: () => document.getElementById("side-toggle") },
-    { id: "d_etichette", prep: openCard("#lb-f"), target: () => card("#lb-f") },
-    { id: "d_proprieta", prep: openCard("#prop-body"), target: () => document.getElementById("prop-card") },
-    { id: "d_parziali", target: () => document.getElementById("kframe") },
+    { id: "d_boxes", target: () => document.getElementById("side-toggle") },
+    { id: "d_labels", prep: openCard("#lb-f"), target: () => card("#lb-f") },
+    { id: "d_properties", prep: openCard("#prop-body"), target: () => document.getElementById("prop-card") },
+    { id: "d_partial", target: () => document.getElementById("kframe") },
     { id: "d_export", prep: openCard("#ex-png"), target: () => card("#ex-png") }
   ];
   let cap1 = STEPS_CAP1;
@@ -466,10 +466,10 @@ const TOUR = (() => {
     const totalSteps = list.length;
     const stepNumber = curStep + 1;
     const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : curCap === 3 ? "tour.cap3" : "tour.cap2");
-    const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
-    const titleText = I18N.t(`tour.${step.id}.titolo`);
-    const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : step.id === "barra" && window.MZLAB_LAB ? ".lab" : ""));
-    const provaText = step.prova ? I18N.t(`tour.${step.id}.prova`) : "";
+    const headerText = I18N.t("tour.step", { n: stepNumber, tot: totalSteps, cap: chapterName });
+    const titleText = I18N.t(`tour.${step.id}.title`);
+    const bodyText = I18N.t(`tour.${step.id}.text` + (step.id === "keys" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : step.id === "bar" && window.MZLAB_LAB ? ".lab" : ""));
+    const provaText = step.prova ? I18N.t(`tour.${step.id}.try`) : "";
 
     const dlg = getDialogEl();
     const isCap1End = curCap === 1 && curStep === list.length - 1;
@@ -477,31 +477,31 @@ const TOUR = (() => {
 
     let tryHtml = "";
     if (step.prova && provaText) {
-      tryHtml = `<div class="tour-try"><b>${I18N.t("tour.prova")}</b> ${provaText}</div>`;
+      tryHtml = `<div class="tour-try"><b>${I18N.t("tour.try")}</b> ${provaText}</div>`;
     }
 
     let endCap1Html = "";
     if (isCap1End) {
-      endCap1Html = `<p style="font-weight:600;margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${I18N.t("tour.fine_cap1_testo")}</p>`;
+      endCap1Html = `<p style="font-weight:600;margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${I18N.t("tour.end_cap1_text")}</p>`;
     }
 
     let buttonsHtml = "";
     if (isCap1End) {
       buttonsHtml = `
-        <button type="button" id="tour-btn-back">${I18N.t("tour.indietro")}</button>
-        <button type="button" id="tour-btn-fine-cap1">${I18N.t("tour.fine")}</button>
-        <button type="button" id="tour-btn-cont">${I18N.t("tour.continua")}</button>
+        <button type="button" id="tour-btn-back">${I18N.t("tour.back")}</button>
+        <button type="button" id="tour-btn-fine-cap1">${I18N.t("tour.end")}</button>
+        <button type="button" id="tour-btn-cont">${I18N.t("tour.continue")}</button>
       `;
     } else if (isCap2End) {
       buttonsHtml = `
-        <button type="button" id="tour-btn-back">${I18N.t("tour.indietro")}</button>
-        <button type="button" id="tour-btn-fine">${I18N.t("tour.fine")}</button>
+        <button type="button" id="tour-btn-back">${I18N.t("tour.back")}</button>
+        <button type="button" id="tour-btn-fine">${I18N.t("tour.end")}</button>
       `;
     } else {
       const backDisabled = ((curCap === 1 || curCap === 3) && curStep === 0) ? "disabled" : "";
       buttonsHtml = `
-        <button type="button" id="tour-btn-back" ${backDisabled}>${I18N.t("tour.indietro")}</button>
-        <button type="button" id="tour-btn-next">${I18N.t("tour.avanti")}</button>
+        <button type="button" id="tour-btn-back" ${backDisabled}>${I18N.t("tour.back")}</button>
+        <button type="button" id="tour-btn-next">${I18N.t("tour.next")}</button>
       `;
     }
 
@@ -513,14 +513,14 @@ const TOUR = (() => {
       ${tryHtml}
       ${endCap1Html}
       <div class="tour-ft">
-        <button type="button" id="tour-btn-skip">${I18N.t("tour.salta")}</button>
+        <button type="button" id="tour-btn-skip">${I18N.t("tour.skip")}</button>
         <div class="tour-btns">${buttonsHtml}</div>
       </div>
     `;
 
     // Live announcer for screen readers
     const live = getLiveEl();
-    live.textContent = I18N.t("tour.annuncio", { n: stepNumber, tot: totalSteps, titolo: titleText });
+    live.textContent = I18N.t("tour.announcement", { n: stepNumber, tot: totalSteps, title: titleText });
 
     // Bind event handlers
     const btnSkip = dlg.querySelector("#tour-btn-skip");

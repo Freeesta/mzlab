@@ -68,8 +68,8 @@ try:
             assert pg2.evaluate("FEATURES.lists") is True and pg2.evaluate("document.querySelector('#np-liste') !== null && document.querySelector('#sb-panel-lists') !== null")
             for lang in ("en", "it"):      # the tour step on the toolbar names no lists in the lab
                 pg3, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); ready(pg3)
-                pg3.wait_for_function("window.I18N && I18N.t('tour.barra.testo.lab') !== 'tour.barra.testo.lab'", timeout=60000)
-                assert not pg3.evaluate("/liste|reference lists/i.test(I18N.t('tour.barra.testo.lab'))")
+                pg3.wait_for_function("window.I18N && I18N.t('tour.bar.text.lab') !== 'tour.bar.text.lab'", timeout=60000)
+                assert not pg3.evaluate("/liste|reference lists/i.test(I18N.t('tour.bar.text.lab'))")
         step("lab: no reference-lists panel nor button, saved tab harmless; main site keeps both", nolists)
         def banner():
             pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)
