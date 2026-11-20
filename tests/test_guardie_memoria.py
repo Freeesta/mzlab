@@ -82,9 +82,12 @@ def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
     for name, got in measured.items():
         assert set(got) == set(want[name]), (name, sorted(got), sorted(want[name]))
         over = {k: (got[k], want[name][k]) for k in got if got[k] > want[name][k] * SLACK}
-        # the SHA-256 of the series is in the message: a different input (numpy's exp/log vary with the CPU) and a different engine look alike otherwise
-        series_sha = hashlib.sha256(b"".join(Path(i).read_bytes() for i in big)).hexdigest()[:16]
-        assert not over, f"{name}: peak of the linear memory above the recorded value + 10 %: {over} (series {series_sha}, numpy {sys.modules['numpy'].__version__})"
+        # what the series is, apart from the paths its index files carry: the SHA-256 of the mzML the generator wrote, the sizes of the indexes, the Python and every phase peak
+        # (a failure that only one runner shows is read from these: the generator, or the engine on the same input)
+        mzml = hashlib.sha256(b"".join(p.read_bytes() for p in sorted(Path(big[0]).parent.glob("*.mzML")))).hexdigest()[:16]
+        sizes = [Path(i).stat().st_size for i in big]
+        detail = f"mzML {mzml}, index sizes {sizes}, Python {sys.version.split()[0]}, numpy {sys.modules['numpy'].__version__}, peaks {got}"
+        assert not over, f"{name}: peak of the linear memory above the recorded value + 10 %: {over} ({detail})"
 
 
 def test_a_new_exported_function_that_returns_a_whole_vec_is_refused(monkeypatch, tmp_path):
