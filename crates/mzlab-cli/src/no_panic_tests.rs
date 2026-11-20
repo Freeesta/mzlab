@@ -42,7 +42,7 @@ fn no_command_panics_on_an_empty_or_garbage_input() {
                 let args = words(e.name, &tail);
                 let r = catch_unwind(AssertUnwindSafe(|| execute(&args)));
                 match r {
-                    Err(_) => panicked.push(format!("{}", args.join(" ").replace(p, file))),
+                    Err(_) => panicked.push(args.join(" ").replace(p, file)),
                     Ok(o) => {
                         assert!(o.code <= 6, "{args:?}: exit {}", o.code);
                         if o.code != 0 && args.iter().any(|a| a == "--json") {
