@@ -28633,3 +28633,5 @@
 {"v":1,"ts_utc":"2026-11-20T20:56:28Z","azione":"push","titolo":"dad peaks: a type alias for the scan taken (clippy type complexity)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3625,"sha":"e8f154b784e5d75cdf4d13dc343610b2f0d7b727"}
 {"v":1,"ts_utc":"2026-11-20T21:11:03Z","azione":"push","titolo":"dad: the view of subtract/spectrum/trace in its own function (function size limit)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3625,"sha":"f0e816ba10552730366dc0bb24d2889a3af5c0fc"}
 {"v":1,"ts_utc":"2026-11-20T21:29:20Z","azione":"push","titolo":"spectrum get: exit 1 in the catalog for err.spectrum.minus, with a test","merge_main":false,"aree":{"rust":2},"tipo":"pr","pr":3616,"sha":"6c921ddc1ba0a46f8b66a6eceabad194bd3d9f80"}
+{"v":1,"ts_utc":"2026-11-20T22:03:48Z","tipo":"conflitto_risolto","pr":3625,"sha":"150b8897e6e5de5fa95aef9402c705af84f1417e"}
+{"v":1,"ts_utc":"2026-11-20T22:07:53Z","tipo":"coda","k":"2026-11-20T22:07:53Z","aperte":6,"indietro":6,"sporche":0,"verdi_in_attesa":0,"piu_vecchia_aperta_s":63913,"piu_vecchia_verde_s":null}
