@@ -67,7 +67,7 @@ fn atom_labels(g: &Geo) -> (Vec<Label>, Vec<Prim>, Vec<Option<Bx>>) {
     let mut labels: Vec<Label> = Vec::new();
     let mut runs: Vec<Prim> = Vec::new();
     let mut boxes: Vec<Option<Bx>> = vec![None; n];
-    for i in 0..n {
+    for (i, slot) in boxes.iter_mut().enumerate() {
         let a = &g.m.atoms[i];
         if a.el == "C" && a.chg == 0 && a.iso == 0 && !g.nb[i].is_empty() {
             continue;
@@ -85,7 +85,7 @@ fn atom_labels(g: &Geo) -> (Vec<Label>, Vec<Prim>, Vec<Option<Bx>>) {
         for (t, p, sz) in pick.0 {
             runs.push(Prim::Run(p, sz, t, INK));
         }
-        boxes[i] = Some(pick.1);
+        *slot = Some(pick.1);
         labels.push(Label {
             kind: "atom",
             atom: i as u32,
