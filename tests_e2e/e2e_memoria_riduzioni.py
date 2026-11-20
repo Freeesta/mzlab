@@ -91,8 +91,7 @@ def main():
             step("the scan cache is limited in bytes, the newest stay", scan_cache)
 
             def pool_closes():
-                pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
-                pg.wait_for_function("document.querySelectorAll('#tp-files tr').length > 1", timeout=60000)
+                open_mzfinder(pg)
                 run_pipeline(pg)
                 assert pg.evaluate("PIPE.state.pool.workers") >= 1, "the pool should hold a worker right after the run"
                 # bounded poll of a state: the pool closes its workers once it has been idle for its delay (20 s)

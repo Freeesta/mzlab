@@ -8,8 +8,6 @@ use crate::{execute, flow::steps};
 /// Names that break a rule today and stay on purpose (`docs/agenti/cli.md`, «Tenuti per scelta»). A name leaves this list when it is
 /// renamed; nothing is added.
 const KNOWN: &[&str] = &[
-    // a shorter name would need the reader to guess («missing» alone loses the meaning)
-    "explain-missing",
     // the subcommand that takes the official lists the user owns; a shorter verb would hide what is imported
     "import-official",
     // persisted parameters of the Attributio annotation steps, long but clear (not in the inventory)
@@ -229,7 +227,6 @@ fn a_flag_that_is_not_kebab_case_fails() {
 
 #[test]
 fn a_command_over_its_length_target_fails() {
-    assert!(command_problem("explain-missing", 0).is_some());
     assert!(command_problem("import-official", 1).is_some());
     assert!(command_problem("completions", 0).is_none());
     assert!(command_problem("Flow", 0).is_some());

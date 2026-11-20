@@ -43,5 +43,4 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("flow record", "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes the input's)", crate::flow_mzrun::record).schema("mzrun/2"),
     Entry::new("flow verify", "mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files", crate::flow_mzrun::check).schema("verify/1"),
     Entry::new("flow command", "mzlab-cli flow command PLAN.json [--json]   the rerun script", command).schema("flowcommand/1").exits(&[0, 2, 3, 4]),
-    Entry::new("explain-missing", "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost", crate::flow_explain::run).schema("explain-missing/1").exits(&[0, 2, 4, 6]),
 ];

@@ -19,9 +19,12 @@ def test_every_function_the_page_calls_has_a_rust_branch_in_the_worker():
     called = set()
     for p in (ROOT / "TP_Mine" / "js").glob("*.js"):
         called |= set(re.findall(r"(?<![.\w])call\(\s*\"([a-z_0-9]+)\"", p.read_text(encoding="utf-8")))
-    assert {"classify", "detail", "tp_row", "tp_table", "transf_rows", "formula_info", "frag_tree"} <= called
     missing = sorted(f for f in called if f'"{f}"' not in js)
     assert not missing, f"the page calls functions the worker only serves with Pyodide: {missing}"
+    # the routes the CLI and the desktop RPC still use stay served by the worker (the Tabui page that called them is gone)
+    engine = {"classify", "detail", "tp_row", "tp_table", "transf_rows", "formula_info", "frag_tree"}
+    gone = sorted(f for f in engine if f'"{f}"' not in js)
+    assert not gone, f"the worker lost engine routes: {gone}"
 
 
 def test_the_worker_has_no_python_left():

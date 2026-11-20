@@ -7,12 +7,12 @@ from lib_giro import *
 steps = []
 step = make_step(steps)
 r = Run(port=8996, wd="/tmp/wd_giro_intestazione_campione")
-VIEWS = ["draw", "flow", "tpmine"]
+VIEWS = ["draw", "flow"]
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         wait_for_js(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
-        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
+        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]')")
         def with_sample():
             stage(pg, [mz("B_FullMass-t15")]); open_first(pg); ready(pg)
             pg.evaluate("window.scrollTo(0, 0)"); frames(pg, 2)
