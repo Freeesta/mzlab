@@ -246,7 +246,12 @@ fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value], answers: &[usiz
     for (s, w) in plan.iter().zip(wasm) {
         let (app, site) = (on_desktop(st, fid, s), from_wasm(w));
         if app != site {
-            differ.push(format!("{s}\n  app:  {app:.300?}\n  wasm: {site:.300?}"));
+            differ.push(match (&app, &site) {
+                (Got::Text(a), Got::Text(w)) => {
+                    format!("{s}\n{}", route_steps::first_difference(a, w))
+                }
+                _ => format!("{s}\n  app:  {app:.300?}\n  wasm: {site:.300?}"),
+            });
         }
     }
     assert!(
@@ -390,12 +395,9 @@ fn the_origin_route_gives_the_same_report_in_the_app_and_in_the_wasm() {
         .iter()
         .filter(|w| matches!(from_wasm(w), Got::Text(t) if t.contains("\"x_snr\"")))
         .count();
-    // short on purpose: the CI log keeps only the tail of this message, and the count must stay in it
-    let heads: Vec<String> = wasm[1..].iter().map(|w| format!("{w:.160?}")).collect();
     assert!(
         reports >= 6,
-        "{reports} origin reports carry a profile similarity; answers:\n{}",
-        heads.join("\n")
+        "{reports} origin reports carry a profile similarity"
     );
 }
 
