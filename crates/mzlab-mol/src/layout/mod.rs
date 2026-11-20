@@ -7,7 +7,7 @@ mod clean;
 mod grow;
 mod place;
 mod rings;
-mod trig;
+pub mod trig;
 
 use crate::sortm::SortM;
 use std::collections::VecDeque;

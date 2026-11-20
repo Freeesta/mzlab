@@ -42,7 +42,7 @@ try:
         pg.wait_for_selector("#askdlg[open]")
         assert "No open files" in pg.inner_text("#asktxt")
         pg.click("#askok")
-        pg.evaluate("() => WORKFLOW.applyWorkflow({formato: 'x'})")
+        pg.evaluate("() => WORKFLOW.applyWorkflow({format: 'x'})")
         pg.wait_for_selector("#askdlg[open]")
         assert "Invalid" in pg.inner_text("#asktxt")
         assert not native, native

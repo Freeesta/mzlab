@@ -34,7 +34,7 @@ def cold(p, with_file, vw=1440):
     port = free_port(); r = Run(port=port, wd=f"/tmp/wd_pannello_vuoto_{port}"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": 900}, locale="it-IT", reduced_motion="reduce")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined' && window.qqReady === true")      # BARRA.init (key handlers) runs right after qqReady
     if with_file:
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")

@@ -7,7 +7,7 @@
 // mzlab/statistica.py (reference_difference, identity_links; /api/stat/reference); this file draws the table and opens the evidence of a row.
 // Loaded by carica() when the section is first shown (riferimento.js keeps the registration); it replaces the window.RIFERIMENTO of the stub.
 const RIFERIMENTO_CORPO = (() => {
-  const KEY = NOMI.KEY("riferimento"), MAX_ROWS = 500;
+  const KEY = NOMI.KEY("reference"), MAX_ROWS = 500;
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const SHAPES = ["rises", "rises_falls", "falls", "flat"];

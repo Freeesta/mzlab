@@ -31,15 +31,15 @@ try:
             assert pg.locator("#bigbody [data-pk]").count() == 12 and pg.locator("#bigbody fieldset.pk-sec").count() == 4   # the low, the high resolution, the baseline, every LR peak
             pg.fill("[data-pk=edgeFrac]", "7"); pg.fill("[data-pk=hrSmooth]", "6"); pg.select_option("[data-pk=bmode]", "1"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
             assert pg.evaluate("PK.edgeFrac") == 7 and pg.evaluate("PK.hrSmooth") == 7 and pg.evaluate("PK.bmode") == 1          # edges chosen; the smoothing window is odd
-            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.picchi')")) == {**pg.evaluate("PK_DEF"), "edgeFrac": 7, "hrSmooth": 7, "bmode": 1}
+            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.peaks')")) == {**pg.evaluate("PK_DEF"), "edgeFrac": 7, "hrSmooth": 7, "bmode": 1}
             pg.evaluate("peakParams()"); pg.click("#pk-def"); assert pg.evaluate("PK.edgeFrac") == 3 and pg.evaluate("PK.hrSmooth") == 5 and pg.evaluate("PK.bmode") == 0
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("the dialog sets, remembers and resets the settings", dlg)
         def dropped():
-            pg.evaluate("localStorage.setItem('mzlab.picchi', JSON.stringify({areaNoise: 40, noise: 'rms', hrProm: 50, win: 0.8, tail: -1}))")
+            pg.evaluate("localStorage.setItem('mzlab.peaks', JSON.stringify({areaNoise: 40, noise: 'rms', hrProm: 50, win: 0.8, tail: -1}))")
             pg.reload(); pg.wait_for_function("typeof PK === 'object'", timeout=20000)
             assert pg.evaluate("PK") == {**pg.evaluate("PK_DEF"), "win": 0.8}, pg.evaluate("PK")
-            pg.evaluate("localStorage.removeItem('mzlab.picchi')")
+            pg.evaluate("localStorage.removeItem('mzlab.peaks')")
         step("stored keys outside the dialog are dropped silently", dropped)
         def fits():
             for w, h in ((1280, 720), (1366, 768)):

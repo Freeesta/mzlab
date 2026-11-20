@@ -110,13 +110,13 @@ function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) ===
 
 // Profile of the program, never a setting: «research» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
 // Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «course» (no element, nothing downloaded).
-// A plain string left under `mzlab.profilo` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
+// A plain string left under `mzlab.profile` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
 const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
 function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "research" : UIP_DEMO ? "demo" : "course"; }
-try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
+try { const v = localStorage.getItem(NOMI.KEY("profile")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profile")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
-function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
+function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminants.on")) === "true"; } catch (_) { return false; } }
 
 // --- settings panel (shared pieces in impostazioni-comp.js)
 const UIP_GROUP_KEY = id => NOMI.KEY("set." + id);
@@ -154,7 +154,7 @@ function uipOpen(btn) {
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
   const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];
-  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button" title="${esc(T("settings.tour.tip"))}"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.impost.fai" : files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "";
+  const tour = tourOn ? `<div class="imp-fld imp-solo"><button id="uip-tour" type="button" title="${esc(T("settings.tour.tip"))}"><span class="ic">${C.GICON.play}</span>${T(window.MZLAB_LAB ? "tour.settings.do" : files.length ? "tour.settings.redo" : "tour.settings.example")}</button></div>` : "";
   const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`

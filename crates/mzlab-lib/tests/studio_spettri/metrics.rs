@@ -6,7 +6,7 @@ use super::arms::Row;
 use super::scen::Q;
 use serde_json::{json, Value};
 
-/// Gate `shared` of `mzlab/web/livelli-1.js`: `picchi_min` 6, or `picchi_min_pochi` 3 when the library spectrum has fewer than 6 peaks.
+/// Gate `shared` of `mzlab/web/livelli-1.js`: `peaks_min` 6, or `peaks_min_few` 3 when the library spectrum has fewer than 6 peaks.
 pub fn gate(r: &Row) -> bool {
     !r.ranked.is_empty() && r.shared >= if r.nlib < 6 { 3 } else { 6 }
 }

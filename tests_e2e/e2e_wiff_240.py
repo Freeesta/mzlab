@@ -63,7 +63,7 @@ try:
         c = p.chromium.launch_persistent_context(prof, executable_path=os.environ.get("MZLAB_CHROMIUM") or None, locale="en-US", viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000)
         pg = c.pages[0] if c.pages else c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.on("crash", lambda: errs.append(("crash", "page crashed")))
         loads = []; pg.on("load", lambda: loads.append(time.time()))
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         cdp = c.new_cdp_session(pg); cdp.send("Performance.enable"); bcdp = cdp
         base = len(loads)

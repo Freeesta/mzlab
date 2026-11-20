@@ -15,9 +15,25 @@ pub mod cut;
 #[cfg(feature = "check")]
 pub mod draw;
 #[cfg(feature = "check")]
+mod draw_build;
+#[cfg(feature = "check")]
+mod draw_cip;
+#[cfg(feature = "check")]
 mod draw_db;
 #[cfg(feature = "check")]
 pub mod draw_file;
+#[cfg(feature = "check")]
+mod draw_font;
+#[cfg(feature = "check")]
+mod draw_hl;
+#[cfg(feature = "check")]
+mod draw_label;
+#[cfg(feature = "check")]
+mod draw_png;
+#[cfg(feature = "check")]
+mod draw_spec;
+#[cfg(feature = "check")]
+mod draw_svg;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

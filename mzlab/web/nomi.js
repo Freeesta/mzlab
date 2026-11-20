@@ -7,7 +7,7 @@ const NOMI = (function () {
   const DB = "mzlab_lab";
   const DB_OLD = "qqq_lab";
   const DB_VERSION = 2;
-  const DB_VER = 5;
+  const DB_VER = 6;
   const CACHE_PREFIX = "mzlab-";
   const CACHE_APP = "mzlab-app-";
   const CACHE_BIG = "mzlab-big-";
@@ -108,7 +108,7 @@ const NOMI = (function () {
   }
 
   function migrateLs(ls) {
-    const migrato = ls.getItem("mzlab.migrato");
+    const migrato = ls.getItem("mzlab.migrated");
     if (migrato !== "1") {
       const toCopy = [];
       for (let i = 0; i < ls.length; i++) {
@@ -127,13 +127,13 @@ const NOMI = (function () {
           ls.setItem(newK, val);
         }
       }
-      ls.setItem("mzlab.migrato", "1");
-      ls.setItem("mzlab.avvii", "1");
+      ls.setItem("mzlab.migrated", "1");
+      ls.setItem("mzlab.launches", "1");
     } else {
-      let avvii = parseInt(ls.getItem("mzlab.avvii") || "1", 10);
+      let avvii = parseInt(ls.getItem("mzlab.launches") || "1", 10);
       if (isNaN(avvii)) avvii = 1;
       avvii++;
-      ls.setItem("mzlab.avvii", String(avvii));
+      ls.setItem("mzlab.launches", String(avvii));
       if (avvii >= 3) {
         const toRemove = [];
         for (let i = 0; i < ls.length; i++) {

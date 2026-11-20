@@ -11,7 +11,7 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p, tour=True)
-        pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1'); } catch (_) {}")
+        pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1'); } catch (_) {}")
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
         pg.click("text=Load data"); ready(pg)
         def invite():

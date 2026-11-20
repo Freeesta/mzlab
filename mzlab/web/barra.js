@@ -8,13 +8,13 @@
 // space left, never sits under it. Always-visible header button #sb-toggle (and Ctrl/Cmd+B) shows/hides it; a tool button shows the panel
 // on that tool and a second click hides it. Below SHEET px it is a sheet that replaces the workspace. Width is draggable (splitter
 // #sidebar-resize-handle, arrows, double click = default); side is left or right (drag the header to the other half of the window, or Alt+Shift+Left/Right).
-// State: localStorage qqq.barra.lr / qqq.barra.hr ({tab, open, w, last}), side shared in qqq.barra.lato.
+// State: localStorage qqq.bar.lr / qqq.bar.hr ({tab, open, w, last}), side shared in qqq.bar.side.
 
 const BARRA = (() => {
-  const K_LR = NOMI.KEY("barra.lr");
-  const K_HR = NOMI.KEY("barra.hr");
-  const K_SIDE = NOMI.KEY("barra.lato");
-  const K_HINT = NOMI.KEY("barra.hint");   // first-visit hint under the toolbar: shown once per browser
+  const K_LR = NOMI.KEY("bar.lr");
+  const K_HR = NOMI.KEY("bar.hr");
+  const K_SIDE = NOMI.KEY("bar.side");
+  const K_HINT = NOMI.KEY("bar.hint");   // first-visit hint under the toolbar: shown once per browser
   const HR_PANELS = ["hdr", "lst", "fil", "alb", "gra", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace

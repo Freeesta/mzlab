@@ -3,7 +3,7 @@
 // Size of the atom symbols in the editor (Disegno): three sizes, kept in this browser. Ketcher takes it as its "fontsz" option;
 // only editor.setOptions applies it at once (ketcher.setSettings does not), and Ketcher keeps it in its own localStorage as well. The same call turns off
 // Ketcher's stereo flag («ABS» beside every molecule with a stereo centre, e.g. a pasted PubChem isomeric SMILES): wedges and @/@@ already say it.
-const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.font") : "qqq.disegno.font";
+const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.font") : "qqq.draw.font";
 export const SIZES = /** @type {const} */ ([13, 16, 20]);        // small, medium (default), large
 export const DEFAULT = 16;
 

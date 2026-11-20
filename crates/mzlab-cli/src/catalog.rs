@@ -75,7 +75,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--smooth", "smoothing points: 3 or 5"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
-    ("--format", "json (default) or csv"),
+    ("--format", "output format (values in the usage line)"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
     ("--conv", "conversation"),

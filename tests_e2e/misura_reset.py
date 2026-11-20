@@ -12,7 +12,7 @@ import argparse, json, statistics, time
 
 EX = ROOT / "mzlab" / "web" / "esempi"
 GUARD = "try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}"
-HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"
 BUSY = "(typeof UPBUSY !== 'undefined' && UPBUSY > 0) || (typeof OPENNOW !== 'undefined' && OPENNOW.busy() > 0) || (typeof PROGRESSO !== 'undefined' && PROGRESSO.busy())"
 READY = "typeof S !== 'undefined' && window.qqReady === true"
 QUIET = "window.qqReady === true && (window.__qqF || 0) === 0 && Date.now() - (window.__qqT || 0) > 1000"
@@ -78,7 +78,7 @@ def run_one(b, base, mode, var, n, big):
             try: tab2 = pg2.evaluate("({ files: typeof E !== 'undefined' ? E.files.length : -1, failed: window.qqFailed || null, err: window.MZLAB_LR_ERR || null, busy: %s })" % BUSY)
             except Exception as e: tab2 = {"err": str(e)[:120]}
         rec = {"doc_loads": len(docs) - n_docs, "mode": mode, "var": var, "n": n, "seed_s": seed_s, "busy_at_reset": busy, "lists_conn_at_reset": conn, **st,
-               "ls_at_start": [k for k in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []) if k not in HARNESS_LS], "session_at_start": "mzlab.sessione" in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []),
+               "ls_at_start": [k for k in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []) if k not in HARNESS_LS], "session_at_start": "mzlab.session" in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []),
                "ls_at_start_last": [k for k in (m["cur"]["ls0"] or []) if k not in HARNESS_LS], "coi": pg.evaluate("crossOriginIsolated"),
                "before": {"usage": before["usage"], "stores": before["stores"]},
                "after": {**after, "ls": [k for k in after["ls"] if k not in HARNESS_LS]}, "tab2": tab2, "errs": errs[:5]}
