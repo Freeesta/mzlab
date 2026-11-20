@@ -10,6 +10,8 @@ pub mod cip;
 #[cfg(feature = "check")]
 mod cip_rank;
 pub mod cut;
+#[cfg(feature = "check")]
+pub mod draw;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

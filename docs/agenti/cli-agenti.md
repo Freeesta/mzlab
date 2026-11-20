@@ -59,7 +59,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 `flow report|record`, `file info|index|inventory|verify|items|channels`, `sample vars|group|table|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay`, `spectrum get|list|dda-window`, `peak auto|auto-lr|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `ion mz|pattern|match`, `mol label|anal|check|cip|hilite|sel|link|cut|mech|search`
 `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
-`flow run|check|steps|verify|command`, `explain-missing`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `db normative build`, `db insilico pack`, `commands`
+`flow run|check|steps|verify|command`, `explain-missing`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
 `features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
@@ -86,8 +86,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `llm eval` (`evalrun/1`, one JSON document, a verdict command): exit 0 all checks pass, 1 a check failed (the document stays on stdout), 2 usage, 3 a case or recording of the wrong format, 4 missing file. A recording that runs out or does not answer its case is one `error/1` with exit 1.
 
 ## Chemistry commands (`mol *`, `ion *`)
-- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
+- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `draw/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
 - Exit codes: 2 for a formula, adduct or SMILES that does not parse or a bad option value; 1 for a valid request the chemistry cannot satisfy (adduct removes more atoms than exist, m/z below 1, cut of an aromatic bond, bond that is not in the molfile); 4 for a missing file or a request/molfile that cannot be read. 6 for an unwritable `--out`. Failures are one `error/1`. `mol export` prints text (no schema, no `--json`); `mol search` answers `substructure/1`, or `substructure_db/1` with `--db`. `error_mda` is in mDa. Schemas: `docs/schemi/*-1.json`.
+- `mol draw SPEC` (`draw/1`, or a molfile without `--json`): 2 unparseable SMILES/molfile, bad `--set`, or a name/key without `--set db=PATH`; 4 missing file or db; 5 name or key not in the db (the hint lists the nearest names); 6 unwritable `--out` (`mol-draw.md`).
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

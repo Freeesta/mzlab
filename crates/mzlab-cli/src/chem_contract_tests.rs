@@ -81,6 +81,7 @@ fn every_answer_opens_with_its_schema_and_none_has_a_format_key() {
         (vec!["mol", "link", &link], "link/1"),
         (vec!["mol", "cut", &mol, "--set", "bonds=0-1"], "cut/1"),
         (vec!["mol", "mech", &mf], "mechanism/1"),
+        (vec!["mol", "draw", "smiles:CCO", "--json"], "draw/1"),
         (
             vec!["mol", "search", "--sub", "CO", "CCO"],
             "substructure/1",
@@ -386,6 +387,21 @@ fn mol_probes(fx: &Fx) -> Probes<'_> {
     probes
 }
 
+fn draw_probes() -> Probes<'static> {
+    let db: &'static str = Box::leak(format!("db={}/../../mzlab/web/molecole/catalogo.csv", env!("CARGO_MANIFEST_DIR")).into_boxed_str());
+    vec![(
+        "mol draw",
+        vec![
+            (vec!["smiles:CCO"], 0),
+            (vec!["smiles:C(("], 2),
+            (vec!["name:caffeine"], 2),
+            (vec!["/no/such/x.mol"], 4),
+            (vec!["name:zzzzzzzzzz", "--set", db], 5),
+            (vec!["smiles:CCO", "--out", NOWHERE], 6),
+        ],
+    )]
+}
+
 fn export_probes(fx: &Fx) -> Probes<'_> {
     let nowhere = NOWHERE;
     let (ether, export_big) = (&fx.ether[..], &fx.export_big[..]);
@@ -434,6 +450,7 @@ fn each_entry_lists_exactly_the_codes_its_probes_give() {
     let mut probes = ion_probes(&fx);
     probes.extend(mol_probes(&fx));
     probes.extend(export_probes(&fx));
+    probes.extend(draw_probes());
     for (name, list) in probes {
         let e = crate::cmd::entries().find(|e| e.name == name).unwrap();
         let mut seen = std::collections::BTreeSet::new();

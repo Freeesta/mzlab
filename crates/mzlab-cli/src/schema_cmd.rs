@@ -28,6 +28,7 @@ embed!(
     "design_canonical-1.json",
     "design_check-1.json",
     "design_proposal-1.json",
+    "draw-1.json",
     "elements-1.json",
     "error-1.json",
     "evalrun-1.json",

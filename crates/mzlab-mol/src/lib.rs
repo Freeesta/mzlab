@@ -12,6 +12,7 @@ pub mod delta;
 mod descr;
 mod drawing;
 mod elements;
+mod layout;
 mod kekule;
 mod model;
 mod molfile;

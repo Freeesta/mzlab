@@ -2,14 +2,15 @@
 `mol cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
 molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `highlight/1` of the evidence colours like
-`mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""
+`mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json); the 2D layout of a spec (`draw`, `draw/1` scene and molfile) like `mzlab-cli mol draw`
+and the app (tests/dati/draw_d1.json, 30 specs). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli
+from cargo_util import build, cli, cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -100,3 +101,25 @@ def test_hilite_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     for bad, key in fx["errors"]:
         r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps(bad), "hilite"], cwd=ROOT, capture_output=True, encoding="utf-8")
         assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == key
+
+
+def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
+    fx = json.loads((ROOT / "tests" / "dati" / "draw_d1.json").read_text(encoding="utf-8"))
+    db = tmp_path / "db.csv"
+    db.write_text(fx["db"], encoding="utf-8")
+    assert len(fx["cases"]) == 30
+    for c in fx["cases"]:
+        r = c["request"]
+        sets = [x for k in ("layout", "name") if k in r for x in ("--set", f"{k}={r[k]}")] + (["--set", f"db={db}"] if "db" in r else [])
+        multi = "\n" in r["spec"]
+        for fmt, want in (("scene", c["scene"]), ("molfile", c["molfile"])):
+            p = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**r, "format": fmt}), "draw"], cwd=ROOT, capture_output=True, encoding="utf-8")
+            assert (p.returncode == 0) == (c["exit"] == 0), c["name"]
+            if c["exit"]:
+                assert json.loads(p.stderr)["error_key"].startswith("err.mol.draw."), c["name"]
+                continue
+            assert p.stdout == want + "\n", (c["name"], fmt)  # the node runner adds one newline
+            args = ["mol", "draw", "-" if multi else r["spec"], *sets, *(["--json"] if fmt == "scene" else [])]
+            q = subprocess.run(cli_argv(*args), cwd=ROOT, input=r["spec"] if multi else None, capture_output=True, encoding="utf-8")
+            assert q.stdout == want + ("\n" if fmt == "scene" else ""), (c["name"], fmt)  # the CLI ends a JSON answer with a newline
+    assert sorted(c["exit"] for c in fx["cases"] if c["exit"]) == [2, 2, 5]

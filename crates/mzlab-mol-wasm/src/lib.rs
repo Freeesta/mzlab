@@ -1,7 +1,7 @@
 //! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
 //! drawing; `substructure` gives `substructure/1` (`substructure_db/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z;
-//! `sdf` gives the `sdf/1` file (molfile or SDF with data items). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
-//! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`) run the same
+//! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene or molfile). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
+//! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`, `mol draw`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`, `draw`) run the same
 //! `mzlab_feat::chem` functions. `flow_moiety` is the Flow step `structure.moiety` (`moiety::moiety_text`, the function `flow run` calls).
 //! Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
@@ -29,6 +29,12 @@ pub fn check(request: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn substructure(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::substructure::search_json(request).map_err(js_err)
+}
+
+/// The `draw/1` scene (or the molfile, `"format":"molfile"`) of a request `{"spec", "format", "layout", "db", "name"}`, the same bytes as `mzlab-cli mol draw`.
+#[wasm_bindgen]
+pub fn draw(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::draw::draw_json(request).map_err(js_err)
 }
 
 /// `sdf/1` text of a request `{"molfile", "format", "ion", "name"}`, the same bytes as `mzlab-cli mol export`.

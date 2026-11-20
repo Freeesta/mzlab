@@ -155,6 +155,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["mol", "sel", "/nonexistent/r.json"],
     &["mol", "link", "/nonexistent/r.json"],
     &["mol", "export", "/nonexistent/r.json"],
+    &["mol", "draw", "/nonexistent/x.mol"],
     &["mol", "cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
     &["mol", "mech", "/nonexistent/r.json"],
     &["file", "inventory", "/nonexistent/x.wiff"],
