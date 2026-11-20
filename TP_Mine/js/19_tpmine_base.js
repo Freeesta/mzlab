@@ -27,7 +27,6 @@
 .tp .err{color:var(--bad)}.tp [aria-invalid="true"]{border:2px solid var(--bad);box-shadow:inset 4px 0 0 var(--bad)}.tp .row>.grow-in{flex:1;width:auto;min-width:0}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
-#qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
 .hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px 18px}
 .tp .hero-b{min-width:0}.tp .hero h2{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}.tp .hero-i{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px}.tp #tp-cnt{display:contents}
 .tp .hero .hc{display:inline-flex;gap:4px;align-items:baseline;box-sizing:border-box;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:12px}.tp .hero .hl{color:var(--muted);font-size:12px}.tp .hero b{font-variant-numeric:tabular-nums}.tp .hero .hn{font-weight:600;border-color:transparent;padding-left:0}
@@ -103,7 +102,9 @@
   }
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
-  window.TPCALL = call;                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
+  window.TPCALL = call;
+  // hands the bytes of a file to the engine worker (the desktop shim test uses it: the page that did this with a file chooser is gone)
+  call.put = async (/** @type {string} */ name, /** @type {ArrayBuffer} */ buf) => { await startWorker(); return send({ type: "put", name, buf }, [buf]); };                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
   const mzmls = new Map();                  // the mzML written for a sample (once, for the use that needs it: Pyodide, a profile sample to reduce)

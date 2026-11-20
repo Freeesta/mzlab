@@ -25,7 +25,7 @@ Severity tags: **[H]** hides a real bug · **[W]** weak (passes, proves little) 
 11. **[W]** `tests/test_sw_cache_node.py:12` — `skipif(shutil.which("node") is None)`: the only unit test of the service worker disappears silently on a runner without node; `tests/*.py` hold 184 `skip`/`skipif`/`importorskip` sites in total. Fix: one strict environment variable in CI that turns "tool missing" skips into errors.
 12. **[W]** 15 `#[ignore]` Rust tests (e.g. `crates/mzlab-core/src/scantable/tests_window.rs:37`, `crates/mzlab-feat/tests/groups.rs:441`, `crates/mzlab-lettori/tests/sqlite_columns.rs:295`, `crates/mzlab-chem/tests/validation.rs:201`, five in `crates/mzlab-finder-lr-wasm/tests/`); no workflow passes `--ignored`, so they run only by hand. Fix: give each a reason string and run them in the nightly job.
 13. **[H]** Lab data: 40 Rust test files and 21 Python test files return early or skip without the private data; CI has none. Behaviours therefore **never tested in CI** (from `docs/agenti/test.md` and `docs/agenti/mutants.md`):
-    - the whole teaching flow (`e2e_studenti`), `e2e_tpmine_mem`, the real series part of `e2e_tpmine2`, `e2e_hr_msntree`, `prova_hr`;
+    - the whole teaching flow (`e2e_studenti`), `e2e_hr_msntree`, `prova_hr`;
     - the Orbitrap cut steps of `e2e_hr_base` and `e2e_hr_ppm`;
     - every `.dam` path: `e2e9`, `e2e10`, `e2e15`, `e2e_dam_incoerente`;
     - reader internals that survive mutation without real files: wiff (`wiff_member`, `scan_header`, `add_unindexed`, `header_tic`), Waters (chromatograms, cuts, functions, `.inf`, MRM, sides), Shimadzu metadata, `mzxml_index`, parts of netCDF.

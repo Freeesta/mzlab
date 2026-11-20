@@ -49,7 +49,7 @@ Reopening, seconds spent between worker messages:
   - Error-3010 on `id_confidence_measure`, `best_id_confidence_measure`, `ms_level` and `identification_method`: the map wants a child of `MS:1002888` ("small molecule confidence measure", only scores from other programs) and the SME rows. Measures the program does not compute are not declared.
   - Summary: jmzTab-m 1.0.6 structural validation = 0 errors and 0 warnings; semantic = 6 findings, all due to (a) no SME row because there is no source spectrum and (b) no identity score from other programs (children of `MS:1002888`); mzLab does not invent them. The file opens with the `COM` line "This file carries quantification only; identification columns are not scored.".
 
-### Clicks of the Tabui flow from the files to the TP table (`python3 tests_e2e/e2e_clic_flusso.py`, line "MISURA", headless Chromium, synthetic HR series `lc_synth` + `msn_synth`)
+### Clicks of the Tabui flow from the files to the TP table (historical: the page and its measuring test were deleted)
 - Counted with capturing listeners in the page (trusted clicks, keys without the modifiers alone). The system file dialog (click on "Choose files...", Ctrl+A, Enter) and the paste of the SMILES (click on the field, Ctrl+V) cannot be driven with Playwright: they are constants declared in the test.
 - **Result: 4 clicks + 3 keys = 7 actions**: Tabui tab (1 click), files (1 click + 2 keys), parent SMILES (1 click + 1 key), "Dig" (1 click).
 - The test fails above 10 actions (without the logo): one more step between the files and the table is a regression. No confirmation, no "Compute" button in between; the Pipeline is not needed for this path.

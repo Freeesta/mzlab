@@ -140,7 +140,7 @@ def test_guard_hides_the_example_entry_points():
 
 
 @needs_node
-@pytest.mark.parametrize("h,want", [("#/flow", "#/data"), ("#/attributio", "#/data"), ("#/theory", "#/data"), ("#/practice/3", "#/data"), ("#/data", "#/data"), ("#/draw", "#/draw"), ("", "")])
+@pytest.mark.parametrize("h,want", [("#/flow", "#/data"), ("#/tpmine", "#/data"), ("#/attributio", "#/data"), ("#/theory", "#/data"), ("#/practice/3", "#/data"), ("#/data", "#/data"), ("#/draw", "#/draw"), ("", "")])
 def test_guard_addresses(h, want):
     assert guard(hash=h)["hash"] == want
 

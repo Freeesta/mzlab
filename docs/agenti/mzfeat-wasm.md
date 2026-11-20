@@ -36,7 +36,7 @@ The WASM bridge of the L1-L9 pipeline of `mzlab-feat` (formats and levels: `mzfe
 - The parent adduct (`[M+H]+`, `[M+Na]+`, `[M+NH4]+`, `[M-H]-`, `[M+HCOO]-`) decides ion formula and m/z (`series::parent`); with a negative adduct the worker passes the recipe `{"polarity":-1}` to detection, alignment, hypotheses and proofs.
 - The "RT (min)" field of the parent (`parent.rt`, empty = automatic) picks the parent row closest in RT and passes `parentRt`/`parentMz` to hypotheses and proofs; empty, the row is the one with the largest area in the time-0 files (otherwise in all).
 - Before the proofs the worker asks `finder_parent` (parent row in the aligned table: `legacy::parent_peak`) and passes m/z and RT to `evidence`: so the products view (`tp/1`) and the kinetics read against the parent. The Dig leaves out the rows that the ISF gate of the view marks `ST_ISF` (in-source fragments of the parent or of a product), lists them in `isf_hidden` and writes it in the warnings.
-- A site without `wasm-feat/` answers "mzFinder engine not built". Test: `e2e_tpmine_rust`.
+- A site without `wasm-feat/` answers "mzFinder engine not built". Test: the Flow e2e tests that use the engine.
 
 ## The MSn tree in Rust: `mzlab_feat::finder_base::msn` (`finder_msn` `.wasm`)
 - `msn::scans_of(index)` reads the MSn scans of the `.mzidx` (a scan shared by several sections once only); `msn::build_tree(scans, ion, smiles, calibrate)` (nodes, parents and consensus from `mzlab_core::msntree_build`, subformula formulas of the precursor, calibration `msn/space.rs::fit`, atom sets `msn/atoms.rs`); SMILES missing, unreadable or too large = tree without structure (`subs` `None`), no error.
@@ -45,7 +45,7 @@ The WASM bridge of the L1-L9 pipeline of `mzlab-feat` (formats and levels: `mzfe
 - `src/msn.rs`: `finder_msn(read, size, parent_json)` → `FinderMsn` (`build_tree` with the [M+H]+ ion of the parent, calibration `auto`, library if the structure is there) with `msn_tree`, `calibration`, `set_parent_ms2(mz, rel)` (rebuilds the library with the DDA MS2), `localize(id, neutral formula, mz, rel, tp_mz)` (ion = neutral + H; `null` without structure or with an element the parent does not have; kept by `id`), `frag_tree`, `frag_tree_compare(id)`.
 - **Worker**: with a file of type `msn` the worker loads `finder_msn` after `finder_dig`; in the `summary` it puts `tree`, `calibration` and, for rows with MS2 and formula, `region` and `margin` (2 decimals); `detail` receives `localization` and `ms2.evidence`; `frag_tree` and `frag_tree_compare` come from the MSn tree, `msn_tree` from `FinderMsn`. The first parent MS2 seen in a `detail` rebuilds the library.
 - Not ported: the library masses as in-source fragments (`isf_masses`, `isf_hidden`, `isf_coincident`) and the library in the IIMN families (`iimn.family`): the Rust Dig does not have these parts.
-- Test: `e2e_tpmine_rust` (a synthetic MSn file from `msn_synth.py`: tree, calibration, `frag_tree`, `frag_tree_compare` and the localization of synthetic products).
+- Test: `crates/mzlab-feat` tests (a synthetic MSn file from `msn_synth.py`: tree, calibration, `frag_tree`, `frag_tree_compare` and the localization of synthetic products).
 
 ## The table `.wasm`: `crates/mzlab-feat-table-wasm`
 - Views, report and exports of the table, loaded by the page only when a table is shown or exported (the pipeline engine does not carry it). Built by `tools/build_feat_wasm.sh` into `wasm-feat/table/`, with the `table` entry in `manifest.json` (SHA-256), same weight limit as the others.

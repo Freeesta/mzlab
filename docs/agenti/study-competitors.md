@@ -95,7 +95,7 @@ Also absent but of lower value for a university lab: electronic signatures and a
 - **Skyline**: its small-molecule transition list uses columns such as Molecule List Name, Precursor Name, Precursor Formula, Precursor Adduct, Precursor RT, Product m/z [11]; mzLab's transition CSV has its own columns (`transitions.md`): a converter in both directions is small work. Skyline `.blib` libraries are not read.
 - **Libraries**: MSP, MGF, MassBank, MoNA/GNPS/mzMine JSON are read (`spectral-match.md`); MZmine also reads JCAMP `.jdx` [1]; NIST binary libraries and mzCloud are vendor-side [17].
 - **mzML out**: complete for all read families (`cli-convert.md`); this is the entry format of GNPS, SIRIUS, XCMS, MassCube, patRoon and OpenMS [13][14][6][9][10][8]. Conformance and known holes: `mzml-matrix.md`.
-- **Docs to align**: `flow-mzmine.md` lists mzTab-M among exports with no step, while `cli-passi.md` and `flow-coverage-tabui.md` describe `export.mztab` as a step.
+- **Docs to align**: `flow-mzmine.md` lists mzTab-M among exports with no step, while `cli-passi.md` describes `export.mztab` as a step.
 
 ### (d) Risks
 - **Citation**: reviewers expect a citable method. The tools read are cited by a paper: MZmine 3 doi:10.1038/s41587-023-01690-2, MS-DIAL doi:10.1038/nmeth.3393, XCMS doi:10.1021/ac051437y, OpenMS 3 doi:10.1038/s41592-024-02197-7, Skyline (small molecules) doi:10.1021/acs.jproteome.9b00640, patRoon doi:10.1186/s13321-020-00477-w, SIRIUS 4 doi:10.1038/s41592-019-0344-8, GNPS doi:10.1038/nbt.3597, MSConvert doi:10.1038/nbt.2377.
