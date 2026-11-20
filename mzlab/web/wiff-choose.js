@@ -2,7 +2,7 @@
 "use strict";
 // «Choose samples»: when a SCIEX .wiff holds several samples the page lists them (engine listing `samples_list/1`, container and index only, the .wiff.scan is not read) and
 // the user ticks which to open (docs/agenti/wiff-sample-choice.md, PR 4). No sample logic here: the list, the first ticks (`sample_default`) and the «1,3,5» field
-// (`sample_selection`) are the engine's; this file draws a dialog and reports the ticked ids. Lazy (carica("wiff-choose.js")), called by wiffToMzml (shell.js).
+// (`sample_selection`) are the engine's; this file draws a dialog and reports the ticked ids. Lazy (loadScript("wiff-choose.js")), called by wiffToMzml (shell.js).
 
 const wcT = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 const wcMb = (/** @type {number} */ n) => n >= 1 << 20 ? wcT("pick.mb", { n: (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) }) : wcT("pick.kb", { n: Math.max(n > 0 ? 1 : 0, Math.round(n / 1024)) });

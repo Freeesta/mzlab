@@ -2,7 +2,7 @@
 // Mechanism notation of the Drawing: curved arrows (full head = an electron pair, half head = one electron), lone-pair dots and the «•+» radical cation.
 // Arrows and lone pairs are data S-groups of Ketcher (fieldName MZLAB_MECH / MZLAB_LP), so they travel in the .ket; they are drawn over the canvas and
 // in the exported image here. The Rust engine (`mech` of the grafo .wasm, `mechanism/1`) says whether each arrow is well formed, never which mechanism is right.
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 import { ketIndex } from "./disegno-parziali.js";
 import { atomAt } from "./disegno-radicale.js";
 
@@ -221,7 +221,7 @@ export function requestOf(/** @type {any} */ K, /** @type {Helpers} */ h) {
 
 /** the check of a request, or `{error}` with the engine's key, or null when the engine cannot answer */
 export async function mechOf(/** @type {Record<string, any>} */ req) {
-  try { return JSON.parse(await (await carica()).mech(JSON.stringify(req))); }
+  try { return JSON.parse(await (await loadWasm()).mech(JSON.stringify(req))); }
   catch (e) { try { return { error: /** @type {string} */ (JSON.parse(String(e)).error_key) }; } catch (_) { return null; } }
 }
 

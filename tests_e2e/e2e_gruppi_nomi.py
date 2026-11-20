@@ -18,7 +18,7 @@ def row(pg, stem):
 def drag(pg, stem, target):
     x, y = centre(row(pg, stem)); pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x + 4, y + 4); pg.mouse.move(x + 8, y + 8)
     tx, ty = centre(pg.locator(target)); pg.mouse.move(tx, ty, steps=10); pg.mouse.move(tx + 1, ty, steps=2); pg.mouse.up(); ready(pg)
-def setg(pg, stem, g): return pg.evaluate("async ([s, g]) => { await carica('gruppi.js'); return GRUPPI.set([fileBase(E.files.find(f => fileBase(f.file).startsWith(s)).file)], g) }", [stem, g])
+def setg(pg, stem, g): return pg.evaluate("async ([s, g]) => { await loadScript('groups.js'); return GROUPS.set([fileBase(E.files.find(f => fileBase(f.file).startsWith(s)).file)], g) }", [stem, g])
 r = Run(port=8903, wd="/tmp/wd_gruppi_nomi")
 try:
     with sync_playwright() as p:
@@ -42,14 +42,14 @@ try:
         def renames():
             assert setg(pg, "FullScan_t15", "Other") and lab(pg, "FullScan_t15") == "Other"
             def ren(old, new):
-                pg.evaluate("async (o) => { await carica('gruppi.js'); GRUPPI.rename(o) }", old)
+                pg.evaluate("async (o) => { await loadScript('groups.js'); GROUPS.rename(o) }", old)
                 pg.wait_for_selector("#askdlg[open]"); pg.fill("#askin", new); pg.click("#askok"); ready(pg)
             ren("Other", "b_lanks"); assert lab(pg, "FullScan_t15") == "Other", "renamed onto a taken name"
             ren("Other", "Samples"); assert lab(pg, "FullScan_t15") == "Samples"
             ren("Samples", "SAMPLES"); assert lab(pg, "FullScan_t15") == "Samples" or lab(pg, "FullScan_t15") == "SAMPLES"   # the group's own name may change case
         step("rename onto a taken name is refused, a free one works", renames)
         def names():
-            n = pg.evaluate("async () => { await carica('gruppi.js'); return GRUPPI.newName(['FullScan_t0.mzML']) }")
+            n = pg.evaluate("async () => { await loadScript('groups.js'); return GROUPS.newName(['FullScan_t0.mzML']) }")
             assert n.replace("_", "").replace(" ", "").lower() not in ("fullscan", "blanks", "samples"), n
         step("a proposed name is free", names)
         def dnd():

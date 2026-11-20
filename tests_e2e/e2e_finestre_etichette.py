@@ -68,7 +68,7 @@ def mrm(size, touch):
             if q.evaluate("E.panels.some(p => p.type === 'mrm' && p.ints && p.ints.length)"): break
         assert q.evaluate("E.panels.some(p => p.type === 'mrm' && p.ints && p.ints.length)"), (size, "no integration")
         # the baseline dialog (key B / «Baseline…»), with a custom line so that its fields are live
-        q.evaluate("carica('integra-base.js').then(() => { const p = E.panels.find(p => p.type === 'mrm' && p.ints.length); INTBASE.open(p, p.ints[0]); })")
+        q.evaluate("loadScript('integra-base.js').then(() => { const p = E.panels.find(p => p.type === 'mrm' && p.ints.length); INTBASE.open(p, p.ints[0]); })")
         wait_for_js(q, "!!document.querySelector('#bigdlg[open] input[name=ib-m]')", 30000)
         q.click("#bigdlg input[name=ib-m][value=line]"); frames(q, 2)
         w = q.evaluate("document.getElementById('bigdlg').getBoundingClientRect().width")

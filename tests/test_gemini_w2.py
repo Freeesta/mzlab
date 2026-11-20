@@ -96,9 +96,9 @@ global.localStorage = { getItem: () => null }; global.setTimeout = (f) => { time
 const src = require("fs").readFileSync(%r, "utf8").replace(/var L = \\[[^\\]]*\\];/, "var L = [];");
 eval(src);
 (async () => {
-  const first = await window.carica("x.js").then(() => "ok", () => "fail");
+  const first = await window.loadScript("x.js").then(() => "ok", () => "fail");
   fail = false;
-  const second = await window.carica("x.js").then(() => "ok", () => "fail");
+  const second = await window.loadScript("x.js").then(() => "ok", () => "fail");
   console.log(JSON.stringify({ first, second, scripts: added.filter(s => s.src === "static/x.js").length }));
   process.exit(0);
 })();

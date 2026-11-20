@@ -4,10 +4,10 @@
 // name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files
 COMANDI.gestore("files.view", {
   // the panels are part of the snapshot: hiding a file closes the panels that only showed it, and the undo opens them again
-  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null, window.GRUPPI?.stg() ?? null, E.ugNone ?? null],
+  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null, window.GROUPS?.stg() ?? null, E.ugNone ?? null],
     p: E.panels.map((/** @type {any} */ q) => [q.id, panelRec(q), { link: q.link, src: q.src, dda: q.dda, dock: q.dock, duo: q.duo }]) }),
   applica: (_p, snap) => {
-    const { f: rows, p: panels, u } = JSON.parse(snap); [E.ugBy, E.ugOrder] = u || []; E.ugNone = u?.[3] ?? undefined; window.GRUPPI?.stg(u?.[2] ?? null);
+    const { f: rows, p: panels, u } = JSON.parse(snap); [E.ugBy, E.ugOrder] = u || []; E.ugNone = u?.[3] ?? undefined; window.GROUPS?.stg(u?.[2] ?? null);
     rows.forEach((/** @type {any[]} */ [file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
     rows.map((/** @type {any[]} */ r) => r[0]).filter((/** @type {string} */ n) => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((/** @type {string} */ n, /** @type {number} */ i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
       if (E.files[i].file !== n) { const j = E.files.findIndex((/** @type {any} */ f) => f.file === n); reorderFiles(E.files[j].k, E.files[i].k, true); }
@@ -205,10 +205,10 @@ function bindListaFile() {
   if (!L.dataset.cap) L.addEventListener("keydown", e => {
     const row = /** @type {HTMLElement} */ (e.target).closest(".fl:not(.pr)");
     if (!row || !(e.ctrlKey || e.metaKey) || !e.shiftKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
-    e.preventDefault(); e.stopPropagation(); carica("gruppi-dnd.js").then(() => GDND.step(row, e.key === "ArrowDown" ? 1 : -1));
+    e.preventDefault(); e.stopPropagation(); loadScript("groups-dnd.js").then(() => GDND.step(row, e.key === "ArrowDown" ? 1 : -1));
   });
   L.dataset.cap = "1";
-  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => carica("gruppi.js").then(() => carica("gruppi-per.js")).then(() => GRUPPIPER.open());
+  const by = document.getElementById("sb-by"); if (by && !by.onclick) by.onclick = () => loadScript("groups.js").then(() => loadScript("groups-for.js")).then(() => GROUPSFOR.open());
   // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
   L.querySelectorAll(".fgh[data-ug]").forEach(x => {
     const el = /** @type {HTMLElement} */ (x), fold = el.onclick, n = el.dataset.ug || "";
@@ -277,7 +277,7 @@ const ugBases = () => new Set(flSide().filter(x => x.vis).map(x => fileBase(x.fi
 function groupFiles() {
   const used = new Set(E.files.map(x => x.ugrp)); let n = 1;
   while (used.has(I18N.t("files.ugrp.name", { n }))) n++;
-  carica("gruppi.js").then(() => GRUPPI.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
+  loadScript("groups.js").then(() => GROUPS.set([...ugBases()], I18N.t("files.ugrp.name", { n }), "new"));
 }
 /** True when the list has user groups and every one is a single file: their headers (a count of 1 each) are left out. @param {{ g: string, fs: any[] }[]} groups */
 const ugFlat = groups => (E.ugBy && E.ugBy.by === "flat") || groups.some(G => G.g.startsWith("u:")) && groups.every(G => !G.g.startsWith("u:") || G.fs.length < 2);
@@ -291,15 +291,15 @@ function ugArrange(/** @type {{ g: string, fs: any[] }[]} */ groups) {
 let _byTick = 0;
 function syncGroupBy() {
   const by = document.getElementById("sb-by"); if (!by) return;
-  const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GRUPPIPER?.close(false); };
+  const my = ++_byTick, show = (/** @type {boolean} */ on) => { if (my !== _byTick || by.hidden === !on) return; by.hidden = !on; if (!on) window.GROUPSFOR?.close(false); };
   if (new Set(flSide().map((/** @type {any} */ f) => fileBase(f.file))).size < 2) return show(false);
-  carica("gruppi.js").then(() => GRUPPI.useful()).then(show);
+  loadScript("groups.js").then(() => GROUPS.useful()).then(show);
 }
-// rename and ungroup also reach the labels of the loading table's rows: gruppi.js writes both
-const renameGroup = (/** @type {string} */ n) => carica("gruppi.js").then(() => GRUPPI.rename(n));
+// rename and ungroup also reach the labels of the loading table's rows: groups.js writes both
+const renameGroup = (/** @type {string} */ n) => loadScript("groups.js").then(() => GROUPS.rename(n));
 function groupCtx(/** @type {any} */ e, /** @type {string} */ n) {
   e.stopPropagation();
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => carica("gruppi.js").then(() => GRUPPI.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameGroup(n) }, { label: I18N.t("files.ctx.ungroup"), fn: () => loadScript("groups.js").then(() => GROUPS.ungroup(n)) }, "-", { label: I18N.t("files.ctx.removeGroup"), fn: () => removeAllFiles(ugFiles(n), n) }]);
 }
 /** Header of a user group: the markup of the automatic headers of renderFileList, plus the name for its menu (right click, Menu key, Shift+F10) and rename (double click, F2). */
 function ugHead(/** @type {{ g: string, fs: any[] }} */ G, /** @type {boolean} */ open) {

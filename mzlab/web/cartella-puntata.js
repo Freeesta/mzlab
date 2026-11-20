@@ -148,7 +148,7 @@ const CartPuntApri = (() => {
   function warm() {
     if (window.MZLAB_PHONE || !(S.native || S.perm === "granted") || !S.items.length) return;
     const items = CartPP.visible(S.items).filter(x => x.kind === "data" && /\.mzml$/i.test(x.name)).map(x => ({ key: x.path, name: x.name, size: (S.stats.get(x.path) || {}).size, get: () => fileOf(x) }));
-    if (items.length && typeof carica === "function") carica("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
+    if (items.length && typeof loadScript === "function") loadScript("m:riscalda.js").then(() => riscaldaDi().offer(items)).catch(() => {});
   }
   return { open, warm };
 })();
@@ -224,7 +224,7 @@ const CartPunt = (() => {
   function stop() { clearInterval(S.timer); clearTimeout(S.deb); if (S.obs) { try { S.obs.disconnect(); } catch (e) { /* gone */ } S.obs = null; } }
 
   async function start() {
-    if (S.native === null && window.MZLAB_DESKTOP) await carica("cartella-puntata-desktop.js");   // the desktop side is not in the start-up list
+    if (S.native === null && window.MZLAB_DESKTOP) await loadScript("cartella-puntata-desktop.js");   // the desktop side is not in the start-up list
     if (S.native === null) S.native = (typeof CartPuntDesk !== "undefined" && CartPuntDesk.available()) ? CartPuntDesk : false;
     if (S.native) { await S.native.start(S, render); render(); return CartPuntApri.warm(); }
     if (supported()) { S.handle = await saved(); if (S.handle) { S.name = S.handle.name; await rescan(); follow(); } }

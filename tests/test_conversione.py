@@ -128,7 +128,7 @@ def test_a_download_of_a_module_sample_follows_the_compression():
       global.window = { LETTORI_MOD: { toMzml: async (fam, mem, k, dest, on, sig, opts) => { asked.push([fam, mem.map(m => m.name), k, opts]); return { size: 5, tag: "np" }; } },
                         CONVCARD: () => ({ start: () => ({ update() {}, done() {}, fail() {} }), end() {} }) };
       global.document = { getElementById: () => ({}), querySelectorAll: () => [] };
-      global.carica = async () => {};
+      global.loadScript = async () => {};
       global.saveBlob = (b, n) => saved.push([n, b.tag]);
       C.add("a.mzML", { size: 9, tag: "std" }, { fam: "sciex", mem: [{ name: "a.wiff" }, { name: "a.wiff.scan" }], c: 1 });
       (async () => {

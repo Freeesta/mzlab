@@ -28,6 +28,7 @@ mod convert_entries;
 mod convert_help;
 mod convert_report;
 mod dad_cmd;
+mod dad_ms;
 mod dad_msat;
 mod design_cmd;
 mod emit;

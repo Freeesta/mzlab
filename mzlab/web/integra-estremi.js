@@ -138,7 +138,7 @@ function sync(/** @type {Bag} */ p) {
   }
   old.forEach(n => n.remove()); say(p);
   const W = /** @type {any} */ (window);                          // the drop lines and the proposal of «Split at the valleys» (integra-valli.js)
-  if (W.INTVALLI) W.INTVALLI.sync(p); else if (p._split || p.ints.some((/** @type {Bag} */ i) => i.splits)) carica("m:integra-valli.js").then(() => draw(p));
+  if (W.INTVALLI) W.INTVALLI.sync(p); else if (p._split || p.ints.some((/** @type {Bag} */ i) => i.splits)) loadScript("m:integra-valli.js").then(() => draw(p));
 }
 {                                                                  // the look of the handles: a ring on the baseline (colours from the CSS variables)
   const st = document.createElement("style");
@@ -157,8 +157,8 @@ function sync(/** @type {Bag} */ p) {
 const splittable = (/** @type {Bag} */ c) => { const l = AREACOPY.target(c.p, c.x, c.px, c.py), it = l && l.int; return it && !it.fol && /^m\|/.test(it.key || "") && it.bm ? it : null; };
 AZIONI.registra({ id: "int.split", gruppo: "tools", ordine: 0, viste: ["mrm"], scorciatoia: { tasto: "v", dove: "chart", et: "int.split.menu" },
   visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.menu"), tip: () => I18N.t("int.split.tip"),
-  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.start(c.p, it)); } });
+  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) loadScript("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.start(c.p, it)); } });
 AZIONI.registra({ id: "int.split.hand", gruppo: "tools", ordine: 1, viste: ["mrm"], scorciatoia: { tasto: "m", dove: "chart", et: "int.split.hand.menu" },
   visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.hand.menu"), tip: () => I18N.t("int.split.hand.tip"),
-  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.startManual(c.p, it)); } });
+  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) loadScript("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.startManual(c.p, it)); } });
 window.INTEND = { sync, baseY, shown };

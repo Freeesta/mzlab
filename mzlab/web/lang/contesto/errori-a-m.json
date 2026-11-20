@@ -33,6 +33,7 @@
   "err.conv.mzlabNoProfile": "Error of convert with peaks = mzlab (CLI, app) on a file that has only the vendor centroids: mzLab does not write the instrument centroids as its own.",
   "warn.centroid.widthFallback": "Warning of the spectra.centroid step (Flow, CLI and site): the width is not measured but a fallback; never call it estimated.",
   "warn.centroid.merged": "Warning of the spectra.centroid step (Flow, CLI and site): centroids with the MERGED flag (full width at half maximum over 1.12 times that of the file at their m/z); a warning, not an answer.",
+  "warn.features.profileUnit": "Warning of the features command (terminal): the first file is profile mode at unit resolution; {profile} = MS1 scans in profile mode, {scans} = MS1 scans.",
   "warn.agilent.damaged": "Calm partial-read notice (CLI, flow, loading row): damaged scan records of an Agilent .D folder (without time, points outside the data file, data.ms records that do not fit): their scans are left out and counted. Do not say that the file ends.",
   "warn.bruker.noCalibration": "Calm partial-read notice (CLI, flow, loading row): frames of a .d folder without a usable MzCalibration; their spectra are left out and counted because their m/z cannot be calculated. Do not say that the file ends.",
   "error.featMemory": "Tabui (pipeline) error: a stage does not fit in memory. {fase} = stage (align, proofs), {files} = number of files, {stima_mb} and {budget_mb} = estimated memory and budget in MB.",

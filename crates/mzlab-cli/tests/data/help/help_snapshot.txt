@@ -13,7 +13,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
@@ -48,6 +48,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
+       mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -121,7 +122,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
@@ -156,6 +157,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
+       mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -229,7 +231,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
@@ -264,6 +266,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
+       mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -369,7 +372,7 @@ exit 0
 --- stdout
 mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --sample LIST      of a file with several samples (.wiff) only these, by id: 1,3,5 or 2-4, each one a member of the series (the others are

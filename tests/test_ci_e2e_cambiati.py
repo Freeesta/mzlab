@@ -76,3 +76,13 @@ def test_a_test_that_calls_build_feat_never_runs_in_this_job():
     assert callers and all("wasm" in ci.needs(n) for n in callers)
     for files in ({"mzlab/web/draw.js"}, {"tools/pre_pr.py"}):
         assert not set(ci.pick(files)[0]) & set(callers)
+
+
+def test_every_drawing_e2e_that_needs_the_molkit_engine_is_tagged_wasm():
+    # `e2e-cambiati` builds the site without the molkit .wasm: an untagged test that needs it ("open/1 engine unavailable") is red there for no code reason
+    need = ("`open/1`", "the molkit .wasm", "(molkit)", "of the molkit .wasm")
+    for f in sorted((ROOT / "tests_e2e").glob("e2e_disegno_*.py")):
+        head = f.read_text(encoding="utf-8").split('"""')[1] if f.read_text(encoding="utf-8").startswith('"""') else ""
+        if any(k in head for k in need):
+            assert verifica.NEEDS.get(f.stem, set()) & {"wasm", "sito"}, f"{f.stem} needs the molkit engine but is not tagged wasm in verifica.NEEDS"
+    assert "wasm" in verifica.NEEDS["e2e_disegno_cdxml"]          # its drops go through `open/1`, whose docstring does not say so (PR #3586)

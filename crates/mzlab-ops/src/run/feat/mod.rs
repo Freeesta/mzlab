@@ -8,6 +8,8 @@ pub mod estimate;
 pub mod family;
 #[cfg(feature = "table")]
 pub mod interp;
+#[cfg(feature = "detect")]
+pub mod lr_note;
 pub mod run;
 #[cfg(feature = "detect")]
 pub mod run_estimate;

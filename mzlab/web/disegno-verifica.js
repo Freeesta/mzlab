@@ -17,7 +17,7 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
 }
 
 /** the molkit module, loaded on the first check; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json and the bridge version */
-export function carica() {
+export function loadWasm() {
   if (modulo) return modulo;
   modulo = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url), e = (await featManifest(base)).molkit;
@@ -51,7 +51,7 @@ async function rpc(/** @type {string} */ kind, /** @type {string} */ request) {
 /** `check/1` (or, with kind `cip`, `cip/1`; with kind `hilite`, `highlight/1`) text of a request: the native engine in the app, the molkit .wasm on the site */
 export async function ask(/** @type {string} */ request, /** @type {"check" | "cip" | "hilite"} */ kind = "check") {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) return rpc(kind, request);
-  const mod = await carica();
+  const mod = await loadWasm();
   return kind === "cip" ? mod.cip(request) : kind === "hilite" ? mod.hilite(request) : mod.check(request);
 }
 
@@ -63,14 +63,14 @@ export async function openFile(/** @type {Uint8Array} */ bytes) {
     for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     return JSON.parse(await rpc("open", JSON.stringify({ data: btoa(bin) })));
   }
-  return JSON.parse((await carica()).open_file(bytes));
+  return JSON.parse((await loadWasm()).open_file(bytes));
 }
 
 /** Whether a file of this many bytes is read: `{limit}`, else the engine refuses (`error.open.tooBig`, with the size and the limit). Asked before the file is read, so a huge drop costs nothing.
  * @returns {Promise<{ limit: number }>} */
 export async function openSize(/** @type {number} */ size) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) return JSON.parse(await rpc("open", JSON.stringify({ size })));
-  return JSON.parse((await carica()).open_size(size));
+  return JSON.parse((await loadWasm()).open_size(size));
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */

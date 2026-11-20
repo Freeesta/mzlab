@@ -132,7 +132,7 @@
   }
 
   // ---- loading (once per page): index, then extra files + the scripts' downloads in parallel, then the scripts run in order
-  /** @param {boolean} [low] started by the idle moment, not by a tab: low priority, so a script the page asks for meanwhile (carica) goes first */
+  /** @param {boolean} [low] started by the idle moment, not by a tab: low priority, so a script the page asks for meanwhile (loadScript) goes first */
   async function load(low) {
     const opt = low ? { priority: /** @type {"low"} */ ("low") } : {};
     const get = async (name, how) => { const r = await fetch(DIR + name, opt); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
