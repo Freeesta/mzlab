@@ -227,7 +227,9 @@ mod tests {
         assert_eq!(code_of_key("err.normative.input"), INPUT);
         assert_eq!(code_of_key("err.flow.cancelled"), DATA);
         assert_eq!(code_of_key("err.file.wiffGrowing"), GROWING);
-        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL, GROWING] {
+        for c in [
+            DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL, GROWING,
+        ] {
             assert_eq!(code_of_key(generic_key(c)), c);
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
