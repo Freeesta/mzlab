@@ -32,6 +32,7 @@ mod design_cmd;
 pub mod error_text;
 pub mod exit;
 mod extract;
+mod features_note;
 mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
@@ -224,7 +225,7 @@ pub fn features_of(
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    let (recipe, detected, weak) = crate::par::index_and_detect(files, labels, &idxs, params)?;
+    let (recipe, detected, weak) = features_note::index_and_detect(files, labels, &idxs, params)?;
     let mut series = crate::par::Series(detected, weak);
     let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());
