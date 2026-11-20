@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), canali/K_MIRATO, K_BLOCCHI, K_DDA (targeted MS2 in LC, MSn in blocks, DDA with 70 precursors: the channel tests), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_broken-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), canali/K_MIRATO, K_BLOCCHI, K_DDA (targeted MS2 in LC, MSn in blocks, DDA with 70 precursors: the channel tests), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -246,7 +246,7 @@ def full_scan_profile(path: Path, t: float, rng) -> None:
 
 # ---------------------------------------------------------------------------------------------- high resolution (Orbitrap) DDA
 HR_PARENT = "C14H13F4N3O2S"       # formula of the invented "parent" of the HR files (m/z computed with mzlab.chem.elements)
-HR_NAMES = {"exploris": "HR_DDA-Exploris-t30.mzML", "fusion": "HR_DDA-Fusion-t30.mzML", "broken": "HR_rotto-t30.mzML"}
+HR_NAMES = {"exploris": "HR_DDA-Exploris-t30.mzML", "fusion": "HR_DDA-Fusion-t30.mzML", "broken": "HR_broken-t30.mzML"}
 
 
 def hr_parent_mz() -> float:

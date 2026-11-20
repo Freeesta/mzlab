@@ -727,7 +727,7 @@ usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out P
                   SMILES; a path to a file or the text itself (- reads the standard input)
   TARGET          one or more structures, each a path to a molfile or a SMILES file, or a SMILES
   --db LIST       a structure list instead of targets: an SDF, a SMILES list (one per line, SMILES then name) or a table with a
-                  smiles column such as the molecules catalogue (mzlab/web/molecole/catalogo.csv); a path or - for the standard input
+                  smiles column such as the molecules catalogue (mzlab/web/molecules/catalogue.csv); a path or - for the standard input
   --set stereo    1 = defined stereo centres and double bonds of the query must be the same in the target (default 0)
   --set max       at most this many matches per target (1-1000, default 1000)
   --out PATH      write there instead of the standard output

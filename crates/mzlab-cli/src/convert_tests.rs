@@ -68,7 +68,7 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
     let o = convert(&[p(&src), "--out", p(&out), "--report", p(&rep)]);
     assert_eq!(o.code, 1, "{}", o.stderr);
     assert!(
-        o.stderr.contains("rotto.raw: err.file.notThisFormat"),
+        o.stderr.contains("broken.raw: err.file.notThisFormat"),
         "{}",
         o.stderr
     );
@@ -89,7 +89,7 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
         .get("input")
         .and_then(Value::str)
         .unwrap()
-        .ends_with("rotto.raw"));
+        .ends_with("broken.raw"));
     assert!(failed[0]
         .get("cause")
         .and_then(Value::str)

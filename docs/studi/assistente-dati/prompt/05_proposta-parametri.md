@@ -1,14 +1,14 @@
-# 05 — Subagente proposta dei parametri
+# 05 — Parameter proposal subagent
 
-| Voce | Valore |
+| Item | Value |
 |---|---|
-| Modello, effort | Sonnet 5.5, `medium` (T5 confronta `low` e `high`); `max_tokens` 4 000; nessuno strumento; uscita `param-choices/1` (contratto nuovo di A6: scelte, domande, saltati, numeri) |
-| Quando | prima di proporre o correre un piano; dopo una risposta dell'utente che cambia un segnale |
-| Token | sistema ≈ 900; `param-proposal/1` + risposte + piano ≈ 12 000; uscita ≈ 2 500 |
-| Costo | ≈ 0,05 $ a chiamata |
-| Accettazione | T4: valori fuori dall'intervallo accettato ≤ 5 %; 100 % dei valori nei limiti del descrittore; ogni scostamento dalla regola motivato; domanda presente quando il segnale manca ≥ 90 % |
+| Model, effort | Sonnet 5.5, `medium` (T5 compares `low` and `high`); `max_tokens` 4 000; no tools; output `param-choices/1` (new contract of A6: choices, questions, skipped, numbers) |
+| When | before proposing or running a plan; after a user answer that changes a signal |
+| Tokens | system ≈ 900; `param-proposal/1` + answers + plan ≈ 12 000; output ≈ 2 500 |
+| Cost | ≈ 0.05 $ per call |
+| Acceptance | T4: values outside the accepted range ≤ 5 %; 100 % of the values within the descriptor limits; every departure from the rule justified; question present when the signal is missing ≥ 90 % |
 
-Le regole stanno in Rust (`03-parametri.md` §5): il modello sceglie fra la proposta della regola e un altro valore SOLO con una ragione che sta nei dati o nelle risposte dell'utente, e spiega in parole semplici.
+The rules are in Rust (`03-parametri.md` §5): the model chooses between the rule's proposal and another value ONLY with a reason found in the data or in the user's answers, and explains in plain words.
 
 ```text
 You choose processing parameters for an LC-MS workflow. A program already proposed a value for each parameter from measured signals, with its rule, proof and confidence. Your job: keep, adjust or question each proposal, and explain it in one plain sentence for a chemist.
@@ -34,9 +34,9 @@ Rules:
 - Never explain with a compound name.
 ```
 
-## Esempio di ingresso sintetico
+## Synthetic input example
 
-Serie G01 (full scan a risoluzione unitaria, 7 file, nessun bianco confermato):
+Series G01 (full scan at unit resolution, 7 files, no confirmed blank):
 
 ```json
 {"param-proposal/1":{"proposals":[
@@ -47,7 +47,7 @@ Serie G01 (full scan a risoluzione unitaria, 7 file, nessun bianco confermato):
  "answers":{"goal":"transformation products"}}
 ```
 
-## Uscita attesa
+## Expected output
 
 ```json
 {"schema":"param-choices/1","choices":[
@@ -58,9 +58,9 @@ Serie G01 (full scan a risoluzione unitaria, 7 file, nessun bianco confermato):
  "skipped":[],"numbers":["0.4","0.78","8.4","1.09","7.7","4"]}
 ```
 
-Nota: i numeri derivati (punti per picco) arrivano da `proof` di Rust (A3 aggiunge `points_per_peak`); il modello non divide né arrotonda per conto suo, altrimenti `checks::numbers` rifiuta la frase.
+Note: derived numbers (points per peak) come from the Rust `proof` (A3 adds `points_per_peak`); the model neither divides nor rounds on its own, otherwise `checks::numbers` refuses the sentence.
 
-## Criterio di accettazione
+## Acceptance criterion
 
-- G15–G22: ogni valore nell'intervallo accettato del caso; `source` corretto; nessun `blank_ratio` senza bianchi (G23 → domanda).
-- T5: si sceglie l'effort più basso che non peggiora errori e piani di più di 2 punti percentuali; scelta scritta in `assist-roles-1.json` e in `docs/agenti/llm-subagenti.md`.
+- G15–G22: every value in the accepted range of the case; correct `source`; no `blank_ratio` without blanks (G23 → question).
+- T5: the lowest effort that does not worsen errors and plans by more than 2 percentage points is chosen; the choice is written in `assist-roles-1.json` and in `docs/agenti/llm-subagents.md`.

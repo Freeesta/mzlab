@@ -111,12 +111,12 @@ fn two_files_give_the_bytes_of_the_command_line_and_cancel_stops_the_second() {
 #[test]
 fn a_file_that_cannot_be_converted_fails_with_its_cause() {
     let d = tempfile::tempdir().unwrap();
-    let bad = d.path().join("rotto.raw");
+    let bad = d.path().join("broken.raw");
     std::fs::write(&bad, b"not a raw file at all").unwrap();
     let c = Queue::with_workers(1);
     c.set_folder(d.path().join("cache"));
-    c.add("rotto.raw", 0, &bad);
-    wait(&c, "rotto.raw", "failed");
+    c.add("broken.raw", 0, &bad);
+    wait(&c, "broken.raw", "failed");
     assert!(!c.list()["jobs"][0]["error"].as_str().unwrap().is_empty());
 }
 
