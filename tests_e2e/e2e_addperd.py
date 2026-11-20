@@ -18,10 +18,11 @@ if __name__ == "__main__":
             def tabs():
                 pg.click("#stbar [data-cmd=addloss]")
                 wait_for_js(pg, "document.querySelector('#sb-title')?.innerText === 'Adducts & losses' && document.querySelector('#al-t-adducts')", 15000)
-                assert pg.get_attribute("#al-t-adducts", "aria-selected") == "true" and pg.is_visible("#sb-panel-adducts")
+                st = pg.evaluate("({ t: document.querySelector('#al-t-adducts')?.getAttribute('aria-selected'), a: !!document.querySelector('#sb-panel-adducts')?.offsetParent, h: document.querySelector('#sb-panel-addloss')?.hidden, sub: localStorage.getItem('mzlab.barra.lr') })")
+                assert st["t"] == "true" and st["a"], ("the Adducts tab is not the selected one when the page opens", st)
                 pg.click("#al-t-losses")
                 wait_for_js(pg, "(() => { const e = document.querySelector('#sb-panel-losses'); return !!e && e.offsetParent !== null; })()", 15000)
-                assert pg.is_visible("#sb-panel-losses") and not pg.is_visible("#sb-panel-adducts")
+                assert pg.is_visible("#sb-panel-losses") and not pg.is_visible("#sb-panel-adducts"), pg.evaluate("[!!document.querySelector('#sb-panel-losses')?.offsetParent, !!document.querySelector('#sb-panel-adducts')?.offsetParent]")
             step("two tabs switch the body", tabs)
             def remembered():
                 pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!document.querySelector('#sb-panel-losses')?.offsetParent", 15000)      # closed
