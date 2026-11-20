@@ -63,3 +63,40 @@ fn sorted_vec_behaves_like_a_btree_map() {
     let y: Vec<(u32, u32)> = b.into_iter().collect();
     assert_eq!(x, y);
 }
+
+#[test]
+fn sorted_vec_keys_can_be_tuples_and_lists_and_a_set_reports_new_keys() {
+    let mut t: SortedVec<(u8, u32, u32), ()> = SortedVec::new();
+    assert!(t.add((1, 5, 2)));
+    assert!(t.add((0, 9, 0)));
+    assert!(!t.add((1, 5, 2)));
+    let keys: Vec<_> = t.iter().map(|e| e.0).collect();
+    assert_eq!(keys, [(0, 9, 0), (1, 5, 2)]);
+
+    let mut l: SortedVec<Vec<usize>, ()> = SortedVec::new();
+    for k in [vec![3, 1], vec![1, 2, 3], vec![1, 2], vec![3, 1]] {
+        l.add(k);
+    }
+    assert_eq!(l.len(), 3);
+    assert!(l.contains(&vec![1, 2]) && !l.contains(&vec![2]));
+    let order: Vec<_> = l.iter().map(|e| e.0.clone()).collect();
+    assert_eq!(order, [vec![1, 2], vec![1, 2, 3], vec![3, 1]]);
+}
+
+#[test]
+fn collecting_into_a_sorted_set_sorts_and_drops_repeats() {
+    let s: SortedVec<u32, ()> = [5u32, 1, 5, 3, 1].into_iter().collect();
+    assert_eq!(s.iter().map(|e| e.0).collect::<Vec<_>>(), [1, 3, 5]);
+}
+
+#[test]
+fn first_repeat_is_the_first_item_equal_to_an_earlier_one() {
+    let mut seed = 5u64;
+    for n in [0usize, 1, 2, 5, 40, 300] {
+        for spread in [3u32, 30, 100_000] {
+            let v: Vec<u32> = (0..n).map(|_| rng(&mut seed) % spread).collect();
+            let want = (0..n).find(|&i| v[..i].contains(&v[i]));
+            assert_eq!(first_repeat(&v), want, "n={n} spread={spread}");
+        }
+    }
+}

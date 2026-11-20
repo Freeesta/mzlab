@@ -6,11 +6,13 @@
 
 use std::cmp::Ordering;
 
-/// Stable order of `n` items as a permutation: `result[i]` is the index of the item that goes to position `i`.
-/// Insertion-sorted runs of 16, then merges of doubling width between two buffers.
-fn order(n: usize, cmp: &mut dyn FnMut(usize, usize) -> Ordering) -> Vec<u32> {
-    const RUN: usize = 16;
-    let mut v: Vec<u32> = (0..n as u32).collect();
+/// Runs of this length are insertion-sorted; up to this length a whole sort needs no allocation (the index list lives on the stack).
+const RUN: usize = 16;
+
+/// Stable sort of the identity permutation `v` by `cmp` on item indices: insertion-sorted runs of `RUN`, then merges of doubling width
+/// between `v` and `buf` (`buf` is only touched when `v` is longer than `RUN`). The result is in `v`.
+fn sort_idx(v: &mut [u32], buf: &mut [u32], cmp: &mut dyn FnMut(usize, usize) -> Ordering) {
+    let n = v.len();
     let mut s = 0;
     while s < n {
         let e = (s + RUN).min(n);
@@ -26,34 +28,72 @@ fn order(n: usize, cmp: &mut dyn FnMut(usize, usize) -> Ordering) -> Vec<u32> {
         s = e;
     }
     if n <= RUN {
-        return v;
+        return;
     }
-    let mut buf = v.clone();
+    buf.copy_from_slice(v);
+    let (mut src, mut dst): (&mut [u32], &mut [u32]) = (v, buf);
     let mut width = RUN;
+    let mut in_v = true;
     while width < n {
         let mut lo = 0;
         while lo < n {
             let mid = (lo + width).min(n);
             let hi = (lo + 2 * width).min(n);
             let (mut i, mut j) = (lo, mid);
-            for slot in buf[lo..hi].iter_mut() {
+            for slot in dst[lo..hi].iter_mut() {
                 // the right run goes first only when strictly smaller: equal items keep their order
                 let right =
-                    i >= mid || (j < hi && cmp(v[j] as usize, v[i] as usize) == Ordering::Less);
+                    i >= mid || (j < hi && cmp(src[j] as usize, src[i] as usize) == Ordering::Less);
                 if right {
-                    *slot = v[j];
+                    *slot = src[j];
                     j += 1;
                 } else {
-                    *slot = v[i];
+                    *slot = src[i];
                     i += 1;
                 }
             }
             lo = hi;
         }
-        std::mem::swap(&mut v, &mut buf);
+        std::mem::swap(&mut src, &mut dst);
+        in_v = !in_v;
         width *= 2;
     }
-    v
+    if !in_v {
+        // after an odd number of passes the sorted order is in the second buffer
+        dst.copy_from_slice(src);
+    }
+}
+
+/// The stable order of `n` items as a permutation (`result[i]` is the index of the item that goes to position `i`): on the stack up to `RUN`
+/// items, in a `Vec` above. Not generic: ONE copy of the sort per `.wasm`, each call site only adds its comparison closure.
+enum Perm {
+    Small([u32; RUN], usize),
+    Big(Vec<u32>),
+}
+
+impl Perm {
+    fn as_mut_slice(&mut self) -> &mut [u32] {
+        match self {
+            Perm::Small(a, n) => &mut a[..*n],
+            Perm::Big(v) => v,
+        }
+    }
+}
+
+fn order(n: usize, cmp: &mut dyn FnMut(usize, usize) -> Ordering) -> Perm {
+    if n <= RUN {
+        let mut a = [0u32; RUN];
+        for (i, x) in a[..n].iter_mut().enumerate() {
+            *x = i as u32;
+        }
+        sort_idx(&mut a[..n], &mut [], cmp);
+        Perm::Small(a, n)
+    } else {
+        let mut v: Vec<u32> = (0..n as u32).collect();
+        let mut buf = v.clone();
+        sort_idx(&mut v, &mut buf, cmp);
+        Perm::Big(v)
+    }
 }
 
 /// Moves `v` so that `v_new[i] = v_old[idx[i]]`, cycle by cycle with swaps only (no `Clone`). `idx` is used up.
@@ -85,7 +125,7 @@ impl<T> SortM<T> for [T] {
             return;
         }
         let mut idx = order(self.len(), &mut |a, b| cmp(&self[a], &self[b]));
-        permute(self, &mut idx);
+        permute(self, idx.as_mut_slice());
     }
     fn sortm_by_key<K: Ord, F: FnMut(&T) -> K>(&mut self, mut key: F) {
         self.sortm_by(|a, b| key(a).cmp(&key(b)));
@@ -96,6 +136,17 @@ impl<T> SortM<T> for [T] {
     {
         self.sortm_by(|a, b| a.cmp(b));
     }
+}
+
+/// Index of the first item that repeats an earlier one (`None` when all differ), in O(n log n): the stable sort puts equal keys side by side
+/// in their original order, so the later item of the earliest pair is the answer. For untrusted lists, where a sorted insert would be O(n^2).
+pub(crate) fn first_repeat<K: Ord>(keys: &[K]) -> Option<usize> {
+    let mut idx: Vec<usize> = (0..keys.len()).collect();
+    idx.sortm_by(|&a, &b| keys[a].cmp(&keys[b]));
+    idx.windows(2)
+        .filter(|w| keys[w[0]] == keys[w[1]])
+        .map(|w| w[1])
+        .min()
 }
 
 /// Entries kept sorted by key: a map, or a set with `()` values. Iteration is in key order, like the BTree types it replaces.
