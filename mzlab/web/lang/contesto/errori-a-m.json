@@ -68,6 +68,7 @@
   "error.drift.tooFewQc": "Engine error message; {batch} = batch, {have} = how many there are, {need} = how many are needed.",
   "error.evid.points": "Engine error message; {what} = what.",
   "error.export.adduct": "Engine error message; {adduct} = adduct.",
+  "error.open.tooBig": "Engine error when a structure file dropped on the Drawing tab is too large; {size} = the file size in bytes, {limit} = the largest size opened, in bytes.",
   "error.label.element": "Engine error message (drawing labels); {label} = atom label in Ketcher.",
   "error.label.isotope": "Engine error message (drawing labels); {label} = atom symbol with the isotope.",
   "error.grafo.delta": "Engine error message; {delta} = change written.",

@@ -6,7 +6,7 @@
 // because Indigo draws nothing from a file that has one. Binary CDX (starts with "VjCD") changes nothing: it goes in as base64, the form the Open dialog gives it.
 
 /** The notice part of one change of `open/1`: `{ key, params }` of a `draw.import.fix.*` text.
- * @param {{ fix: string, charset?: string, count?: number, names?: string[] }} c */
+ * @param {{ fix: string, charset?: string, count?: number, names?: string[] }} c @returns {{ key: string, params: Record<string, string> }} */
 function changeText(c) {
   if (c.fix === "charset") return { key: "draw.import.fix.charset", params: { charset: String(c.charset) } };
   if (c.fix === "replaced") return { key: "draw.import.fix.replaced", params: { count: String(c.count) } };

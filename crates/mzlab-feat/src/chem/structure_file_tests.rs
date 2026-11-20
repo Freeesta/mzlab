@@ -263,14 +263,14 @@ fn text_outside_the_start_tags_is_never_edited() {
     // a stray quote in a tag opens a string that ends with the next quote: `y=''` is inside it, not an attribute
     assert_eq!(
         tidy(r#"<CDXML><a b"x y=''"/><c d=""/></CDXML>"#),
-        (r#"<CDXML><a b"x y=''"/><c/></CDXML>"#.to_string(), names(&["d"]))
+        (
+            r#"<CDXML><a b"x y=''"/><c/></CDXML>"#.to_string(),
+            names(&["d"])
+        )
     );
     // the DOCTYPE with its internal subset, a processing instruction and the text before the root are copied
     let t = r#"<?xml version="1.0"?><!DOCTYPE CDXML [ <!ENTITY e "<b x=''>"> <!-- > <q z=''> --> ]><?pi <p w=''>?><CDXML a=""/>"#;
-    assert_eq!(
-        tidy(t),
-        (t.replace(r#" a="""#, ""), names(&["a"]))
-    );
+    assert_eq!(tidy(t), (t.replace(r#" a="""#, ""), names(&["a"])));
     // an `<?xml encoding=` that is not the declaration at the start of the file is text
     let t = "<CDXML><s><?xml encoding=\"UTF-16\"?></s></CDXML>";
     assert_eq!(declare_utf8(t), t);
@@ -306,7 +306,8 @@ fn a_utf8_file_with_bad_bytes_says_characters_were_replaced() {
 
 #[test]
 fn utf16_without_a_byte_order_mark_is_told_by_its_nul_bytes() {
-    let xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?><CDXML BondLength=\"\"><s>\u{fc}</s></CDXML>";
+    let xml =
+        "<?xml version=\"1.0\" encoding=\"UTF-16\"?><CDXML BondLength=\"\"><s>\u{fc}</s></CDXML>";
     for le in [true, false] {
         let mut b = Vec::new();
         for u in xml.encode_utf16() {
@@ -326,7 +327,9 @@ fn utf16_without_a_byte_order_mark_is_told_by_its_nul_bytes() {
         );
     }
     // plain text with a stray NUL is not UTF-16
-    assert!(open_ok(b"<CDXML a=\"b\"><s>x\0y</s></CDXML>").changes.is_empty());
+    assert!(open_ok(b"<CDXML a=\"b\"><s>x\0y</s></CDXML>")
+        .changes
+        .is_empty());
 }
 
 #[test]
@@ -340,12 +343,17 @@ fn the_names_are_an_array_and_each_fix_carries_its_own_fields() {
         j,
         r#"{"schema":"open/1","text":"<CDXML/>","changes":[{"fix":"charset","charset":"UTF-16"},{"fix":"empty","names":["a","b"]}]}"#
     );
-    assert!(open_json_bytes(b"<CDXML>\xff</CDXML>")
-        .unwrap()
-        .contains(r#"{"fix":"replaced","count":1}"#) == false); // no declaration: windows-1252, nothing replaced
-    assert!(open_json_bytes(b"<?xml encoding=\"utf-8\"?><CDXML>\xff</CDXML>")
-        .unwrap()
-        .contains(r#"{"fix":"replaced","count":1}"#));
+    assert!(
+        open_json_bytes(b"<CDXML>\xff</CDXML>")
+            .unwrap()
+            .contains(r#"{"fix":"replaced","count":1}"#)
+            == false
+    ); // no declaration: windows-1252, nothing replaced
+    assert!(
+        open_json_bytes(b"<?xml encoding=\"utf-8\"?><CDXML>\xff</CDXML>")
+            .unwrap()
+            .contains(r#"{"fix":"replaced","count":1}"#)
+    );
 }
 
 /// The hostile inputs of the review: each took seconds or minutes before the scanner read a run of white space or a missing closer once.
@@ -354,18 +362,42 @@ fn hostile_input_is_read_in_linear_time() {
     let n = 200_000;
     let cases: Vec<(&str, String)> = vec![
         ("blank run in a tag", format!("<CDXML{}", " ".repeat(n))),
-        ("blank run then an attribute", format!("<CDXML{}a=\"\">", " ".repeat(n))),
+        (
+            "blank run then an attribute",
+            format!("<CDXML{}a=\"\">", " ".repeat(n)),
+        ),
         ("unclosed comments", format!("<CDXML>{}", "<!--".repeat(n))),
-        ("unclosed CDATA", format!("<CDXML>{}", "<![CDATA[".repeat(n))),
+        (
+            "unclosed CDATA",
+            format!("<CDXML>{}", "<![CDATA[".repeat(n)),
+        ),
         ("unclosed quotes", format!("<CDXML>{}", "<a \"".repeat(n))),
-        ("unclosed single quotes", format!("<CDXML>{}", "<a '".repeat(n))),
-        ("mixed quotes", format!("<CDXML>{}", "<a '<b \"".repeat(n / 2))),
+        (
+            "unclosed single quotes",
+            format!("<CDXML>{}", "<a '".repeat(n)),
+        ),
+        (
+            "mixed quotes",
+            format!("<CDXML>{}", "<a '<b \"".repeat(n / 2)),
+        ),
         ("open tags", format!("<CDXML>{}", "<a ".repeat(n))),
         ("brackets", format!("<CDXML>{}", "<".repeat(n))),
-        ("stray quotes in a tag", format!("<CDXML a{}>", "\"x y='' ".repeat(n / 4))),
-        ("many empty attributes", format!("<CDXML{}>", " a=''".repeat(n / 4))),
-        ("unclosed declaration", format!("<CDXML><!DOCTYPE x [{}", "<!ENTITY a \"b\">".repeat(n / 8))),
-        ("unclosed instruction", format!("<CDXML>{}", "<?x ".repeat(n))),
+        (
+            "stray quotes in a tag",
+            format!("<CDXML a{}>", "\"x y='' ".repeat(n / 4)),
+        ),
+        (
+            "many empty attributes",
+            format!("<CDXML{}>", " a=''".repeat(n / 4)),
+        ),
+        (
+            "unclosed declaration",
+            format!("<CDXML><!DOCTYPE x [{}", "<!ENTITY a \"b\">".repeat(n / 8)),
+        ),
+        (
+            "unclosed instruction",
+            format!("<CDXML>{}", "<?x ".repeat(n)),
+        ),
     ];
     for (name, t) in &cases {
         let start = std::time::Instant::now();
@@ -387,7 +419,10 @@ fn a_file_over_the_cap_is_refused_with_its_size() {
     assert_eq!(e.key, "error.open.tooBig");
     assert_eq!(
         e.params,
-        vec![("size", (MAX_BYTES + 1).to_string()), ("limit", MAX_BYTES.to_string())]
+        vec![
+            ("size", (MAX_BYTES + 1).to_string()),
+            ("limit", MAX_BYTES.to_string())
+        ]
     );
     assert_eq!(open_json_bytes(&big).unwrap_err().key, "error.open.tooBig");
     assert!(open_bytes(&big[..MAX_BYTES]).is_ok());

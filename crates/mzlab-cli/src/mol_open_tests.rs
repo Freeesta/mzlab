@@ -35,7 +35,10 @@ fn the_command_prints_the_function_json() {
         let c = run(&args);
         assert_eq!(c.code, 1, "a file that needed a change exits 1");
         let out = String::from_utf8(c.stdout).unwrap();
-        assert!(out.contains("\"schema\":\"open/1\"") && !out.contains("error/1"), "{out}");
+        assert!(
+            out.contains("\"schema\":\"open/1\"") && !out.contains("error/1"),
+            "{out}"
+        );
         assert!(out.contains("\"names\":[\"BondLength\"]"), "{out}");
     }
     std::fs::remove_file(&p).ok();
@@ -51,14 +54,19 @@ fn a_file_over_the_limit_is_one_error_document_exit_1_and_an_unreadable_input_ex
         let o = run(&args);
         assert_eq!(o.code, 1, "{args:?}");
         let out = String::from_utf8(o.stdout).unwrap();
-        assert!(out.contains("\"schema\":\"error/1\"") && out.contains("error.open.tooBig"), "{out}");
+        assert!(
+            out.contains("\"schema\":\"error/1\"") && out.contains("error.open.tooBig"),
+            "{out}"
+        );
     }
     std::fs::remove_file(&p).ok();
     // a folder opens but cannot be read: the contract's unreadable input (4), as one error/1
     let dir = std::env::temp_dir();
     let o = run(&["mol", "open", dir.to_str().unwrap(), "--json"]);
     assert_eq!(o.code, 4);
-    assert!(String::from_utf8(o.stdout).unwrap().contains("\"schema\":\"error/1\""));
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"schema\":\"error/1\""));
 }
 
 #[test]

@@ -208,30 +208,53 @@ fn b64(bytes: &[u8]) -> String {
     const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut s = String::new();
     for c in bytes.chunks(3) {
-        let n = c.iter().enumerate().fold(0u32, |n, (i, b)| n | u32::from(*b) << (16 - 8 * i));
+        let n = c
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, b)| n | u32::from(*b) << (16 - 8 * i));
         for k in 0..4 {
-            s.push(if k <= c.len() { A[(n >> (18 - 6 * k) & 63) as usize] as char } else { '=' });
+            s.push(if k <= c.len() {
+                A[(n >> (18 - 6 * k) & 63) as usize] as char
+            } else {
+                '='
+            });
         }
     }
     s
 }
 
-/// The same files and variants as `tests/test_molkit_wasm.py` (the `.wasm` against the CLI): the app route gives the bytes of the function for every one,
-/// through its own base64 decoder, whatever the length of the file (every padding) and its charset.
-#[test]
-fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
+/// The files of `tests/dati/cdxml` and the variants of `tests/test_molkit_wasm.py` (byte-order marks, UTF-16 with and without one, 8-bit text, bad UTF-8,
+/// binary CDX, text that is not XML, the empty file) and the heads of a file of every length that gives each base64 padding.
+fn open_inputs() -> Vec<(String, Vec<u8>)> {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/dati/cdxml");
     let mut files: Vec<(String, Vec<u8>)> = std::fs::read_dir(&dir)
         .unwrap()
         .map(|e| e.unwrap().path())
         .filter(|p| p.extension().is_some_and(|x| x == "cdxml"))
-        .map(|p| (p.file_name().unwrap().to_string_lossy().into_owned(), std::fs::read(&p).unwrap()))
+        .map(|p| {
+            (
+                p.file_name().unwrap().to_string_lossy().into_owned(),
+                std::fs::read(&p).unwrap(),
+            )
+        })
         .collect();
     files.sort();
     assert!(files.len() >= 10, "the fixtures of {}", dir.display());
-    let base = String::from_utf8(files.iter().find(|f| f.0 == "aromatics.cdxml").unwrap().1.clone()).unwrap();
+    let base = String::from_utf8(
+        files
+            .iter()
+            .find(|f| f.0 == "aromatics.cdxml")
+            .unwrap()
+            .1
+            .clone(),
+    )
+    .unwrap();
     let utf16 = |s: &str, le: bool| {
-        let mut b = if le { vec![0xff, 0xfe] } else { vec![0xfe, 0xff] };
+        let mut b = if le {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
         for u in s.replace("UTF-8", "UTF-16").encode_utf16() {
             b.extend(if le { u.to_le_bytes() } else { u.to_be_bytes() });
         }
@@ -257,7 +280,10 @@ fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
         ("utf16be", utf16(&base, false)),
         ("utf16 no mark", nul16),
         ("latin1", latin1),
-        ("utf8 declared, bad bytes", b"<?xml version=\"1.0\" encoding=\"utf-8\"?><CDXML a=\"\"><s>\xff</s></CDXML>".to_vec()),
+        (
+            "utf8 declared, bad bytes",
+            b"<?xml version=\"1.0\" encoding=\"utf-8\"?><CDXML a=\"\"><s>\xff</s></CDXML>".to_vec(),
+        ),
         ("crlf", base.replace('\n', "\r\n").into_bytes()),
         ("cdx", cdx),
         ("text", b"this is not a structure\n".to_vec()),
@@ -267,10 +293,19 @@ fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
     }
     // every length from 0 to 4 (the paddings), so that no file is lucky
     for n in 0..5usize {
-        files.push((format!("cdxml head {n}"), b"<CDXML a=\"\"/>"[..n.min(14)].to_vec()));
+        files.push((
+            format!("cdxml head {n}"),
+            b"<CDXML a=\"\"/>"[..n.min(14)].to_vec(),
+        ));
     }
+    files
+}
+
+/// The app route gives the bytes of the function for every input, through its own base64 decoder.
+#[test]
+fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
     let st = State::new();
-    for (name, bytes) in &files {
+    for (name, bytes) in &open_inputs() {
         let p = json!({"kind": "open", "request": {"data": b64(bytes)}});
         assert_eq!(
             text(st.rpc("feat/grafo", &p, &[]).unwrap()),
@@ -280,9 +315,17 @@ fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
     }
     // a file over the limit keeps its key, as the .wasm throws it
     let big = vec![b' '; mzlab_feat::chem::structure_file::MAX_BYTES + 1];
-    let err = st.rpc("feat/grafo", &json!({"kind": "open", "request": {"data": b64(&big)}}), &[]);
+    let err = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "open", "request": {"data": b64(&big)}}),
+        &[],
+    );
     assert_eq!(err.err().map(|e| e.key), Some("error.open.tooBig"));
-    let bad = st.rpc("feat/grafo", &json!({"kind": "open", "request": {"data": "not base64!"}}), &[]);
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "open", "request": {"data": "not base64!"}}),
+        &[],
+    );
     assert_eq!(bad.err().map(|e| e.key), Some("error.open.request"));
 }
 
