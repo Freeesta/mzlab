@@ -73,6 +73,7 @@ const DATA_KEYS: &[&str] = &[
     "err.pda.none",
     "err.flow.cancelled",
     "err.run.data",
+    "err.run.internal",
     "err.llm.eval.loop",
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
@@ -212,6 +213,7 @@ mod tests {
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
+        assert_eq!(code_of_key("err.run.internal"), DATA);
     }
 
     #[test]

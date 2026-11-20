@@ -1,5 +1,5 @@
 """Writes the blocks of the agent docs that come from the command table of mzlab-cli: the command list of docs/agenti/cli.md and the `--json` list and
-exit-code table of docs/agenti/cli-agenti.md (each between `<!--NAME-->` and `<!--/NAME-->`).
+exit-code table and the renamed-command list of docs/agenti/cli-agenti.md (each between `<!--NAME-->` and `<!--/NAME-->`).
 `python3 tools/cli_doc.py` rewrites them, `--check` only tells whether they are current (exit 1 if not). The binary is `$MZLAB_CLI`, else `cargo run -p mzlab-cli`."""
 import os
 import subprocess
@@ -12,6 +12,7 @@ BLOCKS = [
     ("docs/agenti/cli.md", "cli", []),
     ("docs/agenti/cli-agenti.md", "json", ["json"]),
     ("docs/agenti/cli-agenti.md", "exits", ["exits"]),
+    ("docs/agenti/cli-agenti.md", "renames", ["renames"]),
 ]
 
 

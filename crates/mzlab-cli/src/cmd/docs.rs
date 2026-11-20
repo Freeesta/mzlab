@@ -8,6 +8,7 @@ fn run(args: Vec<String>) -> Outcome {
         [] => super::list_md(),
         [a] if a == "json" => super::json_md(),
         [a] if a == "exits" => super::exits_md(),
+        [a] if a == "renames" => crate::renamed::list_md(),
         [a, ..] => return Outcome::fail(&format!("unknown argument {a}")),
     };
     Outcome::ok(text.into_bytes())

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "version/1",
+  "title": "version/1: which build of mzlab-cli this is, `mzlab-cli --version --json`",
+  "description": "The version and the git commit the binary was built from (MZLAB_COMMIT, else git at build time), with the citation. There is no build date, so two builds of one commit answer alike. `commit` is the full 40-character SHA, `commit_short` its first 7 characters; both are null for a build that knew no commit. Code: crates/mzlab-cli/src/citation.rs.",
+  "type": "object",
+  "required": ["schema", "name", "version", "commit", "commit_short", "citation"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "version/1" },
+    "name": { "const": "mzlab-cli" },
+    "version": { "type": "string" },
+    "commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+    "commit_short": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7}$" },
+    "citation": { "type": "string" }
+  }
+}
