@@ -40,7 +40,7 @@ PROBE = r"""(() => {
     v.coi = !!window.crossOriginIsolated; v.lang = document.documentElement.lang; v.theme = document.documentElement.getAttribute("data-theme");
     return JSON.parse(JSON.stringify(v));
   };
-  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.barra.hint", "1"); } catch (_) {}
+  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.bar.hint", "1"); } catch (_) {}
 })();"""
 
 VIEWS = {"draw": ("#nav button[data-v=draw]", "#v-draw:not([hidden])"), "flow": ("#nav button[data-v=flow]", "#v-flow:not([hidden]), #flowview:not([hidden])")}

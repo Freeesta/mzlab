@@ -51,7 +51,7 @@ try:
             c = b.new_context(viewport={"width": 1200, "height": 900}); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: CON.append(m.text[:200])); pg.on("request", lambda r: reqs.append(r.url))
             settings = json.dumps({"on": True, "provider": "anthropic", "model": "claude-sonnet-5-5", "level": level, "l2max": 5})
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.profilo','ricerca');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.profile','ricerca');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consensus',%s);}catch(_){}"
                                % (json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
@@ -159,8 +159,8 @@ try:
               const g = async () => { try { await run.guard(window.MZLAB_LLM.client); return 'ok'; } catch (e) { return e.key; } };
               const out = { fine: await g() };
               key = true; out.nokey = await g(); key = false;
-              localStorage.setItem('mzlab.llm.consenso', '{}'); out.revoked = await g();
-              localStorage.setItem('mzlab.llm.consenso', JSON.stringify({ anthropic: { classes: ['plan', 'summary', 'names'] } }));
+              localStorage.setItem('mzlab.llm.consensus', '{}'); out.revoked = await g();
+              localStorage.setItem('mzlab.llm.consensus', JSON.stringify({ anthropic: { classes: ['plan', 'summary', 'names'] } }));
               localStorage.setItem('mzlab.llm', JSON.stringify({ on: false, provider: 'anthropic', model: 'm', level: 'L1' })); out.off = await g();
               return out;
             }""")

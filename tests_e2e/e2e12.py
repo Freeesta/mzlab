@@ -72,7 +72,9 @@ with sync_playwright() as p:
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
         xp.locator('[data-a=cpar]').click()      # the m/z edges live in «Range»
         assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.3" and xp.locator('#xic-q, [data-o=tol]').count() == 0
-        xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
+        ready(pg)      # a redraw of the header still in flight would replace the typed fields (seen on a slow runner)
+        xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter")      # the upper edge keeps 364.3: filling it again fires no change, so the pair would wait for a blur
+        wait_for_js(pg, f"Math.abs(E.panels[{xi}].traces[0].w - 0.2) < 0.011", 15000)
         tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
         nv = pg.evaluate("tabFiles().filter(f=>f.vis).length")
         xp.locator('.fcount').click(); pg.wait_for_timeout(200); assert pg.locator("#fpop input").count() == pg.evaluate("tabFiles().length")

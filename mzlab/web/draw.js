@@ -240,7 +240,7 @@ const TOOLS = [
   ["atoms", false, ["any-atom", "extended-table"]],
   ["bio", false, ["create-monomer", "polymer-toggler"]],
 ];
-const TKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.strumenti") : "qqq.disegno.strumenti"; // kept from the old name: renaming it would lose the users' data
+const TKEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.tools") : "qqq.draw.tools"; // kept from the old name: renaming it would lose the users' data
 function toolChoice() {
   const saved = lsObj(TKEY);
   return Object.fromEntries(TOOLS.map(([k, on]) => [k, k in saved ? !!saved[k] : on]));
@@ -783,7 +783,7 @@ function labelMenu(/** @type {any} */ ev, /** @type {DrawStruct} */ d, /** @type
   ctxShow(m, fr0.left + ev.clientX, fr0.top + ev.clientY, 270, kbd);
 }
 // ------------------------------------------------------------------ side cards: hide / show (more room to draw), remembered in this browser
-const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.riquadri") : "qqq.disegno.riquadri";
+const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.boxes") : "qqq.draw.boxes";
 function sideApply(/** @type {boolean} */ hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
   const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide"); b.setAttribute("aria-label", Q("#side-toggle .tl").textContent);

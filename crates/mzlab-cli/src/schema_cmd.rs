@@ -29,6 +29,8 @@ embed!(
     "design_check-1.json",
     "design_proposal-1.json",
     "draw-1.json",
+    "draw_edit-1.json",
+    "draw-image-1.json",
     "elements-1.json",
     "error-1.json",
     "evalrun-1.json",
@@ -108,6 +110,7 @@ embed!(
     "trace-1.json",
     "uvband-1.json",
     "verify-1.json",
+    "version-1.json",
 );
 
 /// The name (`$id`) and the title of an embedded schema.

@@ -46,11 +46,11 @@ try:
             wf_data = json.load(fh)
 
         assert wf_data.get("format") == "mzflow/1", f"Wrong format: {wf_data.get('format')}"
-        assert wf_data["parametri"]["ppm"] == 8, f"PPM not exported: {wf_data['parametri']}"
-        assert wf_data["parametri"]["dec"] == 5, f"Dec not exported: {wf_data['parametri']}"
-        assert wf_data["parametri"]["tema"] == "dark", f"Theme not exported: {wf_data['parametri']}"
-        assert len(wf_data["file"]) == 1
-        assert wf_data["file"][0]["sha256"] == sha
+        assert wf_data["parameters"]["ppm"] == 8, f"PPM not exported: {wf_data['parameters']}"
+        assert wf_data["parameters"]["dec"] == 5, f"Dec not exported: {wf_data['parameters']}"
+        assert wf_data["parameters"]["theme"] == "dark", f"Theme not exported: {wf_data['parameters']}"
+        assert len(wf_data["files"]) == 1
+        assert wf_data["files"][0]["sha256"] == sha
         assert "program" in wf_data and "version" in wf_data["program"]
         assert len(wf_data.get("operations", [])) >= 1
         steps.append(("export of .mzflow with sha256 and parameters", "ok"))

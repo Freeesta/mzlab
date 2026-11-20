@@ -40,7 +40,7 @@ def one(r, p, spec, tmp):
     # a persistent profile (on disk, like a student's browser): the OPFS of a plain context lives in memory and refuses a file of this size
     prof = tmp / "profilo"
     ctx = p.chromium.launch_persistent_context(str(prof), viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
-    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');}catch(_){}")
     ctx.add_init_script(INIT)
     pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))

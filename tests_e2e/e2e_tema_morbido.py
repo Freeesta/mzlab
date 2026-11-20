@@ -6,7 +6,7 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
-SKIP_HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1')}catch(_){}"
+SKIP_HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1')}catch(_){}"
 SPY = "window.__vt=0;window.__tr=0;new MutationObserver(()=>{if(document.documentElement.classList.contains('tema-tr'))window.__tr++}).observe(document,{attributes:true,attributeFilter:['class'],subtree:true});"
 SPY_VT = "if(document.startViewTransition){const o=document.startViewTransition.bind(document);document.startViewTransition=f=>{window.__vt++;return o(f)}}"
 NO_VT = "document.startViewTransition=undefined;"

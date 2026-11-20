@@ -44,7 +44,7 @@ try:
         c = b.new_context(viewport={"width": 1500, "height": 1400}); c.set_default_timeout(120000)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.evaluate(PROBE)

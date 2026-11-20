@@ -26,7 +26,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | conditional GitHub workflows (concurrency, pages, skipped jobs) | `docs/agenti/ci-fast.md` |
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
-| mzlab-cli for AI agents: `--json` commands, exit codes, stdout vs stderr, `--dry-run`, `flow steps --json`, `flow check`, the generated `--json` list and exit codes, Linux binaries, `--cache`, the citation rule (`citation.rs`, `CITATION.cff`) | `docs/agenti/cli-agenti.md` |
+| mzlab-cli for AI agents: `--json` commands, exit codes, stdout vs stderr, `--dry-run`, `flow steps --json`, `flow check`, generated `--json` list, Linux binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
 | `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--report`, exit codes | `docs/agenti/cli-convert.md` |
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page) | `docs/agenti/cli.md` |
@@ -95,7 +95,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
 | acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
-| own 2D layout of a structure (`mzlab-mol::layout`, `layout_2d`), `mol draw` molfile and `draw/1` scene (`chem/draw.rs`: smiles, molfile, name, InChIKey), quality gates against RDKit, `draw_d1.json` parity | `docs/agenti/mol-draw.md` |
+| own 2D layout (`mzlab-mol::layout`), `mol draw`: molfile, `draw/1` scene, KET/CDXML, SVG/PNG pictures (`chem/draw*.rs`), edit patch `--set edit=` (`chem/edit*.rs`, `draw_edit/1`), RDKit quality gates, `draw_d1/d3.json` parity | `docs/agenti/mol-draw.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecules/catalogue.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |
 | infusion MSn fragmentation graph (`msn-graph/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msn-lib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |

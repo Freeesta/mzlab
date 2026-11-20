@@ -41,6 +41,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.scan.unknown",
     "err.msn.node",
     "err.mol.draw.not_found",
+    "err.mol.draw.not_found_bare",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
     "err.cli.schema.unknown",
@@ -77,6 +78,7 @@ const DATA_KEYS: &[&str] = &[
     "err.dad.delayNoPeaks",
     "err.flow.cancelled",
     "err.run.data",
+    "err.run.internal",
     "err.llm.eval.loop",
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
@@ -94,6 +96,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.delta.neg",
         "error.grafo.tooBig",
         "error.grafo.element",
+        "err.mol.draw.element",
         "error.grafo.mixture",
         "error.grafo.ring",
         "error.grafo.mech.atom",
@@ -215,6 +218,7 @@ mod tests {
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
+        assert_eq!(code_of_key("err.run.internal"), DATA);
     }
 
     #[test]

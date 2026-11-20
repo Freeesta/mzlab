@@ -2,7 +2,8 @@
 The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
 `--manifest <wasm-feat dir>` (writes its manifest.json from a build),
 `--misura <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--controlla [--base <git ref>]`.
-Cap rule (docs/agenti/wasm-caps.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
+Cap rule (docs/agenti/wasm-caps.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails,
+unless the module's toml carries an `[exception]` (cap, date, reason) naming exactly that cap: one owner-approved jump, recorded in the file."""
 import argparse
 import hashlib
 import json
@@ -50,6 +51,12 @@ def errori(mod: dict[str, dict]) -> list[str]:
             err.append(f"{n}: misura {r['misura']} not below the cap")
         if "\n" in str(r.get("nota", "")):
             err.append(f"{n}: nota is one line")
+        ex = r.get("exception")
+        if ex is not None and not (isinstance(ex, dict) and set(ex) == {"cap", "date", "reason"} and isinstance(ex["cap"], int)
+                                   and not isinstance(ex["cap"], bool) and isinstance(ex["date"], str) and isinstance(ex["reason"], str) and ex["reason"]):
+            err.append(f"{n}: [exception] needs exactly cap (int), date and reason (text)")
+        elif ex is not None and ex["cap"] != r.get("tetto"):
+            err.append(f"{n}: [exception] cap {ex['cap']} is not the module's cap {r.get('tetto')}")
         if r.get("uscita") in uscite:
             err.append(f"{n}: uscita {r['uscita']} already used by {uscite[r['uscita']]}")
         uscite[r.get("uscita")] = n
@@ -66,7 +73,12 @@ def cambi(mod: dict[str, dict], base: dict[str, dict]) -> list[str]:
     for n, r in mod.items():
         if n in base and r["tetto"] != base[n]["tetto"]:
             b = base[n]["tetto"]
-            out.append(f"{'FAIL ' if r['tetto'] > b * 1.10 else ''}{n}: {b} -> {r['tetto']} ({(r['tetto'] / b - 1) * 100:+.1f} %)")
+            over = r["tetto"] > b * 1.10
+            ex = r.get("exception")
+            allowed = over and isinstance(ex, dict) and ex.get("cap") == r["tetto"]
+            tag = "FAIL " if over and not allowed else ""
+            line = f"{tag}{n}: {b} -> {r['tetto']} ({(r['tetto'] / b - 1) * 100:+.1f} %)"
+            out.append(line + (f" EXCEPTION {ex['date']}: {ex['reason']}" if allowed else ""))
     return out
 
 

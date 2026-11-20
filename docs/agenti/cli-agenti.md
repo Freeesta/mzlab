@@ -8,6 +8,56 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
+## Which build is this
+- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
+
+## Renamed commands
+- A command name of an earlier build (`channels`, `items`, `manual-table`, ...) is exit 2 with `error/1` `err.cli.command.renamed` (`params.old`, `params.now`) and the new path in the message and in `hint`; `commands --json OLD` (exit 5) puts it in `hint` too. A command that was removed answers `err.cli.command.removed`. The table is `RENAMED` in `crates/mzlab-cli/src/renamed.rs`:
+<!--renames-->
+| old name | now |
+|---|---|
+| `background` | `trace background` |
+| `channels` | `file channels` |
+| `convert` | `file convert` |
+| `dda-window` | `spectrum dda-window` |
+| `elements` | `ion elements` |
+| `folder` | `file list` |
+| `insilico` | `db insilico pack` |
+| `ion-mz` | `ion mz` |
+| `ion-pattern` | `ion pattern` |
+| `items` | `file items` |
+| `manual-table` | `peak table` |
+| `match-mz` | `ion match` |
+| `mol-anal` | `mol anal` |
+| `mol-check` | `mol check` |
+| `mol-cip` | `mol cip` |
+| `mol-cut` | `mol cut` |
+| `mol-export` | `mol export` |
+| `mol-hilite` | `mol hilite` |
+| `mol-label` | `mol label` |
+| `mol-link` | `mol link` |
+| `mol-mech` | `mol mech` |
+| `mol-search` | `mol search` |
+| `mol-sel` | `mol sel` |
+| `msn-graph` | `msn graph` |
+| `msn-lib` | `msn lib` |
+| `msn-rules` | `msn rules` |
+| `normative` | `db normative` |
+| `pair` | `file pair` |
+| `peak-area` | `peak area` |
+| `peak-auto` | `peak auto` |
+| `peak-auto-lr` | `peak auto-lr` |
+| `peak-edges` | `peak edges` |
+| `peak-split` | `peak split` |
+| `peak-window` | `peak window` |
+| `ref-list` | `db ref-list` |
+| `samples` | `sample` |
+| `steps` | `flow steps` |
+| `validate` | `file validate` |
+| `wiff` | `file inventory` |
+| `explain-missing` | removed (no replacement) |
+<!--/renames-->
+
 ## Look at a file first
 - `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
@@ -33,6 +83,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
 <!--/exits-->
+  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with exit 1, `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
 ## Learn the CLI in one call
@@ -86,9 +137,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `llm eval` (`evalrun/1`, one JSON document, a verdict command): exit 0 all checks pass, 1 a check failed (the document stays on stdout), 2 usage, 3 a case or recording of the wrong format, 4 missing file. A recording that runs out or does not answer its case is one `error/1` with exit 1.
 
 ## Chemistry commands (`mol *`, `ion *`)
-- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `draw/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
+- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `draw/1`, `draw-image/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
 - Exit codes: 2 for a formula, adduct or SMILES that does not parse or a bad option value; 1 for a valid request the chemistry cannot satisfy (adduct removes more atoms than exist, m/z below 1, cut of an aromatic bond, bond that is not in the molfile); 4 for a missing file or a request/molfile that cannot be read. 6 for an unwritable `--out`. Failures are one `error/1`. `mol export` prints text (no schema, no `--json`); `mol search` answers `substructure/1`, or `substructure_db/1` with `--db`. `error_mda` is in mDa. Schemas: `docs/schemi/*-1.json`.
-- `mol draw SPEC` (`draw/1`, or a molfile without `--json`): 1 over 2000 atoms; 2 unparseable SMILES, bad `--set`, or a name/key without `--set db=PATH`; 4 missing file or db, a molfile or request that cannot be read; 5 name or key not in the db (the hint lists the nearest names); 6 unwritable `--out` (`mol-draw.md`).
+- `mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png]` (`draw/1`, `draw-image/1`, or a molfile, KET, CDXML or PNG without `--json`; `--set edit=JSON|@PATH` applies an edit patch, `draw_edit/1`): 1 over 2000 atoms, an atom that is no element; 2 unparseable SMILES, bad `--set`, a name/key without `--set db=PATH`, or a failed patch operation (`err.mol.draw.edit` with its index and reason); 4 missing file, patch file or db, a molfile or request that cannot be read; 5 name or key not in the db (the hint lists the nearest names); 6 unwritable `--out` (`mol-draw.md`).
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

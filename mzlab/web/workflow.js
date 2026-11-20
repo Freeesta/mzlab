@@ -54,16 +54,16 @@ const WORKFLOW = (() => {
     const files = (typeof E !== "undefined" && E.files ? E.files : [])
       .filter(f => !f.gone)
       .map(f => ({
-        nome: f.file || "",
+        name: f.file || "",
         sha256: f.sha256 || "",
-        dimensione: f.size || 0,
-        tipo: f.type || "sample",
+        size: f.size || 0,
+        type: f.type || "sample",
         role: window.SAMPLES_DOC ? SAMPLES_DOC.kindOf(f) : undefined,           // role of samples/1 (the base type above is kept for the old readers)
-        etichetta: f.label || "",
-        tempo: f.time ?? null,
-        concentrazione: f.conc ?? null,
-        unita_conc: f.cunit ?? null,
-        replica: f.rep || null,
+        label: f.label || "",
+        time: f.time ?? null,
+        concentration: f.conc ?? null,
+        conc_unit: f.cunit ?? null,
+        replicate: f.rep || null,
       }));
 
     const soglieLib = window.LIVELLI ? LIVELLI.exportState() : null;       // profile and thresholds of the confidence levels (livelli.js)
@@ -71,11 +71,11 @@ const WORKFLOW = (() => {
     const parameters = {
       ppm: typeof UIP !== "undefined" && UIP.hrPpm != null ? UIP.hrPpm : 5,
       dec: typeof UIP !== "undefined" && UIP.hrDec != null ? UIP.hrDec : 4,
-      tema: typeof UIP !== "undefined" && UIP.theme ? UIP.theme : "auto",
-      tavolozza: typeof UIP !== "undefined" && UIP.pal ? UIP.pal : "time",
-      picchi: typeof PK !== "undefined" ? { ...PK } : {},
-      soglie_libreria: soglieLib,
-      contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
+      theme: typeof UIP !== "undefined" && UIP.theme ? UIP.theme : "auto",
+      palette: typeof UIP !== "undefined" && UIP.pal ? UIP.pal : "time",
+      peaks: typeof PK !== "undefined" ? { ...PK } : {},
+      library_thresholds: soglieLib,
+      excluded_contaminants: window.LISTE ? LISTE.exclExport() : null,
       qaqc: window.QAQC ? QAQC.exportState() : null,
     };
 
@@ -88,7 +88,7 @@ const WORKFLOW = (() => {
       level: p.level,
       prec: p.prec,
       filt: p.filt,
-      fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined,
+      background: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined,
     }));
 
     const ops = (typeof NB !== "undefined" && NB.ops && NB.ops.length)
@@ -102,13 +102,13 @@ const WORKFLOW = (() => {
         version: window.MZLAB_VERSION || "0.1.0",
         commit: window.MZLAB_COMMIT || "dev",
       },
-      data_creazione: new Date().toISOString(),
-      lingua: (typeof I18N !== "undefined" && I18N.lang) || "en",
-      file: files,
-      parametri: parameters,
-      pannelli: panels,
+      created: new Date().toISOString(),
+      language: (typeof I18N !== "undefined" && I18N.lang) || "en",
+      files: files,
+      parameters: parameters,
+      panels: panels,
       operations: ops,
-      candidati: window.RAPPORTO ? RAPPORTO.candidates() : [],
+      candidates: window.RAPPORTO ? RAPPORTO.candidates() : [],
     };
   }
 
@@ -127,7 +127,7 @@ const WORKFLOW = (() => {
     if (co) wf.operations = wf.operations.filter((/** @type {any} */ o) => !(o && o.op === "samples" && o.source === "data")).concat([co]);
     const text = JSON.stringify(wf, null, 2);
     const first = E.files.find(f => !f.gone);
-    const base = first ? (first.label || first.file).replace(/[^\w.-]+/g, "_") : "sessione";
+    const base = first ? (first.label || first.file).replace(/[^\w.-]+/g, "_") : "session";
     const filename = `${base}_${new Date().toISOString().slice(0, 10)}.mzflow`;
     dl(filename, text, "application/json");
     logOp("export_workflow", { filename });
@@ -141,7 +141,7 @@ const WORKFLOW = (() => {
       const ops = (Array.isArray(wf.operations) ? wf.operations : []).filter((/** @type {any} */ o) => o && o.op === "samples" && o.schema === "samples/1" && Array.isArray(o.samples));
       if (ops.length) SAMPLES.importDoc({ samples: ops[ops.length - 1].samples });
     } catch (_) { /* the roles of the old shape below still apply */ }
-    SAMPLES.importState(needed.map(nf => ({ nome: nf.nome, ruolo: nf.role || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
+    SAMPLES.importState(needed.map(nf => ({ name: nf.name, role: nf.role || (p.qaqc && p.qaqc.roles && p.qaqc.roles[nf.name]), concentration: nf.concentration, conc_unit: nf.conc_unit, replicate: nf.replicate })).filter(x => x.role || x.replicate || x.concentration != null));
   }
 
   function openWorkflow() {
@@ -176,7 +176,7 @@ const WORKFLOW = (() => {
       return false;
     }
 
-    const neededFiles = (Array.isArray(wf.file) ? wf.file : []).filter(nf => nf && typeof nf.nome === "string").slice(0, 2000);
+    const neededFiles = (Array.isArray(wf.files) ? wf.files : []).filter(nf => nf && typeof nf.name === "string").slice(0, 2000);
     const openFiles = (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone);
     const openByName = new Map();
     openFiles.forEach(f => {
@@ -185,15 +185,15 @@ const WORKFLOW = (() => {
     });
 
     // Check for missing files
-    const missing = neededFiles.filter(nf => !openByName.has(nf.nome));
+    const missing = neededFiles.filter(nf => !openByName.has(nf.name));
     if (missing.length && !openFiles.length) {
       // Prompt user to load files first
-      info(I18N.t("workflow.needFiles") + "<br>" + missing.map(m => "• " + EH(m.nome)).join("<br>"));
+      info(I18N.t("workflow.needFiles") + "<br>" + missing.map(m => "• " + EH(m.name)).join("<br>"));
     }
 
     // Check SHA-256 for open matching files
     for (const nf of neededFiles) {
-      const of = openByName.get(nf.nome);
+      const of = openByName.get(nf.name);
       if (of && of.sha256 && nf.sha256) {
         const act = of.sha256.trim().toLowerCase();
         const exp = nf.sha256.trim().toLowerCase();
@@ -212,26 +212,26 @@ const WORKFLOW = (() => {
     }
 
     // Apply parameters
-    const p = wf.parametri || {};
-    if (p.picchi && typeof PK !== "undefined") {
-      FILESICURI.assignKnown(PK, p.picchi);
+    const p = wf.parameters || {};
+    if (p.peaks && typeof PK !== "undefined") {
+      FILESICURI.assignKnown(PK, p.peaks);
       if (typeof pkSave === "function") pkSave();
     }
-    if (p.soglie_libreria && window.LIVELLI) LIVELLI.importState(p.soglie_libreria);
+    if (p.library_thresholds && window.LIVELLI) LIVELLI.importState(p.library_thresholds);
     if (typeof UIP !== "undefined") {
       const ppm = FILESICURI.num(p.ppm, 0, 1e4), dec = FILESICURI.num(p.dec, 0, 10);
       if (ppm != null) UIP.hrPpm = ppm; if (dec != null) UIP.hrDec = dec;
-      if (["auto", "light", "dark"].includes(p.tema)) UIP.theme = p.tema;
-      if (typeof PALS !== "undefined" && typeof p.tavolozza === "string" && Object.prototype.hasOwnProperty.call(PALS, p.tavolozza)) UIP.pal = p.tavolozza;
+      if (["auto", "light", "dark"].includes(p.theme)) UIP.theme = p.theme;
+      if (typeof PALS !== "undefined" && typeof p.palette === "string" && Object.prototype.hasOwnProperty.call(PALS, p.palette)) UIP.pal = p.palette;
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
     }
-    if (p.contaminanti_esclusi && window.LISTE && typeof LISTE.exclImport === "function") {
-      LISTE.exclImport(p.contaminanti_esclusi);
+    if (p.excluded_contaminants && window.LISTE && typeof LISTE.exclImport === "function") {
+      LISTE.exclImport(p.excluded_contaminants);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
     await restoreSamples(wf, neededFiles, p);
-    if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
+    if (window.RAPPORTO && Array.isArray(wf.candidates)) RAPPORTO.setCandidates(wf.candidates);
     if (Array.isArray(wf.operations) && typeof NB !== "undefined") {
       const { keep, unknown } = splitOps(wf.operations.slice(0, 500));
       NB.ops = keep;

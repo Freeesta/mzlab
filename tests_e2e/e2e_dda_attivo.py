@@ -31,8 +31,9 @@ try:
         step("the live spectrum follows the file picked in the list", follows)
         def no_full_scan():
             assert pg.evaluate("E.files.filter(f => f.dda).every(f => !/Full Scan/.test(f.label))")
+            # the empty MS2 panel may say «in the Full Scan» in its hint; what must not appear is the «· Full Scan» suffix of a legend or selector
             t = pg.evaluate("[...document.querySelectorAll('.pnl')].map(e => e.innerText).join(' ')")
-            assert "Full Scan" not in t, t[:300]
+            assert "· Full Scan" not in t, t[:300]
         step("no '· Full Scan' on a DDA file in the legend or the selectors", no_full_scan)
 finally:
     r.close()
