@@ -14,12 +14,13 @@ for i in range(6):      # three small files open while the three large ones drop
     p = os.path.join(d, f"lento_{i}.mzML"); gen.scrivi(p, scans=1500 if i < 3 else 12000, peaks1=1500, peaks2=150, seed=i + 1); fs.append(p)
 # as soon as two files are open (the session keeps one after the removal) while others are still loading, one of them already in the table: the student removes an open file and, once the
 # notebook holds that, the page reloads (sessionStorage carries what it saw)
-ARM = """() => { const t = setInterval(async () => { const open = typeof ST !== 'undefined' && typeof OPENNOW !== 'undefined' ? ST.files.filter(x => OPENNOW.isOpen(x.name)) : [];
+ARM = """names => { const t = setInterval(async () => { const open = typeof ST !== 'undefined' && typeof OPENNOW !== 'undefined' ? ST.files.filter(x => OPENNOW.isOpen(x.name)) : [];
   if (open.length < 2 || UPBUSY === 0 || open.length === ST.files.length) return;      // a row of the table is still being opened
   clearInterval(t); const f = open[0]; OPENNOW.tick(f, false); uiSave(true);
   const saved = async () => { const nb = await (await fetch('api/notebook')).json(); return !(nb.session || []).some(x => String(x.file).split('#')[0] === f.name) && ((nb.ui || {}).files || []).some(x => x.gone && String(x.file).split('#')[0] === f.name); };
   while (!(await saved())) await new Promise(r => requestAnimationFrame(r));
-  sessionStorage.setItem('ricarica', JSON.stringify([f.name, ST.files.filter(x => !OPENNOW.isOpen(x.name) && x.name !== f.name).map(x => x.name)])); location.reload(); }, 20); }"""
+  sessionStorage.setItem('ricarica', JSON.stringify([f.name, names.filter(n => n !== f.name && !ST.files.some(x => x.name === n && OPENNOW.isOpen(n)))])); location.reload(); }, 20); }"""
+# `late`: the dropped files that are not open when the page reloads (the large ones are not rows of the table yet while they are read, so the rows alone do not name them)
 # the page after the reload, with its table
 RELOADED = "performance.getEntriesByType('navigation')[0].type === 'reload' && sessionStorage.getItem('ricarica') !== null && typeof ST !== 'undefined' && ST.files.length >= 2"
 # the rows of the table: ticked, open
@@ -30,7 +31,7 @@ def reload_resumes():
         with sync_playwright() as p:
             pg = r.page(p)
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
-            pg.evaluate(ARM)
+            pg.evaluate(ARM, [os.path.basename(x) for x in fs])
             pg.set_input_files("#pick", fs)
             wait_for_js(pg, RELOADED, 300000)
             gone, late = pg.evaluate("JSON.parse(sessionStorage.getItem('ricarica'))")

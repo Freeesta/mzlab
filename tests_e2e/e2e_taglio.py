@@ -42,7 +42,7 @@ try:
             assert rad == "C0,N1", rad                                     # the aryl carbon and the amide N carry the mark, H unchanged
             gap = pg.evaluate(f"""(()=>{{const st={KJ}.editor.struct(),r=[...st.atoms.values()].filter(a=>a.radical===2);return Math.hypot(r[0].pp.x-r[1].pp.x,r[0].pp.y-r[1].pp.y)}})()""")
             assert gap > 1.6, gap                                          # moved apart along the cut (a bond is about 1)
-            note = pg.inner_text("#cut-note"); assert "radicale" in note and "95.0297" in note, note
+            note = pg.inner_text("#cut-note"); assert "C6H4F• radical · exact mass 95.0297" in note and "C2H4NO• radical · exact mass 58.0293" in note, note
         step("a cut line across the aryl-N bond gives two radical pieces with formula and exact mass", homolytic)
         def oxidised():
             pg.evaluate(f"""(async()=>{{const K={KJ},j=JSON.parse(await K.getKet());for(const k in j)if(j[k].type==='molecule')for(const a of j[k].atoms)if(a.label==='N'){{a.charge=1;delete a.radical;a.implicitHCount=1}}await K.setMolecule(JSON.stringify(j))}})()""")
@@ -57,9 +57,9 @@ try:
             load("CC(=O)Nc1ccc(F)cc1", 11)
             pg.check("input[name=cut-mode][value=heterolytic]")
             pg.click("#cut-line"); slash(bond_pt("C", "N"))
-            pg.wait_for_selector("#ctx:not([hidden]) div:has-text('Catione')", timeout=10000)
-            rows = pg.locator("#ctx div", has_text="Catione").all_inner_texts(); assert len(rows) == 2, rows
-            pg.locator("#ctx div", has_text="Catione C6H4F+").first.click()
+            pg.wait_for_selector("#ctx:not([hidden]) div:has-text('Cation')", timeout=10000)
+            rows = pg.locator("#ctx div", has_text="Cation").all_inner_texts(); assert len(rows) == 2, rows
+            pg.locator("#ctx div", has_text="Cation C6H4F+").first.click()
             wait_for_js(pg, f"/C6H4F\\+.*m\\/z.*95\\.0292/.test({LABELS}) && /C2H4NO−.*m\\/z.*58\\.0298/.test({LABELS})", timeout=10000)
             assert "•" not in pg.evaluate(LABELS)
             pg.keyboard.press("Escape")

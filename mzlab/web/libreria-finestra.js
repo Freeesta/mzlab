@@ -164,6 +164,7 @@ const selOf = (/** @type {any} */ st) => { const A = st.sel.k === "an" ? st.an :
 function showVerdict(/** @type {View} */ V) {
   const { L, st, q, $ } = V;
   const R = st.res, vd = $("#lw-verdict");
+  const prev = vd.querySelector(".lw-why"); if (prev) st.why = /** @type {HTMLDetailsElement} */ (prev).open;   // the toggle event is async: a redraw right after the click must not close «Details»
   if (!R || !R.libs) { vd.innerHTML = ""; return; }
   const lv0 = L.assess(R.results, { nScans: st.n, analogs: st.an && st.an.results }); if (st.decided) LV().decide(lv0, st.decided);
   const r0 = st.sel.k === "id" ? R.results[st.sel.i] : null, cvs = r0 && st.lo != null ? L.cosVis({ it: R.query.it }, r0, st.lo) : null;

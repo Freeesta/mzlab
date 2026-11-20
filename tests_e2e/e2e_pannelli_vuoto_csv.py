@@ -37,9 +37,9 @@ try:
             f = d.value; assert f.suggested_filename.endswith(".csv"), f.suggested_filename
             b = open(f.path(), "rb").read(); assert b[:3] == b"\xef\xbb\xbf", "BOM"
             lines = b[3:].decode("utf-8").rstrip("\n").split("\n"); assert not lines[0].startswith("# mzLab "), lines[0][:40]
-            assert ";" in lines[0] and "," not in lines[0] and len(lines) > 5, lines[0]      # the harness runs in it-IT: Italian Excel opens it into columns, header on row 1
+            assert "," in lines[0] and ";" not in lines[0] and len(lines) > 5, lines[0]      # comma-separated with a decimal point in every language (xlsx.js default), header on row 1
             assert lines[-1].startswith('"# mzLab ') or lines[-1].startswith("# mzLab "), lines[-1][:40]      # the provenance closes the file
-        step("CSV of a panel: BOM, header on line 1, semicolon-separated, provenance as the last row", csv)
+        step("CSV of a panel: BOM, header on line 1, comma-separated, provenance as the last row", csv)
         def popover():
             b = pg.locator(".pnl.chrom [data-a=cpar]").first
             assert b.get_attribute("aria-description") and b.get_attribute("title"), "the note is the description, the tooltip says what the button is (short tooltips, #2609)"
