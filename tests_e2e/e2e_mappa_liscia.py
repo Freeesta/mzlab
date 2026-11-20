@@ -57,8 +57,8 @@ try:
             assert t < 500 and d["smooth"] < 2.5 * d["detail"] + 20, (t, d)
         step("cost of the splat and of a draw", cost)
         def remembered():
-            mode("detail"); assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')||'{}').rend") == "detail"
-            mode("smooth"); assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')||'{}').rend") == "smooth"
+            mode("detail"); assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.map')||'{}').rend") == "detail"
+            mode("smooth"); assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.map')||'{}').rend") == "smooth"
         step("the choice is remembered", remembered)
         r.b.close()
     r.close()

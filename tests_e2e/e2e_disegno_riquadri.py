@@ -87,7 +87,7 @@ try:
             pg.evaluate("TOUR.avanti()"); wait_for_js(pg, "document.querySelector('#lb-card .rq-tg').getAttribute('aria-expanded') === 'false'")
             assert exp(pg, "lb-card") == "false", "labels card not folded again"
             pg.keyboard.press("Escape"); wait_for_js(pg, "!TOUR.active")
-            assert "lb-card" not in (pg.evaluate("localStorage.getItem('mzlab.disegno.schede')") or "")
+            assert "lb-card" not in (pg.evaluate("localStorage.getItem('mzlab.draw.tabs')") or "")
         step("the tour opens the folded labels card for its step and folds it again", tour)
         def english():
             pg.goto(f"http://127.0.0.1:{r.port}/#/draw"); wait_for_js(pg, "!!document.querySelector('#v-draw aside[data-rq]')", timeout=60000)

@@ -66,7 +66,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
   function folderStart() {
     if (!folderInit) folderInit = (async () => {
       if (window.MZLAB_DESKTOP) { folderMsg = { mode: "native", base: BASE }; folderInfo.mode = "native"; return; }
-      if (folderOk() && LS.get(NOMI.KEY("lib.cartella")) === "fs") {
+      if (folderOk() && LS.get(NOMI.KEY("lib.folder")) === "fs") {
         const h = await dirGet();
         if (h) {
           let perm = "prompt"; try { perm = await h.queryPermission({ mode: "readwrite" }); } catch (e) { /* old handle */ }
@@ -87,9 +87,9 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
   async function chooseFolder() {
     if (T()) { const r = await T().invoke("lib_choose_dir"); if (r) { folderMsg = { mode: "native", base: BASE }; await pushFolder(); } return; }
     const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-libs", startIn: "desktop", mode: "readwrite" });
-    await dirPut(h); LS.set(NOMI.KEY("lib.cartella"), "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
+    await dirPut(h); LS.set(NOMI.KEY("lib.folder"), "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
   }
-  async function useBrowserFolder() { await dirPut(null); LS.set(NOMI.KEY("lib.cartella"), null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
+  async function useBrowserFolder() { await dirPut(null); LS.set(NOMI.KEY("lib.folder"), null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
 
   // ------------------------------------------------------------ the «Librerie» window
   const STATES = /** @type {Record<string, string>} */ ({ pronta: "ok", da_indicizzare: "warn", aggiornamento: "warn", danneggiata: "bad" });

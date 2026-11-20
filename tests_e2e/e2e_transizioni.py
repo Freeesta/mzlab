@@ -19,15 +19,15 @@ def cold(p, vw, vh, reduced, saved=None):
     r = Run(port=8873, wd="/tmp/wd_transizioni"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
-    if "mzlab.barra.lr" not in (saved or {}): init += "localStorage.setItem('mzlab.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
+    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');"
+    if "mzlab.bar.lr" not in (saved or {}): init += "localStorage.setItem('mzlab.bar.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
     pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(500)
     # loading data opens the file list whatever was stored: these tests slide it open from closed, so close it first (reduced motion = at once)
-    if "mzlab.barra.lr" not in (saved or {}) and pg.get_attribute("#sb-toggle", "aria-pressed") == "true":
+    if "mzlab.bar.lr" not in (saved or {}) and pg.get_attribute("#sb-toggle", "aria-pressed") == "true":
         pg.click("#sb-toggle"); pg.wait_for_function("document.querySelector('#sb-toggle').getAttribute('aria-pressed') === 'false'"); pg.wait_for_function(SETTLED)
     return r, ctx, pg, errs
 def toggle_final(p, vw, saved=None):          # the final geometry, from the reduced-motion run
@@ -60,7 +60,7 @@ try:
                 assert not errs, errs
             finally: ctx.close(); r.close()
         step("left: slide, exact final geometry, one refit, focus kept", lambda: run(1440, None, "left"))
-        step("right: same", lambda: run(1440, {"mzlab.barra.lato": "right"}, "right"))
+        step("right: same", lambda: run(1440, {"mzlab.bar.side": "right"}, "right"))
         step("sheet under 900 px: same", lambda: run(800, None, "sheet"))
         def neighbours():
             r, ctx, pg, errs = cold(p, 1440, 900, False)

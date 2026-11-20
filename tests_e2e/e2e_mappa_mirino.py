@@ -89,7 +89,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
@@ -99,7 +99,7 @@ try:
         # high resolution: the Full Scans of a synthetic Orbitrap file, in a session of their own
         D = synth("mirino"); hr = hr_variants(D / "HR_DDA-Exploris-t30.mzML", D)[0]
         pg2 = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
-        pg2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg2.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         r2 = Run(port=8900, wd="/tmp/wd_mirino_e2e2")
         try:

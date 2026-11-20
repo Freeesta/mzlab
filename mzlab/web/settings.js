@@ -110,13 +110,13 @@ function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) ===
 
 // Profile of the program, never a setting: «research» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
 // Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «course» (no element, nothing downloaded).
-// A plain string left under `mzlab.profilo` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
+// A plain string left under `mzlab.profile` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
 const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
 function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "research" : UIP_DEMO ? "demo" : "course"; }
-try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
+try { const v = localStorage.getItem(NOMI.KEY("profile")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profile")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
-function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
+function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminants.on")) === "true"; } catch (_) { return false; } }
 
 // --- settings panel (shared pieces in impostazioni-comp.js)
 const UIP_GROUP_KEY = id => NOMI.KEY("set." + id);

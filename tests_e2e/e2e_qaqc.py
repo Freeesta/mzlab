@@ -68,11 +68,11 @@ try:
             import json
             with pg.expect_download() as d: pg.evaluate("RAPPORTO.export('json')")
             rep = json.load(open(d.value.path(), encoding="utf-8"))
-            assert rep["formato"] == "mzreport/1" and rep["alta_risoluzione"] is hr and rep["programma"]["name"], rep.keys()
+            assert rep["format"] == "mzreport/1" and rep["high_resolution"] is hr and rep["program"]["name"], rep.keys()
             shas = pg.evaluate("E.files.map(f=>f.sha256)")
-            assert [f["sha256"] for f in rep["disegno_studio"]["file"]] == shas and all(len(x) == 64 for x in shas)       # the fingerprint of the workflow file
-            assert rep["qaqc"]["ioni"] and rep["acquisizione"] and rep["elaborazione"]["parametri"]["qaqc"]["ioni"]
-            assert ("livelli_confidenza" in rep) is hr
+            assert [f["sha256"] for f in rep["study_design"]["files"]] == shas and all(len(x) == 64 for x in shas)       # the fingerprint of the workflow file
+            assert rep["qaqc"]["ions"] and rep["acquisition"] and rep["processing"]["parameters"]["qaqc"]["ions"]
+            assert ("confidence_levels" in rep) is hr
             with pg.expect_download() as d: pg.evaluate("RAPPORTO.export('html')")
             h = open(d.value.path(), encoding="utf-8").read()
             pos = [h.index(f"{n}. ") for n in (1, 2, 3, 4)]
@@ -81,7 +81,7 @@ try:
             return rep
         def lr_report():
             rep = report(False)
-            assert any(x["role"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
+            assert any(x["role"] == "blank" for x in rep["study_design"]["files"]) and rep["qaqc"]["sample_blank_ratio"]["threshold"] == 10
         step("LR: study report (JSON and HTML) with SHA-256, instrument, parameters, QA/QC, NORMAN order", lr_report)
 
         r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p, qaqc=True)
@@ -98,7 +98,7 @@ try:
         step("HR: Δppm per file and mass accuracy (mean, maximum) of a known ion", hr_panel)
         def hr_report():
             rep = report(True)
-            assert rep["qaqc"]["ioni"][0]["accuratezza_massa"]["n"] == 2 and rep["livelli_confidenza"] == []
+            assert rep["qaqc"]["ions"][0]["mass_accuracy"]["n"] == 2 and rep["confidence_levels"] == []
         step("HR: report with mass accuracy and the section of the confidence levels", hr_report)
 finally:
     r.close()

@@ -1,5 +1,5 @@
 // @ts-strict
-// Consent of the assistant: what the user agreed to, per provider and class of data (localStorage `mzlab.llm.consenso`, revocable in the settings), and the dialog that asks for it.
+// Consent of the assistant: what the user agreed to, per provider and class of data (localStorage `mzlab.llm.consensus`, revocable in the settings), and the dialog that asks for it.
 // The public demo (`mzlab-demo`) asks once per visit: its consent (class `inspection`, the reduced facts) lives in sessionStorage and its dialog is the text of decision D4.
 // Nothing leaves the computer before a consent exists for the provider and every class the request carries. Loaded by llm-impostazioni.js (profile «research») or llm-agente.js (demo).
 
@@ -8,7 +8,7 @@ export const CLASSES = ["plan", "summary", "names"];
 const DEMO = "mzlab-demo";
 /** the demo sends the reduced facts (`inspection/1`, `context/1`) and the plan; file names are always hidden */
 export const DEMO_CLASSES = ["inspection", "plan"];
-const KEY = "mzlab.llm.consenso";
+const KEY = "mzlab.llm.consensus";
 /** catalog keys of each class: its name and what it carries */
 const WORDS = { plan: ["llm.consenso.c.plan", "llm.consenso.c.plan.d"], summary: ["llm.consenso.c.summary", "llm.consenso.c.summary.d"], names: ["llm.consenso.c.names", "llm.consenso.c.names.d"],
   inspection: ["llm.consenso.c.inspection", "llm.consenso.c.inspection.d"] };

@@ -191,7 +191,7 @@ struct Cleaning {
     suffixes: Vec<String>,
 }
 
-/// The cleaning rules of the profile «attributio» (`pulizia_nomi` of the bundled `levels/1`).
+/// The cleaning rules of the profile «attributio» (`name_cleaning` of the bundled `levels/1`).
 fn cleaning() -> &'static Cleaning {
     static C: OnceLock<Cleaning> = OnceLock::new();
     C.get_or_init(|| {

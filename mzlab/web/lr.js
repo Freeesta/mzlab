@@ -41,7 +41,7 @@ async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob)
 }
 
 // Copies into the browser storage at once in a drop (the engine's copy gate, rust-carica.js createCopyGate): COPIES by default, so the first file of the list gets the disk
-// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, data-loading.md); «?copie=N» or localStorage «mzlab.dev.copie» = N
+// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, data-loading.md); «?copie=N» or localStorage «mzlab.dev.copies» = N
 // chooses another number, 0 = every copy at once (the behaviour before the gate). Logged once.
 const COPIES = 2;
 let copiesK = /** @type {number | null} */ (null);
@@ -49,7 +49,7 @@ function copiesOf() {
   if (copiesK != null) return copiesK;
   let v = null, from = "default";
   try { v = new URLSearchParams(location.search).get("copie"); if (v != null) from = "?copie"; } catch (_) { /* no address */ }
-  if (v == null) try { v = localStorage.getItem("mzlab.dev.copie"); if (v != null) from = "localStorage"; } catch (_) { /* storage blocked */ }
+  if (v == null) try { v = localStorage.getItem("mzlab.dev.copies"); if (v != null) from = "localStorage"; } catch (_) { /* storage blocked */ }
   const n = v == null || !/^\d+$/.test(v.trim()) ? COPIES : Math.min(64, +v);
   copiesK = n; console.info(`mzlab: copies at once ${n || "all"} (${from}; ?copie=0 = all at once)`);
   return n;

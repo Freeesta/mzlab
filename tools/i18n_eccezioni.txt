@@ -6,7 +6,7 @@ mzlab/web/index.html	MS2_t
 mzlab/web/index.html	MRM_std_
 mzlab/web/index.html	HRMS_t
 mzlab/web/index.html	static/esempi/
-mzlab/web/draw.js	qqq.disegno.strumenti
+mzlab/web/draw.js	qqq.draw.tools
 mzlab/web/pannelli.js	Cromatogramma
 mzlab/web/pannelli.js	Spettro di massa
 mzlab/web/pannelli.js	Ione estratto (XIC)

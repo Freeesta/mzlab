@@ -18,7 +18,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))
 
 r = Run(port=8973, wd="/tmp/wd_impaginazione")
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1')}catch(_){}"
 
 # The check of one state. `scope`: the layer just opened (a menu, a pop-up); an open modal dialog is the scope by itself (the rest of the page is inert under it).
 CHECK = r"""((scope) => {

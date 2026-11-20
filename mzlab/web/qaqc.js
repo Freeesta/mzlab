@@ -244,10 +244,10 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   }
 
   // ---------------------------------------------------------------- workflow file and report
-  const exportState = () => ({ ruoli: Object.fromEntries(series().map(f => [f.file, roleOf(f)])), ioni: st.ions.map(i => ({ ...i })), soglia: st.thr, finestra_rt: st.win, rapporto: { ...st.ratio } });
+  const exportState = () => ({ roles: Object.fromEntries(series().map(f => [f.file, roleOf(f)])), ions: st.ions.map(i => ({ ...i })), threshold: st.thr, rt_window: st.win, ratio: { ...st.ratio } });
   function importState(s) {
     if (!s || typeof s !== "object") return;
-    st = { ...blankState(), roles: { ...(s.ruoli || {}) }, ions: (s.ioni || []).map(i => ({ ...i })), thr: s.soglia === 10 ? 10 : 3, win: +s.finestra_rt > 0 ? +s.finestra_rt : 0.5, ratio: { text: "", rt: "", ...(s.rapporto || {}) } };
+    st = { ...blankState(), roles: { ...(s.roles || {}) }, ions: (s.ions || []).map(i => ({ ...i })), thr: s.threshold === 10 ? 10 : 3, win: +s.rt_window > 0 ? +s.rt_window : 0.5, ratio: { text: "", rt: "", ...(s.ratio || {}) } };
     st.seq = 1 + maxOf(st.ions.map(i => i.id || 0), 0);
     res = { ions: [], ratio: null, feat: null, at: null };
     save();

@@ -117,7 +117,7 @@ try:
             assert pg.evaluate("MAPPA.diffOpt().show") == "all" and pg.is_checked(".pnl.map [data-mz=neg]")      # both signs by default: the decreases (blue) are drawn
             pg.uncheck(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='up' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).neg") is False
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.map')).neg") is False
             pg.check(".pnl.map [data-mz=neg]")
             pg.wait_for_function(f"MAPPA.diffOpt().show==='all' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
@@ -176,7 +176,7 @@ try:
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Delete"); pg.wait_for_function(f"MAPPA.pts({M}).length===2", timeout=5000)
         step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
         def panel2d():
-            pg.evaluate("localStorage.removeItem('mzlab.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); ready(pg)
+            pg.evaluate("localStorage.removeItem('mzlab.map')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); ready(pg)
             pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); wait_for_js(pg, f"!{M}._parOpen && {M}.el.querySelector('.hd').getBoundingClientRect().height < 60")
             hh = pg.evaluate("(()=>{const h=" + M + ".el.querySelector('.hd').getBoundingClientRect(); return h.height})()"); assert hh < 60, hh                  # one low row
             assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw:not(.ciw)").count() == 1
@@ -185,8 +185,8 @@ try:
             assert pg.locator(".pnl.map [data-o=view][data-v='3d']").count() == 1 and pg.locator(".pnl.map .seg [data-o=view]").count() == 0   # a single «3D» button
             assert pg.locator(".pnl.map [data-mz=pal]").input_value() == "viridis"
             v0 = pg.evaluate(M + "._img.v.length"); img0 = pg.evaluate(M + "._img.key")
-            pg.select_option(".pnl.map [data-mz=pal]", "cividis"); wait_for_js(pg, f"JSON.parse(localStorage.getItem('mzlab.mappa')).pal === 'cividis' && {M}._img.key !== {json.dumps(img0)} && {M}.leg.querySelector('.cbar').style.background.includes('rgb(0, 32, 76)')")
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
+            pg.select_option(".pnl.map [data-mz=pal]", "cividis"); wait_for_js(pg, f"JSON.parse(localStorage.getItem('mzlab.map')).pal === 'cividis' && {M}._img.key !== {json.dumps(img0)} && {M}.leg.querySelector('.cbar').style.background.includes('rgb(0, 32, 76)')")
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.map')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
             hd_click(pg, ".pnl.map [data-o=corr]", keep=True); pg.click(".pnl.map .corrm [data-c=snip]"); wait_for_js(pg, f"{M}.corr === 'auto' && ({M}._img.key.includes('true') || {M}._img.key.includes('bg=1')) && {M}._img.v.length === {v0}")

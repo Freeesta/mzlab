@@ -95,11 +95,11 @@ try:
         step("C13H26N4: [M+H]+ 239.2 (unit resolution: one decimal), delta +1.0073, XIC button name, no descriptive text", table_rows)
         def polarity():
             pg.click("#al-ctl button[data-p='-1']"); pg.wait_for_function(f"(n => n.includes('[M+H]+') && n.includes('[M-H]-'))({TXT}.map(x => x[0]))")      # both polarities
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calcqui')).pol") == 0, "both remembered"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calc.inline')).pol") == 0, "both remembered"
             pg.click("#al-ctl button[data-p='1']"); pg.wait_for_function("document.querySelector('#sb-panel-adducts .cadd-wrap tbody th').textContent.includes('[M-H]')")
             assert [x[0] for x in pg.evaluate(TXT)][:4] == ["[M-H]-", "[M+HCOO]-", "[M+CH3COO]-", "[M+Cl]-"]
             assert pg.get_attribute("#al-ctl button[data-p='-1']", "aria-pressed") == "true" and pg.get_attribute("#al-ctl button[data-p='1']", "aria-pressed") == "false"
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calcqui')).pol") == -1, "polarity remembered"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calc.inline')).pol") == -1, "polarity remembered"
             pg.click("#sb-panel-adducts .cadd-more"); pg.wait_for_function(VIS + "[0].querySelectorAll('tbody tr').length > 6")
             assert "[2M-H]-" in [x[0] for x in pg.evaluate(TXT)]
             pg.click("#sb-panel-adducts .cadd-more")
