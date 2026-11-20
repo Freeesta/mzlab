@@ -55,8 +55,8 @@ export async function ask(/** @type {string} */ request, /** @type {"check" | "c
   return kind === "cip" ? mod.cip(request) : kind === "hilite" ? mod.hilite(request) : mod.check(request);
 }
 
-/** `open/1` of the bytes of a structure file: the text Ketcher reads and the changes made to it (`{fix: "charset", charset}` or `{fix: "empty", names}`), by the same engine function as `mzlab-cli mol open`.
- * @returns {Promise<{ text: string, changes: { fix: string, charset?: string, names?: string }[] }>} */
+/** `open/1` of the bytes of a structure file: the text Ketcher reads and the changes made to it (`{fix: "charset", charset}`, `{fix: "replaced", count}` or `{fix: "empty", names: [..]}`), by the same engine function as `mzlab-cli mol open`.
+ * @returns {Promise<{ text: string, changes: { fix: string, charset?: string, count?: number, names?: string[] }[] }>} */
 export async function openFile(/** @type {Uint8Array} */ bytes) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     let bin = "";

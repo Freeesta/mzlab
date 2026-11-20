@@ -163,6 +163,7 @@ I18N.add("en", {
   "draw.import.pasted": "the pasted text",
   "draw.import.fix.empty": "dropping the empty {names}",
   "draw.import.fix.charset": "reading it as {charset}",
+  "draw.import.fix.replaced": "replacing {count} characters it could not read",
   "draw.import.failed": "Could not import: {message}",
   "draw.error.ketcherNotStarted": "Ketcher did not start",
   "draw.center.title": "Center the drawing in the canvas",

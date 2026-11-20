@@ -1,5 +1,5 @@
 //! `open/1`: a structure file as the text the Draw editor (Ketcher, with Indigo inside) reads, and what was changed on the way. No format is
-//! parsed. Two changes to the text are made, each reported in `changes`: UTF-16 and 8-bit text is decoded as its byte-order mark or XML
+//! parsed. These changes to the text are made, each reported in `changes`: UTF-16 and 8-bit text is decoded as its byte-order mark or XML
 //! declaration says, and the attributes with an empty value are dropped from the start tags of a CDXML text (RDKit writes `BondLength=""` on
 //! the root and Indigo then draws nothing, without an error). Binary CDX (starts with `VjCD`) is passed on as base64, unchanged. Same bytes in
 //! the molkit `.wasm`, the app (`feat/grafo`, `kind: "open"`) and `mzlab-cli mol open`.
@@ -14,6 +14,8 @@ const CDX_MAGIC: &[u8] = b"VjCD";
 pub enum Change {
     /// The text was decoded as this charset (not plain UTF-8).
     Charset(String),
+    /// This many characters were not valid in the charset of the file and are replaced by U+FFFD.
+    Replaced(usize),
     /// These attribute names, each once in order of first sight, were dropped for having an empty value.
     Empty(Vec<String>),
 }
@@ -25,159 +27,314 @@ pub struct Opened {
     pub changes: Vec<Change>,
 }
 
-/// Drops the attributes with an empty value from every start tag of a CDXML text (a quoted value may hold `>`, `<` or the other quote; comments
-/// and CDATA sections are left as they are). Other text comes back unchanged. The names are each once, in order of first sight.
+/// Drops the attributes with an empty value from every start tag of a CDXML text, one pass and linear in the length: the root element must be
+/// `CDXML` (any other text comes back unchanged); comments, CDATA sections, processing instructions and the DOCTYPE with its internal subset are
+/// copied as they are; a quoted value may hold `>`, `<` or the other quote and is never edited. Text that never closes a comment, CDATA section,
+/// declaration or quote is malformed: the rest is copied unchanged. The names are each once, in order of first sight.
 pub fn tidy_cdxml(text: &str) -> (String, Vec<String>) {
-    let is_cdxml = text.match_indices("<CDXML").any(|(i, m)| {
-        matches!(text.as_bytes().get(i + m.len()), Some(b) if b.is_ascii_whitespace() || *b == b'>')
-    });
-    if !is_cdxml {
-        return (text.to_string(), Vec::new());
-    }
-    let (mut out, mut removed, mut i) = (String::with_capacity(text.len()), Vec::new(), 0);
+    let (mut out, mut removed, mut i, mut root) =
+        (String::with_capacity(text.len()), Vec::new(), 0, false);
     while i < text.len() {
         let rest = &text[i..];
-        if !rest.starts_with('<') {
-            let k = rest.find('<').unwrap_or(rest.len());
-            out.push_str(&rest[..k]);
-            i += k;
-            continue;
+        let k = rest.find('<').unwrap_or(rest.len());
+        out.push_str(&rest[..k]);
+        i += k;
+        let rest = &text[i..];
+        if rest.is_empty() {
+            break;
         }
         match markup(rest) {
-            Some((n, true)) => {
-                out.push_str(&strip_empty(&rest[..n], &mut removed));
-                i += n;
-            }
-            Some((n, false)) => {
+            Markup::Skip(n) => {
                 out.push_str(&rest[..n]);
                 i += n;
             }
-            None => {
+            Markup::Tag(n) => {
+                let tag = &rest[..n];
+                if !root {
+                    root = true;
+                    if !is_root(tag) {
+                        out.push_str(rest);
+                        return (out, removed);
+                    }
+                }
+                out.push_str(&strip_empty(tag, &mut removed));
+                i += n;
+            }
+            Markup::Text => {
                 out.push('<'); // not markup: the text goes on after the bracket
                 i += 1;
+            }
+            Markup::Unclosed => {
+                out.push_str(rest);
+                break;
             }
         }
     }
     (out, removed)
 }
 
-/// The comment, CDATA section (`false`) or start tag (`true`) that `s` begins with, and its length.
-fn markup(s: &str) -> Option<(usize, bool)> {
-    for (open, close) in [("<!--", "-->"), ("<![CDATA[", "]]>")] {
-        if let Some(rest) = s.strip_prefix(open) {
-            return rest
-                .find(close)
-                .map(|k| (open.len() + k + close.len(), false));
-        }
-    }
-    tag_len(s).map(|n| (n, true))
+/// What a `<` begins.
+enum Markup {
+    /// A comment, CDATA section, processing instruction or declaration, of this length: copied.
+    Skip(usize),
+    /// A start tag of this length.
+    Tag(usize),
+    /// Just a bracket in the text.
+    Text,
+    /// A construct that never closes: the rest of the text is copied as it is.
+    Unclosed,
 }
 
-/// The length of the start tag that `s` begins with (`<` and a letter, then quoted values and any other character but `<` and `>`), or `None`.
-fn tag_len(s: &str) -> Option<usize> {
-    let b = s.as_bytes();
-    if !b.get(1)?.is_ascii_alphabetic() {
-        return None;
+fn skip_to(s: &str, from: usize, close: &str) -> Markup {
+    s[from..]
+        .find(close)
+        .map_or(Markup::Unclosed, |k| Markup::Skip(from + k + close.len()))
+}
+
+fn markup(s: &str) -> Markup {
+    if s.starts_with("<!--") {
+        return skip_to(s, 4, "-->");
     }
-    let mut i = 2;
-    loop {
-        match *b.get(i)? {
-            q @ (b'"' | b'\'') => i += s[i + 1..].find(q as char)? + 2,
-            b'<' => return None,
-            b'>' => return Some(i + 1),
+    if s.starts_with("<![CDATA[") {
+        return skip_to(s, 9, "]]>");
+    }
+    if s.starts_with("<?") {
+        return skip_to(s, 2, "?>");
+    }
+    if s.starts_with("<!") {
+        return declaration(s);
+    }
+    tag_len(s)
+}
+
+/// A `<!...>` declaration (the DOCTYPE with an internal subset in brackets, quoted literals and comments inside it).
+fn declaration(s: &str) -> Markup {
+    let b = s.as_bytes();
+    let (mut i, mut depth) = (2, 0usize);
+    while i < b.len() {
+        match b[i] {
+            q @ (b'"' | b'\'') => match s[i + 1..].find(q as char) {
+                Some(k) => i += k + 2,
+                None => return Markup::Unclosed,
+            },
+            b'[' => {
+                depth += 1;
+                i += 1;
+            }
+            b']' => {
+                depth = depth.saturating_sub(1);
+                i += 1;
+            }
+            b'<' if s[i..].starts_with("<!--") => match s[i + 4..].find("-->") {
+                Some(k) => i += k + 7,
+                None => return Markup::Unclosed,
+            },
+            b'>' if depth == 0 => return Markup::Skip(i + 1),
             _ => i += 1,
         }
     }
+    Markup::Unclosed
 }
 
-/// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it); a quoted value is never read as an attribute.
+/// The start tag that `s` begins with (`<` and a letter, then quoted values and any other character but `<` and `>`).
+fn tag_len(s: &str) -> Markup {
+    let b = s.as_bytes();
+    if !b.get(1).is_some_and(u8::is_ascii_alphabetic) {
+        return Markup::Text;
+    }
+    let mut i = 2;
+    while let Some(&c) = b.get(i) {
+        match c {
+            q @ (b'"' | b'\'') => match s[i + 1..].find(q as char) {
+                Some(k) => i += k + 2,
+                None => return Markup::Unclosed, // no closing quote anywhere after: nothing later is well formed
+            },
+            b'<' => return Markup::Text,
+            b'>' => return Markup::Tag(i + 1),
+            _ => i += 1,
+        }
+    }
+    Markup::Text
+}
+
+const NAME_CHARS: &[u8] = b"_.:-";
+
+fn name_end(b: &[u8], mut i: usize) -> usize {
+    while b
+        .get(i)
+        .is_some_and(|c| c.is_ascii_alphanumeric() || NAME_CHARS.contains(c))
+    {
+        i += 1;
+    }
+    i
+}
+
+fn blanks(b: &[u8], mut i: usize) -> usize {
+    while b.get(i).is_some_and(u8::is_ascii_whitespace) {
+        i += 1;
+    }
+    i
+}
+
+/// Whether the start tag is the `CDXML` root.
+fn is_root(tag: &str) -> bool {
+    let b = tag.as_bytes();
+    let e = name_end(b, 1);
+    &tag[1..e] == "CDXML"
+}
+
+/// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it). The tag is read left to right in
+/// tokens, a quoted string is skipped whole wherever it stands, so a quoted value is never read as attributes.
 fn strip_empty(tag: &str, removed: &mut Vec<String>) -> String {
-    let (b, mut out, mut p, mut copied) = (tag.as_bytes(), String::new(), 0, 0);
+    let b = tag.as_bytes();
+    let (mut out, mut copied, mut p) = (String::new(), 0, name_end(b, 1));
     while p < b.len() {
-        let Some((end, name, empty)) = attribute(tag, p) else {
-            p += 1;
+        let start = blanks(b, p);
+        match b.get(start) {
+            None | Some(b'>') => break,
+            Some(&q @ (b'"' | b'\'')) => {
+                // a quoted string that is no attribute's value
+                p = tag[start + 1..]
+                    .find(q as char)
+                    .map_or(b.len(), |k| start + k + 2);
+                continue;
+            }
+            _ => {}
+        }
+        let end = name_end(b, start);
+        if end == start {
+            p = start + 1; // any other character
+            continue;
+        }
+        let eq = blanks(b, end);
+        if b.get(eq) != Some(&b'=') || start == p {
+            p = eq.max(end);
+            continue;
+        }
+        let open = blanks(b, eq + 1);
+        let Some(&q) = b.get(open).filter(|c| **c == b'"' || **c == b'\'') else {
+            p = open;
             continue;
         };
-        if empty {
+        let close = open + 1 + tag[open + 1..].find(q as char).unwrap_or(b.len());
+        if close == open + 1 {
             out.push_str(&tag[copied..p]);
-            copied = end;
+            copied = close + 1;
+            let name = &tag[start..end];
             if !removed.iter().any(|n| n == name) {
                 removed.push(name.to_string());
             }
         }
-        p = end;
+        p = close + 1;
     }
     out.push_str(&tag[copied..]);
     out
 }
 
-/// The attribute that starts with the white space at `p`: where it ends, its name, and whether its value is empty.
-fn attribute(tag: &str, p: usize) -> Option<(usize, &str, bool)> {
-    let b = tag.as_bytes();
-    let blanks = |mut i: usize| {
-        while b.get(i).is_some_and(u8::is_ascii_whitespace) {
-            i += 1;
-        }
-        i
+/// The text of the bytes, its charset (`""` for plain UTF-8) and how many characters had to be replaced by U+FFFD because the bytes were not valid
+/// in that charset. Read as the byte-order mark or the XML declaration says; UTF-16 without a mark is told by its NUL bytes.
+fn decode(bytes: &[u8]) -> (String, String, usize) {
+    let bom = if bytes.starts_with(&[0xff, 0xfe]) {
+        Some(true)
+    } else if bytes.starts_with(&[0xfe, 0xff]) {
+        Some(false)
+    } else {
+        None
     };
-    let start = blanks(p);
-    if start == p
-        || !b
-            .get(start)
-            .is_some_and(|c| c.is_ascii_alphabetic() || *c == b'_')
-    {
-        return None;
+    if let Some(le) = bom {
+        let (text, bad) = utf16(&bytes[2..], le);
+        return (text, "UTF-16".to_string(), bad);
     }
-    let mut end = start;
-    while b
-        .get(end)
-        .is_some_and(|c| c.is_ascii_alphanumeric() || b"_.:-".contains(c))
-    {
-        end += 1;
-    }
-    let eq = blanks(end);
-    if b.get(eq) != Some(&b'=') {
-        return None;
-    }
-    let open = blanks(eq + 1);
-    let q = *b.get(open).filter(|c| **c == b'"' || **c == b'\'')?;
-    let close = open + 1 + tag[open + 1..].find(q as char)?;
-    Some((close + 1, &tag[start..end], close == open + 1))
-}
-
-/// The text of the bytes and its charset (`""` for plain UTF-8), read as the byte-order mark or the XML declaration says.
-fn decode(bytes: &[u8]) -> (String, String) {
-    if bytes.starts_with(&[0xff, 0xfe]) || bytes.starts_with(&[0xfe, 0xff]) {
-        let le = bytes[0] == 0xff;
-        let units = bytes[2..].chunks_exact(2).map(|c| {
-            if le {
-                u16::from_le_bytes([c[0], c[1]])
-            } else {
-                u16::from_be_bytes([c[0], c[1]])
-            }
-        });
-        let mut text: String = char::decode_utf16(units)
-            .map(|r| r.unwrap_or('\u{fffd}'))
-            .collect();
-        if bytes.len() % 2 == 1 {
-            text.push('\u{fffd}'); // an odd byte at the end is no character
-        }
-        return (text, "UTF-16".to_string());
+    if let Some(le) = nul_utf16(bytes) {
+        let (text, bad) = utf16(bytes, le);
+        return (text, format!("UTF-16{}", if le { "LE" } else { "BE" }), bad);
     }
     if let Ok(s) = std::str::from_utf8(bytes) {
-        return (s.to_string(), String::new());
+        return (s.to_string(), String::new(), 0);
     }
     let declared = declared_charset(bytes);
     let named = declared.as_deref().unwrap_or("windows-1252");
     match named.to_ascii_lowercase().as_str() {
-        "utf-8" | "utf8" => (
-            String::from_utf8_lossy(bytes).into_owned(),
-            named.to_string(),
-        ),
+        "utf-8" | "utf8" => {
+            let bad = bytes.utf8_chunks().filter(|c| !c.invalid().is_empty()).count();
+            (
+                String::from_utf8_lossy(bytes).into_owned(),
+                named.to_string(),
+                bad,
+            )
+        }
         "iso-8859-1" | "iso8859-1" | "iso_8859-1" | "latin1" | "l1" | "us-ascii" | "ascii"
-        | "windows-1252" | "cp1252" | "x-cp1252" => (windows_1252(bytes), named.to_string()),
+        | "windows-1252" | "cp1252" | "x-cp1252" => (windows_1252(bytes), named.to_string(), 0),
         // a charset this reader has no table for: windows-1252, named as such in the notice
-        _ => (windows_1252(bytes), "windows-1252".to_string()),
+        _ => (windows_1252(bytes), "windows-1252".to_string(), 0),
+    }
+}
+
+/// UTF-16 units (little or big endian) as text, and the number of characters replaced (an unpaired surrogate, an odd byte at the end).
+fn utf16(bytes: &[u8], le: bool) -> (String, usize) {
+    let units = bytes.chunks_exact(2).map(|c| {
+        if le {
+            u16::from_le_bytes([c[0], c[1]])
+        } else {
+            u16::from_be_bytes([c[0], c[1]])
+        }
+    });
+    let mut bad = usize::from(bytes.len() % 2 == 1);
+    let mut text: String = char::decode_utf16(units)
+        .map(|r| {
+            r.unwrap_or_else(|_| {
+                bad += 1;
+                '\u{fffd}'
+            })
+        })
+        .collect();
+    if bytes.len() % 2 == 1 {
+        text.push('\u{fffd}'); // an odd byte at the end is no character
+    }
+    (text, bad)
+}
+
+/// `Some(little endian)` for text with no byte-order mark that is UTF-16 of mostly ASCII: its first 64 bytes have a NUL in every second place
+/// (the high byte) and none in the others.
+fn nul_utf16(bytes: &[u8]) -> Option<bool> {
+    let head = &bytes[..bytes.len().min(64)];
+    if head.len() < 4 {
+        return None;
+    }
+    let at = |par: usize| head.iter().skip(par).step_by(2);
+    let (even_nul, odd_nul) = (at(0).all(|b| *b == 0), at(1).all(|b| *b == 0));
+    let (even_ok, odd_ok) = (at(0).all(|b| *b != 0), at(1).all(|b| *b != 0));
+    if odd_nul && even_ok {
+        Some(true)
+    } else if even_nul && odd_ok {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// The value of the `encoding` of an XML declaration that `text` starts with (after white space), as a range of `text`.
+fn encoding_value(text: &str) -> Option<std::ops::Range<usize>> {
+    let lead = text.len() - text.trim_start().len();
+    let b = text.as_bytes();
+    if !text[lead..].starts_with("<?xml") {
+        return None;
+    }
+    let mut p = lead + 5;
+    loop {
+        let start = blanks(b, p);
+        let end = name_end(b, start);
+        let eq = blanks(b, end);
+        if end == start || b.get(eq) != Some(&b'=') {
+            return None;
+        }
+        let open = blanks(b, eq + 1);
+        let q = *b.get(open).filter(|c| **c == b'"' || **c == b'\'')?;
+        let close = open + 1 + text[open + 1..].find(q as char)?;
+        if &text[start..end] == "encoding" {
+            return Some(open + 1..close);
+        }
+        p = close + 1;
     }
 }
 
@@ -187,14 +344,10 @@ fn declared_charset(bytes: &[u8]) -> Option<String> {
         .iter()
         .map(|&b| char::from(b))
         .collect();
-    let decl = head.trim_start().strip_prefix("<?xml")?;
-    let decl = &decl[..decl.find('>').unwrap_or(decl.len())];
-    let hits: Vec<usize> = decl.match_indices("encoding=").map(|(i, _)| i).collect();
-    hits.into_iter().rev().find_map(|i| {
-        let after = decl[i + "encoding=".len()..].strip_prefix(['"', '\''])?;
-        let n = after.find(|c: char| !(c.is_ascii_alphanumeric() || "_.:-".contains(c)))?;
-        (n > 0 && after[n..].starts_with(['"', '\''])).then(|| after[..n].to_string())
-    })
+    let r = encoding_value(&head)?;
+    let v = &head[r];
+    (!v.is_empty() && v.bytes().all(|c| c.is_ascii_alphanumeric() || NAME_CHARS.contains(&c)))
+        .then(|| v.to_string())
 }
 
 /// windows-1252 (the web's reading of ISO-8859-1 and US-ASCII too): bytes 0x80-0x9F are the printable characters, never controls.
@@ -218,39 +371,39 @@ fn windows_1252(bytes: &[u8]) -> String {
         .collect()
 }
 
-/// An XML declaration that names UTF-16 for text that is UTF-8 now names UTF-8.
+/// The XML declaration at the very start of the text that names UTF-16 for text that is UTF-8 now names UTF-8 (one anywhere else is text).
 fn declare_utf8(text: &str) -> String {
-    let mut from = 0;
-    while let Some(k) = text[from..].find("<?xml") {
-        let at = from + k;
-        let end = text[at..].find('>').map_or(text.len(), |e| at + e);
-        if let Some(e) = text[at..end]
-            .rfind("encoding=")
-            .map(|e| at + e + "encoding=".len())
-            && text[e..end].starts_with(['"', '\''])
-        {
-            let v = e + 1;
-            let n = text[v..end].find(['"', '\'']).unwrap_or(end - v);
-            return format!("{}UTF-8{}", &text[..v], &text[v + n..]);
-        }
-        from = at + 5;
+    match encoding_value(text) {
+        Some(r) => format!("{}UTF-8{}", &text[..r.start], &text[r.end..]),
+        None => text.to_string(),
     }
-    text.to_string()
 }
 
-/// What the editor reads for the bytes of a structure file, and what was changed on the way.
-pub fn open_bytes(bytes: &[u8]) -> Opened {
+/// The largest structure file read (8 MiB): the engine runs on the page thread of the site, and no drawing file comes near it.
+pub const MAX_BYTES: usize = 8 << 20;
+
+/// What the editor reads for the bytes of a structure file, and what was changed on the way; a file over `MAX_BYTES` is refused
+/// (`error.open.tooBig`, the size and the limit in the error), never cut.
+pub fn open_bytes(bytes: &[u8]) -> Result<Opened> {
+    if bytes.len() > MAX_BYTES {
+        return Err(Error::new("error.open.tooBig")
+            .with("size", bytes.len())
+            .with("limit", MAX_BYTES));
+    }
     if bytes.starts_with(CDX_MAGIC) {
-        return Opened {
+        return Ok(Opened {
             text: base64(bytes),
             changes: Vec::new(),
-        };
+        });
     }
-    let (raw, charset) = decode(bytes);
+    let (raw, charset, bad) = decode(bytes);
     let (text, removed) = tidy_cdxml(raw.strip_prefix('\u{feff}').unwrap_or(&raw));
     let mut changes = Vec::new();
     if !charset.is_empty() {
         changes.push(Change::Charset(charset.clone()));
+    }
+    if bad > 0 {
+        changes.push(Change::Replaced(bad));
     }
     if !removed.is_empty() {
         changes.push(Change::Empty(removed));
@@ -260,28 +413,41 @@ pub fn open_bytes(bytes: &[u8]) -> Opened {
     } else {
         text
     };
-    Opened { text, changes }
+    Ok(Opened { text, changes })
+}
+
+impl Opened {
+    /// The `open/1` document.
+    pub fn json(&self) -> String {
+        let mut out = Out::default();
+        out.raw("{\"schema\":\"open/1\",\"text\":")
+            .str(&self.text)
+            .raw(",\"changes\":[");
+        for (i, c) in self.changes.iter().enumerate() {
+            out.raw(if i > 0 { "," } else { "" });
+            match c {
+                Change::Charset(c) => out.raw("{\"fix\":\"charset\",\"charset\":").str(c),
+                Change::Replaced(n) => out
+                    .raw("{\"fix\":\"replaced\",\"count\":")
+                    .raw(&n.to_string()),
+                Change::Empty(names) => {
+                    out.raw("{\"fix\":\"empty\",\"names\":[");
+                    for (k, n) in names.iter().enumerate() {
+                        out.raw(if k > 0 { "," } else { "" }).str(n);
+                    }
+                    out.raw("]")
+                }
+            };
+            out.raw("}");
+        }
+        out.raw("]}");
+        out.0
+    }
 }
 
 /// The `open/1` text of the bytes of a file.
-pub fn open_json_bytes(bytes: &[u8]) -> String {
-    let o = open_bytes(bytes);
-    let mut out = Out::default();
-    out.raw("{\"schema\":\"open/1\",\"text\":")
-        .str(&o.text)
-        .raw(",\"changes\":[");
-    for (i, c) in o.changes.iter().enumerate() {
-        out.raw(if i > 0 { "," } else { "" });
-        match c {
-            Change::Charset(c) => out.raw("{\"fix\":\"charset\",\"charset\":").str(c),
-            Change::Empty(names) => out
-                .raw("{\"fix\":\"empty\",\"names\":")
-                .str(&names.join(", ")),
-        };
-        out.raw("}");
-    }
-    out.raw("]}");
-    out.0
+pub fn open_json_bytes(bytes: &[u8]) -> Result<String> {
+    open_bytes(bytes).map(|o| o.json())
 }
 
 /// `open/1` of a request `{"data": "<the file, base64>"}` (the app has no binary request): the same text as `open_json_bytes`.
@@ -290,7 +456,7 @@ pub fn open_json(request: &str) -> Result<String> {
     let v = json::parse(request.as_bytes()).map_err(|_| bad())?;
     let bytes =
         unbase64(v.get("data").and_then(json::Value::str).ok_or_else(bad)?).ok_or_else(bad)?;
-    Ok(open_json_bytes(&bytes))
+    open_json_bytes(&bytes)
 }
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

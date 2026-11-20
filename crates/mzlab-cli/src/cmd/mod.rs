@@ -119,6 +119,7 @@ const JSON_DEFAULT: &[&str] = &[
     "mol anal",
     "mol check",
     "mol cip",
+    "mol open",
     "mol hilite",
     "mol sel",
     "mol link",

@@ -38,6 +38,7 @@
   "draw.import.changed": "Notice under the SMILES field after a ChemDraw-format file was changed before Ketcher read it; {name} = file name or the words for pasted text, {what} = the changes, joined by semicolons.",
   "draw.import.pasted": "Stands for the file name in draw.import.changed when the structure was pasted.",
   "draw.import.fix.empty": "One change in draw.import.changed: attributes with an empty value were removed from the CDXML; {names} = their names.",
+  "draw.import.fix.replaced": "One change in draw.import.changed: {count} bytes or characters of the file were not valid in its charset and became the replacement character (U+FFFD).",
   "draw.import.fix.charset": "One change in draw.import.changed: the file was not UTF-8 and was decoded as {charset}.",
   "draw.import.unreadable": "Notice below the SMILES field when a dropped structure file cannot be read; {name} = the file name.",
   "draw.props.failed": "Box of the predicted properties when the calculation fails; {message} = technical text.",
