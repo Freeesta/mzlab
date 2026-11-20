@@ -39,4 +39,5 @@ def test_the_window_passes_every_placeholder_the_texts_use():
     cat = "\n".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "mzlab/web/lang/en").glob("errori-*.js")))
     for k in sorted(emitted()):
         m = re.search(rf'\n  "{re.escape(k)}": "([^"\n]*)"', cat)
-        assert set(re.findall(r"\{(\w+)\}", m[1])) <= given, f"{k}: placeholders {set(re.findall(r'[{](\w+)[}]', m[1]))} not all given ({given})"
+        used = set(re.findall(r"\{(\w+)\}", m[1]))
+        assert used <= given, f"{k}: placeholders {used} not all given ({given})"
