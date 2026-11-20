@@ -9,7 +9,7 @@
   "format": {"const": "gruppi"},
   "version": {"const": 1},
   "reference": {"type": ["string", "null"], "description": "the reference condition; null when none was asked or it does not exist (warning refMissing)"},
-  "norm": {"const": "raw", "description": "raw areas; 'istd' is refused with error.gruppi.badOpts"},
+  "norm": {"const": "raw", "description": "raw areas; 'istd' is refused with error.groups.badOpts"},
   "conditions": {
    "type": "array",
    "items": {

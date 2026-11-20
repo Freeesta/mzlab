@@ -14,7 +14,7 @@ fn a_trailer_ion_outside_its_window_is_named_in_the_method_and_the_target_kept()
     let _ = std::fs::remove_dir_all(&d);
     let mut l = reader_of(b.clone());
     let before = l.method(0).expect("method");
-    assert!(!before.contains("meta.ioneScartata"), "{before}");
+    assert!(!before.contains("meta.ionDiscarded"), "{before}");
     let target = l.index(0).expect("index")[1].precursore.expect("an MS2");
     // the trailer record of scan 1 starts with its charge (2) and its monoisotopic m/z: moved 50 m/z off a window of 1.4
     let mut rec = 2u32.to_le_bytes().to_vec();
@@ -30,7 +30,7 @@ fn a_trailer_ion_outside_its_window_is_named_in_the_method_and_the_target_kept()
     assert_eq!(l.losses(0).expect("losses"), Losses::complete(9));
     let doc = l.method(0).expect("method");
     assert!(
-        doc.contains(r#""key":"meta.ioneScartata","place":"the trailer's monoisotopic m/z lies outside the isolation window in 1 of 9 scans""#),
+        doc.contains(r#""key":"meta.ionDiscarded","place":"the trailer's monoisotopic m/z lies outside the isolation window in 1 of 9 scans""#),
         "{doc}"
     );
     // the document of the method alone (`raw::method`, no index built) counts the same scans
@@ -68,7 +68,7 @@ fn an_ms_order_not_decoded_leaves_the_level_unknown_and_is_named() {
     assert_eq!((s.level, s.mz), (0, points));
     let doc = l.method(0).expect("method");
     assert!(
-        doc.contains(r#""key":"meta.nonDecodificato","place":"MS order of 1 of 9 scans"#),
+        doc.contains(r#""key":"meta.notDecoded","place":"MS order of 1 of 9 scans"#),
         "{doc}"
     );
     assert_eq!(

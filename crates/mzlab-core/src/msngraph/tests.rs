@@ -149,9 +149,9 @@ pub(super) fn find(g: &Graph, f: &str) -> usize {
         .unwrap_or_else(|| panic!("no node for {f}"))
 }
 
-pub(super) fn edge<'a>(g: &'a Graph, da: &str, a: &str) -> Option<&'a Edge> {
-    let (p, f) = (find(g, da), find(g, a));
-    g.archi.iter().find(|x| x.da == p && x.a == f)
+pub(super) fn edge<'a>(g: &'a Graph, from: &str, a: &str) -> Option<&'a Edge> {
+    let (p, f) = (find(g, from), find(g, a));
+    g.edges.iter().find(|x| x.from == p && x.to == f)
 }
 
 #[test]
@@ -200,8 +200,8 @@ fn arcs_losses_measures_and_dag() {
         edge(&g, "C5H8N3", "C4H7N2").unwrap().compatibili,
         vec!["HCN"]
     );
-    for x in &g.archi {
-        assert!(g.nodes[x.a].mz < g.nodes[x.da].mz);
+    for x in &g.edges {
+        assert!(g.nodes[x.to].mz < g.nodes[x.from].mz);
     }
 }
 
@@ -326,7 +326,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
         ]
     );
     let n156 = g.nodes.iter().position(|n| n.mz == 156.0).unwrap();
-    let a = g.archi.iter().find(|x| x.a == n156).unwrap();
+    let a = g.edges.iter().find(|x| x.to == n156).unwrap();
     assert!(a.isolamento && a.misure[0].rel == 0.0);
 }
 

@@ -1,5 +1,5 @@
-//! What the `probe` of the `sciex` module tells the page (`motivi`): a scheduled-MRM pair with no Log (`programmati` of `tools/wiff_riferimento.py`) and a pair
-//! whose second sample only is a variant (`tools/wiff_mixed_pi.py`) are `"variante"`, so the page hands them to the module and the engine never reads their blocks.
+//! What the `probe` of the `sciex` module tells the page (`reasons`): a scheduled-MRM pair with no Log (`programmati` of `tools/wiff_riferimento.py`) and a pair
+//! whose second sample only is a variant (`tools/wiff_mixed_pi.py`) are `"variant"`, so the page hands them to the module and the engine never reads their blocks.
 //! Synthetic pairs; skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #![cfg(feature = "sciex")]
 
@@ -59,7 +59,7 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
         l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
-    assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
+    assert_eq!(mzlab_lettori::reasons(&mut *l, 0), vec!["variant"]);
 }
 
 #[test]
@@ -70,11 +70,11 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
     let mut l = open(&dir, "mistopi");
     assert_eq!(l.samples().len(), 2);
     assert!(!l.variant(0) && l.variant(1));
-    assert!(mzlab_lettori::motivi(&mut *l, 0).contains(&"variante"));
+    assert!(mzlab_lettori::reasons(&mut *l, 0).contains(&"variant"));
 }
 
 /// A chromatogram-only MRM sample whose blocks are sparse while its method has no `sMRM` stream (the scheduling is only in the data): the block itself
-/// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces. A `-(k + 0.01)` token is a run of k measured
+/// says the engine cannot read it, so the probe answers `"variant"` and the module reads all 136 traces. A `-(k + 0.01)` token is a run of k measured
 /// zeros: every trace has a point in each of the 40 cycles, as `mrmrado.json` (the generator's own counts) says.
 #[test]
 fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
@@ -86,7 +86,7 @@ fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
         l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
-    assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
+    assert_eq!(mzlab_lettori::reasons(&mut *l, 0), vec!["variant"]);
     let srm: Vec<String> = l
         .chromatograms(0)
         .unwrap()

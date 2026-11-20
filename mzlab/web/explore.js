@@ -291,7 +291,7 @@ window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
 function panelRec(p) {
   return {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, area: window.SIMUI ? SIMUI.areaOf(p) : undefined, tol: p.tol,
-    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
+    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, channel: t.channel || undefined })),
     channels: p.channels && p.channels.length ? p.channels : undefined,
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ks: p.ks ? p.ks.map((/** @type {number} */ k) => E.files[k]?.file).filter(Boolean) : undefined, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, note: p.note || undefined, ints: p.ints, noise: p.noise || undefined, tr: p.tr,
     link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
@@ -387,9 +387,9 @@ async function xicBin(/** @type {string} */ url) {
   return { mz: head.mz, tol: head.tol, traces };
 }
 // the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
-// canale: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
-const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, canale) => canale
-  ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
+// channel: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
+const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, channel) => channel
+  ? memo(`x${k}|${mz}|${tol}|${lv}|${channel}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&channel=${encodeURIComponent(channel)}`).then(j => j.traces ? j.traces[0] : j))
   : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (window.HR ? HR.q() : "");   // no merge flag: the engine decides (unit-resolution centroids are merged, profile and HR never)

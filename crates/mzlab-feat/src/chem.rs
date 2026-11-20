@@ -2,6 +2,8 @@
 //! the user gives the SMILES of the parent.
 
 pub mod analysis;
+mod aromatic_h;
+mod atom_block;
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;

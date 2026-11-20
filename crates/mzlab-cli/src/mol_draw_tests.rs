@@ -12,7 +12,7 @@ fn text(o: &crate::Outcome) -> String {
 
 fn catalog() -> String {
     format!(
-        "{}/../../mzlab/web/molecole/catalogo.csv",
+        "{}/../../mzlab/web/molecules/catalogue.csv",
         env!("CARGO_MANIFEST_DIR")
     )
 }

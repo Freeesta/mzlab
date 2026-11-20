@@ -117,9 +117,9 @@ fn keys_added_later_stay_before_the_view() {
     assert_eq!(completa(&k).unwrap(), k);
 }
 
-fn edge(da: usize, a: usize, rel: f64, isolated: bool) -> EdgeD {
+fn edge(from: usize, a: usize, rel: f64, isolated: bool) -> EdgeD {
     EdgeD {
-        da,
+        from,
         a,
         isolato: isolated,
         rel,
@@ -127,13 +127,13 @@ fn edge(da: usize, a: usize, rel: f64, isolated: bool) -> EdgeD {
     }
 }
 
-fn rete(n: usize, archi: Vec<EdgeD>) -> Data {
+fn rete(n: usize, arcs: Vec<EdgeD>) -> Data {
     Data {
         id: (0..n).map(|i| format!("n{i}")).collect(),
         mz: (0..n).map(|i| 500.0 - i as f64).collect(),
         level: vec![1; n],
         rel_max: vec![100.0; n],
-        edges: archi,
+        edges: arcs,
     }
 }
 
@@ -156,9 +156,9 @@ fn the_best_path_takes_the_fewest_steps_then_the_strongest_weakest_arc_then_isol
     );
     let b = paths(&d);
     // n5: one step from n0 beats two steps even when the second arc is far stronger
-    assert_eq!((b[5].da, b[5].steps), (Some(0), 1));
+    assert_eq!((b[5].from, b[5].steps), (Some(0), 1));
     // n4: all three paths have two steps; the smallest intensities are 50 (via n1), 60 (via n2), 60 (via n3): n2 and n3 tie, n3 is isolated
-    assert_eq!((b[4].da, b[4].steps), (Some(3), 2));
+    assert_eq!((b[4].from, b[4].steps), (Some(3), 2));
     // without the isolation the smaller id wins
     let mut d2 = rete(
         5,
@@ -170,10 +170,10 @@ fn the_best_path_takes_the_fewest_steps_then_the_strongest_weakest_arc_then_isol
             edge(0, 3, 1.0, false),
         ],
     );
-    assert_eq!(paths(&d2)[4].da, Some(1));
+    assert_eq!(paths(&d2)[4].from, Some(1));
     d2.edges[2].rel = 59.0;
-    assert_eq!(paths(&d2)[4].da, Some(2));
-    assert_eq!(b[0].da, None);
+    assert_eq!(paths(&d2)[4].from, Some(2));
+    assert_eq!(b[0].from, None);
 }
 
 /// How many nodes would change parent if each took its single most intense entering arc (the arborescence of least cost of Chu-Liu/Edmonds
@@ -184,9 +184,9 @@ fn parent_changes(d: &Data) -> usize {
         .filter(|&v| {
             let mut ent: Vec<&EdgeD> = d.edges.iter().filter(|a| a.a == v).collect();
             crate::sortc::any_by(&mut ent, |x, y| {
-                y.rel.total_cmp(&x.rel).then(x.da.cmp(&y.da))
+                y.rel.total_cmp(&x.rel).then(x.from.cmp(&y.from))
             });
-            ent.first().map(|a| a.da) != b[v].da
+            ent.first().map(|a| a.from) != b[v].from
         })
         .count()
 }
@@ -217,12 +217,12 @@ fn layered(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, u
     for l in 0..levels - 1 {
         for k in 0..per_level {
             // one precursor in the level above, and a second one for one ion in five (the shared fragments)
-            let da = l * per_level + next() % per_level;
+            let from = l * per_level + next() % per_level;
             let a = (l + 1) * per_level + k;
-            edges.push((da, a));
+            edges.push((from, a));
             if next() % 5 == 0 {
                 let altro = l * per_level + next() % per_level;
-                if altro != da {
+                if altro != from {
                     edges.push((altro, a));
                 }
             }
@@ -234,11 +234,11 @@ fn layered(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, u
 #[test]
 fn the_swaps_remove_crossings_and_no_two_nodes_share_a_place() {
     for (levels, per) in [(5, 6), (8, 10)] {
-        let (level, mz, archi) = layered(levels, per);
+        let (level, mz, arcs) = layered(levels, per);
         let r = Network {
             level: &level,
             mz: &mz,
-            edges: &archi,
+            edges: &arcs,
         };
         let (before, after) = (baricentro_pos(&r), tree(&r));
         let (a, b) = (incroci(&r, &before), incroci(&r, &after));

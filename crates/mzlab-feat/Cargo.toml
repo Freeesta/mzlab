@@ -9,9 +9,9 @@ license.workspace = true
 crate-type = ["rlib"]
 
 [features]
-# `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
+# `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it. It counts the hydrogens of the aromatic rings of a molfile with `mzlab-mol` (`chem::aromatic_h`).
 default = ["chem", "legacy"]
-chem = []
+chem = ["dep:mzlab-mol"]
 # `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`) and the substructure search. Off by default and in every .wasm.
 record = ["chem", "dep:mzlab-mol", "sub"]
 # `sub`: the substructure search `chem::substructure` (`substructure/1`, `substructure_db/1` over a structure list). Off by default; the molkit `.wasm` (`mzlab-mol-wasm`) carries it.

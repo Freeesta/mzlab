@@ -54,7 +54,7 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
-/// The most cells of a summed spectrum (`modo=somma`).
+/// The most cells of a summed spectrum (`mode=sum`).
 pub(crate) const MAX_CELLS: usize = 2_000_000;
 
 impl crate::msnroute::Filter<'_> {
@@ -122,7 +122,7 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         };
         let (mut mz, mut y) = (vec![], vec![]);
-        // `modo=somma`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
+        // `mode=sum`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
         let (div, cap) = if self.msn.opts.sum { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
         if n > 0 {
             // the peaks come in order of m/z, so the cells of `floor(mz / bin)` come in order too

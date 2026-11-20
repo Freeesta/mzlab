@@ -34,7 +34,7 @@ const hasErrors = (/** @type {any} */ j) => !!j && Array.isArray(j.errors) && j.
 export function ready() {
   loaded = loaded || (async () => {
     const [cat, doc] = await Promise.all([
-      fetch("static/molecole/catalogo.csv").then(r => { if (!r.ok) throw new Error("catalogo.csv: " + r.status); return r.text(); }),
+      fetch("static/molecules/catalogue.csv").then(r => { if (!r.ok) throw new Error("catalogue.csv: " + r.status); return r.text(); }),
       // an app older than the page has no archive yet: the catalogue still works, saving fails with a message
       text("archive/read", "").catch(() => `{"schema":"${SCHEMA}","molecules":[]}`),
     ]);

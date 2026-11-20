@@ -23,6 +23,8 @@ mod molfile_v2000;
 mod molfile_v3000;
 mod molfile_write;
 mod pieces;
+pub use molfile::{drawn_hydrogens, DrawnAtom};
+pub use molfile_v2000::stated_hydrogens;
 pub use molfile_write::fixed;
 mod query;
 mod renumber;

@@ -12,7 +12,7 @@
   "recipe",
   "parametri",
   "ingressi",
-  "tabella_sha256",
+  "table_sha256",
   "regole",
   "livelli",
   "sospetti",
@@ -104,7 +104,7 @@
     }
    }
   },
-  "tabella_sha256": {
+  "table_sha256": {
    "type": "string",
    "description": "SHA-256 of the .mzfeat of the series (with the section evid when there is a parent)"
   },

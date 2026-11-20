@@ -114,5 +114,5 @@ pub fn groups_json(
         return Ok(None);
     }
     let g = group_table(t, rows, infos);
-    groups::gruppi_json(&g, cs, &GroupOpts::default()).map(Some)
+    groups::groups_json(&g, cs, &GroupOpts::default()).map(Some)
 }

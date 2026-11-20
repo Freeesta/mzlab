@@ -453,7 +453,7 @@ try:
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
-            got = pg.evaluate(f"fetch('api/canali?k={k}').then(r => r.json())")
+            got = pg.evaluate(f"fetch('api/channels?k={k}').then(r => r.json())")
             assert got["channels"] == CHANNELS["channels"], (got, CHANNELS)
         step("the channels of a sample are those of mzlab-cli file channels", channels)
         step("the engine answered every request", lambda: (lambda m: m and throw(m))(pg.evaluate("window.MZLAB_LR_MISS || []")))

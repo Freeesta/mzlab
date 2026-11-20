@@ -27,7 +27,8 @@ export function molfileOf(st, ids, noCharge, known) {
   const prop = (/** @type {string} */ tag, /** @type {[number, number][]} */ v) => { for (let i = 0; i < v.length; i += 8) L.push(`M  ${tag}` + n3(Math.min(8, v.length - i)) + v.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join("")); };
   prop("CHG", chg); prop("ISO", iso); prop("RAD", rad);
   // the H that Ketcher holds for an atom of a ring drawn aromatic ([nH]): the data group Ketcher itself writes, read by the Rust readers
-  let g = 0; atoms.forEach((a, /** @type {number} */ k) => { if (Number.isInteger(a.implicitHCount)) L.push(`M  STY  1 ${n3(++g)} DAT`, `M  SAL ${n3(g)}  1 ${n3(k + 1)}`, `M  SDT ${n3(g)} MRV_IMPLICIT_H`, `M  SED ${n3(g)} IMPL_H${a.implicitHCount}`); });
+  const ring = new Set(bonds.filter(b => b.type === 4).flatMap(b => [idx.get(b.begin), idx.get(b.end)]));
+  let g = 0; atoms.forEach((a, /** @type {number} */ k) => { if (ring.has(k + 1) && Number.isInteger(a.implicitHCount)) L.push(`M  STY  1 ${n3(++g)} DAT`, `M  SAL ${n3(g)}  1 ${n3(k + 1)}`, `M  SDT ${n3(g)} MRV_IMPLICIT_H`, `M  SED ${n3(g)} IMPL_H${a.implicitHCount}`); });
   L.push("M  END");
   return L.join("\n");
 }

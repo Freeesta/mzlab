@@ -1,6 +1,6 @@
 """Structure classes (`structure:<value>`) of a molecule read from its SMILES alone, by fixed rules: only what the graph shows for certain.
 
-Used by tools/generate_molecules.py for the catalogue (mzlab/web/molecole/catalogo.csv). A rule never guesses a use or an effect: a halogen is in the formula,
+Used by tools/generate_molecules.py for the catalogue (mzlab/web/molecules/catalogue.csv). A rule never guesses a use or an effect: a halogen is in the formula,
 a carboxylic acid is a carbonyl carbon bound to carbon or hydrogen and to an OH, a nitro group
 sits on C or N, a sulfonamide is C-SO2-N. Tests: tests/test_classi_struttura.py.
 """

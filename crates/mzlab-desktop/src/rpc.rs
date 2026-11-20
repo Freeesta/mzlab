@@ -242,7 +242,7 @@ impl State {
         }
     }
 
-    /// api/canali: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm).
+    /// api/channels: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm).
     fn op_channels(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let slot = p["slot"].as_u64().unwrap_or(0) as u32;
         let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;

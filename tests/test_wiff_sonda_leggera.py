@@ -53,9 +53,9 @@ def probe(work, stem):
 
 def test_the_probe_reads_the_blocks_of_sample_0_only(work):
     one, six = probe(work, "uno"), probe(work, "sei")
-    assert len(six["info"]["campioni"]) == 6 and six["info"]["motivi"] == [], six["info"]
+    assert len(six["info"]["samples"]) == 6 and six["info"]["reasons"] == [], six["info"]
     assert six["reads"][1] == one["reads"][1], (one["reads"], six["reads"])
 
 
 def test_a_variant_in_another_sample_is_still_said(work):
-    assert "variante" in probe(work, "mistopi")["info"]["motivi"]
+    assert "variant" in probe(work, "mistopi")["info"]["reasons"]

@@ -14,7 +14,7 @@ pub const SCHEMA: &str = "report/1";
 pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>, table_sha256: &str) -> String {
     let mut j = Out::default();
     j.raw("{\"schema\":").str(SCHEMA).raw(",\"crate\":").str(env!("CARGO_PKG_VERSION"));
-    j.raw(",\"tabella_sha256\":").str(table_sha256).raw(",\"campioni_sha256\":").str(&samples::digest(samples));
+    j.raw(",\"table_sha256\":").str(table_sha256).raw(",\"samples_sha256\":").str(&samples::digest(samples));
     j.raw(",\"righe\":").int(t.len() as i64).raw(",\"file\":").int(t.n_files as i64);
     let all = qc::per_file(t);
     let sum = |f: fn(&qc::FileQc) -> usize| all.iter().map(f).sum::<usize>() as i64;
