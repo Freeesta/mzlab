@@ -5,13 +5,12 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out, Value};
-use mzlab_core::molecules::{self, Molecule};
+use mzlab_core::molecules;
 use mzlab_mol::Mol;
 
 /// Above this many atoms the drawing refuses (a drawing, not a library).
 const MAX_ATOMS: usize = 2000;
 /// How many names the not-found error offers.
-const NEAREST: usize = 3;
 
 /// What the answer is: the molfile text or the `draw/1` scene.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -44,7 +43,7 @@ struct Request<'a> {
     name: Option<&'a str>,
 }
 
-fn note(key: &'static str, value: impl ToString) -> Note {
+pub(super) fn note(key: &'static str, value: impl ToString) -> Note {
     Note {
         key,
         value: value.to_string(),
@@ -95,7 +94,7 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
     let mut d = match kind {
         "smiles" => from_smiles(body)?,
         "molfile" => from_molfile(body, r.keep)?,
-        _ => from_db(kind, body, r.db)?,
+        _ => super::draw_db::from_db(kind, body, r.db)?,
     };
     if kind != "molfile" {
         d.mol.coords = Some(d.mol.layout_2d());
@@ -208,7 +207,7 @@ fn blank(kind: &'static str, mol: Mol) -> Drawn {
     }
 }
 
-fn from_smiles(text: &str) -> Result<Drawn> {
+pub(super) fn from_smiles(text: &str) -> Result<Drawn> {
     let m = Mol::from_smiles(text)
         .map_err(|e| Error::new("err.mol.draw.smiles").with("message", e.to_string()))?;
     Ok(blank("smiles", m))
@@ -248,80 +247,6 @@ fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
         m.coords = Some(m.layout_2d());
     }
     d.mol = m;
-    Ok(d)
-}
-
-/// A name or an InChIKey found in the molecules CSV `db`, drawn from its SMILES.
-fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<Drawn> {
-    if kind == "inchi" {
-        return Err(Error::new("err.mol.draw.inchi"));
-    }
-    let Some(csv) = db else {
-        return Err(Error::new("err.mol.draw.needDb").with("kind", kind));
-    };
-    let ms = molecules::from_csv(csv, "catalog", None).map_err(|e| {
-        let first = e
-            .first()
-            .map(|r| format!("line {}: {}", r.line, r.detail))
-            .unwrap_or_default();
-        Error::new("err.mol.draw.db").with("message", first)
-    })?;
-    let mut hits: Vec<(usize, f64)> = if kind == "inchikey" {
-        let key = q.to_ascii_uppercase();
-        (0..ms.len())
-            .filter(|&k| ms[k].inchikey.as_deref() == Some(key.as_str()))
-            .map(|k| (k, 0.0))
-            .collect()
-    } else {
-        molecules::search(&ms, q, usize::MAX, 5.0)
-    };
-    hits.retain(|h| ms[h.0].smiles.is_some());
-    let Some(&(top, score)) = hits.first() else {
-        let near: Vec<&str> = molecules::search_wide(&ms, q, NEAREST, 5.0)
-            .iter()
-            .map(|h| ms[h.0].name.as_str())
-            .collect();
-        return Err(Error::new("err.mol.draw.not_found")
-            .with("spec", q)
-            .with("nearest", near.join(", ")));
-    };
-    let m: &Molecule = &ms[top];
-    let smiles = m.smiles.as_deref().unwrap_or("");
-    let mut d = from_smiles(smiles)?;
-    d.title = m.name.clone();
-    let hit = if kind == "inchikey" {
-        format!("{} ({})", m.name, q.to_ascii_uppercase())
-    } else {
-        format!("{} (score {score})", m.name)
-    };
-    d.choices.push(note(
-        if kind == "inchikey" {
-            "key_hit"
-        } else {
-            "name_hit"
-        },
-        hit,
-    ));
-    if score > 0.0 {
-        d.warnings.push(note(
-            "name_approximate",
-            format!(
-                "{q} matched {} only as part of a name (score {score}; 0 = equal)",
-                m.name
-            ),
-        ));
-    }
-    let same: Vec<&str> = hits
-        .iter()
-        .filter(|h| h.1 == score)
-        .map(|h| ms[h.0].name.as_str())
-        .collect();
-    if same.len() > 1 {
-        d.warnings.push(note(
-            "name_ambiguous",
-            same.iter().take(5).copied().collect::<Vec<_>>().join(", "),
-        ));
-    }
     Ok(d)
 }
 
