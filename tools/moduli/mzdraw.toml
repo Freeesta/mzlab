@@ -1,0 +1,8 @@
+uscita = "wasm-feat/mzdraw"
+pacchetto = "mzdraw-wasm"
+chiavi = { mzdraw = 29 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+misura = 470042
+nota = "mzDraw editor (document, tools, display list, SVG) with check/1 of the drawing; standard cap"

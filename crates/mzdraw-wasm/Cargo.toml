@@ -1,0 +1,20 @@
+[package]
+name = "mzdraw-wasm"
+description = "wasm-bindgen bridge of the mzDraw editor (crate mzdraw): events in, display list out, a .wasm of its own; the `mzlab` feature adds the mzLab glue (check/1 of mzlab_feat::chem::check on the drawing)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["mzlab"]
+# The mzLab glue: live `check/1` warnings on the drawing. Without it the bridge needs only `mzdraw`.
+mzlab = ["dep:mzlab-feat"]
+
+[dependencies]
+mzdraw = { path = "../mzdraw" }
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["check"], optional = true }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+wasm-bindgen = "0.2"

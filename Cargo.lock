@@ -2308,6 +2308,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzdraw"
+version = "1.0.0"
+dependencies = [
+ "libm",
+ "mzlab-mol",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "mzdraw-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzdraw",
+ "mzlab-feat",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-attributio-wasm"
 version = "1.0.0"
 dependencies = [

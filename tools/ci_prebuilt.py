@@ -29,10 +29,11 @@ GROUPS = {
         "build -p mzlab-lettori --features tutte --example synthetic",
         "build -p mzlab-lib --example fdr_parity",
         "build -p mzlab-lib --example validate",
+        "build -p mzdraw --example replay",
     ],
     "wasm-a": [f"build --target {WASM} -p {p}" for p in (
         "mzlab-wasm", "mzlab-rotte-wasm", "mzlab-feat-wasm", "mzlab-feat-table-wasm", "mzlab-feat-grafo-wasm", "mzlab-feat-import-wasm", "mzlab-lib-wasm", "mzlab-llm-wasm",
-        "mzlab-mol-wasm", "mzlab-msngrafo-wasm", "mzlab-msnregole-wasm", "mzlab-normative-wasm", "mzlab-ticfondo-wasm", "mzlab-flowcal-wasm")] + [
+        "mzlab-mol-wasm", "mzdraw-wasm", "mzlab-msngrafo-wasm", "mzlab-msnregole-wasm", "mzlab-normative-wasm", "mzlab-ticfondo-wasm", "mzlab-flowcal-wasm")] + [
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features finder",
         f"build --target {WASM} -p mzlab-feat-wasm --features untargeted",
         f"build --target {WASM} -p mzlab-attributio-wasm --features rev",

@@ -267,13 +267,14 @@ def lab_expiry() -> str | None:
 
 def lab_variant(html: str, out: Path, static: Path, lab: str) -> str:
     """The lab build: lab.js first in the head (before anything runs), not indexed, no link preview nor canonical address pointing at the main site;
-    no example data files (lab.js hides their entry points), and of the example drawings only the two Draw's «See an example drawing» opens (draw.js)."""
+    no example data files (lab.js hides their entry points), no mzDraw trial page, and of the example drawings only the two Draw's «See an example drawing» opens (draw.js)."""
     head = '<head><meta charset="utf-8">'
     assert head in html
     html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
     (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
     (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     shutil.rmtree(static / "esempi")
+    shutil.rmtree(static / "draw2")          # the mzDraw trial page is not part of the teaching edition
     for png in static.glob("esempio-*.png"):
         if png.name not in LAB_DRAWINGS:
             png.unlink()

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title data-i18n="draw2.name">mzDraw</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="draw2.css">
+</head>
+<body>
+<header><h1 data-i18n="draw2.name">mzDraw</h1><span id="d2-status" role="status"></span></header>
+<div id="d2-tools" role="toolbar" aria-orientation="horizontal" aria-label="Drawing tools" data-i18n-aria-label="draw2.tools"></div>
+<main>
+  <canvas id="d2-canvas" tabindex="0" role="application" aria-label="Structure canvas" data-i18n-aria-label="draw2.canvas"></canvas>
+  <aside>
+    <section><h2 data-i18n="draw2.import">Add a structure</h2>
+      <textarea id="d2-text" rows="3" spellcheck="false" autocomplete="off" aria-label="SMILES or molfile" data-i18n-aria-label="draw2.import.field" placeholder="SMILES or molfile" data-i18n-placeholder="draw2.import.field"></textarea>
+      <div class="row"><button id="d2-add" type="button" data-i18n="draw2.import.add" title="Add this structure to the drawing" data-i18n-title="draw2.import.add.title">Add</button>
+        <button id="d2-open" type="button" data-i18n="draw2.import.open" title="Add the structure of a file to the drawing" data-i18n-title="draw2.import.open.title">Open a file</button>
+        <input id="d2-file" type="file" hidden accept=".mol,.sdf,.smi,.txt,.json"></div>
+      <p id="d2-note" role="status"></p></section>
+    <section><h2 data-i18n="draw2.export">Save</h2>
+      <div class="row"><button id="d2-ex-molfile" type="button" data-i18n="draw2.export.molfile" title="Save the drawing as a molfile" data-i18n-title="draw2.export.molfile.title">Molfile</button>
+        <button id="d2-ex-svg" type="button" data-i18n="draw2.export.svg" title="Save the drawing as an SVG image" data-i18n-title="draw2.export.svg.title">SVG</button>
+        <button id="d2-ex-mzdraw" type="button" data-i18n="draw2.export.doc" title="Save the drawing as an editable document" data-i18n-title="draw2.export.doc.title">Document</button></div></section>
+    <section><h2 data-i18n="draw2.check">Check</h2>
+      <p id="d2-summary"></p>
+      <ul id="d2-warnings"></ul></section>
+  </aside>
+</main>
+<p id="d2-live" class="sr" aria-live="polite"></p>
+<script src="../i18n.js"></script>
+<script src="../lang/en/disegno-verifica.js"></script>
+<script src="../lang/en/draw2.js"></script>
+<script type="module" src="draw2.js"></script>
+</body></html>

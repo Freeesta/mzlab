@@ -5,6 +5,7 @@ A measurement line in a PR says: module, bytes before → after, growth in %, an
 
 ## What costs the most (rules fixed by past measurements)
 - The check and substructure search of `mzlab-mol` weigh about 95 KB in the module that contains them: that is why `molkit` is a separate module and does not live inside `grafo` (+61 %). Inside `molkit` each function grows less than 10 % (CIP +7 %, MOL/SDF export +6 %, colors +3 %), substructure search alone +44 % on a still small module.
+- The editor `mzdraw` starts at 470 043 B optimized (1 030 387 B raw after `wasm-bindgen`): the `mol/1` readers and writers, `check/1` and `serde_json` are most of it; the editor itself (document, operations, tools, display list, SVG) is the smaller part.
 - Three table steps (`table.stats`, `table.pca`, `table.kmd`) inside `flowtab` took it from 373 402 to 541 412 B (+45 %): they live in `flowstat`. A `HashSet` in `ionnet::group` cost +12 KB: bisection is used.
 - A module that receives the whole SCIEX reader carries the Unicode tables (+9.4 KB in `waters`): `FileSet::find` in the rejection stays only with the SCIEX reader.
 - std `slice::sort*` costs 2-10 KB per instance; `sortc` and `order_by_f64` (`wasm-caps.md`) avoid the copy.

@@ -54,6 +54,7 @@ def test_lab_build_ships_no_example_files_but_the_two_example_drawings(sites):
     lab, normal = sites
     names = sorted(p.relative_to(lab).as_posix() for p in lab.rglob("*") if p.is_file())
     assert not (lab / "static" / "esempi").exists()
+    assert not (lab / "static" / "draw2").exists() and (normal / "static" / "draw2" / "index.html").exists()
     assert not [n for n in names if n.startswith("static/esempi/") or n.lower().endswith(".mzml")], names
     drawings = ["static/esempio-frammentazione.png", "static/esempio-trasformazione.png"]      # the two figures of Draw's example link (draw.js)
     assert [n for n in names if n.startswith("static/esempio-")] == drawings, names

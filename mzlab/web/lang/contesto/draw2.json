@@ -1,0 +1,11 @@
+{
+  "draw2.count": "Status next to the page title; {atoms} and {bonds} = how many are drawn.",
+  "draw2.say.imported": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.ring": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.charge": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.moved": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.element": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.atom": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.bond": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about.",
+  "draw2.say.order": "Screen-reader line after an edit; {what} = the element symbol or the number the sentence is about."
+}

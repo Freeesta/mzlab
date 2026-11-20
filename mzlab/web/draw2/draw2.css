@@ -1,0 +1,26 @@
+/* mzDraw page: colours only from these variables (the canvas reads them too). */
+:root { --fg: #1a1a1a; --bg: #ffffff; --panel: #f3f4f6; --line: #767676; --accent: #005a9c; --d2-ink: #111111; --d2-select: #9cc7ee; --d2-hover: #d5d9de; --d2-warn: #c62828; --d2-preview: #5b7fa6; --d2-n: #1f3fbf; --d2-o: #c02020; --d2-s: #8a6d00; --d2-x: #1f7a1f; --d2-p: #b05a00; }
+@media (prefers-color-scheme: dark) { :root { --fg: #ececec; --bg: #1b1b1b; --panel: #262626; --line: #9a9a9a; --accent: #7cc0ff; --d2-ink: #f0f0f0; --d2-select: #2f5f8a; --d2-hover: #454545; --d2-warn: #ff8a80; --d2-preview: #9db8d6; --d2-n: #8fa8ff; --d2-o: #ff8a80; --d2-s: #e6c14a; --d2-x: #7fd37f; --d2-p: #ffb066; } }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+body { display: flex; flex-direction: column; }
+header { display: flex; gap: 12px; align-items: baseline; padding: 4px 10px; }
+h1 { font-size: 16px; margin: 0; } h2 { font-size: 13px; margin: 0 0 4px; }
+#d2-tools { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 10px; background: var(--panel); border-block: 1px solid var(--line); }
+#d2-tools .sep { width: 1px; background: var(--line); margin: 0 4px; }
+button { min-height: 32px; min-width: 32px; padding: 2px 8px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; font: inherit; }
+button[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, canvas:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+main { flex: 1; display: flex; min-height: 0; }
+#d2-canvas { flex: 1; min-width: 0; touch-action: none; background: var(--bg); cursor: crosshair; }
+aside { width: 280px; padding: 8px 10px; background: var(--panel); border-left: 1px solid var(--line); overflow: auto; }
+section { margin-bottom: 12px; }
+textarea { width: 100%; box-sizing: border-box; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font: 12px/1.3 ui-monospace, monospace; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+#d2-warnings { margin: 0; padding-left: 18px; } #d2-warnings li { margin: 2px 0; }
+#d2-warnings .lvl { font-weight: 600; }
+p { margin: 4px 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (pointer: coarse) { button { min-height: 40px; min-width: 40px; } }
+@media (max-width: 800px) { main { flex-direction: column; } aside { width: auto; border-left: 0; border-top: 1px solid var(--line); max-height: 40%; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

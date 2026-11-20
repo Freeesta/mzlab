@@ -1,0 +1,15 @@
+[package]
+name = "mzdraw"
+description = "mzDraw, a 2D molecule editor core: document mzdraw/1, edit operations with exact undo, tools and hit-testing, display list and SVG; stands on mzlab-mol alone"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+mzlab-mol = { path = "../mzlab-mol" }
+libm = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
