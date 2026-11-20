@@ -263,6 +263,13 @@ fn notes(o: &mut Out, key: &str, list: &[Note]) {
     o.raw("]");
 }
 
+/// A coordinate already rounded to 4 decimals, written shortest (`1.299`, `0`) by integer arithmetic: the float formatter of `Out::num`
+/// costs the `.wasm` about 14 KB.
+fn coord(v: f64) -> String {
+    let s = mzlab_mol::fixed(v, 4);
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
 /// The `draw/1` scene: atoms with their position in angstrom, bonds as written in the molfile (a wedge belongs to its first atom), the
 /// connected pieces and what was chosen on the way.
 pub fn scene(d: &Drawn) -> String {
@@ -295,9 +302,9 @@ pub fn scene(d: &Drawn) -> String {
             .raw(",\"h\":")
             .int(i64::from(a.h));
         o.raw(",\"x_a\":")
-            .num(xy(i, 0))
+            .raw(&coord(xy(i, 0)))
             .raw(",\"y_a\":")
-            .num(xy(i, 1))
+            .raw(&coord(xy(i, 1)))
             .raw("}");
     }
     o.raw("],\"bonds\":[");

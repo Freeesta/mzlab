@@ -44,7 +44,7 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 | molfile read back, same `mol/1` core (stereo included) | 300/300 | 300/300 |
 | fragments apart | at least 1.5 bonds | 0 under |
 | atom on a bond | at most 9 | 4 |
-| native release p95 per molecule | at most 1 ms (CI: x3) | 0.18 ms |
+| native release p95 per molecule | at most 1 ms (CI: x3) | 0.14 ms |
 
 What stays unclean: bridged and spiro cage molecules (cubane and adamantane types: ring-angle error 13-20 degrees, some crossings); RDKit draws the same ones unclean. `python3 tools/draw_quality.py --report` prints the table.
 
@@ -52,4 +52,4 @@ What stays unclean: bridged and spiro cage molecules (cubane and adamantane type
 `tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` and CLI), `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`), `crates/mzlab-feat/src/chem/draw_tests.rs`, `crates/mzlab-cli/src/mol_draw_tests.rs`, `crates/mzlab-mol/tests/layout.rs`.
 
 ## Sizes
-molkit `.wasm`: MOLKIT_BEFORE -> MOLKIT_AFTER bytes after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32935 bytes (guard 33000 in `catalog_tests.rs`).
+molkit `.wasm`: 352069 -> 430483 bytes (+78414, allowance 90000) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32935 bytes (guard 33000 in `catalog_tests.rs`).
