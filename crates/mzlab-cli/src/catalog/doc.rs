@@ -247,9 +247,9 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .b("compact", true)
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
-            .put("flag_help_note", text("a flag with no help of its own takes it from flag_help"))
-            .put("exit_codes_note", text("without exit_codes: 0, 1, 2, plus 3 for a `flow ` path or a verdict command (VERDICT), 4 for a path or rest argument or a path flag other than --out, 5 for --sample, --id or a path starting `sample `, `dad ` or `msn graph`, 6 for --out; `commands --json PATH` gives one command's codes"))
-            .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups (a word with a bracket inside is kept) and `...` tokens"));
+            .put("flag_help_note", text("no flag help: see flag_help"))
+            .put("exit_codes_note", text("no exit_codes: 0, 1, 2; 3 for a `flow ` path or VERDICT; 4 with a path or rest argument or a path flag but --out; 5 with --sample, --id or a `sample `, `dad ` or `msn graph` path; 6 with --out; `commands --json PATH` gives the exact codes"))
+            .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"
 }

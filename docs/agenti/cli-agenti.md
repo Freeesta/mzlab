@@ -26,7 +26,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | code | meaning |
 |---|---|
 | 0 | ok |
-| 1 | data or domain error, partial outputs written |
+| 1 | data error, partial outputs written |
 | 2 | usage |
 | 3 | plan, schema or integrity |
 | 4 | input missing or unreadable |
@@ -61,7 +61,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - text or CSV, `--json` gives the document:
 `flow run|check|steps|verify|command`, `explain-missing`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
-`features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
+`features`, `peak split`, `mol export|open`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
 - `sample list` (`sample-list/1`: ONE document, `files` in the order given, a refused file is an inline `error/1` entry, a missing file is a whole-run `error/1` (exit 4, no listing); exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file validate --json` (`mzml-validation/1`, ONE document for all files; a missing file is exit 4 + `error/1`), `file convert --json` (`convert/1`; `--dry-run` lists inputs, readers and sizes and writes nothing; an `.mzML` named as input is `err.file.alreadyMzml`, exit 4) and `file items --no-points` (leaves out `ms2_events`).

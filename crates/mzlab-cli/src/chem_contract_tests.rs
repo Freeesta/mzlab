@@ -82,6 +82,7 @@ fn every_answer_opens_with_its_schema_and_none_has_a_format_key() {
         (vec!["mol", "cut", &mol, "--set", "bonds=0-1"], "cut/1"),
         (vec!["mol", "mech", &mf], "mechanism/1"),
         (vec!["mol", "draw", "smiles:CCO", "--json"], "draw/1"),
+        (vec!["mol", "open", &mol], "open/1"),
         (
             vec!["mol", "search", "--sub", "CO", "CCO"],
             "substructure/1",

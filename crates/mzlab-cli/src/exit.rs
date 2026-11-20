@@ -111,6 +111,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.check.molfile",
         "error.cip.request",
         "error.cip.molfile",
+        "error.open.request",
         "error.hilite.request",
         "error.hilite.molfile",
         "error.link.request",

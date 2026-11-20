@@ -8,7 +8,7 @@
 
 Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository (Freeesta/mzlab-dati: dati/3200 qtrap/mzML + dam/, real lab files; found by tools/dati_percorsi.py
 next to this repository, in a parent folder, in the home or in /workspace, or with MZLAB_DATI=<path> or QQQ_DATI=<path>);
-Federico's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
+the owner's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
 .verifica/dati_sintetici/ (then the summary says "sintetici": a pass on synthetic data is weaker than on real data).
 Some e2e only make sense with the real data or with a .dam method (MZLAB_DAM or QQQ_DAM): they are reported as SKIP, with why.
 
@@ -66,7 +66,7 @@ NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 SMOKE = ["e2e3", "e2e_opfs_promote", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2",
          "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati", "e2e_safari_ipad", "e2e_safari_mac", "e2e_safari_canvas"]
 # Tabui, the guided tour, the header walk, the two-part catalog, the integration drags and the start-up budget join the smoke round on Chromium Linux only (the PR job): not yet measured on Firefox, WebKit and Windows.
-SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_giro_intestazione_flow", "e2e_giro_intestazione_campione", "e2e_giro_intestazione_tempo", "e2e_lingua_parti", "e2e_integrazioni", "e2e_budget_avvio"]
+SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_lab", "e2e_giro_intestazione", "e2e_giro_intestazione_flow", "e2e_giro_intestazione_campione", "e2e_giro_intestazione_tempo", "e2e_lingua_parti", "e2e_integrazioni", "e2e_budget_avvio", "e2e_groups_for"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"'reqfail', '[^']*/static/vendor/ketcher/[^']*', 'NS_BINDING_ABORTED'", r"JavaScript Error: \"Failed to load \S*\. A ServiceWorker intercepted the request and encountered an unexpected error\.\" \{file: \"[^\"]*/sw\.js\"", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded", r"cross-world service worker resource mismatch",
@@ -254,7 +254,7 @@ def con_golden(n: str) -> bool:
 
 
 def hrms_dirs() -> list[Path]:
-    """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on Federico's Mac, the whole files."""
+    """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on the owner's Mac, the whole files."""
     hrms_env = get_env("HRMS")
     c = [percorso("dati/HRMS"), Path(hrms_env) if hrms_env else None, ROOT.parent / "Data" / "HRMS"]
     return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]

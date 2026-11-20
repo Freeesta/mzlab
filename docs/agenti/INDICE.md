@@ -46,7 +46,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | experimental design from the CLI (`sample design propose|validate|canonical`, `design/1`, `design_proposal/1`, `design_check/1`, `design_canonical/1`, problems by key, `design_*` ops of the samples route, port `schema` in `flow steps`) | `docs/agenti/design-cli.md` |
 | MS2 pseudo-spectra from DIA (`dia.rs`, `spectra.ms2` with `dia_pseudo`) | `docs/agenti/dia.md` |
 | file read errors: short cause, "Details", "Copy diagnosis" (`diagnosi.js`), synthetic msconvert-style mzML | `docs/agenti/diagnosis.md` |
-| Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `selection/1`, `link/1`) | `docs/agenti/drawing-menu.md` |
+| Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste `disegno-appunti.js`, "Information…", outside searches, `selection/1`, `link/1`; CDXML/CDX files: routes, `open/1`, RDKit fixtures) | `docs/agenti/drawing-menu.md` |
 | Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/drawing-unsaved.md` |
 | Drawing (Ketcher) | `docs/agenti/drawing.md` |
 | export of all user data: browser storage inventory, ZIP writer (`zip.rs`); chunked exports in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenance, `export/` cleanup) | `docs/agenti/export-data.md` |
@@ -66,7 +66,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
 | statistics in HR: feature table, blank, difference from the reference, PCA | `docs/agenti/high-resolution-statistics.md` |
 | HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/high-resolution.md` |
-| registry of state-changing actions (`comandi.js`, generated `docs/azioni.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/history-removed.md` |
+| registry of state-changing actions (`comandi.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/history-removed.md` |
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |

@@ -1,14 +1,14 @@
 //! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
 //! drawing; `substructure` gives `substructure/1` (`substructure_db/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z;
-//! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene or molfile). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
-//! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`, `mol draw`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`, `draw`) run the same
+//! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene or molfile); `open_file` gives `open/1`, the text the editor reads for a structure file (charset, empty CDXML attributes, binary CDX as base64). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
+//! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`, `mol draw`, `mol open`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`, `draw`, `open`) run the same
 //! `mzlab_feat::chem` functions. `flow_moiety` is the Flow step `structure.moiety` (`moiety::moiety_text`, the function `flow run` calls).
 //! Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "molkit/1";
+const BRIDGE: &str = "molkit/2";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -41,6 +41,12 @@ pub fn draw(request: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn sdf(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::sdf::sdf_json(request).map_err(js_err)
+}
+
+/// `open/1` of the bytes of a structure file, the same bytes as `mzlab-cli mol open`.
+#[wasm_bindgen]
+pub fn open_file(data: &[u8]) -> String {
+    mzlab_feat::chem::structure_file::open_json_bytes(data)
 }
 
 /// `cip/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol cip`.

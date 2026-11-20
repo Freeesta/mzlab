@@ -36,6 +36,8 @@ pub mod sdf;
 pub mod sel;
 mod shuffle;
 mod smiles;
+#[cfg(feature = "check")]
+pub mod structure_file;
 pub mod structures;
 #[cfg(feature = "sub")]
 pub mod substructure;
