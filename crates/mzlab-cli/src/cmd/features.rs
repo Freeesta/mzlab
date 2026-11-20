@@ -7,6 +7,8 @@ use std::path::PathBuf;
 struct Args {
     files: Vec<PathBuf>,
     out: Option<PathBuf>,
+    /// `--notes`: where `features-notes/1` goes; without it, beside `--out`
+    notes: Option<PathBuf>,
     params: String,
     /// `--sample`: the ids to take of every file with several samples
     sample: Option<Vec<u32>>,
@@ -16,6 +18,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
     let mut r = Args {
         files: Vec::new(),
         out: None,
+        notes: None,
         params: String::new(),
         sample: None,
     };
@@ -25,6 +28,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => r.out = Some(value("a path")?.into()),
+            "--notes" => r.notes = Some(value("a path")?.into()),
             "--preset" | "--params" if set => {
                 return Err("use --preset or --params, not both".into())
             }
@@ -87,20 +91,25 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
     Ok((files, labels))
 }
 
-/// Where `features-notes/1` goes for `--out`: `features-notes.json` in a folder, `NAME.notes.json` beside a file `NAME.csv`.
-fn notes_target(out: &std::path::Path) -> PathBuf {
-    if out.is_dir() {
+/// Where `features-notes/1` goes: the `--notes` path, else beside `--out`: `features-notes.json` in a folder, `NAME.notes.json` beside `NAME.csv`.
+fn notes_target(a: &Args) -> Option<PathBuf> {
+    if let Some(n) = &a.notes {
+        return Some(n.clone());
+    }
+    let out = a.out.as_ref()?;
+    Some(if out.is_dir() {
         out.join("features-notes.json")
     } else {
         out.with_extension("notes.json")
-    }
+    })
 }
 
-/// With `--out`, the notes of the series (`features-notes/1`, kept in `tmp` next to the first index) are copied beside the table; without it they
+/// The notes of the series (`features-notes/1`, kept in `tmp` next to the first index) are copied to `--notes` or beside `--out`; with neither they
 /// stay on stderr.
 fn keep_notes(a: &Args, tmp: &std::path::Path) -> std::result::Result<(), String> {
-    let Some(out) = &a.out else { return Ok(()) };
-    let to = notes_target(out);
+    let Some(to) = notes_target(a) else {
+        return Ok(());
+    };
     // written by `features_note::report` next to `0.mzidx`; a run that failed has none and reports its own error
     match std::fs::copy(tmp.join("0.notes.json"), &to) {
         Ok(_) => Ok(()),
@@ -152,6 +161,6 @@ fn run(args: Vec<String>) -> Outcome {
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
+    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
 )];

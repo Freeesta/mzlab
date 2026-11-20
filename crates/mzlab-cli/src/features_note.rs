@@ -1,5 +1,5 @@
 //! What `features` chose by itself for the first file, from the one engine note (`mzlab_ops::run::feat::lr_note`, the function behind the notices of
-//! `estimates/1`): said on stderr and kept as `features-notes/1`, which `--out` keeps beside the table. stdout (the CSV) is untouched.
+//! `estimates/1`): said on stderr and kept as `features-notes/1`, which `--notes` (or `--out`, beside the table) keeps. stdout (the CSV) is untouched.
 
 use std::path::{Path, PathBuf};
 
@@ -61,7 +61,7 @@ pub(crate) fn notes_text(notes: &[(String, Note)]) -> String {
 }
 
 /// The note of every file of the series: its lines on stderr, and `features-notes/1` written next to the first index (`IDX` with the extension
-/// `notes.json`), where the command finds it for `--out`. A file whose index cannot be opened is left out: the run is not about to fail on a note.
+/// `notes.json`), where the command finds it for `--notes` and `--out`. A file whose index cannot be opened is left out: the run is not about to fail on a note.
 pub(crate) fn report(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[String]) {
     let mut notes = Vec::new();
     for (k, idx) in idxs.iter().enumerate() {

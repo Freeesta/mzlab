@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "features-notes/1",
-  "title": "features-notes/1: what the recipe of `mzlab-cli features` chose for each file, written beside `--out`",
+  "title": "features-notes/1: what the recipe of `mzlab-cli features` chose for each file, written at `--notes PATH` or beside `--out`",
   "description": "One entry per input file, in the order given: the axis of the recipe (one for the series), its unit-resolution numbers (0 on the ppm axis), the MS1 scans counted on that file and its notices. The notices are the `notices` member of estimates/1 for the same file, with the same bytes. Code: crates/mzlab-cli/src/features_note.rs, crates/mzlab-ops/src/run/feat/lr_note.rs.",
   "type": "object",
   "required": ["schema", "files"],

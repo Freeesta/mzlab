@@ -23,6 +23,7 @@ const GLOBAL: &[(&str, &str)] = &[
 /// What a flag means, by name; the usage line says only its value.
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
+    ("--notes", "features-notes/1 file"),
     ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),

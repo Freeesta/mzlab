@@ -223,7 +223,7 @@ fn the_notes_of_a_series_hold_one_entry_per_file_in_the_given_order() {
 }
 
 #[test]
-fn the_command_writes_the_notes_beside_the_table_of_out_and_nothing_without_it() {
+fn the_command_writes_the_notes_at_notes_or_beside_out_and_nothing_without_either() {
     let (d, files) = series();
     let mut args = vec!["features".to_string()];
     args.extend(files.iter().map(|f| f.display().to_string()));
@@ -256,6 +256,28 @@ fn the_command_writes_the_notes_beside_the_table_of_out_and_nothing_without_it()
         std::fs::read(d.join("t.notes.json")).unwrap(),
         std::fs::read(out.join("features-notes.json")).unwrap()
     );
+    // --notes PATH: that path, with the table still on stdout; it wins over the place beside --out
+    let named = d.join("named.json");
+    let mut with = args.clone();
+    with.extend(["--notes".to_string(), named.display().to_string()]);
+    let o = crate::execute(&with);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(o.stdout, plain.stdout);
+    assert_eq!(
+        std::fs::read(&named).unwrap(),
+        std::fs::read(out.join("features-notes.json")).unwrap()
+    );
+    let other = d.join("other");
+    std::fs::create_dir_all(&other).unwrap();
+    let mut with = args.clone();
+    with.extend([
+        "--out".to_string(),
+        other.display().to_string(),
+        "--notes".to_string(),
+        named.display().to_string(),
+    ]);
+    assert_eq!(crate::execute(&with).code, 0);
+    assert!(!other.join("features-notes.json").exists());
     let _ = std::fs::remove_dir_all(&d);
 }
 
