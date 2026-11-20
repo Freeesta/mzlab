@@ -1,4 +1,4 @@
-//! Fallback when GFN2-xTB does not converge: extended Hückel theory (Hoffmann 1963, doi:10.1063/1.1734456) of sci-form 0.15.2
+//! Fallback when GFN2-xTB does not converge: extended Hückel theory (Hoffmann 1963, doi:10.1063/1.1734456) of sci-form 2.0.0
 //! (`sci_form::eht`, `sci_form::reactivity::compute_fukui_descriptors`; MIT, see LICENSE-sci-form): f(−) = Mulliken population of
 //! the HOMO per atom, f(+) = population of the LUMO; no charges and no f(0).
 
