@@ -11,8 +11,8 @@ use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
+use super::aromatic_h;
 use super::smiles::{self, normal_valence, RawAtom, RawBond};
-use super::stated_h;
 
 /// Atoms the graph accepts (the localisation of the Python version stopped at 64).
 pub const MAX_ATOMS: usize = 200;
@@ -34,8 +34,17 @@ impl Mol {
     }
 
     /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
-    /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic, the aromatic hydrogen of an `MRV_IMPLICIT_H` data group. Disconnected pieces are accepted (the page cuts bonds).
+    /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic with the hydrogens `mzlab-mol` reads (`aromatic_h`). Disconnected pieces are accepted (the page cuts bonds).
     pub fn from_molfile(mf: &str) -> Result<Mol> {
+        Mol::read_molfile(mf, false)
+    }
+
+    /// `from_molfile` for a selected part of a drawing: a piece of an aromatic ring is read by valence instead of refused.
+    pub fn part_from_molfile(mf: &str) -> Result<Mol> {
+        Mol::read_molfile(mf, true)
+    }
+
+    fn read_molfile(mf: &str, part: bool) -> Result<Mol> {
         let bad = || Error::new("error.grafo.molfile");
         let lines: Vec<&str> = mf.lines().collect();
         let counts = lines.get(3).ok_or_else(bad)?;
@@ -88,13 +97,19 @@ impl Mol {
         for (i, c) in props(&lines[4 + na + nb..], "M  CHG", na) {
             raw[i].charge = c;
         }
-        stated_h::apply(&mut raw, &written, &lines[4 + na + nb..])?;
+        let rest = &lines[4 + na + nb..];
+        let rad = props(rest, "M  RAD", na);
+        let counted = aromatic_h::apply(&mut raw, &written, rest, &rad, part)?;
         let mut m = Mol::assemble(raw, written, true);
-        for (i, w) in props(&lines[4 + na + nb..], "M  ISO", na) {
+        for (i, w) in props(rest, "M  ISO", na) {
             m.atoms[i].iso = w.max(0) as u32;
         }
         // a radical mark takes the place of hydrogens: one for a doublet, two for a singlet or triplet
-        for (i, r) in props(&lines[4 + na + nb..], "M  RAD", na) {
+        for (i, r) in rad {
+            // the hydrogens of an aromatic atom read by `mzlab-mol` already count its radical
+            if counted && m.atoms[i].arom {
+                continue;
+            }
             let less = if r == 2 {
                 1
             } else if r == 1 || r == 3 {

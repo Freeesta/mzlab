@@ -141,12 +141,13 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         atoms,
         bonds,
         collections: Vec::new(),
-        stated_h: stated_h(&lines[4 + na + nb..], na)?,
+        stated_h: stated_hydrogens(&lines[4 + na + nb..], na)?,
     })
 }
 
-/// The (atom, hydrogens) of the `MRV_IMPLICIT_H` data groups: `M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`.
-fn stated_h(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, MolError> {
+/// The (0-based atom, hydrogens) of the `MRV_IMPLICIT_H` data groups among the property `lines` of a V2000 file of `na` atoms
+/// (`M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`, up to `M  END`), sorted: an atom named twice has its larger count last.
+pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, MolError> {
     // data groups by number: (atoms, field name, data)
     let mut data: HashMap<&str, (Vec<usize>, &str, &str)> = HashMap::new();
     for line in lines.iter().take_while(|l| !l.starts_with("M  END")) {

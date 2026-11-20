@@ -109,7 +109,11 @@ pub fn sel_json(request: &str) -> Result<String> {
         .and_then(Value::str)
         .ok_or_else(|| Error::new("error.sel.request"))?;
     let part = v.get("part").and_then(Value::bool).unwrap_or(false);
-    let g = graph::Mol::from_molfile(mf)?;
+    let g = if part {
+        graph::Mol::part_from_molfile(mf)?
+    } else {
+        graph::Mol::from_molfile(mf)?
+    };
     let rad = rad_codes(mf, g.atoms.len());
     let atoms: Vec<AtomIn> = g
         .atoms
@@ -150,6 +154,9 @@ pub fn sel_json(request: &str) -> Result<String> {
     Ok(o.0)
 }
 
+#[cfg(test)]
+#[path = "aromatic_h_tests.rs"]
+mod aromatic_h_tests;
 #[cfg(test)]
 #[path = "sel_tests.rs"]
 mod tests;

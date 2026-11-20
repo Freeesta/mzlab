@@ -2,6 +2,7 @@
 //! the user gives the SMILES of the parent.
 
 pub mod analysis;
+mod aromatic_h;
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;
@@ -32,7 +33,6 @@ pub mod sdf;
 pub mod sel;
 mod shuffle;
 mod smiles;
-mod stated_h;
 #[cfg(feature = "check")]
 pub mod structure_file;
 pub mod structures;
