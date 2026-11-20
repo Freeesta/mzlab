@@ -116,41 +116,87 @@ fn pearson(a: &[f64], b: &[Option<f64>]) -> Option<f64> {
     (saa > 1e-12 && sbb > 1e-12).then(|| sab / (saa * sbb).sqrt())
 }
 
-/// The shift of B that best matches A. `focus` is the time window the spectrum or trace is read in (with its padding): the shift is estimated there when it
-/// holds enough points, else on the whole overlap. A flat trace (no peak) gives shift 0 with `shift_auto_flat`; the result is never an error.
+/// The grid step, the basis (`window` or `run`) and the time window the correlation is made on: the focus when it holds enough points, else the overlap.
 #[allow(clippy::cast_possible_truncation)] // grid counts, small and non-negative
-pub fn dad_align(a: &DadData, b: &DadData, focus: Option<(f64, f64)>) -> Align {
-    let (ya, yb) = (row_means(a), row_means(b));
-    let overlap = (
-        a.time_min
-            .first()
-            .copied()
-            .unwrap_or(0.0)
-            .max(b.time_min.first().copied().unwrap_or(0.0)),
-        a.time_min
-            .last()
-            .copied()
-            .unwrap_or(0.0)
-            .min(b.time_min.last().copied().unwrap_or(0.0)),
-    );
+fn plan(a: &DadData, b: &DadData, focus: Option<(f64, f64)>) -> (f64, &'static str, (f64, f64)) {
+    let edge = |d: &DadData| {
+        (
+            d.time_min.first().copied().unwrap_or(0.0),
+            d.time_min.last().copied().unwrap_or(0.0),
+        )
+    };
+    let (ea, eb) = (edge(a), edge(b));
+    let overlap = (ea.0.max(eb.0), ea.1.min(eb.1));
     let step = median_step(&a.time_min)
         .min(median_step(&b.time_min))
         .max(1e-6);
     let step = step.max((overlap.1 - overlap.0) / MAX_POINTS as f64);
-    let grid = |(lo, hi): (f64, f64)| -> Vec<f64> {
-        (0..)
-            .map(|k| lo + k as f64 * step)
-            .take_while(|t| *t <= hi + 1e-9)
-            .collect()
-    };
-    let mut basis = "run";
-    let mut win = overlap;
     if let Some((f0, f1)) = focus {
         let w = (f0.max(overlap.0), f1.min(overlap.1));
-        if w.1 > w.0 && grid(w).len() >= MIN_POINTS {
-            (basis, win) = ("window", w);
+        if w.1 > w.0 && ((w.1 - w.0) / step) as usize + 1 >= MIN_POINTS {
+            return (step, "window", w);
         }
     }
+    (step, "run", overlap)
+}
+
+/// The Pearson correlation of the baseline-free traces at every lag of `-max_lag..=max_lag` steps; B is read at `t - lag * step`.
+fn correlate(
+    a: &DadData,
+    b: &DadData,
+    t: &[f64],
+    step: f64,
+    max_lag: i64,
+) -> Vec<(i64, Option<f64>)> {
+    // the baseline is removed on each run's own rows
+    #[allow(clippy::cast_possible_truncation)]
+    let peaks = |d: &DadData| {
+        let half = (BASELINE_HALF_MIN / median_step(&d.time_min).max(1e-6)).ceil() as usize;
+        without_baseline(&row_means(d), half)
+    };
+    let (ba, bb) = (peaks(a), peaks(b));
+    let ga: Vec<f64> = t
+        .iter()
+        .map(|&x| interp(&a.time_min, &ba, x).unwrap_or(0.0))
+        .collect();
+    let at = |lag: i64| {
+        let gb: Vec<Option<f64>> = t
+            .iter()
+            .map(|&x| interp(&b.time_min, &bb, x - lag as f64 * step))
+            .collect();
+        pearson(&ga, &gb)
+    };
+    (-max_lag..=max_lag).map(|k| (k, at(k))).collect()
+}
+
+/// The lag of the best correlation, placed between two steps by a parabola through it and its neighbours: `(lags, correlation)`.
+fn best_lag(r: &[(i64, Option<f64>)]) -> Option<(f64, f64)> {
+    let (k, c) = r.iter().filter_map(|(k, c)| Some((*k, (*c)?))).fold(
+        None::<(i64, f64)>,
+        |m, p| match m {
+            Some(q) if q.1 >= p.1 => Some(q),
+            _ => Some(p),
+        },
+    )?;
+    let around = |j: i64| r.iter().find(|(l, _)| *l == j).and_then(|(_, c)| *c);
+    let frac = match (around(k - 1), around(k + 1)) {
+        (Some(l), Some(u)) if (l - 2.0 * c + u).abs() > 1e-12 => {
+            (0.5 * (l - u) / (l - 2.0 * c + u)).clamp(-0.5, 0.5)
+        }
+        _ => 0.0,
+    };
+    Some((k as f64 + frac, c))
+}
+
+/// The shift of B that best matches A. `focus` is the time window the spectrum or trace is read in (with its padding): the shift is estimated there when it
+/// holds enough points, else on the whole overlap. A flat trace (no peak) gives shift 0 with `shift_auto_flat`; the result is never an error.
+#[allow(clippy::cast_possible_truncation)] // grid counts, small and non-negative
+pub fn dad_align(a: &DadData, b: &DadData, focus: Option<(f64, f64)>) -> Align {
+    let (step, basis, win) = plan(a, b, focus);
+    let t: Vec<f64> = (0..)
+        .map(|k| win.0 + k as f64 * step)
+        .take_while(|t| *t <= win.1 + 1e-9)
+        .collect();
     let flat = |warnings: Vec<&'static str>| Align {
         shift_min: 0.0,
         corr: 0.0,
@@ -162,57 +208,23 @@ pub fn dad_align(a: &DadData, b: &DadData, focus: Option<(f64, f64)>) -> Align {
         step_min: step,
         warnings,
     };
-    let t = grid(win);
     if t.len() < MIN_POINTS {
         return flat(vec!["shift_auto_flat"]);
     }
-    // the baseline is removed on each run's own rows; B is then read again at each lag
-    let peaks = |d: &DadData, y: &[f64]| {
-        without_baseline(
-            y,
-            (BASELINE_HALF_MIN / median_step(&d.time_min).max(1e-6)).ceil() as usize,
-        )
-    };
-    let (ba, bb) = (peaks(a, &ya), peaks(b, &yb));
-    let ga: Vec<f64> = t
-        .iter()
-        .map(|&x| interp(&a.time_min, &ba, x).unwrap_or(0.0))
-        .collect();
-    let max_lag = ((MAX_SHIFT_MIN.min((win.1 - win.0) / 4.0)) / step).floor() as i64;
-    let at = |lag: i64| -> Option<f64> {
-        let gb: Vec<Option<f64>> = t
-            .iter()
-            .map(|&x| interp(&b.time_min, &bb, x - lag as f64 * step))
-            .collect();
-        pearson(&ga, &gb)
-    };
-    let r: Vec<(i64, Option<f64>)> = (-max_lag..=max_lag).map(|k| (k, at(k))).collect();
-    let best = r
-        .iter()
-        .filter_map(|(k, c)| Some((*k, (*c)?)))
-        .fold(None::<(i64, f64)>, |m, p| match m {
-            Some(q) if q.1 >= p.1 => Some(q),
-            _ => Some(p),
-        });
-    let Some((k, c)) = best else {
+    let max_lag = (MAX_SHIFT_MIN.min((win.1 - win.0) / 4.0) / step).floor() as i64;
+    let r = correlate(a, b, &t, step, max_lag);
+    let Some((lag, c)) = best_lag(&r) else {
         return flat(vec!["shift_auto_flat"]);
     };
-    let around = |j: i64| r.iter().find(|(l, _)| *l == j).and_then(|(_, c)| *c);
-    // a parabola through the best lag and its neighbours places the peak of the correlation between two steps
-    let frac = match (around(k - 1), around(k + 1)) {
-        (Some(l), Some(u)) if (l - 2.0 * c + u).abs() > 1e-12 => {
-            (0.5 * (l - u) / (l - 2.0 * c + u)).clamp(-0.5, 0.5)
-        }
-        _ => 0.0,
-    };
-    let shift = (k as f64 + frac) * step;
-    let mut warnings = vec![];
-    if k.abs() == max_lag {
-        warnings.push("shift_auto_limit");
-    }
-    if c < WEAK_CORR {
-        warnings.push("shift_auto_weak");
-    }
+    let shift = lag * step;
+    let edge = lag.abs() > max_lag as f64 - 0.5;
+    let warnings = [
+        (edge, "shift_auto_limit"),
+        (c < WEAK_CORR, "shift_auto_weak"),
+    ]
+    .into_iter()
+    .filter_map(|(on, w)| on.then_some(w))
+    .collect();
     Align {
         shift_min: if shift.abs() < NEGLIGIBLE_MIN {
             0.0
@@ -220,7 +232,11 @@ pub fn dad_align(a: &DadData, b: &DadData, focus: Option<(f64, f64)>) -> Align {
             shift
         },
         corr: c,
-        corr_at_zero: around(0).unwrap_or(0.0),
+        corr_at_zero: r
+            .iter()
+            .find(|(l, _)| *l == 0)
+            .and_then(|(_, c)| *c)
+            .unwrap_or(0.0),
         search_min: max_lag as f64 * step,
         basis,
         window_min: win,
