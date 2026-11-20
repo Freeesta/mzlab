@@ -26,7 +26,12 @@ jobs:
           bash = t._git_bash(); git = bash.parent.parent
           import os
           env = {"PATH": os.pathsep.join([str(fake), str(git / "usr" / "bin"), str(git / "bin")]), "SYSTEMROOT": r"C:\Windows"}
-          print(subprocess.run([str(bash), "-c", "command -v curl; command -v wasm-opt; command -v npm; command -v flock; curl -fsSL x; echo rc=$?"], env=env, capture_output=True, text=True))
+          for crlf in (True, False):
+              for f in fake.iterdir():
+                  f.write_bytes(f.read_bytes().replace(b"\r\n", b"\n"))
+              for e in (env, dict(env, MSYSTEM="MSYS")):
+                  print("LF" if not crlf else "CRLF", "MSYSTEM" in e, subprocess.run([str(bash), "-c", "echo $PATH; command -v curl; curl -fsSL x; echo rc=$?"], env=e, capture_output=True, text=True))
+              break
           print(open(tmp/"curl.log").read() if (tmp/"curl.log").exists() else "no curl.log")
       - name: run the tests
         run: python -m pytest tests/test_wasm_opt_chiuso.py -vv -x -q
