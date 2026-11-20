@@ -29552,3 +29552,5 @@
 {"v":1,"ts_utc":"2026-11-20T23:30:28Z","azione":"push","titolo":"statcmp tests: expect_err instead of err().expect (clippy err_expect)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3633,"sha":"ad77f3e52200287e9308300f77068241363031b8"}
 {"v":1,"ts_utc":"2026-11-20T23:35:36Z","tipo":"conflitto","pr":3630,"sha":"f6faae25c05190d7e15380986fea537f6b03dc50","pr_unita":3627,"file_comuni":[],"n_file_comuni":0,"file_conflitto":["docs/agenti/cli.md"]}
 {"v":1,"ts_utc":"2026-11-20T23:38:29Z","tipo":"coda","k":"2026-11-20T23:38:29Z","aperte":3,"indietro":2,"sporche":1,"verdi_in_attesa":0,"piu_vecchia_aperta_s":2850,"piu_vecchia_verde_s":null}
+{"v":1,"ts_utc":"2026-11-20T23:36:19Z","tipo":"conflitto","pr":3630,"sha":"ad36d0106a684ec57f4ce7721ee38fe5149e7434","pr_unita":3632,"file_comuni":[],"n_file_comuni":0,"file_conflitto":["docs/agenti/cli.md"]}
+{"v":1,"ts_utc":"2026-11-20T23:39:55Z","tipo":"coda","k":"2026-11-20T23:39:55Z","aperte":3,"indietro":2,"sporche":1,"verdi_in_attesa":0,"piu_vecchia_aperta_s":2936,"piu_vecchia_verde_s":null}
