@@ -17,8 +17,8 @@ with sync_playwright() as p:
         r, ctx, pg = fresh(p)
         try:
             assert pg.evaluate("typeof PALETTE") == "undefined", "the palette must not be in the start-up list"
-            pg.keyboard.press("Control+k"); pg.keyboard.type("calcol")      # no wait: the script is still arriving
-            wait_for_js(pg, "!!document.getElementById('pal-in') && document.getElementById('pal-in').value === 'calcol'")
+            pg.keyboard.press("Control+k"); pg.keyboard.type("calcul")      # no wait: the script is still arriving
+            wait_for_js(pg, "!!document.getElementById('pal-in') && document.getElementById('pal-in').value === 'calcul'")
             wait_for_js(pg, "document.querySelectorAll('#pal-l [role=option]').length > 0")
         finally: ctx.close(); r.close()
     step("Ctrl+K then typing at once: every key reaches the box and the results appear", typed_at_once)

@@ -690,7 +690,7 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 /* MS² card: the header controls (.ctl) take their own line (fragments row); the other rows sit under the header, one topic each, wrapping on narrow cards */
 .pnl.spec .hd{flex-wrap:wrap;row-gap:4px}
 .pnl.spec .hd .ctl{display:flex;flex:1 1 100%;order:10;align-items:center;gap:4px 8px;min-width:0}
-.pnl.spec .srows{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px;font-size:12px;min-width:0}
+.pnl.spec .srows{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px;font-size:12px;min-width:0;min-height:50px}/* room for the notes and the retention-time row (it arrives with the first cursor): the chart below does not jump */
 .pnl.spec .sr{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-width:0}
 .pnl.spec .srl{flex:0 0 9em;color:var(--muted);font-weight:600}
 .pnl.spec .sr>span:last-child{flex:1 1 12em;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}

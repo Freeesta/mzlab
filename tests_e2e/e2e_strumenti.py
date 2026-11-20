@@ -345,7 +345,7 @@ try:
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
-        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", palette_search)
+        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcul» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", palette_search)
 
         def palette_hr():
             pg.keyboard.press("Control+k"); pg.keyboard.type("isotop"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('High resolution')")

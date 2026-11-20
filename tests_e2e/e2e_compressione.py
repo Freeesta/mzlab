@@ -49,7 +49,12 @@ try:
         c, pg = fresh(b)
         pg.set_input_files("#pick", [str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
         pg.wait_for_function("document.querySelectorAll('#flist [data-dl]').length >= 1", timeout=120000)
-        pg.click("#samptab"); pg.wait_for_selector("#wtable:not([hidden])", timeout=60000)      # the landing shows the table of the samples only when asked
+        # the landing shows the table of the samples only when asked; a click while the file is still opening (work state «opening») does nothing, so it is repeated until the table is there
+        for _ in range(12):
+            pg.click("#samptab")
+            try: pg.wait_for_selector("#wtable:not([hidden])", timeout=5000); break
+            except Exception: pass
+        else: pg.wait_for_selector("#wtable:not([hidden])", timeout=5000)
         def default_is_standard():
             pg.locator("#advconv summary").click()
             assert pg.eval_on_selector("#cvcomp", "e => e.value") == "standard"
