@@ -48,7 +48,12 @@ try:
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
-            pg.goto(base); pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
+            for _try in range(3):          # the page left by a reset may still be doing its one isolating reload: that navigation aborts ours, the next one lands
+                try: pg.goto(base); break
+                except Exception as e:
+                    if "ERR_ABORTED" not in str(e) or _try == 2: raise
+                    pg.wait_for_timeout(1500)
+            pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
             if pg.evaluate("!!S.sess"): wait_for_js(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
