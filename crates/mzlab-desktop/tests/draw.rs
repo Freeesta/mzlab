@@ -77,7 +77,12 @@ fn draw_route_gives_the_shared_fixture() {
             ),
             None => assert!(ask("png").is_err(), "{}", c["name"]),
         }
-        for (format, want) in [("scene", &c["scene"]), ("molfile", &c["molfile"])] {
+        for (format, want) in [
+            ("scene", &c["scene"]),
+            ("molfile", &c["molfile"]),
+            ("ket", &c["ket"]),
+            ("cdxml", &c["cdxml"]),
+        ] {
             let mut request = c["request"].clone();
             request["format"] = json!(format);
             let got = st.rpc(
@@ -93,6 +98,21 @@ fn draw_route_gives_the_shared_fixture() {
                     "{} {format}",
                     c["name"]
                 ),
+            }
+        }
+        // a scene carries the same KET or CDXML text as the plain format
+        for format in ["ket", "cdxml"] {
+            if let Some(want) = c[format].as_str() {
+                let mut request = c["request"].clone();
+                request["format"] = json!("scene");
+                request["file"] = json!(format);
+                let got = st.rpc(
+                    "feat/grafo",
+                    &json!({"kind": "draw", "request": request}),
+                    &[],
+                );
+                let v: serde_json::Value = serde_json::from_str(&text(got.unwrap())).unwrap();
+                assert_eq!(v["file"].as_str(), Some(want), "{} {format}", c["name"]);
             }
         }
     }

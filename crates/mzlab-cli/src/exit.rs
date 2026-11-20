@@ -90,6 +90,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.delta.neg",
         "error.grafo.tooBig",
         "error.grafo.element",
+        "err.mol.draw.element",
         "error.grafo.mixture",
         "error.grafo.ring",
         "error.grafo.mech.atom",

@@ -1,6 +1,6 @@
-//! `mzlab-cli mol draw SPEC [--format molfile|scene|svg|png] [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout
-//! (`draw/1`), as a molfile, a scene of atoms and bonds, or a picture (SVG text, PNG bytes; `--json` wraps a picture as `draw-image/1`).
-//! The same bytes as the molkit `.wasm` and the app (`chem::draw`).
+//! `mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own
+//! layout (`draw/1`), as a molfile, a KET or CDXML text, a picture (SVG text, PNG bytes) or, with `--json`, as a scene of atoms, bonds and fragments
+//! (the KET or CDXML text in `file`; a picture wrapped as `draw-image/1`). The same bytes as the molkit `.wasm` and the app (`chem::draw`).
 
 use mzlab_core::error::Error;
 use std::path::{Path, PathBuf};
@@ -12,12 +12,13 @@ use mzlab_feat::chem::draw::Format;
 
 pub const HELP: &str = "mzlab-cli mol draw: a structure drawn in 2D by mzLab's own layout (draw/1), as a molfile, a scene or a picture.
 
-usage: mzlab-cli mol draw SPEC [--format F] [--set NAME=VALUE...] [--out PATH] [--json]
+usage: mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH] [--json]
 
   SPEC           smiles:TEXT (or a bare SMILES), molfile:TEXT, a molfile path or - (the text has M  END), name:TEXT, inchikey:KEY
                  (or a bare 27-character key), InChI=... followed by its InChIKey. Bare text that is none of these is a name.
-  --format       molfile (default), scene (same as --json), svg or png; --json with svg or png wraps it as draw-image/1
-  --set layout   keep (default: a molfile with 2D coordinates keeps them) or new
+  --format F     molfile (default), scene, ket, cdxml, svg or png (= --set format=F); with --json ket or cdxml go into the scene (file),
+                 svg or png are wrapped as draw-image/1
+  --set layout   keep (default: a molfile with 2D coordinates keeps them) or new (lay it out again)
   --set db       a molecules/1 CSV (for example mzlab/web/molecules/catalogue.csv): names and keys are looked up only there
   --set name     the title of the molfile or picture
   --set scale    pixels per angstrom of svg/png, 8 to 80 (default 24)
@@ -25,9 +26,11 @@ usage: mzlab-cli mol draw SPEC [--format F] [--set NAME=VALUE...] [--out PATH] [
   --set highlight  0,1,0-1@red;5@blue: atoms, bonds a-b, a colour name (red orange yellow green cyan blue purple pink gray)
   --out PATH     write there instead of the standard output
 
-Angstrom, bond length 1.5; deterministic. Wedges come from the stereo of the record, never from coordinates. Every automatic choice is in `choices`
-(on standard error for a bare file). The PNG has its own stroke font. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile; 5 not in the db; 6 --out.";
+KET and CDXML are open formats written from their public documentation, not tested against ChemDraw or Ketcher.
+Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
+every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a bare file they go to
+standard error. The PNG has its own stroke font. An InChI alone is refused: mzLab never parses or hashes one.
+Exit codes: 1 over 2000 atoms, an atom that is no element (err.mol.draw.element); 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 7] = [
     "format",
@@ -58,7 +61,11 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
             },
             "--format" => match it.next() {
                 Some(f) => set[0] = Some(f),
-                None => return Err(Outcome::fail("--format needs molfile, scene, svg or png")),
+                None => {
+                    return Err(Outcome::fail(
+                        "--format needs molfile, scene, ket, cdxml, svg or png",
+                    ))
+                }
             },
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => match NAMES.iter().position(|n| *n == k) {
@@ -82,7 +89,7 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
     };
     if json && set[0].as_deref().is_some_and(|f| f == "molfile") {
         return Err(Outcome::fail(
-            "--json does not go with the molfile format: use scene, svg or png",
+            "--json does not go with the molfile format: use scene, ket, cdxml, svg or png",
         ));
     }
     Ok((spec.clone(), out, json, set))
@@ -96,11 +103,17 @@ fn request(spec: &str, json: bool, set: &[Option<String>; 7], db: Option<&str>) 
         (None, false) => "molfile",
     };
     let mut req = Out::default();
-    req.raw("{\"spec\":")
-        .str(spec)
-        .raw(",\"format\":")
-        .str(format);
-    if json && format != "scene" {
+    req.raw("{\"spec\":").str(spec).raw(",\"format\":").str(
+        if json && matches!(format, "ket" | "cdxml") {
+            "scene"
+        } else {
+            format
+        },
+    );
+    // a scene carries the KET or CDXML text of the drawing; a picture is wrapped as draw-image/1
+    if json && matches!(format, "ket" | "cdxml") {
+        req.raw(",\"file\":").str(format);
+    } else if json && format != "scene" {
         req.raw(",\"json\":true");
     }
     for (k, v) in NAMES.iter().zip(set).skip(1) {

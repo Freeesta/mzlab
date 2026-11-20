@@ -1,4 +1,4 @@
-# `mol draw`: own 2D layout, the `draw/1` scene, SVG and PNG pictures (`mzlab-mol::layout`, `mzlab-feat::chem::draw*`)
+# `mol draw`: own 2D layout, the `draw/1` scene, KET/CDXML files and SVG/PNG pictures (`mzlab-mol::layout`, `mzlab-feat::chem::draw*`, `draw_file`)
 
 A structure written as text (SMILES, molfile, a name or InChIKey of the molecule database) becomes a drawing: coordinates in angstrom, bond length 1.5, the same on the site (molkit `.wasm`), in the app (`feat/grafo`, `kind:"draw"`) and in the CLI (`mzlab-cli mol draw`). No code of other toolkits; RDKit is only the yardstick of the tests (`tools/draw_quality.py`, never a dependency).
 
@@ -10,7 +10,7 @@ A structure written as text (SMILES, molfile, a name or InChIKey of the molecule
 - Reader rule that shapes the tests: a double bond in a ring of up to 7 atoms has no stereo element; elsewhere an unmarked double bond with substituents reads back as defined from the coordinates, so a round trip through a molfile is the same record only when the SMILES marks it. The sets avoid unmarked ones.
 
 ## The request and the scene (`chem/draw.rs`)
-`draw_json(request)`, request `{"spec", "format":"molfile"|"scene", "layout":"keep"|"new", "db": CSV text, "name": title}`; answer: the scene (`draw/1`, `docs/schemi/draw-1.json`) or the molfile text.
+`draw_json(request)`, request `{"spec", "format":"molfile"|"scene"|"ket"|"cdxml", "file":"ket"|"cdxml" (scene only), "layout":"keep"|"new", "db": CSV text, "name": title}`; answer: the scene (`draw/1`, `docs/schemi/draw-1.json`), the molfile, the KET or the CDXML text.
 
 | spec | meaning |
 |---|---|
@@ -23,18 +23,25 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 (an InChIKey with several rows in the db; the first is drawn, the names are listed). In molfile mode the CLI prints them on stderr as `choice: key = value` and `warning: ...`.
 
 ## CLI (`crates/mzlab-cli/src/mol_draw_cmd.rs`)
-`mzlab-cli mol draw SPEC [--format molfile|scene|svg|png] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--set scale=PX] [--set cip=on|off] [--set highlight=LIST] [--out PATH] [--json]`. Plain output is the molfile; `--json` is the scene, or with svg/png the `draw-image/1` wrapper (`--json` with `--format molfile` is a usage error). `--set format=` still works. SPEC is `-` for stdin; a path that exists is read.
+`mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--set scale=PX] [--set cip=on|off] [--set highlight=LIST] [--out PATH] [--json]` (`--format F` is `--set format=F`). Plain output is the molfile, the KET, the CDXML, the SVG text or the PNG bytes; `--json` is the scene, with the KET or CDXML text in its `file` key when `--format` names one, or with svg/png the `draw-image/1` wrapper (`--json` with `--format molfile` is a usage error). SPEC is `-` for stdin; a path that exists is read.
 
 | exit | meaning |
 |---|---|
 | 0 | ok |
-| 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`) |
+| 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`), an atom that is no element in KET or CDXML (`err.mol.draw.element`, data, like `error.grafo.element`) |
 | 2 | unparseable SMILES, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
 | 4 | missing or unreadable file or db, a molfile or request that cannot be read (`err.mol.draw.molfile\|request`), a file with no `M  END` |
 | 5 | not in the db (`err.mol.draw.not_found` with the nearest names in the hint, or `err.mol.draw.not_found_bare` when none is near) |
 | 6 | unwritable `--out` |
 
-Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|binary|smiles|molfile|needDb|inchi|db|not_found|not_found_bare|tooBig` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|binary|smiles|molfile|needDb|inchi|db|not_found|not_found_bare|tooBig|element` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+
+## KET and CDXML (`chem/draw_file.rs`)
+Open formats written by our own code from their public documentation (the KET JSON schema, the CDX SDK object pages; field mapping as in the public mzDraw writers); not tested against ChemDraw or Ketcher, and nothing claims their fidelity. One molecule holds every atom and bond (a salt is one KET molecule or one CDXML fragment), `written_bonds()` gives the wedges (narrow end first), the title is one plain text label under the structure.
+- KET: `{"root":{"nodes":[{"$ref":"mol0"}, text?]},"mol0":{"type":"molecule","atoms":[{label, charge, isotope, radical, implicitHCount, location:[x,y,0]}],"bonds":[{type, atoms:[a,b], stereo}]}}`, bond length 1, y up; `stereo` 1 up, 6 down, 4 either (3 on a double bond); `implicitHCount` only where the reader of molfiles would add another count.
+- CDXML: `fragment` with `n` (`p`, `Element`, `NumHydrogens`, `Charge`, `Isotope`, `Radical`, a label for every atom but a bare carbon; `Radical` is the CDXML enumeration `Doublet` (one unpaired electron) or `Triplet` (two), never a number: the numeric codes belong to binary CDX, and RDKit's reader ignores them; KET keeps the molfile codes 2 and 3) and `b` (`B`, `E`, `Order`, `Display` `WedgeBegin|WedgedHashBegin|Wavy`), points, y down, 30 to the bond, one bond of margin; object ids are unique (font 1, page 2, fragment 3, atoms from 4, then bonds and the text).
+- `choices` log `file_format`, `file_scale` and, when the title has more lines than the one written, `file_title`; an atom that is no element is refused with `err.mol.draw.element` by both writers (KET could carry the label, CDXML cannot, so they agree; never written as carbon); the molfile and SMILES readers do not produce one today; the bytes are fixed (integer-arithmetic numbers, ids in order).
+- Tests: `draw_file_tests.rs` (test-only KET and CDXML readers into `mzlab-mol`: the 200 molecules of set A read back with the same core hash, stereo included); `tests/test_mol_draw_file.py` (JSON and XML well-formed; RDKit, only where installed, reads the CDXML as the same molecules); `tests/dati/draw_d1.json` carries `ket` and `cdxml` for every spec (CLI = `.wasm` = app route).
 
 ## Quality gates (`tests/test_mol_draw_quality.py`, `tools/draw_quality.py`)
 Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, monocycle, fused, bridged_spiro, macrocycle, charged, stereo, salt, druglike). Set B `draw_set_b.tsv`: 100 E/Z double bonds with the expected cis/trans. `draw_reference.json`: RDKit's counts on the same metrics (RDKit is needed only to rewrite the sets: `python3 tools/draw_quality.py --set-out --reference`, seed 20261120). A drawing is clean when it has no clash (atoms closer than 0.45 bond), no atom on a bond (0.3), no crossing, bond-length CV under 0.15 and a mean ring-angle error under 10 degrees.
@@ -59,11 +66,11 @@ One display list (lines, polygons, discs, stroked text) in pixels, built once fr
 - A picture over 4096 px on a side is drawn at a smaller scale instead (`choices`: `scale_reduced`, no refusal); the `images` of `draw_d1.json` include that case.
 
 ## Parity and tests
-`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives.
-`images` holds picture requests with options (scale, CIP, highlights, the wrapper): the SVG text, and for a PNG its length and CRC-32. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
+`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene, molfile, KET, CDXML, SVG and PNG (length and CRC-32) the release CLI gives.
+`images` holds picture requests with options (scale, CIP, highlights, the wrapper): the SVG text, and for a PNG its length and CRC-32. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, the scene `file` key, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
 
 ## Large molecules
 The size limit (2000 atoms) is checked before any layout work. The cleaning step counts its own steps and stops at a fixed budget (never a clock, so the bytes stay the same everywhere); when it stops, `choices` carries `layout_budget`. Native release: 650- and 1950-atom polyphenylenes and 1900-atom chains draw in 0.18 s median, 0.26 s at most (before the budget: 23 s and over 300 s).
 
 ## Sizes
-molkit `.wasm`: 304560 -> 369440 bytes (+64880, allowance 90000; base = main b27a03922, after the shared-sort change of #3595) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32441 bytes (guard 33000 in `catalog_tests.rs`).
+molkit `.wasm`: 369440 bytes recorded (`tools/moduli/molkit.toml`, cap 512000 unchanged); the KET and CDXML writers add about 8.2 KB (+2.1 %: 388117 -> 396314 bytes after wasm-opt, same local toolchain, main ccd4680fc against this tree), so the next recorded measure is about 377.6 KB. Catalog `mzlab-cli commands --json` 32563 bytes (guard 33000 in `catalog_tests.rs`).
