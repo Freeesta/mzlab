@@ -38,9 +38,9 @@ type LibInfo = { n: number, pos: number, neg: number, dropped: number, peaks: nu
 type LibVoce = { nome: string, tipo: string, id: string, size: number, mtime: number, stato: string, info?: any, versione?: string, nuova?: string };
 type LibQuery = Record<string, string | number>;
 type LibDir = { kind: string, name: string, list(sub?: string): Promise<LibEnt[]>, file(rel: string): Promise<LibFile>, write(rel: string, data: string | Blob | Uint8Array): Promise<void>, remove(rel: string): Promise<void>, replace(tmp: string, rel: string): Promise<void>, reader(file: LibFile): (off: number, len: number) => Uint8Array };  // same interface for handles and for the native folder
-type LibPiece = { file: string, dimensione: number, sha256: string };
-type LibPkg = { id: string, versione: string, sha256: string, dimensione: number, pezzi: LibPiece[], lettore_min?: number, spettri?: number, picchi?: number, polarita?: number };  // an entry of the catalog
-type LibCatalog = { formato: string, librerie: LibPkg[], esterne?: { id: string, url: string }[], fonti?: { id: string, modo: string }[] };
+type LibPiece = { file: string, size: number, sha256: string };
+type LibPkg = { id: string, version: string, sha256: string, size: number, pieces: LibPiece[], reader_min?: number, spectra?: number, peaks?: number, polarity?: number };  // an entry of the catalog
+type LibCatalog = { format: string, libraries: LibPkg[], external?: { id: string, url: string }[], sources?: { id: string, mode: string }[] };
 type LibErr = Error & { key: string, params: Record<string, unknown> };
 type LibFetch = (url: string, opts?: RequestInit) => Promise<Response>;
 // File System Access API members the bundled libs do not have (libreria-cartella.js reads and writes the folders with them).

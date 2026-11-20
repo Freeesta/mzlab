@@ -173,7 +173,7 @@ fn manifest_json(text: &str) -> String {
     let s = |v: &Value, k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
     o.raw("{\"sources\":[");
     for (i, f) in v
-        .get("fonti")
+        .get("sources")
         .map(Value::arr)
         .unwrap_or(&[])
         .iter()
@@ -184,9 +184,9 @@ fn manifest_json(text: &str) -> String {
         }
         o.raw("{\"id\":").str(&s(f, "id"));
         for (key, from) in [
-            ("name", "nome"),
-            ("version", "versione"),
-            ("licence", "licenza"),
+            ("name", "name"),
+            ("version", "version"),
+            ("licence", "license"),
             ("doi", "doi"),
         ] {
             o.raw(&format!(",\"{key}\":")).str(&s(f, from));
@@ -194,7 +194,7 @@ fn manifest_json(text: &str) -> String {
         o.raw("}");
     }
     o.raw("],\"attribution\":")
-        .str(&s(&v, "attribuzione"))
+        .str(&s(&v, "attribution"))
         .raw("}");
     o.0
 }

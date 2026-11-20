@@ -47,7 +47,7 @@ def write_listings(rows=LISTING_ROWS, entries=LISTING_ENTRIES, nl: int = 2) -> b
     """A v1 file (flag bit 0 set) with the `listings` extension, written from scratch here: the reference does not share code with the Rust writer."""
     n = len(rows)
     formulas = ["C2H5NO", "C2H4O2", "C6H6"]
-    man = json.dumps({"formato": "mzsus/1", "righe": n, "normative/1": {"lists": [{"id": "L0"}, {"id": "L1"}]}}, sort_keys=True, separators=(",", ":")).encode()
+    man = json.dumps({"format": "mzsus/1", "rows": n, "normative/1": {"lists": [{"id": "L0"}, {"id": "L1"}]}}, sort_keys=True, separators=(",", ":")).encode()
     members = [m for r in rows for m in r[4]]
     entry_json = [json.dumps(e, ensure_ascii=False, separators=(",", ":")).encode() for e in entries]
     offs, c = [], 0

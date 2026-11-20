@@ -19,18 +19,18 @@ const SCARICA = (() => {
   const META = ".mzlab";
   const pieceRel = (/** @type {string} */ id, /** @type {number} */ i) => `${META}/${id}.${String(i).padStart(3, "0")}.piece`;
 
-  // the catalog (`librerie/2` = `librerie/1` + `fonti`, the sources with their mode site|external|link): the same checks as the Rust side (`parse_catalog`): format, plain ids, pieces that belong to their package, sizes that add up
+  // the catalog (`libraries/2`: the packages plus `sources`, the sources with their mode site|external|link): the same checks as the Rust side (`parse_catalog`): format, plain ids, pieces that belong to their package, sizes that add up
   function parseCatalog(/** @type {string} */ text) {
     /** @type {LibCatalog} */ let c; try { c = JSON.parse(text); } catch (e) { throw err("lib.dl.err.catalog", { detail: "json" }); }
-    if (!c || !["librerie/1", "librerie/2"].includes(c.formato) || !Array.isArray(c.librerie)) throw err("lib.dl.err.catalog", { detail: String(c && c.formato) });
+    if (!c || c.format !== "libraries/2" || !Array.isArray(c.libraries)) throw err("lib.dl.err.catalog", { detail: String(c && c.format) });
     const plain = (/** @type {unknown} */ id) => typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id);
-    for (const p of c.librerie) {
-      if (!plain(p.id) || !Array.isArray(p.pezzi) || !p.sha256 || !p.versione) throw err("lib.dl.err.catalog", { detail: String(p.id) });
-      for (const pc of p.pezzi) if (!String(pc.file).startsWith(p.id + "/") || pc.file.includes("..") || pc.file.includes("\\") || !pc.sha256) throw err("lib.dl.err.catalog", { detail: String(pc.file) });
-      if (p.pezzi.reduce((s, x) => s + x.dimensione, 0) !== p.dimensione) throw err("lib.dl.err.catalog", { detail: "size of " + p.id });
+    for (const p of c.libraries) {
+      if (!plain(p.id) || !Array.isArray(p.pieces) || !p.sha256 || !p.version) throw err("lib.dl.err.catalog", { detail: String(p.id) });
+      for (const pc of p.pieces) if (!String(pc.file).startsWith(p.id + "/") || pc.file.includes("..") || pc.file.includes("\\") || !pc.sha256) throw err("lib.dl.err.catalog", { detail: String(pc.file) });
+      if (p.pieces.reduce((s, x) => s + x.size, 0) !== p.size) throw err("lib.dl.err.catalog", { detail: "size of " + p.id });
     }
-    for (const e of c.esterne || []) if (!plain(e.id) || !/^https:\/\//.test(e.url || "")) throw err("lib.dl.err.catalog", { detail: String(e.id) });
-    c.esterne = c.esterne || []; c.fonti = c.fonti || [];
+    for (const e of c.external || []) if (!plain(e.id) || !/^https:\/\//.test(e.url || "")) throw err("lib.dl.err.catalog", { detail: String(e.id) });
+    c.external = c.external || []; c.sources = c.sources || [];
     return c;
   }
 
@@ -42,7 +42,7 @@ const SCARICA = (() => {
       catch (e_) { const e = /** @type {Lanciato} */ (e_); if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
       if (!res.ok) throw err("lib.dl.err.http", { status: res.status });
       let b; try { b = new Uint8Array(await res.arrayBuffer()); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
-      if (b.length === pc.dimensione && (await sha256(b)) === pc.sha256) return b;
+      if (b.length === pc.size && (await sha256(b)) === pc.sha256) return b;
       if (t >= TRIES) throw err("lib.dl.err.hash", { what: pc.file });
     }
   }
@@ -51,40 +51,40 @@ const SCARICA = (() => {
   // `onProgress({id, piece, pieces, bytes, total})`, `beforeReplace()` lets the caller let go of the old file (an open library), `fetchFn` is `fetch` (tests replace it).
   async function downloadPackage(/** @type {{ dir: LibDir, pkg: LibPkg, base: string, signal?: AbortSignal, onProgress?: (p: { id: string, piece: number, pieces: number, bytes: number, total: number }) => void, beforeReplace?: () => unknown, fetchFn?: LibFetch }} */ { dir, pkg, base, signal, onProgress, beforeReplace, fetchFn }) {
     fetchFn = fetchFn || ((u, o) => fetch(u, o));
-    if ((pkg.lettore_min || 1) > READER) throw err("lib.dl.err.version", { id: pkg.id });
-    const have = new Map((await dir.list(META)).map(f => [f.name, f.size])), n = pkg.pezzi.length;
+    if ((pkg.reader_min || 1) > READER) throw err("lib.dl.err.version", { id: pkg.id });
+    const have = new Map((await dir.list(META)).map(f => [f.name, f.size])), n = pkg.pieces.length;
     let done = 0;
     for (let i = 0; i < n; i++) {
       if (signal && signal.aborted) throw err("lib.dl.err.cancelled");
-      const pc = pkg.pezzi[i], rel = pieceRel(pkg.id, i);
+      const pc = pkg.pieces[i], rel = pieceRel(pkg.id, i);
       let ok = false;
-      if (have.get(rel.slice(META.length + 1)) === pc.dimensione) { try { ok = (await sha256(new Uint8Array(await (await dir.file(rel)).slice(0, pc.dimensione).arrayBuffer()))) === pc.sha256; } catch (e) { ok = false; } }
+      if (have.get(rel.slice(META.length + 1)) === pc.size) { try { ok = (await sha256(new Uint8Array(await (await dir.file(rel)).slice(0, pc.size).arrayBuffer()))) === pc.sha256; } catch (e) { ok = false; } }
       if (!ok) await dir.write(rel, await fetchPiece(fetchFn, base + pc.file, pc, signal));
-      done += pc.dimensione;
-      if (onProgress) onProgress({ id: pkg.id, piece: i + 1, pieces: n, bytes: done, total: pkg.dimensione });
+      done += pc.size;
+      if (onProgress) onProgress({ id: pkg.id, piece: i + 1, pieces: n, bytes: done, total: pkg.size });
     }
     if (signal && signal.aborted) throw err("lib.dl.err.cancelled");
     const newRel = `${META}/${pkg.id}.new`, drop = async () => { await dir.remove(newRel); for (let i = 0; i < n; i++) await dir.remove(pieceRel(pkg.id, i)); };
     const files = []; for (let i = 0; i < n; i++) files.push(/** @type {File} */ (await dir.file(pieceRel(pkg.id, i))));
     await dir.write(newRel, new Blob(files));
     const nf = await dir.file(newRel);
-    if (nf.size !== pkg.dimensione || (await CARTELLA.sha256Of(nf)) !== pkg.sha256) { await drop(); throw err("lib.dl.err.hash", { what: pkg.id }); }
+    if (nf.size !== pkg.size || (await CARTELLA.sha256Of(nf)) !== pkg.sha256) { await drop(); throw err("lib.dl.err.hash", { what: pkg.id }); }
     const head = await CARTELLA.readHead(nf);
     if (!head) { await drop(); throw err("lib.dl.err.hash", { what: pkg.id }); }
     if (head.minReader > READER) { await dir.remove(newRel); throw err("lib.dl.err.version", { id: pkg.id }); }
     if (beforeReplace) await beforeReplace();
     const final = pkg.id + ".mzlib";
     await dir.replace(newRel, final);
-    const f = await dir.file(final), pos = pkg.polarita === 1 ? pkg.spettri : 0, neg = pkg.polarita === -1 ? pkg.spettri : 0;
-    await dir.write(`${META}/${final}.pkg.json`, JSON.stringify({ id: pkg.id, versione: pkg.versione, sha256: pkg.sha256, size: f.size, mtime: f.lastModified,
-      info: { n: pkg.spettri || head.n, pos, neg, dropped: 0, peaks: pkg.picchi || head.peaks, date: f.lastModified } }));
+    const f = await dir.file(final), pos = pkg.polarity === 1 ? pkg.spectra : 0, neg = pkg.polarity === -1 ? pkg.spectra : 0;
+    await dir.write(`${META}/${final}.pkg.json`, JSON.stringify({ id: pkg.id, version: pkg.version, sha256: pkg.sha256, size: f.size, mtime: f.lastModified,
+      info: { n: pkg.spectra || head.n, pos, neg, dropped: 0, peaks: pkg.peaks || head.peaks, date: f.lastModified } }));
     for (let i = 0; i < n; i++) await dir.remove(pieceRel(pkg.id, i));
   }
   // what the window shows for a catalog entry given the entries of the folder: «installed» (up to date), «update» (installed, another version) or «new»
   function stateOf(/** @type {LibPkg} */ pkg, /** @type {LibVoce[] | undefined} */ voci) {
     const v = (voci || []).find(x => x.tipo === "pacchetto" && x.nome === pkg.id + ".mzlib");
     if (!v) return "new";
-    return v.stato === "aggiornamento" || (v.versione && v.versione !== pkg.versione) ? "update" : v.stato === "danneggiata" ? "damaged" : "installed";
+    return v.stato === "aggiornamento" || (v.versione && v.versione !== pkg.version) ? "update" : v.stato === "danneggiata" ? "damaged" : "installed";
   }
   return { READER, parseCatalog, fetchPiece, downloadPackage, stateOf, pieceRel };
 })();

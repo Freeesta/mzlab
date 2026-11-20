@@ -1,8 +1,8 @@
 //! Download of the spectral-library packages into the folder of the libraries (`libraries.rs`), only on a click of the user.
 //! Packages of the site (`static/librerie/catalogo.json`): pieces of 4 MiB checked one by one with their SHA-256, resumed from the first piece that is missing
 //! or wrong, assembled into `.mzlab/<id>.new`, checked as a whole (size, SHA-256, header of the format) and only then swapped for the old `<id>.mzlib` in one rename
-//! (the old one stays until the new one is verified). External sources (the `esterne` list of the catalog, e.g. GNPS): ONLY with the switch «Scarica librerie
-//! pubbliche da fonti esterne» on (`Config::esterne`, off by default), only from the hosts of an allow-list over HTTPS, one plain GET with no data of the user.
+//! (the old one stays until the new one is verified). External sources (the `external` list of the catalog, e.g. GNPS): ONLY with the switch «Download public libraries
+//! from external sources» on (`Config::esterne`, off by default), only from the hosts of an allow-list over HTTPS, one plain GET with no data of the user.
 //! Every error is a key of `lang/` (`lib.dl.err.*`) plus a detail for the log.
 
 use std::fs;
@@ -57,7 +57,7 @@ impl DlError {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Piece {
     pub file: String,
-    pub dimensione: u64,
+    pub size: u64,
     pub sha256: String,
 }
 
@@ -65,19 +65,19 @@ pub struct Piece {
 pub struct Package {
     pub id: String,
     #[serde(default)]
-    pub nome: String,
-    pub versione: String,
+    pub name: String,
+    pub version: String,
     pub sha256: String,
-    pub dimensione: u64,
+    pub size: u64,
     #[serde(default = "one")]
-    pub lettore_min: u16,
+    pub reader_min: u16,
     #[serde(default)]
-    pub spettri: u64,
+    pub spectra: u64,
     #[serde(default)]
-    pub picchi: u64,
+    pub peaks: u64,
     #[serde(default)]
-    pub polarita: i32,
-    pub pezzi: Vec<Piece>,
+    pub polarity: i32,
+    pub pieces: Vec<Piece>,
 }
 
 fn one() -> u16 {
@@ -88,40 +88,40 @@ fn one() -> u16 {
 pub struct External {
     pub id: String,
     #[serde(default)]
-    pub nome: String,
+    pub name: String,
     pub url: String,
     #[serde(default)]
-    pub formato: String,
+    pub format: String,
     #[serde(default)]
     pub sha256: Option<String>,
     #[serde(default)]
-    pub dimensione: Option<u64>,
+    pub size: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Catalog {
-    pub formato: String,
+    pub format: String,
     #[serde(default)]
-    pub librerie: Vec<Package>,
+    pub libraries: Vec<Package>,
     #[serde(default)]
-    pub esterne: Vec<External>,
-    /// `librerie/2`: every source of the menu with its mode (empty in `librerie/1`)
+    pub external: Vec<External>,
+    /// `libraries/2`: every source of the menu with its mode (empty in `libraries/2`)
     #[serde(default)]
-    pub fonti: Vec<CatalogSource>,
+    pub sources: Vec<CatalogSource>,
 }
 
 pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
     let c: Catalog = serde_json::from_slice(bytes)
         .map_err(|e| DlError::new("lib.dl.err.catalog", e.to_string()))?;
-    if c.formato != "librerie/1" && c.formato != "librerie/2" {
-        return Err(DlError::new("lib.dl.err.catalog", c.formato));
+    if c.format != "libraries/2" && c.format != "libraries/2" {
+        return Err(DlError::new("lib.dl.err.catalog", c.format));
     }
     // names that become file names: plain only
     for id in c
-        .librerie
+        .libraries
         .iter()
         .map(|p| &p.id)
-        .chain(c.esterne.iter().map(|e| &e.id))
+        .chain(c.external.iter().map(|e| &e.id))
     {
         if id.is_empty()
             || !id
@@ -131,14 +131,14 @@ pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
             return Err(DlError::new("lib.dl.err.catalog", format!("id {id}")));
         }
     }
-    if c.fonti
+    if c.sources
         .iter()
-        .any(|f| !["site", "external", "link"].contains(&f.modo.as_str()))
+        .any(|f| !["site", "external", "link"].contains(&f.mode.as_str()))
     {
-        return Err(DlError::new("lib.dl.err.catalog", "fonti"));
+        return Err(DlError::new("lib.dl.err.catalog", "sources"));
     }
-    for p in &c.librerie {
-        for pc in &p.pezzi {
+    for p in &c.libraries {
+        for pc in &p.pieces {
             if !pc.file.starts_with(&format!("{}/", p.id))
                 || pc.file.contains("..")
                 || pc.file.contains('\\')
@@ -146,7 +146,7 @@ pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
                 return Err(DlError::new("lib.dl.err.catalog", pc.file.clone()));
             }
         }
-        if p.pezzi.iter().map(|x| x.dimensione).sum::<u64>() != p.dimensione {
+        if p.pieces.iter().map(|x| x.size).sum::<u64>() != p.size {
             return Err(DlError::new(
                 "lib.dl.err.catalog",
                 format!("size of {}", p.id),
@@ -203,8 +203,8 @@ fn check_cancel(cancel: &AtomicBool) -> Result<(), DlError> {
 /// True if the file of the folder is already the piece (size and SHA-256).
 fn piece_ok(folder: &Folder, rel: &str, p: &Piece) -> bool {
     match folder.stat(rel) {
-        Ok(e) if e.size == p.dimensione => folder
-            .read(rel, 0, p.dimensione)
+        Ok(e) if e.size == p.size => folder
+            .read(rel, 0, p.size)
             .is_ok_and(|b| sha256_hex(&b) == p.sha256),
         _ => false,
     }
@@ -219,15 +219,15 @@ pub fn download_package(
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(Progress),
 ) -> Result<(), DlError> {
-    if pkg.lettore_min > READER {
+    if pkg.reader_min > READER {
         return Err(DlError::new(
             "lib.dl.err.version",
-            format!("{}>{}", pkg.lettore_min, READER),
+            format!("{}>{}", pkg.reader_min, READER),
         ));
     }
-    let n = pkg.pezzi.len();
+    let n = pkg.pieces.len();
     let mut done = 0u64;
-    for (i, p) in pkg.pezzi.iter().enumerate() {
+    for (i, p) in pkg.pieces.iter().enumerate() {
         check_cancel(cancel)?;
         let rel = piece_rel(&pkg.id, i);
         if !piece_ok(folder, &rel, p) {
@@ -243,7 +243,7 @@ pub fn download_package(
                         e.detail,
                     )
                 })?;
-                if data.len() as u64 == p.dimensione && sha256_hex(&data) == p.sha256 {
+                if data.len() as u64 == p.size && sha256_hex(&data) == p.sha256 {
                     folder
                         .put(&rel, 0, data.len() as u64, &data)
                         .map_err(|e| DlError::io(e.key))?;
@@ -256,13 +256,13 @@ pub fn download_package(
                 check_cancel(cancel)?;
             }
         }
-        done += p.dimensione;
+        done += p.size;
         progress(Progress {
             id: pkg.id.clone(),
             piece: i + 1,
             pieces: n,
             bytes: done,
-            total: pkg.dimensione,
+            total: pkg.size,
         });
     }
     check_cancel(cancel)?;
@@ -276,9 +276,9 @@ pub fn download_package(
     let mut h = Sha256::new();
     let mut size = 0u64;
     let mut head = Vec::new();
-    for (i, p) in pkg.pezzi.iter().enumerate() {
+    for (i, p) in pkg.pieces.iter().enumerate() {
         let b = folder
-            .read(&piece_rel(&pkg.id, i), 0, p.dimensione)
+            .read(&piece_rel(&pkg.id, i), 0, p.size)
             .map_err(|e| DlError::io(e.key))?;
         if head.len() < 36 {
             head.extend_from_slice(&b[..b.len().min(36 - head.len())]);
@@ -295,7 +295,7 @@ pub fn download_package(
         }
         DlError::new("lib.dl.err.hash", format!("{what} of {}", pkg.id))
     };
-    if size != pkg.dimensione
+    if size != pkg.size
         || h.finalize()
             .iter()
             .map(|x| format!("{x:02x}"))
@@ -317,14 +317,14 @@ pub fn download_package(
         .rename(&new_rel, &file)
         .map_err(|e| DlError::io(e.key))?;
     let st = folder.stat(&file).map_err(|e| DlError::io(e.key))?;
-    let (pos, neg) = match pkg.polarita {
-        1 => (pkg.spettri, 0),
-        -1 => (0, pkg.spettri),
+    let (pos, neg) = match pkg.polarity {
+        1 => (pkg.spectra, 0),
+        -1 => (0, pkg.spectra),
         _ => (0, 0),
     };
     let side = serde_json::json!({
-        "id": pkg.id, "versione": pkg.versione, "sha256": pkg.sha256, "size": st.size, "mtime": st.mtime,
-        "info": {"n": pkg.spettri, "pos": pos, "neg": neg, "dropped": 0, "peaks": pkg.picchi, "date": st.mtime}
+        "id": pkg.id, "version": pkg.version, "sha256": pkg.sha256, "size": st.size, "mtime": st.mtime,
+        "info": {"n": pkg.spectra, "pos": pos, "neg": neg, "dropped": 0, "peaks": pkg.peaks, "date": st.mtime}
     })
     .to_string();
     folder
@@ -378,7 +378,7 @@ impl Policy {
     }
 }
 
-/// Downloads an external file to `<id>.<formato>` of the folder (the page then indexes it like any file of the folder). Redirects are followed by hand, each hop
+/// Downloads an external file to `<id>.<format>` of the folder (the page then indexes it like any file of the folder). Redirects are followed by hand, each hop
 /// checked against the allow-list; the SHA-256 and the size are checked when the catalog knows them.
 pub fn download_external(
     folder: &Folder,
@@ -390,10 +390,10 @@ pub fn download_external(
     let name = format!(
         "{}.{}",
         ext.id,
-        if ext.formato.is_empty() {
+        if ext.format.is_empty() {
             "dat"
         } else {
-            &ext.formato
+            &ext.format
         }
     );
     let mut url = ext.url.clone();
@@ -429,7 +429,7 @@ pub fn download_external(
     let total = resp
         .header("content-length")
         .and_then(|v| v.parse::<u64>().ok())
-        .or(ext.dimensione)
+        .or(ext.size)
         .unwrap_or(0);
     let part_rel = format!("{META}/{name}.part");
     let part = folder.resolve(&part_rel).map_err(|e| DlError::io(e.key))?;
@@ -472,9 +472,7 @@ pub fn download_external(
         .iter()
         .map(|x| format!("{x:02x}"))
         .collect::<String>();
-    if ext.sha256.as_ref().is_some_and(|want| *want != sha)
-        || ext.dimensione.is_some_and(|d| d != got)
-    {
+    if ext.sha256.as_ref().is_some_and(|want| *want != sha) || ext.size.is_some_and(|d| d != got) {
         let _ = fs::remove_file(&part);
         return Err(DlError::new("lib.dl.err.hash", name));
     }
