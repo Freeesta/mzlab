@@ -111,7 +111,9 @@ pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]
     let pairs: Vec<(usize, usize)> = aromatic.iter().map(|&i| ends[i]).collect();
     let doubles = kekulize(n, &pairs, &needy).or_else(|| {
         // a file that does not say which ring atom carries the H (pyrrole-type N): try one, then two, of the atoms that an H would satisfy
-        let flexible: Vec<usize> = (0..n).filter(|&i| needy[i] && !needs(i, 1)).collect();
+        // heteroatoms first: the H of indole or carbazole is on the N, never on a ring-fusion carbon that would leave the ring
+        let mut flexible: Vec<usize> = (0..n).filter(|&i| needy[i] && !needs(i, 1)).collect();
+        flexible.sort_by_key(|&i| atoms[i].el == "C");
         let with_h = |skip: &[usize]| {
             let mut v = needy.clone();
             skip.iter().for_each(|&i| v[i] = false);

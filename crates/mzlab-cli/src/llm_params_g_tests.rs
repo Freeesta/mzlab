@@ -1,4 +1,4 @@
-//! The cases G15-G22 of `docs/studi/assistente-dati/06-valutazione.md` for `mzlab_llm::params_rules`: series G01 (unit resolution) and G08 (DDA, high
+//! The cases G15-G22 of `docs/agenti/llm-eval.md` for `mzlab_llm::params_rules`: series G01 (unit resolution) and G08 (DDA, high
 //! resolution), expected values from the rules, against the real registry.
 
 use super::params::{conf, find, n, near, run, val, G01, G08};

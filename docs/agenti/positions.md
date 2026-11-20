@@ -1,6 +1,6 @@
 # Substitution position (classes compatible with the MS2)
 
-Code: `crates/mzlab-feat/src/chem/positions.rs` and `posizioni/` (feature `chem`, on top of `grafo::Mol`); tests: `crates/mzlab-feat/tests/positions.rs` and `positions_prior.rs`. The "Substitution position" panel of Tabui (administrator) is in `TP_Mine/js/44_posizioni.js`; test: `tests_e2e/e2e_posizioni.py`.
+Code: `crates/mzlab-feat/src/chem/positions.rs` and `chem/positions/` (feature `chem`, on top of `grafo::Mol`); tests: `crates/mzlab-feat/tests/positions.rs` and `positions_prior.rs`. The "Substitution position" panel of Tabui (administrator) is in `TP_Mine/js/44_posizioni.js`; test: `tests_e2e/e2e_posizioni.py`.
 
 ## Purpose
 - Given a parent (SMILES), a transformation and the observed MS2 of the TP, it lists the atoms where the modification can sit, groups them and says which groups the spectrum supports, excludes or cannot tell apart. It never chooses a position and assigns no levels: `proposal.sublevel` is a 3a/3b proposal for the chemist (no field is called `level`).

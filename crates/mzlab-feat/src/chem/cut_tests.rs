@@ -175,3 +175,24 @@ fn existing_radical_and_charge_are_counted() {
         .unwrap()
         .contains("\"radical\":3"));
 }
+
+#[test]
+fn the_pieces_of_a_quaternary_ammonium_keep_its_formula() {
+    // choline-like CH3-CH2-N+(CH3)3, C-C cut: CH3• and •CH2-N+(CH3)3 (C4H11N, 73.089 with the dot), nothing pinned on the N
+    let m = molfile(
+        &[
+            ("C", 0.0, 0.0),
+            ("C", 1.0, 0.0),
+            ("N", 2.0, 0.0),
+            ("C", 3.0, 0.0),
+            ("C", 2.0, 1.0),
+            ("C", 2.0, -1.0),
+        ],
+        &[(1, 2, 1), (2, 3, 1), (3, 4, 1), (3, 5, 1), (3, 6, 1)],
+        &["M  CHG  1   3   1"],
+    );
+    let j = cut_json(&req(&m, "[[0,1]]", "", "[]")).unwrap();
+    assert!(j.contains("\"text\":\"CH3\""), "{j}");
+    assert!(j.contains("\"text\":\"C4H11N+\""), "{j}");
+    assert!(!j.contains("\"pin\":true"), "{j}");
+}

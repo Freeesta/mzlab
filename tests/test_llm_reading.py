@@ -1,4 +1,4 @@
-"""`reading/1`, `param-choices/1` and `assist-roles/1` of `mzlab-llm`: the schemas accept the examples of docs/studi/assistente-dati and reject an unknown action, a ninth finding and a role file with a made-up field."""
+"""`reading/1`, `param-choices/1` and `assist-roles/1` of `mzlab-llm`: the schemas accept the examples of the contracts and reject an unknown action, a ninth finding and a role file with a made-up field."""
 import json
 from pathlib import Path
 

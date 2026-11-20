@@ -232,6 +232,7 @@ fn noise_gates() -> Vec<Param> {
             .min(0.0)
             .default_num(0.0)
             .doc("A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off")
+            .tip("Drops features below this S/N (apex over the flank median, divided by 1.4826 MAD of the raw flanks).")
             .advanced(),
     ]
 }
@@ -463,4 +464,18 @@ fn num(v: f64) -> Value {
 
 fn text(v: &str) -> Value {
     Value::Str(v.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Study item 9: the tip of the `min_snr` gate names its S/N estimator (the one of `quality`); the CLI help (`doc`) stays as it was.
+    #[test]
+    fn min_snr_names_its_estimator() {
+        let gates = noise_gates();
+        let p = gates.iter().find(|p| p.name == "min_snr").unwrap();
+        let tip = p.tip.unwrap();
+        assert!(tip.contains(crate::quality::SNR_ESTIMATOR), "{tip}");
+    }
 }
