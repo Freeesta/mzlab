@@ -27,56 +27,54 @@ Exit codes: 2 unparseable SMILES or molfile, bad option, a name or key without -
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
 
-pub fn run(args: Vec<String>) -> Outcome {
+/// The words of the command line: SPEC, `--out`, `--json` and the four `--set` values (format, layout, db, name).
+fn parse(
+    args: Vec<String>,
+) -> Result<(String, Option<PathBuf>, bool, [Option<String>; 4]), Outcome> {
     let (mut pos, mut out, mut json) = (Vec::new(), None::<PathBuf>, false);
     let mut set: [Option<String>; 4] = Default::default();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+            "--help" | "-h" => return Err(Outcome::ok(format!("{HELP}\n").into_bytes())),
             "--json" => json = true,
             "--out" => match it.next() {
                 Some(p) => out = Some(PathBuf::from(p)),
-                None => return Outcome::fail("--out needs a path"),
+                None => return Err(Outcome::fail("--out needs a path")),
             },
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => match NAMES.iter().position(|n| *n == k) {
                     Some(i) => set[i] = Some(v.to_string()),
                     None => {
-                        return Outcome::fail(&format!(
+                        return Err(Outcome::fail(&format!(
                             "unknown --set name {k} (format, layout, db, name)"
-                        ))
+                        )))
                     }
                 },
-                None => return Outcome::fail("--set needs NAME=VALUE"),
+                None => return Err(Outcome::fail("--set needs NAME=VALUE")),
             },
-            o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
+            o if o.starts_with("--") => return Err(Outcome::fail(&format!("unknown option {o}"))),
             _ => pos.push(a),
         }
     }
     let [spec] = pos.as_slice() else {
-        return Outcome::fail(
+        return Err(Outcome::fail(
             "mol draw needs one SPEC (smiles:..., a molfile path, name:..., inchikey:...)",
-        );
+        ));
     };
     if json && set[0].as_deref().is_some_and(|f| f != "scene") {
-        return Outcome::fail("--json is the scene: it does not go with --set format=molfile");
+        return Err(Outcome::fail(
+            "--json is the scene: it does not go with --set format=molfile",
+        ));
     }
-    let spec = match resolve(spec) {
-        Ok(s) => s,
-        Err(o) => return o,
-    };
-    let db = match set[2]
-        .as_deref()
-        .map(|p| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}")))
-        .transpose()
-    {
-        Ok(d) => d,
-        Err(e) => return Outcome::fail(&e),
-    };
+    Ok((spec.clone(), out, json, set))
+}
+
+/// The request of the engine: SPEC text, the format, the layout and name choices, the database text.
+fn request(spec: &str, json: bool, set: &[Option<String>; 4], db: Option<&str>) -> String {
     let mut req = Out::default();
     req.raw("{\"spec\":")
-        .str(&spec)
+        .str(spec)
         .raw(",\"format\":")
         .str(if json {
             "scene"
@@ -88,11 +86,31 @@ pub fn run(args: Vec<String>) -> Outcome {
             req.raw(",").str(k).raw(":").str(v);
         }
     }
-    if let Some(d) = &db {
+    if let Some(d) = db {
         req.raw(",\"db\":").str(d);
     }
     req.raw("}");
-    match mzlab_feat::chem::draw::draw(&req.0) {
+    req.0
+}
+
+pub fn run(args: Vec<String>) -> Outcome {
+    let (spec, out, json, set) = match parse(args) {
+        Ok(p) => p,
+        Err(o) => return o,
+    };
+    let spec = match resolve(&spec) {
+        Ok(s) => s,
+        Err(o) => return o,
+    };
+    let db = match set[2]
+        .as_deref()
+        .map(|p| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}")))
+        .transpose()
+    {
+        Ok(d) => d,
+        Err(e) => return Outcome::fail(&e),
+    };
+    match mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref())) {
         Ok((d, f)) => {
             let text = match f {
                 mzlab_feat::chem::draw::Format::Scene => {
