@@ -316,7 +316,7 @@ T0 = time.time()
 
 def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
     """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt in turn, so the parts take about the same time and are the same on every call.
-    Night (the CI of notte.yml): part 1 also runs syntax, texts, pytest and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
+    Night (the CI of notte.yml): part 1 also runs syntax, texts and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
     plain (--fumo --parte): no part has that extra work; part 1 takes one slot per 3(n-1)+1, starting with rank[0] (e2e_giro_intestazione on chromium/Linux)."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
     wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 and not plain else [1, *range(2, n + 1), *range(2, n + 1), *range(2, n + 1)]
@@ -399,7 +399,7 @@ def main() -> None:
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
                     help="e2e run together (default: CPU - 1, at most 6; 1 = one at a time)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
-    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
+    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts and prova_hr (pytest has its own jobs in the night), every part a share of the e2e")
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
     ap.add_argument("--cambiati", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
@@ -423,7 +423,8 @@ def main() -> None:
         js_syntax(results)
         i18n(results)
         codice(results)
-        pytest(results, 1800)
+        if not parte:      # the night (--parte) has its own `pytest` jobs on five setups: a second serial pytest here took 1800 s of part 1 and starved its e2e (run 44635648355: 50 e2e not run)
+            pytest(results, 1800)
         if not a.rapida:
             hr_round(results)
     if not a.senza_e2e:

@@ -224,7 +224,7 @@ jobs:
 
 
   # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
-  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts, pytest and prova_hr), each with its own report .verifica/ultimo.md
+  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts and prova_hr), each with its own report .verifica/ultimo.md
   completa:
     if: inputs.solo == ''
     name: completa (${{ matrix.parte }}/5)
@@ -294,7 +294,7 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       # --budget: when spent no test starts and the running one is cut, so the report .verifica/ultimo.md is always written (the step ceiling kills it with none). Counted from the start of the run:
-      # part 1 does syntax, pytest and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
+      # part 1 does syntax, texts and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
       - name: Complete verification (part ${{ matrix.parte }}/5)
         timeout-minutes: 55
         run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget ${{ matrix.parte == 1 && 2820 || 2400 }}
