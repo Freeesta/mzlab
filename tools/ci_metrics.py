@@ -27,11 +27,13 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import ci_metrics_data as dati_ci
+from ci_metrics_api import ApiDenied, api_get, denied_wait, warn  # noqa: F401
 import ci_metrics_file as file_ci
 import ci_metrics_day as giorno_ci
 from ci_metrics_day import pr_recent_rows as _recent
@@ -53,24 +55,6 @@ CATEGORIE = [
     ("lint", r"lint|clippy|fmt|format|tsc|syntax|machete|deny|globals|i18n|sources"),
     ("test", r"test|e2e|smoke|pytest|guards|parity|verifica|determinism"),
 ]
-
-
-def api_get(path: str):
-    base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-    repo = os.environ.get("GITHUB_REPOSITORY", "Freeesta/mzlab")
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "mzlab-stat-ci"}
-    if os.environ.get("GITHUB_TOKEN"):
-        headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    req = urllib.request.Request(f"{base}/repos/{repo}{path}", headers=headers)
-    # 503 "Egress is over the account limit" lasts longer than a few seconds: back off up to about a minute
-    for i in range(6):
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.load(r)
-        except Exception:
-            if i == 5:
-                raise
-            time.sleep(2**i)
 
 
 def ts(iso: str | None) -> datetime | None:
@@ -240,7 +224,11 @@ def conflict_rows(event: dict, data: str, api=api_get, wait=time.sleep, provare:
     if event.get("ref") != "refs/heads/main":
         return []
     sha = event["after"]
-    commit = api(f"/commits/{sha}")
+    try:
+        commit = api(f"/commits/{sha}")
+    except ApiDenied as e:
+        warn(f"conflict row skipped for {sha[:7]}: {e}")
+        return []
     main_file = {f["filename"] for f in commit.get("files", [])}
     m = re.search(r"Merge pull request #(\d+)|\(#(\d+)\)", commit["commit"]["message"])
     unit = int(m.group(1) or m.group(2)) if m else None
@@ -459,20 +447,25 @@ def main() -> int:
             write_rows(p, righe)
         print(f"{a.massimo - remain} rows tried")
         return 0
-    if a.comando == "registra-recenti":
-        righe, cursor = recent_rows(data)
-        if a.cursore:
-            with open(a.cursore, "w", encoding="utf-8") as f:
-                json.dump({"ultimo": cursor}, f)
-    elif a.comando == "registra-coda":
-        righe = giorno_ci.queue_rows(api_get, adesso())
-    elif a.comando == "registra-pr-recenti":
-        righe = pr_recent_rows(data)
-    else:
-        with open(a.evento, encoding="utf-8") as f:
-            event = json.load(f)
-        righe = {"registra-run": lambda: run_rows(event),
-                 "registra-conflitti": lambda: conflict_rows(event, data, provare=True)}[a.comando]()
+    try:
+        if a.comando == "registra-recenti":
+            righe, cursor = recent_rows(data)
+            if a.cursore:
+                with open(a.cursore, "w", encoding="utf-8") as f:
+                    json.dump({"ultimo": cursor}, f)
+        elif a.comando == "registra-coda":
+            righe = giorno_ci.queue_rows(api_get, adesso())
+        elif a.comando == "registra-pr-recenti":
+            righe = pr_recent_rows(data)
+        else:
+            with open(a.evento, encoding="utf-8") as f:
+                event = json.load(f)
+            righe = {"registra-run": lambda: run_rows(event),
+                     "registra-conflitti": lambda: conflict_rows(event, data, provare=True)}[a.comando]()
+    except ApiDenied as e:
+        # a metrics collector never turns main red: no rows this time, the cursor does not advance, the next poll retries
+        warn(f"{a.comando}: no rows recorded ({e})")
+        righe = []
     if a.nuovi:
         write_rows(a.nuovi, righe)
     else:
