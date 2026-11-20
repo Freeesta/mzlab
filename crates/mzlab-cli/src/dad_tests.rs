@@ -159,3 +159,44 @@ fn delay_with_no_matching_peak_is_exit_1_with_the_delay_and_correlation_found() 
 fn f_example() -> String {
     example()
 }
+
+#[test]
+fn trace_csv_is_the_same_points_as_the_json_and_feeds_the_peak_commands() {
+    let f = example();
+    let j = dad(&["trace", &f, "--nm", "250,260"]);
+    assert_eq!(j.code, 0, "{}", j.stderr);
+    let jt = String::from_utf8(j.stdout).unwrap();
+    let v = parse(jt.trim().as_bytes()).unwrap();
+    let (rt, y) = (v.get("rt").unwrap().arr(), v.get("y").unwrap().arr());
+    let o = dad(&["trace", &f, "--nm", "250,260", "--format", "csv"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let t = String::from_utf8(o.stdout).unwrap();
+    let mut lines = t.lines();
+    assert_eq!(lines.next(), Some("rt_min,intensity"));
+    let rows: Vec<&str> = lines.collect();
+    assert_eq!(rows.len(), rt.len());
+    assert!(!rows.is_empty() && rt.len() == y.len());
+    // the tokens are the engine's own: the CSV and the JSON hold the same text
+    let want = crate::extract::points_csv(
+        "rt_min",
+        "intensity",
+        &crate::extract::pairs(
+            &crate::extract::tokens(&jt, "rt").unwrap(),
+            &crate::extract::tokens(&jt, "y").unwrap(),
+            None,
+        ),
+    );
+    assert_eq!(t, want);
+    // a difference prints its rows the same way; --format is for trace only; a bad value is usage
+    let d = dad(&["trace", &f, "--nm", "250", "--minus", &f, "--format", "csv"]);
+    assert_eq!(d.code, 0, "{}", d.stderr);
+    assert!(String::from_utf8(d.stdout)
+        .unwrap()
+        .starts_with("rt_min,intensity\n"));
+    for a in [
+        vec!["spectrum", &f, "--rt", "1", "--format", "csv"],
+        vec!["trace", &f, "--nm", "250", "--format", "xml"],
+    ] {
+        assert_eq!(dad(&a).code, 2, "{a:?}");
+    }
+}

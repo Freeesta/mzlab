@@ -29,9 +29,19 @@ impl Drawn {
     }
 }
 
+impl Drawn {
+    /// The text a patch gave atom `i`, drawn instead of its symbol (and its hydrogens) in the pictures, KET and CDXML.
+    pub(super) fn label_at(&self, i: usize) -> Option<&str> {
+        self.labels
+            .iter()
+            .find(|l| l.0 == i as u32)
+            .map(|l| l.1.as_str())
+    }
+}
+
 /// The `label` of atom `i` in the scene, when the patch set one.
 pub(super) fn put_label(o: &mut Out, d: &Drawn, i: usize) {
-    if let Some((_, l)) = d.labels.iter().find(|l| l.0 == i as u32) {
+    if let Some(l) = d.label_at(i) {
         o.raw(",\"label\":").str(l);
     }
 }

@@ -20,7 +20,7 @@ pub const HELP: &str = "mzlab-cli dad: the optical (DAD / PDA) matrix of a file 
 
 usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale none|max|tic|fit|FACTOR] [--shift MIN] [--rt T0[,T1]] [--nm N0[,N1]]
        mzlab-cli dad spectrum FILE --rt T0[,T1] [--minus B [--scale S] [--shift MIN]]
-       mzlab-cli dad trace FILE --nm N0[,N1] [--minus B [--scale S] [--shift MIN]]
+       mzlab-cli dad trace FILE --nm N0[,N1] [--minus B [--scale S] [--shift MIN]] [--format json|csv]
        mzlab-cli dad ms-at FILE --rt T [--offset MIN] [--level N]
        mzlab-cli dad delay FILE
 
@@ -33,6 +33,7 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
   delay       the offset the engine estimates by matching the UV peaks with the TIC (`delay`, `peaks`, `corr`): evidence to accept or not, never applied;
               no matching peak, or traces too short to compare, is exit 1
   --sample ID the sample of a file with several (.wiff); --minus-sample ID the same for B
+  --format F  trace only: json (default) or csv with the header rt_min,intensity, the input of every `peak` command (a difference: its rows too)
   --json      accepted; every answer is JSON, and an error is also an error/1 document on stdout
   --out PATH  write there instead of the standard output
 exit codes: 0 done, 1 data error (no DAD, nothing overlaps, no scan or peak found), 2 usage, 4 a file missing or unreadable, 5 a sample id the file does not have";
@@ -50,6 +51,7 @@ struct Req {
     nm: Option<(f64, f64)>,
     offset: f64,
     level: u8,
+    csv: bool,
     json: bool,
     out: Option<PathBuf>,
 }
@@ -88,6 +90,13 @@ fn option(
         "--out" => r.out = Some(PathBuf::from(val("--out")?)),
         "--minus" => r.minus = Some(PathBuf::from(val("--minus")?)),
         "--view" => r.view = val("--view")?,
+        "--format" => {
+            r.csv = match val("--format")?.as_str() {
+                "json" => false,
+                "csv" => true,
+                _ => return Err("--format needs json or csv".into()),
+            }
+        }
         "--scale" => r.scale = val("--scale")?,
         "--shift" => r.shift = minutes(val("--shift")?, "--shift")?,
         "--offset" => r.offset = minutes(val("--offset")?, "--offset")?,
@@ -124,6 +133,9 @@ fn check(r: &mut Req) -> std::result::Result<(), String> {
     if r.verb == "subtract" {
         r.minus = r.files.pop();
     }
+    if r.csv && r.verb != "trace" {
+        return Err("--format is for dad trace".into());
+    }
     if r.verb != "subtract" && r.view != "report" {
         return Err("--view is for dad subtract".into());
     }
@@ -154,6 +166,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
         nm: None,
         offset: 0.0,
         level: 1,
+        csv: false,
         json: false,
         out: None,
     };
@@ -393,14 +406,27 @@ fn json_str(s: &str) -> String {
     o.0
 }
 
+/// The `rt_min,intensity` table of a trace answer (`{"rt":[..],"y":[..],..}`, plain or of a difference): the tokens are the engine's own, as `trace chrom` prints them.
+fn trace_csv(text: &str) -> Result<String> {
+    let bad = || Error::new("error.badIndex");
+    let x = crate::extract::tokens(text, "rt").ok_or_else(bad)?;
+    let y = crate::extract::tokens(text, "y").ok_or_else(bad)?;
+    Ok(crate::extract::points_csv(
+        "rt_min",
+        "intensity",
+        &crate::extract::pairs(&x, &y, None),
+    ))
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let c = match parse(args) {
         Ok(Some(c)) => c,
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    match run_req(&c) {
-        Ok(t) => crate::emit(t + "\n", &c.out),
+    let answer = run_req(&c).and_then(|t| if c.csv { trace_csv(&t) } else { Ok(t + "\n") });
+    match answer {
+        Ok(t) => crate::emit(t, &c.out),
         Err(e) => Outcome::fail_error(&e).with_hint(match e.key {
             "err.sample.unknown" => "list the samples with `mzlab-cli sample list FILE --json`",
             "err.session.fileNotFound" => "check the path",
