@@ -10,6 +10,7 @@ use crate::model::{Atom, Bond, Coords, GroupKind, Mol};
 use crate::molfile_stereo::{double_bonds, groups, tetra};
 use crate::molfile_v2000::read_v2000;
 use crate::molfile_v3000::read_v3000;
+use crate::sortm::SortM;
 use crate::valence::shortfall;
 
 /// Elements that get implicit hydrogens from the valence rules.
@@ -134,7 +135,7 @@ impl Draft {
                 o: b.order,
             })
             .collect();
-        bonds.sort_by_key(|b| (b.a, b.b));
+        bonds.sortm_by_key(|b| (b.a, b.b));
         let mut stereo = tetra(&self, &atoms);
         stereo.extend(double_bonds(&self));
         let groups = groups(&self, &stereo)?;

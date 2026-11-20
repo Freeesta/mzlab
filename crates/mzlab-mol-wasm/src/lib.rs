@@ -39,8 +39,14 @@ pub fn sdf(request: &str) -> std::result::Result<String, JsValue> {
 
 /// `open/1` of the bytes of a structure file, the same bytes as `mzlab-cli mol open`.
 #[wasm_bindgen]
-pub fn open_file(data: &[u8]) -> String {
-    mzlab_feat::chem::structure_file::open_json_bytes(data)
+pub fn open_file(data: &[u8]) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::structure_file::open_json_bytes(data).map_err(js_err)
+}
+
+/// Whether a file of this many bytes is read: `{"limit": L}`, else the `error.open.tooBig` error; the site asks it before reading a dropped file.
+#[wasm_bindgen]
+pub fn open_size(size: f64) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::structure_file::size_json_f64(size).map_err(js_err)
 }
 
 /// `cip/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol cip`.

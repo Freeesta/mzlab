@@ -8,6 +8,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
+from lib import open_mzfinder  # noqa: E402
 from lib import axe_path  # noqa: E402
 
 steps = []
@@ -43,9 +44,8 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: errs.append("console: " + m.text) if m.type == "error" and re.search(r"rete|TPRETE", m.text + str(m.location)) else None)
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector('#nav button[data-v="tpmine"]', state="attached", timeout=120000)
+        pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")     # the view needs no engine
-        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
         pg.wait_for_function("typeof window.TDATI === 'object'", timeout=120000)
         pg.evaluate("() => window.TPLAZY.load('rete-vista.js')")
         pg.wait_for_function("typeof window.TPRETE_VIEW === 'object'", timeout=20000)

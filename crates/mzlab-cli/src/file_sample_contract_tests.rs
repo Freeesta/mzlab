@@ -307,6 +307,9 @@ fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
         ("sample select", vec![], 2),
         ("sample select", vec!["/no/such.wiff", "--sample", "1"], 4),
         ("sample select", vec![&w, "--sample", "9"], 5),
+        ("sample select", vec![&w, "--sample", "1", "--ranges"], 0),
+        ("sample select", vec![&w, "--ranges"], 2),
+        ("sample select", vec![&w, "--sample", "9", "--ranges"], 5),
     ];
     let mut seen: BTreeMap<&str, BTreeSet<u8>> = BTreeMap::new();
     for (name, rest, code) in &probes {

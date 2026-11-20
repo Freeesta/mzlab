@@ -32,7 +32,6 @@ embed!(
     "error-1.json",
     "evalrun-1.json",
     "evid-1.json",
-    "explain-missing-1.json",
     "feature_pipeline-1.json",
     "file_info-1.json",
     "filtri-1.json",

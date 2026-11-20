@@ -3,6 +3,7 @@
 
 use crate::codec::MolError;
 use crate::model::{Bond, Cfg, Coords, Mol, Parity, Prop, Region, Stereo, StereoGroup};
+use crate::sortm::SortM;
 
 impl Mol {
     /// The record with atom `i` moved to index `new_of_old[i]` (a permutation of `0..atoms.len()`). Identity layers are kept as they are.
@@ -34,14 +35,14 @@ impl Mol {
                 o: b.o,
             })
             .collect();
-        bonds.sort_by_key(|b| (b.a, b.b));
+        bonds.sortm_by_key(|b| (b.a, b.b));
         let adj = neighbours(n, &bonds);
         let mut stereo: Vec<Stereo> = self
             .stereo
             .iter()
             .map(|s| move_stereo(s, &map, &adj))
             .collect();
-        stereo.sort_by_key(|s| match s {
+        stereo.sortm_by_key(|s| match s {
             Stereo::Tetra { c, .. } => (0, *c, 0),
             Stereo::Db { a, b, .. } => (1, *a, *b),
         });
@@ -57,14 +58,14 @@ impl Mol {
             .iter()
             .map(|g| {
                 let mut atoms: Vec<u32> = g.atoms.iter().map(|&a| map(a)).collect();
-                atoms.sort_unstable();
+                atoms.sortm();
                 StereoGroup {
                     kind: g.kind,
                     atoms,
                 }
             })
             .collect();
-        groups.sort_by(|x, y| x.atoms.cmp(&y.atoms));
+        groups.sortm_by(|x, y| x.atoms.cmp(&y.atoms));
         groups
     }
 
@@ -88,7 +89,7 @@ impl Mol {
             .iter()
             .map(|r| {
                 let mut atoms: Vec<u32> = r.atoms.iter().map(|&a| map(a)).collect();
-                atoms.sort_unstable();
+                atoms.sortm();
                 Region { atoms, ..r.clone() }
             })
             .collect();
@@ -124,7 +125,7 @@ fn move_stereo(s: &Stereo, map: &dyn Fn(u32) -> u32, adj: &[Vec<u32>]) -> Stereo
             Stereo::Tetra {
                 c: map(*c),
                 refs: moved.map(|mut r| {
-                    r.sort_unstable();
+                    r.sortm();
                     r
                 }),
                 implicit_h: *implicit_h,

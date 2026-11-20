@@ -1,4 +1,4 @@
-"""Browser tab title in administrator mode: every view (Dati, Disegno, Flow, Tabui) sets its own document.title when the tab is switched, with no reload."""
+"""Browser tab title in administrator mode: every view (Data, Drawing, Flow) sets its own document.title when the tab is switched, with no reload."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
@@ -12,14 +12,14 @@ try:
         pg = r.page(p)
         pg.context.route("http://127.0.0.1:8765/**", lambda rt: rt.fulfill(status=200, content_type="application/json", headers={"access-control-allow-origin": "*"}, body='{"ok": false}'))
         for _ in range(5): pg.click("header img.logo")
-        pg.wait_for_selector("#nav [data-v=flow]", timeout=30000); pg.wait_for_selector("#nav [data-v=tpmine]", timeout=30000)
+        pg.wait_for_selector("#nav [data-v=flow]", timeout=30000)
         app = pg.evaluate("window.APP_NAME")
         def title(view, name):
             def f():
                 pg.click(f"#nav [data-v={view}]")
                 wait_for_js(pg, f"document.title === {name!r}".replace("'", '"'), 10000)
             step(f"title of {view}", f)
-        for view, name in [("flow", f"Flow · {app}"), ("tpmine", f"Tabui · {app}"), ("draw", pg.evaluate("I18N.t('nav.draw')") + f" · {app}"), ("data", None)]:
+        for view, name in [("flow", f"Flow · {app}"), ("draw", pg.evaluate("I18N.t('nav.draw')") + f" · {app}"), ("data", None)]:
             if name: title(view, name)
             else:
                 def d():

@@ -4,6 +4,7 @@
 use crate::codec::MolError;
 use crate::elements::is_element;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
+use crate::sortm::SortM;
 use std::collections::BTreeMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
@@ -179,7 +180,7 @@ pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, 
             out.extend(list.iter().map(|&a| (a, h)));
         }
     }
-    out.sort_unstable();
+    out.sortm();
     Ok(out)
 }
 

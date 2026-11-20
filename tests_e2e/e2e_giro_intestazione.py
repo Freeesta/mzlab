@@ -7,12 +7,12 @@ from lib_giro import *
 steps = []
 step = make_step(steps)
 r = Run(port=8996, wd="/tmp/wd_giro_intestazione")
-VIEWS = ["draw", "flow", "tpmine"]
+VIEWS = ["draw", "flow"]
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         wait_for_js(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
-        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
+        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]')")
         step("no samples, Data: every header button opens and closes, nothing moves", lambda: walk(pg, "data, empty"))
         step("no samples, draw: every header button opens and closes, nothing moves", lambda: (view(pg, "draw"), walk(pg, "draw, empty"), view(pg, "data")))
         step("no samples: Data → each view → Data moves nothing", lambda: round_trip(pg, VIEWS))

@@ -397,6 +397,7 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
 
 mod listing;
 mod outcome;
+pub mod ranges;
 pub mod selection;
 mod skips;
 

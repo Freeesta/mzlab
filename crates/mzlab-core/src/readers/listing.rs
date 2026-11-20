@@ -31,6 +31,9 @@ pub struct Listing {
     /// `(bytes of the data file, where its indexed part ends)`.
     pub scan: Option<(u64, u64)>,
     pub samples: Vec<Summary>,
+    /// `(sample id, start, end)` of each sample's section in the data file, ascending by start (`start == end` for a sample with no section): what a range copy
+    /// (`readers::ranges`) keeps of the data file. Empty for a reader whose samples are not byte sections of one file.
+    pub sections: Vec<(u32, u64, u64)>,
 }
 
 /// The listing of the engine (`samples_json`, kept byte for byte for its callers): the page and the app read it.

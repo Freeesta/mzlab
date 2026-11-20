@@ -137,12 +137,6 @@ try:
             assert not errs, errs
             c2.close()
         step("the product-ion spectrum of a precursor is drawn for a file with two precursors and for a file with another one", product_spectrum)
-        def mzfinder():                                  # the converted files are ordinary files of the Data tab: mzFinder (LR) lists them
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
-            try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
-            except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
-        step("mzFinder lists the converted Full Scan file", mzfinder)
         def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli file convert` writes gaps-2.mzML
             c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))

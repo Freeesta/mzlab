@@ -40,9 +40,6 @@
  "funzioni": {
   "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 109,
   "TP_Mine/files/feat-worker.js::createFeatPool": 117,
-  "TP_Mine/js/20_tpmine.js::open": 415,
-  "TP_Mine/js/21_tpmine_hr.js::render": 196,
-  "TP_Mine/js/23_tpmine_albero.js::mount": 193,
   "TP_Mine/js/42_tp_table.js::mount": 283,
   "crates/mzlab-core/examples/raw_times.rs::phases": 85,
   "crates/mzlab-core/src/composition.rs::Res": 249,
