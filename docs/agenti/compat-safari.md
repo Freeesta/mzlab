@@ -17,7 +17,7 @@
 | `SharedArrayBuffer`, `crossOriginIsolated` | `idxpool.js`, `idx-aiuti.js` | 15.2 (COOP/COEP from `sw.js`) | indexing with a single builder, same bytes | `e2e_isolamento` |
 | `AbortSignal.any` | `pannelli.js` (corrections summary) | 17.4 | `compat.js` | `test_compat`, `e2e_safari_ipad` |
 | `Array.prototype.at`, `findLast`, `Object.hasOwn` | `avvio.js`, `flow-run-end.js`, `libreria-worker.js` | 15.4 | below the floor | — |
-| `requestIdleCallback` | `first-paint.js`, `mappa.js`, `shell.js`, `rust-budget.js`, `tpmine-loader.js`, `flow-tool.js`, `reatt-auto.js` | absent | every use falls back to `setTimeout` | — |
+| `requestIdleCallback` | `first-paint.js`, `mappa.js`, `shell.js`, `rust-budget.js`, `tpmine-loader.js`, `flow-tool.js` | absent | every use falls back to `setTimeout` | — |
 | `navigator.clipboard.writeText` / `write` | ~30 "Copy", "Copy the image" buttons | 13.1; rejected after an `await` (gesture consumed) | `compat.js`: `clipboardCopy({type: value or Promise})` creates the `ClipboardItem` inside the click and fills it later (PROV row, PNG); if missing, `writeText`; a rejected `writeText` goes to `execCommand("copy")` with a textarea, then focus returns | `test_compat`, `e2e_tabelle_dati`, `e2e_banco_barra` |
 | `<input type=file accept=".raw,.wiff,…">` | `#pick`, libraries, lists, samples | iPadOS greys out unknown extensions | `compat.js`: on `(hover: none) and (pointer: coarse)` removes `accept` (kept in `data-accept`) on touch, `click()` or `showPicker()`; the app checks the type | `test_compat`, `e2e_safari_ipad` |
 | `showDirectoryPicker` | `cartella-puntata.js`, `libreria-corpo.js` | absent | `capacita` `cartellaLocale`; `#pickdir` (`webkitdirectory`) or OPFS | `e2e_capacita` |

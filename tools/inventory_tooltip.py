@@ -189,7 +189,7 @@ def visible(r, cat):
 NOT_TOOLTIP = {"appname.js:6", "appname.js:8", "avvio.js:4", "banco.js:63", "banco.js:67", "dda.js:118", "dda.js:299", "dda.js:308",
                "eventi.js:274", "pannelli.js:161", "pannelli.js:358", "pannelli.js:649", "pannelli.js:651", "pannelli-annulla.js:25",
                "tabs.js:206", "tabs.js:208", "index.html:8", "shell.js:137", "xic-lente.js:115", "llm/llm-clienti.js:56",
-               "TP_Mine/js/20_tpmine.js:200", "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
+               "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
 OVERRIDE = {
     "etpk.tip.rt": ("B", "repeats the RT already written on the label (CROMA-CLICK-PICCO)"),
     "tip.peakLabel": ("D", "only «Right-click: actions» (CROMA-CLICK-PICCO)"),

@@ -61,7 +61,6 @@ mod flow_drift;
 #[cfg(test)]
 mod flow_drift_tests;
 mod flow_estimate;
-mod flow_explain;
 mod flow_export;
 #[cfg(test)]
 mod flow_export_tests;

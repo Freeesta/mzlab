@@ -1,5 +1,5 @@
 // @ts-strict
-// Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a normal tab.
+// Loader of the mzFinder package (internal name "TP Mine"): the engine, readers and views that Flow and the other tabs use; it has no tab of its own.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) and are downloaded and run once the page is usable (idle after qqReady) or on the first use of a tool tab (the tab shows a loading note until they are ready). No switch, no password.
 // static/mzfinder/indice.json = {early: [names, run first, before the data files], js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
@@ -107,18 +107,13 @@
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-draw");
     const old = tabs.get(t.id);
-    if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
-      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.dataset.tname = t.name; if (!old.late) old.b.innerHTML = label(t);
-      if (old.opened) { old.sec.textContent = ""; openIn(old); }
-      return;
-    }
     if (!nav || !anchor || old || document.getElementById("v-" + t.id)) return;
     const pre = /** @type {HTMLElement | null} */ (nav.querySelector(`[data-late][data-v="${t.id}"]`));
     const b = pre || document.createElement("button"); b.dataset.v = t.id; b.dataset.tname = t.name; b.title = t.desc || t.name;
     if (pre) pre.removeAttribute("data-late");
     else { b.innerHTML = label(t); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px"; nav.appendChild(b); }
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.setAttribute("role", "main"); sec.hidden = true; anchor.after(sec);
-    /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false, late: !!pre };
+    /** @type {any} */ const x = { b, sec, fn: null, t, opened: false, late: !!pre };
     b.onclick = () => openView(t.id);
     x.fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
@@ -128,12 +123,12 @@
     document.addEventListener("tpview", x.fn);
     tabs.set(t.id, x);
   }
-  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); x.sec.textContent = "The tool failed: " + (e && e.message || e); } }
   function openTool(t) {
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); host.querySelector(".qt-bd").textContent = "The tool failed: " + (e && e.message || e); }
   }
 
   // ---- loading (once per page): index, then extra files + the scripts' downloads in parallel, then the scripts run in order
@@ -155,8 +150,6 @@
     settling = true;
     try { await Promise.all(runOrdered(js)); } finally { settling = false; }
   }
-  // the tab appears at once with a short loading note; the real tool takes its place when its script registers
-  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   function showTabs() {
     for (const t of tools) if (t.nav) addTab(t);
     render();
@@ -166,14 +159,11 @@
     if (!on) return;
     if (!loaded) loaded = load(low === true);
     try { await loaded; } catch (e) {
-      loaded = null; console.error("Tabui failed to load:", e);
-      const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "Tabui failed to load. Reload the page to try again.";
+      loaded = null; console.error("mzFinder package failed to load:", e);
       return;
     }
     if (!on) return;
     showTabs();
-    // a direct address (#/tpmine) fired its tpview before this tab and its section existed: show the view now
-    { const x = tabs.get("tpmine"); if (shellReady() && S.view === "tpmine" && x && !x.opened) openView("tpmine"); }   // once: openView fires tpview, which calls this again
   }
   // for callers (tests, tools) that need the package without opening a tab: same promise as the idle start
   /** @type {any} */ (reg).ensure = ensureLoaded;
@@ -187,14 +177,11 @@
   }
   function turnOn() {
     on = true; ensureUi();
-    if (!tabs.size) addTab(PLACEHOLDER);
     // tabs written in index.html that have no section yet (Flow): a click loads the package, then opens the view
     document.querySelectorAll("#nav [data-late]").forEach(b => { const el = /** @type {HTMLElement} */ (b); if (!el.dataset.v || tabs.has(el.dataset.v)) return; el.onclick = () => openLate(/** @type {string} */ (el.dataset.v)); });
     // a click that came before this script ran (first-paint.js keeps it): replayed now, so it is not lost while the page's own scripts load
     const pending = /** @type {any} */ (window).MZLAB_LATE_CLICK; /** @type {any} */ (window).MZLAB_LATE_CLICK = null;
     if (pending) { if (tabs.has(pending)) openView(pending); else openLate(pending); }
-    // a direct address (#/tpmine) typed or pasted: opened like a click that came early, since its tpview may have fired before this listener existed
-    else if (typeof hashView === "function" && hashView() === "tpmine") openLate("tpmine");
     document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
     const idle = () => { const run = () => { ensureLoaded(true); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
     // without an engine qqReady never comes (plain web folder, failed engine): start anyway after a long delay

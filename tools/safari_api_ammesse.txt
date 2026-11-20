@@ -6,7 +6,6 @@ TP_Mine/js/52_attributio_banco.js::createWritable::1  # a picker folder, absent 
 flow/lazy/flow-web-msn.js::createWritable::1  # OPFS file: compat.js
 mzlab/web/infusione-grafo-esporta.js::createWritable::1  # OPFS file: compat.js
 mzlab/web/libreria-cartella.js::createWritable::1  # if (fh.createWritable), else the sync handle
-TP_Mine/lazy/reatt-auto.js::requestIdleCallback::1  # typeof check, setTimeout
 flow/js/flow-tool.js::requestIdleCallback::1  # "in window", setTimeout
 mzlab/web/first-paint.js::requestIdleCallback::1  # || setTimeout
 mzlab/web/mappa-caldo.js::requestIdleCallback::1  # ? :, setTimeout

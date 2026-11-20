@@ -23,6 +23,7 @@ const GLOBAL: &[(&str, &str)] = &[
 /// What a flag means, by name; the usage line says only its value.
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
+    ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE; repeatable"),
     ("--sample", "ids: 1,3,5 or 2-4"),
     ("--no-points", "omit the MS2 points"),
@@ -112,7 +113,7 @@ const CSV: &[&str] = &["features", "peak table"];
 /// What the exit codes mean (`exit.rs`).
 pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::OK, "ok"),
-    (exit::DATA, "data or domain error, partial outputs written"),
+    (exit::DATA, "data error, partial outputs written"),
     (exit::USAGE, "usage"),
     (exit::INTEGRITY, "plan, schema or integrity"),
     (exit::INPUT, "input missing or unreadable"),

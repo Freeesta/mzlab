@@ -63,7 +63,7 @@ fn resolve(raw: &Raw) -> Result<(Vec<u8>, Vec<u8>), MolError> {
             h: u32::from(a.h),
         })
         .collect();
-    if !assign(&ends, &mut orders, &facts) {
+    if assign(&ends, &mut orders, &facts).is_none() {
         return Err(MolError::Smiles(
             "the aromatic system cannot be kekulised".into(),
         ));

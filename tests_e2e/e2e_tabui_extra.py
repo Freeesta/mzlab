@@ -6,6 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402
+from lib import open_mzfinder  # noqa: E402
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -44,8 +45,8 @@ try:
             c = b.new_context(viewport={"width": 1100, "height": 900}, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
-            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_function("window.PIPET && window.TPRIGA", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
+            pg.wait_for_function("window.PIPET && window.TPRIGA", timeout=60000)
             pg.evaluate(STUB, extra); pg.wait_for_selector("#ex-host #ft-t tbody tr", timeout=20000)
             return pg
         pg = fresh(False)

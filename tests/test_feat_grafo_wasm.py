@@ -185,3 +185,15 @@ def test_link_through_wasm_equals_the_cli_and_the_reference(pkg, tmp_path):
         req.write_text(json.dumps(c["request"]), encoding="utf-8")
         site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "link")
         assert site == cli("mol", "link", str(req), runner=run) == c["link"] + "\n", c
+
+
+def test_sel_counts_the_aromatic_hydrogen_ketcher_states_like_the_cli(pkg, tmp_path):
+    # pyrrole as Ketcher writes it: aromatic bonds and the H of the N in an MRV_IMPLICIT_H data group
+    atoms = "".join(f"{i:10.4f}{0:10.4f}{0:10.4f} {e:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for i, e in enumerate("NCCCC"))
+    bonds = "".join("%3d%3d  4  0  0  0  0\n" % (i + 1, (i + 1) % 5 + 1) for i in range(5))
+    group = "M  STY  1   1 DAT\nM  SLB  1   1   1\nM  SAL   1  1   1\nM  SDT   1 MRV_IMPLICIT_H\nM  SDD   1     0.0000    0.0000    DA    ALL  1       1\nM  SED   1 IMPL_H1\n"
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({"molfile": "\n  qqq\n\n  5  5  0  0  0  0  0  0  0  0999 V2000\n" + atoms + bonds + group + "M  END", "part": False}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
+    assert site == cli("mol", "sel", str(req), runner=run)
+    assert (json.loads(site)["label"]["text"], json.loads(site)["label"]["unpaired"]) == ("C4H5N", 0)

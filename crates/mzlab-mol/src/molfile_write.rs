@@ -162,6 +162,7 @@ impl Mol {
             atoms: Vec::new(),
             bonds: Vec::new(),
             collections: Vec::new(),
+            stated_h: Vec::new(),
         };
         for (i, a) in self.atoms.iter().enumerate() {
             d.atoms.push(DraftAtom {

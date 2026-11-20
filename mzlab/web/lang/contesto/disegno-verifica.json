@@ -8,5 +8,6 @@
   "draw.check.valenceCharge.next": "Next step; {fix} = the charge (e.g. +1) that would make the valence right.",
   "draw.check.charge.what": "Unusual charge; {q} = signed charge (e.g. +2), {el} = element symbol.",
   "draw.check.isotope.what": "Unknown isotope; {iso} = mass number written, {el} = element symbol.",
-  "draw.check.pieces.what": "Note about separate pieces; {n} = number of structures not bonded to each other."
+  "draw.check.pieces.what": "Note about separate pieces; {n} = number of structures not bonded to each other.",
+  "draw.check.aromaticH.what": "Note on the ring atom (e.g. an N of imidazole) the reader gave the hydrogen to, when the drawing has aromatic bonds and does not say which atom carries it."
 }

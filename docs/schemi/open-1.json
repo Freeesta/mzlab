@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "open/1",
+  "title": "open/1: the text the Drawing editor reads for a structure file",
+  "description": "The answer of `mzlab-cli mol open`; `text` is the file decoded as UTF-8 (binary CDX as base64), `changes` lists each change made to it, in this order: `charset` (the file was UTF-16 or 8-bit text) then `empty` (attributes with an empty value dropped from the CDXML start tags). Code: crates/mzlab-feat/src/chem/structure_file.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "text",
+    "changes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "open/1"
+    },
+    "text": {
+      "type": "string"
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "fix"
+        ],
+        "properties": {
+          "fix": {
+            "enum": [
+              "charset",
+              "empty"
+            ]
+          },
+          "charset": {
+            "type": "string"
+          },
+          "names": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
