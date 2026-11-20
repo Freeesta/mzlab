@@ -4,6 +4,7 @@
 use crate::codec::MolError;
 use crate::elements::is_element;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
+use crate::sortm::SortM;
 use std::collections::HashMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
@@ -173,7 +174,7 @@ fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
             out.extend(list.iter().map(|&a| (a, h)));
         }
     }
-    out.sort_unstable();
+    out.sortm();
     out
 }
 
