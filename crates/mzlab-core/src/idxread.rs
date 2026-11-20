@@ -325,6 +325,9 @@ fn u64_at(b: &[u8], at: usize) -> u64 {
     u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
 }
 
+/// Heap bytes per scan outside the `Scan` itself (the strings of its row), measured on the synthetic DDA table: 149 B native, and in the .wasm the size classes of the allocator and the fragmentation of the freed row text need more than the sum of the strings (tests/test_memoria_limite_wasm.py).
+pub const ROW_HEAP: usize = 192;
+
 impl<R: ReadAt> Index<R> {
     /// `size` = size of the index file (the header says how long it must be).
     pub fn open(mut r: R, size: u64) -> Result<Self> {
@@ -348,7 +351,11 @@ impl<R: ReadAt> Index<R> {
         let mut scans: Vec<Scan> = Vec::new();
         if let Some(rows) = head.rows.as_deref() {
             // counted first: a `Vec` that doubles holds one and a half times its rows while it moves; no room is `error.memoryBudget`, not a trap
-            scans = crate::budget::try_vec(json::count_elements(rows)?)?;
+            let count = json::count_elements(rows)?;
+            scans = crate::budget::try_vec(count)?;
+            // the strings of each row (filter, native id, ...) are small infallible allocations: ask for their room first, or a browser that grants
+            // less than the table needs ends in a trap in the middle of the parse (`tests/memory_scan_table.rs`, `docs/agenti/memory-limits.md`)
+            crate::budget::headroom(count.saturating_mul(ROW_HEAP))?;
             json::each_element(rows, |r| {
                 scans.push(crate::scanrow::scan_of_row(r, nativo).ok_or_else(bad)?);
                 Ok(())
