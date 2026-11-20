@@ -40,7 +40,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol P[ppm]|D[da]) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   the XIC of one or several m/z: trace/1, trace-set/1 or CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol T) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -147,7 +147,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol P[ppm]|D[da]) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   the XIC of one or several m/z: trace/1, trace-set/1 or CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol T) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -254,7 +254,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol P[ppm]|D[da]) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   the XIC of one or several m/z: trace/1, trace-set/1 or CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol T) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
