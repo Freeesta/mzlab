@@ -53,7 +53,11 @@ try:
             t = pg.inner_text("#tp-prev"); assert "uncertain" not in t and "level" not in t and pg.input_value("#tp-mol") == "C8H10O", (t, pg.input_value("#tp-mol"))
         step("a plain drawing: as before (formula of the SMILES), no note", plain)
         def uncertain():
-            pg.click("#tp-draw"); pg.wait_for_function("TPDraw.ready() && !document.querySelector('#tp-draw-use').disabled", timeout=90000)
+            pg.click("#tp-draw")
+            # the canvas still holds the unsaved drawing of the step before: loading the typed SMILES over it asks first (disegno-pulito.js); this test replaces it
+            pg.wait_for_function("(TPDraw.ready() && !document.querySelector('#tp-draw-use').disabled) || document.querySelector('#draw-unsaved')", timeout=90000)
+            if pg.locator("#draw-unsaved").count(): pg.click("#draw-unsaved #mm-drop")
+            pg.wait_for_function("TPDraw.ready() && !document.querySelector('#tp-draw-use').disabled", timeout=90000)
             pg.evaluate(f"{KET}.setMolecule('c1ccccc1CCO')"); pg.wait_for_function(f"{KET}.editor.struct().atoms.size === 9", timeout=10000)
             pg.evaluate(f"{KET}.editor.selection({{atoms:[0,1,2,3,4,5]}})")
             menu_on_atom(0); pg.locator("#ctx div", has_text="Brackets with").first.click()
