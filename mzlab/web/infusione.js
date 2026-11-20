@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // MSn infusion (kind "infusion"): the precursor tree of the file (/api/msn_tree, built in Rust from the index), the nodes as scan filters of the cells
-// of the bench (filt = "msn:<id>", with mtol/mce of the tree options added to every request by qs()), the Mean | Sum switch (modo=somma) and the
+// of the bench (filt = "msn:<id>", with mtol/mce of the tree options added to every request by qs()), the Mean | Sum switch (mode=sum) and the
 // right-click entries of a peak (infusione-menu.js). Classic script, loaded before banco.js; the tree panel is in infusione-albero.js.
 const INF = (() => {
   /** Options of the tree: tolerance of the precursors ("nom" | "0.01" | "10ppm"), energies separate or merged, mean or sum, deepest level shown (0 = all). */
@@ -39,7 +39,7 @@ const INF = (() => {
   const qs = (/** @type {string} */ url) => {
     if (!/msn(:|%3A)/i.test(url)) return url;
     let u = url + `&mtol=${O.tol}&mce=${O.ce ? 1 : 0}`;
-    if (O.sum && /^(\.\/)?api\/(spectrum|spectra|scanavg)\b/.test(u)) u += "&modo=somma";
+    if (O.sum && /^(\.\/)?api\/(spectrum|spectra|scanavg)\b/.test(u)) u += "&mode=sum";
     return u;
   };
   const node = (/** @type {any} */ j, /** @type {string | null | undefined} */ filt) => (filt && filt.startsWith("msn:") ? j.nodes.find((/** @type {any} */ n) => "msn:" + n.id === filt) || null : null);

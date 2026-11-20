@@ -77,23 +77,23 @@ def test_suggestion_has_minimal_fields_and_fixed_headings():
 
 def test_issue_url_expected_and_limit():
     u = node("B.urlIssue({title:'[Bug] x',body:'hello',ambiente:'UA',cut:'CUT'})")
-    assert u["url"].startswith("https://github.com/Freeesta/mzlab/issues/new?template=bug.yml&labels=bug&title=%5BBug%5D%20x&ambiente=UA&cosa=hello") and not u["troncato"]
+    assert u["url"].startswith("https://github.com/Freeesta/mzlab/issues/new?template=bug.yml&labels=bug&title=%5BBug%5D%20x&ambiente=UA&cosa=hello") and not u["truncated"]
     big = node("B.urlIssue({title:'t',body:'à€😀'.repeat(3000),ambiente:'UA',cut:'CUT'})")
-    assert big["troncato"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
+    assert big["truncated"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
 
 
 def test_suggestion_url_label_and_limit():
     u = node("B.urlIssue({kind:'suggestion',title:'Suggestion: x',body:'hello',cut:'CUT'})")
-    assert u["url"] == "https://github.com/Freeesta/mzlab/issues/new?template=suggestion.yml&labels=suggestion&title=Suggestion%3A%20x&idea=hello" and not u["troncato"]
+    assert u["url"] == "https://github.com/Freeesta/mzlab/issues/new?template=suggestion.yml&labels=suggestion&title=Suggestion%3A%20x&idea=hello" and not u["truncated"]
     big = node("B.urlIssue({kind:'suggestion',title:'t',body:'à€😀'.repeat(3000),cut:'CUT'})")
-    assert big["troncato"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
+    assert big["truncated"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
 
 
 def test_email_url_expected_and_limit():
     u = node("B.urlEmail({user:'a.b',host:'c.it',subject:'[Bug] x',body:'hello world',cut:'CUT'})")
-    assert u["url"] == "mailto:a.b@c.it?subject=%5BBug%5D%20x&body=hello%20world" and not u["troncato"]
+    assert u["url"] == "mailto:a.b@c.it?subject=%5BBug%5D%20x&body=hello%20world" and not u["truncated"]
     big = node("B.urlEmail({user:'a.b',host:'c.it',subject:'t',body:'à€😀'.repeat(3000),cut:'CUT'})")
-    assert big["troncato"] and len(big["url"]) <= 1900 and big["url"].endswith("CUT")
+    assert big["truncated"] and len(big["url"]) <= 1900 and big["url"].endswith("CUT")
 
 
 def test_title():

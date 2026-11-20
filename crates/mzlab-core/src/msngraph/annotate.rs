@@ -35,10 +35,10 @@ fn raggiunti(g: &Graph, r: usize) -> Vec<bool> {
     vivo[r] = true;
     let mut pila = vec![r];
     while let Some(p) = pila.pop() {
-        for a in g.archi.iter().filter(|a| a.da == p) {
-            if !vivo[a.a] && g.nodes[a.a].isotope_of.is_none() {
-                vivo[a.a] = true;
-                pila.push(a.a);
+        for a in g.edges.iter().filter(|a| a.from == p) {
+            if !vivo[a.to] && g.nodes[a.to].isotope_of.is_none() {
+                vivo[a.to] = true;
+                pila.push(a.to);
             }
         }
     }
@@ -69,9 +69,9 @@ fn state<'a>(g: &Graph, e: &'a Elementi, r: usize, rc: &[u32], o: &Options) -> S
     let n = g.nodes.len();
     let vivo = raggiunti(g, r);
     let (mut genitori, mut figli) = (vec![vec![]; n], vec![vec![]; n]);
-    for a in g.archi.iter().filter(|a| vivo[a.da] && vivo[a.a]) {
-        genitori[a.a].push(a.da);
-        figli[a.da].push(a.a);
+    for a in g.edges.iter().filter(|a| vivo[a.from] && vivo[a.to]) {
+        genitori[a.to].push(a.from);
+        figli[a.from].push(a.to);
     }
     let mut ordine: Vec<usize> = (0..n).filter(|&i| vivo[i] && i != r).collect();
     crate::sortc::by(&mut ordine, |a, b| {
@@ -296,20 +296,20 @@ fn losses(g: &mut Graph, st: &State) {
         Some(st.cand[i][0].c.clone())
     };
     let v: Vec<Option<(String, f64)>> = g
-        .archi
+        .edges
         .iter()
         .map(|a| {
-            let (p, c) = (choice(a.da)?, choice(a.a)?);
+            let (p, c) = (choice(a.from)?, choice(a.to)?);
             if !below(&c, &p) {
                 return None;
             }
             let d: Vec<u32> = p.iter().zip(&c).map(|(x, y)| x - y).collect();
-            let oss = g.nodes[a.da].mz - g.nodes[a.a].mz;
+            let oss = g.nodes[a.from].mz - g.nodes[a.to].mz;
             let teo = st.e.mass(&d);
-            Some((st.e.loss_text(&d), (oss - teo) / g.nodes[a.da].mz * 1e6))
+            Some((st.e.loss_text(&d), (oss - teo) / g.nodes[a.from].mz * 1e6))
         })
         .collect();
-    for (a, f) in g.archi.iter_mut().zip(v) {
+    for (a, f) in g.edges.iter_mut().zip(v) {
         a.formula = f;
     }
 }
@@ -390,9 +390,9 @@ fn togli(g: &mut Graph, keep: &[bool]) {
     for n in g.nodes.iter_mut() {
         n.isotope_of = n.isotope_of.and_then(|x| new[x]);
     }
-    g.archi.retain(|a| keep[a.da] && keep[a.a]);
-    for a in g.archi.iter_mut() {
-        (a.da, a.a) = (new[a.da].unwrap(), new[a.a].unwrap());
+    g.edges.retain(|a| keep[a.from] && keep[a.to]);
+    for a in g.edges.iter_mut() {
+        (a.from, a.to) = (new[a.from].unwrap(), new[a.to].unwrap());
     }
     g.radici = g.radici.iter().filter_map(|&r| new[r]).collect();
     for sp in g.spettri.iter_mut() {

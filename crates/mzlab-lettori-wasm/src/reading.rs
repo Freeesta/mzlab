@@ -241,15 +241,15 @@ pub fn family() -> String {
     mzlab_lettori::famiglia().into()
 }
 
-/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}` (a SCIEX pair counts the scans of sample 0 only, the others say 0). The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
-/// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
+/// What the module sees in a dataset: `{format, samples:[{id,name,scans}], reasons:[...]}` (a SCIEX pair counts the scans of sample 0 only, the others say 0). The `reasons` say what the engine's reader would not give: `"srm"` (SRM only
+/// as scans), `"pda"` (UV traces), `"variant"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
     let m = Members::new(names, sizes, read)?;
     #[cfg_attr(not(any(feature = "agilent", feature = "tutte")), allow(unused_mut))]
-    let mut motivi: Vec<&str> = Vec::new();
+    let mut reasons: Vec<&str> = Vec::new();
     #[cfg(any(feature = "agilent", feature = "tutte"))]
-    motivi.extend(mzlab_lettori::reasons_together(&mut m.fileset()));
+    reasons.extend(mzlab_lettori::reasons_together(&mut m.fileset()));
     let mut l = match open_probe(m.fileset()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
@@ -263,29 +263,29 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
                     | "err.file.wiffNeeds2"
             ) =>
         {
-            return Ok(r#"{"formato":"sciex-wiff","campioni":[],"motivi":["variante"]}"#.into())
+            return Ok(r#"{"format":"sciex-wiff","samples":[],"reasons":["variant"]}"#.into())
         }
         Err(e) => return Err(error_json(&e)),
     };
-    for x in mzlab_lettori::motivi(&mut *l, 0) {
-        if !motivi.contains(&x) {
-            motivi.push(x);
+    for x in mzlab_lettori::reasons(&mut *l, 0) {
+        if !reasons.contains(&x) {
+            reasons.push(x);
         }
     }
     let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"formato\":")
+    o.raw("{\"format\":")
         .str(l.format().id())
-        .raw(",\"campioni\":");
+        .raw(",\"samples\":");
     json_text::samples_json(&mut o, l.samples());
-    o.raw(",\"motivi\":[");
-    for (i, m) in motivi.iter().enumerate() {
+    o.raw(",\"reasons\":[");
+    for (i, m) in reasons.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(m);
     }
     o.raw("]}");
     Ok(o.0)
 }
 
-/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`apri_solo`), the method of the others is enough for `motivi`;
+/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`apri_solo`), the method of the others is enough for `reasons`;
 /// any other set opens as `apri`.
 fn open_probe(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,

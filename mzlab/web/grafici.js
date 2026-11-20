@@ -95,7 +95,7 @@ async function rawSeries(p) {
   const files = shownFor(p);
   if (p.type === "xic") {
     const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.canale) : null).then(d => ({
+    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.channel) : null).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
       color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));

@@ -103,10 +103,10 @@ pub fn warning(n: &crate::convert::Notice) -> String {
 }
 
 /// An entry of `method/1.warnings` (key and place) as the Method window says it: «text (key)», or «key: place» for a key without a text.
-pub(crate) fn method_note(key: &str, dove: &str) -> String {
+pub(crate) fn method_note(key: &str, place: &str) -> String {
     match text_of(key) {
-        Some(t) => format!("{} ({key})", t.replace("{dove}", dove)),
-        None => format!("{key}: {dove}"),
+        Some(t) => format!("{} ({key})", t.replace("{place}", place)),
+        None => format!("{key}: {place}"),
     }
 }
 

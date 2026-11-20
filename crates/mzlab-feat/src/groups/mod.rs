@@ -10,7 +10,7 @@ mod prev;
 mod sets;
 mod shapes;
 
-pub use json::{gruppi_json, opts_from_value, parse_input, run_json, samples_from_value, to_json};
+pub use json::{groups_json, opts_from_value, parse_input, run_json, samples_from_value, to_json};
 
 use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
@@ -199,11 +199,11 @@ pub(crate) struct Ctx<'a> {
 }
 
 fn size_err(what: &str) -> Error {
-    Error::new("error.gruppi.sizeMismatch").with("what", what)
+    Error::new("error.groups.sizeMismatch").with("what", what)
 }
 
 fn bad_opt(name: &'static str, value: impl ToString) -> Error {
-    Error::new("error.gruppi.badOpts").with(name, value)
+    Error::new("error.groups.badOpts").with(name, value)
 }
 
 /// The sizes of the arrays and the ranges of the options.
@@ -261,7 +261,7 @@ pub fn build(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<GroupsO
     check(tb, cs, opts)?;
     let conds = presence::conditions(cs);
     if conds.is_empty() {
-        return Err(Error::new("error.gruppi.noConditions"));
+        return Err(Error::new("error.groups.noConditions"));
     }
     check_factors(opts, &conds)?;
     let ref_ix = opts

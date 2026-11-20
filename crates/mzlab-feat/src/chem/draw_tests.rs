@@ -12,7 +12,7 @@ fn req(spec: &str, extra: &str) -> String {
 
 fn catalog() -> String {
     let p = format!(
-        "{}/../../mzlab/web/molecole/catalogo.csv",
+        "{}/../../mzlab/web/molecules/catalogue.csv",
         env!("CARGO_MANIFEST_DIR")
     );
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}"))

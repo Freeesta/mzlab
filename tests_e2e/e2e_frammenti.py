@@ -36,7 +36,7 @@ try:
         step("«All cuts…» opens the table with one row per bond", table)
         def ring():
             pg.evaluate(f"{KJ}.setMolecule('C1CCCCC1')"); pg.wait_for_timeout(1000)
-            menu_at("bond", 0); pg.wait_for_selector("#ctx div:has-text('Legame di un anello')", timeout=5000)
+            menu_at("bond", 0); pg.wait_for_selector("#ctx div:has-text('Ring bond')", timeout=5000)
         step("a ring bond says it does not split alone", ring)
         def charged():
             pg.evaluate(f"{KJ}.setMolecule('C[NH3+]')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 2")

@@ -106,7 +106,7 @@ function aggiorna(kind) {
   const tp = TIPI[/** @type {keyof typeof TIPI} */ (kind)];
   const u = urlIssue({ kind, title: titolo(what, t(KEYS[/** @type {keyof typeof KEYS} */ (kind)].empty), tp.prefix), body, ambiente: kind === "bug" ? navigator.userAgent : undefined, cut: "\n\n" + t("bug.cut") });
   q(f, `#${f.p}-go`).href = u.url;
-  q(f, `#${f.p}-st`).textContent = u.troncato || mailUrl(kind).troncato ? t("bug.cutNote") : "";
+  q(f, `#${f.p}-st`).textContent = u.truncated || mailUrl(kind).truncated ? t("bug.cutNote") : "";
 }
 
 /** the mailto link for the report now on screen (also used by the tests) @param {string} [kind] */

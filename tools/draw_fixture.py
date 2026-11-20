@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "target" / "release" / "mzlab-cli"
-CATALOG = ROOT / "mzlab" / "web" / "molecole" / "catalogo.csv"
+CATALOG = ROOT / "mzlab" / "web" / "molecules" / "catalogue.csv"
 SMILES = [
     "CCO", "C/C=C/C(=O)O", "C/C=C\\C(=O)O", "c1ccccc1", "c1ccc2ccccc2c1", "Cn1cnc2c1c(=O)n(C)c(=O)n2C", "N[C@@H](C)C(=O)O",
     "N[C@H](C)C(=O)O", "C1CCC2C(C1)CCC1C2CCC2CCCC12", "C1CCC2(CC1)CCCC2", "C1CC2CCC1C2", "C1C2CC3CC1CC(C2)C3", "C1CCCCCCCCCCC1", "[Na+].[Cl-]",

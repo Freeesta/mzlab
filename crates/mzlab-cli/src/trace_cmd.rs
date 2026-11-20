@@ -216,14 +216,14 @@ fn chrom_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Re
                 "tic"
             };
             let q = Query(vec![
-                ("canale".into(), id.into()),
+                ("channel".into(), id.into()),
                 ("kind".into(), kind.into()),
             ]);
             let text = s.routes.handle("/api/chrom", &q)?.ok_or_else(unknown)?;
             let ev = format!(
                 "{},\"route\":\"/api/chrom\",\"query\":{}",
                 family_ev("route", id, &meta),
-                extract::jstr(&format!("canale={id}&kind={kind}"))
+                extract::jstr(&format!("channel={id}&kind={kind}"))
             );
             Ok(Answer {
                 text,

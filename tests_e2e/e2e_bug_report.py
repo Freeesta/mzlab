@@ -84,7 +84,7 @@ try:
             pg.fill("#bug-what", "The chart does not open")
             m = pg.evaluate("BUGREP.mailUrl()"); u = urlparse(m["url"]); q = parse_qs(u.query)
             assert u.scheme == "mailto" and u.path == "federico.cristaudo@unito.it" and q["subject"][0].startswith("[Bug] The chart") and "The chart does not open" in q["body"][0], m
-            pg.fill("#bug-what", "x" * 20000); m = pg.evaluate("BUGREP.mailUrl()"); assert len(m["url"]) <= 1900 and m["troncato"]
+            pg.fill("#bug-what", "x" * 20000); m = pg.evaluate("BUGREP.mailUrl()"); assert len(m["url"]) <= 1900 and m["truncated"]
             assert pg.inner_text("#bug-mail") == "Send by email"; pg.fill("#bug-what", "The chart " + SECRET + " does not open")
         step("Send by email: the address is joined at runtime, mailto with the report, cut at 1900 characters", mail)
         step("Open on GitHub: expected link, new tab, never more than 6000 characters", link)
@@ -138,7 +138,7 @@ try:
             assert q["title"][0].startswith("Suggestion: Add a dark palette") and "## Suggestion" in q["idea"][0] and "ambiente" not in q and len(href) <= 6000
             assert a.get_attribute("target") == "_blank" and "noopener" in a.get_attribute("rel") and a.inner_text() == "GitHub"
             pg.fill("#sug-what", "x" * 20000); h = pg.get_attribute("#sug-go", "href"); assert len(h) <= 6000 and "too long for a link" in pg.inner_text("#sug-st") and "Download full report" in pg.inner_text("#sug-st"), "long text: say it on screen"
-            m = pg.evaluate("BUGREP.mailUrl('suggestion')"); assert len(m["url"]) <= 1900 and m["troncato"]
+            m = pg.evaluate("BUGREP.mailUrl('suggestion')"); assert len(m["url"]) <= 1900 and m["truncated"]
             pg.fill("#sug-what", "Add a dark palette")
             m = pg.evaluate("BUGREP.mailUrl('suggestion')"); q = parse_qs(urlparse(m["url"]).query); assert urlparse(m["url"]).scheme == "mailto" and q["subject"][0].startswith("Suggestion: Add a dark palette"), m
         step("Suggestion on GitHub: issue form suggestion.yml, label suggestion, nothing sent; long text says so", sug_link)

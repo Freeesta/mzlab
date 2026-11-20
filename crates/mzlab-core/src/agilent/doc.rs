@@ -273,8 +273,8 @@ fn warnings(d: &AgilentD) -> Vec<V> {
         }
     }
     let note = |k: &str, o: &str| obj(vec![("key", Some(V::s(k))), ("place", text(o))]);
-    let undecoded = seen.into_iter().map(|o| note("meta.nonDecodificato", o));
-    let left_out = d.notes.iter().map(|o| note("meta.danneggiato", o));
+    let undecoded = seen.into_iter().map(|o| note("meta.notDecoded", o));
+    let left_out = d.notes.iter().map(|o| note("meta.damaged", o));
     undecoded.chain(left_out).flatten().collect()
 }
 

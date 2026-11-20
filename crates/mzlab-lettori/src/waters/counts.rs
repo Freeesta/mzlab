@@ -6,7 +6,7 @@ use super::inf::Extern;
 use super::reader::Fun;
 use mzlab_core::readers::{Losses, MEMBER_MISSING, RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED};
 
-const KEY: &str = "meta.nonDecodificato";
+const KEY: &str = "meta.notDecoded";
 
 /// Scans of the index past the end of a DAT cut short (the rows of a function without its DAT are a missing member, not a cut).
 pub(super) fn cut(funs: &[Fun]) -> usize {

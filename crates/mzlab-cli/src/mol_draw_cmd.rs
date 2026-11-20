@@ -16,7 +16,7 @@ usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
                  (or a bare 27-character key), InChI=... followed by its InChIKey. Bare text that is none of these is a name.
   --set format   molfile (default) or scene; --json is the scene (draw/1)
   --set layout   keep (default: a molfile with 2D coordinates keeps them) or new (lay it out again)
-  --set db       a molecules/1 CSV (for example mzlab/web/molecole/catalogo.csv): names and keys are looked up only there
+  --set db       a molecules/1 CSV (for example mzlab/web/molecules/catalogue.csv): names and keys are looked up only there
   --set name     the title line of the molfile (default: the molecule's name, or the title of the molfile)
   --out PATH     write there instead of the standard output
 
@@ -141,7 +141,7 @@ fn hinted(o: Outcome, e: &mzlab_core::error::Error) -> Outcome {
             .unwrap_or("")
     };
     match e.key {
-        "err.mol.draw.needDb" => o.with_hint("names and keys are looked up only in a molecules/1 CSV: add --set db=PATH (for example mzlab/web/molecole/catalogo.csv)"),
+        "err.mol.draw.needDb" => o.with_hint("names and keys are looked up only in a molecules/1 CSV: add --set db=PATH (for example mzlab/web/molecules/catalogue.csv)"),
         "err.mol.draw.not_found" if !param("nearest").is_empty() => o.with_hint(&format!("nearest names: {}", param("nearest"))),
         "err.mol.draw.inchi" => o.with_hint("write the InChIKey: inchikey:KEY, or the InChI followed by its InChIKey"),
         _ => o,
