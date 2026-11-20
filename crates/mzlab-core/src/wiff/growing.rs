@@ -30,7 +30,8 @@ mod tests {
     #[test]
     fn equal_sizes_pass_and_a_changed_member_is_named_with_both_sizes() {
         assert!(check_stable(&pair(10, 20), &pair(10, 20), 300).is_ok());
-        let e = check_stable(&pair(10, 20), &pair(10, 25), 300).expect_err("a changed size must be refused");
+        let e = check_stable(&pair(10, 20), &pair(10, 25), 300)
+            .expect_err("a changed size must be refused");
         assert_eq!(e.key, "err.file.wiffGrowing");
         let p: Vec<(String, String)> = e
             .params
