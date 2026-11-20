@@ -139,3 +139,102 @@ fn errors_keep_their_key() {
     );
     assert_eq!(sel_json("{}").unwrap_err().key, "error.sel.request");
 }
+
+/// Formula with charge of a drawn structure.
+fn text(els: &[&str], bonds: &[(usize, usize, u8)], props: &[&str]) -> String {
+    sel(&mf(els, bonds, props), false)["label"]["text"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+#[test]
+fn a_charged_atom_with_all_its_bonds_takes_no_hydrogen() {
+    // formulas of RDKit 2026.09 for the same structures
+    let star = [(1, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 1)];
+    let plus = ["M  CHG  1   2   1"];
+    // tetramethylammonium, tetramethylphosphonium, trimethylsulfonium, trimethyloxonium
+    assert_eq!(text(&["C", "N", "C", "C", "C"], &star, &plus), "C4H12N+");
+    assert_eq!(text(&["C", "P", "C", "C", "C"], &star, &plus), "C4H12P+");
+    assert_eq!(text(&["C", "S", "C", "C"], &star[..3], &plus), "C3H9S+");
+    assert_eq!(text(&["C", "O", "C", "C"], &star[..3], &plus), "C3H9O+");
+    // trimethylsulfoxonium: S+ with five valences
+    assert_eq!(
+        text(
+            &["C", "S", "C", "C", "O"],
+            &[(1, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 2)],
+            &plus
+        ),
+        "C3H9OS+"
+    );
+    // nitromethane and trimethylamine N-oxide drawn with separated charges
+    let zw = ["M  CHG  2   2   1   3  -1"];
+    assert_eq!(
+        text(
+            &["C", "N", "O", "O"],
+            &[(1, 2, 1), (2, 3, 1), (2, 4, 2)],
+            &zw
+        ),
+        "CH3NO2"
+    );
+    assert_eq!(text(&["C", "N", "O", "C", "C"], &star, &zw), "C3H9NO");
+    // diazomethane C=[N+]=[N-], carbon monoxide [C-]#[O+], methyl isocyanide C[N+]#[C-]
+    assert_eq!(
+        text(&["C", "N", "N"], &[(1, 2, 2), (2, 3, 2)], &zw),
+        "CH2N2"
+    );
+    assert_eq!(
+        text(&["C", "O"], &[(1, 2, 3)], &["M  CHG  2   1  -1   2   1"]),
+        "CO"
+    );
+    assert_eq!(
+        text(&["C", "N", "C"], &[(1, 2, 1), (2, 3, 3)], &zw),
+        "C2H3N"
+    );
+    // 1-methylpyridinium, Kekulé and with aromatic bonds
+    let ring = |o: [u8; 6]| {
+        let mut b: Vec<(usize, usize, u8)> =
+            (0..6).map(|i| (i + 1, (i + 1) % 6 + 1, o[i])).collect();
+        b.push((1, 7, 1));
+        b
+    };
+    let py = ["N", "C", "C", "C", "C", "C", "C"];
+    let n1 = ["M  CHG  1   1   1"];
+    assert_eq!(text(&py, &ring([2, 1, 2, 1, 2, 1]), &n1), "C6H8N+");
+    assert_eq!(text(&py, &ring([4; 6]), &n1), "C6H8N+");
+}
+
+#[test]
+fn a_charged_atom_with_open_valences_is_filled_as_before() {
+    let one = |el: &str, q: &str| text(&[el], &[], &[&format!("M  CHG  1   1 {q:>3}")]);
+    assert_eq!(one("N", "1"), "H4N+");
+    assert_eq!(one("O", "1"), "H3O+");
+    assert_eq!(one("S", "1"), "H3S+");
+    assert_eq!(one("P", "1"), "H4P+");
+    assert_eq!(one("O", "-1"), "HO-");
+    assert_eq!(one("S", "-1"), "HS-");
+    assert_eq!(one("N", "-1"), "H2N-");
+    assert_eq!(one("C", "1"), "CH3+");
+    assert_eq!(one("C", "-1"), "CH3-");
+    assert_eq!(one("Cl", "-1"), "Cl-");
+    // pyridinium: the aromatic N+ carries its hydrogen
+    let ring: Vec<(usize, usize, u8)> = (0..6).map(|i| (i + 1, (i + 1) % 6 + 1, 4)).collect();
+    assert_eq!(
+        text(
+            &["N", "C", "C", "C", "C", "C"],
+            &ring,
+            &["M  CHG  1   1   1"]
+        ),
+        "C5H6N+"
+    );
+    // hexafluorophosphate keeps six bonds and no hydrogen
+    let pf6: Vec<(usize, usize, u8)> = (2..8).map(|i| (1, i, 1)).collect();
+    assert_eq!(
+        text(
+            &["P", "F", "F", "F", "F", "F", "F"],
+            &pf6,
+            &["M  CHG  1   1  -1"]
+        ),
+        "F6P-"
+    );
+}
