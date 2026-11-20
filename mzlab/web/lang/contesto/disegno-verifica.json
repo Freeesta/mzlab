@@ -8,6 +8,5 @@
   "draw.check.valenceCharge.next": "Next step; {fix} = the charge (e.g. +1) that would make the valence right.",
   "draw.check.charge.what": "Unusual charge; {q} = signed charge (e.g. +2), {el} = element symbol.",
   "draw.check.isotope.what": "Unknown isotope; {iso} = mass number written, {el} = element symbol.",
-  "draw.check.pieces.what": "Note about separate pieces; {n} = number of structures not bonded to each other.",
-  "error.check.tooBig": "Drawing check error; {max} = maximum number of atoms."
+  "draw.check.pieces.what": "Note about separate pieces; {n} = number of structures not bonded to each other."
 }
