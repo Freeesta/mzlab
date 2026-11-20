@@ -148,6 +148,13 @@ pub fn headroom(bytes: usize) -> Result<()> {
     v.try_reserve_exact(bytes).map_err(|_| Error::memory_budget())
 }
 
+/// The empty scan table of an index of `count` scans, after proof that the strings of its rows will find room too (`ROW_HEAP`): `error.memoryBudget`, never a trap in the parse.
+pub fn scan_table<T>(count: usize) -> Result<Vec<T>> {
+    let v = try_vec(count)?;
+    headroom(count.saturating_mul(ROW_HEAP))?;
+    Ok(v)
+}
+
 /// Where an output is written: bytes at an offset. The browser gives an OPFS handle (`write(k, offset, bytes)`), the tests a `Vec`.
 pub trait WriteAt {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()>;
