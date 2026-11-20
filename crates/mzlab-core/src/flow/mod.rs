@@ -12,6 +12,7 @@ pub mod lineage;
 pub mod migrate;
 mod order;
 mod parse;
+mod parse_shape;
 mod prov;
 mod run;
 mod run_report;
@@ -32,8 +33,8 @@ pub use prov::{
     build_agent, prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
 pub use run::{
-    execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
-    Outcome, Results, Run, Runner,
+    check_run, execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx,
+    Hooks, Job, Outcome, Results, Run, Runner,
 };
 pub use run_report::{build as run_report_build, Output, RunReport};
 pub use sched_route::{

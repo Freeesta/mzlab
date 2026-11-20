@@ -149,7 +149,15 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("mzlab-flow-rep-{}", std::process::id()));
         let work = dir.join("work");
         std::fs::create_dir_all(&work).unwrap();
-        let plan = r#"{"format":"mzflow/2","inputs":[],"steps":[]}"#;
+        // one cheap step on synthetic text: a plan with no step is refused, so the run needs something to do
+        std::fs::write(
+            dir.join("sites.json"),
+            r#"{"schema":"sites/1","parent":"c1ccccc1O","rows":[]}"#,
+        )
+        .unwrap();
+        std::fs::write(dir.join("parent.txt"), "c1ccccc1O").unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"sites.json","type":"transform"},{"name":"parent.txt","type":"structure"}],"steps":[
+            {"id":"r","step":"structure.render@1","in":{"sites":"file:sites.json","parent":"file:parent.txt"}}]}"#;
         let (_, prov) = mzlab_cli::flow::run_plan(plan.as_bytes(), &dir, &work, 1, None).unwrap();
         std::fs::write(work.join("prov.json"), prov).unwrap();
         let text = mzlab_cli::flow_report::report(&work).unwrap();

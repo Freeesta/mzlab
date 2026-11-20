@@ -35,7 +35,7 @@ const CSS = `#moldlg{position:fixed;inset:0;z-index:6200;display:flex;align-item
 #moldlg input,#moldlg textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;box-sizing:border-box;width:100%}
 #moldlg .mol-hint,#moldlg .mol-note{margin:0;font-size:.8125rem;color:var(--muted)}
 #moldlg .mol-st{min-height:1.2em;font-size:.875rem}
-#moldlg .avv{margin:0}#moldlg .avv ul{margin:6px 0 0;padding-left:20px}
+#moldlg .notice{margin:0}#moldlg .notice ul{margin:6px 0 0;padding-left:20px}
 #moldlg .mol-row-act{display:flex;gap:8px;flex-wrap:wrap}
 #moldlg :is(button,a,textarea,input):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #moldlg [hidden]{display:none}
@@ -71,12 +71,12 @@ function build() {
 <div class="mol-hd"><h2 id="mol-h"></h2><button type="button" id="mol-x"></button></div>
 <div id="mol-list">
 <div class="mol-bar"><div id="mol-q"><label for="mol-qi"></label><input id="mol-qi" type="search" autocomplete="off" spellcheck="false"></div><button type="button" id="mol-add" class="mol-go"></button><button type="button" id="mol-imp"></button><button type="button" id="mol-csv"></button><button type="button" id="mol-json"></button><input type="file" id="mol-file" accept=".csv,.json,text/csv,application/json" hidden></div>
-<div id="mol-errs" class="avv bad" role="alert" hidden></div>
-<div id="mol-conf" class="avv warn" role="alertdialog" aria-labelledby="mol-conf-t" hidden><p id="mol-conf-t"></p><div class="mol-row-act"><button type="button" id="mol-conf-ok"></button><button type="button" id="mol-conf-no"></button></div></div>
+<div id="mol-errs" class="notice bad" role="alert" hidden></div>
+<div id="mol-conf" class="notice warn" role="alertdialog" aria-labelledby="mol-conf-t" hidden><p id="mol-conf-t"></p><div class="mol-row-act"><button type="button" id="mol-conf-ok"></button><button type="button" id="mol-conf-no"></button></div></div>
 <table><caption id="mol-cap"></caption><thead><tr><th scope="col" id="mol-c1"></th><th scope="col" id="mol-c2"></th><th scope="col" id="mol-c3"></th><th scope="col" id="mol-c4"></th><th scope="col" id="mol-c5"><span class="sr-only"></span></th></tr></thead><tbody id="mol-body"></tbody></table>
 </div>
 <form id="mol-form" novalidate hidden><h3 id="mol-fh"></h3><p class="mol-note" id="mol-fn" hidden></p>${fieldsHtml(t)}
-<div id="mol-ferr" class="avv bad" role="alert" hidden></div>
+<div id="mol-ferr" class="notice bad" role="alert" hidden></div>
 <div class="mol-row-act"><button type="submit" id="mol-save" class="mol-go"></button><button type="button" id="mol-cancel"></button></div></form>
 <div class="mol-st" id="mol-st" role="status" aria-live="polite"></div></div>`;
   document.body.appendChild(d);

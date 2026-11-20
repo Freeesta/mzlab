@@ -36,6 +36,32 @@ fn params_obj(o: &mut Out, params: &[(&str, String)]) {
     o.raw("}");
 }
 
+/// Where in the plan the problem sits, the way the file spells it: `det.params.zzz` (a parameter), `det.in.index` (a port), the instance id,
+/// or `steps` for a problem of the plan as a whole.
+pub(crate) fn problem_path(p: &Problem) -> String {
+    if p.instance.is_empty() {
+        return "steps".into();
+    }
+    if !p.port.is_empty() {
+        return format!("{}.in.{}", p.instance, p.port);
+    }
+    match p.params.iter().find(|(k, _)| *k == "param") {
+        Some((_, name)) => format!("{}.params.{name}", p.instance),
+        None => p.instance.clone(),
+    }
+}
+
+/// One line for stderr: the problem, its path and its values (`det:err.flow.param.unknown at det.params.zzz (param=zzz)`).
+fn problem_line(p: &Problem) -> String {
+    let values: Vec<String> = p.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
+    let tail = if values.is_empty() {
+        String::new()
+    } else {
+        format!(" ({})", values.join(", "))
+    };
+    format!("{} at {}{tail}", problem_text(p), problem_path(p))
+}
+
 fn problem(o: &mut Out, p: &Problem) {
     o.raw("{\"instance\":")
         .str(&p.instance)
@@ -43,6 +69,8 @@ fn problem(o: &mut Out, p: &Problem) {
         .str(&p.port)
         .raw(",\"error_key\":")
         .str(p.error_key)
+        .raw(",\"path\":")
+        .str(&problem_path(p))
         .raw(",\"params\":");
     params_obj(o, &p.params);
     o.raw("}");
@@ -129,7 +157,10 @@ pub(crate) fn fail(err: &Error, msg: &str, hint: &str) -> Outcome {
 /// Exit 3 for a plan that is not valid: one problem per line on stderr, and the list of problems in the `error/1` document.
 pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
     let list: Vec<String> = problems.iter().map(problem_text).collect();
-    let lines: Vec<String> = list.iter().map(|l| format!("  {l}")).collect();
+    let lines: Vec<String> = problems
+        .iter()
+        .map(|p| format!("  {}", problem_line(p)))
+        .collect();
     let hint = "fix the plan in the Flow page or with --set";
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
@@ -333,7 +364,7 @@ const CHECK_HELP: &str = "mzlab-cli flow check: is a plan valid? Checks it as `f
 usage: mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]
 
   --set INSTANCE.NAME=V    as in `flow run`; the setting is checked with the rest of the plan
-  --json                   one flowcheck/1 document on stdout: {\"valid\", \"problems\": [{instance, port, error_key, params}]}
+  --json                   one flowcheck/1 document on stdout: {\"valid\", \"problems\": [{instance, port, error_key, path, params}]}
   --help                   this text
 
 exit codes: 0 valid, 2 usage, 3 the plan is not valid (also a step that has no native executor: err.flow.step.native), 4 the plan cannot be read";
@@ -373,8 +404,8 @@ fn check_plan(path: &str, sets: &[String], reg: &[Step]) -> Result<Plan, Outcome
         let err = Error::new("err.cli.file").with("path", path);
         fail(&err, &format!("{path}: {e}"), "check the path of the plan")
     })?;
-    let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| fail(&e, &e.to_string(), hint))?;
+    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow steps --id STEP --template` writes one to start from";
+    let mut plan = parse(&text).map_err(|e| fail(&e, &crate::error_text::human_error(&e), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = sets
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
