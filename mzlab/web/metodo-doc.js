@@ -53,7 +53,7 @@ const METODO_DOC = (() => {
   function notes(/** @type {any} */ d) {
     const a = (d.warnings || []).filter((/** @type {any} */ x) => x && x.key);
     if (!a.length) return "";
-    const line = (/** @type {any} */ x) => NOTE_KEYS.includes(x.key) ? T(x.key, { dove: x.place || "" }) : join([x.key, x.place], ": ");
+    const line = (/** @type {any} */ x) => NOTE_KEYS.includes(x.key) ? T(x.key, { place: x.place || "" }) : join([x.key, x.place], ": ");
     return `<div class="sm" role="note" aria-label="${EH(T("method.doc.notes"))}" data-mnotes="${a.length}"><strong>${EH(T("method.doc.notes"))}</strong><ul style="margin:4px 0 8px">${a.map((/** @type {any} */ x) => `<li>${EH(line(x))}</li>`).join("")}</ul></div>`;
   }
 

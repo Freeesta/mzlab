@@ -37,10 +37,12 @@
   /** what a re-application gave against the record: same table (SHA-256), same files, same engine; `lines` in words */
   function compare(op, now) {
     const cur = new Map(now.ingressi.map(i => [i.nome, i.sha256])), missing = op.ingressi.filter(i => cur.get(i.nome) !== i.sha256).map(i => i.nome);
-    const same = now.table_sha256 === op.table_sha256, lines = [];
+    // a record of another version of the format has no such field: not comparable, never a crash
+    const old = typeof op.table_sha256 !== "string" || typeof now.table_sha256 !== "string", same = !old && now.table_sha256 === op.table_sha256, lines = [];
     if (missing.length) lines.push(`the files are not the ones of the recipe: ${missing.join(", ")}`);
     if (now.crate_version !== op.crate_version) lines.push(`the engine is another version (${now.crate_version}, the recipe was made with ${op.crate_version})`);
-    if (!same) lines.push(`the table differs (${now.table_sha256.slice(0, 12)}, recorded ${op.table_sha256.slice(0, 12)})`);
+    if (old) lines.push("the record has no table hash: it cannot be compared");
+    else if (!same) lines.push(`the table differs (${now.table_sha256.slice(0, 12)}, recorded ${op.table_sha256.slice(0, 12)})`);
     return { same, filesSame: !missing.length, crateSame: now.crate_version === op.crate_version, lines };
   }
 

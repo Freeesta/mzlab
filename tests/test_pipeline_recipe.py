@@ -53,3 +53,9 @@ console.log(JSON.stringify({ same: same.same, sl: same.lines, files: [files.file
 def test_unknown_operation_is_ignored_with_warning():
     r = run_node("""const o = await R.record(A); const s = W.splitOps([o, { op: 'dal_futuro' }]); console.log(JSON.stringify({ keep: s.keep.length, unknown: s.unknown }));""")
     assert r == {"keep": 1, "unknown": ["dal_futuro"]}
+
+
+def test_compare_of_a_record_without_the_table_hash_is_not_a_crash():
+    r = run_node("""const o = await R.record(A); const old = Object.assign({}, o); delete old.table_sha256;
+const c = R.compare(old, o); console.log(JSON.stringify({ same: c.same, lines: c.lines }));""")
+    assert r["same"] is False and r["lines"] == ["the record has no table hash: it cannot be compared"]
