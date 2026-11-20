@@ -48,7 +48,7 @@ The student acquires an MS2 on an ion because they saw it in the full scan: if t
 - An ion that the truth gives as an isotope of a row (`expect: "isotope"`) has the `isotope` link and no row of its own. The data test (`lr_ms2link_data.rs`) requires, for a truth target (`expect: "target"`), an `auto`, `ambiguous` or `user` link of the peak at the apex (±0.1 min) to any row with a reference RT within 0.1 min of the full apex; `isotope` holds only for `expect: "isotope"`; for `no_signal` no link to the Dig row at that time.
 - The reason the Dig does not list strong ions (synthetic, tested in `lr_ms2link/target.rs`): an ion within `tol_da` of a hypothesis' m/z belongs to that hypothesis for `rows::assign` and is never an unexpected (`rows::unexpected` discards every row within `tol_da` of a known m/z, even at another time); it enters as an isomer only if it has ≥ 10 % of the strongest's area and is among the first 4 (`rows::candidates`). A small ion at the same m/z as a hypothesis but at another time therefore vanishes from the Dig table. No change to the Dig: fixing it needs the Coordinator's yes.
 
-### Diagnosis on real data (done by Federico locally; numbers only in the private repository)
+### Diagnosis on real data (done by the owner locally; numbers only in the private repository)
 ```
 MZLAB_DATI=<percorso> cargo run --release -p mzlab-finder-lr-wasm --example finder_lr -- OUT FILES.json PARENT.json RULES.json --diag --ms2 N MZML...
 ```

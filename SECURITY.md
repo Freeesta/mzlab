@@ -1,6 +1,6 @@
 # Security policy
 
-mzLab runs entirely in the browser (or in the desktop app): the files of the students never leave their computer. This page says how to report a vulnerability and what to expect.
+mzLab runs entirely in the browser (or in the desktop app): your files never leave their computer. This page says how to report a vulnerability and what to expect.
 
 ## Reporting a vulnerability
 
@@ -10,7 +10,7 @@ Please **do not open a public issue** for a security problem. Use the private fo
 2. Describe what you found, how to reproduce it and which version or page address is affected.
 3. Never attach real laboratory or personal data: a synthetic file or a description is enough.
 
-This is a teaching project maintained on a best-effort basis: we read every report and aim to answer within a few weeks, but we cannot promise a deadline. When a fix is released, the advisory is published and the reporter is credited unless they prefer not to be.
+This project is maintained on a best-effort basis: we read every report and aim to answer within a few weeks, but we cannot promise a deadline. When a fix is released, the advisory is published and the reporter is credited unless they prefer not to be.
 
 ## Supported versions
 
