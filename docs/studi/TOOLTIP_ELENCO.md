@@ -755,7 +755,7 @@ Check: scanner sites 668 = 658 listed + 10 excluded (appendix A); nothing is ski
 | 678 | Long trace | features.detect.long_trace | docs/schemi/steps-1.json | A trace longer than this is background and is not taken | 55 | non |
 | 679 | Mass defect | features.detect.mass_defect | docs/schemi/steps-1.json | Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty | 107 | >90 |
 | 680 | Merge overlap | features.detect.merge_overlap | docs/schemi/steps-1.json | Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace | 102 | >90 |
-| 681 | Minimum S/N | features.detect.min_snr | docs/schemi/steps-1.json | A feature whose S/N is below this is dropped; S/N = apex over the flank median, divided by 1.4826 MAD of the raw flanks; 0 = off | 128 | >90 |
+| 681 | Minimum S/N | features.detect.min_snr | docs/schemi/steps-1.json | Drops features below this S/N (apex over the flank median, divided by 1.4826 MAD of the raw flanks). | 100 | >90 |
 | 682 | RT range | features.detect.rt_range | docs/schemi/steps-1.json | Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows | 92 | >90 |
 | 683 | Stitch | features.detect.stitch | docs/schemi/steps-1.json | Wide (default at high resolution) joins touching low pieces of neighbouring channels so a wandering ion stays one row. | 118 | >90 |
 | 684 | Estimate parameters | features.estimate | docs/schemi/steps-1.json | Measures the noise floor, the m/z tolerance, the peak width and the dead time of each file from its own data and writes the proofs; it proposes values, the next step decides. | 174 | >90 |
