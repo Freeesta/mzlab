@@ -186,7 +186,11 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
     hits.retain(|h| h.1 == score);
     if hits.len() > 1 {
         d.warnings.push(note(
-            "name_ambiguous",
+            if kind == "inchikey" {
+                "key_ambiguous"
+            } else {
+                "name_ambiguous"
+            },
             hits.iter()
                 .take(5)
                 .map(|h| es[h.0].name.as_str())
@@ -195,4 +199,30 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
         ));
     }
     Ok(d)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::within_one;
+
+    fn w(a: &str, b: &str) -> bool {
+        within_one(
+            &a.chars().collect::<Vec<_>>(),
+            &b.chars().collect::<Vec<_>>(),
+        )
+    }
+
+    #[test]
+    fn within_one_never_indexes_past_the_end() {
+        // Equal and identical (the case that indexed `short[len + 1..]`), empty, one slip, two slips, length gap.
+        assert!(w("caffeine", "caffeine"));
+        assert!(w("", ""));
+        assert!(w("a", "a"));
+        assert!(w("caffeine", "caffeino"));
+        assert!(w("caffeine", "caffeie"));
+        assert!(w("caffeie", "caffeine"));
+        assert!(!w("caffeine", "caffeinoo"));
+        assert!(!w("caffeine", "cafxeino"));
+        assert!(!w("ab", "abcd"));
+    }
 }

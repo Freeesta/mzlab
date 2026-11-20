@@ -104,13 +104,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(s) => s,
         Err(o) => return o,
     };
-    let db = match set[2]
-        .as_deref()
-        .map(|p| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}")))
-        .transpose()
-    {
+    let db = match set[2].as_deref().map(read_db).transpose() {
         Ok(d) => d,
-        Err(e) => return Outcome::fail(&e),
+        Err(o) => return o,
     };
     match mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref())) {
         Ok((d, f)) => {
@@ -152,14 +148,45 @@ fn hinted(o: Outcome, e: &mzlab_core::error::Error) -> Outcome {
     }
 }
 
+/// Most bytes read for a molfile (a 2000-atom one is about 200 KB) and for a `--set db` CSV (the shipped catalog is 360 KB).
+const MAX_MOLFILE: u64 = 8 << 20;
+const MAX_DB: u64 = 64 << 20;
+
+/// The text of `r` up to `max` bytes. `Err(Some(text))`: more than `max` bytes ("more than N bytes"); `Err(None)`: unreadable or not UTF-8.
+fn read_capped(r: impl std::io::Read, max: u64) -> Result<String, Option<String>> {
+    let mut t = String::new();
+    std::io::Read::read_to_string(&mut r.take(max + 1), &mut t).map_err(|_| None)?;
+    if t.len() as u64 > max {
+        return Err(Some(format!("more than {max} bytes")));
+    }
+    Ok(t)
+}
+
+fn molfile_error(why: &str) -> Outcome {
+    Outcome::fail_error(&Error::new("err.mol.draw.molfile").with("message", why))
+}
+
+/// The `--set db=PATH` CSV: a missing file is `err.cli.file` (exit 4), an oversized or non-UTF-8 one `err.mol.draw.db` (exit 4).
+fn read_db(path: &str) -> Result<String, Outcome> {
+    let file = std::fs::File::open(path)
+        .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", path)))?;
+    read_capped(file, MAX_DB).map_err(|why| {
+        let message = why.map_or_else(
+            || format!("{path} is not UTF-8 text"),
+            |w| format!("{path} is {w}"),
+        );
+        Outcome::fail_error(&Error::new("err.mol.draw.db").with("message", message))
+    })
+}
+
 /// The text the library reads for `spec`: itself, or the molfile it names (`-` is the standard input). A path that is not there is an
 /// unreadable file (exit 4), not a name.
 fn resolve(spec: &str) -> Result<String, Outcome> {
     if spec == "-" {
-        let mut t = String::new();
-        std::io::Read::read_to_string(&mut std::io::stdin(), &mut t)
-            .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", "-")))?;
-        return Ok(t);
+        return read_capped(std::io::stdin(), MAX_MOLFILE).map_err(|why| match why {
+            Some(w) => molfile_error(&format!("the standard input is {w}")),
+            None => Outcome::fail_error(&Error::new("err.cli.file").with("path", "-")),
+        });
     }
     if PREFIXES.iter().any(|p| spec.starts_with(p)) {
         return Ok(spec.to_string());
@@ -171,22 +198,24 @@ fn resolve(spec: &str) -> Result<String, Outcome> {
     if !Path::new(spec).is_file() {
         let guess = pathlike && mzlab_feat::chem::draw::kind_of(spec) == "name";
         return if guess {
-            Err(Outcome::fail(&format!(
-                "{spec}: No such file or directory (os error 2)"
-            )))
+            Err(Outcome::fail_error(
+                &Error::new("err.cli.file").with("path", spec),
+            ))
         } else {
             Ok(spec.to_string())
         };
     }
-    let text = std::fs::read_to_string(spec).map_err(|e| Outcome::fail(&format!("{spec}: {e}")))?;
+    let file = std::fs::File::open(spec)
+        .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", spec)))?;
+    let text = read_capped(file, MAX_MOLFILE).map_err(|why| match why {
+        Some(w) => molfile_error(&format!("{spec} is {w}")),
+        None => Outcome::fail_error(&Error::new("err.cli.file").with("path", spec)),
+    })?;
     if text.contains("M  END") {
         return Ok(text);
     }
     if pathlike {
-        let why = format!("{spec} has no M  END line");
-        return Err(Outcome::fail_error(
-            &Error::new("err.mol.draw.molfile").with("message", why),
-        ));
+        return Err(molfile_error(&format!("{spec} has no M  END line")));
     }
     Ok(spec.to_string())
 }

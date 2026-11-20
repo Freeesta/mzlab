@@ -188,3 +188,17 @@ fn draw_a_large_molecule_finishes_with_every_atom_placed() {
     let atoms = s.get("atoms").unwrap().arr();
     assert_eq!(atoms.len(), 1950);
 }
+
+#[test]
+fn an_inchikey_with_two_rows_warns_under_its_own_key() {
+    let key = "BSYNRYMUTXBXSQ-UHFFFAOYSA-N";
+    let smiles = "CC(=O)Oc1ccccc1C(=O)O";
+    let db = format!(
+        "id;name;synonyms;smiles;inchikey\n1;aspirin;;{smiles};{key}\n2;acetylsalicylic acid;;{smiles};{key}\n"
+    );
+    let mut o = Out::default();
+    o.raw(",\"format\":\"scene\",\"db\":").str(&db);
+    let text = draw_json(&req(&format!("inchikey:{key}"), &o.0)).unwrap();
+    assert!(text.contains("key_ambiguous"), "{text}");
+    assert!(!text.contains("name_ambiguous"), "{text}");
+}

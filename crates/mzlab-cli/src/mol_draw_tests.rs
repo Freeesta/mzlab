@@ -143,3 +143,20 @@ fn mol_draw_an_inchi_alone_is_usage_with_a_hint_and_too_many_atoms_is_data() {
     let o = run(&["mol", "draw", &format!("smiles:{}", "C".repeat(2001))]);
     assert_eq!(o.code, 1, "{}", o.stderr);
 }
+
+#[test]
+fn mol_draw_reads_are_capped_and_a_missing_file_is_a_keyed_error() {
+    use super::read_capped;
+    assert_eq!(read_capped(&b"abc"[..], 3).unwrap(), "abc");
+    assert_eq!(
+        read_capped(&b"abcd"[..], 3),
+        Err(Some("more than 3 bytes".to_string()))
+    );
+    assert_eq!(read_capped(&[0xff_u8, 0xfe][..], 3), Err(None));
+    let o = run(&["mol", "draw", "--json", "/no/such/x.mol"]);
+    assert_eq!(o.code, 4);
+    assert_eq!(
+        o.error.as_ref().map(|e| e.key.as_str()),
+        Some("err.cli.file")
+    );
+}
