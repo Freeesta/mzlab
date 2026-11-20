@@ -177,6 +177,15 @@ pub(crate) fn prepare(
     }
     let plan = crate::flow_compare::expand(plan, reg)?;
     let mut problems = mzlab_core::flow::check(&plan, reg, Platform::current());
+    // a plan with nothing to run is a wrong plan (a misspelt key, a wrong file), never a successful empty run
+    if plan.steps.is_empty() {
+        problems.push(Problem {
+            instance: String::new(),
+            port: String::new(),
+            error_key: "err.flow.empty",
+            params: Vec::new(),
+        });
+    }
     for s in plan.steps.iter().filter(|s| !executable(&s.step)) {
         problems.push(Problem {
             instance: s.id.clone(),
@@ -358,8 +367,9 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
         let msg = format!("{}: {e}", plan_path.display());
         jfail(&err, &msg, "check the path of the plan")
     })?;
-    let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| jfail(&e, &e.to_string(), hint))?;
+    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow template STEP` writes one to start from";
+    let mut plan =
+        parse(&text).map_err(|e| jfail(&e, &crate::error_text::human_error(&e), hint))?;
     apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
         // the CLI keeps the text apart from the error: the page reads it from the parameters
         let of = |k: &str| {

@@ -151,6 +151,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+mod flow_template;
 mod flow_transitions;
 mod idx_cache;
 mod idx_open;

@@ -94,6 +94,8 @@
       "err.flow.cycle": "The steps depend on each other in a circle.",
       "err.flow.json": "The file is not valid JSON.",
       "err.flow.format": `Unknown file format ${q.format}; Flow reads mzflow/2.`,
+      "err.flow.key.unknown": `The file has a key that is not part of the format: ${q.path}.`,
+      "err.flow.shape": `The file is not valid at ${q.path}: expected ${q.expected}.`,
       "err.flow.step": `The step ${q.step} must be written id@version.`,
       "err.flow.ref": `The reference ${q.ref} must be file:NAME or step.output.`,
       "err.flow.instance": `A step has no ${q.field}.`,

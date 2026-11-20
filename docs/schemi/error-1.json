@@ -50,11 +50,16 @@
           "instance",
           "port",
           "error_key",
+          "path",
           "params"
         ],
         "properties": {
           "instance": {
             "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "where the problem sits in the plan: INSTANCE.params.NAME, INSTANCE.in.PORT, INSTANCE, or steps"
           },
           "port": {
             "type": "string"

@@ -12,6 +12,7 @@ pub mod lineage;
 pub mod migrate;
 mod order;
 mod parse;
+mod parse_shape;
 mod prov;
 mod run;
 mod run_report;
