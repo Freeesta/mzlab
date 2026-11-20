@@ -29,8 +29,8 @@ try:
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         def clear():
-            pg.evaluate(f"{KJ}.editor.tool('select')")                                # the Open dialog leaves Ketcher's paste tool holding the structure on the cursor; a later tool change would roll it back and wipe what a following paste added
-            pg.evaluate(f"{KJ}.setMolecule('')")
+            pg.evaluate(f"(() => {{ {KJ}.editor.tool('select'); }})()")                                # the Open dialog leaves Ketcher's paste tool holding the structure on the cursor; a later tool change would roll it back and wipe what a following paste added
+            pg.evaluate(f"(async () => {{ await {KJ}.setMolecule(''); }})()")      # nothing returned: the page cannot serialize what Ketcher resolves with
             wait_for_js(pg, f"{KJ}.editor.struct().isBlank()", timeout=10000)      # Ketcher's promise can resolve before a canvas that held a reaction arrow is empty: a paste made at once would be wiped by the late clear
             pg.evaluate("document.getElementById('smi-warn').hidden = true")
         def settle():
