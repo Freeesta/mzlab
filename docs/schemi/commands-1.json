@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "commands/1",
   "title": "commands/1: every command of mzlab-cli, its arguments, flags and outputs",
-  "description": "The answer of `mzlab-cli commands --json [PATH...]`, built from the same table as `--help`: `synopsis` is the usage line, `args` and `flags` are read from it, so help and catalog cannot differ. `stdout.schema` names a schema that `mzlab-cli schema NAME` prints (empty when the command prints none, or several). The whole listing (`compact`: true) says what is shared or derivable once at the top (`flag_help`, `exit_codes_note`, `examples_note`) and leaves it out of each command; `commands --json PATH...` gives each command in full. `exit_codes` lists the codes of the command, `exit_code_meaning` (top level) says what each means. Code: crates/mzlab-cli/src/catalog.rs. A flag object leaves out `unit`, `default` and `enum` when they are null, and `repeat` and `required` when false.",
+  "description": "The answer of `mzlab-cli commands --json [PATH...]`, built from the same table as `--help`: `synopsis` is the usage line, `args` and `flags` are read from it, so help and catalog cannot differ. `stdout.schema` names a schema that `mzlab-cli schema NAME` prints (empty when the command prints none, or several). The whole listing (`compact`: true) says what is shared or derivable once at the top (`flag_help`, `exit_codes_note`, `examples_note`) and leaves it out of each command; `commands --json PATH...` gives each command in full. `exit_codes` lists the codes of the command, `exit_code_meaning` (top level) says what each means. Code: crates/mzlab-cli/src/catalog.rs. A flag object leaves out `unit`, `default` and `enum` when they are null, and `repeat` and `required` when false. The whole listing also leaves out a flag's `type` when it is the `flag_type` of that flag name or, when the name has no `flag_type`, `string`, and an argument's `kind` when it is `path` (`rest` for the argument `...`); `commands --json PATH...` always gives `type` and `kind`.",
   "type": "object",
   "required": [
     "schema",
@@ -96,8 +96,7 @@
             "items": {
               "type": "object",
               "required": [
-                "name",
-                "kind"
+                "name"
               ],
               "properties": {
                 "name": {
@@ -124,8 +123,7 @@
             "items": {
               "type": "object",
               "required": [
-                "name",
-                "type"
+                "name"
               ],
               "properties": {
                 "name": {
@@ -227,6 +225,21 @@
     },
     "examples_note": {
       "type": "string"
+    },
+    "flag_type": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "bool",
+          "int",
+          "number",
+          "path",
+          "list",
+          "enum",
+          "set"
+        ]
+      },
+      "description": "the type of every flag used by two or more commands that all give it one type other than string; a flag object with no type takes it from here, else it is a string"
     },
     "flag_help": {
       "type": "object",
