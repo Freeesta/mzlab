@@ -1,4 +1,4 @@
-//! Route tests of the channels engine (`api/canali`, `canale=`) on in-memory indexes.
+//! Route tests of the channels engine (`api/channels`, `channel=`) on in-memory indexes.
 
 use super::tests::*;
 use super::*;
@@ -83,7 +83,7 @@ fn route_lists_the_channels_of_the_file() {
             (2, MS2_B, Some(300.2)),
         ],
     );
-    let v = crate::json::parse(ask(&mut r, "/api/canali", "k=0").as_bytes()).unwrap();
+    let v = crate::json::parse(ask(&mut r, "/api/channels", "k=0").as_bytes()).unwrap();
     assert_eq!(v.get("schema").and_then(|x| x.str()), Some("channels/1"));
     assert_eq!(
         v.get("kind")
@@ -130,18 +130,18 @@ fn channel_of_a_key_is_the_filter_of_that_key_byte_for_byte() {
             ask(
                 &mut r,
                 "/api/chrom",
-                &format!("k=0&kind={kind}&canale=ms:{key}")
+                &format!("k=0&kind={kind}&channel=ms:{key}")
             ),
             ask(&mut r, "/api/chrom", &format!("k=0&kind={kind}&filt={key}")),
         );
     }
     assert_eq!(
-        ask(&mut r, "/api/scanlist", &format!("k=0&canale=ms:{key}")),
+        ask(&mut r, "/api/scanlist", &format!("k=0&channel=ms:{key}")),
         ask(&mut r, "/api/scanlist", &format!("k=0&filt={key}"))
     );
     // an unknown channel says what is wrong
     let e = r
-        .handle("/api/chrom", &Query::parse("k=0&canale=ms:nope"))
+        .handle("/api/chrom", &Query::parse("k=0&channel=ms:nope"))
         .unwrap_err();
     assert_eq!(e.key, "err.canali.unknown");
 }
@@ -170,14 +170,14 @@ fn xic_inside_two_precursors_gives_different_traces() {
     let a = trace(
         &mut r,
         &format!(
-            "k=0&mz=150&tol=0.5&canale=ms:{}",
+            "k=0&mz=150&tol=0.5&channel=ms:{}",
             enc("ITMS + ms2 222 @cid")
         ),
     );
     let b = trace(
         &mut r,
         &format!(
-            "k=0&mz=150&tol=0.5&canale=ms:{}",
+            "k=0&mz=150&tol=0.5&channel=ms:{}",
             enc("ITMS + ms2 300 @cid")
         ),
     );
@@ -192,7 +192,7 @@ fn xic_inside_two_precursors_gives_different_traces() {
     assert_ne!(ya, ys(&level));
     // the TIC channel adds every level
     let all =
-        crate::json::parse(ask(&mut r, "/api/xic", "k=0&mz=150&tol=0.5&canale=tic").as_bytes())
+        crate::json::parse(ask(&mut r, "/api/xic", "k=0&mz=150&tol=0.5&channel=tic").as_bytes())
             .unwrap();
     assert_eq!(all.get("y").unwrap().arr().len(), 30);
 }
@@ -200,7 +200,7 @@ fn xic_inside_two_precursors_gives_different_traces() {
 #[test]
 fn tic_channel_joins_the_levels_in_time_order() {
     let mut r = index(5, &[(1, FULL, None), (2, MS2_A, Some(222.1))]);
-    let v = crate::json::parse(ask(&mut r, "/api/chrom", "k=0&canale=tic").as_bytes()).unwrap();
+    let v = crate::json::parse(ask(&mut r, "/api/chrom", "k=0&channel=tic").as_bytes()).unwrap();
     let rt: Vec<f64> = v
         .get("rt")
         .unwrap()
@@ -222,7 +222,7 @@ fn a_transition_is_not_a_scan_route() {
     r.pon_cromatogrammi("c.mzML", &chroms, &Facts::default());
     assert!(r.canali().find("srm:230>162@25").is_some());
     assert_eq!(
-        r.handle("/api/chrom", &Query::parse("k=0&canale=srm:230>162@25"))
+        r.handle("/api/chrom", &Query::parse("k=0&channel=srm:230>162@25"))
             .unwrap(),
         None
     );

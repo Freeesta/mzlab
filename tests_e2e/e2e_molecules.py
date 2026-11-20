@@ -1,7 +1,7 @@
-"""molecules/1 in the page: the routes api/molecules/* answer from the Rust engine. The catalogue (static/molecole/catalogo.csv) is loaded with `load`; the search finds a
+"""molecules/1 in the page: the routes api/molecules/* answer from the Rust engine. The catalogue (static/molecules/catalogue.csv) is loaded with `load`; the search finds a
 name, a formula and a mass; an invented molecule of the user (to_json -> load) is found and replaces nothing; from_csv/to_csv give the same CSV back; a wrong row gives its error;
 MZLAB_LR_MISS stays empty. Needs the built site (tools/prepara_sito.py). Run from the repo root."""
-# covers: mzlab/web/molecole, mzlab/web/molecules-
+# covers: mzlab/web/molecules, mzlab/web/molecules-
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -13,7 +13,7 @@ try:
         pg.wait_for_selector("#drop", timeout=120000)
         post = """async ([op, body]) => (await fetch('api/molecules/' + op, { method: 'POST', body: JSON.stringify(body) })).text()"""
         call = lambda op, body: pg.evaluate(post, [op, body])
-        cat = pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")
+        cat = pg.evaluate("fetch('static/molecules/catalogue.csv').then(r => r.text())")
         loaded = json.loads(call("load", {"catalog": cat}))
         assert loaded["errors"] == [] and loaded["total"] == 1228, loaded
         hrms = json.loads(call("list", {"catalog": "hrms", "adducts": ["[M+H]+", "[M+Na]+"]}))

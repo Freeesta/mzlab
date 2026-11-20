@@ -12,8 +12,6 @@ use mzlab_core::Error;
 use serde_json::{json, Value};
 
 const MOLECULES_FILE: &str = "molecules.json";
-/// The file of the app before the keys were English: read so the engine refuses it with a clear message, removed by the next save.
-const OLD_MOLECULES_FILE: &str = "molecole.json";
 const EMPTY_MOLECULES: &str = "{\"schema\":\"molecules/1\",\"molecules\":[]}";
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -258,7 +256,6 @@ impl Store {
         let dir = self.dir();
         match op {
             "read" => Ok(std::fs::read_to_string(dir.join(MOLECULES_FILE))
-                .or_else(|_| std::fs::read_to_string(dir.join(OLD_MOLECULES_FILE)))
                 .unwrap_or_else(|_| EMPTY_MOLECULES.to_string())),
             "write" => {
                 let canonical = mzlab_core::molecules::route("to_json", body)?;
@@ -266,7 +263,6 @@ impl Store {
                     return Err(Error::new("error.molecules.badJson"));
                 }
                 write_atomic(&dir, MOLECULES_FILE, &canonical);
-                let _ = std::fs::remove_file(dir.join(OLD_MOLECULES_FILE));
                 Ok("{}".to_string())
             }
             _ => Err(Error::new("error.badMolecules").with("op", op)),

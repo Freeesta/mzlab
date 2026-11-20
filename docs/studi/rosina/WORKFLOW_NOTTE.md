@@ -1,10 +1,10 @@
-# Rosina: workflow notturno del repository privato (proposta, da mettere in `Freeesta/mzlab-dati/.github/workflows/rosina.yml`)
+# Rosina: nightly workflow of the private repo (proposal, to place in `Freeesta/mzlab-dati/.github/workflows/rosina.yml`)
 
-Provato solo nella sintassi: il push nel privato richiede `add_repo`, che la chat di R-00 non ha ottenuto. Il Coordinatore (o la chat locale) lo copia nel privato con una PR e lo unisce.
-Gira di notte e a mano: checkout del privato (i dati stanno in `dati/`, le verità in `scratchpad/rosina/verita/`) e di `Freeesta/mzlab` `main` (pubblico), poi i test `verita_*` del banco
-(`crates/mzlab-lettori/tests/verita_<famiglia>.rs`). Ogni file produce una riga `file<TAB>L|P|NV|DIFETTO<TAB>livelli mancanti` in `MZLAB_ROSINA_RAPPORTO`; il riassunto formato × livello
-è un artefatto, mai nel pubblico. I file oltre 90 MB non sono nel privato: li prova la chat locale con `MZLAB_DATI_GRANDI`. msconvert e `timsdata` non girano qui: le verità
-arrivano già fatte da Windows/Mac (`coordinamento/dati_esterni/rosina/ORACOLI.md`).
+Syntax-checked only: pushing to the private repo needs `add_repo`, which the R-00 chat did not obtain. The Coordinator (or the local chat) copies it into the private repo with a PR and merges it.
+It runs at night and by hand: checkout of the private repo (data in `dati/`, truths in `scratchpad/rosina/verita/`) and of `Freeesta/mzlab` `main` (public), then the `truth_*` tests of the bench
+(`crates/mzlab-lettori/tests/truth_<family>.rs`). Each file produces a line `file<TAB>L|P|NV|DEFECT<TAB>missing levels` in `MZLAB_ROSINA_RAPPORTO`; the format × level summary
+is an artifact, never in the public repo. Files over 90 MB are not in the private repo: the local chat tests them with `MZLAB_DATI_GRANDI`. msconvert and `timsdata` do not run here: the truths
+arrive already made from Windows/Mac (`coordinamento/dati_esterni/rosina/ORACOLI.md`).
 
 ```yaml
 name: rosina
@@ -37,13 +37,13 @@ jobs:
       - name: Bench
         working-directory: mzlab
         # a defect fails the step, the report is written either way
-        run: cargo test --locked -p mzlab-lettori --features tutte --test 'verita_*' -- --nocapture
+        run: cargo test --locked -p mzlab-lettori --features tutte --test 'truth_*' -- --nocapture
       - name: Summary format x level
         if: always()
         run: |
           [ -f rapporto.tsv ] || : > rapporto.tsv
           {
-            echo "| file | esito | livelli mancanti |"; echo "|---|---|---|"
+            echo "| file | outcome | missing levels |"; echo "|---|---|---|"
             awk -F'\t' '{printf "| %s | %s | %s |\n", $1, $2, $3}' rapporto.tsv
           } | tee -a "$GITHUB_STEP_SUMMARY" > riassunto.md
       - uses: actions/upload-artifact@v4

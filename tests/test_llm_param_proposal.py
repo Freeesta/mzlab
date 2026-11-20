@@ -1,4 +1,4 @@
-"""`param-proposal/1` of `mzlab-llm`: the schema accepts the shape of 03-parametri.md §2 and rejects a proposal without proof or with an unknown field."""
+"""`param-proposal/1` of `mzlab-llm`: the schema accepts the shape of docs/agenti/llm-params.md and rejects a proposal without proof or with an unknown field."""
 import json
 from pathlib import Path
 

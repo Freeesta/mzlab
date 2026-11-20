@@ -45,7 +45,9 @@ try:
             # the copy stays and only its index is gone: «This file cannot be read» with the name filled in
             g = mlm.small_files(Path("/tmp/wd_tolto_altra_scheda_in2"), 1)[0]; name = os.path.basename(g)
             a.set_input_files("#pick", [g]); wait_for_js(a, f"UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone && f.file === {name!r})", 120000)
-            a.evaluate(f"(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); await d.removeEntry({name + '.mzidx'!r}); }})()")
+            # the engine keeps the index open for a moment after its last read (archivio.js, LEASE_IDLE): the removal waits for that lock to go, any other error is a failure
+            a.evaluate(f"""(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'), t0 = performance.now();
+              for (;;) {{ try {{ await d.removeEntry({name + '.mzidx'!r}); return; }} catch (e) {{ if (e.name !== 'NoModificationAllowedError' || performance.now() - t0 > 15000) throw e; await new Promise(r => setTimeout(r, 50)); }} }} }})()""")
             msg = a.evaluate(f"post('api/explore', {{ samples: [{{ file: {name!r}, time: 0, type: 'sample', conc: null, cunit: null, label: null }}], append: true }}).then(() => '', e => String(e.message || e))")
             assert name in msg and "{name}" not in msg, f"message: {msg!r}"
         step("an index lost alone names the file in «This file cannot be read»", index_lost)

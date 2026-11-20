@@ -1,6 +1,6 @@
 // @ts-check
 "use strict";
-// Channels of the files (api/canali, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (group),
+// Channels of the files (api/channels, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (group),
 // the tree selector of the chromatogram and MRM panels and the default channel of an experiment type. Only glue: every number comes from the engine.
 // Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP.
 (() => {
@@ -17,7 +17,7 @@
     const key = keyOf(k);
     let w = WAIT.get(key);
     if (!w) {
-      w = J(`api/canali?k=${k}`).then((/** @type {Canali} */ j) => { DONE.set(key, j); return j; });
+      w = J(`api/channels?k=${k}`).then((/** @type {Canali} */ j) => { DONE.set(key, j); return j; });
       w.catch(() => WAIT.delete(key));
       WAIT.set(key, w);
     }
@@ -43,7 +43,7 @@
     }
     if (!["tic", "bpc", "ms", "dd"].includes(c.family)) return null;
     const kind = c.family === "bpc" || o.kind === "bpc" ? "bpc" : "tic";
-    const url = `api/chrom?k=${k}&canale=${encodeURIComponent(c.id)}&kind=${kind}` + (o.mz0 != null ? `&mz0=${o.mz0}` : "") + (o.mz1 != null ? `&mz1=${o.mz1}` : "");
+    const url = `api/chrom?k=${k}&channel=${encodeURIComponent(c.id)}&kind=${kind}` + (o.mz0 != null ? `&mz0=${o.mz0}` : "") + (o.mz1 != null ? `&mz1=${o.mz1}` : "");
     const d = await memo(`can${k}|${c.id}|${kind}|${o.mz0 ?? ""}|${o.mz1 ?? ""}`, () => J(url));
     return { rt: d.rt, y: d.y };
   }

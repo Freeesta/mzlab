@@ -1,12 +1,13 @@
-//! The record `trasf/1` (docs/studi/STRUTTURA_DATO_TRASFORMAZIONI.md): a parent → product transformation with the atom map, written on the canonical
+//! The record `trasf/1` (docs/studi/TRANSFORMATION_RECORD.md): a parent → product transformation with the atom map, written on the canonical
 //! indices of two `mol/1` records that it names by their core hash and never copies. A certain product has a complete map; an uncertain one (only
 //! the change is known) has `delta`, `sites` and a region and no product. Chains, remapping and the stereo rule are in `transform_chain.rs`.
 
 use crate::codec::MolError;
 use crate::delta;
 use crate::model::{Mol, RegionKind};
+use crate::sortm::SortM;
+use crate::sortm::SortedVec;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
 
 /// The value of the `format` field.
 pub const TRANSFORMATION_FORMAT: &str = "trasf/1";
@@ -58,7 +59,7 @@ impl Transformation {
             return invalid("map lists every atom of the parent once, in order");
         }
         let hit: Vec<u32> = self.map.iter().filter_map(|m| m.1).collect();
-        let distinct: BTreeSet<u32> = hit.iter().copied().collect();
+        let distinct: SortedVec<u32, ()> = hit.iter().copied().collect();
         if distinct.len() != hit.len() {
             return invalid("two parent atoms map to one product atom");
         }
@@ -82,13 +83,13 @@ impl Transformation {
         if self.sites.is_empty() {
             return invalid("without a product the change needs sites");
         }
-        let atoms: BTreeSet<u32> = self.sites.iter().map(|s| s.atom).collect();
+        let atoms: SortedVec<u32, ()> = self.sites.iter().map(|s| s.atom).collect();
         if atoms.len() != self.sites.len() || self.sites.iter().any(|s| !(s.p > 0.0 && s.p <= 1.0))
         {
             return invalid("sites: distinct atoms, p in (0, 1]");
         }
         if let Some(r) = &self.region
-            && (!ascending(&r.atoms, usize::MAX) || !atoms.iter().all(|a| r.atoms.contains(a)))
+            && (!ascending(&r.atoms, usize::MAX) || !atoms.iter().all(|a| r.atoms.contains(&a.0)))
         {
             return invalid("region: ascending atoms that include every site");
         }
@@ -148,10 +149,10 @@ impl Transformation {
                 .map(|&a| self.product_atom(a))
                 .collect();
             let Some(mut image) = image else { continue };
-            image.sort_unstable();
+            image.sortm();
             for s in product.stereo.iter().filter(|s| s.is_defined()) {
                 let mut key = s.key_atoms();
-                key.sort_unstable();
+                key.sortm();
                 if key == image {
                     return invalid("a stereo element at the centre is copied as defined");
                 }

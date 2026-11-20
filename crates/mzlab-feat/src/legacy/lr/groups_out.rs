@@ -130,5 +130,5 @@ pub fn block(d: &LrDig, names: &[String], found: &[bool]) -> Option<String> {
         tb.rows.push(meta(d, e, &names[i]));
     }
     other_polarity(&mut tb.rows, d.settings.tol_da, d.settings.rt_tol_min);
-    groups::gruppi_json(&tb, &cs, &d.settings.groups).ok()
+    groups::groups_json(&tb, &cs, &d.settings.groups).ok()
 }

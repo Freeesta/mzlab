@@ -13,19 +13,10 @@ use super::labels::{shape, shape_json, AtomIn};
 
 /// The `M  RAD` code of every atom (0 = none), as `label/1` reads it.
 fn rad_codes(mf: &str, n: usize) -> Vec<i64> {
+    let lines: Vec<&str> = mf.lines().collect();
     let mut r = vec![0; n];
-    for l in mf.lines().filter(|l| l.starts_with("M  RAD")) {
-        let v: Vec<i64> = l[6..]
-            .split_whitespace()
-            .filter_map(|t| t.parse().ok())
-            .collect();
-        for p in v.get(1..).unwrap_or(&[]).chunks(2) {
-            if let [a, c] = p
-                && (1..=n as i64).contains(a)
-            {
-                r[*a as usize - 1] = *c;
-            }
-        }
+    for (i, c) in graph::props(&lines, "M  RAD", n) {
+        r[i] = i64::from(c);
     }
     r
 }
@@ -151,5 +142,12 @@ pub fn sel_json(request: &str) -> Result<String> {
 }
 
 #[cfg(test)]
+#[path = "aromatic_h_tests.rs"]
+mod aromatic_h_tests;
+#[cfg(test)]
 #[path = "sel_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "reader_bounds_tests.rs"]
+mod reader_bounds_tests;

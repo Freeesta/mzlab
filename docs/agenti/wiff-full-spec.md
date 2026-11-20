@@ -105,15 +105,6 @@ Total size is $40 + \sum_{e=0}^{N_{\text{entries}}-1} \text{sizeof}(\text{Entry}
    - `+6 + plen` (`f32`): `val_stop` — stop voltage (equals `val_start` unless ramped).
    - `+10 + plen` (`f32`): `val_step` — ramp step (`0.0` unless ramped).
 
-#### Exact Offset Map in `MRM.wiff` (290 bytes total, 2 transitions, `n_params = 5`)
-
-- **Entry 0 (`+40..+166`, 126 bytes — `"Quant"`)**:
-  - `+40` (`f32`): `Q1 = 364.1`, `+44` (`f32`): `0.0`, `+48` (`f32`): `Q3 = 194.1`, `+52` (`f32`): `dwell = 25.0` ms, `+56` (`u32`): `0`, `+60` (`u16`): `10`, `+62..+72`: `"Quant"`.
-  - `+72..+90`: `"DP"` (`f32` at `+78` = `50.0` V), `+90..+108`: `"EP"` (`f32` at `+96` = `10.0` V), `+108..+128`: `"CEP"` (`f32` at `+116` = `22.10639` V), `+128..+146`: `"CE"` (`f32` at `+134` = `20.0` V), `+146..+166`: `"CXP"` (`f32` at `+154` = `3.0` V).
-- **Entry 1 (`+166..+290`, 124 bytes — `"Qual"`)**:
-  - `+166` (`f32`): `Q1 = 364.1`, `+170` (`f32`): `0.0`, `+174` (`f32`): `Q3 = 152.1`, `+178` (`f32`): `dwell = 25.0` ms, `+182` (`u32`): `0`, `+186` (`u16`): `8`, `+188..+196`: `"Qual"`.
-  - `+196..+214`: `"DP"` (`f32` at `+202` = `50.0` V), `+214..+232`: `"EP"` (`f32` at `+220` = `10.0` V), `+232..+252`: `"CEP"` (`f32` at `+240` = `22.10639` V), `+252..+270`: `"CE"` (`f32` at `+258` = `20.0` V), `+270..+290`: `"CXP"` (`f32` at `+278` = `3.0` V).
-
 ### 2.3 `sMRM` (52 bytes)
 
 | Offset | Type | Field | Physical Meaning |
@@ -244,3 +235,28 @@ For each non-empty TOF scan $i$, at `marker_pos = SampleIdxTable.offset + 24 + I
      - `0x7c` + `u8 c`, `0x7d` + `u16 c`, `0x7e` + `u32 c`: emit point at `curr_bin` with count $c$, then `curr_bin += 4`.
      - `0xff`: end-of-block padding up to `size`.
    - **Exact Invariants**: $\sum c_k = \text{Idx}[i].\text{tic}$ and $\max_k c_k = \text{Idx}[i].\text{aux\_26}$ across 100% of scans.
+
+---
+
+## 5. What is per sample and what is file-global (container rewrites)
+
+Source: the reader (`crates/mzlab-core/src/wiff/`, `ole.rs`), the synthetic fixtures of `tools/wiff_riferimento.py` and the sections above. The `.wiff` is never edited in place and no `.wiff` writer is built (the read-only inventory of section 7 is). Whatever the repo does not show is UNKNOWN: it needs a real file.
+- **Per sample**: `SampleSubtree/SampleN/Idx` (32 B header + 54 B rows; offsets are relative to the section, so a section can move in the `.scan` without touching `Idx`); the section of sample N in the `.wiff.scan` (starts at `B - 20`, B = the table position; blocks at `section + offset + 44`; ends at the next section; marker `11 11 11 11 82 05 00 00` + u32 sample number on partial copies, `unindexed.rs`); `Log`, `SampleDABE/{DATA, CFR_INFO}` (name, `.dam` name, vial), `Devices/Device_K/*`, `DAD/*`, `DDERealTimeData`;
+  on TOF / SCIEX OS also `Wiff2SampleInfo` (number at +32), `Itc`, `TDCInfo`, `TDCStatistics`, `TOFCalibrationData`.
+- **File-global**: `SampleSubtree/SampleIdxTable` (32 B header, 16 B rows: u32 number, u32 B); `DabsInfo` and `SampleTable` (strings `s1`, `s2`...: sample name, plate, position; read only as text); `SummaryInformation` (creation date, the mzML `startTimeStamp`); the OLE directory (names, CLSID, times, state bits), FAT, DIFAT, mini FAT, sector size (`ole.rs` keeps only name, type, links, start, size).
+- **Per method** (shared by samples): `MethodSubtree/MethodM/...` (`DeviceMethod0/Period0/ExperimentI/*`, `DeviceMethod1/{VendorAppMethod, LCPumpStepK}`, `GLPTables` with the Q1/Q3 calibration tables, `AcqMethodFileInfoStm`). A batch has one `MethodM` per distinct method; the reader picks a sample's method by the `.dam` name (`SampleDABE/DATA`, `AcqMethodFileInfoStm`), else the nearest `MethodN` below the sample (`wiff::method_no`, `borrow_agrees`), so renumbering a method can change the answer. An empty injection is a table row with B < 20 and no `Idx`: a sample with no section.
+- **Sample-number occurrences seen**: the table row, the storage name `SampleN`, the section marker, `Wiff2SampleInfo` +32 and a `MethodN` named after its sample; others UNKNOWN.
+
+## 6. What the reader never parses (potential loss for any decode/re-encode)
+Measured with a throwaway script over the 32 synthetic `.wiff` of `tools/wiff_riferimento.py` (204 streams, 17 stream classes; every class is read by some code path, which proves little because the fixtures hold only what our own writer put in):
+- Real files carry streams the reader touches only as text or not at all: `SummaryInformation`, `DabsInfo`, `SampleTable`, `GLPTables`, `CFR_INFO`, `AcqMethodFileInfoStm`.
+- Inside streams: the 32-byte OLE header of every stream (about 6 % of the fixture bytes); in `Idx` the u8 at +16 and the 20 bytes +34..+53 of each row (about 23 % of the fixture bytes; zero in the fixtures and on QTRAP, but TOF rows use +34 and +46); in `ExperimentHeader` about 20 of 180 bytes are used (+42, +86, +122, +176; the experiment name at +90 and the MRM marker at +120 are documented here but not used by the reader).
+- In the `.wiff.scan`: bytes inside a section but outside any block (the 44-byte section lead, the 4-byte padding after a block stream, gaps between `offset+size` and the next row) are never decoded; bytes outside every section (file header, trailer) are UNKNOWN, since the reader enters the file only through table positions.
+- The nibble codec of the instrument writer is not canonical (long/short forms; the 3200 pads a stream of `u` bytes to `u + 4 - u % 4`), so a re-encode cannot be byte-identical; only a verbatim copy keeps every byte.
+
+## 7. Read-only inventory and verify (`mzlab-cli file inventory`, `file verify`)
+- `mzlab-cli file inventory IN.wiff... [--full] [--json]` (feature `wiffwrite`, `crates/mzlab-core/src/wiff/inventory.rs`, `ole/inventory.rs`, `crates/mzlab-cli/src/wiff_cmd.rs`), schema `wiff.list/1`. Per file: name, SHA-256 of the `.wiff`, `container` (OLE version, sector sizes, bytes), `scan` (bytes, `head_bytes` before the first section, `unindexed_skipped`), `global_streams`.
+  Per sample: `number`, `name`, `method`, `scans`, `status` (`ok|refused|truncated|damaged|unindexed`), `reason`, `section` (start, bytes, `slack` after the last block, SHA-256, `lead_hex` of the first 44 bytes), `idx` (rows, zero rows), `streams` (path, bytes, SHA-256). `--full` adds the SHA-256 of the whole `.wiff.scan` and `directory` (every entry: kind, bytes, CLSID, state bits, creation and modification FILETIME as hex). A refused sample (a code the reader refuses, a TOF experiment or block, periods, an unknown block version) is listed with its reason, never hidden.
+  Exit 3 when any sample is not `ok`; the tool does not search every place a sample number occurs.
+- `mzlab-cli file verify OUT.wiff --against SRC.wiff...`, schema `wiff.verify/1`: each output sample is matched to the source sample with the same section SHA-256 (an empty injection: the same name) and compared stream by stream (path without the sample and method numbers) and on the directory metadata; the streams shared by all samples must equal those of the first source; `equal` is the answer and `differences` the evidence. Exit 0 equal, 1 any difference or a sample that is not `ok`.
+- The site serves the same two functions from the lazily loaded module `wiffwrite` (`wiff_list`, `wiff_verify`, `crates/mzlab-lettori-wasm/src/wiffwrite.rs`, cap in `tools/moduli/lettori-wiffwrite.toml`); `tests/test_wiff_inventory_wasm.py` compares its text with the CLI's byte for byte.

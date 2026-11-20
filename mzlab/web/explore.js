@@ -291,7 +291,7 @@ window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
 function panelRec(p) {
   return {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, area: window.SIMUI ? SIMUI.areaOf(p) : undefined, tol: p.tol,
-    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
+    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, channel: t.channel || undefined })),
     channels: p.channels && p.channels.length ? p.channels : undefined,
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ks: p.ks ? p.ks.map((/** @type {number} */ k) => E.files[k]?.file).filter(Boolean) : undefined, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, note: p.note || undefined, ints: p.ints, noise: p.noise || undefined, tr: p.tr,
     link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
@@ -387,9 +387,9 @@ async function xicBin(/** @type {string} */ url) {
   return { mz: head.mz, tol: head.tol, traces };
 }
 // the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
-// canale: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
-const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, canale) => canale
-  ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
+// channel: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
+const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, channel) => channel
+  ? memo(`x${k}|${mz}|${tol}|${lv}|${channel}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&channel=${encodeURIComponent(channel)}`).then(j => j.traces ? j.traces[0] : j))
   : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (window.HR ? HR.q() : "");   // no merge flag: the engine decides (unit-resolution centroids are merged, profile and HR never)
@@ -529,8 +529,9 @@ function restoreUi() {
   const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
   const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));  // a removed file's entry only records the removal: it must not make the restore fail
   if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
-  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
+  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved)); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
   saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved));
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }

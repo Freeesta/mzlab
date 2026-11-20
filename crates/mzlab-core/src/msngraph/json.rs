@@ -130,7 +130,7 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
     candidates(o, g);
     o.raw(",\"counts\":{\"nodes\":").int(g.nodes.len() as i64);
     o.raw(",\"edges\":")
-        .int(g.archi.len() as i64)
+        .int(g.edges.len() as i64)
         .raw(",\"discarded_heavy\":")
         .int(g.scartati.pesanti as i64);
     o.raw(",\"discarded_isotopes\":")
@@ -249,9 +249,9 @@ fn formula(o: &mut Out, f: &NodeFormula) {
 
 fn edge(o: &mut Out, a: &Edge) {
     o.raw("{\"from\":")
-        .str(&format!("n{}", a.da))
+        .str(&format!("n{}", a.from))
         .raw(",\"to\":")
-        .str(&format!("n{}", a.a));
+        .str(&format!("n{}", a.to));
     o.raw(",\"loss\":{\"da_mass\":")
         .num(round(a.perdita, 5))
         .raw(",\"formula\":");
@@ -326,7 +326,7 @@ pub fn json(g: &Graph, op: &Options, source: Option<(&str, &str)>) -> String {
         node(&mut o, i, n);
     }
     o.raw("],\"edges\":[");
-    for (i, a) in g.archi.iter().enumerate() {
+    for (i, a) in g.edges.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }

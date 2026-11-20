@@ -1,5 +1,4 @@
-//! The agent contract on every command of the table: `--help`/`-h` with nothing run, unknown options, `--json`, exit codes 4 and 5, `error/1`
-//! and a newline at the end of stdout. python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`); without it the test fails, it never skips.
+//! The agent contract on every command of the table: `--help`/`-h`, unknown options, `--json`, exit codes 4 and 5, `error/1`, a newline at the end of stdout; python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`) and without it the test fails.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -104,11 +103,6 @@ pub(crate) const MISSING: &[&[&str]] = &[
         "--at",
         "1",
     ],
-    &[
-        "explain-missing",
-        "/nonexistent/t.mzfeat",
-        "/nonexistent/e.csv",
-    ],
     &["ion", "match", "1", "--tables", "/nonexistent/t.json"],
     &["msn", "graph", "/nonexistent/g.json"],
     &["msn", "lib", "export", "/nonexistent/lib.json"],
@@ -155,6 +149,8 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["mol", "sel", "/nonexistent/r.json"],
     &["mol", "link", "/nonexistent/r.json"],
     &["mol", "export", "/nonexistent/r.json"],
+    &["mol", "draw", "/nonexistent/x.mol"],
+    &["mol", "open", "/nonexistent/f.cdxml"],
     &["mol", "cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
     &["mol", "mech", "/nonexistent/r.json"],
     &["file", "inventory", "/nonexistent/x.wiff"],
@@ -358,7 +354,6 @@ fn an_unknown_option_is_exit_2_and_under_json_one_error_document_for_every_comma
 fn positional_commands_reject_unknown_options() {
     for a in [
         vec!["sample", "group", "a.mzML", "--bogus"],
-        vec!["explain-missing", "t.mzfeat", "e.csv", "--bogus"],
         vec!["db", "normative", "bogus"],
         vec!["db", "normative", "pack", "a", "b", "--bogus"],
         vec!["flow", "command", "plan.json", "--bogus"],

@@ -1,5 +1,5 @@
 //! `molecules/1`: the CSV and canonical JSON round trips, one error per wrong row, the search (mass in ppm, formula, text), the levels, the catalogue (written
-//! back to the same bytes) and the parity of the search with the name box of Tabui (`tests/data/molecole_tabui_oro.json`, made by `tools/molecole_oro_tabui.mjs`).
+//! back to the same bytes) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/name_box_gold.json`, written once; the script and the page are gone).
 //! The molecules of the tests are invented.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -33,7 +33,7 @@ fn root() -> std::path::PathBuf {
 }
 
 fn catalogue() -> (String, Vec<Molecule>) {
-    let text = std::fs::read_to_string(root().join("mzlab/web/molecole/catalogo.csv")).unwrap();
+    let text = std::fs::read_to_string(root().join("mzlab/web/molecules/catalogue.csv")).unwrap();
     let all =
         from_csv(&text, "catalog", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
     (text, all)
@@ -252,7 +252,7 @@ fn the_catalogue_is_canonical_and_complete() {
     let (text, all) = catalogue();
     // the last record (timolol) was added after the two old lists
     assert_eq!(all.len(), 625 + 645 - 43 + 1);
-    assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/generate_molecules.py");
+    assert_eq!(to_csv(&all), text, "mzlab/web/molecules/catalogue.csv is not in the canonical form: run tools/generate_molecules.py");
     let both = all.iter().filter(|m| m.origin.catalog.len() == 2).count();
     assert_eq!(both, 43 + 1);
     assert_eq!(
@@ -263,7 +263,7 @@ fn the_catalogue_is_canonical_and_complete() {
     );
 }
 
-/// The queries of `tools/molecole_oro_tabui.mjs`: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
+/// The queries of the frozen answers: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
 fn queries(tabui: &[&Molecule]) -> Vec<String> {
     let mut names: Vec<&str> = Vec::new();
     for m in tabui {
@@ -311,13 +311,13 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
     let common: Vec<usize> = (0..tabui.len())
         .filter(|&k| tabui[k].origin.catalog.len() == 2)
         .collect();
-    let oro = std::fs::read_to_string(root().join("tests/data/molecole_tabui_oro.json")).unwrap();
-    let oro = parse(oro.as_bytes()).unwrap();
-    let expected = oro.get("risultati").unwrap().arr();
+    let gold = std::fs::read_to_string(root().join("tests/data/name_box_gold.json")).unwrap();
+    let gold = parse(gold.as_bytes()).unwrap();
+    let expected = gold.get("results").unwrap().arr();
     let qs = queries(&tabui.iter().collect::<Vec<_>>());
     assert_eq!(qs.len(), expected.len());
     assert_eq!(
-        oro.get("righe").and_then(Value::f64),
+        gold.get("rows").and_then(Value::f64),
         Some(tabui.len() as f64)
     );
     let (mut diff, mut numeric, mut extra) = (Vec::new(), 0, 0);
@@ -434,14 +434,14 @@ fn a_suspect_list_becomes_a_collection() {
     assert_eq!(back[hits[0].0].name, "Provolone B");
 }
 
-/// The screening list (`elenca` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
+/// The screening list (`list` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
 #[test]
 fn hrms_list_keeps_the_mz_of_the_old_csv() {
     let (text, _) = catalogue();
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
     route("load", &format!("{{\"catalog\":{}}}", quoted(&text))).unwrap();
     let gold =
-        parse(&std::fs::read(root().join("tests/dati/molecole_hrms_oro.json")).unwrap()).unwrap();
+        parse(&std::fs::read(root().join("tests/data/molecules_hrms_gold.json")).unwrap()).unwrap();
     let ads: Vec<String> = gold
         .get("adducts")
         .unwrap()
@@ -477,4 +477,14 @@ fn hrms_list_keeps_the_mz_of_the_old_csv() {
             "no molecule with the m/z of {r:?}"
         );
     }
+}
+
+/// A document that is not `molecules/1` with its list is a bad document, never read as empty.
+#[test]
+fn a_document_without_the_molecules_list_is_a_bad_document() {
+    let e = mzlab_core::molecules::from_json(br#"{"schema":"molecules/1"}"#).unwrap_err();
+    assert_eq!(
+        (e.len(), e[0].key, e[0].line),
+        (1, "error.molecules.badJson", 0)
+    );
 }

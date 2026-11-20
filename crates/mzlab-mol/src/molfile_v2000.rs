@@ -1,8 +1,11 @@
-//! Reader of the V2000 connection table: fixed-column atom and bond lines and the `M  CHG`, `M  ISO`, `M  RAD` property lines.
+//! Reader of the V2000 connection table: fixed-column atom and bond lines and the `M  CHG`, `M  ISO`, `M  RAD` property lines; of the
+//! S-groups only the `MRV_IMPLICIT_H` data group (`M  SAL`, `M  SDT`, `M  SED`).
 
 use crate::codec::MolError;
 use crate::elements::is_element;
-use crate::molfile::{fail, Draft, DraftAtom, DraftBond, Wedge};
+use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
+use crate::sortm::SortM;
+use std::collections::BTreeMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
 fn field(line: &str, a: usize, b: usize) -> &str {
@@ -71,9 +74,26 @@ fn atom_line(line: &str) -> Result<(DraftAtom, i8, u8), MolError> {
     Ok((atom, charge, rad))
 }
 
+/// A charge as the record keeps it; one outside -15 to 15 (what a molfile can state) is a damaged file, not a value to cut.
+pub(crate) fn charge(v: i32, atom: usize) -> Result<i8, MolError> {
+    if (-15..=15).contains(&v) {
+        Ok(v as i8)
+    } else {
+        Err(fail(format!(
+            "the charge {v} of atom {} is not -15 to 15",
+            atom + 1
+        )))
+    }
+}
+
 pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
     let counts = lines.get(3).copied().unwrap_or("");
-    let (na, nb) = (int(counts, 0, 3)? as usize, int(counts, 3, 6)? as usize);
+    // a negative count would wrap into a huge one
+    let count = |a, b| {
+        usize::try_from(int(counts, a, b)?)
+            .map_err(|_| fail(format!("the counts line {counts:?} has a negative count")))
+    };
+    let (na, nb) = (count(0, 3)?, count(3, 6)?);
     if lines.len() < 4 + na + nb {
         return Err(fail(
             "the atom and bond blocks are shorter than the counts line says",
@@ -97,7 +117,10 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         if line.starts_with("M  END") {
             break;
         }
-        let Some(kind) = line.get(3..6) else { continue };
+        // a property line starts with `M  `: any other line is not one
+        let Some(kind) = line.strip_prefix("M  ").and_then(|l| l.get(..3)) else {
+            continue;
+        };
         let pairs = || -> Result<Vec<(usize, i32)>, MolError> { property_pairs(line, na) };
         match kind {
             "CHG" => {
@@ -106,7 +129,7 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
                     seen_chg = true;
                 }
                 for (a, v) in pairs()? {
-                    legacy_charge[a] = v as i8;
+                    legacy_charge[a] = charge(v, a)?;
                 }
             }
             "ISO" => {
@@ -134,15 +157,54 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         atoms,
         bonds,
         collections: Vec::new(),
+        stated_h: stated_hydrogens(&lines[4 + na + nb..], na)?,
     })
+}
+
+/// The (0-based atom, hydrogens) of the `MRV_IMPLICIT_H` data groups among the property `lines` of a V2000 file of `na` atoms
+/// (`M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`, up to `M  END`), sorted: an atom named twice has its larger count last.
+pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, MolError> {
+    // data groups by number: (atoms, field name, data)
+    // ordered, so that of two damaged groups the same one is named in every run
+    let mut data: BTreeMap<&str, (Vec<usize>, &str, &str)> = BTreeMap::new();
+    for line in lines.iter().take_while(|l| !l.starts_with("M  END")) {
+        let kind = line.starts_with("M  ").then(|| line.get(3..6)).flatten();
+        let Some(kind @ ("SAL" | "SDT" | "SED")) = kind else {
+            continue;
+        };
+        let mut t = line[6..].split_whitespace();
+        let Some(group) = t.next() else { continue };
+        let g = data.entry(group).or_default();
+        match kind {
+            "SAL" => g.0.extend(
+                t.skip(1)
+                    .filter_map(|a| a.parse::<usize>().ok())
+                    .filter(|a| (1..=na).contains(a))
+                    .map(|a| a - 1),
+            ),
+            "SDT" => g.1 = t.next().unwrap_or(""),
+            _ => g.2 = t.next().unwrap_or(""),
+        }
+    }
+    let mut out = Vec::new();
+    for (list, field, value) in data.values() {
+        if let Some(h) = implicit_h(field, value)? {
+            out.extend(list.iter().map(|&a| (a, h)));
+        }
+    }
+    out.sortm();
+    Ok(out)
 }
 
 fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
     let (a, b) = (int(line, 0, 3)? as usize, int(line, 3, 6)? as usize);
-    if a == 0 || b == 0 || a > na || b > na || a == b {
+    if a == 0 || b == 0 || a > na || b > na {
         return Err(fail(format!(
             "bond line {line:?} names atoms outside 1..{na}"
         )));
+    }
+    if a == b {
+        return Err(fail(format!("bond line {line:?} joins atom {a} to itself")));
     }
     let (order, query) = match int(line, 6, 9)? {
         t @ 1..=3 => (t as u8, 0),
@@ -176,7 +238,8 @@ fn property_pairs(line: &str, na: usize) -> Result<Vec<(usize, i32)>, MolError> 
                 .map_err(|_| fail(format!("{t:?} in property line {line:?}")))
         })
         .collect::<Result<_, _>>()?;
-    let n = nums.first().copied().unwrap_or(0) as usize;
+    let n = usize::try_from(nums.first().copied().unwrap_or(0))
+        .map_err(|_| fail(format!("property line {line:?} has a negative count")))?;
     let mut out = Vec::new();
     for k in 0..n {
         let (Some(&a), Some(&v)) = (nums.get(1 + 2 * k), nums.get(2 + 2 * k)) else {

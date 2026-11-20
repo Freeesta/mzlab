@@ -1,5 +1,5 @@
 """first-paint.js: Ketcher is warmed by ONE policy (low-priority prefetch links, only after the page and any file load are quiet), never read into memory;
-a click on a tool tab (Flow, Tabui) before the loader exists is kept for tpmine-loader.js to replay."""
+a click on a tool tab (Flow) before the loader exists is kept for tpmine-loader.js to replay."""
 import json, pathlib, shutil, subprocess
 import pytest
 
@@ -83,7 +83,7 @@ const h = make({}); const nav = h.byId.nav; const w = h.ctx.window;
 const click = v => nav.on.click.forEach(f => f({ target: { closest: s => s === "[data-late]" && v ? { dataset: { v } } : null } }));
 click(null); const plain = w.MZLAB_LATE_CLICK === undefined ? "unset" : w.MZLAB_LATE_CLICK;
 click("flow"); const early = w.MZLAB_LATE_CLICK;
-w.QTOOLS = {}; w.MZLAB_LATE_CLICK = null; click("tpmine"); const late = w.MZLAB_LATE_CLICK;
+w.QTOOLS = {}; w.MZLAB_LATE_CLICK = null; click("flow"); const late = w.MZLAB_LATE_CLICK;
 console.log(JSON.stringify({ n: nav.on.click.length, plain, early, late }));
 ''')
     assert out == {"n": 1, "plain": "unset", "early": "flow", "late": None}

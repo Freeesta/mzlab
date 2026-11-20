@@ -34,7 +34,7 @@ pub struct NodeBreak {
 /// An arc and whether a hypothesis of its child lies inside a hypothesis of its parent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeBreak {
-    pub da: usize,
+    pub from: usize,
     pub a: usize,
     pub spiegato: bool,
 }
@@ -142,7 +142,7 @@ pub fn breaks_json(r: &Breaks) -> String {
     for (i, a) in r.edges.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"from\":")
-            .str(&format!("n{}", a.da))
+            .str(&format!("n{}", a.from))
             .raw(",\"to\":")
             .str(&format!("n{}", a.a))
             .raw(",\"explained\":")

@@ -37,9 +37,9 @@ fn applied_json(o: &mut Out, r: &Applicata) {
 
 fn edge_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
     o.raw("{\"from\":")
-        .str(&format!("n{}", g.archi[i].da))
+        .str(&format!("n{}", g.edges[i].from))
         .raw(",\"to\":")
-        .str(&format!("n{}", g.archi[i].a))
+        .str(&format!("n{}", g.edges[i].to))
         .raw(",\"rules\":[");
     for (j, r) in a.rules.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" });

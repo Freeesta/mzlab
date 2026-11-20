@@ -10,7 +10,7 @@ fn open(files: Vec<(String, Vec<u8>)>) -> Box<dyn Reader> {
         .unwrap_or_else(|e| panic!("{}", e.key))
 }
 
-/// The `dove` of every notice of the method document.
+/// The `place` of every notice of the method document.
 fn notices(l: &mut Box<dyn Reader>) -> Vec<String> {
     let h = l.mzml_header(0).unwrap().unwrap();
     let doc = &h

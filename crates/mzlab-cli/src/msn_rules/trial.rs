@@ -113,7 +113,7 @@ fn with_rule(g: &Graph, v: &Evaluation, rules: &mut BTreeMap<String, usize>) -> 
 
 fn peak_ids(g: &Graph, v: &Evaluation, prec: usize, node: usize) -> Vec<String> {
     let mut ids: Vec<String> = vec![];
-    if let Some(i) = g.archi.iter().position(|x| x.da == prec && x.a == node) {
+    if let Some(i) = g.edges.iter().position(|x| x.from == prec && x.to == node) {
         ids.extend(v.edges[i].rules.iter().map(|r| r.id.to_string()));
         ids.extend(v.edges[i].composta.iter().map(|(x, y)| format!("{x}+{y}")));
     }

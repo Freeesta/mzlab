@@ -6,7 +6,7 @@ Run from the repo root: python3 tests_e2e/e2e_untarget.py"""
 import json, os, random, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT
+from lib import open_mzfinder, ROOT
 from lib import copy_file as lib_copy_file, write_file as lib_write_file
 
 from lib import free_port; PORT = free_port()
@@ -45,11 +45,11 @@ try:
         def boot():
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=60000)
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-unt", timeout=60000)
+            open_mzfinder(pg)
         step("mzFinder is on and the feature-table button exists", boot)
         def lib():
             info = pg.evaluate(ADD, ["alpha.msp", ALPHA]); assert info["n"] == 1, info
-            pg.click("#tp-unt"); pg.wait_for_selector("#unt[open]", timeout=10000)
+            pg.evaluate("() => window.UNTUI.open()"); pg.wait_for_selector("#unt[open]", timeout=10000)
         step("a library is imported and the window opens", lib)
         def load():
             pg.set_input_files("#unt-in", [str(tmp / "tabella_pos.csv"), str(tmp / "fbmn.mgf")])

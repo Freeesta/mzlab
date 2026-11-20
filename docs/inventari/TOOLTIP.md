@@ -1,119 +1,57 @@
-# Inventario dei tooltip
+# Tooltip inventory
 
-Elenco di ogni tooltip del sito (`mzlab/web`, Tabui `TP_Mine`, Flow `flow/lazy`), classificato. Le tabelle per zona (`TOOLTIP-pannelli-1.md`, `-pannelli-2`, `-spettri`, `-liste`, `-disegno`, `-tabui`) sono generate: `python3 tools/inventory_tooltip.py --md docs/inventari` (le icone senza tooltip: `--gaps`). Qui: meccanismo, regola, hover dei grafici, mancanti, decisioni.
+Every tooltip site of the program (`mzlab/web`, Tabui `TP_Mine`, Flow `flow/lazy`), classified. The per-zone tables (`TOOLTIP-pannelli.md`, `TOOLTIP-spettri.md`, `TOOLTIP-liste-1.md`, `TOOLTIP-liste-2.md`, `TOOLTIP-disegno.md`, `TOOLTIP-tabui.md`) are generated: `python3 tools/inventory_tooltip.py --md docs/inventari` (icons with no tooltip: `--gaps`). Counts are not kept here: `python3 tools/inventory_tooltip.py` prints one row per site and the number of sites on stderr; `python3 tools/list_tooltip.py` prints the totals of the full text list (`--md` and `--csv` print the list itself to stdout, nothing is written). This page: mechanism, rule, chart hover, decisions.
 
-## Come funzionano
-- **Tooltip dei controlli**: l'attributo `title` (o `.title =`, `data-i18n-title`). Il programma lo sostituisce con il suo tooltip discreto (`eventi.js`, blocco «discreet tooltip»): al primo passaggio il `title` diventa `data-tip`, il riquadro `#qtip` compare dopo 1,25 s (1 s nelle righe `.fl`) di puntatore fermo o di fuoco arrivato da tastiera, sparisce quando puntatore o fuoco escono, e Esc toglie solo lui (WCAG 1.4.13; guardia `e2e_tip_tastiera`); non compare dentro una `dialog` aperta. `data-tiph` = tooltip con HTML. Al tocco: pressione lunga di 0,6 s.
-- **Hover dei grafici** (canvas): `p._a.hov` restituisce l'HTML del riquadro `p.tip` (`grafici.js` `showHover`); le etichette dei picchi/annotazioni hanno il proprio `tip` (`_a.lbls`, `eventi.js`).
-- **Grafici SVG**: elementi `<title>` (`pca.js`, `kmd-vista.js`, `pfas.js`, `profilo.js`, `qaqc.js`).
-- **Testi**: chiavi in `lang/it` e `lang/en` (nessuna chiave senza l'altra lingua); i punti senza chiave sono costruiti a runtime o sono Tabui/Flow (solo inglese).
+## How they work
+- **Control tooltips**: the `title` attribute (or `.title =`, `data-i18n-title`). The program replaces it with its discreet tooltip (`eventi.js`, block «discreet tooltip»): on the first pass `title` becomes `data-tip`, the `#qtip` box appears after 1.25 s (1 s in `.fl` rows) of a still pointer or keyboard focus, disappears when pointer or focus leave, and Esc dismisses only it (WCAG 1.4.13; guard `e2e_tip_tastiera`); it does not appear inside an open `dialog`. `data-tiph` = tooltip with HTML. On touch: a long press of 0.6 s.
+- **Chart hover** (canvas): `p._a.hov` returns the HTML of the `p.tip` box (`grafici.js` `showHover`); peak and annotation labels have their own `tip` (`_a.lbls`, `eventi.js`).
+- **SVG charts**: `<title>` elements (`pca.js`, `kmd-vista.js`, `pfas.js`, `profilo.js`, `qaqc.js`).
+- **Texts**: keys in `mzlab/web/lang/en/` (the only catalog; the interface is English only). Sites without a key are built at run time, or are Tabui/Flow texts written directly in English.
 
-## Numeri (508 punti, 318 chiavi distinte)
-| zona | punti | A | C | D | non tooltip |
-|---|---|---|---|---|---|
-| pannelli, barre, legende | 161 | 152 | 0 | 0 | 9 |
-| spettri, mappa, DDA, XIC, integrazione | 86 | 82 | 0 | 1 | 3 |
-| file, liste, librerie, tabelle, calcolatrice | 132 | 119 | 2 | 0 | 11 |
-| disegno, grafo, infusione | 57 | 56 | 0 | 0 | 1 |
-| Tabui e Flow | 72 | 70 | 0 | 0 | 2 |
-Per tipo: 330 `title="…"`, 39 `data-i18n-title`, 85 `.title =` (26 righe tra queste e le altre sono proprietà dei pannelli o titoli di pagina, non tooltip), 30 `tip:` nei menu, 19 `<title>` SVG. I 4 tooltip sopra 200 caratteri: `grafici.js:219`, `pannelli.js:713`, `settings.js:149`, `index.html:81`; 25 sopra 150.
+## Classes
+- **A useful**: adds what is not visible (unit, shortcut, effect, explanation of an icon). Almost every row of the tables.
+- **B redundant**: repeats the label or the value already written next to it.
+- **C to redo**: incomplete or inconsistent (a format unlike the others, text that names internal files).
+- **D to remove**: noise (for example just "Right-click: actions").
+- **-**: the line contains `.title` but it is a panel or page property, not a tooltip.
 
-**Risultato**: tra i `title` dei controlli la ridondanza vera è quasi assente (uno ripeteva la scritta del pulsante, due erano rumore: vedi «Fatto in questa PR»). Quasi tutti spiegano un'icona, un'unità o un effetto. I tooltip inutili stanno nei **grafici** (hover ed etichette dei picchi) e nel formato non unico dell'hover.
+## Rule (the maintainer)
+1. At most one short sentence: what the control does or the datum that is not visible; never a copy of the label, no tutorial, no explanation of the obvious.
+2. Dynamic values (time range, id) are not pasted into the explanation: they have their own column or disappear. Shortcuts stay, in parentheses.
+3. Icon-only buttons ALWAYS have a tooltip with the name and, if there is one, the shortcut.
+4. Every chart shows time, m/z and intensity in the same format, produced by a single function.
+5. Hints about gestures («Right-click: actions») belong in the help, not in the tooltip.
 
-## Classi
-- **A utile**: aggiunge ciò che non si vede (unità, scorciatoia, effetto, spiegazione di un'icona). Quasi tutti i punti delle tabelle.
-- **B ridondante**: ripete l'etichetta o il valore già scritti accanto.
-- **C da rifare**: incompleto o incoerente (formato diverso dagli altri, testo in lingua sbagliata o che nomina file interni).
-- **D da togliere**: rumore (per esempio solo «Right-click: actions»).
-- **-**: la riga contiene `.title` ma è una proprietà del pannello o della pagina, non un tooltip.
+Text rule (guard `tests/test_tooltip_corti.py`, every `.tip`, `.title` or `Title` key and every literal `title="..."`): one short sentence, at most 90 characters, saying only what the control does (shortcut in parentheses); never promises about privacy or method, advertising, a tutorial, the repeated label, the «candidate, not identification» warning or a pasted dynamic value. A warning only when the control destroys (deletes, overwrites); facts go in the help or in visible notes. Exceptions in `tests/tooltip_ammessi.txt`, each with its reason.
 
-## Regola (Federico)
-1. Al massimo una frase breve: cosa fa il controllo o il dato che non si vede; mai la copia dell'etichetta, niente tutorial né spiegazioni dell'ovvio.
-2. I valori dinamici (intervallo di tempo, id) non si incollano alla spiegazione: hanno la loro colonna o spariscono. Le scorciatoie restano, tra parentesi.
-3. I pulsanti con sola icona hanno SEMPRE tooltip con nome e, se c'è, scorciatoia (tabella «Mancanti»).
-4. Ogni grafico mostra tempo, m/z e intensità nello stesso formato, prodotto da una sola funzione.
-5. I suggerimenti sui gesti («Tasto destro: azioni») stanno nell'aiuto e nella Teoria, non nel tooltip.
-Elenco completo di tutti i testi dei tooltip (IT, EN, lunghezza, segnalazioni automatiche per le regole 20 e 21; fonti: siti, chiavi di catalogo, aiuto dei passi e parametri del Flow): `docs/studi/TOOLTIP_ELENCO.md` e `.csv`, generati da `python3 tools/list_tooltip.py` (`--check` dice se sono da rigenerare).
-Regola dei testi (guardia `tests/test_tooltip_corti.py`, IT ed EN, ogni chiave `.tip`, `.title` o `Title` e ogni `title="..."` letterale): una frase breve, al massimo 90 caratteri, che dice solo che cosa fa il controllo (scorciatoia tra parentesi); mai promesse di privacy o di metodo («non si invia nulla», «X invece di Y»), pubblicità, tutorial, la scritta ripetuta, l'avvertenza «candidato, non identificazione» o un valore dinamico incollato. Un avviso solo se il controllo distrugge (cancella, sovrascrive); i fatti vanno nell'aiuto o nelle note visibili. Eccezioni in `tests/tooltip_ammessi.txt`, ognuna col motivo.
-Guardia dinamica: `tests_e2e/e2e_tooltip_dinamici.py` (sito costruito, file sintetici di ogni tipo: Full Scan, MS2, MRM, IDA, DDA ad alta risoluzione, .wiff Q1/PI/EPI e SIM; IT ed EN). Raccoglie ogni elemento con `title`, `data-tip` o `data-tiph` (le sole fonti del tooltip del programma) in ogni scheda di esperimento, poi passa il mouse sulle intestazioni dei gruppi, su ogni tooltip HTML e sui 25 testi più lunghi. Fallisce se un testo supera 60 caratteri o ha più di una frase, o se il riquadro disegnato è più largo di 28ch o più alto di 3 righe (`#qtip` ha `max-width:28ch`).
-Pannello Impostazioni: ogni controllo visibile (anche il modulo «Segnala un bug», i gruppi Assistente e Diagnostica della modalità amministratore) ha un tooltip suo, al massimo 60 caratteri, diverso dalla scritta, in IT ed EN, con un file LR e con uno HR; le opzioni di tema stanno sotto un tooltip unico (`IMPCOMP.opts`), quelle del carattere ne hanno uno ciascuna. Guardia: `tests_e2e/e2e_tip_impostazioni.py` (anche mouse, pressione lunga al tocco senza cambiare l'interruttore, anello di focus con Tab).
-Le intestazioni dei gruppi dell'elenco laterale (`files.grp.tip.*`) dicono solo il tipo di scansione; lo schema Q1 → q2 → Q3 è nell'aiuto del tipo (`QMODI.html`), non nel tooltip.
-Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del proprio elemento, nessuno fatto solo di «Right-click: actions»; le due eccezioni sono quelle di CROMA-CLICK-PICCO e solo calano).
+Other guards:
+- `tests/test_tooltip_inventario.py`: no tooltip equal to the text of its own element, none made only of «Right-click: actions».
+- `tests/test_elenco_tooltip.py`: the full text list (`tools/list_tooltip.py`) covers every source and its CSV matches its Markdown.
+- `tests_e2e/e2e_tooltip_dinamici.py` (built site, synthetic files of every type: Full Scan, MS2, MRM, IDA, high-resolution DDA, `.wiff` Q1/PI/EPI and SIM): collects every element with `title`, `data-tip` or `data-tiph` in every experiment tab, then hovers the group headings, every HTML tooltip and the longest texts. Fails if a text exceeds 60 characters or has more than one sentence, or if the drawn box is wider than 28ch or taller than 3 lines (`#qtip` has `max-width:28ch`).
+- Settings panel: every visible control has its own tooltip, at most 60 characters, different from the label, with one LR and one HR file open; guard `tests_e2e/e2e_tip_impostazioni.py` (also mouse, long press on touch without toggling the switch, focus ring with Tab).
+- The headings of the side list groups (`files.grp.tip.*`) say only the scan type; the Q1 -> q2 -> Q3 scheme is in the type help, not in the tooltip.
 
-## Hover dei grafici (da tenere insieme)
-| dove | cosa mostra oggi | classe | nota |
+## Chart hover (to keep consistent)
+| where | what it shows | class | note |
 |---|---|---|---|
-| `grafici.js:446` cromatogramma, XIC, MRM | **RT min**, poi per traccia: nome e intensità (+ «grezzo»); fino a 8 righe | A/C | niente unità (cps) e niente m/z della traccia |
-| `picchi.js:410` spettro (`tip.peak`) | **m/z**, «intensità» e valore, cps assoluti se in %, Δm/z dal riferimento, file | C | formato diverso dal cromatogramma (CROMA-CLICK-PICCO) |
-| `grafici.js:596` mappa 2D (`map.hov`) | **RT · m/z**, «intensità» o «differenza», bin di m/z | A | è il formato più completo |
-| `grafici.js:596` mappa PDA | RT min, nm, mAU scritti nel codice, non da `lang/` | C | unità fuori dai cataloghi |
-| `uv-spettro.js:101` spettro UV | nm e mAU scritti nel codice | C | come sopra |
-| `area-etichette.js` area label (no key) | no hover text (a click copies the area) | — | the hover box with area, intensity and baseline lines was removed |
-| `picchi.js:458` etichetta m/z (`tip.peakLabel`) | m/z e «Right-click: actions» | D | l'm/z è già sull'etichetta; CROMA-CLICK-PICCO |
-| `etichette-picchi.js:54` etichetta RT (`etpk.tip.rt`) | «Peak at RT 14.34 min» | B | ripete l'etichetta; CROMA-CLICK-PICCO |
-| `spettro.js:100` etichette Δ del righello | addotto, Δ, «Clic destro: …» | C | un solo suggerimento di gesto |
-| `grafici.js:156` annotazione (`draw.ann.tip`) | il testo della nota + «Doppio clic: modifica · tasto destro: azioni» | C | il testo si ripete; restano i gesti |
-| `dda.js:247,257` marcatori DDA | titolo, n. MS2, precursore | A | |
-| `mappa.js:53` etichette dello spettro laterale | m/z, S/N | A | |
-| SVG: `pca.js:87`, `kmd-vista.js:37`, `pfas.js:102`, `profilo.js:84`, `qaqc.js` | campione, m/z, RT, valore | A | formati propri, ognuno con la sua unità |
+| `grafici.js` chromatogram, XIC, MRM | **RT min**, then per trace: name and intensity (+ "raw"); up to 8 lines | A/C | no unit (cps) and no m/z of the trace |
+| `picchi.js` spectrum (`tip.peak`) | **m/z**, "intensity" and value, absolute cps if shown in %, Δm/z from the reference, file | C | format differs from the chromatogram |
+| `grafici.js` 2D map (`map.hov`) | **RT · m/z**, "intensity" or "difference", m/z bin | A | the most complete format |
+| `grafici.js` PDA map | RT min, nm, mAU written in the code, not from `lang/` | C | units outside the catalogs |
+| `uv-spettro.js` UV spectrum | nm and mAU written in the code | C | as above |
+| `area-etichette.js` area label | no hover text (a click copies the area) | - | the hover box with area, intensity and baseline lines was removed |
+| `picchi.js` m/z label (`tip.peakLabel`) | m/z and «Right-click: actions» | D | the m/z is already on the label |
+| `etichette-picchi.js` RT label (`etpk.tip.rt`) | «Peak at RT 14.34 min» | B | repeats the label |
+| `spettro.js` ruler Δ labels | adduct, Δ, «Right-click: ...» | C | a single gesture hint |
+| `grafici.js` annotation (`draw.ann.tip`) | the note text + double-click and right-click gestures | C | the text repeats; the gestures remain |
+| `dda.js` DDA markers | title, MS2 count, precursor | A | |
+| `mappa.js` side-spectrum labels | m/z, S/N | A | |
+| SVG: `pca.js`, `kmd-vista.js`, `pfas.js`, `profilo.js`, `qaqc.js` | sample, m/z, RT, value | A | own formats, each with its unit |
 
-## Mancanti: pulsanti solo icona con `aria-label` e senza tooltip
-Mostrano il nome ai lettori di schermo ma non al mouse (da completare con tooltip + scorciatoia).
-| file:line | segno | aria-label o testo |
-|---|---|---|
-| banco.js:449 | × | ${I18N.t( |
-| elementare.js:45 | × | ${t( |
-| elementare.js:48 | × | ${t( |
-| explore.js:808 | × | ${EH(I18N.t( |
-| fair.js:138 | &times; | ${T( |
-| pca.js:128 | ? | ${eh(t( |
-| picchi.js:231 | ${IC_DL}Excel |  |
-| picchi.js:231 | ${IC_DL}CSV |  |
-| qaqc.js:163 | × | ${eh(t( |
-| shell.js:122 | ? | ${I18N.t( |
-| index.html:74 | ( |  |
-| index.html:74 | ) |  |
-| index.html:76 | &times; |  |
-| index.html:78 | , |  |
-| index.html:78 | + |  |
-| TP_Mine/js/20_tpmine.js:57 | × | Remove ${esc(fileLabel(f.name))} |
-| TP_Mine/js/27_untarget_ui.js:35 | &times; | Close |
-| TP_Mine/js/32_pipeline.js:194 | &times; | Close |
-| TP_Mine/js/32_pipeline.js:195 | &#8635; | Refresh the list of files |
-| TP_Mine/js/52_attributio_banco.js:142 | + | Zoom in |
-| TP_Mine/js/52_attributio_banco.js:142 | − | Zoom out |
-| TP_Mine/js/52_attributio_banco.js:143 | ← | Move left |
-| TP_Mine/js/52_attributio_banco.js:143 | → | Move right |
-| TP_Mine/js/52_attributio_banco.js:275 | ← | Previous feature |
-| TP_Mine/js/52_attributio_banco.js:275 | → | Next feature |
-| TP_Mine/lazy/gruppi-vista.js:200 | − | Zoom out the UpSet plot |
-| TP_Mine/lazy/gruppi-vista.js:200 | + | Zoom in the UpSet plot |
-| TP_Mine/lazy/gruppi-vista.js:300 | − | Zoom out the chart |
-| TP_Mine/lazy/gruppi-vista.js:300 | + | Zoom in the chart |
-
-## Fatto in questa PR (prima → dopo)
-| dove | prima | dopo |
-|---|---|---|
-| `fondo-piatto.js:67` pulsante «↺ ripristina automatico» | tooltip «ripristina automatico» | nessuno (ripeteva la scritta) |
-| `mappa3d.js:184` pulsante «Ripristina (R)» | tooltip «R» | nessuno (la scritta ha già la scorciatoia) |
-| `tpmine-loader.js:125` pulsante «Close» di Tabui | tooltip «Close» | nessuno |
-| `tbl.loss.exactTitle` (m/z esatto nella tabella Perdite neutre) | «Massa esatta, da elements.py» / «Exact mass, from elements.py» | «Massa esatta» / «Exact mass» |
-
-## Lasciato come proposta
-- Tutto ciò che riguarda le etichette dei picchi, l'hover dello spettro e «Right-click: actions» (`tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): lo sta cambiando CROMA-CLICK-PICCO.
-- Funzione unica dell'hover dei grafici (tempo, m/z, intensità con unità) e unità da `lang/` per mappa PDA e spettro UV.
-- Tooltip con i gesti ripetuti su ogni elemento («Clic: mostra o nascondi» nelle legende, «Clic: mostra solo questo file»): da spostare nell'aiuto.
-- `liste-target.js:75,145`: tooltip in inglese scritti nel codice, da portare in `lang/it` e `lang/en`.
-- I 4 tooltip sopra 200 caratteri da accorciare o spostare nell'aiuto; `draw.ann.tip` e `spec.dm.tip.*` (un tooltip che è solo un gesto).
-
-## Decisioni per Federico
-1. Approvi la regola «un tooltip solo se aggiunge informazione» e il «sempre tooltip con nome e scorciatoia sulle icone»?
-2. Formato unico dell'hover dei grafici: «RT 14.34 min · m/z 301.1 · intensità 2.3e5 cps». Va bene, con una sola funzione?
-3. I suggerimenti sui gesti (tasto destro, doppio clic) escono dai tooltip e vanno nell'aiuto: sì o no?
-4. Aggiungo il tooltip ai ~20 pulsanti solo icona che ne sono privi?
-5. I 4 tooltip lunghi (oltre 200 caratteri): accorciarli o spostarli nell'aiuto?
-6. Porto in `lang/` i due tooltip inglesi di `liste-target.js`?
-7. Tooltip dell'etichetta del picco (RT ripetuto): tenere solo l'area e l'intensità, come proposto da CROMA-CLICK-PICCO?
-8. Tabui e Flow: stessa regola (restano in inglese)?
-9. Al tocco il tooltip non si vede: va bene così o serve un modo (pressione lunga)?
-10. La guardia dei test (nessun tooltip uguale alla propria scritta) resta obbligatoria?
+## Open proposals
+- A single chart-hover function (time, m/z, intensity with units, e.g. «RT 14.34 min · m/z 301.1 · intensity 2.3e5 cps») and units from `lang/` for the PDA map and the UV spectrum.
+- Peak labels, spectrum hover and «Right-click: actions» (`tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): keep only area and intensity on the peak label.
+- Tooltips that repeat gestures on every element («Click: show or hide» in legends, «Click: show only this file»): move to the help.
+- The tooltips above 200 characters: shorten them or move them to the help; `draw.ann.tip` and `spec.dm.tip.*` (a tooltip that is only a gesture).
+- Icon-only buttons with an `aria-label` but no tooltip: `python3 tools/inventory_tooltip.py --gaps` lists them; each needs a tooltip with name and shortcut.
+- Tabui and Flow follow the same rule (their texts are English only, like the rest).

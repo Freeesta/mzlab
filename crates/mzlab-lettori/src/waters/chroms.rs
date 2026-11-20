@@ -225,7 +225,7 @@ pub(super) fn all_of_them(l: &mut WatersReader) -> Result<Vec<Chromatogram>> {
             None if l.funs[i].left_out.is_some() => {}
             None => {
                 let a = format!("{}: function {} channels", l.c.name, l.funs[i].f.indice);
-                l.warnings.push(("meta.nonDecodificato".into(), a));
+                l.warnings.push(("meta.notDecoded".into(), a));
             }
         }
     }
@@ -244,7 +244,7 @@ pub(super) fn all_of_them(l: &mut WatersReader) -> Result<Vec<Chromatogram>> {
             gone.len(),
             gone.join(", ")
         );
-        l.warnings.push(("meta.nonDecodificato".into(), a));
+        l.warnings.push(("meta.notDecoded".into(), a));
     }
     for (i, h) in out.iter_mut().enumerate() {
         h.index = i;

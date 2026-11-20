@@ -10,7 +10,7 @@
   const T = (k, v) => I18N.t(k, v);
   const W = 176, H = 96, EDGE = 2, CLEAR = 12, CACHE_MAX = 64;      // no title row and no DOM axis: the canvas holds the plot and its ticks; ion and file are the tooltip
   /** @typedef {{ rt: number[], y: number[] }} Trace */
-  /** @typedef {{ m: number, req: { f: any, args: any[], text: string, canale?: string | null }, key: string }} Want */
+  /** @typedef {{ m: number, req: { f: any, args: any[], text: string, channel?: string | null }, key: string }} Want */
   /** @type {WeakMap<any, any>} */
   const ST = new WeakMap();
   /** @type {Map<string, Trace>} least recently used last */
@@ -80,8 +80,8 @@
     if (t) { show(p, s, w, t); return; }
     busy = true; const my = ++seq;
     const [mz, tol] = w.req.args, f = w.req.f;
-    const can = w.req.canale;      // inside the channel the spectrum follows (canali.js), otherwise the whole level
-    (can ? J(`api/xic?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}&canale=${encodeURIComponent(can)}`).then(j => j.traces ? j.traces[0] : j) : xicBin(`api/xicbin?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}`).then(j => j.traces[0])).then(tr => {
+    const can = w.req.channel;      // inside the channel the spectrum follows (canali.js), otherwise the whole level
+    (can ? J(`api/xic?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}&channel=${encodeURIComponent(can)}`).then(j => j.traces ? j.traces[0] : j) : xicBin(`api/xicbin?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}`).then(j => j.traces[0])).then(tr => {
       busy = false; if (!tr) return;
       keep(w.key, tr);
       if (my === seq && want === w && cur === p) show(p, s, w, tr, true); else pump(p);
@@ -140,7 +140,7 @@
     const req = XICBTN.lensArgs(p, m); if (!req) return;
     const s = st(p);
     if (!s.wired) { s.wired = true; p.cv.addEventListener("wheel", () => close(p), { passive: true }); p.cv.addEventListener("contextmenu", () => close(p)); }
-    const key = `${req.f.k}|${req.f.lv}|${req.args.join("|")}|${req.canale || ""}`;
+    const key = `${req.f.k}|${req.f.lv}|${req.args.join("|")}|${req.channel || ""}`;
     if (cur && cur !== p) close(cur);
     cur = p; s.sticky = sticky; s.scan = viewKey(p);
     if (!want || want.key !== key) { want = { m, req, key }; s.said = ""; }

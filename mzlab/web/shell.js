@@ -70,7 +70,7 @@ const concFrom=(/** @type {FileRiga} */ f)=>f.conc==null||f.kind!=="mrm"?null:ro
 function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=false){const old=Object.fromEntries(ST.files.map((/** @type {FileRiga} */ f)=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
-    gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
+    gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o?o.ugrp:(typeof E!=="undefined"?E.files.find((/** @type {FileAperto} */ g)=>!g.gone&&g.ugrp&&g.file.split("#")[0]===f.name)?.ugrp:undefined)}});
   if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (samples/1)
@@ -231,17 +231,20 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
     const want=/** @type {number[] | null} */ (pick&&pick.picks?pick.picks.get(e.row)||null:null),partial=!!want&&want.length<(pick.total.get(e.row)||0);
     if(pick&&(pick.cancelled||(want&&!want.length))){CONVROWS.finish(e.row,"cancel");(res.notes=res.notes||[]).push(T("pick.cancelled",{name:e.wiff.name}));continue}
-    // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variante» pair drops the parse
+    // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variant» pair drops the parse
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=partial?null:await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{if(want&&pr.campioni.length&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.reasons.includes("variant")){const cs=pr.samples.length?pr.samples:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{if(want&&pr.samples.length&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.samples.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
       const pj=await parsed(),s=pj.samples,key=NATIVO.key(e.stem);
       // the .wiff.scan holds sections the .wiff index does not list (copied during the acquisition): ONE calm note for the pair, the sections are samples of the list
       if(pj.unindexed)(res.notes=res.notes||[]).push(e.wiff.name+": "+T("warn.wiff.unindexed",{n:pj.unindexed.recovered+pj.unindexed.skipped,recovered:pj.unindexed.recovered,skipped:pj.unindexed.skipped}));
       // × on the row of the pair while it was parsed: its samples are not made (they would open by themselves)
       if(OPENNOW.held(e.row)){CONVROWS.finish(e.row,"cancel");continue}
-      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{if(want&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
+      // a subset chosen: the engine plans which byte ranges of the pair those samples need (the same plan as `mzlab-cli sample select --ranges`) and only they are copied to OPFS; the app reads in place
+      let ranges=/** @type {Record<string, number[][]> | null} */ (null);let rangesTag="";
+      if(partial&&want&&!window.MZLAB_DESKTOP){try{const pl=await rb.nativePlan(mem,want.join(","));rangesTag=String(pl.tag||"");ranges=Object.fromEntries(pl.members.map((/** @type {{ name: string, ranges: number[][] }} */ m)=>[m.name,m.ranges]))}catch(x2){(res.notes=res.notes||[]).push(T("pick.rangeFailed",{name:e.wiff.name,reason:String(x2&&/** @type {any} */ (x2).message||x2)}))}}
+      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{if(want&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);if(ranges){f.mzlabNat.ranges=ranges;f.mzlabNat.tag=rangesTag}taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
     catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam,undefined,e.wiff.name));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
@@ -260,8 +263,8 @@ async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCa
   if(LETT_FORCE&&nat.members.some((/** @type {{ name: string }} */ m)=>/\.d\//i.test(m.name)))return fam;
   if(!M.loaded)return "";
   // a sample of a .wiff: the pair was probed once (wiffToMzml); a full read of the .wiff.scan per sample made the loading wait minutes
-  if(nat.probed)return nat.probed.motivi.length>0?fam:"";
-  try{return (await M.probe(fam,nat.members)).motivi.length>0?fam:""}catch(_){return ""}}
+  if(nat.probed)return nat.probed.reasons.length>0?fam:"";
+  try{return (await M.probe(fam,nat.members)).reasons.length>0?fam:""}catch(_){return ""}}
 // onFile(file, group): called for every file of the batch as soon as it is ready (a file the module does not take at once, a converted one when its conversion ends), so upload0 can read the first sample while the next ones convert
 async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {CaricaRep} */ rep,/** @type {((f: FileCarica, g: any) => void) | undefined} */ onFile){
   const M=window.LETTORI_MOD;if(!M||!files.length)return files;

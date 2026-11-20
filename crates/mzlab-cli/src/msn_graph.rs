@@ -307,7 +307,7 @@ pub fn summary(g: &Graph, truth: Option<&str>) -> Result<String> {
     let mut o = Out::default();
     o.raw("{\"schema\":\"msn-summary/1\",\"nodes\":")
         .int(g.nodes.len() as i64);
-    o.raw(",\"arcs\":").int(g.archi.len() as i64);
+    o.raw(",\"arcs\":").int(g.edges.len() as i64);
     o.raw(",\"roots\":").int(g.radici.len() as i64);
     o.raw(",\"polarity\":").int(i64::from(g.polarita));
     if let Some(t) = truth {

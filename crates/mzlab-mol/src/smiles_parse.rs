@@ -3,7 +3,7 @@
 
 use crate::codec::MolError;
 use crate::elements::is_element;
-use std::collections::BTreeMap;
+use crate::sortm::SortedVec;
 
 impl Raw {
     /// The atom at the other end of bond `b` seen from `x`.
@@ -327,7 +327,7 @@ struct Parser {
     prev: Option<usize>,
     stack: Vec<Option<usize>>,
     sym: Sym,
-    open: BTreeMap<u32, usize>,
+    open: SortedVec<u32, usize>,
 }
 
 fn atom(el: String, aromatic: bool, bracket: bool) -> RawAtom {
@@ -356,7 +356,7 @@ pub(crate) fn parse(text: &str) -> Result<Raw, MolError> {
         prev: None,
         stack: Vec::new(),
         sym: Sym::None,
-        open: BTreeMap::new(),
+        open: SortedVec::new(),
     };
     while p.i < p.s.len() {
         p.step()?;
@@ -364,7 +364,7 @@ pub(crate) fn parse(text: &str) -> Result<Raw, MolError> {
     if !p.stack.is_empty() {
         return err("unclosed branch '('");
     }
-    if let Some(n) = p.open.keys().next() {
+    if let Some(n) = p.open.iter().next().map(|e| &e.0) {
         return err(format!("ring closure {n} is never closed"));
     }
     if p.sym != Sym::None {

@@ -73,7 +73,7 @@
   },
   "hr_broken": {
    "files": [
-    "HR_rotto-t30.mzML"
+    "HR_broken-t30.mzML"
    ],
    "truth": "Orbitrap DDA without spectrumRef, isolation window, resolution or known model"
   },

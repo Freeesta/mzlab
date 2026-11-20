@@ -110,7 +110,7 @@ def test_reason_below_and_background_and_area():
 
 def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
     shas = oro_mzmine.generate(tmp_path)
-    text = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
+    text = (ORO / "README.md").read_text(encoding="utf-8")
     assert len(shas) == 4
     for name, h in shas.items():
         # the pinned hashes are the ones of Linux: the last bit of libm/SIMD floats on another platform (seen on Windows with Python 3.14) can move a value across the 6-digit rounding;

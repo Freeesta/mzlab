@@ -50,7 +50,7 @@ pub fn stats_text(
     Ok(write_stats(&out, &lay))
 }
 
-/// The role the page gives a file (`qaqc.js`, `FROM_CAMPIONI`); a file the samples do not know is a sample.
+/// The role the page gives a file (`qaqc.js`, `FROM_SAMPLES`); a file the samples do not know is a sample.
 fn page_role(kind: &str) -> &'static str {
     match kind {
         "blank" => "blank",

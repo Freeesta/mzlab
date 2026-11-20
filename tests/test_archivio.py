@@ -207,3 +207,18 @@ def test_a_copy_refused_halfway_says_where_it_stopped_and_the_whole_size():
     catch (e) { return [JSON.parse(e), files.has("big.raw")]; }
   });""")
     assert got == [{"error_key": "error.quotaWrite", "params": {"serve_mb": 20, "scritti_mb": 10, "libero_mb": 100}}, False]
+
+
+def test_a_partial_copy_refuses_ranges_that_are_not_ascending_whole_and_inside_the_file():
+    got = run("""
+  await out(async () => {
+    const ok = A.rangesOk;
+    let key = null;
+    nav({ locks: { request: (k, o, fn) => Promise.resolve(fn()) }, storage: { getDirectory: async () => { throw new Error("the disk is not reached"); } } });
+    try { await A.putSparse("files", "x", 10, [[6, 10], [0, 4]], async () => new Uint8Array(0)); } catch (e) { key = JSON.parse(e.message || String(e)).error_key; }
+    return { good: [ok([[0, 4], [6, 10]], 10), ok([], 10), ok([[0, 0]], 10)],
+             bad: [ok([[6, 10], [0, 4]], 10), ok([[0, 11]], 10), ok([[0, 4], [3, 6]], 10), ok([[1.5, 3]], 10), ok([[5, 3]], 10), ok([[0]], 10)], key };
+  });""")
+    assert got["good"] == [True, True, True]
+    assert got["bad"] == [False] * 6
+    assert got["key"] == "error.copyRanges"
