@@ -221,6 +221,26 @@ fn cip_route_gives_the_bytes_of_the_fixture() {
 }
 
 #[test]
+fn open_route_gives_the_bytes_of_the_function() {
+    // a CDXML file with an empty attribute, as RDKit writes it; the same bytes are checked against the molkit `.wasm` and `mzlab-cli mol open` in tests/test_molkit_wasm.py
+    let file = b"<?xml version=\"1.0\"?><CDXML BondLength=\"\" Name=\"a\"><page/></CDXML>";
+    let b64 =
+        "PD94bWwgdmVyc2lvbj0iMS4wIj8+PENEWE1MIEJvbmRMZW5ndGg9IiIgTmFtZT0iYSI+PHBhZ2UvPjwvQ0RYTUw+";
+    let st = State::new();
+    let p = json!({"kind": "open", "request": {"data": b64}});
+    assert_eq!(
+        text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+        mzlab_feat::chem::structure_file::open_json_bytes(file)
+    );
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "open", "request": {"data": "not base64!"}}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.open.request"));
+}
+
+#[test]
 fn link_route_gives_the_golden_bytes() {
     let st = State::new();
     let cases: Vec<serde_json::Value> =
