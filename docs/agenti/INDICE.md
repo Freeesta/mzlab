@@ -26,7 +26,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | conditional GitHub workflows (concurrency, pages, skipped jobs) | `docs/agenti/ci-fast.md` |
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
-| mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, Linux binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
+| mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
 | `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--report`, exit codes | `docs/agenti/cli-convert.md` |
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page) | `docs/agenti/cli.md` |
