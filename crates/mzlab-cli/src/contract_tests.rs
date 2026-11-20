@@ -234,6 +234,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
 /// The commands that read no input file: a formula, a number, a query, or nothing.
 const NO_FILE: &[&str] = &[
     "ion elements",
+    "flow template",
     "sample vars",
     "sample group",
     "sample table",
