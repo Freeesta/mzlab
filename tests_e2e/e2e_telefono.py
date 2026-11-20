@@ -15,9 +15,10 @@ try:
         U = f"http://127.0.0.1:{r.port}/"
         def desktop():
             assert not pg.evaluate("document.documentElement.classList.contains('phone')")
-            assert pg.locator("#nav button:visible").count() == 4 and pg.is_hidden("#phone")
-        step("computer: four tabs, no phone card", desktop)
-        for vw, vh, tag in [(390, 844, "verticale"), (844, 390, "orizzontale")]:
+            # Tabui is hidden from the navigation on purpose (app.css, TABUI_VISIBLE): Data, Drawing, Flow
+            assert pg.evaluate("[...document.querySelectorAll('#nav button')].filter(b => b.offsetParent !== null).map(b => b.dataset.v)") == ["data", "draw", "flow"] and pg.is_hidden("#phone")
+        step("computer: three tabs, no phone card", desktop)
+        for vw, vh, tag in [(390, 844, "portrait"), (844, 390, "landscape")]:
             ctx = r.b.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPHONE)
             q = ctx.new_page(); reqs = []
             q.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
@@ -28,7 +29,7 @@ try:
                 assert q.evaluate("document.documentElement.classList.contains('phone')")
                 vis = q.evaluate("[...document.querySelectorAll('header > *, #nav button')].filter(e=>e.offsetParent!==null).map(e=>e.id||e.dataset.v||e.className)")
                 assert vis == ["logo", "nav", "phinfo"], vis
-                assert q.is_visible("#phone") and q.is_hidden("#loading") and "schermo grande" in q.inner_text("#phone") and "MB" not in q.inner_text("#phone")
+                assert q.is_visible("#phone") and q.is_hidden("#loading") and "large screen" in q.inner_text("#phone") and "MB" not in q.inner_text("#phone")
                 heavy = [u for u in reqs if any(k in u for k in ("draw.js", "openchemlib", "ketcher", "esempi/", "pyodide", ".wasm", "explore.js", "grafici.js", "hr.js", "banco.js"))]
                 assert not heavy, heavy
                 assert q.evaluate("document.documentElement.scrollWidth") <= vw
@@ -37,7 +38,7 @@ try:
             q.screenshot(path=SH + f"tel_{tag}_home.png")
             def link():
                 assert q.evaluate("document.querySelectorAll('#phone a').length") == 0 and q.is_visible("#phopen")
-            step(f"{tag}: the card has the open-anyway button and no link", link)
+            step(f"{tag}: the card has the Open anyway button and no link", link)
             ctx.close()
 
         def look(scheme):
@@ -66,7 +67,7 @@ try:
             assert q.is_hidden("#phone")
             q.reload(); q.wait_for_function("window.qqReady===true", timeout=60000)      # the choice lasts for the tab
             ctx.close()
-        step("phone: Apri comunque loads the full program and remembers the choice", open_anyway)
+        step("phone: Open anyway loads the full program and remembers the choice", open_anyway)
         def ipad():
             ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, is_mobile=True, has_touch=True, device_scale_factor=2,
                                   user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15")
