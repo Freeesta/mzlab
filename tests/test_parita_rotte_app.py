@@ -13,7 +13,10 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 
 
 def run(*a, env=None):
-    return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8", env=env)
+    r = subprocess.run(a, cwd=ROOT, capture_output=True, encoding="utf-8", env=env)
+    # the tail of both streams goes into the failure: cargo test prints the panic on stdout/stderr and a bare exit status hides it in CI
+    assert r.returncode == 0, f"{' '.join(a)} exited {r.returncode}:\n{r.stdout[-3000:]}\n{r.stderr[-6000:]}"
+    return r
 
 
 def test_the_app_and_the_wasm_give_the_same_answers(tmp_path):

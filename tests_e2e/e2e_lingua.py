@@ -24,13 +24,13 @@ try:
         def english_everywhere():
             for loc in ("en-US", "it-IT", "fr-FR", "de-DE"):
                 pg = page(loc); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
-                assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], (loc, nav(pg))
+                assert nav(pg) == ["Data", "Drawing", "Flow"], (loc, nav(pg))
         step("any browser language -> English (the browser language is not consulted)", english_everywhere)
         def query():
-            pg = page("it-IT", "?lang=it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], nav(pg)
+            pg = page("it-IT", "?lang=it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Flow"], nav(pg)
         step("?lang=it is ignored", query)
         def stored():
-            pg = page("it-IT", stored="it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], nav(pg)
+            pg = page("it-IT", stored="it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Flow"], nav(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             assert pg.locator("#uip-lang-l").count() == 0 and pg.locator("input[name=uip-lang]").count() == 0, "no language switch in the settings"
         step("a stored mzlab.lang=it is ignored silently, the settings have no language switch", stored)

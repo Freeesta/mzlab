@@ -9,6 +9,7 @@ The profile `debole` is `piccolo` plus `WEAK` matrix features in every file with
 minimum height (2e5): the weak tier (`series::weak_tier`) makes tens of thousands of rows of them, enough for the weak tables to leave the memory of the module
 (`spill::Weak::add`) under a budget of a few MB."""
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -17,6 +18,7 @@ import numpy as np
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 from valida import sintetici_identita as si           # noqa: E402
+from valida import sintetici_mzml as sm               # noqa: E402
 from valida.sintetici_mzml import write_file          # noqa: E402
 from mzlab.reader import mzidx                         # noqa: E402
 from mzlab.reader.mzml import Run                      # noqa: E402
@@ -25,6 +27,22 @@ WEAK = 5000
 WEAK_HEIGHTS = (7e4, 1.8e5)
 si.PROFILES["debole"] = {**si.PROFILES["piccolo"], "debole": WEAK}
 PRODUCTS = ("tp1", "tp2", "isomero")
+
+
+class _ScalarMath:
+    """numpy with exp/sin from the scalar libm: numpy picks SIMD code by CPU and may differ in the last bit, so the series (and the peak memory
+    the guard measures on it) would depend on the runner. Only the generator of these series uses it; the others keep numpy."""
+
+    def __init__(self, base):
+        self._base = base
+        self.exp, self.sin = (lambda f: (lambda x: base.asarray(base.frompyfunc(f, 1, 1)(base.asarray(x, float)), float)))(math.exp), \
+            (lambda f: (lambda x: base.asarray(base.frompyfunc(f, 1, 1)(base.asarray(x, float)), float)))(math.sin)
+
+    def __getattr__(self, name):
+        return getattr(self._base, name)
+
+
+sm.np = si.np = _ScalarMath(np)
 
 
 def genera(seme: int, profile: str, scala: float, out: Path) -> list[float]:

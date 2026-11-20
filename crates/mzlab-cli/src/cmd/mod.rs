@@ -292,10 +292,13 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
 pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {
     match args.first().map(String::as_str) {
         None | Some("--help" | "-h") => Some(help()),
+        Some("--version" | "-V") if args.iter().any(|a| a == "--json") => {
+            Some(Outcome::ok(crate::citation::version_json().into_bytes()))
+        }
         Some("--version" | "-V") => Some(Outcome::ok(
             format!(
-                "mzlab-cli {}\n{}\n",
-                crate::citation::VERSION,
+                "{}\n{}\n",
+                crate::citation::version_line(),
                 crate::citation::reminder()
             )
             .into_bytes(),

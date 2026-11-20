@@ -100,6 +100,12 @@ def blank(v):
     if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank({a: b for a, b in x.items() if a not in AGENT_BLANK} if k in ("agent", "engine") and isinstance(x, dict) else x)) for k, x in v.items() if k not in BLANK}
     if isinstance(v, list): return [blank(x) for x in v]
     return v
+def native(path):
+    """The native record with the one member only the CLI writes (flow_run.rs `prov_text`: the page's record has no `citation`): checked, then taken out."""
+    rec = json.loads(Path(path).read_text())
+    if "prov" in str(rec.get("schema", "")):
+        cit = rec.pop("citation", None); assert isinstance(cit, str) and "mzLab" in cit and "https://github.com/" in cit, ("the native prov/1 has no citation", cit)
+    return rec
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
@@ -125,20 +131,20 @@ try:
             kept = pg.evaluate(KEPT)
             assert not kept["alone"], "the table of the alignment alone stayed in OPFS"
             for name, nat_name in (("prov.json", "prov.json"), ("report.json", "report.json")):
-                nat = json.loads((run / "out" / nat_name).read_text()); web = json.loads(kept[name])
+                nat = native(run / "out" / nat_name); web = json.loads(kept[name])
                 assert blank(nat) == blank(web), (name, diff(blank(nat), blank(web)))
             assert kept["report"] == kept["report.json"] and r["record"]["run_report"] == kept["report.json"]
         step("the prov/1 and the run-report/1 of the browser are the records of the native flow run apart from the declared fields", first)
 
         def again():
             r = pg.evaluate(RUN, PLAN); assert not r.get("err"), r["err"]
-            web = json.loads(r["record"]["prov"]); nat = json.loads((run / "out" / "prov.json").read_text())
+            web = json.loads(r["record"]["prov"]); nat = native(run / "out" / "prov.json")
             assert blank(web) == blank(nat), "the record of a run that reuses everything differs"
         step("a second run, which reuses every step, gives the same record", again)
 
         def failed():
             r = pg.evaluate(FAILED); assert r, "a run with a failed job gave no record"
-            web = json.loads(r["prov"]); nat = json.loads((run / "out" / "prov.json").read_text())
+            web = json.loads(r["prov"]); nat = native(run / "out" / "prov.json")
             assert r["kept"] == r["prov"], "the record of the failed run is not the one kept in OPFS"
             assert web["activity"]["ali"]["error"] == {"error_key": "err.flow.align.polarity", "params": {"positive": PLAN["inputs"][0]["name"], "negative": "b.mzML"}}, web["activity"]["ali"]
             assert "gap" not in web["activity"] and "gap.table" not in web["entity"], "the gap filling that did not run is in the record"
