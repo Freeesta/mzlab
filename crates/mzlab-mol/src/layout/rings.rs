@@ -140,17 +140,19 @@ fn reduce(basis: &mut Vec<Vec<u64>>, mut bits: Vec<u64>) -> bool {
     true
 }
 
+/// Union-find root of `x`, with the path of `x` cut short.
+fn find(s: &mut [usize], x: usize) -> usize {
+    let mut r = x;
+    while s[r] != r {
+        r = s[r];
+    }
+    s[x] = r;
+    r
+}
+
 /// Ring systems: groups of ring indices connected by sharing two or more atoms, ordered by their first ring.
 pub fn systems(rings: &[Vec<usize>]) -> Vec<Vec<usize>> {
     let mut sys: Vec<usize> = (0..rings.len()).collect();
-    fn find(s: &mut [usize], x: usize) -> usize {
-        let mut r = x;
-        while s[r] != r {
-            r = s[r];
-        }
-        s[x] = r;
-        r
-    }
     for i in 0..rings.len() {
         for j in 0..i {
             let shared = rings[i].iter().filter(|a| rings[j].contains(a)).count();
