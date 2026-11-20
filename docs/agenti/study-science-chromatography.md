@@ -44,7 +44,7 @@ Confirmed findings B1-B7 (area 2). Part of the scientific-correctness study; met
 - Expected: one named estimator; the pharmacopoeial one is 2H/h (Ph. Eur. 2.2.46, USP <621>), which gives about 33 for height/sigma = 100.
 - Observed: for a true height/sigma_raw of 100 `find_peak` reports 100 (smoothing 1), 166-169 (smoothing 3, the default of the manual table), 184 (smoothing 5).
 - Fix: name the estimator beside every S/N and compute the noise on the raw trace (or offer 2H/h).
-- Status: FIXED (owner decision: yes) for `find_peak`: noise = 1.4826 MAD of the RAW trace far from the peak, named by `peak1d::SNR_ESTIMATOR` and in the `snr_min` doc of `chrom.transitions`; median S/N of 21 draws at true 100: 99, 97, 95 at smoothing 1, 3, 5 (before 99, 160, 182); old reading `snr_basis=smoothed`; test `peak_snr_basis.rs`. OPEN: the flank MAD of `quality.rs` and `peakq_lr::noise_sd` are not named yet.
+- Status: FIXED (owner decision: yes) for `find_peak`: noise = 1.4826 MAD of the RAW trace far from the peak, named by `peak1d::SNR_ESTIMATOR` and in the `snr_min` doc of `chrom.transitions`; median S/N of 21 draws at true 100: 99, 97, 95 at smoothing 1, 3, 5 (before 99, 160, 182); old reading `snr_basis=smoothed`; test `peak_snr_basis.rs`. The other two are named too (`quality::SNR_ESTIMATOR` in the `min_snr` doc of `features.detect`, `peakq_lr::SNR_ESTIMATOR`; tests `min_snr_names_its_estimator`, `peakq_lr_snr_name.rs`); the divisor of `peakq_lr::noise_sd` is unchanged (SUSPECTED only).
 
 ### B7 - convention unclear - areas in counts x s and counts x min
 - Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
