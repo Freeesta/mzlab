@@ -11,11 +11,12 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Look at a file first
 - `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
-## Linux binaries (for agents in Linux VMs)
-- Every release carries static musl builds of `mzlab-cli` (profile `cli`; no libc or distro dependency, runs on any distro): `mzLab-X.Y.Z-cli-Linux-x86_64` and `mzLab-X.Y.Z-cli-Linux-aarch64` (plain executables), listed in `SHA256SUMS` of the release. The `release` workflow also keeps them, each with a `.sha256` file, as the artifacts `mzlab-cli-linux-x86_64` and `mzlab-cli-linux-aarch64`.
-- Fetch and verify (replace `X.Y.Z`, use `aarch64` on ARM):
+## Prebuilt binaries (no Rust needed)
+- A release carries `mzlab-cli` (profile `cli`) as plain executables: `mzLab-X.Y.Z-cli-Linux-x86_64` and `-cli-Linux-aarch64` (static musl: no libc or distro dependency) and `-cli-Mac-aarch64` (Apple silicon), all listed in `SHA256SUMS`. The macOS binary is **unsigned and not notarized** (no Apple credentials yet); a binary fetched with `curl` carries no quarantine flag and runs. Only a published release is reachable at `releases/latest`: a draft is not (404).
+- Fetch and verify (replace `X.Y.Z`; `a=aarch64` on ARM; macOS: `Mac-aarch64`, `shasum -a 256` instead of `sha256sum`):
   `v=X.Y.Z; a=x86_64; u=https://github.com/Freeesta/mzlab/releases/download/v$v; curl -fsSLO $u/mzLab-$v-cli-Linux-$a -O $u/SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS && chmod +x mzLab-$v-cli-Linux-$a && ./mzLab-$v-cli-Linux-$a --version`
-- Each build is smoke-tested on a runner of its own architecture before it is attached: `--version` (version and citation line) and `flow steps --json`.
+- Before a release is published, `release` (Actions, Run workflow, version empty = dry run) keeps the same files as artifacts `mzlab-cli-linux-x86_64`, `-linux-aarch64`, `-macos-aarch64`, each with a `.sha256` file.
+- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`: `--version`, `commands --json`, `flow steps --json`); the Linux x86_64 one is also compared byte for byte with a native glibc build (`ion pattern`, the catalogs, `file info` and `trace chrom` on a synthetic file).
 
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
