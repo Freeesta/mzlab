@@ -8,8 +8,7 @@ fn an_empty_plan_is_refused_on_the_run_path() {
     std::fs::create_dir_all(&work).unwrap();
     let plan = r#"{"format":"mzflow/2","inputs":[],"steps":[]}"#;
     let e = mzlab_cli::flow::run_plan(plan.as_bytes(), &dir, &work, 1, None)
-        .err()
-        .expect("an empty plan must not run");
+        .expect_err("an empty plan must not run");
     assert_eq!(e.key, "err.flow.check");
     assert!(e.to_string().contains("err.flow.empty"), "{e}");
     let _ = std::fs::remove_dir_all(&dir);
