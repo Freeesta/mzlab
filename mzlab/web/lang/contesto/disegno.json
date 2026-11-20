@@ -48,8 +48,5 @@
   "draw.selection.cuts": "Note below the SMILES of the selection: number of bonds cut by the selection ({n}).",
   "draw.export.filePrefix": "Prefix of the name of the downloaded files (drawing_YYYY-MM-DD_HHMM.png): only lowercase letters without accents.",
   "draw.export.transparentSuffix": "Suffix of the name of the files with a transparent background: only lowercase letters without accents.",
-  "draw.error": "Text on the chart when the drawing fails; {message} = technical text.",
-  "error.sdf.ion": "Error of the MOL/SDF export of the drawing; {ion} = name of the adduct asked for, not present in the table.",
-  "error.sdf.molfile": "Error of the MOL/SDF export of the drawing; {message} = technical text from the molfile reader.",
-  "error.sdf.tooBig": "Error of the MOL/SDF export of the drawing; {max} = maximum number of atoms."
+  "draw.error": "Text on the chart when the drawing fails; {message} = technical text."
 }

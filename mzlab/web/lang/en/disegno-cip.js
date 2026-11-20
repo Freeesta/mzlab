@@ -14,7 +14,5 @@ I18N.add("en", {
   "draw.cip.bond": "{a}={b}: {label}",
   "draw.cip.skip.query": "The drawing has generic (query) atoms or bonds: no descriptors.",
   "draw.cip.skip.kekule": "An aromatic ring cannot be written with alternating double bonds: no descriptors.",
-  "draw.cip.skip.tooBig": "The drawing is too big for the descriptors (over 400 atoms).",
-  "error.cip.request": "The request of the CIP descriptors is not valid JSON with a molfile.",
-  "error.cip.molfile": "The drawing cannot be read as a molfile."
+  "draw.cip.skip.tooBig": "The drawing is too big for the descriptors (over 400 atoms)."
 });

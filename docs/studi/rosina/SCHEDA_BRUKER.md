@@ -1,48 +1,48 @@
-# Rosina C: Bruker timsTOF (TDF/TSF) e BAF
+# Rosina C: Bruker timsTOF (TDF/TSF) and BAF
 
-Legenda e indice: `SCHEDE.md`. Lettore: modulo `bruker` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, LZF); dettagli in `docs/agenti/bruker.md`.
+Legend and index: `SCHEDE.md`. Reader: module `bruker` (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, LZF); details in `docs/agenti/bruker.md`.
 
-## Stato
-- TDF (timsTOF Pro/HT/SCP/flex, DDA-PASEF, diaPASEF, PRM, MRM): m/z L con V1 su compressione 1 (0,07 ppm contro msconvert `combineIonMobilitySpectra`), compressione 2 solo V7 (`LargestPeakMz` e lettura senza errori). WAL letto.
-- **1/K0 non calcolata** (la formula di `TimsCalibration` `ModelType` 2 non si ricava dai file): oggi intervalli di scansione.
-- TSF (timsTOF senza TIMS, MALDI/LC): blocchi letti, nessun riferimento.
-- BAF (impact, maXis, compact, solariX, amaZon) e YEP: non letti.
-- Quota: Bruker 7 % degli studi MS MetaboLights, 3 % di Workbench, 8 % di PRIDE (5,5 % timsTOF).
+## Status
+- TDF (timsTOF Pro/HT/SCP/flex, DDA-PASEF, diaPASEF, PRM, MRM): m/z L with V1 on compression 1 (0.07 ppm against msconvert `combineIonMobilitySpectra`), compression 2 only V7 (`LargestPeakMz` and error-free reading). WAL read.
+- **1/K0 not computed** (the `TimsCalibration` `ModelType` 2 formula cannot be derived from the files): today scan ranges.
+- TSF (timsTOF without TIMS, MALDI/LC): blocks read, no reference.
+- BAF (impact, maXis, compact, solariX, amaZon) and YEP: not read.
+- Share: Bruker 7% of the MetaboLights MS studies, 3% of Workbench, 8% of PRIDE (5.5% timsTOF).
 
-## Cosa manca
-1. V1 con `timsdata` (SDK Bruker gratuito; librerie solo per Linux e Windows: sul Mac arm64 non c'è, `opentimspy` dà solo indici TOF e scansione; gira su Windows (Parallels) tramite la chat locale, `ROSINA.md` decisione 1; se anche lì non va, «oracolo assente» per m/z e 1/K0 e restano le fixture con mobilità di ProteoWizard come V2) per 1/K0 e per gli spettri della compressione 2 (PXD037766, PXD058337 in ELENCO-1).
-2. 1/K0: due strade. (a) Tabelle di riferimento: per ogni file del corpus `timsdata` dà 1/K0 per scansione; se un modello chiuso (polinomio sui parametri di `TimsCalibration`) le riproduce a 1e-5, si scrive. (b) Se non riesce, 1/K0 solo nell'app desktop con `timsdata` come libreria (decisione di Federico: peso e licenza).
-3. TSF: V1 con `timsdata` (stessa libreria) o msconvert.
-4. Metadati delle tabelle oltre `GlobalMetadata`/`Properties` (segmenti, errori, `Precursors` completi nel `metodo/1`) da elencare.
+## What is missing
+1. V1 with `timsdata` (free Bruker SDK; libraries only for Linux and Windows: not available on Mac arm64, `opentimspy` gives only TOF and scan indices; it runs on Windows (Parallels) through the local chat, `ROSINA.md` decision 1; if it does not work there either, "oracle absent" for m/z and 1/K0 and the ProteoWizard fixtures with mobility remain as V2) for 1/K0 and for the compression 2 spectra (PXD037766, PXD058337 in ELENCO-1).
+2. 1/K0: two routes. (a) Reference tables: for every corpus file `timsdata` gives 1/K0 per scan; if a closed-form model (polynomial on the `TimsCalibration` parameters) reproduces them to 1e-5, it gets written. (b) If it fails, 1/K0 only in the desktop app with `timsdata` as a library (the maintainer's decision: weight and license).
+3. TSF: V1 with `timsdata` (same library) or msconvert.
+4. Table metadata beyond `GlobalMetadata`/`Properties` (segments, errors, complete `Precursors` in `metodo/1`) to be listed.
 
-## Prove possibili
-- V1: `timsdata` (Python `timsdata.py` del pacchetto SDK) e msconvert. V4: timsrust (Rust, MIT/Apache: 1/K0 con la stessa approssimazione?), alphatims (Apache, usa la formula lineare di `TimsCalibration`): concordanza come spia, non come prova.
-- V3: DataAnalysis/Compass se disponibile.
+## Possible checks
+- V1: `timsdata` (Python `timsdata.py` of the SDK package) and msconvert. V4: timsrust (Rust, MIT/Apache: 1/K0 with the same approximation?), alphatims (Apache, uses the linear `TimsCalibration` formula): agreement as an indicator, not as proof.
+- V3: DataAnalysis/Compass if available.
 
-## Metadati campo per campo (TDF/TSF)
-| Campo del produttore | Dove nel file | `metodo/1` | Stato | Controllo (V3 · oracolo) |
+## Metadata field by field (TDF/TSF)
+| Vendor field | Where in the file | `metodo/1` | Status | Check (V3 · oracle) |
 |---|---|---|---|---|
 | InstrumentName, InstrumentFamily, InstrumentRevision, InstrumentSerialNumber, InstrumentVendor | `GlobalMetadata` | `strumento.*` | L | DataAnalysis · `timsdata`/SQL · mzML `instrumentConfiguration` |
 | AcquisitionSoftware, AcquisitionSoftwareVersion, AcquisitionFirmwareVersion | `GlobalMetadata` | `strumento.software`, `campi` | L | mzML `softwareList` |
-| AcquisitionDateTime, OperatorName, SampleName, MethodName, Description | `GlobalMetadata` | `origine.file_creato`, `operatore.utente` (identita), `campione.nome`, `campi` | L | SQL diretto (V2 pulito: SQLite è aperto) |
+| AcquisitionDateTime, OperatorName, SampleName, MethodName, Description | `GlobalMetadata` | `origine.file_creato`, `operatore.utente` (identita), `campione.nome`, `campi` | L | direct SQL (clean V2: SQLite is open) |
 | TimsCompressionType, MaxNumPeaksPerScan, DigitizerNumSamples, MzAcqRangeLower/Upper, OneOverK0AcqRangeLower/Upper | `GlobalMetadata` | `campi` | L | SQL |
-| Frames: Time, Polarity, ScanMode, MsMsType, TIC, MaxIntensity, NumScans, AccumulationTime, RampTime, T1, T2, Pressure, Denoised | `Frames` | scansioni, `campi` (intervalli) | L (T1/T2/pressione come serie: ? R-06) | SQL; `timsdata` |
-| Proprietà per frame (tensioni, temperature, gas, tutte le `PropertyDefinitions`) | `Properties`, `GroupProperties`, `PropertyDefinitions` | `campi` | L | SQL; DataAnalysis «Acquisition Parameters» |
-| Precursori PASEF: Mz, Charge, ScanNumBegin/End, CollisionEnergy, IsolationMz/Width | `Precursors`, `PasefFrameMsMsInfo` | precursori delle MS2 | L | `timsdata` · mzML `precursor` |
-| Finestre diaPASEF e PRM | `DiaFrameMsMsWindows`, `DiaFrameMsMsInfo`, `PrmTargets`, `PrmFrameMsMsInfo` | esperimenti, `isolamento` | L | SQL · mzML |
-| Calibrazione m/z (ModelType, coefficienti, temperature di riferimento, correzione per frame T1/T2) | `MzCalibration` + `Frames` | `campi`; applicata agli m/z | L | `timsdata` `indexToMz` (F3) |
-| Calibrazione di mobilità (ModelType 2, C0-C9) | `TimsCalibration` | `campi`; 1/K0 N | N per 1/K0 (R-06) | `timsdata` `scanNumToOneOverK0` |
-| Segmenti, errori, messaggi di acquisizione | `Segments`, `ErrorLog` (se presenti) | — | ? (R-06) | SQL |
-| Metodo completo (`*.m/` dentro la cartella: `microTOFQImpacTemAcquisition.method`, LC) | `<x>.d/<metodo>.m/` (XML) | `grezzo`? | ? (R-06: elencare) | DataAnalysis «Method» |
-| HyStar: campione, vial, LC | `SampleInfo.xml`, `HyStar*.xml` (se presenti) | `campione`, `lc` | ? (R-06) | HyStar |
-| TSF: spettri in linee o profilo, Frames | `analysis.tsf` + `.tsf_bin` | spettri | L senza riferimento | `timsdata` `tsf` |
+| Frames: Time, Polarity, ScanMode, MsMsType, TIC, MaxIntensity, NumScans, AccumulationTime, RampTime, T1, T2, Pressure, Denoised | `Frames` | scans, `campi` (ranges) | L (T1/T2/pressure as series: ? R-06) | SQL; `timsdata` |
+| Per-frame properties (voltages, temperatures, gas, all the `PropertyDefinitions`) | `Properties`, `GroupProperties`, `PropertyDefinitions` | `campi` | L | SQL; DataAnalysis "Acquisition Parameters" |
+| PASEF precursors: Mz, Charge, ScanNumBegin/End, CollisionEnergy, IsolationMz/Width | `Precursors`, `PasefFrameMsMsInfo` | MS2 precursors | L | `timsdata` · mzML `precursor` |
+| diaPASEF and PRM windows | `DiaFrameMsMsWindows`, `DiaFrameMsMsInfo`, `PrmTargets`, `PrmFrameMsMsInfo` | experiments, `isolamento` | L | SQL · mzML |
+| m/z calibration (ModelType, coefficients, reference temperatures, per-frame T1/T2 correction) | `MzCalibration` + `Frames` | `campi`; applied to the m/z values | L | `timsdata` `indexToMz` (F3) |
+| Mobility calibration (ModelType 2, C0-C9) | `TimsCalibration` | `campi`; 1/K0 N | N for 1/K0 (R-06) | `timsdata` `scanNumToOneOverK0` |
+| Segments, errors, acquisition messages | `Segments`, `ErrorLog` (if present) | — | ? (R-06) | SQL |
+| Complete method (`*.m/` inside the folder: `microTOFQImpacTemAcquisition.method`, LC) | `<x>.d/<method>.m/` (XML) | `grezzo`? | ? (R-06: list) | DataAnalysis "Method" |
+| HyStar: sample, vial, LC | `SampleInfo.xml`, `HyStar*.xml` (if present) | `campione`, `lc` | ? (R-06) | HyStar |
+| TSF: spectra as lines or profile, Frames | `analysis.tsf` + `.tsf_bin` | spectra | L without reference | `timsdata` `tsf` |
 
-## BAF (impact, maXis, compact, solariX, amaZon) e YEP
-- `analysis.baf` è un formato binario chiuso con indice in `analysis.baf_idx` e, nelle versioni recenti, un SQLite (`*.sqlite` creato da `baf2sql`); nessuna specifica, nessun lettore libero affidabile.
-- **Decisione onesta**: nessun lettore nel sito né nell'app desktop. Guida: esportare mzML da DataAnalysis (`Export → mzML`) o convertire con msconvert (Windows). `baf2sql` è un SDK nativo Bruker: non si porta nel sito (peso e licenza). Si riapre solo se Bruker pubblica una specifica.
-- **Rifiuto**: la riga `bruker` di `lettori-famiglie.js` riconosce `analysis.baf` e deve dare la chiave che rimanda alla guida (R-06 lo verifica).
+## BAF (impact, maXis, compact, solariX, amaZon) and YEP
+- `analysis.baf` is a closed binary format with an index in `analysis.baf_idx` and, in recent versions, a SQLite (`*.sqlite` created by `baf2sql`); no specification, no reliable free reader.
+- **Honest decision**: no reader in the site or in the desktop app. Guide: export mzML from DataAnalysis (`Export → mzML`) or convert with msconvert (Windows). `baf2sql` is a native Bruker SDK: it cannot be ported to the site (weight and license). Reopened only if Bruker publishes a specification.
+- **Rejection**: the `bruker` row of `lettori-famiglie.js` recognizes `analysis.baf` and must give the key that points to the guide (R-06 verifies it).
 
-## Lavoro, rischio, priorità
-- **R-06**: 5-7 giorni. Verità `timsdata` (LOC-2), compressione 2 a F3, 1/K0 strada (a) con criterio d'uscita (3 giorni senza 1e-5: strada (b) come proposta a Federico), TSF, metadati del metodo incorporato, BAF come guida e rifiuto.
-- **Rischio**: alto su 1/K0 (modello non pubblico), basso sul resto. **Priorità**: 2.
-- Tetto del modulo `bruker`: 434 176 B, misura 421 370 B (12 KB liberi).
+## Work, risk, priority
+- **R-06**: 5-7 days. `timsdata` truth (LOC-2), compression 2 at F3, 1/K0 route (a) with an exit criterion (3 days without 1e-5: route (b) as a proposal to the maintainer), TSF, embedded method metadata, BAF as guide and rejection.
+- **Risk**: high on 1/K0 (non-public model), low on the rest. **Priority**: 2.
+- Cap of the `bruker` module: 434,176 B, measured 421,370 B (12 KB free).

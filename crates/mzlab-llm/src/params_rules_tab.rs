@@ -1,4 +1,4 @@
-//! Rules `R-rt-1` … `R-form-2` of `docs/studi/assistente-dati/03-parametri.md` §5: retention-time tolerance and alignment, the working window, the
+//! Rules `R-rt-1` … `R-form-2` of `docs/agenti/llm-params.md` (table of rules): retention-time tolerance and alignment, the working window, the
 //! filters of the table (blank, QC, detection, MS2), drift, isolation, centroiding and formulas. Used by `params_rules::propose`.
 
 use mzlab_core::json::Value;
