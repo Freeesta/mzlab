@@ -35,8 +35,6 @@ try:
             pg.evaluate(f"{KJ}.setMolecule('')"); pg.evaluate("(() => { const w = document.getElementById('smi-warn'); w.hidden = true; w.textContent = ''; })()")
             wait_for_js(pg, f"{KJ}.editor.struct().isBlank()", timeout=15000)
         b64 = lambda raw: base64.b64encode(raw).decode()
-        def quiet(ms=1500):          # nothing is drawn and no note appears: there is no event to wait for
-            pg.wait_for_timeout(ms)
 
         def text_tool():
             fr.locator('[data-testid="text"]:visible').first.click()
@@ -110,7 +108,8 @@ try:
         def double_draw():
             clear(); pg.fill("#ex-smi", "CCO")
             pg.evaluate("(() => { const b = document.getElementById('ex-load'); b.click(); b.click(); })()")
-            wait_for_js(pg, f"!{KJ}.editor.struct().isBlank() && document.getElementById('ex-smi').value === ''", timeout=15000); quiet()
+            wait_for_js(pg, f"!{KJ}.editor.struct().isBlank() && document.getElementById('ex-smi').value === ''", timeout=15000)
+            wait_for_js(pg, "/atoms/.test(NB.ket || '')", timeout=15000)          # the autosave runs once the changes have stopped: a second drawing would be in by now
             assert smi() == "CCO", smi()
             pg.fill("#ex-smi", "CCN"); pg.click("#ex-load")          # the button works again afterwards
             wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 6", timeout=15000)
