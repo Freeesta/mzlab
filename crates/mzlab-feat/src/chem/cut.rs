@@ -214,7 +214,14 @@ fn by_valence(mf: &str, n: usize, ks: &[usize], st: &[State]) -> Result<Vec<u32>
         .collect();
     let rest = lines.get(3).and_then(|l| l.get(6..)).unwrap_or("");
     let mut out = lines[..3].join("\n") + &format!("\n{n:>3}{:>3}{rest}\n", kept.len());
-    for l in lines[4..4 + n].iter().chain(kept.iter()) {
+    for l in &lines[4..4 + n] {
+        // the charges are the new ones below: the charge column of the atom line says the old one
+        match (l.get(..36), l.get(39..)) {
+            (Some(head), Some(tail)) => out += &format!("{head}  0{tail}\n"),
+            _ => out += &format!("{l}\n"),
+        }
+    }
+    for l in &kept {
         out += l;
         out += "\n";
     }

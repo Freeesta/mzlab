@@ -1,4 +1,4 @@
-"""The catalogue of the molecules database (mzlab/web/molecole/catalogo.csv) loses nothing of the two lists it replaces: TP_Mine/data/composti.csv and
+"""The catalogue of the molecules database (mzlab/web/molecules/catalogue.csv) loses nothing of the two lists it replaces: TP_Mine/data/composti.csv and
 tests/data/liste/sostanze_hrms.csv. Every row has its record (names as a set, formula, SMILES, InChIKey, CAS, CID, classes, notes; the mass within 0.0005 Da);
 the 43 molecules of both lists are one record, found by the whole InChIKey. The adducts are not copied (derived): the hrms records say which they prefer.
 """
@@ -20,7 +20,7 @@ def read(path, delimiter=","):
 
 
 def catalogue():
-    rows = read("mzlab/web/molecole/catalogo.csv", ";")
+    rows = read("mzlab/web/molecules/catalogue.csv", ";")
     return rows, {r["inchikey"]: r for r in rows}
 
 

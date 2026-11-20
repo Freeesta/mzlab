@@ -94,7 +94,7 @@ pub(super) fn mark_notes(name: &str, k: u32, rows: &[Row]) -> Vec<(String, Strin
     v.into_iter()
         .map(|(m, n)| {
             let a = format!("{name}: function {k}: unknown calibration flag 0x{m:02X} in {n} scans, polynomial applied as for 0x18");
-            ("meta.nonDecodificato".to_string(), a)
+            ("meta.notDecoded".to_string(), a)
         })
         .collect()
 }

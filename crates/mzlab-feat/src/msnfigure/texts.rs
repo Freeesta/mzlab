@@ -158,7 +158,7 @@ pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compact: bool) -> Scatola {
     } else {
         String::new()
     };
-    let rel = if p.da.is_some() { p.rel } else { None };
+    let rel = if p.from.is_some() { p.rel } else { None };
     let mut aria = vec![
         format!("m/z {:.4}", i.mz),
         format!("levels {}", level_text(p)),

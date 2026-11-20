@@ -117,15 +117,15 @@ pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
             ipotesi: vec![],
         });
     }
-    for a in &g.archi {
-        let spiegato = hyps[a.a].iter().any(|c| {
-            hyps[a.da].iter().any(|q| {
+    for a in &g.edges {
+        let spiegato = hyps[a.to].iter().any(|c| {
+            hyps[a.from].iter().any(|q| {
                 sottoinsieme(&c.piece, &q.piece) && (c.piece.len() < q.piece.len() || c.h != q.h)
             })
         });
         out.edges.push(EdgeBreak {
-            da: a.da,
-            a: a.a,
+            from: a.from,
+            a: a.to,
             spiegato,
         });
     }
@@ -137,7 +137,7 @@ pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
             if nodo.is_some_and(|n| {
                 out.edges
                     .iter()
-                    .any(|a| a.da == pr && a.a == n && a.spiegato)
+                    .any(|a| a.from == pr && a.a == n && a.spiegato)
             }) {
                 sp += rel;
             }

@@ -5,14 +5,14 @@ mod groups_common;
 
 use groups_common::*;
 use mzlab_core::json::{parse, Value};
-use mzlab_feat::groups::{build, gruppi_json, run_json, GroupOpts, GroupTable};
+use mzlab_feat::groups::{build, groups_json, run_json, GroupOpts, GroupTable};
 
 const FIXTURE: &str = "tests/data/gruppi_fixture.json";
 
 fn fixture_text() -> String {
     let (tb, cs, opts) = scenario();
     let input = input_json(&tb, &cs, &opts);
-    let out = gruppi_json(&tb, &cs, &opts).unwrap();
+    let out = groups_json(&tb, &cs, &opts).unwrap();
     format!("{{\"input\":{input},\n\"expected\":{out}}}\n")
 }
 
@@ -33,7 +33,7 @@ fn fixture_is_byte_for_byte() {
 
 fn doc() -> Value {
     let (tb, cs, opts) = scenario();
-    parse(gruppi_json(&tb, &cs, &opts).unwrap().as_bytes()).unwrap()
+    parse(groups_json(&tb, &cs, &opts).unwrap().as_bytes()).unwrap()
 }
 
 fn row(d: &Value, id: usize) -> Value {
@@ -118,13 +118,13 @@ fn min_rep_frac_and_min_area_are_options() {
         min_rep_frac: 1.0,
         ..scenario_opts()
     };
-    let d = parse(gruppi_json(&tb, &cs, &strict).unwrap().as_bytes()).unwrap();
+    let d = parse(groups_json(&tb, &cs, &strict).unwrap().as_bytes()).unwrap();
     assert!(!present(&row(&d, 5), "Air"), "2 of 3 is not enough at 1.0");
     let big = GroupOpts {
         min_area: 1e6,
         ..scenario_opts()
     };
-    let d = parse(gruppi_json(&tb, &cs, &big).unwrap().as_bytes()).unwrap();
+    let d = parse(groups_json(&tb, &cs, &big).unwrap().as_bytes()).unwrap();
     assert!(!present(&row(&d, 1), "N2"), "8e5 is below 1e6");
     assert!(present(&row(&d, 1), "O2"));
     assert_eq!(
@@ -236,7 +236,7 @@ fn warnings_cover_the_design() {
         reference: Some("Fe".into()),
         ..GroupOpts::default()
     };
-    let d = parse(gruppi_json(&tb, &cs, &o).unwrap().as_bytes()).unwrap();
+    let d = parse(groups_json(&tb, &cs, &o).unwrap().as_bytes()).unwrap();
     assert!(d.get("reference").unwrap().is_null());
     let w: Vec<(String, String)> = d
         .get("warnings")
@@ -309,22 +309,22 @@ fn controls_shared_and_per_condition() {
 fn errors_have_keys_and_params() {
     let (tb, cs, opts) = scenario();
     let key = |r: Result<String, mzlab_core::error::Error>| r.unwrap_err();
-    let e = key(gruppi_json(&tb, &cs[..5], &opts));
-    assert_eq!(e.key, "error.gruppi.sizeMismatch");
+    let e = key(groups_json(&tb, &cs[..5], &opts));
+    assert_eq!(e.key, "error.groups.sizeMismatch");
     let mut short = tb.clone();
     short.area.pop();
     assert_eq!(
-        key(gruppi_json(&short, &cs, &opts)).key,
-        "error.gruppi.sizeMismatch"
+        key(groups_json(&short, &cs, &opts)).key,
+        "error.groups.sizeMismatch"
     );
     let istd = GroupOpts {
         norm: "istd".into(),
         ..opts.clone()
     };
-    let e = key(gruppi_json(&tb, &cs, &istd));
+    let e = key(groups_json(&tb, &cs, &istd));
     assert_eq!(
         (e.key, e.params[0].0, e.params[0].1.as_str()),
-        ("error.gruppi.badOpts", "norm", "istd")
+        ("error.groups.badOpts", "norm", "istd")
     );
     for bad in [
         GroupOpts {
@@ -340,23 +340,23 @@ fn errors_have_keys_and_params() {
             ..opts.clone()
         },
     ] {
-        assert_eq!(key(gruppi_json(&tb, &cs, &bad)).key, "error.gruppi.badOpts");
+        assert_eq!(key(groups_json(&tb, &cs, &bad)).key, "error.groups.badOpts");
     }
     let ghost = GroupOpts {
         factors: vec![("Nope".into(), vec![])],
         ..opts.clone()
     };
     assert_eq!(
-        key(gruppi_json(&tb, &cs, &ghost)).key,
-        "error.gruppi.badOpts"
+        key(groups_json(&tb, &cs, &ghost)).key,
+        "error.groups.badOpts"
     );
     let mut none = cs.clone();
     for c in &mut none {
         c.series.clear();
     }
     assert_eq!(
-        key(gruppi_json(&tb, &none, &opts)).key,
-        "error.gruppi.noConditions"
+        key(groups_json(&tb, &none, &opts)).key,
+        "error.groups.noConditions"
     );
 }
 
@@ -368,7 +368,7 @@ fn factors_must_be_strings() {
     let bad = ok.replace("\"catalyst\":\"TiO2 P25\"", "\"catalyst\":5");
     assert_eq!(
         run_json(bad.as_bytes()).unwrap_err().key,
-        "error.gruppi.badOpts"
+        "error.groups.badOpts"
     );
 }
 
@@ -408,7 +408,7 @@ fn remap(v: &Value, perm: &[usize], key: &str, out: &mut Vec<String>) {
 #[test]
 fn columns_in_any_order_give_the_same_bytes() {
     let (tb, cs, opts) = scenario();
-    let base = gruppi_json(&tb, &cs, &opts).unwrap();
+    let base = groups_json(&tb, &cs, &opts).unwrap();
     let identity: Vec<usize> = (0..11).collect();
     let mut base_idx = Vec::new();
     remap(
@@ -426,7 +426,7 @@ fn columns_in_any_order_give_the_same_bytes() {
     ];
     for p in perms {
         let (t, c, o) = permuted(&p);
-        let out = gruppi_json(&t, &c, &o).unwrap();
+        let out = groups_json(&t, &c, &o).unwrap();
         // Everything after the conditions (rows, sets, warnings) is byte for byte the same.
         let tail = |s: &str| s[s.find("\"rows\":[").unwrap()..].to_string();
         assert_eq!(tail(&out), tail(&base), "{p:?}");

@@ -45,6 +45,21 @@ pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
     ))
 }
 
+/// The copy plan (`sample-select/1` with `--ranges`) of the samples `wanted` of the dataset at `path`: container and index only. Members are named by their file name, as the site names them.
+pub(crate) fn plan(path: &Path, wanted: &[u32]) -> Result<mzlab_core::readers::ranges::Plan> {
+    let fs = crate::flow_set::file_set(path)?;
+    let members: Vec<(String, u64)> = fs
+        .membri
+        .iter()
+        .map(|m| {
+            let n = m.nome.rsplit(['/', '\\']).next().unwrap_or(&m.nome);
+            (n.to_string(), m.dim)
+        })
+        .collect();
+    let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    mzlab_core::readers::ranges::plan(&l.listing(), &members, wanted)
+}
+
 /// `wanted` among the samples of `path`, in the order of the file; `err.sample.unknown` when one is missing.
 pub(crate) fn resolve(path: &Path, wanted: &[u32]) -> Result<Vec<u32>> {
     selection::resolve(&present(path)?, wanted)
@@ -68,3 +83,7 @@ pub(crate) fn fail(e: &Error) -> Outcome {
 #[cfg(test)]
 #[path = "sample_select_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "sample_ranges_tests.rs"]
+mod ranges_tests;

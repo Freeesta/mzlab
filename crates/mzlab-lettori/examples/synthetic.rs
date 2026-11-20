@@ -37,7 +37,7 @@ fn main() {
     let mut d = thermo::Raw::tsq(63, 12);
     (d.stray_first, d.analog) = (true, vec![true, false]);
     (d.entry_past_the_end, d.entry_too_big) = (Some(4), Some(7));
-    w("thermo_danneggiato/danneggiato.raw", d.bytes());
+    w("thermo_damaged/damaged.raw", d.bytes());
     w("bruker/synt.d/analysis.tdf", common_sqlite::minimal_tdf(3));
     w("bruker/synt.d/analysis.tdf_bin", common_sqlite::block2());
     // five frames, the copy of `tdf_bin` cut inside the fourth block: three spectra read, two counted as missing
@@ -49,9 +49,9 @@ fn main() {
     w("bruker_tagliato/tagliato.d/analysis.tdf_bin", bin);
     // three frames, the middle one naming a calibration that is not there: its spectrum is left out and counted, the other two are read
     let tdf = common_sqlite::db(&common_sqlite::tdf_tables(&[0, n, 2 * n], 3, &[1, 7, 1]));
-    w("bruker_danneggiato/danneggiato.d/analysis.tdf", tdf);
+    w("bruker_damaged/damaged.d/analysis.tdf", tdf);
     w(
-        "bruker_danneggiato/danneggiato.d/analysis.tdf_bin",
+        "bruker_damaged/damaged.d/analysis.tdf_bin",
         b.iter().copied().cycle().take(3 * b.len()).collect(),
     );
     w("andi/synt.cdf", andi::andi_ms(&andi::FLAT_RUN));

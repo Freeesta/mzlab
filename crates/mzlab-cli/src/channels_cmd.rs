@@ -1,4 +1,4 @@
-//! `mzlab-cli file channels FILE [--out PATH]`: the channels (`channels/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
+//! `mzlab-cli file channels FILE [--out PATH]`: the channels (`channels/1`) of a file, the JSON of `api/channels`. An mzML also gives its SRM and SIC chromatograms;
 //! any other file the app reads gives the channels of one sample (`--sample ID`, else the first): its scans and its chromatograms (the mzML shell the site
 //! reads), what the site and the app list for that sample. The traces themselves are `trace chrom`.
 
@@ -56,7 +56,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     }))
 }
 
-/// The JSON of `api/canali` for `file`, indexes kept in `tmp`. The note names the other samples when `--sample` was not given.
+/// The JSON of `api/channels` for `file`, indexes kept in `tmp`. The note names the other samples when `--sample` was not given.
 fn read(c: &Request, sample: Option<u32>, tmp: &std::path::Path) -> Result<(String, String)> {
     let mut s = crate::extract::open_sample(&c.file, sample, tmp)?;
     Ok((s.routes.canali().json(), s.note))

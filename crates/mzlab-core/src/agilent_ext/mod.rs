@@ -82,7 +82,7 @@ pub struct AgilentD {
     pub(crate) devices_all: Vec<Device>,
     /// The member that holds the points (`MSPeak.bin`, or `MSProfile.bin` of a profile run).
     pub data_file: &'static str,
-    /// Parts of the folder left out because they could not be read or decode (a side member, damaged MRM visits): `meta.danneggiato` in `warnings`.
+    /// Parts of the folder left out because they could not be read or decode (a side member, damaged MRM visits): `meta.damaged` in `warnings`.
     pub(crate) notes: Vec<String>,
 }
 

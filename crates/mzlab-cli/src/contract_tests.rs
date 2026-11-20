@@ -1,5 +1,4 @@
-//! The agent contract on every command of the table: `--help`/`-h` with nothing run, unknown options, `--json`, exit codes 4 and 5, `error/1`
-//! and a newline at the end of stdout. python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`); without it the test fails, it never skips.
+//! The agent contract on every command of the table: `--help`/`-h`, unknown options, `--json`, exit codes 4 and 5, `error/1`, a newline at the end of stdout; python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`) and without it the test fails.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -150,6 +149,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["mol", "sel", "/nonexistent/r.json"],
     &["mol", "link", "/nonexistent/r.json"],
     &["mol", "export", "/nonexistent/r.json"],
+    &["mol", "draw", "/nonexistent/x.mol"],
     &["mol", "open", "/nonexistent/f.cdxml"],
     &["mol", "cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
     &["mol", "mech", "/nonexistent/r.json"],

@@ -71,9 +71,9 @@ fn baricentro(r: &Network, giri: usize) -> Vec<Vec<usize>> {
         crate::sortc::by(c, |a, b| r.mz[*b].total_cmp(&r.mz[*a]).then(a.cmp(b)));
     }
     let (mut su, mut giu) = (vec![vec![]; n], vec![vec![]; n]);
-    for &(da, a) in r.edges {
-        su[a].push(da);
-        giu[da].push(a);
+    for &(from, a) in r.edges {
+        su[a].push(from);
+        giu[from].push(a);
     }
     for _ in 0..giri {
         for c in 1..ncol {
@@ -105,11 +105,11 @@ pub(super) fn baricentro_pos(r: &Network) -> Vec<(usize, usize)> {
 pub(super) fn posa(g: &mut Graph) {
     let level: Vec<u8> = g.nodes.iter().map(|x| x.level).collect();
     let mz: Vec<f64> = g.nodes.iter().map(|x| x.mz).collect();
-    let archi: Vec<(usize, usize)> = g.archi.iter().map(|a| (a.da, a.a)).collect();
+    let arcs: Vec<(usize, usize)> = g.edges.iter().map(|a| (a.from, a.to)).collect();
     let pos = baricentro_pos(&Network {
         level: &level,
         mz: &mz,
-        edges: &archi,
+        edges: &arcs,
     });
     for (n, p) in g.nodes.iter_mut().zip(pos) {
         n.pos = p;

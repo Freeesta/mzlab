@@ -12,7 +12,7 @@ try:
         pg = r.page(p)
         pg.context.route("http://127.0.0.1:8765/**", lambda rt: rt.fulfill(status=200, content_type="application/json", headers={"access-control-allow-origin": "*"}, body='{"ok": false}'))
         for _ in range(5): pg.click("header img.logo")
-        pg.wait_for_selector("#nav [data-v=flow]", timeout=30000);
+        pg.wait_for_selector("#nav [data-v=flow]", timeout=30000)
         app = pg.evaluate("window.APP_NAME")
         def title(view, name):
             def f():

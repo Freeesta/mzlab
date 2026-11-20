@@ -101,9 +101,8 @@ try:
             w1 = win()["win"]; assert w1["rt0"] > w0["rt0"], (w0, w1); assert pg.evaluate(f"[{M}.zoom,{M}.zoomY]") == z0, "the map did not move"
         step("a finger on the box moves the box, not the map", touch_drag)
         def no_labels():
-            pg.evaluate("window.MAPFEAT = { features: () => [{ id: 1, mz: 259, rt: 8, ppm: 5 }] }"); pg.evaluate(M + ".cv.focus()"); r0 = win()["win"]["rt0"]; pg.keyboard.press("ArrowRight"); wait_for_js(pg, f"MAPEX.numbers({M}).win.rt0 !== {r0}"); frames(pg, 3)
-            assert pg.evaluate(f"!{M}._mz.feat && document.querySelector('.pnl.map [data-nav=mapfeat]').hidden"), "LR: no automatic marker, no switch for the features of a search, even if a provider exists"
-            pg.evaluate("delete window.MAPFEAT")
+            pg.evaluate(M + ".cv.focus()"); r0 = win()["win"]["rt0"]; pg.keyboard.press("ArrowRight"); wait_for_js(pg, f"MAPEX.numbers({M}).win.rt0 !== {r0}"); frames(pg, 3)
+            assert pg.evaluate("document.querySelector('.pnl.map [data-nav=mapfeat]') === null"), "LR: no marker and no switch for search-tool features"
             txt = pg.inner_text(".pnl.map .mzex"); import re
             assert not re.search(r"(?i)product|\bTP\b|candidate|identified", txt), txt
         step("low resolution: no marker and no label from the program", no_labels)

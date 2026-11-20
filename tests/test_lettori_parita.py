@@ -152,7 +152,7 @@ def create(fam: str, d: Path) -> Path:
     raise AssertionError(fam)
 
 
-SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_danneggiato/danneggiato.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "bruker_danneggiato": "bruker_danneggiato/danneggiato.d", "andi": "andi/synt.cdf"}
+SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_damaged": "thermo_damaged/damaged.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "bruker_damaged": "bruker_damaged/damaged.d", "andi": "andi/synt.cdf"}
 
 
 def synthetic(base: Path):
@@ -229,8 +229,8 @@ def test_waters_damaged_part_equals_the_cli(tools, part):
 def test_bruker_with_one_frame_without_calibration_equals_cli(tools):
     """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conversion/1 of both
     names `warn.bruker.noCalibration` as the cause of the partial read."""
-    ds = create("bruker_danneggiato", tools["tmp"] / "in_bruker_danneggiato")
-    cli = da_cli(tools, "bruker_danneggiato", ds, code=3)
+    ds = create("bruker_damaged", tools["tmp"] / "in_bruker_damaged")
+    cli = da_cli(tools, "bruker_damaged", ds, code=3)
     wasm = da_wasm(tools, "bruker", ds)
     assert cli.count(b"<spectrum ") == 2
     assert b"warn.bruker.noCalibration" in cli
@@ -251,8 +251,8 @@ def test_bruker_with_truncated_tdf_bin_equals_cli(tools):
 def test_thermo_damaged_units_equal_the_cli(tools):
     """A `.raw` with one of every damaged unit (an unreadable controller before the MS one, an unreadable analog controller, a scan pointing past the end,
     a record that does not decode): both faces write the 12 scans, the damaged two without points, byte for byte, and conversion/1 names `warn.raw.damaged`."""
-    ds = create("thermo_danneggiato", tools["tmp"] / "in_thermo_danneggiato")
-    cli = da_cli(tools, "thermo_danneggiato", ds, code=3)
+    ds = create("thermo_damaged", tools["tmp"] / "in_thermo_damaged")
+    cli = da_cli(tools, "thermo_damaged", ds, code=3)
     wasm = da_wasm(tools, "thermo", ds)
     assert cli.count(b"<spectrum ") == 12
     assert b"warn.raw.damaged" in cli

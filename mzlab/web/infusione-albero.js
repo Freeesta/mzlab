@@ -178,7 +178,7 @@
   }
   /** The only file loaded when it is an infusion: the «Fragmentation graph» (infusione-grafo.js) belongs to that case. */
   const single = () => { const l = E.files.filter((/** @type {any} */ f) => !f.gone); return l.length === 1 && INF.isInf(l[0]); };
-  /** Files with channels of level 2 or more (api/canali): the tree tab belongs to them too, whatever the experiment type says. */
+  /** Files with channels of level 2 or more (api/channels): the tree tab belongs to them too, whatever the experiment type says. */
   const HAS = new Map();
   const hasTree = (/** @type {any} */ f) => !!f && !f.gone && (INF.isInf(f) || HAS.get(f.k) === true);
   const any = () => E.files.some(hasTree);
@@ -187,7 +187,7 @@
     let changed = false;
     for (const f of files) {
       if (!f || f.gone || HAS.has(f.k)) continue;
-      try { const j = await J(`api/canali?k=${f.k}`); const has = j.channels.some((/** @type {any} */ c) => (c.family === "ms" || c.family === "dd") && c.ms_level >= 2); HAS.set(f.k, has); changed ||= has && !INF.isInf(f); } catch (e) { console.info("INF probe", e); }
+      try { const j = await J(`api/channels?k=${f.k}`); const has = j.channels.some((/** @type {any} */ c) => (c.family === "ms" || c.family === "dd") && c.ms_level >= 2); HAS.set(f.k, has); changed ||= has && !INF.isInf(f); } catch (e) { console.info("INF probe", e); }
     }
     if (changed && window.BARRA) BARRA.syncMode();
   }

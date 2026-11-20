@@ -46,7 +46,7 @@ fn job(iter: u64) -> f64 {
 
 /// The pool of `mzmlwrite/pool.rs` reduced to its channels: a producer sends `tasks` tasks of about `us` microseconds to `t` workers that share the receiver
 /// behind a mutex and answer on a second channel; `blocco` tasks travel together. Returns the wall seconds.
-fn canale(t: usize, tasks: usize, us: f64, block: usize, ns_iter: f64) -> f64 {
+fn channel(t: usize, tasks: usize, us: f64, block: usize, ns_iter: f64) -> f64 {
     let iter = (us * 1e3 / ns_iter) as u64;
     let (tx, rx) = mpsc::channel::<Vec<usize>>();
     let (txr, rxr) = mpsc::channel::<Vec<usize>>();
@@ -125,7 +125,7 @@ pub fn all(thread: &[usize]) -> Value {
         for &t in thread {
             for block in [1usize, 32] {
                 let tasks = 20_000;
-                let s = canale(t, tasks, us, block, ns_iter);
+                let s = channel(t, tasks, us, block, ns_iter);
                 let ideale = tasks as f64 * us * 1e-6 / t as f64;
                 channels.push(json!({
                     "compito_us": us, "thread": t, "compiti_per_messaggio": block, "secondi": round_to(s), "ideale_s": round_to(ideale),

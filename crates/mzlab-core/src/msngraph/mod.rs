@@ -185,15 +185,15 @@ pub struct Measure {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Edge {
-    pub da: usize,
-    pub a: usize,
-    /// m/z of `da` minus m/z of `a`.
+    pub from: usize,
+    pub to: usize,
+    /// m/z of `from` minus m/z of `to`.
     pub perdita: f64,
     /// Known neutral losses within the tolerance (formulas, «compatible with», never assigned).
     pub compatibili: Vec<&'static str>,
-    /// The loss between the chosen formulas of the two nodes and its error in ppm of the m/z of `da`, when both have one.
+    /// The loss between the chosen formulas of the two nodes and its error in ppm of the m/z of `from`, when both have one.
     pub formula: Option<(String, f64)>,
-    /// The arc is a step of a path that was isolated (`a` is the precursor of a child of the spectrum).
+    /// The arc is a step of a path that was isolated (`to` is the precursor of a child of the spectrum).
     pub isolamento: bool,
     pub misure: Vec<Measure>,
 }
@@ -308,7 +308,7 @@ pub struct Counts {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Graph {
     pub nodes: Vec<GNode>,
-    pub archi: Vec<Edge>,
+    pub edges: Vec<Edge>,
     pub radici: Vec<usize>,
     pub polarita: i8,
     pub scartati: Counts,

@@ -8,6 +8,7 @@ use crate::kekule::{assign, Facts};
 use crate::model::{Atom, Bond, Mol, Status, Stereo, StereoGroup};
 use crate::smiles_parse::{parse, Raw, RawBond, Sym};
 use crate::smiles_stereo::{double, tetra};
+use crate::sortm::SortM;
 use crate::valence::shortfall;
 
 impl Mol {
@@ -27,7 +28,7 @@ impl Mol {
                 o,
             })
             .collect();
-        bonds.sort_by_key(|b| (b.a, b.b));
+        bonds.sortm_by_key(|b| (b.a, b.b));
         let mut stereo = tetra(&raw, &h);
         stereo.extend(double(&raw, &orders));
         let groups = groups(cxsmiles::groups(tail), &stereo, atoms.len())?;
@@ -118,7 +119,7 @@ fn groups(
     let mut seen = Vec::new();
     let mut out = Vec::new();
     for (kind, _, mut atoms) in listed {
-        atoms.sort_unstable();
+        atoms.sortm();
         atoms.dedup();
         for &a in &atoms {
             let defined = stereo

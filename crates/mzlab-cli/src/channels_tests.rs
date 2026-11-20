@@ -231,7 +231,7 @@ fn channels_of_the_synthetic_files() {
 /// A SIM channel id has spaces and `name=` words: the error line names it whole, never split into parameters.
 #[test]
 fn an_unknown_sim_id_is_named_whole() {
-    let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_sim_{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_channel_sim_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("e.mzML");
     std::fs::write(

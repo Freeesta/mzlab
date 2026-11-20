@@ -40,6 +40,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.canali.unknown",
     "err.scan.unknown",
     "err.msn.node",
+    "err.mol.draw.not_found",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
     "err.cli.schema.unknown",
@@ -97,10 +98,12 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.cut.radical",
         "error.check.tooBig",
         "error.sdf.tooBig",
+        "error.open.tooBig",
         "error.sub.dbSize",
         "error.anal.abundance",
         "error.anal.empty",
         "error.hilite.query",
+        "err.mol.draw.tooBig",
     ];
     const CHEM_INPUT_KEYS: &[&str] = &[
         "error.label.request",
@@ -120,6 +123,9 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.sub.db",
         "error.sub.column",
         "err.search.request",
+        "err.mol.draw.db",
+        "err.mol.draw.molfile",
+        "err.mol.draw.request",
     ];
     if CHEM_DATA_KEYS.contains(&key) {
         Some(DATA)

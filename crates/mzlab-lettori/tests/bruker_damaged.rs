@@ -83,7 +83,7 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
     assert_eq!(l.scan(0, 0).unwrap().mz.len(), 2);
     let doc = l.method(0).unwrap();
     assert!(
-        doc.contains("meta.danneggiato") && doc.contains("analysis.tdf: table GlobalMetadata"),
+        doc.contains("meta.damaged") && doc.contains("analysis.tdf: table GlobalMetadata"),
         "{doc}"
     );
 }

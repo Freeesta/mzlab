@@ -2,6 +2,8 @@
 //! the user gives the SMILES of the parent.
 
 pub mod analysis;
+mod aromatic_h;
+mod atom_block;
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;
@@ -10,6 +12,10 @@ pub mod cip;
 #[cfg(feature = "check")]
 mod cip_rank;
 pub mod cut;
+#[cfg(feature = "check")]
+pub mod draw;
+#[cfg(feature = "check")]
+mod draw_db;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

@@ -55,8 +55,8 @@ export async function ask(/** @type {string} */ request, /** @type {"check" | "c
   return kind === "cip" ? mod.cip(request) : kind === "hilite" ? mod.hilite(request) : mod.check(request);
 }
 
-/** `open/1` of the bytes of a structure file: the text Ketcher reads and the changes made to it (`{fix: "charset", charset}` or `{fix: "empty", names}`), by the same engine function as `mzlab-cli mol open`.
- * @returns {Promise<{ text: string, changes: { fix: string, charset?: string, names?: string }[] }>} */
+/** `open/1` of the bytes of a structure file: the text Ketcher reads and the changes made to it (`{fix: "charset", charset}`, `{fix: "replaced", count}` or `{fix: "empty", names: [..]}`), by the same engine function as `mzlab-cli mol open`.
+ * @returns {Promise<{ text: string, changes: { fix: string, charset?: string, count?: number, names?: string[] }[] }>} */
 export async function openFile(/** @type {Uint8Array} */ bytes) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     let bin = "";
@@ -64,6 +64,13 @@ export async function openFile(/** @type {Uint8Array} */ bytes) {
     return JSON.parse(await rpc("open", JSON.stringify({ data: btoa(bin) })));
   }
   return JSON.parse((await carica()).open_file(bytes));
+}
+
+/** Whether a file of this many bytes is read: `{limit}`, else the engine refuses (`error.open.tooBig`, with the size and the limit). Asked before the file is read, so a huge drop costs nothing.
+ * @returns {Promise<{ limit: number }>} */
+export async function openSize(/** @type {number} */ size) {
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) return JSON.parse(await rpc("open", JSON.stringify({ size })));
+  return JSON.parse((await carica()).open_size(size));
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */

@@ -93,25 +93,25 @@ pub struct EdgeLoss {
 /// The interpretation of one arc: the loss (if any) and the distinct activations that observed it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeInterp {
-    pub da: usize,
+    pub from: usize,
     pub a: usize,
     pub loss: Option<EdgeLoss>,
     pub attivazioni: Vec<String>,
 }
 
-/// The loss of every arc of the graph, in the order of `g.archi`.
+/// The loss of every arc of the graph, in the order of `g.edges`.
 pub fn interpreta(g: &Graph, ppm: f64) -> Vec<EdgeInterp> {
     let tab = known_losses();
-    g.archi
+    g.edges
         .iter()
         .map(|a| {
-            let mz = g.nodes[a.da].mz;
+            let mz = g.nodes[a.from].mz;
             let mut att: Vec<String> = a.misure.iter().map(|m| m.att.clone()).collect();
             crate::sortc::slice_ord(&mut att);
             att.dedup();
             EdgeInterp {
-                da: a.da,
-                a: a.a,
+                from: a.from,
+                a: a.to,
                 loss: edge_loss(&tab, a.perdita, a.formula.as_ref(), mz, ppm),
                 attivazioni: att,
             }
@@ -203,7 +203,7 @@ pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     for (i, a) in v.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"from\":")
-            .str(&format!("n{}", a.da))
+            .str(&format!("n{}", a.from))
             .raw(",\"to\":")
             .str(&format!("n{}", a.a))
             .raw(",\"activations\":[");
