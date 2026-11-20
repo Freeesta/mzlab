@@ -40,10 +40,9 @@ impl Mol {
         let counts = lines.get(3).ok_or_else(bad)?;
         let num =
             |s: &str, a: usize, b: usize| s.get(a..b).and_then(|t| t.trim().parse::<i64>().ok());
-        let (na, nb) = (
-            num(counts, 0, 3).ok_or_else(bad)? as usize,
-            num(counts, 3, 6).ok_or_else(bad)? as usize,
-        );
+        // a negative count is not a count (as `usize` it would wrap into a huge one)
+        let count = |a, b| num(counts, a, b).and_then(|n| usize::try_from(n).ok());
+        let (na, nb) = (count(0, 3).ok_or_else(bad)?, count(3, 6).ok_or_else(bad)?);
         if na > MAX_ATOMS || lines.len() < 4 + na + nb {
             return Err(if na > MAX_ATOMS {
                 Error::new("error.grafo.tooBig").with("max", MAX_ATOMS)
