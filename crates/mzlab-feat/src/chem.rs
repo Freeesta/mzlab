@@ -16,6 +16,8 @@ pub mod cut;
 pub mod draw;
 #[cfg(feature = "check")]
 mod draw_db;
+#[cfg(feature = "check")]
+pub mod draw_file;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

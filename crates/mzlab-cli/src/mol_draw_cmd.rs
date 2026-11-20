@@ -1,5 +1,5 @@
-//! `mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout (`draw/1`), as a molfile or, with
-//! `--json`, as a scene of atoms, bonds and fragments. The same bytes as the molkit `.wasm` and the app (`chem::draw`).
+//! `mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout
+//! (`draw/1`), as a molfile, a KET or a CDXML text or, with `--json`, as a scene of atoms, bonds and fragments (the KET or CDXML text in `file`). The same bytes as the molkit `.wasm` and the app (`chem::draw`).
 
 use mzlab_core::error::Error;
 use std::path::{Path, PathBuf};
@@ -10,20 +10,21 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli mol draw: a structure drawn in 2D by mzLab's own layout (draw/1).
 
-usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
+usage: mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH] [--json]
 
   SPEC           smiles:TEXT (or a bare SMILES), molfile:TEXT, a molfile path or - (the text has M  END), name:TEXT, inchikey:KEY
                  (or a bare 27-character key), InChI=... followed by its InChIKey. Bare text that is none of these is a name.
-  --set format   molfile (default) or scene; --json is the scene (draw/1)
+  --format F     molfile (default), scene, ket or cdxml (= --set format=F); with --json ket or cdxml go into the scene (file)
   --set layout   keep (default: a molfile with 2D coordinates keeps them) or new (lay it out again)
   --set db       a molecules/1 CSV (for example mzlab/web/molecules/catalogue.csv): names and keys are looked up only there
   --set name     the title line of the molfile (default: the molecule's name, or the title of the molfile)
   --out PATH     write there instead of the standard output
 
+KET and CDXML are open formats written from their public documentation, not tested against ChemDraw or Ketcher.
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a molfile they go to
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms, an atom that is no element (err.mol.draw.element); 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
@@ -43,6 +44,10 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
             "--out" => match it.next() {
                 Some(p) => out = Some(PathBuf::from(p)),
                 None => return Err(Outcome::fail("--out needs a path")),
+            },
+            "--format" => match it.next() {
+                Some(f) => set[0] = Some(f),
+                None => return Err(Outcome::fail("--format needs a name")),
             },
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => match NAMES.iter().position(|n| *n == k) {
@@ -64,9 +69,13 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
             "mol draw needs one SPEC (smiles:..., a molfile path, name:..., inchikey:...)",
         ));
     };
-    if json && set[0].as_deref().is_some_and(|f| f != "scene") {
+    if json
+        && set[0]
+            .as_deref()
+            .is_some_and(|f| !matches!(f, "scene" | "ket" | "cdxml"))
+    {
         return Err(Outcome::fail(
-            "--json is the scene: it does not go with --set format=molfile",
+            "--json is the scene: it does not go with --format molfile",
         ));
     }
     Ok((spec.clone(), out, json, set))
@@ -75,14 +84,15 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
 /// The request of the engine: SPEC text, the format, the layout and name choices, the database text.
 fn request(spec: &str, json: bool, set: &[Option<String>; 4], db: Option<&str>) -> String {
     let mut req = Out::default();
+    let format = set[0].as_deref().unwrap_or("molfile");
     req.raw("{\"spec\":")
         .str(spec)
         .raw(",\"format\":")
-        .str(if json {
-            "scene"
-        } else {
-            set[0].as_deref().unwrap_or("molfile")
-        });
+        .str(if json { "scene" } else { format });
+    // a scene carries the KET or CDXML text of the drawing
+    if json && matches!(format, "ket" | "cdxml") {
+        req.raw(",\"file\":").str(format);
+    }
     for (k, v) in [("layout", &set[1]), ("name", &set[3])] {
         if let Some(v) = v {
             req.raw(",").str(k).raw(":").str(v);
@@ -108,16 +118,21 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(d) => d,
         Err(o) => return o,
     };
-    match mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref())) {
-        Ok((d, f)) => {
-            let text = match f {
-                mzlab_feat::chem::draw::Format::Scene => {
-                    format!("{}\n", mzlab_feat::chem::draw::scene(&d))
-                }
-                mzlab_feat::chem::draw::Format::Molfile => d.mol.to_molfile(&d.title),
-            };
+    let text_of = |d: &mzlab_feat::chem::draw::Drawn, f| {
+        use mzlab_feat::chem::draw::Format;
+        Ok(match f {
+            Format::Scene => format!("{}\n", mzlab_feat::chem::draw::scene(d)?),
+            Format::Molfile => d.mol.to_molfile(&d.title),
+            Format::Ket => mzlab_feat::chem::draw_file::ket(d)?,
+            Format::Cdxml => mzlab_feat::chem::draw_file::cdxml(d)?,
+        })
+    };
+    let drawn = mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref()))
+        .and_then(|(d, f)| text_of(&d, f).map(|t| (d, f, t)));
+    match drawn {
+        Ok((d, f, text)) => {
             let mut o = crate::emit(text, &out);
-            if o.code == 0 && f == mzlab_feat::chem::draw::Format::Molfile {
+            if o.code == 0 && f != mzlab_feat::chem::draw::Format::Scene {
                 for (label, list) in [("choice", &d.choices), ("warning", &d.warnings)] {
                     o.stderr += &list
                         .iter()
