@@ -27,6 +27,7 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 | exit | meaning |
 |---|---|
 | 0 | ok |
+| 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`) |
 | 2 | unparseable SMILES or molfile, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
 | 4 | missing or unreadable file or db |
 | 5 | not in the db (`err.mol.draw.not_found`, hint: the nearest names) |
@@ -44,7 +45,7 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 | molfile read back, same `mol/1` core (stereo included) | 300/300 | 300/300 |
 | fragments apart | at least 1.5 bonds | 0 under |
 | atom on a bond | at most 9 | 4 |
-| native release p95 per molecule | at most 1 ms (CI: x3) | 0.14 ms |
+| native release p95 per molecule | at most 1 ms (best of 3 runs) | 0.18 ms |
 
 What stays unclean: bridged and spiro cage molecules (cubane and adamantane types: ring-angle error 13-20 degrees, some crossings); RDKit draws the same ones unclean. `python3 tools/draw_quality.py --report` prints the table.
 

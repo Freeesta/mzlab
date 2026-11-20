@@ -18,7 +18,7 @@ import draw_quality as dq  # noqa: E402
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 CLI = ROOT / "target" / "release" / "mzlab-cli"   # `build` leaves it here (or installs the prebuilt one): no `cargo run` per molecule
 P95_LIMIT_US = 1000.0
-CI_MARGIN = 3.0
+RUNS = 3   # best of 3 absorbs the noise of a shared runner; the limit itself is not widened
 
 
 def scene(smiles):
@@ -71,8 +71,11 @@ def test_native_p95_of_one_layout_is_under_a_millisecond():
     build_example("mzlab-mol", "layout_bench")
     worst = 0.0
     for name in ("draw_set_a", "draw_set_b"):
-        out = run(*example_argv("mzlab-mol", "layout_bench", str(dq.DATI / f"{name}.tsv"))).stdout.split()
-        n, median, p95, top = int(out[1]), float(out[3]), float(out[5]), float(out[7])  # `n N median_us M p95_us P max_us X`
-        print(f"{name}: n {n} median {median:.0f} us p95 {p95:.0f} us max {top:.0f} us")
-        worst = max(worst, p95)
-    assert worst <= P95_LIMIT_US * CI_MARGIN, f"p95 {worst:.0f} us (limit {P95_LIMIT_US:.0f} us, x{CI_MARGIN:g} margin)"
+        runs = []
+        for _ in range(RUNS):
+            out = run(*example_argv("mzlab-mol", "layout_bench", str(dq.DATI / f"{name}.tsv"))).stdout.split()
+            n, median, p95, top = int(out[1]), float(out[3]), float(out[5]), float(out[7])  # `n N median_us M p95_us P max_us X`
+            print(f"{name}: n {n} median {median:.0f} us p95 {p95:.0f} us max {top:.0f} us")
+            runs.append(p95)
+        worst = max(worst, min(runs))
+    assert worst <= P95_LIMIT_US, f"p95 {worst:.0f} us (limit {P95_LIMIT_US:.0f} us, best of {RUNS})"

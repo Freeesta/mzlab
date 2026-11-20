@@ -10,7 +10,6 @@ use mzlab_mol::Mol;
 
 /// Above this many atoms the drawing refuses (a drawing, not a library).
 const MAX_ATOMS: usize = 2000;
-/// How many names the not-found error offers.
 
 /// What the answer is: the molfile text or the `draw/1` scene.
 #[derive(Clone, Copy, PartialEq, Debug)]

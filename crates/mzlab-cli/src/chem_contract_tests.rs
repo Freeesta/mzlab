@@ -395,12 +395,17 @@ fn draw_probes() -> Probes<'static> {
         )
         .into_boxed_str(),
     );
+    // over the 2000-atom limit: data (1), as every `*.tooBig`
+    let big: &'static str = Box::leak(format!("smiles:{}", "C".repeat(2001)).into_boxed_str());
     vec![(
         "mol draw",
         vec![
             (vec!["smiles:CCO"], 0),
+            (vec![big], 1),
             (vec!["smiles:C(("], 2),
             (vec!["name:caffeine"], 2),
+            // an InChI alone is never parsed: usage, the hint asks for the InChIKey
+            (vec!["InChI=1S/CH4/h1H4"], 2),
             (vec!["/no/such/x.mol"], 4),
             (vec!["name:zzzzzzzzzz", "--set", db], 5),
             (vec!["smiles:CCO", "--out", NOWHERE], 6),

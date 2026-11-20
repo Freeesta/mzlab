@@ -22,7 +22,7 @@ usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a molfile they go to
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 2 unparseable SMILES or molfile, bad option, a name or key without --set db; 4 missing file or db; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms; 2 unparseable SMILES or molfile, bad option, a name or key without --set db; 4 missing file or db; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];

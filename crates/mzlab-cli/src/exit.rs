@@ -102,6 +102,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.anal.abundance",
         "error.anal.empty",
         "error.hilite.query",
+        "err.mol.draw.tooBig",
     ];
     const CHEM_INPUT_KEYS: &[&str] = &[
         "error.label.request",

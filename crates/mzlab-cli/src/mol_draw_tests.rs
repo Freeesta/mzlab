@@ -134,3 +134,12 @@ fn mol_draw_writes_to_out() {
     assert_eq!(o.code, 0);
     assert!(o.stdout.is_empty() && written.contains("M  END"));
 }
+
+#[test]
+fn mol_draw_an_inchi_alone_is_usage_with_a_hint_and_too_many_atoms_is_data() {
+    let o = run(&["mol", "draw", "InChI=1S/CH4/h1H4"]);
+    assert_eq!(o.code, 2);
+    assert!(o.stderr.contains("InChIKey"), "{}", o.stderr);
+    let o = run(&["mol", "draw", &format!("smiles:{}", "C".repeat(2001))]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+}
