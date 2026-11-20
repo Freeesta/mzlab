@@ -4,6 +4,7 @@
 use crate::codec::MolError;
 use crate::model::{Atom, Cfg, Parity, Status, Stereo, StereoGroup};
 use crate::molfile::{fail, Draft, Wedge};
+use crate::sortm::SortM;
 use std::collections::VecDeque;
 
 /// Neighbours of every atom with the index of the joining bond.
@@ -68,7 +69,7 @@ pub(crate) fn tetra(d: &Draft, atoms: &[Atom]) -> Vec<Stereo> {
         let (refs, par, status) = match par {
             Some(p) => {
                 let mut refs: Vec<u32> = adj[c].iter().map(|&(n, _)| n as u32).collect();
-                refs.sort_unstable();
+                refs.sortm();
                 (Some(refs), Some(p), Status::Defined)
             }
             None if starts.iter().any(|&(_, w)| w == Wedge::Either) => {
@@ -97,7 +98,7 @@ pub(crate) fn parity(
     wedges: &[(usize, Wedge)],
 ) -> Option<Parity> {
     let mut ns: Vec<usize> = nbrs.iter().map(|&(n, _)| n).collect();
-    ns.sort_unstable();
+    ns.sortm();
     let mut v: Vec<[f64; 3]> = ns
         .iter()
         .map(|&n| {
@@ -157,7 +158,7 @@ pub(crate) fn double_bonds(d: &Draft) -> Vec<Stereo> {
         .filter(|(_, b)| b.order == 2 && !b.arom)
         .map(|(i, b)| (b.a.min(b.b), b.a.max(b.b), i))
         .collect();
-    ends.sort_unstable();
+    ends.sortm();
     let mut out = Vec::new();
     for (a, b, bi) in ends {
         let low =
@@ -246,11 +247,11 @@ pub(crate) fn groups(d: &Draft, stereo: &[Stereo]) -> Result<Vec<StereoGroup>, M
                 atoms.push(a as u32);
             }
         }
-        atoms.sort_unstable();
+        atoms.sortm();
         if !atoms.is_empty() {
             out.push(StereoGroup { kind: *kind, atoms });
         }
     }
-    out.sort_by(|x, y| x.atoms.cmp(&y.atoms));
+    out.sortm_by(|x, y| x.atoms.cmp(&y.atoms));
     Ok(out)
 }

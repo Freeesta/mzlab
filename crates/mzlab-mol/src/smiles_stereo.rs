@@ -3,6 +3,7 @@
 
 use crate::model::{Cfg, Parity, Status, Stereo};
 use crate::smiles_parse::{Raw, Sym};
+use crate::sortm::SortM;
 
 /// Tetrahedral centres marked with `@`/`@@`. The neighbours are the written ones with the implicit hydrogen (or lone pair) right after the
 /// first, or first when the atom has no predecessor; the parity is turned into "ascending refs, implicit last" by counting inversions.
@@ -29,7 +30,7 @@ pub(crate) fn tetra(raw: &Raw, h: &[u8]) -> Vec<Stereo> {
             .filter(|&&x| x != usize::MAX)
             .map(|&x| x as u32)
             .collect();
-        refs.sort_unstable();
+        refs.sortm();
         let cw = double ^ (inversions % 2 == 1);
         out.push(Stereo::Tetra {
             c: c as u32,
@@ -58,7 +59,7 @@ fn side(raw: &Raw, x: usize, skip: usize) -> Option<(usize, bool)> {
         .map(|&b| (raw.other(b, x), up_from(raw, b, x)))
         .filter(|&(o, _)| o != skip)
         .collect();
-    near.sort_unstable();
+    near.sortm();
     let r = near.first()?.0;
     let (o, up) = near.iter().find_map(|&(o, d)| d.map(|u| (o, u)))?;
     Some((r, up == (o == r)))
@@ -73,7 +74,7 @@ pub(crate) fn double(raw: &Raw, orders: &[u8]) -> Vec<Stereo> {
         .filter(|&(i, e)| e.sym == Sym::Double && orders[i] == 2)
         .map(|(_, e)| (e.from.min(e.to), e.from.max(e.to)))
         .collect();
-    ends.sort_unstable();
+    ends.sortm();
     ends.into_iter()
         .filter_map(|(a, b)| {
             let (ra, ua) = side(raw, a, b)?;
