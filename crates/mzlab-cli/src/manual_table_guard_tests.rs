@@ -80,10 +80,8 @@ fn every_row_says_which_sample_it_is_even_with_a_blank_before_it() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// A trace set where the second sample's peak lies 0.30 min from the source's: followed freely it moves the window, with `--max-shift 0.2` (or the rigid 0)
-/// it stays and says `too_far` with the refused shift; `--shifts` prints the same decision; a negative limit is a usage error.
-#[test]
-fn max_shift_keeps_a_window_where_it_was_and_writes_the_shift_it_refused() {
+/// Writes the three-sample trace set (peaks at 5.00, 5.30 and 5.02 min) and the one followed window; returns the directory and the two paths.
+fn shift_inputs() -> (PathBuf, String, String) {
     let d = std::env::temp_dir().join(format!("mzlab_cli_maxshift_{}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
     let t: Vec<String> = (0..500)
@@ -123,7 +121,14 @@ fn max_shift_keeps_a_window_where_it_was_and_writes_the_shift_it_refused() {
         r#"[{"file":0,"tr":0,"a":4.85,"b":5.15,"follow":true}]"#,
     )
     .unwrap();
-    let (tp, wp) = (tp.display().to_string(), wp.display().to_string());
+    (d, tp.display().to_string(), wp.display().to_string())
+}
+
+/// A trace set where the second sample's peak lies 0.30 min from the source's: followed freely it moves the window, with `--max-shift 0.2` (or the rigid 0)
+/// it stays and says `too_far` with the refused shift; `--shifts` prints the same decision; a negative limit is a usage error.
+#[test]
+fn max_shift_keeps_a_window_where_it_was_and_writes_the_shift_it_refused() {
+    let (d, tp, wp) = shift_inputs();
     let row = |extra: &[&str]| -> Vec<String> {
         let mut a = vec!["--traces", &tp, "--windows", &wp];
         a.extend(extra);
