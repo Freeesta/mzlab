@@ -32,6 +32,7 @@ pub mod sdf;
 pub mod sel;
 mod shuffle;
 mod smiles;
+mod stated_h;
 pub mod structures;
 #[cfg(feature = "sub")]
 pub mod substructure;

@@ -342,7 +342,7 @@ fn an_aromatic_oxygen_or_sulfur_cation_gives_a_ring_electron_and_takes_no_hydrog
 #[test]
 fn the_aromatic_hydrogen_that_the_file_states_is_counted() {
     // indole's five-membered ring alone (pyrrole) as Ketcher writes it: aromatic bonds and the H of the N in a data group
-    let ring = [(1, 2, 4), (2, 3, 4), (3, 4, 4), (4, 5, 4), (5, 1, 4)];
+    let ring = RING5;
     let stated = [
         "M  STY  1   1 DAT",
         "M  SLB  1   1   1",
@@ -354,7 +354,113 @@ fn the_aromatic_hydrogen_that_the_file_states_is_counted() {
     let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &stated), false);
     assert_eq!(v["label"]["text"], "C4H5N");
     assert_eq!(v["label"]["unpaired"], 0);
-    // without the group the N reads as a pyridine-type one (no hydrogen)
-    let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &[]), false);
-    assert_eq!(v["label"]["text"], "C4H4N");
+}
+
+/// The lines of an `MRV_IMPLICIT_H` data group `g` on `atom` with the data `IMPL_H<count>`.
+fn group(g: usize, atom: usize, count: &str) -> [String; 4] {
+    [
+        format!("M  STY  1 {g:>3} DAT"),
+        format!("M  SAL {g:>3}  1 {atom:>3}"),
+        format!("M  SDT {g:>3} MRV_IMPLICIT_H"),
+        format!("M  SED {g:>3} IMPL_H{count}"),
+    ]
+}
+
+/// The hydrogens of every atom as the two readers give them: `graph::Mol` (selection, cut) and `mzlab_mol::Mol` (check, export).
+fn both(text: &str) -> (Vec<u32>, Vec<u32>) {
+    let feat = super::graph::Mol::from_molfile(text).unwrap();
+    let mol = mzlab_mol::Mol::from_molfile(text).unwrap();
+    (
+        feat.atoms.iter().map(|a| a.h).collect(),
+        mol.atoms.iter().map(|a| u32::from(a.h)).collect(),
+    )
+}
+
+const RING5: [(usize, usize, u8); 5] = [(1, 2, 4), (2, 3, 4), (3, 4, 4), (4, 5, 4), (5, 1, 4)];
+
+#[test]
+fn a_hydrogen_count_no_atom_carries_is_refused() {
+    for count in ["5", "4294967295", "99999999999999999999", "-1", "x"] {
+        let g = group(1, 1, count);
+        let lines: Vec<&str> = g.iter().map(String::as_str).collect();
+        let text = mf(&["N", "C", "C", "C", "C"], &RING5, &lines);
+        let e = super::graph::Mol::from_molfile(&text).err().unwrap();
+        assert_eq!(e.key, "error.grafo.molfile", "{count}");
+        assert!(mzlab_mol::Mol::from_molfile(&text).is_err(), "{count}");
+    }
+}
+
+#[test]
+fn the_two_readers_give_a_stated_hydrogen_the_same_meaning() {
+    let with =
+        |els: &[&str], bonds: &[(usize, usize, u8)], groups: &[(usize, &str)], more: &[&str]| {
+            let g: Vec<String> = groups
+                .iter()
+                .enumerate()
+                .flat_map(|(k, (atom, count))| group(k + 1, *atom, count))
+                .collect();
+            let mut lines: Vec<&str> = more.to_vec();
+            lines.extend(g.iter().map(String::as_str));
+            both(&mf(els, bonds, &lines))
+        };
+    let pyrrole = ["N", "C", "C", "C", "C"];
+    // the N of pyrrole: one H whatever the count says above it, and from the larger of two groups
+    for groups in [
+        &[(1, "1")][..],
+        &[(1, "2")],
+        &[(1, "4")],
+        &[(1, "0"), (1, "1")],
+    ] {
+        let (feat, mol) = with(&pyrrole, &RING5, groups, &[]);
+        assert_eq!(feat, [1, 1, 1, 1, 1], "{groups:?}");
+        assert_eq!(mol, feat, "{groups:?}");
+    }
+    // a count on an aromatic CH that already has its H, or a zero, changes nothing
+    let (feat, mol) = with(&pyrrole, &RING5, &[(1, "1"), (2, "1"), (3, "0")], &[]);
+    assert_eq!((feat.clone(), mol), (vec![1, 1, 1, 1, 1], feat));
+    // both tautomers of 4-methylimidazole (CH3, C, CH, N, CH, N)
+    let els = ["C", "C", "C", "N", "C", "N"];
+    let bonds = [
+        (1, 2, 1),
+        (2, 3, 4),
+        (3, 4, 4),
+        (4, 5, 4),
+        (5, 6, 4),
+        (6, 2, 4),
+    ];
+    for (atom, h) in [(4, [3, 0, 1, 1, 1, 0]), (6, [3, 0, 1, 0, 1, 1])] {
+        let (feat, mol) = with(&els, &bonds, &[(atom, "1")], &[]);
+        assert_eq!((feat, mol), (h.to_vec(), h.to_vec()));
+    }
+    // outside an aromatic ring a count is not read: the methyl radical keeps its three H (not the two a count of 3 minus the radical would give), ethane its six
+    let (feat, mol) = with(&["C"], &[], &[(1, "3")], &["M  RAD  1   1   2"]);
+    assert_eq!((feat, mol), (vec![3], vec![3]));
+    let (feat, mol) = with(&["C", "C"], &[(1, 2, 1)], &[(1, "1"), (2, "4")], &[]);
+    assert_eq!((feat, mol), (vec![3, 3], vec![3, 3]));
+}
+
+#[test]
+fn many_data_groups_are_read_in_one_pass() {
+    // 20,000 groups (a file of more than 1 MB): each line is looked at once
+    let g: Vec<String> = (1..=20_000).flat_map(|k| group(k, 1, "1")).collect();
+    let lines: Vec<&str> = g.iter().map(String::as_str).collect();
+    let text = mf(&["N", "C", "C", "C", "C"], &RING5, &lines);
+    let start = std::time::Instant::now();
+    let m = super::graph::Mol::from_molfile(&text).unwrap();
+    assert_eq!(m.atoms[0].h, 1);
+    assert!(start.elapsed().as_secs() < 5, "{:?}", start.elapsed());
+}
+
+#[test]
+fn a_data_group_after_the_end_line_or_without_its_prefix_is_not_read() {
+    let g = group(1, 1, "1");
+    let lines: Vec<&str> = g.iter().map(String::as_str).collect();
+    let stated = mf(&["N", "C", "C", "C", "C"], &RING5, &lines);
+    let late = stated.replacen("M  STY", "M  END\nM  STY", 1);
+    let bare = stated.replace("M  S", "X  S");
+    for text in [late, bare] {
+        let (feat, mol) = both(&text);
+        // no stated H: `graph::Mol` reads a pyridine-type N, `mzlab-mol` puts the H the ring needs on it
+        assert_eq!((feat, mol), (vec![0, 1, 1, 1, 1], vec![1, 1, 1, 1, 1]));
+    }
 }

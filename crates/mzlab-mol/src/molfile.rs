@@ -73,8 +73,9 @@ impl Draft {
                 h: 0,
             })
             .collect();
+        // an atom named by two groups keeps the larger count
         for &(i, h) in &self.stated_h {
-            facts[i].h = h;
+            facts[i].h = facts[i].h.max(h);
         }
         let kekule = assign(&ends, &mut orders, &facts);
         if kekule.is_none() && !lenient {
@@ -191,10 +192,22 @@ pub(crate) struct Draft {
     pub stated_h: Vec<(usize, u32)>,
 }
 
-/// The hydrogen count of the data `IMPL_Hn` of an `MRV_IMPLICIT_H` group; None for any other field.
-pub(crate) fn implicit_h(field: &str, data: &str) -> Option<u32> {
-    (field == "MRV_IMPLICIT_H").then_some(())?;
-    data.trim_matches('"').strip_prefix("IMPL_H")?.parse().ok()
+/// More hydrogens than any atom carries: a larger count in an `MRV_IMPLICIT_H` group is a damaged file.
+pub(crate) const MAX_STATED_H: u32 = 4;
+
+/// The hydrogen count of the data `IMPL_Hn` of an `MRV_IMPLICIT_H` group; None for any other field, an error for a count that is not
+/// 0..=`MAX_STATED_H`.
+pub(crate) fn implicit_h(field: &str, data: &str) -> Result<Option<u32>, MolError> {
+    let count = (field == "MRV_IMPLICIT_H")
+        .then(|| data.trim_matches('"').strip_prefix("IMPL_H"))
+        .flatten();
+    let Some(count) = count else { return Ok(None) };
+    match count.parse::<u32>() {
+        Ok(h) if h <= MAX_STATED_H => Ok(Some(h)),
+        _ => Err(fail(format!(
+            "the hydrogen count {data:?} of a data group is not 0..{MAX_STATED_H}"
+        ))),
+    }
 }
 
 /// Hydrogens and unpaired electrons of an atom whose bonds add up to `sum`: a stated valence fixes the total (the rest is hydrogens,

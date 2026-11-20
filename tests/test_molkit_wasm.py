@@ -37,16 +37,17 @@ def test_check_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     assert [w["code"] for w in json.loads(site)["warnings"]] == ["valence", "valenceCharge", "isotope", "wedgeNoCentre", "pieces"]
 
 
-def test_check_of_an_unstated_aromatic_hydrogen_through_wasm_equals_the_cli(pkg, tmp_path):
-    # imidazole written with aromatic bonds: the reader puts the H on the first N in file order and the check says on which atom
-    atoms = "".join(f"{i:10.4f}{0:10.4f}{0:10.4f} {e:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for i, e in enumerate("NCNCC"))
-    bonds = "".join("%3d%3d  4  0  0  0  0\n" % (i + 1, (i + 1) % 5 + 1) for i in range(5))
-    req = tmp_path / "req.json"
-    req.write_text(json.dumps({"molfile": "\n  qqq\n\n  5  5  0  0  0  0  0  0  0  0999 V2000\n" + atoms + bonds + "M  END"}), encoding="utf-8")
-    site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"))
-    assert site == cli("mol", "check", str(req), runner=run)
-    (w,) = json.loads(site)["warnings"]
-    assert (w["code"], w["level"], w["atoms"]) == ("aromaticH", "note", [0])
+def test_check_of_an_aromatic_hydrogen_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
+    # imidazole written with aromatic bonds: unstated, the reader puts the H on the first N in file order and the check says on which atom;
+    # stated by an MRV_IMPLICIT_H data group on the other N, there is nothing to say
+    fx = json.loads((ROOT / "tests" / "dati" / "check_disegno.json").read_text(encoding="utf-8"))
+    for case, codes in (("aromatic", ["aromaticH"]), ("stated", [])):
+        req = tmp_path / f"{case}.json"
+        req.write_text(json.dumps({"molfile": fx[f"{case}_request"]["molfile"]}), encoding="utf-8")
+        site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"))
+        assert site == cli("mol", "check", str(req), runner=run)
+        assert site.strip() == fx[f"{case}_check"]
+        assert [(w["code"], w["level"], w["atoms"]) for w in json.loads(site)["warnings"]] == [(c, "note", [0]) for c in codes]
 
 
 def test_a_bad_molfile_is_a_keyed_error(pkg):

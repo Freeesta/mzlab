@@ -105,7 +105,7 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
     for t in &raw_groups {
         let p = props(t);
         let field = p.get("FIELDNAME").copied().unwrap_or("");
-        let Some(h) = implicit_h(field, p.get("FIELDDATA").copied().unwrap_or("")) else {
+        let Some(h) = implicit_h(field, p.get("FIELDDATA").copied().unwrap_or(""))? else {
             continue;
         };
         let list = p.get("ATOMS").copied().unwrap_or("");

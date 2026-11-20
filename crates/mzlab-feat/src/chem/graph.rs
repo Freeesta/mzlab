@@ -12,6 +12,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
 use super::smiles::{self, normal_valence, RawAtom, RawBond};
+use super::stated_h;
 
 /// Atoms the graph accepts (the localisation of the Python version stopped at 64).
 pub const MAX_ATOMS: usize = 200;
@@ -87,10 +88,7 @@ impl Mol {
         for (i, c) in props(&lines[4 + na + nb..], "M  CHG", na) {
             raw[i].charge = c;
         }
-        // the hydrogen of a pyrrole-type atom of a ring written aromatic: without it the atom reads as a pyridine-type one
-        for (i, h) in stated_h(&lines[4 + na + nb..], na) {
-            raw[i].h = Some(h);
-        }
+        stated_h::apply(&mut raw, &written, &lines[4 + na + nb..])?;
         let mut m = Mol::assemble(raw, written, true);
         for (i, w) in props(&lines[4 + na + nb..], "M  ISO", na) {
             m.atoms[i].iso = w.max(0) as u32;
@@ -371,34 +369,6 @@ pub(super) fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)
             {
                 out.push((*i as usize - 1, *c));
             }
-        }
-    }
-    out
-}
-
-/// The (atom index, hydrogens) that the `MRV_IMPLICIT_H` data groups of a molfile state (`M  SDT g MRV_IMPLICIT_H`, `M  SED g IMPL_Hn`,
-/// `M  SAL g n atoms`): how Ketcher says which atom of an aromatic ring carries the hydrogen.
-fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
-    let of = |kind: &str, group: &str| -> Vec<Vec<&str>> {
-        let rows = lines.iter().filter_map(|l| l.strip_prefix(kind));
-        rows.map(|r| r.split_whitespace().collect::<Vec<_>>())
-            .filter(|t| t.first() == Some(&group))
-            .collect()
-    };
-    let mut out = vec![];
-    for t in lines.iter().filter_map(|l| l.strip_prefix("M  SDT")) {
-        let mut t = t.split_whitespace();
-        let (Some(group), Some("MRV_IMPLICIT_H")) = (t.next(), t.next()) else {
-            continue;
-        };
-        let data = of("M  SED", group);
-        let count = data.first().and_then(|d| d.get(1)?.strip_prefix("IMPL_H"));
-        let Some(h) = count.and_then(|n| n.parse::<u32>().ok()) else {
-            continue;
-        };
-        for row in of("M  SAL", group) {
-            let atoms = row.iter().skip(2).filter_map(|a| a.parse::<usize>().ok());
-            out.extend(atoms.filter(|a| (1..=na).contains(a)).map(|a| (a - 1, h)));
         }
     }
     out
