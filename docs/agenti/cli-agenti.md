@@ -66,7 +66,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Fetch and verify (replace `X.Y.Z`; `a=aarch64` on ARM; macOS: `Mac-aarch64`, `shasum -a 256` instead of `sha256sum`):
   `v=X.Y.Z; a=x86_64; u=https://github.com/Freeesta/mzlab/releases/download/v$v; curl -fsSLO $u/mzLab-$v-cli-Linux-$a -O $u/SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS && chmod +x mzLab-$v-cli-Linux-$a && ./mzLab-$v-cli-Linux-$a --version`
 - Before a release is published, `release` (Actions, Run workflow, version empty = dry run) keeps the same files as artifacts `mzlab-cli-linux-x86_64`, `-linux-aarch64`, `-macos-aarch64`, each with a `.sha256` file.
-- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`: `--version`, `commands --json`, `flow steps --json`); the Linux x86_64 one is also compared byte for byte with a native glibc build (`ion pattern`, the catalogs, `file info` and `trace chrom` on a synthetic file).
+- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`: `--version`, `commands --json`, `flow steps --json`); the Linux x86_64 one is also compared byte for byte with a native glibc build (`ion pattern`, the catalogs, `file info`, `trace chrom` and `trace xic` on a synthetic file).
 
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
