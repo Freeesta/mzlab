@@ -92,23 +92,23 @@ def test_localstorage_migration_first_launch():
     NOMI.migrateStorage(ls);
 
     console.log(JSON.stringify({
-        migrato: ls.getItem("mzlab.migrated"),
-        avvii: ls.getItem("mzlab.launches"),
+        migrated: ls.getItem("mzlab.migrated"),
+        launches: ls.getItem("mzlab.launches"),
         prefs: ls.getItem("mzlab.prefs"),
         theme: ls.getItem("mzlab-theme"),
         labels: ls.getItem("mzlab-labels"),
-        picchi: ls.getItem("mzlab.peaks"),
+        peaks: ls.getItem("mzlab.peaks"),
         old_prefs: ls.getItem("qqq.prefs"),
         old_theme: ls.getItem("qqq-theme"),
     }));
     """
     res = run_node(code)
-    assert res["migrato"] == "1"
-    assert res["avvii"] == "1"
+    assert res["migrated"] == "1"
+    assert res["launches"] == "1"
     assert json.loads(res["prefs"]) == {"theme": "dark"}
     assert res["theme"] == "dark"
     assert res["labels"] == "custom"
-    assert json.loads(res["picchi"]) == {"tol": 0.5}
+    assert json.loads(res["peaks"]) == {"tol": 0.5}
     # Old keys are preserved after first launch
     assert res["old_prefs"] is not None
     assert res["old_theme"] is not None
@@ -167,15 +167,15 @@ def test_idempotence_at_second_launch():
     NOMI.migrateStorage(ls); // 2nd launch
 
     console.log(JSON.stringify({
-        migrato: ls.getItem("mzlab.migrated"),
-        avvii: ls.getItem("mzlab.launches"),
+        migrated: ls.getItem("mzlab.migrated"),
+        launches: ls.getItem("mzlab.launches"),
         prefs: ls.getItem("mzlab.prefs"),
         old_prefs: ls.getItem("qqq.prefs"),
     }));
     """
     res = run_node(code)
-    assert res["migrato"] == "1"
-    assert res["avvii"] == "2"
+    assert res["migrated"] == "1"
+    assert res["launches"] == "2"
     # Existing migrated keys must NOT be overwritten by old keys on subsequent launches
     assert json.loads(res["prefs"]) == {"theme": "light"}
     # Old keys remain untouched at launch 2
@@ -200,13 +200,13 @@ def test_cleanup_at_third_launch():
     NOMI.migrateStorage(ls); // 1st
     NOMI.migrateStorage(ls); // 2nd
     const at2 = {
-        avvii: ls.getItem("mzlab.launches"),
+        launches: ls.getItem("mzlab.launches"),
         has_qqq: ls.getItem("qqq.prefs") !== null,
     };
 
     NOMI.migrateStorage(ls); // 3rd
     const at3 = {
-        avvii: ls.getItem("mzlab.launches"),
+        launches: ls.getItem("mzlab.launches"),
         has_qqq_prefs: ls.getItem("qqq.prefs"),
         has_qqq_theme: ls.getItem("qqq-theme"),
         has_qqq_labels: ls.getItem("qqq-labels"),
@@ -217,9 +217,9 @@ def test_cleanup_at_third_launch():
     console.log(JSON.stringify({ at2, at3 }));
     """
     res = run_node(code)
-    assert res["at2"]["avvii"] == "2"
+    assert res["at2"]["launches"] == "2"
     assert res["at2"]["has_qqq"] is True
-    assert res["at3"]["avvii"] == "3"
+    assert res["at3"]["launches"] == "3"
     # At launch 3, old keys are safely pruned
     assert res["at3"]["has_qqq_prefs"] is None
     assert res["at3"]["has_qqq_theme"] is None
@@ -254,14 +254,14 @@ def test_resilience_to_exceptions():
 
     console.log(JSON.stringify({
         threw,
-        migrato: ls.getItem("mzlab.migrated"),
+        migrated: ls.getItem("mzlab.migrated"),
         old_val: ls.getItem("qqq.prefs"),
     }));
     """
     res = run_node(code)
     assert res["threw"] is False
     # If copy failed due to storage exception, migration is not marked complete
-    assert res["migrato"] is None
+    assert res["migrated"] is None
     assert res["old_val"] == "v1"
 
 
@@ -386,7 +386,7 @@ def test_indexeddb_migration_full_lifecycle():
       status: await getKv(newDb, "migration_status"),
       runs: await getKv(newDb, "migration_runs"),
       files_count: await countStore(newDb, "files"),
-      liste_count: await countStore(newDb, "user_lists"),
+      lists_count: await countStore(newDb, "user_lists"),
     }};
     await migrateIdb(newDb, "qqq_lab");
     const r2 = {{ runs: await getKv(newDb, "migration_runs"), deleted: deleted.slice() }};
@@ -400,7 +400,7 @@ def test_indexeddb_migration_full_lifecycle():
     """
     res = run_node_esm(code)
     assert res["r1"]["migrated_from"] == "qqq_lab" and res["r1"]["status"] == "ok"
-    assert res["r1"]["runs"] == 1 and res["r1"]["files_count"] == 1 and res["r1"]["liste_count"] == 1
+    assert res["r1"]["runs"] == 1 and res["r1"]["files_count"] == 1 and res["r1"]["lists_count"] == 1
     assert res["r2"]["runs"] == 2 and "qqq_lab" not in res["r2"]["deleted"]
     assert res["r3"]["runs"] == 3 and res["r3"]["status"] == "cleaned" and "qqq_lab" in res["r3"]["deleted"]
 
