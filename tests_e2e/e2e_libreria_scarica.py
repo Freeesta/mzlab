@@ -30,7 +30,8 @@ if not wasm.exists():
         print("  ", ("wasm", "FAIL site/static/wasm-lib missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 for f in ("libreria-worker.js", "libreria.js", "libreria-cartella.js", "libreria-scarica.js"):
     lib_copy_file(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
-for f in (ROOT / "mzlab" / "web" / "lang").rglob("*.js"):
+# the area files only: lang/en.js of the site is the bundled first part (tools/build_site.py bundle_lang), and the loader of the source would replace it for every test that runs after this one in the shard
+for f in (ROOT / "mzlab" / "web" / "lang").rglob("*/*.js"):
     (ROOT / "site" / "static" / "lang" / f.relative_to(ROOT / "mzlab" / "web" / "lang")).parent.mkdir(parents=True, exist_ok=True)
     lib_copy_file(f, ROOT / "site" / "static" / "lang" / f.relative_to(ROOT / "mzlab" / "web" / "lang"))
 
