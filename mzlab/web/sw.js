@@ -51,7 +51,7 @@ const ISO = [["Cross-Origin-Embedder-Policy", "require-corp"], ["Cross-Origin-Op
   // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
   ["Cache-Control", "no-cache"]];
 // The copies are stored with these headers (`guardar`) and a copy that has them is answered as the cache gave it: a new Response per hit pipes each of
-// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, measurements-code-cache.md). Not for the code cache: Chromium keeps
+// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, service-worker.md). Not for the code cache: Chromium keeps
 // none for a built Response, stored or not. A copy stored by an older worker (no headers) is still wrapped until a deploy carries it over (`heredado`).
 /** @param {Response} res */
 const isolata = res => {

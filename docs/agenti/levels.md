@@ -1,6 +1,6 @@
 # Identification levels (Tabui, Attributio, untargeted flow)
 
-Definitions chosen by Federico. They apply to Tabui (low-resolution MS2), Attributio, the "What is it?" view, "Identify all MS2" and the mzFinder untargeted flow. Rules in `mzlab/web/livelli-1.js` (data), cascade in `mzlab/web/livelli.js`, Rust copy in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/export_levels.py`).
+Definitions chosen by the project owner. They apply to Tabui (low-resolution MS2), Attributio, the "What is it?" view, "Identify all MS2" and the mzFinder untargeted flow. Rules in `mzlab/web/livelli-1.js` (data), cascade in `mzlab/web/livelli.js`, Rust copy in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/export_levels.py`).
 
 ## Schymanski scale (identification level)
 - **L1**: reference standard marked by the chemist (mass, RT, MS2).
