@@ -110,7 +110,7 @@ const FLAG_DEFAULT: &[(&str, &str, &str)] = &[
 const CSV: &[&str] = &["features", "peak table"];
 
 /// What the exit codes mean (`exit.rs`).
-const EXIT_MEANING: &[(u8, &str)] = &[
+pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::OK, "ok"),
     (exit::DATA, "data or domain error, partial outputs written"),
     (exit::USAGE, "usage"),
