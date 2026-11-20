@@ -150,7 +150,7 @@ fn text(els: &[&str], bonds: &[(usize, usize, u8)], props: &[&str]) -> String {
 
 #[test]
 fn a_charged_atom_with_all_its_bonds_takes_no_hydrogen() {
-    // formulas of RDKit 2026.09 for the same structures
+    // formulas by hand: the charged atom has all its bonds, the carbons fill valence four
     let star = [(1, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 1)];
     let plus = ["M  CHG  1   2   1"];
     // tetramethylammonium, tetramethylphosphonium, trimethylsulfonium, trimethyloxonium
@@ -237,4 +237,100 @@ fn a_charged_atom_with_open_valences_is_filled_as_before() {
         ),
         "F6P-"
     );
+}
+
+#[test]
+fn an_anion_with_all_its_bonds_takes_no_hydrogen() {
+    // dimethylamide (CH3)2N- and methanethiolate CH3S-
+    let minus = ["M  CHG  1   2  -1"];
+    assert_eq!(
+        text(&["C", "N", "C"], &[(1, 2, 1), (2, 3, 1)], &minus),
+        "C2H6N-"
+    );
+    assert_eq!(text(&["C", "S"], &[(1, 2, 1)], &minus), "CH3S-");
+}
+
+#[test]
+fn neutral_atoms_fill_their_lowest_valence_as_before() {
+    assert_eq!(text(&["N"], &[], &[]), "NH3");
+    assert_eq!(text(&["P"], &[], &[]), "H3P");
+    assert_eq!(text(&["S"], &[], &[]), "H2S");
+    // dimethyl sulfoxide (S valence 4) and dimethyl sulfone (S valence 6)
+    assert_eq!(
+        text(
+            &["C", "S", "C", "O"],
+            &[(1, 2, 1), (2, 3, 1), (2, 4, 2)],
+            &[]
+        ),
+        "C2H6OS"
+    );
+    assert_eq!(
+        text(
+            &["C", "S", "C", "O", "O"],
+            &[(1, 2, 1), (2, 3, 1), (2, 4, 2), (2, 5, 2)],
+            &[]
+        ),
+        "C2H6O2S"
+    );
+    // phosphoric acid O=P(OH)3 (P valence 5) and methanesulfonic acid
+    assert_eq!(
+        text(
+            &["O", "P", "O", "O", "O"],
+            &[(1, 2, 2), (2, 3, 1), (2, 4, 1), (2, 5, 1)],
+            &[]
+        ),
+        "H3O4P"
+    );
+    assert_eq!(
+        text(
+            &["C", "S", "O", "O", "O"],
+            &[(1, 2, 1), (2, 3, 2), (2, 4, 2), (2, 5, 1)],
+            &[]
+        ),
+        "CH4O3S"
+    );
+}
+
+#[test]
+fn an_aromatic_oxygen_or_sulfur_cation_gives_a_ring_electron_and_takes_no_hydrogen() {
+    let ring: Vec<(usize, usize, u8)> = (0..6).map(|i| (i + 1, (i + 1) % 6 + 1, 4)).collect();
+    let plus = ["M  CHG  1   1   1"];
+    // pyrylium C5H5O+ and thiopyrylium C5H5S+ written with aromatic bonds
+    assert_eq!(
+        text(&["O", "C", "C", "C", "C", "C"], &ring, &plus),
+        "C5H5O+"
+    );
+    assert_eq!(
+        text(&["S", "C", "C", "C", "C", "C"], &ring, &plus),
+        "C5H5S+"
+    );
+    // the same rings in Kekule form
+    let kekule = [
+        (1, 2, 2),
+        (2, 3, 1),
+        (3, 4, 2),
+        (4, 5, 1),
+        (5, 6, 2),
+        (6, 1, 1),
+    ];
+    assert_eq!(
+        text(&["O", "C", "C", "C", "C", "C"], &kekule, &plus),
+        "C5H5O+"
+    );
+    // S-methylthiophenium: the S+ has three bonds and gives its lone pair, no hydrogen and no ring electron
+    let five = [
+        (1, 2, 4),
+        (2, 3, 4),
+        (3, 4, 4),
+        (4, 5, 4),
+        (5, 1, 4),
+        (1, 6, 1),
+    ];
+    assert_eq!(
+        text(&["S", "C", "C", "C", "C", "C"], &five, &plus),
+        "C5H7S+"
+    );
+    // neutral furan and thiophene are untouched
+    assert_eq!(text(&["O", "C", "C", "C", "C"], &five[..5], &[]), "C4H4O");
+    assert_eq!(text(&["S", "C", "C", "C", "C"], &five[..5], &[]), "C4H4S");
 }
