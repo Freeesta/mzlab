@@ -226,6 +226,7 @@ pub mod qaqc;
 pub mod statistics;
 pub mod statmat;
 pub mod statcmp;
+mod statcmp_plan;
 pub mod statref;
 pub mod statroute;
 pub mod kendrick;

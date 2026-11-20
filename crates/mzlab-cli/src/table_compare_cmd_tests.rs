@@ -27,11 +27,11 @@ fn dir(tag: &str) -> PathBuf {
 /// A table in the shape of the mzmine "full" CSV: id, m/z, RT, then area, height and state of every file.
 const FILES: [&str; 5] = ["s_t0", "s_t5", "s_t10", "s_t20", "MQ_blank"];
 const ROWS: [(f64, f64, [f64; 5]); 5] = [
-    (301.1, 5.0, [1e6, 1e6, 1e6, 1e6, 0.0]),    // present everywhere: unchanged
-    (317.1, 6.5, [0.0, 8e5, 2e6, 3e6, 0.0]),    // absent at t0, rises: candidate
-    (333.1, 7.0, [0.0, 2e4, 3e4, 2e4, 2e4]),    // as high in the blank: blank artefact
+    (301.1, 5.0, [1e6, 1e6, 1e6, 1e6, 0.0]), // present everywhere: unchanged
+    (317.1, 6.5, [0.0, 8e5, 2e6, 3e6, 0.0]), // absent at t0, rises: candidate
+    (333.1, 7.0, [0.0, 2e4, 3e4, 2e4, 2e4]), // as high in the blank: blank artefact
     (349.1, 8.0, [0.0, 500.0, 800.0, 600.0, 500.0]), // below the pseudocount
-    (365.1, 9.0, [1e6, 2e5, 1e5, 5e4, 0.0]),    // falls
+    (365.1, 9.0, [1e6, 2e5, 1e5, 5e4, 0.0]), // falls
 ];
 
 fn csv() -> String {
@@ -65,10 +65,17 @@ fn mzfeat() -> Vec<u8> {
             t.height.push((a / 10.0) as f32);
             t.apex_rt.push(rt as f32);
             t.width.push(0.1);
-            t.state.push(if a > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
+            t.state
+                .push(if a > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
         }
     }
-    let origin = Origin { inputs: FILES.iter().map(|n| (n.to_string(), String::new())).collect(), ..Origin::default() };
+    let origin = Origin {
+        inputs: FILES
+            .iter()
+            .map(|n| (n.to_string(), String::new()))
+            .collect(),
+        ..Origin::default()
+    };
     write_table(&t, &Recipe::default(), &origin)
 }
 
@@ -125,7 +132,13 @@ fn json_and_csv_say_the_same() {
         let c: Vec<&str> = line.split(',').collect();
         assert_eq!(c[at("id")], text(&rows[k], "id"));
         assert_eq!(c[at("class")], text(&rows[k], "class"));
-        let reasons: Vec<&str> = rows[k].get("reasons").unwrap().arr().iter().map(|r| r.str().unwrap()).collect();
+        let reasons: Vec<&str> = rows[k]
+            .get("reasons")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|r| r.str().unwrap())
+            .collect();
         assert_eq!(c[at("reasons")], reasons.join(";"));
         let ratio: f64 = c[at("ratio_ref")].parse().unwrap();
         assert!((ratio - rows[k].get("ratio_ref").unwrap().f64().unwrap()).abs() < 1e-9);
@@ -144,35 +157,128 @@ fn a_dry_run_prints_the_plan_and_no_row() {
     // the plan names the same columns the run reads
     let real = parse(one.as_bytes()).unwrap();
     assert_eq!(
-        v.get("roles").unwrap().get("treated").unwrap().get("columns").unwrap().arr().len(),
-        real.get("roles").unwrap().get("treated").unwrap().get("columns").unwrap().arr().len()
+        v.get("roles")
+            .unwrap()
+            .get("treated")
+            .unwrap()
+            .get("columns")
+            .unwrap()
+            .arr()
+            .len(),
+        real.get("roles")
+            .unwrap()
+            .get("treated")
+            .unwrap()
+            .get("columns")
+            .unwrap()
+            .arr()
+            .len()
     );
 }
 
 #[test]
-fn the_exit_codes_are_declared() {
+fn usage_and_input_errors_have_their_exit_codes() {
     let (d, t) = table("exit");
     let code = |a: &[&str]| run(a).0;
-    assert_eq!(code(&["table", "compare", &t, "--ref", "s_t0"]), 2, "no --blank");
-    assert_eq!(code(&["table", "compare", &t, "--ref", "s_t*", "--blank", "s_t5"]), 2, "a column in both lists");
-    assert_eq!(code(&["table", "compare", &t, "--ref", "role:reference", "--blank", "MQ*"]), 2, "role: needs --samples");
-    assert_eq!(code(&["table", "compare", &t, "--ref", "s_t0", "--blank", "MQ*", "--format", "xml"]), 2);
-    assert_eq!(code(&["table", "compare", d.join("none.csv").to_str().unwrap(), "--ref", "s_t0", "--blank", "MQ*"]), 4);
     assert_eq!(
-        code(&["table", "compare", &t, "--ref", "s_t0", "--blank", "MQ*", "--samples", d.join("none.json").to_str().unwrap()]),
+        code(&["table", "compare", &t, "--ref", "s_t0"]),
+        2,
+        "no --blank"
+    );
+    assert_eq!(
+        code(&["table", "compare", &t, "--ref", "s_t*", "--blank", "s_t5"]),
+        2,
+        "a column in both lists"
+    );
+    assert_eq!(
+        code(&[
+            "table",
+            "compare",
+            &t,
+            "--ref",
+            "role:reference",
+            "--blank",
+            "MQ*"
+        ]),
+        2,
+        "role: needs --samples"
+    );
+    assert_eq!(
+        code(&["table", "compare", &t, "--ref", "s_t0", "--blank", "MQ*", "--format", "xml"]),
+        2
+    );
+    assert_eq!(
+        code(&[
+            "table",
+            "compare",
+            d.join("none.csv").to_str().unwrap(),
+            "--ref",
+            "s_t0",
+            "--blank",
+            "MQ*"
+        ]),
         4
     );
-    assert_eq!(code(&["table", "compare", &t, "--ref", "s_t0", "--blank", "nothing*"]), 5);
-    let (c, _, err) = run(&["table", "compare", &t, "--ref", "nothing*", "--blank", "MQ*"]);
+    assert_eq!(
+        code(&[
+            "table",
+            "compare",
+            &t,
+            "--ref",
+            "s_t0",
+            "--blank",
+            "MQ*",
+            "--samples",
+            d.join("none.json").to_str().unwrap()
+        ]),
+        4
+    );
+}
+
+#[test]
+fn a_selector_that_matches_nothing_and_an_unwritable_out_have_their_codes() {
+    let (d, t) = table("exit_sel");
+    let code = |a: &[&str]| run(a).0;
+    assert_eq!(
+        code(&["table", "compare", &t, "--ref", "s_t0", "--blank", "nothing*"]),
+        5
+    );
+    let (c, _, err) = run(&[
+        "table", "compare", &t, "--ref", "nothing*", "--blank", "MQ*",
+    ]);
     assert_eq!(c, 5);
-    assert!(err.contains("err.compare.selector") && err.contains("s_t0"), "{err}");
+    assert!(
+        err.contains("err.compare.selector") && err.contains("s_t0"),
+        "{err}"
+    );
     let bad = d.join("no_folder").join("out.json");
-    assert_eq!(code(&[&["table", "compare", &t, "--out", bad.to_str().unwrap()][..], &SEL].concat()), 6);
+    assert_eq!(
+        code(
+            &[
+                &["table", "compare", &t, "--out", bad.to_str().unwrap()][..],
+                &SEL
+            ]
+            .concat()
+        ),
+        6
+    );
     // --out writes the same bytes the standard output carries
     let out = d.join("out.json");
-    assert_eq!(code(&[&["table", "compare", &t, "--out", out.to_str().unwrap()][..], &SEL].concat()), 0);
+    assert_eq!(
+        code(
+            &[
+                &["table", "compare", &t, "--out", out.to_str().unwrap()][..],
+                &SEL
+            ]
+            .concat()
+        ),
+        0
+    );
     let (_, stdout, _) = run(&[&["table", "compare", &t][..], &SEL].concat());
-    assert_eq!(std::fs::read_to_string(&out).unwrap().trim_end(), stdout.trim_end());
+    assert_eq!(
+        std::fs::read_to_string(&out).unwrap().trim_end(),
+        stdout.trim_end()
+    );
 }
 
 #[test]
@@ -184,15 +290,26 @@ fn the_flow_step_writes_the_bytes_of_the_command() {
     // the .mzfeat and the CSV of the same areas give the same classes
     let (_, from_csv, _) = run(&[&["table", "compare", &t][..], &SEL].concat());
     let classes = |j: &str| -> Vec<String> {
-        parse(j.as_bytes()).unwrap().get("rows").unwrap().arr().iter().map(|r| text(r, "class").to_string()).collect()
+        parse(j.as_bytes())
+            .unwrap()
+            .get("rows")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|r| text(r, "class").to_string())
+            .collect()
     };
     assert_eq!(classes(&cli), classes(&from_csv));
     let plan = r#"{"format":"mzflow/2","inputs":[{"name":"feats.mzfeat","type":"table"}],"steps":[
         {"id":"c","step":"table.compare@1","in":{"table":"file:feats.mzfeat"},"params":{"ref":"s_t0","blank":"MQ*","pseudocount":1000}}]}"#;
     let work = d.join("work");
     std::fs::create_dir_all(&work).unwrap();
-    crate::flow::run_plan(plan.as_bytes(), &d, &work, 2, None).unwrap_or_else(|e| panic!("{} {:?}", e.key, e.params));
-    assert_eq!(std::fs::read_to_string(made(&work, "c")).unwrap(), cli.trim_end());
+    crate::flow::run_plan(plan.as_bytes(), &d, &work, 2, None)
+        .unwrap_or_else(|e| panic!("{} {:?}", e.key, e.params));
+    assert_eq!(
+        std::fs::read_to_string(made(&work, "c")).unwrap(),
+        cli.trim_end()
+    );
 }
 
 #[test]
@@ -214,35 +331,38 @@ fn a_ref_that_matches_nothing_in_a_plan_is_the_selector_error() {
 fn python_files(tag: &str) -> Option<PathBuf> {
     let d = dir(tag);
     let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/lr_synthetic.py");
-    let ok = Command::new("python3").arg(tool).arg(&d).output().is_ok_and(|o| o.status.success());
+    let ok = Command::new("python3")
+        .arg(tool)
+        .arg(&d)
+        .output()
+        .is_ok_and(|o| o.status.success());
     if !ok {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 or numpy missing");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 or numpy missing"
+        );
         eprintln!("skipped: python3/numpy not available");
         return None;
     }
     Some(d)
 }
 
-/// The CSV the `features` command writes on the synthetic files compares like the `.mzfeat` of a flow run on the same files: the CSV is rounded, so the ids,
-/// classes, reasons and shapes are asserted exactly and the numbers within the rounding of the export.
-#[test]
-fn a_features_csv_and_the_mzfeat_of_the_same_run_give_the_same_rows() {
-    let Some(d) = python_files("synth") else { return };
-    let names = ["LR_bench-noise-s1.mzML", "LR_bench-blank-s1.mzML", "LR_bench-s1.mzML"];
-    // the smoke of the command on the CSV of `features`
-    let args: Vec<String> = ["features"].into_iter().map(String::from).chain(names.iter().map(|n| d.join(n).to_str().unwrap().to_string())).collect();
-    let o = execute(&args);
-    assert_eq!(o.code, 0, "{}", o.stderr);
-    let feats = d.join("features.csv");
-    std::fs::write(&feats, &o.stdout).unwrap();
-    let sel = ["--ref", "LR_bench-noise*", "--blank", "LR_bench-blank*"];
-    let j = doc(&[&["table", "compare", feats.to_str().unwrap()][..], &sel].concat());
-    assert!(!j.get("rows").unwrap().arr().is_empty());
-    // the same run as a flow: the `.mzfeat` and the CSV exported from it
-    let raw: Vec<String> = names.iter().map(|n| format!(r#"{{"name":"{n}","type":"raw"}}"#)).collect();
+/// The same files as a flow run in `d`: its folder holds `gap.mzfeat` and the CSV (`csv.csv`) exported from it.
+fn flow_run(d: &Path, names: &[&str]) -> PathBuf {
+    let raw: Vec<String> = names
+        .iter()
+        .map(|n| format!(r#"{{"name":"{n}","type":"raw"}}"#))
+        .collect();
     let src: Vec<String> = names.iter().map(|n| format!(r#""file:{n}""#)).collect();
-    let full: Vec<String> = names.iter().map(|n| d.join(n).to_str().unwrap().to_string()).collect();
-    let (code, samples, err) = run(&[&["sample", "table"][..], &full.iter().map(String::as_str).collect::<Vec<_>>()].concat());
+    let full: Vec<String> = names
+        .iter()
+        .map(|n| d.join(n).to_str().unwrap().to_string())
+        .collect();
+    let (code, samples, err) = run(&[
+        &["sample", "table"][..],
+        &full.iter().map(String::as_str).collect::<Vec<_>>(),
+    ]
+    .concat());
     assert_eq!(code, 0, "{err}");
     std::fs::write(d.join("samples.json"), samples).unwrap();
     let plan = format!(
@@ -257,19 +377,75 @@ fn a_features_csv_and_the_mzfeat_of_the_same_run_give_the_same_rows() {
     );
     std::fs::write(d.join("plan.json"), &plan).unwrap();
     let out = d.join("run");
-    let (code, _, err) = run(&["flow", "run", d.join("plan.json").to_str().unwrap(), "--out", out.to_str().unwrap()]);
+    let (code, _, err) = run(&[
+        "flow",
+        "run",
+        d.join("plan.json").to_str().unwrap(),
+        "--out",
+        out.to_str().unwrap(),
+    ]);
     assert_eq!(code, 0, "{err}");
-    let a = doc(&[&["table", "compare", out.join("csv.csv").to_str().unwrap()][..], &sel].concat());
-    let b = doc(&[&["table", "compare", out.join("gap.mzfeat").to_str().unwrap()][..], &sel].concat());
+    out
+}
+
+/// The CSV the `features` command writes on the synthetic files compares like the `.mzfeat` of a flow run on the same files: the CSV is rounded, so the ids,
+/// classes, reasons and shapes are asserted exactly and the numbers within the rounding of the export.
+#[test]
+fn a_features_csv_and_the_mzfeat_of_the_same_run_give_the_same_rows() {
+    let Some(d) = python_files("synth") else {
+        return;
+    };
+    let names = [
+        "LR_bench-noise-s1.mzML",
+        "LR_bench-blank-s1.mzML",
+        "LR_bench-s1.mzML",
+    ];
+    // the smoke of the command on the CSV of `features`
+    let args: Vec<String> = ["features"]
+        .into_iter()
+        .map(String::from)
+        .chain(
+            names
+                .iter()
+                .map(|n| d.join(n).to_str().unwrap().to_string()),
+        )
+        .collect();
+    let o = execute(&args);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let feats = d.join("features.csv");
+    std::fs::write(&feats, &o.stdout).unwrap();
+    let sel = ["--ref", "LR_bench-noise*", "--blank", "LR_bench-blank*"];
+    let j = doc(&[&["table", "compare", feats.to_str().unwrap()][..], &sel].concat());
+    assert!(!j.get("rows").unwrap().arr().is_empty());
+    let out = flow_run(&d, &names);
+    let a = doc(&[
+        &["table", "compare", out.join("csv.csv").to_str().unwrap()][..],
+        &sel,
+    ]
+    .concat());
+    let b = doc(&[
+        &["table", "compare", out.join("gap.mzfeat").to_str().unwrap()][..],
+        &sel,
+    ]
+    .concat());
     let (ra, rb) = (a.get("rows").unwrap().arr(), b.get("rows").unwrap().arr());
     assert_eq!(ra.len(), rb.len());
     assert_eq!(a.get("counts").unwrap().entries().len(), 5);
     for (x, y) in ra.iter().zip(rb) {
         assert_eq!(text(x, "class"), text(y, "class"));
-        assert_eq!(x.get("reasons").unwrap().arr().len(), y.get("reasons").unwrap().arr().len());
-        assert_eq!(x.get("shape").and_then(|s| s.str()), y.get("shape").and_then(|s| s.str()));
+        assert_eq!(
+            x.get("reasons").unwrap().arr().len(),
+            y.get("reasons").unwrap().arr().len()
+        );
+        assert_eq!(
+            x.get("shape").and_then(|s| s.str()),
+            y.get("shape").and_then(|s| s.str())
+        );
         for k in ["ref_level", "blank_level", "max_treated"] {
-            let (p, q) = (x.get(k).unwrap().f64().unwrap(), y.get(k).unwrap().f64().unwrap());
+            let (p, q) = (
+                x.get(k).unwrap().f64().unwrap(),
+                y.get(k).unwrap().f64().unwrap(),
+            );
             assert!((p - q).abs() <= 1e-6 * q.abs().max(1.0), "{k}: {p} {q}");
         }
     }
@@ -280,11 +456,19 @@ fn a_features_csv_and_the_mzfeat_of_the_same_run_give_the_same_rows() {
 fn the_output_on_the_invented_table_is_the_golden_file() {
     let d = dir("golden");
     std::fs::write(d.join("feats.mzfeat"), mzfeat()).unwrap();
-    let (code, out, err) = run(&[&["table", "compare", d.join("feats.mzfeat").to_str().unwrap()][..], &SEL].concat());
+    let (code, out, err) = run(&[
+        &["table", "compare", d.join("feats.mzfeat").to_str().unwrap()][..],
+        &SEL,
+    ]
+    .concat());
     assert_eq!(code, 0, "{err}");
     let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/compare_lr.json");
     if std::env::var_os("MZLAB_UPDATE_COMPARE").is_some() {
         std::fs::write(&golden, &out).unwrap();
     }
-    assert_eq!(out, std::fs::read_to_string(&golden).unwrap(), "run with MZLAB_UPDATE_COMPARE=1 to rewrite it");
+    assert_eq!(
+        out,
+        std::fs::read_to_string(&golden).unwrap(),
+        "run with MZLAB_UPDATE_COMPARE=1 to rewrite it"
+    );
 }

@@ -38,7 +38,16 @@ struct Job {
 }
 
 fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'static str>, String> {
-    let valued = ["--ref", "--blank", "--samples", "--quantity", "--factor", "--pseudocount", "--format", "--out"];
+    let valued = [
+        "--ref",
+        "--blank",
+        "--samples",
+        "--quantity",
+        "--factor",
+        "--pseudocount",
+        "--format",
+        "--out",
+    ];
     let Some(p) = extract::parse(args, &valued, &["--dry-run"])? else {
         return Ok(Err(HELP));
     };
@@ -49,7 +58,9 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
     };
     let mut params: Vec<(String, Value)> = Vec::new();
     for k in ["ref", "blank"] {
-        let v = p.get(&format!("--{k}")).ok_or(format!("table compare needs --{k}"))?;
+        let v = p
+            .get(&format!("--{k}"))
+            .ok_or(format!("table compare needs --{k}"))?;
         params.push((k.into(), text(v)));
     }
     if let Some(q) = p.get("--quantity") {
@@ -60,24 +71,52 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
     }
     match p.get("--pseudocount") {
         None | Some("auto") => {}
-        Some(_) => params.push(("pseudocount".into(), num(p.num("--pseudocount")?.unwrap_or(f64::NAN)))),
+        Some(_) => params.push((
+            "pseudocount".into(),
+            num(p.num("--pseudocount")?.unwrap_or(f64::NAN)),
+        )),
     }
-    Ok(Ok(Job { table, samples: p.get("--samples").map(Into::into), params, csv: p.csv()?, dry: p.flag("--dry-run"), out: p.out() }))
+    Ok(Ok(Job {
+        table,
+        samples: p.get("--samples").map(Into::into),
+        params,
+        csv: p.csv()?,
+        dry: p.flag("--dry-run"),
+        out: p.out(),
+    }))
 }
 
 fn read(path: &std::path::Path) -> Result<Vec<u8>> {
-    std::fs::read(path).map_err(|e| Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display())))
+    std::fs::read(path)
+        .map_err(|e| Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display())))
 }
 
 const COLUMNS: [&str; 17] = [
-    "id", "mz", "rt_min", "ref_level", "blank_level", "max_treated", "max_file", "t_max_min", "ratio_ref", "ratio_blank", "log2fc_ref", "log2fc_blank",
-    "absent_in_reference", "shape", "rho", "blank_rho", "class",
+    "id",
+    "mz",
+    "rt_min",
+    "ref_level",
+    "blank_level",
+    "max_treated",
+    "max_file",
+    "t_max_min",
+    "ratio_ref",
+    "ratio_blank",
+    "log2fc_ref",
+    "log2fc_blank",
+    "absent_in_reference",
+    "shape",
+    "rho",
+    "blank_rho",
+    "class",
 ];
 
 fn cell(v: Option<&Value>) -> String {
     match v {
         None | Some(Value::Null) => String::new(),
-        Some(Value::Str(s)) if s.contains([',', '"', '\n']) => format!("\"{}\"", s.replace('"', "\"\"")),
+        Some(Value::Str(s)) if s.contains([',', '"', '\n']) => {
+            format!("\"{}\"", s.replace('"', "\"\""))
+        }
         Some(Value::Str(s)) => s.clone(),
         Some(other) => write(other),
     }
@@ -88,7 +127,13 @@ fn to_csv(doc: &str) -> Result<String> {
     let v = parse(doc.as_bytes())?;
     let mut out = COLUMNS.join(",") + ",reasons\n";
     for r in v.get("rows").map(Value::arr).unwrap_or(&[]) {
-        let reasons: Vec<&str> = r.get("reasons").map(Value::arr).unwrap_or(&[]).iter().filter_map(Value::str).collect();
+        let reasons: Vec<&str> = r
+            .get("reasons")
+            .map(Value::arr)
+            .unwrap_or(&[])
+            .iter()
+            .filter_map(Value::str)
+            .collect();
         let cells: Vec<String> = COLUMNS.iter().map(|k| cell(r.get(k))).collect();
         out += &format!("{},{}\n", cells.join(","), reasons.join(";"));
     }
@@ -104,12 +149,25 @@ pub fn run(args: Vec<String>) -> Outcome {
     let go = || -> Result<String> {
         let bytes = read(&j.table)?;
         let samples = j.samples.as_deref().map(read).transpose()?;
-        let name = j.table.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned());
+        let name = j
+            .table
+            .file_name()
+            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
         if j.dry {
-            return mzlab_feat::flow_compare::plan_text(&j.params, &name, &bytes, samples.as_deref());
+            return mzlab_feat::flow_compare::plan_text(
+                &j.params,
+                &name,
+                &bytes,
+                samples.as_deref(),
+            );
         }
-        let doc = mzlab_feat::flow_compare::compare_text(&j.params, &name, &bytes, samples.as_deref())?;
-        if j.csv { to_csv(&doc) } else { Ok(doc) }
+        let doc =
+            mzlab_feat::flow_compare::compare_text(&j.params, &name, &bytes, samples.as_deref())?;
+        if j.csv {
+            to_csv(&doc)
+        } else {
+            Ok(doc)
+        }
     };
     match go() {
         Err(e) => crate::sample_select::fail(&e),

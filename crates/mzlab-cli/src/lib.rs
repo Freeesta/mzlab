@@ -89,10 +89,6 @@ mod flow_insilico;
 #[cfg(test)]
 mod flow_iso_grouper_tests;
 mod flow_json;
-mod flow_tablecmp;
-mod table_compare_cmd;
-#[cfg(test)]
-mod table_compare_cmd_tests;
 mod flow_kmd;
 mod flow_level;
 mod flow_link;
@@ -156,6 +152,7 @@ mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+mod flow_tablecmp;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
@@ -200,6 +197,9 @@ mod samples_cmd;
 mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
+mod table_compare_cmd;
+#[cfg(test)]
+mod table_compare_cmd_tests;
 mod trace_cmd;
 mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
