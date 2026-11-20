@@ -7,7 +7,7 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
-import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import "./disegno-storage.js";
+import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import { guardStorage } from "./disegno-storage.js"; import { watchLoad } from "./disegno-avvio.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { structureText } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
@@ -16,7 +16,7 @@ const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"
 
 const Q = (/** @type {string} */ s) => document.querySelector(s);
 let AP = /** @type {any} */ (null);                       // clipboard and molecule selection for a finger (disegno-appunti.js), set when the editor is mounted
-let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined);
+let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined), failed = false;
 
 let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0;
 function start() {
@@ -25,7 +25,9 @@ function start() {
   starting = new Promise((resolve, reject) => {
     const on = (/** @type {MessageEvent} */ e) => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
-    Q("#kload").hidden = false;
+    const fail = () => { if (K || failed) return; failed = true; removeEventListener("message", on); clearTimeout(startTimeout); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); };
+    const watch = () => watchLoad(fr, fail);
+    Q("#kload").hidden = false; Q("#kfail").hidden = true; dnote("");
     const dots = Q("#kld-dots");
     if (dots) {
       kldN = 0; [...dots.children].forEach(d => { d.style.visibility = "hidden"; });
@@ -36,8 +38,10 @@ function start() {
       }, 400);
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
-    if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
-    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", early, { once: true });   // before Ketcher focuses its clipboard textarea
+    if (failed) { failed = false; /** @type {any} */ (window).MZLAB_KETCHER_READY = false; guardStorage(); fr.src = "static/vendor/ketcher/index.html"; }   // «Try again»: the frame is loaded anew
+    else if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
+    else queueMicrotask(watch);                            // started by first-paint.js: it may have failed already (looked at once `starting` holds this attempt)
+    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", () => { watch(); early(); }, { once: true });   // before Ketcher focuses its clipboard textarea
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
@@ -72,8 +76,9 @@ function start() {
     }
     
     return k; });
-  starting.catch(e => { console.error(e); dnote(I18N.t("draw.error.ketcherNotStarted")); });   // never Ketcher's raw English: the cause stays in the console
-  starting.finally(() => FRAME.next(() => FRAME.next(() => { fr.classList.remove("kwait"); Q("#kload").hidden = true; }))).catch(() => {});
+  starting.catch(e => { console.error(e); failed = true; Q("#kfail").hidden = false; });   // never Ketcher's raw English: the cause stays in the console; the frame stays hidden under the notice
+  starting.then(() => FRAME.next(() => FRAME.next(() => fr.classList.remove("kwait"))), () => {});
+  starting.finally(() => FRAME.next(() => FRAME.next(() => { Q("#kload").hidden = true; }))).catch(() => {});
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
@@ -746,6 +751,7 @@ Q("#ex-nobg").addEventListener("change", syncBg); syncBg(); freshName();
 Q("#ex-sdfopt").onclick = () => { const p = Q("#ex-sdfpop"), open = p.hidden; p.hidden = !open; Q("#ex-sdfopt").setAttribute("aria-expanded", String(open)); if (open) Q("#ex-ion").focus(); };
 Q("#ex-sdfpop").addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { Q("#ex-sdfpop").hidden = true; Q("#ex-sdfopt").setAttribute("aria-expanded", "false"); Q("#ex-sdfopt").focus(); } });
 Q("#ex-ion").addEventListener("change", () => { NB.drawIon = Q("#ex-ion").value === "none" ? "" : Q("#ex-ion").value; nbSave(); });
+Q("#kfail-retry").onclick = () => { start().then(() => Q("#kframe").focus(), () => {}); };   // the button goes away with the notice: the focus moves to the editor
 Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };

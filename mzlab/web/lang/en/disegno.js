@@ -161,6 +161,7 @@ I18N.add("en", {
   "draw.import.done": "Structure imported",
   "draw.import.failed": "Could not import: {message}",
   "draw.error.ketcherNotStarted": "Ketcher did not start",
+  "draw.retry": "Try again",
   "draw.center.title": "Center the drawing in the canvas",
   "draw.zoom.in": "Zoom in",
   "draw.zoom.out": "Zoom out",
