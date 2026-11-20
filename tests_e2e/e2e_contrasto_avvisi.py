@@ -36,7 +36,9 @@ try:
                 bad = [x for x in pg.evaluate(RATIO) if x[1] < 4.5]; assert not bad, bad
             step(f"{theme}: every box variant has contrast >= 4.5:1", boxes)
             def method():
-                pg.click("#np-method"); pg.wait_for_selector(".notice.warn")
+                pg.click("#np-method"); pg.wait_for_selector("#bigdlg[open] #bigbody .msec")
+                # the window no longer carries a warning box of its own: put one in it, so axe still reads a box over the window's own background
+                pg.evaluate("(() => { const d = document.createElement('div'); d.className = 'notice warn'; d.textContent = 'Warning box sample'; document.querySelector('#bigbody').prepend(d); })()")
                 if SHOTS: pg.screenshot(path=os.path.join(SHOTS, f"metodo-{theme}.png"))
                 if AXE:
                     v = pg.evaluate("axe.run(document, {runOnly: {type: 'rule', values: ['color-contrast']}}).then(r => r.violations.map(v => v.nodes.map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,2).join(' | '))).flat())")

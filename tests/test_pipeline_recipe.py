@@ -16,7 +16,7 @@ def run_node(body):
     js = f"""globalThis.window = globalThis; globalThis.UNT = require({json.dumps(str(JS / '25_untarget.js'))});
 require('vm').runInThisContext(require('fs').readFileSync({json.dumps(str(ROOT / 'mzlab/web/workflow.js'))}, 'utf8'));
 const R = require({json.dumps(str(JS / '35_pipeline_recipe.js'))}); const W = globalThis.WORKFLOW;
-const A = {{ recipe: JSON.stringify({{ ppm: 5, floor: null }}), proofs: [1], parent: {{ formula: 'C9H9', mz: 200.1, rt: NaN, minuti: [0, 5, NaN] }}, crate: '0.1.0',
+const A = {{ recipe: JSON.stringify({{ ppm: 5, floor: null }}), proofs: [1], parent: {{ formula: 'C9H9', mz: 200.1, rt: NaN, minutes: [0, 5, NaN] }}, crate: '0.1.0',
   out: {{ evid: new TextEncoder().encode('evid'), tried: 4, found: 2, registry: '{{"a":1}}' }}, data: {{ meta: {{ inputs: [{{ name: 'a.mzidx', sha256: 'ab' }}] }} }},
   rules: '{{"version": 3}}', levels: '{{"version": 2}}', suspects: null }};
 (async () => {{ {body} }})();"""

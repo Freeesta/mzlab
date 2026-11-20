@@ -24,15 +24,20 @@ usage: mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set
   --set scale    pixels per angstrom of svg/png, 8 to 80 (default 24)
   --set cip      on (default) or off: R/S and E/Z marks of the picture
   --set highlight  0,1,0-1@red;5@blue: atoms, bonds a-b, a colour name (red orange yellow green cyan blue purple pink gray)
+  --set edit     a patch (schema draw_edit/1): a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge), as text
+                 or @PATH, all or none, at most 1000 operations and 65536 bytes; x, y, dx, dy are in bond lengths (1.0 = 1.5 angstrom),
+                 x_a, y_a, dx_a, dy_a in angstrom, never mixed in one operation
   --out PATH     write there instead of the standard output
 
 KET and CDXML are open formats written from their public documentation, not tested against ChemDraw or Ketcher.
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a bare file they go to
 standard error. The PNG has its own stroke font. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms, an atom that is no element (err.mol.draw.element); 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms, an atom that is no element (err.mol.draw.element); 2 unparseable SMILES, bad option, a name or key without --set db, a patch that is not
+JSON or whose operation fails (err.mol.draw.edit names its index and reason, err.mol.draw.editJson); 4 missing file or db, unreadable molfile or request or
+edit=@PATH; 5 not in the db; 6 --out.";
 
-const NAMES: [&str; 7] = [
+const NAMES: [&str; 8] = [
     "format",
     "layout",
     "db",
@@ -40,16 +45,17 @@ const NAMES: [&str; 7] = [
     "scale",
     "cip",
     "highlight",
+    "edit",
 ];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
 
 /// SPEC, `--out`, `--json` and the `--set` values in the order of `NAMES`.
-type Words = (String, Option<PathBuf>, bool, [Option<String>; 7]);
+type Words = (String, Option<PathBuf>, bool, [Option<String>; 8]);
 
 /// The words of the command line.
 fn parse(args: Vec<String>) -> Result<Words, Outcome> {
     let (mut pos, mut out, mut json) = (Vec::new(), None::<PathBuf>, false);
-    let mut set: [Option<String>; 7] = Default::default();
+    let mut set: [Option<String>; 8] = Default::default();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -72,7 +78,7 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
                     Some(i) => set[i] = Some(v.to_string()),
                     None => {
                         return Err(Outcome::fail(&format!(
-                        "unknown --set name {k} (format, layout, db, name, scale, cip, highlight)"
+                        "unknown --set name {k} (format, layout, db, name, scale, cip, highlight, edit)"
                     )))
                     }
                 },
@@ -96,7 +102,7 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
 }
 
 /// The request of the engine: SPEC text, the format, the other settings, the database text. `--json` is the scene, or wraps a picture.
-fn request(spec: &str, json: bool, set: &[Option<String>; 7], db: Option<&str>) -> String {
+fn request(spec: &str, json: bool, set: &[Option<String>; 8], db: Option<&str>) -> String {
     let format = match (set[0].as_deref(), json) {
         (Some(f), _) => f,
         (None, true) => "scene",
@@ -137,6 +143,14 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(s) => s,
         Err(o) => return o,
     };
+    let mut set = set;
+    // `--set edit=@PATH` reads the patch from a file
+    if let Some(path) = set[7].as_deref().and_then(|e| e.strip_prefix('@')) {
+        match read_patch(path) {
+            Ok(t) => set[7] = Some(t),
+            Err(o) => return o,
+        }
+    }
     let db = match set[2].as_deref().map(read_db).transpose() {
         Ok(d) => d,
         Err(o) => return o,
@@ -223,6 +237,17 @@ fn molfile_error(why: &str) -> Outcome {
 
 fn unreadable(path: &str) -> Outcome {
     Outcome::fail_error(&Error::new("err.cli.file").with("path", path))
+}
+
+/// The `--set edit=@PATH` patch: a missing file is `err.cli.file` (exit 4), one over the patch limit or not UTF-8 is `err.mol.draw.editJson` (exit 2).
+fn read_patch(path: &str) -> Result<String, Outcome> {
+    let file = std::fs::File::open(path).map_err(|_| unreadable(path))?;
+    read_capped(file, mzlab_feat::chem::draw::MAX_PATCH as u64).map_err(|e| match e {
+        NotRead::Unreadable => unreadable(path),
+        _ => Outcome::fail_error(
+            &Error::new("err.mol.draw.editJson").with("message", why(&e, "the patch file")),
+        ),
+    })
 }
 
 /// The `--set db=PATH` CSV: a missing or unreadable file is `err.cli.file` (exit 4), an oversized or non-UTF-8 one `err.mol.draw.db` (exit 4).

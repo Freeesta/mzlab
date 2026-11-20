@@ -59,13 +59,13 @@
     const show = () => { const j = savedOf(F.parentText(S, input.name)); say.textContent = j ? summary(j, input.sha256) : F.parentText(S, input.name) ? "SMILES or text kept as typed (neutral) · SHA-256 " + input.sha256.slice(0, 12) + "…" : "No parent yet."; };
     app("molecules-field.js").then(async c => {
       const a = await app("molecules-archive.js");
-      const names = await a.addotti();
+      const names = await a.adducts();
       sel.append(el("option", { value: "neutral" }, "the neutral molecule (M)"), ...names.map((/** @type {string} */ n) => el("option", { value: n }, "an ion " + n)));
       sel.value = old && old.typed && names.includes(old.typed.adduct) ? old.typed.adduct : "neutral";
       /** the reading of `t` as a formula or an m/z under `adduct`, or null when it is neither @param {string} t @param {string} adduct */
       const ionOf = async (t, adduct) => {
         if (!/^[\d.]+$/.test(t) && !(/^[A-Za-z0-9()]+$/.test(t) && /\d/.test(t))) return null;
-        try { return await a.ione(t, adduct); } catch (e) { return /** @type {any} */ (e).key === "err.ion.notHeld" ? { error: `${t} has no ${adduct} atoms to take away, so it is not that ion.` } : null; }
+        try { return await a.ion(t, adduct); } catch (e) { return /** @type {any} */ (e).key === "err.ion.notHeld" ? { error: `${t} has no ${adduct} atoms to take away, so it is not that ion.` } : null; }
       };
       const store = async (/** @type {any} */ j) => { await F.parentSet(S, input, JSON.stringify(j)); show(); if (S.redraw) S.redraw(); };
       const commit = async (/** @type {string} */ raw) => {
@@ -74,23 +74,23 @@
         const r = await ionOf(t, sel.value);
         row.hidden = !r;
         if (r && "error" in r) { say.textContent = r.error; return; }
-        if (r) { chosen = ""; await store({ ...(r.formula ? { formula: r.formula } : {}), mass: r.massa, typed: { text: t, adduct: sel.value } }); return; }
+        if (r) { chosen = ""; await store({ ...(r.formula ? { formula: r.formula } : {}), mass: r.mass, typed: { text: t, adduct: sel.value } }); return; }
         if (t === chosen) return;
         const hit = (await a.search(t, 1, 10, true))[0];
-        if (hit && hit.nome.toLowerCase() === t.toLowerCase()) { await pick(hit); return; }
+        if (hit && hit.name.toLowerCase() === t.toLowerCase()) { await pick(hit); return; }
         if (/[\d()=#[\]@]/.test(t) || /^[A-Z]+$/.test(t)) { chosen = ""; await F.parentSet(S, input, t); show(); if (S.redraw) S.redraw(); return; }
         say.textContent = `No molecule called ${t}: pick one from the list, or type a formula, an m/z or a SMILES.`;
       };
       const pick = async (/** @type {any} */ row0) => {
         const m = (await a.getMolecule(row0.id)) || row0;
-        chosen = m.nome || ""; row.hidden = true;
-        await store({ name: chosen, ...(m.formula ? { formula: m.formula } : {}), smiles: m.smiles || "", inchikey: m.inchikey || "", mass: m.massa, typed: { text: chosen, adduct: "neutral" } });
+        chosen = m.name || ""; row.hidden = true;
+        await store({ name: chosen, ...(m.formula ? { formula: m.formula } : {}), smiles: m.smiles || "", inchikey: m.inchikey || "", mass: m.mass, typed: { text: chosen, adduct: "neutral" } });
       };
       const f = c.field(host, {
         texts: { label: "Parent compound", placeholder: "name, formula, InChIKey or m/z", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
         value: text || chosen, wide: true, manage: null,
         // under an ion reading the list is searched with the neutral formula or mass, the database holds neutral molecules
-        prepare: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.massa)) : t; },
+        prepare: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.mass)) : t; },
         onPick: pick,
       });
       f.input.addEventListener("input", async () => { const r = await ionOf(f.input.value.trim(), sel.value); row.hidden = !r; });

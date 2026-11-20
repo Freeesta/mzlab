@@ -106,6 +106,8 @@
   "err.mol.draw.not_found": "Error of mol draw; {spec} = the name looked for, {nearest} = up to three nearest names (this text is used only when there are some).",
   "err.mol.draw.not_found_bare": "Error of mol draw; {spec} = the name or InChIKey looked for; nothing near it in the database.",
   "err.mol.draw.tooBig": "Error of mol draw; {max} = maximum number of atoms.",
+  "err.mol.draw.edit": "Error of mol draw --set edit; {index} = 0-based index of the failing operation, {op} = its name, {reason} = the reason key, {detail} = what is wrong.",
+  "err.mol.draw.editJson": "Error of mol draw --set edit; {message} = why the patch text cannot be read as JSON.",
   "err.cli.design.samplesAndFiles": "CLI usage error of sample design propose: both --samples and FILE paths were given.",
   "err.cli.design.needsInput": "CLI usage error of sample design; {op} = the operation (propose).",
   "err.cli.design.oneFile": "CLI usage error of sample design; {op} = the operation (validate or canonical).",

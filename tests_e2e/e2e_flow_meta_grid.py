@@ -101,7 +101,8 @@ try:
         btn = ".flx-imp button[aria-label='Mark every time guessed from the file names as confirmed']"
         check("confirm visible", pg.is_visible(btn)); pg.screenshot(path=str(HERE / "shots" / "flow_meta_grid_guessed.png")) if (HERE / "shots").is_dir() else None
         pg.click(btn)
-        wait_for_js(pg, "!/guessed from file names/.test(document.querySelector('.flx-imp').textContent) && /No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
+        try: wait_for_js(pg, "!/guessed from file names/.test(document.querySelector('.flx-imp').textContent) && /No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
+        except TimeoutError: raise AssertionError("the summary after the confirmation: " + pg.inner_text(".flx-imp")[:400])      # show what the panel says when the wait runs out
         check("confirm gone", not pg.is_visible(btn))
         check("no page errors", not errs, errs[:3])
         b.close()

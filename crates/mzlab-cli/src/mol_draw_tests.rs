@@ -312,3 +312,82 @@ fn a_non_element_atom_is_a_data_error_not_a_usage_error() {
     assert_eq!(crate::exit::code_of_key("err.mol.draw.element"), 1);
     assert_eq!(crate::exit::code_of_key("err.mol.draw.set"), 2);
 }
+
+#[test]
+fn mol_draw_edit_applies_a_patch_inline_or_from_a_file() {
+    let patch = r#"[{"op":"atom.add","el":"C"},{"op":"bond.add","a":0,"b":6}]"#;
+    let inline = run(&["mol", "draw", "c1ccccc1", "--set", &format!("edit={patch}")]);
+    assert_eq!(inline.code, 0, "{}", inline.stderr);
+    assert!(
+        inline.stderr.contains("choice: edit_added = 6"),
+        "{}",
+        inline.stderr
+    );
+    assert_eq!(
+        text(&inline).lines().nth(3).unwrap().trim_start().get(..4),
+        Some("7  7")
+    );
+    let p = std::env::temp_dir().join(format!("mol_draw_edit_{}.json", std::process::id()));
+    std::fs::write(&p, patch).unwrap();
+    let from_file = run(&[
+        "mol",
+        "draw",
+        "c1ccccc1",
+        "--set",
+        &format!("edit=@{}", p.to_str().unwrap()),
+    ]);
+    std::fs::remove_file(&p).ok();
+    assert_eq!(text(&from_file), text(&inline));
+    let none = run(&[
+        "mol",
+        "draw",
+        "c1ccccc1",
+        "--set",
+        "edit=@/no/such/patch.json",
+    ]);
+    assert_eq!(none.code, 4);
+    // a file over the patch limit or one that is not text is a patch that cannot be read (2), keyed, with its reason
+    let big = std::env::temp_dir().join(format!("mol_draw_edit_big_{}.json", std::process::id()));
+    std::fs::write(&big, " ".repeat(mzlab_feat::chem::draw::MAX_PATCH + 1)).unwrap();
+    let bin = std::env::temp_dir().join(format!("mol_draw_edit_bin_{}.json", std::process::id()));
+    std::fs::write(&bin, [0xff, 0xfe]).unwrap();
+    for f in [&big, &bin] {
+        let o = run(&[
+            "mol",
+            "draw",
+            "CCO",
+            "--set",
+            &format!("edit=@{}", f.to_str().unwrap()),
+        ]);
+        std::fs::remove_file(f).ok();
+        let e = o.error.as_ref().expect("a keyed error");
+        assert_eq!((o.code, e.key.as_str()), (2, "err.mol.draw.editJson"));
+        assert!(e.params.iter().any(|p| p.0 == "message" && !p.1.is_empty()));
+    }
+}
+
+#[test]
+fn mol_draw_edit_failure_is_a_keyed_usage_error_naming_the_operation() {
+    let bad = r#"[{"op":"atom.set","id":0,"chg":0},{"op":"bond.add","a":1,"b":9}]"#;
+    let o = run(&[
+        "mol",
+        "draw",
+        "CCO",
+        "--json",
+        "--set",
+        &format!("edit={bad}"),
+    ]);
+    assert_eq!(o.code, 2);
+    assert!(
+        o.stdout.is_empty() || !text(&o).contains("draw/1"),
+        "nothing is drawn"
+    );
+    let e = o.error.as_ref().expect("a keyed error");
+    assert_eq!(e.key, "err.mol.draw.edit");
+    let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.as_str());
+    assert_eq!(
+        (param("index"), param("reason")),
+        (Some("1"), Some("unknown_atom"))
+    );
+    assert_eq!(run(&["mol", "draw", "CCO", "--set", "edit=nope"]).code, 2);
+}

@@ -391,6 +391,7 @@ try:
         def recipe_logged():
             ops = pg.evaluate("NB.ops.filter(o => o.op === 'feature_pipeline')"); assert len(ops) >= 1, ops
             o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
+            assert isinstance(o.get("regole"), dict) and isinstance(o.get("genitore"), dict), {k: (v if k in ("regole", "genitore") else "...") for k, v in o.items()}      # name the missing block instead of a TypeError
             assert o["crate_version"] and len(o["table_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
             assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operations"])

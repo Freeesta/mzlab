@@ -47,7 +47,7 @@ try:
         step("a triangle on the chromatogram: s2 shows that MS2, s1 its parent Full Scan", tri)
         def flags():
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {n:t.s1._a.flags.length,lbl:t.s1._a.lbls.filter(l=>l.fl!=null).length,tip:t.s1._a.lbls.find(l=>l.fl!=null).tip}})()"); print(v)
-            assert v["n"] >= 1 and v["lbl"] == v["n"] and "MS2 n. " in v["tip"] and "HCD" in v["tip"] and "NCE 30" in v["tip"], v
+            assert v["n"] >= 1 and v["lbl"] == v["n"] and "MS2 no. " in v["tip"] and "HCD" in v["tip"] and "NCE 30" in v["tip"], v
         step("flags ▼ over the precursors of the shown Full Scan, with hover text", flags)
         def flag_click():
             # a Full Scan with two MS2 of close precursors (412.1000 and 412.1364): choose the first, then click the second flag
