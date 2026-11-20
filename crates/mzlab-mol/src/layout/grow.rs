@@ -2,6 +2,7 @@
 //! neighbours go into the largest empty angle (a chain continues as a 120-degree zigzag, a linear atom straight on, three or more
 //! neighbours are spread evenly).
 
+use crate::sortm::SortM;
 use std::collections::VecDeque;
 
 use super::place::{largest_gap, place_system, placed_angles};
@@ -56,7 +57,7 @@ fn zigzag(g: &G, a: usize) -> f64 {
 fn grow_atom(g: &mut G, a: usize) -> Vec<usize> {
     let before: Vec<bool> = g.pos.iter().map(|p| p.is_some()).collect();
     let mut sys: Vec<usize> = g.rings_of[a].iter().map(|&r| g.ring_sys[r]).collect();
-    sys.sort_unstable();
+    sys.sortm();
     sys.dedup();
     for s in sys {
         let open = g.systems[s]

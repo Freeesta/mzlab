@@ -5,13 +5,15 @@
 use super::clean::penalty;
 use super::trig::*;
 use super::G;
+use crate::sortm::SortM;
 
 type Pos = Vec<Option<V>>;
 
 /// Start and size of the largest empty angle among `angles` (counter-clockwise from the start); the whole circle if none.
 pub fn largest_gap(angles: &[f64]) -> (f64, f64) {
-    let mut a: Vec<f64> = angles.to_vec();
-    a.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+    // a NaN has no place in an order (it would make the comparison inconsistent): it is left out, so the sort is total
+    let mut a: Vec<f64> = angles.iter().copied().filter(|x| !x.is_nan()).collect();
+    a.sortm_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
     match a.len() {
         0 => (0.0, TAU),
         1 => (a[0], TAU),
@@ -201,7 +203,7 @@ fn fuse_all(g: &G, s: usize, pos: &mut Pos, mirror: bool) {
         .iter()
         .flat_map(|&r| g.rings[r].iter().copied())
         .collect();
-    atoms.sort_unstable();
+    atoms.sortm();
     atoms.dedup();
     let mut first = true;
     loop {
@@ -258,6 +260,14 @@ pub fn place_system(g: &mut G, s: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_largest_gap_ignores_a_nan_angle() {
+        let clean = largest_gap(&[0.0, 1.0, 2.5]);
+        assert_eq!(largest_gap(&[f64::NAN, 0.0, 2.5, f64::NAN, 1.0]), clean);
+        assert_eq!(largest_gap(&[f64::NAN]), (0.0, TAU));
+        assert_eq!(largest_gap(&[2.5, f64::NAN, 1.0, 0.0]), clean);
+    }
 
     #[test]
     fn an_arc_closing_a_hexagon_gives_its_four_missing_corners() {

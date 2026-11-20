@@ -29,6 +29,7 @@ mod smiles;
 mod smiles_parse;
 mod smiles_stereo;
 mod smiles_write;
+mod sortm;
 mod substruct;
 mod transform;
 mod transform_chain;

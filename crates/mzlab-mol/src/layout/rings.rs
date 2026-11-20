@@ -2,6 +2,7 @@
 //! GF(2) independence) as ordered atom cycles, and the ring systems (rings that share two or more atoms). Deterministic: neighbours are
 //! always visited in ascending atom order.
 
+use crate::sortm::SortM;
 use std::collections::VecDeque;
 
 /// The shortest path from `u` to `v` that does not use the bond `u`-`v`, neighbours tried ascending or descending.
@@ -88,10 +89,10 @@ pub fn sssr(adj: &[Vec<usize>]) -> Vec<Vec<usize>> {
             for desc in [false, true] {
                 if let Some(p) = shortest_cycle(adj, u, v, desc) {
                     let mut key = p.clone();
-                    key.sort_unstable();
+                    key.sortm();
                     if !cands.iter().any(|c| {
                         let mut k = c.clone();
-                        k.sort_unstable();
+                        k.sortm();
                         k == key
                     }) {
                         cands.push(p);
@@ -100,7 +101,7 @@ pub fn sssr(adj: &[Vec<usize>]) -> Vec<Vec<usize>> {
             }
         }
     }
-    cands.sort_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
+    cands.sortm_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
     let words = ne.div_ceil(64);
     let mut basis: Vec<Vec<u64>> = Vec::new();
     let mut out = Vec::new();
@@ -187,7 +188,7 @@ mod tests {
             a[x].push(y);
             a[y].push(x);
         }
-        a.iter_mut().for_each(|v| v.sort_unstable());
+        a.iter_mut().for_each(|v| v.sortm());
         a
     }
 

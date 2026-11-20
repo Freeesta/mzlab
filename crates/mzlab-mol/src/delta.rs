@@ -2,10 +2,18 @@
 //! chain of transformations can be computed. Only element symbols and counts; no charges.
 
 use crate::codec::MolError;
-use std::collections::BTreeMap;
+use crate::sortm::SortM;
 
-/// Net change of every element, zero entries removed.
-pub type Counts = BTreeMap<String, i64>;
+/// Net change of every element in element-name order, zero entries removed.
+pub type Counts = Vec<(String, i64)>;
+
+/// Adds `n` to the count of `el`, keeping the list sorted by element.
+fn bump(counts: &mut Counts, el: String, n: i64) {
+    match counts.binary_search_by(|e| e.0.cmp(&el)) {
+        Ok(i) => counts[i].1 += n,
+        Err(i) => counts.insert(i, (el, n)),
+    }
+}
 
 /// Reads `+O`, `-H2+O`, `+NO-H`; an empty text is no change.
 pub fn parse(text: &str) -> Result<Counts, MolError> {
@@ -33,12 +41,12 @@ pub fn parse(text: &str) -> Result<Counts, MolError> {
                 } else {
                     digits.parse().map_err(|_| bad())?
                 };
-                *out.entry(el).or_insert(0) += sign * n;
+                bump(&mut out, el, sign * n);
             }
             _ => return Err(bad()),
         }
     }
-    out.retain(|_, n| *n != 0);
+    out.retain(|e| e.1 != 0);
     Ok(out)
 }
 
@@ -48,10 +56,10 @@ pub fn print(counts: &Counts) -> String {
     let part = |gain: bool| {
         let mut els: Vec<(&String, i64)> = counts
             .iter()
-            .filter(|&(_, &n)| (n > 0) == gain && n != 0)
-            .map(|(e, &n)| (e, n.abs()))
+            .filter(|&&(_, n)| (n > 0) == gain && n != 0)
+            .map(|(e, n)| (e, n.abs()))
             .collect();
-        els.sort_by_key(|(e, _)| hill(e));
+        els.sortm_by_key(|(e, _)| hill(e));
         let body: String = els
             .iter()
             .map(|(e, n)| {
@@ -75,8 +83,8 @@ pub fn print(counts: &Counts) -> String {
 pub fn add(a: &str, b: &str) -> Result<String, MolError> {
     let mut sum = parse(a)?;
     for (el, n) in parse(b)? {
-        *sum.entry(el).or_insert(0) += n;
+        bump(&mut sum, el, n);
     }
-    sum.retain(|_, n| *n != 0);
+    sum.retain(|e| e.1 != 0);
     Ok(print(&sum))
 }

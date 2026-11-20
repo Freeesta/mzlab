@@ -9,6 +9,7 @@ mod place;
 mod rings;
 mod trig;
 
+use crate::sortm::SortM;
 use std::collections::VecDeque;
 
 use crate::model::{Cfg, Coords, Mol, Status, Stereo};
@@ -66,8 +67,8 @@ impl G {
                 }
             }
         }
-        adj.iter_mut().for_each(|v| v.sort_unstable());
-        bonds.sort_unstable();
+        adj.iter_mut().for_each(|v| v.sortm());
+        bonds.sortm();
         let linear = (0..n)
             .map(|i| adj[i].len() == 2 && (triple[i] > 0 || double[i] == 2))
             .collect();
@@ -156,10 +157,10 @@ impl G {
                     }
                 }
             }
-            f.sort_unstable();
+            f.sortm();
             out.push(f);
         }
-        out.sort_by(|a, b| b.len().cmp(&a.len()).then(a[0].cmp(&b[0])));
+        out.sortm_by(|a, b| b.len().cmp(&a.len()).then(a[0].cmp(&b[0])));
         out
     }
 
@@ -208,7 +209,7 @@ impl G {
                         .iter()
                         .flat_map(|&r| self.rings[r].iter().copied())
                         .collect();
-                    atoms.sort_unstable();
+                    atoms.sortm();
                     atoms.dedup();
                     queue.extend(atoms);
                 }

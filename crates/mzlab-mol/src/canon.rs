@@ -3,6 +3,7 @@
 //! Automorphisms found on the way prune the search. The order is ours and versioned by `CAN_VERSION`; it is not RDKit's or InChI's.
 
 use crate::model::Mol;
+use crate::sortm::SortM;
 use std::collections::HashMap;
 
 /// Prefix of `Mol::can`; changes when the algorithm changes, so stored `props` can be told apart and remapped.
@@ -76,7 +77,12 @@ impl Search<'_> {
     /// Equitable refinement: classes split by the multiset of (neighbour class, bond order) until no class splits any more.
     fn refine(&self, mut cls: Vec<usize>) -> Vec<usize> {
         let n = cls.len();
-        let mut count = cls.iter().collect::<std::collections::BTreeSet<_>>().len();
+        let mut count = {
+            let mut d = cls.clone();
+            d.sortm();
+            d.dedup();
+            d.len()
+        };
         // Neighbour keys live in one flat buffer (one slice per atom) and the ranking sorts atom
         // indices, so a round allocates nothing per atom.
         let mut start = vec![0usize; n + 1];
@@ -91,10 +97,10 @@ impl Search<'_> {
                 for (s, &(j, o)) in slot.iter_mut().zip(&self.adj[i]) {
                     *s = (cls[j], o);
                 }
-                slot.sort_unstable();
+                slot.sortm();
             }
             let key = |i: usize| (cls[i], &near[start[i]..start[i + 1]]);
-            order.sort_unstable_by(|&x, &y| key(x).cmp(&key(y)));
+            order.sortm_by(|&x, &y| key(x).cmp(&key(y)));
             let mut next = vec![0usize; n];
             let mut now = 0;
             for w in 0..n {
@@ -202,7 +208,7 @@ struct Search<'a> {
 /// Dense rank of every key among the sorted distinct keys.
 fn rank<K: Ord + Clone>(keys: &[K]) -> Vec<usize> {
     let mut sorted: Vec<&K> = keys.iter().collect();
-    sorted.sort_unstable();
+    sorted.sortm();
     sorted.dedup();
     keys.iter()
         .map(|k| sorted.binary_search(&k).unwrap_or(0))

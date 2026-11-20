@@ -4,8 +4,9 @@
 use crate::codec::MolError;
 use crate::delta;
 use crate::model::{Mol, Status, Stereo};
+use crate::sortm::SortM;
+use crate::sortm::SortedVec;
 use crate::transform::{Evidence, TRegion, TSite, Transformation};
-use std::collections::BTreeSet;
 
 impl Stereo {
     /// The atoms that name the element: the centre of a tetrahedral one, both ends of a double bond.
@@ -68,7 +69,7 @@ impl Transformation {
             .map(|&(a, b)| (a, b.and_then(|b| next.product_atom(b))))
             .collect();
         let size = next.map.iter().filter(|m| m.1.is_some()).count() + next.added.len();
-        let hit: BTreeSet<u32> = map.iter().filter_map(|m| m.1).collect();
+        let hit: SortedVec<u32, ()> = map.iter().filter_map(|m| m.1).collect();
         let added: Vec<u32> = (0..size as u32).filter(|x| !hit.contains(x)).collect();
         let centre: Vec<u32> = (0..self.map.len() as u32)
             .filter(|a| {
@@ -126,7 +127,7 @@ impl Transformation {
         let p = |a: u32| po[a as usize];
         let q = |b: u32| qo.as_ref().map_or(b, |o| o[b as usize]);
         let sorted = |mut v: Vec<u32>| {
-            v.sort_unstable();
+            v.sortm();
             v
         };
         let on = |e: &Evidence| {
@@ -135,7 +136,7 @@ impl Transformation {
         };
         let mut map: Vec<(u32, Option<u32>)> =
             self.map.iter().map(|m| (p(m.0), m.1.map(q))).collect();
-        map.sort_unstable_by_key(|m| m.0);
+        map.sortm_by_key(|m| m.0);
         let mut out = Transformation {
             parent: parent.renumbered(&po)?.core_hash_hex(),
             product: match (product, &qo) {
@@ -159,7 +160,7 @@ impl Transformation {
             }),
             ..self.clone()
         };
-        out.sites.sort_by_key(|s| s.atom);
+        out.sites.sortm_by_key(|s| s.atom);
         out.evidence = self
             .evidence
             .iter()
