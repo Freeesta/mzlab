@@ -1,6 +1,6 @@
 // @ts-check
 // V2000 molfile of some atoms of Ketcher's struct, for Indigo (SMILES of the selection) and the Rust graph (fragments, partial structures), in
-// Ketcher's atom order. Isotopes (M  ISO), radicals (M  RAD), wedge/hash bonds and atom parity are kept, so the SMILES of a selection has the same
+// Ketcher's atom order. Isotopes (M  ISO), radicals (M  RAD), the stated H of an aromatic atom, wedge/hash bonds and atom parity are kept, so the SMILES of a selection has the same
 // [13C] and @/@@ as the one of the whole canvas; chiral flag 1 when every stereo centre of the piece is absolute.
 /**
  * @param {any} st Ketcher's struct @param {number[]} ids atoms of the piece @param {Set<number> | undefined} noCharge atoms written without their charge
@@ -26,6 +26,8 @@ export function molfileOf(st, ids, noCharge, known) {
   bonds.forEach(b => L.push(`${n3(/** @type {number} */ (idx.get(b.begin)))}${n3(/** @type {number} */ (idx.get(b.end)))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}${n3(bst(b))}  0  0  0`));
   const prop = (/** @type {string} */ tag, /** @type {[number, number][]} */ v) => { for (let i = 0; i < v.length; i += 8) L.push(`M  ${tag}` + n3(Math.min(8, v.length - i)) + v.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join("")); };
   prop("CHG", chg); prop("ISO", iso); prop("RAD", rad);
+  // the H that Ketcher holds for an atom of a ring drawn aromatic ([nH]): the data group Ketcher itself writes, read by the Rust readers
+  let g = 0; atoms.forEach((a, /** @type {number} */ k) => { if (Number.isInteger(a.implicitHCount)) L.push(`M  STY  1 ${n3(++g)} DAT`, `M  SAL ${n3(g)}  1 ${n3(k + 1)}`, `M  SDT ${n3(g)} MRV_IMPLICIT_H`, `M  SED ${n3(g)} IMPL_H${a.implicitHCount}`); });
   L.push("M  END");
   return L.join("\n");
 }

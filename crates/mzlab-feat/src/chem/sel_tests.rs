@@ -338,3 +338,23 @@ fn an_aromatic_oxygen_or_sulfur_cation_gives_a_ring_electron_and_takes_no_hydrog
     assert_eq!(text(&["O", "C", "C", "C", "C"], &five[..5], &[]), "C4H4O");
     assert_eq!(text(&["S", "C", "C", "C", "C"], &five[..5], &[]), "C4H4S");
 }
+
+#[test]
+fn the_aromatic_hydrogen_that_the_file_states_is_counted() {
+    // indole's five-membered ring alone (pyrrole) as Ketcher writes it: aromatic bonds and the H of the N in a data group
+    let ring = [(1, 2, 4), (2, 3, 4), (3, 4, 4), (4, 5, 4), (5, 1, 4)];
+    let stated = [
+        "M  STY  1   1 DAT",
+        "M  SLB  1   1   1",
+        "M  SAL   1  1   1",
+        "M  SDT   1 MRV_IMPLICIT_H",
+        "M  SDD   1     0.0000    0.0000    DA    ALL  1       1",
+        "M  SED   1 IMPL_H1",
+    ];
+    let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &stated), false);
+    assert_eq!(v["label"]["text"], "C4H5N");
+    assert_eq!(v["label"]["unpaired"], 0);
+    // without the group the N reads as a pyridine-type one (no hydrogen)
+    let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &[]), false);
+    assert_eq!(v["label"]["text"], "C4H4N");
+}

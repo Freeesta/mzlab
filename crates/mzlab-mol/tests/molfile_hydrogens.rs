@@ -204,3 +204,46 @@ fn the_open_hydrogen_of_an_aromatic_ring_goes_to_the_first_heteroatom_that_can_t
     );
     assert_eq!(methylated, [3, 0, 1, 0, 1, 1]);
 }
+
+/// The data group that Ketcher, Marvin and RDKit write for the hydrogen of an aromatic atom (`atom` 1-based).
+fn stated(atom: usize) -> String {
+    format!(
+        "M  STY  1   1 DAT\nM  SLB  1   1   1\nM  SAL   1  1{atom:>4}\nM  SDT   1 MRV_IMPLICIT_H\nM  SDD   1     0.0000    0.0000    DA    ALL  1       1\nM  SED   1 IMPL_H1\nM  END\n"
+    )
+}
+
+#[test]
+fn a_stated_aromatic_hydrogen_goes_on_its_atom_not_on_the_first_that_can() {
+    // methylimidazole as Ketcher writes it: CH3, C, CH, N, CH, N; the two tautomers differ only in the data group
+    let els = ["C", "C", "C", "N", "C", "N"];
+    let bonds = [
+        (1, 2, 1),
+        (2, 3, 4),
+        (3, 4, 4),
+        (4, 5, 4),
+        (5, 6, 4),
+        (6, 2, 4),
+    ];
+    let file = |atom| plain(&els, &bonds, &[]).replace("M  END\n", &stated(atom));
+    let h = |text: &str| -> Vec<u8> {
+        let m = Mol::from_molfile(text).unwrap();
+        m.atoms.iter().map(|a| a.h).collect()
+    };
+    assert_eq!(h(&file(4)), [3, 0, 1, 1, 1, 0]);
+    assert_eq!(h(&file(6)), [3, 0, 1, 0, 1, 1]);
+    // without the group the first N in file order takes it
+    assert_eq!(hs(&els, &bonds, &[]), [3, 0, 1, 1, 1, 0]);
+}
+
+#[test]
+fn a_stated_aromatic_hydrogen_is_read_from_a_v3000_file() {
+    let text = "\n  t\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 5 5 1 0 0\nM  V30 BEGIN ATOM\n\
+M  V30 1 C 0 0 0 0\nM  V30 2 C 0 0 0 0\nM  V30 3 N 0 0 0 0\nM  V30 4 C 0 0 0 0\nM  V30 5 N 0 0 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\n\
+M  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 1\nM  V30 END BOND\nM  V30 BEGIN SGROUP\n\
+M  V30 1 DAT 0 ATOMS=(1 5) FIELDNAME=MRV_IMPLICIT_H FIELDDATA=IMPL_H1\nM  V30 END SGROUP\nM  V30 END CTAB\nM  END\n";
+    let m = Mol::from_molfile(text).unwrap();
+    assert_eq!(
+        m.atoms.iter().map(|a| a.h).collect::<Vec<_>>(),
+        [1, 1, 0, 1, 1]
+    );
+}
