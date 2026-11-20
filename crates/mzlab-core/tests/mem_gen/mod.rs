@@ -6,7 +6,14 @@ use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 
 /// The `.mzidx` of a DDA-like mzML: one MS1 then `ms2` MS2 scans with filter, precursor and native id (the strings are what weigh in the table).
 pub fn mzidx(scans: usize, ms2: usize) -> Vec<u8> {
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "r".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(scans).unwrap();
     for i in 0..scans {
         let l2 = i % (ms2 + 1) != 0;
@@ -19,7 +26,10 @@ pub fn mzidx(scans: usize, ms2: usize) -> Vec<u8> {
             polarity: 1,
             profile: false,
             filter: if l2 {
-                format!("FTMS + c ESI d Full ms2 {prec:.4}@hcd30.00 [50.0000-{:.4}]", prec + 20.0)
+                format!(
+                    "FTMS + c ESI d Full ms2 {prec:.4}@hcd30.00 [50.0000-{:.4}]",
+                    prec + 20.0
+                )
             } else {
                 "FTMS + c ESI Full ms [100.0000-1000.0000]".into()
             },
@@ -34,5 +44,7 @@ pub fn mzidx(scans: usize, ms2: usize) -> Vec<u8> {
     let b = w.finish().unwrap();
     let mut src = b.clone();
     let p = mzlab_core::upload::prepare(&mut src, b.len() as u64, "r.mzML").unwrap();
-    mzlab_core::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20).unwrap().0
+    mzlab_core::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20)
+        .unwrap()
+        .0
 }

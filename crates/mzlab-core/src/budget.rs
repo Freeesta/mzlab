@@ -145,7 +145,8 @@ pub const ROW_HEAP: usize = 192;
 /// For what is built from many small allocations (the strings of a scan table): the caller passes its estimate, with margin. Nothing is touched.
 pub fn headroom(bytes: usize) -> Result<()> {
     let mut v: Vec<u8> = Vec::new();
-    v.try_reserve_exact(bytes).map_err(|_| Error::memory_budget())
+    v.try_reserve_exact(bytes)
+        .map_err(|_| Error::memory_budget())
 }
 
 /// The empty scan table of an index of `count` scans, after proof that the strings of its rows will find room too (`ROW_HEAP`): `error.memoryBudget`, never a trap in the parse.
