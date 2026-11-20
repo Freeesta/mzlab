@@ -7,9 +7,10 @@ const XICNOMI = (() => {
   const load = () => Promise.all([carica("ask-suggerisci.js"), carica("liste-nomi.js")]).then(() => LISTE.ready());
   const CALM = new Set(["err.formula.offset", "err.formula.mzLow"]);   // errors of the engine shown as they are (not a name to look up, not «invalid formula»)
   const SHIFT = /\s*([+-]\s*[\d.,]*)\s*$/;   // the signed number closing the field (the engine reads it; here it is only kept or cut)
-  /** The text the engine could not read as a formula (e = its error): {text: formula + shift, adduct} when its head is exactly one name of the lists, else null. */
+  /** The text the engine could not read as a formula (e = its error): {text: formula + shift, adduct} when its head is exactly one name of the lists, else null.
+   *  The head is cut from the typed text: the engine's `params.head` has the spaces dropped, which breaks a name of several words. */
   async function resolve(/** @type {string} */ t, /** @type {Bag} */ e) {
-    const p = e.params || {}, head = p.head || t, sh = p.offset == null ? "" : (String(p.offset).startsWith("-") ? "" : "+") + p.offset;
+    const p = e.params || {}, head = p.offset == null ? t : t.replace(SHIFT, ""), sh = p.offset == null ? "" : (String(p.offset).startsWith("-") ? "" : "+") + p.offset;
     try { await load(); } catch (_) { return null; }
     const nm = LISTENOMI.byName(head);
     return nm ? { text: nm.formula + sh, adduct: nm.adduct } : null;

@@ -74,17 +74,17 @@
         const r = await ionOf(t, sel.value);
         row.hidden = !r;
         if (r && "error" in r) { say.textContent = r.error; return; }
-        if (r) { chosen = ""; await store({ ...(r.formula ? { formula: r.formula } : {}), mass: r.massa, typed: { text: t, adduct: sel.value } }); return; }
+        if (r) { chosen = ""; await store({ ...(r.formula ? { formula: r.formula } : {}), mass: r.mass, typed: { text: t, adduct: sel.value } }); return; }
         if (t === chosen) return;
         const hit = (await a.search(t, 1, 10, true))[0];
-        if (hit && hit.nome.toLowerCase() === t.toLowerCase()) { await pick(hit); return; }
+        if (hit && hit.name.toLowerCase() === t.toLowerCase()) { await pick(hit); return; }
         if (/[\d()=#[\]@]/.test(t) || /^[A-Z]+$/.test(t)) { chosen = ""; await F.parentSet(S, input, t); show(); if (S.redraw) S.redraw(); return; }
         say.textContent = `No molecule called ${t}: pick one from the list, or type a formula, an m/z or a SMILES.`;
       };
       const pick = async (/** @type {any} */ row0) => {
         const m = (await a.getMolecule(row0.id)) || row0;
-        chosen = m.nome || ""; row.hidden = true;
-        await store({ name: chosen, ...(m.formula ? { formula: m.formula } : {}), smiles: m.smiles || "", inchikey: m.inchikey || "", mass: m.massa, typed: { text: chosen, adduct: "neutral" } });
+        chosen = m.name || ""; row.hidden = true;
+        await store({ name: chosen, ...(m.formula ? { formula: m.formula } : {}), smiles: m.smiles || "", inchikey: m.inchikey || "", mass: m.mass, typed: { text: chosen, adduct: "neutral" } });
       };
       const f = c.field(host, {
         texts: { label: "Parent compound", placeholder: "name, formula, InChIKey or m/z", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },

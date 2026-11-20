@@ -21,7 +21,7 @@ try:
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         stage(pg, FILES); pg.wait_for_selector("#dpanels .pnl canvas", timeout=60000); ready(pg)
         for other in ("draw", "tpmine"):
-            pg.click(f"nav button[data-v={other}]"); wait_for_js(pg, f"S.view === '{other}'"); ready(pg); frames(pg, 3)
+            pg.click(f"#nav button[data-v={other}]"); wait_for_js(pg, f"S.view === '{other}'"); ready(pg); frames(pg, 3)
             before = pg.evaluate("[...document.querySelectorAll('#dpanels>.pnl, #dfiles')].map(e => { const r = e.getBoundingClientRect(); return r.width })")
             seq = pg.evaluate(SAMPLE)
             wait_for_js(pg, "S.view === 'data'"); ready(pg)

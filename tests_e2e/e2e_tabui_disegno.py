@@ -59,9 +59,10 @@ try:
         step("a structure drawn comes back as SMILES and formula", drawn)
         def reverse():
             pg.fill("#tp-smi", "CCN"); pg.click("#tp-draw")
+            pg.wait_for_selector("#draw-unsaved", timeout=10000); pg.click("#draw-unsaved #mm-drop")      # the drawn CCO is not saved: a load over it asks first
             pg.wait_for_function("TPDraw.smiles().then(s => s === 'CCN')", timeout=30000)
             assert not pg.is_disabled("#tp-draw-use")
-        step("a SMILES written in Tabui is shown in the editor by «Draw»", reverse)
+        step("a SMILES written in Tabui is shown in the editor by «Draw», after the unsaved-drawing question", reverse)
         pg.click("#tp-draw-no"); assert pg.evaluate("S.view") == "tpmine"
         b.close()
 finally:
