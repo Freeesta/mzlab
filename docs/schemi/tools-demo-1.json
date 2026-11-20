@@ -793,7 +793,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                    "description":"A feature whose S/N is below this is dropped; S/N = apex over the flank median, divided by 1.4826 MAD of the raw flanks; 0 = off"
                   },
                   {
                     "enum":["averagine","grouper","finder"],
