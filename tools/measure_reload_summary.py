@@ -13,7 +13,7 @@ def kind(path: str) -> str:
     if p.endswith(".wasm"): return "wasm"
     if "/lang/" in p: return "lang"
     if "/vendor/" in p: return "vendor"
-    if "/mzfinder/" in p or "tpmine" in p: return "tabui"
+    if "/mzfinder/" in p or "tpmine" in p: return "mzfinder"
     if p.endswith((".js", ".mjs")): return "js"
     if p.endswith(".css"): return "css"
     if p.endswith((".json", ".csv")): return "data"

@@ -62,7 +62,7 @@ pub struct AgilentD {
     pub missing: usize,
     /// Scans whose index record is damaged, left out (`scan::parse`, `datams::parse`): the others are read.
     pub damaged: usize,
-    /// Side members left out because they could not be read: `meta.danneggiato` in `warnings`.
+    /// Side members left out because they could not be read: `meta.damaged` in `warnings`.
     pub(crate) notes: Vec<String>,
 }
 

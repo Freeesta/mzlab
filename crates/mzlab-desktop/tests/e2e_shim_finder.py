@@ -1,6 +1,6 @@
 """mzFinder in the desktop shim, in Chromium, without Tauri: the page of the desktop (dist/, made by prepare.py: no Pyodide, no wasm-feat/), mzFinder on, against the real native
-engine (`cargo run --example serve`, the mzlab:// protocol over HTTP). A synthetic high-resolution series chosen with «Choose files...» (the bytes go to the app once): classify, the Dig,
-its details and the table of the page. The Dig equals the one of `cargo run --example finder` (timing aside) and no request names pyodide or wasm-feat. Run from the repository root:
+engine (`cargo run --example serve`, the mzlab:// protocol over HTTP). A synthetic high-resolution series whose bytes go to the app once: classify, the Dig,
+its details and the table of the products. The Dig equals the one of `cargo run --example finder` (timing aside) and no request names pyodide or wasm-feat. Run from the repository root:
   python3 tools/build_site.py && python3 crates/mzlab-desktop/prepare.py && python3 crates/mzlab-desktop/tests/e2e_shim_finder.py"""
 import json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.request
 from functools import partial
@@ -112,20 +112,22 @@ try:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
         ctx = b.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36", viewport={"width": 1280, "height": 900}, reduced_motion="reduce")
         ctx.add_init_script(FAKE_TAURI)
-        ctx.add_init_script("try{localStorage.setItem('mzlab.mzfinder','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+        ctx.add_init_script("try{localStorage.setItem('mzlab.mzfinder','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.bar.hint','1');}catch(_){}")
         ctx.route(re.compile(r"http://mzlab\.localhost/.*"), native_route)
         ctx.on("request", lambda r: reqs.append(r.url))
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
+        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # the mzFinder package loads in the administrator mode
         pg.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg.wait_for_selector("#drop", timeout=300000)
         pg.wait_for_function("typeof window.TPCALL === 'function' && window.MZLAB_DESKTOP === true", timeout=300000)
-        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+        pg.evaluate("() => window.QTOOLS.ensure()")
+        def put(paths):                  # the bytes of the files go to the app once, as the removed page did with its file chooser
+            import base64
+            for x in paths:
+                pg.evaluate("async ([n, b]) => { const a = Uint8Array.from(atob(b), c => c.charCodeAt(0)); await window.TPCALL.put(n, a.buffer); }", [Path(x).name, base64.b64encode(Path(x).read_bytes()).decode()])
         got = {}
         def choose():
-            pg.set_input_files("#tp-in", [str(f) for f in files])
-            pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= %d" % len(files), timeout=300000)
-            m = pg.inner_text("#tp-msg"); assert "error" not in m.lower(), m
+            put(files)
             info = pg.evaluate("([n]) => window.TPCALL('classify', n)", [[f.name for f in files]])
             assert [i["name"] for i in info] == [f.name for f in files] and all(i.get("hr_kind") == "hr" for i in info), info
             got["files"] = [{"name": i["name"], "type": i["type"], "time": i.get("time"), "kind": "hr"} for i in info]
@@ -147,11 +149,6 @@ try:
             for x in t["rows"]: assert all(x.get(k) is not None for k in ("in_t0", "in_blank", "t0_ratio", "blank_ratio")), x
             assert t == pg.evaluate("([i]) => window.TPCALL('tp_table', i)", [ids]), "the table changes between two calls"
         step("tp_table: the table of the products has the t0 and Blank columns filled", tp_table)
-        def ui():
-            pg.fill("#tp-mol", PARENT["neutral"]); pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
-            pg.locator("#hr-t tr.clk").first.click(); pg.wait_for_timeout(1500)
-            m = pg.inner_text("#tp-msg"); assert "error" not in m.lower(), m
-        step("the page: Dig, table and detail of a candidate", ui)
         def pipeline_pool():
             r = pg.evaluate("""async ([names, rulesUrl, parent]) => {
                 const pool = (await import('/static/mzfinder/feat-desktop-pool.js')).createDesktopPool();
@@ -224,8 +221,7 @@ try:
             assert len(rows["rows"]) >= 1, rows
         step("a list of transformations of the user runs; a bad row says what is wrong", transformations)
         def msn_standard():
-            pg.set_input_files("#tp-in", [str(msn_ml)])
-            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].some(r => r.textContent.trim().startsWith('std_msn'))", timeout=300000)
+            put([msn_ml])
             info = pg.evaluate("([n]) => window.TPCALL('classify', n)", [["std_msn.mzML"]])
             assert info[0].get("hr_kind") == "msn", info
             files = got["files"] + [{"name": "std_msn.mzML", "type": info[0]["type"], "time": None, "kind": "msn"}]
@@ -251,8 +247,7 @@ try:
                 close(call("frag_tree_compare", d["id"]), G["localization"][str(d["id"])]["cmp"], f"compare {d['id']}")
         step("run with an MSn file: tree, calibration, localization, frag_tree and frag_tree_compare (= the frozen Python answers)", msn_standard)
         def lr_series():
-            pg.set_input_files("#tp-in", [f["path"] for f in lrs])
-            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => r.textContent.trim().startsWith('lr_')).length >= %d" % len(lrs), timeout=300000)
+            put([f["path"] for f in lrs])
             run = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, '')", [LR_FILES, LR_PARENT])
             a, n = dict(run), dict(lr_native["run"])
             a.pop("timing", None); n.pop("timing", None)
@@ -269,8 +264,7 @@ try:
             epi, std, t0 = (tmp / "lr" / n for n in ("lr_EPI.mzML", "lr_MRM-std.mzML", "lr_MRM-t0.mzML"))
             DS._write(epi, [DS._spec(i, 8.8 + 0.02 * i, numpy.array([pm - 61, pm - 44, pm - 17]), numpy.array([120., 500., 900.]) * rng.normal(1, 0.05), level=2, prec=pm, ce=30) for i in range(21)], [])
             LS.write_mrm(std, 10.0, 1); LS.write_mrm(t0, 3.0, 2)
-            pg.set_input_files("#tp-in", [str(x) for x in (epi, std, t0)])
-            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => /lr_(EPI|MRM)/.test(r.textContent)).length >= 3", timeout=300000)
+            put([epi, std, t0])
             files = LR_FILES + [{"name": epi.name, "type": "sample", "time": None, "kind": "ms2"}, {"name": std.name, "type": "standard", "time": None, "kind": "mrm"}, {"name": t0.name, "type": "sample", "time": 0, "kind": "mrm"}]
             call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
             run = call("run", files, LR_PARENT, {}, "")

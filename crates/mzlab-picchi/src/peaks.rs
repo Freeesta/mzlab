@@ -57,11 +57,14 @@ pub fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
     let mut m = [0.0; 5];
     let mut aty = [0.0; 3];
     for (x, &yy) in xs[..len].iter().zip(&y[a..b]) {
-        for (j, mj) in m.iter_mut().enumerate() {
-            *mj += x.powi(j as i32);
+        // explicit products, not `powi(j)`: a runtime exponent goes through the platform's routine, and the 3 x 3 solve amplifies its last bit (Windows native vs wasm)
+        let (x2, x3) = (x * x, x * x * x);
+        let pw = [1.0, *x, x2, x3, x2 * x2];
+        for (mj, p) in m.iter_mut().zip(pw) {
+            *mj += p;
         }
         for (j, t) in aty.iter_mut().enumerate() {
-            *t += x.powi(j as i32) * yy;
+            *t += pw[j] * yy;
         }
     }
     let ata = [m[0], m[1], m[2], m[1], m[2], m[3], m[2], m[3], m[4]];

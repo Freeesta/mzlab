@@ -91,7 +91,7 @@ class Page:
         ctx = s.br.new_context(viewport={"width": vp[0], "height": vp[1]}, has_touch=s.a.tablet, is_mobile=s.a.tablet, reduced_motion="reduce",
                                accept_downloads=True)
         ctx.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));"
-                            "localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+                            "localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         ctx.add_init_script(INSTR)
         pg = s.pg = ctx.new_page()
         s.errs = []
@@ -126,8 +126,13 @@ class Page:
         return (st or {}).get("busy", ["?"]), st
 
     def counters(s):
-        s.cdp.send("HeapProfiler.collectGarbage")
-        d = s.cdp.send("Memory.getDOMCounters")
+        # detached DOM nodes go over more than one collection: collect until the count stops falling, so the sample does not swing with the collector
+        last = None
+        for _ in range(8):
+            s.cdp.send("HeapProfiler.collectGarbage")
+            d = s.cdp.send("Memory.getDOMCounters")
+            if d["nodes"] == last: break
+            last = d["nodes"]
         m = {x["name"]: x["value"] for x in s.cdp.send("Performance.getMetrics")["metrics"]}
         return {"nodes": d["nodes"], "listeners": d["jsEventListeners"], "docs": d["documents"], "heap": int(m.get("JSHeapUsedSize", 0))}
 
@@ -328,6 +333,8 @@ def leak(s, p):
             for t in ("addloss", "lists", "stat", "file"):
                 pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
             s.wait_ready(); s.quiet(20)
+            # the undo history keeps a closed panel by design (100 entries at most, so it levels off after the few cycles measured here): empty it, so what is counted can only be a real leak
+            pg.evaluate("typeof STORIA !== 'undefined' && STORIA && STORIA.svuota()")
             rows.append(s.counters())
         return rows
     finally:

@@ -8,17 +8,18 @@ fn run(args: Vec<String>) -> Outcome {
         [] => super::list_md(),
         [a] if a == "json" => super::json_md(),
         [a] if a == "exits" => super::exits_md(),
+        [a] if a == "renames" => crate::renamed::list_md(),
         [a, ..] => return Outcome::fail(&format!("unknown argument {a}")),
     };
     Outcome::ok(text.into_bytes())
 }
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("commands", "mzlab-cli commands [--json] [PATH...]   every command with its arguments, flags, output schema and exit codes (commands/1)", crate::catalog::run)
+    Entry::new("commands", "mzlab-cli commands [--json] [PATH...]   every command's arguments, flags, schema, exit codes (commands/1)", crate::catalog::run)
         .schema("commands/1")
         .exits(&[0, 2, 5])
         .examples(&["mzlab-cli commands --json", "mzlab-cli commands --json flow"]),
-    Entry::new("schema", "mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list of them (schemas/1)", crate::schema_cmd::run)
+    Entry::new("schema", "mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)", crate::schema_cmd::run)
         .schema("schemas/1")
         .exits(&[0, 2, 5])
         .examples(&["mzlab-cli schema --list", "mzlab-cli schema mzflow/2"]),

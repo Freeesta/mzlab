@@ -66,6 +66,8 @@ try:
             b.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!!document.getElementById('colsdlg')", 3000)
             pg.locator("#colsdlg [data-cc=batch]").check(); pg.locator("#colsclose").click()
             wait_for_js(pg, "!!document.querySelector('.ldtab input[data-xk=batch]')", 3000)
+            try: wait_for_js(pg, "!document.getElementById('colsdlg') && document.activeElement && document.activeElement.id === 'colsplus'", 5000)      # the dialog's close event runs after the click
+            except Exception: pass
             assert pg.evaluate("document.activeElement && document.activeElement.id") == "colsplus", "focus did not return to «+»"
             assert pg.evaluate("getComputedStyle(document.getElementById('colsplus').closest('th')).position") == "sticky"
         step("«+» opens the Columns chooser (keyboard), the picked column appears, «+» stays sticky", plus)

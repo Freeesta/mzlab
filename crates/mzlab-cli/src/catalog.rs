@@ -23,6 +23,7 @@ const GLOBAL: &[(&str, &str)] = &[
 /// What a flag means, by name; the usage line says only its value.
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
+    ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE; repeatable"),
     ("--sample", "ids: 1,3,5 or 2-4"),
     ("--no-points", "omit the MS2 points"),
@@ -58,15 +59,12 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--tr", "transition index"),
     ("--a", "start, min"),
     ("--b", "end, min"),
-    (
-        "--depth",
-        "how deep a valley is, as a fraction of the lower peak",
-    ),
+    ("--depth", "valley depth, fraction of the lower peak"),
     ("--windows", "JSON file of windows"),
     ("--auto", "engine peaks, as JSON"),
     ("--traces", "JSON file of traces"),
     ("--columns", "sn, fig, quality"),
-    ("--polarity", "polarity: + or -"),
+    ("--polarity", "+ or -"),
     ("--mz", "m/z"),
     ("--ppm", "ppm"),
     ("--rt-tol", "RT window, min"),
@@ -75,7 +73,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--da", "tolerance, Da"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
-    ("--format", "json (default) or csv"),
+    ("--format", "output format (values in the usage line)"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
     ("--conv", "conversation"),
@@ -112,7 +110,7 @@ const CSV: &[&str] = &["features", "peak table"];
 /// What the exit codes mean (`exit.rs`).
 pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::OK, "ok"),
-    (exit::DATA, "data or domain error, partial outputs written"),
+    (exit::DATA, "data error, partial outputs written"),
     (exit::USAGE, "usage"),
     (exit::INTEGRITY, "plan, schema or integrity"),
     (exit::INPUT, "input missing or unreadable"),
@@ -222,6 +220,19 @@ fn read(toks: &[String], optional: bool, u: &mut Usage) {
         i += 1;
         if let Some(inner) = t.strip_prefix('[').and_then(|x| x.strip_suffix(']')) {
             read(&tokens(inner), true, u);
+        } else if t.starts_with('(') {
+            // `(--ppm P | --da D)`: alternatives, one of which is needed (the synopsis says so); none is required by itself
+            let end = toks[i - 1..]
+                .iter()
+                .position(|w| w.ends_with(')'))
+                .map_or(toks.len(), |k| i + k);
+            let mut group: Vec<String> = toks[i - 1..end].to_vec();
+            group[0] = group[0].trim_start_matches('(').to_string();
+            if let Some(last) = group.last_mut() {
+                *last = last.trim_end_matches(')').to_string();
+            }
+            read(&group, true, u);
+            i = end;
         } else if t == "|" {
         } else if t == "..." {
             u.args.push(Arg {
@@ -313,7 +324,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     }
     if !entries().any(|e| under(e, &path)) {
         let err = mzlab_core::Error::new("err.cli.command.unknown").with("path", path.join(" "));
-        return Outcome::fail_error(&err).with_hint("mzlab-cli commands lists every command");
+        let first: Vec<String> = path.first().map(|w| w.to_string()).into_iter().collect();
+        let hint = match crate::renamed::fate(&first) {
+            Some((old, crate::renamed::Fate::Now(now))) => {
+                format!("{old} is now {now}: mzlab-cli commands --json {now}")
+            }
+            _ => "mzlab-cli commands lists every command".to_string(),
+        };
+        return Outcome::fail_error(&err).with_hint(&hint);
     }
     if json {
         return Outcome::ok(catalog_json(&path).into_bytes());

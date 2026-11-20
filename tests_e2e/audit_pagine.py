@@ -172,7 +172,7 @@ def panels(pg):
 def new_page(p, st):
     b = p.chromium.launch(args=["--enable-precise-memory-info"])
     pg = b.new_page(viewport={"width": 1440, "height": 900}, reduced_motion="no-preference")
-    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg.add_init_script(INSTR)
     st["errs"], st["reqs"] = [], []
     pg.on("pageerror", lambda e: st["errs"].append(("pageerror", str(e)[:300])))
@@ -199,7 +199,7 @@ def view(pg, v):
 
 def first_useful(pg, v):
     """ms from navigation start until the view shows its useful content."""
-    sel = {"data": "#start:not([hidden]) #drop, #v-workspace .panel, #tools", "draw": "#v-draw:not([hidden]) iframe, #v-draw:not([hidden]) canvas", "tpmine": "#v-tpmine:not([hidden]) button", "flow": "#v-flow:not([hidden]) button", "theory": "#v-theory:not([hidden]) iframe"}[v]
+    sel = {"data": "#start:not([hidden]) #drop, #v-workspace .panel, #tools", "draw": "#v-draw:not([hidden]) iframe, #v-draw:not([hidden]) canvas", "flow": "#v-flow:not([hidden]) button", "theory": "#v-theory:not([hidden]) iframe"}[v]
     try:
         pg.wait_for_selector(sel, state="visible", timeout=60000)
         return pg.evaluate("Math.round(performance.now())")
@@ -232,7 +232,7 @@ def main():
     r = Run(fresh=True)
     res = []
     samples = {"none": [], "one": [mz("B_FullMass-t15")], "multi": [mz(f) for f in lib.FILES]}
-    views = ["data", "draw", "tpmine", "flow", "theory"]
+    views = ["data", "draw", "flow", "theory"]
     if QUICK: samples = {"none": [], "one": samples["one"]}
     try:
         with sync_playwright() as p:

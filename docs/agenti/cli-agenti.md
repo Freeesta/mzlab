@@ -8,6 +8,56 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
+## Which build is this
+- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
+
+## Renamed commands
+- A command name of an earlier build (`channels`, `items`, `manual-table`, ...) is exit 2 with `error/1` `err.cli.command.renamed` (`params.old`, `params.now`) and the new path in the message and in `hint`; `commands --json OLD` (exit 5) puts it in `hint` too. A command that was removed answers `err.cli.command.removed`. The table is `RENAMED` in `crates/mzlab-cli/src/renamed.rs`:
+<!--renames-->
+| old name | now |
+|---|---|
+| `background` | `trace background` |
+| `channels` | `file channels` |
+| `convert` | `file convert` |
+| `dda-window` | `spectrum dda-window` |
+| `elements` | `ion elements` |
+| `folder` | `file list` |
+| `insilico` | `db insilico pack` |
+| `ion-mz` | `ion mz` |
+| `ion-pattern` | `ion pattern` |
+| `items` | `file items` |
+| `manual-table` | `peak table` |
+| `match-mz` | `ion match` |
+| `mol-anal` | `mol anal` |
+| `mol-check` | `mol check` |
+| `mol-cip` | `mol cip` |
+| `mol-cut` | `mol cut` |
+| `mol-export` | `mol export` |
+| `mol-hilite` | `mol hilite` |
+| `mol-label` | `mol label` |
+| `mol-link` | `mol link` |
+| `mol-mech` | `mol mech` |
+| `mol-search` | `mol search` |
+| `mol-sel` | `mol sel` |
+| `msn-graph` | `msn graph` |
+| `msn-lib` | `msn lib` |
+| `msn-rules` | `msn rules` |
+| `normative` | `db normative` |
+| `pair` | `file pair` |
+| `peak-area` | `peak area` |
+| `peak-auto` | `peak auto` |
+| `peak-auto-lr` | `peak auto-lr` |
+| `peak-edges` | `peak edges` |
+| `peak-split` | `peak split` |
+| `peak-window` | `peak window` |
+| `ref-list` | `db ref-list` |
+| `samples` | `sample` |
+| `steps` | `flow steps` |
+| `validate` | `file validate` |
+| `wiff` | `file inventory` |
+| `explain-missing` | removed (no replacement) |
+<!--/renames-->
+
 ## Look at a file first
 - `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
@@ -26,13 +76,14 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | code | meaning |
 |---|---|
 | 0 | ok |
-| 1 | data or domain error, partial outputs written |
+| 1 | data error, partial outputs written |
 | 2 | usage |
 | 3 | plan, schema or integrity |
 | 4 | input missing or unreadable |
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
 <!--/exits-->
+  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with exit 1, `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
 ## Learn the CLI in one call
@@ -56,16 +107,16 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 `--json` is accepted by every command; the generated list says what it does for each (`python3 tools/cli_doc.py`, from the tables the contract reads):
 <!--json-->
 - JSON already (`--json` only makes a failure an `error/1`):
-`flow report|record`, `file info|index|inventory|verify|items|channels`, `sample vars|group|table|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay`, `spectrum get|list|dda-window`, `peak auto|auto-lr|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `ion mz|pattern|match`, `mol label|anal|check|cip|hilite|sel|link|cut|mech|search`
-`db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
+`flow report|record`, `file info|index|inventory|verify|items|channels`, `sample vars|group|table|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay`, `spectrum get|list|dda-window`, `peak auto|auto-lr|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `ion mz|pattern|match`
+`mol label|anal|check|cip|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
-`flow run|check|steps|verify|command`, `explain-missing`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `db normative build`, `db insilico pack`, `commands`
+`flow run|check|steps|verify|command`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
 `features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
 - `sample list` (`sample-list/1`: ONE document, `files` in the order given, a refused file is an inline `error/1` entry, a missing file is a whole-run `error/1` (exit 4, no listing); exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file validate --json` (`mzml-validation/1`, ONE document for all files; a missing file is exit 4 + `error/1`), `file convert --json` (`convert/1`; `--dry-run` lists inputs, readers and sizes and writes nothing; an `.mzML` named as input is `err.file.alreadyMzml`, exit 4) and `file items --no-points` (leaves out `ms2_events`).
-- `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-writer.md`).
+- `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-full-spec.md`).
 - A command with no JSON form fails `--json` with `err.cli.json.unsupported` (exit 2, one `error/1`), never "unknown option". `db normative build` and `db insilico pack` print nothing on stdout without `--json`.
 - `mzlab-cli --help` starts with "Start here" (`flow steps --json`, `flow check PLAN.json --json`, `flow run`, `COMMAND --help`), the contract for scripts and the exit codes; `features --help` is the help of `features` alone.
 - On a failure after a command printed a document (a `flowrun/1` report, a `flowcheck/1`, a `verify/1`), `error/1` carries it as `report`: stdout is one JSON document either way. Every non-zero exit is one `error/1`, except the verdicts below.
@@ -80,14 +131,15 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `peak auto` and `peak auto-lr`: areas in counts x s; `--area-unit s|min` (`min` = counts x min). `peak auto` under `--baseline zero` (default) leaves out `b0`/`b1` and says so in `choices`; with `line` they are the line at `t0`/`t1`; `base_*` numbers without `--baseline line` are exit 2.
 
 ## Flow and llm commands
-- `flow report RUNDIR` (`run-report/1`; exit 4 no folder or `prov.json`, 6 `--out` unwritable), `flow command PLAN.json --json` (`flowcommand/1`, the script in `script`; exit 0, 2, 4) and `explain-missing ... --json` (`explain-missing/1`, `columns` and `rows`; exit 0, 2, 4, 6) follow the contract; `flow report` ends with one `\n`.
+- `flow report RUNDIR` (`run-report/1`; exit 4 no folder or `prov.json`, 6 `--out` unwritable), `flow command PLAN.json --json` (`flowcommand/1`, the script in `script`; exit 0, 2, 4) follow the contract; `flow report` ends with one `\n`.
 - `llm inspect FILE|DIR...` indexes the files in parallel (a folder gives its mzML by name, files keep the order given; same bytes for any number of workers). `llm params --inspection FILE|-` reuses an inspection (no indexing, its budget and `--hide-names` are the ones it was made with), so `llm inspect A B | llm params --inspection -` equals `llm params A B`; each proposal carries its rule, signals and confidence, and `choices` lists every automatic choice with its reason.
 - `llm inspect`, `llm params` and `llm context`: exit 0 ok, 2 usage, 4 missing or unreadable input. `llm replay` (`replay/1`) adds 3 (a recording of the wrong format) and 1 (no turn left). A failure is one `error/1` under `--json`.
 - `llm eval` (`evalrun/1`, one JSON document, a verdict command): exit 0 all checks pass, 1 a check failed (the document stays on stdout), 2 usage, 3 a case or recording of the wrong format, 4 missing file. A recording that runs out or does not answer its case is one `error/1` with exit 1.
 
 ## Chemistry commands (`mol *`, `ion *`)
-- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
+- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `draw/1`, `draw-image/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
 - Exit codes: 2 for a formula, adduct or SMILES that does not parse or a bad option value; 1 for a valid request the chemistry cannot satisfy (adduct removes more atoms than exist, m/z below 1, cut of an aromatic bond, bond that is not in the molfile); 4 for a missing file or a request/molfile that cannot be read. 6 for an unwritable `--out`. Failures are one `error/1`. `mol export` prints text (no schema, no `--json`); `mol search` answers `substructure/1`, or `substructure_db/1` with `--db`. `error_mda` is in mDa. Schemas: `docs/schemi/*-1.json`.
+- `mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png]` (`draw/1`, `draw-image/1`, or a molfile, KET, CDXML or PNG without `--json`; `--set edit=JSON|@PATH` applies an edit patch, `draw_edit/1`): 1 over 2000 atoms, an atom that is no element; 2 unparseable SMILES, bad `--set`, a name/key without `--set db=PATH`, or a failed patch operation (`err.mol.draw.edit` with its index and reason); 4 missing file, patch file or db, a molfile or request that cannot be read; 5 name or key not in the db (the hint lists the nearest names); 6 unwritable `--out` (`mol-draw.md`).
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

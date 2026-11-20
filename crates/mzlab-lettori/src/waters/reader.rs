@@ -321,7 +321,7 @@ fn unknown_variant(name: &str, funs: &[Fun], without_analog: bool) -> Result<()>
 
 /// A notice of folder `name`: what is not decoded or was left out.
 fn note(w: &mut Vec<(String, String)>, name: &str, a: String) {
-    w.push(("meta.nonDecodificato".to_string(), format!("{name}: {a}")));
+    w.push(("meta.notDecoded".to_string(), format!("{name}: {a}")));
 }
 
 /// The functions `_FUNCTNS.INF` lists. Every run has it: a folder without it is a copy that left files behind.

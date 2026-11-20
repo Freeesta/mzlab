@@ -310,7 +310,7 @@
    },
    "thresholds": {
     "std_rt_max": 0.2,
-    "std_entropia_min": 0.7,
+    "std_entropy_min": 0.7,
     "std_ppm_max": 5
    },
    "level": "1",
@@ -345,7 +345,7 @@
    },
    "thresholds": {
     "std_rt_max": 0.2,
-    "std_entropia_min": 0.7,
+    "std_entropy_min": 0.7,
     "std_ppm_max": 5
    },
    "level": "5",
@@ -365,7 +365,7 @@
    },
    "thresholds": {
     "std_rt_max": 0.2,
-    "std_entropia_min": 0.7,
+    "std_entropy_min": 0.7,
     "std_ppm_max": 5
    },
    "level": "5",
@@ -385,7 +385,7 @@
    },
    "thresholds": {
     "std_rt_max": 0.2,
-    "std_entropia_min": 0.7,
+    "std_entropy_min": 0.7,
     "std_ppm_max": 5
    },
    "level": "1",
@@ -405,7 +405,7 @@
    },
    "thresholds": {
     "std_rt_max": 0.2,
-    "std_entropia_min": 0.7,
+    "std_entropy_min": 0.7,
     "std_ppm_max": 5
    },
    "level": "5",

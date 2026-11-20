@@ -35,9 +35,11 @@ try:
         step("a change with a file open survives an immediate reload", with_file)
         def ui_change():
             pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 1", timeout=90000); ready(pg)
+            pg.evaluate("nbEnsure()")          # the files come back from the session before the notebook is read: a change made before that is not saved (nbSave waits for the first read)
             pg.evaluate("() => { NB.flushMark = 'ui'; uiSave(); }")
             hold(pg, 50)
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 1", timeout=90000)
+            pg.evaluate("nbEnsure()")          # the notebook is read after the files are back (same as quick_reload)
             assert pg.evaluate("NB.flushMark") == "ui", "the debounced uiSave was lost"
         step("a change queued in uiSave (800 ms) survives an immediate reload", ui_change)
         pg.close()

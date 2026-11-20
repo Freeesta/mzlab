@@ -17,9 +17,7 @@ declare var clipboardCopy: (parts: Record<string, string | Blob | Promise<string
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 // Browser API not yet in lib.dom (File System Observer) and globals of the TP_Mine scripts, which load lazily after the page.
 declare var FileSystemObserver: any;
-declare var MAPFEAT: any;
 declare var IMPCOMP: any;
-declare var TPMINE: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are samples/1 `kind` and `blank_kind`, `time` is in minutes, `gR`, `gT` = role and time proposed from the name (until the student edits them). */
 type Voce = { name: string; kind?: string; use: boolean; type: string; role?: string; sub?: string | null; time: number | null; gR?: boolean; gT?: boolean; conc?: number | null; prop?: number; ed?: number };
@@ -59,7 +57,7 @@ type FileAperto = { file: string; label?: string; gone?: boolean; color?: string
 /** A file still to be opened one by one (E.pending). */
 type Pendiente = { file: string; label: string; state: string; msg?: string };
 /** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
-type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any }; mzlabGz?: { name: string; size: number }; mzlabTemp?: string };
+type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { reasons: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any }; mzlabGz?: { name: string; size: number }; mzlabTemp?: string };
 /** What one loading collects for the notice after it (shell.js reportLoad). */
 type CaricaRep = { unopen: { name: string; ext: string; label: string; st: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
 

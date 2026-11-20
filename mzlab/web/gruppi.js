@@ -188,6 +188,12 @@ window.GRUPPI = (() => {
         write(out, ub, order, false);
       }, 300);
     },
+    /** A resumed session: the table rows take the user group the restored files carry, so the table and the side list show the same groups. @param {{ file: string, ugrp?: string, gone?: boolean }[]} saved */
+    rowsFrom(saved) {
+      let n = 0;
+      saved.forEach(sf => { if (!sf.ugrp || sf.gone) return; const r = rowsT().find(x => x.name === sf.file.split("#")[0]); if (r && !r.ugrp) { r.ugrp = sf.ugrp; n++; } });
+      if (n && typeof renderFiles === "function") renderFiles();
+    },
     /** The labels of the table rows for the undo snapshot (no argument), or put back from one (`null` = none): the table repaints. @param {[string, string][] | null} [snap] */
     stg(snap) {
       if (snap === undefined) return rowsT().filter(f => f.ugrp).map(f => [f.name, f.ugrp]);

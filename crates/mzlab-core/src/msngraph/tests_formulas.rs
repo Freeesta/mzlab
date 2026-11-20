@@ -230,9 +230,9 @@ fn several_candidates_are_listed_by_ppm_and_none_is_chosen() {
         e.conta(&crate::elements::parse_formula(s).unwrap())
             .unwrap()
     };
-    for a in &g.archi {
-        for c in &f(&g, a.a).candidates {
-            let above = &f(&g, a.da).candidates;
+    for a in &g.edges {
+        for c in &f(&g, a.to).candidates {
+            let above = &f(&g, a.from).candidates;
             let ok = above
                 .iter()
                 .any(|q| super::candidates::below(&count(&c.formula), &count(&q.formula)));

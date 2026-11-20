@@ -27,9 +27,9 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 // bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
 // 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
 const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0, lrSmooth: 0, lrValley: 10, lrSn: 5, lrSplit: 0 };      // lr*: integra-tutti.js, = LrAutoParams::default
-const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
+const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("peaks")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 const BMODES = ["zero", "edges", "line"];
-function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
+function pkSave() { try { localStorage.setItem(NOMI.KEY("peaks"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
 // (found with a coarse smoothing first), so noisy MRM traces sampled every 0.05 s and sparse TIC traces both work. The apex is where the derivative

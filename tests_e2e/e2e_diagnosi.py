@@ -18,7 +18,7 @@ import mzml_msconvert_synthetic as gen
 D = Path(tempfile.mkdtemp(prefix="diag_e2e_"))
 gen.scrivi(D / "ok.mzML", scans=30, peaks1=40, peaks2=10)
 whole = (D / "ok.mzML").read_bytes()
-(D / "troncato.mzML").write_bytes(whole[: len(whole) // 2])
+(D / "truncated.mzML").write_bytes(whole[: len(whole) // 2])
 (D / "nonxml.mzML").write_bytes(b"\x00\x01\x02 this is not xml " * 400)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 for _ in range(50):
@@ -30,15 +30,15 @@ try:
         for lang, det, copy in (("en-US", "Details", "Copy diagnosis"),):
             c = b.new_context(locale=lang, viewport={"width": 1400, "height": 1200}, permissions=["clipboard-read", "clipboard-write"]); c.set_default_timeout(120000)
             pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
-            pg.set_input_files("#pick", [str(D / "troncato.mzML"), str(D / "nonxml.mzML")])
+            pg.set_input_files("#pick", [str(D / "truncated.mzML"), str(D / "nonxml.mzML")])
             pg.wait_for_selector("#unopen:not([hidden]) .diag", timeout=120000)
             def shown():
                 t = pg.inner_text("#unopen"); btns = pg.locator("#unopen [data-a=diagdet]")
                 assert btns.count() >= 1 and det in btns.first.inner_text(), t
                 assert btns.first.get_attribute("aria-expanded") == "false" and not pg.locator("#unopen .diagbox").first.is_visible()
-                assert "troncato" in t or "nonxml" in t
+                assert "truncated" in t or "nonxml" in t
                 # the failure reads in words in words, never as a catalogue key
                 assert not re.search(r"\b(?:err|error|warn)\.[A-Za-z]+\.", t), t
                 words = ("not a complete mzML", "damaged", "does not look like an mzML file")
@@ -55,7 +55,7 @@ try:
                 pg.locator("#unopen [data-a=diagcopy]").first.click()
                 pg.wait_for_function("document.querySelector('#unopen [data-a=diagcopy]').textContent !== %r" % copy)
                 txt = pg.evaluate("navigator.clipboard.readText()")
-                assert "phase:" in txt and "error:" in txt and "troncato" not in txt and "nonxml" not in txt, txt
+                assert "phase:" in txt and "error:" in txt and "truncated" not in txt and "nonxml" not in txt, txt
             step(f"{lang}: «{copy}» puts the diagnosis on the clipboard, without file names", copied)
             def exception_has_cause():
                 # a JS exception inside a route that exists (here the body of the request throws) is a failure of the data with its original text, not "route unavailable"

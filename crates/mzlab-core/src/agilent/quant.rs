@@ -274,7 +274,7 @@ pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
                 seen.into_iter()
                     .filter_map(|o| {
                         obj(vec![
-                            ("key", Some(V::s("meta.nonDecodificato"))),
+                            ("key", Some(V::s("meta.notDecoded"))),
                             ("place", text(o)),
                         ])
                     })

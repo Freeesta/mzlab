@@ -205,10 +205,10 @@ const LISTE = (() => {
     };
   }
 
-  const KEY_ROWS = NOMI.KEY("contaminanti"),
-    KEY_ON = NOMI.KEY("contaminanti.on"),
-    KEY_LISTS = NOMI.KEY("liste.attive");
-  const IDB_STORE = "liste_utente";
+  const KEY_ROWS = NOMI.KEY("contaminants"),
+    KEY_ON = NOMI.KEY("contaminants.on"),
+    KEY_LISTS = NOMI.KEY("lists.active");
+  const IDB_STORE = "user_lists";
 
   const ST = /** @type {{ lists: any[], userLists: any[], idx: any, loading: Promise<void> | null, err: any, runs: WeakMap<object, any> }} */ ({
     lists: [],           // built-in lists (/api/contaminants: Keller 2008)
@@ -224,7 +224,7 @@ const LISTE = (() => {
   const isOn = () => rd(KEY_ON, false) === true;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
-  const KEY_EXCL = NOMI.KEY("contaminanti.esclusi");
+  const KEY_EXCL = NOMI.KEY("contaminants.excluded");
   const exclKinds = ["entry", "cls", "list"];
   // names of the stored object (user data: do not rename)
   const FLD = /** @type {Record<string, string>} */ ({ entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" });

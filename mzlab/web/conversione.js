@@ -19,7 +19,7 @@ const CONV = {
   },
   // the tooltip of each «Download mzML» button of the table (in place: the table is not drawn again)
   paintSizes() {
-    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { b.title = I18N.t("conv.dl.title"); });
+    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {HTMLElement} */ b) => { const n = this.realSize(b.dataset.dl || ""); b.title = I18N.t("conv.dl.title") + (n ? ` (${n})` : ""); });
   },
   // the real size of the mzML already written for `name` (in the desktop app the file stays on the disk and its size comes from the native side)
   realSize(/** @type {string} */ name) {

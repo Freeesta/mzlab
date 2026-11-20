@@ -16,7 +16,7 @@ impl Engine {
         mzlab_core::fileroutes::fileinfo(r, &mut m, name, &head).map_err(|e| error_json(&e))
     }
 
-    /// `api/canali` of the file at `slot`: the channels of its scans and of the SRM/SIC chromatograms of its mzML (`read`, `size` bytes), as JSON.
+    /// `api/channels` of the file at `slot`: the channels of its scans and of the SRM/SIC chromatograms of its mzML (`read`, `size` bytes), as JSON.
     pub fn canali(&mut self, slot: u32, name: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Ok(String::new());

@@ -1,6 +1,6 @@
 //! `inspection/1` on the synthetic files of `tools/dati_sintetici.py` (skipped without python3 and numpy; `MZLAB_GOLDEN_STRICT=1` fails instead): the sources
 //! are made here with the engine of `mzlab-core` the way the page and the CLI make them, the kind of each file is the one the generator built it as
-//! (table G01-G09 of `docs/studi/assistente-dati/06-valutazione.md`), the QC series gives its drift, no private field goes out and the same input gives
+//! (table G01-G09 of `docs/agenti/llm-eval.md`), the QC series gives its drift, no private field goes out and the same input gives
 //! the same bytes. `MZLAB_UPDATE_LLM=1 cargo test -p mzlab-llm` rewrites the golden file.
 
 mod inspect;

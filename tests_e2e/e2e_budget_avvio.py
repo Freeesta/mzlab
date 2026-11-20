@@ -34,7 +34,7 @@ PROBE = r"""(() => { const v = window.__b = { lt: [], cls: 0, fcp: 0, drop: 0 };
     .observe(document, { childList: true, subtree: true });
   const poll = () => { const d = document.getElementById("drop"); if (d && d.offsetParent && d.getBoundingClientRect().height > 0) { v.drop = performance.now(); return; } setTimeout(poll, 10); };
   poll();
-  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.barra.hint", "1"); } catch (_) {}
+  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.bar.hint", "1"); } catch (_) {}
 })()"""
 # the critical set: render-blocking files and the head's preloads (fixed by the page, not by how fast the cache answers; non-blocking scripts that
 # merely start before the paint on a fast machine, and links added by script after parsing, are not counted)

@@ -7,6 +7,7 @@
 import { guardFocus } from "./disegno-tablet.js";
 const FRAME_PAGE = "ketcher/index.html";
 const done = new WeakSet();
+let iv = /** @type {number | undefined} */ (undefined);
 
 /** @param {any} w the frame window */
 function guard(w) {
@@ -23,11 +24,12 @@ function guard(w) {
   }
 }
 
-/** Polls (4 ms) for the Ketcher document of the frame and guards it once; stops when the editor exists or after 90 s. */
+/** Polls (4 ms) for the Ketcher document of the frame and guards it once; stops when the editor exists or after 90 s. A new call replaces the poller. */
 export function guardStorage() {
   const fr = /** @type {HTMLIFrameElement | null} */ (document.getElementById("kframe"));
   if (!fr) return;
-  const t0 = Date.now(), iv = setInterval(() => {
+  clearInterval(iv);                                  // «Try again» calls this again: one poller at a time
+  const t0 = Date.now(); iv = setInterval(() => {
     try {
       const w = /** @type {any} */ (fr.contentWindow);
       if (w && w.ketcher) { clearInterval(iv); return; }

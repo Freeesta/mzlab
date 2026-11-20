@@ -41,7 +41,7 @@ async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob)
 }
 
 // Copies into the browser storage at once in a drop (the engine's copy gate, rust-carica.js createCopyGate): COPIES by default, so the first file of the list gets the disk
-// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, measurements-copies.md); «?copie=N» or localStorage «mzlab.dev.copie» = N
+// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, data-loading.md); «?copie=N» or localStorage «mzlab.dev.copies» = N
 // chooses another number, 0 = every copy at once (the behaviour before the gate). Logged once.
 const COPIES = 2;
 let copiesK = /** @type {number | null} */ (null);
@@ -49,7 +49,7 @@ function copiesOf() {
   if (copiesK != null) return copiesK;
   let v = null, from = "default";
   try { v = new URLSearchParams(location.search).get("copie"); if (v != null) from = "?copie"; } catch (_) { /* no address */ }
-  if (v == null) try { v = localStorage.getItem("mzlab.dev.copie"); if (v != null) from = "localStorage"; } catch (_) { /* storage blocked */ }
+  if (v == null) try { v = localStorage.getItem("mzlab.dev.copies"); if (v != null) from = "localStorage"; } catch (_) { /* storage blocked */ }
   const n = v == null || !/^\d+$/.test(v.trim()) ? COPIES : Math.min(64, +v);
   copiesK = n; console.info(`mzlab: copies at once ${n || "all"} (${from}; ?copie=0 = all at once)`);
   return n;
@@ -126,7 +126,7 @@ export function createLr({ rb }) {
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "start", 0), "start");      /* the copy is over: the next stage starts */ const ix = hit ? { missing: hit.missing, cause: hit.cause } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : mzF(blob.size, p.phase, p.frac), p.phase, p))).info || "{}"); fase = "open"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "list", 0), "list"); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); causes.set(n, ix.cause || ""); }
+      else { fase = "index"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "start", 0), "start");      /* the copy is over: the next stage starts */ const ix = hit ? { missing: hit.missing, cause: hit.cause } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: false }, p => tellIndex(n, nat ? p.frac : mzF(blob.size, p.phase, p.frac), p.phase, p))).info || "{}"); fase = "open"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "list", 0), "list"); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); causes.set(n, ix.cause || ""); }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)

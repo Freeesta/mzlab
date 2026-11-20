@@ -336,7 +336,7 @@ fn edges(
         }
     }
     m.into_iter()
-        .map(|((da, a), mut measures)| {
+        .map(|((from, to), mut measures)| {
             crate::sortc::slice_by(&mut measures, |x, y| {
                 x.level
                     .cmp(&y.level)
@@ -344,17 +344,17 @@ fn edges(
                     .then(x.ce.total_cmp(&y.ce))
                     .then(x.tree.cmp(&y.tree))
             });
-            let loss = nodes[da].mz - nodes[a].mz;
-            let t = o.tol(nodes[da].mz) + o.tol(nodes[a].mz);
+            let loss = nodes[from].mz - nodes[to].mz;
+            let t = o.tol(nodes[from].mz) + o.tol(nodes[to].mz);
             let isolation = ing
                 .tree
                 .nodes
                 .iter()
                 .enumerate()
-                .any(|(c, n)| prec[c] == a && n.parent.is_some_and(|g| prec[g] == da));
+                .any(|(c, n)| prec[c] == to && n.parent.is_some_and(|g| prec[g] == from));
             Edge {
-                da,
-                a,
+                from,
+                to,
                 perdita: loss,
                 compatibili: LOSSES
                     .iter()
@@ -409,12 +409,12 @@ pub(super) fn merge(ing: &Input, o: &Options) -> Graph {
             prec[t] = di[i];
         }
     }
-    let archi = edges(ing, &obs, &di, &prec, &nodes, o);
+    let edge_list = edges(ing, &obs, &di, &prec, &nodes, o);
     let spettri = spettri(ing, o, &obs, &di, &prec);
     let radici = (0..nodes.len()).filter(|&i| nodes[i].level == 1).collect();
     Graph {
         nodes,
-        archi,
+        edges: edge_list,
         radici,
         polarita: ing.polarita,
         scartati: discarded,

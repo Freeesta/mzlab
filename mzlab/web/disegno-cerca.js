@@ -4,6 +4,7 @@
 // A text that reads as a SMILES is never searched; choosing a suggestion puts its SMILES in the field and draws it with the «Draw» button, as a pasted SMILES.
 import { field } from "./molecules-field.js";
 import { ready, search } from "./molecules-archive.js";
+import { isCdxml } from "./disegno-file.js";
 
 /** True when `t` is made only of SMILES tokens (atoms, bonds, branches, ring digits, charges): "CC(=O)O", "c1ccccc1", "[Na+].[Cl-]". A name such as "caffeine" has letters no SMILES atom uses. */
 export function looksLikeSmiles(/** @type {string} */ t) {
@@ -32,8 +33,8 @@ const isStructureLine = (/** @type {string} */ t) => {
   return isStructureText(t) || isStructureText(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || looksLikeSmiles(x)));
 };
 
-/** True for one line that Ketcher's reader would turn into query atoms: not a structure line, not the start of a KET ("{"), of an XML file ("<") or of a base64 CDX ("VmpDRD"). A compound name, or junk. */
-export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:[{<]|VmpDRD)/.test(t) && !isStructureLine(t); };
+/** True for one line that Ketcher's reader would turn into query atoms: not a structure line, not the start of a KET ("{") or of a base64 CDX ("VmpDRD"), not a CDXML (`isCdxml`). A compound name, or junk. */
+export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:\{|VmpDRD)/.test(t) && !isCdxml(t) && !isStructureLine(t); };
 
 /** Watches the paste events of the editor document: a single line on the canvas that is a name (`isNameLine`) is not handed to Ketcher, which would draw query atoms; `note` says so.
  * A paste inside one of Ketcher's own fields (text tool, Open dialog, atom label) is that field's business.

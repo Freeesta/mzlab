@@ -49,8 +49,11 @@ try:
             sdf = open(d.value.path(), encoding="utf-8").read()
             stem = d.value.suggested_filename[:-4]
             # the layout change does not touch the files: the bytes of the buttons are those of the engine request
-            direct = pg.evaluate("async([k, ion, name]) => (await import('./disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["sdf", "[M+H]+", stem])
+            direct = pg.evaluate("async([k, ion, name]) => (await import('/static/disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["sdf", "[M+H]+", stem])
             assert direct == sdf, "SDF button bytes differ from the engine request"
+            # the notebook is written in the background (debounced), possibly after the download: wait for it, then assert
+            try: pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => n.drawIon === '[M+H]+')", timeout=20000)
+            except Exception: pass
             assert pg.evaluate("fetch('api/notebook').then(r => r.json()).then(n => n.drawIon)") == "[M+H]+", "the ion is saved with the panel settings"
             assert d.value.suggested_filename.endswith(".sdf"), d.value.suggested_filename
             recs = [x for x in sdf.split("$$$$\n") if x.strip()]
@@ -61,7 +64,7 @@ try:
             assert "152.0706" in sdf, "paracetamol [M+H]+"
             with pg.expect_download(timeout=60000) as d: pg.click("#ex-mol")
             mol = open(d.value.path(), encoding="utf-8").read()
-            assert pg.evaluate("async([k, ion, name]) => (await import('./disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["mol", "[M+H]+", d.value.suggested_filename[:-4]]) == mol, "MOL button bytes differ"
+            assert pg.evaluate("async([k, ion, name]) => (await import('/static/disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["mol", "[M+H]+", d.value.suggested_filename[:-4]]) == mol, "MOL button bytes differ"
             assert d.value.suggested_filename.endswith(".mol") and mol.endswith("M  END\n") and "$$$$" not in mol and "> <" not in mol, mol[-200:]
             assert int(mol.split("\n")[3][:3]) == 14, mol.split("\n")[3]
             assert pg.evaluate("document.querySelector('#ex-warn').hidden"), pg.inner_text("#ex-warn")

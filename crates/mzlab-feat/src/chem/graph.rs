@@ -11,6 +11,8 @@ use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
+use super::aromatic_h;
+use super::atom_block::{atom_block, has};
 use super::smiles::{self, normal_valence, RawAtom, RawBond};
 
 /// Atoms the graph accepts (the localisation of the Python version stopped at 64).
@@ -33,17 +35,16 @@ impl Mol {
     }
 
     /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
-    /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic. Disconnected pieces are accepted (the page cuts bonds).
+    /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic with the hydrogens `mzlab-mol` reads (`aromatic_h`). Disconnected pieces are accepted (the page cuts bonds).
     pub fn from_molfile(mf: &str) -> Result<Mol> {
         let bad = || Error::new("error.grafo.molfile");
         let lines: Vec<&str> = mf.lines().collect();
         let counts = lines.get(3).ok_or_else(bad)?;
         let num =
             |s: &str, a: usize, b: usize| s.get(a..b).and_then(|t| t.trim().parse::<i64>().ok());
-        let (na, nb) = (
-            num(counts, 0, 3).ok_or_else(bad)? as usize,
-            num(counts, 3, 6).ok_or_else(bad)? as usize,
-        );
+        // a negative count is not a count (as `usize` it would wrap into a huge one)
+        let count = |a, b| num(counts, a, b).and_then(|n| usize::try_from(n).ok());
+        let (na, nb) = (count(0, 3).ok_or_else(bad)?, count(3, 6).ok_or_else(bad)?);
         if na > MAX_ATOMS || lines.len() < 4 + na + nb {
             return Err(if na > MAX_ATOMS {
                 Error::new("error.grafo.tooBig").with("max", MAX_ATOMS)
@@ -51,19 +52,9 @@ impl Mol {
                 bad()
             });
         }
-        let mut raw: Vec<RawAtom> = Vec::new();
-        for l in &lines[4..4 + na] {
-            let el = l.get(31..34).ok_or_else(bad)?.trim().to_string();
-            if elements::mass_of(&el).is_none() || normal_valence(&el).is_none() {
-                return Err(Error::new("error.grafo.element").with("element", &el));
-            }
-            raw.push(RawAtom {
-                el,
-                arom: false,
-                h: None,
-                charge: 0,
-            });
-        }
+        let rest = &lines[4 + na + nb..];
+        let chg = props(rest, "M  CHG", na);
+        let (mut raw, valence) = atom_block(&lines[4..4 + na], !has(rest, "M  CHG"))?;
         let mut written: Vec<RawBond> = Vec::new();
         for l in &lines[4 + na..4 + na + nb] {
             let (a, b, t) = (num(l, 0, 3), num(l, 3, 6), num(l, 6, 9));
@@ -73,6 +64,12 @@ impl Mol {
             if a < 1 || b < 1 || a as usize > na || b as usize > na {
                 return Err(bad());
             }
+            if a == b {
+                return Err(bad().with(
+                    "message",
+                    format!("molfile: a bond joins atom {a} to itself"),
+                ));
+            }
             let arom = t == 4;
             if arom {
                 raw[a as usize - 1].arom = true;
@@ -81,19 +78,28 @@ impl Mol {
             written.push((
                 a as usize - 1,
                 b as usize - 1,
-                if arom { 1.5 } else { t.clamp(1, 3) as f32 },
+                // any other type (a query bond) is read as single, as `mzlab-mol` reads it
+                match t {
+                    4 => 1.5,
+                    2 | 3 => t as f32,
+                    _ => 1.0,
+                },
                 true,
             ));
         }
-        for (i, c) in props(&lines[4 + na + nb..], "M  CHG", na) {
-            raw[i].charge = c;
-        }
+        super::atom_block::charges(&mut raw, chg)?;
+        let rad = props(rest, "M  RAD", na);
+        let counted = aromatic_h::apply(&mut raw, &written, rest, &rad, &valence)?;
         let mut m = Mol::assemble(raw, written, true);
-        for (i, w) in props(&lines[4 + na + nb..], "M  ISO", na) {
+        for (i, w) in props(rest, "M  ISO", na) {
             m.atoms[i].iso = w.max(0) as u32;
         }
         // a radical mark takes the place of hydrogens: one for a doublet, two for a singlet or triplet
-        for (i, r) in props(&lines[4 + na + nb..], "M  RAD", na) {
+        for (i, r) in rad {
+            // the hydrogens of an aromatic atom read by `mzlab-mol` already count its radical
+            if counted[i] {
+                continue;
+            }
             let less = if r == 2 {
                 1
             } else if r == 1 || r == 3 {
@@ -106,16 +112,10 @@ impl Mol {
         Ok(m)
     }
 
-    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence; a SMILES atom in brackets already says its hydrogens.
+    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence (`smiles::valence_for`); a SMILES atom in brackets already says its hydrogens.
     fn assemble(raw: Vec<RawAtom>, written: Vec<RawBond>, by_charge: bool) -> Mol {
         let bonds = typed_bonds(&raw, written);
-        let mut atoms = smiles::fill(&raw, &bonds);
-        for a in atoms.iter_mut().filter(|a| by_charge && a.charge != 0) {
-            // a charge moves the valence: N+ and O+ take one more, O- one less, C+/C- one less
-            let up = matches!(a.el.as_str(), "N" | "P" | "O" | "S");
-            let d = if up { a.charge } else { -a.charge.abs() };
-            a.h = (a.h as i32 + d).max(0) as u32;
-        }
+        let atoms = smiles::fill(&raw, &bonds, by_charge);
         let mut adj = vec![Vec::new(); atoms.len()];
         for (k, b) in bonds.iter().enumerate() {
             adj[b.a].push((b.b, k));
@@ -359,15 +359,18 @@ fn typed_bonds(raw: &[RawAtom], written: Vec<RawBond>) -> Vec<Bond> {
         .collect()
 }
 
-/// The (atom index, value) pairs of the `M  CHG` / `M  ISO` lines (`prefix`) of a molfile with `na` atoms.
+/// The (atom index, value) pairs of the `M  CHG` / `M  ISO` / `M  RAD` lines (`prefix`) of a molfile with `na` atoms: the lines before
+/// `M  END`, as many pairs as the count of the line says.
 pub(super) fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)> {
     let mut out = vec![];
-    for rest in lines.iter().filter_map(|l| l.strip_prefix(prefix)) {
+    let lines = lines.iter().take_while(|l| !l.starts_with("M  END"));
+    for rest in lines.filter_map(|l| l.strip_prefix(prefix)) {
         let v: Vec<i32> = rest
             .split_whitespace()
             .filter_map(|t| t.parse().ok())
             .collect();
-        for p in v.get(1..).unwrap_or(&[]).chunks(2) {
+        let pairs = usize::try_from(v.first().copied().unwrap_or(0)).unwrap_or(0);
+        for p in v.get(1..).unwrap_or(&[]).chunks(2).take(pairs) {
             if let [i, c] = p
                 && *i >= 1
                 && (*i as usize) <= na

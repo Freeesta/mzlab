@@ -107,7 +107,7 @@ def wait_cache(pg, app, timeout=150):
     raise AssertionError("the cache of " + app + " was not filled in time")
 
 
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"
 try:
     if not (SITE / "sw.js").is_file(): raise SystemExit("build the site first: python tools/build_site.py")
     shutil.copytree(SITE, work / "n0")
@@ -139,6 +139,9 @@ try:
         step("a normal reload after a deploy shows the new version at once", reload_new)
         def page_n_keeps_n():
             wait_cache(pg, app["n1"])
+            # the worker writes `.fill-done` and then deletes the earlier caches (sw.js `llenar`): wait for the deletion, then assert on the keys
+            try: wait_for_js(pg, "caches.keys().then(k => !k.some(x => x.endsWith(%s)))" % json.dumps(app["n0"]), timeout=30000)
+            except Exception: pass
             keys = pg.evaluate("caches.keys()")
             assert not any(k.endswith(app["n0"]) for k in keys), keys
             assert any(k.endswith(app["n1"]) for k in keys), keys

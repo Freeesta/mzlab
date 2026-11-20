@@ -34,6 +34,9 @@ I18N.add("en", {
   "draw.check.kekule.what": "This aromatic ring cannot be written with alternating single and double bonds.",
   "draw.check.kekule.why": "The hydrogens of an aromatic ring follow from its alternating form; without one the formula is uncertain.",
   "draw.check.kekule.next": "Add the missing H on a ring nitrogen (as in pyrrole), add a charge, or draw the ring with plain single and double bonds.",
+  "draw.check.aromaticH.what": "More than one atom of this aromatic ring can carry its hydrogen and the drawing does not say which: it was put on this one.",
+  "draw.check.aromaticH.why": "The choice is automatic: the first atom that can carry the hydrogen, N, O or S before carbon, in the order of the file. Another atom of the ring may be the one you mean (a tautomer); the formula is the same.",
+  "draw.check.aromaticH.next": "Nothing to fix if the hydrogen is where you mean; otherwise draw the ring with plain single and double bonds and the hydrogen on its atom.",
   "draw.check.wedgeMultiple.what": "A wedge sits on a double or triple bond.",
   "draw.check.wedgeMultiple.why": "Wedges show the 3D arrangement around a tetrahedral atom; on a multiple bond they carry no meaning.",
   "draw.check.wedgeMultiple.next": "Use a plain bond here; for cis/trans, draw the double bond with the geometry you mean.",
@@ -51,8 +54,5 @@ I18N.add("en", {
   "draw.check.queryBond.next": "Replace it with a plain bond of the order you mean.",
   "draw.check.pieces.what": "The drawing holds {n} separate structures.",
   "draw.check.pieces.why": "Formula and mass are computed for each structure on its own: a counter-ion drawn apart is not part of the other structure.",
-  "draw.check.pieces.next": "Nothing to fix if this is on purpose; join the pieces with a bond if they are one molecule.",
-  "error.check.request": "The request for the drawing check is not valid JSON with a molfile.",
-  "error.check.molfile": "The drawing could not be read as a molfile.",
-  "error.check.tooBig": "The drawing has more than {max} atoms: the check is for small molecules."
+  "draw.check.pieces.next": "Nothing to fix if this is on purpose; join the pieces with a bond if they are one molecule."
 });

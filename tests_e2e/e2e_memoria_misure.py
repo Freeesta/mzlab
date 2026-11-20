@@ -1,5 +1,5 @@
 """C39 phase 1, measurement only: where the memory of the tab goes, at five instants (page opened / engine ready / demo Full Scan files open / after the map /
-after Tabui in the administrator mode). For the page and for every worker: JS heap, WebAssembly linear memory of every instance, buffer bytes posted by copy and
+after the mzFinder package in the administrator mode). For the page and for every worker: JS heap, WebAssembly linear memory of every instance, buffer bytes posted by copy and
 by transfer; for the page also the canvases (w x h x 4 B, hidden ones and the ones not in the DOM too) and the size of the JS caches (CACHE, SC, ...); for the
 browser the PSS of the renderer and GPU processes read from /proc. It asserts no threshold: it prints a table sorted by MB with a proposal for each big item
 (MZLAB_E2E_JSON=<file> also writes it as JSON). A dedicated worker lives in the process of its creator, so its PSS cannot be split from the page's: the per-worker
@@ -64,7 +64,7 @@ HOOK = r"""
       HTMLCanvasElement.prototype.getContext = function (...a) { if (!this.__mzReg) { this.__mzReg = 1; mz.cv.push(new WeakRef(this)); } return gc.apply(this, a); };
     }
   }
-  // workers started from a Blob of the app (Tabui): the hook goes in front of the source, the first line names it
+  // workers started from a Blob of the app (mzFinder): the hook goes in front of the source, the first line names it
   if (g.Blob && g.URL) {
     g.__mzUrl = {};
     const B = g.Blob;
@@ -248,7 +248,7 @@ def wait_workers(pg, n0, limit_s=40):
 def scenario(r, p, files):
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="en-US")
-    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
     ctx.add_init_script(INIT) if not os.environ.get("NOHOOK") else None
     pg = ctx.new_page(); cdp = ctx.new_cdp_session(pg); cdp.send("Performance.enable")
     snaps, notes = {}, []
@@ -264,15 +264,13 @@ def scenario(r, p, files):
     wait_for_js(pg, "PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw map')", 60000); ready(pg)
     snaps["4_after_map"] = measure(pg, ctx, cdp)
     try:
-        # Tabui takes the files already open in the page
-        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
-        pg.wait_for_function("document.querySelectorAll('#tp-files tr').length > 1", timeout=20000)
+        # the mzFinder package (shared by Flow) loads in the administrator mode
+        open_mzfinder(pg)
     except Exception as e:
-        notes.append("Tabui step incomplete: " + str(e).splitlines()[0][:120])
-        notes.append("Tabui state: " + pg.evaluate("(document.querySelector('#tp-load')||{}).textContent + ' | ' + (document.querySelector('#tp-files')||{}).innerText")[:300])
+        notes.append("mzFinder package step incomplete: " + str(e).splitlines()[0][:120])
     ready(pg)
-    snaps["5_after_tabui"] = measure(pg, ctx, cdp)
-    # the Pipeline of Tabui on the files already open: preview, confirm the times proposed from the names, run on the series
+    snaps["5_after_package"] = measure(pg, ctx, cdp)
+    # the Pipeline on the files already open: preview, confirm the times proposed from the names, run on the series
     try:
         pg.evaluate("PIPE.open()"); pg.wait_for_selector("#pipe[open]", timeout=30000)
         pg.click("#pipe-go"); pg.wait_for_function("document.querySelector('#pipe-n').textContent.length > 0", timeout=60000)
@@ -291,7 +289,7 @@ def scenario(r, p, files):
         notes.append("Pipeline step incomplete: " + str(e).splitlines()[0][:120])
     ready(pg)
     snaps["6_after_pipeline"] = measure(pg, ctx, cdp)
-    # idle: the workers of the Pipeline and of Tabui are not needed any more; wait (by state, bounded) until one of them is gone
+    # idle: the workers of the Pipeline are not needed any more; wait (by state, bounded) until one of them is gone
     n0 = len(pg.workers)
     wait_workers(pg, n0)
     snaps["7_pipeline_idle"] = measure(pg, ctx, cdp)

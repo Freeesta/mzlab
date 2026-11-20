@@ -49,7 +49,7 @@ def page(b, wasm_log):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: wasm_log.append(r.url) if "wasm-lettori/" in r.url else None)
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("window.MZLAB_RUST_READY !== undefined", timeout=60000)
     return pg
@@ -114,7 +114,7 @@ try:
             pg3 = page(b, [])
             r = pg3.evaluate("""async head => { const rb = await window.MZLAB_RUST_READY;
               const blob = new Blob([Uint8Array.from(atob(head), c => c.charCodeAt(0))]);
-              try { await rb.nativeSamples([{ name: "rotto.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
+              try { await rb.nativeSamples([{ name: "broken.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
             assert not r["ok"] and str(r["key"]).startswith("err.file."), r
         step("a truncated .raw is refused", broken)
         def baf():

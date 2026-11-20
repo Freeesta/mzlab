@@ -1,5 +1,5 @@
 # Interface text (English only)
-The core is in CLAUDE.md. mzLab (site, desktop app, CLI) and the qqq teaching site are English only; the Italian dictionaries, the language selector and `?lang=` were removed. The catalog keeps the key structure of a multi-language catalog (`lang/<lang>/<area>.js`, keys, `I18N.t`) so that a translation could come back later: keys stay, strings are never inlined in the code.
+The core is in CLAUDE.md. mzLab (site, desktop app, CLI) and the qqq teaching site are English only; there is no language selector and no `?lang=`. The catalog keeps the key structure of a multi-language catalog (`lang/<lang>/<area>.js`, keys, `I18N.t`) so that a translation could come back later: keys stay, strings are never inlined in the code.
 
 - All new text is written in English in `mzlab/web/lang/en/<area>.js`. The program always starts in English; a language stored by an older version (`mzlab.lang`, `qqq.lang`) is ignored silently, no migration.
 - `i18n.js` (loaded first) + `lang/en.js`: in the source a loader that writes the area files `lang/en/<area>.js` (see below).
@@ -18,8 +18,8 @@ The core is in CLAUDE.md. mzLab (site, desktop app, CLI) and the qqq teaching si
   The writer is `i18n.js`: `putText`/`putHtml` do not rewrite a node whose text did not change (an equal `textContent` would drop the `<i>`)
   and mark what they write with `mark`, before the first paint (the inline `apply(document)` of `index.html`); the same `apply(document)` marks
   the static text without a key and starts the observer that marks, in the same task, text written by other code. Never inputs, options, titles,
-  selects, scripts or an `<i>`/`<sup>` already there. The observer used to live in `shell.js`, ~0.3-0.5 s after the first paint: after a full
-  reset (two loads) the "m/z" of the map button went upright → italic → upright → italic. Test: `tests_e2e/e2e_corsivo_avvio.py` (every
+  selects, scripts or an `<i>`/`<sup>` already there. The observer runs before the first paint, not later from `shell.js`, so after a full
+  reset the "m/z" of the map button never flips upright and italic. Test: `tests_e2e/e2e_corsivo_avvio.py` (every
   frame of every load after `QQRESET.run("all")`: the first painted frame already italic, no change, CLS 0).
 - **Traps**: a literal key in `t("…")` or `data-i18n` must exist in the catalog (the check does not see keys built from pieces: use `t(`prefix.${x}`)`); `t()` never builds a sentence from pieces; an HTML attribute (`title`) cannot contain `"` or entities (`&Delta;` is written `Δ`).
 

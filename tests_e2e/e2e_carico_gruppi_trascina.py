@@ -77,7 +77,7 @@ try:
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
         pg.evaluate("window.__cls = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({type: 'layout-shift', buffered: false});")
         if AXE: pg.add_script_tag(path=AXE)
-        BOX = "['#tools', '#sb-header', '#drop'].map(s => { const e = document.querySelector(s); if (!e || !e.offsetParent) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(); }).join('|')"
+        BOX = "(() => { const pinned = e => { for (; e; e = e.parentElement) if (/^(fixed|sticky)$/.test(getComputedStyle(e).position)) return true; return false; }; return ['#tools', '#sb-header', '#drop'].map(s => { const e = document.querySelector(s); if (!e || !e.offsetParent) return null; const b = e.getBoundingClientRect(); return [b.x, b.y + (pinned(e) ? 0 : scrollY), b.width, b.height].map(Math.round).join(); }).join('|'); })()"
         def start():
             try: wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
             except Exception: raise AssertionError(pg.evaluate("[UPBUSY, OPENNOW.busy(), ST.files.length, document.querySelectorAll('#flist tbody tr').length, document.querySelector('#v-workspace').dataset.work]"))
@@ -157,6 +157,7 @@ try:
         step("a file dropped from the desktop on a header of the side list takes that group", drop_side)
         def calm():
             assert pg.evaluate("window.__cls") == 0, pg.evaluate("window.__cls")
+            table(pg)      # an upload takes the work area back to the panels (shell.js upload): the settled table is the one brought into view again
             assert pg.evaluate(BOX) == box0, (box0, pg.evaluate(BOX))
         step("no layout shift from the first drag to the settled table; #tools, the header and #drop keep their boxes", calm)
         def ax():

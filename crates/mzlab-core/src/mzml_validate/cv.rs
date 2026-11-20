@@ -1,5 +1,5 @@
 //! The PSI-MS vocabulary the validator checks against: `data/psims-cv.json`, generated from `psi-ms.obo` by `tools/psims_tabella.py` (CC BY 4.0,
-//! declared in `LICENZE-TERZI.md`). Loaded once on first use.
+//! declared in `THIRD-PARTY-LICENSES.md`). Loaded once on first use.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;

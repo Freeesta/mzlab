@@ -1,5 +1,5 @@
-//! The routes of the channels: `api/canali` and the `canale=<id>` parameter of `chrom`, `xic`, `scanlist`, `spectrum` and `nearest_scan`.
-//! `canale=ms:<key>` is `filt=<key>` of the same level; the old parameters (`level`, `prec`, `filt`) answer as before.
+//! The routes of the channels: `api/channels` and the `channel=<id>` parameter of `chrom`, `xic`, `scanlist`, `spectrum` and `nearest_scan`.
+//! `channel=ms:<key>` is `filt=<key>` of the same level; the old parameters (`level`, `prec`, `filt`) answer as before.
 
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use crate::msnroute::Filter;
 use crate::mzmlhead::Chrom;
 use crate::routes::{trace, Query, Routes};
 
-/// The routes that take `canale=`.
+/// The routes that take `channel=`.
 const WITH_CHANNEL: [&str; 5] = [
     "/api/chrom",
     "/api/xic",
@@ -42,7 +42,7 @@ impl<R: ReadAt> Routes<R> {
         c
     }
 
-    /// `filt=canale:<id>`: the scans of the channel as a mask over the scan table.
+    /// `filt=channel:<id>`: the scans of the channel as a mask over the scan table.
     pub(crate) fn channel_filter(&mut self, id: &str) -> Result<Filter<'static>> {
         let c = self.canali();
         let i = c
@@ -55,7 +55,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(Filter::Node(Arc::new(mask)))
     }
 
-    /// The request `path` with `canale=<id>`: the same request with the level and the filter of the channel; `None` for a channel with no scans here
+    /// The request `path` with `channel=<id>`: the same request with the level and the filter of the channel; `None` for a channel with no scans here
     /// (a transition, a UV trace): the readers of the chromatograms answer it.
     pub(crate) fn with_channel(
         &mut self,
@@ -69,7 +69,10 @@ impl<R: ReadAt> Routes<R> {
             .ok_or_else(|| Error::new("err.canali.unknown").with("id", id))?;
         let c = &channels.v[i];
         let mut r: Vec<(String, String)> =
-            q.0.iter().filter(|(k, _)| k != "canale").cloned().collect();
+            q.0.iter()
+                .filter(|(k, _)| k != "channel")
+                .cloned()
+                .collect();
         let ha = |r: &[(String, String)], k: &str| r.iter().any(|(n, _)| n == k);
         match c.famiglia {
             Famiglia::Srm | Famiglia::Sim | Famiglia::Uv | Famiglia::Analog => return Ok(None),
@@ -91,7 +94,7 @@ impl<R: ReadAt> Routes<R> {
                     "filt"
                 };
                 if !ha(&r, f) {
-                    r.push((f.into(), format!("canale:{id}")));
+                    r.push((f.into(), format!("channel:{id}")));
                 }
             }
         }
@@ -125,7 +128,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(trace(&rt, &y)))
     }
 
-    /// `/api/xic?mz&tol&level&filt`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `canale:<id>`); without `filt` it is not this route's.
+    /// `/api/xic?mz&tol&level&filt`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`); without `filt` it is not this route's.
     pub(crate) fn xic_route(&mut self, q: &Query) -> Result<Option<String>> {
         let (Some(mz), Some(f)) = (q.num("mz")?, q.some("filt")) else {
             return Ok(None);
@@ -153,16 +156,16 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(trace(&pick(&rt), &pick(&y))))
     }
 
-    /// `/api/canali` and the routes that take `canale=`; `None` = not a channel request.
+    /// `/api/channels` and the routes that take `channel=`; `None` = not a channel request.
     pub(crate) fn route_channels(
         &mut self,
         path: &str,
         q: &Query,
     ) -> Option<Result<Option<String>>> {
-        if path == "/api/canali" {
+        if path == "/api/channels" {
             return Some(Ok(Some(self.canali().json())));
         }
-        let id = q.some("canale").filter(|_| WITH_CHANNEL.contains(&path))?;
+        let id = q.some("channel").filter(|_| WITH_CHANNEL.contains(&path))?;
         Some(self.with_channel(path, q, id))
     }
 }

@@ -15,7 +15,7 @@ while True:      # until the server listens (refused connections return at once)
     try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
     except OSError: pass
 URL = f"http://127.0.0.1:{PORT}/"
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
 # every static element shows the catalog text of its key (none left waiting with a stale text of the page)
 STATIC = """() => { const P = { app: window.APP_NAME || '' }, bad = [];
   for (const el of document.querySelectorAll('[data-i18n]')) { const k = el.getAttribute('data-i18n'); if (el.textContent !== I18N.t(k, P)) bad.push(k); }
@@ -43,7 +43,7 @@ try:
                     wait_for_js(pg, "window.I18N && !I18N.rest && (!!document.querySelector('#drop') || !!window.MZLAB_PHONE)", 120000)
                     wait_for_js(pg, "document.readyState === 'complete'", 60000); frames(pg, 3)
                     assert pg.evaluate("I18N.lang") == lang
-                    assert sizes.get(f"{lang}.js", 0) < 64000 and sizes.get(f"{lang}-resto.js", 0) > 100000, sizes      # first part small, the rest fetched
+                    assert sizes.get(f"{lang}.js", 0) < 64000 and sizes.get(f"{lang}-resto.js", 0) > 100000, ({k: sizes.get(k) for k in (f"{lang}.js", f"{lang}-resto.js")}, len(sizes))      # first part small, the rest fetched
                     views = pg.evaluate("[...document.querySelectorAll('#nav button')].filter(b => b.offsetParent).map(b => b.dataset.v)")
                     for v in views:
                         pg.click(f'#nav button[data-v="{v}"]'); frames(pg, 3)

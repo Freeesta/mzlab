@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML CreationProgram="synthetic fixture" LabelFont="3" LabelSize="10"><fonttable><font id="3" charset="iso-8859-1" name="Arial"/></fonttable><colortable><color r="1" g="1" b="1"/><color r="0" g="0" b="0"/></colortable><page id="1"><fragment id="10"><n id="11" p="100 100" Element="6"/><n id="12" p="114 108" Element="7" NumHydrogens="1"><t id="512" p="110 111" LabelJustification="Left"><s font="3" size="10">NH</s></t></n><n id="13" p="128 100" NodeType="Unspecified"><t id="14" p="124 103" LabelJustification="Left"><s font="3" size="10">Boc</s></t></n><b id="15" B="11" E="12"/><b id="16" B="12" E="13"/></fragment></page></CDXML>

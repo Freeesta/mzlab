@@ -25,8 +25,8 @@ fn the_scan_notes_are_warnings_with_their_counts() {
         ..Default::default()
     });
     assert_eq!(w.len(), 2);
-    assert!(w[0].contains(r#""meta.ioneScartata""#) && w[0].contains("in 1 of 4 scans"));
-    assert!(w[1].contains(r#""meta.daTabella""#) && w[1].contains("of 4 of 4 scans"));
+    assert!(w[0].contains(r#""meta.ionDiscarded""#) && w[0].contains("in 1 of 4 scans"));
+    assert!(w[1].contains(r#""meta.fromTable""#) && w[1].contains("of 4 of 4 scans"));
 }
 
 /// What the reader passes on unverified or refuses is named with its count: an MS order not decoded, events found by number in a cut table, profiles
@@ -46,7 +46,7 @@ fn unverified_and_refused_scans_are_named_with_their_counts() {
     .map(|v| v.json())
     .collect();
     assert_eq!(w.len(), 3);
-    assert!(w.iter().all(|t| t.contains(r#""meta.nonDecodificato""#)));
+    assert!(w.iter().all(|t| t.contains(r#""meta.notDecoded""#)));
     assert!(w[0].contains("MS order of 2 of 9 scans") && w[0].contains("level is unknown"));
     assert!(w[1].contains("5 of 9 scans") && w[1].contains("unchecked"));
     assert!(w[2].contains("3 of 9 scans") && w[2].contains("refused"));

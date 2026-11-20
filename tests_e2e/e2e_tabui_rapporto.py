@@ -7,6 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
+from lib import open_mzfinder  # noqa: E402
 from lib import axe_path  # noqa: E402
 
 steps = []
@@ -39,7 +40,7 @@ BUILD = """([tp, times]) => {
   const session = { rows: async () => rows, tpTable: async () => tp, report: async () => ({}),
     interp: async id => ({ change: { neutral_formula: "C10H12N2O" + id, ion_formula: "C10H13N2O" + id } }) };
   return window.TPREPORT.collect({ session, spec: () => "", names: ["a", "b", "c", "d", "e"], tpInfo: id => ({ level: id === 2 ? "3" : null, pred: id === 2 ? 2 : null }) }).then(d => {
-    const r = { crate: "9.9.9", tabella_sha256: "a".repeat(64), campioni_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
+    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
       qc: { file: [], gruppi: [], standard_cv: null } };
     return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
   });
@@ -49,7 +50,7 @@ BUILD_NO_PRED_ION = """([tp, times]) => {
   const session = { rows: async () => rows, tpTable: async () => tp, report: async () => ({}),
     interp: async id => ({ change: { neutral_formula: "C10H12N2O" + id } }) };
   return window.TPREPORT.collect({ session, spec: () => "", names: ["a", "b", "c", "d", "e"], tpInfo: id => ({ level: id === 2 ? "3" : null, pred: null }) }).then(d => {
-    const r = { crate: "9.9.9", tabella_sha256: "a".repeat(64), campioni_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
+    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
       qc: { file: [], gruppi: [], standard_cv: null } };
     return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
   });
@@ -58,10 +59,9 @@ html = ""
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce"); pg = ctx.new_page()
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#nav button[data-v=\"tpmine\"]", state="attached", timeout=120000)
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+        pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")
-        pg.click('#nav button[data-v="tpmine"]')
         pg.wait_for_function("typeof window.PIPEX === 'object' && typeof window.TPREPORT === 'object'", timeout=120000)
         html = pg.evaluate(BUILD, [TPTAB, TIMES])
 

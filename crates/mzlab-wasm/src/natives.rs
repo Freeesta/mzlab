@@ -63,6 +63,23 @@ impl Members {
         })
     }
 
+    /// `(file name, size)` of each member: what the copy plan (`readers::ranges`) is made over.
+    pub(crate) fn named(&self) -> Vec<(String, u64)> {
+        let name = |n: &String| n.rsplit(['/', '\\']).next().unwrap_or(n).to_string();
+        let bytes = |x: &f64| {
+            if x.is_finite() && *x > 0.0 {
+                *x as u64
+            } else {
+                0
+            }
+        };
+        self.names
+            .iter()
+            .zip(&self.sizes)
+            .map(|(n, z)| (name(n), bytes(z)))
+            .collect()
+    }
+
     pub(crate) fn fileset(&self) -> FileSet {
         let membri = self
             .names

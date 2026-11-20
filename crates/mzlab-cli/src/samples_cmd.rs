@@ -271,26 +271,28 @@ fn list_table(json: &str, file: &str) -> String {
 
 const SELECT_HELP: &str = "mzlab-cli sample select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
-usage: mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]
+usage: mzlab-cli sample select FILE (--sample LIST [--ranges] | --default [--budget-mb N]) [--json]
 
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `sample list`, not positions)
+  --ranges     with --sample: also the byte ranges of every member that those samples need (`bytes`, `total`, `tag`, `members[].ranges`, `[start, end)`): what the site copies into OPFS, the head of the .wiff.scan, the chosen sections and what follows the indexed part; any other member whole (the same bytes as the site's `sample_ranges`)
   --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
   --json       {\"schema\":\"sample-select/1\",\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
-Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
+Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, --ranges without --sample, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
 /// `sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
-    let (mut default, mut budget) = (false, 0.0f64);
+    let (mut default, mut budget, mut ranges) = (false, 0.0f64, false);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{SELECT_HELP}\n").into_bytes()),
             "--json" => json = true,
             "--default" => default = true,
+            "--ranges" => ranges = true,
             "--budget-mb" => match it.next().and_then(|v| v.parse::<f64>().ok()) {
                 Some(v) if v >= 0.0 => budget = v,
                 _ => return Outcome::fail("--budget-mb needs a number of MB"),
@@ -312,6 +314,9 @@ fn select_run(args: Vec<String>) -> Outcome {
     if text.is_some() == default {
         return Outcome::fail("sample select needs exactly one of --sample LIST and --default");
     }
+    if ranges && text.is_none() {
+        return Outcome::fail("--ranges goes with --sample LIST");
+    }
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
         return Outcome::fail_error(&e).with_hint("check the path");
@@ -319,11 +324,28 @@ fn select_run(args: Vec<String>) -> Outcome {
     if let Err(e) = crate::sample_select::refuse_mzml(&file) {
         return crate::sample_select::fail(&e);
     }
-    let chosen = match &text {
+    if ranges {
+        return select_ranges(&file, text.as_deref().unwrap_or_default(), json);
+    }
+    select_ids(&file, text.as_deref(), budget, json)
+}
+
+/// `sample select FILE --sample LIST --ranges`: the byte ranges to copy for the chosen samples.
+fn select_ranges(file: &Path, text: &str, json: bool) -> Outcome {
+    match crate::sample_select::parse(text).and_then(|w| crate::sample_select::plan(file, &w)) {
+        Err(e) => crate::sample_select::fail(&e),
+        Ok(p) if json => Outcome::ok(format!("{}\n", p.json()).into_bytes()),
+        Ok(p) => Outcome::ok(p.text().into_bytes()),
+    }
+}
+
+/// The sample numbers `sample select` prints: the typed list resolved, or the suggestion within the budget.
+fn select_ids(file: &Path, text: Option<&str>, budget: f64, json: bool) -> Outcome {
+    let chosen = match text {
         Some(t) => {
-            crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(&file, &w))
+            crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(file, &w))
         }
-        None => crate::sample_select::sized(&file).map(|(ids, sizes)| {
+        None => crate::sample_select::sized(file).map(|(ids, sizes)| {
             mzlab_core::readers::selection::suggest(
                 &ids,
                 &sizes,

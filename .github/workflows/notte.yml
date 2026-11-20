@@ -63,6 +63,18 @@ jobs:
             rustup toolchain uninstall "$ch" || true
             sleep 10
           done
+      # tests/test_wiff_inventory_wasm.py runs wasm-bindgen; without it, half b errored at setup on macOS and Windows
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+          key: wasm-bindgen-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        shell: bash
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
       # --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
         env:
@@ -157,7 +169,7 @@ jobs:
           if-no-files-found: ignore
 
   # The .wasm of the built site (engine, libraries, readers, mzFinder) as the three jobs of sito-rust.yml build them, with the same caches (the run on main fills them):
-  # without them the parts of `completa` would run on a site with only the engine (e2e_tpmine_rust, e2e_uv_spettro and the like fail for it).
+  # without them the parts of `completa` would run on a site with only the engine (e2e_uv_spettro and the like fail for it).
   sito:
     if: inputs.solo == ''
     name: sito (${{ matrix.parte }})

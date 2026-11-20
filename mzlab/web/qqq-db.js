@@ -1,9 +1,9 @@
 // @ts-strict
 // IndexedDB for mzLab ("mzlab_lab", migrated from legacy "qqq_lab"):
-// manages stores (files, kv, liste_utente, manifest, molecules), connection lifecycle, and transparent migration.
+// manages stores (files, kv, user_lists, manifest, molecules), connection lifecycle, and transparent migration.
 export const DB_NAME = typeof NOMI !== "undefined" ? NOMI.DB : "mzlab_lab";
 export const DB_OLD = typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab";
-export const DB_VER = 5;
+export const DB_VER = 6;
 export const SCHEMA = 3;
 
 /**
@@ -13,7 +13,7 @@ export const SCHEMA = 3;
 export function upgrade(db) {
   if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
   if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
-  if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
+  if (!db.objectStoreNames.contains("user_lists")) db.createObjectStore("user_lists", { keyPath: "id" });
   if (!db.objectStoreNames.contains("manifest")) db.createObjectStore("manifest", { keyPath: "path" });
   // the molecules of the user (molecules/1 records, one per id); added in version 4, nothing else is touched
   if (!db.objectStoreNames.contains("molecules")) db.createObjectStore("molecules", { keyPath: "id" });
@@ -63,11 +63,11 @@ export function countStore(db, storeName) {
 }
 
 /** @param {IDBDatabase} oldDb @param {IDBDatabase} newDb @param {string} storeName */
-export function copyStore(oldDb, newDb, storeName) {
+export function copyStore(oldDb, newDb, storeName, oldStoreName = storeName) {
   return new Promise((resolve, reject) => {
     try {
-      const oldTx = oldDb.transaction(storeName, "readonly");
-      const oldStore = oldTx.objectStore(storeName);
+      const oldTx = oldDb.transaction(oldStoreName, "readonly");
+      const oldStore = oldTx.objectStore(oldStoreName);
       const isKeyPath = !!oldStore.keyPath;
       /** @type {any[]} */
       const entries = [];
@@ -148,31 +148,32 @@ async function doMigration(newDb, oldName) {
   if (!oldDb) return;
 
   try {
-    const STORES = ["files", "kv", "liste_utente"];
+    // [store in the legacy qqq_lab database, store in the new one]: the legacy database only has the Italian name
+    const STORES = [["files", "files"], ["kv", "kv"], ["liste_utente", "user_lists"]];
     const migratedFrom = await getKv(newDb, "migrated_from");
     const cFiles = await countStore(newDb, "files");
-    const cListe = await countStore(newDb, "liste_utente");
+    const cListe = await countStore(newDb, "user_lists");
     const cKv = await countStore(newDb, "kv");
     const schema = await getKv(newDb, "schema");
     const isEmpty = cFiles === 0 && cListe === 0 && (cKv === 0 || (schema !== undefined && cKv <= 1));
 
     if (!migratedFrom && isEmpty) {
-      for (const s of STORES) {
-        if (oldDb.objectStoreNames.contains(s) && newDb.objectStoreNames.contains(s)) {
-          await copyStore(oldDb, newDb, s);
+      for (const [o, n] of STORES) {
+        if (oldDb.objectStoreNames.contains(o) && newDb.objectStoreNames.contains(n)) {
+          await copyStore(oldDb, newDb, n, o);
         }
       }
       await putKv(newDb, "migrated_from", oldName);
       await putKv(newDb, "migration_runs", 1);
       const matchFiles = (await countStore(newDb, "files")) === (await countStore(oldDb, "files"));
-      const matchListe = (await countStore(newDb, "liste_utente")) === (await countStore(oldDb, "liste_utente"));
+      const matchListe = (await countStore(newDb, "user_lists")) === (await countStore(oldDb, "liste_utente"));
       const matchKv = (await countStore(newDb, "kv")) >= (await countStore(oldDb, "kv"));
       if (matchFiles && matchListe && matchKv) {
         await putKv(newDb, "migration_status", "ok");
       }
     } else if (migratedFrom === oldName) {
       const matchFiles = (await countStore(newDb, "files")) >= (await countStore(oldDb, "files"));
-      const matchListe = (await countStore(newDb, "liste_utente")) >= (await countStore(oldDb, "liste_utente"));
+      const matchListe = (await countStore(newDb, "user_lists")) >= (await countStore(oldDb, "liste_utente"));
       const matchKv = (await countStore(newDb, "kv")) >= (await countStore(oldDb, "kv"));
       if (matchFiles && matchListe && matchKv) {
         const runs = Number((await getKv(newDb, "migration_runs")) || 1) + 1;
@@ -225,7 +226,7 @@ export function lab(onblocked) {
  * What the reset «Files» removes from the main database, written once: the page's wipe (reset.js), the engine's backstop after the reload (`lr_clear` with this
  * spec, rust-worker.js) and the desktop app's native store (`lr_clear`, store.rs) all apply it. Gone: the loaded files and their manifest (stores), the stored
  * folder handle (kv), the parts of the notebook that name files (open-files list, panels, sample roles). Everything else stays: drawing, saved lists
- * (liste_utente), molecules (store molecules), the rest of the notebook.
+ * (user_lists), molecules (store molecules), the rest of the notebook.
  */
 export const RESET_FILES = Object.freeze({ stores: ["files", "manifest"], kv: ["cartella.puntata"], notebook: ["session", "ui", "sampleCols", "sampleEx"] });
 

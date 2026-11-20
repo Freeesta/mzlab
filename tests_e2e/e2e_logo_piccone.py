@@ -20,7 +20,7 @@ def tab(pg): return pg.evaluate("localStorage.getItem('mzlab.mzfinder') !== null
 def run(p, reduced):
     tag = "reduced " if reduced else "motion "
     b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, reduced_motion="reduce" if reduced else "no-preference")
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg.on("pageerror", lambda e: R.errs.append(("pageerror", str(e))))
     pg.goto(f"http://127.0.0.1:{R.port}/"); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(1500)
     def a11y():

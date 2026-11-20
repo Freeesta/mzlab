@@ -1,5 +1,5 @@
 """Builds `crates/mzlab-core/data/psims-cv.json`, the vocabulary table of the mzML validator (`mzlab_core::mzml_validate`), from the PSI-MS ontology `psi-ms.obo`
-(HUPO-PSI/psi-ms-CV, CC BY 4.0, declared in LICENZE-TERZI.md). The obo is pinned by tag and SHA-256, so the table is reproducible.
+(HUPO-PSI/psi-ms-CV, CC BY 4.0, declared in THIRD-PARTY-LICENSES.md). The obo is pinned by tag and SHA-256, so the table is reproducible.
 
     python3 tools/psims_tabella.py                 # fetch the pinned obo (cached in the temp folder), rewrite the table
     python3 tools/psims_tabella.py --obo FILE      # use a local copy of the obo (it must have the pinned SHA-256)

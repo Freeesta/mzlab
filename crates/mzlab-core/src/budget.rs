@@ -136,6 +136,26 @@ pub fn try_vec<T>(n: usize) -> Result<Vec<T>> {
     Ok(v)
 }
 
+/// Heap bytes per scan outside the `Scan` itself (the strings of its row): 149 B native; the .wasm needs more than the sum (size classes, freed row text), so 192
+/// (`tests/test_memoria_limite_wasm.py`).
+pub const ROW_HEAP: usize = 192;
+
+/// Proof that `bytes` more can be had in one piece, taken and given back at once: a refusal (`error.memoryBudget` without a phase, so `routes_open::open_beside`
+/// empties the caches and tries again) instead of the trap an infallible allocation ends in when the browser grants no more (`memory.grow` fails).
+/// For what is built from many small allocations (the strings of a scan table): the caller passes its estimate, with margin. Nothing is touched.
+pub fn headroom(bytes: usize) -> Result<()> {
+    let mut v: Vec<u8> = Vec::new();
+    v.try_reserve_exact(bytes)
+        .map_err(|_| Error::memory_budget())
+}
+
+/// The empty scan table of an index of `count` scans, after proof that the strings of its rows will find room too (`ROW_HEAP`): `error.memoryBudget`, never a trap in the parse.
+pub fn scan_table<T>(count: usize) -> Result<Vec<T>> {
+    let v = try_vec(count)?;
+    headroom(count.saturating_mul(ROW_HEAP))?;
+    Ok(v)
+}
+
 /// Where an output is written: bytes at an offset. The browser gives an OPFS handle (`write(k, offset, bytes)`), the tests a `Vec`.
 pub trait WriteAt {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()>;

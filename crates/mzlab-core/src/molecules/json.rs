@@ -197,10 +197,6 @@ fn read_one(v: &Value) -> Result<Molecule, (&'static str, String)> {
     if charge.fract() != 0.0 || charge.abs() > 1e6 {
         return Err(("error.molecules.badCharge", charge.to_string()));
     }
-    // a record saved before the keys were English (`nome`): refused with its own message, never read as a record without a name
-    if v.get("name").is_none() && v.get("nome").is_some() {
-        return Err(("error.molecules.oldFormat", String::new()));
-    }
     let o = v.get("origin").cloned().unwrap_or(Value::Null);
     let ext = v.get("external").cloned().unwrap_or(Value::Null);
     let mut m = Molecule {
@@ -247,22 +243,9 @@ pub fn from_value(doc: &Value) -> Result<Vec<Molecule>, Vec<RowError>> {
     if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
         return Err(bad("schema"));
     }
-    // a document without the `molecules` list is not this format (an archive written before the keys were English): refused, never read as empty
+    // a document without the `molecules` list is not this format: refused, never read as empty
     let Some(list) = doc.get("molecules").map(|a| a.arr()) else {
-        let old = doc.get("molecole").is_some();
-        return Err(vec![RowError {
-            line: 0,
-            key: if old {
-                "error.molecules.oldFormat"
-            } else {
-                "error.molecules.badJson"
-            },
-            detail: if old {
-                String::new()
-            } else {
-                "molecules".into()
-            },
-        }]);
+        return Err(bad("molecules"));
     };
     let (mut out, mut errors) = (Vec::new(), Vec::new());
     for (i, v) in list.iter().enumerate() {

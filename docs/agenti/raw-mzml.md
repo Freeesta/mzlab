@@ -1,6 +1,6 @@
 # `.raw` → mzML conversion: bench, roofline, measured causes
 
-Measurement bench of the converter (`crates/mzlab-core/examples/raw_mzml_bench/`, launcher `tools/bench/raw_mzml.py`) and baseline numbers for the V1-V9 criteria (section "Acceptance criteria"). The bench changes no output byte: it reads with the real `Lettore` and writes with the real `Conversione`/`MzmlWriter`. Cumulative table of gains: `measurements-speed.md`; Thermo reader: `thermo-speed.md`.
+Measurement bench of the converter (`crates/mzlab-core/examples/raw_mzml_bench/`, launcher `tools/bench/raw_mzml.py`) and the V1-V9 criteria (section "Acceptance criteria"). The bench changes no output byte: it reads with the real `Lettore` and writes with the real `Conversione`/`MzmlWriter`. Cumulative table of gains: `measurements-speed.md`; Thermo reader: `thermo-speed.md`.
 
 ## How to run
 - `python3 tools/bench/raw_mzml.py --file X.raw` (real file) or `--denso 2` (synthetic dense case of 2 GB, generated in `--tmp` and deleted); `--zlib-rs` redoes everything with the `banco-zlib-rs` feature; options after `--` go to the bench. It writes `.verifica/raw-mzml/<label>.<backend>.json` (fields: machine, git, rustc, kernel, `cli` profile, disk bandwidth measured with `dd`).
@@ -10,38 +10,13 @@ Measurement bench of the converter (`crates/mzlab-core/examples/raw_mzml_bench/`
 - The dense generator is deterministic (integer SplitMix64, only IEEE operations): same SHA-256 on every round (`dense_test.rs`); the fake `Lettore` serves the packets from the file through the real decoders (`opentfraw::pacchetto::decodifica`), bit-exact re-read on 3 scans; the 8 GB variant is generated and deleted in an `#[ignore]` test (`cargo test --profile cli -p mzlab-core --example raw_mzml_bench -- --ignored`).
 
 ## Machine and T_min
-- Machine for these numbers: Xeon 2.8 GHz, 4 cores, 16 GB, Linux 6.18 (VM), `cli` profile, zlib `miniz_oxide` (measurements before the switch to zlib-rs), no SHA-NI (SHA-1 ≈ 440 MB/s, SHA-256 ≈ 204 MB/s). Disk: sequential write 216 MB/s (`dd conv=fdatasync`), read 3.0 GB/s (page cache).
+- Machine for these numbers: Xeon 2.8 GHz, 4 cores, 16 GB, Linux 6.18 (VM), `cli` profile, no SHA-NI (SHA-1 ≈ 440 MB/s, SHA-256 ≈ 204 MB/s). Disk: sequential write 216 MB/s (`dd conv=fdatasync`), read 3.0 GB/s (page cache).
 - `T_min = max(B_in/BW_read, B_out/BW_write, W_cpu/N, W_serial)`; `W_serial` = SHA-1 of the input in the mzML header (a single stream), which on large files is already a floor. Micro-benchmarks (`--solo micro`): base64 1.87 GB/s; freq→m/z conversion 4.1 ns/point; zeroing 63 GB/s; malloc+free 65 ns; XML 80-86 µs/spectrum; whole-packet FT decoding 8.4 µs (lab-a, 11 KB), 10.6 µs (lab-b, 4 KB), 4.6 ms (dense, 1.5 MB), of which peak list 4.2 µs / 0.83 µs / 154 µs; deflate level 0/1/6 on the dense case:
   214 / 160 / 22 MB/s (compressed/original ratio 1.00 / 0.80 / 0.80).
 
-## Baseline for V1-V9
-Measurements in seconds, median without the first round. Lab-b and lab-a: `--senza-conta`, 7 rounds; the other columns with the counting allocator on. LAB-A, LAB-B and BAF are not reachable from this machine: not verified on real files; the numbers measured earlier on real files hold (LAB-B `convert` 5.97 s, writer 2.87 s; LAB-A 3.96 s) together with the synthetic sources of the same shape (`--forma lab-b`, 16,731 scans of 4 KB, 69 MB; `--forma lab-a`, 6,336 scans of 11 KB, 70 MB), which give a 1-thread writer at 2.1 s (lab-b) and 0.8 s (lab-a), the same order of magnitude as the real ones.
-
-| | PRIDE (stand-in, 1.71 GB, 46,730 scans) | dense 0.4 GB (271 scans) | dense 2 GB | dense 8 GB | synthetic lab-b | synthetic lab-a |
-|---|---|---|---|---|---|---|
-| T_min (s) | 5.7 (input SHA-1); write 3.3; CPU/4 2.4 | 3.3 (write 711 MB); CPU/4 1.8 | ≈ 16 (3.55 GB/216 MB/s) | ≈ 66 (14.2 GB) | ≈ 1 | ≈ 0.5 |
-| V1/V2/V3 writer, level 1, 1 thread | 11.8 | 7.2 | indexed 42.4 | indexed 168 | 2.1 | 0.8 |
-| V4 level 0, 4 threads | 13.7 | 2.46 | 11.6 | 46.3 | 0.61 | 0.21 |
-| V4 level 1, 4 threads | 13.3 | 2.46 | 11.95 | 48.6 | 0.62 | 0.24 |
-| V4 level 6, 4 threads | 16.9 | 8.5 | 41.8 | 168.8 | 0.81 | 0.35 |
-| V5 level 1, 1→2→4 threads | 11.8 → 12.6 → 13.3 (slower) | 7.2 → 2.65 → 2.46 (2.9×) | — | 168 → 72 (indexed 1→4, 2.3×) | 2.14 → 0.86 → 0.62 (3.5×) | 0.79 → 0.36 → 0.24 (3.3×) |
-| V6 peak RSS, 1 thread (4 threads) MB | 339 | 26 (111) | 31 indexed (122) | 48 indexed (158) | 13 | 7 |
-| V7 allocations per scan | ≈ 670 | ≈ 59,000 | ≈ 59,000 | ≈ 59,000 | ≈ 1,720 | ≈ 1,590 |
-| V9 opening (s) | 0.95 | 0.00005 | — | — | — | — |
-
-Readings: V5 is met on the synthetic lab-b and lab-a (4 threads: 2.7-3.5× at level 0-1, 3.6× at level 6) and on the dense case (2.9× with 4 threads at level 1, 3.9× at level 6 on 4 cores: 33→8.5 s); PRIDE is not re-measured after the pool fix (D8): its row is the old pool's. V6: RSS is not constant with file size (4 threads: 111 → 122 → 158 MB for 0.4 → 2 → 8 GB;
-1 thread indexed 70 → 31 → 48 MB) and PRIDE sits at 339 MB: cause not identified (in the dense case the heap peak is 12 MB: the part beyond the heap is system/mapped memory). V7: the gap from the target (≤ 1 per 1000 scans) is 6-8 orders of magnitude; at 1 thread the counter estimates 10-20 % of the time in allocation, against about 10 % from callgrind (same order of magnitude). V8 (browser) is not measured here (RM-5). V10: see below.
-
-Breakdown of a PRIDE write without zlib (phases, seconds out of the total 4.08 xml-only → 1.66 sink write): decoding 1.5, extra per scan 1.5, XML with empty arrays 1.66, base64 3.5, output SHA-1 and offsets 1.2, file write 0.77; zlib level 1 adds 1.25 s, level 6 25 s (miniz_oxide).
-
-## zlib: miniz_oxide versus zlib-rs
-Same bench, build with `--features banco-zlib-rs`, 1 thread, total seconds (miniz → zlib-rs; output bytes): PRIDE level 1 8.76 → 7.26 s (−17 %; 722 → 837 MB, +16 %), level 6 32.8 → 17.6 s (−46 %; 718 → 717 MB); dense 0.4 GB level 1 6.99 → 10.8 s (+54 %; 711 → 921 MB, +30 %), level 6 32.5 → 19.1 s (−41 %; 712 → 796 MB).
-Level 0 oscillates more (PRIDE 7.5 → 4.2 s, dense 6.3 → 3.1 s: the first round pays for the cold cache), not to be read as a gain. zlib-rs changes the compressed bytes: it requires a new `conversion/1` version with before/after; it gains where the input is made of centroid spectra and loses on dense profiles at level 1. The build uses zlib-rs (read and write) with default level 2 (`mzmlwrite::ZLIB_LEVEL`): on the dense profile of the DAD test, zlib-rs level 1 writes 16.3 MB against 12.1 for miniz, level 2 12.9 MB; `conversion/1` declares `compressore`.
-
 ## D11: the fingerprints of `mzlab-cli file convert`
-On PRIDE (RM-0, `--solo cli` measurement, no SHA-NI) the command took ≈ 35 s against 20 s for the indexed writer alone: it was not conversion but fingerprints computed several times on the same bytes (input SHA-256 8.6 s, input SHA-1 5.7 s inside the header, output SHA-256 3.7 s in `keep` and again 3.7 s in the report, input read 3×, output re-read 2×).
-Every byte is hashed once per purpose: `flow_set::hash_file` (`hashio::hash_read_with`) reads the input once and takes its SHA-256, and the SHA-1 if the plan writes an mzML (`flow_set::wants_sha1`); `file_set` passes the SHA-1 to the reader (`Membro.sha1`), which does not re-read the file for the header; the writer goes through `hashio::HashWrite` and `write_mzml_with` returns the bytes and the SHA-256 of the output, which `FileRunner::keep_known` and the `convert.rs` report use without re-reading it (`flow_set::remember_sha`). A file taken from the cache is hashed as before.
-Synthetic measurement (mzXML 320 MB, output 323 MB without zlib, machine with SHA-NI, 3 alternating rounds): 2.93 → 2.73 s; identical output bytes (`cmp`). The gain is proportional to the cost of the hashes: not re-measured on PRIDE.
+Several hashes of the same bytes would cost more than the conversion itself (on a 1.7 GB file without SHA-NI the input SHA-256 is 8.6 s, the input SHA-1 5.7 s).
+Every byte is hashed once per purpose: `flow_set::hash_file` (`hashio::hash_read_with`) reads the input once and takes its SHA-256, and the SHA-1 if the plan writes an mzML (`flow_set::wants_sha1`); `file_set` passes the SHA-1 to the reader (`Membro.sha1`), which does not re-read the file for the header; the writer goes through `hashio::HashWrite` and `write_mzml_with` returns the bytes and the SHA-256 of the output, which `FileRunner::keep_known` and the `convert.rs` report use without re-reading it (`flow_set::remember_sha`). A file taken from the cache is hashed as for any other.
 
 ## D8: more encoding threads do not slow down
 The writer pool (`mzmlwrite/pool.rs`) hands the spectra to the workers in blocks (≤ 32 spectra or ≈ 100,000 points) and has them returned together with the text: the thread that allocated them frees them.
@@ -72,7 +47,7 @@ The thresholds change only with a Coordinator decision written here, never to ma
 - **F5** metadata: filter, trailer fields, nearest status and tune, method text; equal to msconvert on MS level, polarity, analyzer, resolving power (MS:1000800), activation (CID/HCD/ETD/EThcD/UVPD), energy, precursor m/z and charge, isolation window, RT. An `@cid` MS2 is CID (MS:1000133), never HCD; `is_dia` never on a targeted MS2.
 - **F6** number of spectra = scans of the file; TIC and BPC equal to msconvert (f32). **F7** a field absent in the file is absent in the mzML; zeros only with the F3 option, marked.
 - **F8** 0 errors with the PSI validator, OpenMS `FileInfo -v`, pyteomics, mzR and msconvert re-reading; every offset points to the first byte of `<spectrum ` / `<chromatogram `, correct `fileChecksum` SHA-1.
-- **F9** equal output SHA-256 with 1/2/4/N threads, on Linux x86-64, macOS arm64 and `.wasm`, with permuted inputs and in two rounds. **F10** where a PR does not change the output, `raw_equivalenza.rs`, `raw_parity.rs`, `msntree_parity.rs` stay green; where it changes it, before/after on one file and `conversion/1` version bumped.
+- **F9** equal output SHA-256 with 1/2/4/N threads, on Linux x86-64, macOS arm64 and `.wasm`, with permuted inputs and in two rounds. **F10** where a PR does not change the output, `raw_equivalence.rs`, `raw_parity.rs`, `msntree_parity.rs` stay green; where it changes it, before/after on one file and `conversion/1` version bumped.
 - **C1-C4** our own centroiding, only on scans without an instrument list or with `--peaks mzlab`, never in the base path of FT. Simulated (≥ 10,000 peaks, S/N from 3 to 10⁴): median |Δm/z| ≤ 0.2 ppm (or ≤ 0.02 FWHM) and 99th percentile ≤ 1 ppm, median area ≤ 1 %, two peaks at 1.0 FWHM resolved ≥ 95 %, ghosts ≤ 0.1 %, recall ≥ 99.5 % at S/N ≥ 10.
 - Against the instrument list: precision and recall ≥ 0.98 within 1 ppm at S/N ≥ 10, |median of the intensity ratio − 1| ≤ 2 %; calibrants: median error within 0.1 ppm of the instrument's, isotope ratios within 1 %; ion trap: ±0.05 Th from msconvert, precision and recall ≥ 0.95 (if it fails the numbers are reported and the Coordinator decides).
 - **V1/V2** LAB-B and LAB-A with indexed `mzlab-cli file convert`, default level, 4 cores: ≤ 0.6 s and ≤ 0.5 s, and ≤ 3× T_min. **V3** BAF ≤ 3× T_min and faster than msconvert and TRFP on the same Mac. **V4** dense ≥ 2 GB: without compression ≤ 1.5× B_out/BW_write, with zlib ≤ 1.3× W_cpu/N.
@@ -88,5 +63,5 @@ The thresholds change only with a Coordinator decision written here, never to ma
 
 ## Coordinator decisions
 - Zeros: by default only the points of the file (nothing invented). Indexed mzML also from `scrivi`, in the same pass with offsets and SHA-1. The per-peak columns in the reader (`vendor/opentfraw`, `scan_data.rs`) are done one PR at a time. Switching to zlib-rs changes the compressed bytes: new `conversion/1` version and before/after in the PR (F10).
-- Proposal not carried out: `--peaks tutto` (profile as a standard array, centroid list as a non-standard array, per-peak columns with standard CV terms and `arrayLength`); the default value `file` stays until third-party readers pass (D7).
-- Proposal not carried out: `--set conv.zeri=rfr` for zero parity with msconvert and RFR (F3).
+- Not available: `--peaks tutto` (profile as a standard array, centroid list as a non-standard array, per-peak columns with standard CV terms and `arrayLength`); the default value `file` stays until third-party readers pass (D7).
+- Not available: `--set conv.zeri=rfr` for zero parity with msconvert and RFR (F3).

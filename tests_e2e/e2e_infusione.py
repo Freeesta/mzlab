@@ -80,7 +80,7 @@ try:
         def total():
             q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_tree?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
               const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.level}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;
-              const a=await fetch(u).then(r=>r.json()),b=await fetch(u+'&modo=somma').then(r=>r.json());
+              const a=await fetch(u).then(r=>r.json()),b=await fetch(u+'&mode=sum').then(r=>r.json());
               return {n:a.scans,ma:Math.max(...a.y),mb:Math.max(...b.y),nb:b.scans}})()""")
             assert q["n"] >= 10 and abs(q["mb"] - q["ma"] * q["n"]) <= 1e-6 * q["mb"], q
         step("the sum is the mean times the number of scans", total)

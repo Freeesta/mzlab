@@ -26,7 +26,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        pg.evaluate("localStorage.removeItem('mzlab.contaminanti');localStorage.removeItem('mzlab.contaminanti.on');localStorage.removeItem('mzlab.liste.attive')")
+        pg.evaluate("localStorage.removeItem('mzlab.contaminants');localStorage.removeItem('mzlab.contaminants.on');localStorage.removeItem('mzlab.lists.active')")
         pg.evaluate("LISTE.ensure()"); pg.wait_for_function("LISTE.find&&true", timeout=5000); wait_for_js(pg, f"{SP}&&{SP}._a")
         sp = pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()"); frames(pg, 3)
 
@@ -43,7 +43,7 @@ try:
             pg.wait_for_function(f"{SP}&&{SP}._a&&{SP}._a.cmarks&&{SP}._a.cmarks.length>=1", timeout=5000)
             assert pg.is_checked("#lst-cont-signs")
             assert pg.evaluate("LISTE.isOn()") is True
-            assert pg.evaluate("localStorage.getItem('mzlab.contaminanti.on')") == "true"
+            assert pg.evaluate("localStorage.getItem('mzlab.contaminants.on')") == "true"
             assert pg.evaluate(f"{SP}._a.cmarks.length") >= 1, "signs appear on spectrum after checking"
             # Reload page: choice persists
             pg.reload()
@@ -93,21 +93,21 @@ try:
             kks = pg.evaluate(f"{SP}._a.cont.match({SP}._a.cmarks[0].m).map(x=>LISTE.keyFor('entry', x))"); kk = kks[0]
             for k in kks: pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)")
             wait_for_js(pg, f"{SP}._a.chid>=1")
-            s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"mzlab.contaminanti.esclusi\"))"))
+            s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"mzlab.contaminants.excluded\"))"))
             assert "Show" in pg.inner_text(".cont-cnt")
             assert t0 == sig(), "TIC drawn the same"
             pg.focus(".cont-show"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Hide')")
             assert st()["marks"] == m0 and "Hide" in pg.inner_text(".cont-cnt")
             pg.click(".cont-show"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Show')")
-            ls = json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')")); assert kk in ls["voci"], ls
-        step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in mzlab.contaminanti.esclusi", excl)
+            ls = json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminants.excluded')")); assert kk in ls["voci"], ls
+        step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in mzlab.contaminants.excluded", excl)
 
         def excl_cls():
             pg.evaluate("LISTE.exclReset()"); wait_for_js(pg, f"{SP}._a.chid==0")
             ck = pg.evaluate(f"LISTE.keyFor('cls', {SP}._a.cont.match(391.2843)[0])")
             pg.evaluate(f"LISTE.exclSet('cls', {json.dumps(ck)}, true)"); wait_for_js(pg, f"{SP}._a.cont.state(391.2843).hid===true")
             assert pg.evaluate(f"{SP}._a.cont.state(391.2843).hid") is True
-            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')"))["classi"] == [ck]
+            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminants.excluded')"))["classi"] == [ck]
             pg.click("#np-liste"); pg.wait_for_selector("#lst-excl", timeout=5000)
             assert pg.is_visible("#lst-excl-reset"); pg.click("#lst-excl-reset"); wait_for_js(pg, "LISTE.exclItems().length==0")
             assert pg.evaluate("LISTE.exclItems().length") == 0
@@ -141,7 +141,7 @@ try:
             pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); wait_for_js(pg, "LISTE.exclItems().length==1")
             pg.evaluate("uiSave(true)"); wait_for_js(pg, "NB.ui.contEx&&NB.ui.contEx.voci&&NB.ui.contEx.voci.length>=1")
             assert k in pg.evaluate("NB.ui.contEx.voci"), "exclusions saved with the session"
-            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
+            pg.evaluate("localStorage.removeItem('mzlab.contaminants.excluded')"); pg.evaluate("LISTE.exclReset()")
             pg.evaluate("LISTE.exclImport(NB.ui.contEx)"); assert pg.evaluate("LISTE.exclItems().length") == 1
             pg.evaluate("LISTE.exclReset()")
         step("exclusions saved with the session and restored", sess)
@@ -164,7 +164,7 @@ try:
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
         def gear_fresh():
-            pg.evaluate("localStorage.removeItem('mzlab.contaminanti.on'); window.__L=window.LISTE; window.LISTE=undefined")
+            pg.evaluate("localStorage.removeItem('mzlab.contaminants.on'); window.__L=window.LISTE; window.LISTE=undefined")
             assert pg.evaluate("uipContOn()") is False, "uipContOn is off for a new user"
             pg.evaluate("window.LISTE=window.__L")
             assert pg.evaluate("LISTE.isOn()") is False, "LISTE.isOn is off for a new user"
@@ -184,9 +184,9 @@ try:
         def lab():
             pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); frames(pg, 3)
             mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
-            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "my background"); pg.click("#askok"); wait_for_js(pg, "JSON.parse(localStorage.getItem('mzlab.contaminanti')||'[]').length==1")
+            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "my background"); pg.click("#askok"); wait_for_js(pg, "JSON.parse(localStorage.getItem('mzlab.contaminants')||'[]').length==1")
             h = hov(pg, mz0); assert h and "my background" in h and "Laboratory contaminants" in h, h
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminanti')).length") == 1
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminants')).length") == 1
             csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "my background" in csv
         step("laboratory contaminants: added from the menu, seen in the box, saved as CSV", lab)
 
@@ -220,7 +220,7 @@ try:
             shut(pg, "#refx"); frames(pg, 2)
         step("user CSV suspect list: uploaded, visible in dialog, matched in HR hover tip", user_csv)
 
-        pg.evaluate("localStorage.removeItem('mzlab.contaminanti')")
+        pg.evaluate("localStorage.removeItem('mzlab.contaminants')")
     r.close()
 
     r2 = Run(port=8994, wd="/tmp/wd_cont2")

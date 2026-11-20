@@ -45,7 +45,7 @@ fn a_sample_the_dataset_lacks_and_a_file_no_reader_takes_are_errors() {
 
     let broken = makers(&dir, true);
     let plan = dir.join("plan2.json");
-    let name = "rotto.raw";
+    let name = "broken.raw";
     let text = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"{name}","type":"raw"}}],"steps":[{{"id":"imp","step":"import.raw@1","in":{{"files":["file:{name}"]}}}}]}}"#
     );

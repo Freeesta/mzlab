@@ -42,7 +42,7 @@ fn the_flags_of_help_and_catalog_are_the_same() {
     for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
         let usage = e.help.split("   ").next().unwrap();
         let in_help: BTreeSet<String> = usage
-            .split(|ch: char| ch.is_whitespace() || "[]|".contains(ch))
+            .split(|ch: char| ch.is_whitespace() || "[]|()".contains(ch))
             .filter(|w| w.starts_with("--"))
             .map(String::from)
             .collect();

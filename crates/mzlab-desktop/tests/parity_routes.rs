@@ -246,7 +246,12 @@ fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value], answers: &[usiz
     for (s, w) in plan.iter().zip(wasm) {
         let (app, site) = (on_desktop(st, fid, s), from_wasm(w));
         if app != site {
-            differ.push(format!("{s}\n  app:  {app:.300?}\n  wasm: {site:.300?}"));
+            differ.push(match (&app, &site) {
+                (Got::Text(a), Got::Text(w)) => {
+                    format!("{s}\n{}", route_steps::first_difference(a, w))
+                }
+                _ => format!("{s}\n  app:  {app:.300?}\n  wasm: {site:.300?}"),
+            });
         }
     }
     assert!(
@@ -337,7 +342,8 @@ fn origin_mzml() -> Vec<u8> {
             ] {
                 let d = (rt - apex) / w;
                 mz.push(m + 0.001 * k as f64);
-                intensity.push((h * (-0.5 * d * d).exp() + 400.0 * noise()) as f32);
+                intensity.push((h * libm::exp(-0.5 * d * d) + 400.0 * noise()) as f32);
+                // libm: the same bits on every platform, the std `exp` is the C library of the target
             }
         }
         let mut order: Vec<usize> = (0..mz.len()).collect();
@@ -391,7 +397,7 @@ fn the_origin_route_gives_the_same_report_in_the_app_and_in_the_wasm() {
         .count();
     assert!(
         reports >= 6,
-        "{reports} origin reports carry a profile similarity: {wasm:?}"
+        "{reports} origin reports carry a profile similarity"
     );
 }
 

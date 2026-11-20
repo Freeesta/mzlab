@@ -81,6 +81,8 @@ fn every_answer_opens_with_its_schema_and_none_has_a_format_key() {
         (vec!["mol", "link", &link], "link/1"),
         (vec!["mol", "cut", &mol, "--set", "bonds=0-1"], "cut/1"),
         (vec!["mol", "mech", &mf], "mechanism/1"),
+        (vec!["mol", "draw", "smiles:CCO", "--json"], "draw/1"),
+        (vec!["mol", "open", &mol], "open/1"),
         (
             vec!["mol", "search", "--sub", "CO", "CCO"],
             "substructure/1",
@@ -118,8 +120,8 @@ fn every_chemistry_entry_with_one_schema_names_it() {
         crate::cmd::entries().filter(|e| e.name.starts_with("mol ") || e.name.starts_with("ion "))
     {
         assert!(!e.exits.is_empty(), "{}: no exit list", e.name);
-        // mol export is text and mol search has two documents: the others carry one tag
-        if !matches!(e.name, "mol export" | "mol search") {
+        // mol export is text; mol search and mol draw have two documents (draw/1, draw-image/1): the others carry one tag
+        if !matches!(e.name, "mol export" | "mol search" | "mol draw") {
             assert!(!e.schema.is_empty(), "{}: no schema", e.name);
         }
     }
@@ -386,6 +388,38 @@ fn mol_probes(fx: &Fx) -> Probes<'_> {
     probes
 }
 
+fn draw_probes() -> Probes<'static> {
+    let db: &'static str = Box::leak(
+        format!(
+            "db={}/../../mzlab/web/molecules/catalogue.csv",
+            env!("CARGO_MANIFEST_DIR")
+        )
+        .into_boxed_str(),
+    );
+    // over the 2000-atom limit: data (1), as every `*.tooBig`
+    let big: &'static str = Box::leak(format!("smiles:{}", "C".repeat(2001)).into_boxed_str());
+    let edit: &'static str = r#"edit=[{"op":"atom.set","id":9,"chg":1}]"#;
+    vec![(
+        "mol draw",
+        vec![
+            (vec!["smiles:CCO"], 0),
+            // an operation that fails is a usage error (2) naming its index, never a partial drawing
+            (vec!["smiles:CCO", "--set", edit], 2),
+            (vec!["smiles:CCO", "--set", "edit=@/no/such/patch.json"], 4),
+            (vec![big], 1),
+            (vec!["smiles:C(("], 2),
+            (vec!["name:caffeine"], 2),
+            // an InChI alone is never parsed: usage, the hint asks for the InChIKey
+            (vec!["InChI=1S/CH4/h1H4"], 2),
+            (vec!["/no/such/x.mol"], 4),
+            // content that is not a molfile is unreadable input
+            (vec!["molfile:not a molfile\nM  END\n"], 4),
+            (vec!["name:zzzzzzzzzz", "--set", db], 5),
+            (vec!["smiles:CCO", "--out", NOWHERE], 6),
+        ],
+    )]
+}
+
 fn export_probes(fx: &Fx) -> Probes<'_> {
     let nowhere = NOWHERE;
     let (ether, export_big) = (&fx.ether[..], &fx.export_big[..]);
@@ -434,6 +468,7 @@ fn each_entry_lists_exactly_the_codes_its_probes_give() {
     let mut probes = ion_probes(&fx);
     probes.extend(mol_probes(&fx));
     probes.extend(export_probes(&fx));
+    probes.extend(draw_probes());
     for (name, list) in probes {
         let e = crate::cmd::entries().find(|e| e.name == name).unwrap();
         let mut seen = std::collections::BTreeSet::new();

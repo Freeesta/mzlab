@@ -35,6 +35,11 @@
   "draw.export.svgTitle.clear": "<title> element of the exported SVG (transparent background); {app} = program name, {stamp} = date YYYY-MM-DD.",
   "draw.export.svgTitle.white": "As above, with a white background.",
   "draw.import.failed": "Notice below the SMILES field when pasting a structure fails; {message} = Ketcher text (English).",
+  "draw.import.changed": "Notice under the SMILES field after a ChemDraw-format file was changed before Ketcher read it; {name} = file name or the words for pasted text, {what} = the changes, joined by semicolons.",
+  "draw.import.pasted": "Stands for the file name in draw.import.changed when the structure was pasted.",
+  "draw.import.fix.empty": "One change in draw.import.changed: attributes with an empty value were removed from the CDXML; {names} = their names.",
+  "draw.import.fix.replaced": "One change in draw.import.changed: {count} bytes or characters of the file were not valid in its charset and became the replacement character (U+FFFD).",
+  "draw.import.fix.charset": "One change in draw.import.changed: the file was not UTF-8 and was decoded as {charset}.",
   "draw.import.unreadable": "Notice below the SMILES field when a dropped structure file cannot be read; {name} = the file name.",
   "draw.props.failed": "Box of the predicted properties when the calculation fails; {message} = technical text.",
   "draw.quick.invalid": "Notice below \"Quick draw\" for a SMILES rejected by Ketcher; {message} = Ketcher text (English).",
@@ -44,8 +49,5 @@
   "draw.selection.cuts": "Note below the SMILES of the selection: number of bonds cut by the selection ({n}).",
   "draw.export.filePrefix": "Prefix of the name of the downloaded files (drawing_YYYY-MM-DD_HHMM.png): only lowercase letters without accents.",
   "draw.export.transparentSuffix": "Suffix of the name of the files with a transparent background: only lowercase letters without accents.",
-  "draw.error": "Text on the chart when the drawing fails; {message} = technical text.",
-  "error.sdf.ion": "Error of the MOL/SDF export of the drawing; {ion} = name of the adduct asked for, not present in the table.",
-  "error.sdf.molfile": "Error of the MOL/SDF export of the drawing; {message} = technical text from the molfile reader.",
-  "error.sdf.tooBig": "Error of the MOL/SDF export of the drawing; {max} = maximum number of atoms."
+  "draw.error": "Text on the chart when the drawing fails; {message} = technical text."
 }

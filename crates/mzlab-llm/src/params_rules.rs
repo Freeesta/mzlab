@@ -1,4 +1,4 @@
-//! `param-proposal/1`: the parameters of mzFlow proposed by deterministic rules (`R-*` of `docs/studi/assistente-dati/03-parametri.md` §5) from an
+//! `param-proposal/1`: the parameters of mzFlow proposed by deterministic rules (`R-*` of `docs/agenti/llm-params.md`, table of rules) from an
 //! `inspection/1` and the answers of the user. Every proposal carries its rule, signals, confidence, `range_ok` against the real `step/1` limits and the
 //! place of its proof; a signal that is absent gives a `missing` question, never an invented value. Used by `mzlab-cli llm` and the `llm` module.
 
@@ -119,7 +119,7 @@ const RT: &[Target] = &[
     ("features.table", "", "rt_tol"),
 ];
 
-/// How sure a proposal is (`03-parametri.md` §1): `low` is shown as a question, not as a proposal.
+/// How sure a proposal is (`docs/agenti/llm-params.md`, principle): `low` is shown as a question, not as a proposal.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Conf {
     High,

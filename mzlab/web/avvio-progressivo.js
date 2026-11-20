@@ -110,7 +110,7 @@ const AVVIO = (function () {
   const BOTTONI_RIGA = ["np-chrom", "np-spec", "np-map", "np-xic", "np-mrm"];
 
   function chiaveRiga() {
-    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione.riga") : "mzlab.sessione.riga";
+    return typeof window.NOMI !== "undefined" ? window.NOMI.KEY("session.row") : "mzlab.session.row";
   }
 
   /**
@@ -168,7 +168,7 @@ const AVVIO = (function () {
   function segnaSessione(attiva) {
     if (typeof window === "undefined" || !window.localStorage) return;
     try {
-      const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione") : "mzlab.sessione";
+      const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("session") : "mzlab.session";
       if (attiva) { if (!window.QQ_RESETTING) window.localStorage.setItem(k, "1"); }    // pagehide of a reset must not re-create the marker: the next start would show «restoring» for nothing
       else { window.localStorage.removeItem(k); segnaRiga(null); }
     } catch (_) {}
@@ -177,7 +177,7 @@ const AVVIO = (function () {
   function haSessione() {
     if (typeof window === "undefined" || !window.localStorage) return false;
     try {
-      const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione") : "mzlab.sessione";
+      const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("session") : "mzlab.session";
       return window.localStorage.getItem(k) === "1";
     } catch (_) { return false; }
   }

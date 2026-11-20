@@ -35,8 +35,8 @@ const BANCO = (() => {
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
   // an MSn infusion lists the nodes of its precursor tree instead of the scan types (infusione.js)
-  // the scan filter lists the channels of the file (api/canali); an MSn infusion lists the nodes of its precursor tree instead (infusione.js)
-  const channelsOf = k => J(`api/canali?k=${k}`).then(j => j.channels.filter(c => (c.family === "ms" || c.family === "dd") && c.n_points > 0).map(c => ({ key: "canale:" + c.id, level: c.ms_level, n: c.n_points, label: c.label })));
+  // the scan filter lists the channels of the file (api/channels); an MSn infusion lists the nodes of its precursor tree instead (infusione.js)
+  const channelsOf = k => J(`api/channels?k=${k}`).then(j => j.channels.filter(c => (c.family === "ms" || c.family === "dd") && c.n_points > 0).map(c => ({ key: "channel:" + c.id, level: c.ms_level, n: c.n_points, label: c.label })));
   const groupsOf = k => memo(`flt|${k}|${window.INF && INF.isInf(E.files[k]) ? INF.O.tol + INF.O.ce : ""}`, () => (window.INF && INF.isInf(E.files[k]) ? INF.groups(k) : channelsOf(k).catch(() => J(`api/filters?k=${k}`).then(j => j.filters))));
   const nfmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const IC_PIN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8l4.7 4.7-2 .6-2.4 2.6.1 3-1 1-2.6-3.1-3.6 3.6-.4-.4 3.6-3.6-3.1-2.6 1-1 3 .1 2.6-2.4z"/></svg>';
@@ -83,7 +83,7 @@ const BANCO = (() => {
   /** @returns {Promise<{sid: number, no: number, rt: number, prec: number | null, level: number}[]>} */
   const scansOf = (f, gs, filt) => memo(`scn|${f.k}|${filt || ""}`, async () => {
     const g = filt ? gs.find(x => x.key === filt) : null, levels = g ? [g.level] : [...new Set(gs.map(x => x.level))];
-    const url = (/** @type {number} */ lv) => g && g.key.startsWith("canale:") ? `api/scanlist?k=${f.k}&canale=${encodeURIComponent(g.key.slice(7))}` : `api/scanlist?k=${f.k}&level=${lv}${g ? "&filt=" + encodeURIComponent(g.key) : ""}`;
+    const url = (/** @type {number} */ lv) => g && g.key.startsWith("channel:") ? `api/scanlist?k=${f.k}&channel=${encodeURIComponent(g.key.slice(7))}` : `api/scanlist?k=${f.k}&level=${lv}${g ? "&filt=" + encodeURIComponent(g.key) : ""}`;
     const parts = await Promise.all(levels.map(lv => J(url(lv))));
     const out = [];
     parts.forEach((t, i) => t.sid.forEach((/** @type {number} */ sid, /** @type {number} */ j) => out.push({ sid, no: t.no[j], rt: t.rt[j], prec: t.prec[j], level: levels[i] })));
@@ -359,7 +359,7 @@ const BANCO = (() => {
     ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')],
     ["alb", I18N.t("bn.i9.alb"), ICON.tree],
     ["gra", I18N.t("bn.i9.gra"), svg('<rect x="1.5" y="6" width="4" height="4" rx=".8"/><rect x="10.5" y="2" width="4" height="4" rx=".8"/><rect x="10.5" y="10" width="4" height="4" rx=".8"/><path d="M5.5 8h2.5V4h2.5M8 8v4h2.5"/>')]];
-  const IK = NOMI.KEY("banco.info");
+  const IK = NOMI.KEY("bench.info");
   const ist = (() => { const o = lsObj(IK); return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
   const num = (v, d = 4) => (v == null || !Number.isFinite(+v) ? "" : String(+(+v).toFixed(d)));

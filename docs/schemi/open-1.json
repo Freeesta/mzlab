@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "open/1",
+  "title": "open/1: the text the Drawing editor reads for a structure file",
+  "description": "The answer of `mzlab-cli mol open` (always JSON); `text` is the file decoded as UTF-8 (binary CDX as base64), `changes` lists each change made to it, in this order: `charset` (the file was UTF-16, with or without a byte-order mark, or 8-bit text), `replaced` (characters not valid in that charset became U+FFFD), then `empty` (attributes with an empty value dropped from the CDXML start tags). Each fix carries only its own fields. A file over 8 MiB is refused with an error/1 (`error.open.tooBig`). Code: crates/mzlab-feat/src/chem/structure_file.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "text",
+    "changes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "open/1"
+    },
+    "text": {
+      "type": "string"
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "fix",
+              "charset"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fix": {
+                "const": "charset"
+              },
+              "charset": {
+                "type": "string",
+                "description": "the charset the text was decoded as: UTF-16, UTF-16LE or UTF-16BE (the last two when there was no byte-order mark), or the charset the XML declaration named, windows-1252 when it named none or one with no table"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fix",
+              "count"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fix": {
+                "const": "replaced"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "how many invalid sequences became U+FFFD"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fix",
+              "names"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fix": {
+                "const": "empty"
+              },
+              "names": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "the attribute names dropped, each once, in order of first sight"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

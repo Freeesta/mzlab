@@ -62,7 +62,7 @@ fn visible(sc: &Scena) -> Vec<usize> {
     let valid: Vec<&Edge> = sc
         .edges
         .iter()
-        .filter(|a| idx.contains_key(a.da.as_str()) && idx.contains_key(a.a.as_str()))
+        .filter(|a| idx.contains_key(a.from.as_str()) && idx.contains_key(a.a.as_str()))
         .collect();
     let has_in: HashSet<&str> = valid.iter().map(|a| a.a.as_str()).collect();
     let mut on = vec![false; sc.ions.len()];
@@ -74,7 +74,7 @@ fn visible(sc: &Scena) -> Vec<usize> {
         }
     }
     while let Some(k) = todo.pop() {
-        for a in valid.iter().filter(|a| a.da == sc.ions[k].id) {
+        for a in valid.iter().filter(|a| a.from == sc.ions[k].id) {
             let t = idx[a.a.as_str()];
             if !on[t] && sc.pos.contains_key(&a.a) {
                 on[t] = true;
@@ -292,7 +292,7 @@ pub fn svg(graph: &str, view: View) -> Result<String> {
     }
     let vis_ix = visible(&sc);
     let mol = root_molecule(&sc);
-    let extra = |_: &Ion, p: &Pos| match (&mol, p.da.is_none()) {
+    let extra = |_: &Ion, p: &Pos| match (&mol, p.from.is_none()) {
         (Mol_::Disegno(_), true) => DH + 18.0,
         (Mol_::Niente, true) => LH,
         _ => 0.0,
@@ -302,7 +302,7 @@ pub fn svg(graph: &str, view: View) -> Result<String> {
     let narcs = sc
         .edges
         .iter()
-        .filter(|a| vis.contains(a.da.as_str()) && vis.contains(a.a.as_str()))
+        .filter(|a| vis.contains(a.from.as_str()) && vis.contains(a.a.as_str()))
         .count();
     let (mode, name) = if view == View::Radial {
         ("radial", "Fragmentation graph, radial view")
@@ -387,16 +387,16 @@ pub fn texts(graph: &str, view: View) -> Result<Vec<String>> {
     for a in sc
         .edges
         .iter()
-        .filter(|a| vis.contains(a.da.as_str()) && vis.contains(a.a.as_str()))
+        .filter(|a| vis.contains(a.from.as_str()) && vis.contains(a.a.as_str()))
     {
-        let best = sc.best.contains(&format!("{}>{}", a.da, a.a));
+        let best = sc.best.contains(&format!("{}>{}", a.from, a.a));
         if view == View::Radial && !best {
             continue;
         }
         let (first, second) = loss_text(a);
         out.push(format!(
             "arc {}>{} | {} | {} | {}",
-            a.da,
+            a.from,
             a.a,
             plane(&first),
             second.as_deref().map_or(String::new(), plane),

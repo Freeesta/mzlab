@@ -32,10 +32,10 @@ fn register_index_open_and_route() {
     let tic = text(r("route", json!({"slot": 0, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap());
     assert!(tic.starts_with("{\"rt\":["), "{tic}");
     assert_eq!(text(r("route", json!({"slot": 9, "path": "/api/chrom", "query": ""})).unwrap()), "", "a slot that is not open is not answered");
-    // api/canali reads the chromatograms of the mzML too (op `canali`, as the wasm engine); the plain route then serves the same channels from the cache
+    // api/channels reads the chromatograms of the mzML too (op `canali`, as the wasm engine); the plain route then serves the same channels from the cache
     let channels = text(r("canali", json!({"slot": 0, "name": name, "fid": id})).unwrap());
     assert!(channels.starts_with("{\"schema\":\"channels/1\""), "{channels}");
-    assert_eq!(text(r("route", json!({"slot": 0, "path": "/api/canali", "query": "?k=0"})).unwrap()), channels);
+    assert_eq!(text(r("route", json!({"slot": 0, "path": "/api/channels", "query": "?k=0"})).unwrap()), channels);
     assert!(r("nope", json!({})).is_err());
     let tic_of = |pol: i64| {
         r("idxopen", json!({"slot": 1, "name": name, "pol": pol})).unwrap();
@@ -116,23 +116,6 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     st2.set_data_folder(data.path().join("app"));
     assert_eq!(text(st2.rpc("lr_molecules_archive", &json!({"mop": "read", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
     assert!(st2.rpc("lr_molecules_archive", &json!({"mop": "write", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
-}
-
-#[test]
-fn an_old_molecule_file_is_read_so_the_engine_refuses_it_and_the_next_save_removes_it() {
-    let data = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(data.path().join("app")).unwrap();
-    let old = r#"{"molecole":[{"nome":"Esempina","formula":"C10H15NO"}],"schema":"molecules/1"}"#;
-    std::fs::write(data.path().join("app/molecole.json"), old).unwrap();
-    let st = State::new();
-    st.set_data_folder(data.path().join("app"));
-    let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
-    let got = r("lr_molecules_archive", json!({"mop": "read", "body": ""}));
-    assert_eq!(got, old, "the page gets the old bytes");
-    assert!(r("lr_molecules", json!({"mop": "load", "body": format!("{{\"user\":{got}}}")})).contains("error.molecules.oldFormat"));
-    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Nuova","formula":"CH4"}]}"#;
-    assert_eq!(r("lr_molecules_archive", json!({"mop": "write", "body": doc})), "{}");
-    assert!(!data.path().join("app/molecole.json").exists() && data.path().join("app/molecules.json").exists());
 }
 
 #[test]

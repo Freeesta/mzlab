@@ -1,8 +1,8 @@
 """Window «Molecules» (molecules-ui.js, opened by the «Manage» link) and the search box (molecules-field.js), on INVENTED molecules only (Exampline, Provolone B): lazy loading, open and close
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
-surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 5 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
+surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 6 without losing files / kv / manifest (the old liste_utente store is left as it is), the ARIA combobox with the keyboard, axe.
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecules_ui.py"""
-# covers: mzlab/web/molecole, mzlab/web/molecules-, mzlab/web/qqq-db.js
+# covers: mzlab/web/molecules, mzlab/web/molecules-, mzlab/web/qqq-db.js
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -141,8 +141,8 @@ try:
             v = pg.evaluate("""async () => { const dbs = await indexedDB.databases(); const d = dbs.find(x => x.name === 'mzlab_lab');
               const db = await new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => ok(q.result); });
               const out = { v: d.version, stores: [...db.objectStoreNames].sort(), n: await new Promise(ok => { const c = db.transaction('molecules').objectStore('molecules').count(); c.onsuccess = () => ok(c.result); }) }; db.close(); return out; }""")
-            assert v["v"] == 5 and "molecules" in v["stores"] and v["n"] == 2, v
-        step("after a reload the molecules are still there (IndexedDB version 5, store molecules)", persists)
+            assert v["v"] == 6 and "molecules" in v["stores"] and v["n"] == 2, v
+        step("after a reload the molecules are still there (IndexedDB version 6, store molecules)", persists)
 
         def exports():
             with pg.expect_download() as d: pg.click("#mol-csv")
@@ -250,27 +250,9 @@ try:
               const out = { ver: v4.version, stores: [...v4.objectStoreNames].sort(), files: await get('files', 'a.mzML'), kv: await get('kv', 'notebook'), lst: await get('liste_utente', 'l1'), man: await get('manifest', 'files/a.mzML'),
                 key: v4.transaction('molecules').objectStore('molecules').keyPath };
               v4.close(); indexedDB.deleteDatabase(name); return out; }""")
-            assert res["ver"] == 5 and res["stores"] == ["files", "kv", "liste_utente", "manifest", "molecules"] and res["key"] == "id", res
+            assert res["ver"] == 6 and res["stores"] == ["files", "kv", "liste_utente", "manifest", "molecules", "user_lists"] and res["key"] == "id", res
             assert res["files"] == "bytes" and res["kv"] == '{"session":[]}' and res["lst"] == {"id": "l1", "name": "My list"} and res["man"] == {"path": "files/a.mzML", "bytes": 5}, res
-        step("database 3 -> 5: the new store is added, files / kv / liste_utente / manifest keep their rows", migration)
-
-        def old_rows():
-            # a record saved before the keys were English (`nome`): the window says so, the catalogue still works, the next save drops the old row
-            pg.evaluate("""new Promise((ok, no) => { const q = indexedDB.open('mzlab_lab'); q.onerror = () => no(q.error);
-              q.onsuccess = () => { const x = q.result.transaction('molecules', 'readwrite'), s = x.objectStore('molecules'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Legacy', formula: 'CH4' });
-                x.oncomplete = () => { q.result.close(); ok(); }; }; })""")
-            pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
-            pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
-            pg.wait_for_selector("#mol-errs", state="visible")
-            txt = pg.inner_text("#mol-errs"); assert "older version" in txt and "Row 1:" in txt, txt
-            search("paracetamol"); assert names(), "the catalogue still works"
-            add(name="Fresh", formula="CH4")
-            assert not pg.is_visible("#mol-errs"), "the old row is gone with the next save"
-            left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecules').objectStore('molecules').getAll();
-              g.onsuccess = () => { q.result.close(); ok(g.result.map(r => ("nome" in r ? "OLD:" : "") + r.name)); }; }; })""")
-            assert left == ["Fresh"], left   # an `OLD:` entry would be a record of the old format that the save did not clear
-            pg.keyboard.press("Escape")
-        step("an old-format record is refused with a clear message; the catalogue works; the next save clears it", old_rows)
+        step("database 3 -> 6: the new stores are added, files / kv / manifest and the old liste_utente rows are left untouched (no conversion)", migration)
 
         def clean():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")

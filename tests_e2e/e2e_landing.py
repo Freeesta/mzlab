@@ -13,7 +13,7 @@ import dati_sintetici as ds
 
 CLS_MAX = 0.01
 TIMES = (0, 15, 30, 45, 60)
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"
 
 # Vitals from the navigation: observers are installed before any script runs.
 VITALS = """() => { const V = window.__v = {fcp: null, lcp: null, cls: 0};
