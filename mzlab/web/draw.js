@@ -8,7 +8,7 @@
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
 import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import { guardStorage } from "./disegno-storage.js"; import { watchLoad } from "./disegno-avvio.js";
-import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
+import { initCerca, nameToSmiles, guardPaste, isNameLine } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { mountImport } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
@@ -62,7 +62,7 @@ function start() {
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
-    if (doc && doc.body) mountImport(doc, k, { t: (key, p) => I18N.t(key, p), note: dnote, done: () => { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); } });
+    if (doc && doc.body) mountImport(doc, k, { t: (key, p) => I18N.t(key, p), note: dnote, isName: isNameLine, done: () => { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); } });
     
     onReady(); return k; });
   // a failure before or after Ketcher is ready: the next start() is a new attempt on a frame loaded anew, so «Try again» always does something
@@ -747,9 +747,18 @@ Q("#ex-sdfopt").onclick = () => { const p = Q("#ex-sdfpop"), open = p.hidden; p.
 Q("#ex-sdfpop").addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { Q("#ex-sdfpop").hidden = true; Q("#ex-sdfopt").setAttribute("aria-expanded", "false"); Q("#ex-sdfopt").focus(); } });
 Q("#ex-ion").addEventListener("change", () => { NB.drawIon = Q("#ex-ion").value === "none" ? "" : Q("#ex-ion").value; nbSave(); });
 Q("#kfail-retry").onclick = () => { retried = true; start().then(() => { retried = false; Q("#kframe").focus(); }, () => {}); };   // the button goes away with the notice: the focus moves to the editor, or back to the button of a new failure
-Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; try { await start(); } catch (_) { return; } /* a failed start has its own notice */ dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
-  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
-  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
+let quickBusy = false, quickAgain = false;          // one «Draw» at a time: a double click would add the structure twice; a suggestion picked meanwhile is drawn next
+Q("#ex-load").onclick = async () => { if (quickBusy) { quickAgain = true; return; } quickBusy = true; try { for (let drawn = "", first = true; first || (quickAgain && Q("#ex-smi").value.trim() && Q("#ex-smi").value !== drawn); first = false) { quickAgain = false; drawn = await quickDraw(); } } finally { quickBusy = false; } };
+/** Draws the typed text and answers it as typed; the field is emptied only if it still holds that text. */
+async function quickDraw() { const typed = Q("#ex-smi").value; let v = typed.trim(); if (!v) return typed; try { await start(); } catch (_) { return typed; } /* a failed start has its own notice */ dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return typed; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
+  let late = false, timer = 0;   // after the 20 s limit nothing more is added and the field is left alone; an addFragment already sent to Ketcher cannot be called back
+  try {   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error; an Indigo that never answers must not leave «Draw» dead
+    const changed = await Promise.race([(async () => { const before = await K.getKet(); if (late) return null; await K.addFragment(v); return await K.getKet() !== before; })(), new Promise(ok => { timer = setTimeout(() => { late = true; ok(null); }, 20000); })]);
+    if (changed === null) dnote(I18N.t("draw.quick.slow")); else if (!changed) dnote(I18N.t("draw.quick.invalidNone"));
+    else { if (Q("#ex-smi").value === typed) Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); }
+  finally { clearTimeout(timer); }
+  return typed; }
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { start().catch(() => {}); await everReady; return true; } /* never rejects: it stays pending while the failure notice shows, until a start succeeds */, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };

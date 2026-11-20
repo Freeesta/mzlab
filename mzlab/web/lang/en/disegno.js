@@ -28,6 +28,7 @@ I18N.add("en", {
   "draw.quick.button": "Draw",
   "draw.quick.invalidNone": "Invalid SMILES: no structure was added.",
   "draw.quick.invalid": "Invalid SMILES: {message}",
+  "draw.quick.slow": "The editor did not answer. Try again.",
   "draw.selection.heading": "SMILES of the selection",
   "draw.selection.slow": "The structure conversion did not answer within {s} s and was stopped, so this piece has no SMILES. Select a smaller piece, or draw it again, and try once more.",
   "draw.selection.noFormula": "Atom without a formula (R group, abbreviation...): no SMILES.",
