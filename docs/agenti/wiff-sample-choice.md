@@ -106,7 +106,7 @@ Lang keys (English, new `pick` file under `mzlab/web/lang/en/` with its contexts
 2. By-sector OLE open and DAD on demand for big `.wiff` (from #3398 a, b): memory only, the listing and `Wiff::open` work above `WIFF_MAX`; cap measured; tests `wiff_by_sector.rs` as base.
 3. (DONE) `--sample LIST` on `convert` / `channels` / `features` + `sample select`, CLI only; `sample-flag.md`. Left: `flow run` input property.
 4. (DONE, `wiff-sample-dialog.md`) The page dialog «Choose samples» (setting, remember, filter, a11y, i18n), reading `native_samples`; on the site it still copies the whole pair to OPFS; skipped samples are not indexed. e2e its picker e2e test revived for several files, one file, a pair without scan, drop of a folder.
-5. OPFS copy by ranges of only the chosen samples (from #3398 d): the part that makes a huge pair openable in the browser at all; own PR, own risks.
+5. (DONE, `wiff-range-copy.md`) OPFS copy by ranges of only the chosen samples (from #3398 d); Q4 left open.
 6. Optional: desktop-specific polish, a file-level chooser for folders, date/vial columns after X1.
 PRs 1-3 can run in parallel with the dialog design review; PR 4 needs PR 1; PR 5 needs 2 and 4.
 

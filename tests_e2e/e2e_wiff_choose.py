@@ -1,7 +1,7 @@
-"""«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4): shown only when the file has several samples, all ticked for a small
+"""«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4; the range copy of a partial choice, wiff-range-copy.md): shown only when the file has several samples, all ticked for a small
 set, Select none / numbers field (the engine's `sample_selection`), Open selected opens only the ticked ones, Cancel opens nothing, the setting «never» and «always». Synthetic pairs of
 tools/wiff_grande.py. Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
-# covers: mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, crates/mzlab-core/src/readers/selection
+# covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, crates/mzlab-core/src/readers/selection
 import os, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -60,6 +60,16 @@ try:
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
             assert rows(pg) == 2, rows(pg)
         step("Open selected opens only the ticked samples", open_some)
+        def range_copy():
+            # the .wiff.scan in OPFS has the size of the original but holds only the chosen samples' bytes (the skipped sample's section is zeros): the engine's copy plan, putSparse
+            got = pg.evaluate("""async () => { const out = []; const walk = async (d, path) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h, path + n + '/'); else if (n.startsWith('nat~') && n.endsWith('.wiff.scan')) { const f = await h.getFile(); const b = new Uint8Array(await f.arrayBuffer()); let z = 0, nz = 0; for (const v of b) v === 0 ? z++ : nz++; out.push({ n, size: b.length, nz }); } } }; await walk(await navigator.storage.getDirectory(), ''); return out; }""")
+            src = (D / "multi" / "multi.wiff.scan").read_bytes()
+            mine = [g for g in got if "multi" in g["n"]]
+            assert mine, got
+            last = mine[-1]
+            assert last["size"] == len(src), (last["size"], len(src))
+            assert 0 < last["nz"] < sum(1 for v in src if v != 0), (last["nz"], sum(1 for v in src if v != 0))
+        step("a partial choice copies only the chosen ranges of the .wiff.scan into OPFS (same size, the skipped section is zeros)", range_copy)
         def solo():
             n = rows(pg); pg.set_input_files("#pick", pair("solo"))
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n}", timeout=120000)

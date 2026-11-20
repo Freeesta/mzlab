@@ -146,6 +146,29 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
 /** @type {(kind: string, name: string, size: number, chunk: Chunker, after?: AfterPiece) => Promise<File>} */
 export const putChunks = (kind, name, size, chunk, after) => write(kind, name, size, chunk, after);
 
+// the file kind/name of `size` bytes of which only `ranges` ([start, end) pairs, ascending) are written, read with chunk(offset, length): the rest is zeros (the range copy of a
+// .wiff.scan of which one sample is wanted, readers::ranges); the partial file is removed if something fails
+/** @type {(kind: string, name: string, size: number, ranges: number[][], chunk: Chunker) => Promise<File>} */
+export const putSparse = (kind, name, size, ranges, chunk) => locked(kind, name, async () => {
+  await dropLease(kind, name);
+  const d = await dir(kind), fh = await d.getFileHandle(name, { create: true }), ah = await fh.createSyncAccessHandle();
+  try {
+    ah.truncate(0);
+    for (const [a, b] of ranges) for (let off = a; off < b; off += STEP) { const n = Math.min(STEP, b - off); await writeAll(ah, await chunk(off, n), off, size); }
+    ah.truncate(size);
+    ah.flush();
+    if (ah.getSize() < size) throw await quotaError(size, ah.getSize());
+  } catch (e) {
+    try { ah.close(); } catch (_) { /* already closed */ }
+    try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }
+    throw e;
+  }
+  ah.close();
+  const f = await fh.getFile();
+  told("put", kind, name, f.size);
+  return f;
+});
+
 // pieces of a size known only at the end (the mzML a .mzML.gz inflates to, rust-carica.js putGz): `next()` gives the next piece, null at the end; the partial file is removed if something fails
 export function putStream(/** @type {string} */ kind, /** @type {string} */ name, /** @type {() => Promise<Uint8Array | null>} */ next) {
   return locked(kind, name, async () => {

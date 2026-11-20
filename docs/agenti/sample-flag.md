@@ -13,10 +13,11 @@ Plan and decisions: `wiff-sample-choice.md`. List what a file holds first: `mzla
 - `convert INPUT... --out DIR --sample LIST`: one `NAME-ID.mzML` per chosen sample, byte for byte the file a run without `--sample` writes for that sample (a single chosen sample keeps its `NAME-ID` name). Exit 5 before anything is written.
 - `channels FILE --sample LIST`: one `channels/1` line per sample, in the order of the file, each the bytes of its own single-sample run; the whole list is checked first (no partial answer); `trace chrom|xic|spectrum` and `file info` read one sample (`--sample ID`; `file info` takes a list).
 - `features FILE... --sample LIST`: every file with several samples gives one series member per chosen sample (progress lines name it `FILE@ID`), single-sample files stay one member; without `--sample` a multi-sample file is its first sample, as before.
+- `sample select FILE --sample LIST --ranges [--json]`: also the byte ranges the chosen samples need (`bytes`, `total`, `tag`, `members[].ranges`), the site's range copy: `wiff-range-copy.md`.
 - `sample select FILE --default [--budget-mb N] [--json]`: the samples the page dialog ticks first (`readers::selection::suggest`, the site's `sample_default`): all when their section bytes are at most a quarter of the budget (default 1024 MB), none otherwise; exactly one of `--sample` and `--default`.
 
 ## Not here
-- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4 (`wiff-sample-dialog.md`), the OPFS range copy PR 5.
+- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4 (`wiff-sample-dialog.md`), the OPFS range copy PR 5 (`wiff-range-copy.md`).
 - `dad --sample ID` keeps its single id.
 
 Tests: `crates/mzlab-cli/src/sample_select_tests.rs` (synthetic `tools/wiff_grande.py` pair; python3 is part of the test), `readers/selection.rs` unit tests.
