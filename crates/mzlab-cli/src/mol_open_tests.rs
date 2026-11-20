@@ -84,6 +84,25 @@ fn the_refusal_of_a_big_file_reports_its_real_size() {
     );
 }
 
+/// An endless source (a device, a pipe) is never read past the limit: it ends at once with the "more than" refusal, exit 1, as one `error/1`.
+#[cfg(unix)]
+#[test]
+fn an_endless_input_is_refused_as_more_than_the_limit_and_ends() {
+    let max = mzlab_feat::chem::structure_file::MAX_BYTES;
+    let start = std::time::Instant::now();
+    let o = run(&["mol", "open", "/dev/zero"]);
+    assert_eq!(o.code, 1);
+    let out = String::from_utf8(o.stdout).unwrap();
+    assert!(
+        out.contains("\"schema\":\"error/1\"")
+            && out.contains(&format!("\"size\":\"more than {max}\"")),
+        "{out}"
+    );
+    assert!(start.elapsed() < std::time::Duration::from_secs(5));
+    // a device of a few bytes is read, as a file of no known size
+    assert_eq!(run(&["mol", "open", "/dev/null"]).code, 0);
+}
+
 #[test]
 fn a_file_read_as_it_is_exits_0_under_check() {
     let p = file("b.cdxml", b"<CDXML Name=\"a\"><page/></CDXML>");

@@ -441,14 +441,17 @@ fn a_file_over_the_cap_is_refused_with_its_size() {
 fn a_dropped_attribute_never_fuses_its_neighbours() {
     for (input, text) in [
         (r#"<CDXML a=""x="1"/>"#, r#"<CDXML x="1"/>"#),
-        (r#"<CDXML a=""x=""/>"#, r#"<CDXML x=""/>"#),
+        (r#"<CDXML a=""x=""/>"#, r#"<CDXML/>"#),
+        (r#"<CDXML a=""b=""c=""/>"#, r#"<CDXML/>"#),
+        (r#"<CDXML a=""b="1"/>"#, r#"<CDXML b="1"/>"#),
         (r#"<CDXML a="" x=""/>"#, r#"<CDXML/>"#),
         (r#"<CDXML a=""/>"#, r#"<CDXML/>"#),
         (r#"<CDXML a=""b="2"/>"#, r#"<CDXML b="2"/>"#),
     ] {
         assert_eq!(tidy(input).0, text, "{input}");
+        // a second pass finds nothing more to drop
+        assert_eq!(tidy(text), (text.to_string(), Vec::new()), "{input}");
     }
-    assert!(tidy(r#"<CDXML a=""x=""/>"#).0.starts_with("<CDXML "));
 }
 
 #[test]

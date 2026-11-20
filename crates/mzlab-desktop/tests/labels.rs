@@ -336,6 +336,14 @@ fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
     };
     assert_eq!(e.key, "error.open.tooBig");
     assert_eq!(e.params[0], ("size", (max + 1000).to_string()));
+    for size in [json!(-1), json!(null)] {
+        let r = st.rpc(
+            "feat/grafo",
+            &json!({"kind": "open", "request": {"size": size}}),
+            &[],
+        );
+        assert_eq!(r.err().map(|e| e.key), Some("error.open.request"));
+    }
     let bad = st.rpc(
         "feat/grafo",
         &json!({"kind": "open", "request": {"data": "not base64!"}}),

@@ -170,6 +170,10 @@ def test_open_refuses_a_file_over_the_limit_the_same_way_in_the_wasm_and_the_cli
     asked = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), str(size), "size"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert asked.returncode == 1 and json.loads(asked.stderr) == refusal
     assert json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), "1000", "size")) == {"limit": 8 << 20}
+    # a size that is no size is no request, as on the app's route
+    for bad in ("-1", "NaN"):
+        r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), bad, "size"], cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.open.request", bad
     c = subprocess.run(cli_argv("mol", "open", str(big)), cwd=ROOT, capture_output=True, encoding="utf-8")
     e = json.loads(c.stdout)
     assert c.returncode == 1 and e["schema"] == "error/1" and e["error_key"] == "error.open.tooBig", c.stdout

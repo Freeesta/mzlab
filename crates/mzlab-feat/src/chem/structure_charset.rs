@@ -70,8 +70,7 @@ fn utf16(bytes: &[u8], le: bool) -> (String, usize) {
 }
 
 /// `Some(little endian)` for text with no byte-order mark that is UTF-16 of mostly Latin text: in the first 512 bytes at least 9 in 10 of the bytes
-/// in one place of each pair (the high byte) are NUL and at most 1 in 10 of the others. Text whose head is mostly past U+00FF has no NUL
-/// high bytes and stays undetected.
+/// in one place of each pair (the high byte) are NUL and at most 1 in 10 of the others. A head that does not meet this stays undetected.
 fn nul_utf16(bytes: &[u8]) -> Option<bool> {
     let head = &bytes[..bytes.len().min(512) & !1];
     if head.len() < 4 {

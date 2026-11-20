@@ -22,10 +22,11 @@ in this order. A UTF-16 declaration is rewritten as UTF-8. Binary CDX (VjCD) com
 fidelity to any drawing program is claimed. A file over 8 MiB is refused (error.open.tooBig, exit 1): the page reads it on its own thread.
 Exit codes: 0 ok, 1 --check and a change or a file over the limit, 2 usage, 4 file or standard input unreadable, 6 --out not writable.";
 
-/// The bytes of `src` (`-`: the standard input). A file over the limit is refused with its real size, from the file metadata and without reading it;
-/// the standard input is read to one byte over the limit, then only counted, so the error has the real size and memory stays bounded.
+/// The bytes of `src` (`-`: the standard input), never read past one byte over the limit. A regular file over the limit is refused with its real
+/// size, from the file metadata and without reading it; the standard input, a pipe or any other file of no known size is refused as "more than"
+/// the limit once it has that many bytes (an endless one ends at once).
 fn read_input(src: &str) -> std::result::Result<Vec<u8>, Outcome> {
-    use mzlab_feat::chem::structure_file::{check_size, MAX_BYTES};
+    use mzlab_feat::chem::structure_file::{check_size, too_big_unknown, MAX_BYTES};
     use std::io::Read;
     let limit = MAX_BYTES as u64 + 1;
     let unreadable = |e: std::io::Error| {
@@ -34,22 +35,20 @@ fn read_input(src: &str) -> std::result::Result<Vec<u8>, Outcome> {
             &mzlab_core::Error::new("err.cli.file").with("path", format!("{path}: {e}")),
         )
     };
-    let refuse = |size: u64| check_size(size).map_err(|e| Outcome::fail_error(&e));
-    let mut b = Vec::new();
-    if src == "-" {
-        let mut s = std::io::stdin();
-        (&mut s)
-            .take(limit)
-            .read_to_end(&mut b)
-            .map_err(unreadable)?;
-        if b.len() as u64 >= limit {
-            let more = std::io::copy(&mut s, &mut std::io::sink()).map_err(unreadable)?;
-            refuse(b.len() as u64 + more)?;
-        }
+    let reader: Box<dyn Read> = if src == "-" {
+        Box::new(std::io::stdin())
     } else {
         let f = std::fs::File::open(src).map_err(unreadable)?;
-        refuse(f.metadata().map_err(unreadable)?.len())?;
-        f.take(limit).read_to_end(&mut b).map_err(unreadable)?;
+        let meta = f.metadata().map_err(unreadable)?;
+        if meta.is_file() {
+            check_size(meta.len()).map_err(|e| Outcome::fail_error(&e))?;
+        }
+        Box::new(f)
+    };
+    let mut b = Vec::new();
+    reader.take(limit).read_to_end(&mut b).map_err(unreadable)?;
+    if b.len() as u64 >= limit {
+        return Err(Outcome::fail_error(&too_big_unknown()));
     }
     Ok(b)
 }

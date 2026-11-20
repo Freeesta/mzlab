@@ -190,10 +190,12 @@ fn is_root(tag: &str) -> bool {
 }
 
 /// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it). The tag is read left to right in
-/// tokens, a quoted string is skipped whole wherever it stands, so a quoted value is never read as attributes.
+/// tokens, a quoted string is skipped whole wherever it stands, so a quoted value is never read as attributes. An attribute glued to a dropped
+/// one (`a=""b=""`, no white space: malformed XML) is dropped too, so a second pass finds nothing more; a kept one gets one blank in front.
 fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>) -> String {
     let b = tag.as_bytes();
     let (mut out, mut copied, mut p) = (String::new(), 0, name_end(b, 1));
+    let mut owed = false;
     while p < b.len() {
         let start = blanks(b, p);
         match b.get(start) {
@@ -213,7 +215,7 @@ fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>
             continue;
         }
         let eq = blanks(b, end);
-        if b.get(eq) != Some(&b'=') || start == p {
+        if b.get(eq) != Some(&b'=') || (start == p && p != copied) {
             p = eq.max(end);
             continue;
         }
@@ -224,14 +226,12 @@ fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>
         };
         let close = open + 1 + tag[open + 1..].find(q as char).unwrap_or(b.len());
         if close == open + 1 {
-            out.push_str(&tag[copied..p]);
-            // the next token must not fuse with the name before the dropped attribute (`a=""x=""`)
-            if b.get(close + 1)
-                .is_some_and(|c| !c.is_ascii_whitespace() && *c != b'>' && *c != b'/')
-            {
-                out.push(' ');
-            }
+            keep(&mut out, &tag[copied..p], &mut owed);
             copied = close + 1;
+            // the token right after it (`a=""x="1"`) must not fuse with what came before: one blank is owed to it
+            owed = b
+                .get(close + 1)
+                .is_some_and(|c| !c.is_ascii_whitespace() && *c != b'>' && *c != b'/');
             let name = &tag[start..end];
             if seen.insert(name.to_string()) {
                 removed.push(name.to_string());
@@ -239,8 +239,18 @@ fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>
         }
         p = close + 1;
     }
-    out.push_str(&tag[copied..]);
+    keep(&mut out, &tag[copied..], &mut owed);
     out
+}
+
+/// Adds kept text to the output, after the blank that is owed to it.
+fn keep(out: &mut String, text: &str, owed: &mut bool) {
+    if !text.is_empty() {
+        if std::mem::take(owed) {
+            out.push(' ');
+        }
+        out.push_str(text);
+    }
 }
 
 /// The largest structure file read (8 MiB): the engine runs on the page thread of the site, and no drawing file comes near it.
@@ -255,6 +265,21 @@ pub fn check_size(size: u64) -> Result<()> {
             .with("limit", MAX_BYTES));
     }
     Ok(())
+}
+
+/// The refusal of an input whose size is not known (standard input, a pipe): it was read up to the limit and is over it.
+pub fn too_big_unknown() -> Error {
+    Error::new("error.open.tooBig")
+        .with("size", format!("more than {MAX_BYTES}"))
+        .with("limit", MAX_BYTES)
+}
+
+/// `size_json` of the number the page sends: a size that is not a number or is negative is no request (`error.open.request`).
+pub fn size_json_f64(size: f64) -> Result<String> {
+    if size.is_nan() || size < 0.0 {
+        return Err(Error::new("error.open.request"));
+    }
+    size_json(size as u64)
 }
 
 /// `{"limit": L}` when a file of this size is read, else the `error.open.tooBig` of `check_size`.
