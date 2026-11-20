@@ -71,7 +71,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         def load():
-            pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg, page=True)
             pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")     # the component needs no engine: a build without the .wasm must not block the test
             pg.wait_for_function("window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=60000); pg.evaluate("() => window.QTOOLS.ensure()")      # no engine here, so no qqReady: ask for the package like the idle start does
             pg.wait_for_function("typeof window.TPTAB === 'object' && typeof window.TPHELP === 'object' && typeof window.TPRIGA === 'object'", timeout=120000)       # before the click: the view attaches the help to what exists when it is built

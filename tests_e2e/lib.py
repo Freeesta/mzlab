@@ -116,14 +116,15 @@ def show_table(pg):
     open_first(pg)
     if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
     pg.wait_for_selector("#wtable", state="visible", timeout=10000)
-def open_mzfinder(pg, host="tp-right", timeout=120000):
+def open_mzfinder(pg, host="tp-right", timeout=120000, page=False):
     """Loads the mzFinder package of the page (what Flow and the shared views use) and adds an empty #<host> div where a test mounts a component by hand."""
     pg.wait_for_function("!!window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=timeout)
     pg.evaluate("() => window.QTOOLS.ensure()")
     pg.wait_for_function("!!window.TPTAB && !!window.TPLAZY", timeout=timeout)
     # the Data view stays visible now and its one-shot decorative leaf (9 s) would keep `getAnimations()` busy: reduced motion, as the a11y setting does
     pg.evaluate("() => document.documentElement.setAttribute('data-a11y-reduce', '1')")
-    pg.evaluate("h => { if (!document.getElementById(h)) { const d = document.createElement('div'); d.id = h; document.body.appendChild(d); } }", host)
+    # page=True: the host is a full-screen scrolling page of its own (the table tests measure rows against the viewport)
+    pg.evaluate("([h, page]) => { if (!document.getElementById(h)) { const d = document.createElement('div'); d.id = h; if (page) d.style.cssText = 'position:fixed;inset:0;overflow:auto;z-index:50;background:var(--bg,#fff)'; document.body.appendChild(d); } }", [host, page])
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # «Load data» is gone: the files are open already, the click is the first click on a file

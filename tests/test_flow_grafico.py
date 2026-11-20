@@ -59,9 +59,9 @@ def test_the_model_of_the_page_behaves():
 
 
 def test_flow_is_english_only():
-    # same rule and same detector as Tabui (tests/test_tabui_inglese.py): no Italian in the strings of the page, no catalogue key in lang/
+    # same rule and same detector as Tabui (tests/test_mzfinder_english.py): no Italian in the strings of the page, no catalogue key in lang/
     import importlib.util
-    spec = importlib.util.spec_from_file_location("tabui_inglese", ROOT / "tests/test_tabui_inglese.py")
+    spec = importlib.util.spec_from_file_location("mzfinder_english", ROOT / "tests/test_mzfinder_english.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     bad = []
