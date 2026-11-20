@@ -5,6 +5,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 |---|---|
 | accessibility of the whole application (WCAG 2.1/2.2 AA, axe-core, controls, known gaps and tolerated rules) | `docs/agenti/accessibility.md` |
 | panel actions (`azioni/1` registry, right-click menu, Shift+F10) | `docs/agenti/actions.md` |
+| headless 2D depiction for agents (`mol draw` study: own Rust layout vs RDKit MinimalLib, Indigo, Rust crates; sizes, licences, quality on a synthetic set with RDKit as oracle, gates) | `docs/agenti/agent-draw.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profile/centroids/MS2, LC/MS method, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
 | Agilent `.D` folder reader (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | loading animation (`base`) and the switched-off animated analyzers (`an-*.js`: quadrupole, TOF, Orbitrap, ESI, trap, FT-ICR, QqQ, Paul, sector, IMS, MALDI) | `docs/agenti/analyzers.md` |
@@ -78,6 +79,8 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |
 | user lists (transformations, adducts, suspects: CSV with per-row errors, `liste/1`, SHA-256 for `prov/1`) | `docs/agenti/lists.md` |
 | LLM assistant and external agents: principles, choices, risks, unrealized proposals | `docs/agenti/llm-choices.md` |
+| LLM assistant evaluation: case sets (G/U/R/smoke), metrics, thresholds, `mzlab-cli llm eval`, red-team attack classes (`tests/data/assist/`) | `docs/agenti/llm-eval.md` |
+| LLM assistant parameter proposals: `param-proposal/1`, signals, rule ids `R-*`, acquisition-to-plan table (`params_rules*.rs`) | `docs/agenti/llm-params.md` |
 | subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `tools/1` catalog) | `docs/agenti/llm-subagents.md` |
 | LLM assistant: `tools/1` catalog | `docs/agenti/llm.md` |
 | map of the open path of every file (click → screen, site and app, by format), strategies present/absent, file batches for external assistants (`tools/batch_gemini.py`) | `docs/agenti/map-loading.md` |
@@ -107,6 +110,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | list of MSn experiments of a DDA file, "MSn tree" window (Experiments/Tree tabs, `msn-elenco.js`, `lev`/`z` columns of `/api/dda`); MS3-only files (`msn_level`, level, `/api/ms2tr`, titles); MSn graph figure; rule tests (`msn rules`) | `docs/agenti/msn-manual.md` |
 | library (area: infusion MSn fragmentation graph (`msn-graph/1`: ions…) | `docs/agenti/msnlib.md` |
 | mutation tests (`cargo-mutants`) of `mzlab-lettori` and the wiff module: commands, samples, survivors and why they stay | `docs/agenti/mutants.md` |
+| mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | mzDraw competitor study: editors, depictors, toolkits and Rust crates (matrix, sizes, licences, layout benchmarks, licence verdict, ideas to copy) | `docs/agenti/mzdraw-competitors.md` |
 | mzDraw formats: conformity matrix (read/write, what is lost, spec terms, public golden files), images and clipboard carrying the molecule, settings file `mzdraw-settings/1` and journal presets, document format `mzdraw/1`, annotations, import report | `docs/agenti/mzdraw-formats.md` |
 | mzDraw plan: feature priorities P0-P3, risks, owner decisions, ready implementation prompts (format catalog, settings, layout benchmark, images with molecule, RXN/RDF, CML/MRV) | `docs/agenti/mzdraw-plan.md` |

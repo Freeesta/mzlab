@@ -304,14 +304,13 @@ fn the_hydrogen_of_an_aromatic_file_goes_to_the_nitrogen_not_to_a_fusion_carbon(
         ],
     );
     let m = read(&imidazole, "2-methylimidazole");
-    let h = hs(&m);
-    assert_eq!((h[0], h[1], h[3], h[4]), (3, 0, 1, 1));
-    assert_eq!(h[2] + h[5], 1);
+    // both nitrogens could take it: the first in file order does
+    assert_eq!(hs(&m), [3, 0, 1, 1, 1, 0]);
 }
 
 #[test]
 fn silicon_arsenic_and_selenium_fill_their_valence_like_the_drawing() {
-    // formulas of RDKit 2026.09 and of Ketcher's canvas: triethylsilane C6H16Si, methaneselenol CH4Se, methylarsine CH5As
+    // lowest allowed valence (Si 4, Se 2, As 3): triethylsilane C6H16Si, methaneselenol CH4Se, methylarsine CH5As
     let silane = plain(
         &["C", "C", "Si", "C", "C", "C", "C"],
         &[
