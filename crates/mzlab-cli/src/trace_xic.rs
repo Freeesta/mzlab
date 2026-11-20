@@ -159,17 +159,20 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
     }))
 }
 
-/// `a` with its `y` replaced by the 1-decimal smoothing of k points; the evidence names the filter.
-fn smoothed(mut a: Answer, k: usize) -> Result<Answer> {
+/// Why a trace has no signal (`None` when it has some): the section holds no scan of that level and polarity, the ion is absent, or the window cut it all.
+fn emptiness(a: &Answer, win: Option<(f64, f64)>) -> Result<Option<&'static str>> {
     let bad = || Error::new("error.badIndex");
     let x = extract::tokens(&a.text, "rt").ok_or_else(bad)?;
     let y = extract::tokens(&a.text, "y").ok_or_else(bad)?;
-    let v: Vec<f64> = y.iter().map(|t| t.parse().unwrap_or(0.0)).collect();
-    let mut o = mzlab_core::json::Out::default();
-    o.rounded(&mzlab_core::peak1d::smooth(&v, k), 1);
-    a.text = format!("{{\"rt\":[{}],\"y\":{}}}", x.join(","), o.0);
-    a.evidence += &format!(",\"smooth\":{k}");
-    Ok(a)
+    if x.is_empty() {
+        return Ok(Some("no_scans_in_section"));
+    }
+    let seen = |t: &&str| t.parse::<f64>().map_or(true, |v| v != 0.0);
+    if !y.iter().any(seen) {
+        return Ok(Some("no_signal"));
+    }
+    let kept = extract::pairs(&x, &y, win);
+    Ok(kept.iter().all(|p| !seen(&p.1)).then_some("outside_window"))
 }
 
 /// The `xicplan/1` document: what the run would extract.
@@ -252,14 +255,18 @@ pub fn xic(args: Vec<String>) -> Outcome {
             let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
             let mut answers = Vec::new();
             for &mz in &j.mz {
-                let mut a = trace_cmd::xic_answer(&mut s, mz, j.tol(mz), j.level, j.pol)?;
+                let mut a = trace_cmd::xic_answer(&mut s, mz, j.tol(mz), j.level, j.pol, j.smooth)?;
                 if let Some(p) = j.ppm {
                     a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
                 }
-                let a = match j.smooth {
-                    Some(k) => smoothed(a, k)?,
-                    None => a,
-                };
+                if let Some(why) = emptiness(&a, j.win)? {
+                    a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
+                    s.note += &format!(
+                        "note: xic:{} is empty ({}); exit 0, the trace is all zero or absent\n",
+                        extract::jnum(mz),
+                        why.replace('_', " ")
+                    );
+                }
                 answers.push((mz, a));
             }
             let id = |mz: f64| format!("xic:{}", extract::jnum(mz));

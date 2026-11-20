@@ -294,9 +294,24 @@ pub(crate) fn xic_answer(
     tol: f64,
     level: u8,
     pol: Option<i8>,
+    smooth: Option<usize>,
 ) -> Result<Answer> {
     s.routes.pol = pol;
-    let text = s.routes.xic(mz, tol, level)?;
+    let text = match smooth {
+        None => s.routes.xic(mz, tol, level)?,
+        // the same route the site asks (`/api/xic` with `smooth`), so the bytes are the site's
+        Some(k) => {
+            let q = Query(vec![
+                ("mz".into(), mz.to_string()),
+                ("tol".into(), tol.to_string()),
+                ("level".into(), level.to_string()),
+                ("smooth".into(), k.to_string()),
+            ]);
+            s.routes
+                .handle("/api/xic", &q)?
+                .ok_or_else(|| Error::new("error.badIndex"))?
+        }
+    };
     let used = s
         .routes
         .idx
@@ -308,6 +323,10 @@ pub(crate) fn xic_answer(
         extract::jnum(tol),
         pol.map_or("null".to_string(), |p| format!("\"{}\"", if p > 0 { "+" } else { "-" })),
     );
+    let ev = match smooth {
+        Some(k) => format!("{ev},\"smooth\":{k}"),
+        None => ev,
+    };
     Ok(Answer {
         text,
         y_unit: "counts".into(),

@@ -3,6 +3,8 @@
 
 use mzlab_core::json::parse;
 
+use mzlab_core::routes::Query;
+
 use crate::extract::tests::{doc_points, mzml_file, page_routes, route_points, run};
 
 fn text(o: crate::Outcome) -> String {
@@ -26,16 +28,26 @@ fn a_list_is_the_traces_of_each_ion_in_order() {
     assert_eq!(v.get("schema").unwrap().str(), Some("trace-set/1"));
     assert_eq!(v.get("n_traces").unwrap().f64(), Some(3.0));
     let mut r = page_routes(&f);
+    let mut members = Vec::new();
     for mz in ["241.3", "300", "500.5"] {
         let one = text(run(&["trace", "xic", &f, "--mz", mz, "--da", "0.4"]));
-        // the member of the list is the document of the ion alone
-        assert!(set.contains(one.trim()), "{mz}: {set}");
         assert_eq!(
             doc_points(&one),
             route_points(&r.xic(mz.parse().unwrap(), 0.4, 1).unwrap(), "rt"),
             "{mz}"
         );
+        members.push(one.trim().to_string());
     }
+    // the whole document, byte for byte: the head, then the document of each ion alone in the order given
+    let name = std::path::Path::new(&f)
+        .file_name()
+        .unwrap()
+        .to_string_lossy();
+    let want = format!(
+        "{{\"schema\":\"trace-set/1\",\"file\":\"{name}\",\"sample\":null,\"n_traces\":3,\"traces\":[{}]}}",
+        members.join(",")
+    );
+    assert_eq!(set.trim(), want);
     let ids: Vec<_> = v
         .get("traces")
         .unwrap()
@@ -131,6 +143,16 @@ fn smoothing_is_the_engine_filter_and_is_named_in_the_evidence() {
             "--smooth",
             &k.to_string(),
         ]));
+        // the bytes of the page's route: `/api/xic` with `smooth`
+        let q = Query(vec![
+            ("mz".into(), "241.3".into()),
+            ("tol".into(), "0.35".into()),
+            ("level".into(), "1".into()),
+            ("smooth".into(), k.to_string()),
+        ]);
+        let routed = page_routes(&f).handle("/api/xic", &q).unwrap().unwrap();
+        assert_eq!(doc_points(&doc), route_points(&routed, "rt"), "k={k}");
+        // and it is the engine filter of the raw trace (the route rounds to 1 decimal)
         let want = mzlab_core::peak1d::smooth(&raw, k);
         let got: Vec<f64> = doc_points(&doc)
             .iter()
@@ -223,5 +245,91 @@ fn a_dry_run_names_the_extraction_and_writes_nothing() {
         "--dry-run",
     ]);
     assert_eq!(o.code, 4, "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn a_smoothed_list_in_csv_is_the_smoothed_routes_by_column() {
+    let (d, f) = mzml_file("xic_wide_smooth");
+    let csv = text(run(&[
+        "trace",
+        "xic",
+        &f,
+        "--mz",
+        "241.3,300",
+        "--da",
+        "0.4",
+        "--smooth",
+        "5",
+        "--format",
+        "csv",
+    ]));
+    let rows: Vec<Vec<&str>> = csv
+        .lines()
+        .skip(1)
+        .map(|l| l.split(',').collect())
+        .collect();
+    let mut r = page_routes(&f);
+    for (col, mz) in [(1usize, 241.3), (2, 300.0)] {
+        let q = Query(vec![
+            ("mz".into(), mz.to_string()),
+            ("tol".into(), "0.4".into()),
+            ("level".into(), "1".into()),
+            ("smooth".into(), "5".into()),
+        ]);
+        let want = route_points(&r.handle("/api/xic", &q).unwrap().unwrap(), "rt");
+        let got: Vec<(String, String)> = rows
+            .iter()
+            .map(|c| (c[0].to_string(), c[col].to_string()))
+            .collect();
+        assert_eq!(got, want, "{mz}");
+    }
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn an_empty_trace_is_named_and_not_silent() {
+    let (d, f) = mzml_file("xic_empty");
+    let run_ok = |a: &[&str]| {
+        let mut v = vec!["trace", "xic", f.as_str()];
+        v.extend_from_slice(a);
+        let o = run(&v);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        (String::from_utf8(o.stdout).unwrap(), o.stderr)
+    };
+    let reason = |doc: &str| {
+        let v = parse(doc.trim().as_bytes()).unwrap();
+        let ev = v.get("evidence").unwrap();
+        (
+            ev.get("empty").and_then(|e| e.bool()),
+            ev.get("empty_reason")
+                .and_then(|e| e.str().map(String::from)),
+        )
+    };
+    // an ion the file does not hold: all zero
+    let (doc, err) = run_ok(&["--mz", "9999", "--da", "0.2"]);
+    assert_eq!(reason(&doc), (Some(true), Some("no_signal".into())));
+    assert!(err.contains("xic:9999 is empty (no signal)"), "{err}");
+    // a polarity none of the scans has
+    let (doc, err) = run_ok(&["--mz", "241.3", "--da", "0.4", "--polarity", "-"]);
+    assert_eq!(
+        reason(&doc),
+        (Some(true), Some("no_scans_in_section".into()))
+    );
+    assert!(err.contains("no scans in section"), "{err}");
+    // a window that holds no signal of an ion that has some
+    let (doc, err) = run_ok(&["--mz", "241.3", "--da", "0.4", "--rt", "500,600"]);
+    assert_eq!(reason(&doc), (Some(true), Some("outside_window".into())));
+    assert!(err.contains("outside window"), "{err}");
+    // a trace with signal says nothing, and a list names only its empty member
+    let (doc, err) = run_ok(&["--mz", "241.3", "--da", "0.4"]);
+    assert_eq!(reason(&doc), (None, None));
+    assert!(!err.contains("empty"), "{err}");
+    let (doc, err) = run_ok(&["--mz", "241.3,9999", "--da", "0.4"]);
+    assert_eq!(doc.matches("\"empty\":true").count(), 1, "{doc}");
+    assert!(
+        err.contains("xic:9999") && !err.contains("xic:241.3 is"),
+        "{err}"
+    );
     let _ = std::fs::remove_dir_all(d);
 }

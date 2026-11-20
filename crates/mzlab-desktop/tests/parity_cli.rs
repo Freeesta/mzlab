@@ -114,10 +114,22 @@ fn the_cli_extraction_commands_hold_the_bytes_of_the_app_routes() {
             .all(|(a, b)| near(a, b));
     let inter = nums.iter().zip(&pts).all(|(a, b)| near(a, b));
     assert!(halves || inter, "the XIC of the app and of the CLI differ");
-    // a list of ions: each member is the document of that ion alone (the same route bytes), in the order given
+    // the smoothed XIC: the app's route with `smooth` (the one the site asks through the wasm `route`) holds the bytes of `--smooth`
+    let smooth = run(&[
+        "trace", "xic", &file, "--mz", "300", "--da", "0.5", "--smooth", "3",
+    ]);
+    assert!(smooth.contains(&route_points(
+        &route("/api/xic", "?mz=300&tol=0.5&level=1&smooth=3"),
+        "rt"
+    )));
+    // a list of ions: the whole document is the head and the document of each ion alone (the same route bytes), in the order given
     let set = run(&["trace", "xic", &file, "--mz", "300,241.3", "--da", "0.5"]);
+    let first = run(&["trace", "xic", &file, "--mz", "300", "--da", "0.5"]);
     let alone = run(&["trace", "xic", &file, "--mz", "241.3", "--da", "0.5"]);
-    assert!(set.starts_with("{\"schema\":\"trace-set/1\""), "{set}");
-    assert!(set.contains(xic.trim()) && set.contains(alone.trim()));
-    assert!(set.find(xic.trim()) < set.find(alone.trim()));
+    let head = set.split(",\"traces\":[").next().unwrap();
+    assert_eq!(
+        set.trim(),
+        format!("{head},\"traces\":[{},{}]}}", first.trim(), alone.trim())
+    );
+    assert!(head.starts_with("{\"schema\":\"trace-set/1\"") && head.ends_with("\"n_traces\":2"));
 }

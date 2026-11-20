@@ -34,7 +34,7 @@
       "items": {
         "$ref": "trace/1"
       },
-      "description": "A trace/1 per ion; evidence names its tolerance (tolerance_da, tolerance_ppm) and, with --smooth, the filter (smooth: 3 or 5)."
+      "description": "A trace/1 per ion; evidence names its tolerance (tolerance_da, tolerance_ppm) and, with --smooth, the filter (smooth: 3 or 5); a member with no signal says empty: true and why (empty_reason)."
     }
   }
 }
