@@ -145,7 +145,7 @@ I18N.add("en", {
   "draw.export.failed": "Export failed: {message}. Reload the page (Cmd+Shift+R) and try again; if it persists, write to whoever runs the course.",
   "draw.export.saved": "File saved",
   "draw.export.mol.title": "The whole canvas in one molfile (V2000; V3000 when large or with stereo groups)",
-  "draw.export.sdf.title": "One record per structure, with formula, exact mass, chosen-ion m/z and an identifier",
+  "draw.export.sdf.title": "A record for each structure: formula, exact mass, chosen-ion m/z and an identifier",
   "draw.export.ion": "Adduct for the SDF m/z",
   "draw.export.ion.title": "m/z of this adduct, for neutral structures",
   "draw.export.sdfopt": "SDF options",
