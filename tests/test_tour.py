@@ -50,3 +50,14 @@ def test_fits_left_target():
     res = run("console.log(JSON.stringify(t.computePosition({top:20,left:1000,right:1180,bottom:700,width:180,height:680}, 320, 160, 1200, 720)))")
     assert res["side"] == "left"
     assert res["left"] == 1000 - 12 - 320
+
+
+def test_every_step_id_has_its_texts_in_the_language_file():
+    # the keys are built from the step id at run time (`tour.<id>.title`, `.text`): a renamed id without its keys only shows as a console warning
+    import re
+    ids = re.findall(r'\bid: "(\w+)"', JS.read_text(encoding="utf-8"))
+    keys = set(re.findall(r'"(tour\.[\w.]+)"', (JS.parent / "lang" / "en" / "tour.js").read_text(encoding="utf-8")))
+    assert len(ids) >= 20, ids
+    missing = [k for i in ids for k in (f"tour.{i}.title", f"tour.{i}.text") if k not in keys]
+    assert not missing, missing
+    assert all(k[:-4] + ".title" in keys for k in keys if k.endswith(".try") and k.count(".") == 2), keys
