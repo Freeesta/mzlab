@@ -41,10 +41,10 @@ pub fn penalty(g: &G, pos: &Pos, mv: &[bool]) -> f64 {
             if a == c || a == d || b == c || b == d || !(mv[a] || mv[b] || mv[c] || mv[d]) {
                 continue;
             }
-            if let (Some(pc), Some(pd)) = (pos[c], pos[d]) {
-                if crosses(pa, pb, pc, pd) {
-                    p += 25.0;
-                }
+            if let (Some(pc), Some(pd)) = (pos[c], pos[d])
+                && crosses(pa, pb, pc, pd)
+            {
+                p += 25.0;
             }
         }
     }
@@ -77,10 +77,8 @@ pub fn side_of(g: &G, a: usize, b: usize) -> Option<Vec<bool>> {
 
 fn apply(pos: &mut Pos, mask: &[bool], f: impl Fn(V) -> V) {
     for (i, m) in mask.iter().enumerate() {
-        if *m {
-            if let Some(p) = pos[i] {
-                pos[i] = Some(f(p));
-            }
+        if *m && let Some(p) = pos[i] {
+            pos[i] = Some(f(p));
         }
     }
 }

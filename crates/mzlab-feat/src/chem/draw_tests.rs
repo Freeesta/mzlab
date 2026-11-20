@@ -30,7 +30,7 @@ fn with_db(spec: &str) -> Result<String> {
 }
 
 fn err_key(r: Result<String>) -> &'static str {
-    r.err().expect("an error").key
+    r.expect_err("an error").key
 }
 
 #[test]

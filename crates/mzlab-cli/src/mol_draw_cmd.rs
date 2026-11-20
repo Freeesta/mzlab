@@ -27,10 +27,11 @@ Exit codes: 1 over 2000 atoms; 2 unparseable SMILES or molfile, bad option, a na
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
 
-/// The words of the command line: SPEC, `--out`, `--json` and the four `--set` values (format, layout, db, name).
-fn parse(
-    args: Vec<String>,
-) -> Result<(String, Option<PathBuf>, bool, [Option<String>; 4]), Outcome> {
+/// SPEC, `--out`, `--json` and the four `--set` values (format, layout, db, name).
+type Words = (String, Option<PathBuf>, bool, [Option<String>; 4]);
+
+/// The words of the command line.
+fn parse(args: Vec<String>) -> Result<Words, Outcome> {
     let (mut pos, mut out, mut json) = (Vec::new(), None::<PathBuf>, false);
     let mut set: [Option<String>; 4] = Default::default();
     let mut it = args.into_iter();
