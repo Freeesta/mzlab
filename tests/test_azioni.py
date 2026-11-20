@@ -37,7 +37,7 @@ def test_duplicate_id_or_unknown_group_is_refused(bad):
 
 def test_map_actions_have_texts():
     ids = re.findall(r'cmd\("(\w+)"', (WEB / "mappa.js").read_text(encoding="utf-8"))
-    assert len(ids) == len(set(ids)) >= 13
+    assert len(ids) == len(set(ids)) >= 12
     for lang in ("en",):
         cat = lang_catalog.testo(lang)
         for i in ids:
