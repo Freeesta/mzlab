@@ -141,16 +141,17 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         atoms,
         bonds,
         collections: Vec::new(),
-        stated_h: stated_h(&lines[4 + na + nb..], na),
+        stated_h: stated_h(&lines[4 + na + nb..], na)?,
     })
 }
 
 /// The (atom, hydrogens) of the `MRV_IMPLICIT_H` data groups: `M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`.
-fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
+fn stated_h(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, MolError> {
     // data groups by number: (atoms, field name, data)
     let mut data: HashMap<&str, (Vec<usize>, &str, &str)> = HashMap::new();
     for line in lines.iter().take_while(|l| !l.starts_with("M  END")) {
-        let Some(kind @ ("SAL" | "SDT" | "SED")) = line.get(3..6) else {
+        let kind = line.starts_with("M  ").then(|| line.get(3..6)).flatten();
+        let Some(kind @ ("SAL" | "SDT" | "SED")) = kind else {
             continue;
         };
         let mut t = line[6..].split_whitespace();
@@ -169,12 +170,12 @@ fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
     }
     let mut out = Vec::new();
     for (list, field, value) in data.values() {
-        if let Some(h) = implicit_h(field, value) {
+        if let Some(h) = implicit_h(field, value)? {
             out.extend(list.iter().map(|&a| (a, h)));
         }
     }
     out.sort_unstable();
-    out
+    Ok(out)
 }
 
 fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {

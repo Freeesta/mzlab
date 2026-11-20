@@ -244,7 +244,7 @@ pub(super) fn read(smiles: &str) -> Result<(Vec<RawAtom>, Vec<RawBond>)> {
 /// (a molfile: the charge is on an atom whose hydrogens are implicit) a singly charged N, P, O or S takes the valences of the element with the
 /// same electrons (N+ like C, S+ like P, O- like F), so a quaternary N+ or a sulfonium S+ carries no hydrogen; any other charged atom loses
 /// one valence per charge.
-fn valence_for(el: &str, charge: i32, by_charge: bool, used: f32) -> Option<f32> {
+pub(super) fn valence_for(el: &str, charge: i32, by_charge: bool, used: f32) -> Option<f32> {
     let normal = normal_valence(el).unwrap_or(0) as f32;
     let q = if by_charge { charge } else { 0 };
     let ladder: &[f32] = match (el, q) {

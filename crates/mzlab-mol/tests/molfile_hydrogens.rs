@@ -247,3 +247,25 @@ M  V30 1 DAT 0 ATOMS=(1 5) FIELDNAME=MRV_IMPLICIT_H FIELDDATA=IMPL_H1\nM  V30 EN
         [1, 1, 0, 1, 1]
     );
 }
+
+#[test]
+fn a_stated_hydrogen_count_no_atom_carries_is_refused_with_its_reason() {
+    let v2000 = |count: &str| {
+        plain(&["N", "C", "C", "C", "C"], RING5, &[])
+            .replace("M  END\n", &stated(1))
+            .replace("IMPL_H1", &format!("IMPL_H{count}"))
+    };
+    let v3000 = |count: &str| {
+        format!("\n  t\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 1 0 1 0 0\nM  V30 BEGIN ATOM\n\
+M  V30 1 N 0 0 0 0\nM  V30 END ATOM\nM  V30 BEGIN SGROUP\nM  V30 1 DAT 0 ATOMS=(1 1) FIELDNAME=MRV_IMPLICIT_H FIELDDATA=IMPL_H{count}\n\
+M  V30 END SGROUP\nM  V30 END CTAB\nM  END\n")
+    };
+    for count in ["5", "4294967295", "99999999999999999999", "-1", "x"] {
+        for text in [v2000(count), v3000(count)] {
+            let e = Mol::from_molfile(&text).err().unwrap().to_string();
+            assert!(e.contains("hydrogen count"), "{count}: {e}");
+        }
+    }
+    assert!(Mol::from_molfile(&v2000("4")).is_ok());
+    assert!(Mol::from_molfile(&v3000("0")).is_ok());
+}
