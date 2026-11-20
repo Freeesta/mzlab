@@ -5,5 +5,5 @@ senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 495616
-misura = 492621
+misura = 494374
 nota = "carries the .wiff device traces (+6 KB), the by-sector OLE open (+2.6 KB), the sample list and the section ranges of the range copy (+1.4 KB); measured plus margin, rounded to 1 KiB"

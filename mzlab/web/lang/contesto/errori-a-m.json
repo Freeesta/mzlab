@@ -31,6 +31,7 @@
   "warn.agilent.damaged": "Calm partial-read notice (CLI, flow, loading row): damaged scan records of an Agilent .D folder (without time, points outside the data file, data.ms records that do not fit): their scans are left out and counted. Do not say that the file ends.",
   "warn.bruker.noCalibration": "Calm partial-read notice (CLI, flow, loading row): frames of a .d folder without a usable MzCalibration; their spectra are left out and counted because their m/z cannot be calculated. Do not say that the file ends.",
   "error.featMemory": "Tabui (pipeline) error: a stage does not fit in memory. {fase} = stage (align, proofs), {files} = number of files, {stima_mb} and {budget_mb} = estimated memory and budget in MB.",
+  "error.copyRanges": "Error: the byte ranges of a partial copy are not ascending, not whole numbers or not inside the file. {file} = file name.",
   "error.fileInUse": "Error: the file has been written by another mzLab tab for more than 2 seconds. {file} = file name.",
   "err.manint.columns": "Error of the manual integrations table for an unknown optional column group; {column} = name requested.",
   "err.manint.baseline": "Error of the manual integrations table for an unknown baseline; {baseline} = name requested.",

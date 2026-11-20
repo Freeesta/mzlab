@@ -146,10 +146,14 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
 /** @type {(kind: string, name: string, size: number, chunk: Chunker, after?: AfterPiece) => Promise<File>} */
 export const putChunks = (kind, name, size, chunk, after) => write(kind, name, size, chunk, after);
 
+// the ranges of a partial copy: whole numbers, ascending, not overlapping and inside the file
+/** @type {(ranges: number[][], size: number) => boolean} */
+export const rangesOk = (ranges, size) => { let at = 0; for (const r of ranges) { if (!Array.isArray(r) || r.length !== 2) return false; const [a, b] = r; if (!Number.isSafeInteger(a) || !Number.isSafeInteger(b) || a < at || b < a || b > size) return false; at = b; } return true; };
 // the file kind/name of `size` bytes of which only `ranges` ([start, end) pairs, ascending) are written, read with chunk(offset, length): the rest is zeros (the range copy of a
 // .wiff.scan of which one sample is wanted, readers::ranges); the partial file is removed if something fails
 /** @type {(kind: string, name: string, size: number, ranges: number[][], chunk: Chunker) => Promise<File>} */
 export const putSparse = (kind, name, size, ranges, chunk) => locked(kind, name, async () => {
+  if (!rangesOk(ranges, size)) throw fail("error.copyRanges", { file: name });
   await dropLease(kind, name);
   const d = await dir(kind), fh = await d.getFileHandle(name, { create: true }), ah = await fh.createSyncAccessHandle();
   try {

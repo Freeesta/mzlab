@@ -168,7 +168,8 @@ async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: num
 export const partOf = (/** @type {any} */ nat, /** @type {{ name: string, blob: Blob }} */ x) => { const r = nat.ranges && nat.ranges[x.name]; return r && !(r.length === 1 && r[0][0] === 0 && r[0][1] >= x.blob.size) ? /** @type {number[][]} */ (r) : undefined; };
 /** the bytes a copy of `x` writes */
 const workOf = (/** @type {any} */ nat, /** @type {{ name: string, blob: Blob }} */ x) => { const r = partOf(nat, x); return r ? r.reduce((/** @type {number} */ a, /** @type {number[]} */ b) => a + b[1] - b[0], 0) : x.blob.size; };
-export const storeOf = (/** @type {any} */ nat, /** @type {{ name: string }} */ x) => PREFIX + nat.key + "~" + x.name.replace(/[\\/]/g, "~");
+// a member copied only in part carries the plan's tag in its name: another choice of samples never finds (and reuses) a copy whose other ranges are zeros
+export const storeOf = (/** @type {any} */ nat, /** @type {{ name: string, blob?: Blob }} */ x) => PREFIX + nat.key + "~" + (nat.tag && x.blob && partOf(nat, /** @type {any} */ (x)) ? nat.tag + "~" : "") + x.name.replace(/[\\/]/g, "~");
 export const LOCK = "mzlab-nat:";                          // Web Lock of a dataset, held (shared) by a tab while it copies the members and writes the stub
 const locks = () => /** @type {any} */ (self.navigator) && navigator.locks;
 /** the dataset key and the file name a member store stands for (`nat~<key>~<path>`: a key never holds «~») */

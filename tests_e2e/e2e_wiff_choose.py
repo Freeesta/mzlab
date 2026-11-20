@@ -77,7 +77,9 @@ try:
         step("one sample per file: no dialog", solo)
         def never():
             pg.evaluate(f"localStorage.setItem({key()!r}, 'never')"); n = rows(pg)
-            pg.set_input_files("#pick", pair("multi")); pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 3", timeout=120000)
+            pg.set_input_files("#pick", pair("multi"))
+            try: pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 3", timeout=30000)
+            except Exception: raise AssertionError(("rows", n, rows(pg), pg.evaluate("Array.from(document.querySelectorAll('#flist [data-k=use]')).map(e => (e.closest('tr,li,div')||e).textContent.slice(0, 60))"), pg.evaluate("(document.querySelector('#notes,.notes,#msgs')||{}).textContent || ''")))
             assert not pg.query_selector("dialog#wiffchoose")
         step("setting «never»: every sample opens without asking", never)
         def always():
@@ -85,6 +87,26 @@ try:
             pg.set_input_files("#pick", pair("solo")); dlg(pg); assert ticked(pg) == 1
             pg.click("#wiffchoose button:text('Cancel')"); settle(pg)
         step("setting «always»: a file with one sample is asked too", always)
+        # last: it needs the pair opened by the first choice and must not change the row counts the settings steps rely on
+        pg.evaluate("localStorage.removeItem(NOMI.KEY('pick'))")
+        def second_choice():
+            # sample 1 and 3 were opened above: choosing sample 2 of the same pair must make its own copy, never reuse the first one (its sample-2 ranges are zeros)
+            import base64
+            js = """async (src64) => { const src = Uint8Array.from(atob(src64), c => c.charCodeAt(0)); const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.endsWith('.wiff.scan')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let nz = 0, bad = 0, digest = 0; for (let i = 0; i < b.length; i++) if (b[i] !== 0) { nz++; if (b[i] !== src[i]) bad++; digest = (digest * 31 + b[i] + i) >>> 0; } out.push({ n, size: b.length, nz, bad, digest }); } } }; await walk(await navigator.storage.getDirectory()); return out; }"""
+            src = base64.b64encode((D / "multi" / "multi.wiff.scan").read_bytes()).decode()
+            before = {g["n"]: g for g in pg.evaluate(js, src) if "multi" in g["n"]}
+            assert before, before
+            n = rows(pg); pg.set_input_files("#pick", pair("multi")); dlg(pg)
+            pg.click("#wiffchoose button:text('Select none')"); pg.fill("#wc-ids", "2"); pg.click("#wiffchoose button:text('Tick numbers')")
+            pg.wait_for_function("document.querySelectorAll('#wiffchoose tbody input:checked').length === 1"); assert ticked(pg) == 1
+            pg.click("#wiffchoose button.go"); settle(pg)
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n}", timeout=120000)
+            after = {g["n"]: g for g in pg.evaluate(js, src) if "multi" in g["n"]}
+            new = [g for k, g in after.items() if k not in before]
+            assert new, (sorted(before), sorted(after))
+            assert all(g["bad"] == 0 and g["nz"] > 0 for g in new), new
+            assert all(g["digest"] != b["digest"] for g in new for b in before.values()), (new, before)
+        step("another sample of the same file gets its own partial copy (sample 2 after samples 1 and 3)", second_choice)
         b.close()
 finally:
     srv = run.srv; srv.terminate(); import shutil; shutil.rmtree(D, ignore_errors=True)
