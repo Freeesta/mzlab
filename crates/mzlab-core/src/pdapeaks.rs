@@ -36,6 +36,9 @@ struct Offset {
     evidence: Option<(f64, f64)>,
 }
 
+/// The scan chosen for a peak, its ions `(mz, intensity)` and the warnings of the choice.
+type Taken = (Option<Pick>, Vec<(f64, f64)>, Vec<&'static str>);
+
 /// The `top` strongest ions of a `/api/spectrum` answer, strongest first: `(mz, intensity)`.
 fn top_ions(spectrum: &str, top: usize) -> Vec<(f64, f64)> {
     let Ok(v) = parse(spectrum.as_bytes()) else {
@@ -114,12 +117,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The scan nearest to `ms` and its strongest ions, with the warnings of the choice: a time outside the scans, or an empty scan, gives no ions and says why.
-    fn ions_at(
-        &mut self,
-        times: &[f64],
-        ms: f64,
-        mo: &MsOpts,
-    ) -> Result<(Option<Pick>, Vec<(f64, f64)>, Vec<&'static str>)> {
+    fn ions_at(&mut self, times: &[f64], ms: f64, mo: &MsOpts) -> Result<Taken> {
         if times.is_empty() {
             return Ok((None, Vec::new(), Vec::new()));
         }
