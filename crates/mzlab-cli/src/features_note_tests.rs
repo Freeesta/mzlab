@@ -249,7 +249,7 @@ fn the_command_writes_the_notes_at_the_path_asked_for_and_nothing_without_it() {
 fn the_notes_of_a_file_and_the_flow_estimate_carry_the_same_notices() {
     let c = Case::new(40);
     let f = c.dir.join("q1.mzML");
-    crate::features_of(&[f.clone()], &[String::new()], "", &c.dir).unwrap();
+    crate::features_of(std::slice::from_ref(&f), &[String::new()], "", &c.dir).unwrap();
     let notes = std::fs::read_to_string(c.dir.join("0.notes.json")).unwrap();
     // the notices member of the only entry, as written, closes the document
     let at = notes.find("\"notices\":").unwrap() + "\"notices\":".len();
