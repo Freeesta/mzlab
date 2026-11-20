@@ -167,7 +167,7 @@ fn emptiness(a: &Answer, win: Option<(f64, f64)>) -> Result<Option<&'static str>
     if x.is_empty() {
         return Ok(Some("no_scans_in_section"));
     }
-    let seen = |t: &&str| t.parse::<f64>().map_or(true, |v| v != 0.0);
+    let seen = |t: &&str| !t.parse::<f64>().is_ok_and(|v| v == 0.0);
     if !y.iter().any(seen) {
         return Ok(Some("no_signal"));
     }
