@@ -41,7 +41,7 @@ async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob)
 }
 
 // Copies into the browser storage at once in a drop (the engine's copy gate, rust-carica.js createCopyGate): COPIES by default, so the first file of the list gets the disk
-// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, measurements-copies.md); «?copie=N» or localStorage «mzlab.dev.copie» = N
+// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, data-loading.md); «?copie=N» or localStorage «mzlab.dev.copie» = N
 // chooses another number, 0 = every copy at once (the behaviour before the gate). Logged once.
 const COPIES = 2;
 let copiesK = /** @type {number | null} */ (null);

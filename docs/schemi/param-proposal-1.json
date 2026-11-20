@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "param-proposal/1",
  "title": "param-proposal/1: the parameters of mzFlow proposed by rules from an inspection/1",
- "description": "Format «param-proposal/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/studi/assistente-dati/03-parametri.md §5, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
+ "description": "Format «param-proposal/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/agenti/llm-params.md, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "series", "choices", "proposals", "missing", "warnings"],

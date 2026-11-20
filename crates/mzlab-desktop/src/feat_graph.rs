@@ -6,7 +6,7 @@
 //! (`request` the same way) the `cut/1` of a cut across bonds (`mzlab-cli mol cut`); `kind: "sub"` (`request` the same way) the `substructure/1` of a
 //! substructure search (`mzlab-cli mol search --sub`); `kind: "analysis"` (`request` the same way) the `analysis/1` of one drawn structure
 //! (`mzlab-cli mol anal`); `kind: "check"` the `check/1` of a drawing (`mzlab-cli mol check`), `kind: "cip"` its `cip/1` (`mzlab-cli mol cip`), `kind: "hilite"` the `highlight/1` of its evidence colours (`mzlab-cli mol hilite`);
-//! `kind: "sdf"` the `.mol`/`.sdf` text of a drawing (`sdf/1`, `mzlab-cli mol export`); `kind: "mech"` the `mechanism/1` check of the curved arrows
+//! `kind: "sdf"` the `.mol`/`.sdf` text of a drawing (`sdf/1`, `mzlab-cli mol export`); `kind: "open"` the `open/1` text of a structure file given as `{"data": base64}` (`mzlab-cli mol open`); `kind: "mech"` the `mechanism/1` check of the curved arrows
 //! of a mechanism (`mzlab-cli mol mech`); `kind: "sel"` the `selection/1` of a selection (`mzlab-cli mol sel`); `kind: "link"` the `link/1` URLs of
 //! the outside lookups of the right-click menu (`mzlab-cli mol link`);
 //! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
@@ -15,7 +15,7 @@
 use mzlab_core::{Error, Result};
 use mzlab_feat::chem::{
     analysis, check, cip, cut, fragments, graph, hilite, labels, link, mech, positions, sdf, sel,
-    substructure,
+    structure_file, substructure,
 };
 use serde_json::Value;
 
@@ -40,7 +40,7 @@ impl State {
                 s("reatt"),
             )?),
             "labels" | "cut" | "sel" | "link" | "sub" | "analysis" | "check" | "cip" | "mech"
-            | "sdf" | "hilite" => {
+            | "sdf" | "hilite" | "open" => {
                 let req = if p["request"].is_object() {
                     p["request"].to_string()
                 } else {
@@ -57,6 +57,7 @@ impl State {
                     "sdf" => sdf::sdf_json(&req)?,
                     "cip" => cip::cip_json(&req)?,
                     "hilite" => hilite::hilite_json(&req)?,
+                    "open" => structure_file::open_json(&req)?,
                     _ => labels::labels_json(&req)?,
                 })
             }

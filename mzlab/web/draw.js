@@ -10,7 +10,7 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { structureText } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
+import { mountImport } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -52,24 +52,7 @@ function start() {
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
-    if (doc && doc.body) {
-      doc.body.addEventListener("dragover", (/** @type {Event} */ e) => { e.preventDefault(); e.stopPropagation(); });
-      doc.body.addEventListener("drop", async (/** @type {DragEvent} */ e) => {
-        e.preventDefault(); e.stopPropagation();
-        const file = /** @type {DataTransfer} */ (e.dataTransfer).files[0];
-        let txt = "";
-        if (file) txt = await structureText(file);
-        else txt = /** @type {DataTransfer} */ (e.dataTransfer).getData("text/plain");
-        if (txt) {
-          try {
-            const before = await k.getKet();
-            await k.addFragment(txt);
-            if (await k.getKet() === before) dnote(file ? I18N.t("draw.import.unreadable", { name: file.name }) : I18N.t("draw.import.unsupported"));
-            else { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); }
-          } catch (err_) { const err = /** @type {Lanciato} */ (err_); dnote(I18N.t("draw.import.failed", { message: err.message })); }
-        }
-      });
-    }
+    if (doc && doc.body) mountImport(doc, k, { t: (key, p) => I18N.t(key, p), note: dnote, done: () => { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); } });
     
     return k; });
   starting.catch(e => { console.error(e); dnote(I18N.t("draw.error.ketcherNotStarted")); });   // never Ketcher's raw English: the cause stays in the console

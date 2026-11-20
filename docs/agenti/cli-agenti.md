@@ -26,7 +26,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | code | meaning |
 |---|---|
 | 0 | ok |
-| 1 | data or domain error, partial outputs written |
+| 1 | data error, partial outputs written |
 | 2 | usage |
 | 3 | plan, schema or integrity |
 | 4 | input missing or unreadable |
@@ -61,11 +61,11 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - text or CSV, `--json` gives the document:
 `flow run|check|steps|verify|command`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
-`features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
+`features`, `peak split`, `mol export|open`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
 - `sample list` (`sample-list/1`: ONE document, `files` in the order given, a refused file is an inline `error/1` entry, a missing file is a whole-run `error/1` (exit 4, no listing); exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file validate --json` (`mzml-validation/1`, ONE document for all files; a missing file is exit 4 + `error/1`), `file convert --json` (`convert/1`; `--dry-run` lists inputs, readers and sizes and writes nothing; an `.mzML` named as input is `err.file.alreadyMzml`, exit 4) and `file items --no-points` (leaves out `ms2_events`).
-- `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-writer.md`).
+- `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-full-spec.md`).
 - A command with no JSON form fails `--json` with `err.cli.json.unsupported` (exit 2, one `error/1`), never "unknown option". `db normative build` and `db insilico pack` print nothing on stdout without `--json`.
 - `mzlab-cli --help` starts with "Start here" (`flow steps --json`, `flow check PLAN.json --json`, `flow run`, `COMMAND --help`), the contract for scripts and the exit codes; `features --help` is the help of `features` alone.
 - On a failure after a command printed a document (a `flowrun/1` report, a `flowcheck/1`, a `verify/1`), `error/1` carries it as `report`: stdout is one JSON document either way. Every non-zero exit is one `error/1`, except the verdicts below.

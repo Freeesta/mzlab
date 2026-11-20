@@ -1,6 +1,6 @@
 """Gold data of mzmine 4.10 per stage on the four synthetic mzML of `oro_mzmine.py` -> `tests/data/untargeted/mzmine410/`.
 Same files, same stages and same CSV formats as the 3.9.0 set (`tests/data/untargeted/mzmine39/`), plus the output of the reworked isotope finder. Usage:
-    python3 tools/bench/oro_mzmine410.py --oro [DIR]       run mzmine 4.10 and write the CSV and the LEGGIMI (DIR default: the folder above)
+    python3 tools/bench/oro_mzmine410.py --oro [DIR]       run mzmine 4.10 and write the CSV and the README (DIR default: the folder above)
     python3 tools/bench/oro_mzmine410.py --oro DIR --versione 4.10.6    the same with another release of the table `VERSIONI`
 The mzmine package (portable zip, own JDK) is downloaded once into `~/.cache/mzlab/mzmine<version>` (or `MZMINE410_DIR`) and its sha256 is checked."""
 from __future__ import annotations
@@ -175,7 +175,7 @@ def _phase_finder(phases: Path) -> tuple[list[str], list[list]]:
 
 
 def write_gold(dest: Path, versione: str) -> None:
-    """Runs mzmine on the four files and writes the CSV of the stages and the LEGGIMI of provenance in `dest`."""
+    """Runs mzmine on the four files and writes the CSV of the stages and the README of provenance in `dest`."""
     mm = install(versione)
     par = corri.parameters("mzmine", "predefinita")
     with tempfile.TemporaryDirectory() as t:
@@ -202,7 +202,7 @@ def write_gold(dest: Path, versione: str) -> None:
                                            ("gapfilled.csv", oro._aligned_phase(phases / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
                                            ("isotopes.csv", _isotope_phase(phases), per_file), ("isotopes_finder.csv", _phase_finder(phases), per_file)]:
             oro._write_csv(dest / nome, col, rows, key)
-        (dest / "LEGGIMI.md").write_text(_readme(versione, shas, shas_410, mm, {n: oro._replace(x, t) for n, x in xmls.items()}), encoding="utf-8")
+        (dest / "README.md").write_text(_readme(versione, shas, shas_410, mm, {n: oro._replace(x, t) for n, x in xmls.items()}), encoding="utf-8")
 
 
 def _readme(versione: str, shas: dict[str, str], shas_410: dict[str, str], mm: Path, xmls: dict[str, str]) -> str:
@@ -226,7 +226,7 @@ The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DI
 
 {file}
 ## Files
-`adap.csv`, `resolved.csv`, `aligned.csv`, `gapfilled.csv`, `isotopes.csv` have the columns of the 3.9.0 set (see its LEGGIMI); `isotopes.csv` is the output of the isotope grouper («13C isotope filter»).
+`adap.csv`, `resolved.csv`, `aligned.csv`, `gapfilled.csv`, `isotopes.csv` have the columns of the 3.9.0 set (see its README); `isotopes.csv` is the output of the isotope grouper («13C isotope filter»).
 {batches}"""
 
 

@@ -26,16 +26,15 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 First public release.
 
 ### Added
-- mzLab in the browser (GitHub Pages) and as a desktop app: Data view per file for low and high resolution (chromatograms, spectra, RT×m/z map, MRM, integration, MS2 and libraries), Drawing (Ketcher), Theory and Practice; interface in Italian and English.
+- mzLab in the browser (GitHub Pages) and as a desktop app: Data view per file for low and high resolution (chromatograms, spectra, RT×m/z map, MRM, integration, MS2 and libraries), Drawing (Ketcher); English-only interface.
 - Direct reading of Thermo `.raw`, SCIEX `.wiff` (with `.wiff.scan`) files and Agilent `.D` folders (also those with a `.m` method, with a dedicated message for `.D`); other formats (Waters, Shimadzu, Bruker) are converted to mzML with MSConvert.
 - Desktop app: notice of a new version, read from the GitHub releases; the (i) box links «Download the desktop app».
 - Desktop app: Tabui and the Pipeline panel with native computation (table, QC, export and report, file roles).
 - RT×m/z map: axis lock with Shift, continuous-profile side spectrum and a tile pyramid computed in Rust.
 - File list: click = active file, double click = only this one, Ctrl/Cmd+click and Shift+click for multiple selections; default colours «Per file» (never grey or dashed without times).
 - Smooth loading: the first file of the list opens at once; the loading table moves from one field to the next with one click.
-- Theory: chapter 23 on timing with a dynamic simulation, export to PDF, Word, Markdown and HTML; in English it opens in Italian, with a notice.
-- Licences: code MIT, Theory and Practice texts CC BY 4.0, example files CC0, third-party material in `LICENZE-TERZI.md`.
-- Accessibility (WCAG 2.2 AA) checked with axe on Data, HR bench, Drawing, Practice and the tour.
+- Licences: code MIT, example files CC0, third-party material in `THIRD-PARTY-LICENSES.md`.
+- Accessibility (WCAG 2.2 AA) checked with axe on Data, HR bench, Drawing and the tour.
 - Security policy (`SECURITY.md`), Dependabot, licence checks with `cargo-deny`, CycloneDX SBOM.
 - Guides for students and teachers, privacy, accessibility and the hosting plan B in `docs/utenti/`.
 - Release flow on the tag `vX.Y.Z`: site zip, installers for macOS, Windows and Linux, `SHA256SUMS`, SBOM.

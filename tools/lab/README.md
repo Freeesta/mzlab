@@ -5,9 +5,9 @@ working after 2026-12-29 (UTC). Draw's «See an example drawing» link works: it
 `esempio-frammentazione.png`, anonymous paracetamol schemes) are the only example images the build ships. It follows `main` of `Freeesta/mzlab` by itself.
 The expiry is a soft block (the date is checked against the visitor's clock), not security.
 
-The reference-lists panel («Liste di riferimento», with its toolbar button, palette entry, spectrum context action and tour mention) is hidden too: `FEATURES.lists` (features.js) is off when `window.MZLAB_LAB` is set; the main site and the desktop app keep it.
+The reference-lists panel («Reference lists», with its toolbar button, palette entry, spectrum context action and tour mention) is hidden too: `FEATURES.lists` (features.js) is off when `window.MZLAB_LAB` is set; the main site and the desktop app keep it.
 
-Three manual steps for Federico:
+Three manual steps for the owner:
 
 1. Create the public repository `Freeesta/qqq` (no files needed).
 2. In it: Settings > Pages > Build and deployment > Source = **GitHub Actions**.

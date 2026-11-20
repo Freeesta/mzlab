@@ -2,7 +2,7 @@
 and the same nitrogen drawn as N+ is fine, and common groups (sulfone, nitro, phosphate, DMSO, pyridine, carboxylic acid, azide) raise no alarm.
 A remark selects its atoms on the canvas and «Why?» opens its three parts; draw -> Check -> remark -> Why? is three clicks; auto-run is off by default.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
-# covers: mzlab/web/disegno-verifica.js, mzlab/web/lang/en/disegno-verifica.js, mzlab/web/draw.js
+# covers: mzlab/web/disegno-verifica.js, mzlab/web/disegno-molfile.js, mzlab/web/lang/en/disegno-verifica.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
     print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
@@ -90,6 +90,17 @@ try:
                 codes = check(smi)
                 assert codes == [], (smi, codes, pg.inner_text("#chk-card"))
         step("sulfone, nitro, phosphate, DMSO, pyridine, acetic acid, azide, indole: no remark", groups)
+
+        def aromatic_h():
+            # imidazole written with aromatic bonds: the file does not say which N carries the H; the note names the atom chosen
+            ring = [(1, 2, 4), (2, 4, 4), (4, 3, 4), (3, 5, 4), (5, 1, 4)]
+            assert check(molfile(["N", "C", "C", "N", "C"], ring)) == ["aromaticH"], pg.inner_text("#chk-card")
+            li = pg.locator("#chk-list li").first
+            assert "Note" in li.inner_text() and "N1" in li.inner_text(), li.inner_text()
+            # drawn from a SMILES that says it ([nH]), the page hands the H on with the molfile: nothing was chosen, no remark
+            for smi in ("Cc1cnc[nH]1", "Cc1c[nH]cn1"):
+                assert check(smi) == [], (smi, pg.inner_text("#chk-card"))
+        step("an aromatic ring whose H the file does not place: a note says on which atom it was put", aromatic_h)
 
         def pieces_and_empty():
             assert check("CC(=O)[O-].[Na+]") == ["pieces"], pg.inner_text("#chk-card")
