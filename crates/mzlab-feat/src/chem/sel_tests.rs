@@ -317,6 +317,10 @@ fn an_aromatic_oxygen_or_sulfur_cation_gives_a_ring_electron_and_takes_no_hydrog
         text(&["O", "C", "C", "C", "C", "C"], &kekule, &plus),
         "C5H5O+"
     );
+    assert_eq!(
+        text(&["S", "C", "C", "C", "C", "C"], &kekule, &plus),
+        "C5H5S+"
+    );
     // S-methylthiophenium: the S+ has three bonds and gives its lone pair, no hydrogen and no ring electron
     let five = [
         (1, 2, 4),

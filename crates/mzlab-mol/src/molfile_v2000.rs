@@ -181,7 +181,8 @@ fn property_pairs(line: &str, na: usize) -> Result<Vec<(usize, i32)>, MolError> 
                 .map_err(|_| fail(format!("{t:?} in property line {line:?}")))
         })
         .collect::<Result<_, _>>()?;
-    let n = nums.first().copied().unwrap_or(0) as usize;
+    let n = usize::try_from(nums.first().copied().unwrap_or(0))
+        .map_err(|_| fail(format!("property line {line:?} has a negative count")))?;
     let mut out = Vec::new();
     for k in 0..n {
         let (Some(&a), Some(&v)) = (nums.get(1 + 2 * k), nums.get(2 + 2 * k)) else {

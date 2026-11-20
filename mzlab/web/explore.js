@@ -529,8 +529,9 @@ function restoreUi() {
   const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
   const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));  // a removed file's entry only records the removal: it must not make the restore fail
   if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
-  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
+  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved)); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
   saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved));
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
