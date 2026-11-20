@@ -17,6 +17,6 @@ def test_old_names_are_gone():
         if f.startswith(("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/lang/")) or p.suffix not in KINDS or f in SKIP or not p.is_file():
             continue
         for n, line in enumerate(p.read_text(encoding="utf8", errors="ignore").splitlines(), 1):
-            if OLD.search(line) and "lang/en/groups.js" not in line and "gruppi-vista" not in line and "gruppi_" not in line:
+            if OLD.search(line):
                 hits.append(f"{f}:{n}")
     assert not hits, hits[:20]

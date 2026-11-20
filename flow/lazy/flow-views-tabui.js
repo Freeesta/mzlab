@@ -21,7 +21,7 @@
   });
 
   /** groups/1 → the presence matrix (one row per product, one column per condition), the sets, the parent's kinetics @param {any} g */
-  F.readGruppi = g => {
+  F.readGroups = g => {
     const ids = (g.conditions || []).map((/** @type {any} */ c) => c.id);
     const cell = (/** @type {any} */ c) => !c.present ? "absent" : `present, area ${fx(c.area, 0)}${c.ratio_ref !== null && c.ratio_ref !== undefined && c.ratio_ref !== 1 ? `, ×${fx(c.ratio_ref, 2)} of the reference` : ""}`;
     return {
@@ -76,7 +76,7 @@
 
   /** the conditions block of a tptab/1: matrix, a chart of the area of one product per condition with its table, the sets and the parent @param {HTMLElement} host @param {any} g @param {string} name */
   const conditions = (host, g, name) => {
-    const { el } = F, d = F.readGruppi(g);
+    const { el } = F, d = F.readGroups(g);
     table(host, `${name}, conditions`, d.matrix, `Conditions of ${name}`);
     if (g.rows && g.rows.length && d.ids.length) {
       const show = el("div", { class: "flx-one" }), pick = /** @type {HTMLSelectElement} */ (el("select", { "aria-label": "Product to draw", onchange: () => { draw(Number(pick.value)); F.select(String(g.rows[Number(pick.value)].row), "conditions"); } }, ...g.rows.slice(0, 300).map((/** @type {any} */ r, /** @type {number} */ i) => el("option", { value: String(i), text: `${r.tp_name} (m/z ${fx(r.mz, 4)})` }))));
@@ -106,10 +106,11 @@
       table(host, label, F.readTptab(j), `Table ${label}`);
       if (F.tptabDetail) F.tptabDetail(host, j, label);
       if (j.groups) conditions(host, j.groups, label);
+      else if (j.gruppi) host.append(el("p", { class: "fl-note", text: `${label} has the old \"gruppi\" key, which is no longer read: run the analysis again to get \"groups\".` }));
     } else if (kind === "groups/1") conditions(host, j, label);
     else if (kind === "interp/1") { const d = F.readInterp(j); table(host, label, d.summary, `Reading of ${label}`); table(host, `${label}, site classes`, d.classes, `Site classes of ${label}`); }
     else if (kind === "reatt/1" || j.atoms) table(host, label, F.readReatt(j), `Table ${label}`);
-    else host.append(el("p", { class: "fl-note", text: `${label} is not a file this view knows (tptab/1, groups/1, interp/1 or reatt/1).` }));
+    else host.append(el("p", { class: "fl-note", text: `${label} is not a file this view knows (tptab/1, groups/1, interp/1 or reatt/1)${/^gruppi\b/.test(kind) ? "; the old gruppi format is now groups/1, run the analysis again" : ""}.` }));
   };
   F.openTabui = open;
   F.registerView({ id: "tp", title: "Products", types: ["tp"], accepts: (/** @type {any} */ item) => /\.json$/i.test(item.label), open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => open(await item.text(), item.label, host) });
