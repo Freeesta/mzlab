@@ -209,6 +209,9 @@ try:
             pg.select_option("#tp-ms2-ce", "40")
             fr = pg.inner_text("#tp-ms2-fr")
             assert "197.06" in fr, fr                                                        # the 60 Da loss of the CE 40 spectrum
+            # the detail can be drawn once more while it loads (a second fill of the same tab closes «Details» again): wait until the button is shown, opening «Details» each time it is closed
+            open_details_js = "(() => { const d = document.querySelector('#tp-det details.tpr-det'); if (d && !d.open) d.open = true; const b = document.querySelector('.tp-ms2-ch'); return !!b && b.getClientRects().length > 0; })()"
+            pg.wait_for_function(open_details_js, timeout=60000)
             pg.locator(".tp-ms2-ch").first.click()
             assert pg.evaluate("document.activeElement && document.activeElement.dataset.ep") is not None, "«Change» goes to the menu"
             pk = (pg.get_attribute('#tp-det .tpr-pk[data-tt="ft.pf.ms2"]', 'data-tt-text') or ''); assert "from lr_MS2-t30" in pk, pk

@@ -65,7 +65,7 @@
       /** the reading of `t` as a formula or an m/z under `adduct`, or null when it is neither @param {string} t @param {string} adduct */
       const ionOf = async (t, adduct) => {
         if (!/^[\d.]+$/.test(t) && !(/^[A-Za-z0-9()]+$/.test(t) && /\d/.test(t))) return null;
-        try { return await a.ione(t, adduct); } catch (e) { return /** @type {any} */ (e).key === "err.ion.notHeld" ? { error: `${t} has no ${adduct} atoms to take away, so it is not that ion.` } : null; }
+        try { return await a.ion(t, adduct); } catch (e) { return /** @type {any} */ (e).key === "err.ion.notHeld" ? { error: `${t} has no ${adduct} atoms to take away, so it is not that ion.` } : null; }
       };
       const store = async (/** @type {any} */ j) => { await F.parentSet(S, input, JSON.stringify(j)); show(); if (S.redraw) S.redraw(); };
       const commit = async (/** @type {string} */ raw) => {
