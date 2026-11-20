@@ -199,7 +199,7 @@ SORT_STD_ALLOWED = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/
 
 def test_guard_std_sorts_only_sortc_in_wasm_crates():
     found = []
-    for crate in ("mzlab-lib", "mzlab-feat", "mzlab-feat-wasm"):
+    for crate in ("mzlab-lib", "mzlab-feat", "mzlab-feat-wasm", "mzlab-mol"):
         for f in sorted((ROOT / "crates" / crate / "src").rglob("*.rs")):
             rel = f.relative_to(ROOT).as_posix()
             if rel.startswith(SORT_STD_ALLOWED) or f.stem.endswith("tests") or f.parent.name == "tests":
@@ -208,7 +208,7 @@ def test_guard_std_sorts_only_sortc_in_wasm_crates():
             for n, row in enumerate(testo.splitlines(), 1):
                 if SORT_STD.search(row) and not row.lstrip().startswith("//"):
                     found.append(f"{rel}:{n}")
-    assert not found, f"use sortc (SortC::sortc_by...) instead of std sorts: {found}"
+    assert not found, f"use sortc (SortC::sortc_by...; mzlab-mol: SortM::sortm_by...) instead of std sorts: {found}"
 
 
 # Std exp/ln/pow/trig come from the system library in a native build and from the libm port in the .wasm, which differ in the last bit:

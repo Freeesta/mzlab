@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::elements::is_element;
 use crate::model::{Cfg, Mol, Parity, Status, Stereo, FORMAT};
-use std::collections::BTreeSet;
+use crate::sortm::SortedVec;
 
 type Res = Result<(), MolError>;
 
@@ -33,7 +33,7 @@ impl Mol {
 
     fn check_bonds(&self) -> Res {
         let n = self.atoms.len() as u32;
-        let mut seen = BTreeSet::new();
+        let mut seen = SortedVec::new();
         for (i, b) in self.bonds.iter().enumerate() {
             if b.a >= b.b || b.b >= n {
                 return bad(format!(
@@ -47,7 +47,7 @@ impl Mol {
                     b.o
                 ));
             }
-            if !seen.insert((b.a, b.b)) {
+            if !seen.add((b.a, b.b)) {
                 return bad(format!("bonds[{i}] repeats the bond {}-{}", b.a, b.b));
             }
         }
@@ -55,11 +55,11 @@ impl Mol {
     }
 
     fn check_stereo(&self, adj: &[Vec<u32>]) -> Res {
-        let mut centres = BTreeSet::new();
+        let mut centres = SortedVec::new();
         for (i, s) in self.stereo.iter().enumerate() {
             let fresh = match s {
-                Stereo::Tetra { c, .. } => centres.insert((0u8, *c, 0)),
-                Stereo::Db { a, b, .. } => centres.insert((1u8, *a, *b)),
+                Stereo::Tetra { c, .. } => centres.add((0u8, *c, 0)),
+                Stereo::Db { a, b, .. } => centres.add((1u8, *a, *b)),
             };
             if !fresh {
                 return bad(format!("stereo[{i}] repeats an earlier element"));
@@ -167,7 +167,7 @@ impl Mol {
     }
 
     fn check_groups(&self) -> Res {
-        let mut used = BTreeSet::new();
+        let mut used = SortedVec::new();
         for (i, g) in self.groups.iter().enumerate() {
             if g.atoms.is_empty() || !ascending(&g.atoms) {
                 return bad(format!(
@@ -183,7 +183,7 @@ impl Mol {
                         "groups[{i}] lists atom {a}, which is not a defined tetrahedral centre"
                     ));
                 }
-                if !used.insert(a) {
+                if !used.add(a) {
                     return bad(format!(
                         "groups[{i}] lists atom {a}, already in another group"
                     ));

@@ -1,5 +1,6 @@
 //! Kekulization: choose which aromatic bonds become double so that every atom that needs a double bond gets exactly one.
 
+use crate::sortm::SortM;
 use crate::valence::needs_double;
 
 /// Upper bound on the backtracking steps; a ring system that needs more is reported as impossible rather than hanging.
@@ -113,7 +114,7 @@ pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]
         // a file that does not say which ring atom carries the H (pyrrole-type N): try one, then two, of the atoms that an H would satisfy
         // heteroatoms first: the H of indole or carbazole is on the N, never on a ring-fusion carbon that would leave the ring
         let mut flexible: Vec<usize> = (0..n).filter(|&i| needy[i] && !needs(i, 1)).collect();
-        flexible.sort_by_key(|&i| atoms[i].el == "C");
+        flexible.sortm_by_key(|&i| atoms[i].el == "C");
         let with_h = |skip: &[usize]| {
             let mut v = needy.clone();
             skip.iter().for_each(|&i| v[i] = false);
