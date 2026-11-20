@@ -364,3 +364,54 @@ fn an_atom_that_is_no_element_is_refused_by_both_writers_and_the_scene() {
         "a scene without a file has no use for the atomic number"
     );
 }
+
+#[test]
+fn edited_drawings_read_back_as_the_same_molecule_and_carry_their_labels() {
+    // (spec, patch): a label, a charge, an added atom, merged fragments, a joined pair, a wedge and a moved atom
+    for (spec, patch) in [
+        ("c1ccccc1", r#"[{"op":"atom.set","id":0,"label":"Ph"}]"#),
+        (
+            "CCO",
+            r#"[{"op":"atom.set","id":0,"label":"OMe"},{"op":"atom.set","id":2,"label":"OAc"}]"#,
+        ),
+        ("CCN", r#"[{"op":"atom.set","id":2,"chg":1}]"#),
+        (
+            "c1ccccc1",
+            r#"[{"op":"atom.add","el":"C","label":"Et"},{"op":"bond.add","a":0,"b":6}]"#,
+        ),
+        ("C.CO", r#"[{"op":"merge","from":1,"into":0}]"#),
+        (
+            "CC.CC",
+            r#"[{"op":"merge","from":2,"into":1},{"op":"atom.set","id":0,"label":"R"}]"#,
+        ),
+        ("C.C", r#"[{"op":"bond.add","a":0,"b":1,"o":2}]"#),
+        (
+            "N[C@@H](C)C(=O)O",
+            r#"[{"op":"bond.set","a":1,"b":0,"wedge":-1}]"#,
+        ),
+        (
+            "CCO",
+            r#"[{"op":"atom.set","id":1,"rad":2},{"op":"move","atoms":[2],"dx":1,"dy":0}]"#,
+        ),
+    ] {
+        let ask = |format: &str| format!(",\"format\":\"{format}\",\"edit\":{patch}");
+        let want = draw(&request(spec, &ask("ket"))).unwrap().0.mol.can();
+        let (ket, cdxml) = (
+            draw_json(&request(spec, &ask("ket"))).unwrap(),
+            draw_json(&request(spec, &ask("cdxml"))).unwrap(),
+        );
+        assert_eq!(read_ket(&ket).can(), want, "KET of {spec} {patch}");
+        assert_eq!(read_cdxml(&cdxml).can(), want, "CDXML of {spec} {patch}");
+        // a label is KET's alias beside the element and the text of a CDXML node, nowhere else
+        let labels: Vec<&str> = patch
+            .split("\"label\":\"")
+            .skip(1)
+            .map(|t| t.split('"').next().unwrap())
+            .collect();
+        assert_eq!(ket.matches("\"alias\":").count(), labels.len(), "{ket}");
+        for l in labels {
+            assert!(ket.contains(&format!("\"alias\":\"{l}\"")), "{ket}");
+            assert!(cdxml.contains(&format!(">{l}</s>")), "{cdxml}");
+        }
+    }
+}

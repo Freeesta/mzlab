@@ -127,6 +127,10 @@ pub fn ket(d: &Drawn) -> Result<String> {
         for (i, a) in m.atoms.iter().enumerate() {
             o.raw(if i > 0 { ",{\"label\":" } else { "{\"label\":" })
                 .str(&a.el);
+            // the alias is KET's own place for a shown text that is not the element (the molfile's alias line)
+            if let Some(l) = d.label_at(i) {
+                o.raw(",\"alias\":").str(l);
+            }
             for (key, v) in [
                 ("charge", i64::from(a.chg)),
                 ("isotope", i64::from(a.iso)),
@@ -224,7 +228,8 @@ pub fn cdxml(d: &Drawn) -> Result<String> {
         if a.rad > 0 {
             out += &format!(" Radical=\"{}\"", radical_name(a.rad));
         }
-        if z == 6 {
+        let shown = d.label_at(i);
+        if z == 6 && shown.is_none() {
             out += "/>\n";
         } else {
             let hs = match h {
@@ -232,7 +237,8 @@ pub fn cdxml(d: &Drawn) -> Result<String> {
                 1 => "H".into(),
                 n => format!("H{n}"),
             };
-            out += &format!("><t>{}</t></n>\n", run(&format!("{}{hs}", a.el)));
+            let text = shown.map_or_else(|| format!("{}{hs}", a.el), str::to_string);
+            out += &format!("><t>{}</t></n>\n", run(&text));
         }
     }
     let mut id = 4 + m.atoms.len();
