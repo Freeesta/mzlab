@@ -11,6 +11,7 @@ use mzlab_feat::nature::{estimate, of_indexes, polarity_estimate};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::steps::recipe_map;
 
+use super::lr_note::{note_of, notices_value, Notice};
 use super::run::preview;
 
 /// The members of the preview that are measurements; the histograms and the example traces are drawings for the panel.
@@ -29,8 +30,14 @@ const KEPT: &[&str] = &[
 /// What the file decided: name, value and proof.
 pub type Estimates = Vec<(String, Value, Value)>;
 
-/// The `estimates/1` text of one file: its name, the polarity and axis it was measured with, and the members of `KEPT` of the preview.
-pub fn estimate_text(recipe: &Recipe, name: &str, preview: &str) -> Result<String> {
+/// The `estimates/1` text of one file: its name, the polarity and axis it was measured with, the members of `KEPT` of the preview and, only when there
+/// are any, the `notices` of the file (`lr_note`).
+pub fn estimate_text(
+    recipe: &Recipe,
+    name: &str,
+    preview: &str,
+    notices: &[Notice],
+) -> Result<String> {
     let preview = parse(preview.as_bytes())?;
     let axis = if recipe.detect.axis.is_da() {
         "Da"
@@ -48,6 +55,9 @@ pub fn estimate_text(recipe: &Recipe, name: &str, preview: &str) -> Result<Strin
     ];
     for k in KEPT {
         doc.extend(preview.get(k).map(|v| (k.to_string(), v.clone())));
+    }
+    if !notices.is_empty() {
+        doc.push(("notices".to_string(), notices_value(notices)));
     }
     Ok(value_text(&Value::Obj(doc)))
 }
@@ -88,5 +98,6 @@ pub fn estimate_of<R: ReadAt>(
 ) -> Result<(String, Estimates)> {
     let (recipe, estimates) = recipe_of(index, given)?;
     let p = preview(index, &recipe, false)?;
-    Ok((estimate_text(&recipe, name, &p)?, estimates))
+    let notices = note_of(&recipe, index).notices;
+    Ok((estimate_text(&recipe, name, &p, &notices)?, estimates))
 }

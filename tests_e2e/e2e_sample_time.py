@@ -52,7 +52,7 @@ try:
             need(vals["H20 demi"][0] == "", vals["H20 demi"])
         step("the table shows the proposed time in yellow, empty for H20", table)
         def group():
-            ans = pg.evaluate("carica('gruppi.js').then(() => GRUPPI.vars())")
+            ans = pg.evaluate("loadScript('groups.js').then(() => GROUPS.vars())")
             v = [x for x in ans["variables"] if x["id"] == "time"]
             need(v, [x["id"] for x in ans["variables"]])
             labels = {x["label"]: len(x["files"]) for x in v[0]["values"]}
@@ -114,7 +114,7 @@ try:
             wait_for_js(pg, "%s.includes('Renamed sample')" % cmp_names, 8000)
             need("Renamed sample" in pg.evaluate(side), pg.evaluate(side))
             # group: Group by time in the panel -> the sample table shows the group tag at once
-            pg.evaluate("GRUPPI.by({by: 'time'})")
+            pg.evaluate("GROUPS.by({by: 'time'})")
             wait_for_js(pg, "[...document.querySelectorAll('#cmp-tab .ftag')].length > 0", 8000)
             need(pg.evaluate("[...document.querySelectorAll('#cmp-tab .ftag')].map(e => e.textContent).every(t => E.files.some(f => f.ugrp === t))"), "the group tags of the table differ from the panel")
             # delete: the x of the panel -> gone from the sample table and the loading table

@@ -38,7 +38,7 @@ function nativo() {
 }
 
 /** the graph module, loaded on the first cut; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json */
-export function carica() {
+export function loadWasm() {
   if (modulo) return modulo;
   if (/** @type {any} */ (window).MZLAB_DESKTOP) return (modulo = Promise.resolve(nativo()));
   modulo = (async () => {
@@ -60,7 +60,7 @@ export function carica() {
  */
 export async function cutsOf(/** @type {string} */ molfile, /** @type {number} */ a = -1, /** @type {number} */ b = -1) {
   try {
-    const mod = await carica();
+    const mod = await loadWasm();
     return JSON.parse(await mod.fragments(molfile, a, b)).cuts;
   } catch (e) {
     return typeof e === "string" && e.includes("error.grafo.ring") ? "ring" : null;
@@ -103,7 +103,7 @@ export async function fragmentItems(/** @type {any} */ K, /** @type {MouseEvent}
     if (r === "ring") items.push({ text: h.t("draw.frag.ring") });
     else if (r && r[0]) r[0].sides.forEach(s => { const line = sideLine(s, h.num, h.t); items.push({ text: line, title: h.t("draw.frag.side.title"), run: () => h.copy(line) }); });
     else { items.push({ text: h.t("draw.frag.off") }); live = false; }
-  } else live = await carica().then(() => true, () => false);
+  } else live = await loadWasm().then(() => true, () => false);
   if (live) items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {
     const cuts = await cutsOf(mf);
     if (Array.isArray(cuts)) h.table(cutsTable(cuts, piece.ids.map(i => st.atoms.get(i).label), h.num, h.t));

@@ -172,7 +172,7 @@ def poll(pg, expr, timeout=240.0):
 
 
 def static_sets(site: str):
-    """What index.html and carica.js declare: render-blocking scripts/styles, preloads, the carica list in its load order."""
+    """What index.html and carica.js declare: render-blocking scripts/styles, preloads, the list of lazy scripts in its load order."""
     html = (Path(site) / "index.html").read_text(encoding="utf-8")
     head = html.split("</head>")[0]
     scripts = set(re.findall(r'<script src="(static/[^"]+)"', html))
@@ -183,7 +183,7 @@ def static_sets(site: str):
     lst = [x.split(":")[-1] for x in re.findall(r'"([^"]+)"', L)]
     classic = [x for x in re.findall(r'"([^"]+)"', L) if not x.startswith("m:")]
     mods = [x[2:] for x in re.findall(r'"([^"]+)"', L) if x.startswith("m:")]
-    return {"scripts": scripts, "styles": styles, "preload": pre, "carica": [x.split(":")[-1] for x in classic] + ["shell.js"] + mods}
+    return {"scripts": scripts, "styles": styles, "preload": pre, "lazy": [x.split(":")[-1] for x in classic] + ["shell.js"] + mods}
 
 
 _SZ: dict = {}
@@ -212,7 +212,7 @@ def kind_of(url: str, ent, sets) -> str:
         return "css (render-blocking)"
     if rel in sets["scripts"] and ent and ent.get("block") == "blocking":
         return "script (parser, render-blocking)"
-    if name in sets["carica"]:
+    if name in sets["lazy"]:
         return "script inserted by carica.js"
     if rel in sets["scripts"]:
         return "script (parser)"
@@ -290,7 +290,7 @@ def analyse(visit, srvlog, sets, site):
     fcp = marks.get("fcp", [None])[0]
     drop = marks.get("drop", [None])[0]
     ready = marks["ready"][0] if marks.get("ready") else None
-    lastc = [e["end"] for e in table if e["url"].endswith(tuple("/" + n for n in sets["carica"]))]
+    lastc = [e["end"] for e in table if e["url"].endswith(tuple("/" + n for n in sets["lazy"]))]
     ms = {"fcp": fcp, "lcp": (marks.get("lcp") or [None])[-1], "drop": drop, "carica_last": max(lastc) if lastc else None, "ready": ready}
     cum = {}
     for name, t in ms.items():
@@ -298,7 +298,7 @@ def analyse(visit, srvlog, sets, site):
             continue
         done = [e for e in table if e["end"] <= t and not e["url"].endswith("(document) [first navigation]")]
         cum[name] = {"t": round(t), "req": len(done), "enc_kb": round(sum(e["enc"] for e in done) / 1024, 1), "dec_kb": round(sum(e["dec"] for e in done) / 1024, 1)}
-    # the critical chain: everything finished until engine ready (or the last carica script, whichever is later)
+    # the critical chain: everything finished until engine ready (or the last lazy script, whichever is later)
     stop = max(x for x in (ms["ready"], ms["carica_last"]) if x) if (ms["ready"] or ms["carica_last"]) else None
     chain = [e for e in table if stop and e["end"] <= stop and not e["url"].endswith("[first navigation]")]
     wire = [r for r in srvlog if r["status"] == 200]

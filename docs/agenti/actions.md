@@ -7,7 +7,7 @@
 - **Layout, the rest**: `disp.affianca` (one entry for every other panel), `disp.intera`, `disp.uguali`, `disp.ripristina` have `menu: false`: they stay in the palette (active panel, `barra.js`) and in the ⠿ handle menu (with «Restore layout»); they are also done by dragging. Grey when not needed; absent on the map (`mappa.js`).
 - **Hints** (`suggerimenti.js`, `SUGG.chiedi(id, mostra, attesa)`): single queue of tours, «The tools are here» and «Drag here to tile»; only one is open, the others wait until it is closed.
 - **New action**: adds its id to `POR_ID` (`test_azioni.py` and `e2e_menu_coerenti` check that every action has an existing icon).
-- **Menu** = `AZIONI.per(c)`: the view's actions in group order (`AZIONI.GRUPPI`, a single table for all panels; within a group `ordine`, then registration order), a separator between groups; an action with `voci(c)` gives several rows with the same id (one per open XIC, per measurement…).
+- **Menu** = `AZIONI.per(c)`: the view's actions in group order (`AZIONI.GROUPS`, a single table for all panels; within a group `ordine`, then registration order), a separator between groups; an action with `voci(c)` gives several rows with the same id (one per open XIC, per measurement…).
 - **Unavailable entries** (`off`): not shown at all in any menu; `AZIONI.pulisci` (a single function, called by `menu()`) removes them and removes the separators left first, last or doubled; an informational row (`info: true`) stays.
 - `menu()` (`explore.js`) writes `data-azione=<id>` on every entry: it is what the tests compare. 
 - **Execution**: `AZIONI.esegui(id, c)` runs only an action of the view and available; `AZIONI.elenco(c, "barra")` gives the actions with `barra: true`.

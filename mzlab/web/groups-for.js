@@ -1,7 +1,7 @@
 // @ts-check
 // «Group by ▾» of the side list header: the menu (None, the ranked variables of the names with a preview, Then by…, Token position…, Contains…, Custom) and the two
-// dialogs of the manual rules. Lazy (carica("gruppi-per.js") from lista-file.js); the engine's answer and the writer are in gruppi.js, nothing here splits a name.
-window.GRUPPIPER = (() => {
+// dialogs of the manual rules. Lazy (loadScript("groups-for.js") from lista-file.js); the engine's answer and the writer are in groups.js, nothing here splits a name.
+window.GROUPSFOR = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
   // the button the menu hangs from: the side list's, or another one given to open() (the table's «Group by»)
   let anchor = "sb-by";
@@ -26,9 +26,9 @@ window.GRUPPIPER = (() => {
       return list;
     }
     if (anchor === "sb-by") {
-      list.push({ label: t("groups.type"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
+      list.push({ label: t("groups.type"), checked: !ub && !GROUPS.has(), fn: () => pick(null) });
       list.push({ label: t("groups.none"), checked: ub?.by === "flat", fn: () => pick({ by: "flat" }) });
-    } else list.push({ label: t("groups.none"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
+    } else list.push({ label: t("groups.none"), checked: !ub && !GROUPS.has(), fn: () => pick(null) });
     vs.forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.by === v.id, fn: () => pick({ by: v.id }) }));
     if (ub && ub.by !== "custom" && ub.by !== "flat" && ub.by !== "manual" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
     list.push({ label: t("groups.pos"), checked: ub?.by === "manual" && !!ub.manual?.pos, fn: () => { close(false); dialogPos(); } });
@@ -36,15 +36,15 @@ window.GRUPPIPER = (() => {
     list.push({ label: t("groups.custom"), checked: ub?.by === "custom", disabled: true, fn: () => { /* shown only: set by a manual edit */ } });
     return list;
   }
-  async function pick(/** @type {any} */ spec) { close(); if (!(await GRUPPI.by(spec))) directNote("groups.error"); }
+  async function pick(/** @type {any} */ spec) { close(); if (!(await GROUPS.by(spec))) directNote("groups.error"); }
   /** @param {string} v */
   async function draw(v) {
     view = v;
-    const ans = await GRUPPI.vars();
+    const ans = await GROUPS.vars();
     if (!box) return;
     box.replaceChildren();
     if (ans && ans.common && view === "main") { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.common", { text: ans.common }); box.append(n); }
-    if (!GRUPPI.names().length) { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.noFiles"); box.append(n); }
+    if (!GROUPS.names().length) { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.noFiles"); box.append(n); }
     items(ans).forEach(it => {
       const d = document.createElement("div");
       d.setAttribute("role", "menuitemradio"); d.setAttribute("aria-checked", String(!!it.checked)); d.tabIndex = -1;
@@ -88,7 +88,7 @@ window.GRUPPIPER = (() => {
     let tick = 0;
     const refresh = () => {
       const s = spec(), my = ++tick; ok.disabled = true; if (!s) { pv.replaceChildren(); warn.textContent = ""; return; }
-      GRUPPI.vars(s).then(ans => {
+      GROUPS.vars(s).then(ans => {
         if (my !== tick) return;
         const man = ans?.manual, shown = man ? rows(man) : [];
         pv.replaceChildren(...shown.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
@@ -99,7 +99,7 @@ window.GRUPPIPER = (() => {
     };
     fill(body, refresh);
     no.onclick = () => d.close();
-    ok.onclick = async () => { const s = spec(); d.close(); if (s && !(await GRUPPI.by(apply(s)))) directNote("groups.error"); };
+    ok.onclick = async () => { const s = spec(); d.close(); if (s && !(await GROUPS.by(apply(s)))) directNote("groups.error"); };
     d.onclose = () => { d.remove(); btn().focus(); };
     document.body.append(d); d.showModal(); refresh();
     /** @type {HTMLElement | null} */ (d.querySelector("input"))?.focus();

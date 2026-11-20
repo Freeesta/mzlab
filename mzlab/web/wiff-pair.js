@@ -2,7 +2,7 @@
 "use strict";
 // A SCIEX .wiff always travels with its .wiff.scan (docs/agenti/wiff-pair.md). When only one of them is loaded the page asks the user for the FOLDER (a web page cannot
 // read the neighbours of a file), opens that dialog already in the right place when the browser gave a file handle, and takes ONLY the file of the pair from it
-// (names are listed, no other file is read). Lazy (carica("wiff-pair.js")), called by upload() once a batch holds a .wiff or .wiff.scan that is still alone.
+// (names are listed, no other file is read). Lazy (loadScript("wiff-pair.js")), called by upload() once a batch holds a .wiff or .wiff.scan that is still alone.
 // The rule «which file is the companion of which» is the engine's (crates/mzlab-lettori/src/pair.rs); `half`, `companionName` and `pick` are its twin, tests/test_wiff_pair.py proves them equal.
 
 const WIFFRULE = (() => {

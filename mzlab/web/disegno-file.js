@@ -70,11 +70,12 @@ export function changesNote(name, changes, t) {
 
 /** Wires the three routes on the editor document.
  * @param {Document} doc @param {any} k Ketcher
- * @param {{ t: (key: string, p?: Record<string, any>) => string, note: (text: string) => void, done: () => void }} ui `done` runs after a structure was drawn */
+ * @param {{ t: (key: string, p?: Record<string, any>) => string, note: (text: string) => void, done: () => void, isName?: (text: string) => boolean }} ui `done` runs after a structure was drawn; `isName` tells one line that is a compound name, which Ketcher would draw as query atoms */
 export function mountImport(doc, k, ui) {
   const w = /** @type {any} */ (doc.defaultView), { t, note } = ui;
   /** Adds the text; a canvas that did not change means Indigo could not read it. */
   const add = async (/** @type {string} */ text, /** @type {string} */ name, /** @type {string} */ extra) => {
+    if (ui.isName && ui.isName(text)) { note(name ? t("draw.import.unreadable", { name }) : t("draw.quick.notFound")); return; }
     try {
       const before = await k.getKet();
       await k.addFragment(text);

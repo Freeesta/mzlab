@@ -83,7 +83,7 @@ try:
             drawer(pg, "alb"); pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
         def late_graph():
             # the graph module arrives AFTER the student went back to the tree: it must not repaint the body
-            pg.evaluate("""() => { window.__lateGraph = false; const o = window.carica; window.carica = async n => { const r = await o(n); if (/infusione-grafo/.test(n)) { await new Promise(f => setTimeout(f, 1200)); window.__lateGraph = true; } return r; }; }""")
+            pg.evaluate("""() => { window.__lateGraph = false; const o = window.loadScript; window.loadScript = async n => { const r = await o(n); if (/infusione-grafo/.test(n)) { await new Promise(f => setTimeout(f, 1200)); window.__lateGraph = true; } return r; }; }""")
             pg.evaluate("BARRA.setTab('gra', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.curTab === 'gra'", 10000)
             pg.evaluate("BARRA.setTab('alb', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.curTab === 'alb' && !!document.querySelector('#inf-tree tbody tr')", 10000)
             wait_for_js(pg, "window.__lateGraph === true", 10000); frames(pg, 5)

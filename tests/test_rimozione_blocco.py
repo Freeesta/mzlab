@@ -34,7 +34,7 @@ globalThis.ST = { files: E.files.map(f => ({ name: f.file, use: true })) };
 def run(code):
     lf = (WEB / "lista-file.js").read_text(encoding="utf-8")
     js = STUBS + f"""
-const vm = require("vm"); globalThis.carica = async () => {{}};
+const vm = require("vm"); globalThis.loadScript = async () => {{}};
 vm.runInThisContext({json.dumps(lf)});
 globalThis.bootSession = async () => {{}};
 (async () => {{ {code} }})().catch(e => {{ console.error(e); process.exit(1); }});

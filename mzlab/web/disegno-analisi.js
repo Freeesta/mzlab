@@ -2,7 +2,7 @@
 // «Formula analysis» card of Draw (`#anal-card`, a closed <details>): formula, exact, nominal and average mass, mass % and, on a click, the theoretical
 // isotope pattern of the drawn structure. Every number comes from the Rust `analysis/1` (`analysis` of the grafo .wasm, `feat/grafo` with kind "analysis" in
 // the app, `mzlab-cli mol anal`); this module only draws. The pattern is theory for the formula, never compared with a spectrum; Composition does the scoring.
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 import { atomOf, formulaParts } from "./disegno-etichette.js";
 
 /** @typedef {{ off: number, mz: number, rel: number, abund: number }} Stick */
@@ -11,7 +11,7 @@ import { atomOf, formulaParts } from "./disegno-etichette.js";
 const W = 280, H = 132, ML = 34, MR = 10, MT = 10, MB = 30;
 const esc = (/** @type {unknown} */ s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c);
 
-/** the app asks the native engine; the site the .wasm loaded by `carica` */
+/** the app asks the native engine; the site the .wasm loaded by `loadWasm` */
 async function ask(/** @type {string} */ request) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
@@ -19,7 +19,7 @@ async function ask(/** @type {string} */ request) {
     if (r.status !== 200) throw t;
     return t;
   }
-  return (await carica()).analysis(request);
+  return (await loadWasm()).analysis(request);
 }
 
 /** formula as HTML: isotope mass numbers as superscripts, counts as subscripts, then the charge */

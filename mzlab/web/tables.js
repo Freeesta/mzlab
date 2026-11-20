@@ -19,7 +19,7 @@
 
   // periodic table: markup, layout and behaviour live in tavola-periodica.js, loaded when the dialog first opens (not in the start-up list)
   /** @type {any} */ let PT = null;
-  const ptLoad = async () => { if (!PT) { await carica("tavola-periodica.js"); const data = await (await fetch("api/elements")).json(); PT = TAVOLA.create({ data, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p) }); } return PT; };
+  const ptLoad = async () => { if (!PT) { await loadScript("tavola-periodica.js"); const data = await (await fetch("api/elements")).json(); PT = TAVOLA.create({ data, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p) }); } return PT; };
   const periodic = () => PT.periodic(), bindPeriodic = (/** @type {HTMLElement} */ root) => PT.bindPeriodic(root);
 
 

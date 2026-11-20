@@ -1,5 +1,5 @@
 // @ts-strict
-// "Where does this ion come from?". ES module read on first use (carica() from the openOrigin stub of carica.js); only openOrigin goes on window.
+// "Where does this ion come from?". ES module read on first use (loadScript() from the openOrigin stub of carica.js); only openOrigin goes on window.
 // ONE window (like openXic) that shows the EVIDENCE computed by mzlab/ionfamily.py (/api/origin) and never a verdict:
 //   (a) normalised XICs of the ion, of the candidate precursor and of the co-eluting ions the student picks,
 //   (b) table of the co-eluting ions sorted by correlation, with the difference in apex time and in mass (neutral losses are hints),

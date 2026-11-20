@@ -44,7 +44,7 @@ async function read(f, v) {
 
 /** Shows the graph `j` of the file `name` in a window; the state of the tab is put back when it closes. @param {any} j @param {string} name */
 async function show(j, name) {
-  await carica("m:infusione-grafo.js");
+  await loadScript("m:infusione-grafo.js");
   if (win) win.remove();
   const keep = { ...G }, opener = /** @type {HTMLElement | null} */ (document.activeElement);
   Object.assign(G, { ro: name, j, sel: null, error: null, errorObj: null, rf: false, key: "" });

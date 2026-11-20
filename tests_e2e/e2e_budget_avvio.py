@@ -18,8 +18,8 @@ BUDGET = {"req_fcp": 29, "kb_fcp": 790, "blocking": 15, "cls": 0.02, "lt_ms": 10
 ROUNDS = 5
 SRC = (ROOT / "mzlab" / "web" / "carica.js").read_text(encoding="utf-8")
 L = re.findall(r'"([^"]+)"', re.search(r"var L = \[(.*?)\];", SRC, re.S).group(1))
-# every script of L has run when carica(n) resolves for each (the promise of its tag's onload); a failed one rejects
-ALL_L = "(names) => Promise.all(names.map(n => carica(n))).then(() => ({ ms: Math.round(performance.now()), lt: __b.lt.map(x => Math.round(x[1])) }))"
+# every script of L has run when loadScript(n) resolves for each (the promise of its tag's onload); a failed one rejects
+ALL_L = "(names) => Promise.all(names.map(n => loadScript(n))).then(() => ({ ms: Math.round(performance.now()), lt: __b.lt.map(x => Math.round(x[1])) }))"
 ENGINE_BANNER = "(() => { const e = document.getElementById('avvio-errore'); return !!(e && e.offsetHeight > 0); })()"
 
 PROBE = r"""(() => { const v = window.__b = { lt: [], cls: 0, fcp: 0, drop: 0 };

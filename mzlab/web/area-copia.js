@@ -63,5 +63,5 @@ if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.copyArea", gruppo:
 // the baseline of the integration under the pointer or selected (key B): its dialog in integra-base.js, loaded on demand
 if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.baseline", gruppo: "tools", ordine: 0, viste: ["chrom", "xic", "mrm"], scorciatoia: { tasto: "b", dove: "chart", et: "scorc.base" },
   visibile: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.base.menu"),
-  esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) carica("integra-base.js").then(() => INTBASE.open(c.p, l.int)); } });
+  esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) loadScript("integra-base.js").then(() => INTBASE.open(c.p, l.int)); } });
 window.AREACOPY = { target, copy, put, say: notice };

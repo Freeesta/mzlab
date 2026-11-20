@@ -31,7 +31,7 @@ I18N.add("en", {
   "draw.sub.col.name": "Name",
   "draw.sub.col.id": "Id",
   "draw.sub.col.matches": "Matches",
-  "draw.sub.col.atoms": "Matched atoms (per match) or reason not read",
+  "draw.sub.col.atoms": "Matched atoms (for each match) or reason not read",
   "draw.sub.note": "A substructure hit is a candidate to check, not an identification.",
   "draw.sub.empty": "Nothing to search: the canvas is empty.",
   "draw.sub.query.sel": "Query: the selection ({n} atoms).",

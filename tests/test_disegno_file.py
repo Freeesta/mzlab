@@ -88,3 +88,23 @@ def test_a_drop_over_the_engines_limit_is_refused_before_the_file_is_read():
     return { refused, after: { read, added } };""")
     assert got["refused"] == {"read": 0, "notes": ['draw.import.failed{"message":"refused 2000000000"}']}, got
     assert got["after"] == {"read": 1, "added": ["<CDXML/>"]}, got
+
+
+def test_a_dropped_name_never_reaches_ketcher_and_the_notice_says_which_drop_it_was():
+    got = run(WIRED.replace("done: () => {} }", "done: () => {}, isName: x => x.trim() === 'aspirin' }") + """
+    const drop = (files, text) => L["body:drop"]({ dataTransfer: { files, getData: () => text }, preventDefault() {}, stopPropagation() {} });
+    await drop([], "aspirin");
+    await drop([{ name: "name.txt", size: 8, arrayBuffer: async () => new TextEncoder().encode("aspirin\\n").buffer }], "");
+    await drop([], "CCO");
+    return { added, notes };""")
+    assert got == {"added": ["CCO"], "notes": ["draw.quick.notFound{}", 'draw.import.unreadable{"name":"name.txt"}', ""]}, got
+
+
+def test_one_line_is_a_name_unless_it_reads_as_a_structure():
+    lines = {"aspirin": True, "acetic acid": True, "<foo>": True, "Co nitrate": True, "Sc oxide": True, "Cs chloride": True, "In vitro": True, "SO2 gas": True, "CO2 emissions": True,
+             "CCO": False, "Co": False, "InChI=1S/CH4/h1H4": False, "CC=O.OCC>>CC(=O)OCC": False, "CCO ethanol": False, "c1ccccc1 benzene": False, "C1CC1 cyclopropane": False, "CO2": False, "CO poisoning": False,
+             "C[C@H](N)C(=O)O |a:1|": False, '<CDXML a="1"/>': False, '{"root":{}}': False, "VmpDRDAxMDA": False, "CCO\nCCN": False, "": False, "  ": False}
+    src = f"import {{ isNameLine }} from {(WEB / 'disegno-cerca.js').as_uri()!r}; console.log(JSON.stringify({json.dumps(list(lines))}.map(isNameLine)));"
+    r = subprocess.run(["node", "--input-type=module", "-e", src], capture_output=True, encoding="utf-8")
+    assert r.returncode == 0, r.stderr
+    assert dict(zip(lines, json.loads(r.stdout))) == lines
