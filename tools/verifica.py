@@ -57,7 +57,9 @@ NEEDS: dict[str, set[str]] = {
 SLOW = ["e2e_giro_intestazione", "e2e_giro_intestazione_flow", "e2e_giro_intestazione_campione", "e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione", "e2e_disegno_click", "e2e_budget_avvio"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it), disegno_click times the slowest event of a click at CPU x4 (96-152 ms alone, up to 208 ms beside three busy processes, 216-696 ms on the CI pool); budget_avvio takes the best long task at CPU x4 (113 ms in the pool of a slow CI runner against a 100 ms budget, 10 s test; the rounds of the same run spread 110-164 ms), so it runs alone like disegno_click; the tests beside them never starve
 # A test that is long by construction gets a cap of its own (seconds), never lower than --timeout: e2e_impaginazione sweeps 16 page configurations
 # (13 with an MRM panel, 3 full scan) and every menu of each; 179 s on a fast machine (129 + 50), over the 150 s of `e2e-cambiati` on a CI runner.
-CAP_PROPRIO = {"e2e_impaginazione": 420}
+# The three Flow «This browser» tests build a site, run the native `flow run` and the page for every case: e2e_flow_neg_lr alone is 9 min per case (6 cases),
+# e2e_flow_web_group 20 min and e2e_flow_web_modelli 13 min when three run together (measured with the .wasm already built).
+CAP_PROPRIO = {"e2e_impaginazione": 420, "e2e_flow_neg_lr": 3600, "e2e_flow_web_group": 1800, "e2e_flow_web_modelli": 1800}
 def cap_of(name: str, timeout: int) -> int:
     return max(timeout, CAP_PROPRIO.get(name, 0))
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
@@ -388,6 +390,11 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         exe = ROOT / "target" / "release" / ("mzlab-cli.exe" if os.name == "nt" else "mzlab-cli")
         if exe.is_file():      # the tests start this binary (tests_e2e/cli_cmd.py cli_command) instead of a `cargo run` each
             env["MZLAB_CLI"] = env_sint["MZLAB_CLI"] = str(exe)
+    man = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
+    if shutil.which("cargo") and shutil.which("wasm-bindgen") and any("build_feat" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo) and not (man.is_file() and '"feat"' in man.read_text(encoding="utf-8")):
+        # the tests that need the mzFinder .wasm would each build it inside their own cap (cold cargo: far over 600 s, so they TIMEOUT): build it once into the shared site, they copy it (lib.build_feat)
+        rc, _out, dt = sh(["bash", "tools/build_feat_wasm.sh", "site/static"], LOG / "precompila_feat.log", 3600, env=env)
+        print(f"[{time.time() - T0:5.0f} s] build mzFinder .wasm before the e2e: rc {rc}, {dt:.0f} s", file=sys.stderr, flush=True)
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
     slow = [n for n in SLOW if n in todo]
