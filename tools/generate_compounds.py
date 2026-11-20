@@ -2,7 +2,7 @@
 
 Run by hand (never at use time):  python3 tools/generate_compounds.py [path/to/PubChemLite.csv]
 Without a path the Zenodo file is downloaded to a temporary folder and checked against the pinned SHA-256.
-Licence of the source: CC-BY-4.0 (see LICENZE-TERZI.md).
+Licence of the source: CC-BY-4.0 (see THIRD-PARTY-LICENSES.md).
 """
 import csv
 import hashlib

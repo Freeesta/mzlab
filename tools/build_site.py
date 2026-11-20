@@ -301,7 +301,7 @@ def main() -> None:
     static = out / "static"
     shutil.copytree(ROOT / "mzlab" / "web", static)
     bundle_lang(static)
-    for lic in ("LICENSE", "LICENZE-TERZI.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
+    for lic in ("LICENSE", "THIRD-PARTY-LICENSES.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
         if (ROOT / lic).exists():
             shutil.copy2(ROOT / lic, out / lic)
     # the page: same index.html, plus the bridge that answers api/... without a server

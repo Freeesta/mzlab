@@ -65,7 +65,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
 | statistics in HR: feature table, blank, difference from the reference, PCA | `docs/agenti/high-resolution-statistics.md` |
 | HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/high-resolution.md` |
-| registry of state-changing actions (`comandi.js`, generated `docs/azioni.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/history-removed.md` |
+| registry of state-changing actions (`comandi.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/history-removed.md` |
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |

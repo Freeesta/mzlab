@@ -8,7 +8,7 @@
 
 Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository (Freeesta/mzlab-dati: dati/3200 qtrap/mzML + dam/, real lab files; found by tools/dati_percorsi.py
 next to this repository, in a parent folder, in the home or in /workspace, or with MZLAB_DATI=<path> or QQQ_DATI=<path>);
-Federico's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
+the owner's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
 .verifica/dati_sintetici/ (then the summary says "sintetici": a pass on synthetic data is weaker than on real data).
 Some e2e only make sense with the real data or with a .dam method (MZLAB_DAM or QQQ_DAM): they are reported as SKIP, with why.
 
@@ -254,7 +254,7 @@ def con_golden(n: str) -> bool:
 
 
 def hrms_dirs() -> list[Path]:
-    """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on Federico's Mac, the whole files."""
+    """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on the owner's Mac, the whole files."""
     hrms_env = get_env("HRMS")
     c = [percorso("dati/HRMS"), Path(hrms_env) if hrms_env else None, ROOT.parent / "Data" / "HRMS"]
     return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]

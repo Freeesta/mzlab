@@ -21,7 +21,7 @@ What the deletion will have to cover (check each with grep before removing it):
 - Tests: every `tests_e2e/e2e_tabui_*.py` and `e2e_tpmine*.py`, `tests_e2e/e2e_tabui_hidden.py`, the Tabui clicks in shared tests (`e2e3.py`, `e2e_giro_intestazione.py`, `e2e_lab.py`,
   `e2e_axe_release.py`, `misura_primo_paint.py`), `open_tabui` in `tests_e2e/lib.py`, and the Rust tests `crates/mzlab-feat/tests/steps_tabui_parity.rs`, `crates/mzlab-finder-lr-wasm/tests/`.
 - Docs: `flow-coverage-tabui.md`, `flow-package-tabui.md`, this file, the Tabui parts of `groups.md`, `mzfinder*.md`, `levels.md`, `reactivity.md`, `measurements.md`, `suspects.md`, and the rows of
-  `docs/agenti/INDICE.md` (regenerate `docs/inventari/TOOLTIP-*` and `docs/azioni.md` with their tools).
+  `docs/agenti/INDICE.md` (regenerate `docs/inventari/TOOLTIP-*` and `docs/actions.md` with their tools).
 - i18n keys that only Tabui uses (`mapfeat.*`, `cmd.mapfeat.*`, `feat.mzf`, `feat.src.mzfinder`, `qaqc.feat.go`, `rep.feat`... check each with `python3 tools/controlla_i18n.py`; the Tabui UI itself is
   English-only literals, no keys).
 - wasm modules and caps in `tools/moduli/*.toml`: candidate `finder-lr.toml` (`mzlab-finder-lr-wasm`, cap 892928 B, measured 785462 B), used by the LR search of Tabui; check that no Flow step or other
