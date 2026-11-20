@@ -75,6 +75,11 @@ const INTEGRITY_PREFIXES: &[&str] = &[
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
+    "err.dad.msNoLevel",
+    "err.dad.msRange",
+    "err.dad.msEmpty",
+    "err.dad.delayShort",
+    "err.dad.delayNoPeaks",
     "err.flow.cancelled",
     "err.run.data",
     "err.llm.eval.loop",
