@@ -59,7 +59,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("dad delay", "mzlab-cli dad delay FILE ...   the delay between the DAD and the MS", |a| crate::dad_cmd::run(pre("delay", a))),
     Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank", crate::spectrum_cmd::get)
         .schema("spectrum/1")
-        .exits(&[0, 2, 4, 5, 6]),
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("spectrum list", "mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)", crate::spectrum_cmd::list)
         .schema("scanlist/1")
         .exits(&[0, 2, 4, 5, 6]),

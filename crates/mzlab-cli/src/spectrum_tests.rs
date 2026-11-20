@@ -309,3 +309,62 @@ fn a_bad_blank_is_usage_or_a_missing_file_with_an_error_document() {
         .contains("\"schema\":\"error/1\""));
     let _ = std::fs::remove_dir_all(d);
 }
+
+/// A profile mzML of MS1 scans only (no MS2 level to take a mean of).
+fn profile_ms1(tag: &str) -> (std::path::PathBuf, String) {
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let d = dir(tag);
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_spectra(4).unwrap();
+    for k in 0..4 {
+        let (mz, y): (Vec<f64>, Vec<f32>) = (0..200)
+            .map(|i| {
+                let m = 100.0 + f64::from(i) * 0.01;
+                (
+                    m,
+                    (1000.0 * (-((m - 101.0) / 0.2).powi(2)).exp() + 5.0) as f32,
+                )
+            })
+            .unzip();
+        w.spectrum(&mzlab_core::mzml::Spectrum {
+            index: k,
+            id: format!("scan={}", k + 1),
+            level: 1,
+            rt: k as f64,
+            polarity: 1,
+            profile: true,
+            mz,
+            intensity: y,
+            ..Default::default()
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let f = d.join("p.mzML");
+    std::fs::write(&f, w.finish().unwrap()).unwrap();
+    (d, f.to_string_lossy().into_owned())
+}
+
+#[test]
+fn a_blank_with_no_spectrum_to_subtract_from_is_exit_1_with_its_key() {
+    let (d, f) = profile_ms1("spec_minus_none");
+    let o = run(&[
+        "spectrum",
+        "get",
+        &f,
+        "--rt",
+        "0,2",
+        "--ms-level",
+        "2",
+        "--minus",
+        &f,
+        "--minus-rt",
+        "0,2",
+        "--json",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let e = String::from_utf8(o.stdout).unwrap();
+    assert!(e.contains("\"schema\":\"error/1\""), "{e}");
+    assert!(e.contains("err.spectrum.minus"), "{e}");
+    let _ = std::fs::remove_dir_all(d);
+}
