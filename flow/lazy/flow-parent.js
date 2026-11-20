@@ -59,7 +59,7 @@
     const show = () => { const j = savedOf(F.parentText(S, input.name)); say.textContent = j ? summary(j, input.sha256) : F.parentText(S, input.name) ? "SMILES or text kept as typed (neutral) · SHA-256 " + input.sha256.slice(0, 12) + "…" : "No parent yet."; };
     app("molecules-field.js").then(async c => {
       const a = await app("molecules-archive.js");
-      const names = await a.addotti();
+      const names = await a.adducts();
       sel.append(el("option", { value: "neutral" }, "the neutral molecule (M)"), ...names.map((/** @type {string} */ n) => el("option", { value: n }, "an ion " + n)));
       sel.value = old && old.typed && names.includes(old.typed.adduct) ? old.typed.adduct : "neutral";
       /** the reading of `t` as a formula or an m/z under `adduct`, or null when it is neither @param {string} t @param {string} adduct */
@@ -90,7 +90,7 @@
         texts: { label: "Parent compound", placeholder: "name, formula, InChIKey or m/z", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
         value: text || chosen, wide: true, manage: null,
         // under an ion reading the list is searched with the neutral formula or mass, the database holds neutral molecules
-        prepare: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.massa)) : t; },
+        prepare: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.mass)) : t; },
         onPick: pick,
       });
       f.input.addEventListener("input", async () => { const r = await ionOf(f.input.value.trim(), sel.value); row.hidden = !r; });
