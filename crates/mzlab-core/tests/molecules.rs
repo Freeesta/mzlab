@@ -483,5 +483,8 @@ fn hrms_list_keeps_the_mz_of_the_old_csv() {
 #[test]
 fn a_document_without_the_molecules_list_is_a_bad_document() {
     let e = mzlab_core::molecules::from_json(br#"{"schema":"molecules/1"}"#).unwrap_err();
-    assert_eq!((e.len(), e[0].key, e[0].line), (1, "error.molecules.badJson", 0));
+    assert_eq!(
+        (e.len(), e[0].key, e[0].line),
+        (1, "error.molecules.badJson", 0)
+    );
 }

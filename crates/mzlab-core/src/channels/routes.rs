@@ -69,7 +69,10 @@ impl<R: ReadAt> Routes<R> {
             .ok_or_else(|| Error::new("err.canali.unknown").with("id", id))?;
         let c = &channels.v[i];
         let mut r: Vec<(String, String)> =
-            q.0.iter().filter(|(k, _)| k != "channel").cloned().collect();
+            q.0.iter()
+                .filter(|(k, _)| k != "channel")
+                .cloned()
+                .collect();
         let ha = |r: &[(String, String)], k: &str| r.iter().any(|(n, _)| n == k);
         match c.famiglia {
             Famiglia::Srm | Famiglia::Sim | Famiglia::Uv | Famiglia::Analog => return Ok(None),

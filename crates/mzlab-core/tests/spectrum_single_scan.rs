@@ -298,10 +298,7 @@ fn queries_of(scans: &[ScanRow]) -> Vec<String> {
         // two scans of the level, and the whole run
         if let Some((_, rt2, _, _)) = scans.iter().skip(i + 1).find(|s| s.0 == *level) {
             qs.push(format!("rt0={a}&rt1={}&level={level}", rt2 + 1e-6));
-            qs.push(format!(
-                "rt0={a}&rt1={}&level={level}&mode=sum",
-                rt2 + 1e-6
-            ));
+            qs.push(format!("rt0={a}&rt1={}&level={level}&mode=sum", rt2 + 1e-6));
         }
     }
     let last = scans.last().map_or(0.0, |s| s.1);

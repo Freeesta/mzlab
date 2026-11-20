@@ -96,7 +96,11 @@ fn a_rule_explains_the_loss_of_an_arc_by_formula_and_adduct() {
     assert_eq!(v.addotto, Some("[M+H]+"));
     let leads = |from: &str, a: &str| {
         let (p, f) = (find(&g, from), find(&g, a));
-        let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
+        let i = g
+            .edges
+            .iter()
+            .position(|x| x.from == p && x.to == f)
+            .unwrap();
         v.edges[i].rules.iter().map(|r| r.id).collect::<Vec<_>>()
     };
     // CO leaves a fragment of the m/z 138, so the adduct of the root plays no part: the rule asks for it only on the root
@@ -117,7 +121,11 @@ fn a_loss_that_is_the_sum_of_two_rules_is_composite_only_in_a_beam() {
         let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
         let v = evaluate_with(t, &g, &o, &RuleParams::default());
         let (p, f) = (find(&g, "C6H8N3O"), find(&g, "C4H7N2"));
-        let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
+        let i = g
+            .edges
+            .iter()
+            .position(|x| x.from == p && x.to == f)
+            .unwrap();
         v.edges[i].composta.clone()
     };
     assert_eq!(among(None), [("co", "hcn"), ("hcn", "co")]);

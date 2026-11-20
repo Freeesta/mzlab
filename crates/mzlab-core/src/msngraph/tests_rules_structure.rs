@@ -46,7 +46,11 @@ fn leads(t: &'static Table, o: &Options, from: &str, a: &str) -> Vec<(String, St
     let (g, _) = shifted_graph(o, &[0, 1, 2, 3], false, 0.0);
     let v = evaluate_with(t, &g, o, &RuleParams::default());
     let (p, f) = (find(&g, from), find(&g, a));
-    let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
+    let i = g
+        .edges
+        .iter()
+        .position(|x| x.from == p && x.to == f)
+        .unwrap();
     v.edges[i]
         .rules
         .iter()
