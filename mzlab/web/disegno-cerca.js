@@ -28,10 +28,15 @@ export async function nameToSmiles(text, note, t) {
 }
 
 /** True for one line that is a structure as written: a SMILES or InChI, a reaction SMILES ("CC=O.OCC>>CC(=O)OCC"), either one followed by a title (a .smi line, "CCO ethanol") or by a CXSMILES block ("|...|").
- * Before a title, a word with an aromatic atom and no ring digit is not a SMILES: "Co nitrate", "Sc oxide" and "In vitro" are names. */
+ * Before a title, a word with an aromatic atom and no ring digit, or with a ring that never closes, is not a SMILES: "Co nitrate", "In vitro" and "CO2 emissions" are names. */
 const isStructureLine = (/** @type {string} */ t) => {
   const first = t.split(/\s+/)[0], parts = first.split(">"), alone = first === t;
-  const ok = (/** @type {string} */ w) => looksLikeSmiles(w) && (alone || /\d/.test(w) || !/[cnops]/.test(w.replace(/Cl|Br|\[[^\]]*\]/g, "")));
+  const ok = (/** @type {string} */ w) => {
+    if (!looksLikeSmiles(w)) return false;
+    if (alone) return true;
+    const bare = w.replace(/Cl|Br|\[[^\]]*\]|%\d\d/g, ""), digits = bare.replace(/\D/g, "");
+    return [...new Set(digits)].every(d => digits.split(d).length % 2 === 1) && (!!digits || !/[cnops]/.test(bare));
+  };
   return isStructureText(t) || /^InChI=/i.test(first) || ok(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || ok(x)));
 };
 

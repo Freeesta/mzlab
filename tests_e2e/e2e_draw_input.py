@@ -118,12 +118,13 @@ try:
         SAVED_O = """/"label":\\s*"O"/.test(NB.ket || '')"""                 # the autosave runs once the changes have stopped
         def double_draw():
             clear(); wait_for_js(pg, "!" + SAVED_O, timeout=15000)
-            pg.evaluate(f"(() => {{ const k = {KJ}, add = k.addFragment.bind(k); window.__adds = 0; k.addFragment = x => {{ window.__adds++; return add(x); }}; }})()")
+            pg.evaluate(f"(() => {{ const k = {KJ}, add = k.addFragment.bind(k); window.__adds = 0; window.__add0 = k.addFragment; k.addFragment = x => {{ window.__adds++; return add(x); }}; }})()")
             pg.fill("#ex-smi", "CCO")
             pg.evaluate("(() => { const b = document.getElementById('ex-load'); b.click(); b.click(); })()")
             wait_for_js(pg, SAVED_O, timeout=15000)                         # saved after the last change: a second drawing would be in by now
             assert pg.evaluate("window.__adds") == 1, pg.evaluate("window.__adds")
             assert smi() == "CCO" and pg.input_value("#ex-smi") == "", (smi(), pg.input_value("#ex-smi"))
+            pg.evaluate(f"void ({KJ}.addFragment = window.__add0)")
         step("a double click on «Draw» draws the structure once", double_draw)
 
         def pick_while_drawing():
@@ -144,6 +145,24 @@ try:
             pg.click("#ex-load")                                             # the button is not left dead
             wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 3", timeout=15000)
         step("an editor that never answers gets a notice and «Draw» works again", silent_editor)
+
+        def late_editor():
+            clear()
+            pg.evaluate(f"""(() => {{ const k = {KJ}, get = k.getKet.bind(k), add = k.addFragment.bind(k); window.__adds = 0; window.__late = false;
+              k.addFragment = x => {{ window.__adds++; return add(x); }};
+              k.getKet = () => new Promise(ok => {{ window.__answer = () => {{ k.getKet = get; get().then(ok).then(() => {{ window.__late = true; }}); }}; }});
+              const st = window.setTimeout; window.__st = st; window.setTimeout = (f, ms, ...a) => st(f, ms === 20000 ? 300 : ms, ...a); }})()""")
+            pg.fill("#ex-smi", "CCO"); pg.click("#ex-load")
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
+            assert "did not answer" in note(), note()
+            pg.evaluate("(() => { window.setTimeout = window.__st; window.__answer(); })()")          # the editor answers after the limit
+            wait_for_js(pg, "window.__late", timeout=15000)
+            pg.evaluate("new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(ok)))")
+            assert pg.evaluate("window.__adds") == 0 and smi() == "", (pg.evaluate("window.__adds"), smi())
+            pg.click("#ex-load")
+            wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 3 && document.getElementById('ex-smi').value === ''", timeout=15000)
+            assert pg.evaluate("window.__adds") == 1, pg.evaluate("window.__adds")
+        step("an editor that answers after the limit adds nothing late, and the next «Draw» draws once", late_editor)
 
         def element_words():
             clear(); pg.evaluate(DROP_TEXT, "Co nitrate")

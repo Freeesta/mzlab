@@ -101,8 +101,8 @@ def test_a_dropped_name_never_reaches_ketcher_and_the_notice_says_which_drop_it_
 
 
 def test_one_line_is_a_name_unless_it_reads_as_a_structure():
-    lines = {"aspirin": True, "acetic acid": True, "<foo>": True, "Co nitrate": True, "Sc oxide": True, "Cs chloride": True, "In vitro": True,
-             "CCO": False, "Co": False, "InChI=1S/CH4/h1H4": False, "CC=O.OCC>>CC(=O)OCC": False, "CCO ethanol": False, "c1ccccc1 benzene": False, "CO poisoning": False,
+    lines = {"aspirin": True, "acetic acid": True, "<foo>": True, "Co nitrate": True, "Sc oxide": True, "Cs chloride": True, "In vitro": True, "SO2 gas": True, "CO2 emissions": True,
+             "CCO": False, "Co": False, "InChI=1S/CH4/h1H4": False, "CC=O.OCC>>CC(=O)OCC": False, "CCO ethanol": False, "c1ccccc1 benzene": False, "C1CC1 cyclopropane": False, "CO2": False, "CO poisoning": False,
              "C[C@H](N)C(=O)O |a:1|": False, '<CDXML a="1"/>': False, '{"root":{}}': False, "VmpDRDAxMDA": False, "CCO\nCCN": False, "": False, "  ": False}
     src = f"import {{ isNameLine }} from {(WEB / 'disegno-cerca.js').as_uri()!r}; console.log(JSON.stringify({json.dumps(list(lines))}.map(isNameLine)));"
     r = subprocess.run(["node", "--input-type=module", "-e", src], capture_output=True, encoding="utf-8")

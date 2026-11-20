@@ -746,11 +746,13 @@ let quickBusy = false, quickAgain = false;          // one «Draw» at a time: a
 Q("#ex-load").onclick = async () => { if (quickBusy) { quickAgain = true; return; } quickBusy = true; try { for (let drawn = "", first = true; first || (quickAgain && Q("#ex-smi").value.trim() && Q("#ex-smi").value !== drawn); first = false) { quickAgain = false; drawn = await quickDraw(); } } finally { quickBusy = false; } };
 /** Draws the typed text and answers it as typed; the field is emptied only if it still holds that text. */
 async function quickDraw() { const typed = Q("#ex-smi").value; let v = typed.trim(); if (!v) return typed; try { await start(); } catch (_) { return typed; } /* a failed start has its own notice */ dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return typed; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
+  let late = false, timer = 0;   // after the 20 s limit nothing more is added and the field is left alone; an addFragment already sent to Ketcher cannot be called back
   try {   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error; an Indigo that never answers must not leave «Draw» dead
-    const changed = await Promise.race([(async () => { const before = await K.getKet(); await K.addFragment(v); return await K.getKet() !== before; })(), new Promise(ok => setTimeout(ok, 20000, null))]);
+    const changed = await Promise.race([(async () => { const before = await K.getKet(); if (late) return null; await K.addFragment(v); return await K.getKet() !== before; })(), new Promise(ok => { timer = setTimeout(() => { late = true; ok(null); }, 20000); })]);
     if (changed === null) dnote(I18N.t("draw.quick.slow")); else if (!changed) dnote(I18N.t("draw.quick.invalidNone"));
     else { if (Q("#ex-smi").value === typed) Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); }
+  finally { clearTimeout(timer); }
   return typed; }
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
