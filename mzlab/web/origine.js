@@ -134,7 +134,7 @@ async function ogEvidence(R, box) {
     const ev = await window.TPCALL("origin_evidence", { report: Object.fromEntries(["mz", "parent_mz", "profile", "ratio", "ratio_constancy", "kinetics", "ms2_peaks"].map(k => [k, R[k]])), pol: R.pol || 1 });
     if (R !== OG.res || !ev || !ev.length) return;
     const mark = { evidence: "+", against: "-", hint: "~", info: "·" };
-    box.innerHTML = `<h4>Proofs (Tabui)</h4><p class="why">What the data say about the link between the two ions, one proof per line (+ supports, - against, ~ only a hint). They are measurements for you to weigh, not a conclusion.</p><ul>${ev.map(e => `<li><b aria-hidden="true">${mark[e.strength] || "·"}</b> ${EH(e.text)}</li>`).join("")}</ul>`;
+    box.innerHTML = `<h4>Proofs</h4><p class="why">What the data say about the link between the two ions, one proof per line (+ supports, - against, ~ only a hint). They are measurements for you to weigh, not a conclusion.</p><ul>${ev.map(e => `<li><b aria-hidden="true">${mark[e.strength] || "·"}</b> ${EH(e.text)}</li>`).join("")}</ul>`;
     box.hidden = false;
   } catch (_) { /* mzFinder not ready: the report stays as it is */ }
 }

@@ -248,3 +248,96 @@ fn sites_of_a_molfile_are_defined_or_unknown_like_rdkit() {
         "{skipped} of {checked} differ"
     );
 }
+
+/// V2000 of atoms `els` with bonds `(a, b, type)` (1-based), no coordinates and no hydrogen counts.
+fn plain(els: &[&str], bonds: &[(usize, usize, u8)]) -> String {
+    let mut s = format!(
+        "\n  t\n\n{:>3}{:>3}  0  0  0  0  0  0  0  0999 V2000\n",
+        els.len(),
+        bonds.len()
+    );
+    for e in els {
+        s += &format!("    0.0000    0.0000    0.0000 {e:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n");
+    }
+    for (a, b, o) in bonds {
+        s += &format!("{a:>3}{b:>3}{o:>3}  0\n");
+    }
+    s + "M  END\n"
+}
+
+/// Hydrogens of every atom of the record.
+fn hs(m: &Mol) -> Vec<u8> {
+    m.atoms.iter().map(|a| a.h).collect()
+}
+
+#[test]
+fn the_hydrogen_of_an_aromatic_file_goes_to_the_nitrogen_not_to_a_fusion_carbon() {
+    // indole c1ccc2[nH]ccc2c1 with every ring bond of type 4: the file does not say where the H is; the N comes after a fusion carbon
+    let indole = plain(
+        &["C", "C", "C", "C", "N", "C", "C", "C", "C"],
+        &[
+            (1, 2, 4),
+            (2, 3, 4),
+            (3, 4, 4),
+            (4, 5, 4),
+            (5, 6, 4),
+            (6, 7, 4),
+            (7, 8, 4),
+            (8, 9, 4),
+            (9, 1, 4),
+            (8, 4, 4),
+        ],
+    );
+    let m = read(&indole, "indole");
+    assert_eq!(hs(&m), [1, 1, 1, 0, 1, 1, 1, 0, 1]);
+    assert_eq!(m.aromatic_atoms().iter().filter(|x| **x).count(), 9);
+    // 2-methylimidazole Cc1ncc[nH]1: the H is on a ring N, the substituted carbon keeps none
+    let imidazole = plain(
+        &["C", "C", "N", "C", "C", "N"],
+        &[
+            (1, 2, 1),
+            (2, 3, 4),
+            (3, 4, 4),
+            (4, 5, 4),
+            (5, 6, 4),
+            (6, 2, 4),
+        ],
+    );
+    let m = read(&imidazole, "2-methylimidazole");
+    // both nitrogens could take it: the first in file order does
+    assert_eq!(hs(&m), [3, 0, 1, 1, 1, 0]);
+}
+
+#[test]
+fn silicon_arsenic_and_selenium_fill_their_valence_like_the_drawing() {
+    // lowest allowed valence (Si 4, Se 2, As 3): triethylsilane C6H16Si, methaneselenol CH4Se, methylarsine CH5As
+    let silane = plain(
+        &["C", "C", "Si", "C", "C", "C", "C"],
+        &[
+            (1, 2, 1),
+            (2, 3, 1),
+            (3, 4, 1),
+            (4, 5, 1),
+            (3, 6, 1),
+            (6, 7, 1),
+        ],
+    );
+    assert_eq!(hs(&read(&silane, "silane")), [3, 2, 1, 2, 3, 2, 3]);
+    assert_eq!(
+        hs(&read(&plain(&["C", "Se"], &[(1, 2, 1)]), "selenol")),
+        [3, 1]
+    );
+    assert_eq!(
+        hs(&read(&plain(&["C", "As"], &[(1, 2, 1)]), "arsine")),
+        [3, 2]
+    );
+    // full valence: tetramethylsilane and dimethyl selenide stay without hydrogens on the heteroatom
+    let tms = plain(
+        &["Si", "C", "C", "C", "C"],
+        &[(1, 2, 1), (1, 3, 1), (1, 4, 1), (1, 5, 1)],
+    );
+    assert_eq!(hs(&read(&tms, "tms"))[0], 0);
+    // the writer and the reader agree: the record survives a round trip
+    let m = read(&silane, "silane");
+    assert_eq!(hs(&read(&m.to_molfile(""), "silane again")), hs(&m));
+}

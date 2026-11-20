@@ -59,12 +59,6 @@ fn the_report_and_command_follow_the_contract() {
     for a in [
         &["flow", "report", "/nonexistent/run"][..],
         &["flow", "report", "/nonexistent/run", "--json"],
-        &[
-            "explain-missing",
-            "/nonexistent/t.mzfeat",
-            "/nonexistent/e.csv",
-            "--json",
-        ],
     ] {
         let o = run(a);
         assert_eq!(o.code, 4, "{a:?}: {}", o.stderr);

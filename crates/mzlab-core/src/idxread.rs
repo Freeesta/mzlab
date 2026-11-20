@@ -348,7 +348,7 @@ impl<R: ReadAt> Index<R> {
         let mut scans: Vec<Scan> = Vec::new();
         if let Some(rows) = head.rows.as_deref() {
             // counted first: a `Vec` that doubles holds one and a half times its rows while it moves; no room is `error.memoryBudget`, not a trap
-            scans = crate::budget::try_vec(json::count_elements(rows)?)?;
+            scans = crate::budget::scan_table(json::count_elements(rows)?)?;
             json::each_element(rows, |r| {
                 scans.push(crate::scanrow::scan_of_row(r, nativo).ok_or_else(bad)?);
                 Ok(())

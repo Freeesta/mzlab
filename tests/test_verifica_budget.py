@@ -27,7 +27,7 @@ def test_parts_cover_every_test_once_and_part_one_is_lighter():
 
 
 def test_the_slowest_e2e_are_not_in_part_one():
-    names = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"] + [f"e2e_{i:03d}" for i in range(60)]
+    names = ["e2e_giro_intestazione_campione"] + [f"e2e_{i:03d}" for i in range(60)]
     assert not [x for x in verifica.parte_di(names, 1, 5) if x in verifica.SLOW]
 
 

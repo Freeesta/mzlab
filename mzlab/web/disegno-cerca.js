@@ -4,6 +4,7 @@
 // A text that reads as a SMILES is never searched; choosing a suggestion puts its SMILES in the field and draws it with the «Draw» button, as a pasted SMILES.
 import { field } from "./molecules-field.js";
 import { ready, search } from "./molecules-archive.js";
+import { isCdxml } from "./disegno-file.js";
 
 /** True when `t` is made only of SMILES tokens (atoms, bonds, branches, ring digits, charges): "CC(=O)O", "c1ccccc1", "[Na+].[Cl-]". A name such as "caffeine" has letters no SMILES atom uses. */
 export function looksLikeSmiles(/** @type {string} */ t) {
@@ -31,7 +32,7 @@ export async function nameToSmiles(text, note, t) {
 export function guardPaste(doc, note) {
   doc.addEventListener("paste", e => {
     const t = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").trim();
-    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || isStructureText(t)) return;
+    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || isCdxml(t) || isStructureText(t)) return;
     e.preventDefault(); e.stopImmediatePropagation(); note();
   }, true);
 }

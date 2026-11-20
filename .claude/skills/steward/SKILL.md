@@ -1,14 +1,14 @@
 ---
 name: steward
-description: Regole di mzLab per portare una PR propria a CI verde (rossi, conflitti, revisioni) e riferire al Coordinatore. Da leggere quando arrivano eventi su una PR aperta da questa chat.
+description: mzLab rules for taking your own PR to green CI (reds, conflicts, reviews) and reporting to the Coordinator. Read when events arrive on an open PR opened by this chat.
 ---
-# Portare una PR di mzLab a verde
+# Taking an mzLab PR to green
 
-La PR la unisce il Coordinatore (COO), mai la chat che l'ha scritta. La chat la porta a verde e lo dice una volta.
+The Coordinator merges the PR, never the chat that wrote it. The chat takes it to green and says so once.
 
-1. **CI rossa**: leggi solo la coda del log del job rosso (`controllo-github`), riproduci in locale, correggi, `python3 tools/pre_pr.py`, un push. Rosso anche su main o in una zona che la PR non tocca: una riga al COO (job, perché non è tuo) e nessun rilancio a vuoto. `e2e_tour` è instabile noto: un solo rilancio.
-2. **Conflitto con main**: solo allora `tools/fondi_main.py` (merge, mai rebase o push forzato); i file generati si rigenerano con lo strumento, mai a mano. Una PR pulita non si aggiorna con main.
-3. **Revisioni**: correggi le richieste piccole e locali; quelle grandi (API, formati, più file) vanno al COO con la tua proposta.
-4. **Comunicazione**: niente commenti su GitHub; tutto passa al COO con `send_message`, nella sessione indicata dal prompt. A CI verde mandi UN messaggio: `PR #n · SHA (40 caratteri) · CI verde · cosa resta`. Un blocco vero è una riga con due opzioni, poi continui con altro.
-5. **Mai**: unire, abilitare l'auto-merge senza che il prompt lo dica, push su main, saltare o mettere in quarantena un test, commit vuoti, chiedere a Federico.
-6. **Dopo il merge**: la PR successiva parte da un ramo nuovo da `origin/main`. Se il contesto supera 200k token, manda il blocco di consegna (≤ 15 righe) e fermati.
+1. **Red CI**: read only the log tail of the red job (`github-status` agent), reproduce locally, fix, `python3 tools/pre_pr.py`, one push. A red on main too, or in an area the PR does not touch: one line to the Coordinator (job, why it is not yours) and no empty rerun. `e2e_tour` is a known flaky: one rerun only.
+2. **Conflict with main**: only then `python3 tools/fondi_main.py` (merge, never rebase or force-push); generated files are regenerated with their tool, never by hand. A clean PR is not updated with main.
+3. **Reviews**: fix small, local requests; big ones (API, formats, several files) go to the Coordinator with your proposal.
+4. **Communication**: no GitHub comments; everything goes to the Coordinator with `send_message`, to the session named in the prompt. At green CI send ONE message: `PR #n · 40-char SHA · CI green · what remains`. A real blocker is one line with two options, then you continue with something else.
+5. **Never**: merge, enable auto-merge unless the prompt says so, push to main, skip or quarantine a test, empty commits, ask the owner.
+6. **After the merge**: the next PR starts from a new branch from `origin/main`. If the context exceeds 200k tokens, send the hand-over block (at most 15 lines) and stop.

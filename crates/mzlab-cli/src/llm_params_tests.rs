@@ -1,5 +1,5 @@
 //! The rules `R-*` of `mzlab_llm::params_rules` against the real registry: every target exists with its limits, one test per rule, the cases G15-G22 of
-//! `docs/studi/assistente-dati/06-valutazione.md` (series G01 at unit resolution, series G08 DDA at high resolution) and the bytes are stable.
+//! `docs/agenti/llm-eval.md` (series G01 at unit resolution, series G08 DDA at high resolution) and the bytes are stable.
 
 use mzlab_core::json::{parse, Value};
 use mzlab_llm::params_rules::{propose_text, target_param, TARGETS};

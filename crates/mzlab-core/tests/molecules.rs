@@ -1,5 +1,5 @@
 //! `molecules/1`: the CSV and canonical JSON round trips, one error per wrong row, the search (mass in ppm, formula, text), the levels, the catalogue (written
-//! back to the same bytes) and the parity of the search with the name box of Tabui (`tests/data/molecole_tabui_oro.json`, made by `tools/molecole_oro_tabui.mjs`).
+//! back to the same bytes) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/molecole_tabui_oro.json`, written once; the script and the page are gone).
 //! The molecules of the tests are invented.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -263,7 +263,7 @@ fn the_catalogue_is_canonical_and_complete() {
     );
 }
 
-/// The queries of `tools/molecole_oro_tabui.mjs`: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
+/// The queries of the frozen answers: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
 fn queries(tabui: &[&Molecule]) -> Vec<String> {
     let mut names: Vec<&str> = Vec::new();
     for m in tabui {

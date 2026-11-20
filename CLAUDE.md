@@ -4,7 +4,7 @@ Professional free LC-MS analysis program: in the browser only (https://freeesta.
 
 ## Find things (read narrowly)
 - Docs: `grep -n '<word>' docs/agenti/INDICE.md`, then read only that area file (line ranges, `Read` offset/limit).
-- Code: `python3 tools/indice.py` first (it writes `docs/agenti/mappa.md`, which is gitignored and absent in a fresh clone), then `grep -n '<name>' docs/agenti/mappa.md`. Lookups: the `cercatore` agent.
+- Code: `python3 tools/indice.py` first (it writes `docs/agenti/mappa.md`, which is gitignored and absent in a fresh clone), then `grep -n '<name>' docs/agenti/mappa.md`. Lookups: the `finder` agent.
 - Never read `mzlab/web/vendor/`, `mzlab/web/elements.js`, `mzlab/web/esempi/`, `.git/`, `site/` (grep is fine).
 
 ## Layout
