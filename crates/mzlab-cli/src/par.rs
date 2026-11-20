@@ -5,6 +5,9 @@ use mzlab_core::error::Result;
 use mzlab_ops::run::feat::run;
 use std::path::PathBuf;
 
+#[path = "features_note.rs"]
+mod features_note;
+
 /// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.
 pub(crate) fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
     par_map_with(
@@ -57,6 +60,17 @@ pub(crate) type Detected = (mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8
 /// recipe (made from the first index) exist, so no thread waits for the slowest index of the series. Results are in file order. Returns the
 /// recipe, the `.mzfeatf` bytes and the weak candidates of each file.
 pub(crate) fn index_and_detect(
+    files: &[PathBuf],
+    labels: &[String],
+    idxs: &[PathBuf],
+    params: &str,
+) -> Result<Detected> {
+    let detected = detect_all(files, labels, idxs, params)?;
+    features_note::report(&detected.0, idxs, files, labels);
+    Ok(detected)
+}
+
+fn detect_all(
     files: &[PathBuf],
     labels: &[String],
     idxs: &[PathBuf],

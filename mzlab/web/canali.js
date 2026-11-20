@@ -236,7 +236,7 @@
   }
   /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
   function pickKind(p, v) {
-    if (ESP.mrm(p) || ms2Chrom(p)) { p._canOpen = false; ctl(p); return void carica("canali-uv.js").then(() => CANALIUV(p, v)); }
+    if (ESP.mrm(p) || ms2Chrom(p)) { p._canOpen = false; ctl(p); return void loadScript("canali-uv.js").then(() => CANALIUV(p, v)); }
     COMANDI.fai("panel.source", p, () => { p.kind = v; p.channels = undefined; });
     p._canOpen = false; ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-o="kind"]')); if (b) b.focus();

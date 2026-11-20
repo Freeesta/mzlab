@@ -3,7 +3,7 @@
 // (`substructure` of the molkit .wasm, `substructure_db/1`; the app asks `feat/grafo`, kind `sub`): the catalogue of the program or a file the user picks, read
 // in memory. The hits are candidates to check, never identifications; «Show» draws one, selects its matched atoms and colours the moiety
 // (`disegno-evidenza.js`), «Back» restores the drawing.
-import { carica } from "./disegno-verifica.js";
+import { loadWasm } from "./disegno-verifica.js";
 import { molfileOf } from "./disegno-molfile.js";
 
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => I18N.t(k, p);
@@ -29,7 +29,7 @@ async function ask(/** @type {string} */ request) {
     if (r.status !== 200) throw x;
     return x;
   }
-  return (await carica()).substructure(request);
+  return (await loadWasm()).substructure(request);
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */

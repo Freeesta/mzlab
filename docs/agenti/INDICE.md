@@ -29,7 +29,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
 | `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--report`, exit codes | `docs/agenti/cli-convert.md` |
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
-| command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page) | `docs/agenti/cli.md` |
+| command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page; `features-notes/1` at `--notes` or beside `--out`) | `docs/agenti/cli.md` |
 | running the verification in the cloud container (Chromium, `--setup`, tests against the built site) | `docs/agenti/cloud-environment.md` |
 | Safari and iPadOS (WebKit): API × minimum version × fallback, 16.4 floor, `compat.js` fallbacks (`AbortSignal.any`, `createWritable`, clipboard, `accept`); Safari, iPad, iPhone memory (budget without `deviceMemory`, calm refusal, `estimate::check_reader`) | `docs/agenti/compat-safari.md` |
 | RT-λ (DAD) map: study of the panel — data flow, causes of subtraction/side strips/3D not working, formats (Agilent/Waters/SCIEX) and DAD→MS discard, design of the link with the MS, split into PRs | `docs/agenti/dad-mappa-studio.md` |

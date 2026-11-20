@@ -101,12 +101,12 @@ const LIB = (() => {
   }
   // the body loads once, on the first member that needs it; the worker is created later still, on the first call
   /** @type {Promise<Bag> | null} */ let loading = null;
-  const body = () => loading || (loading = carica("libreria-corpo.js").then(() => /** @type {Bag} */ (window).LIBCORE({ queryOf, profOf, mirror, whatIs })).catch((/** @type {unknown} */ e) => { loading = null; throw e; }));
+  const body = () => loading || (loading = loadScript("libreria-corpo.js").then(() => /** @type {Bag} */ (window).LIBCORE({ queryOf, profOf, mirror, whatIs })).catch((/** @type {unknown} */ e) => { loading = null; throw e; }));
   /** @type {Bag} */ let core = /** @type {any} */ (null);
   const fwd = (/** @type {string} */ name) => async (/** @type {unknown[]} */ ...a) => { core = core || await body(); return core[name](...a); };
   const searchFrom = fwd("searchFrom");
   // «What is it?» and «Identify all the MS2»: the master/detail window of libreria-finestra.js, loaded on first use
-  const win = async () => { await carica("m:libreria-finestra.js"); return /** @type {Bag} */ (window).LIBWIN; };
+  const win = async () => { await loadScript("m:libreria-finestra.js"); return /** @type {Bag} */ (window).LIBWIN; };
   const whatIs = async (/** @type {Pannello} */ p) => (await win()).whatIs(p);
   const identifyAll = async (/** @type {number} */ k) => (await win()).identifyAll(k);
   // the action of the spectrum menu (registry azioni/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum

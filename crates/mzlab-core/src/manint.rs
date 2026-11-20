@@ -21,7 +21,7 @@ use crate::valley;
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin\n";
+    "channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin,sample_id,file,shift_min\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
@@ -74,12 +74,15 @@ struct Row {
     origin: &'static str,
     /// The start of the window all the rows of a peak come from: rows are ordered by channel, this, then sample.
     gkey: f64,
+    /// The shift (min) the apex search found against the source's apex, for a window applied to another sample (empty otherwise): also the one
+    /// that `max_shift` refused (`too_far`).
+    found: Option<f64>,
 }
 
 /// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1), the name the method gives it and `Trace::dup`.
 type Key = (i64, i64, String, usize);
-/// A sample: its name without `.mzML`, its channels and its time point in minutes.
-type Sample = (String, Vec<Trace>, Option<f64>);
+/// A sample: its name without `.mzML`, its channels, its time point in minutes and the file name as given (the `file` column).
+type Sample = (String, Vec<Trace>, Option<f64>, String);
 /// A channel group with its label and name.
 type Channel = (Key, String, String);
 
@@ -165,30 +168,6 @@ fn field(s: &str) -> String {
     }
 }
 
-/// The page's end point of the line between the edges: the mean of the point and its two neighbours.
-fn edge3(y: &[f64], i: usize) -> f64 {
-    let (lo, hi) = (i.saturating_sub(1), (i + 1).min(y.len() - 1));
-    y[lo..=hi].iter().sum::<f64>() / (hi - lo + 1) as f64
-}
-
-/// `[area (counts × s), height, apex RT]` against the line between the edges, as the Data view measures a window with `edges`: trapezoids minus the
-/// line, area and height clipped at 0.
-fn edges_area(t: &[f64], y: &[f64], a: f64, b: f64) -> [f64; 3] {
-    let (lo, hi) = (near_idx(t, a.min(b)), near_idx(t, a.max(b)));
-    if hi <= lo {
-        return [0.0, 0.0, t[lo]];
-    }
-    let mut ar = 0.0;
-    for j in lo + 1..=hi {
-        ar += (y[j] + y[j - 1]) / 2.0 * (t[j] - t[j - 1]) * 60.0;
-    }
-    let at = (lo..=hi).fold(lo, |m, j| if y[j] > y[m] { j } else { m });
-    let (ya, yb) = (edge3(y, lo), edge3(y, hi));
-    let line = (ya + yb) / 2.0 * (t[hi] - t[lo]) * 60.0;
-    let hb = ya + (yb - ya) * (t[at] - t[lo]) / (t[hi] - t[lo]);
-    [(ar - line).max(0.0), (y[at] - hb).max(0.0), t[at]]
-}
-
 /// The baseline of a window: `baseline` (absent = `zero`) and, for `line`, `line` = `[t0, y0, t1, y1]`.
 fn baseline_of(w: &Value, shift: f64) -> Result<Baseline> {
     let name = w.get("baseline").and_then(Value::str).unwrap_or("zero");
@@ -243,11 +222,12 @@ fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
                     f.get("conc_unit").and_then(Value::str).unwrap_or(""),
                 ),
                 time_of(f, name),
+                name.to_string(),
             )
         })
         .collect();
     let mut keys: Vec<Channel> = Vec::new();
-    for (_, trs, _) in &samples {
+    for (_, trs, _, _) in &samples {
         for tr in trs {
             let k = key_of(tr);
             if !keys.iter().any(|(x, _, _)| *x == k) {
@@ -289,19 +269,6 @@ fn channel_of<'a>(w: &Value, samples: &'a [Sample]) -> Result<(usize, &'a Trace,
     }
 }
 
-/// The line the parts of a split window share: `edges` as the line between the 3-point means of the edges, the others as they are.
-fn drop_line(base: Baseline, tr: &Trace, lo: usize, hi: usize) -> Baseline {
-    match base {
-        Baseline::Edges => Baseline::Line {
-            t0: tr.t[lo],
-            y0: edge3(&tr.y, lo),
-            t1: tr.t[hi],
-            y1: edge3(&tr.y, hi),
-        },
-        b => b,
-    }
-}
-
 /// The S/N of `peak1d::find_peak` around `a..b`.
 fn snr_of(tr: &Trace, a: f64, b: f64) -> Option<f64> {
     find_peak(
@@ -328,6 +295,7 @@ struct Item {
     shift: f64,
     origin: &'static str,
     gkey: f64,
+    found: Option<f64>,
 }
 
 /// One window measured on its channel: (the place of the channel in `keys`, a row, or a row per part when `splits` cuts it). `w` is the window
@@ -365,6 +333,7 @@ fn measure(
             label,
             origin: it.origin,
             gkey: it.gkey,
+            found: it.found,
         };
     let (lo, hi) = (near_idx(&tr.t, a), near_idx(&tr.t, b));
     let cuts: Vec<usize> = if it.origin == "manual" {
@@ -430,14 +399,15 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 
 /// The table for `files` (JSON `[{"name", "transitions"}]`, `transitions` as `/api/mrm` gives them) and `windows` (JSON `[{"file", "tr", "a", "b",
 /// "baseline"?, "line"?, "label"?, "splits"?}]`: index of the file, index of its transition, the edges in min, the name the user gave the window, last
-/// column, the times of its drop lines).
+/// column, the times of its drop lines; `follow` windows may carry `max_shift`, min). `windows` may also be `{"windows": [...], "columns": [...],
+/// "max_shift": MIN}`: `max_shift` is then the default of every `follow` window that has none of its own.
 /// Channels in the order they first appear in the files, the windows of a channel by file then start; `sums` adds after each channel a row `sum` with the sum of its areas. `err.manint.channel` for a window
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
     let doc = parse(windows.as_bytes())?;
     let (list, cols) = fig::split(&doc)?;
-    let items = follow::items_of(list, &samples)?;
+    let items = follow::items_of(list, &samples, follow::max_shift(&doc)?)?;
     let mut rows: Vec<(usize, Row)> = Vec::new();
     let mut labels: Vec<String> = Vec::new();
     // the correction note of each window, by the same place as its name
@@ -467,6 +437,9 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     ))
 }
 
+#[path = "manint_edges.rs"]
+mod edges;
+use edges::{drop_line, edge3, edges_area};
 #[path = "manint_csv.rs"]
 mod csv;
 use csv::csv_text;
@@ -491,6 +464,9 @@ mod ext_tests;
 #[cfg(test)]
 #[path = "manint_nopeak_tests.rs"]
 mod nopeak_tests;
+#[cfg(test)]
+#[path = "manint_shift_tests.rs"]
+mod shift_tests;
 #[cfg(test)]
 #[path = "manint_tests.rs"]
 mod tests;

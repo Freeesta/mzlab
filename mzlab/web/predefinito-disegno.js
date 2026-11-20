@@ -1,6 +1,6 @@
 // @ts-strict
 // @ts-check
-// Lazy (carica("predefinito-disegno.js")) from predefinito.js, desktop app only: a `.ket` handed over by the system opens in the drawing editor.
+// Lazy (loadScript("predefinito-disegno.js")) from predefinito.js, desktop app only: a `.ket` handed over by the system opens in the drawing editor.
 // Saving stays the editor's own export, which asks where; nothing is written back here.
 window.DESKDEFKET = {
   async open(/** @type {{name: string, text: string | null, error: string | null}} */ d) {

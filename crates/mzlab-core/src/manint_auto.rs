@@ -87,7 +87,7 @@ pub fn auto_text(files: &str, params: &str) -> Result<String> {
     )?);
     let mut found: Vec<Found> = Vec::new();
     let mut log: Vec<String> = Vec::new();
-    for (file, (_, trs, _)) in samples.iter().enumerate() {
+    for (file, (_, trs, _, _)) in samples.iter().enumerate() {
         for tr in trs.iter().filter(|t| t.t.len() >= 2) {
             let last = tr.t[tr.t.len() - 1];
             let r = lr_auto_integrate(&tr.t, &tr.y, tr.t[0], last, lr);

@@ -1,7 +1,7 @@
 // @ts-strict
 // Markers of the DDA trio (dda.js): the flags ▼ and open triangles ▽ on the Full Scan, the isolation band and the precursor line on the MS2, and the
 // reason an MS2 panel is empty (averaged Full Scan, no MS2 from this scan, outside the m/z zoom, no MS2 in the file). Loaded on the first drawing
-// of a DDA Full Scan (carica in DDA.decorate); `I` is the inside of DDA (DDA._in). Nothing here names a compound: an MS2 is shown as acquired.
+// of a DDA Full Scan (loadScript in DDA.decorate); `I` is the inside of DDA (DDA._in). Nothing here names a compound: an MS2 is shown as acquired.
 const MARK = 6;
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 /** A DIA file (the engine's `acq`): its MS2 are isolation windows fragmented cycle after cycle, not ions picked from the Full Scan. @param {Bag | undefined} f */
@@ -27,7 +27,7 @@ export function full(I, p, g, X, Y, W, c) {
   if (D && D.sid.length && p.r0 != null) {                      // the «N MS²» button: the MS2 of the scan(s) shown, from the engine
     const wk = `${f.k}|${p.r0}|${p.r1}`;
     if (p._dwk !== wk) { p._dwk = wk; p._dw = null; I.win(f.k, p.r0, p.r1).then((/** @type {Bag} */ w) => { if (p._dwk === wk) { p._dw = w; drawSoon(p); } }, () => {}); }
-    if (window.DDAELENCO) { window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); window.DDAELENCO.tri(I.byId(p.link)); } else carica("m:dda-elenco.js").then(() => drawSoon(p), () => {});
+    if (window.DDAELENCO) { window.DDAELENCO.sync(I, p, p._dw, p._a.ddaWhy); window.DDAELENCO.tri(I.byId(p.link)); } else loadScript("m:dda-elenco.js").then(() => drawSoon(p), () => {});
   }
   if (!s2 || !D) return;
   if (dia(f)) { p._a.markN = 0; diaBand(p, g, X, D, s2); return; }          // windows, not ions: no flag claims a peak, the band of the chosen window stays
@@ -178,6 +178,6 @@ function diaPeak(I, p, D, d0, m) {
 }
 /** ‹ i/N › in the header of the MS2 panel (dda-naviga.js, loaded on the first MS2 drawn). @param {Bag} I @param {Bag} p */
 function nav(I, p) {
-  if (window.DDANAV) window.DDANAV.sync(I, p); else if (p.sid != null) carica("m:dda-naviga.js").then(() => drawSoon(p), () => {});
+  if (window.DDANAV) window.DDANAV.sync(I, p); else if (p.sid != null) loadScript("m:dda-naviga.js").then(() => drawSoon(p), () => {});
 }
 window.DDAMARK = { full, ms2, why, peak, dia };
