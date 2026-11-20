@@ -29,7 +29,7 @@ The code, the tests and the technical documentation are developed with the assis
 
 ## Licences and credits
 
-The code is under the **MIT** licence (`LICENSE`, Federico Cristaudo). Third-party material, each with its own licence (texts in [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md), also copied into the site):
+The code is under the **MIT** licence (`LICENSE`). Third-party material, each with its own licence (texts in [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md), also copied into the site):
 
 - **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `mzlab/web/vendor/ketcher/`, https://github.com/epam/ketcher
 - **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
