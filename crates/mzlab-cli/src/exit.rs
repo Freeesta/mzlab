@@ -76,6 +76,7 @@ const INTEGRITY_PREFIXES: &[&str] = &[
     "err.normative.sources",
 ];
 const DATA_KEYS: &[&str] = &[
+    "error.memoryBudget",
     "err.pda.none",
     "err.dad.msNoLevel",
     "err.dad.msRange",

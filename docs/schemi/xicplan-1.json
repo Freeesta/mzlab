@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "xicplan/1",
   "title": "xicplan/1: what `mzlab-cli trace xic --dry-run` would extract",
-  "description": "The extraction a run would do, written without reading the data of the file (a missing file is still exit 4). Code: crates/mzlab-cli/src/trace_xic.rs.",
+  "description": "The extraction a run would do, written without reading the data of the file (a missing file is still exit 4). With --sweep: the sweep and its matrix. Code: crates/mzlab-cli/src/trace_xic.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -113,6 +113,39 @@
           }
         }
       }
+    },
+    "sweep": {
+      "type": "object",
+      "required": [
+        "lo",
+        "hi",
+        "step",
+        "n",
+        "tol_default"
+      ],
+      "additionalProperties": false,
+      "description": "Only with --sweep LO:HI:STEP: the sweep as given, the number of centres, and whether the half-window is the default STEP/2 in Da.",
+      "properties": {
+        "lo": {
+          "type": "number"
+        },
+        "hi": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number"
+        },
+        "n": {
+          "type": "integer"
+        },
+        "tol_default": {
+          "type": "boolean"
+        }
+      }
+    },
+    "matrix_bytes_per_scan": {
+      "type": "integer",
+      "description": "Only with --sweep: n x 8 bytes; times the scans of the section is the matrix the run holds (the scans are not read in a dry run). The run is refused (error.memoryBudget, exit 1) when the matrix is over half the memory budget."
     }
   }
 }

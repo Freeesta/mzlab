@@ -312,6 +312,36 @@ pub(crate) fn xic_answer(
                 .ok_or_else(|| Error::new("error.badIndex"))?
         }
     };
+    Ok(xic_wrap(s, text, mz, tol, level, pol, smooth))
+}
+
+/// The answers of several ions at once (one pass over the peaks, `Routes::sweep_traces`): each is the text `xic_answer` gives for that ion alone.
+pub(crate) fn xic_answers(
+    s: &mut Sample,
+    mzs: &[f64],
+    tols: &[f64],
+    level: u8,
+    pol: Option<i8>,
+    smooth: Option<usize>,
+) -> Result<Vec<Answer>> {
+    s.routes.pol = pol;
+    let texts = s.routes.sweep_traces(mzs, tols, level, smooth)?;
+    Ok(texts
+        .into_iter()
+        .zip(mzs.iter().zip(tols))
+        .map(|(t, (&m, &tol))| xic_wrap(s, t, m, tol, level, pol, smooth))
+        .collect())
+}
+
+fn xic_wrap(
+    s: &Sample,
+    text: String,
+    mz: f64,
+    tol: f64,
+    level: u8,
+    pol: Option<i8>,
+    smooth: Option<usize>,
+) -> Answer {
     let used = s
         .routes
         .idx
@@ -327,12 +357,12 @@ pub(crate) fn xic_answer(
         Some(k) => format!("{ev},\"smooth\":{k}"),
         None => ev,
     };
-    Ok(Answer {
+    Answer {
         text,
         y_unit: "counts".into(),
         evidence: ev,
         schema: "trace/1",
-    })
+    }
 }
 
 #[cfg(test)]
