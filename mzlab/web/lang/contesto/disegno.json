@@ -43,7 +43,6 @@
   "draw.import.unreadable": "Notice below the SMILES field when a dropped structure file cannot be read; {name} = the file name.",
   "draw.props.failed": "Box of the predicted properties when the calculation fails; {message} = technical text.",
   "draw.quick.invalid": "Notice below \"Quick draw\" for a SMILES rejected by Ketcher; {message} = Ketcher text (English).",
-  "draw.quick.refused": "Notice below \"Quick draw\" when the engine will not draw the SMILES; {message} = the engine's own error text (translated).",
   "draw.quick.notFound": "Notice below \"Quick draw\" when the text is neither a SMILES nor an InChI and no compound in the database has that name (or when a name is pasted onto the drawing).",
   "draw.quick.count": "Status read by screen readers below the \"Quick draw\" field when the compound search has found results; {n} = how many suggestions.",
   "draw.selection.slow": "Calm note in the SMILES tab of the selection when the Ketcher (Indigo) conversion does not answer within the time limit ({s} seconds): it names the limit, says what happened and the next step.",

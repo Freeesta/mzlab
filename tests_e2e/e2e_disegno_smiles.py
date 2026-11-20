@@ -1,8 +1,9 @@
 """Draw, the «Draw» button on a SMILES: the layout comes from the Rust engine (`draw` of the molkit .wasm, `draw/1`), Ketcher only adds the molfile. Needs the molkit .wasm.
 With the .wasm blocked «Draw» still draws (Ketcher's own layout); with it, the structure on the canvas has the engine's shape (same distances between atoms,
-whatever Ketcher does to position and scale), a second «Draw» adds a second molecule, and an invalid SMILES shows the notice and changes nothing."""
+whatever Ketcher does to position and scale; a spy on `addFragment` shows it was given the engine's molfile), a second «Draw» adds a second molecule, an InChI goes to Ketcher
+as typed (the engine does not read it), and a text the engine refuses goes to Ketcher too, which says it drew nothing."""
 # covers: mzlab/web/draw.js, mzlab/web/disegno-smiles.js
-import sys, os, math; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, math, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
 def step(name, fn):
@@ -29,6 +30,10 @@ def shape(mol):
     return [at[i][2] for i in range(len(at))], [[d(i, j) / mean for j in range(len(at))] for i in range(len(at))], bo
 def atoms(): return pg.evaluate(f"{K}.editor.struct().atoms.size")
 def note(): return pg.evaluate("(() => { const w = document.getElementById('smi-warn'); return w.hidden ? '' : w.textContent; })()")
+def spy():
+    """records what «Draw» hands to Ketcher's addFragment"""
+    pg.evaluate(f"(() => {{ const k = {K}, add = k.addFragment.bind(k); window.__args = []; k.addFragment = x => {{ window.__args.push(x); return add(x); }}; }})()")
+def args(): return pg.evaluate("window.__args")
 def draw(text):
     pg.fill("#ex-smi", text); pg.click("#ex-load")
 r = Run(port=8971, wd="/tmp/wd_dsmiles")
@@ -39,8 +44,9 @@ try:
         def fallback():
             pg.route("**/wasm-feat/**", lambda route: route.fulfill(status=404, body="not found"))      # the engine is not there
             pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=90000)
-            draw(SMI); poll(lambda: atoms() == 13)
+            spy(); draw(SMI); poll(lambda: atoms() == 13)
             assert note() == "", note()
+            assert args() == [SMI], ("the SMILES goes to Ketcher as typed", args())
             assert pg.input_value("#ex-smi") == "", "the field is emptied after a drawing"
             assert pg.evaluate("async s => (await import('/static/disegno-smiles.js')).layoutSmiles(s)", SMI) == {}, "the engine answered: the block did not work"
         step("the engine not there: «Draw» still draws, with Ketcher's own layout", fallback)
@@ -49,8 +55,9 @@ try:
         engine = pg.evaluate("async s => (await import('/static/disegno-smiles.js')).layoutSmiles(s)", SMI)
         assert engine.get("molfile"), ("the engine is not there", engine)
         def laid_out():
-            draw(SMI); poll(lambda: atoms() == 13)
+            spy(); draw(SMI); poll(lambda: atoms() == 13)
             assert note() == "" and pg.input_value("#ex-smi") == "", note()
+            (given,) = args(); assert given == engine["molfile"] and "V2000" in given.split("\n")[3] and "M  END" in given, ("addFragment must get the engine's molfile, not the SMILES", given[:80])
             got = pg.evaluate(f"{K}.getMolfile()")
             (e1, d1, b1), (e2, d2, b2) = shape(engine["molfile"]), shape(got)
             assert e1 == e2 and len(b1) == len(b2), (e1, e2)
@@ -63,12 +70,18 @@ try:
             draw("CCO"); poll(lambda: atoms() == 16)
             assert "." in pg.evaluate("TPDraw.smiles()") and note() == ""
         step("a second «Draw» adds a second molecule", second)
+        def inchi():
+            n = len(args()); draw("InChI=1S/CH4/h1H4"); poll(lambda: atoms() == 17)           # methane: the engine does not read InChI, Ketcher does
+            assert note() == "" and args()[n:] == ["InChI=1S/CH4/h1H4"], (note(), args()[n:])
+        step("an InChI goes to Ketcher as typed", inchi)
         def invalid():
-            draw("C(C"); wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=20000)
-            assert note().startswith("Nothing was added."), note()
-            frames(pg, 10); assert atoms() == 16, ("the canvas changed", atoms())
-            assert pg.input_value("#ex-smi") == "C(C", "the typed text stays"
-        step("an invalid SMILES shows its notice and changes nothing", invalid)
+            n = len(args()); draw("C1CC"); wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=20000)          # an unclosed ring: the engine refuses it, Ketcher draws nothing
+            assert args()[n:] == ["C1CC"], ("a refusal is not a blocked result: the text goes to Ketcher", args()[n:])
+            assert note() == "Invalid SMILES: no structure was added.", note()
+            assert not re.search(r"err\.", note()), note()
+            frames(pg, 10); assert atoms() == 17, ("the canvas changed", atoms())
+            assert pg.input_value("#ex-smi") == "C1CC", "the typed text stays"
+        step("a text the engine refuses goes to Ketcher, which draws nothing: its notice shows and the canvas stays", invalid)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

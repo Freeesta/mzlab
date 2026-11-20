@@ -40,7 +40,7 @@ export async function ketcher() {
 }
 
 /** The answer of the native engine (`feat/grafo`) to a request of `kind`: a failure throws the engine's error text. */
-async function rpc(/** @type {string} */ kind, /** @type {string} */ request) {
+export async function rpc(/** @type {string} */ kind, /** @type {string} */ request) {
   const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
   const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind, request }) });
   const x = await r.text();
