@@ -39,7 +39,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
-       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
+       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
@@ -77,7 +77,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
+       mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]   molfile or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
@@ -145,7 +146,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
-       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
+       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
@@ -183,7 +184,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
+       mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]   molfile or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
@@ -251,7 +253,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
-       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
+       mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
@@ -289,7 +291,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
+       mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]   molfile or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut

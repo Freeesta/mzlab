@@ -59,15 +59,12 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--tr", "transition index"),
     ("--a", "start, min"),
     ("--b", "end, min"),
-    (
-        "--depth",
-        "how deep a valley is, as a fraction of the lower peak",
-    ),
+    ("--depth", "valley depth, fraction of the lower peak"),
     ("--windows", "JSON file of windows"),
     ("--auto", "engine peaks, as JSON"),
     ("--traces", "JSON file of traces"),
     ("--columns", "sn, fig, quality"),
-    ("--polarity", "polarity: + or -"),
+    ("--polarity", "+ or -"),
     ("--mz", "m/z"),
     ("--ppm", "ppm"),
     ("--rt-tol", "RT window, min"),
@@ -223,6 +220,19 @@ fn read(toks: &[String], optional: bool, u: &mut Usage) {
         i += 1;
         if let Some(inner) = t.strip_prefix('[').and_then(|x| x.strip_suffix(']')) {
             read(&tokens(inner), true, u);
+        } else if t.starts_with('(') {
+            // `(--ppm P | --da D)`: alternatives, one of which is needed (the synopsis says so); none is required by itself
+            let end = toks[i - 1..]
+                .iter()
+                .position(|w| w.ends_with(')'))
+                .map_or(toks.len(), |k| i + k);
+            let mut group: Vec<String> = toks[i - 1..end].to_vec();
+            group[0] = group[0].trim_start_matches('(').to_string();
+            if let Some(last) = group.last_mut() {
+                *last = last.trim_end_matches(')').to_string();
+            }
+            read(&group, true, u);
+            i = end;
         } else if t == "|" {
         } else if t == "..." {
             u.args.push(Arg {

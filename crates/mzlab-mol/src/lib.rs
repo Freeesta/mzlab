@@ -13,6 +13,7 @@ mod descr;
 mod drawing;
 mod elements;
 mod kekule;
+mod layout;
 mod model;
 mod molfile;
 mod molfile_stereo;

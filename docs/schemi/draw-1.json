@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "draw/1",
+  "title": "draw/1: a structure drawn in 2D",
+  "description": "The scene of `mzlab-cli mol draw SPEC --json`, of the molkit export `draw` and of the app route `kind: \"draw\"`. Positions are in angstrom (bond length 1.5), atoms 0-based in the order of the record, a wedge belongs to the first atom of its bond (`wedge`: 0 none, 1 up, -1 down, 2 either). `fragments` lists the connected pieces (largest first). `choices` logs every automatic choice (spec_kind, name_hit or key_hit, layout, molfile_version); `warnings` what the user should look at. Code: crates/mzlab-feat/src/chem/draw.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "spec_kind",
+    "title",
+    "atoms",
+    "bonds",
+    "fragments",
+    "choices",
+    "warnings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "draw/1"
+    },
+    "spec_kind": {
+      "enum": [
+        "smiles",
+        "molfile",
+        "name",
+        "inchikey"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "el",
+          "chg",
+          "iso",
+          "h",
+          "x_a",
+          "y_a"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "el": {
+            "type": "string"
+          },
+          "chg": {
+            "type": "integer"
+          },
+          "iso": {
+            "type": "integer",
+            "description": "0 = natural abundance"
+          },
+          "h": {
+            "type": "integer",
+            "description": "implicit hydrogens"
+          },
+          "x_a": {
+            "type": "number"
+          },
+          "y_a": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "bonds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "o",
+          "wedge"
+        ],
+        "properties": {
+          "a": {
+            "type": "integer"
+          },
+          "b": {
+            "type": "integer"
+          },
+          "o": {
+            "enum": [
+              1,
+              2,
+              3
+            ]
+          },
+          "wedge": {
+            "enum": [
+              -1,
+              0,
+              1,
+              2
+            ]
+          }
+        }
+      }
+    },
+    "fragments": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      }
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

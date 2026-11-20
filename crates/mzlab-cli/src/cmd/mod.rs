@@ -95,6 +95,7 @@ const JSON_FLAG: &[&str] = &[
     "file pair",
     "file list",
     "ion elements",
+    "mol draw",
     "peak table",
     "msn lib export",
     "db normative build",

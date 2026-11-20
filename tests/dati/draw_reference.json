@@ -1,0 +1,23 @@
+{
+ "clean": 184,
+ "n": 200,
+ "families": {
+  "chain": 20,
+  "monocycle": 25,
+  "fused": 40,
+  "bridged_spiro": 4,
+  "macrocycle": 20,
+  "charged": 20,
+  "stereo": 25,
+  "salt": 20,
+  "druglike": 10
+ },
+ "clash": 0,
+ "onbond": 2,
+ "cross": 10,
+ "fragments_under_1": 12,
+ "fragments_under_1_5": 20,
+ "rdkit": "2026.09.2",
+ "ez_wrong_b": 0,
+ "ez_total_b": 100
+}

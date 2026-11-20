@@ -52,6 +52,24 @@ impl Mol {
         s
     }
 
+    /// The bonds as `to_molfile` writes them: begin atom (a wedge belongs to it), end atom, order and the stereo mark (0 none, 1 wedge up,
+    /// -1 hash down, 2 either), in the order of `self.bonds`.
+    pub fn written_bonds(&self) -> Vec<(u32, u32, u8, i8)> {
+        let marks = self.out_bonds(&self.xyz());
+        marks
+            .iter()
+            .map(|b| {
+                let m = match b.mark {
+                    Wedge::Up => 1,
+                    Wedge::Down => -1,
+                    Wedge::Either => 2,
+                    Wedge::None => 0,
+                };
+                (b.a as u32, b.b as u32, b.o, m)
+            })
+            .collect()
+    }
+
     /// x, y, z of every atom (zeros without a coordinate layer).
     fn xyz(&self) -> Vec<[f64; 3]> {
         let mut out = vec![[0.0; 3]; self.atoms.len()];
