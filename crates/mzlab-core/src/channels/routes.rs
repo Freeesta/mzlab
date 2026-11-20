@@ -128,32 +128,46 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(trace(&rt, &y)))
     }
 
-    /// `/api/xic?mz&tol&level&filt`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`); without `filt` it is not this route's.
+    /// `/api/xic?mz&tol&level[&filt][&smooth=3|5]`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`), then smoothed
+    /// by `smooth` points (`peak1d::smooth`); with neither it is not this route's.
     pub(crate) fn xic_route(&mut self, q: &Query) -> Result<Option<String>> {
-        let (Some(mz), Some(f)) = (q.num("mz")?, q.some("filt")) else {
+        let Some(mz) = q.num("mz")? else {
             return Ok(None);
         };
+        let smooth = match q.some("smooth") {
+            None => None,
+            Some("3") => Some(3),
+            Some("5") => Some(5),
+            Some(_) => return Ok(None),
+        };
+        let filt = q.some("filt");
+        if filt.is_none() && smooth.is_none() {
+            return Ok(None);
+        }
         let (tol, level) = (q.num("tol")?.unwrap_or(0.35), q.level());
-        let (rt, y) = self.xic_raw(mz, tol, level)?;
-        let Some(si) = self.idx.section_of(level, self.pol) else {
-            return Ok(Some(trace(&rt, &y)));
-        };
-        let ids = self.idx.arrays(si)?.scan_ids.clone();
-        let Some(fl) = self.filtro(Some(f))? else {
-            return Ok(None);
-        };
-        let keep: Vec<bool> = ids
-            .iter()
-            .map(|&id| fl.passes(id as usize, &self.idx.scans[id as usize]))
-            .collect();
-        let pick = |v: &[f64]| -> Vec<f64> {
-            v.iter()
-                .zip(&keep)
-                .filter(|(_, k)| **k)
-                .map(|(x, _)| *x)
-                .collect()
-        };
-        Ok(Some(trace(&pick(&rt), &pick(&y))))
+        let (mut rt, mut y) = self.xic_raw(mz, tol, level)?;
+        if let (Some(f), Some(si)) = (filt, self.idx.section_of(level, self.pol)) {
+            let ids = self.idx.arrays(si)?.scan_ids.clone();
+            let Some(fl) = self.filtro(Some(f))? else {
+                return Ok(None);
+            };
+            let keep: Vec<bool> = ids
+                .iter()
+                .map(|&id| fl.passes(id as usize, &self.idx.scans[id as usize]))
+                .collect();
+            let pick = |v: &[f64]| -> Vec<f64> {
+                v.iter()
+                    .zip(&keep)
+                    .filter(|(_, k)| **k)
+                    .map(|(x, _)| *x)
+                    .collect()
+            };
+            (rt, y) = (pick(&rt), pick(&y));
+        }
+        if let Some(k) = smooth {
+            y = crate::peak1d::smooth(&y, k);
+        }
+        Ok(Some(trace(&rt, &y)))
     }
 
     /// `/api/channels` and the routes that take `channel=`; `None` = not a channel request.

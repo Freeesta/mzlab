@@ -161,3 +161,26 @@ fn outputs_are_keyed_by_the_name_of_the_input() {
         ["idx.index[a.raw]", "idx.index[b.raw]", "idx.index[c.raw]"]
     );
 }
+
+/// A plan with no step is refused on every run path (`execute`, `check_run`), while the editor's `check` accepts it: a canvas starts empty.
+#[test]
+fn an_empty_plan_is_refused_to_run_but_not_by_the_editor_check() {
+    let empty = parse(br#"{"format":"mzflow/2","inputs":[],"steps":[]}"#).unwrap();
+    let reg = registry();
+    assert!(check(&empty, &reg, Platform::current()).is_empty());
+    let p = check_run(&empty, &reg, Platform::current());
+    assert_eq!(p.len(), 1);
+    assert_eq!(p[0].error_key, "err.flow.empty");
+    let runner = Seeded {
+        seed: 1,
+        began: Mutex::new(Vec::new()),
+    };
+    let e = execute(&empty, &reg, &runner, 1).err().unwrap();
+    assert_eq!(e.key, "err.flow.check");
+    assert!(e.to_string().contains("err.flow.empty"), "{e}");
+    // a plan with steps is the same under both
+    assert_eq!(
+        check_run(&plan(), &reg, Platform::current()),
+        check(&plan(), &reg, Platform::current())
+    );
+}

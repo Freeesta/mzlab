@@ -269,17 +269,21 @@ fn the_documents_have_schema_first_and_a_newline() {
 }
 
 /// The exit codes `exit_codes_note` states, from the compact listing of command `c` alone (written out again here, not taken from `exits_of`).
-fn derived_exits(name: &str, c: &serde_json::Value) -> Vec<u8> {
+fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -> Vec<u8> {
     let flags = c["flags"].as_array().unwrap();
     let has = |f: &str| flags.iter().any(|x| x["name"] == f);
+    // an arg with no kind is a path (or `...`, a rest): both read a file; a flag with no type takes its `flag_type`
     let reads = c["args"]
         .as_array()
         .unwrap()
         .iter()
-        .any(|a| a["kind"] == "path" || a["kind"] == "rest")
-        || flags
-            .iter()
-            .any(|f| f["type"] == "path" && f["name"] != "--out");
+        .any(|a| a.get("kind").is_none_or(|k| k == "path" || k == "rest"))
+        || flags.iter().any(|f| {
+            let t = f
+                .get("type")
+                .or_else(|| types.get(f["name"].as_str().unwrap()));
+            t == Some(&serde_json::json!("path")) && f["name"] != "--out"
+        });
     let mut v = vec![0, 1, 2];
     if name.starts_with("flow ") || crate::contract::VERDICT.contains(&name) {
         v.push(3);
@@ -322,6 +326,42 @@ fn top_level_words(synopsis: &str) -> String {
     words.join(" ")
 }
 
+/// An arg with no kind is a path (`...` a rest), a flag with no type has its `flag_type` or is a string: the types of the full listing.
+fn defaults_give_the_full_types(
+    doc: &serde_json::Value,
+    c: &serde_json::Value,
+    whole: &serde_json::Value,
+    name: &str,
+) {
+    for (a, g) in c["args"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(whole["args"].as_array().unwrap())
+    {
+        let kind = match a.get("kind") {
+            Some(k) => k.clone(),
+            None if a["name"] == "..." => serde_json::json!("rest"),
+            None => serde_json::json!("path"),
+        };
+        assert_eq!(kind, g["kind"], "{name}: {}", a["name"]);
+    }
+    for (f, g) in c["flags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(whole["flags"].as_array().unwrap())
+    {
+        let flag = f["name"].as_str().unwrap();
+        let kind = f
+            .get("type")
+            .or_else(|| doc["flag_type"].get(flag))
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!("string"));
+        assert_eq!(kind, g["type"], "{name}: {flag}");
+    }
+}
+
 /// The whole listing says what is shared or derivable once, and gives each command in full under its path: nothing is lost, only moved.
 #[test]
 fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
@@ -329,9 +369,11 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
     assert_eq!(doc["compact"], true);
     let shared = doc["flag_help"].as_object().unwrap();
     assert!(shared.len() > 5 && shared.contains_key("--out"));
+    assert_eq!(doc["flag_type"]["--out"], "path");
     for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
         let whole = full(e);
         assert!(whole.get("compact").is_none());
+        defaults_give_the_full_types(&doc, c, &whole, e.name);
         for (f, g) in c["flags"]
             .as_array()
             .unwrap()
@@ -344,7 +386,7 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
             assert_eq!(help, &g["help"], "{}: {name}", e.name);
         }
         // a member left out is the derived one: the rule of `exit_codes_note`, applied here to what the compact listing shows
-        let derived = derived_exits(e.name, c);
+        let derived = derived_exits(e.name, c, &doc["flag_type"]);
         if c.get("exit_codes").is_none() {
             assert_eq!(
                 whole["exit_codes"],

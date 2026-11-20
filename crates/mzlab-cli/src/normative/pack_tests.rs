@@ -94,7 +94,7 @@ fn pack_is_deterministic_and_complete() {
     let raw = std::fs::read(o1.join("normative.mzsus")).unwrap();
     assert_eq!(
         sha256_hex(&raw),
-        "e0c2bf73a26d310124fb64ebe52fffbfc22e88777b281f69999db29a22fe61d2",
+        "ff789064f8ddc797d96b6ffec416afe72c21c8fbf0573ffee10601acfaaec96d",
         "the bytes of `normative pack` do not change"
     );
     let s = Suspects::open(&raw).unwrap();

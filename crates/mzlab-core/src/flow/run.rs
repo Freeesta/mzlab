@@ -4,7 +4,7 @@
 //! An error stops only the descendants of the instance that failed: its activity carries the error, the descendants are listed in `Run::skipped`.
 
 use super::canon::{canonical, Resolved};
-use super::check::{check, Platform};
+use super::check::{check, Platform, Problem};
 use super::order::levels;
 use super::prov::{Activity, ErrorRecord, Mem};
 use super::{FileInput, Instance, Plan, Ref};
@@ -291,10 +291,25 @@ fn file_notes(outcomes: &[Outcome], names: &[Option<String>]) -> Vec<(String, Va
     .collect()
 }
 
+/// `check` for a plan that is about to run: the same problems, plus `err.flow.empty` when there is no step. An empty plan is a wrong plan on every run path
+/// (a misspelt key, a wrong file), never a successful empty run; the editor's `check` accepts it, since a canvas starts empty.
+pub fn check_run(plan: &Plan, registry: &[Step], platform: Platform) -> Vec<Problem> {
+    let mut problems = check(plan, registry, platform);
+    if plan.steps.is_empty() {
+        problems.push(Problem {
+            instance: String::new(),
+            port: String::new(),
+            error_key: "err.flow.empty",
+            params: Vec::new(),
+        });
+    }
+    problems
+}
+
 /// Runs `plan` with `workers` threads (1 = in order; the record is the same for any number). The plan is checked first; an instance that fails stops its
 /// descendants only. The jobs run in the order of the scheduler, the record is written afterwards in the order of the levels of the plan.
 pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usize) -> Result<Run> {
-    let problems = check(plan, registry, Platform::current());
+    let problems = check_run(plan, registry, Platform::current());
     if let Some(p) = problems.first() {
         return Err(Error::new("err.flow.check")
             .with("count", problems.len())

@@ -68,3 +68,11 @@ def test_the_assistant_e2e_needs_the_llm_wasm_so_the_changed_files_job_leaves_it
     assert "wasm" in verifica.NEEDS["e2e_llm"]          # its site must carry wasm-feat/manifest.json `llm` (tools/build_feat_wasm.sh), which only the wasm jobs build
     tests, _ = ci.pick({"tests_e2e/e2e_llm.py", "mzlab/web/llm/llm-worker.js"})
     assert "e2e_llm" not in tests
+
+
+def test_a_test_that_calls_build_feat_never_runs_in_this_job():
+    """Calling build_feat() compiles the mzFinder .wasm cold when the CI did not build it: silent, and past the 30 min of the job."""
+    callers = [p.stem for p in (ROOT / "tests_e2e").glob("e2e*.py") if "build_feat(" in p.read_text(encoding="utf-8")]
+    assert callers and all("wasm" in ci.needs(n) for n in callers)
+    for files in ({"mzlab/web/draw.js"}, {"tools/pre_pr.py"}):
+        assert not set(ci.pick(files)[0]) & set(callers)

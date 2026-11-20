@@ -329,11 +329,11 @@ pub fn raw_of(rows: &[(&String, &Row)], lists: &[&Value]) -> Result<Vec<u8>, Err
 
 pub fn manifest_json(rows: usize, lists: &[&Value]) -> String {
     let mut man = Out::default();
-    man.raw("{\"formato\":\"mzsus/1\",\"righe\":")
+    man.raw("{\"format\":\"mzsus/1\",\"rows\":")
         .int(rows as i64)
-        .raw(",\"attribuzione\":")
+        .raw(",\"attribution\":")
         .str(ATTRIBUTION)
-        .raw(",\"fonti\":[{\"id\":\"normative\",\"bit\":")
+        .raw(",\"sources\":[{\"id\":\"normative\",\"bit\":")
         .int(SRC_NORMATIVE as i64)
         .raw("}],\"normative/1\":{\"lists\":");
     lists_json(&mut man, lists);

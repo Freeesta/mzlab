@@ -353,7 +353,7 @@ fn do_download(app: &AppHandle, state: &State, cancel: &AtomicBool, ids: Vec<Str
     };
     let (mut done, mut failed) = (Vec::new(), Vec::new());
     for id in ids {
-        let Some(pkg) = cat.librerie.iter().find(|p| p.id == id) else {
+        let Some(pkg) = cat.libraries.iter().find(|p| p.id == id) else {
             failed.push(
                 serde_json::json!({"id": id, "error_key": "lib.dl.err.catalog", "detail": id}),
             );
@@ -410,7 +410,7 @@ async fn lib_download_external(
             Ok(c) => c,
             Err(e) => return e.to_json(),
         };
-        let Some(ext) = cat.esterne.iter().find(|e| e.id == id) else {
+        let Some(ext) = cat.external.iter().find(|e| e.id == id) else {
             return err_json("lib.dl.err.catalog", &id);
         };
         match download::download_external(&st.libs, ext, &Policy::default(), &flag, &mut |p| {

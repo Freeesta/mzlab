@@ -80,3 +80,74 @@ fn step_ids_that_are_not_plain_file_names_are_refused() {
         assert!(parse(plan(id).as_bytes()).is_ok(), "{id:?}");
     }
 }
+
+/// The error key and its `path` for a plan text the reader refuses.
+fn refused(text: &str) -> (&'static str, String) {
+    let e = parse(text.as_bytes()).unwrap_err();
+    let path = e
+        .params
+        .iter()
+        .find(|(k, _)| *k == "path")
+        .map(|(_, v)| v.to_string());
+    (e.key, path.unwrap_or_default())
+}
+
+#[test]
+fn a_key_that_is_not_in_the_format_is_named_with_its_path() {
+    assert_eq!(
+        refused(r#"{"hello":"world"}"#),
+        ("err.flow.key.unknown", "hello".into())
+    );
+    assert_eq!(
+        refused(r#"{"schema":"mzflow/2","steps":[]}"#),
+        ("err.flow.key.unknown", "schema".into())
+    );
+    assert_eq!(
+        refused(r#"{"steps":[{"id":"a","step":"x@1"},{"id":"b","step":"x@1","param":{}}]}"#),
+        ("err.flow.key.unknown", "steps[1].param".into())
+    );
+    assert_eq!(
+        refused(r#"{"steps":[],"inputs":[{"name":"a","path":"b"}]}"#),
+        ("err.flow.key.unknown", "inputs[0].path".into())
+    );
+}
+
+#[test]
+fn a_value_of_the_wrong_type_is_named_with_its_path() {
+    for (text, path) in [
+        (r#"{"steps":{}}"#, "steps"),
+        (r#"{"format":"mzflow/2"}"#, "steps"),
+        (r#"{"steps":[],"inputs":"a.mzML"}"#, "inputs"),
+        (r#"{"steps":["x"]}"#, "steps[0]"),
+        (
+            r#"{"steps":[{"id":"a","step":"x@1","params":[1]}]}"#,
+            "steps[0].params",
+        ),
+        (
+            r#"{"steps":[{"id":"a","step":"x@1","in":[]}]}"#,
+            "steps[0].in",
+        ),
+        (
+            r#"{"steps":[{"id":"a","step":"x@1","in":{"p":3}}]}"#,
+            "steps[0].in.p",
+        ),
+        (
+            r#"{"steps":[{"id":"a","step":"x@1","in":{"p":["f", 3]}}]}"#,
+            "steps[0].in.p[1]",
+        ),
+        (r#"{"steps":[{"id":7,"step":"x@1"}]}"#, "steps[0].id"),
+        (
+            r#"{"steps":[{"id":"a","step":"x@1","label":null}]}"#,
+            "steps[0].label",
+        ),
+    ] {
+        assert_eq!(refused(text), ("err.flow.shape", path.into()), "{text}");
+    }
+}
+
+#[test]
+fn the_plans_the_page_writes_keep_reading() {
+    assert!(parse(br#"{"steps":[]}"#).is_ok());
+    assert!(parse(br#"{"format":"mzflow/1","operations":[]}"#).is_ok());
+    assert!(parse(br#"{"format":"mzflow/2","program":{"name":"a","version":"1"},"inputs":[],"steps":[],"operations":[{"op":"x"}]}"#).is_ok());
+}
