@@ -24,7 +24,7 @@ KET and CDXML are open formats written from their public documentation, not test
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a molfile they go to
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms, an atom that is no element (err.mol.draw.element); 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
@@ -118,16 +118,19 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(d) => d,
         Err(o) => return o,
     };
-    match mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref())) {
-        Ok((d, f)) => {
-            let text = match f {
-                mzlab_feat::chem::draw::Format::Scene => {
-                    format!("{}\n", mzlab_feat::chem::draw::scene(&d))
-                }
-                mzlab_feat::chem::draw::Format::Molfile => d.mol.to_molfile(&d.title),
-                mzlab_feat::chem::draw::Format::Ket => mzlab_feat::chem::draw_file::ket(&d),
-                mzlab_feat::chem::draw::Format::Cdxml => mzlab_feat::chem::draw_file::cdxml(&d),
-            };
+    let text_of = |d: &mzlab_feat::chem::draw::Drawn, f| {
+        use mzlab_feat::chem::draw::Format;
+        Ok(match f {
+            Format::Scene => format!("{}\n", mzlab_feat::chem::draw::scene(d)?),
+            Format::Molfile => d.mol.to_molfile(&d.title),
+            Format::Ket => mzlab_feat::chem::draw_file::ket(d)?,
+            Format::Cdxml => mzlab_feat::chem::draw_file::cdxml(d)?,
+        })
+    };
+    let drawn = mzlab_feat::chem::draw::draw(&request(&spec, json, &set, db.as_deref()))
+        .and_then(|(d, f)| text_of(&d, f).map(|t| (d, f, t)));
+    match drawn {
+        Ok((d, f, text)) => {
             let mut o = crate::emit(text, &out);
             if o.code == 0 && f != mzlab_feat::chem::draw::Format::Scene {
                 for (label, list) in [("choice", &d.choices), ("warning", &d.warnings)] {

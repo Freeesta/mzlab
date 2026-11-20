@@ -117,9 +117,9 @@ pub fn draw_json(request: &str) -> Result<String> {
     let (d, format) = draw(request)?;
     Ok(match format {
         Format::Molfile => d.mol.to_molfile(&d.title),
-        Format::Scene => scene(&d),
-        Format::Ket => super::draw_file::ket(&d),
-        Format::Cdxml => super::draw_file::cdxml(&d),
+        Format::Scene => scene(&d)?,
+        Format::Ket => super::draw_file::ket(&d)?,
+        Format::Cdxml => super::draw_file::cdxml(&d)?,
     })
 }
 
@@ -150,15 +150,6 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
         } else {
             "points, 30 per bond, y down"
         };
-        // both writers need an atomic number for every atom: refuse, never turn an unknown label into carbon
-        if let Some(a) = d
-            .mol
-            .atoms
-            .iter()
-            .find(|a| mzlab_mol::atomic_number(&a.el).is_none())
-        {
-            return Err(Error::new("err.mol.draw.element").with("symbol", a.el.as_str()));
-        }
         d.choices.push(note("file_format", f.name()));
         d.choices.push(note("file_scale", scale));
         if let Some(n) = r.name {
@@ -369,7 +360,7 @@ pub(super) fn coord(v: f64) -> String {
 
 /// The `draw/1` scene: atoms with their position in angstrom, bonds as written in the molfile (a wedge belongs to its first atom), the
 /// connected pieces and what was chosen on the way.
-pub fn scene(d: &Drawn) -> String {
+pub fn scene(d: &Drawn) -> Result<String> {
     let m = &d.mol;
     let xy = |i: usize, k: usize| {
         m.coords
@@ -431,14 +422,14 @@ pub fn scene(d: &Drawn) -> String {
     match d.file {
         Some(Format::Ket) => o
             .raw(",\"file_format\":\"ket\",\"file\":")
-            .str(&super::draw_file::ket(d)),
+            .str(&super::draw_file::ket(d)?),
         Some(Format::Cdxml) => o
             .raw(",\"file_format\":\"cdxml\",\"file\":")
-            .str(&super::draw_file::cdxml(d)),
+            .str(&super::draw_file::cdxml(d)?),
         _ => &mut o,
     };
     o.raw("}");
-    o.0
+    Ok(o.0)
 }
 
 #[cfg(test)]

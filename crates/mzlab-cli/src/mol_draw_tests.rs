@@ -203,3 +203,9 @@ fn mol_draw_format_errors_are_usage_errors() {
         2
     );
 }
+
+#[test]
+fn a_non_element_atom_is_a_data_error_not_a_usage_error() {
+    assert_eq!(crate::exit::code_of_key("err.mol.draw.element"), 1);
+    assert_eq!(crate::exit::code_of_key("err.mol.draw.set"), 2);
+}

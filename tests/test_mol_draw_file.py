@@ -64,3 +64,16 @@ def test_rdkit_reads_the_cdxml_as_the_same_molecule(cli_built):
         if a != b:
             bad.append((smi, a, b))
     assert not bad, f"{len(bad)} of 200 differ, first: {bad[:3]}"
+
+
+@pytest.mark.parametrize("fmt", ["ket", "cdxml", None])
+def test_the_scene_validates_against_its_schema(cli_built, fmt):
+    from jsonschema import Draft202012Validator
+
+    schema = json.loads((ROOT / "docs" / "schemi" / "draw-1.json").read_text(encoding="utf-8"))
+    args = ["mol", "draw", "smiles:C[C@H](N)C(=O)O", "--json"] + (["--format", fmt] if fmt else [])
+    p = subprocess.run([str(CLI), *args], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert p.returncode == 0, p.stderr
+    scene = json.loads(p.stdout)
+    assert list(Draft202012Validator(schema).iter_errors(scene)) == []
+    assert ("file" in scene) == (fmt is not None)

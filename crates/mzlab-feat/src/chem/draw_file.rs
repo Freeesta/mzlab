@@ -4,6 +4,7 @@
 //! clock, so the bytes are equal in the app, the CLI and the molkit `.wasm`.
 
 use super::draw::{coord, Drawn};
+use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 use mzlab_mol::{allowed_valences, fixed, Mol};
 
@@ -80,6 +81,17 @@ fn radical_name(rad: u8) -> &'static str {
     }
 }
 
+/// The atomic number of every atom. An atom that is no element is refused in both formats (KET could carry its label, CDXML cannot), so
+/// the two agree and an unknown label is never written as carbon.
+fn numbers(m: &Mol) -> Result<Vec<u16>> {
+    (m.atoms.iter())
+        .map(|a| {
+            mzlab_mol::atomic_number(&a.el)
+                .ok_or_else(|| Error::new("err.mol.draw.element").with("symbol", a.el.as_str()))
+        })
+        .collect()
+}
+
 /// The text label of a drawing: its title, a plain text line.
 fn label_of(d: &Drawn) -> Option<&str> {
     let t = d.title.lines().next().unwrap_or("").trim();
@@ -88,8 +100,9 @@ fn label_of(d: &Drawn) -> Option<&str> {
 
 /// KET: `{"root":{"nodes":[{"$ref":"mol0"},...]},"mol0":{"type":"molecule","atoms":[...],"bonds":[...]}}`, bond length 1, y up. A wedge
 /// starts at its narrow end (`stereo` 1 up, 6 down, 4 or 3 either); the title is one text node under the structure.
-pub fn ket(d: &Drawn) -> String {
+pub fn ket(d: &Drawn) -> Result<String> {
     let m = &d.mol;
+    numbers(m)?;
     let (p, (x0, y0, _)) = positions(m);
     let (sum, mut o) = (sums(m), Out::default());
     let num = |o: &mut Out, key: &str, v: i64| {
@@ -151,7 +164,7 @@ pub fn ket(d: &Drawn) -> String {
         o.raw("]}");
     }
     o.raw("}\n");
-    o.0
+    Ok(o.0)
 }
 
 /// The text of an XML attribute or element: the five markup characters escaped, other control characters dropped.
@@ -179,8 +192,9 @@ fn run(s: &str) -> String {
 /// CDXML: one `fragment` with a node per atom (`Element`, `NumHydrogens`, `Charge`, `Isotope`, `Radical`; a label for every atom but a
 /// bare carbon) and a bond per bond (`Order`; `Display` `WedgeBegin`, `WedgedHashBegin` or `Wavy` from the narrow end), in points, y
 /// down, 30 to the bond, one bond of margin; the title is a text object under the structure.
-pub fn cdxml(d: &Drawn) -> String {
+pub fn cdxml(d: &Drawn) -> Result<String> {
     let m = &d.mol;
+    let zs = numbers(m)?;
     let (p, (x0, _, y1)) = positions(m);
     let sum = sums(m);
     let pt = |x: f64, y: f64| {
@@ -194,7 +208,7 @@ pub fn cdxml(d: &Drawn) -> String {
     // font 1, page 2, fragment 3: atom `i` is object `4 + i`, and the bonds and the text follow, so no id is used twice
     for (i, a) in m.atoms.iter().enumerate() {
         out += &format!("<n id=\"{}\" p=\"{}\"", 4 + i, pt(p[i].0, p[i].1));
-        let z = mzlab_mol::atomic_number(&a.el).unwrap_or(6);
+        let z = zs[i];
         let h = u32::from(a.h);
         if z != 6 {
             out += &format!(" Element=\"{z}\"");
@@ -240,7 +254,7 @@ pub fn cdxml(d: &Drawn) -> String {
         let (x, y) = (x0, p.iter().map(|q| q.1).fold(f64::MAX, f64::min) - 1.0);
         out += &format!("<t id=\"{id}\" p=\"{}\">{}</t>\n", pt(x, y), run(t));
     }
-    out + "</page>\n</CDXML>\n"
+    Ok(out + "</page>\n</CDXML>\n")
 }
 
 #[cfg(test)]

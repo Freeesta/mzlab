@@ -345,3 +345,21 @@ fn extra_title_lines_are_logged_as_a_choice() {
     assert!(ask("first\\nsecond"));
     assert!(!ask("only one"));
 }
+
+#[test]
+fn an_atom_that_is_no_element_is_refused_by_both_writers_and_the_scene() {
+    use super::super::draw::scene;
+    let (mut d, _) = draw(&request("CCO", ",\"format\":\"ket\"")).unwrap();
+    d.mol.atoms[1].el = "Xx".into();
+    for e in [super::ket(&d).unwrap_err(), super::cdxml(&d).unwrap_err()] {
+        assert_eq!(e.key, "err.mol.draw.element");
+        assert!(e.params.iter().any(|(k, v)| *k == "symbol" && v == "Xx"));
+    }
+    d.file = Some(super::super::draw::Format::Cdxml);
+    assert_eq!(scene(&d).unwrap_err().key, "err.mol.draw.element");
+    d.file = None;
+    assert!(
+        scene(&d).is_ok(),
+        "a scene without a file has no use for the atomic number"
+    );
+}
