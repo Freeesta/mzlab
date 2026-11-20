@@ -1,6 +1,6 @@
 """Draw, text and files that reach the editor: a paste inside one of Ketcher's own fields (text tool, Open dialog) is left alone, a compound name dropped on
 the canvas draws nothing (as a pasted one), an empty file gets a notice, a UTF-16 molfile is read, one «Draw» runs at a time.
-Needs the built site (tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_draw_input.py"""
+Needs the built site (tools/build_site.py) with the molkit .wasm (`open/1` reads the dropped files). Run from the repo root: python3 tests_e2e/e2e_draw_input.py"""
 # covers: mzlab/web/draw.js, mzlab/web/disegno-cerca.js, mzlab/web/disegno-file.js
 import sys, os, base64; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
