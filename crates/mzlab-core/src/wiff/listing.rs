@@ -126,7 +126,7 @@ fn section_ranges(ole: &crate::ole::Ole, scan_len: u64, end_of_index: u64) -> Ve
     let mut out = Vec::with_capacity(starts.len());
     for (i, (at, id)) in starts.iter().enumerate() {
         let none = table.iter().any(|(t, a)| t == id && a.is_none());
-        let next = starts[i + 1..].iter().map(|x| x.0).find(|n| n > at);
+        let next = starts.iter().skip(i + 1).map(|x| x.0).find(|n| n > at);
         let end = next.unwrap_or_else(|| end_of_index.min(scan_len)).max(*at);
         out.push((*id, *at, if none { *at } else { end }));
     }
