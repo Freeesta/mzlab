@@ -57,6 +57,7 @@ try:
         step("long press on a molecule: ring, whole molecule selected, menu Copy / Cut / Delete (no Paste yet)", press_menu)
         def menu_targets():
             hs = pg.evaluate("[...document.querySelectorAll('#ctx [role=menuitem]')].map(e => [e.getBoundingClientRect().height, (e.title || '').length, e.dataset.row])")
+            hs = [r for r in hs if r[0] > 0]   # rows the molecule does not offer are hidden (height 0)
             assert hs and all(h >= 43.5 for h, _, _ in hs), hs
             assert all(n <= 60 for _, n, row in hs if row in ("select-molecule", "copy", "cut", "paste", "delete")), hs
             if SHOTS: pg.screenshot(path=os.path.join(SHOTS, "menu.png"))
