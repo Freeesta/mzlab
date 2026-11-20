@@ -990,5 +990,96 @@
         }
       ]
     }
+  },
+  {
+    "name": "a key that is not part of the format is refused with its path",
+    "parse_error": "err.flow.key.unknown",
+    "plan": {
+      "format": "mzflow/2",
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": "file:a.raw"
+          },
+          "param": {
+            "budget": 1
+          },
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "a plan with another top-level key (schema instead of format) is refused",
+    "parse_error": "err.flow.key.unknown",
+    "plan": {
+      "schema": "mzflow/2",
+      "steps": []
+    }
+  },
+  {
+    "name": "steps that is not a list is refused",
+    "parse_error": "err.flow.shape",
+    "plan": {
+      "format": "mzflow/2",
+      "steps": {}
+    }
+  },
+  {
+    "name": "a plan without steps is refused",
+    "parse_error": "err.flow.shape",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": []
+    }
+  },
+  {
+    "name": "params that is not an object is refused",
+    "parse_error": "err.flow.shape",
+    "plan": {
+      "format": "mzflow/2",
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": "file:a.raw"
+          },
+          "params": [
+            1
+          ],
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "an input link that is not a text or a list of texts is refused",
+    "parse_error": "err.flow.shape",
+    "plan": {
+      "format": "mzflow/2",
+      "steps": [
+        {
+          "id": "ix",
+          "in": {
+            "source": 3
+          },
+          "step": "index.mzidx@1"
+        }
+      ]
+    }
+  },
+  {
+    "expect": [],
+    "name": "an empty plan has no problem for the editor (a canvas starts empty); running it is refused by check_run with err.flow.empty",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": []
+    }
   }
 ]

@@ -38,6 +38,21 @@ Table by families and table by ions: two `features.align` on the same `det.peaks
 For the ion table of a series with RT drift between samples (TiO2, about 0.2 min) use `ion.mode=ion`, `ion.rt_warp=piecewise` and `ion.rt_gap=0.3`: on the 12-file series the rows in view go from 235 to 134 and the median rank from 31 to 20.5. It does not hold for the family table: with the same values it loses products (absorbed as members), there the default values stay.
 The recipe is tested only on the high-resolution TiO2 series: on the flufenacet demo (default HR recipe) `rt_warp=piecewise` and `rt_gap=0.3` halve the rows (families 11 195 -> 3 537, ions 13 910 -> 4 135) but two of the three documented products move away and the view goes from 1 to 0 rows: do not apply it to another series without testing it with the expected-ion check.
 
+## Learn the format, then check before running (tested: `flow_template_tests.rs`)
+1. `mzlab-cli flow steps --compact` (ids, ports, parameter names), then `mzlab-cli flow steps --json --id features.detect` for the types, limits and defaults of one step.
+2. `mzlab-cli flow steps --id features.detect@2 --template > plan.json`: a valid one-step plan; add the steps and links you need (`"in":{"index":["idx.index"]}`) and change only the parameters you want.
+3. `mzlab-cli flow check plan.json --json`: exit 3 names every problem with its `path`, e.g. `det.params.min_hight` (unknown parameter), `det.params.min_height` (wrong type), `det.in.index` (missing port), `steps[1].param` (a key the format does not have). `flow run plan.json --in DIR --dry-run` repeats the check with the inputs and prints what WOULD run; it never writes.
+
+## Several ions from a full-scan file, then a report
+`trace xic` answers one m/z per call (the page's `api/xic`); loop it, integrate each trace, and keep the calls as the record:
+```sh
+for mz in 364.4 194.2 152.2; do
+  mzlab-cli trace xic sample.mzML --mz $mz --ppm 500 --rt 12,16.5 --format csv --out xic_$mz.csv   # rt_min,intensity
+  mzlab-cli peak auto-lr xic_$mz.csv > peaks_$mz.json                                              # {"params","peaks":[rt, area, ...]}
+done
+```
+At unit resolution give the window in Da (`--da 0.3`), in ppm for high resolution. There is no Flow step that extracts XICs yet, so a plan cannot do it: the plan examples above start from the index. After a plan run, `mzlab-cli flow report RUN` writes the `run-report/1` of the run.
+
 ## Rules for the agent
 - The CLI uses no network and reads and writes only in `--in` and `--out`; do not delete user files: the run folder is the only place to write.
 - At unit resolution an m/z is a candidate, not an identification; the identification steps require `hr` data.

@@ -83,6 +83,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--adduct", "adduct with signed shift"),
     ("--compact", "compact form"),
     ("--list", "list names"),
+    ("--template", "a one-step plan"),
     ("--replay", "recordings"),
     ("--against", "sources to compare"),
     ("--params", "Pipeline numbers"),
