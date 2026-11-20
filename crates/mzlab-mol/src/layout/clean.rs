@@ -34,7 +34,9 @@ pub fn penalty(g: &G, pos: &Pos, mv: &[bool]) -> f64 {
         }
     }
     for (k, &(a, b)) in g.bonds.iter().enumerate() {
-        let (Some(pa), Some(pb)) = (pos[a], pos[b]) else { continue };
+        let (Some(pa), Some(pb)) = (pos[a], pos[b]) else {
+            continue;
+        };
         for &(c, d) in &g.bonds[..k] {
             if a == c || a == d || b == c || b == d || !(mv[a] || mv[b] || mv[c] || mv[d]) {
                 continue;
@@ -92,13 +94,22 @@ fn movable(g: &G, mask: &[bool]) -> bool {
 fn mover(g: &G, x: usize, y: usize) -> Option<(usize, usize, Vec<bool>)> {
     let sy = side_of(g, x, y)?;
     let sx = side_of(g, y, x)?;
-    let (cy, cx) = (sy.iter().filter(|m| **m).count(), sx.iter().filter(|m| **m).count());
-    let order = if cy <= cx { [(x, y, sy), (y, x, sx)] } else { [(y, x, sx), (x, y, sy)] };
+    let (cy, cx) = (
+        sy.iter().filter(|m| **m).count(),
+        sx.iter().filter(|m| **m).count(),
+    );
+    let order = if cy <= cx {
+        [(x, y, sy), (y, x, sx)]
+    } else {
+        [(y, x, sx), (x, y, sy)]
+    };
     order.into_iter().find(|(_, _, m)| movable(g, m))
 }
 
 fn is_defined_db(g: &G, x: usize, y: usize) -> bool {
-    g.dbs.iter().any(|d| (d.a == x && d.b == y) || (d.a == y && d.b == x))
+    g.dbs
+        .iter()
+        .any(|d| (d.a == x && d.b == y) || (d.a == y && d.b == x))
 }
 
 /// Reflects and, if `turn`, also turns subtrees behind acyclic bonds while the penalty falls.
@@ -115,8 +126,12 @@ pub fn tidy(g: &mut G) {
                 if is_defined_db(g, x, y) {
                     continue;
                 }
-                let Some((a, b, mask)) = mover(g, x, y) else { continue };
-                let (Some(pa), Some(pb)) = (g.pos[a], g.pos[b]) else { continue };
+                let Some((a, b, mask)) = mover(g, x, y) else {
+                    continue;
+                };
+                let (Some(pa), Some(pb)) = (g.pos[a], g.pos[b]) else {
+                    continue;
+                };
                 let base = penalty(g, &g.pos, &mask);
                 let mut best = (base, None);
                 let mut tries: Vec<Pos> = Vec::new();
@@ -167,8 +182,12 @@ pub fn fix_ez(g: &mut G) {
         if drawn_cis(&g.pos, &d) != Some(d.trans) {
             continue;
         }
-        let Some((a, b, mask)) = mover(g, d.a, d.b) else { continue };
-        let (Some(pa), Some(pb)) = (g.pos[a], g.pos[b]) else { continue };
+        let Some((a, b, mask)) = mover(g, d.a, d.b) else {
+            continue;
+        };
+        let (Some(pa), Some(pb)) = (g.pos[a], g.pos[b]) else {
+            continue;
+        };
         apply(&mut g.pos, &mask, |p| reflect(p, pa, pb));
     }
 }

@@ -45,7 +45,10 @@ struct Request<'a> {
 }
 
 fn note(key: &'static str, value: impl ToString) -> Note {
-    Note { key, value: value.to_string() }
+    Note {
+        key,
+        value: value.to_string(),
+    }
 }
 
 fn read_request(v: &Value) -> Result<Request<'_>> {
@@ -57,12 +60,18 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
         let want = text(name).unwrap_or(default);
         match ok.iter().position(|o| *o == want) {
             Some(i) => Ok(i == 1),
-            None => Err(Error::new("err.mol.draw.set").with("name", name).with("value", want)),
+            None => Err(Error::new("err.mol.draw.set")
+                .with("name", name)
+                .with("value", want)),
         }
     };
     Ok(Request {
         spec: spec.ok_or_else(bad)?,
-        format: if setting("format", ["molfile", "scene"], "molfile")? { Format::Scene } else { Format::Molfile },
+        format: if setting("format", ["molfile", "scene"], "molfile")? {
+            Format::Scene
+        } else {
+            Format::Molfile
+        },
         keep: !setting("layout", ["keep", "new"], "keep")?,
         db: text("db"),
         name: text("name"),
@@ -112,7 +121,11 @@ pub fn kind_of(spec: &str) -> &'static str {
 /// SMILES tokens only, otherwise a name.
 fn classify(spec: &str) -> (&'static str, &str) {
     let t = spec.trim();
-    for (p, kind) in [("smiles:", "smiles"), ("name:", "name"), ("inchikey:", "inchikey")] {
+    for (p, kind) in [
+        ("smiles:", "smiles"),
+        ("name:", "name"),
+        ("inchikey:", "inchikey"),
+    ] {
         if let Some(r) = t.strip_prefix(p) {
             return (kind, r.trim());
         }
@@ -125,7 +138,10 @@ fn classify(spec: &str) -> (&'static str, &str) {
     }
     if t.starts_with("InChI=") {
         // an InChI is never parsed or hashed here: only the InChIKey written beside it can find the molecule
-        let key = t.split_whitespace().map(|w| w.strip_prefix("InChIKey=").unwrap_or(w)).find(|w| molecules::is_inchikey(w));
+        let key = t
+            .split_whitespace()
+            .map(|w| w.strip_prefix("InChIKey=").unwrap_or(w))
+            .find(|w| molecules::is_inchikey(w));
         return key.map_or(("inchi", t), |k| ("inchikey", k));
     }
     if molecules::is_inchikey(t) {
@@ -145,7 +161,9 @@ fn smiles_tokens(t: &str) -> bool {
     while i < c.len() {
         match c[i] {
             '[' => {
-                let Some(j) = c[i..].iter().position(|&x| x == ']') else { return false };
+                let Some(j) = c[i..].iter().position(|&x| x == ']') else {
+                    return false;
+                };
                 i += j;
                 atoms += 1;
             }
@@ -157,8 +175,22 @@ fn smiles_tokens(t: &str) -> bool {
                 i += 1;
                 atoms += 1;
             }
-            'B' | 'C' | 'N' | 'O' | 'P' | 'S' | 'F' | 'I' | 'b' | 'c' | 'n' | 'o' | 'p' | 's' | '*' => atoms += 1,
-            '0'..='9' | '(' | ')' | '=' | '#' | '$' | ':' | '/' | '\\' | '.' | '%' | '@' | '+' | '-' => {}
+            'B' | 'C' | 'N' | 'O' | 'P' | 'S' | 'F' | 'I' | 'b' | 'c' | 'n' | 'o' | 'p' | 's'
+            | '*' => atoms += 1,
+            '0'..='9'
+            | '('
+            | ')'
+            | '='
+            | '#'
+            | '$'
+            | ':'
+            | '/'
+            | '\\'
+            | '.'
+            | '%'
+            | '@'
+            | '+'
+            | '-' => {}
             _ => return false,
         }
         i += 1;
@@ -167,7 +199,13 @@ fn smiles_tokens(t: &str) -> bool {
 }
 
 fn blank(kind: &'static str, mol: Mol) -> Drawn {
-    Drawn { kind, title: String::new(), mol, choices: Vec::new(), warnings: Vec::new() }
+    Drawn {
+        kind,
+        title: String::new(),
+        mol,
+        choices: Vec::new(),
+        warnings: Vec::new(),
+    }
 }
 
 fn from_smiles(text: &str) -> Result<Drawn> {
@@ -180,19 +218,32 @@ fn from_smiles(text: &str) -> Result<Drawn> {
 fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
     let mut m = Mol::from_molfile(text)
         .map_err(|e| Error::new("err.mol.draw.molfile").with("message", e.to_string()))?;
-    let mut d = blank("molfile", Mol::new(Vec::new(), Vec::new(), Vec::new(), Vec::new()));
-    let version = if text.lines().nth(3).is_some_and(|l| l.contains("V3000")) { "V3000" } else { "V2000" };
+    let mut d = blank(
+        "molfile",
+        Mol::new(Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+    );
+    let version = if text.lines().nth(3).is_some_and(|l| l.contains("V3000")) {
+        "V3000"
+    } else {
+        "V2000"
+    };
     d.choices.push(note("molfile_version", version));
     d.title = text.lines().next().unwrap_or("").trim().to_string();
     let flat = m.coords.as_ref().is_some_and(|c| c.dim == 2);
-    let spread = m.coords.as_ref().is_some_and(|c| c.xy.iter().any(|r| r.iter().take(2).any(|v| *v != 0.0)));
+    let spread = m
+        .coords
+        .as_ref()
+        .is_some_and(|c| c.xy.iter().any(|r| r.iter().take(2).any(|v| *v != 0.0)));
     let (why, relay) = match (keep, flat, spread) {
         (false, ..) => ("layout=new", true),
         (_, false, true) => ("3D coordinates", true),
         (_, _, false) => ("all atoms at the origin", true),
         _ => ("2D coordinates of the file", false),
     };
-    d.choices.push(note("layout", format!("{} ({why})", if relay { "new" } else { "kept" })));
+    d.choices.push(note(
+        "layout",
+        format!("{} ({why})", if relay { "new" } else { "kept" }),
+    ));
     if relay {
         m.coords = Some(m.layout_2d());
     }
@@ -205,34 +256,71 @@ fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<Drawn> {
     if kind == "inchi" {
         return Err(Error::new("err.mol.draw.inchi"));
     }
-    let Some(csv) = db else { return Err(Error::new("err.mol.draw.needDb").with("kind", kind)) };
+    let Some(csv) = db else {
+        return Err(Error::new("err.mol.draw.needDb").with("kind", kind));
+    };
     let ms = molecules::from_csv(csv, "catalog", None).map_err(|e| {
-        let first = e.first().map(|r| format!("line {}: {}", r.line, r.detail)).unwrap_or_default();
+        let first = e
+            .first()
+            .map(|r| format!("line {}: {}", r.line, r.detail))
+            .unwrap_or_default();
         Error::new("err.mol.draw.db").with("message", first)
     })?;
     let mut hits: Vec<(usize, f64)> = if kind == "inchikey" {
         let key = q.to_ascii_uppercase();
-        (0..ms.len()).filter(|&k| ms[k].inchikey.as_deref() == Some(key.as_str())).map(|k| (k, 0.0)).collect()
+        (0..ms.len())
+            .filter(|&k| ms[k].inchikey.as_deref() == Some(key.as_str()))
+            .map(|k| (k, 0.0))
+            .collect()
     } else {
         molecules::search(&ms, q, usize::MAX, 5.0)
     };
     hits.retain(|h| ms[h.0].smiles.is_some());
     let Some(&(top, score)) = hits.first() else {
-        let near: Vec<&str> = molecules::search_wide(&ms, q, NEAREST, 5.0).iter().map(|h| ms[h.0].name.as_str()).collect();
-        return Err(Error::new("err.mol.draw.not_found").with("spec", q).with("nearest", near.join(", ")));
+        let near: Vec<&str> = molecules::search_wide(&ms, q, NEAREST, 5.0)
+            .iter()
+            .map(|h| ms[h.0].name.as_str())
+            .collect();
+        return Err(Error::new("err.mol.draw.not_found")
+            .with("spec", q)
+            .with("nearest", near.join(", ")));
     };
     let m: &Molecule = &ms[top];
     let smiles = m.smiles.as_deref().unwrap_or("");
     let mut d = from_smiles(smiles)?;
     d.title = m.name.clone();
-    let hit = if kind == "inchikey" { format!("{} ({})", m.name, q.to_ascii_uppercase()) } else { format!("{} (score {score})", m.name) };
-    d.choices.push(note(if kind == "inchikey" { "key_hit" } else { "name_hit" }, hit));
+    let hit = if kind == "inchikey" {
+        format!("{} ({})", m.name, q.to_ascii_uppercase())
+    } else {
+        format!("{} (score {score})", m.name)
+    };
+    d.choices.push(note(
+        if kind == "inchikey" {
+            "key_hit"
+        } else {
+            "name_hit"
+        },
+        hit,
+    ));
     if score > 0.0 {
-        d.warnings.push(note("name_approximate", format!("{q} matched {} only as part of a name (score {score}; 0 = equal)", m.name)));
+        d.warnings.push(note(
+            "name_approximate",
+            format!(
+                "{q} matched {} only as part of a name (score {score}; 0 = equal)",
+                m.name
+            ),
+        ));
     }
-    let same: Vec<&str> = hits.iter().filter(|h| h.1 == score).map(|h| ms[h.0].name.as_str()).collect();
+    let same: Vec<&str> = hits
+        .iter()
+        .filter(|h| h.1 == score)
+        .map(|h| ms[h.0].name.as_str())
+        .collect();
     if same.len() > 1 {
-        d.warnings.push(note("name_ambiguous", same.iter().take(5).copied().collect::<Vec<_>>().join(", ")));
+        d.warnings.push(note(
+            "name_ambiguous",
+            same.iter().take(5).copied().collect::<Vec<_>>().join(", "),
+        ));
     }
     Ok(d)
 }
@@ -240,7 +328,12 @@ fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<Drawn> {
 fn notes(o: &mut Out, key: &str, list: &[Note]) {
     o.raw(",").str(key).raw(":[");
     for (i, n) in list.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"key\":").str(n.key).raw(",\"value\":").str(&n.value).raw("}");
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"key\":")
+            .str(n.key)
+            .raw(",\"value\":")
+            .str(&n.value)
+            .raw("}");
     }
     o.raw("]");
 }
@@ -249,18 +342,51 @@ fn notes(o: &mut Out, key: &str, list: &[Note]) {
 /// connected pieces and what was chosen on the way.
 pub fn scene(d: &Drawn) -> String {
     let m = &d.mol;
-    let xy = |i: usize, k: usize| m.coords.as_ref().and_then(|c| c.xy.get(i)).and_then(|r| r.get(k)).copied().unwrap_or(0.0) + 0.0;
+    let xy = |i: usize, k: usize| {
+        m.coords
+            .as_ref()
+            .and_then(|c| c.xy.get(i))
+            .and_then(|r| r.get(k))
+            .copied()
+            .unwrap_or(0.0)
+            + 0.0
+    };
     let mut o = Out::default();
-    o.raw("{\"schema\":\"draw/1\",\"spec_kind\":").str(d.kind).raw(",\"title\":").str(&d.title).raw(",\"atoms\":[");
+    o.raw("{\"schema\":\"draw/1\",\"spec_kind\":")
+        .str(d.kind)
+        .raw(",\"title\":")
+        .str(&d.title)
+        .raw(",\"atoms\":[");
     for (i, a) in m.atoms.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"i\":").int(i as i64).raw(",\"el\":").str(&a.el);
-        o.raw(",\"chg\":").int(i64::from(a.chg)).raw(",\"iso\":").int(i64::from(a.iso)).raw(",\"h\":").int(i64::from(a.h));
-        o.raw(",\"x_a\":").num(xy(i, 0)).raw(",\"y_a\":").num(xy(i, 1)).raw("}");
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"i\":")
+            .int(i as i64)
+            .raw(",\"el\":")
+            .str(&a.el);
+        o.raw(",\"chg\":")
+            .int(i64::from(a.chg))
+            .raw(",\"iso\":")
+            .int(i64::from(a.iso))
+            .raw(",\"h\":")
+            .int(i64::from(a.h));
+        o.raw(",\"x_a\":")
+            .num(xy(i, 0))
+            .raw(",\"y_a\":")
+            .num(xy(i, 1))
+            .raw("}");
     }
     o.raw("],\"bonds\":[");
     for (i, (a, b, order, wedge)) in m.written_bonds().into_iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"a\":").int(i64::from(a)).raw(",\"b\":").int(i64::from(b));
-        o.raw(",\"o\":").int(i64::from(order)).raw(",\"wedge\":").int(i64::from(wedge)).raw("}");
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"a\":")
+            .int(i64::from(a))
+            .raw(",\"b\":")
+            .int(i64::from(b));
+        o.raw(",\"o\":")
+            .int(i64::from(order))
+            .raw(",\"wedge\":")
+            .int(i64::from(wedge))
+            .raw("}");
     }
     o.raw("],\"fragments\":[");
     for (i, f) in m.layout_pieces().iter().enumerate() {

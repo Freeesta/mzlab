@@ -19,7 +19,9 @@ fn directions(g: &G, a: usize, have: &[f64], k: usize) -> Vec<f64> {
         }
         _ => {
             let (s, sz) = largest_gap(have);
-            (1..=k).map(|j| s + sz * j as f64 / (k + 1) as f64).collect()
+            (1..=k)
+                .map(|j| s + sz * j as f64 / (k + 1) as f64)
+                .collect()
         }
     }
 }
@@ -28,9 +30,17 @@ fn directions(g: &G, a: usize, have: &[f64], k: usize) -> Vec<f64> {
 fn zigzag(g: &G, a: usize) -> f64 {
     let pos = &g.pos;
     let Some(pa) = pos[a] else { return 1.0 };
-    let Some(p) = g.adj[a].iter().copied().find(|&n| pos[n].is_some()) else { return 1.0 };
+    let Some(p) = g.adj[a].iter().copied().find(|&n| pos[n].is_some()) else {
+        return 1.0;
+    };
     let Some(pp) = pos[p] else { return 1.0 };
-    let Some(gp) = g.adj[p].iter().copied().find(|&n| n != a && pos[n].is_some()) else { return 1.0 };
+    let Some(gp) = g.adj[p]
+        .iter()
+        .copied()
+        .find(|&n| n != a && pos[n].is_some())
+    else {
+        return 1.0;
+    };
     let side = cross(sub(pa, pp), sub(pos[gp].unwrap_or(pp), pp));
     // the new atom lies at the angle from `a` towards `p` plus or minus 120 degrees: it is on the left of p->a when that is minus
     if side > 1e-9 {
@@ -49,12 +59,18 @@ fn grow_atom(g: &mut G, a: usize) -> Vec<usize> {
     sys.sort_unstable();
     sys.dedup();
     for s in sys {
-        let open = g.systems[s].iter().any(|&r| g.rings[r].iter().any(|&x| g.pos[x].is_none()));
+        let open = g.systems[s]
+            .iter()
+            .any(|&r| g.rings[r].iter().any(|&x| g.pos[x].is_none()));
         if open {
             place_system(g, s);
         }
     }
-    let todo: Vec<usize> = g.adj[a].iter().copied().filter(|&n| g.pos[n].is_none()).collect();
+    let todo: Vec<usize> = g.adj[a]
+        .iter()
+        .copied()
+        .filter(|&n| g.pos[n].is_none())
+        .collect();
     if !todo.is_empty() {
         let pa = g.pos[a].unwrap_or([0.0, 0.0]);
         let have = placed_angles(g, &g.pos, a);
@@ -62,7 +78,9 @@ fn grow_atom(g: &mut G, a: usize) -> Vec<usize> {
             g.pos[*n] = Some(add(pa, unit(ang)));
         }
     }
-    (0..g.n).filter(|&i| !before[i] && g.pos[i].is_some()).collect()
+    (0..g.n)
+        .filter(|&i| !before[i] && g.pos[i].is_some())
+        .collect()
 }
 
 /// Grows from the atoms in `queue` until nothing is left to place.

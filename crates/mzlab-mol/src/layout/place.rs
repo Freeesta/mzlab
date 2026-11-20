@@ -47,7 +47,11 @@ fn radius(n: usize) -> f64 {
 pub fn arc(a: V, b: V, m: usize, left: bool) -> Vec<V> {
     let segs = (m + 1) as f64;
     let d = dist(a, b);
-    let l = if d > 0.92 * segs { d / (0.92 * segs) } else { 1.0 };
+    let l = if d > 0.92 * segs {
+        d / (0.92 * segs)
+    } else {
+        1.0
+    };
     let target = d / l;
     let (mut lo, mut hi) = (1e-9, PI - 1e-9);
     for _ in 0..60 {
@@ -75,7 +79,11 @@ pub fn arc(a: V, b: V, m: usize, left: bool) -> Vec<V> {
     // the rotation direction that carries `a` to `b` after the whole arc (2t)
     let cb = sub(b, centre);
     let (plus, minus) = (rot(ca, sincos(2.0 * t)), rot(ca, sincos(-2.0 * t)));
-    let sgn = if dist(plus, cb) <= dist(minus, cb) { 1.0 } else { -1.0 };
+    let sgn = if dist(plus, cb) <= dist(minus, cb) {
+        1.0
+    } else {
+        -1.0
+    };
     (1..=m)
         .map(|j| add(centre, rot(ca, sincos(sgn * step * j as f64))))
         .collect()
@@ -112,7 +120,12 @@ fn polygon_hung(g: &G, r: &[usize], k: usize, pos: &mut Pos, mirror: bool) {
 fn polygon_kink(r: &[usize], i: usize, pos: &mut Pos) {
     let n = r.len();
     let at = |k: usize| r[(i + n + k - 1) % n];
-    let pts = [[-0.5, 0.866_025_403_784_438_6], [0.0, 0.0], [1.0, 0.0], [1.5, -0.866_025_403_784_438_6]];
+    let pts = [
+        [-0.5, 0.866_025_403_784_438_6],
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.5, -0.866_025_403_784_438_6],
+    ];
     for (k, p) in pts.iter().enumerate() {
         pos[at(k)] = Some(*p);
     }
@@ -149,7 +162,10 @@ fn fuse_ring(g: &G, r: &[usize], sys_atoms: &[usize], pos: &mut Pos) {
         while j < n && pos[at(j)].is_none() {
             j += 1;
         }
-        let (a, b) = (pos[at(i - 1)].unwrap_or([0.0; 2]), pos[at(j % n)].unwrap_or([0.0; 2]));
+        let (a, b) = (
+            pos[at(i - 1)].unwrap_or([0.0; 2]),
+            pos[at(j % n)].unwrap_or([0.0; 2]),
+        );
         let (ab, mid) = (sub(b, a), scale(add(a, b), 0.5));
         let left = cross(ab, sub(c, mid)) <= 0.0;
         let mut best: Option<(f64, Vec<V>)> = None;
@@ -181,7 +197,10 @@ fn fuse_ring(g: &G, r: &[usize], sys_atoms: &[usize], pos: &mut Pos) {
 /// Places every unplaced atom of ring system `s` into `pos`, the first ring mirrored when `mirror`.
 fn fuse_all(g: &G, s: usize, pos: &mut Pos, mirror: bool) {
     let rings = &g.systems[s];
-    let mut atoms: Vec<usize> = rings.iter().flat_map(|&r| g.rings[r].iter().copied()).collect();
+    let mut atoms: Vec<usize> = rings
+        .iter()
+        .flat_map(|&r| g.rings[r].iter().copied())
+        .collect();
     atoms.sort_unstable();
     atoms.dedup();
     let mut first = true;

@@ -58,10 +58,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--tr", "transition index"),
     ("--a", "start, min"),
     ("--b", "end, min"),
-    (
-        "--depth",
-        "valley depth, fraction of the lower peak",
-    ),
+    ("--depth", "valley depth, fraction of the lower peak"),
     ("--windows", "JSON file of windows"),
     ("--auto", "engine peaks, as JSON"),
     ("--traces", "JSON file of traces"),
@@ -224,7 +221,10 @@ fn read(toks: &[String], optional: bool, u: &mut Usage) {
             read(&tokens(inner), true, u);
         } else if t.starts_with('(') {
             // `(--ppm P | --da D)`: alternatives, one of which is needed (the synopsis says so); none is required by itself
-            let end = toks[i - 1..].iter().position(|w| w.ends_with(')')).map_or(toks.len(), |k| i + k);
+            let end = toks[i - 1..]
+                .iter()
+                .position(|w| w.ends_with(')'))
+                .map_or(toks.len(), |k| i + k);
             let mut group: Vec<String> = toks[i - 1..end].to_vec();
             group[0] = group[0].trim_start_matches('(').to_string();
             if let Some(last) = group.last_mut() {

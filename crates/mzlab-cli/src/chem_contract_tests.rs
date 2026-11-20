@@ -388,7 +388,13 @@ fn mol_probes(fx: &Fx) -> Probes<'_> {
 }
 
 fn draw_probes() -> Probes<'static> {
-    let db: &'static str = Box::leak(format!("db={}/../../mzlab/web/molecole/catalogo.csv", env!("CARGO_MANIFEST_DIR")).into_boxed_str());
+    let db: &'static str = Box::leak(
+        format!(
+            "db={}/../../mzlab/web/molecole/catalogo.csv",
+            env!("CARGO_MANIFEST_DIR")
+        )
+        .into_boxed_str(),
+    );
     vec![(
         "mol draw",
         vec![

@@ -20,7 +20,9 @@ fn main() {
     let mut micros = Vec::new();
     for line in text.lines().skip(1) {
         let mut cols = line.split('\t');
-        let (Some(id), Some(smi)) = (cols.next(), cols.next()) else { continue };
+        let (Some(id), Some(smi)) = (cols.next(), cols.next()) else {
+            continue;
+        };
         let Ok(m) = Mol::from_smiles(smi) else {
             eprintln!("{id}: unreadable SMILES");
             continue;
@@ -30,7 +32,10 @@ fn main() {
         micros.push(t.elapsed().as_secs_f64() * 1e6);
         if dump {
             let bonds: Vec<[u32; 3]> = m.bonds.iter().map(|b| [b.a, b.b, u32::from(b.o)]).collect();
-            println!("{}", serde_json::json!({"id": id, "bonds": bonds, "xy": c.xy, "n": m.atoms.len()}));
+            println!(
+                "{}",
+                serde_json::json!({"id": id, "bonds": bonds, "xy": c.xy, "n": m.atoms.len()})
+            );
         }
     }
     if dump || micros.is_empty() {
@@ -38,5 +43,11 @@ fn main() {
     }
     micros.sort_by(|a, b| a.total_cmp(b));
     let p = |q: f64| micros[((micros.len() - 1) as f64 * q).round() as usize];
-    println!("n {} median_us {:.0} p95_us {:.0} max_us {:.0}", micros.len(), p(0.5), p(0.95), p(1.0));
+    println!(
+        "n {} median_us {:.0} p95_us {:.0} max_us {:.0}",
+        micros.len(),
+        p(0.5),
+        p(0.95),
+        p(1.0)
+    );
 }

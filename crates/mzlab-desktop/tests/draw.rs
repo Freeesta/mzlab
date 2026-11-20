@@ -23,7 +23,11 @@ fn draw_route_equals_the_function() {
     let as_text = json!({"kind": "draw", "request": req.to_string()});
     assert_eq!(text(st.rpc("feat/grafo", &as_object, &[]).unwrap()), direct);
     assert_eq!(text(st.rpc("feat/grafo", &as_text, &[]).unwrap()), direct);
-    let bad = st.rpc("feat/grafo", &json!({"kind": "draw", "request": {"spec": "smiles:C1CC"}}), &[]);
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "draw", "request": {"spec": "smiles:C1CC"}}),
+        &[],
+    );
     assert_eq!(bad.err().map(|e| e.key), Some("err.mol.draw.smiles"));
 }
 
@@ -31,15 +35,21 @@ fn draw_route_equals_the_function() {
 fn draw_route_gives_the_shared_fixture() {
     let st = State::new();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let fx: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root.join("tests/dati/draw_d1.json")).unwrap()).unwrap();
+    let fx: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join("tests/dati/draw_d1.json")).unwrap(),
+    )
+    .unwrap();
     let cases = fx["cases"].as_array().unwrap();
     assert_eq!(cases.len(), 30);
     for c in cases {
         for (format, want) in [("scene", &c["scene"]), ("molfile", &c["molfile"])] {
             let mut request = c["request"].clone();
             request["format"] = json!(format);
-            let got = st.rpc("feat/grafo", &json!({"kind": "draw", "request": request}), &[]);
+            let got = st.rpc(
+                "feat/grafo",
+                &json!({"kind": "draw", "request": request}),
+                &[],
+            );
             match want.as_str() {
                 Some(w) => assert_eq!(text(got.unwrap()), w, "{} {format}", c["name"]),
                 None => assert!(got.is_err(), "{} {format}", c["name"]),

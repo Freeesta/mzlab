@@ -11,7 +11,10 @@ fn req(spec: &str, extra: &str) -> String {
 }
 
 fn catalog() -> String {
-    let p = format!("{}/../../mzlab/web/molecole/catalogo.csv", env!("CARGO_MANIFEST_DIR"));
+    let p = format!(
+        "{}/../../mzlab/web/molecole/catalogo.csv",
+        env!("CARGO_MANIFEST_DIR")
+    );
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}"))
 }
 
@@ -41,7 +44,10 @@ fn draw_detects_the_kind_of_a_spec() {
     assert_eq!(classify("BSYNRYMUTXBXSQ-UHFFFAOYSA-N").0, "inchikey");
     assert_eq!(classify("InChI=1S/CH4/h1H4").0, "inchi");
     assert_eq!(classify("\n  mzLab\n\nM  END\n").0, "molfile");
-    assert_eq!(classify("InChI=1S/CH4/h1H4 BSYNRYMUTXBXSQ-UHFFFAOYSA-N"), ("inchikey", "BSYNRYMUTXBXSQ-UHFFFAOYSA-N"));
+    assert_eq!(
+        classify("InChI=1S/CH4/h1H4 BSYNRYMUTXBXSQ-UHFFFAOYSA-N"),
+        ("inchikey", "BSYNRYMUTXBXSQ-UHFFFAOYSA-N")
+    );
 }
 
 #[test]
@@ -66,8 +72,14 @@ fn draw_the_scene_comes_first_with_its_schema() {
 
 #[test]
 fn draw_a_name_and_a_key_need_the_database() {
-    assert_eq!(err_key(draw_json(&req("caffeine", ""))), "err.mol.draw.needDb");
-    assert_eq!(err_key(draw_json(&req("BSYNRYMUTXBXSQ-UHFFFAOYSA-N", ""))), "err.mol.draw.needDb");
+    assert_eq!(
+        err_key(draw_json(&req("caffeine", ""))),
+        "err.mol.draw.needDb"
+    );
+    assert_eq!(
+        err_key(draw_json(&req("BSYNRYMUTXBXSQ-UHFFFAOYSA-N", ""))),
+        "err.mol.draw.needDb"
+    );
     let by_name = with_db("name:caffeine").unwrap();
     assert!(by_name.starts_with("caffeine\n") && by_name.contains("M  END"));
     let by_key = with_db("BSYNRYMUTXBXSQ-UHFFFAOYSA-N").unwrap();
@@ -78,8 +90,17 @@ fn draw_a_name_and_a_key_need_the_database() {
 fn draw_a_name_that_is_not_there_names_the_nearest() {
     let e = with_db("caffeinee").err().unwrap();
     assert_eq!(e.key, "err.mol.draw.not_found");
-    assert!(e.params.iter().any(|(k, v)| *k == "nearest" && v.contains("caffeine")), "{:?}", e.params);
-    assert_eq!(err_key(with_db("ZZZZZZZZZZZZZZ-ZZZZZZZZZZ-Z")), "err.mol.draw.not_found");
+    assert!(
+        e.params
+            .iter()
+            .any(|(k, v)| *k == "nearest" && v.contains("caffeine")),
+        "{:?}",
+        e.params
+    );
+    assert_eq!(
+        err_key(with_db("ZZZZZZZZZZZZZZ-ZZZZZZZZZZ-Z")),
+        "err.mol.draw.not_found"
+    );
 }
 
 #[test]
@@ -96,21 +117,42 @@ fn draw_a_molfile_keeps_its_coordinates_unless_told_otherwise() {
     assert_eq!(kept, m.to_molfile("ethanol"));
     let s = scene_of(&mf, "");
     let c = s.get("choices").unwrap().arr();
-    assert!(c.iter().any(|n| n.get("value").and_then(Value::str).is_some_and(|v| v.starts_with("kept"))));
+    assert!(c.iter().any(|n| n
+        .get("value")
+        .and_then(Value::str)
+        .is_some_and(|v| v.starts_with("kept"))));
     let relaid = scene_of(&mf, ",\"layout\":\"new\"");
-    assert!(relaid.get("choices").unwrap().arr().iter().any(|n| n.get("value").and_then(Value::str).is_some_and(|v| v.starts_with("new"))));
+    assert!(relaid.get("choices").unwrap().arr().iter().any(|n| n
+        .get("value")
+        .and_then(Value::str)
+        .is_some_and(|v| v.starts_with("new"))));
     let flat = Mol::from_smiles("CCO").unwrap().to_molfile("");
     let s = scene_of(&flat, "");
-    assert!(s.get("choices").unwrap().arr().iter().any(|n| n.get("value").and_then(Value::str).is_some_and(|v| v.contains("origin"))));
+    assert!(s.get("choices").unwrap().arr().iter().any(|n| n
+        .get("value")
+        .and_then(Value::str)
+        .is_some_and(|v| v.contains("origin"))));
 }
 
 #[test]
 fn draw_bad_requests_and_settings_are_told_apart() {
     assert_eq!(err_key(draw_json("{")), "err.mol.draw.request");
-    assert_eq!(err_key(draw_json("{\"spec\":\"\"}")), "err.mol.draw.request");
-    assert_eq!(err_key(draw_json(&req("CCO", ",\"format\":\"png\""))), "err.mol.draw.set");
-    assert_eq!(err_key(draw_json(&req("smiles:C(C", ""))), "err.mol.draw.smiles");
-    assert_eq!(err_key(draw_json(&req("molfile:not a molfile", ""))), "err.mol.draw.molfile");
+    assert_eq!(
+        err_key(draw_json("{\"spec\":\"\"}")),
+        "err.mol.draw.request"
+    );
+    assert_eq!(
+        err_key(draw_json(&req("CCO", ",\"format\":\"png\""))),
+        "err.mol.draw.set"
+    );
+    assert_eq!(
+        err_key(draw_json(&req("smiles:C(C", ""))),
+        "err.mol.draw.smiles"
+    );
+    assert_eq!(
+        err_key(draw_json(&req("molfile:not a molfile", ""))),
+        "err.mol.draw.molfile"
+    );
 }
 
 #[test]

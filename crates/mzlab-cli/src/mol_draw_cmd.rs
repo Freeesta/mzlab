@@ -42,7 +42,11 @@ pub fn run(args: Vec<String>) -> Outcome {
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => match NAMES.iter().position(|n| *n == k) {
                     Some(i) => set[i] = Some(v.to_string()),
-                    None => return Outcome::fail(&format!("unknown --set name {k} (format, layout, db, name)")),
+                    None => {
+                        return Outcome::fail(&format!(
+                            "unknown --set name {k} (format, layout, db, name)"
+                        ))
+                    }
                 },
                 None => return Outcome::fail("--set needs NAME=VALUE"),
             },
@@ -51,7 +55,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [spec] = pos.as_slice() else {
-        return Outcome::fail("mol draw needs one SPEC (smiles:..., a molfile path, name:..., inchikey:...)");
+        return Outcome::fail(
+            "mol draw needs one SPEC (smiles:..., a molfile path, name:..., inchikey:...)",
+        );
     };
     if json && set[0].as_deref().is_some_and(|f| f != "scene") {
         return Outcome::fail("--json is the scene: it does not go with --set format=molfile");
@@ -60,12 +66,23 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(s) => s,
         Err(o) => return o,
     };
-    let db = match set[2].as_deref().map(|p| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))).transpose() {
+    let db = match set[2]
+        .as_deref()
+        .map(|p| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}")))
+        .transpose()
+    {
         Ok(d) => d,
         Err(e) => return Outcome::fail(&e),
     };
     let mut req = Out::default();
-    req.raw("{\"spec\":").str(&spec).raw(",\"format\":").str(if json { "scene" } else { set[0].as_deref().unwrap_or("molfile") });
+    req.raw("{\"spec\":")
+        .str(&spec)
+        .raw(",\"format\":")
+        .str(if json {
+            "scene"
+        } else {
+            set[0].as_deref().unwrap_or("molfile")
+        });
     for (k, v) in [("layout", &set[1]), ("name", &set[3])] {
         if let Some(v) = v {
             req.raw(",").str(k).raw(":").str(v);
@@ -78,13 +95,18 @@ pub fn run(args: Vec<String>) -> Outcome {
     match mzlab_feat::chem::draw::draw(&req.0) {
         Ok((d, f)) => {
             let text = match f {
-                mzlab_feat::chem::draw::Format::Scene => format!("{}\n", mzlab_feat::chem::draw::scene(&d)),
+                mzlab_feat::chem::draw::Format::Scene => {
+                    format!("{}\n", mzlab_feat::chem::draw::scene(&d))
+                }
                 mzlab_feat::chem::draw::Format::Molfile => d.mol.to_molfile(&d.title),
             };
             let mut o = crate::emit(text, &out);
             if o.code == 0 && f == mzlab_feat::chem::draw::Format::Molfile {
                 for (label, list) in [("choice", &d.choices), ("warning", &d.warnings)] {
-                    o.stderr += &list.iter().map(|n| format!("{label}: {} = {}\n", n.key, n.value)).collect::<String>();
+                    o.stderr += &list
+                        .iter()
+                        .map(|n| format!("{label}: {} = {}\n", n.key, n.value))
+                        .collect::<String>();
                 }
             }
             o
@@ -95,7 +117,13 @@ pub fn run(args: Vec<String>) -> Outcome {
 
 /// The failure with the hint that names the way out.
 fn hinted(o: Outcome, e: &mzlab_core::error::Error) -> Outcome {
-    let param = |k: &str| e.params.iter().find(|(n, _)| *n == k).map(|(_, v)| v.as_str()).unwrap_or("");
+    let param = |k: &str| {
+        e.params
+            .iter()
+            .find(|(n, _)| *n == k)
+            .map(|(_, v)| v.as_str())
+            .unwrap_or("")
+    };
     match e.key {
         "err.mol.draw.needDb" => o.with_hint("names and keys are looked up only in a molecules/1 CSV: add --set db=PATH (for example mzlab/web/molecole/catalogo.csv)"),
         "err.mol.draw.not_found" if !param("nearest").is_empty() => o.with_hint(&format!("nearest names: {}", param("nearest"))),
@@ -109,19 +137,33 @@ fn hinted(o: Outcome, e: &mzlab_core::error::Error) -> Outcome {
 fn resolve(spec: &str) -> Result<String, Outcome> {
     if spec == "-" {
         let mut t = String::new();
-        std::io::Read::read_to_string(&mut std::io::stdin(), &mut t).map_err(|e| Outcome::fail(&e.to_string()))?;
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut t)
+            .map_err(|e| Outcome::fail(&e.to_string()))?;
         return Ok(t);
     }
     if PREFIXES.iter().any(|p| spec.starts_with(p)) {
         return Ok(spec.to_string());
     }
-    let pathlike = spec.starts_with('/') || spec.starts_with("./") || spec.starts_with("../") || [".mol", ".sdf", ".mdl"].iter().any(|e| spec.ends_with(e));
+    let pathlike = spec.starts_with('/')
+        || spec.starts_with("./")
+        || spec.starts_with("../")
+        || [".mol", ".sdf", ".mdl"].iter().any(|e| spec.ends_with(e));
     if !Path::new(spec).is_file() {
         let guess = pathlike && mzlab_feat::chem::draw::kind_of(spec) == "name";
-        return if guess { Err(Outcome::fail(&format!("{spec}: No such file or directory (os error 2)"))) } else { Ok(spec.to_string()) };
+        return if guess {
+            Err(Outcome::fail(&format!(
+                "{spec}: No such file or directory (os error 2)"
+            )))
+        } else {
+            Ok(spec.to_string())
+        };
     }
     let text = std::fs::read_to_string(spec).map_err(|e| Outcome::fail(&format!("{spec}: {e}")))?;
-    Ok(if text.contains("M  END") || pathlike { text } else { spec.to_string() })
+    Ok(if text.contains("M  END") || pathlike {
+        text
+    } else {
+        spec.to_string()
+    })
 }
 
 #[cfg(test)]

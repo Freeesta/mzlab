@@ -28,7 +28,8 @@ fn every_drawn_molecule_reads_back_with_the_same_core() {
     for set in ["draw_set_a", "draw_set_b"] {
         for (id, smi) in rows(set) {
             let m = drawn(&smi);
-            let back = Mol::from_molfile(&m.to_molfile("")).unwrap_or_else(|e| panic!("{id} {smi}: {e}"));
+            let back =
+                Mol::from_molfile(&m.to_molfile("")).unwrap_or_else(|e| panic!("{id} {smi}: {e}"));
             if back.core_json() != m.core_json() {
                 bad.push(format!("{id} {smi}"));
             }
@@ -45,11 +46,22 @@ fn defined_double_bonds_come_out_as_written() {
     for set in ["draw_set_a", "draw_set_b"] {
         for (id, smi) in rows(set) {
             let m = drawn(&smi);
-            defined += m.stereo.iter().filter(|s| matches!(s, Stereo::Db { .. })).count();
-            assert!(m.ez_mismatches().is_empty(), "{id} {smi}: {:?}", m.ez_mismatches());
+            defined += m
+                .stereo
+                .iter()
+                .filter(|s| matches!(s, Stereo::Db { .. }))
+                .count();
+            assert!(
+                m.ez_mismatches().is_empty(),
+                "{id} {smi}: {:?}",
+                m.ez_mismatches()
+            );
         }
     }
-    assert!(defined >= 100, "only {defined} defined double bonds in the sets");
+    assert!(
+        defined >= 100,
+        "only {defined} defined double bonds in the sets"
+    );
 }
 
 #[test]
@@ -62,7 +74,8 @@ fn pieces_are_at_least_one_and_a_half_bonds_apart() {
             for q in &pieces[..i] {
                 for &a in p {
                     for &b in q {
-                        let d = ((xy[a][0] - xy[b][0]).powi(2) + (xy[a][1] - xy[b][1]).powi(2)).sqrt();
+                        let d =
+                            ((xy[a][0] - xy[b][0]).powi(2) + (xy[a][1] - xy[b][1]).powi(2)).sqrt();
                         assert!(d >= 1.5 * 1.5, "{id} {smi}: {d}");
                     }
                 }
@@ -81,6 +94,12 @@ fn the_layout_is_deterministic_and_keeps_fixed_atoms() {
     let c = m.layout_2d_fixed(&fixed);
     assert_eq!(c.xy[0], vec![10.0, 5.0]);
     assert_eq!(c.xy[1], vec![11.5, 5.0]);
-    let far = c.xy.iter().map(|p| (p[0] - 10.0).hypot(p[1] - 5.0)).fold(0.0, f64::max);
-    assert!(far < 20.0, "the rest is placed around the fixed atoms: {far}");
+    let far =
+        c.xy.iter()
+            .map(|p| (p[0] - 10.0).hypot(p[1] - 5.0))
+            .fold(0.0, f64::max);
+    assert!(
+        far < 20.0,
+        "the rest is placed around the fixed atoms: {far}"
+    );
 }

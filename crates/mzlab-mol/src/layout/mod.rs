@@ -82,7 +82,13 @@ impl G {
             .stereo
             .iter()
             .filter_map(|s| match s {
-                Stereo::Db { a, b, refs: Some(r), cfg: Some(c), status: Status::Defined } if r.len() == 2 => Some(Db {
+                Stereo::Db {
+                    a,
+                    b,
+                    refs: Some(r),
+                    cfg: Some(c),
+                    status: Status::Defined,
+                } if r.len() == 2 => Some(Db {
                     a: *a as usize,
                     b: *b as usize,
                     r0: r[0] as usize,
@@ -92,7 +98,19 @@ impl G {
                 _ => None,
             })
             .collect();
-        G { n, adj, bonds, linear, rings, systems, ring_sys, rings_of, dbs, pos: vec![None; n], frozen: vec![false; n] }
+        G {
+            n,
+            adj,
+            bonds,
+            linear,
+            rings,
+            systems,
+            ring_sys,
+            rings_of,
+            dbs,
+            pos: vec![None; n],
+            frozen: vec![false; n],
+        }
     }
 
     /// For a ring of 8 or more atoms: the cycle index `i` of a defined double bond `r[i]=r[i+1]` that the ring must draw trans.
@@ -165,7 +183,11 @@ impl G {
 
     /// Lays out one connected piece: from its placed atoms if any, else from the biggest ring system or the end of its longest chain.
     fn run_piece(&mut self, frag: &[usize]) {
-        let mut queue: VecDeque<usize> = frag.iter().copied().filter(|&a| self.pos[a].is_some()).collect();
+        let mut queue: VecDeque<usize> = frag
+            .iter()
+            .copied()
+            .filter(|&a| self.pos[a].is_some())
+            .collect();
         if queue.is_empty() {
             let root = frag
                 .iter()
@@ -177,7 +199,10 @@ impl G {
             match root {
                 Some(s) => {
                     place::place_system(self, s);
-                    let mut atoms: Vec<usize> = self.systems[s].iter().flat_map(|&r| self.rings[r].iter().copied()).collect();
+                    let mut atoms: Vec<usize> = self.systems[s]
+                        .iter()
+                        .flat_map(|&r| self.rings[r].iter().copied())
+                        .collect();
                     atoms.sort_unstable();
                     atoms.dedup();
                     queue.extend(atoms);
@@ -199,7 +224,12 @@ fn bbox(pts: impl Iterator<Item = V>) -> Option<[f64; 4]> {
     pts.fold(None, |b: Option<[f64; 4]>, p| {
         Some(match b {
             None => [p[0], p[1], p[0], p[1]],
-            Some(c) => [c[0].min(p[0]), c[1].min(p[1]), c[2].max(p[0]), c[3].max(p[1])],
+            Some(c) => [
+                c[0].min(p[0]),
+                c[1].min(p[1]),
+                c[2].max(p[0]),
+                c[3].max(p[1]),
+            ],
         })
     })
 }
@@ -226,10 +256,18 @@ impl Mol {
             }
         }
         let frags = g.fragments();
-        let has_fixed: Vec<bool> = frags.iter().map(|f| f.iter().any(|&a| g.frozen[a])).collect();
+        let has_fixed: Vec<bool> = frags
+            .iter()
+            .map(|f| f.iter().any(|&a| g.frozen[a]))
+            .collect();
         let mut out: Vec<Option<V>> = vec![None; g.n];
         let mut right = f64::NEG_INFINITY;
-        for f in frags.iter().zip(&has_fixed).filter(|(_, h)| **h).map(|(f, _)| f) {
+        for f in frags
+            .iter()
+            .zip(&has_fixed)
+            .filter(|(_, h)| **h)
+            .map(|(f, _)| f)
+        {
             g.run_piece(f);
             for &a in f {
                 out[a] = g.pos[a];
@@ -238,10 +276,21 @@ impl Mol {
                 right = right.max(b[2]);
             }
         }
-        let mut cursor = if right.is_finite() { right + FRAGMENT_GAP } else { 0.0 };
-        for f in frags.iter().zip(&has_fixed).filter(|(_, h)| !**h).map(|(f, _)| f) {
+        let mut cursor = if right.is_finite() {
+            right + FRAGMENT_GAP
+        } else {
+            0.0
+        };
+        for f in frags
+            .iter()
+            .zip(&has_fixed)
+            .filter(|(_, h)| !**h)
+            .map(|(f, _)| f)
+        {
             g.run_piece(f);
-            let Some(b) = bbox(f.iter().filter_map(|&a| g.pos[a])) else { continue };
+            let Some(b) = bbox(f.iter().filter_map(|&a| g.pos[a])) else {
+                continue;
+            };
             let shift = [cursor - b[0], -(b[1] + b[3]) / 2.0];
             for &a in f {
                 out[a] = g.pos[a].map(|p| add(p, shift));
@@ -256,7 +305,11 @@ impl Mol {
                 vec![r4(p[0] * BOND_A), r4(p[1] * BOND_A)]
             })
             .collect();
-        Coords { dim: 2, xy, from: "layout".into() }
+        Coords {
+            dim: 2,
+            xy,
+            from: "layout".into(),
+        }
     }
 
     /// The pieces of the record in the order `layout_2d` places them (atom indices, ascending in each).
@@ -266,7 +319,9 @@ impl Mol {
 
     /// The defined double bonds (as atom pairs `a`, `b`) that the coordinates of the record draw with the wrong cis/trans.
     pub fn ez_mismatches(&self) -> Vec<(u32, u32)> {
-        let Some(c) = &self.coords else { return Vec::new() };
+        let Some(c) = &self.coords else {
+            return Vec::new();
+        };
         let g = G::new(self);
         let pos: Vec<Option<V>> = c.xy.iter().map(|r| Some([r[0], r[1]])).collect();
         clean::ez_wrong(&g, &pos)
