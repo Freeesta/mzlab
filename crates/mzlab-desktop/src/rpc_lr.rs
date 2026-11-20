@@ -45,7 +45,7 @@ impl State {
     fn pda_sub(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
-        let (o, v) = mzlab_core::itemroutes::pda_sub_args(s("view"), f("a"), f("b"), s("scale"), f("shift"))?;
+        let (o, v) = mzlab_core::itemroutes::pda_sub_args(s("view"), f("a"), f("b"), s("scale"), f("shift"), p["auto"].as_bool().unwrap_or(false))?;
         let db = {
             let (mut mb, _, _) = self.chroms(eng, s("ref").split('#').next().unwrap_or(""))?;
             mzlab_core::itemroutes::pda_dad(&mut mb)?
