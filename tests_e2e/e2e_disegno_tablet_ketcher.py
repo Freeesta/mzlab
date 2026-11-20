@@ -1,4 +1,5 @@
-"""Draw tab on tablets: no scroll jump on open, no keyboard trap from Ketcher's hidden textarea, 16 px fields (no iOS zoom), a reachable top bar in split view, stable rotation."""
+"""Draw tab on tablets: no scroll jump on open, no keyboard trap from Ketcher's hidden textarea, 16 px fields (no iOS zoom), a reachable top bar in split view, stable rotation,
+a tap on Copy that reaches Copy (its options triangle sits beside it) and a «Show panels» pill that covers no control of the top bar."""
 # covers: mzlab/web/disegno-tablet.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -84,6 +85,34 @@ try:
                 assert nb() == 0, f"{w}: touch tap on undo did not remove the bond"
                 ctx.close()
         step("4 split view top bar", split)
+        def copy_tap():
+            ctx = r.b.new_context(viewport={"width": 820, "height": 1180}, has_touch=True, is_mobile=True)
+            pg = open_draw(ctx)
+            g = pg.evaluate("""(() => { const d = document.getElementById('kframe').contentDocument, c = d.querySelector('[data-testid=copy-button]'), t = d.querySelector('[data-testid=copy-button-dropdown-triangle]');
+              const a = c.getBoundingClientRect(), b = t.getBoundingClientRect(), hit = d.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
+              return {hit: !!hit && c.contains(hit), tri: [b.width, b.height], overlap: Math.min(a.right, b.right) - Math.max(a.left, b.left), inView: b.left >= 0 && b.top >= 0 && b.right <= d.defaultView.innerWidth}; })()""")
+            assert g["hit"], f"the middle of Copy belongs to another control {g}"
+            assert g["overlap"] <= 1, f"the triangle lies over Copy by {g['overlap']} px"
+            assert min(g["tri"]) >= 24 and g["inView"], f"triangle box {g}"
+            ctx.close()
+        step("6 a tap on Copy reaches Copy, the triangle beside it", copy_tap)
+        def pill():
+            ctx = r.b.new_context(viewport={"width": 1024, "height": 768}, has_touch=True, is_mobile=True)
+            pg = open_draw(ctx)
+            pg.click("#side-toggle"); wait_for_js(pg, "parseFloat(document.getElementById('kframe').contentDocument.documentElement.style.getPropertyValue('--tpill')) > 0")       # the bar has made room for the pill
+            COV = """(() => { const f = document.getElementById('kframe'), d = f.contentDocument, fb = f.getBoundingClientRect(), p = document.getElementById('side-toggle').getBoundingClientRect();
+              if (d.defaultView.innerWidth !== innerWidth) return null;
+              return [...d.querySelectorAll('[class*=App-module_top] button, [class*=App-module_top] [data-testid=zoom-selector]')].filter(b => { const x = b.getBoundingClientRect();
+                return x.width > 0 && Math.min(x.right + fb.left, p.right) - Math.max(x.left + fb.left, p.left) > 0.5 && Math.min(x.bottom + fb.top, p.bottom) - Math.max(x.top + fb.top, p.top) > 0.5; })
+                .map(b => b.getAttribute('data-testid') || b.title || '?'); })()"""
+            for w, h in ((1024, 768), (820, 1180), (768, 1024), (700, 1024), (640, 1024), (600, 1024), (507, 1024), (768, 1024), (1180, 820)):
+                pg.set_viewport_size({"width": w, "height": h}); wait_for_js(pg, f"document.getElementById('kframe').contentWindow.innerWidth === {w}")
+                frames(pg, 3)
+                cov = pg.evaluate(COV); assert cov == [], f"{w} px: the pill covers {cov}"
+                name = pg.evaluate("document.getElementById('side-toggle').getAttribute('aria-label')"); assert name, f"{w} px: pill without a name"
+            assert not pg.evaluate("document.getElementById('side-toggle').classList.contains('ico')"), "a wide bar keeps the word on the pill"
+            ctx.close()
+        step("7 the «Show panels» pill covers no top-bar control", pill)
 finally:
     r.close()
 bad = [s for s in steps if s[1] != "ok"]

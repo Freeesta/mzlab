@@ -98,12 +98,17 @@ function addZoomButtons(/** @type {Document} */ d, /** @type {HTMLIFrameElement}
 // the «Show panels» pill (outside the iframe, top right) is centred on the top bar; the bar keeps a free strip under it so no button is covered (icon only on a narrow editor)
 function placePill(/** @type {Document} */ d) {
   const pill = document.querySelector("#side-toggle"), corner = document.querySelector("#side-corner"), top = d.querySelector('[class*="App-module_top"]');
-  if (!pill || !corner || !top) return;
-  const inCorner = pill.parentNode === corner;
-  pill.classList.toggle("ico", inCorner && /** @type {Window} */ (d.defaultView).innerWidth < 600);
+  if (!pill || !corner || !top) return false;
+  const inCorner = pill.parentNode === corner, w = /** @type {Window} */ (d.defaultView), root = d.documentElement;
+  const set = (/** @type {boolean} */ ico) => { pill.classList.toggle("ico", ico); root.style.setProperty("--tpill", inCorner ? pill.offsetWidth + 14 + "px" : "0px"); };
+  // the bar's controls do not shrink: measured in one row, they must end before the pill. If not, the pill keeps its icon only; if still not, the bar wraps
+  const over = () => Math.max(0, ...[...top.querySelectorAll("button,[data-testid=zoom-selector]")].map(b => b.getBoundingClientRect()).filter(r => r.width > 0).map(r => r.right)) > w.innerWidth - (inCorner ? pill.offsetWidth + 14 : 0);
+  const was = root.hasAttribute("data-tp-wrap");
+  root.removeAttribute("data-tp-wrap"); set(false);
+  if (over()) { set(inCorner); if (over()) root.setAttribute("data-tp-wrap", ""); }
   const tb = top.getBoundingClientRect();
   corner.style.top = Math.max(0, Math.round(tb.top + (tb.height - pill.offsetHeight) / 2)) + "px";
-  d.documentElement.style.setProperty("--tpill", inCorner ? pill.offsetWidth + 14 + "px" : "0px");
+  return was !== root.hasAttribute("data-tp-wrap");                       // the bar changed height: the side toolbars are fitted again
 }
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
@@ -218,8 +223,8 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
       root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
-    const fit0 = fit; kFit = () => { fit0(); placePill(d); };
-    fit(); placePill(d); /** @type {Window} */ (d.defaultView).addEventListener("resize", () => kFit());
+    const fit0 = fit; kFit = () => { fit0(); if (placePill(d)) fit0(); };
+    kFit(); /** @type {Window} */ (d.defaultView).addEventListener("resize", () => kFit());
     d.head.appendChild(st);
     const rad = mountRadical({ d, K: () => K, changed: () => { if (kBar) kBar.sync(); FRAME.next(drawLabels); } });
     kBar = mountBar(d, k => I18N.t(k), { radical: { run: rad.run, on: rad.on } });
