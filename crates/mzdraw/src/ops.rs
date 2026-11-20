@@ -133,6 +133,102 @@ impl Document {
         }
     }
 
+    fn add_atom(
+        &mut self,
+        id: Option<u32>,
+        el: &str,
+        x: f64,
+        y: f64,
+        done: &mut Vec<Op>,
+        inv: &mut Vec<Inv>,
+    ) -> Result<(), OpError> {
+        if !mzlab_mol::is_element(el) {
+            return err("error.draw2.element", id.unwrap_or(0));
+        }
+        let id = self.take_id(id, inv)?;
+        let (x, y, el) = (round4(x), round4(y), el.to_string());
+        self.atoms.push(Atom {
+            id,
+            el: el.clone(),
+            x,
+            y,
+            chg: 0,
+            iso: 0,
+            rad: 0,
+            h: None,
+        });
+        inv.push(Inv::DropAtom(id));
+        done.push(Op::AtomAdd {
+            id: Some(id),
+            el,
+            x,
+            y,
+        });
+        Ok(())
+    }
+
+    fn add_bond(
+        &mut self,
+        id: Option<u32>,
+        a: u32,
+        b: u32,
+        o: u8,
+        done: &mut Vec<Op>,
+        inv: &mut Vec<Inv>,
+    ) -> Result<(), OpError> {
+        if self.atom(a).is_none() || a == b {
+            return err("error.draw2.noAtom", a);
+        }
+        if self.atom(b).is_none() {
+            return err("error.draw2.noAtom", b);
+        }
+        if !(1..=3).contains(&o) || self.bond_between(a, b).is_some() {
+            return err("error.draw2.bond", a);
+        }
+        let id = self.take_id(id, inv)?;
+        self.bonds.push(Bond { id, a, b, o });
+        inv.push(Inv::DropBond(id));
+        done.push(Op::BondAdd {
+            id: Some(id),
+            a,
+            b,
+            o,
+        });
+        Ok(())
+    }
+
+    /// Sets the given properties of an atom; a new element forgets the explicit hydrogen count.
+    fn set_atom(&mut self, op: &Op, inv: &mut Vec<Inv>) -> Result<(), OpError> {
+        let Op::AtomSet {
+            id,
+            el,
+            chg,
+            iso,
+            rad,
+            h,
+        } = op
+        else {
+            return Ok(());
+        };
+        let Some(i) = self.atom_index(*id) else {
+            return err("error.draw2.noAtom", *id);
+        };
+        if el.as_ref().is_some_and(|e| !mzlab_mol::is_element(e)) {
+            return err("error.draw2.element", *id);
+        }
+        inv.push(Inv::SetAtom(self.atoms[i].clone()));
+        let a = &mut self.atoms[i];
+        if let Some(e) = el {
+            a.el = e.clone();
+            a.h = None;
+        }
+        a.chg = chg.unwrap_or(a.chg).clamp(-4, 4);
+        a.iso = iso.unwrap_or(a.iso);
+        a.rad = rad.unwrap_or(a.rad).min(3);
+        a.h = h.or(a.h);
+        Ok(())
+    }
+
     /// Applies one primitive operation, pushing its inverse and its resolved form (ids filled in, numbers rounded).
     fn apply_one(
         &mut self,
@@ -141,79 +237,10 @@ impl Document {
         inv: &mut Vec<Inv>,
     ) -> Result<(), OpError> {
         match op {
-            Op::AtomAdd { id, el, x, y } => {
-                if !mzlab_mol::is_element(el) {
-                    return err("error.draw2.element", id.unwrap_or(0));
-                }
-                let id = self.take_id(*id, inv)?;
-                let (x, y) = (round4(*x), round4(*y));
-                self.atoms.push(Atom {
-                    id,
-                    el: el.clone(),
-                    x,
-                    y,
-                    chg: 0,
-                    iso: 0,
-                    rad: 0,
-                    h: None,
-                });
-                inv.push(Inv::DropAtom(id));
-                done.push(Op::AtomAdd {
-                    id: Some(id),
-                    el: el.clone(),
-                    x,
-                    y,
-                });
-            }
-            Op::BondAdd { id, a, b, o } => {
-                if self.atom(*a).is_none() || a == b {
-                    return err("error.draw2.noAtom", *a);
-                }
-                if self.atom(*b).is_none() {
-                    return err("error.draw2.noAtom", *b);
-                }
-                if !(1..=3).contains(o) || self.bond_between(*a, *b).is_some() {
-                    return err("error.draw2.bond", *a);
-                }
-                let id = self.take_id(*id, inv)?;
-                self.bonds.push(Bond {
-                    id,
-                    a: *a,
-                    b: *b,
-                    o: *o,
-                });
-                inv.push(Inv::DropBond(id));
-                done.push(Op::BondAdd {
-                    id: Some(id),
-                    a: *a,
-                    b: *b,
-                    o: *o,
-                });
-            }
-            Op::AtomSet {
-                id,
-                el,
-                chg,
-                iso,
-                rad,
-                h,
-            } => {
-                let Some(i) = self.atom_index(*id) else {
-                    return err("error.draw2.noAtom", *id);
-                };
-                if el.as_ref().is_some_and(|e| !mzlab_mol::is_element(e)) {
-                    return err("error.draw2.element", *id);
-                }
-                inv.push(Inv::SetAtom(self.atoms[i].clone()));
-                let a = &mut self.atoms[i];
-                if let Some(e) = el {
-                    a.el = e.clone();
-                    a.h = None;
-                }
-                a.chg = chg.unwrap_or(a.chg).clamp(-4, 4);
-                a.iso = iso.unwrap_or(a.iso);
-                a.rad = rad.unwrap_or(a.rad).min(3);
-                a.h = h.or(a.h);
+            Op::AtomAdd { id, el, x, y } => self.add_atom(*id, el, *x, *y, done, inv)?,
+            Op::BondAdd { id, a, b, o } => self.add_bond(*id, *a, *b, *o, done, inv)?,
+            Op::AtomSet { .. } => {
+                self.set_atom(op, inv)?;
                 done.push(op.clone());
             }
             Op::BondSet { id, o } => {
