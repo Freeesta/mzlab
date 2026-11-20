@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 AXE = axe_path()
-OPEN = "carica('m:molecules-ui.js').then(() => window.MOLDB.open())"   # the window opens from the «Manage» link of a search box; here directly
+OPEN = "loadScript('m:molecules-ui.js').then(() => window.MOLDB.open())"   # the window opens from the «Manage» link of a search box; here directly
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

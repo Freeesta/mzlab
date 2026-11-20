@@ -3,7 +3,7 @@
 // kind "sdf"; `mzlab-cli mol export` gives the same bytes). A .mol keeps the whole canvas in one record; an .sdf has one record per structure
 // with formula, exact mass, the m/z of the chosen ion and the mol1: identifier. This file builds the request and saves the returned text.
 import { molfileOf } from "./disegno-molfile.js";
-import { carica } from "./disegno-verifica.js";
+import { loadWasm } from "./disegno-verifica.js";
 
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => I18N.t(k, p);
 
@@ -22,7 +22,7 @@ async function ask(/** @type {string} */ request) {
     if (r.status !== 200) throw x;
     return x;
   }
-  return (await carica()).sdf(request);
+  return (await loadWasm()).sdf(request);
 }
 
 /**

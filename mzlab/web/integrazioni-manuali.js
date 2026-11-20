@@ -274,7 +274,7 @@ async function ask() {
 
 /** The table follows the integrations (asked again only when a window, a baseline or a file changes) and the work area. */
 async function sync() {
-  if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await carica("m:integrazioni-tracce.js");
+  if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await loadScript("m:integrazioni-tracce.js");
   const xch = G.MANTR ? await G.MANTR.sync() : false;
   const recs = await records(), ks = [...new Set(recs.map(r => r.k))].sort((a, b) => a - b), windows = windowsOf(recs, ks);
   const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows + optCols();   // the time points of the samples as the table of the files has them

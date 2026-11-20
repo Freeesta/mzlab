@@ -24,7 +24,7 @@ try:
                 j = max(i for i in range(len(xs)) if xs[i] <= t); f = (t - xs[j]) / (xs[j + 1] - xs[j]); return ys[j] + (ys[j + 1] - ys[j]) * f
             pts = [(a, at(a))] + [(x, y) for x, y in zip(xs, ys) if a < x < b] + [(b, at(b))]
             ref = sum((pts[i][1] + pts[i + 1][1]) / 2 * (pts[i + 1][0] - pts[i][0]) * 60 for i in range(len(pts) - 1))
-            res = pg.evaluate("async ([xs,ys,a,b])=>{await carica('integra-zero.js');const s={x:xs,y:ys,ys};return {neu:integ(s,a,b,null,true).area,old:integ(s,a,b).area}}", [xs, ys, a, b])
+            res = pg.evaluate("async ([xs,ys,a,b])=>{await loadScript('integra-zero.js');const s={x:xs,y:ys,ys};return {neu:integ(s,a,b,null,true).area,old:integ(s,a,b).area}}", [xs, ys, a, b])
             assert abs(res["neu"] - ref) < 1e-6 * ref, (res, ref)
             assert abs(res["old"] - ref) > 0.05 * ref, "the sloped baseline must give a clearly different area on this pair"
         step("overlapping Gaussians: new area = trapezoids with exact bar interpolation, old sloped area differs", synthetic)

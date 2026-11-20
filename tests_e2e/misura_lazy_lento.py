@@ -1,4 +1,4 @@
-"""Probe of the modules read on first use (`carica`) on a slow link, first visit: how long the page waits for `elementare-pannello.js` (first
+"""Probe of the modules read on first use (`loadScript`) on a slow link, first visit: how long the page waits for `elementare-pannello.js` (first
 opening of «Elemental composition») and `origine.js` (first «Where does this ion come from?») right after a file is loaded, while the service
 worker fills its cache in the background; `--probe cmp` instead times the click on «Elemental composition» (BARRA.show) until its panel is
 drawn, as a user does it. Measures, never asserts: used by docs/agenti/measurements-loading.md.
@@ -27,7 +27,7 @@ def serve(folder: str) -> str:
     return f"http://127.0.0.1:{srv.server_address[1]}/mzlab/"
 
 MODS = ["m:elementare-pannello.js", "m:origine.js"]
-TIME = """async ([n, d]) => { await new Promise(r => setTimeout(r, d)); const t = performance.now(); await carica(n); return [Math.round(performance.now() - t), Math.round(performance.now())]; }"""
+TIME = """async ([n, d]) => { await new Promise(r => setTimeout(r, d)); const t = performance.now(); await loadScript(n); return [Math.round(performance.now() - t), Math.round(performance.now())]; }"""
 CMP = """async d => { await new Promise(r => setTimeout(r, d)); const t = performance.now(); BARRA.show("cmp");
   while (!document.querySelector("#hri-body .cx")) await new Promise(r => requestAnimationFrame(r));
   return [Math.round(performance.now() - t), Math.round(performance.now())]; }"""
@@ -57,7 +57,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", required=True, help="built site folder (tools/prepara_sito.py)")
     ap.add_argument("--delays", default="0,3000,6000,9000,12000", help="ms between the file loaded and the first use, one fresh visit each")
-    ap.add_argument("--probe", choices=["carica", "cmp"], default="carica")
+    ap.add_argument("--probe", choices=["lazy", "cmp"], default="lazy")
     ap.add_argument("--file", help="data file to load instead of two small synthetic ones (an HR mzML for --probe cmp)")
     ap.add_argument("--runs", type=int, default=1, help="fresh visits per delay")
     ap.add_argument("--out", required=True)

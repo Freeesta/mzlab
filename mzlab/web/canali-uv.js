@@ -1,6 +1,6 @@
 // @ts-nocheck
 // A UV/Vis row of the MRM / SIM picker or of the MS2 chromatogram opens (or shows again) a chromatogram of that detector right under the panel,
-// in the same tab and time-linked as every new chromatogram. Classic script, loaded on demand (carica) by canali.js.
+// in the same tab and time-linked as every new chromatogram. Classic script, loaded on demand (loadScript) by canali.js.
 function CANALIUV(p, v) {
   const back = () => p.el.querySelector('[data-o="canali"],[data-o="kind"]')?.focus();
   if (!/^(pda|press|an:)/.test(v)) return back();      // the «MS2» row of the MS2 chromatogram: nothing to open

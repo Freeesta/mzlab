@@ -52,7 +52,7 @@ try:
             need(vals["H20 demi"][0] == "", vals["H20 demi"])
         step("the table shows the proposed time in yellow, empty for H20", table)
         def group():
-            ans = pg.evaluate("carica('gruppi.js').then(() => GRUPPI.vars())")
+            ans = pg.evaluate("loadScript('gruppi.js').then(() => GRUPPI.vars())")
             v = [x for x in ans["variables"] if x["id"] == "time"]
             need(v, [x["id"] for x in ans["variables"]])
             labels = {x["label"]: len(x["files"]) for x in v[0]["values"]}

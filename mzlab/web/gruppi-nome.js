@@ -1,12 +1,12 @@
 // @ts-check
 // The in-place rename of a group header of the loading table (gruppi-tab.js): the name becomes a text field, Enter or leaving it saves (GRUPPI.renameTo, one undo step), Esc cancels.
-// Lazy (carica("gruppi-nome.js")): double click, F2 or Enter on the name asks for it.
+// Lazy (loadScript("gruppi-nome.js")): double click, F2 or Enter on the name asks for it.
 window.GRUNOME = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 /** The name of a group header becomes a text field: Enter or leaving it saves, Esc cancels, empty = the default name; a name that exists stays open with a short message.@param {HTMLElement} th */
   async function edit(th) {
       const b = /** @type {HTMLElement | null} */ (th.querySelector(".tg-name")); if (!b || th.querySelector(".tg-edit")) return;
-      await carica("gruppi.js");
+      await loadScript("gruppi.js");
       const g = b.dataset.gn || "", shown = b.textContent || "", inp = document.createElement("input"), msg = document.createElement("span");
       inp.type = "text"; inp.className = "tg-edit"; inp.value = g ? shown : (E.ugNone || ""); inp.maxLength = 40; inp.size = 18; inp.autocomplete = "off";
       inp.setAttribute("aria-label", t("groups.tab.rename", { g: shown })); inp.placeholder = g ? "" : t("groups.move.none");

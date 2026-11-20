@@ -7,7 +7,7 @@
 // atoms and the substituent atom; it is exported as a V3000 molfile with ENDPTS written here (Ketcher has no bond with a variable position).
 // The export for mzFinder is {smiles, delta, level: 3} (level 3 of Schymanski: a generic class with many plausible isomers, never one structure), plus positionUnknown and the V3000.
 import { drawBrackets, drawMulticenter, bracketBox } from "./parentesi.js";
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 
 export const KEY = "MZLAB", KEY_M = "MZLAB_ENDPTS", ANY = "ANY";
 
@@ -67,7 +67,7 @@ export function multis(/** @type {any} */ K) {
 
 /** the delta checked by the engine; null when it is not readable (the text of the error is shown by the caller) */
 async function checkDelta(/** @type {string} */ molfile, /** @type {string} */ delta) {
-  try { return JSON.parse(await (await carica()).partial(molfile, delta)); } catch (e) { return typeof e === "string" ? { error: JSON.parse(e).error_key } : null; }
+  try { return JSON.parse(await (await loadWasm()).partial(molfile, delta)); } catch (e) { return typeof e === "string" ? { error: JSON.parse(e).error_key } : null; }
 }
 
 /** for every Ketcher atom id, its molecule node and position in the .ket (matched on the coordinates: the .ket has its own numbering) */

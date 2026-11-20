@@ -381,7 +381,7 @@ const BANCO = (() => {
     const h = await J(`api/scaninfo?k=${cFile(p).k}&sid=${n.sid}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (h.error) return void (b.innerHTML = `<span class="fail">${esc(h.error)}</span>`);
-    await carica("m:banco-file.js");
+    await loadScript("m:banco-file.js");
     if (tok !== ist.tok) return;
     const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), { h: BFIL.msLv(h.level) }], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
@@ -431,7 +431,7 @@ const BANCO = (() => {
     const j = await J(`api/fileinfo?k=${f.k}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (j.error) return void (b.innerHTML = `<span class="fail">${esc(j.error)}</span>`);
-    await carica("m:banco-file.js");
+    await loadScript("m:banco-file.js");
     if (tok !== ist.tok) return;
     b.innerHTML = BFIL.fileHtml(j);
   }
@@ -441,7 +441,7 @@ const BANCO = (() => {
   // what the composition panel was built from: a click that leaves it unchanged must not rebuild the panel (the typed mass and the results stay)
   const cmpKey = p => { const sp = specOf(p), d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d; return `${sp && sp.id}|${topMz(sp)}|${d ? d.mz.length : 0}|${(cFile(p) || {}).polarity}`; };
   async function tCmp(b, p, tok) {
-    await carica("m:elementare-pannello.js"); if (tok !== ist.tok) return;      // the panel code is read on its first opening (startup weight)
+    await loadScript("m:elementare-pannello.js"); if (tok !== ist.tok) return;      // the panel code is read on its first opening (startup weight)
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
     b._cmpKey = g ? null : cmpKey(p);
     ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
@@ -496,7 +496,7 @@ const BANCO = (() => {
     b.querySelector("#hri-off").onclick = () => { if (sp) { COMANDI.fai("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }
   // TODO mzFlow: identificazione su feature table — the «identify all the MS2 of the file» button left this tab (LIB.identifyAll stays for the Flow work)
-  const tIdn = async (b, p, tok) => { await carica("m:ident-pannello.js"); const sp = specOf(p); return IDP.render(b, sp && sp.level === 2 ? sp : null, () => tok !== ist.tok); };
+  const tIdn = async (b, p, tok) => { await loadScript("m:ident-pannello.js"); const sp = specOf(p); return IDP.render(b, sp && sp.level === 2 ? sp : null, () => tok !== ist.tok); };
   // the tabs «File and instrument», «Scans» and «Precursor tree» of the bar for file k in a container of the caller (Flow's Explore): the same functions on a stand-in cell that moves no panel
   const FILE_TABS = { fil: tFil, lst: tLst, alb: (b, p, tok) => INF.render(b, p, tok) };
   async function fileView(host, k, tab) {
@@ -504,7 +504,7 @@ const BANCO = (() => {
     host.classList.add("hri-body"); host.innerHTML = `<div class="muted">…</div>`;
     try { await FILE_TABS[tab](host, p, tok); } catch (e) { if (tok === ist.tok) host.innerHTML = `<span class="fail">${esc(/** @type {any} */ (e).message)}</span>`; }
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); if (tok !== ist.tok) return; return INFG.render(b, p, tok); } };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await loadScript("m:infusione-grafo.js"); if (tok !== ist.tok) return; return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;

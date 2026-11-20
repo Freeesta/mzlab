@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Baseline of an integration other than the line between the edges: `bm` = "zero" (y = 0) or "line" (`bl` = [t0, y0, t1, y1], a level or two points that may
 // cut through the peak). The numbers come from the Rust engine (QUALITA.peakArea, mzlab_core::baseline: signed area, the part under the line apart);
-// this file only asks, draws (the part under the line hatched) and moves the two points. Classic script, loaded on demand (carica) by grafici.js.
+// this file only asks, draws (the part under the line hatched) and moves the two points. Classic script, loaded on demand (loadScript) by grafici.js.
 const IB_MODE = { zero: 1, line: 2 }, IB_C = new WeakMap();           // the engine's answer per record (never saved: sessions and undo keep only bm/bl)
 const ibKey = (s, it) => [s.key, s.x.length, s.y[0], s.y[s.y.length - 1], it.a, it.b, it.bm, (it.bl || []).join(), ibDips(s, it) ? it.base.join() : ""].join("|");
 // the measure of the record; until the engine answers: the previous one, or nothing (wait), then the panel is drawn again

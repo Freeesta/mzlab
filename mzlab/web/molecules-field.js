@@ -68,7 +68,7 @@ export function field(host, opts) {
   if (opts.manage !== null && texts.manage) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "molc-man"; b.textContent = texts.manage;
-    b.onclick = opts.manage || (() => /** @type {any} */ (window).carica("m:molecules-ui.js").then(() => /** @type {any} */ (window).MOLDB.open()));
+    b.onclick = opts.manage || (() => /** @type {any} */ (window).loadScript("m:molecules-ui.js").then(() => /** @type {any} */ (window).MOLDB.open()));
     root.appendChild(b);
   }
   if (!opts.input) host.appendChild(root);   // an input of the page is replaced in place by `build`

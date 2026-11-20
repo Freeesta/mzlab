@@ -113,4 +113,4 @@ workQ("#flist").addEventListener("click", leavePage, true);
 { /** @type {any[] | null} */ let q = null;
   addEventListener("mzlab-index", (/** @type {any} */ e) => { const d = e && e.detail, W = /** @type {any} */ (window); if (W.TICPROV || !(d && (q || d.early_tic))) return;
     if (q) { q.push(d); return; }
-    q = [d]; carica("m:tic-provvisorio.js").then(() => { W.TICPROV.feed(q); q = null; }, () => { q = null; }); }); }
+    q = [d]; loadScript("m:tic-provvisorio.js").then(() => { W.TICPROV.feed(q); q = null; }, () => { q = null; }); }); }

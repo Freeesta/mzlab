@@ -529,9 +529,9 @@ function restoreUi() {
   const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
   const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));  // a removed file's entry only records the removal: it must not make the restore fail
   if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
-  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved)); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
+  if (!u.panels || !u.panels.length) { saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); if (f && sf.ugrp && !sf.gone) f.ugrp = sf.ugrp; }); if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) loadScript("gruppi.js").then(() => GRUPPI.rowsFrom(saved)); return false; }  // an empty work area keeps the user groups of the restored E.ugBy
   saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
-  if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) carica("gruppi.js").then(() => GRUPPI.rowsFrom(saved));
+  if (saved.some((/** @type {Bag} */ sf) => sf.ugrp)) loadScript("gruppi.js").then(() => GRUPPI.rowsFrom(saved));
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
@@ -663,7 +663,7 @@ function bindDragDrop(/** @type {ElementoDati} */ el, /** @type {number} */ k) {
   el.ondragstart = (/** @type {DragEvent} */ e) => {
     /** @type {DataTransfer} */ (e.dataTransfer).setData("text/plain", String(k));
     /** @type {DataTransfer} */ (e.dataTransfer).effectAllowed = "move";
-    el.classList.add("fl-dragging"); carica("gruppi-dnd.js").then(() => GDND.start(k));
+    el.classList.add("fl-dragging"); loadScript("gruppi-dnd.js").then(() => GDND.start(k));
   };
   el.ondragover = (/** @type {DragEvent} */ e) => {
     e.preventDefault();
@@ -705,9 +705,9 @@ function bindFileReorder() {
 
     el.onpointerdown = (/** @type {PointerEvent} */ e) => {
       if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog") || e.button !== 0) return;
-      touchStartX = e.clientX; touchStartY = e.clientY; carica("gruppi-dnd.js");
+      touchStartX = e.clientX; touchStartY = e.clientY; loadScript("gruppi-dnd.js");
       touchTimer = setTimeout(() => {
-        touchDragging = k; carica("gruppi-dnd.js").then(() => GDND.start(k, true));
+        touchDragging = k; loadScript("gruppi-dnd.js").then(() => GDND.start(k, true));
         el.classList.add("fl-dragging");
         try { el.setPointerCapture(e.pointerId); } catch (_) { /* the pointer is already gone: dragging still works without capture */ }
       }, 350);
@@ -776,7 +776,7 @@ function renderFileList() {
   const byG = /** @type {Map<string, { g: string, fs: FileAperto[] }>} */ (new Map()); side.forEach((/** @type {FileAperto} */ f) => { const g = grpOf(f); let G = byG.get(g); if (!G) { G = { g, fs: [] }; byG.set(g, G); groups.push(G); } G.fs.push(f); });
   // a DDA file is ONE row (its Full Scan and MS2 parts open together): the first file of each base stays
   groups.forEach(G => { const seen = new Set(); G.fs = G.fs.filter((/** @type {FileAperto} */ f) => { if (!f.dda) return true; const b = fileBase(f.file); if (seen.has(b)) return false; seen.add(b); return true; }); });
-  if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") carica("gruppi.js").then(() => GRUPPI.follow());
+  if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") loadScript("gruppi.js").then(() => GRUPPI.follow());
   if (window.GRUPPI) GRUPPI.order(groups); ugArrange(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? ((ESP.voce(f.kind) || {}).tempo ? fmtTime(f.time) : timeBadge(f.time)) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
@@ -999,7 +999,7 @@ async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Ar
   const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);
   const size = iter ? 0 : typeof text === "string" ? text.length : /** @type {{ size?: number, byteLength?: number }} */ (text).size || /** @type {{ byteLength?: number }} */ (text).byteLength || 0;
   // the piece-by-piece writer is loaded on the first big export
-  if ((iter || size >= 8 << 20) && window.carica) await window.carica("m:export-pezzi.js").catch(console.error);
+  if ((iter || size >= 8 << 20) && window.loadScript) await window.loadScript("m:export-pezzi.js").catch(console.error);
   const EP = /** @type {any} */ (window).EXPORT_PEZZI, tab = /csv|tab-separated/.test(type);
   if (prov !== false && tab && typeof text === "string") text = await PROV.tsv(text, prov || {});
   else if (prov !== false && tab && EP && EP.isIter(text)) { const src = /** @type {AsyncIterable<string | Uint8Array>} */ (text); text = (async function* () { let first = true; for await (const p of src) { yield first && typeof p === "string" ? await PROV.tsv(p, prov || {}) : p; first = false; } })(); }

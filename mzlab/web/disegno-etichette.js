@@ -2,7 +2,7 @@
 // Formula, mass and arrow change of the structures of the drawing, from the Rust engine (`labels` of the grafo .wasm, `label/1`; the app asks `feat/grafo`):
 // isotopes ([13C], D), every element, charge, radical marks (unpaired electrons, odd electron count). The page sends the atoms as Ketcher holds them and which structures each arrow joins; the answers are kept by
 // request, so the labels are drawn at once from a known answer and redrawn when a new one arrives (nothing is shown until then).
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 
 /** a Ketcher label that is an element symbol (not R#, A, Q, M, X, L, *, an atom list) */
 export const isElement = (/** @type {string} */ l) => /^[A-Z][a-z]?$/.test(l) && !/^[AQMXLR]$/.test(l);
@@ -22,7 +22,7 @@ export function labelsOf(/** @type {any} */ req, /** @type {() => void} */ redra
   if (cache.has(key)) return cache.get(key);
   cache.set(key, null);
   const old = cache.keys().next().value; if (cache.size > 64 && old !== undefined) cache.delete(old);
-  carica().then(m => m.labels(key)).then(t => { cache.set(key, JSON.parse(t)); redraw(); }).catch(() => cache.delete(key));
+  loadWasm().then(m => m.labels(key)).then(t => { cache.set(key, JSON.parse(t)); redraw(); }).catch(() => cache.delete(key));
   return null;
 }
 
@@ -30,7 +30,7 @@ export function labelsOf(/** @type {any} */ req, /** @type {() => void} */ redra
 export async function labelsNow(/** @type {any} */ req) {
   const key = JSON.stringify(req), known = cache.get(key);
   if (known) return known;
-  try { const r = JSON.parse(await (await carica()).labels(key)); cache.set(key, r); return r; } catch (_) { return null; }
+  try { const r = JSON.parse(await (await loadWasm()).labels(key)); cache.set(key, r); return r; } catch (_) { return null; }
 }
 
 /** pieces of a formula for a label: `[13C]` as a superscript mass number before the symbol, counts as subscripts */

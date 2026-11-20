@@ -52,7 +52,7 @@ try:
         all_ions(pg)
         pg.evaluate("window.__cls = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true })")
         def run_it():
-            pg.evaluate("carica('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a)))")
+            pg.evaluate("loadScript('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a)))")
             wait_for_js(pg, "document.querySelectorAll('#manint tbody tr').length >= 4 && !!document.querySelector('.manint-log')", timeout=90000)
         step("the action adds the peaks of every file", run_it)
         def groups():
@@ -106,7 +106,7 @@ try:
             pg.evaluate("STORIA.rifai && STORIA.rifai()"); frames(pg, 3)
         step("one undo removes them all", undo)
         def unmatched():
-            pg.evaluate("carica('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol_min: 0.01 }))")
+            pg.evaluate("loadScript('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol_min: 0.01 }))")
             wait_for_js(pg, "document.querySelectorAll('#manint tbody tr').length >= 4", timeout=90000)
             rows = pg.evaluate(ROWS); T = pg.evaluate("I18N.t('canali.manint.org.unmatched')")
             need(len(rows) >= 12 and all(x[-2] == T for x in rows), ("a tolerance of 0.01 min leaves every drifted peak alone", [x[-2] for x in rows][:4]))

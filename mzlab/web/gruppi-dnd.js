@@ -1,6 +1,6 @@
 // @ts-check
 // Dragging files between the user groups of a list (side list now; the loading table binds the same helper later), the «Move to group» menu and the keyboard move.
-// Lazy (carica("gruppi-dnd.js")): explore.js and lista-file.js call it on the first pointer down, drag or Ctrl+Shift+Arrow. The pure parts (hit test, companions) are tested by node.
+// Lazy (loadScript("gruppi-dnd.js")): explore.js and lista-file.js call it on the first pointer down, drag or Ctrl+Shift+Arrow. The pure parts (hit test, companions) are tested by node.
 // explore.js fetches it on the first pointer down and starts a drag when it is there (a mouse drag that began earlier joins at once); a native mouse drag also fires pointercancel, so
 // only finger drags are cancelled by it; over a group header the header takes the highlight, not a row; a drag held by the finger or Esc ends without a reorder.
 window.GDND = (() => {
@@ -142,7 +142,7 @@ window.GDND = (() => {
   function side() {
     const list = /** @type {HTMLElement} */ (Q("#flst"));
     if (cfg && cfg.list === list) return;
-    carica("gruppi.js"); bind(list, sideOpts());
+    loadScript("gruppi.js"); bind(list, sideOpts());
   }
   // the side list keeps only its first group open by default: the group that receives the files opens first, so a moved row stays on screen and keeps the keyboard focus
   const openFor = (/** @type {string[]} */ bases, /** @type {string} */ g) => {
@@ -152,7 +152,7 @@ window.GDND = (() => {
   };
   /** A drop (or a keyboard move): ONTO a file = new group or join, else into the header's group; returns the group. @param {{ bases: string[], target: { kind?: string, key: string } }} d */
   const drop = async d => {
-    await carica("gruppi.js");
+    await loadScript("gruppi.js");
     if (d.target.kind === "onto") { const t = E.files.find(/** @param {any} x */ x => !x.gone && fileBase(x.file) === d.target.key); if (t && t.ugrp) openFor(d.bases, t.ugrp); return GRUPPI.onto(d.bases, d.target.key); }
     openFor(d.bases, d.target.key); GRUPPI.set(d.bases, d.target.key); return d.target.key;
   };
@@ -175,7 +175,7 @@ window.GDND = (() => {
   function tab() {
     const list = /** @type {HTMLElement} */ (Q("#flist"));
     if (cfg && cfg.list === list) return;
-    carica("gruppi.js"); bind(list, tabOpts());
+    loadScript("gruppi.js"); bind(list, tabOpts());
   }
   /** «Group with…»: the keyboard way to a drop ONTO a file; the file is typed with the help of the browser's own type-ahead (a datalist on the prompt). @param {string[]} bases @param {string[]} pool */
   async function groupWith(bases, pool) {
@@ -185,7 +185,7 @@ window.GDND = (() => {
     const v = ((await ask(I18N.t("groups.with.prompt"), "")) || "").toLowerCase(); i.removeAttribute("list"); dl.remove();
     const hits = v ? names.filter(n => n.toLowerCase() === v) : [], part = v ? names.filter(n => n.toLowerCase().includes(v)) : [], to = hits[0] || (part.length === 1 ? part[0] : "");
     if (!to) { if (v) say(I18N.t("groups.with.none")); return; }
-    await carica("gruppi.js"); say(I18N.t("groups.dnd.done", { g: await GRUPPI.onto(bases, to) }));
+    await loadScript("gruppi.js"); say(I18N.t("groups.dnd.done", { g: await GRUPPI.onto(bases, to) }));
   }
   /** The groups of both lists: the labels of the side list's files and of the table's rows, in the order they were first met. */
   const labels = () => [...new Set([...E.files, ...ST.files].map(/** @param {any} x */ x => x.ugrp).filter(Boolean))];
@@ -217,7 +217,7 @@ window.GDND = (() => {
     if (!h || !e.dataTransfer) return;
     const names = [...e.dataTransfer.files].map(f => f.name), g = h.t.key;
     // the drop itself goes on as usual (the page's own drop handlers load the files); the rows take the label when they arrive
-    Promise.all([carica("gruppi.js"), carica("gruppi-tab.js")]).then(() => { GRUPPI.expect(names, g); say(I18N.t("groups.dnd.doneFiles", { g, n: names.length })); });
+    Promise.all([loadScript("gruppi.js"), loadScript("gruppi-tab.js")]).then(() => { GRUPPI.expect(names, g); say(I18N.t("groups.dnd.doneFiles", { g, n: names.length })); });
   }, true);
   }
   return {
@@ -253,7 +253,7 @@ window.GDND = (() => {
     },
     /** «Move to group ▸» for a table row: the same menu, anchored to the click. @param {any} ev @param {string} name */
     async moveMenuT(ev, name) {
-      tab(); await carica("gruppi.js"); const groups = labels(), some = ST.files.some(/** @param {any} x */ x => x.name === name && x.ugrp);
+      tab(); await loadScript("gruppi.js"); const groups = labels(), some = ST.files.some(/** @param {any} x */ x => x.name === name && x.ugrp);
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set([name], g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
         { label: I18N.t("groups.with.menu"), fn: () => groupWith([name], ST.files.map(/** @param {any} x */ x => x.name)) },
         { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await GRUPPI.newName([name]))) || "").trim(); if (v && GRUPPI.set([name], v)) say(I18N.t("groups.dnd.done", { g: v })); } },
@@ -261,7 +261,7 @@ window.GDND = (() => {
     },
     /** The «Move to group ▸» entries of a row menu, as a second menu at the same place (the menu has no sub-menus). @param {any} ev @param {any} f */
     async moveMenu(ev, f) {
-      side(); await carica("gruppi.js"); const c = /** @type {Cfg} */ (cfg), base = fileBase(f.file), bases = companions(base, f.vis ? c.ticked() : []), groups = [...new Set(flSide().map(/** @param {any} x */ x => x.ugrp).filter(Boolean))];
+      side(); await loadScript("gruppi.js"); const c = /** @type {Cfg} */ (cfg), base = fileBase(f.file), bases = companions(base, f.vis ? c.ticked() : []), groups = [...new Set(flSide().map(/** @param {any} x */ x => x.ugrp).filter(Boolean))];
       const some = flSide().some(/** @param {any} x */ x => bases.includes(fileBase(x.file)) && x.ugrp);
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set(bases, g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
         { label: I18N.t("groups.with.menu"), fn: () => groupWith(bases, flSide().map(/** @param {any} x */ x => fileBase(x.file))) },
