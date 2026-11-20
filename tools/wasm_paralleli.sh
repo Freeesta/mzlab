@@ -19,7 +19,7 @@ wasm_pack() {
 }
 # waits for every job, prints their logs in the order they started, fails if one failed
 wasm_wait() {
-  local bad=0 p
+  local bad=0 p rc
   for p in $wasm_pids; do
     rc=0; wait "${p%%:*}" || rc=$?
     cat "$wasm_jobs/${p##*:}.log"

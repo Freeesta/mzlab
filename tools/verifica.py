@@ -321,7 +321,7 @@ WEIGHT_DEFAULT = 6
 
 def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
     """Part k of n (1-based) of the e2e `names`, the same on every call.
-    Night (the CI of notte.yml): the slow ones first, dealt in turn; part 1 also runs syntax, texts, pytest and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
+    Night (the CI of notte.yml): the slow ones first, dealt in turn; part 1 also runs syntax, texts and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
     plain (--fumo --parte): longest first (WEIGHT, else WEIGHT_DEFAULT; ties by name), each test to the part with the least time so far, so the parts take about the same time."""
     if plain:
         load, out = [0] * n, []
@@ -398,6 +398,17 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     results.append(("data used by the e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · no .dam")]))
 
 
+def checks_first(results, rapida: bool, night: bool) -> None:
+    """Syntax, texts, limits, pytest and prova_hr. The night (--parte) skips pytest: its own jobs run it, and a second serial one took 1800 s of part 1 (50 e2e not run)."""
+    js_syntax(results)
+    i18n(results)
+    codice(results)
+    if not night:
+        pytest(results, 1800)
+    if not rapida:
+        hr_round(results)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rapida", action="store_true", help="syntax + pytest + e2e3")
@@ -410,7 +421,7 @@ def main() -> None:
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
                     help="e2e run together (default: CPU - 1, at most 6; 1 = one at a time)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
-    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
+    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts and prova_hr (pytest has its own jobs in the night), every part a share of the e2e")
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
     ap.add_argument("--cambiati", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
@@ -431,12 +442,7 @@ def main() -> None:
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
     if not a.fumo and not a.ultimi_falliti and not a.solo and (not parte or parte[0] == 1):      # --solo = e2e only: `--solo e2e_rust` after part 5 ran a second pytest past 1800 s
-        js_syntax(results)
-        i18n(results)
-        codice(results)
-        pytest(results, 1800)
-        if not a.rapida:
-            hr_round(results)
+        checks_first(results, a.rapida, bool(parte))
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.rapida or a.fumo else set())
         if a.ultimi_falliti and not only:

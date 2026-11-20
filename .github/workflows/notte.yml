@@ -23,12 +23,15 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
         python: ["3.11", "3.14"]
+        # the suite in two halves (tools/ci_pytest_meta.py, as the `rest` shard of test.yml): the whole suite in one job hit the 40 min ceiling on every runner (night of 2026-11-19)
+        half: [a, b]
         include:
           # the pull-request workflow (test.yml) runs Linux on 3.11 only; Linux 3.14 runs here
-          - {os: ubuntu-latest, python: "3.14"}
+          - {os: ubuntu-latest, python: "3.14", half: a}
+          - {os: ubuntu-latest, python: "3.14", half: b}
+    name: pytest (${{ matrix.os }}, ${{ matrix.python }}, ${{ matrix.half }})
     runs-on: ${{ matrix.os }}
-    # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests Windows 3.14 needs about 25 min (1435 tests), so the ceiling is 40
-    timeout-minutes: 40
+    timeout-minutes: 60
     # Windows: the tests compare bytes and sizes of the checked-out files (LF) and read text files with the default encoding (UTF-8 here, as on Linux and macOS)
     env:
       PYTHONUTF8: "1"
@@ -62,7 +65,10 @@ jobs:
           done
       # --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
-        run: python -m pytest -q -n auto --dist loadfile tests
+        env:
+          PYTHONPATH: tools
+          CI_PYTEST_MITA: ${{ matrix.half }}
+        run: python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_meta --durations=25 tests
 
   browser:
     name: browser (${{ matrix.os }}, ${{ matrix.browser }})
@@ -75,7 +81,8 @@ jobs:
           - { os: windows-latest, browser: chromium }
     runs-on: ${{ matrix.os }}
     # WebKit fails the night like the other browsers; its tests run in persistent contexts (tests_e2e/lib.py), because OPFS throws in the ephemeral context of new_page()
-    timeout-minutes: 30
+    # warm caches: 14-23 min; a cold start (Playwright and cargo caches evicted: Windows spent 4 min on the browser install and rebuilt every crate) passed 30 min on 2026-11-19
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -217,7 +224,7 @@ jobs:
 
 
   # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
-  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts, pytest and prova_hr), each with its own report .verifica/ultimo.md
+  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts and prova_hr), each with its own report .verifica/ultimo.md
   completa:
     if: inputs.solo == ''
     name: completa (${{ matrix.parte }}/5)
@@ -287,7 +294,7 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       # --budget: when spent no test starts and the running one is cut, so the report .verifica/ultimo.md is always written (the step ceiling kills it with none). Counted from the start of the run:
-      # part 1 does syntax, pytest and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
+      # part 1 does syntax, texts and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
       - name: Complete verification (part ${{ matrix.parte }}/5)
         timeout-minutes: 55
         run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget ${{ matrix.parte == 1 && 2820 || 2400 }}

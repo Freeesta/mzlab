@@ -26,7 +26,16 @@ RUNNER_TEMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"   # unbound outside GitHub Actions
 exe=
 command -v cygpath >/dev/null && RUNNER_TEMP=$(cygpath -u "$RUNNER_TEMP")   # Git Bash: D:\a\_temp would read as a remote host in `tar`
 # Git for Windows has no flock: the same lock with mkdir (the subshells below only call `flock 9`)
-command -v flock >/dev/null || flock() { until mkdir "$RUNNER_TEMP/wo.lockd" 2>/dev/null; do sleep 1; done; trap 'rmdir "$RUNNER_TEMP/wo.lockd"' EXIT; }
+# the owner writes its pid into the lock: a lock whose owner is gone (killed before its trap ran) is taken over instead of waited on forever
+command -v flock >/dev/null || flock() {
+  local d="$RUNNER_TEMP/wo.lockd"
+  until mkdir "$d" 2>/dev/null; do
+    local o; o=$(cat "$d/pid" 2>/dev/null)
+    if [ -n "$o" ] && ! kill -0 "$o" 2>/dev/null; then rm -rf "$d"; continue; fi
+    sleep 1
+  done
+  sh -c 'echo $PPID' > "$d/pid"; trap 'rm -rf "$RUNNER_TEMP/wo.lockd"' EXIT
+}
 mkdir -p "$RUNNER_TEMP"
 base="https://github.com/WebAssembly/binaryen/releases/download/version_133"
 case "$(uname -s)-$(uname -m)" in
