@@ -1,5 +1,6 @@
 //! The operations of `rpc.rs` about the files of the page's list, the notebook and the methods (`.dam`): the native `lr_*` of `rust-worker.js`.
 
+
 use mzlab_core::gradient;
 use mzlab_core::json::{self, Out};
 use mzlab_core::labmethods::{self, Lab};
@@ -20,40 +21,18 @@ impl State {
 
     /// The methods (`.dam`) of the store, oldest first, loaded again whenever the set changes.
     pub(crate) fn lab_sync(&self, eng: &mut Eng) {
-        let mut dams: Vec<_> = self
-            .store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .list()
-            .into_iter()
-            .filter(|(n, _, _)| n.to_ascii_lowercase().ends_with(".dam"))
-            .collect();
+        let mut dams: Vec<_> = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().filter(|(n, _, _)| n.to_ascii_lowercase().ends_with(".dam")).collect();
         dams.sort_by(|a, b| (a.1.mtime, a.1.seq, &a.0).cmp(&(b.1.mtime, b.1.seq, &b.0)));
-        let sig = dams
-            .iter()
-            .map(|(n, e, _)| format!("{n}:{}:{}", e.size, e.mtime))
-            .collect::<Vec<_>>()
-            .join("|");
+        let sig = dams.iter().map(|(n, e, _)| format!("{n}:{}:{}", e.size, e.mtime)).collect::<Vec<_>>().join("|");
         if eng.labs_sig.as_deref() == Some(sig.as_str()) {
             return;
         }
-        eng.labs = dams
-            .iter()
-            .filter_map(|(n, e, _)| {
-                std::fs::read(&e.path)
-                    .ok()
-                    .map(|b| (Lab::read(n, b.clone()), b.len() as u64))
-            })
-            .collect();
+        eng.labs = dams.iter().filter_map(|(n, e, _)| std::fs::read(&e.path).ok().map(|b| (Lab::read(n, b.clone()), b.len() as u64))).collect();
         eng.labs_sig = Some(sig);
     }
 
     /// The chromatograms of the mzML of `name` and the reader to go on with.
-    pub(crate) fn chroms<'a>(
-        &self,
-        eng: &'a mut Eng,
-        name: &str,
-    ) -> Result<(Mzml<Src<'a>>, Vec<Chrom>, u32)> {
+    pub(crate) fn chroms<'a>(&self, eng: &'a mut Eng, name: &str) -> Result<(Mzml<Src<'a>>, Vec<Chrom>, u32)> {
         let slot = self.open_lr(eng, name)?;
         let end = eng.idx[&slot].idx.scans.last().map_or(0, |s| s.end);
         let (r, size) = self.src_named(&mut eng.nat, slot, name)?;
@@ -66,21 +45,13 @@ impl State {
     fn pda_sub(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
-        let (o, v) = mzlab_core::itemroutes::pda_sub_args(
-            s("view"),
-            f("a"),
-            f("b"),
-            s("scale"),
-            f("shift"),
-        )?;
+        let (o, v) = mzlab_core::itemroutes::pda_sub_args(s("view"), f("a"), f("b"), s("scale"), f("shift"))?;
         let db = {
             let (mut mb, _, _) = self.chroms(eng, s("ref").split('#').next().unwrap_or(""))?;
             mzlab_core::itemroutes::pda_dad(&mut mb)?
         };
         let (mut m, _, _) = self.chroms(eng, s("name").split('#').next().unwrap_or(""))?;
-        Ok(Answer::Text(mzlab_core::itemroutes::pda_subtract(
-            &mut m, &db, &o, v,
-        )?))
+        Ok(Answer::Text(mzlab_core::itemroutes::pda_subtract(&mut m, &db, &o, v)?))
     }
 
     #[allow(unused_variables)]
@@ -100,18 +71,13 @@ impl State {
             }
             "lr_put" => {
                 let name = clean(s("name"))?;
-                self.indexer()?.resume(name); // a file cancelled before builds afresh
+                self.indexer()?.resume(name);                                   // a file cancelled before builds afresh
                 if p["nat"].is_object() {
                     return self.put_native(eng, name, &p["nat"]);
                 }
                 let pk = self.picked(u("fid"))?;
                 let path = if self.is_temp(&pk.path) {
-                    let dest = self
-                        .store
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .own_dir()?
-                        .join(name);
+                    let dest = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?.join(name);
                     std::fs::copy(&pk.path, &dest).map_err(|e| io_error(&e))?;
                     dest
                 } else {
@@ -119,11 +85,7 @@ impl State {
                 };
                 Self::drop_slot(eng, name);
                 self.indexer()?.remove(name);
-                let e = self
-                    .store
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .put(name, path)?;
+                let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put(name, path)?;
                 text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
             }
             "lr_entry" => {
@@ -133,13 +95,8 @@ impl State {
                 let mut m = Mzml::new(rd, size);
                 let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
                 let entry = mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size)?;
-                match self
-                    .store
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .get(name)
-                {
-                    Some(e) if e.nat.is_some() => text(native_entry(&entry, e.size)), // the size of a sample of a maker's file is the one of its members
+                match self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name) {
+                    Some(e) if e.nat.is_some() => text(native_entry(&entry, e.size)),             // the size of a sample of a maker's file is the one of its members
                     _ => text(entry),
                 }
             }
@@ -161,10 +118,7 @@ impl State {
                 };
                 let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
                 let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, name, &sample)?;
-                let body: Vec<String> = items
-                    .iter()
-                    .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
-                    .collect();
+                let body: Vec<String> = items.iter().map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr)).collect();
                 text(format!("[{}]", body.join(",")))
             }
             _ => Err(Error::new("rpc.unknown")),
@@ -173,10 +127,7 @@ impl State {
 
     /// `lr_remove`: the file leaves the list and its indexes leave the folder with it, as on the site.
     fn forget_lr(&self, name: &str) -> Result<()> {
-        self.store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(name);
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
         self.indexer()?.remove_all(name);
         Ok(())
     }
@@ -263,15 +214,9 @@ impl State {
 
     /// «Validate mzML»: the report of `mzlab-cli file validate --json` for a registered mzML (the page's `valida` module gives the same bytes).
     fn validate_mzml(&self, name: &str) -> Result<Answer> {
-        let entry = self
-            .store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(name)
-            .filter(|e| e.nat.is_none());
+        let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
         let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;
-        let file = std::fs::File::open(&entry.path)
-            .map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
+        let file = std::fs::File::open(&entry.path).map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
         let report = mzlab_core::mzml_validate::validate(std::io::BufReader::new(file))?;
         text(mzlab_core::mzml_validate::json_un_file(name, &report))
     }
@@ -317,9 +262,7 @@ impl State {
                 let g = match s("fmt") {
                     "course" => gradient::course(),
                     "chromeleon" => mzlab_core::chromeleon::parse(t),
-                    "model" => {
-                        json::parse(t.as_bytes()).and_then(|v| gradient::model_from_json(&v))
-                    }
+                    "model" => json::parse(t.as_bytes()).and_then(|v| gradient::model_from_json(&v)),
                     _ => gradient::parse_csv(t),
                 };
                 text(tx(&g?))
@@ -327,23 +270,14 @@ impl State {
             "lr_method_warnings" => {
                 self.lab_sync(eng);
                 let v = json::parse(p["have"].to_string().as_bytes())?;
-                let have: Vec<String> = v
-                    .arr()
-                    .iter()
-                    .filter_map(|x| x.str().map(String::from))
-                    .collect();
+                let have: Vec<String> = v.arr().iter().filter_map(|x| x.str().map(String::from)).collect();
                 text(labmethods::warnings_json(&Self::labs_of(eng), &have))
             }
             "lr_method" | "lr_gradient" => self.method_or_gradient(eng, op, s("name")),
             "lr_analog" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, chroms, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::analog(
-                    &mut m,
-                    &chroms,
-                    p["i"].as_i64().unwrap_or(-1),
-                    p["n"].as_i64().unwrap_or(2000),
-                )?)
+                text(mzlab_core::itemroutes::analog(&mut m, &chroms, p["i"].as_i64().unwrap_or(-1), p["n"].as_i64().unwrap_or(2000))?)
             }
             "lr_pda" => {
                 let name = s("name").split('#').next().unwrap_or("");
@@ -358,25 +292,14 @@ impl State {
             "lr_pda_wavelength" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, _, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::pda_wavelength(
-                    &mut m,
-                    p["nm0"].as_f64().unwrap_or(f64::NAN),
-                    p["nm1"].as_f64().unwrap_or(f64::NAN),
-                )?)
+                text(mzlab_core::itemroutes::pda_wavelength(&mut m, p["nm0"].as_f64().unwrap_or(f64::NAN), p["nm1"].as_f64().unwrap_or(f64::NAN))?)
             }
             // the UV spectrum, or the XWC band proposed, of rt0..rt1
             "lr_pda_spectrum" | "lr_pda_propose" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, _, _) = self.chroms(eng, name)?;
-                let (a, b) = (
-                    p["rt0"].as_f64().unwrap_or(f64::NAN),
-                    p["rt1"].as_f64().unwrap_or(f64::NAN),
-                );
-                text(if op == "lr_pda_propose" {
-                    mzlab_core::itemroutes::pda_propose(&mut m, a, b)
-                } else {
-                    mzlab_core::itemroutes::pda_spectrum(&mut m, a, b)
-                }?)
+                let (a, b) = (p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN));
+                text(if op == "lr_pda_propose" { mzlab_core::itemroutes::pda_propose(&mut m, a, b) } else { mzlab_core::itemroutes::pda_spectrum(&mut m, a, b) }?)
             }
             "lr_pda_sub" => self.pda_sub(eng, p),
             "lr_delay" => {
@@ -413,10 +336,7 @@ impl State {
         let mut members = Vec::new();
         for m in nat["members"].as_array().map_or(&[][..], |a| a.as_slice()) {
             let n = m["name"].as_str().unwrap_or("");
-            members.push((
-                n.to_string(),
-                self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path,
-            ));
+            members.push((n.to_string(), self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path));
         }
         if let Some(slot) = eng.lr_slot.get(name).copied() {
             eng.idx.remove(&slot);
@@ -430,30 +350,17 @@ impl State {
             centroid: nat["centroid"].as_bool().unwrap_or(false),
             members,
         };
-        let e = self
-            .store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .put_nat(name, n)?;
+        let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put_nat(name, n)?;
         text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
     }
 
     /// One row of `lr_boot`: a file changed on disk, or whose bytes are not those of its index (same size and date), loses its index.
-    fn boot_row(
-        &self,
-        eng: &mut Eng,
-        name: &str,
-        e: &crate::store::Entry,
-        changed: bool,
-    ) -> Result<Value> {
+    fn boot_row(&self, eng: &mut Eng, name: &str, e: &crate::store::Entry, changed: bool) -> Result<Value> {
         let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
         if changed {
             self.indexer()?.remove(name);
             Self::drop_slot(eng, name);
-            self.store
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .restamp(name, (e.size, e.mtime));
+            self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, (e.size, e.mtime));
         }
         let mut indexed = mzml && self.open_lr(eng, name).is_ok();
         if indexed && e.nat.is_none() && !self.index_belongs(eng, name, e) {
@@ -461,18 +368,12 @@ impl State {
             Self::drop_slot(eng, name);
             indexed = false;
         }
-        Ok(
-            json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }),
-        )
+        Ok(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }))
     }
 
     /// Whether the open index of `name` was built from the file of `e` (`Index::built_from`: size and probe); a file that cannot be read keeps it.
     fn index_belongs(&self, eng: &Eng, name: &str, e: &crate::store::Entry) -> bool {
-        let (Some(slot), Ok(mut f)) = (eng.lr_slot.get(name), std::fs::File::open(&e.path)) else {
-            return true;
-        };
-        eng.idx
-            .get(slot)
-            .is_none_or(|r| r.idx.built_from(&mut f, e.size).unwrap_or(true))
+        let (Some(slot), Ok(mut f)) = (eng.lr_slot.get(name), std::fs::File::open(&e.path)) else { return true };
+        eng.idx.get(slot).is_none_or(|r| r.idx.built_from(&mut f, e.size).unwrap_or(true))
     }
 }

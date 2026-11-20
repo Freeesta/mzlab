@@ -52,7 +52,7 @@ try:
                 try: pg.goto(base); break
                 except Exception as e:
                     if "ERR_ABORTED" not in str(e) or _try == 2: raise
-                    pg.wait_for_timeout(1500)
+                    wait_for_js(pg, "document.readyState === 'complete'", 10000)
             pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
             if pg.evaluate("!!S.sess"): wait_for_js(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
