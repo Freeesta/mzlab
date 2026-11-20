@@ -207,7 +207,6 @@ pub(crate) use flow_pace::build_index_of;
 pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
     build_index_of(path, "", idx, budget)
 }
-
 pub(crate) use idx_open::open;
 
 /// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
