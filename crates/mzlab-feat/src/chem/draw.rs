@@ -12,7 +12,8 @@ pub use super::draw_spec::kind_of;
 use super::{draw_build, draw_hl, draw_png, draw_svg};
 
 /// Above this many atoms the drawing refuses (a drawing, not a library).
-const MAX_ATOMS: usize = 2000;
+pub(super) const MAX_ATOMS: usize = 2000;
+pub const MAX_PATCH: usize = super::edit_set::MAX_PATCH;
 
 /// What the answer is: the molfile text, the `draw/1` scene, a KET or CDXML text (`draw_file`), or a picture (SVG text, PNG bytes).
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -65,6 +66,8 @@ pub struct Drawn {
     pub warnings: Vec<Note>,
     /// A KET or CDXML text to carry in the scene (`"file": "ket"|"cdxml"` of a scene request).
     pub file: Option<Format>,
+    /// Atom labels set by an edit patch (atom index, text): in the scene, and as alias lines of a V2000 molfile.
+    pub labels: Vec<(u32, String)>,
 }
 
 struct Request<'a> {
@@ -74,6 +77,7 @@ struct Request<'a> {
     keep: bool,
     db: Option<&'a str>,
     name: Option<&'a str>,
+    edit: Option<&'a Value>,
     /// Picture settings: pixels per angstrom, CIP marks, highlight lists (as in the request), and the `draw-image/1` wrapper.
     scale: f64,
     cip: bool,
@@ -168,6 +172,7 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
         keep: !setting("layout", ["keep", "new"], "keep")?,
         db: text("db"),
         name: text("name"),
+        edit: v.get("edit").filter(|e| !e.is_null()),
         scale,
         cip,
         highlight: v.get("highlight"),
@@ -176,7 +181,7 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
 }
 
 /// The answer to a request `{"spec", "format": "molfile"|"scene"|"ket"|"cdxml"|"svg"|"png", "file": "ket"|"cdxml" (scene only), "layout": "keep"|"new",
-/// "db": CSV text, "name": title, "scale": pixels per angstrom, "cip": on|off, "highlight": [{"atoms", "bonds", "color"}], "json": true}` as text. A PNG is
+/// "db": CSV text, "name": title, "edit": patch (`chem/edit.rs`), "scale": pixels per angstrom, "cip": on|off, "highlight": [{"atoms", "bonds", "color"}], "json": true}` as text. A PNG is
 /// bytes: `draw_bytes`, or `"json": true`.
 pub fn draw_json(request: &str) -> Result<String> {
     let a = answer(request)?;
@@ -201,7 +206,7 @@ pub fn answer(request: &str) -> Result<Answer> {
     let v = parse(request)?;
     let (mut d, r) = prepare(&v)?;
     let bytes = match r.format {
-        Format::Molfile => d.mol.to_molfile(&d.title).into_bytes(),
+        Format::Molfile => d.molfile().into_bytes(),
         Format::Scene => scene(&d)?.into_bytes(),
         Format::Ket => super::draw_file::ket(&d)?.into_bytes(),
         Format::Cdxml => super::draw_file::cdxml(&d)?.into_bytes(),
@@ -272,6 +277,7 @@ fn prepare(v: &Value) -> Result<(Drawn, Request<'_>)> {
     d.kind = kind;
     d.file = r.file;
     d.choices.insert(0, note("spec_kind", kind));
+    r.edit.map(|e| super::edit::apply(&mut d, e)).transpose()?;
     if let Some(f) = r
         .file
         .or(Some(r.format).filter(|f| matches!(f, Format::Ket | Format::Cdxml)))
@@ -305,7 +311,7 @@ fn prepare(v: &Value) -> Result<(Drawn, Request<'_>)> {
 }
 
 /// The size limit, checked before any layout work.
-fn too_big(m: &Mol) -> Result<()> {
+pub(super) fn too_big(m: &Mol) -> Result<()> {
     if m.atoms.len() > MAX_ATOMS {
         return Err(Error::new("err.mol.draw.tooBig").with("max", MAX_ATOMS));
     }
@@ -330,6 +336,7 @@ fn blank(kind: &'static str, mol: Mol) -> Drawn {
         choices: Vec::new(),
         warnings: Vec::new(),
         file: None,
+        labels: Vec::new(),
     }
 }
 
@@ -443,6 +450,7 @@ pub fn scene(d: &Drawn) -> Result<String> {
             .int(i64::from(a.iso))
             .raw(",\"h\":")
             .int(i64::from(a.h));
+        super::edit::put_label(&mut o, d, i);
         o.raw(",\"x_a\":")
             .raw(&coord(xy(i, 0)))
             .raw(",\"y_a\":")

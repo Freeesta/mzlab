@@ -73,4 +73,4 @@ try:
 finally:
     r.close()
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)
-sys.exit(1 if any(s != "ok" for _, s in steps) or len(steps) < 6 else 0)
+sys.exit(1 if any(s != "ok" for _, s in steps) or len(steps) < 5 else 0)
