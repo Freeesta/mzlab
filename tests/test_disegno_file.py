@@ -25,6 +25,21 @@ def test_text_that_is_not_cdxml_and_tags_with_single_quotes_are_left_alone():
     assert got[1]["removed"] == []
 
 
+def test_a_quoted_value_may_hold_a_bracket_or_the_other_quote_and_is_never_edited():
+    got = run("""return [
+      tidyCdxml('<CDXML a="x > y" b=""><n/></CDXML>'),
+      tidyCdxml("<CDXML a='' b=\\"\\" c='it\\"s' d=\\"it's\\" e=''/>"),
+      tidyCdxml('<CDXML><t v="a b=&quot;&quot;"/><u w = "" /></CDXML>')];""")
+    assert got[0] == {"text": '<CDXML a="x > y"><n/></CDXML>', "removed": ["b"]}
+    assert got[1] == {"text": "<CDXML c='it\"s' d=\"it's\"/>", "removed": ["a", "b", "e"]}
+    assert got[2] == {"text": '<CDXML><t v="a b=&quot;&quot;"/><u /></CDXML>', "removed": ["w"]}
+
+
+def test_empty_attributes_go_from_every_start_tag_not_only_the_root():
+    got = run("""return tidyCdxml('<CDXML><page><fragment id="1" Name=""><n z=""/></fragment></page></CDXML>');""")
+    assert got == {"text": "<CDXML><page><fragment id=\"1\"><n/></fragment></page></CDXML>", "removed": ["Name", "z"]}
+
+
 def test_the_bytes_are_decoded_as_their_mark_or_declaration_says():
     got = run("""
     const file = bytes => ({ arrayBuffer: async () => new Uint8Array(bytes).buffer });

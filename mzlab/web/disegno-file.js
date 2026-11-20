@@ -1,16 +1,20 @@
 // @ts-check
 // Structure files on their way into Ketcher's own reader (Indigo), by the three routes: a drop on the canvas, Ketcher's Open dialog and pasted text.
-// No format is parsed here. Three things are done first, each reported in a notice, never silently: binary CDX (starts with "VjCD") goes in as base64,
-// the form the Open dialog gives it; UTF-16 and 8-bit text is decoded as its byte-order mark or XML declaration says; and the empty attributes some writers
-// leave on the CDXML root (RDKit writes BondLength="") are dropped, because Indigo draws nothing from a file that has one.
+// No format is parsed here. Two changes to the text are made first, each named in a notice, never silently: UTF-16 and 8-bit text is decoded as its
+// byte-order mark or XML declaration says, and the empty attributes some writers leave on CDXML tags (RDKit writes BondLength="" on the root) are
+// dropped, because Indigo draws nothing from a file that has one. Binary CDX (starts with "VjCD") changes nothing: it goes in as base64, the form the Open dialog gives it.
 const CDX_MAGIC = [0x56, 0x6a, 0x43, 0x44];
 
-/** Drops the attributes with an empty value from the start tags of a CDXML text. Other text comes back unchanged.
+/** Drops the attributes with an empty value from every start tag of a CDXML text (a quoted value may hold `>`, `<` or the other quote). Other text comes back unchanged.
  * @param {string} text @returns {{ text: string, removed: string[] }} `removed`: the attribute names, each once */
 export function tidyCdxml(text) {
   if (!/<CDXML[\s>]/.test(text)) return { text, removed: [] };
   const removed = new Set();
-  const out = text.replace(/<[A-Za-z][^<>]*>/g, tag => tag.includes("'") ? tag : tag.replace(/\s+([A-Za-z_][\w.:-]*)=""/g, (_, name) => { removed.add(name); return ""; }));
+  const attr = /(\s+)([A-Za-z_][\w.:-]*)(\s*=\s*)("[^"]*"|'[^']*')/g;
+  const out = text.replace(/<[A-Za-z](?:"[^"]*"|'[^']*'|[^<>"'])*>/g, tag => tag.replace(attr, (all, _ws, name, _eq, value) => {
+    if (value.length > 2) return all;
+    removed.add(name); return "";
+  }));
   return { text: out, removed: [...removed] };
 }
 
@@ -33,7 +37,7 @@ export async function readStructure(file) {
     for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     return { text: btoa(bin), changes: [] };
   }
-  const { text: raw, charset } = decode(bytes), { text, removed } = tidyCdxml(raw.replace(/^﻿/, ""));
+  const { text: raw, charset } = decode(bytes), { text, removed } = tidyCdxml(raw.replace(/^\uFEFF/, ""));
   /** @type {{ key: string, params?: Record<string, string> }[]} */
   const changes = [];
   if (charset) changes.push({ key: "draw.import.fix.charset", params: { charset } });
@@ -65,7 +69,12 @@ export function mountImport(doc, k, ui) {
   doc.body.addEventListener("drop", async e => {
     e.preventDefault(); e.stopPropagation();
     const dt = /** @type {DataTransfer} */ (e.dataTransfer), file = dt.files[0];
-    if (file) { const r = await readStructure(file); if (r.text) await add(r.text, file.name, changesNote(file.name, r.changes, t)); return; }
+    if (file) {
+      let r;
+      try { r = await readStructure(file); } catch (err_) { note(t("draw.import.failed", { message: /** @type {Error} */ (err_).message })); return; }   // an unreadable or too large file is told, not dropped
+      if (r.text.trim()) await add(r.text, file.name, changesNote(file.name, r.changes, t)); else note(t("draw.import.unreadable", { name: file.name }));
+      return;
+    }
     const text = dt.getData("text/plain"), r = tidyCdxml(text);
     if (text) await add(r.text, "", r.removed.length ? changesNote(t("draw.import.pasted"), [{ key: "draw.import.fix.empty", params: { names: r.removed.join(", ") } }], t) : "");
   });

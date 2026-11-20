@@ -94,6 +94,26 @@ try:
             data = base.replace(frag, many).encode(); assert len(data) > 70000
             got, note = drop(data, "big.cdxml"); assert got["atoms"] == 60 * 16 and got["fragments"] == 120, got
         step("a 70 kB file with 60 pairs of molecules", big)
+        # a file that is not a structure: the notice names it and the canvas stays as it was (the drawing already on it is the same before and after)
+        KET = f"{KJ}.getKet()"
+        def refused(data, name):
+            def one():
+                drop((DATA / "aromatics.cdxml").read_bytes(), "aromatics.cdxml")
+                before = pg.evaluate(KET); pg.evaluate("document.getElementById('smi-warn').hidden = true")
+                pg.evaluate(DROP, [base64.b64encode(data).decode(), name])
+                wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=30000)
+                note = pg.inner_text("#smi-warn")
+                assert note.startswith("Could not read") and name in note, note
+                assert pg.evaluate(KET) == before, "the canvas changed"
+            return one
+        good = (DATA / "aromatics.cdxml").read_text(encoding="utf-8")
+        for bname, bdata in {
+            "truncated XML": good[: len(good) // 2].encode(),
+            "an empty file": b"",
+            "text that is not XML": b"this is not a structure\nnor a drawing\n",
+            "XML that is not CDXML": b'<?xml version="1.0"?><molecule><atom id="a1"/></molecule>',
+        }.items():
+            step(f"refused: {bname}", refused(bdata, "bad.cdxml"))
         clear(); drop((DATA / "stereo_wedge.cdxml").read_bytes(), "stereo_wedge.cdxml")
         pg.screenshot(path=os.environ.get("CDXML_SHOT", str(tmp / "cdxml_rdkit.png")))
 finally:
