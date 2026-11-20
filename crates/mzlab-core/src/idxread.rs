@@ -401,6 +401,34 @@ impl<R: ReadAt> Index<R> {
         })
     }
 
+    /// The scan table of this index as the compact JSON rows the file holds (`SCAN_COLUMNS`), read again from the file: for a copy of the index
+    /// whose rows change in a few columns (`centroids::index`).
+    pub fn rows_bytes(&mut self) -> Result<Vec<u8>> {
+        let mut h = [0u8; HEADER];
+        index_bytes(&mut self.r, 0, &mut h)?;
+        let size = u64_at(&h, 48);
+        let head = Head::read(&mut self.r, size)?;
+        Ok(head.rows.unwrap_or_default())
+    }
+
+    /// The same index read through another reader of the same kind of bytes: `f` turns the reader (`Index::over` keeps the tables, this one the caches too).
+    pub fn map_reader<S: ReadAt>(self, f: impl FnOnce(R) -> S) -> Index<S> {
+        Index {
+            r: f(self.r),
+            scans: self.scans,
+            keys: self.keys,
+            sections: self.sections,
+            source: self.source,
+            run: self.run,
+            cache: Vec::new(),
+            arrays: self.arrays.iter().map(|_| None).collect(),
+            arrays_tick: self.arrays_tick,
+            fences: self.fences.iter().map(|_| None).collect(),
+            crcs: self.crcs,
+            layout: self.layout,
+        }
+    }
+
     /// This index over `r`, another reader of the same bytes: the tables `open` read, with empty caches, so it is what `open` would give on
     /// `r` without reading and parsing the file again.
     pub fn over<S: ReadAt>(&self, r: S) -> Index<S> {

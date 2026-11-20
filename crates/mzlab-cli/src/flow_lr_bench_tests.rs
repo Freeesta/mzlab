@@ -98,9 +98,36 @@ fn truth(d: &Path) -> Truth {
     Truth { ions, pairs }
 }
 
-/// The rows the chain gives for `file` (path A with the centroid step, path B without); `tag` names the work folder.
-fn rows(d: &Path, file: &str, centroid: bool, tag: &str) -> Rows {
-    let (first, source) = if centroid {
+/// How the chain meets the data: A centroids them with the `spectra.centroid` step first; B is the profile points as they are (`centroid`, `recenter` off:
+/// the path of before `--centroid`); C is the profile file with the defaults, which centroid it before detection.
+#[derive(Clone, Copy, PartialEq)]
+enum Mode {
+    A,
+    B,
+    C,
+}
+
+impl Mode {
+    /// The params of `features.detect` and of `features.align` this mode sets.
+    fn detect(self) -> &'static str {
+        if self == Mode::B {
+            r#","params":{"centroid":"off"}"#
+        } else {
+            ""
+        }
+    }
+    fn align(self) -> &'static str {
+        if self == Mode::B {
+            r#","params":{"recenter":"off"}"#
+        } else {
+            ""
+        }
+    }
+}
+
+/// The rows the chain gives for `file` in `mode`; `tag` names the work folder.
+fn rows(d: &Path, file: &str, mode: Mode, tag: &str) -> Rows {
+    let (first, source) = if mode == Mode::A {
         (
             format!(
                 r#"{{"id":"cen","step":"spectra.centroid@1","in":{{"source":"file:{file}"}}}},"#
@@ -113,7 +140,8 @@ fn rows(d: &Path, file: &str, centroid: bool, tag: &str) -> Rows {
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"{file}","type":"raw"}}],"steps":[{first}
         {{"id":"idx","step":"index.mzidx@1","in":{{"source":"{source}"}}}},
-        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}}}]}}"#
+        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}{}}}]}}"#,
+        mode.detect()
     );
     let w = d.join(tag);
     std::fs::create_dir_all(&w).unwrap();
@@ -135,7 +163,7 @@ fn rows(d: &Path, file: &str, centroid: bool, tag: &str) -> Rows {
 }
 
 /// The rows of the aligned table of the sample and the blank; with `rule`, only those the blank rule keeps (`table.filter`, `blank_ratio` 3 on the heights).
-fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
+fn aligned(d: &Path, mode: Mode, rule: bool, tag: &str) -> Rows {
     let names = ["LR_bench-s1.mzML", "LR_bench-blank-s1.mzML"];
     let files: Vec<_> = names
         .iter()
@@ -148,7 +176,7 @@ fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
         .map(|n| format!(r#"{{"name":"{n}","type":"raw"}}"#))
         .collect();
     let src: Vec<String> = names.iter().map(|n| format!(r#""file:{n}""#)).collect();
-    let (first, source) = if centroid {
+    let (first, source) = if mode == Mode::A {
         (
             format!(
                 r#"{{"id":"cen","step":"spectra.centroid@1","in":{{"source":[{}]}}}},"#,
@@ -167,9 +195,11 @@ fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{},{{"name":"samples.json","type":"samples"}}],"steps":[{first}
         {{"id":"idx","step":"index.mzidx@1","in":{{"source":[{source}]}}}},
-        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}}},
-        {{"id":"ali","step":"features.align@1","in":{{"peaks":["det.peaks"]}}}}{filter}]}}"#,
-        raw.join(",")
+        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}{}}},
+        {{"id":"ali","step":"features.align@1","in":{{"peaks":["det.peaks"]}}{}}}{filter}]}}"#,
+        raw.join(","),
+        mode.detect(),
+        mode.align()
     );
     let w = d.join(tag);
     std::fs::create_dir_all(&w).unwrap();
@@ -266,56 +296,68 @@ fn score(t: &Truth, rows: &Rows) -> Score {
     s
 }
 
-/// Scores of both paths, the rows on the blank of each, the rows of the blank rule (sample against blank) and the rows on a blank of only noise.
+/// Scores of the three modes, the rows on the blank of each, the rows of the blank rule (sample against blank) and the rows on a blank of only noise.
 struct Bench {
     a: Score,
     b: Score,
-    blank: (usize, usize),
-    table: (Score, Score),
-    ruled: (Score, Score),
-    noise: (usize, usize),
+    c: Score,
+    blank: (usize, usize, usize),
+    table: (Score, Score, Score),
+    ruled: (Score, Score, Score),
+    noise: (usize, usize, usize),
 }
 
 fn bench(tag: &str, jitter: f64) -> Option<Bench> {
     let d = generate(tag, jitter)?;
     let t = truth(&d);
     let f = "LR_bench-s1.mzML";
-    let a = rows(&d, f, true, "a");
-    let b = rows(&d, f, false, "b");
     let blank = "LR_bench-blank-s1.mzML";
-    let (ba, bb) = (
-        rows(&d, blank, true, "ba").len(),
-        rows(&d, blank, false, "bb").len(),
-    );
     let noise = "LR_bench-noise-s1.mzML";
-    let (na, nb) = (
-        rows(&d, noise, true, "na").len(),
-        rows(&d, noise, false, "nb").len(),
-    );
-    let (ta, tb) = (
-        score(&t, &aligned(&d, true, false, "ta")),
-        score(&t, &aligned(&d, false, false, "tb")),
-    );
-    let (ra, rb) = (
-        score(&t, &aligned(&d, true, true, "fa")),
-        score(&t, &aligned(&d, false, true, "fb")),
-    );
-    let (sa, sb) = (score(&t, &a), score(&t, &b));
-    println!("jitter {jitter}: blank rows A {ba}, B {bb}; noise-only blank A {na}, B {nb}");
-    println!("jitter {jitter}  A (centroid): {sa:?}");
-    println!("jitter {jitter}  B (profile):  {sb:?}");
-    println!("jitter {jitter}  A aligned: {ta:?}");
-    println!("jitter {jitter}  B aligned: {tb:?}");
-    println!("jitter {jitter}  A + blank rule: {ra:?}");
-    println!("jitter {jitter}  B + blank rule: {rb:?}");
+    let modes = [Mode::A, Mode::B, Mode::C];
+    let name = |m: Mode, x: &str| format!("{x}{}", ["a", "b", "c"][m as usize]);
+    let on = |file: &str, x: &str| -> Vec<usize> {
+        modes
+            .iter()
+            .map(|&m| rows(&d, file, m, &name(m, x)).len())
+            .collect()
+    };
+    let (ba, na) = (on(blank, "bl"), on(noise, "no"));
+    let table: Vec<Score> = modes
+        .iter()
+        .map(|&m| score(&t, &aligned(&d, m, false, &name(m, "t"))))
+        .collect();
+    let ruled: Vec<Score> = modes
+        .iter()
+        .map(|&m| score(&t, &aligned(&d, m, true, &name(m, "f"))))
+        .collect();
+    let s: Vec<Score> = modes
+        .iter()
+        .map(|&m| score(&t, &rows(&d, f, m, &name(m, "s"))))
+        .collect();
+    println!("jitter {jitter}: blank rows {ba:?}; noise-only blank {na:?}");
+    for (k, label) in ["A (centroid step)", "B (profile as is)", "C (profile, defaults)"]
+        .iter()
+        .enumerate()
+    {
+        println!("jitter {jitter}  {label}: {:?}", s[k]);
+        println!("jitter {jitter}  {label} aligned: {:?}", table[k]);
+        println!("jitter {jitter}  {label} + blank rule: {:?}", ruled[k]);
+    }
     let _ = std::fs::remove_dir_all(&d);
+    let mut s = s.into_iter();
+    let (mut table, mut ruled) = (table.into_iter(), ruled.into_iter());
+    let mut next = || (table.next().unwrap(), ruled.next().unwrap());
+    let (ta, ra) = next();
+    let (tb, rb) = next();
+    let (tc, rc) = next();
     Some(Bench {
-        a: sa,
-        b: sb,
-        blank: (ba, bb),
-        table: (ta, tb),
-        ruled: (ra, rb),
-        noise: (na, nb),
+        a: s.next().unwrap(),
+        b: s.next().unwrap(),
+        c: s.next().unwrap(),
+        blank: (ba[0], ba[1], ba[2]),
+        table: (ta, tb, tc),
+        ruled: (ra, rb, rc),
+        noise: (na[0], na[1], na[2]),
     })
 }
 
@@ -330,6 +372,7 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
     let Some(Bench {
         a,
         b,
+        c,
         blank,
         table,
         ruled,
@@ -359,6 +402,14 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
     // merged pairs: rows between the two members of a decoy pair that sit on no true ion
     assert!(a.merged <= 6 && b.merged <= 6, "merged {a:?} {b:?}");
     assert!(blank.0 <= 154 && blank.1 <= 100, "blank rows {blank:?}");
+    // C, the profile file with the defaults (`centroid` auto): it is centroided before detection, so it scores like A and not like B: no split rows
+    assert!(c.recall >= 0.90 && c.recall >= b.recall, "recall C {c:?}");
+    assert!(c.precision >= 0.31, "precision C {c:?}");
+    assert!(c.pairs_both >= 6, "pairs C {c:?}");
+    assert!(c.split <= 0.076, "split C {c:?}");
+    assert!(c.mean_dm <= 0.024, "mean |dm| C {c:?}");
+    assert!(c.merged <= 6, "merged C {c:?}");
+    assert!(blank.2 <= 154, "blank rows C {blank:?}");
     // the blank rule of the table (sample against blank on the heights) keeps fewer rows and a larger share of them on true ions; compounds that sit under
     // the background of the blank at their m/z go with it
     assert!(
@@ -373,7 +424,13 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
         table.1,
         ruled.1
     );
-    assert_eq!(noise, (0, 0), "a blank of only noise gives no row");
+    assert!(
+        ruled.2.rows < table.2.rows && ruled.2.precision > table.2.precision,
+        "blank rule C {:?} {:?}",
+        table.2,
+        ruled.2
+    );
+    assert_eq!(noise, (0, 0, 0), "a blank of only noise gives no row");
 }
 
 /// The 0.35 Da recipe against a jitter three times larger: numbers only, nothing asserted.

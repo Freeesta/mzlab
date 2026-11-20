@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "features-report/1",
+  "title": "features-report/1: what `mzlab-cli features` did by itself on a series, written at `--report PATH`",
+  "description": "The recipe line, one entry per input member (unit resolution, profile share, whether its profile scans were centroided, the channel defect, the m/z shift measured against the series and whether it was subtracted, the features detected), the rows merged as duplicates and every automatic choice with its reason. stdout (the CSV) is the same with or without `--report`. Code: crates/mzlab-cli/src/features_report.rs, crates/mzlab-feat/src/lrscreen*.rs.",
+  "type": "object",
+  "required": ["schema", "recipe", "files", "merged", "choices"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "features-report/1" },
+    "recipe": { "type": "string", "description": "the recipe of the series in one line, the same words as the plan" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["member", "unit", "profile_fraction", "centroided", "defect", "mz_shift_da", "recentred", "rows"],
+        "additionalProperties": false,
+        "properties": {
+          "member": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
+          "unit": { "type": "boolean", "description": "unit resolution (the 1 Da axis)" },
+          "profile_fraction": { "type": "number", "minimum": 0, "maximum": 1, "description": "share of the MS1 scans in profile mode" },
+          "centroided": { "type": "boolean", "description": "the profile scans were centroided before detection" },
+          "defect": { "type": "number", "description": "channel centre offset, Da (0 on the ppm axis)" },
+          "mz_shift_da": { "type": "number", "description": "m/z shift of the file against the series, Da; 0 when it was not measured" },
+          "recentred": { "type": "boolean", "description": "the shift was subtracted (it is at least 0.05 Da)" },
+          "rows": { "type": "integer", "minimum": 0, "description": "features detected in the file, before the alignment" }
+        }
+      }
+    },
+    "merged": {
+      "type": "array",
+      "description": "rows dropped as the same ion as a taller row (`dedup`)",
+      "items": {
+        "type": "object",
+        "required": ["kept", "dropped", "dmz_da", "drt_min", "r"],
+        "additionalProperties": false,
+        "properties": {
+          "kept": { "$ref": "#/$defs/row" },
+          "dropped": { "$ref": "#/$defs/row" },
+          "dmz_da": { "type": "number" },
+          "drt_min": { "type": "number" },
+          "r": { "type": "number", "description": "Pearson r of the area vectors of the two rows" }
+        }
+      }
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "required": ["mz", "rt"],
+      "additionalProperties": false,
+      "properties": { "mz": { "type": "number" }, "rt": { "type": "number", "description": "min" } }
+    }
+  }
+}

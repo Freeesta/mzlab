@@ -11,6 +11,9 @@ use mzlab_feat::recipe::Recipe;
 /// Key of the notice for unit-resolution data that are mostly profile scans; its parameters are `profile` and `scans`.
 pub const PROFILE_UNIT: &str = "warn.features.profileUnit";
 
+/// Key of the note that says the profile scans of a unit-resolution file were centroided before detection (`centroid` of `features.detect`); same parameters.
+pub const CENTROIDED: &str = "note.features.centroided";
+
 /// A notice: a lang key and its whole-number parameters, in the order the text names them.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notice {
@@ -35,7 +38,7 @@ pub struct Note {
 /// The notices of `profile` profile scans among `scans` MS1 scans at unit resolution: the file counts as profile from half of its MS1 scans, the share
 /// at which the recipe itself takes a per-point floor.
 pub fn notices_of(profile: usize, scans: usize) -> Vec<Notice> {
-    if scans > 0 && 2 * profile >= scans {
+    if mzlab_feat::lrscreen::is_profile(profile, scans) {
         vec![Notice {
             key: PROFILE_UNIT,
             params: vec![("profile", profile), ("scans", scans)],
@@ -43,6 +46,14 @@ pub fn notices_of(profile: usize, scans: usize) -> Vec<Notice> {
     } else {
         Vec::new()
     }
+}
+
+/// The warning of profile scans becomes the note that they were centroided when the recipe centroids this file; with `centroid` off the warning stays.
+fn screened<R: ReadAt>(mut n: Vec<Notice>, recipe: &Recipe, index: &Index<R>) -> Vec<Notice> {
+    if mzlab_feat::lrscreen::centroid_wanted(index, recipe) {
+        n.iter_mut().for_each(|x| x.key = CENTROIDED);
+    }
+    n
 }
 
 /// The note of the file `index` measured with `recipe`.
@@ -58,7 +69,7 @@ pub fn note_of<R: ReadAt>(recipe: &Recipe, index: &Index<R>) -> Note {
             min_height: d.min_height,
             profile,
             scans,
-            notices: notices_of(profile, scans),
+            notices: screened(notices_of(profile, scans), recipe, index),
         },
         MassAxis::Ppm => Note {
             unit: false,

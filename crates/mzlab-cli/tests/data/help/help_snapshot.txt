@@ -13,7 +13,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -120,7 +120,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -227,7 +227,7 @@ For scripts and agents: --json is accepted by every command (the data as JSON on
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -366,11 +366,16 @@ exit 0
 --- stdout
 mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
 
-usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
+usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --sample LIST      of a file with several samples (.wiff) only these, by id: 1,3,5 or 2-4, each one a member of the series (the others are
                      not read; an id the file does not have: exit 5); without it the first sample of such a file
+  --centroid MODE    unit resolution: auto (default) centroids a file that is mostly profile scans before detecting, on does it for every such file, off
+                     detects the profile points as they are; high-resolution files are never centroided here
+  --report PATH      features-report/1: per file the profile share, the centroiding, the m/z shift and the rows, the merged duplicate rows and every
+                     automatic choice with its reason; the CSV is the same with or without it
+  --dry-run          print features-plan/1 (members, unit/profile/centroid decision of each, recipe) and write nothing
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
   --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}

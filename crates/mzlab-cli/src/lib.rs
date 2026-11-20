@@ -39,6 +39,8 @@ mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
 #[cfg(test)]
+mod features_lr_tests;
+#[cfg(test)]
 mod flow_align_join_tests;
 mod flow_apply;
 mod flow_base;
@@ -227,10 +229,35 @@ pub fn features_of(
     params: &str,
     tmp: &Path,
 ) -> Result<String> {
+    features_full(files, labels, params, tmp).map(|(csv, _)| csv)
+}
+
+/// `features-plan/1` of the series (`features --dry-run`): the indexes are made in `tmp`, nothing is detected.
+pub fn features_plan_of(
+    files: &[PathBuf],
+    labels: &[String],
+    params: &str,
+    tmp: &Path,
+) -> Result<String> {
+    let idxs: Vec<PathBuf> = (0..files.len())
+        .map(|k| tmp.join(format!("{k}.mzidx")))
+        .collect();
+    let recipe = crate::par::index_only(files, labels, &idxs, params)?;
+    Ok(crate::par::features_report::plan_text(&recipe, &idxs, files, labels))
+}
+
+/// `features_of` and the `features-report/1` of the run (`--report`).
+pub fn features_full(
+    files: &[PathBuf],
+    labels: &[String],
+    params: &str,
+    tmp: &Path,
+) -> Result<(String, String)> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
     let (recipe, detected, weak) = crate::par::index_and_detect(files, labels, &idxs, params)?;
+    let rows: Vec<usize> = run::read_files(&detected)?.0.iter().map(|f| f.len()).collect();
     let mut series = crate::par::Series(detected, weak);
     let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());
@@ -255,7 +282,7 @@ pub fn features_of(
     list.raw("]}");
     let samples = samples_json(&list.0)?;
     let polarity = recipe.detect.polarity.map_or(1, i32::from);
-    table_file(
+    let csv = table_file(
         &mut mzlab_feat::store::Slice(&table),
         table.len() as u64,
         &samples,
@@ -263,7 +290,9 @@ pub fn features_of(
         &sha256_hex(&table),
         polarity,
         "full",
-    )
+    )?;
+    let report = crate::par::features_report::report_text(&recipe, &idxs, files, labels, &rows);
+    Ok((csv, report))
 }
 
 /// Why a run failed, in the words of `error/1`: the key the texts and docs know, its parameters and the hint.

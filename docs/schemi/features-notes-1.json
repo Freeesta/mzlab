@@ -36,7 +36,7 @@
         "required": ["key", "params"],
         "additionalProperties": false,
         "properties": {
-          "key": { "enum": ["warn.features.profileUnit"] },
+          "key": { "enum": ["warn.features.profileUnit", "note.features.centroided"] },
           "params": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
         }
       }

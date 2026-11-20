@@ -9,7 +9,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::detect_route::detect;
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
-use crate::gapfill::fill_file;
+use crate::lrscreen::centroids_of;
 #[cfg(not(target_family = "wasm"))]
 use crate::gapfill::{fill_apply, fill_find};
 use crate::pipeline::analyse_with;
@@ -33,11 +33,36 @@ pub fn analyse_file_with<R: ReadAt>(
     r: &Recipe,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
+    if let Some(mut c) = centroids_of(index, r)? {
+        return analyse_plain(&mut c.index, r, progress);
+    }
+    analyse_plain(index, r, progress)
+}
+
+fn analyse_plain<R: ReadAt>(
+    index: &mut Index<R>,
+    r: &Recipe,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<FileFeatures> {
     let (mut f, links) = analyse_with(index, &r.detect, &r.steps, progress)?;
     crate::prof::time("detect: families", || {
         analyse_families(index, &mut f, &links, &r.detect, &r.fam)
     })?;
     Ok(f)
+}
+
+/// The cells file `k` fills, found on its centroids when the recipe centroids it (the same view as the detection).
+fn find_screened<R: ReadAt>(
+    index: &mut Index<R>,
+    al: &Aligned,
+    k: usize,
+    map: Option<&RtMap>,
+    r: &Recipe,
+) -> Result<Vec<(usize, f64)>> {
+    if let Some(mut c) = centroids_of(index, r)? {
+        return fill_find(&mut c.index, al, k, map, &r.detect, &r.fill);
+    }
+    fill_find(index, al, k, map, &r.detect, &r.fill)
 }
 
 /// The SHA-256 of the file an index was built from (empty when the index does not carry it).
@@ -54,6 +79,13 @@ pub fn source_sha256<R: ReadAt>(index: &Index<R>) -> String {
 /// not an isotopologue. What a file contributes to the weak tier before the strong peaks of its own table take their share (`unheld`); the step that
 /// detects the file stores it (`weakfile`) so that the alignment does not detect the file again.
 pub fn weak_candidates<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<FileFeatures> {
+    if let Some(mut c) = centroids_of(index, r)? {
+        return weak_plain(&mut c.index, r);
+    }
+    weak_plain(index, r)
+}
+
+fn weak_plain<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<FileFeatures> {
     let p = Params {
         min_height: r.detect.min_height * WEAK_RATIO,
         ..r.detect.clone()
@@ -165,6 +197,12 @@ pub fn align_and_fill<R: ReadAt>(
 
 /// The rows of the aligned table of `files`: the join of mzmine when the recipe chooses it (one row per ion whatever the mode), else the groups of the mode.
 pub(crate) fn align_rows(files: &[&FileFeatures], r: &Recipe) -> Result<Aligned> {
+    let shifted = crate::lrscreen_recenter::recentred(files, r)?;
+    let files: Vec<&FileFeatures> = match &shifted {
+        Some(v) => v.iter().collect(),
+        None => files.to_vec(),
+    };
+    let files = files.as_slice();
     if let Some(j) = &r.join {
         return join_table(files, r, j);
     }
@@ -265,7 +303,7 @@ fn fill_threads<R: ReadAt>(
     {
         let al: &Aligned = table;
         let find = |k: usize| {
-            open(k).and_then(|mut ix| fill_find(&mut ix, al, k, map, &r.detect, &r.fill))
+            open(k).and_then(|mut ix| find_screened(&mut ix, al, k, map, r))
         };
         if workers > 1 && n > 1 {
             let next = std::sync::atomic::AtomicUsize::new(0);
@@ -351,6 +389,7 @@ pub(crate) fn finish<R: ReadAt>(
         #[cfg(not(target_family = "wasm"))]
         if let Some(po) = par_open {
             let filled = fill_threads(&mut table, n, map, r, po, prog)?;
+            crate::lrscreen_dedup::merge(&mut table, r);
             table.sort_rows();
             return Ok((table, filled));
         }
@@ -359,10 +398,12 @@ pub(crate) fn finish<R: ReadAt>(
                 Some(po) => po(k)?,
                 None => open(k)?,
             };
-            filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
+            let found = find_screened(&mut index, &table, k, map, r)?;
+            filled += fill_apply(&mut table, k, &found);
             prog.tick(1);
         }
     }
+    crate::lrscreen_dedup::merge(&mut table, r);
     table.sort_rows();
     Ok((table, filled))
 }

@@ -38,6 +38,8 @@ embed!(
     "evid-1.json",
     "feature_pipeline-1.json",
     "features-notes-1.json",
+    "features-plan-1.json",
+    "features-report-1.json",
     "file_info-1.json",
     "filtri-1.json",
     "flowcheck-1.json",

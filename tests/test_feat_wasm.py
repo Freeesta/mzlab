@@ -1,6 +1,7 @@
 """The pipeline of mzFinder in WebAssembly (crates/mzlab-feat-wasm) gives the same bytes as the native engine: the `.mzfeatf` of every file, the `.mzfeat` of the
 series and the one with the graph of the proofs have the same SHA-256 whether the example `native` or the `.wasm` (through Node) makes them. The series is the
 synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+import json
 import re
 import shutil
 import subprocess
@@ -8,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
-from cargo_util import build
+from cargo_util import build, cli
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -312,3 +313,59 @@ def test_fewer_sizes_than_files_is_an_error_and_not_a_trap(built_sizes):
     idx, pkg = built_sizes
     out = run("node", str(ROOT / "tests" / "feat_wasm_sizes_node.js"), str(pkg), str(ROOT / "TP_Mine/data/regole_tp_2.json"), *idx)
     assert out.splitlines() == ["ok align_untargeted_to", "ok align_untargeted_to afterwards", "ok build_evidence_to", "ok build_evidence_to afterwards"], out
+
+
+@pytest.fixture(scope="module")
+def lr_drift(built):
+    """The 8-sample unit-resolution drift series of tools/lr_synthetic.py (profile and centroid mzML), indexed by the CLI: the paths of the `.mzidx` of each."""
+    root, _, _ = built
+    cache, out = root / "lr_cache", {}
+    for mode in ("profile", "centroid"):
+        d = root / f"lr_{mode}"
+        run("python3", "tools/lr_synthetic.py", str(d), "--drift-series", mode)
+        files = sorted(str(p) for p in d.glob("drift-s*.mzML"))
+        listed = json.loads(cli("--cache", str(cache), "file", "index", *files).stdout)["files"]
+        out[mode] = [str(cache / f["key"]) for f in listed]
+        assert len(out[mode]) == 8
+    return out
+
+
+OFF = '{"centroid": "off", "recenter": "off", "dedup": "off"}'
+
+
+def plain(root, idx, pkg, name, recipe):
+    """The native example and the .wasm on `idx` with no hypotheses: (native dir, wasm dir), the printed SHA-256 lines already compared."""
+    nat_dir, wasm_dir = root / f"{name}_nat", root / f"{name}_wasm"
+    nat_dir.mkdir(exist_ok=True)
+    wasm_dir.mkdir(exist_ok=True)
+    nat = run("target/release/examples/native", str(nat_dir), *idx, "--recipe", recipe)
+    got = run("node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg), str(wasm_dir), *idx, "--recipe", recipe)
+    assert got == nat
+    return nat_dir, wasm_dir
+
+
+@pytest.mark.parametrize("mode", ["profile", "centroid"])
+@pytest.mark.parametrize("recipe,tag", [("", "auto"), (OFF, "off")])
+def test_the_unit_resolution_screen_gives_the_same_bytes_native_and_in_node(built, lr_drift, mode, recipe, tag):
+    """`centroid`, `recenter` and `dedup` (unit resolution: profile scans centroided before detection, the m/z drift of each file measured and removed,
+    the duplicate rows merged) act in the .wasm as natively: every `.mzfeatf` and the `series.mzfeat` have the same bytes, with the defaults and with the
+    three switches off."""
+    root, _, pkg = built
+    nat_dir, wasm_dir = plain(root, lr_drift[mode], pkg, f"lr_{mode}_{tag}", recipe)
+    names = sorted(p.name for p in nat_dir.iterdir())
+    assert "series.mzfeat" in names and len(names) == 9
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+
+
+def test_the_unit_resolution_switches_reach_the_node_module(built, lr_drift):
+    """On the profile series the defaults and the switches off write other tables in the .wasm too (the test above would pass on two modules that both
+    ignored the keys), and a centroid series has the file bytes it had before the switches."""
+    root, _, pkg = built
+    auto, _ = plain(root, lr_drift["profile"], pkg, "lr_sw_auto", "")
+    off, _ = plain(root, lr_drift["profile"], pkg, "lr_sw_off", OFF)
+    assert (auto / "series.mzfeat").read_bytes() != (off / "series.mzfeat").read_bytes()
+    c_auto, _ = plain(root, lr_drift["centroid"], pkg, "lr_c_auto", "")
+    c_off, _ = plain(root, lr_drift["centroid"], pkg, "lr_c_off", '{"centroid": "off"}')
+    for f in sorted(p.name for p in c_auto.iterdir() if p.suffix == ".mzfeatf"):
+        assert (c_auto / f).read_bytes() == (c_off / f).read_bytes(), f

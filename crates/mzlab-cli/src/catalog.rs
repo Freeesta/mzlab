@@ -24,6 +24,8 @@ const GLOBAL: &[(&str, &str)] = &[
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
     ("--notes", "features-notes/1 file"),
+    ("--report", "features-report/1 file"),
+    ("--centroid", "profile scans: auto, on, off"),
     ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),
