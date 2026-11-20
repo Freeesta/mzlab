@@ -83,7 +83,7 @@ fn scan_index(s: &mut Sample, at: &At, level: u8, chan: Option<&str>) -> Result<
         At::Nearest(rt) => {
             let mut q = vec![("rt", rt.to_string()), ("level", level.to_string())];
             if let Some(c) = chan {
-                q.push(("canale", c.into()));
+                q.push(("channel", c.into()));
             }
             let none = || {
                 Error::new("err.scan.unknown")
@@ -158,7 +158,7 @@ fn get_one(
         ],
     );
     if let Some(c) = chan {
-        pairs.push(("canale", c.into()));
+        pairs.push(("channel", c.into()));
     }
     let text = s
         .routes
@@ -273,7 +273,7 @@ fn list_rows(s: &mut Sample, level: Option<u8>, chan: Option<&str>) -> Result<Ve
     for l in levels {
         let mut q = vec![("level", l.to_string())];
         if let Some(c) = chan {
-            q.push(("canale", c.into()));
+            q.push(("channel", c.into()));
         }
         let text = s
             .routes

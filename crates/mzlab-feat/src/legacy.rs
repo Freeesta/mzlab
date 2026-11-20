@@ -1,6 +1,6 @@
 //! Compatibility layer of mzFinder: the JSON that the mzFinder API returns, computed in Rust. `classify` and `formula_info` are ports with
 //! parity to the former Python engine; `summary` and `detail` translate the series of the pipeline (L1-L9, evid/1, tp/1) into the
-//! rows and the detail that `TP_Mine/js/21_tpmine_hr.js` reads.
+//! rows and the detail that the former page read.
 
 pub mod dig;
 /// The old path of the MSn tree, in `crate::finder_base` like the rest of what the interpretation reads.

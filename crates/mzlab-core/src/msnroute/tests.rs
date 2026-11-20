@@ -19,7 +19,7 @@ fn sum_is_mean_times_n() {
             .unwrap()
             .unwrap();
         let sum = r
-            .with_opts(&Query::parse("modo=somma"), |r| {
+            .with_opts(&Query::parse("mode=sum"), |r| {
                 r.binned(n.level, 0.0, 1e9, None, 0.1, Some(&f))
             })
             .unwrap()
@@ -59,7 +59,7 @@ fn scanavg_sums_too() {
         .unwrap()
     };
     let q = format!("sids={}", sids.join(","));
-    let (mean, sum) = (ask(&q), ask(&format!("{q}&modo=somma")));
+    let (mean, sum) = (ask(&q), ask(&format!("{q}&mode=sum")));
     let n = sids.len() as f64;
     let ys = |v: &crate::json::Value| -> Vec<f64> {
         v.get("y")

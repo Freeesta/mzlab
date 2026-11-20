@@ -30,7 +30,7 @@ if not wasm.exists():
         print("  ", ("wasm", "FAIL site/static/wasm missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 
 D = Path(tempfile.mkdtemp(prefix="cartp_d_e2e_"))
-top = D / "lab"
+top = D / "lab"; top.mkdir()
 synth.write_full(top / "a.mzML", 5, seed=1)
 agilent_sintetico.write_old(top / "serie", "gcsynth.D", 60, gc=True)
 agilent_sintetico.write_old(top / "serie/cut", "incompleta.D", 60, gc=True)
@@ -46,14 +46,17 @@ PUT = """async ([path, b64]) => { let d = await (await navigator.storage.getDire
   for (const p of parts) d = await d.getDirectoryHandle(p, { create: true });
   const w = await (await d.getFileHandle(name, { create: true })).createWritable(); await w.write(Uint8Array.from(atob(b64), c => c.charCodeAt(0))); await w.close(); }"""
 def rows(pg): return pg.evaluate("Array.from(document.querySelectorAll('#cartbody .cprow .cpn')).map(e=>e.textContent)")
+def add_page(pg):
+    """Once a file is shown the work area is the panels and the folder list is not on screen: the «+» page (STATO.aggiunta) brings the list back, as the sidebar's add button does."""
+    pg.evaluate("STATO.aggiunta(true, 'test'); applyView()"); pg.wait_for_selector("#cartbody .cprow")
 def names(pg): return pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0].replace(/\.mzml$/i,''))")
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
+        b = p.chromium.launch(**({"executable_path": os.environ["MZLAB_CHROMIUM"]} if os.environ.get("MZLAB_CHROMIUM") else {}))
         def page(nopicker=False):
             c = b.new_context(viewport={"width": 1500, "height": 2000}); c.set_default_timeout(120000); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('nopicker','1');" if nopicker else "") + "}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');" + ("localStorage.setItem('nopicker','1');" if nopicker else "") + "}catch(_){}")
             pg.add_init_script(INIT)
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#cartpick", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             return pg
@@ -71,12 +74,12 @@ try:
             assert "has no AcqData" not in pg.inner_text("#up"), pg.inner_text("#up")
         step("a click on a .D row loads it as one file and the row turns «loaded»", load_d)
         def notice():
-            pg.click('.cprow:has-text("incompleta.D")')
+            add_page(pg); pg.click('.cprow:has-text("incompleta.D")')
             pg.wait_for_function("/has no AcqData/.test(document.querySelector('#up').innerText)", timeout=60000)
             t = pg.inner_text("#up"); assert "AcqData/Contents.xml (" in t and "GC.ini (" in t, t
         step("a .D without data.ms gets the notice that lists the files received", notice)
         def mzml():
-            pg.click('.cprow:has-text("a.mzML")')
+            add_page(pg); pg.click('.cprow:has-text("a.mzML")')
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
         step("the .mzML of the same folder loads beside it", mzml)
         pg2 = page(nopicker=True)

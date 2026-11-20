@@ -7,25 +7,33 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
-import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import "./disegno-storage.js";
+import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import { guardStorage } from "./disegno-storage.js"; import { watchLoad } from "./disegno-avvio.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { structureText } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
+import { mountImport } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = (/** @type {string} */ s) => document.querySelector(s);
 let AP = /** @type {any} */ (null);                       // clipboard and molecule selection for a finger (disegno-appunti.js), set when the editor is mounted
-let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined);
+let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined), reload = false, attempt = 0;
+let onReady = () => {}; const everReady = /** @type {Promise<void>} */ (new Promise(r => { onReady = r; }));   // the first good start, whatever attempt it was
 
-let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0;
+let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0, retried = false;
 function start() {
   if (starting) return starting;
   const fr = Q("#kframe");
-  starting = new Promise((resolve, reject) => {
-    const on = (/** @type {MessageEvent} */ e) => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); } };
+  const me = ++attempt;                                    // an older attempt never touches the timer or `starting` of a newer one
+  const p = starting = new Promise((resolve, reject) => {
+    let done = false, unwatch = () => {};
+    const end = () => { done = true; removeEventListener("message", on); fr.removeEventListener("load", loaded); unwatch(); if (me === attempt) clearTimeout(startTimeout); };
+    const ready = () => { end(); K = fr.contentWindow.ketcher; resolve(K); };
+    const on = (/** @type {MessageEvent} */ e) => { if (!done && e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") ready(); };
     addEventListener("message", on);
-    Q("#kload").hidden = false;
+    const fail = () => { if (done) return; end(); reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); };
+    const watch = () => { unwatch(); unwatch = watchLoad(fr, fail); };
+    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }, loaded = () => { watch(); early(); };
+    Q("#kload").hidden = false; Q("#kfail").hidden = true; dnote("");
     const dots = Q("#kld-dots");
     if (dots) {
       kldN = 0; [...dots.children].forEach(d => { d.style.visibility = "hidden"; });
@@ -36,45 +44,32 @@ function start() {
       }, 400);
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
-    if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
-    const early = () => { try { mountTablet(/** @type {Document} */ (fr.contentDocument)); } catch (_) { /* not ready */ } }; early(); fr.addEventListener("load", early, { once: true });   // before Ketcher focuses its clipboard textarea
+    if (reload) { reload = false; restored = false; /** @type {any} */ (window).MZLAB_KETCHER_READY = false; guardStorage(); fr.src = "static/vendor/ketcher/index.html"; }   // «Try again»: the frame is loaded anew
+    else if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
+    else queueMicrotask(watch);                            // started by first-paint.js: it may have failed already (looked at once `starting` holds this attempt)
+    early(); fr.addEventListener("load", loaded, { once: true });   // before Ketcher focuses its clipboard textarea
     // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
     clearTimeout(startTimeout);
-    startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
-    if (/** @type {any} */ (window).MZLAB_KETCHER_READY && fr.contentWindow.ketcher) { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); }
+    startTimeout = setTimeout(fail, 60000);
+    if (/** @type {any} */ (window).MZLAB_KETCHER_READY && fr.contentWindow.ketcher) ready();
   });
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
-  starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
-  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); Pulito.mount({ K: () => K, save: doExport }); await restore(); await Pulito.markSaved(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
+  p.finally(() => { clearInterval(kldTimer); }).catch(() => {});
+  const whole = starting = p.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); Pulito.mount({ K: () => K, save: doExport }); await restore(); await Pulito.markSaved(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); mountCut(fr); mountNew(/** @type {Document} */ (fr.contentDocument), k); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
-    if (doc && doc.body) {
-      doc.body.addEventListener("dragover", (/** @type {Event} */ e) => { e.preventDefault(); e.stopPropagation(); });
-      doc.body.addEventListener("drop", async (/** @type {DragEvent} */ e) => {
-        e.preventDefault(); e.stopPropagation();
-        const file = /** @type {DataTransfer} */ (e.dataTransfer).files[0];
-        let txt = "";
-        if (file) txt = await structureText(file);
-        else txt = /** @type {DataTransfer} */ (e.dataTransfer).getData("text/plain");
-        if (txt) {
-          try {
-            const before = await k.getKet();
-            await k.addFragment(txt);
-            if (await k.getKet() === before) dnote(file ? I18N.t("draw.import.unreadable", { name: file.name }) : I18N.t("draw.import.unsupported"));
-            else { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); }
-          } catch (err_) { const err = /** @type {Lanciato} */ (err_); dnote(I18N.t("draw.import.failed", { message: err.message })); }
-        }
-      });
-    }
+    if (doc && doc.body) mountImport(doc, k, { t: (key, p) => I18N.t(key, p), note: dnote, done: () => { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); } });
     
-    return k; });
-  starting.catch(e => { console.error(e); dnote(I18N.t("draw.error.ketcherNotStarted")); });   // never Ketcher's raw English: the cause stays in the console
-  starting.finally(() => FRAME.next(() => FRAME.next(() => { fr.classList.remove("kwait"); Q("#kload").hidden = true; }))).catch(() => {});
-  return starting;
+    onReady(); return k; });
+  // a failure before or after Ketcher is ready: the next start() is a new attempt on a frame loaded anew, so «Try again» always does something
+  whole.catch(e => { console.error(e); if (me !== attempt) return; K = null; starting = null; reload = true; Q("#kfail").hidden = false; if (retried) Q("#kfail-retry").focus(); retried = false; });   // never Ketcher's raw English: the cause stays in the console; the frame stays hidden under the notice
+  whole.then(() => FRAME.next(() => FRAME.next(() => fr.classList.remove("kwait"))), () => {});
+  whole.finally(() => FRAME.next(() => FRAME.next(() => { if (me === attempt) Q("#kload").hidden = true; }))).catch(() => {});
+  return whole;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
 /** @type {ReturnType<typeof mountBar> | null} */ let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
@@ -250,7 +245,7 @@ const TOOLS = [
   ["atoms", false, ["any-atom", "extended-table"]],
   ["bio", false, ["create-monomer", "polymer-toggler"]],
 ];
-const TKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.strumenti") : "qqq.disegno.strumenti"; // kept from the old name: renaming it would lose the users' data
+const TKEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.tools") : "qqq.draw.tools"; // kept from the old name: renaming it would lose the users' data
 function toolChoice() {
   const saved = lsObj(TKEY);
   return Object.fromEntries(TOOLS.map(([k, on]) => [k, k in saved ? !!saved[k] : on]));
@@ -751,12 +746,13 @@ Q("#ex-nobg").addEventListener("change", syncBg); syncBg(); freshName();
 Q("#ex-sdfopt").onclick = () => { const p = Q("#ex-sdfpop"), open = p.hidden; p.hidden = !open; Q("#ex-sdfopt").setAttribute("aria-expanded", String(open)); if (open) Q("#ex-ion").focus(); };
 Q("#ex-sdfpop").addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { Q("#ex-sdfpop").hidden = true; Q("#ex-sdfopt").setAttribute("aria-expanded", "false"); Q("#ex-sdfopt").focus(); } });
 Q("#ex-ion").addEventListener("change", () => { NB.drawIon = Q("#ex-ion").value === "none" ? "" : Q("#ex-ion").value; nbSave(); });
-Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
+Q("#kfail-retry").onclick = () => { retried = true; start().then(() => { retried = false; Q("#kframe").focus(); }, () => {}); };   // the button goes away with the notice: the focus moves to the editor, or back to the button of a new failure
+Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; try { await start(); } catch (_) { return; } /* a failed start has its own notice */ dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { start().catch(() => {}); await everReady; return true; } /* never rejects: it stays pending while the failure notice shows, until a start succeeds */, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -792,7 +788,7 @@ function labelMenu(/** @type {any} */ ev, /** @type {DrawStruct} */ d, /** @type
   ctxShow(m, fr0.left + ev.clientX, fr0.top + ev.clientY, 270, kbd);
 }
 // ------------------------------------------------------------------ side cards: hide / show (more room to draw), remembered in this browser
-const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.riquadri") : "qqq.disegno.riquadri";
+const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.boxes") : "qqq.draw.boxes";
 function sideApply(/** @type {boolean} */ hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
   const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide"); b.setAttribute("aria-label", Q("#side-toggle .tl").textContent);

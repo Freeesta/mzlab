@@ -1,4 +1,4 @@
-"""The `structure:` classes of tools/classes_structure.py: fixed rules on synthetic SMILES, and the catalogue (catalogo.csv) carrying exactly what they give,
+"""The `structure:` classes of tools/classes_structure.py: fixed rules on synthetic SMILES, and the catalogue (catalogue.csv) carrying exactly what they give,
 with every class tag from a closed vocabulary."""
 import csv
 import sys
@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from classes_structure import VOCABULARY, classes, parse  # noqa: E402
 
-CATALOGUE = ROOT / "mzlab" / "web" / "molecole" / "catalogo.csv"
+CATALOGUE = ROOT / "mzlab" / "web" / "molecules" / "catalogue.csv"
 
 
 @pytest.mark.parametrize("smiles,want", [

@@ -294,7 +294,7 @@ fn qtof_points_agree_with_their_records() {
     assert!(checked > 100, "{checked} scans checked");
 }
 
-/// The probe says `variante` for every LC/MS run (QqQ MRM, Q-TOF centroid and profile): the engine's reader cannot read their points.
+/// The probe says `variant` for every LC/MS run (QqQ MRM, Q-TOF centroid and profile): the engine's reader cannot read their points.
 #[test]
 fn probe_says_variant_for_every_lc_run() {
     let Some(root) = root() else {
@@ -304,7 +304,7 @@ fn probe_says_variant_for_every_lc_run() {
     for dir in runs(&root) {
         let label = name(&dir);
         let reasons = mzlab_lettori::reasons_together(&mut set_of(&dir));
-        assert!(reasons.contains(&"variante"), "{label}: {reasons:?}");
+        assert!(reasons.contains(&"variant"), "{label}: {reasons:?}");
     }
 }
 

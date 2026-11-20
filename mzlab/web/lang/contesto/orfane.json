@@ -36,5 +36,5 @@
   "tpmine.feat.degraded": "Tabui (pipeline) notice when memory is not enough for the evidence: the table is saved without evidence. {files} = number of files, {phase} = rejected phase, {stima_mb} = estimated memory in MB, {budget_mb} = budget in MB.",
   "bn.idn.loaded": "Outcome of loading files or a folder; {n} = libraries loaded, {m} = files ignored.",
   "canali.tip.time": "Line of a channel's tooltip with its time interval; {a} and {b} = start and end time in minutes.",
-  "meta.versioneNonVerificata": "Entry of method/1.warnings: format version not verified, read with the closest layout. {dove} = version, text from the reader."
+  "meta.versionUnverified": "Entry of method/1.warnings: format version not verified, read with the closest layout. {place} = version, text from the reader."
 }

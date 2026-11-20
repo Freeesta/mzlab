@@ -34,7 +34,7 @@ def test_data_file_is_versioned_and_has_two_profiles():
 
 def test_attributio_profile_carries_the_draft_values():
     t = run("console.log(JSON.stringify(L.thresholds('attributio')))")
-    assert t["coseno_min"] == 0.70 and t["ioni_comuni_min"] == 4 and t["precursore_ppm_max"] == 15.0 and t["margine_conflitto_coseno"] == 0.05
+    assert t["cosine_min"] == 0.70 and t["shared_ions_min"] == 4 and t["precursor_ppm_max"] == 15.0 and t["cosine_conflict_margin"] == 0.05
     assert run("console.log(JSON.stringify(L.data.profiles.attributio.cascade.map(x => x.basis)))")[:3] == ["reference standard", "spectral library", "diagnostic evidence"]
 
 
@@ -105,11 +105,11 @@ def test_decision_of_the_chemist():
 
 
 def test_thresholds_are_editable_stored_and_exported():
-    r = lv("""const out = [L.thresholds().entropia_min]; L.setThreshold('entropia_min', .9); out.push(L.thresholds().entropia_min);
+    r = lv("""const out = [L.thresholds().entropy_min]; L.setThreshold('entropy_min', .9); out.push(L.thresholds().entropy_min);
       out.push(L.assess({cands: [c(.85, 8, 2)], nScans: 3}).proposed);                             // with 0.90 an entropy of 0.85 is no longer 2a
-      out.push(L.setThreshold('inesistente', 1), L.setThreshold('picchi_min', -1));
-      const ex = L.exportState(); out.push(ex.formato, ex.profilo, ex.soglie.entropia_min);
-      L.reset(); out.push(L.thresholds().entropia_min); L.importState(ex); out.push(L.thresholds().entropia_min);
+      out.push(L.setThreshold('inesistente', 1), L.setThreshold('peaks_min', -1));
+      const ex = L.exportState(); out.push(ex.format, ex.profile, ex.thresholds.entropy_min);
+      L.reset(); out.push(L.thresholds().entropy_min); L.importState(ex); out.push(L.thresholds().entropy_min);
       return out""")
     assert r == [0.75, 0.9, "3a", False, False, "levels/1", "mzlab", 0.9, 0.75, 0.9]
 
@@ -157,7 +157,7 @@ def test_points_section_does_not_change_the_levels():
 def test_points_section_shape():
     p = run("console.log(JSON.stringify(L.data.profiles.mzlab.points))")
     assert p["version"] == 1 and set(p["proofs"]) == {"mass", "isotopes", "MS2", "fragments", "network", "kinetics", "controls", "RT", "frequency", "external"}
-    assert [g["points"] for g in p["proofs"]["mass"]["steps"]] == [2, 1] and p["proofs"]["MS2"]["steps"][0] == {"threshold": "entropia_min", "points": 3}
+    assert [g["points"] for g in p["proofs"]["mass"]["steps"]] == [2, 1] and p["proofs"]["MS2"]["steps"][0] == {"threshold": "entropy_min", "points": 3}
     assert p["proofs"]["kinetics"]["maximum"] == 0 and p["proofs"]["kinetics"]["maximum_if_weighted"] == 1           # K1: informative only
     thresholds = run("console.log(JSON.stringify(L.data.profiles.mzlab.thresholds))")
     keys = [g["threshold"] for r in p["proofs"].values() for g in r["steps"] if isinstance(g["threshold"], str)] + [r["requires"]["threshold"] for r in p["proofs"].values() if "requires" in r]

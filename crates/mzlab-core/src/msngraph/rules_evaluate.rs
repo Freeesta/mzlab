@@ -45,7 +45,7 @@ pub struct Applicata {
     pub refs: Vec<&'static str>,
 }
 
-/// The evaluation of one arc, in the order of `g.archi`.
+/// The evaluation of one arc, in the order of `g.edges`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct EdgeVal {
     pub rules: Vec<Applicata>,
@@ -169,7 +169,7 @@ pub(super) fn loss_vectors(
 }
 
 fn attivazioni(g: &Graph, i: usize) -> Vec<Activation> {
-    let mut v: Vec<Activation> = g.archi[i]
+    let mut v: Vec<Activation> = g.edges[i]
         .misure
         .iter()
         .map(|m| activation_type(&m.att))
@@ -220,7 +220,7 @@ fn applicata(c: &Cand, delta: f64) -> Applicata {
 
 /// The loss of the arc `i` matches the rule: the same formula when the arc has one, else the same mass within the tolerance.
 fn coincide(g: &Graph, i: usize, c: &Cand, toll: f64) -> bool {
-    let a = &g.archi[i];
+    let a = &g.edges[i];
     match &a.formula {
         Some((f, _)) => parse_formula(f).is_ok_and(|p| fmt(&p) == c.formula),
         None => (a.perdita - c.massa).abs() <= toll / 1000.0,
@@ -231,8 +231,8 @@ fn coincide(g: &Graph, i: usize, c: &Cand, toll: f64) -> bool {
 fn after(c: &Ctx, prev: Option<&[EdgeVal]>, i: usize, r: &Rule) -> bool {
     r.after.is_empty()
         || prev.is_some_and(|pv| {
-            c.g.archi.iter().enumerate().any(|(j, x)| {
-                x.a == c.g.archi[i].da
+            c.g.edges.iter().enumerate().any(|(j, x)| {
+                x.to == c.g.edges[i].from
                     && pv[j]
                         .rules
                         .iter()
@@ -243,9 +243,9 @@ fn after(c: &Ctx, prev: Option<&[EdgeVal]>, i: usize, r: &Rule) -> bool {
 
 fn score_edge(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
     let (g, glob) = (c.g, &c.t.globali);
-    let a = &g.archi[i];
+    let a = &g.edges[i];
     let att = attivazioni(g, i);
-    let root = g.radici.contains(&a.da);
+    let root = g.radici.contains(&a.from);
     let regole: Vec<Applicata> = applicabili(c, g.polarita, root, Tipo::Loss)
         .iter()
         .filter(|x| {
@@ -260,7 +260,7 @@ fn score_edge(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
         vec![]
     };
     let mut avvisi = vec![];
-    let from_even = g.nodes[a.da]
+    let from_even = g.nodes[a.from]
         .formula
         .as_ref()
         .and_then(|f| {
@@ -298,7 +298,7 @@ fn composte(c: &Ctx, i: usize, root: bool) -> Vec<(&'static str, &'static str)> 
     let mut v = vec![];
     for r1 in &firsts {
         for r2 in &seconds {
-            if (c.g.archi[i].perdita - r1.massa - r2.massa).abs() <= c.p.toll_mda / 1000.0 {
+            if (c.g.edges[i].perdita - r1.massa - r2.massa).abs() <= c.p.toll_mda / 1000.0 {
                 v.push((&r1.r.id[..], &r2.r.id[..]));
             }
         }
@@ -362,7 +362,7 @@ fn rule_ions(c: &Ctx) -> Vec<RuleIon> {
     v
 }
 
-/// The rules of the table on the graph; the arcs are in the order of `g.archi`.
+/// The rules of the table on the graph; the arcs are in the order of `g.edges`.
 pub fn valuta(g: &Graph, o: &Options, p: &RuleParams) -> Evaluation {
     evaluate_with(table(), g, o, p)
 }
@@ -383,41 +383,41 @@ pub(super) fn evaluate_with(
         attese: &o.attese,
     };
     // a second pass lets a rule that follows another (`after`) see the arcs the first one explained
-    let mut archi: Vec<EdgeVal> = (0..g.archi.len())
+    let mut arcs: Vec<EdgeVal> = (0..g.edges.len())
         .map(|i| score_edge(&c, i, None))
         .collect();
-    archi = (0..g.archi.len())
-        .map(|i| score_edge(&c, i, Some(&archi)))
+    arcs = (0..g.edges.len())
+        .map(|i| score_edge(&c, i, Some(&arcs)))
         .collect();
-    let forza = |i: usize| g.archi[i].misure.iter().map(|m| m.rel).fold(0.0, f64::max);
+    let forza = |i: usize| g.edges[i].misure.iter().map(|m| m.rel).fold(0.0, f64::max);
     let (mut whole, mut spiegata) = (0.0, 0.0);
     let mut spiegati = 0;
-    for (i, a) in archi.iter().enumerate() {
+    for (i, a) in arcs.iter().enumerate() {
         whole += forza(i);
         if !a.rules.is_empty() || !a.composta.is_empty() {
             spiegati += 1;
             spiegata += forza(i);
         }
     }
-    for (i, a) in archi.iter_mut().enumerate() {
+    for (i, a) in arcs.iter_mut().enumerate() {
         let node_threshold = |n: usize| {
             g.spettri.iter().any(|s| {
-                s.precursore == Some(g.archi[i].da)
+                s.precursore == Some(g.edges[i].from)
                     && activation_type(&s.att) == Activation::CidTrap
-                    && g.nodes[n].mz < p.cutoff_q / Q_LIMIT * g.nodes[g.archi[i].da].mz
+                    && g.nodes[n].mz < p.cutoff_q / Q_LIMIT * g.nodes[g.edges[i].from].mz
             })
         };
-        if node_threshold(g.archi[i].a) {
+        if node_threshold(g.edges[i].to) {
             a.warnings.push("warn.msngrafo.belowCutoff");
         }
     }
     Evaluation {
         addotto: add,
-        without_rule: archi.len() - spiegati,
+        without_rule: arcs.len() - spiegati,
         explained: spiegati,
         explained_intensity: if whole > 0.0 { spiegata / whole } else { 0.0 },
         ions: rule_ions(&c),
         non_osservabili: below_threshold(&c),
-        edges: archi,
+        edges: arcs,
     }
 }

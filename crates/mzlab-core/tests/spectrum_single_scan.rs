@@ -151,7 +151,7 @@ type ScanRow = (u8, f64, Option<f64>, String);
 /// (level, window, precursor, filter, sum).
 type Params = (u8, (f64, f64), Option<f64>, Option<String>, bool);
 
-/// What the file asks of the two functions: level, window, precursor, filter, and `modo=somma`.
+/// What the file asks of the two functions: level, window, precursor, filter, and `mode=sum`.
 fn params(q: &Query) -> Option<Params> {
     let (rt0, rt1) = (q.num("rt0").unwrap()?, q.num("rt1").unwrap()?);
     Some((
@@ -159,7 +159,7 @@ fn params(q: &Query) -> Option<Params> {
         (rt0.min(rt1), rt0.max(rt1)),
         q.num("precursor").unwrap(),
         q.some("filt").map(str::to_string),
-        q.get("modo") == Some("somma"),
+        q.get("mode") == Some("sum"),
     ))
 }
 
@@ -283,7 +283,7 @@ fn queries_of(scans: &[ScanRow]) -> Vec<String> {
         let p = prec.map_or(String::new(), |p| format!("&precursor={p}"));
         qs.push(format!("rt0={a}&rt1={b}&level={level}{p}"));
         qs.push(format!("rt0={b}&rt1={a}&level={level}{p}"));
-        qs.push(format!("rt0={a}&rt1={b}&level={level}{p}&modo=somma"));
+        qs.push(format!("rt0={a}&rt1={b}&level={level}{p}&mode=sum"));
         qs.push(format!(
             "rt0={a}&rt1={b}&level={level}&filt={}",
             filter
@@ -298,10 +298,7 @@ fn queries_of(scans: &[ScanRow]) -> Vec<String> {
         // two scans of the level, and the whole run
         if let Some((_, rt2, _, _)) = scans.iter().skip(i + 1).find(|s| s.0 == *level) {
             qs.push(format!("rt0={a}&rt1={}&level={level}", rt2 + 1e-6));
-            qs.push(format!(
-                "rt0={a}&rt1={}&level={level}&modo=somma",
-                rt2 + 1e-6
-            ));
+            qs.push(format!("rt0={a}&rt1={}&level={level}&mode=sum", rt2 + 1e-6));
         }
     }
     let last = scans.last().map_or(0.0, |s| s.1);

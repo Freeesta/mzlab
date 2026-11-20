@@ -111,12 +111,36 @@ fn indexed_end(ole: &crate::ole::Ole) -> u64 {
     table.iter().filter_map(end).max().unwrap_or(0)
 }
 
+/// `(id, start, end)` of every sample's section in a `.wiff.scan` of `scan_len` bytes, ascending by start: a section runs to the start of the next one, the last
+/// to `end_of_index`. A sample with no section (nothing acquired) gets an empty range at 0.
+fn section_ranges(ole: &crate::ole::Ole, scan_len: u64, end_of_index: u64) -> Vec<(u32, u64, u64)> {
+    let table = ole
+        .read(&format!("{}SampleIdxTable", super::SAMPLES))
+        .map(|t| super::idx::sections(&t))
+        .unwrap_or_default();
+    let mut starts: Vec<(u64, u32)> = table
+        .iter()
+        .map(|(id, at)| (at.map_or(0, |a| a.min(scan_len)), *id))
+        .collect();
+    crate::sortc::slice_ord(&mut starts);
+    let mut out = Vec::with_capacity(starts.len());
+    for (i, (at, id)) in starts.iter().enumerate() {
+        let none = table.iter().any(|(t, a)| t == id && a.is_none());
+        let next = starts.iter().skip(i + 1).map(|x| x.0).find(|n| n > at);
+        let end = next.unwrap_or_else(|| end_of_index.min(scan_len)).max(*at);
+        out.push((*id, *at, if none { *at } else { end }));
+    }
+    out
+}
+
 impl WiffReader {
     pub(super) fn listing_of(&self) -> Listing {
+        let end = indexed_end(&self.ole);
         let sections = self.parts.iter().map(|p| &p.w).collect::<Vec<_>>();
         Listing {
             bytes: self.ole.byte_len() + self.scan_len,
-            scan: Some((self.scan_len, indexed_end(&self.ole))),
+            scan: Some((self.scan_len, end)),
+            sections: section_ranges(&self.ole, self.scan_len, end),
             samples: sections
                 .iter()
                 .map(|w| summary(w, super::method_name::dam_of(&self.ole, w.sample)))

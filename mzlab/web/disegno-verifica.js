@@ -26,7 +26,7 @@ export function carica() {
     if ((await sha256(bytes)) !== e.sha256) throw new Error("sha");
     const mod = await import(new URL(e.js, base).href);
     await mod.default({ module_or_path: bytes });
-    if (mod.version() !== "molkit/1") throw new Error("molkit version");
+    if (mod.version() !== "molkit/2") throw new Error("molkit version");
     return mod;
   })();
   modulo.catch(() => { modulo = null; });
@@ -39,17 +39,38 @@ export async function ketcher() {
   return /** @type {any} */ (document.querySelector("#kframe")).contentWindow.ketcher;
 }
 
+/** The answer of the native engine (`feat/grafo`) to a request of `kind`: a failure throws the engine's error text. */
+async function rpc(/** @type {string} */ kind, /** @type {string} */ request) {
+  const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
+  const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind, request }) });
+  const x = await r.text();
+  if (r.status !== 200) throw x;
+  return x;
+}
+
 /** `check/1` (or, with kind `cip`, `cip/1`; with kind `hilite`, `highlight/1`) text of a request: the native engine in the app, the molkit .wasm on the site */
 export async function ask(/** @type {string} */ request, /** @type {"check" | "cip" | "hilite"} */ kind = "check") {
-  if (/** @type {any} */ (window).MZLAB_DESKTOP) {
-    const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
-    const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind, request }) });
-    const x = await r.text();
-    if (r.status !== 200) throw x;
-    return x;
-  }
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) return rpc(kind, request);
   const mod = await carica();
   return kind === "cip" ? mod.cip(request) : kind === "hilite" ? mod.hilite(request) : mod.check(request);
+}
+
+/** `open/1` of the bytes of a structure file: the text Ketcher reads and the changes made to it (`{fix: "charset", charset}`, `{fix: "replaced", count}` or `{fix: "empty", names: [..]}`), by the same engine function as `mzlab-cli mol open`.
+ * @returns {Promise<{ text: string, changes: { fix: string, charset?: string, count?: number, names?: string[] }[] }>} */
+export async function openFile(/** @type {Uint8Array} */ bytes) {
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return JSON.parse(await rpc("open", JSON.stringify({ data: btoa(bin) })));
+  }
+  return JSON.parse((await carica()).open_file(bytes));
+}
+
+/** Whether a file of this many bytes is read: `{limit}`, else the engine refuses (`error.open.tooBig`, with the size and the limit). Asked before the file is read, so a huge drop costs nothing.
+ * @returns {Promise<{ limit: number }>} */
+export async function openSize(/** @type {number} */ size) {
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) return JSON.parse(await rpc("open", JSON.stringify({ size })));
+  return JSON.parse((await carica()).open_size(size));
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */

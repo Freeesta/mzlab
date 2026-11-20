@@ -11,17 +11,17 @@ const ESP = (() => {
     { id: "infusion", ordine: 4, etichetta: I18N.t("inf.name"), didattica: "msn", spettri: true, vista: "tic-spettro", nodi: true },
   ];
   const voce = id => voci.find(v => v.id === id);
-  // What an experiment type of api/canali (kind.proposed) starts on: the kind of channel of the first trace (canali.js picks the channel of the file) and
+  // What an experiment type of api/channels (kind.proposed) starts on: the kind of channel of the first trace (canali.js picks the channel of the file) and
   // whether the XIC lens is proposed. A default, not a permission: a type never switches a tool off.
   const predefiniti = {
-    "lc-full": { canale: "tic", lente: true },
-    "lc-ms2-targeted": { canale: "ms2", lente: true },
-    "lc-dda": { canale: "ms1", lente: true },
-    "lc-mrm": { canale: "srm", lente: true },
-    "lc-sim": { canale: "sim", lente: true },
-    "msn-infusion": { canale: "profondo", lente: false },
-    "mixed": { canale: "tic", lente: true },
-    "uv-only": { canale: "uv", lente: true },
+    "lc-full": { channel: "tic", lente: true },
+    "lc-ms2-targeted": { channel: "ms2", lente: true },
+    "lc-dda": { channel: "ms1", lente: true },
+    "lc-mrm": { channel: "srm", lente: true },
+    "lc-sim": { channel: "sim", lente: true },
+    "msn-infusion": { channel: "profondo", lente: false },
+    "mixed": { channel: "tic", lente: true },
+    "uv-only": { channel: "uv", lente: true },
   };
   /** @param {string | null | undefined} tipo */
   const predefinito = tipo => predefiniti[tipo || ""] || predefiniti["lc-full"];
@@ -29,7 +29,7 @@ const ESP = (() => {
   // the channel a type starts on among the channels `v` of a file (`quant`: tells the SRM transition the student quantifies); null = the TIC
   /** @param {string} tipo @param {any[]} v @param {(x: any) => boolean} quant */
   const scegli = (tipo, v, quant) => {
-    const d = predefinito(tipo).canale, liv = n => v.find(x => x.family === "ms" && x.ms_level === n);
+    const d = predefinito(tipo).channel, liv = n => v.find(x => x.family === "ms" && x.ms_level === n);
     return d === "ms1" ? liv(1) : d === "ms2" ? liv(2) : d === "profondo" ? v.filter(x => x.family === "ms").sort((a, b) => b.ms_level - a.ms_level)[0]
       : d === "srm" ? v.find(x => x.family === "srm" && quant(x)) || v.find(x => x.family === "srm") : d === "uv" ? v.find(x => x.family === "uv") : d === "sim" ? v.find(x => x.family === "sim") || null : null;
   };

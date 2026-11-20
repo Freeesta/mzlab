@@ -28,11 +28,13 @@ embed!(
     "design_canonical-1.json",
     "design_check-1.json",
     "design_proposal-1.json",
+    "draw-1.json",
+    "draw_edit-1.json",
+    "draw-image-1.json",
     "elements-1.json",
     "error-1.json",
     "evalrun-1.json",
     "evid-1.json",
-    "explain-missing-1.json",
     "feature_pipeline-1.json",
     "file_info-1.json",
     "filtri-1.json",
@@ -78,6 +80,7 @@ embed!(
     "mzml-validation-1.json",
     "mzrun-2.json",
     "normative-build-1.json",
+    "open-1.json",
     "param-choices-1.json",
     "peak-auto-1.json",
     "param-proposal-1.json",
@@ -107,6 +110,7 @@ embed!(
     "trace-1.json",
     "uvband-1.json",
     "verify-1.json",
+    "version-1.json",
 );
 
 /// The name (`$id`) and the title of an embedded schema.

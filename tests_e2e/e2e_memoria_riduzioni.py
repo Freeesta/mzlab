@@ -54,7 +54,7 @@ def main():
         with sync_playwright() as p:
             b = p.chromium.launch()
             ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="en-US")
-            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg = ctx.new_page(); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); wait_for_js(pg, "window.qqReady === true"); ready(pg)
@@ -91,8 +91,7 @@ def main():
             step("the scan cache is limited in bytes, the newest stay", scan_cache)
 
             def pool_closes():
-                pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
-                pg.wait_for_function("document.querySelectorAll('#tp-files tr').length > 1", timeout=60000)
+                open_mzfinder(pg)
                 run_pipeline(pg)
                 assert pg.evaluate("PIPE.state.pool.workers") >= 1, "the pool should hold a worker right after the run"
                 # bounded poll of a state: the pool closes its workers once it has been idle for its delay (20 s)

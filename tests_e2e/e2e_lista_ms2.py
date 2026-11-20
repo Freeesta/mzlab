@@ -53,12 +53,12 @@ try:
         def labels():
             t = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.pr)')].map(x => [x.dataset.tip, x.querySelector('small').textContent])")
             ms2 = [x for x in t if x[0].startswith("MS2")]; full = [x for x in t if x[0].startswith("FullScan")]
-            assert ms2 and all("min" not in x[1] for x in ms2), t      # no time on a product-ion row
+            assert ms2 and all(re.fullmatch(r"\d+min", x[1]) for x in ms2), t      # a product-ion row has no time text of its own: only the compact muted tag («15min»), not the «15 min» of Full Scan rows
             assert full and all("min" in x[1] for x in full), t        # the time stays on Full Scan rows
             assert not any("." in x[0].split(" ")[0] for x in t), t   # no extension in a name
             r = pg.evaluate("(() => { const fs = [{ label: noExt('CBZ_t10.wiff') }, { label: noExt('CBZ_t10.mzML') }, { label: noExt('CBZ_t15.RAW · MS2') }]; uniqueLabels(fs); return fs.map(f => f.label); })()")
             assert r == ["CBZ_t10", "CBZ_t10 (2)", "CBZ_t15 · MS2"], r
-        step("names without extension and unique, time only on Full Scan rows", labels)
+        step("names without extension and unique, time text only on Full Scan rows, a compact tag on product-ion rows", labels)
         def phone():
             pg.set_viewport_size({"width": 390, "height": 800}); ready(pg)
             assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no horizontal overflow"

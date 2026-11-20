@@ -25,7 +25,7 @@ const TOURDOPO = (() => {
     b.id = "tour-later";
     b.setAttribute("role", "status");
     b.setAttribute("aria-live", "polite");
-    b.textContent = I18N.t("tour.invito.dopo");
+    b.textContent = I18N.t("tour.invite.later");
     document.body.appendChild(b);
     const g = gear.getBoundingClientRect();
     const w = b.offsetWidth;
@@ -63,13 +63,13 @@ const TOURINVITO = (() => {
     div.id = "tour-invito";
     div.setAttribute("role", "dialog");
     div.setAttribute("aria-modal", "false");
-    div.setAttribute("aria-label", I18N.t("tour.impost.titolo"));
+    div.setAttribute("aria-label", I18N.t("tour.settings.title"));
     div.style.cssText = "position:fixed;bottom:12px;left:12px;z-index:7000;width:260px;max-width:calc(100vw - 24px);background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:12px 14px;box-sizing:border-box;font:13px/1.4 system-ui,-apple-system,sans-serif";
     div.innerHTML = `
-      <p style="margin:0 0 10px;line-height:1.45">${I18N.t("tour.invito.testo")}</p>
+      <p style="margin:0 0 10px;line-height:1.45">${I18N.t("tour.invite.text")}</p>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button type="button" id="tour-inv-no" style="background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:5px;padding:4px 10px;cursor:pointer">${I18N.t("tour.invito.no")}</button>
-        <button type="button" id="tour-inv-si" style="background:var(--accent,#2b5c8a);color:#fff;border:1px solid var(--accent,#2b5c8a);border-radius:5px;padding:4px 12px;font-weight:500;cursor:pointer">${I18N.t("tour.invito.si")}</button>
+        <button type="button" id="tour-inv-no" style="background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:5px;padding:4px 10px;cursor:pointer">${I18N.t("tour.invite.no")}</button>
+        <button type="button" id="tour-inv-si" style="background:var(--accent,#2b5c8a);color:#fff;border:1px solid var(--accent,#2b5c8a);border-radius:5px;padding:4px 12px;font-weight:500;cursor:pointer">${I18N.t("tour.invite.yes")}</button>
       </div>
     `;
     document.body.appendChild(div); TOURDOPO.centra(div);
@@ -116,11 +116,11 @@ const TOURSCELTA = (() => {
     const T = (/** @type {string} */ k) => I18N.t(k);
     const esc = (/** @type {string} */ s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
     wrap.innerHTML = `<div id="tour-scelta-dlg" role="dialog" aria-modal="true" aria-labelledby="tour-scelta-ttl" aria-describedby="tour-scelta-txt" style="width:340px;max-width:100%;background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.3);padding:16px 18px;box-sizing:border-box;font:13px/1.45 system-ui,-apple-system,sans-serif">
-      <h3 id="tour-scelta-ttl" style="margin:0 0 6px;font-size:15px">${T("tour.scelta.titolo")}</h3>
-      <p id="tour-scelta-txt" style="margin:0 0 14px">${T("tour.scelta.testo")}</p>
+      <h3 id="tour-scelta-ttl" style="margin:0 0 6px;font-size:15px">${T("tour.choice.title")}</h3>
+      <p id="tour-scelta-txt" style="margin:0 0 14px">${T("tour.choice.text")}</p>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-        <button type="button" id="tour-sc-via" style="${bs}" title="${esc(T("tour.scelta.via.tip"))}">${T("tour.scelta.via")}</button>
-        <button type="button" id="tour-sc-resta" style="${bs};background:var(--accent,#2b5c8a);color:#fff;border-color:var(--accent,#2b5c8a);font-weight:500" title="${esc(T("tour.scelta.resta.tip"))}">${T("tour.scelta.resta")}</button>
+        <button type="button" id="tour-sc-via" style="${bs}" title="${esc(T("tour.choice.leave.tip"))}">${T("tour.choice.leave")}</button>
+        <button type="button" id="tour-sc-resta" style="${bs};background:var(--accent,#2b5c8a);color:#fff;border-color:var(--accent,#2b5c8a);font-weight:500" title="${esc(T("tour.choice.stay.tip"))}">${T("tour.choice.stay")}</button>
       </div></div>`;
     document.body.appendChild(wrap);
     const dlg = /** @type {HTMLElement} */ (wrap.querySelector("#tour-scelta-dlg"));

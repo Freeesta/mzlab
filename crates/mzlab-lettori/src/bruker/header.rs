@@ -94,7 +94,7 @@ impl BrukerHeader {
             .as_ref()
             .and_then(|(n, v)| obj(vec![("name", text(n)), ("version", s(v))]));
         let nondec = obj(vec![
-            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("key", Some(V::s("meta.notDecoded"))),
             (
                 "place",
                 text("TimsCalibration: 1/K0 of each scan (the spectra carry their scan range)"),
@@ -145,7 +145,7 @@ impl BrukerHeader {
         });
         out.extend(damaged.chain(uncal).filter_map(|d| {
             obj(vec![
-                ("key", Some(V::s("meta.danneggiato"))),
+                ("key", Some(V::s("meta.damaged"))),
                 ("place", text(&d)),
             ])
         }));
@@ -201,11 +201,11 @@ pub struct BrukerHeader {
     pub user: Option<String>,
     pub sample: Option<String>,
     pub tsf: bool,
-    /// Side tables found damaged (`Data::damaged`): named in `warnings` as `meta.danneggiato`.
+    /// Side tables found damaged (`Data::damaged`): named in `warnings` as `meta.damaged`.
     pub damaged: Vec<&'static str>,
-    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `warnings` as `meta.danneggiato`.
+    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `warnings` as `meta.damaged`.
     pub uncalibrated: usize,
-    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `warnings` as `meta.danneggiato`.
+    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `warnings` as `meta.damaged`.
     pub left_out: Vec<(String, usize, usize)>,
 }
 

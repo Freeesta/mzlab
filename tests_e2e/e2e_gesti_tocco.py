@@ -41,7 +41,7 @@ try:
             touch("touchEnd", []); frames(pg, 18); b2 = z(); assert b2[0][0] < a[0][0], ("two fingers move the map", a, b2)
         step("two fingers pinch and move the map", two_fingers)
         def double_tap():
-            for _ in range(2): touch("touchStart", [(cx, cy)]); frames(pg, 2); touch("touchEnd", []); frames(pg, 5)
+            for _ in range(2): touch("touchStart", [(cx, cy)]); touch("touchEnd", [])      # no waiting between the taps: the 350 ms window is wall-clock, a slow runner's frames would outlast it
             frames(pg, 18); assert z() == [None, None], z()
         step("double tap = whole view", double_tap)
         def long_press():

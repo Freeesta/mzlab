@@ -11,7 +11,7 @@ use mzlab_core::readers::{self, FileSet, Limits, Member};
 /// One folder per test: the tests run in parallel and the script rewrites its folder.
 fn reference(tag: &str) -> Option<PathBuf> {
     let out =
-        std::env::temp_dir().join(format!("mzlab_wiff_troncato_{}_{tag}", std::process::id()));
+        std::env::temp_dir().join(format!("mzlab_wiff_truncated_{}_{tag}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)

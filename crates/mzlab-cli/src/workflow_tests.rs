@@ -295,7 +295,7 @@ fn folder_triage_convert_validate() {
     let (a, b) = (src.join("a.mzXML"), src.join("b.cdf"));
     let out = d.join("mzml");
     let mut c = Chain::new();
-    // the folder listing shows the maker files the page would offer (`rotto.raw` is one; a.mzXML and b.cdf are named directly below)
+    // the folder listing shows the maker files the page would offer (`broken.raw` is one; a.mzXML and b.cdf are named directly below)
     let list = c.json(&["file", "list", s(&src), "--json"], "folder/1");
     assert_eq!(list.get("items").unwrap().arr().len(), 1);
     c.json(&["sample", "list", s(&a), s(&b), "--json"], "sample-list/1");

@@ -1,8 +1,8 @@
 """A scheduled-MRM .wiff with no Log (`programmati` of tools/wiff_riferimento.py, synthetic, no laboratory data) on the site: the `probe` of the `sciex` module says
-«variante», so shell.js hands the pair to the module, whose mzML is byte for byte the one `mzlab-cli file convert` writes (one TIC per experiment, the scheduled
+«variant», so shell.js hands the pair to the module, whose mzML is byte for byte the one `mzlab-cli file convert` writes (one TIC per experiment, the scheduled
 transitions without their skip markers, the generic instrument term: no Log names no model). The engine (mzlab-wasm, `build_mzidx_native`) refuses the sparse
 blocks (`err.file.wiff`, `sparse MRM block`) instead of reading the markers as intensities. `mrmrado` (tools/wiff_mrm_sparse.py) has sparse blocks but no `sMRM`
-stream in its method: the probe still says «variante» from the blocks themselves. Skipped without cargo, wasm-bindgen or node."""
+stream in its method: the probe still says «variant» from the blocks themselves. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -51,7 +51,7 @@ def module_and_cli(work, name):
 
 def test_the_probe_of_the_module_hands_the_pair_to_the_module(work):
     out = probe(work, "programmati")
-    assert "variante" in out["motivi"], out
+    assert "variant" in out["reasons"], out
 
 
 def test_the_mzml_of_the_module_is_the_one_of_the_cli(work):
@@ -69,7 +69,7 @@ def test_the_engine_refuses_the_sparse_blocks(work):
 
 def test_sparse_blocks_without_a_scheduled_method_go_to_the_module_too(work):
     out = probe(work, "mrmrado")
-    assert "variante" in out["motivi"], out
+    assert "variant" in out["reasons"], out
     mod, cli = module_and_cli(work, "mrmrado")
     assert mod == cli and cli.count(b'id="SRM SIC') == 136
     p = subprocess.run(["node", str(ROOT / "tests" / "mzidx_nativo_node.js"), str(work / "eng"), str(work / "eng-rado.mzidx"), "0", "mrmrado.wiff", *map(str, pair(work, "mrmrado"))],

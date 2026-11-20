@@ -9,7 +9,9 @@ use crate::molfile_stereo::{adjacency, parity};
 use crate::valence::shortfall;
 
 /// Elements whose hydrogens the reader computes (the others get none, whatever the file says).
-const ORGANIC: &[&str] = &["B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I"];
+const ORGANIC: &[&str] = &[
+    "B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I", "Si", "As", "Se",
+];
 /// V2000 counts are three digits.
 const V2000_MAX: usize = 999;
 /// V3000 lines are at most 80 characters; longer ones continue with `-`.
@@ -48,6 +50,24 @@ impl Mol {
         }
         s.push_str("M  END\n");
         s
+    }
+
+    /// The bonds as `to_molfile` writes them: begin atom (a wedge belongs to it), end atom, order and the stereo mark (0 none, 1 wedge up,
+    /// -1 hash down, 2 either), in the order of `self.bonds`.
+    pub fn written_bonds(&self) -> Vec<(u32, u32, u8, i8)> {
+        let marks = self.out_bonds(&self.xyz());
+        marks
+            .iter()
+            .map(|b| {
+                let m = match b.mark {
+                    Wedge::Up => 1,
+                    Wedge::Down => -1,
+                    Wedge::Either => 2,
+                    Wedge::None => 0,
+                };
+                (b.a as u32, b.b as u32, b.o, m)
+            })
+            .collect()
     }
 
     /// x, y, z of every atom (zeros without a coordinate layer).
@@ -160,6 +180,7 @@ impl Mol {
             atoms: Vec::new(),
             bonds: Vec::new(),
             collections: Vec::new(),
+            stated_h: Vec::new(),
         };
         for (i, a) in self.atoms.iter().enumerate() {
             d.atoms.push(DraftAtom {

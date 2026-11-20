@@ -228,27 +228,27 @@ pub fn estensioni() -> Vec<&'static str> {
     out
 }
 
-/// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variante"` when the file is of an instrument or a scan type the engine's reader
+/// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variant"` when the file is of an instrument or a scan type the engine's reader
 /// was not written for (SCIEX other than the 3200 QTRAP, scheduled MRM), in sample `c` or in any other sample: the page hands the whole pair to one reader.
-pub fn motivi(l: &mut dyn Reader, c: usize) -> Vec<&'static str> {
+pub fn reasons(l: &mut dyn Reader, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
     if srm::has_srm_scans(l, c) {
         m.push("srm");
     }
     #[cfg(feature = "sciex")]
     if l.variant(c) || (0..l.samples().len()).any(|k| k != c && l.variant(k)) {
-        m.push("variante");
+        m.push("variant");
     }
     m
 }
 
-/// Why the engine does not do for the dataset `fs` (before it is opened): `"variante"` when it is an Agilent `.D` of a variant the engine's reader cannot read the
+/// Why the engine does not do for the dataset `fs` (before it is opened): `"variant"` when it is an Agilent `.D` of a variant the engine's reader cannot read the
 /// points of (QqQ MRM, Q-TOF profile or time-of-flight spectra, compressed spectra), so that the page does not try the engine first.
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 pub fn reasons_together(fs: &mut FileSet) -> Vec<&'static str> {
     let mut m = Vec::new();
     if mzlab_core::agilent::reader::variant(fs) {
-        m.push("variante");
+        m.push("variant");
     }
     m
 }

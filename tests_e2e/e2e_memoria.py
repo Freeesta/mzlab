@@ -10,10 +10,10 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#mzlab-labels');return g?g.childNodes.length:-1})()"
-KEYS = ["mzlab.a11y", "mzlab.banco.info", "mzlab.barra.hr", "mzlab.barra.lato", "mzlab.barra.lr", "mzlab.bianco", "mzlab.comp", "mzlab.contaminanti",
-        "mzlab.contaminanti.esclusi", "mzlab.contaminanti.on", "mzlab.convopen", "mzlab.disegno.riquadri", "mzlab.disegno.strumenti", "mzlab.fair", "mzlab.flgrp",
-        "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
-        "mzlab.picchi", "mzlab.pool", "mzlab.prefs", "mzlab.profilo", "mzlab.qaqc", "mzlab.riferimento", "mzlab.tunit", "mzlab.unopen", "mzlab.upd.last", "mzlab-labels", "mzlab-theme"]
+KEYS = ["mzlab.a11y", "mzlab.bench.info", "mzlab.bar.hr", "mzlab.bar.side", "mzlab.bar.lr", "mzlab.blank", "mzlab.comp", "mzlab.contaminants",
+        "mzlab.contaminants.excluded", "mzlab.contaminants.on", "mzlab.convopen", "mzlab.draw.boxes", "mzlab.draw.tools", "mzlab.fair", "mzlab.flgrp",
+        "mzlab.lib.folder", "mzlab.lib.thresholds", "mzlab.lists.active", "mzlab.lr", "mzlab.map", "mzlab.pca",
+        "mzlab.peaks", "mzlab.pool", "mzlab.prefs", "mzlab.profile", "mzlab.qaqc", "mzlab.reference", "mzlab.tunit", "mzlab.unopen", "mzlab.upd.last", "mzlab-labels", "mzlab-theme"]
 BAD = ["{", "null", "[]", "123", '"x"', '{"a":1}', "[1,2,3]", "undefined", "x" * 5000]
 r = Run(port=8997, wd="/tmp/wd_memoria")
 try:
@@ -56,7 +56,7 @@ try:
         def two_tabs():
             pg.evaluate("fetch('api/notebook',{method:'POST',body:'{}'})")
             ctx = r.b.new_context(viewport={"width": 1440, "height": 900})
-            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
             a, q = ctx.new_page(), ctx.new_page()
             for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/draw"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             a.fill("#ex-name", "tab_a"); a.dispatch_event("#ex-name", "change"); a.wait_for_function("async()=>{const n=await (await fetch('api/notebook')).json();return n.drawName==='tab_a'}")

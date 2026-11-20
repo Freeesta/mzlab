@@ -4,6 +4,7 @@
 //! to flip the element in records whose other sites are given values and comparing canonical forms.
 
 use crate::model::{Cfg, Mol, Parity, Status, Stereo, StereoGroup};
+use crate::sortm::SortM;
 
 /// Number of random assignments of the other sites tried before a site is declared not stereogenic.
 const TRIES: usize = 64;
@@ -23,7 +24,7 @@ impl Mol {
                 out.push(c.site);
             }
         }
-        out.sort();
+        out.sortm();
         out
     }
 
@@ -81,7 +82,7 @@ impl Mol {
             adj[b.b as usize].push((b.a, b.o));
         }
         for list in &mut adj {
-            list.sort_unstable();
+            list.sortm();
         }
         adj
     }
@@ -271,7 +272,7 @@ fn lowest(adj: &[Vec<(u32, u8)>], x: u32, skip: u32) -> u32 {
 /// `None` = fewer than `need` different slots (cannot be a site); `Some(true)` = all slots differ.
 fn differ(slots: &[usize], need: usize) -> Option<bool> {
     let mut s = slots.to_vec();
-    s.sort_unstable();
+    s.sortm();
     s.dedup();
     (s.len() >= need).then_some(s.len() == slots.len())
 }
@@ -324,7 +325,7 @@ fn strained_n(adj: &[Vec<(u32, u8)>], n: usize) -> bool {
             }
         }
     }
-    sizes.sort_unstable();
+    sizes.sortm();
     sizes.len() == 3 && sizes[2] != sizes[0] + sizes[1] - 2
 }
 

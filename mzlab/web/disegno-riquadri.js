@@ -1,11 +1,11 @@
 // @ts-check
 // Draw's side cards fold one by one: the chevron button in each header (disclosure: aria-expanded, aria-controls) shows or hides the body.
-// Quick draw, Expected properties and Export canvas start open, the rest closed; the student's choice is kept in `qqq.disegno.schede`
+// Quick draw, Expected properties and Export canvas start open, the rest closed; the student's choice is kept in `qqq.draw.tabs`
 // (the inline script after the aside in index.html applies it before the first paint). A card whose tool gives a result opens itself.
 
 /** the cards that start open; every other card starts closed */
 export const OPEN = ["quick-card", "prop-card", "exp-card"];
-const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.schede") : "qqq.disegno.schede";
+const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("draw.tabs") : "qqq.draw.tabs";
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => I18N.t(k, p);
 const CHEV = '<svg class="rq-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>';
 

@@ -51,7 +51,7 @@ def cold(p, vw):
     r = Run(port=8874, wd="/tmp/wd_pannelli_stabili"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": 900}, locale="en-US", reduced_motion="no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.barra.lr','{\"open\":true}');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');localStorage.setItem('mzlab.bar.lr','{\"open\":true}');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined' && !!document.querySelector('#pick')")
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "E.files.length > 0")
     pg.click("text=Load data"); ready(pg)

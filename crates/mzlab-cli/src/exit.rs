@@ -40,6 +40,8 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.canali.unknown",
     "err.scan.unknown",
     "err.msn.node",
+    "err.mol.draw.not_found",
+    "err.mol.draw.not_found_bare",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
     "err.cli.schema.unknown",
@@ -71,6 +73,7 @@ const DATA_KEYS: &[&str] = &[
     "err.pda.none",
     "err.flow.cancelled",
     "err.run.data",
+    "err.run.internal",
     "err.llm.eval.loop",
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
@@ -88,6 +91,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.delta.neg",
         "error.grafo.tooBig",
         "error.grafo.element",
+        "err.mol.draw.element",
         "error.grafo.mixture",
         "error.grafo.ring",
         "error.grafo.mech.atom",
@@ -97,10 +101,12 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.grafo.cut.radical",
         "error.check.tooBig",
         "error.sdf.tooBig",
+        "error.open.tooBig",
         "error.sub.dbSize",
         "error.anal.abundance",
         "error.anal.empty",
         "error.hilite.query",
+        "err.mol.draw.tooBig",
     ];
     const CHEM_INPUT_KEYS: &[&str] = &[
         "error.label.request",
@@ -109,6 +115,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.check.molfile",
         "error.cip.request",
         "error.cip.molfile",
+        "error.open.request",
         "error.hilite.request",
         "error.hilite.molfile",
         "error.link.request",
@@ -119,6 +126,9 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.sub.db",
         "error.sub.column",
         "err.search.request",
+        "err.mol.draw.db",
+        "err.mol.draw.molfile",
+        "err.mol.draw.request",
     ];
     if CHEM_DATA_KEYS.contains(&key) {
         Some(DATA)
@@ -203,6 +213,7 @@ mod tests {
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
+        assert_eq!(code_of_key("err.run.internal"), DATA);
     }
 
     #[test]

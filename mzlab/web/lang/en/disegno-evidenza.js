@@ -21,8 +21,5 @@ I18N.add("en", {
   "draw.ev.col.label": "Label",
   "draw.ev.col.what": "Atom or bond",
   "draw.ev.col.where": "Where (element and number on the drawing)",
-  "draw.sub.ev.label": "the substructure searched",
-  "error.hilite.request": "The request of the evidence colours is not valid.",
-  "error.hilite.molfile": "The drawing cannot be read as a molfile.",
-  "error.hilite.query": "The evidence structure cannot be matched on the drawing: {detail}."
+  "draw.sub.ev.label": "the substructure searched"
 });

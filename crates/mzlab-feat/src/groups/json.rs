@@ -48,14 +48,14 @@ impl Fast for Out {
 }
 
 /// The text of `gruppi/1` for a table, the files and the options.
-pub fn gruppi_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<String> {
+pub fn groups_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<String> {
     Ok(to_json(&build(tb, cs, opts)?))
 }
 
 /// Builds the groups from the JSON input described in the module header and returns `gruppi/1`.
 pub fn run_json(input: &[u8]) -> Result<String> {
     let (tb, cs, opts) = parse_input(input)?;
-    gruppi_json(&tb, &cs, &opts)
+    groups_json(&tb, &cs, &opts)
 }
 
 /// Six decimals, cheaply (the ratios are for people; `Out::rounded` formats and parses).
@@ -261,14 +261,14 @@ pub fn to_json(g: &GroupsOut) -> String {
 // ---- input ----
 
 fn bad(name: &'static str, v: impl ToString) -> Error {
-    Error::new("error.gruppi.badOpts").with(name, v)
+    Error::new("error.groups.badOpts").with(name, v)
 }
 
 fn size(what: &str) -> Error {
-    Error::new("error.gruppi.sizeMismatch").with("what", what)
+    Error::new("error.groups.sizeMismatch").with("what", what)
 }
 
-/// Options from a JSON object; missing keys keep their default, wrong types are `error.gruppi.badOpts`.
+/// Options from a JSON object; missing keys keep their default, wrong types are `error.groups.badOpts`.
 fn parse_opts(v: &Value) -> Result<GroupOpts> {
     let mut o = GroupOpts::default();
     let num = |k: &'static str, into: &mut f64| -> Result<()> {

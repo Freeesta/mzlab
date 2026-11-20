@@ -152,7 +152,7 @@ def wasm_rows(run: dict, base: dict, api, fetch) -> list[dict]:
         margins = [100 * (1 - m["byte"] / m["tetto"]) for m in modules.values() if m.get("tetto")]
         out.append({"ts_utc": run["updated_at"], "tipo": "wasm", "k": name_art, "workflow": run["name"],
                     "moduli": {f: [m["byte"], m.get("tetto")] for f, m in modules.items()}, "byte_totali": sum(m["byte"] for m in modules.values()),
-                    "margine_min_pct": round(min(margins), 1) if margins else None, **base})
+                    "margin_min_pct": round(min(margins), 1) if margins else None, **base})
     return out
 
 
@@ -286,7 +286,7 @@ def tabelle(ev: list[dict], out=print) -> None:
                 out(f"  {r['python']}: xdist busy seconds per worker " + ", ".join(f"{k} {v:.0f}" for k, v in w.items()) + f" (spread {max(w.values()) - min(w.values()):.0f}s)")
     ws = [r for r in ev if r["tipo"] == "wasm"]
     if ws:
-        out(f"\n.wasm: total {ws[-1]['byte_totali'] / 1e6:.1f} MB, smallest margin to a cap {ws[-1]['margine_min_pct']}% (latest of {len(ws)} runs)")
+        out(f"\n.wasm: total {ws[-1]['byte_totali'] / 1e6:.1f} MB, smallest margin to a cap {ws[-1]['margin_min_pct']}% (latest of {len(ws)} runs)")
     an = [r for r in ev if r["tipo"] == "annullamento"]
     if an:
         out(f"\nCancelled runs: {len(an)}, runner minutes already spent {sum(r['minuti_runner'] for r in an):.0f}")

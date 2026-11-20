@@ -7,7 +7,8 @@
 use crate::codec::MolError;
 use crate::model::{Cfg, Mol, Parity, Status, Stereo};
 use crate::query::{AtomTest, BondTest, SubQuery};
-use std::collections::BTreeSet;
+use crate::sortm::SortM;
+use crate::sortm::SortedVec;
 
 /// Options of a search.
 #[derive(Clone, Copy, Debug)]
@@ -59,7 +60,7 @@ fn adjacency(m: &Mol) -> Vec<Vec<(usize, usize)>> {
         adj[b.a as usize].push((b.b as usize, k));
         adj[b.b as usize].push((b.a as usize, k));
     }
-    adj.iter_mut().for_each(|l| l.sort_unstable());
+    adj.iter_mut().for_each(|l| l.sortm());
     adj
 }
 
@@ -127,7 +128,7 @@ struct Search<'a> {
     plan: Plan,
     map: Vec<usize>,
     used: Vec<bool>,
-    found: BTreeSet<Vec<usize>>,
+    found: SortedVec<Vec<usize>, ()>,
     out: Vec<Vec<u32>>,
     steps: u64,
     opts: SubOptions,
@@ -220,11 +221,11 @@ impl Search<'_> {
 
     fn record(&mut self) {
         let mut set: Vec<usize> = self.plan.order.iter().map(|&q| self.map[q]).collect();
-        set.sort_unstable();
+        set.sortm();
         if self.found.contains(&set) || (self.opts.stereo && !self.stereo_ok()) {
             return;
         }
-        self.found.insert(set);
+        self.found.add(set);
         let row = (0..self.q.mol.atoms.len())
             .filter(|&i| self.plan.keep[i])
             .map(|i| self.map[i] as u32)
@@ -372,7 +373,7 @@ impl SubQuery {
             qadj,
             tadj,
             plan,
-            found: BTreeSet::new(),
+            found: SortedVec::new(),
             out: Vec::new(),
             steps: 0,
             opts: *opts,

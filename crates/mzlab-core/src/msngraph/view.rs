@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 const RULE: &str = "Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id";
 
 pub(super) struct EdgeD {
-    pub(super) da: usize,
+    pub(super) from: usize,
     pub(super) a: usize,
     pub(super) isolato: bool,
     /// The most intense measure of the arc, % of the base peak of its spectrum.
@@ -76,7 +76,7 @@ pub(super) fn read(v: &Value) -> Result<Data> {
             }
         }
         d.edges.push(EdgeD {
-            da: node("from")?,
+            from: node("from")?,
             a: node("to")?,
             isolato: a.get("isolation").and_then(|x| x.bool()).unwrap_or(false),
             rel,
@@ -89,7 +89,7 @@ pub(super) fn read(v: &Value) -> Result<Data> {
 /// The best entering arc of a node and what the path to it costs: (steps, smallest relative intensity on the path, isolated arcs).
 #[derive(Clone, Copy)]
 pub(super) struct Best {
-    pub(super) da: Option<usize>,
+    pub(super) from: Option<usize>,
     pub(super) steps: usize,
     pub(super) min_rel: Option<f64>,
     pub(super) isolati: usize,
@@ -102,7 +102,7 @@ fn better(x: &Best, y: &Best) -> bool {
         .cmp(&y.steps)
         .then(rel(y).total_cmp(&rel(x)))
         .then(y.isolati.cmp(&x.isolati))
-        .then(x.da.cmp(&y.da))
+        .then(x.from.cmp(&y.from))
         .is_lt()
 }
 
@@ -112,7 +112,7 @@ fn topologico(n: usize, edges: &[EdgeD]) -> Vec<usize> {
     let mut giu: Vec<Vec<usize>> = vec![vec![]; n];
     for a in edges {
         entranti[a.a] += 1;
-        giu[a.da].push(a.a);
+        giu[a.from].push(a.a);
     }
     let mut ready: Vec<usize> = (0..n).filter(|&i| entranti[i] == 0).collect();
     let mut out = vec![];
@@ -136,7 +136,7 @@ fn topologico(n: usize, edges: &[EdgeD]) -> Vec<usize> {
 pub(super) fn paths(d: &Data) -> Vec<Best> {
     let n = d.id.len();
     let root = Best {
-        da: None,
+        from: None,
         steps: 0,
         min_rel: None,
         isolati: 0,
@@ -150,12 +150,12 @@ pub(super) fn paths(d: &Data) -> Vec<Best> {
     for i in topologico(n, &d.edges) {
         let mut chosen: Option<Best> = None;
         for a in &su[i] {
-            if !done[a.da] {
+            if !done[a.from] {
                 continue;
             }
-            let p = best[a.da];
+            let p = best[a.from];
             let c = Best {
-                da: Some(a.da),
+                from: Some(a.from),
                 steps: p.steps + 1,
                 min_rel: Some(p.min_rel.map_or(a.rel, |m| m.min(a.rel))),
                 isolati: p.isolati + a.isolato as usize,
@@ -193,11 +193,11 @@ fn node_json(
 ) {
     let b = *b;
     let entranti: Vec<&EdgeD> = d.edges.iter().filter(|a| a.a == i).collect();
-    let mut da: Vec<usize> = entranti.iter().map(|a| a.da).collect();
-    crate::sortc::any_by(&mut da, |a, b| a.cmp(b));
-    da.dedup();
+    let mut from: Vec<usize> = entranti.iter().map(|a| a.from).collect();
+    crate::sortc::any_by(&mut from, |a, b| a.cmp(b));
+    from.dedup();
     let mut levels: Vec<u8> = entranti.iter().flat_map(|a| a.levels.clone()).collect();
-    if b.da.is_none() && d.level[i] == 1 {
+    if b.from.is_none() && d.level[i] == 1 {
         levels = vec![1];
     }
     crate::sortc::any_by(&mut levels, |a, b| a.cmp(b));
@@ -205,11 +205,11 @@ fn node_json(
     if levels.is_empty() {
         levels.push(d.level[i]);
     }
-    let rel = match b.da {
+    let rel = match b.from {
         Some(p) => d
             .edges
             .iter()
-            .find(|a| a.da == p && a.a == i)
+            .find(|a| a.from == p && a.a == i)
             .map(|a| a.rel),
         None => Some(d.rel_max[i]).filter(|r| *r > 0.0),
     };
@@ -224,13 +224,13 @@ fn node_json(
     o.raw(",\"rel_max\":");
     opt(o, Some(d.rel_max[i]));
     o.raw(",\"best\":{\"from\":");
-    id(o, d, b.da);
+    id(o, d, b.from);
     o.raw(",\"steps\":").int(b.steps as i64).raw(",\"cost\":[");
     o.int(b.steps as i64).raw(",");
     opt(o, b.min_rel);
     o.raw(",").int(b.isolati as i64).raw("]},\"incoming\":");
-    o.int(da.len() as i64).raw(",\"common\":");
-    o.raw(if da.len() >= 2 { "true" } else { "false" });
+    o.int(from.len() as i64).raw(",\"common\":");
+    o.raw(if from.len() >= 2 { "true" } else { "false" });
     o.raw(",\"tree\":{\"col\":")
         .int(pos.0 as i64)
         .raw(",\"row\":")
@@ -246,14 +246,14 @@ fn node_json(
 fn view(d: &Data) -> String {
     let n = d.id.len();
     let best = paths(d);
-    let pairs: Vec<(usize, usize)> = d.edges.iter().map(|a| (a.da, a.a)).collect();
+    let pairs: Vec<(usize, usize)> = d.edges.iter().map(|a| (a.from, a.a)).collect();
     let rete = Network {
         level: &d.level,
         mz: &d.mz,
         edges: &pairs,
     };
     let pos = tree(&rete);
-    let parent: Vec<Option<usize>> = best.iter().map(|b| b.da).collect();
+    let parent: Vec<Option<usize>> = best.iter().map(|b| b.from).collect();
     let steps: Vec<usize> = best.iter().map(|b| b.steps).collect();
     let rad = radiale(&parent, &steps, &d.mz);
     let mut order: Vec<usize> = (0..n).collect();
@@ -272,11 +272,11 @@ fn view(d: &Data) -> String {
     o.raw("],\"edges\":[");
     for (k, a) in d.edges.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw("{\"from\":");
-        id(&mut o, d, Some(a.da));
+        id(&mut o, d, Some(a.from));
         o.raw(",\"to\":");
         id(&mut o, d, Some(a.a));
         o.raw(",\"best\":");
-        o.raw(if best[a.a].da == Some(a.da) {
+        o.raw(if best[a.a].from == Some(a.from) {
             "true}"
         } else {
             "false}"

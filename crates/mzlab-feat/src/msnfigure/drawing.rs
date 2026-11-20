@@ -129,13 +129,13 @@ pub(super) fn edges_svg(sc: &Scena, d: &Layout, view: View, vis: &HashSet<&str>)
     let mut arcs: Vec<&Edge> = sc
         .edges
         .iter()
-        .filter(|a| vis.contains(a.da.as_str()) && vis.contains(a.a.as_str()))
+        .filter(|a| vis.contains(a.from.as_str()) && vis.contains(a.a.as_str()))
         .collect();
-    arcs.sortc_by_key(|a| sc.best.contains(&format!("{}>{}", a.da, a.a)));
+    arcs.sortc_by_key(|a| sc.best.contains(&format!("{}>{}", a.from, a.a)));
     let mut o = String::new();
     for a in arcs {
-        let (p, q) = (d.cells[&a.da], d.cells[&a.a]);
-        let best = sc.best.contains(&format!("{}>{}", a.da, a.a));
+        let (p, q) = (d.cells[&a.from], d.cells[&a.a]);
+        let best = sc.best.contains(&format!("{}>{}", a.from, a.a));
         let rel = a.measures.iter().map(|m| m.rel).fold(0.0f64, f64::max);
         let (stroke, width, dash) = if best {
             (
@@ -201,7 +201,7 @@ pub(super) fn edges_svg(sc: &Scena, d: &Layout, view: View, vis: &HashSet<&str>)
 
 pub(super) fn node_svg(sc: &Scena, i: &Ion, p: &Pos, b: &Box_, view: View, mol: &Mol_) -> String {
     let m = scatola(sc, i, p, view == View::Radial);
-    let root = p.da.is_none();
+    let root = p.from.is_none();
     let mut o = format!(
         "<g transform=\"translate({},{})\" role=\"img\" aria-label=\"{}\"><title>{}</title>",
         num(b.x),

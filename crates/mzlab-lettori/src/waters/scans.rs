@@ -94,7 +94,7 @@ impl WatersReader {
         self.bad = per.values().sum();
         for (n, x) in per {
             let a = format!("{}: function {n}: {x} damaged scans left out", self.c.name);
-            self.warnings.push(("meta.nonDecodificato".into(), a));
+            self.warnings.push(("meta.notDecoded".into(), a));
         }
         if let Some(s) = self.samples.first_mut() {
             s.scansioni = self.indice.len();

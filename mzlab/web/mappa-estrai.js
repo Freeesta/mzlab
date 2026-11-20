@@ -11,10 +11,8 @@
  * @typedef {{ area: number | null, height: number | null, rtMax: number | null, mzMax: number | null, nPts: number }} MapMeasure
  * @typedef {{ x: number, y: number, box: MapBox }} MapStart  where a drag began
  * @typedef {{ l?: boolean, r?: boolean, t?: boolean, b?: boolean, move?: boolean }} MapGrab  the edges (or the inside) of the box under the pointer
- * @typedef {{ key: string, label: string, thr: number, value?: number, from?: string, cmp?: string, unit?: string, note?: string }} MapFilter
- * @typedef {{ id: string | number, mz: number, rt: number, ppm?: number, rt0?: number, rt1?: number, filters?: MapFilter[] }} MapFeature  a feature found by mzFinder
  * @typedef {{ box: MapBox, gen: number, t: number, xic: (MapXic & { c: number, tol: number }) | null, spec: (MapSpec & { rt0: number, rt1: number, n: number }) | null, num: MapMeasure | null,
- *   win: MapBox | null, k?: number, fresh?: boolean }} MapEx  the state of the extraction (st(p).ex)
+ *   win: MapBox | null, k?: number }} MapEx  the state of the extraction (st(p).ex)
  */
 /** @param {string} k @param {Record<string, any>} [o] */
 const T = (k, o) => I18N.t(k, o);
@@ -114,11 +112,6 @@ async function load(/** @type {PannelloMappa} */ p) {
     const tr = (xj.traces || [])[0];
     s.xic = tr ? { rt: tr.rt, y: tr.y, c, tol } : null;
     const m = MAPPA.st(p);
-    // a feature was chosen: the RT window goes to the edges of its peak, then the plots are asked again
-    if (s.fresh && m.fq && tr) {
-      s.fresh = false; const ed = await autoEdges({ x: tr.rt, y: tr.y }, m.fq.rt); m.fedges = ed ? { rt0: ed[0], rt1: ed[1], auto: true } : null;
-      if (ed) { s.box.rt0 = ed[0]; s.box.rt1 = Math.max(ed[1], ed[0] + MIN_RT); clampBox(p, s.box); changed(p); return; }
-    }
     s.spec = { mz: sj.mz, y: sj.y, rt0: b.rt0, rt1: b.rt1, n: sj.n }; s.win = b; s.num = measure(s.xic, s.spec, b);
     MAPPA.redraw(p); table(p);
   } catch (e) { /* nothing to show: the plots keep their title */ }
@@ -218,70 +211,7 @@ function table(/** @type {PannelloMappa} */ p) {
     `<p class="mzex-f"><b>XIC(t)</b> = Σ ${T("mapex.f.xic")}<br><b>S(m/z)</b> = ${T("mapex.f.spec")}<br>${T("mapex.f.area")}</p>` +
     `<p class="mzex-b"><button type="button" data-ex="off">${T("mapex.close")}</button></p>`;
   box.querySelector('[data-ex="off"]').onclick = () => MAPPA.explain(p, false);
-  found(p, box); MAPPA.grow(p, "ex", Math.ceil(box.offsetHeight) + 4);
-}
-
-// ---------------------------------------------------------------- high resolution only: the features that mzFinder has already found (read-only, switched off at the start)
-// window.MAPFEAT.features(file) -> [{ id, mz, rt, ppm, rt0?, rt1?, filters?: [{ key, label, thr, value?, from?: "height", cmp?: ">=" | "<=", unit?, note? }] }] or null;
-// it is written by mzFinder from the result it already holds (TP_Mine/js/31_map_features.js): nothing is computed again in the engine.
-const feats = (/** @type {PannelloMappa} */ p) => { const f = p._a && p._a.f; try { return (window.MAPFEAT && f && window.HR && HR.isHr(f, f.lv || 1) ? MAPFEAT.features(f) : null) || []; } catch (e) { return []; } };
-export function featOverlay(/** @type {PannelloMappa} */ p, /** @type {CanvasRenderingContext2D} */ g) {
-  const a = p._a, s = MAPPA.st(p); if (!a) return; g.save();
-  for (const q of feats(p)) {
-    if (q.rt < a.x0 || q.rt > a.x1 || q.mz < a.y0 || q.mz > a.y1) continue;
-    const x = a.X(q.rt), y = a.Y(q.mz), sel = s.fsel === q.id;
-    g.beginPath(); g.arc(x, y, sel ? 7 : 4.5, 0, 2 * Math.PI); g.globalAlpha = .9; g.fillStyle = css("--panel"); g.fill(); g.globalAlpha = 1;
-    g.lineWidth = sel ? 2.4 : 1.4; g.strokeStyle = sel ? css("--accent") : css("--ink"); g.stroke();
-  }
-  g.restore();
-}
-function featAt(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y, tol = 9) {
-  const a = p._a; let best = null, bd = tol * tol;
-  for (const q of feats(p)) { const d = (a.X(q.rt) - x) ** 2 + (a.Y(q.mz) - y) ** 2; if (d <= bd) { bd = d; best = q; } }
-  return best;
-}
-export function featHover(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) {
-  const q = featAt(p, x, y); if (!q) return false; const v = MAPPA.valueAt(p, q.rt, q.mz);
-  if (p.rd) p.rd.textContent = T("mapfeat.read", { mz: q.mz.toFixed(dp(p)), rt: q.rt.toFixed(2), v: v == null ? "–" : fmt(v) }); p.cv.style.cursor = "pointer"; return true;
-}
-export function featClick(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) { const q = featAt(p, x, y, 11); if (!q) return false; selectFeat(p, q); return true; }
-export async function selectFeat(/** @type {PannelloMappa} */ p, /** @type {MapFeature} */ q) {
-  const m = MAPPA.st(p); m.fsel = q.id; m.fq = q; m.fedges = q.rt0 != null && q.rt1 != null ? { rt0: q.rt0, rt1: q.rt1, auto: false } : null;
-  if (!m.ex) await MAPPA.explain(p, true);
-  const s = ex(p); if (!s) return; const d = q.mz * (q.ppm ?? 5) * 1e-6, w = Math.max(0.15, 4 * scanStep()) / 2;
-  s.box = { mz0: q.mz - d, mz1: q.mz + d, rt0: m.fedges ? m.fedges.rt0 : q.rt - w, rt1: m.fedges ? m.fedges.rt1 : q.rt + w }; s.fresh = !m.fedges; clampBox(p, s.box); changed(p);
-}
-export function featClear(/** @type {PannelloMappa} */ p) { const m = MAPPA.st(p); m.fsel = null; m.fq = null; m.fedges = null; if (m.exBox) table(p); MAPPA.redraw(p); }
-// «How it was found»: window, peak with its edges, the filters with their thresholds
-function found(/** @type {PannelloMappa} */ p, /** @type {HTMLElement} */ box) {
-  const m = MAPPA.st(p), s = ex(p), q = m.fq; let el = box.querySelector(".mzex-found"); if (el) el.remove(); if (!q || !s) return;
-  const n = /** @type {Partial<MapMeasure>} */ (s.num || {}), d = dp(p), ppm = q.ppm ?? 5, dm = q.mz * ppm * 1e-6, ed = m.fedges;
-  const rows = (q.filters || []).map((/** @type {MapFilter} */ f) => {
-    const v = f.value != null ? f.value : f.from === "height" ? n.height : null, ok = v != null && (f.cmp === "<=" ? v <= f.thr : v >= f.thr);
-    return `<tr><th scope="row">${EH(f.label)}</th><td>${v == null ? "–" : fmt(v)}${f.unit ? " " + EH(f.unit) : ""}</td><td>${f.cmp === "<=" ? "≤" : "≥"} ${fmt(f.thr)}</td><td>${v == null ? EH(f.note || "–") : ok ? T("mapfeat.pass") : T("mapfeat.below")}</td></tr>`;
-  }).join("");
-  el = document.createElement("div"); el.className = "mzex-found"; el.setAttribute("role", "region"); el.setAttribute("aria-label", T("mapfeat.region"));
-  el.innerHTML = `<h4>${T("mapfeat.title", { id: EH(String(q.id)) })}</h4>` +
-    `<p>${T("mapfeat.win", { mz: q.mz.toFixed(d), ppm: ppm, a: (q.mz - dm).toFixed(d), b: (q.mz + dm).toFixed(d) })}</p>` +
-    `<canvas class="mzex-prof" aria-label="${T("mapfeat.prof.aria")}"></canvas>` +
-    `<p class="muted">${ed ? T(ed.auto ? "mapfeat.edges.auto" : "mapfeat.edges.rec", { a: ed.rt0.toFixed(3), b: ed.rt1.toFixed(3) }) : T("mapfeat.edges.none")}</p>` +
-    (rows ? `<table class="mzex-flt"><caption>${T("mapfeat.filters")}</caption><thead><tr><th scope="col">${T("mapfeat.f.name")}</th><th scope="col">${T("mapfeat.f.value")}</th><th scope="col">${T("mapfeat.f.thr")}</th><th scope="col"></th></tr></thead><tbody>${rows}</tbody></table>` : "") +
-    `<p class="muted">${T("mapfeat.note")}</p>`;
-  box.appendChild(el);
-  const c = el.querySelector("canvas"), t = s.xic;
-  FRAME.next(() => {
-    const { g, W, H } = MAPMARGINI.sized(c, devicePixelRatio), ml = 6, mb = 16, mt = 8;
-    if (!t || !t.rt.length) return;
-    const lo = Math.min(...[ed ? ed.rt0 : q.rt, q.rt]) - 0.3, hi = Math.max(...[ed ? ed.rt1 : q.rt, q.rt]) + 0.3, pts = []; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= lo && t.rt[i] <= hi) pts.push(i);
-    if (!pts.length) return; let ymax = Math.max(...pts.map(i => t.y[i])); const thr = (q.filters || []).filter((/** @type {MapFilter} */ f) => f.from === "height").map((/** @type {MapFilter} */ f) => f.thr); ymax = Math.max(ymax, ...thr) * 1.05;
-    const X = (/** @type {number} */ v) => ml + (v - lo) / (hi - lo) * (W - 2 * ml), Y = (/** @type {number} */ v) => H - mb - v / ymax * (H - mb - mt), ink = css("--ink"), ac = css("--accent"), mu = css("--muted");
-    if (ed) { g.globalAlpha = .35; g.fillStyle = ac; g.beginPath(); g.moveTo(X(ed.rt0), Y(0)); for (const i of pts) if (t.rt[i] >= ed.rt0 && t.rt[i] <= ed.rt1) g.lineTo(X(t.rt[i]), Y(t.y[i])); g.lineTo(X(ed.rt1), Y(0)); g.closePath(); g.fill(); g.globalAlpha = 1;
-      g.strokeStyle = ac; g.setLineDash([4, 3]); g.beginPath(); for (const v of [ed.rt0, ed.rt1]) { g.moveTo(X(v) + .5, mt); g.lineTo(X(v) + .5, H - mb); } g.stroke(); g.setLineDash([]); }
-    g.strokeStyle = ink; g.lineWidth = 1.3; g.beginPath(); pts.forEach((i, k) => k ? g.lineTo(X(t.rt[i]), Y(t.y[i])) : g.moveTo(X(t.rt[i]), Y(t.y[i]))); g.stroke(); g.lineWidth = 1;
-    g.strokeStyle = mu; g.setLineDash([2, 3]); for (const v of thr) { g.beginPath(); g.moveTo(ml, Y(v) + .5); g.lineTo(W - ml, Y(v) + .5); g.stroke(); } g.setLineDash([]);
-    g.strokeStyle = ink; g.beginPath(); g.moveTo(X(q.rt) + .5, mt); g.lineTo(X(q.rt) + .5, H - mb); g.stroke();
-    g.fillStyle = mu; g.font = fpx(10); g.textAlign = "left"; g.fillText(lo.toFixed(2), ml, H - 3); g.textAlign = "right"; g.fillText(hi.toFixed(2), W - ml, H - 3);
-  });
+  MAPPA.grow(p, "ex", Math.ceil(box.offsetHeight) + 4);
 }
 
 // ---------------------------------------------------------------- on and off

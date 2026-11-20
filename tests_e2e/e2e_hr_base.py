@@ -16,10 +16,10 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         # Test 1: Load HR files only
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML", D / "HR_rotto-t30.mzML"], 4000, 5)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML", D / "HR_broken-t30.mzML"], 4000, 5)
         def profiles():
             fl = {f[0]: f for f in pg.evaluate(FILES())}; print(sorted(fl))
-            ex, fu, br = fl["HR_DDA-Exploris-t30.mzML#MS1"], fl["HR_DDA-Fusion-t30.mzML#MS2"], fl["HR_rotto-t30.mzML#MS1"]
+            ex, fu, br = fl["HR_DDA-Exploris-t30.mzML#MS1"], fl["HR_DDA-Fusion-t30.mzML#MS2"], fl["HR_broken-t30.mzML#MS1"]
             assert ex[2] and ex[3] == "FTMS" and ex[4] == 4 and ex[5] and ex[7] == 4 and "Exploris" in ex[8] and ex[9] and ex[10], ex
             assert fu[2] and fu[3] == "FTMS" and (not fu[5]) and fu[6] == "ITMS" and fu[7] == 2 and "Fusion" in fu[8], fu
             assert br[2] and br[4] == 4 and br[11] is None, br                 # the broken file opens, with a profile, without error

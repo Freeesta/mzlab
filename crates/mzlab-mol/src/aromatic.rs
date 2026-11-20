@@ -3,6 +3,7 @@
 //! of the engines (`mzlab-feat::chem::grafo`) uses to keep the flag it always had from lower-case SMILES.
 
 use crate::model::Mol;
+use crate::sortm::SortM;
 
 impl Mol {
     /// For every entry of `bonds`: whether the bond belongs to an aromatic ring.
@@ -32,7 +33,7 @@ impl Mol {
                     continue;
                 }
                 let mut union: Vec<usize> = x.atoms.iter().chain(&y.atoms).copied().collect();
-                union.sort_unstable();
+                union.sortm();
                 union.dedup();
                 if huckel(g.electrons(&union)) {
                     // the bond the two rings share is aromatic only if a ring is aromatic alone
@@ -88,7 +89,7 @@ impl<'a> Graph<'a> {
                 continue;
             };
             let mut key = path.clone();
-            key.sort_unstable();
+            key.sortm();
             if out.iter().any(|r| r.atoms == key) {
                 continue;
             }
@@ -130,7 +131,7 @@ impl<'a> Graph<'a> {
                 out.push(k);
             }
         }
-        out.sort_unstable();
+        out.sortm();
         out
     }
 

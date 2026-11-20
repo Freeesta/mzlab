@@ -18,6 +18,23 @@ pub fn native_samples(
     Ok(mzlab_core::readers::list_samples(&mut *l))
 }
 
+/// The byte ranges of the members that the samples `text` (`1,3,5`, `2-4`) need, as `sample-select/1` with its plan (`readers::ranges`, the very bytes of `mzlab-cli sample select --ranges --json`): the
+/// page copies only these into OPFS. The container and the index are read, the data file never.
+#[wasm_bindgen]
+pub fn sample_ranges(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    text: &str,
+) -> Result<String, JsValue> {
+    let m = Members::new(names, sizes, read)?;
+    let wanted = mzlab_core::readers::selection::parse(text).map_err(|e| crate::error_json(&e))?;
+    let mut l = m.open_as(false, true)?;
+    let plan = mzlab_core::readers::ranges::plan(&l.listing(), &m.named(), &wanted)
+        .map_err(|e| crate::error_json(&e))?;
+    Ok(plan.json())
+}
+
 /// The ids `text` (`1,3,5`, `2-4`) selects among the `present` ids of a dataset, as `{"samples":[..]}` in the order of the file: what `--sample` of the
 /// CLI answers (`readers::selection`). An id the file does not have is an error naming the ids it has.
 #[wasm_bindgen]

@@ -26,7 +26,7 @@ pub(super) struct Meta {
     pub injection_ul: Option<f64>,
     pub method_file: Option<String>,
     pub fields: Vec<Field>,
-    /// The parts of the file that are not decoded (`meta.nonDecodificato`).
+    /// The parts of the file that are not decoded (`meta.notDecoded`).
     pub warnings: Vec<String>,
 }
 
@@ -325,7 +325,7 @@ pub(super) fn document(
     let experiments = experiments(d);
     let warnings = m.warnings.iter().filter_map(|location| {
         obj(vec![
-            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("key", Some(V::s("meta.notDecoded"))),
             ("place", text(location)),
         ])
     });

@@ -1,4 +1,4 @@
-//! Rules `R-pol-1` … `R-gap-1` of `docs/studi/assistente-dati/03-parametri.md` §5: polarity, m/z axis and tolerances, noise, peak width and points.
+//! Rules `R-pol-1` … `R-gap-1` of `docs/agenti/llm-params.md` (table of rules): polarity, m/z axis and tolerances, noise, peak width and points.
 //! One function per rule, each reading only the signals of `inspection/1` it names. Used by `params_rules::propose`.
 
 use mzlab_core::json::Value;

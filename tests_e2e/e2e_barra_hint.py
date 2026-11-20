@@ -1,4 +1,4 @@
-"""Hint under the toolbar: shown only the FIRST time the user hides the tools (mzlab.barra.hint, marked at once, so never again, also after a reload),
+"""Hint under the toolbar: shown only the FIRST time the user hides the tools (mzlab.bar.hint, marked at once, so never again, also after a reload),
 closes by itself after 10 s, with ×, Esc or the first tool opened; polite live region."""
 # covers: mzlab/web/barra.js, mzlab/web/suggerimenti.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -13,7 +13,7 @@ def load(pg):
 def fresh(p, tour_state=True, hint=None):
     r = Run(port=8872, wd="/tmp/wd_hint"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce"); pg = ctx.new_page()
-    init = "try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));" if tour_state else "") + (f"localStorage.setItem('mzlab.barra.hint','{hint}');" if hint else "") + "}catch(_){}"
+    init = "try{localStorage.setItem('mzlab.panels.side_by_side.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));" if tour_state else "") + (f"localStorage.setItem('mzlab.bar.hint','{hint}');" if hint else "") + "}catch(_){}"
     pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")
     return r, ctx, pg
 vis = lambda pg: pg.evaluate("(() => { const e = document.getElementById('bar-hint'); if (!e) return null; const b = e.getBoundingClientRect(), s = document.getElementById('stbar').getBoundingClientRect(); return {w: b.width, below: b.top >= s.bottom, live: e.getAttribute('aria-live'), role: e.getAttribute('role'), inside: b.right <= innerWidth && b.left >= 0}; })()")
@@ -23,11 +23,11 @@ with sync_playwright() as p:
         r, ctx, pg = fresh(p)
         try:
             load(pg); frames(pg, 5)
-            assert vis(pg) is None and pg.evaluate("localStorage.getItem('mzlab.barra.hint')") is None, "the hint must not appear at load"
+            assert vis(pg) is None and pg.evaluate("localStorage.getItem('mzlab.bar.hint')") is None, "the hint must not appear at load"
             shut(pg)
             v = vis(pg); assert v and v["w"] > 100 and v["below"] and v["inside"] and v["live"] == "polite" and v["role"] == "status", v
             assert pg.inner_text("#bar-hint").startswith("The tools are here")
-            assert pg.evaluate("localStorage.getItem('mzlab.barra.hint')") == "1", "marked as seen when shown"
+            assert pg.evaluate("localStorage.getItem('mzlab.bar.hint')") == "1", "marked as seen when shown"
             ar = pg.evaluate("(() => { const h = document.getElementById('bar-hint'), t = document.getElementById('sb-toggle').getBoundingClientRect(); const x = parseFloat(getComputedStyle(h).getPropertyValue('--ha')) + 5 + h.getBoundingClientRect().left; return [x, t.left, t.right]; })()")
             assert ar[1] - 2 <= ar[0] <= ar[2] + 2, ("the arrow does not point at the Panel button", ar)
             hold(pg, 8500); assert vis(pg), "still there before 10 s"

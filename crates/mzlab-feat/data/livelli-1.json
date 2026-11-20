@@ -17,16 +17,16 @@
   "mzlab": {
    "visible": true,
    "thresholds": {
-    "entropia_min": 0.75,
-    "picchi_min": 6,
-    "picchi_min_pochi": 3,
-    "precursore_ppm_max": 5,
-    "scansioni_min": 2,
-    "margine_min": 0.05,
-    "entropia_provvisorio": 0.6,
-    "analogo_mcos_min": 0.6,
+    "entropy_min": 0.75,
+    "peaks_min": 6,
+    "peaks_min_few": 3,
+    "precursor_ppm_max": 5,
+    "scans_min": 2,
+    "margin_min": 0.05,
+    "entropy_provisional": 0.6,
+    "analog_mcos_min": 0.6,
     "std_rt_max": 0.1,
-    "std_entropia_min": 0.8,
+    "std_entropy_min": 0.8,
     "std_ppm_max": 5
    },
    "gates": [
@@ -34,7 +34,7 @@
      "id": "prec",
      "field": "ppm",
      "op": "<=",
-     "threshold": "precursore_ppm_max",
+     "threshold": "precursor_ppm_max",
      "absolute": true,
      "unit": "ppm",
      "role": "source"
@@ -43,18 +43,18 @@
      "id": "score",
      "field": "ent",
      "op": ">=",
-     "threshold": "entropia_min",
+     "threshold": "entropy_min",
      "role": "source"
     },
     {
      "id": "shared",
      "field": "shared",
      "op": ">=",
-     "threshold": "picchi_min",
+     "threshold": "peaks_min",
      "reduced": {
       "if_field": "nlib",
       "less_than": 6,
-      "threshold": "picchi_min_pochi"
+      "threshold": "peaks_min_few"
      },
      "role": "source"
     },
@@ -62,14 +62,14 @@
      "id": "scans",
      "field": "nScans",
      "op": ">=",
-     "threshold": "scansioni_min",
+     "threshold": "scans_min",
      "role": "confirm"
     },
     {
      "id": "distinct",
      "field": "margin",
      "op": ">=",
-     "threshold": "margine_min",
+     "threshold": "margin_min",
      "role": "confirm"
     }
    ],
@@ -86,7 +86,7 @@
      "id": "stdscore",
      "field": "ent",
      "op": ">=",
-     "threshold": "std_entropia_min"
+     "threshold": "std_entropy_min"
     },
     {
      "id": "stdppm",
@@ -99,15 +99,15 @@
    ],
    "provisional": {
     "field": "ent",
-    "threshold": "entropia_provvisorio"
+    "threshold": "entropy_provisional"
    },
    "without_proofs": "5",
    "points": {
     "version": 1,
     "reference": "stepped points per proof after Alygizakis et al., TrAC 2023, as an explanation and never as a learned model: the total orders the candidates, the level stays the cascade above (2b and 1 only by the chemist). A proof 'against' earns no points and is never offset. Steps are listed best first; a string is the key of a threshold of 'soglie'.",
     "tolerances": {
-     "mass_ppm": "precursore_ppm_max",
-     "ms2_margin": "margine_min"
+     "mass_ppm": "precursor_ppm_max",
+     "ms2_margin": "margin_min"
     },
     "proofs": {
      "mass": {
@@ -143,15 +143,15 @@
       "op": ">=",
       "requires": {
        "op": ">=",
-       "threshold": "picchi_min"
+       "threshold": "peaks_min"
       },
       "steps": [
        {
-        "threshold": "entropia_min",
+        "threshold": "entropy_min",
         "points": 3
        },
        {
-        "threshold": "entropia_provvisorio",
+        "threshold": "entropy_provisional",
         "points": 1
        }
       ]
@@ -234,34 +234,34 @@
    "visible": false,
    "source": "attributio 1.12.0 (commit 2bde634), annotate.py: AnnotationSettings, LEVEL_BASIS_LABEL, level_reasons; only thresholds, rules and wording",
    "thresholds": {
-    "coseno_min": 0.7,
-    "ioni_comuni_min": 4,
-    "precursore_ppm_max": 15,
-    "margine_conflitto_coseno": 0.05,
+    "cosine_min": 0.7,
+    "shared_ions_min": 4,
+    "precursor_ppm_max": 15,
+    "cosine_conflict_margin": 0.05,
     "cosmic_min": 0.64,
-    "struttura_libreria_ppm_max": 20,
-    "rt_gruppo_tol_min": 0.2
+    "library_structure_ppm_max": 20,
+    "rt_group_tol_min": 0.2
    },
    "gates": [
     {
      "id": "score",
      "field": "cos",
      "op": ">=",
-     "threshold": "coseno_min",
+     "threshold": "cosine_min",
      "role": "source"
     },
     {
      "id": "shared",
      "field": "shared",
      "op": ">=",
-     "threshold": "ioni_comuni_min",
+     "threshold": "shared_ions_min",
      "role": "source"
     },
     {
      "id": "prec",
      "field": "ppm",
      "op": "<=",
-     "threshold": "precursore_ppm_max",
+     "threshold": "precursor_ppm_max",
      "absolute": true,
      "unit": "ppm",
      "role": "source"
@@ -270,7 +270,7 @@
      "id": "distinct",
      "field": "marginCos",
      "op": ">=",
-     "threshold": "margine_conflitto_coseno",
+     "threshold": "cosine_conflict_margin",
      "role": "confirm"
     }
    ],
@@ -286,7 +286,7 @@
     {
      "level": "2a",
      "basis": "spectral library",
-     "rule": "at least one valid EXPERIMENTAL library source (mzCloud, MassBank, MoNA): cosine >= coseno_min AND shared ions >= ioni_comuni_min AND precursor within precursore_ppm_max (beyond = analogue, never 2a)"
+     "rule": "at least one valid EXPERIMENTAL library source (mzCloud, MassBank, MoNA): cosine >= cosine_min AND shared ions >= shared_ions_min AND precursor within precursor_ppm_max (beyond = analogue, never 2a)"
     },
     {
      "level": "2b",
@@ -296,12 +296,12 @@
     {
      "level": "3a",
      "basis": "name conflict",
-     "rule": "valid sources that name different structures (first InChIKey block) and the best ahead by less than margine_conflitto_coseno"
+     "rule": "valid sources that name different structures (first InChIKey block) and the best ahead by less than cosine_conflict_margin"
     },
     {
      "level": "3a",
      "basis": "isomers not discriminated",
-     "rule": "the same library compound at two or more RT (beyond rt_gruppo_tol_min)"
+     "rule": "the same library compound at two or more RT (beyond rt_group_tol_min)"
     },
     {
      "level": "3a",
@@ -337,7 +337,7 @@
    "excluded_sources": [
     "propagated GNPS2 annotations (name starting with 'Candidate', or containing '(known structural isomers' or '(delta mass:'): never a source",
     "mzMine lipids with method = 'matchedlipid': not spectral matches",
-    "structure (SMILES/InChI/InChIKey/formula) of the mzMine library: used only if the formula explains the precursor of the entry within struttura_libreria_ppm_max with the declared adduct or a common one (known bug of mzMine exports: reused keys)"
+    "structure (SMILES/InChI/InChIKey/formula) of the mzMine library: used only if the formula explains the precursor of the entry within library_structure_ppm_max with the declared adduct or a common one (known bug of mzMine exports: reused keys)"
    ],
    "name_cleaning": {
     "prefixes": [
@@ -376,21 +376,21 @@
    "source": "unit resolution (triple quadrupole, nominal masses): never above 4 (an MS2 does not raise a level, decision D6 of Tabui), a nominal mass is a candidate and not an identification; 4 when the nominal formula alone explains the ion; 5 otherwise",
    "cap": "4",
    "thresholds": {
-    "entropia_min": 0.75,
-    "picchi_min": 6,
-    "picchi_min_pochi": 3,
-    "precursore_ppm_max": 350,
-    "scansioni_min": 2,
-    "margine_min": 0.05,
-    "entropia_provvisorio": 0.6,
-    "analogo_mcos_min": 0.6
+    "entropy_min": 0.75,
+    "peaks_min": 6,
+    "peaks_min_few": 3,
+    "precursor_ppm_max": 350,
+    "scans_min": 2,
+    "margin_min": 0.05,
+    "entropy_provisional": 0.6,
+    "analog_mcos_min": 0.6
    },
    "gates": [
     {
      "id": "prec",
      "field": "ppm",
      "op": "<=",
-     "threshold": "precursore_ppm_max",
+     "threshold": "precursor_ppm_max",
      "absolute": true,
      "unit": "mDa",
      "role": "source"
@@ -399,18 +399,18 @@
      "id": "score",
      "field": "ent",
      "op": ">=",
-     "threshold": "entropia_min",
+     "threshold": "entropy_min",
      "role": "source"
     },
     {
      "id": "shared",
      "field": "shared",
      "op": ">=",
-     "threshold": "picchi_min",
+     "threshold": "peaks_min",
      "reduced": {
       "if_field": "nlib",
       "less_than": 6,
-      "threshold": "picchi_min_pochi"
+      "threshold": "peaks_min_few"
      },
      "role": "source"
     },
@@ -418,21 +418,21 @@
      "id": "scans",
      "field": "nScans",
      "op": ">=",
-     "threshold": "scansioni_min",
+     "threshold": "scans_min",
      "role": "confirm"
     },
     {
      "id": "distinct",
      "field": "margin",
      "op": ">=",
-     "threshold": "margine_min",
+     "threshold": "margin_min",
      "role": "confirm"
     }
    ],
    "standard": [],
    "provisional": {
     "field": "ent",
-    "threshold": "entropia_provvisorio"
+    "threshold": "entropy_provisional"
    },
    "without_proofs": "5"
   }

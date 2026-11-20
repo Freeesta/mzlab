@@ -39,7 +39,7 @@
   /** the trace of the XIC for the chosen ion: the default one of xicDirect, or with the tolerance written by the student @param {any} p @param {Sel} sel */
   function traceFor(p, sel) {
     const t = traceFor0(p, sel), o = window.CANALI ? CANALI.xicGroup(p, specFile(p)) : null;      // the channel of the chromatogram the spectrum follows (canali.js)
-    if (o) t.canale = o;
+    if (o) t.channel = o;
     return t;
   }
   /** @param {any} p @param {Sel} sel */
@@ -284,7 +284,7 @@
   function lensArgs(p, m) {
     const f = specFile(p); if (!f || !lens.ok(p)) return null;
     const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
-    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel), canale: window.CANALI ? CANALI.idOf(f, tr.canale) : null };
+    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel), channel: window.CANALI ? CANALI.idOf(f, tr.channel) : null };
   }
   /** the lens was committed: the same path as a click on the peak with the button waiting @param {any} p @param {number} m */
   function commit(p, m) { choose(p, m, true); extract(p, false); }

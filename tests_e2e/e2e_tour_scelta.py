@@ -45,7 +45,7 @@ def to_the_end(pg):
 
 def settings(pg):
     """Every stored value but the tour's own marker and the bookkeeping of the saved session (a flag, the pending notebook write, the visit counter): what the tour must not change."""
-    return pg.evaluate("Object.fromEntries(Object.keys(localStorage).filter(k => !['mzlab.tour.lr', 'mzlab.sessione', 'mzlab.nbpending', 'mzlab.avvii'].includes(k)).sort().map(k => [k, localStorage.getItem(k)]))")
+    return pg.evaluate("Object.fromEntries(Object.keys(localStorage).filter(k => !['mzlab.tour.lr', 'mzlab.session', 'mzlab.nbpending', 'mzlab.launches'].includes(k)).sort().map(k => [k, localStorage.getItem(k)]))")
 
 
 def diff(a, b):

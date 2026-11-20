@@ -441,7 +441,7 @@ fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
     if no_log {
         warn.push(obj(vec![
-            ("key", Some(V::s("meta.mancante"))),
+            ("key", Some(V::s("meta.missing"))),
             ("place", Some(V::s("Log"))),
         ]));
     }

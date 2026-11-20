@@ -1,4 +1,4 @@
-//! The subagents as data: the prompt files are the exact ```text blocks of `docs/studi/assistente-dati/prompt/0N_*.md`, every role names an existing prompt
+//! The subagents as data: every role names an existing prompt
 //! and a model of the price table, and the files of `docs/schemi/` are valid JSON of the right `$id`.
 
 use std::path::PathBuf;
@@ -35,37 +35,6 @@ fn prompts() -> Prompts {
 
 fn builtin() -> Vec<Role> {
     roles(&data("assist-roles-1.json")).unwrap()
-}
-
-/// The first ```text block of a study prompt, the way `docs/studi` writes it.
-fn block(file: &str) -> String {
-    let s = std::fs::read_to_string(root().join("docs/studi/assistente-dati/prompt").join(file))
-        .unwrap();
-    let start = s.find("```text\n").expect("a text block") + 8;
-    let end = start + s[start..].find("\n```").expect("a closed block");
-    s[start..end].to_string()
-}
-
-#[test]
-fn the_prompt_files_are_the_blocks_of_the_study_byte_for_byte() {
-    let studies = std::fs::read_dir(root().join("docs/studi/assistente-dati/prompt")).unwrap();
-    let mut names: Vec<String> = studies
-        .map(|e| e.unwrap().file_name().into_string().unwrap())
-        .collect();
-    names.sort();
-    assert_eq!(files().len(), 8);
-    for (file, text) in files() {
-        let n = &file[..2];
-        let study = names
-            .iter()
-            .find(|s| s.starts_with(&format!("{n}_")))
-            .expect("a study file");
-        assert_eq!(
-            text,
-            format!("{}\n", block(study)),
-            "{file} differs from {study}"
-        );
-    }
 }
 
 #[test]

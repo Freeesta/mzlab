@@ -4,7 +4,7 @@ The files carry every case that the stages of mzmine treat differently: isolated
 with a hole of one zero, a long background trace with a peak on top, an isotope pair of charge 1 and one of charge 2, a retention-time drift between files (join),
 and a peak that one file lacks (gap filling: it is below the minimum height there but present in the raw data). Usage:
     python3 tools/bench/oro_mzmine.py --genera DIR        write the four mzML (they never go into the repository)
-    python3 tools/bench/oro_mzmine.py --oro [DIR]         run mzmine 3.9.0 and write the CSV and the LEGGIMI of `tests/data/untargeted/mzmine39/`
+    python3 tools/bench/oro_mzmine.py --oro [DIR]         run mzmine 3.9.0 and write the CSV and the README of `tests/data/untargeted/mzmine39/`
     python3 tools/bench/oro_mzmine.py --reale MZML_DIR DEST  ADAP lists of mzmine on the first two mzML of a folder (real-data test of the ADAP builder)"""
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def _replace(testo: str, dir_: Path) -> str:
 
 
 def write_gold(dest: Path) -> None:
-    """Runs mzmine 3.9.0 on the four files and writes the CSV of the stages and the LEGGIMI of provenance in `dest`."""
+    """Runs mzmine 3.9.0 on the four files and writes the CSV of the stages and the README of provenance in `dest`."""
     mm, jh = corri_mzmine.install_39()
     par = corri.parameters("mzmine", "predefinita")
     with tempfile.TemporaryDirectory() as t:
@@ -214,7 +214,7 @@ def write_gold(dest: Path) -> None:
             _write_csv(dest / nome, col, rows, chiave)
         java = subprocess.run([str(jh / "bin" / "java"), "-version"], capture_output=True, text=True).stderr.strip().splitlines()
         java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
-        (dest / "LEGGIMI.md").write_text(_readme(shas, [java[0], java[1]] if len(java) > 1 else java, _replace(xml_a.read_text(), t), _replace(xml_b.read_text(), t)), encoding="utf-8")
+        (dest / "README.md").write_text(_readme(shas, [java[0], java[1]] if len(java) > 1 else java, _replace(xml_a.read_text(), t), _replace(xml_b.read_text(), t)), encoding="utf-8")
 
 
 def write_real(folder: Path, dest: Path, quanti: int = 2) -> None:
