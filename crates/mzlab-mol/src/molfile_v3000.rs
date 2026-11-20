@@ -80,8 +80,10 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
             (Some("END"), _) => block = "",
             _ => match block {
                 "ATOM" => {
+                    // `atom` first: it refuses a line too short to have an index
+                    let a = atom(&t)?;
                     ids.insert(number(&t[0])?, atoms.len());
-                    atoms.push(atom(&t)?);
+                    atoms.push(a);
                 }
                 "BOND" => raw_bonds.push(t),
                 "COLLECTION" => collections.extend(collection(&t, &ids)?),
