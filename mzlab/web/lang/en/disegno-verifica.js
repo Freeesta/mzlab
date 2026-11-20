@@ -51,8 +51,5 @@ I18N.add("en", {
   "draw.check.queryBond.next": "Replace it with a plain bond of the order you mean.",
   "draw.check.pieces.what": "The drawing holds {n} separate structures.",
   "draw.check.pieces.why": "Formula and mass are computed for each structure on its own: a counter-ion drawn apart is not part of the other structure.",
-  "draw.check.pieces.next": "Nothing to fix if this is on purpose; join the pieces with a bond if they are one molecule.",
-  "error.check.request": "The request for the drawing check is not valid JSON with a molfile.",
-  "error.check.molfile": "The drawing could not be read as a molfile.",
-  "error.check.tooBig": "The drawing has more than {max} atoms: the check is for small molecules."
+  "draw.check.pieces.next": "Nothing to fix if this is on purpose; join the pieces with a bond if they are one molecule."
 });
