@@ -1,6 +1,6 @@
 //! Highlight lists of `mol draw` pictures: the JSON list or the compact text `0,1,0-1@red;5@blue` (atoms, bonds `a-b`, a colour name), checked
-//! against the structure (atoms below the atom count, bonds that exist, at most one item per atom and bond in all). Colours are pale halos by
-//! name.
+//! against the structure (atoms below the atom count, bonds that exist, at most one item per atom and per bond of the structure in all, duplicates counted). Colours are pale
+//! halos by name.
 
 use super::draw_svg::Rgb;
 use mzlab_core::error::{Error, Result};

@@ -115,6 +115,10 @@ fn everything_of_a_structure_can_be_highlighted_but_not_more_than_its_atoms_and_
         e.params
     );
     assert!(svg("c1ccccc1", &format!("{all};0@red")).is_err());
+    // valid atoms that are not bonded (0 and 3 of benzene) are refused as a bond
+    let e = svg("c1ccccc1", "0-3").unwrap_err();
+    assert_eq!(e.key, "err.mol.draw.set");
+    assert!(e.params.iter().any(|(_, v)| v == "bond"), "{:?}", e.params);
 }
 
 #[test]
