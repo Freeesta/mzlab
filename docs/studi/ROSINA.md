@@ -20,12 +20,18 @@ mzLab reads, on any computer, the files of every vendor, either natively or as a
 - Vendor SDKs (RawFileReader via ThermoRawFileParser, `timsdata`, MassLynx SDK, msconvert) are used only as oracles, as end users on Mac/Windows; nothing from an SDK enters the repo, the site or the desktop app. Save the accepted licence before each oracle and check that comparison use is allowed.
 - Redistribution follows the licence: CC0, CC-BY, MIT, Apache with attribution; CC-BY-SA, CC-BY-NC, EBI terms of use and files without a licence stay private. Clinical files carry personal data: only accessions and numbers appear in this repo.
 
-## Data policy
+## D. Data policy
 - Real data live only in the private repo `Freeesta/mzlab-dati`, resolved by `tools/dati_percorsi.py`; never write paths by hand. Files over 90 MB stay outside git (listed in a manifest, fetched by `tools/rosina/scarica.py`, ceiling 20 GB on the Mac).
+- Private layout: native files in `dati/formati/<vendor>/<family>/<accession>_<experiment>/` with `references/<oracle>-<version>/` (the vendor's or authors' mzML, if <= 90 MB); truths in `scratchpad/rosina/verita/` with the same relative path (`<file>.verita.json`). Vendors: `thermo`, `sciex`, `agilent`, `waters`, `bruker`, `shimadzu`, `leco`, `open` (mzML, mzXML, mzData, imzML, netCDF with no known vendor). The instrument recorded is the one read in the file, not the one the deposit declares.
+- One index `INDICE.tsv` (writes `INDICE.md`): path, vendor, model in the file, format version, experiments (closed vocabulary), source, accession, DOI, licence, redistributable (`yes`/`no`/`to-check`), bytes, SHA-256, URL, reference (`none`, `authors`, `msconvert-<v>`, `trfp-<v>`), truth (`yes`/`no`), notes. Big files are listed in `GRANDI.tsv` and fetched by `tools/rosina/scarica.py` (resume, byte and checksum check, refuses to pass the ceiling); on the Mac they live outside git (ceiling 20 GB). Licence texts of every source and of the SDKs used as oracles sit in `dati/formati/_licenze/`.
 - The public repo gets only synthetic files and, after the maintainer's licence check, small CC0/CC-BY files (<= 2 MB each, <= 10 MB total) in `tests/formati/` with attributions and no personal or clinical names.
 
-## Protocol F
+## F. Test protocol
+
+### F.1 Truth file
 Truth file `verita/1`: one JSON per native file (one per sample in multi-sample containers) with the oracle name, version, options and date, counts, every scan, sample points, chromatograms and metadata. A new oracle adds a truth, never replaces one.
+
+### F.2 Test levels (every reader, every corpus file)
 
 | Level | Check |
 |---|---|
@@ -40,6 +46,14 @@ Truth file `verita/1`: one JSON per native file (one per sample in multi-sample 
 | F8 | scale (local only): time and peak memory on the largest file |
 
 Outcome per file: `L` (F0-F5 against an oracle or the authors' mzML), `P` (a level is missing, stated), `NV` (internal consistency only). The format row in `docs/agenti/native-reading.md` follows this outcome.
+
+### F.3 Where it runs
+- Public CI (`test.yml`): F0-F4 and F6 on synthetic and small public files; F5 on the synthetic `metodo/1` documents.
+- Private nightly workflow in `mzlab-dati` (text in `rosina/WORKFLOW_NOTTE.md`): checks out `Freeesta/mzlab` `main`, runs `cargo test -p mzlab-lettori --features tutte --test 'truth_*'` (one test per family) on every `scratchpad/rosina/verita/**/*.verita.json` (files <= 90 MB); the format x level summary stays in an artefact, never public.
+- Local (Mac): F8 and the files in the big-files folder, with the same test and `MZLAB_DATI_GRANDI=<path>`.
+
+### F.4 Edge cases to find (an empty cell means no file yet)
+Per-scan calibration or lock mass; vendor centroids against profile; polarity switching; multiple scan events or periods; ion mobility (FAIMS, SelexION, drift tube, timsTOF, cyclic); time and intensity units (min, s, ms; Bruker normalisation to 100 ms); format versions (Thermo v57-v66, Analyst 1.4-1.7 and SCIEX OS, Agilent B.0x-12, Waters 4.1/4.2, timsControl 1-5, Shimadzu 5.x); files over 4 GB; several samples per container; truncated or in-acquisition files (Bruker `-wal`); endianness. Fill the cell per vendor in the R-package that covers it.
 
 ## Decisions
 1. Oracles: data stay on the Mac; ThermoRawFileParser runs there; msconvert and `timsdata` run on Windows (Parallels) by the maintainer. No oracle in GitHub Actions. Until an oracle exists: authors' mzML (V2); Bruker gets an internal comparison.
