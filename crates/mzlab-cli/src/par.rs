@@ -66,7 +66,7 @@ pub(crate) fn index_and_detect(
     params: &str,
 ) -> Result<Detected> {
     let detected = detect_all(files, labels, idxs, params)?;
-    features_note::report(&detected.0, &idxs[0], &files[0]);
+    features_note::report(&detected.0, idxs, files, labels);
     Ok(detected)
 }
 

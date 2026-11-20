@@ -143,20 +143,19 @@ fn a_file_with_no_ms1_scan_has_no_notice() {
 #[test]
 fn the_notes_say_what_the_stderr_lines_say() {
     let c = Case::new(20);
-    let t = notes_text("q1.mzML", &c.note);
+    let t = notes_text(&[("q1.mzML".to_string(), c.note.clone())]);
     assert!(
-        t.starts_with(
-            "{\"schema\":\"features-notes/1\",\"file\":\"q1.mzML\",\"axis\":\"Da\",\"defect\":"
-        ),
+        t.starts_with("{\"schema\":\"features-notes/1\",\"files\":[{\"file\":\"q1.mzML\",\"axis\":\"Da\",\"defect\":"),
         "{t}"
     );
     assert!(
         t.ends_with(
-            ",\"profile_scans\":20,\"ms1_scans\":40,\"notices\":[{\"key\":\"warn.features.profileUnit\",\"params\":{\"profile\":20,\"scans\":40}}]}\n"
+            ",\"profile_scans\":20,\"ms1_scans\":40,\"notices\":[{\"key\":\"warn.features.profileUnit\",\"params\":{\"profile\":20,\"scans\":40}}]}]}\n"
         ),
         "{t}"
     );
-    assert!(notes_text("q1.mzML", &Case::new(19).note).ends_with("\"notices\":[]}\n"));
+    let below = notes_text(&[("q1.mzML".to_string(), Case::new(19).note.clone())]);
+    assert!(below.ends_with("\"notices\":[]}]}\n"), "{below}");
 }
 
 #[test]
@@ -165,23 +164,98 @@ fn a_ppm_axis_file_has_notes_without_a_notice() {
     n.unit = false;
     n.notices.clear();
     assert!(lines("q1.mzML", &n).is_empty());
-    let t = notes_text("q1.mzML", &n);
+    let t = notes_text(&[("q1.mzML".to_string(), n)]);
     assert!(t.contains("\"axis\":\"ppm\""), "{t}");
-    assert!(t.ends_with("\"notices\":[]}\n"), "{t}");
+    assert!(t.ends_with("\"notices\":[]}]}\n"), "{t}");
+}
+
+/// A folder with the series `a.mzML` (all profile), `b.mzML` (centroid) and `c.mzML` (19 of 40 profile), in that order.
+fn series() -> (std::path::PathBuf, Vec<std::path::PathBuf>) {
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let d = std::env::temp_dir().join(format!("mzlab_fseries_{k}_{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let files: Vec<_> = [("a", 40), ("b", 0), ("c", 19)]
+        .iter()
+        .map(|(n, p)| {
+            let f = d.join(format!("{n}.mzML"));
+            std::fs::write(&f, mzml(*p, 40)).unwrap();
+            f
+        })
+        .collect();
+    (d, files)
 }
 
 #[test]
-fn features_keeps_the_notes_next_to_the_index_and_the_flow_estimate_carries_the_same_notices() {
+fn the_notes_of_a_series_hold_one_entry_per_file_in_the_given_order() {
+    let (d, files) = series();
+    let tmp = d.join("tmp");
+    std::fs::create_dir_all(&tmp).unwrap();
+    let labels = vec![String::new(); 3];
+    crate::features_of(&files, &labels, "", &tmp).unwrap();
+    let doc = mzlab_core::json::parse(&std::fs::read(tmp.join("0.notes.json")).unwrap()).unwrap();
+    let list = doc.get("files").unwrap().arr();
+    let got: Vec<(String, usize, usize)> = list
+        .iter()
+        .map(|e| {
+            let n = |k: &str| e.get(k).and_then(|v| v.f64()).unwrap() as usize;
+            (
+                e.get("file").and_then(|v| v.str()).unwrap().to_string(),
+                n("profile_scans"),
+                e.get("notices").unwrap().arr().len(),
+            )
+        })
+        .collect();
+    // `tests/test_features_notes_schema.py` checks these two documents against their schemas
+    if let Some(dir) = std::env::var_os("MZLAB_JSON_SAMPLES") {
+        let dir = std::path::PathBuf::from(dir);
+        std::fs::copy(tmp.join("0.notes.json"), dir.join("features-notes.json")).unwrap();
+        let mut index = crate::open(&tmp.join("0.mzidx")).unwrap();
+        let (estimate, _) = estimate_of(&mut index, "a.mzML", &[]).unwrap();
+        std::fs::write(dir.join("estimates.json"), estimate).unwrap();
+    }
+    let name = |n: &str| d.join(format!("{n}.mzML")).display().to_string();
+    assert_eq!(
+        got,
+        vec![(name("a"), 40, 1), (name("b"), 0, 0), (name("c"), 19, 0)]
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_command_writes_the_notes_at_the_path_asked_for_and_nothing_without_it() {
+    let (d, files) = series();
+    let to = d.join("notes.json");
+    let mut args = vec!["features".to_string()];
+    args.extend(files.iter().map(|f| f.display().to_string()));
+    let plain = crate::execute(&args);
+    assert_eq!(plain.code, 0, "{}", plain.stderr);
+    assert!(!to.exists());
+    args.extend(["--notes".to_string(), to.display().to_string()]);
+    let with = crate::execute(&args);
+    assert_eq!(with.code, 0, "{}", with.stderr);
+    // the table is the same bytes with and without the notes
+    assert_eq!(plain.stdout, with.stdout);
+    let doc = mzlab_core::json::parse(&std::fs::read(&to).unwrap()).unwrap();
+    assert_eq!(
+        doc.get("schema").and_then(|v| v.str()),
+        Some("features-notes/1")
+    );
+    assert_eq!(doc.get("files").unwrap().arr().len(), 3);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_notes_of_a_file_and_the_flow_estimate_carry_the_same_notices() {
     let c = Case::new(40);
     let f = c.dir.join("q1.mzML");
     crate::features_of(&[f.clone()], &[String::new()], "", &c.dir).unwrap();
     let notes = std::fs::read_to_string(c.dir.join("0.notes.json")).unwrap();
-    // the notices member, as written, closes the document
-    let at = notes.find("\"notices\":").unwrap();
-    let notices = notes[at + "\"notices\":".len()..]
-        .trim_end()
-        .trim_end_matches('}');
+    // the notices member of the only entry, as written, closes the document
+    let at = notes.find("\"notices\":").unwrap() + "\"notices\":".len();
+    let notices = notes[at..].trim_end().strip_suffix("}]}").unwrap();
     assert!(notices.starts_with("[{"), "{notes}");
+    // the function behind the page's `flow_estimate` and the app's `flow run`
     let mut index = crate::open(&c.dir.join("0.mzidx")).unwrap();
     let (estimate, _) = estimate_of(&mut index, "q1.mzML", &[]).unwrap();
     assert!(

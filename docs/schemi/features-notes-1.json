@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "features-notes/1",
+  "title": "features-notes/1: what the recipe of `mzlab-cli features` chose for each file, `--notes PATH`",
+  "description": "One entry per input file, in the order given: the axis of the recipe (one for the series), its unit-resolution numbers (0 on the ppm axis), the MS1 scans counted on that file and its notices. The notices are the `notices` member of estimates/1 for the same file, with the same bytes. Code: crates/mzlab-cli/src/features_note.rs, crates/mzlab-ops/src/run/feat/lr_note.rs.",
+  "type": "object",
+  "required": ["schema", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "features-notes/1" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "axis", "defect", "floor", "min_height", "profile_scans", "ms1_scans", "notices"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
+          "axis": { "enum": ["Da", "ppm"] },
+          "defect": { "type": "number", "description": "channel centre offset, Da (0 on the ppm axis)" },
+          "floor": { "type": "number", "description": "counts" },
+          "min_height": { "type": "number", "description": "counts" },
+          "profile_scans": { "type": "integer", "minimum": 0, "description": "MS1 scans in profile mode" },
+          "ms1_scans": { "type": "integer", "minimum": 0 },
+          "notices": { "$ref": "#/$defs/notices" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "notices": {
+      "type": "array",
+      "description": "lang keys with their whole-number parameters, empty when there is nothing to say",
+      "items": {
+        "type": "object",
+        "required": ["key", "params"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "enum": ["warn.features.profileUnit"] },
+          "params": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+        }
+      }
+    }
+  }
+}
