@@ -392,7 +392,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         if exe.is_file():      # the tests start this binary (tests_e2e/cli_cmd.py cli_command) instead of a `cargo run` each
             env["MZLAB_CLI"] = env_sint["MZLAB_CLI"] = str(exe)
     man = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
-    if shutil.which("cargo") and shutil.which("wasm-bindgen") and any("build_feat" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo) and not (man.is_file() and '"feat"' in man.read_text(encoding="utf-8")):
+    if shutil.which("cargo") and shutil.which("wasm-bindgen") and any("build_feat(" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo) and not (man.is_file() and '"feat"' in man.read_text(encoding="utf-8")):
         # the tests that need the mzFinder .wasm would each build it inside their own cap (cold cargo: far over 600 s, so they TIMEOUT): build it once into the shared site, they copy it (lib.build_feat)
         rc, _out, dt = sh(["bash", "tools/build_feat_wasm.sh", "site/static"], LOG / "precompila_feat.log", 3600, env=env)
         print(f"[{time.time() - T0:5.0f} s] build mzFinder .wasm before the e2e: rc {rc}, {dt:.0f} s", file=sys.stderr, flush=True)
