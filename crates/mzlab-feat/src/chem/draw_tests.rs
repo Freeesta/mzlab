@@ -166,3 +166,25 @@ fn draw_pieces_are_listed_in_the_scene() {
     let s = scene_of("CC(=O)[O-].[Na+]", "");
     assert_eq!(s.get("fragments").unwrap().arr().len(), 2);
 }
+
+#[test]
+fn draw_refuses_a_too_big_molecule_before_any_layout_work() {
+    // 2001 atoms: the limit is checked first, so the refusal costs the parse only
+    let t = std::time::Instant::now();
+    let smiles = "C".repeat(2001);
+    assert_eq!(err_key(draw_json(&req(&smiles, ""))), "err.mol.draw.tooBig");
+    let mol = Mol::from_smiles(&smiles).unwrap().to_molfile("big");
+    assert_eq!(err_key(draw_json(&req(&mol, ""))), "err.mol.draw.tooBig");
+    assert!(t.elapsed().as_secs_f64() < 5.0);
+}
+
+#[test]
+fn draw_a_large_molecule_finishes_with_every_atom_placed() {
+    // 1950 atoms of polyphenylene: the layout stops at its work budget instead of cleaning for minutes
+    let t = std::time::Instant::now();
+    let smiles = vec!["c1ccc(cc1)"; 325].join("-");
+    let s = scene_of(&smiles, "");
+    assert!(t.elapsed().as_secs_f64() < 60.0);
+    let atoms = s.get("atoms").unwrap().arr();
+    assert_eq!(atoms.len(), 1950);
+}

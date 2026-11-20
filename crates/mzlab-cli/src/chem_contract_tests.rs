@@ -407,6 +407,8 @@ fn draw_probes() -> Probes<'static> {
             // an InChI alone is never parsed: usage, the hint asks for the InChIKey
             (vec!["InChI=1S/CH4/h1H4"], 2),
             (vec!["/no/such/x.mol"], 4),
+            // content that is not a molfile is unreadable input
+            (vec!["molfile:not a molfile\nM  END\n"], 4),
             (vec!["name:zzzzzzzzzz", "--set", db], 5),
             (vec!["smiles:CCO", "--out", NOWHERE], 6),
         ],

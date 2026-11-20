@@ -42,6 +42,9 @@ pub(crate) struct G {
     pub dbs: Vec<Db>,
     pub pos: Vec<Option<V>>,
     pub frozen: Vec<bool>,
+    /// Steps the overlap cleanup has spent on this piece, and whether it stopped at its budget (`clean::WORK_BUDGET`).
+    pub work: std::cell::Cell<u64>,
+    pub cut: bool,
 }
 
 impl G {
@@ -110,6 +113,8 @@ impl G {
             dbs,
             pos: vec![None; n],
             frozen: vec![false; n],
+            work: std::cell::Cell::new(0),
+            cut: false,
         }
     }
 
@@ -245,9 +250,19 @@ impl Mol {
         self.layout_2d_fixed(&vec![None; self.atoms.len()])
     }
 
+    /// `layout_2d` and whether the overlap cleanup of some piece stopped at its work budget (a very large molecule keeps the layout it
+    /// had by then: no hang, possibly some overlaps).
+    pub fn layout_2d_checked(&self) -> (Coords, bool) {
+        self.layout_run(&vec![None; self.atoms.len()])
+    }
+
     /// A 2D layout that keeps the atoms given in `fixed` (angstrom) where they are and places the others around them; pieces
     /// without a fixed atom go to the right of the rest. `fixed` shorter than the record counts as no fixed atom.
     pub fn layout_2d_fixed(&self, fixed: &[Option<[f64; 2]>]) -> Coords {
+        self.layout_run(fixed).0
+    }
+
+    fn layout_run(&self, fixed: &[Option<[f64; 2]>]) -> (Coords, bool) {
         let mut g = G::new(self);
         for (i, f) in fixed.iter().enumerate().take(g.n) {
             if let Some(p) = f {
@@ -305,11 +320,12 @@ impl Mol {
                 vec![r4(p[0] * BOND_A), r4(p[1] * BOND_A)]
             })
             .collect();
-        Coords {
+        let coords = Coords {
             dim: 2,
             xy,
             from: "layout".into(),
-        }
+        };
+        (coords, g.cut)
     }
 
     /// The pieces of the record in the order `layout_2d` places them (atom indices, ascending in each).

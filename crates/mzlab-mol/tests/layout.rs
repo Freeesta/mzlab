@@ -103,3 +103,27 @@ fn the_layout_is_deterministic_and_keeps_fixed_atoms() {
         "the rest is placed around the fixed atoms: {far}"
     );
 }
+
+/// Large molecules never hang: the cleaning stops at its fixed work budget (a count of steps, not a clock), so a 650-atom and a 1950-atom
+/// molecule come back in seconds even in a debug build (before the budget they took 23 s and more than 300 s), with every atom placed.
+#[test]
+fn large_molecules_finish_within_the_work_budget() {
+    let polyphenylene = |rings: usize| vec!["c1ccc(cc1)"; rings].join("-");
+    let chain = "C".repeat(1900);
+    let cases = [
+        ("650 atoms", polyphenylene(108)),
+        ("1950 atoms", polyphenylene(325)),
+        ("1900-C chain", chain),
+    ];
+    for (name, smiles) in cases {
+        let m = Mol::from_smiles(&smiles).unwrap();
+        let t = std::time::Instant::now();
+        let (c, _cut) = m.layout_2d_checked();
+        let secs = t.elapsed().as_secs_f64();
+        assert!(secs < 60.0, "{name}: {secs:.1} s");
+        assert_eq!(c.xy.len(), m.atoms.len(), "{name}");
+        assert!(c.xy.iter().flatten().all(|v| v.is_finite()), "{name}");
+        // the same bytes twice, budget cut or not
+        assert_eq!(c.xy, m.layout_2d_checked().0.xy, "{name}");
+    }
+}

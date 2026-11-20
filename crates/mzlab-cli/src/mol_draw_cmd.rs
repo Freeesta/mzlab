@@ -1,6 +1,7 @@
 //! `mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout (`draw/1`), as a molfile or, with
 //! `--json`, as a scene of atoms, bonds and fragments. The same bytes as the molkit `.wasm` and the app (`chem::draw`).
 
+use mzlab_core::error::Error;
 use std::path::{Path, PathBuf};
 
 use mzlab_core::json::Out;
@@ -22,7 +23,7 @@ usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a molfile they go to
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms; 2 unparseable SMILES or molfile, bad option, a name or key without --set db; 4 missing file or db; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
@@ -157,7 +158,7 @@ fn resolve(spec: &str) -> Result<String, Outcome> {
     if spec == "-" {
         let mut t = String::new();
         std::io::Read::read_to_string(&mut std::io::stdin(), &mut t)
-            .map_err(|e| Outcome::fail(&e.to_string()))?;
+            .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", "-")))?;
         return Ok(t);
     }
     if PREFIXES.iter().any(|p| spec.starts_with(p)) {
@@ -178,11 +179,16 @@ fn resolve(spec: &str) -> Result<String, Outcome> {
         };
     }
     let text = std::fs::read_to_string(spec).map_err(|e| Outcome::fail(&format!("{spec}: {e}")))?;
-    Ok(if text.contains("M  END") || pathlike {
-        text
-    } else {
-        spec.to_string()
-    })
+    if text.contains("M  END") {
+        return Ok(text);
+    }
+    if pathlike {
+        let why = format!("{spec} has no M  END line");
+        return Err(Outcome::fail_error(
+            &Error::new("err.mol.draw.molfile").with("message", why),
+        ));
+    }
+    Ok(spec.to_string())
 }
 
 #[cfg(test)]

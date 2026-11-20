@@ -116,11 +116,16 @@ def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
         for fmt, want in (("scene", c["scene"]), ("molfile", c["molfile"])):
             p = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**r, "format": fmt}), "draw"], cwd=ROOT, capture_output=True, encoding="utf-8")
             assert (p.returncode == 0) == (c["exit"] == 0), c["name"]
-            if c["exit"]:
-                assert json.loads(p.stderr)["error_key"].startswith("err.mol.draw."), c["name"]
-                continue
-            assert p.stdout == want + "\n", (c["name"], fmt)  # the node runner adds one newline
             args = ["mol", "draw", "-" if multi else r["spec"], *sets, *(["--json"] if fmt == "scene" else [])]
             q = subprocess.run([str(ROOT / "target" / "release" / "mzlab-cli"), *args], cwd=ROOT, input=r["spec"] if multi else None, capture_output=True, encoding="utf-8")
+            if c["exit"]:
+                # the same failure everywhere: the key of the wasm, the key of the CLI and its exit code
+                assert json.loads(p.stderr)["error_key"] == c["error_key"], c["name"]
+                assert q.returncode == c["exit"], (c["name"], fmt)
+                if fmt == "scene":
+                    err = [x for x in (q.stdout + "\n" + q.stderr).splitlines() if x.startswith('{"schema":"error/1"')]
+                    assert json.loads(err[0])["error_key"] == c["error_key"], c["name"]
+                continue
+            assert p.stdout == want + "\n", (c["name"], fmt)  # the node runner adds one newline
             assert q.stdout == want + ("\n" if fmt == "scene" else ""), (c["name"], fmt)  # the CLI ends a JSON answer with a newline
     assert sorted(c["exit"] for c in fx["cases"] if c["exit"]) == [2, 2, 5]

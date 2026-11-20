@@ -7,44 +7,79 @@ use super::G;
 
 type Pos = Vec<Option<V>>;
 
-/// Overlap cost of the placed atoms, counting only terms that involve an atom flagged in `mv`.
+/// Work the overlap cleanup may spend on one piece, in inner-loop steps of `penalty` (about 0.2 s native); a molecule that is not
+/// cleaned up in that budget keeps the layout it has and `G::cut` says so.
+pub const WORK_BUDGET: u64 = 40_000_000;
+
+/// Overlap cost of the placed atoms, counting only terms that involve an atom flagged in `mv`. The cost of a call is the size of the
+/// flagged part times the size of the molecule, not the molecule squared; the steps taken are added to `g.work`.
 pub fn penalty(g: &G, pos: &Pos, mv: &[bool]) -> f64 {
+    let nb = g.bonds.len();
+    let movers: Vec<usize> = (0..g.n).filter(|&i| mv[i] && pos[i].is_some()).collect();
+    let mover_bonds: Vec<usize> = (0..nb)
+        .filter(|&k| mv[g.bonds[k].0] || mv[g.bonds[k].1])
+        .collect();
+    let mut in_mb = vec![false; nb];
+    mover_bonds.iter().for_each(|&k| in_mb[k] = true);
     let mut p = 0.0;
-    for i in 0..g.n {
+    let mut steps = 0u64;
+    for &i in &movers {
         let Some(a) = pos[i] else { continue };
-        for j in 0..i {
-            let Some(b) = pos[j] else { continue };
-            if (mv[i] || mv[j]) && !g.adj[i].contains(&j) {
+        for j in 0..g.n {
+            // a pair of two flagged atoms is counted once, from its higher index
+            if j == i || (mv[j] && j > i) || g.adj[i].contains(&j) {
+                continue;
+            }
+            if let Some(b) = pos[j] {
                 let d = dist(a, b);
                 if d < 0.85 {
                     p += (0.85 - d) * (0.85 - d) * 40.0;
                 }
             }
         }
-        for &(x, y) in &g.bonds {
-            if x == i || y == i || !(mv[i] || mv[x] || mv[y]) {
-                continue;
-            }
-            if let (Some(u), Some(w)) = (pos[x], pos[y]) {
-                let d = seg_dist(a, u, w);
-                if d < 0.55 {
-                    p += (0.55 - d) * (0.55 - d) * 80.0;
-                }
-            }
+        p += atom_on_bonds(g, pos, i, a, 0..nb);
+        steps += (g.n + nb) as u64;
+    }
+    for i in (0..g.n).filter(|&i| !mv[i]) {
+        if let Some(a) = pos[i] {
+            p += atom_on_bonds(g, pos, i, a, mover_bonds.iter().copied());
+            steps += mover_bonds.len() as u64;
         }
     }
-    for (k, &(a, b)) in g.bonds.iter().enumerate() {
+    for &k in &mover_bonds {
+        let (a, b) = g.bonds[k];
         let (Some(pa), Some(pb)) = (pos[a], pos[b]) else {
             continue;
         };
-        for &(c, d) in &g.bonds[..k] {
-            if a == c || a == d || b == c || b == d || !(mv[a] || mv[b] || mv[c] || mv[d]) {
+        for (m, &(c, d)) in g.bonds.iter().enumerate() {
+            // a pair of two bonds at a flagged atom is counted once, from its higher index
+            if m == k || (in_mb[m] && m > k) || a == c || a == d || b == c || b == d {
                 continue;
             }
             if let (Some(pc), Some(pd)) = (pos[c], pos[d])
                 && crosses(pa, pb, pc, pd)
             {
                 p += 25.0;
+            }
+        }
+        steps += nb as u64;
+    }
+    g.work.set(g.work.get() + steps);
+    p
+}
+
+/// The cost of the atom `i` (at `a`) lying on the bonds `of`, other than its own.
+fn atom_on_bonds(g: &G, pos: &Pos, i: usize, a: V, of: impl Iterator<Item = usize>) -> f64 {
+    let mut p = 0.0;
+    for k in of {
+        let (x, y) = g.bonds[k];
+        if x == i || y == i {
+            continue;
+        }
+        if let (Some(u), Some(w)) = (pos[x], pos[y]) {
+            let d = seg_dist(a, u, w);
+            if d < 0.55 {
+                p += (0.55 - d) * (0.55 - d) * 80.0;
             }
         }
     }
@@ -112,6 +147,7 @@ fn is_defined_db(g: &G, x: usize, y: usize) -> bool {
 
 /// Reflects and, if `turn`, also turns subtrees behind acyclic bonds while the penalty falls.
 pub fn tidy(g: &mut G) {
+    g.work.set(0);
     let all = vec![true; g.n];
     if penalty(g, &g.pos, &all) < 1e-9 {
         return;
@@ -120,6 +156,10 @@ pub fn tidy(g: &mut G) {
         for _ in 0..6 {
             let mut better = false;
             for k in 0..g.bonds.len() {
+                if g.work.get() > WORK_BUDGET {
+                    g.cut = true;
+                    return;
+                }
                 let (x, y) = g.bonds[k];
                 if is_defined_db(g, x, y) {
                     continue;

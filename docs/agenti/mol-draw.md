@@ -28,8 +28,8 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 |---|---|
 | 0 | ok |
 | 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`) |
-| 2 | unparseable SMILES or molfile, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
-| 4 | missing or unreadable file or db |
+| 2 | unparseable SMILES, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
+| 4 | missing or unreadable file or db, a molfile or request that cannot be read (`err.mol.draw.molfile\|request`), a file with no `M  END` |
 | 5 | not in the db (`err.mol.draw.not_found`, hint: the nearest names) |
 | 6 | unwritable `--out` |
 
@@ -50,7 +50,7 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 What stays unclean: bridged and spiro cage molecules (cubane and adamantane types: ring-angle error 13-20 degrees, some crossings); RDKit draws the same ones unclean. `python3 tools/draw_quality.py --report` prints the table.
 
 ## Parity and tests
-`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` and CLI), `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`), `crates/mzlab-feat/src/chem/draw_tests.rs`, `crates/mzlab-cli/src/mol_draw_tests.rs`, `crates/mzlab-mol/tests/layout.rs`.
+`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
 
 ## Sizes
 molkit `.wasm`: 352069 -> 430483 bytes (+78414, allowance 90000) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32935 bytes (guard 33000 in `catalog_tests.rs`).

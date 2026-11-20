@@ -122,6 +122,8 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.sub.column",
         "err.search.request",
         "err.mol.draw.db",
+        "err.mol.draw.molfile",
+        "err.mol.draw.request",
     ];
     if CHEM_DATA_KEYS.contains(&key) {
         Some(DATA)

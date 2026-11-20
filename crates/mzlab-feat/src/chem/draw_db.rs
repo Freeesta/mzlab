@@ -89,7 +89,7 @@ fn within_one(a: &[char], b: &[char]) -> bool {
     }
     let i = short.iter().zip(long).take_while(|(x, y)| x == y).count();
     if short.len() == long.len() {
-        short[i + 1..] == long[i + 1..] || i == short.len()
+        i == short.len() || short[i + 1..] == long[i + 1..]
     } else {
         short[i..] == long[i + 1..]
     }

@@ -41,10 +41,14 @@ def main():
         sets = [x for s in sets for x in ("--set", s)]
         if "db" in opts:
             sets += ["--set", f"db={dbfile}"]
-        c, scene, _ = draw(spec, *sets, stdin=stdin)
+        c, scene, err = draw(spec, *sets, stdin=stdin)
         c2, mol, _ = draw(spec, *sets, stdin=stdin, js=False)
         req = {"spec": stdin if stdin is not None else spec, **({"db": db} if "db" in opts else {}), **{k: v for k, v in opts.items() if k != "db"}}
-        cases.append({"name": name, "request": req, "exit": c, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None})
+        key = None
+        if c:
+            lines = [x for x in (scene + "\n" + err).splitlines() if x.startswith('{"schema":"error/1"')]
+            key = json.loads(lines[0])["error_key"]
+        cases.append({"name": name, "request": req, "exit": c, "error_key": key, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None})
 
     for i, s in enumerate(SMILES):
         add(f"smiles {i}", "smiles:" + s)

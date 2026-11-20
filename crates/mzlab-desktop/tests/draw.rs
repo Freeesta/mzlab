@@ -52,7 +52,12 @@ fn draw_route_gives_the_shared_fixture() {
             );
             match want.as_str() {
                 Some(w) => assert_eq!(text(got.unwrap()), w, "{} {format}", c["name"]),
-                None => assert!(got.is_err(), "{} {format}", c["name"]),
+                None => assert_eq!(
+                    got.err().map(|e| e.key.to_string()),
+                    c["error_key"].as_str().map(str::to_string),
+                    "{} {format}",
+                    c["name"]
+                ),
             }
         }
     }

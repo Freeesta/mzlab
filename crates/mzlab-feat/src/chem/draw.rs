@@ -95,8 +95,9 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
         "molfile" => from_molfile(body, r.keep)?,
         _ => super::draw_db::from_db(kind, body, r.db)?,
     };
+    too_big(&d.mol)?;
     if kind != "molfile" {
-        d.mol.coords = Some(d.mol.layout_2d());
+        lay_out(&mut d);
         d.choices.push(note("layout", "new"));
     }
     d.kind = kind;
@@ -104,10 +105,25 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
     if let Some(n) = r.name {
         d.title = n.to_string();
     }
-    if d.mol.atoms.len() > MAX_ATOMS {
+    Ok((d, r.format))
+}
+
+/// The size limit, checked before any layout work.
+fn too_big(m: &Mol) -> Result<()> {
+    if m.atoms.len() > MAX_ATOMS {
         return Err(Error::new("err.mol.draw.tooBig").with("max", MAX_ATOMS));
     }
-    Ok((d, r.format))
+    Ok(())
+}
+
+/// Lays the drawing out; when the work budget of the layout ran out the cleaning stopped early and the scene says so.
+fn lay_out(d: &mut Drawn) {
+    let (c, cut) = d.mol.layout_2d_checked();
+    d.mol.coords = Some(c);
+    if cut {
+        d.choices
+            .push(note("layout_budget", "cleaning stopped at the work limit"));
+    }
 }
 
 /// The kind of a spec (`smiles`, `molfile`, `name`, `inchikey`, `inchi`), as `draw` reads it.
@@ -214,7 +230,7 @@ pub(super) fn from_smiles(text: &str) -> Result<Drawn> {
 
 /// A molfile: its coordinates are kept when it has 2D ones that are not all at the origin and `keep` is on; else it is laid out again.
 fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
-    let mut m = Mol::from_molfile(text)
+    let m = Mol::from_molfile(text)
         .map_err(|e| Error::new("err.mol.draw.molfile").with("message", e.to_string()))?;
     let mut d = blank(
         "molfile",
@@ -242,10 +258,11 @@ fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
         "layout",
         format!("{} ({why})", if relay { "new" } else { "kept" }),
     ));
-    if relay {
-        m.coords = Some(m.layout_2d());
-    }
     d.mol = m;
+    too_big(&d.mol)?;
+    if relay {
+        lay_out(&mut d);
+    }
     Ok(d)
 }
 
@@ -266,7 +283,13 @@ fn notes(o: &mut Out, key: &str, list: &[Note]) {
 /// costs the `.wasm` about 14 KB.
 fn coord(v: f64) -> String {
     let s = mzlab_mol::fixed(v, 4);
-    s.trim_end_matches('0').trim_end_matches('.').to_string()
+    let t = s.trim_end_matches('0').trim_end_matches('.');
+    // a tiny negative rounds to "-0"; the scene writes 0
+    if t == "-0" {
+        "0".into()
+    } else {
+        t.into()
+    }
 }
 
 /// The `draw/1` scene: atoms with their position in angstrom, bonds as written in the molfile (a wedge belongs to its first atom), the
