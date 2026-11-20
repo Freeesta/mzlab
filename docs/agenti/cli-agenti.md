@@ -26,7 +26,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | code | meaning |
 |---|---|
 | 0 | ok |
-| 1 | data or domain error, partial outputs written |
+| 1 | data error, partial outputs written |
 | 2 | usage |
 | 3 | plan, schema or integrity |
 | 4 | input missing or unreadable |

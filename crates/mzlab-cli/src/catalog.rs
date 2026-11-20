@@ -112,7 +112,7 @@ const CSV: &[&str] = &["features", "peak table"];
 /// What the exit codes mean (`exit.rs`).
 pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::OK, "ok"),
-    (exit::DATA, "data or domain error, partial outputs written"),
+    (exit::DATA, "data error, partial outputs written"),
     (exit::USAGE, "usage"),
     (exit::INTEGRITY, "plan, schema or integrity"),
     (exit::INPUT, "input missing or unreadable"),
