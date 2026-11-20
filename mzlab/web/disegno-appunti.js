@@ -148,15 +148,22 @@ export function initAppunti(d, K, fr, deps = {}) {
   }
   const touch = touchPaste(d, w, fr, S, startPaste, fire);
   const covers = (/** @type {{ atoms: number[] }} */ m) => { const s = new Set(selection().atoms || []); return m.atoms.every(a => s.has(a)); };
+  const eraseSel = () => { if (!hasSel()) return false; K.editor.tool("eraser"); const b = /** @type {HTMLElement | null} */ (d.querySelector("[data-testid=select-rectangle]")); if (b) b.click(); else K.editor.tool("select"); return true; };
   const api = {
     has: () => !!S.clip,
     types: () => (S.clip ? Object.fromEntries(Object.entries(S.clip).map(([k, v]) => [k, v.length])) : {}),
     armed: touch.armed,
     arm: touch.arm, disarm: touch.disarm,
     copy: () => viaButton("copy-button"),
-    cut: () => viaButton("cut-button"),
+    // a cut Ketcher did not carry out (its button needs the system clipboard) still takes the molecule out: the copy above is kept, the selection is erased here
+    cut: async () => {
+      const ok = await viaButton("cut-button");
+      for (let i = 0; i < 12 && hasSel(); i++) await wait(25);
+      if (hasSel()) eraseSel();
+      return ok;
+    },
     // Ketcher erases the selection the moment the eraser is chosen (a keydown we dispatch is ignored), then the selection tool comes back
-    del: () => { if (!hasSel()) return false; K.editor.tool("eraser"); const b = /** @type {HTMLElement | null} */ (d.querySelector("[data-testid=select-rectangle]")); if (b) b.click(); else K.editor.tool("select"); return true; },
+    del: eraseSel,
     /** drop at the point (iframe coordinates) at once */
     pasteHere: (/** @type {number} */ x, /** @type {number} */ y) => place(x, y, true),
     /** a mouse: the structure follows the cursor and a click drops it */

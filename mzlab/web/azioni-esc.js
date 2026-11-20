@@ -33,18 +33,21 @@ const ESC = (() => {
   if (typeof document === "undefined") return;
   const CTL = "button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])";
   const seen = (/** @type {Element} */ e) => e.isConnected && e.getClientRects().length > 0 && !e.closest("dialog:not([open])");
-  /** @type {HTMLElement[]} */ const hist = [];
+  // weak: a control that left the page (a rebuilt panel) must not keep its whole old subtree alive through this list
+  /** @type {WeakRef<HTMLElement>[]} */ const hist = [];
+  const recent = () => hist.map(r => r.deref()).filter((/** @type {HTMLElement | undefined} */ x) => !!x);
   document.addEventListener("focusin", e => {
     const t = e.target; if (!(t instanceof HTMLElement) || t.closest("dialog")) return;
-    const i = hist.indexOf(t); if (i >= 0) hist.splice(i, 1); hist.push(t); if (hist.length > 8) hist.shift();
+    const i = hist.findIndex(r => r.deref() === t); if (i >= 0) hist.splice(i, 1); hist.push(new WeakRef(t)); if (hist.length > 8) hist.shift();
   }, true);
   document.addEventListener("close", e => {
     if (!(e.target instanceof HTMLDialogElement)) return;
     setTimeout(() => {
       const a = document.activeElement;
       if ((a && a !== document.body && seen(a)) || document.querySelector("dialog[open]")) return;
-      let f = [...hist].reverse().find(seen);
-      for (let c = /** @type {Element | null} */ (hist[hist.length - 1]); !f && c && c !== document.body; c = c.parentElement) if (seen(c)) f = c.matches(CTL) ? c : [...c.querySelectorAll(CTL)].find(seen);
+      const list = /** @type {HTMLElement[]} */ (recent());
+      let f = [...list].reverse().find(seen);
+      for (let c = /** @type {Element | null} */ (list[list.length - 1] || null); !f && c && c !== document.body; c = c.parentElement) if (seen(c)) f = c.matches(CTL) ? c : [...c.querySelectorAll(CTL)].find(seen);
       if (f) /** @type {HTMLElement} */ (f).focus({ preventScroll: true });
     }, 0);
   }, true);

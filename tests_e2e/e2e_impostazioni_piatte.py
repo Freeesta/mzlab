@@ -38,7 +38,8 @@ try:
         step("no horizontal overflow at 360 and 1400 px", narrow)
         if AXE:
             def axe_themes():
-                pg.click("#np-set"); pg.wait_for_selector("#uipset")
+                if not pg.is_visible("#uipset"): pg.click("#np-set")      # the dialog of the earlier steps still covers the button
+                pg.wait_for_selector("#uipset")
                 if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
                 for t, bg in (("light", ""), ("dark", ""), ("light", "hc")):
                     pg.evaluate("t => { document.documentElement.dataset.theme = t[0]; if (t[1]) document.documentElement.dataset.a11yBg = t[1]; else delete document.documentElement.dataset.a11yBg; }", [t, bg])

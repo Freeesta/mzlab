@@ -48,7 +48,7 @@ try:
         step("times from the names are plain values, nothing to confirm", never_blocks)
         def dark_negative():
             sel = f"{row('X_dark-adsorption')} input[data-k=time]"
-            assert "buio" in (pg.get_attribute(sel, "title") or ""), "the dark cell says what its time is"
+            assert "darkness" in (pg.get_attribute(sel, "title") or ""), "the dark cell says what its time is"
             pg.fill(sel, "-30"); pg.keyboard.press("Tab")
             pg.wait_for_function("[...document.querySelectorAll('#flist tr')].some(r => r.textContent.includes('X_dark-adsorption') && r.querySelector('input[data-k=time]').value === '-30')", timeout=10000)
             pg.fill(sel, "45"); pg.keyboard.press("Tab")                    # a positive number typed in a dark is read as its negative

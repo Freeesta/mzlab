@@ -8,7 +8,7 @@
   "edges": [
    {
     "from": "n0",
-    "a": "n1",
+    "to": "n1",
     "rules": [],
     "composite": [],
     "stepped": false,
@@ -16,7 +16,7 @@
    },
    {
     "from": "n0",
-    "a": "n2",
+    "to": "n2",
     "rules": [],
     "composite": [
      [
@@ -29,7 +29,7 @@
    },
    {
     "from": "n0",
-    "a": "n3",
+    "to": "n3",
     "rules": [
      {
       "id": "loss_co2",
@@ -51,7 +51,7 @@
    },
    {
     "from": "n2",
-    "a": "n5",
+    "to": "n5",
     "rules": [],
     "composite": [],
     "stepped": false,
@@ -59,7 +59,7 @@
    },
    {
     "from": "n2",
-    "a": "n6",
+    "to": "n6",
     "rules": [],
     "composite": [],
     "stepped": false,
@@ -67,7 +67,7 @@
    },
    {
     "from": "n3",
-    "a": "n2",
+    "to": "n2",
     "rules": [
      {
       "id": "loss_nh3_amide",
@@ -90,7 +90,7 @@
    },
    {
     "from": "n3",
-    "a": "n4",
+    "to": "n4",
     "rules": [],
     "composite": [],
     "stepped": false,
@@ -98,7 +98,7 @@
    },
    {
     "from": "n3",
-    "a": "n6",
+    "to": "n6",
     "rules": [],
     "composite": [],
     "stepped": false,

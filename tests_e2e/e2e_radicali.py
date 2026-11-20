@@ -32,7 +32,7 @@ try:
             fr.locator("#tp-bar [data-tp=charge]").click()
             item = fr.locator("#tp-bar [data-tp-own]")
             box = item.bounding_box(); assert box["width"] >= 24 and box["height"] >= 24, box
-            assert "Radicale" in item.get_attribute("aria-label")
+            assert "Radical" in item.get_attribute("aria-label"), item.get_attribute("aria-label")
             item.click(); assert pressed() == "true" and tool_on()
             x, y = atom_pt(0); pg.mouse.click(x, y)
             wait_for_js(pg, f"{RADS} === 'C2'")

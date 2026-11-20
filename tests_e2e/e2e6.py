@@ -152,13 +152,13 @@ try:
             wait_for_js(pg, "document.querySelector('#sel-body').innerText.includes('1 bond cut') && document.querySelector('#prop-body').innerText.includes('Selection')")
             assert pg.is_visible("#sel-card"); t = pg.inner_text("#sel-body"); print("SEL:", t.replace("\n", " | "))
             assert "Nc1ccc(O)cc1" in t or "Oc1ccc(N)cc1" in t, t
-            assert "1 legame tagliato" in t, t
+            assert "1 bond cut" in t, t
             assert pg.is_visible("#prop-card") and "Selection" in pg.inner_text("#prop-body")
             pg.screenshot(path=SH + "66_sel_smiles.png")
             # whole molecule selected: its full SMILES; the copy button works on the text
-            pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); wait_for_js(pg, "(t => t.length > 0 && !t.includes('legam'))(document.querySelector('#sel-body').innerText)")
+            pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); wait_for_js(pg, "(t => t.length > 0 && !t.includes('bond cut'))(document.querySelector('#sel-body').innerText)")
             whole = pg.evaluate("(async()=>%s.getSmiles())()" % KQ)      # the selection of everything = the SMILES Ketcher gives for the canvas
-            t = pg.inner_text("#sel-body"); assert whole in t and "legam" not in t, (whole, t)
+            t = pg.inner_text("#sel-body"); assert whole in t and "bond cut" not in t, (whole, t)
             assert pg.get_attribute("#sel-body [data-cp]", "data-cp") == whole
             pg.evaluate(KQ + ".editor.selection(null)"); gone("#sel-card"); assert not pg.is_visible("#sel-card")
         step("selection shows its SMILES (also a piece); properties table (logP...)", sel_smiles)

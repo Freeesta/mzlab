@@ -126,8 +126,13 @@ class Page:
         return (st or {}).get("busy", ["?"]), st
 
     def counters(s):
-        s.cdp.send("HeapProfiler.collectGarbage")
-        d = s.cdp.send("Memory.getDOMCounters")
+        # detached DOM nodes go over more than one collection: collect until the count stops falling, so the sample does not swing with the collector
+        last = None
+        for _ in range(8):
+            s.cdp.send("HeapProfiler.collectGarbage")
+            d = s.cdp.send("Memory.getDOMCounters")
+            if d["nodes"] == last: break
+            last = d["nodes"]
         m = {x["name"]: x["value"] for x in s.cdp.send("Performance.getMetrics")["metrics"]}
         return {"nodes": d["nodes"], "listeners": d["jsEventListeners"], "docs": d["documents"], "heap": int(m.get("JSHeapUsedSize", 0))}
 
@@ -328,6 +333,8 @@ def leak(s, p):
             for t in ("addloss", "lists", "stat", "file"):
                 pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
             s.wait_ready(); s.quiet(20)
+            # the undo history keeps a closed panel by design (100 entries at most, so it levels off after the few cycles measured here): empty it, so what is counted can only be a real leak
+            pg.evaluate("typeof STORIA !== 'undefined' && STORIA && STORIA.svuota()")
             rows.append(s.counters())
         return rows
     finally:

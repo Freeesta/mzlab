@@ -28,7 +28,8 @@
         && !(typeof PROGRESSO !== "undefined" && PROGRESSO.busy())
         && !(typeof CONVROWS !== "undefined" && CONVROWS.rows.some((/** @type {any} */ r) => !["done", "fail", "cancel"].includes(r.state)));
       const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", RESET_NONCE || "1"); } catch (_) { return; } location.reload(); };
-      navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
+      // after a reset the new page can reuse the registration the reset just unregistered: its worker is active but never claims this page, so no controllerchange comes; the one reload gives the page its worker
+      navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller || RESET_NONCE) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
     } catch (_) { /* stays not isolated */ }
   }
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);

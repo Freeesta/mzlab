@@ -13,7 +13,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_nat_sul_posto.py")][-1]
-        steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split())[:600]))
+        steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split())[:1500]))
 D = Path(tempfile.mkdtemp(prefix="nat_sul_posto_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
@@ -32,7 +32,7 @@ STUBS = """async () => { const d = await (await (await navigator.storage.getDire
 PRINTS = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const o = {};
   for await (const [n, h] of d.entries()) if (/\\.mzml$/i.test(n)) { try { o[n] = JSON.parse(await (await h.getFile()).text()).members.map(m => !!m.sha1); } catch (_) { o[n] = null; } } return o; }"""
 CALM = "!window.qqFailed && document.getElementById('rust-note')?.getAttribute('role') === 'status' && ![...document.querySelectorAll('[role=alert]')].some(e => e.offsetParent && e.textContent.trim())"      # a notice, never the failure banner
-WHY = "[ST.files.map(f => [f.name, f.kind]), UPBUSY, document.getElementById('unopen')?.innerText.slice(0, 400), window.__notes]"
+WHY = "[document.body.innerText.match(/.{0,80}(not loaded|could not be read|incomplete or damaged|Not enough space).{0,160}/gi), ST.files.map(f => [f.name, f.kind]), UPBUSY, document.getElementById('unopen')?.innerText.slice(0, 400), window.__notes]"
 try:
     with sync_playwright() as p:
         a = r.page(p); a.add_init_script("document.addEventListener('DOMContentLoaded', () => { " + NOTES + " })"); a.reload()
@@ -53,11 +53,11 @@ try:
         step("with room the members are copied, as before (the reference indexes)", copied)
         def in_place():
             members = sum(os.path.getsize(f) for f in PAIR); room = sum(v for k, v in ref["walk"].items() if not k.startswith("files/nat~"))
-            limit(room + (1 << 20))          # the stubs and indexes fit, the members do not
+            limit(room + (3 << 20))          # the stubs and indexes fit (with the temporary copies of the builds running together), the members (more than 4 MB) do not
             a.evaluate("window.__notes = []")
             a.set_input_files("#pick", PAIR)
             try: wait_for_js(a, DONE, 120000)
-            except Exception as e: raise AssertionError((a.evaluate(WALK), str(e)[:60], a.evaluate(WHY)))
+            except Exception as e: raise AssertionError((a.evaluate(WHY), str(e)[:60], a.evaluate(WALK)))
             o = a.evaluate(WALK)
             assert not [k for k in o if k.startswith("files/nat~") and k.endswith(".scan")], ("the .wiff.scan was copied", o)
             st = a.evaluate(STUBS); assert len(st) == N and all(st.values()), st
@@ -71,7 +71,7 @@ try:
         step("the members read in place get their SHA-1 from the hash workers, not from one more read in the builder", hashed)
         def same():
             now = a.evaluate(SHAS)
-            assert now == ref["sha"], ("the indexes read in place differ from the ones built from the copy", sorted(set(now) ^ set(ref["sha"])))
+            assert now == ref["sha"], ("the indexes read in place differ from the ones built from the copy", sorted(k for k in set(now) | set(ref["sha"]) if now.get(k) != ref["sha"].get(k)))
         step("the indexes built from the user's Files are byte-identical to the ones built from the copy", same)
         def reload():
             names = a.evaluate("ST.files.map(f => f.name)")

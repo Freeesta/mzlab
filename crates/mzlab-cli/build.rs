@@ -36,7 +36,10 @@ fn main() {
                 .map(|d| d.join(&path))
                 .unwrap_or(path)
         };
-        println!("cargo:rerun-if-changed={}", path.display());
+        // a path that does not exist (no packed-refs, a loose ref that was packed) makes cargo rebuild the crate on every run: skip it
+        if path.exists() {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
     }
     println!(
         "cargo:rustc-env=MZLAB_CLI_COMMIT={}",
