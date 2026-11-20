@@ -32,7 +32,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       const rf = item(new URLSearchParams({ k: q.get("ref") || "" }));
       if (!it || !rf) return null;
       try {
-        return raw(await rpc({ op: "lr_pda_sub", name, ref: rf.file, view: q.get("view") || "map", a: num(q, "a", NaN), b: num(q, "b", NaN), scale: q.get("scale") || "none", shift: num(q, "shift", 0) }));
+        return raw(await rpc({ op: "lr_pda_sub", name, ref: rf.file, view: q.get("view") || "map", a: num(q, "a", NaN), b: num(q, "b", NaN), scale: q.get("scale") || "none", shift: num(q, "shift", 0), auto: q.get("auto") === "1" }));
       } catch (e) { return fail(e, 500); }
     }
     if (!it || q.get("ref")) return null;

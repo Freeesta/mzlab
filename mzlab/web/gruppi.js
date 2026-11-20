@@ -1,6 +1,6 @@
 // @ts-check
 // The writer of the user groups of the side list («Group by», gruppi-per.js) and the cache of the engine's answer about the file names (`api/samples/variables`).
-// Lazy (carica("gruppi.js")). The page never splits a name: the engine answers, this file maps the answer to `ugrp` (one undoable files.view step).
+// Lazy (loadScript("gruppi.js")). The page never splits a name: the engine answers, this file maps the answer to `ugrp` (one undoable files.view step).
 // Pure label maths of GRUPPI (the answer of the engine → the label of every file); same lazy file.
 window.GRUPPI_ETI = (() => {
   const MAX = 40;
@@ -60,7 +60,7 @@ window.GRUPPI = (() => {
   function write(map, by, order, undo, action = "move") {
     const go = () => { E.files.forEach(/** @param {any} f */ f => { f.ugrp = map.get(fileBase(f.file)) || undefined; }); rowsT().forEach(f => { f.ugrp = map.get(f.name) || undefined; }); E.ugBy = by; E.ugOrder = order.length ? order : undefined; };
     if (undo) step(go, action); else go();
-    renderFileList(); if (typeof carica === "function") carica("gruppi-tab.js").then(() => renderFiles()); uiSave();
+    renderFileList(); if (typeof loadScript === "function") loadScript("gruppi-tab.js").then(() => renderFiles()); uiSave();
   }
   /** Runs `go` as one files.view step and names the step after the group action (`groups.undo.<action>`) in the undo notice. @param {() => void} go @param {string} action */
   function step(go, action) {
@@ -136,7 +136,7 @@ window.GRUPPI = (() => {
       if (v === (E.ugNone || "")) return "";
       if (v && clash(v)) return "clash";
       step(() => { E.ugNone = v || undefined; }, "rename");
-      renderFileList(); if (typeof carica === "function") carica("gruppi-tab.js").then(() => renderFiles()); uiSave(); return "";
+      renderFileList(); if (typeof loadScript === "function") loadScript("gruppi-tab.js").then(() => renderFiles()); uiSave(); return "";
     }
     if (!v) v = freeName();
     if (v === old) return "";

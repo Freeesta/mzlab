@@ -24,7 +24,7 @@ window.DESKUPD = (() => {
   const close = () => { if (box) { box.remove(); box = null; } };
   const closeBtn = () => ["close", I18N.t("update.close")];
   // errors: lazy (aggiorna-errore.js)
-  const fail = r => carica("aggiorna-errore.js").then(() => DESKUPDERR.fail({ show, closeBtn, box: () => box, ver: () => ver }, r), () => show(EH(I18N.t("update.error.io")), [closeBtn()]));
+  const fail = r => loadScript("aggiorna-errore.js").then(() => DESKUPDERR.fail({ show, closeBtn, box: () => box, ver: () => ver }, r), () => show(EH(I18N.t("update.error.io")), [closeBtn()]));
 
   function offer(r, silent) {
     if (r.version) ver = r.version;

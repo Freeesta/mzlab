@@ -9,7 +9,7 @@ const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) =
 const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), sample: t("canali.manint.h.sample"), time_min: t("canali.manint.h.time"),
   start_min: t("canali.manint.h.start"), end_min: t("canali.manint.h.end"), apex_rt_min: t("canali.manint.h.apex"), area: t("canali.manint.h.area"),
   height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), overlap: t("canali.manint.h.overlap"),
-  pv: t("canali.manint.h.pv"), label: t("canali.manint.h.label"), origin: t("canali.manint.h.origin"),
+  pv: t("canali.manint.h.pv"), shift_min: t("canali.manint.h.shift"), label: t("canali.manint.h.label"), origin: t("canali.manint.h.origin"),
   sn_zone: t("canali.manint.h.snz"), w_half_min: t("canali.manint.h.w50"), plates: t("int.tbl.plates"), tailing: t("int.tbl.tail"),
   gaussian: t("int.tbl.gauss"), asymmetry: t("int.tbl.asym"), noise_score: t("int.tbl.nscore") });
 /** The tooltips of the columns of a split window. */
@@ -22,7 +22,7 @@ const withCols = w => optCols().length ? `{"windows":${w},"columns":${JSON.strin
 /** The stretch a window's noise is measured on (the user's pick, picchi.js `noiseZone`), as the engine's `noise` field. @param {any} p @param {any} it */
 const noiseOf = (p, it) => { const z = typeof noiseZone === "function" ? noiseZone(p, it) : null; return z ? { noise: [Math.min(z[0], z[1]), Math.max(z[0], z[1])] } : {}; };
 /** How a row came to be (manint.rs, column `origin`), as shown. */
-const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali.manint.org.manual"), applied: t("canali.manint.org.applied"), shifted: t("canali.manint.org.shifted"), no_peak: t("canali.manint.org.nopeak"), auto: t("canali.manint.org.auto"), unmatched: t("canali.manint.org.unmatched") });
+const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali.manint.org.manual"), applied: t("canali.manint.org.applied"), shifted: t("canali.manint.org.shifted"), no_peak: t("canali.manint.org.nopeak"), too_far: t("canali.manint.org.toofar"), auto: t("canali.manint.org.auto"), unmatched: t("canali.manint.org.unmatched") });
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 /** The longest name of an integration (manint::LABEL_MAX). */
 const NM_MAX = 40;
@@ -195,7 +195,7 @@ function draw() {
   const had = st.had; st.had = total;
   if (!total) { el.hidden = true; el.innerHTML = ""; return; }
   if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
-  const H = HEADS(), tips = TIPS(), cols = head.map((_, i) => i).filter(c => head[c] === "origin" ? body.some(r => r[c] !== "manual") : !["overlap", "pv"].includes(head[c]) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "sample", "time_min", "baseline", "overlap", "label", "origin"];
+  const H = HEADS(), tips = TIPS(), cols = head.map((_, i) => i).filter(c => head[c] === "origin" ? body.some(r => r[c] !== "manual") : !["sample_id", "file"].includes(head[c]) && (!["overlap", "pv", "shift_min"].includes(head[c]) || body.some(r => r[c] !== ""))), open = isOpen(), plain = ["channel", "sample", "time_min", "baseline", "overlap", "label", "origin"];
   const cls = (/** @type {string} */ c) => [plain.includes(c) ? "" : "num", KEY.includes(c) ? "manint-key" : ""].filter(Boolean).join(" "), clsAttr = (/** @type {string} */ c) => cls(c) ? ` class="${cls(c)}"` : "";
   const ths = cols.map(c => h`<th scope="col"${raw(clsAttr(head[c]))}${raw(tips[head[c]] ? h` title="${tips[head[c]]}"` : "")}>${H[head[c]] || head[c]}</th>`).join("");
   const trs = body.map((r, i) => {
@@ -274,7 +274,7 @@ async function ask() {
 
 /** The table follows the integrations (asked again only when a window, a baseline or a file changes) and the work area. */
 async function sync() {
-  if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await carica("m:integrazioni-tracce.js");
+  if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await loadScript("m:integrazioni-tracce.js");
   const xch = G.MANTR ? await G.MANTR.sync() : false;
   const recs = await records(), ks = [...new Set(recs.map(r => r.k))].sort((a, b) => a - b), windows = windowsOf(recs, ks);
   const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows + optCols();   // the time points of the samples as the table of the files has them

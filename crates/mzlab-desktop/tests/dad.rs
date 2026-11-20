@@ -111,14 +111,16 @@ fn register_wiff(st: &State, wiff: &Path) -> String {
     n
 }
 
+const FIT: (&str, f64, bool) = ("fit", 0.1, false);
+
 type Pair = (&'static str, Result<String, String>, Result<String, String>);
 
 /// The file minus itself shifted by 0.1 min and scaled by a fit, through `lr_pda_sub` and through the core route: the report is part of the answer.
 fn sub_answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
     let e = |r: mzlab_core::Result<String>| r.map_err(|e| e.key.to_string());
     let me = itemroutes::pda_dad(m);
-    let mut core = |view: &str, a: f64, b: f64| {
-        let (o, v) = itemroutes::pda_sub_args(view, a, b, "fit", 0.1).unwrap();
+    let mut core = |view: &str, a: f64, b: f64, (scale, shift, auto): (&str, f64, bool)| {
+        let (o, v) = itemroutes::pda_sub_args(view, a, b, scale, shift, auto).unwrap();
         match &me {
             Ok(d) => e(itemroutes::pda_subtract(m, d, &o, v)),
             Err(x) => Err(x.key.to_string()),
@@ -131,21 +133,31 @@ fn sub_answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> 
             .map_err(|e| e.key.to_string())
     };
     let (lo, hi) = (PEAK_NM - 2.0, PEAK_NM + 2.0);
+    // the shift estimated from the two runs (`auto`), with the window of the spectrum
+    let auto_app = st
+        .rpc("lr_pda_sub", &json!({"name": name, "ref": name, "view": "spectrum", "a": 0.9, "b": 1.1, "scale": "none", "shift": 0, "auto": true}), &[])
+        .map(text)
+        .map_err(|e| e.key.to_string());
     vec![
+        (
+            "subtracted spectrum with the shift estimated",
+            auto_app,
+            core("spectrum", 0.9, 1.1, ("none", 0.0, true)),
+        ),
         (
             "subtracted map",
             app("map", 0.0, 0.0),
-            core("map", 0.0, 0.0),
+            core("map", 0.0, 0.0, FIT),
         ),
         (
             "subtracted spectrum",
             app("spectrum", 0.9, 1.1),
-            core("spectrum", 0.9, 1.1),
+            core("spectrum", 0.9, 1.1, FIT),
         ),
         (
             "subtracted trace",
             app("trace", lo, hi),
-            core("trace", lo, hi),
+            core("trace", lo, hi, FIT),
         ),
     ]
 }

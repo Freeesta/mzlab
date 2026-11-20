@@ -965,7 +965,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     r.win = null; r.sum.textContent = "";
     r.pending = (async () => {
       try {
-        const x = await carica("xic-nomi.js").then(() => XICNOMI.row(t, r.ad.value, hrFile()));
+        const x = await loadScript("xic-nomi.js").then(() => XICNOMI.row(t, r.ad.value, hrFile()));
         if (ed !== r.edits) return;
         Object.assign(r, x);
         r.sum.innerHTML = x.note + sumText(r);
@@ -976,7 +976,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     const el = document.createElement("div"); el.className = "xrw";
     el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select title="${I18N.t("xic.adduct.title")}" aria-label="${I18N.t("xic.adduct.title")}">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}<option value="none" ${init.adduct === "none" ? "selected" : ""}>${I18N.t("xic.noAdduct")}</option></select><button class="xr-x" type="button" title="${I18N.t("xic.remove.title")}">&times;</button></div><div class="xr-sum"></div>`;
     const r = /** @type {Bag} */ ({ el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 });
-    r.inp.value = init.text || ""; r.inp.onfocus = () => carica("xic-nomi.js").then(() => XICNOMI.wire(r.inp), Object);
+    r.inp.value = init.text || ""; r.inp.onfocus = () => loadScript("xic-nomi.js").then(() => XICNOMI.wire(r.inp), Object);
     r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => { renumber(); evalRow(r); };
     r.inp.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field

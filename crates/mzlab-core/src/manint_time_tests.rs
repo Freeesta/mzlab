@@ -25,7 +25,7 @@ fn times(list: &[(&str, &str)], sums: bool) -> Vec<(String, String)> {
         .skip(1)
         .map(|l| {
             let c: Vec<&str> = l.split(',').collect();
-            assert_eq!(c.len(), 14, "{l}");
+            assert_eq!(c.len(), 17, "{l}");
             (c[1].to_string(), c[2].to_string())
         })
         .collect()

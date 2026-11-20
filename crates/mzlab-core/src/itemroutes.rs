@@ -182,9 +182,9 @@ pub fn pda_dad<M: ReadAt>(m: &mut Mzml<M>) -> Result<std::sync::Arc<crate::wiff:
     m.dad_memo()?.ok_or_else(|| Error::new("err.pda.none"))
 }
 
-/// The arguments of `/api/pdasub` as every seam (site, app, CLI) gets them: `view` is `map`, `spectrum` (`a`, `b` = rt0, rt1) or `trace` (`a`, `b` = nm0, nm1); `scale` is `none`, `max`, `tic`, `fit` or a factor; `shift` in minutes.
+/// The arguments of `/api/pdasub` as every seam (site, app, CLI) gets them: `view` is `map`, `spectrum` (`a`, `b` = rt0, rt1) or `trace` (`a`, `b` = nm0, nm1); `scale` is `none`, `max`, `tic`, `fit` or a factor; `shift` in minutes, or estimated from the two runs when `auto` is set (on the time window of a `spectrum` view; `wiff::dad_align`).
 #[cfg(feature = "mappa-dad")]
-pub fn pda_sub_args(view: &str, a: f64, b: f64, scale: &str, shift: f64) -> Result<(crate::wiff::dad_ops::SubOpts, PdaView)> {
+pub fn pda_sub_args(view: &str, a: f64, b: f64, scale: &str, shift: f64, auto: bool) -> Result<(crate::wiff::dad_ops::SubOpts, PdaView)> {
     let scale = crate::wiff::dad_ops::Scale::parse(scale).ok_or_else(|| Error::new("err.pda.scale").with("scale", scale))?;
     let view = match view {
         "map" => PdaView::Map,
@@ -192,7 +192,12 @@ pub fn pda_sub_args(view: &str, a: f64, b: f64, scale: &str, shift: f64) -> Resu
         "trace" => PdaView::Wavelength(a, b),
         v => return Err(Error::new("err.pda.view").with("view", v)),
     };
-    Ok((crate::wiff::dad_ops::SubOpts { scale, shift_min: shift }, view))
+    let pad = crate::wiff::dad_align::FOCUS_PAD_MIN;
+    let focus = match view {
+        PdaView::Spectrum(t0, t1) => Some((t0.min(t1) - pad, t0.max(t1) + pad)),
+        _ => None,
+    };
+    Ok((crate::wiff::dad_ops::SubOpts { scale, shift_min: shift, auto_shift: auto, focus }, view))
 }
 
 /// What a subtracted DAD map is asked for: the map, the UV spectrum in a window of time, or the trace in a band of wavelengths.

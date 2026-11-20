@@ -102,7 +102,7 @@ const OPENNOW = /** @type {any} */ ((() => {
     if (fs.length) SAMPLES.apply(fs.map(entry), true);
   }
   // the rare paths (the switch of world, the question of a large folder) load on first use: open-now-raro.js
-  const rare = async () => { await carica("m:open-now-raro.js"); return /** @type {any} */ (window).OPENRARO; };
+  const rare = async () => { await loadScript("m:open-now-raro.js"); return /** @type {any} */ (window).OPENRARO; };
   /** «Switch to …»: closes the files of the open world and opens the other one (one «Removed · Undo» entry) */
   const toWorld = async (/** @type {boolean} */ hr) => (await rare()).toWorld(hr, { sent, q, drain });
   /** a batch has ended: the side list says what was set aside */

@@ -39,14 +39,14 @@ fn extra_columns_follow_origin() {
     let rows: Vec<Vec<&str>> = t.lines().skip(1).map(|l| l.split(',').collect()).collect();
     // two samples on the one channel (same label across files), then its sum
     assert_eq!(rows.len(), 3);
-    assert!(rows.iter().all(|r| r.len() == 20));
+    assert!(rows.iter().all(|r| r.len() == 23));
     assert_eq!(rows[0][0], "m/z 100.1");
     assert_eq!(
-        &rows[0][14..],
+        &rows[0][17..],
         ["XIC 1", "2.5", "ppm", "drift", "0.00000E+00", ""]
     );
-    assert_eq!(rows[1][14], "XIC 1");
-    assert_eq!(rows[1][15], "");
+    assert_eq!(rows[1][17], "XIC 1");
+    assert_eq!(rows[1][18], "");
     assert_eq!(rows[2][2], "");
     assert_eq!(rows[2][1], "sum");
 }
@@ -57,7 +57,7 @@ fn unit_and_edges_below() {
     let t = table_text(&files(), w, false).unwrap();
     let r: Vec<&str> = t.lines().nth(1).unwrap().split(',').collect();
     assert_eq!(r[0], "254 nm");
-    assert_eq!(r[14], "DAD");
-    assert_eq!(r[18], "");
-    assert_eq!(r[19], "mAU·s");
+    assert_eq!(r[17], "DAD");
+    assert_eq!(r[21], "");
+    assert_eq!(r[22], "mAU·s");
 }

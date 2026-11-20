@@ -13,7 +13,7 @@ const TIPOF = (() => {
   /** The file with its effective kind; `kindAuto` keeps the engine's. @param {any} f @param {string} name */
   const apply = (f, name) => { const auto = f.kindAuto || f.kind, m = manual(name); return { ...f, kindAuto: auto, kind: m || auto, manual: !!m }; };
   /** The MSn infusion tools (infusione*.js) are not in the start-up list: they arrive before the first scan file (not MRM) enters the session: a DDA file has a precursor tree too (infusione-albero.js probes it). */
-  const loadInf = async () => { await carica("infusione.js"); await Promise.all([carica("infusione-albero.js"), carica("infusione-menu.js")]); };
+  const loadInf = async () => { await loadScript("infusione.js"); await Promise.all([loadScript("infusione-albero.js"), loadScript("infusione-menu.js")]); };
   const infusione = async (/** @type {any[]} */ session) => { if (!window.INF && session.some(s => !ESP.mrm({ type: apply(s, s.file).kind }))) await loadInf(); };
   /** Applies the choice to the files already opened in the viewer, without reloading. @param {string[]} names */
   const viewer = async names => {

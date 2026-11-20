@@ -4,7 +4,7 @@
 // are the `link/1` of the Rust graph (crates/mzlab-feat chem::link, through the `.wasm` `grafo` or the app's `feat/grafo`). The page never fetches
 // them: a row opens its URL in a new tab (noopener, noreferrer) only when clicked, copying the SMILES first when the site takes no structure in its URL.
 
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 import { copyText } from "./disegno-menu.js";
 
 /** @typedef {{ id: string, url: string, copy: string | null }} Link */
@@ -13,7 +13,7 @@ import { copyText } from "./disegno-menu.js";
 
 /** `link/1` of a structure, or null when the engine cannot answer */
 export async function linkOf(/** @type {string} */ smiles, /** @type {string} */ inchi, /** @type {boolean} */ part) {
-  try { return /** @type {Links} */ (JSON.parse(await (await carica()).link(JSON.stringify({ smiles, inchi, part })))); } catch (_) { return null; }
+  try { return /** @type {Links} */ (JSON.parse(await (await loadWasm()).link(JSON.stringify({ smiles, inchi, part })))); } catch (_) { return null; }
 }
 
 /** opens `url` in a new tab cut off from this page (no opener, no referrer) */

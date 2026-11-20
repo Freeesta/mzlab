@@ -548,7 +548,7 @@ const TOUR = (() => {
     const priBtn = btnNext || btnCont || btnFine;
     if (priBtn) priBtn.focus();
 
-    if (step.carica) tryTimer = step.carica(() => { stopTryTimer(); renderStep(); });
+    if (step.startTry) tryTimer = step.startTry(() => { stopTryTimer(); renderStep(); });
     // Setup "Prova tu" observation
     if (step.prova && step.attesa && step.initProva) {
       provaState = step.initProva();

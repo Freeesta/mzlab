@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Suggestions under the text field of the small question dialog (#askin): a combobox with a listbox (no <datalist>: Safari and iPad draw it badly).
-// Lazy (carica("ask-suggerisci.js")): ask() in explore.js attaches it when its caller passes `suggest`.
+// Lazy (loadScript("ask-suggerisci.js")): ask() in explore.js attaches it when its caller passes `suggest`.
 // The caller gives the rows for a text; a pick returns the text to put in the field. Keyboard: up/down move, Enter picks, Esc closes the list only.
 const ASKSUG = (() => {
   /** @param {HTMLInputElement} input

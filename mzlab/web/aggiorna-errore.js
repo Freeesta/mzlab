@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// Lazy (carica("aggiorna-errore.js")) from aggiorna.js: an update error with the failed file under the message and a «Copy details» button
+// Lazy (loadScript("aggiorna-errore.js")) from aggiorna.js: an update error with the failed file under the message and a «Copy details» button
 // (key, detail, commit and manifest version for a bug report).
 const DESKUPDERR = (() => {
   let last = /** @type {Bag | null} */ (null), ctx = /** @type {Bag | null} */ (null);

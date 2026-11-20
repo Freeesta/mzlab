@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "estimates/1",
+  "title": "estimates/1: what `features.estimate` measured on one file",
+  "description": "The file, the polarity and axis it was measured with, the measurements of `run::preview` that are numbers (each with the figures it comes from; their members are those of KEPT in crates/mzlab-ops/src/run/feat/run_estimate.rs and are not listed here) and, only when there are any, the `notices` of the file (crates/mzlab-ops/src/run/feat/lr_note.rs). The same text from the `flow_estimate` of the page and from `flow run`.",
+  "type": "object",
+  "required": ["schema", "file", "polarity", "axis"],
+  "properties": {
+    "schema": { "const": "estimates/1" },
+    "file": { "type": "string" },
+    "polarity": { "enum": [-1, 0, 1], "description": "0 when the file did not decide" },
+    "axis": { "enum": ["Da", "ppm"] },
+    "notices": {
+      "type": "array",
+      "minItems": 1,
+      "description": "present only when there is a notice; the same items as `notices` of features-notes/1",
+      "items": {
+        "type": "object",
+        "required": ["key", "params"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "enum": ["warn.features.profileUnit"] },
+          "params": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+        }
+      }
+    }
+  }
+}

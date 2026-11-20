@@ -8,7 +8,11 @@ mod bpc;
 mod chromatograms;
 mod container;
 pub use container::{container, container_at, container_within};
+mod growing;
+pub use growing::check_stable;
 pub mod dad;
+#[cfg(feature = "mappa-dad")]
+pub mod dad_align;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
 #[cfg(feature = "mappa-dad")]

@@ -16,7 +16,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         fs = sorted((ROOT / "tests" / "data" / "gruppi").glob("*.mzML"))[:3]
         stage(pg, fs)
-        pg.evaluate("carica('gruppi.js').then(() => { const n = ST.files.map(f => f.name); GRUPPI.set(n.slice(0, 2), 'Blank'); })")
+        pg.evaluate("loadScript('gruppi.js').then(() => { const n = ST.files.map(f => f.name); GRUPPI.set(n.slice(0, 2), 'Blank'); })")
         wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2", 10000)
         pg.click("text=Sample table"); wait_for_js(pg, "!!document.querySelector('.tg-name') && document.querySelector('.tg-name').offsetWidth > 0", 5000)
         def heads(): return pg.evaluate(NAMES)

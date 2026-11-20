@@ -1,6 +1,6 @@
 // @ts-check
 // «Group by ▾» of the side list header: the menu (None, the ranked variables of the names with a preview, Then by…, Token position…, Contains…, Custom) and the two
-// dialogs of the manual rules. Lazy (carica("gruppi-per.js") from lista-file.js); the engine's answer and the writer are in gruppi.js, nothing here splits a name.
+// dialogs of the manual rules. Lazy (loadScript("gruppi-per.js") from lista-file.js); the engine's answer and the writer are in gruppi.js, nothing here splits a name.
 window.GRUPPIPER = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
   // the button the menu hangs from: the side list's, or another one given to open() (the table's «Group by»)
