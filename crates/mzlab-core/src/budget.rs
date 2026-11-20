@@ -136,6 +136,10 @@ pub fn try_vec<T>(n: usize) -> Result<Vec<T>> {
     Ok(v)
 }
 
+/// Heap bytes per scan outside the `Scan` itself (the strings of its row): 149 B native; the .wasm needs more than the sum (size classes, freed row text), so 192
+/// (`tests/test_memoria_limite_wasm.py`).
+pub const ROW_HEAP: usize = 192;
+
 /// Proof that `bytes` more can be had in one piece, taken and given back at once: a refusal (`error.memoryBudget` without a phase, so `routes_open::open_beside`
 /// empties the caches and tries again) instead of the trap an infallible allocation ends in when the browser grants no more (`memory.grow` fails).
 /// For what is built from many small allocations (the strings of a scan table): the caller passes its estimate, with margin. Nothing is touched.
