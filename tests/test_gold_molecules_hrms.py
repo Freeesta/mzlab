@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ORO = ROOT / "tests" / "dati" / "molecules_hrms_gold.json"
+ORO = ROOT / "tests" / "data" / "molecules_hrms_gold.json"
 
 
 def test_oro_shape():
