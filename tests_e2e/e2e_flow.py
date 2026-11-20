@@ -350,14 +350,14 @@ try:
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
         def samples_fix():
-            # a step that asks for the sample list: the one-click remedy adds it filled from the files open in Data (MISURA clic_campioni)
+            # a step that asks for the sample list: the one-click remedy adds it filled from the files open in Data (MISURA click_samples)
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }];
               FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")   # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
             label = pg.evaluate("""() => { const S = FLOW.current, inst = S.plan.steps.find(s => s.step.startsWith('table.filter')); window.__fix = FLOW.friendly(S, { key: 'err.flow.port.missing', instance: inst.id, port: 'samples' }).fix; return window.__fix.label; }""")
             assert label == "Add sample list from Data", label
             pg.evaluate("() => window.__fix.run()")
             wait_for_js(pg, "FLOW.current.plan.inputs.some(i => i.type === 'samples' && i.sha256.length === 64) && Object.values(FLOW.current.samples)[0].samples.length === 2")
-            print("MISURA clic_campioni: 1 click (the remedy) from a step that asks for the list to the list filled from Data")
+            print("MISURA click_samples: 1 click (the remedy) from a step that asks for the list to the list filled from Data")
             pg.evaluate("() => { E.files = window.__e; }")
         step("the remedy of a step that needs the sample list fills it from Data in one click", samples_fix)
 

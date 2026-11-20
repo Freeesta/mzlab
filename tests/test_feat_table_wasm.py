@@ -39,7 +39,7 @@ def built(tmp_path_factory):
     series = root / "series"
     series.mkdir()
     run("target/release/examples/native", str(series), *idx)
-    (root / "campioni.json").write_text(samples_json(idx))
+    (root / "samples.json").write_text(samples_json(idx))
     (root / "spec.json").write_text(json.dumps(SPEC))
     return root, idx, pkg, series / "series.mzfeat"
 
@@ -47,7 +47,7 @@ def built(tmp_path_factory):
 @pytest.mark.parametrize("spec", ["-", "spec.json"])
 def test_wasm_and_native_write_the_same_files(built, spec):
     root, idx, pkg, table = built
-    args = [str(table), str(root / "campioni.json"), "-" if spec == "-" else str(root / spec), "1", *idx]
+    args = [str(table), str(root / "samples.json"), "-" if spec == "-" else str(root / spec), "1", *idx]
     outs = {}
     for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
         out = root / f"{name}-{spec}"

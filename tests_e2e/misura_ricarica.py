@@ -43,7 +43,7 @@ PROBE = r"""(() => {
     return v;
   };
   addEventListener("pagehide", () => { try { const a = JSON.parse(localStorage.getItem("__probe") || "[]"); a.push(v.snap()); localStorage.setItem("__probe", JSON.stringify(a)); } catch (_) {} });
-  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ stato: "saltato" })); localStorage.setItem("mzlab.barra.hint", "1"); localStorage.setItem("mzlab.pannelli.affianca.hint", "1"); } catch (_) {}
+  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.barra.hint", "1"); localStorage.setItem("mzlab.pannelli.affianca.hint", "1"); } catch (_) {}
 })();"""
 
 USABLE = "!!(window.__v && __v.marks.ready && __v.marks.drop && window.crossOriginIsolated)"

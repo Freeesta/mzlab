@@ -1,5 +1,5 @@
 """Test e2e for reproducibility (.mzflow) and MGF / MSP spectral export."""
-# covers: mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/rapporto.js, mzlab/web/workflow.js, mzlab/web/gradiente.js, mzlab/web/fair.js
+# covers: mzlab/web/samples.js, mzlab/web/samples-doc.js, mzlab/web/rapporto.js, mzlab/web/workflow.js, mzlab/web/gradiente.js, mzlab/web/fair.js
 # covers: mzlab/web/version.js
 import json
 import os

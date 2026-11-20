@@ -283,7 +283,7 @@ try:
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
                 ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, reduced_motion="reduce")
-                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
                 try:
                     stage(q, [EX]); q.click("text=Load data"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); ready(q)     # the session lives in the browser: a new context opens the file itself
@@ -305,7 +305,7 @@ try:
 
         def phone():
             ctx = r.b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True, reduced_motion="reduce")
-            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
                 stage(q, [EX]); q.click("text=Load data"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); ready(q)     # the session lives in the browser: a new context opens the file itself

@@ -19,7 +19,7 @@ def cold(p, vw, vh, reduced, saved=None):
     r = Run(port=8873, wd="/tmp/wd_transizioni"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
+    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
     if "mzlab.barra.lr" not in (saved or {}): init += "localStorage.setItem('mzlab.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")

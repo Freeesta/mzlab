@@ -10,7 +10,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_disegno_bersagli.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:600]))
 r = Run(port=8862, wd="/tmp/wd_disegno_bersagli")
-INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 READY = "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())"
 def open_draw(ctx):
     pg = ctx.new_page(); pg.add_init_script(INIT)

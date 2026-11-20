@@ -122,7 +122,7 @@
   "mzlab/statistica.py::reference_difference": 88,
   "mzlab/web/banco.js::BANCO": 562,
   "mzlab/web/barra.js::BARRA": 1029,
-  "mzlab/web/campioni.js::CAMPIONI": 172,
+  "mzlab/web/samples.js::SAMPLES": 172,
   "mzlab/web/composizione.js::COMP": 201,
   "mzlab/web/composizione.js::open": 96,
   "mzlab/web/dda.js::DDA": 403,

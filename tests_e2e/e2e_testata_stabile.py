@@ -10,7 +10,7 @@ from lib import *
 LOG = """window.__h = []; (function f() { try { const h = document.querySelector('header'), n = document.querySelector('#nav'), d = document.querySelector('#drop');
   if (h && n && d && !document.documentElement.classList.contains('i18n-wait')) { const v = [Math.round(h.getBoundingClientRect().height), Math.round(n.getBoundingClientRect().width), Math.round(d.getBoundingClientRect().top)];
     const l = __h[__h.length - 1]; if (!l || l.join() !== v.join()) __h.push(v); } } catch (e) {} requestAnimationFrame(f); })()"""
-SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}))}catch(e){}"
+SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}))}catch(e){}"
 
 if __name__ == "__main__":
     r = Run(port=8830 + 171, wd="/tmp/wd_testata_stabile"); bad = []

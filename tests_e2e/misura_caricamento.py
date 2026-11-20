@@ -66,7 +66,7 @@ def run(a):
             b = p.chromium.launch()
             c = b.new_context(viewport={"width": a.width, "height": a.height}, color_scheme="dark" if a.dark else "light")
             c.set_default_timeout(300000)
-            c.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            c.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             if not a.cold: c.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
             c.add_init_script(PROBE)
             pg = c.new_page()

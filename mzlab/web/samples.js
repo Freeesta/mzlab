@@ -4,10 +4,10 @@
 //   filename, sample_type (sample | blank | qc | standard | dark | infusion), time + time_unit, concentration + concentration_unit, replicate (a dark has a negative time: the minutes before the time zero).
 // The values are the ones the file name gave (project.py, read at loading) and can be edited here; the table is the only place that
 // writes them after loading (`apply`, the only writer): f.role / f.type / f.time (minutes) / f.tconf / f.conc / f.cunit / f.rep of E.files,
-// the server copy (/api/meta), the notebook (uiSave: NB.session in the format samples/1, campioni-doc.js) and the .mzflow file (operation
+// the server copy (/api/meta), the notebook (uiSave: NB.session in the format samples/1, samples-doc.js) and the .mzflow file (operation
 // `samples`). Export and import of the table as TSV (mzmine column names, the columns of samples/1 at the end).
-// The pure functions at the top (TSV, replicate groups, time scale) are also run by node in tests/test_campioni.py.
-const CAMPIONI = (() => {
+// The pure functions at the top (TSV, replicate groups, time scale) are also run by node in tests/test_samples.py.
+const SAMPLES = (() => {
   // sample_type of the table (an old export may say «t0»: a sample at 0 minutes)
   const TYPES = ["sample", "blank", "qc", "standard", "dark", "infusion"];
   // sample_type -> role of samples/1 (the others are the same word)
@@ -83,7 +83,7 @@ const CAMPIONI = (() => {
   const files = () => (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone && (f.lv || 1) === 1 && f.kind !== "empty");
   // role of the QA/QC (sample | blank | qc | standard | dark), for the statistics
   const roleOf = f => (window.QAQC ? QAQC.roleOf(f) : f.type || "sample");
-  const kindOf = f => CDOC.kindOf(f);                                              // role of samples/1
+  const kindOf = f => SAMPLES_DOC.kindOf(f);                                              // role of samples/1
   const roleName = r => t("qaqc.role." + r);
   const repOf = f => repKey(f, roleOf(f));
   const shownRep = f => (f.rep ? f.rep : f.time == null && f.conc == null ? "" : repKey(f, roleOf(f)).replace(/\|/g, " "));
@@ -94,8 +94,8 @@ const CAMPIONI = (() => {
     const was = kindOf(f);
     // the old role: a sample at 0 minutes
     if (k === "t0") { k = "sample"; if (!(f.time === 0)) { f.time = 0; f.tconf = true; } }
-    f.role = k; f.type = CDOC.BASE[k] || "sample";
-    if (was !== k && !CDOC.TIMED.has(k)) { f.time = null; f.tconf = true; }
+    f.role = k; f.type = SAMPLES_DOC.BASE[k] || "sample";
+    if (was !== k && !SAMPLES_DOC.TIMED.has(k)) { f.time = null; f.tconf = true; }
     // a negative time belongs to the dark only
     else if (was === "dark" && k !== "dark" && f.time != null && f.time < 0) { f.time = null; f.tconf = true; }
   }
@@ -106,7 +106,7 @@ const CAMPIONI = (() => {
     entries.forEach(e => {
       const f = files().find(x => x.file === e.file || x.file.split("#")[0] === e.file); if (!f) return;
       const k = KIND[e.role || e.type] || e.role || e.type;
-      if (k && CDOC.known(k)) setKind(f, k);
+      if (k && SAMPLES_DOC.known(k)) setKind(f, k);
       if ("time" in e) { f.time = e.time; f.tconf = e.tconf !== false; } else if ("tconf" in e) f.tconf = !!e.tconf;
       // minutes of darkness before the time zero: never positive
       if (kindOf(f) === "dark") f.time = darkTime(f.time);
@@ -164,22 +164,22 @@ const CAMPIONI = (() => {
   function importState(list) {
     if (!Array.isArray(list)) return 0;
     const ent = [];
-    list.forEach(x => { if (x && x.nome) { const e = { file: x.nome }; const r = KIND[x.ruolo] || x.ruolo; if (CDOC.known(r)) e.role = r; if ("concentrazione" in x) { e.conc = x.concentrazione; e.cunit = x.unita_conc || null; } if ("replica" in x) e.rep = x.replica || ""; ent.push(e); } });
+    list.forEach(x => { if (x && x.nome) { const e = { file: x.nome }; const r = KIND[x.ruolo] || x.ruolo; if (SAMPLES_DOC.known(r)) e.role = r; if ("concentrazione" in x) { e.conc = x.concentrazione; e.cunit = x.unita_conc || null; } if ("replica" in x) e.rep = x.replica || ""; ent.push(e); } });
     return apply(ent);
   }
   /** the document samples/1 of the open files (entries of NB.session plus `rep`, the keys of the schema in the order of the Rust) */
-  const docNow = () => CDOC.doc(files());
+  const docNow = () => SAMPLES_DOC.doc(files());
   /** the entries of a samples/1 document (the operation `samples` of a .mzflow, or NB.session) applied to the open files; returns how many */
   function importDoc(d) {
     const list = d && Array.isArray(d.samples) ? d.samples : [];
-    return apply(list.filter(e => e && e.file && CDOC.known(e.kind)).map(e => { const x = CDOC.fields(e); const o = { file: e.file, role: x.role, time: x.time, tconf: x.tconf, conc: x.conc, rep: x.rep || "" }; if (x.conc != null) o.cunit = x.cunit; return o; }), true);
+    return apply(list.filter(e => e && e.file && SAMPLES_DOC.known(e.kind)).map(e => { const x = SAMPLES_DOC.fields(e); const o = { file: e.file, role: x.role, time: x.time, tconf: x.tconf, conc: x.conc, rep: x.rep || "" }; if (x.conc != null) o.cunit = x.cunit; return o; }), true);
   }
   /** the fields of the entries of NB.session set on the files just built (first loading): role, subtype, confirmation, the fields the table does not edit */
   function restore(list) {
     if (!Array.isArray(list)) return;
     for (const f of files()) {
       const e = list.find(x => x && x.file === f.file && x.kind); if (!e) continue;
-      const x = CDOC.fields(e); f.role = x.role; f.time = x.time; f.tconf = x.tconf; f.cx = x.cx; if (x.rep) f.rep = x.rep;
+      const x = SAMPLES_DOC.fields(e); f.role = x.role; f.time = x.time; f.tconf = x.tconf; f.cx = x.cx; if (x.rep) f.rep = x.rep;
     }
   }
   /** what a file keeps when the list is rebuilt (a file added later) */
@@ -187,5 +187,5 @@ const CAMPIONI = (() => {
 
   return { TYPES, COLS, KIND, toTsv, parseTsv, baseName, repKey, groups, timeFrac, files, roleOf, kindOf, roleName, repOf, rows, apply, importTsv, gradientLegend, selVal, shownRep, exportState, importState, docNow, importDoc, restore, keep };
 })();
-if (typeof window !== "undefined") window.CAMPIONI = CAMPIONI;
-if (typeof module !== "undefined") module.exports = CAMPIONI;
+if (typeof window !== "undefined") window.SAMPLES = SAMPLES;
+if (typeof module !== "undefined") module.exports = SAMPLES;

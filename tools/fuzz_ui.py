@@ -90,7 +90,7 @@ class Page:
         vp = TABLET if s.a.tablet else DESKTOP
         ctx = s.br.new_context(viewport={"width": vp[0], "height": vp[1]}, has_touch=s.a.tablet, is_mobile=s.a.tablet, reduced_motion="reduce",
                                accept_downloads=True)
-        ctx.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));"
+        ctx.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));"
                             "localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         ctx.add_init_script(INSTR)
         pg = s.pg = ctx.new_page()
@@ -320,7 +320,7 @@ def leak(s, p):
                 b = pg.locator(f"#nav [data-v={v}]")
                 if b.count() and b.first.is_visible(): b.first.click(); s.quiet(20)
             pg.keyboard.press("Shift+?"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)          # the shortcuts panel
-            pg.evaluate("carica('m:molecole-ui.js').then(() => window.MOLDB.apri())"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
+            pg.evaluate("carica('m:molecules-ui.js').then(() => window.MOLDB.open())"); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
             n = pg.evaluate("E.panels.length")                  # a spectrum panel added and closed again
             if pg.locator("#np-spec").first.is_visible():
                 pg.click("#np-spec"); s.quiet(20)

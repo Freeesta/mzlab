@@ -15,7 +15,7 @@ URL = f"http://127.0.0.1:{PORT}/"
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:300])); errs.append(name)
-SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+SKIP_TOUR = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); msgs = []

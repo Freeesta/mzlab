@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the parent compound of a plan (input type `structure`) written in place. The box is the search box of the molecules database (molecole-campo.js):
+// Flow (administrator mode): the parent compound of a plan (input type `structure`) written in place. The box is the search box of the molecules database (molecules-field.js):
 // a name, a synonym, a formula, an InChIKey or an m/z, with the ranked list (one slip of a letter is forgiven). A formula or an m/z is asked what it is, the neutral molecule M
 // (the default) or an ion of the adduct table of the engine, and the plan keeps the NEUTRAL molecule: S.parents[input name] is a JSON {name, formula, smiles, inchikey, mass, typed:{text, adduct}}
 // (also in S.samplesJson, the map of the contents of the inputs that the desktop run is given). A SMILES, or a formula/SMILES/JSON written by hand, is still accepted as text.
@@ -57,8 +57,8 @@
     const old = savedOf(F.parentText(S, input.name));
     let text = old && old.typed ? String(old.typed.text || "") : "", chosen = old && old.name ? String(old.name) : "";
     const show = () => { const j = savedOf(F.parentText(S, input.name)); say.textContent = j ? summary(j, input.sha256) : F.parentText(S, input.name) ? "SMILES or text kept as typed (neutral) · SHA-256 " + input.sha256.slice(0, 12) + "…" : "No parent yet."; };
-    app("molecole-campo.js").then(async c => {
-      const a = await app("molecole-archivio.js");
+    app("molecules-field.js").then(async c => {
+      const a = await app("molecules-archive.js");
       const names = await a.addotti();
       sel.append(el("option", { value: "neutral" }, "the neutral molecule (M)"), ...names.map((/** @type {string} */ n) => el("option", { value: n }, "an ion " + n)));
       sel.value = old && old.typed && names.includes(old.typed.adduct) ? old.typed.adduct : "neutral";
@@ -76,22 +76,22 @@
         if (r && "error" in r) { say.textContent = r.error; return; }
         if (r) { chosen = ""; await store({ ...(r.formula ? { formula: r.formula } : {}), mass: r.massa, typed: { text: t, adduct: sel.value } }); return; }
         if (t === chosen) return;
-        const hit = (await a.cerca(t, 1, 10, true))[0];
+        const hit = (await a.search(t, 1, 10, true))[0];
         if (hit && hit.nome.toLowerCase() === t.toLowerCase()) { await pick(hit); return; }
         if (/[\d()=#[\]@]/.test(t) || /^[A-Z]+$/.test(t)) { chosen = ""; await F.parentSet(S, input, t); show(); if (S.redraw) S.redraw(); return; }
         say.textContent = `No molecule called ${t}: pick one from the list, or type a formula, an m/z or a SMILES.`;
       };
       const pick = async (/** @type {any} */ row0) => {
-        const m = (await a.prendi(row0.id)) || row0;
+        const m = (await a.getMolecule(row0.id)) || row0;
         chosen = m.nome || ""; row.hidden = true;
         await store({ name: chosen, ...(m.formula ? { formula: m.formula } : {}), smiles: m.smiles || "", inchikey: m.inchikey || "", mass: m.massa, typed: { text: chosen, adduct: "neutral" } });
       };
-      const f = c.campo(host, {
-        testi: { label: "Parent compound", placeholder: "name, formula, InChIKey or m/z", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
-        valore: text || chosen, ampia: true, gestisci: null,
+      const f = c.field(host, {
+        texts: { label: "Parent compound", placeholder: "name, formula, InChIKey or m/z", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
+        value: text || chosen, wide: true, manage: null,
         // under an ion reading the list is searched with the neutral formula or mass, the database holds neutral molecules
-        interroga: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.massa)) : t; },
-        onScegli: pick,
+        prepare: async (/** @type {string} */ t) => { const r = sel.value === "neutral" ? null : await ionOf(t, sel.value); return r && !("error" in r) ? (r.formula || String(r.massa)) : t; },
+        onPick: pick,
       });
       f.input.addEventListener("input", async () => { const r = await ionOf(f.input.value.trim(), sel.value); row.hidden = !r; });
       f.input.addEventListener("change", () => { commit(f.input.value); });

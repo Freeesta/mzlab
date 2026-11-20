@@ -17,7 +17,7 @@ const LISTE_TARGET = (function() {
    * @param {any} [doc] a molecules/1 document; without it the `hrms` catalogue of the archive
    */
   async function listMolecules(adducts, doc) {
-    if (!doc) await (await import("./molecole-archivio.js")).pronto();
+    if (!doc) await (await import("./molecules-archive.js")).ready();
     const body = doc ? { molecules: doc, adducts } : { catalog: "hrms", adducts };
     const r = await fetch(ROUTE + "list", { method: "POST", body: JSON.stringify(body) });
     if (!r.ok) throw new Error("list: " + r.status);

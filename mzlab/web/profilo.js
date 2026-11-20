@@ -17,7 +17,7 @@ const PROFILO = (() => {
   let res = null;                                              // last result {ion, rows, series, normalized, metric}
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
-  const series = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter(f => f.kind !== "mrm");
+  const series = () => (window.SAMPLES ? SAMPLES.files() : []).filter(f => f.kind !== "mrm");
   const fmt = (v, d = 2) => I18N.sci(v, d);
 
   async function resolveMz(text) {
@@ -92,7 +92,7 @@ const PROFILO = (() => {
   }
   function body(r) {
     const u = tunitGet();
-    return r.rows.map((o, k) => [o.label, CAMPIONI.roleName(o.role), o.time == null ? "" : timeShown(o.time, u), o.rt == null ? "" : +o.rt.toFixed(3), o.area == null ? "" : o.area, o.height == null ? "" : o.height].concat(r.normalized ? [o.norm == null ? "" : o.norm] : []));
+    return r.rows.map((o, k) => [o.label, SAMPLES.roleName(o.role), o.time == null ? "" : timeShown(o.time, u), o.rt == null ? "" : +o.rt.toFixed(3), o.area == null ? "" : o.area, o.height == null ? "" : o.height].concat(r.normalized ? [o.norm == null ? "" : o.norm] : []));
   }
   function tableHtml(r) {
     const b = body(r);
@@ -120,7 +120,7 @@ ${hr && qaOn() && !ions.length ? `<p class="sm">${t("prof.istd.hint")}</p>` : ""
     if (!el) return;
     if (res && !sameFiles(res)) res = null;
     if (!res) { el.innerHTML = ""; return; }
-    el.innerHTML = `<div class="sm" id="prof-sum">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.CAMPIONI ? CAMPIONI.gradientLegend() : ""}
+    el.innerHTML = `<div class="sm" id="prof-sum">${t("prof.sum", { mz: fmt(res.ion.mz, 4), rt: fmt(res.ion.rt, 2) })}${res.normalized && res.istd ? " " + t("prof.sum.istd", { istd: eh(res.istd.label) }) : ""}</div>${chart(res)}${window.SAMPLES ? SAMPLES.gradientLegend() : ""}
 ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("meta.copy")}</button><button type="button" id="prof-xlsx">Excel</button></div><div id="prof-note" class="sm" role="status"></div>`;
   }
   // a failed run drops the last result: the chart of the previous ion beside the new, wrong input would read as its answer

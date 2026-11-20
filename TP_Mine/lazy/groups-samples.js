@@ -1,6 +1,6 @@
 // @ts-check
 // @ts-strict
-// TPMINE-PRIVATE  Table of the files of Tabui with role, condition, time and replicate (samples/1). Loaded on request (window.TPLAZY.load("gruppi-campioni.js")), never at start.
+// TPMINE-PRIVATE  Table of the files of Tabui with role, condition, time and replicate (samples/1). Loaded on request (window.TPLAZY.load("groups-samples.js")), never at start.
 // window.TPGRUPPI_FILES.mount(el, files, opts) draws it: the proposals (role, time, condition = `series`, replicate) and the warnings are the Rust of mzlab-core (`samples`) reached through
 // opts.R (the module TP_Mine/files/finder-ruoli.js) and opts.call; this file holds no rule about names. The record lives in the notebook: NB.samples (canonical samples/1, one entry per file)
 // and NB.gruppi_opts ({reference, min_rep_frac, min_area, factors}; the fields other than `reference` stay as they are). A condition proposed from a name is yellow until «Confirm conditions»

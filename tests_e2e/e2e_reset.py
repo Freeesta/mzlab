@@ -96,7 +96,7 @@ try:
         def isolated_after():
             # a visitor's tab (no guard preset by the harness): first visit isolates itself, a Full reset must end isolated again with no manual reload
             c2 = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
-            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
             loads = []; q.on("framenavigated", lambda f: loads.append(f.url) if f == q.main_frame else None)
             try:
                 q.goto(base); q.wait_for_function("crossOriginIsolated === true && window.qqReady", timeout=60000)

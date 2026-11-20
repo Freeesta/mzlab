@@ -1,20 +1,20 @@
-"""Window «Molecules» (molecole-ui.js, opened by the «Manage» link) and the search box (molecole-campo.js), on INVENTED molecules only (Exampline, Provolone B): lazy loading, open and close
+"""Window «Molecules» (molecules-ui.js, opened by the «Manage» link) and the search box (molecules-field.js), on INVENTED molecules only (Exampline, Provolone B): lazy loading, open and close
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
-surviving a reload (IndexedDB store «molecole»), the migration of the database 3 -> 4 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
-Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecole_ui.py"""
-# covers: mzlab/web/molecole, mzlab/web/qqq-db.js
+surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 5 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
+Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecules_ui.py"""
+# covers: mzlab/web/molecole, mzlab/web/molecules-, mzlab/web/qqq-db.js
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 AXE = axe_path()
-OPEN = "carica('m:molecole-ui.js').then(() => window.MOLDB.apri())"   # the window opens from the «Manage» link of a search box; here directly
+OPEN = "carica('m:molecules-ui.js').then(() => window.MOLDB.open())"   # the window opens from the «Manage» link of a search box; here directly
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:400]))
 
-r = Run(port=8888, wd="/tmp/wd_molecole_ui")
+r = Run(port=8888, wd="/tmp/wd_molecules_ui")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -60,30 +60,30 @@ try:
         step("Tab and Shift+Tab stay inside the window", tab_trap)
 
         def adds():
-            add(nome="Exampline", sinonimi="Ex-1\nExampleum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", note="invented")
+            add(name="Exampline", synonyms="Ex-1\nExampleum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", notes="invented")
             assert names() == ["Exampline"], names()
             row = pg.locator(ROWS).first
             assert "C10H15NO" in row.inner_text() and "165.1154" in row.inner_text() and "Yours" in row.inner_text(), row.inner_text()
             assert "Saved: Exampline" in pg.inner_text("#mol-st")
-            add(nome="Provolone B", formula="c12h17no2", carica="0", addotti="[M+H]+ [M+Na]+", raccolte="corso")
+            add(name="Provolone B", formula="c12h17no2", charge="0", adducts="[M+H]+ [M+Na]+", collections="corso")
             assert names() == ["Exampline", "Provolone B"], names()
             assert "C12H17NO2" in pg.locator(ROWS).nth(1).inner_text(), "the formula is written in Hill order by the engine"
         step("add two molecules: the engine writes the formula and the mass, the level is «Yours»", adds)
 
         def wrong_form():
-            pg.click("#mol-add"); fill(nome="Errorina", formula="Xx9"); pg.click("#mol-save")
+            pg.click("#mol-add"); fill(name="Errorina", formula="Xx9"); pg.click("#mol-save")
             form_error("molecular formula cannot be read"); assert pg.is_visible("#mol-form")
-            fill(formula="C2H6", carica="1.5"); pg.click("#mol-save")
+            fill(formula="C2H6", charge="1.5"); pg.click("#mol-save")
             form_error("whole number")
-            fill(nome="", formula="C2H6", carica=""); pg.click("#mol-save")
+            fill(name="", formula="C2H6", charge=""); pg.click("#mol-save")
             form_error("The name is missing")
             pg.keyboard.press("Escape"); pg.wait_for_selector("#mol-form", state="hidden")
             assert pg.is_visible("#mol-list") and pg.is_visible("#moldlg"), "Esc in the form goes back to the list"
         step("a wrong form shows the error of the engine and keeps the data; Esc goes back to the list", wrong_form)
 
         def duplicate_key():
-            add(nome="Exampline bis", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C")
-            pg.click("#mol-add"); fill(nome="Copia", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C"); pg.click("#mol-save")
+            add(name="Exampline bis", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C")
+            pg.click("#mol-add"); fill(name="Copia", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C"); pg.click("#mol-save")
             form_error("same id")
             pg.keyboard.press("Escape")
             assert "Exampline bis" in names()
@@ -99,9 +99,9 @@ try:
         def edit_own():
             search(""); pg.locator(ROWS, has_text="Provolone B").get_by_role("button", name="Edit Provolone B").click()
             pg.wait_for_selector("#mol-form", state="visible")
-            assert pg.input_value("#mol-f-nome") == "Provolone B" and pg.input_value("#mol-f-addotti") == "[M+H]+ [M+Na]+"
-            assert pg.evaluate("document.activeElement.id") == "mol-f-nome" and not pg.is_visible("#mol-fn")
-            fill(nome="Provolone C", note="renamed"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
+            assert pg.input_value("#mol-f-name") == "Provolone B" and pg.input_value("#mol-f-adducts") == "[M+H]+ [M+Na]+"
+            assert pg.evaluate("document.activeElement.id") == "mol-f-name" and not pg.is_visible("#mol-fn")
+            fill(name="Provolone C", notes="renamed"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
             assert "Provolone C" in names() and "Provolone B" not in names()
             search("provolone"); assert names() == ["Provolone C"], "the id stays, the name changes"
         step("edit one of the user: the name changes, nothing else is lost", edit_own)
@@ -112,7 +112,7 @@ try:
             nm = names()[0]
             pg.locator(ROWS).first.get_by_role("button", name="Edit " + nm).click()
             pg.wait_for_selector("#mol-form", state="visible"); assert pg.is_visible("#mol-fn")
-            fill(note="my note"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
+            fill(notes="my note"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
             search(""); assert nm in names(), "the copy of the user is in «Your molecules»"
             row = pg.locator(ROWS, has_text=nm).first
             assert "Yours" in row.inner_text()
@@ -140,9 +140,9 @@ try:
             assert sorted(names()) == ["Exampline", "Provolone C"], names()
             v = pg.evaluate("""async () => { const dbs = await indexedDB.databases(); const d = dbs.find(x => x.name === 'mzlab_lab');
               const db = await new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => ok(q.result); });
-              const out = { v: d.version, stores: [...db.objectStoreNames].sort(), n: await new Promise(ok => { const c = db.transaction('molecole').objectStore('molecole').count(); c.onsuccess = () => ok(c.result); }) }; db.close(); return out; }""")
-            assert v["v"] == 4 and "molecole" in v["stores"] and v["n"] == 2, v
-        step("after a reload the molecules are still there (IndexedDB version 4, store molecole)", persists)
+              const out = { v: d.version, stores: [...db.objectStoreNames].sort(), n: await new Promise(ok => { const c = db.transaction('molecules').objectStore('molecules').count(); c.onsuccess = () => ok(c.result); }) }; db.close(); return out; }""")
+            assert v["v"] == 5 and "molecules" in v["stores"] and v["n"] == 2, v
+        step("after a reload the molecules are still there (IndexedDB version 5, store molecules)", persists)
 
         def exports():
             with pg.expect_download() as d: pg.click("#mol-csv")
@@ -173,7 +173,7 @@ try:
             assert "Ok uno" in names() and "Imported" in pg.locator(ROWS, has_text="Ok uno").first.inner_text()
             put("good.csv", ok); status("replaced: 2; yours, left as they are: 0")
             pg.locator(ROWS, has_text="Importina").get_by_role("button", name="Edit Importina").click()
-            pg.wait_for_selector("#mol-form", state="visible"); fill(nome="Importina X"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
+            pg.wait_for_selector("#mol-form", state="visible"); fill(name="Importina X"); pg.click("#mol-save"); pg.wait_for_selector("#mol-form", state="hidden")
             assert "Yours" in pg.locator(ROWS, has_text="Importina X").first.inner_text()
             put("good.csv", ok); status("replaced: 1; yours, left as they are: 1")
             assert "Importina X" in names() and "Importina" not in names(), names()
@@ -207,7 +207,7 @@ try:
 
         def combobox():
             pg.evaluate("""() => { const h = document.createElement('div'); h.id = 'molc-host'; h.style.cssText = 'position:fixed;left:20px;top:300px;width:420px;z-index:5000;background:var(--panel)'; document.body.appendChild(h);
-              window.__picked = []; window.__box = MOLDB.campo(h, { testi: { label: 'Molecule', placeholder: 'Name, formula or mass', none: 'No molecule found', count: n => n + ' found', manage: 'Manage' }, onScegli: m => window.__picked.push(m.name) }); }""")
+              window.__picked = []; window.__box = MOLDB.field(h, { texts: { label: 'Molecule', placeholder: 'Name, formula or mass', none: 'No molecule found', count: n => n + ' found', manage: 'Manage' }, onPick: m => window.__picked.push(m.name) }); }""")
             i = "#molc-host input"
             assert pg.get_attribute(i, "role") == "combobox" and pg.get_attribute(i, "aria-expanded") == "false" and pg.get_attribute(i, "aria-autocomplete") == "list"
             assert pg.inner_text("#molc-host label") == "Molecule" and pg.get_attribute(i, "placeholder") == "Name, formula or mass"
@@ -248,25 +248,25 @@ try:
               const v4 = await open(DB_VER, upgrade);
               const get = (s, k) => new Promise(ok => { const q = v4.transaction(s).objectStore(s).get(k); q.onsuccess = () => ok(q.result); });
               const out = { ver: v4.version, stores: [...v4.objectStoreNames].sort(), files: await get('files', 'a.mzML'), kv: await get('kv', 'notebook'), lst: await get('liste_utente', 'l1'), man: await get('manifest', 'files/a.mzML'),
-                key: v4.transaction('molecole').objectStore('molecole').keyPath };
+                key: v4.transaction('molecules').objectStore('molecules').keyPath };
               v4.close(); indexedDB.deleteDatabase(name); return out; }""")
-            assert res["ver"] == 4 and res["stores"] == ["files", "kv", "liste_utente", "manifest", "molecole"] and res["key"] == "id", res
+            assert res["ver"] == 5 and res["stores"] == ["files", "kv", "liste_utente", "manifest", "molecules"] and res["key"] == "id", res
             assert res["files"] == "bytes" and res["kv"] == '{"session":[]}' and res["lst"] == {"id": "l1", "name": "My list"} and res["man"] == {"path": "files/a.mzML", "bytes": 5}, res
-        step("database 3 -> 4: the new store is added, files / kv / liste_utente / manifest keep their rows", migration)
+        step("database 3 -> 5: the new store is added, files / kv / liste_utente / manifest keep their rows", migration)
 
         def old_rows():
             # a record saved before the keys were English (`nome`): the window says so, the catalogue still works, the next save drops the old row
             pg.evaluate("""new Promise((ok, no) => { const q = indexedDB.open('mzlab_lab'); q.onerror = () => no(q.error);
-              q.onsuccess = () => { const x = q.result.transaction('molecole', 'readwrite'), s = x.objectStore('molecole'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Legacy', formula: 'CH4' });
+              q.onsuccess = () => { const x = q.result.transaction('molecules', 'readwrite'), s = x.objectStore('molecules'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Legacy', formula: 'CH4' });
                 x.oncomplete = () => { q.result.close(); ok(); }; }; })""")
             pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
             pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
             pg.wait_for_selector("#mol-errs", state="visible")
             txt = pg.inner_text("#mol-errs"); assert "older version" in txt and "Row 1:" in txt, txt
             search("paracetamol"); assert names(), "the catalogue still works"
-            add(nome="Fresh", formula="CH4")
+            add(name="Fresh", formula="CH4")
             assert not pg.is_visible("#mol-errs"), "the old row is gone with the next save"
-            left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecole').objectStore('molecole').getAll();
+            left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecules').objectStore('molecules').getAll();
               g.onsuccess = () => { q.result.close(); ok(g.result.map(r => ("nome" in r ? "OLD:" : "") + r.name)); }; }; })""")
             assert left == ["Fresh"], left   # an `OLD:` entry would be a record of the old format that the save did not clear
             pg.keyboard.press("Escape")

@@ -39,16 +39,16 @@ try:
             assert pg.inner_text("#gomsg").strip() == "", "no message under the table"
         step("the files open at once, no veil, no message", starts_at_once)
         def t0_and_dark():
-            got = pg.evaluate("E.files.filter(f => !f.gone).map(f => [f.label, CAMPIONI.kindOf(f), f.time])")
+            got = pg.evaluate("E.files.filter(f => !f.gone).map(f => [f.label, SAMPLES.kindOf(f), f.time])")
             assert all(g[1] == "sample" for g in got) and sorted(g[2] for g in got) == [0, 5, 10, 15, 30], got
             assert pg.evaluate("SUBREF.autoFile(E.tab).time") == 0                  # the reference chosen by «auto» is the sample at time 0
-            pg.evaluate("CAMPIONI.apply([{file: E.files.find(f => f.label.endsWith('t5')).file, role: 'dark', time: 30}])")
-            f = pg.evaluate("(() => { const x = E.files.find(f => f.label.endsWith('t5')); return [CAMPIONI.kindOf(x), x.time]; })()")
+            pg.evaluate("SAMPLES.apply([{file: E.files.find(f => f.label.endsWith('t5')).file, role: 'dark', time: 30}])")
+            f = pg.evaluate("(() => { const x = E.files.find(f => f.label.endsWith('t5')); return [SAMPLES.kindOf(x), x.time]; })()")
             assert f == ["dark", -30], f                                            # a positive number written in a dark is read as its negative
             assert pg.evaluate("SUBREF.autoFile(E.tab).time") == 0                  # the dark never becomes the first by time
-            leg = pg.evaluate("CAMPIONI.gradientLegend(E.files.filter(f => !f.gone))")
+            leg = pg.evaluate("SAMPLES.gradientLegend(E.files.filter(f => !f.gone))")
             assert "-30" not in leg and "−30" not in leg, leg                       # the dark is not a point of the gradient
-            ent = pg.evaluate("CDOC.session(E.files.filter(f => !f.gone)).map(e => [e.kind, e.time_min, e.blank_kind])")
+            ent = pg.evaluate("SAMPLES_DOC.session(E.files.filter(f => !f.gone)).map(e => [e.kind, e.time_min, e.blank_kind])")
             assert ["dark", -30, None] in ent and not any(e[0] == "t0" for e in ent), ent
         step("t0 = sample at 0, dark time negative and out of the gradient and of the auto reference", t0_and_dark)
 finally:

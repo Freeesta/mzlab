@@ -123,7 +123,7 @@ def open_ctx(p, prof, cpu_hint=None, copie=None):
     ctx = p.chromium.launch_persistent_context(prof, viewport={"width": 1500, "height": 1000}, reduced_motion="reduce", **CHROME,
                                                args=["--headless=new", "--enable-precise-memory-info"])
     ctx.set_default_timeout(900000)
-    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     ctx.add_init_script(PROBE)
     if copie is not None: ctx.add_init_script(f"try{{localStorage.setItem('mzlab.dev.copie','{int(copie)}')}}catch(_){{}}")      # the copy gate's switch (lr.js copiesOf)
     return ctx

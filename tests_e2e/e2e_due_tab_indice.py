@@ -17,7 +17,7 @@ D = Path(tempfile.mkdtemp(prefix="due_tab_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
 N = len(json.loads((D / "tipi.json").read_text()))
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 DONE = f"ST.files.length === {N} && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0"
 HOLD = """names => { window.__held = 0; window.__free = null; const gate = new Promise(r => { window.__free = r; });
   for (const n of names) navigator.locks.request('mzlab-job:idx/' + n, () => { window.__held++; return gate; }); }"""
