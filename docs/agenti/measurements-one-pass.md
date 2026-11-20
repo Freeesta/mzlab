@@ -6,7 +6,7 @@ Measured with `tests_e2e/misura_una_passata.py` (not run in CI). Synthetic mzML 
 
 Machine: cloud container, 4 vCPU, 15 GB, headless Chromium (Playwright), warm persistent profile (service worker filled), cross-origin isolated. Each run is a fresh copy of the warm profile and drops one file. Files, arms and CPU rates are interleaved run by run. Numbers are medians of 5 runs [min-max], in ms from the drop. CPU 4× is CDP throttling, which slows the page's main thread only. Safari and Firefox are not available in the cloud and were not measured.
 
-## Bound (today's two passes, no product change)
+## Bound (the two passes)
 
 Phases come from the `mzlab-index` events: copy (`load`), scan table (`scan`), builder read with decoding (`read`) and rounds over the scratch file (`index`). Afterwards a worker reads the OPFS copy alone (I/O, read-only SyncAccessHandle in 4 MiB blocks). Gain ≤ min(scan + read, copy + I/O). The CPU-aware bound (`bound_cpu`, from /proc every 25 ms) puts the builder's work only on the cores the copy leaves idle.
 
@@ -23,18 +23,18 @@ Phases come from the `mzlab-index` events: copy (`load`), scan table (`scan`), b
 
 ## Spike (off by default)
 
-Arms: `due` = today's two passes, `una` = the spike. The spike is on only when the OPFS directory `mzlab` holds the switch file `una-passata.on` (`tests_e2e/misura_una_passata.py --arms due,una`). Same machine and method as the bound, 5 interleaved runs per row, 40 runs and no failures. RSS is the peak of the summed RSS of the browser's processes. `live` = 8 MiB pieces that went through the ring during the copy; `from_file` = MB the builder read from the dropped File.
+Arms: `due` = the two passes, `una` = the spike. The spike is on only when the OPFS directory `mzlab` holds the switch file `una-passata.on` (`tests_e2e/misura_una_passata.py --arms due,una`). Same machine and method as the bound, 5 interleaved runs per row, 40 runs and no failures. RSS is the peak of the summed RSS of the browser's processes. `live` = 8 MiB pieces that went through the ring during the copy; `from_file` = MB the builder read from the dropped File.
 
 | file | CPU | arm | drop→indexed | drop→prov. TIC | copy (bar 0-40 %) | peak RSS MB | busy cores in copy | live | from_file |
 |---|---|---|---|---|---|---|---|---|---|
-| P53 | 1× | due | 1807 [1603-2066] | 581 [514-726] | 324 | 1518 | 1.89 | - | - |
-| P53 | 1× | una | 1522 [1354-1735] (−15.8 %) | 609 [572-711] | 538 | 1550 | 3.02 | 5 | 17 |
-| P489 | 1× | due | 10731 [10016-10798] | 2833 [2783-3231] | 2242 | 1690 | 1.86 | - | - |
-| P489 | 1× | una | 9742 [9265-10676] (−9.2 %) | 3213 [3028-3287] (+380) | 3074 | 1743 | 2.79 | 11 | 393 |
-| P53 | 4× | due | 3153 [2877-3309] | 773 [632-827] | 350 | 1517 | 2.61 | - | - |
-| P53 | 4× | una | 2738 [2638-2936] (−13.2 %) | 734 [686-853] | 562 | 1547 | 3.30 | 4 | 17 |
-| P489 | 4× | due | 11911 [11791-12649] | 3085 [2941-3308] | 2308 | 1686 | 2.54 | - | - |
-| P489 | 4× | una | 12040 [11187-12658] (+1.1 %) | 3656 [3392-3844] (+571) | 3346 | 1766 | 3.18 | 10 | 401 |
+| P53 | 1× | two-pass | 1807 [1603-2066] | 581 [514-726] | 324 | 1518 | 1.89 | - | - |
+| P53 | 1× | one-pass | 1522 [1354-1735] (−15.8 %) | 609 [572-711] | 538 | 1550 | 3.02 | 5 | 17 |
+| P489 | 1× | two-pass | 10731 [10016-10798] | 2833 [2783-3231] | 2242 | 1690 | 1.86 | - | - |
+| P489 | 1× | one-pass | 9742 [9265-10676] (−9.2 %) | 3213 [3028-3287] (+380) | 3074 | 1743 | 2.79 | 11 | 393 |
+| P53 | 4× | two-pass | 3153 [2877-3309] | 773 [632-827] | 350 | 1517 | 2.61 | - | - |
+| P53 | 4× | one-pass | 2738 [2638-2936] (−13.2 %) | 734 [686-853] | 562 | 1547 | 3.30 | 4 | 17 |
+| P489 | 4× | two-pass | 11911 [11791-12649] | 3085 [2941-3308] | 2308 | 1686 | 2.54 | - | - |
+| P489 | 4× | one-pass | 12040 [11187-12658] (+1.1 %) | 3656 [3392-3844] (+571) | 3346 | 1766 | 3.18 | 10 | 401 |
 
 - `.mzidx` SHA-256: one value per file in all 20 runs of both arms (P53 `8f9111013d74…`, P489 `51ac26f5f1c5…`). The one pass held in all 20 spike runs.
 - The copy of the spike includes the scan table, which is made at the end of the copy, before the bar moves on. During the copy the builder and its decoding helpers take the idle cores (3.0 busy instead of 1.9), so the copy stretches.
@@ -50,20 +50,20 @@ Arms: `due` = today's two passes, `una` = the spike. The spike is on only when t
   - `build_mzml_streamed` runs pass 1 (`First`) on the bytes as they arrive, using each spectrum's level and polarity.
   - The `hr1` of the level-1 groups is guessed from the file head (instrument configurations) and the filter string of the first MS1 scan (`HrGuess`).
   - At the end it asks for the scan table and checks it against what pass 1 saw (hr1, the number of scans, every level and polarity). If they agree, the rounds follow (`build_after`).
-  - On any difference, or a failure of pass 1, it falls back to today's `build_mzml_corriere` from `again`. The bytes are therefore always today's (`crates/mzlab-core/tests/mzidx_streamed.rs`).
+  - On any difference, or a failure of pass 1, it falls back to `build_mzml_corriere` from `again`. The bytes are therefore always those of that path (`crates/mzlab-core/tests/mzidx_streamed.rs`).
   - The parser reuses the instantiation of `build_mzml_corriere` (`late::Fermabile`), so the engine `.wasm` grows by +8.6 KB optimised (+0.39 %).
 - **Worker glue** (`una-passata.js` in the engine worker, `una-passata-lettore.js` in the builder):
   - The ring is 4 SharedArrayBuffer slots of 8 MiB. The copy pushes each piece it wrote, before the hash worker takes it by transfer.
   - A piece that finds the ring full is skipped, so the copy never waits for the builder. The builder reads every gap, and whatever is left once the copy ends, from the dropped File (`FileReaderSync`, one read per gap). The builder decodes more slowly than the copy writes, so on P489 most bytes come from the File (`from_file` in the console line).
-  - At the end of the copy the engine worker makes the scan table (`prepare_upload` on the copy, as today) and sends it through the ring after the last byte of the file. The provisional TIC comes from that table, as today.
+  - At the end of the copy the engine worker makes the scan table (`prepare_upload` on the copy) and sends it through the ring after the last byte of the file. The provisional TIC comes from that table.
   - The builder waits with `Atomics.wait`; its synchronous wasm call cannot open an OPFS handle.
   - Later rounds read the scratch file (`.sp.part`). A round that decodes again, and the fallback, read the dropped File (`FileReaderSync`), not the OPFS copy.
   - The builder keeps its budget, its spill and its decoding helpers.
 - **Failure and cancel**:
   - A failed copy stops the builder (`abort`), and `lr_cancel` stops it too (`una.cancel`).
   - A scan table that fails sets the ring's FAIL flag, so the builder throws.
-  - Any fatal end of the builder (an unreachable trap, out of memory, a worker error) answers null, and `lr_index` builds with the pool as today. A key error of the builder (a damaged file) is the answer.
-- **Fallback**: without cross-origin isolation, or for any file that is not `.mzML`, loading stays today's two passes.
+  - Any fatal end of the builder (an unreachable trap, out of memory, a worker error) answers null, and `lr_index` builds with the pool. A key error of the builder (a damaged file) is the answer.
+- **Fallback**: without cross-origin isolation, or for any file that is not `.mzML`, loading stays the two passes.
 - **Desktop/CLI**:
   - There is no copy: the file is mapped (`Mapped::open`), the table is made with SHA-256 on a second thread (`upload::prepare_parallelo`), then `build_mzml_spill` runs.
   - The maker formats already decode once (`upload::with_parallel_prints`).

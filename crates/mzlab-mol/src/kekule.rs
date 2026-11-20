@@ -86,11 +86,16 @@ pub(crate) struct Facts<'a> {
 }
 
 /// Turns the aromatic bonds (`orders[i] == 0`, between `ends[i]`) into single or double ones, so that every aromatic atom that needs a
-/// double bond gets exactly one. False when no assignment exists.
-pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]) -> bool {
+/// double bond gets exactly one. None when no assignment exists; else the atoms that were given a hydrogen the input does not state
+/// when another atom could carry it as well (empty when nothing was chosen), so that the caller can report the choice.
+pub(crate) fn assign(
+    ends: &[(usize, usize)],
+    orders: &mut [u8],
+    atoms: &[Facts],
+) -> Option<Vec<usize>> {
     let aromatic: Vec<usize> = (0..orders.len()).filter(|&i| orders[i] == 0).collect();
     if aromatic.is_empty() {
-        return true;
+        return Some(Vec::new());
     }
     let n = atoms.len();
     let mut total = vec![0u32; n];
@@ -109,7 +114,8 @@ pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]
     };
     let needy: Vec<bool> = (0..n).map(|i| needs(i, 0)).collect();
     let pairs: Vec<(usize, usize)> = aromatic.iter().map(|&i| ends[i]).collect();
-    let doubles = kekulize(n, &pairs, &needy).or_else(|| {
+    let stated = kekulize(n, &pairs, &needy).map(|d| (d, Vec::new()));
+    let (doubles, given) = stated.or_else(|| {
         // a file that does not say which ring atom carries the H (pyrrole-type N): try one, then two, of the atoms that an H would satisfy
         // heteroatoms first: the H of indole or carbazole is on the N, never on a ring-fusion carbon that would leave the ring
         let mut flexible: Vec<usize> = (0..n).filter(|&i| needy[i] && !needs(i, 1)).collect();
@@ -117,18 +123,28 @@ pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]
         let with_h = |skip: &[usize]| {
             let mut v = needy.clone();
             skip.iter().for_each(|&i| v[i] = false);
-            kekulize(n, &pairs, &v)
+            kekulize(n, &pairs, &v).map(|d| (d, skip.to_vec()))
         };
-        flexible.iter().find_map(|&i| with_h(&[i])).or_else(|| {
-            flexible
+        let carbons = |v: &[usize]| v.iter().filter(|&&i| atoms[i].el == "C").count();
+        let mut one = flexible.iter().filter_map(|&i| with_h(&[i]));
+        let mut two = flexible.iter().enumerate().flat_map(|(k, &i)| {
+            let with_h = &with_h;
+            flexible[k + 1..]
                 .iter()
-                .enumerate()
-                .find_map(|(k, &i)| flexible[k + 1..].iter().find_map(|&j| with_h(&[i, j])))
-        })
-    });
-    let Some(doubles) = doubles else {
-        return false;
-    };
+                .filter_map(move |&j| with_h(&[i, j]))
+        });
+        // the first that works is taken; it is a choice (reported) only when another atom of the same kind works too
+        let (doubles, given) = one.next().or_else(|| two.next())?;
+        let same = |(_, other): (_, Vec<usize>)| {
+            other.len() == given.len() && carbons(&other) == carbons(&given)
+        };
+        let choice = if given.len() == 1 {
+            one.any(same)
+        } else {
+            two.any(same)
+        };
+        Some((doubles, if choice { given } else { Vec::new() }))
+    })?;
     for &i in &aromatic {
         let (f, t) = ends[i];
         orders[i] = if doubles.contains(&(f.min(t), f.max(t))) {
@@ -137,5 +153,5 @@ pub(crate) fn assign(ends: &[(usize, usize)], orders: &mut [u8], atoms: &[Facts]
             1
         };
     }
-    true
+    Some(given)
 }

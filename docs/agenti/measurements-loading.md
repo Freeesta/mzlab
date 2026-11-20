@@ -13,22 +13,20 @@
 | cold, iPad viewport + touch (Chromium) | 364 | 430 | 361 | 2045 | 0 | 0 | 11 | 666 |
 
 - **Views** (warm, click after the page is usable): Disegno 148 ms (2 files, 13 KB); Tabui 133 ms; Flow 200 ms when the Tabui package has loaded, longer when the click comes before it: the 60 `mzfinder/` scripts load at idle after `qqReady`, all tags inserted at once in order (package done ~1.1 s warm, ~2.8 s on a cold visit). Stat panel 51 ms (×4: 157), Molecules window 222 ms the first time (module and archive; ×4: 363), then ~30 ms.
-- **Startup list weight** (`test_peso_avvio`, list `L` of `carica.js`, uncompressed): 144 files, 1,838,247 B of 1,900,000 (61,753 B of room) (a new tool goes behind `carica()` or `import()`; `origine.js` 19,728 B is read by the `openOrigin` stub of `carica.js`, `elementare-pannello.js` 13,896 B by `tCmp` of `banco.js`, both on first use). Same table, two rounds before/after: engine ready cold 1587/1730 → 1710/1642 ms, CPU ×4 1992/2001 → 1952/1953 ms, KB until ready 5927 → 5894 (noise ±100 ms).
-- **Slow link, first visit** (`misura_lazy_lento.py`: 1.6 Mbit/s shared, 150 ms per answer, CPU ×4, HTTP/1.1, 6 visits per site): the background fill of `sw.js` yields to the page (`primero`: the fill pauses while a page request is on the network). Page usable 23.5–23.7 s → 14.2–16.8 s; file loaded 25.0–25.4 → 24.2–24.6 s; `carica` of `elementare-pannello.js` / `origine.js` 9–703 ms → 10–369 ms.
-- **Click → composition, slow link** (same model, HR 32 MB, `BARRA.show('cmp')` to `#hri-body .cx`, 3 rounds on HTTP/1.0 and 1.1, medians): before, the click took 8.8 s; with `sw.js` yielding and `carica` at high priority, 0.65–0.67 s, ready 52.2 → 32.8 s, file loaded 13.6 → 3.0 s.
+- **Startup list weight** (`test_peso_avvio`, list `L` of `carica.js`, uncompressed): 144 files, 1,838,247 B of 1,900,000 (61,753 B of room) (a new tool goes behind `carica()` or `import()`; `origine.js` 19,728 B is read by the `openOrigin` stub of `carica.js`, `elementare-pannello.js` 13,896 B by `tCmp` of `banco.js`, both on first use).
+- **Slow link, first visit** (`misura_lazy_lento.py`: 1.6 Mbit/s shared, 150 ms per answer, CPU ×4, HTTP/1.1, 6 visits per site): the background fill of `sw.js` yields to the page (`primero`: the fill pauses while a page request is on the network). Page usable 14.2–16.8 s; file loaded 24.2–24.6 s; `carica` of `elementare-pannello.js` / `origine.js` 10–369 ms.
+- **Click → composition, slow link** (same model, HR 32 MB, `BARRA.show('cmp')` to `#hri-body .cx`, 3 rounds on HTTP/1.0 and 1.1, medians): with `sw.js` yielding and `carica` at high priority the click takes 0.65–0.67 s, ready 32.8 s, file loaded 3.0 s.
 - **No flash**: theme and language are set in the head before the first paint (CLS 0, `<html lang>` right in every run); no notice or modal at load. Console at load: only Chrome's warning on the Ketcher frame (`allow-scripts` + `allow-same-origin`).
 - **First visit**: `browser.js isolateOnce` reloads once for cross-origin isolation (~270 ms after the start, before the cold FCP): the engine is ready ~260 ms later than without it, once per browser; GitHub Pages cannot send COOP/COEP, so the service worker adds them.
-- **Head round trips** (local HTTP/2 mirror like GitHub Pages: gzip, 40 ms per answer, shared 30 Mbit/s; Chromium, 6 interleaved visits, medians): with `preload` of `reset.js`, `telefono.js`, `browser.js`, `sito.js` the head scripts arrive together instead of one round trip each. First visit, navigation to engine ready: 1885 → 1426 ms, FCP 597 → 345 ms; reload: 610 → 573 ms. Firefox first visit 2664 → 2510 ms (3 visits). No file downloaded twice; KB and requests before ready unchanged.
-- **Early hints tried and dropped** (same mirror, Chromium, 6 interleaved visits, medians, min-max): `preload` of `lang/<L>.js` from the inline language script: first-visit FCP 312 [272-337] → 341 [308-376] ms; `modulepreload` of the bridge's static imports: engine ready 3450 [3206-3536] → 3460 [3426-3684] ms (modules start earlier, `.wasm` still sets the pace); warm unchanged (742 → 746 ms). Gate was 20 ms; see `optimizations-tried.md`.
+- **Head round trips** (local HTTP/2 mirror like GitHub Pages: gzip, 40 ms per answer, shared 30 Mbit/s; Chromium, 6 interleaved visits, medians): `preload` of `reset.js`, `telefono.js`, `browser.js`, `sito.js` makes the head scripts arrive together instead of one round trip each. First visit, navigation to engine ready: 1426 ms, FCP 345 ms; reload: 573 ms. Firefox first visit 2510 ms (3 visits). No file downloaded twice; KB and requests before ready unchanged.
 - **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
-- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`. Warm page from navigation preload and the `?nav=cache` option: `measurements-navigation.md`.
+- **Site update**: the page is ready in about 0.55 s on both reloads after a deploy and only the changed files are downloaded; behaviour in `e2e_sw_versione`. Warm page from navigation preload and the `?nav=cache` option: `measurements-navigation.md`.
 - KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
 
 ## Restarted service worker, latency, code cache, boot order
 
 Tool: `tests_e2e/misura_avvio_sw.py` (measures, never asserts; reuses the mirror of `misura_ricarica.py`). Chromium 153 headless, 4 vCPU runner, new browser per run, median [min-max] of 5 interleaved runs (every combination once per round), ms from the navigation start of the measured page.
-Site = the live site (build `9d2427b3ed`) copied into a local mirror with GitHub-Pages headers; the latency is a delay the mirror adds to **every** answer (HTTP/1.1, 6 connections per host, so a queue is worse than on the HTTP/2 Pages; a file the HTTP cache keeps pays nothing). CDP latency was tried
-first and rejected: it does not reach the service worker's own fetches (the manifest was answered in 34 ms at RTT 150). CPU ×4 = CDP throttling of the page, workers and service worker. Site-only: the desktop app has no service worker.
+Site = the live site copied into a local mirror with GitHub-Pages headers; the latency is a delay the mirror adds to **every** answer (HTTP/1.1, 6 connections per host, so a queue is worse than on the HTTP/2 Pages; a file the HTTP cache keeps pays nothing). CDP latency is not used because it does not reach the service worker's own fetches (the manifest was answered in 34 ms at RTT 150). CPU ×4 = CDP throttling of the page, workers and service worker. Site-only: the desktop app has no service worker.
 
 ```
 python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenari warm,warm-restarted,cold,trace-warm,trace-restarted --out run.json   # DIR is filled from --url on the first run
@@ -36,8 +34,8 @@ python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --cpu 1 --scenari tra
 python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --runs 5 --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold                                  # live rows
 ```
 
-Scenarios. `warm`: first visit, wait for `.fill-done` in the app cache, 6 s for the idle work of the page (prefetch at +3 s, mzFinder package; with 1.5 s the old page was still busy and `warm` looked 200 ms slower than it is), then reload, SW running. `warm-restarted`: the same, but
-`ServiceWorker.stopAllWorkers` (CDP) first, so the SW starts again with `visto` false (`sw.js:44`, `app` waits for the manifest, line 193). The restarted cost is the difference of the two rows. Boot steps come from the page (init script, no product change): `load` event of each script of list `L`,
+Scenarios. `warm`: first visit, wait for `.fill-done` in the app cache, 6 s for the idle work of the page (prefetch at +3 s, mzFinder package; with 1.5 s the page is still busy and `warm` looks 200 ms slower than it is), then reload, SW running. `warm-restarted`: the same, but
+`ServiceWorker.stopAllWorkers` (CDP) first, so the SW starts again with `visto` false (`app` waits for the manifest). The restarted cost is the difference of the two rows. Boot steps come from the page (init script, no product change): `load` event of each script of list `L`,
 the engine worker's `ready` message, setters on `qqReady` and `MZLAB_LR` (set right before `perfMark("motore pronto")`), a wrapper of `fetch` for `api/state`. `manifest_*`: the SW's own request to `static/sw-manifest.json` (CDP of the SW target); `index_srv`: arrival of the page request at the
 mirror.
 
@@ -61,10 +59,10 @@ mirror.
 | **live** warm-restarted | — | ×1 | 65 [60-68] | — | 14 [11-16] | 53 [49-59] | 162 [149-182] | 592 [543-618] | 609 [572-636] | 610 [572-636] |
 
 - **A restarted SW costs nothing on the critical path here; with latency it is faster.** At RTT 0 the two rows are equal (`qqReady` 524 vs 525; ×4 1035 vs 1048). The SW start is ~1-2 ms (`workerStart`), the manifest is asked 14 ms after the navigation start instead of 2 ms. With latency the restarted row wins by one round trip or more: RTT 150 `qqReady` 868 → 624 (×1), 1603 → 1208 (×4); FCP 441 → 272.
-- **Why (observed, cause not isolated):** with the SW running, `navegar` (`sw.js:214`) asks the manifest first and only then `index.html` (the server sees the page request at 160 ms at RTT 150, after the manifest answer at 157). After a restart the server sees the page request at 2 ms, before the SW has asked for the manifest (14 ms): the page request does not wait behind the manifest. Candidate (not verified): this Chromium starts the navigation request in parallel with the worker start; other Chrome versions were not measured.
-- **The manifest wait in `app()` (`visto` false, `sw.js:193`) is not a cost:** it answers in 18-21 ms at RTT 0, in parallel with the page request after a restart; the 3 s `NAV_MS` race was never reached.
+- **Why (observed, cause not isolated):** with the SW running, `navegar` (`sw.js`) asks the manifest first and only then `index.html` (the server sees the page request at 160 ms at RTT 150, after the manifest answer at 157). After a restart the server sees the page request at 2 ms, before the SW has asked for the manifest (14 ms): the page request does not wait behind the manifest. Candidate (not verified): this Chromium starts the navigation request in parallel with the worker start; other Chrome versions were not measured.
+- **The manifest wait in `app()` (`visto` false, `sw.js`) is not a cost:** it answers in 18-21 ms at RTT 0, in parallel with the page request after a restart; the 3 s `NAV_MS` race was never reached.
 
-### 4. Boot order (ms from the navigation start; last script of `L`, `shell.js`, last module, engine worker `ready`, `api/state`, `qqReady`)
+### 3. Boot order (ms from the navigation start; last script of `L`, `shell.js`, last module, engine worker `ready`, `api/state`, `qqReady`)
 
 | scenario | RTT | CPU | last classic script | `shell.js` ran | last module | worker `ready` | engine ready | `api/state` answered | `qqReady` |
 |---|---|---|---|---|---|---|---|---|---|
@@ -81,11 +79,7 @@ Cold at RTT 40 / 150 (mirror): `qqReady` 3359 / 7585 (HTTP/1.1 queue, see above)
   `ready` 100-360 ms later (warm 118 ms, `cpu4warm` 209 ms, cold 339 ms, ×4 cold 262 ms), `MZLAB_LR` is set 17-32 ms after that and `api/state` answers ~1 ms after the engine (`shell.js` calls it at once, the answer is a worker call that is ready) and `qqReady` is set in the same task. So `qqReady`
   = worker `ready` + ~20 ms: shortening the script tail (list `L`, slices of 48) does not move `qqReady` until the worker ready arrives earlier than the tail.
 
-### 3. Code cache
-
-Moved to `measurements-code-cache.md` (S1 trace of main and the S3 test of serving cached copies without a new `Response`).
-
-### 5. Isolation reload (cold; first page not isolated, second page after `isolateOnce`)
+### 4. Isolation reload (cold; first page not isolated, second page after `isolateOnce`)
 
 | RTT | CPU | requests of page 1 | KB sent (gzip) | files of page 2 | also in page 1 | of those: HTTP cache | revalidated (304) | full 200 | new files |
 |---|---|---|---|---|---|---|---|---|---|
@@ -100,14 +94,14 @@ Moved to `measurements-code-cache.md` (S1 trace of main and the S3 test of servi
 
 ### Answers to the open unknowns
 
-- **OPFS clean-up timer** (`rust-worker.js:168`): `setTimeout(..., 8000)` after the worker starts. Off the critical path.
+- **OPFS clean-up timer** (`rust-worker.js`): `setTimeout(..., 8000)` after the worker starts. Off the critical path.
 - **Reproducibility**: all numbers above are one runner, Chromium only (WebKit/Firefox not measured), the mirror's latency is a per-answer delay, not a real link. Keep the 6 s settle (`SETTLE_MS`) when comparing: 1.5 s changed `warm` by ~200 ms.
 
 
 ## First file and many files: critical path
 
 Measurement only (no product change), `tests_e2e/misura_caricamento.py --scenarios uno,dieci,rotte,thermo,subito,interazione,memoria` (module `tests_e2e/scenari_caricamento.py`; never asserts, not in the CI). Site only: the desktop app serves `mzlab://` locally, has no service worker (SW) and no network, and its native path is different, so none of this applies there.
-Setup: `main` `2cf7180`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one persistent profile per run (a normal window; cross-origin isolated), cloud machine 4 vCPU Intel Xeon 2.10 GHz.
+Setup: site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one persistent profile per run (a normal window; cross-origin isolated), cloud machine 4 vCPU Intel Xeon 2.10 GHz.
 
 Files: synthetic mzML 50.7 MB (2400 scans, `mzml_msconvert_synthetic.py --peaks1 5000 --peaks2 500`) and synthetic Thermo `.raw` 50.6 MB (`thermo_synthetic --scans 950 --peaks 600`); a drop of ten = the same file first plus nine copies with other names. **warm** = copy of a profile whose SW fill is done (`.fill-done`); **cold** = empty profile, the drop 3 s after `qqReady` unless the arm says otherwise.
 
@@ -154,10 +148,10 @@ The 333-438 requests of the cold +0 arm are the SW's fill (all the `.wasm` modul
 
 | arm | CPU | wheel p50 / p95 | wheel in the busy window | drag p50 / p95 | drag in the busy window | Event Timing p50 / p98 | click → spectrum | rAF delta p95 (first chart → all indexed) |
 |---|---|---|---|---|---|---|---|---|
-| uno+gesti (nothing else loads) | 1× | 21 / 28 | 0 | 19 / 20 | 0 | 24 / 48 | 66 [52-70] | n/a (no window) |
-| dieci+gesti | 1× | 22 / 38 | 20 of 20 | 19 / 24 | 21 of 60 | 32 / 64 | 64 [63-68] | 36 [31-40] (without gestures 36 [33-46]) |
-| uno+gesti | 4× | 48 / 94 | 0 | 22 / 34 | 0 | 48 / 112 | 198 [188-198] | n/a |
-| dieci+gesti | 4× | 52 / 83 | 9 of 20 | 24 / 35 | 0 of 60 | 56 / 136 | 209 [181-236] | 189 [181-233] (without gestures 187 [182-253]) |
+| one file + gestures (nothing else loads) | 1× | 21 / 28 | 0 | 19 / 20 | 0 | 24 / 48 | 66 [52-70] | n/a (no window) |
+| ten files + gestures | 1× | 22 / 38 | 20 of 20 | 19 / 24 | 21 of 60 | 32 / 64 | 64 [63-68] | 36 [31-40] (without gestures 36 [33-46]) |
+| one file + gestures | 4× | 48 / 94 | 0 | 22 / 34 | 0 | 48 / 112 | 198 [188-198] | n/a |
+| ten files + gestures | 4× | 52 / 83 | 9 of 20 | 24 / 35 | 0 of 60 | 56 / 136 | 209 [181-236] | 189 [181-233] (without gestures 187 [182-253]) |
 
 At 4× the gestures start after the first chart (5 s) and last about 9 s, so only 9 wheels fall in the loading window and no drag; the rest ran on a quiet page.
 
@@ -169,18 +163,3 @@ At 4× the gestures start after the first chart (5 s) and last about 9 s, so onl
 | 4× | 65 [65-108] MB | 30 [29-33] MB | 1777 [1716-1823] MB | 5189 [4821-5477] | 9596 [9154-9793] |
 
 `measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
-
-**(b) `thermo` asked at the drop: no gain** (cold profile, drop at `qqReady` + 0, one `.raw` of 50.6 MB, `--scenarios raw-subito`, N = 12 per arm interleaved run by run with the order alternating, median [min-max] ms, same machine and files as above). The arm that asked the engine worker for the module (`prepara`) as soon as the `.raw` was recognised, before the quota check, against the module asked at the read:
-
-| CPU | arm | first chart | copy start |
-|---|---|---|---|
-| 1× | module asked at the read | 1297 [1132-4135] | 98 [41-540] |
-| 1× | module asked at the drop | 1402 [1019-1703] | 82 [45-150] |
-| 4× | module asked at the read | 2443 [2119-3005] | 172 [90-238] |
-| 4× | module asked at the drop | 2523 [1992-2991] | 180 [117-235] |
-
-Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside the spread of both arms. A first run of N = 5 had shown −146 / −303 ms with overlapping ranges; N = 12 does not confirm it. Not adopted (`optimizations-tried.md`).
-
-### Verdicts
-
-The verdicts (a)-(f) of this section, with the copy gate that answers (c): `measurements-copies.md`, "Critical path: verdicts".

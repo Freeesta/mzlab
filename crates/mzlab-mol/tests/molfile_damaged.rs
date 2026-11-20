@@ -22,8 +22,23 @@ fn negative_counts_are_refused() {
             "  2  1  0  0  0  0  0  0  0  0999",
             &format!("{counts}  0  0  0  0  0  0  0  0999"),
         );
-        assert!(reason(&text).contains("counts"), "{counts:?}");
+        assert!(reason(&text).contains("negative count"), "{counts:?}");
     }
+}
+
+#[test]
+fn a_negative_count_of_a_property_line_is_refused_with_its_reason() {
+    for line in [
+        "M  CHG -1   1   1",
+        "M  ISO -3   1  13",
+        "M  RAD -1   2   2",
+    ] {
+        let text = V2000.replace("M  END", &format!("{line}\nM  END"));
+        assert!(reason(&text).contains("negative count"), "{line:?}");
+    }
+    // a count of zero says nothing and is read
+    let text = V2000.replace("M  END", "M  CHG  0\nM  END");
+    assert_eq!(Mol::from_molfile(&text).unwrap().atoms.len(), 2);
 }
 
 #[test]

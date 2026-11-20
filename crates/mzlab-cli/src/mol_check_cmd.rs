@@ -13,7 +13,7 @@ usage: mzlab-cli mol check REQUEST.json|- [--out PATH]
   --out PATH    write there instead of the standard output
 
 The answer is {\"schema\": \"check/1\", \"atoms\", \"pieces\", \"warnings\": [{code, level, atoms, bonds, ...}]}: codes valence,
-valenceCharge, charge, isotope, kekule, wedgeMultiple, wedgeNoCentre, wedgeUndecided (level warn) and query, queryBond, pieces (level note);
+valenceCharge, charge, isotope, kekule, wedgeMultiple, wedgeNoCentre, wedgeUndecided (level warn) and aromaticH, query, queryBond, pieces (level note);
 atoms are 0-based in the order of the molfile. The check speaks of the drawing only, never of data.";
 
 pub fn run(args: Vec<String>) -> Outcome {

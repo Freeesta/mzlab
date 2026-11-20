@@ -10,5 +10,6 @@
   "pick.ids.bad": "The typed sample numbers are not a list: {text} = what was typed.",
   "pick.ids.unknown": "A file lacks a typed sample number: {missing} = the numbers it lacks, {ids} = the numbers it has.",
   "pick.failed": "Note when the chooser fails before it can ask: {reason} = the error text. Every sample of the files is opened then.",
+  "pick.rangeFailed": "Note when the byte ranges of the chosen samples cannot be planned: {name} = the .wiff, {reason} = the error text. The whole pair is copied then, as without a choice.",
   "pick.cancelled": "Note when the dialog is cancelled: {name} = the file that was not opened."
 }

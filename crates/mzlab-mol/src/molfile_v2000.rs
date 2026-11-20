@@ -1,8 +1,10 @@
-//! Reader of the V2000 connection table: fixed-column atom and bond lines and the `M  CHG`, `M  ISO`, `M  RAD` property lines.
+//! Reader of the V2000 connection table: fixed-column atom and bond lines and the `M  CHG`, `M  ISO`, `M  RAD` property lines; of the
+//! S-groups only the `MRV_IMPLICIT_H` data group (`M  SAL`, `M  SDT`, `M  SED`).
 
 use crate::codec::MolError;
 use crate::elements::is_element;
-use crate::molfile::{fail, Draft, DraftAtom, DraftBond, Wedge};
+use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
+use std::collections::HashMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
 fn field(line: &str, a: usize, b: usize) -> &str {
@@ -139,7 +141,40 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         atoms,
         bonds,
         collections: Vec::new(),
+        stated_h: stated_h(&lines[4 + na + nb..], na),
     })
+}
+
+/// The (atom, hydrogens) of the `MRV_IMPLICIT_H` data groups: `M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`.
+fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
+    // data groups by number: (atoms, field name, data)
+    let mut data: HashMap<&str, (Vec<usize>, &str, &str)> = HashMap::new();
+    for line in lines.iter().take_while(|l| !l.starts_with("M  END")) {
+        let Some(kind @ ("SAL" | "SDT" | "SED")) = line.get(3..6) else {
+            continue;
+        };
+        let mut t = line[6..].split_whitespace();
+        let Some(group) = t.next() else { continue };
+        let g = data.entry(group).or_default();
+        match kind {
+            "SAL" => g.0.extend(
+                t.skip(1)
+                    .filter_map(|a| a.parse::<usize>().ok())
+                    .filter(|a| (1..=na).contains(a))
+                    .map(|a| a - 1),
+            ),
+            "SDT" => g.1 = t.next().unwrap_or(""),
+            _ => g.2 = t.next().unwrap_or(""),
+        }
+    }
+    let mut out = Vec::new();
+    for (list, field, value) in data.values() {
+        if let Some(h) = implicit_h(field, value) {
+            out.extend(list.iter().map(|&a| (a, h)));
+        }
+    }
+    out.sort_unstable();
+    out
 }
 
 fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
@@ -181,7 +216,8 @@ fn property_pairs(line: &str, na: usize) -> Result<Vec<(usize, i32)>, MolError> 
                 .map_err(|_| fail(format!("{t:?} in property line {line:?}")))
         })
         .collect::<Result<_, _>>()?;
-    let n = nums.first().copied().unwrap_or(0) as usize;
+    let n = usize::try_from(nums.first().copied().unwrap_or(0))
+        .map_err(|_| fail(format!("property line {line:?} has a negative count")))?;
     let mut out = Vec::new();
     for k in 0..n {
         let (Some(&a), Some(&v)) = (nums.get(1 + 2 * k), nums.get(2 + 2 * k)) else {

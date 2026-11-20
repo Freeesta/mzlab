@@ -13,20 +13,20 @@
 - Measurement of the `cli` profile (36 indexed mzML, detect→align→gapfill plan, `tools/compare_profiles.py`): `release` 10.3 s with 1 worker and 4.3 s with 4; `cli` 7.4 s and 3.2 s (−28 %); binary 8.1 MB against 10.3 MB; cold build of `cli` 6 min (4 CPUs). With `lto = "thin"` and `codegen-units = 16` the speed is the same, the build 3 min and the binary 13.0 MB: not adopted.
 - If the build steps in `pages.yml` change, they change in the `sito` job of `release.yml` too.
 - **`tools/sbom.py`**: CycloneDX 1.5 of the site's JS and WASM components (Ketcher, OpenChemLib); versions are read from `mzlab/web/vendor/README.md` and `tools/build_site.py`.
-- **Federico's steps** (the code does not do them):
+- **the owner's steps** (the code does not do them):
   1) once, in Settings → Environments create the `release` environment and, if wanted, add yourself as required reviewer
   2) write the changelog section, raise the version in the three files, merge into `main`
   3) without a terminal: on GitHub, **Actions** tab → **release** workflow → **Run workflow**, branch `main`, in "version" type `1.0.0` (without `v`), in "confirm" retype `1.0.0`, **Run workflow** (if the two lines differ the workflow stops immediately and does nothing); with a terminal: `git tag v1.0.0 && git push origin v1.0.0`
   4) wait for all jobs to be green (about 30 minutes), then **Releases**: you find the **draft** "mzLab v1.0.0" with the files, `SHA256SUMS` and the changelog notes; check them and press **Publish release**: at that moment the tag `v1.0.0` is born on the `main` commit that was at the head at start, and Zenodo (if activated as in `docs/zenodo.md`) archives by itself and creates the DOI
   5) Software Heritage: at <https://archive.softwareheritage.org/save/> "Save code now" with the repository address (one click, needed once and after each release if you want the SWHID updated)
   6) fill in `doi` and `date-released` in `CITATION.cff` as in `docs/zenodo.md`.
-- Not included: Windows (SignPath) and macOS signing, own domain, `update.rs` with the new origin.
+- Out of scope of the release workflow: Windows (SignPath) and macOS signing, an own domain, `update.rs` pointing to another origin.
 
 ## Plan B: host the site elsewhere
 The site is a static folder; there is no active mirror. **Build** `site/`: run `pages.yml` (`workflow_dispatch` or push to a test branch) and download its artifact, or repeat its `run:` steps by hand in the same order (`build_site.py`, `wasm_opt.sh`, `build_feat_wasm.sh`, `librerie_pacchetti.py`, `genera_sospetti.py`; Python ≥ 3.11, the toolchain of `rust-toolchain.toml`, network).
 **Check**: no file above 25 MiB (`find site -size +25M`, Cloudflare Pages limit), no console errors from `python3 -m http.server -d site` with the service worker registered, `.wasm` served as `application/wasm`.
 **Publish**: Cloudflare Pages "Direct Upload" (`npx wrangler pages deploy site --project-name mzlab`) or another static host over HTTPS that serves the files as they are.
-**New address**: update `README.md`, `CITATION.cff`, `.zenodo.json`; the desktop app checks for updates only from `https://freeesta.github.io/mzlab/` (`crates/mzlab-desktop/src/update.rs`), so a version that accepts both the new and the old address is needed first; the data saved in the browser stay tied to the old address. Announce with a pinned issue and on the course page.
+**Moving to another address**: update `README.md`, `CITATION.cff`, `.zenodo.json`; the desktop app checks for updates only from `https://freeesta.github.io/mzlab/` (`crates/mzlab-desktop/src/update.rs`), so a version that accepts both addresses is needed first; the data saved in the browser stay tied to the address they were written under. Announce with a pinned issue and on the course page.
 
 ## Publishing the libraries
 No crate or npm package is published; every outward action (crates.io, npm, reserved names, DOI) needs the Coordinator's "go".
@@ -34,7 +34,7 @@ No crate or npm package is published; every outward action (crates.io, npm, rese
 - Not candidates: `mzlab-feat` (contracts still moving), `mzlab-desktop`, `mzlab-cli`, the page's `*-wasm` crates; `vendor/opentfraw` is not republished, the changes (`vendor/opentfraw/MODIFICHE-MZLAB.md`) are offered to the original project.
 - Licenses: MIT inherited with `license.workspace = true`; the `deny` job (`deny.toml`) checks the dependencies on every PR; with "MIT OR Apache-2.0" MIT is chosen; whoever redistributes `opentfraw` carries the Apache-2.0 license and the NOTICE of the changes; no GPL code copied.
 - A public library requires: English facade with semver (`0.x` while it changes), rustdoc on every public item and README with an example that compiles, declared MSRV, tests with external truth without the private repository, `cargo package --list` without `mzlab-dati` data or forbidden surnames, per-crate CHANGELOG and `cargo semver-checks` before every release; free names on crates.io and npm to be verified.
-- Proposal not carried out: `publish = false` on all crates (none carries it: an accidental `cargo publish` would go through), to be removed only from the chosen crate.
+- No crate carries `publish = false`, so an accidental `cargo publish` would go through; if it is added, it is removed only from the chosen crate.
 
 ## Repository security hygiene
 

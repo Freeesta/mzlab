@@ -40,17 +40,17 @@ try:
             pg, reqs = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z")      # admin flag already set: the lab must not honour it
             ready(pg)
             assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"], pg.evaluate(NAV)
-            assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert in the lab (window.MZLAB_LAB); the Tabui and mzFlow package is never fetched, reqs
-            assert not pg.evaluate("document.querySelector('#v-tpmine, #v-flow, [data-v=tpmine], [data-v=flow]')")
+            assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert in the lab (window.MZLAB_LAB); the mzFlow package is never fetched, reqs
+            assert not pg.evaluate("document.querySelector('#v-flow, [data-v=flow]')")
             assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
             for _ in range(5): pg.click(".logo")                      # the five clicks of the administrator mode
             pg.wait_for_function("document.querySelector('.logo').style.opacity !== '0'", timeout=15000)
             assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"]
             assert pg.evaluate("document.querySelector('meta[name=robots]').content") == "noindex,nofollow"
             assert pg.evaluate("window.MZLAB_LAB.expires") == "2026-12-29"
-        step("lab: Tabui and mzFlow are hidden, even with the administrator flag and the five clicks", hidden)
+        step("lab: mzFlow is hidden, even with the administrator flag and the five clicks", hidden)
         def routes():
-            for h in ("#/flow", "#/tpmine", "#/attributio", "#/theory", "#/practice"):
+            for h in ("#/flow", "#/attributio", "#/theory", "#/practice"):
                 pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z", h)
                 ready(pg)
                 assert pg.evaluate("location.hash") == "#/data" and pg.evaluate("location.pathname.endsWith('/')"), (h, pg.url)
@@ -136,10 +136,9 @@ try:
             pg, reqs = page(NORMAL, ""); ready(pg)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"
             assert not [u for u in reqs if u.split("?")[0].endswith("/lab.js")], reqs
-            pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # no flag, no click: Tabui and mzFlow are in the header of the normal build
-            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+            pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # no flag, no click: mzFlow is in the header of the normal build
             assert pg.evaluate(NAV)[:2] == ["data", "draw"] and pg.evaluate("localStorage.getItem('mzlab.admin')") is None
-        step("normal build: no lab, Tabui and mzFlow visible at first load", normal)
+        step("normal build: no lab, mzFlow visible at first load", normal)
         b.close()
 finally:
     for pr in procs: pr.terminate()

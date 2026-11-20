@@ -116,29 +116,23 @@ def show_table(pg):
     open_first(pg)
     if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
     pg.wait_for_selector("#wtable", state="visible", timeout=10000)
-TABUI_BTN = re.compile(r'#nav (?:button)?\[data-v=["\']?tpmine["\']?\]')
-_CLR = "history.replaceState(null, '', location.pathname + location.search)"
-def open_tabui(pg):
-    """Tabui has no nav button (TABUI_VISIBLE = false in first-paint.js): it opens on its exact address, as a person with the link would."""
-    pg.wait_for_function("typeof setView === 'function' && typeof S !== 'undefined' && !!window.QTOOLS", timeout=120000)     # the shell must listen first
-    pg.evaluate(_CLR + "; location.hash = '#/tpmine'")          # a hash left by an earlier visit would make this one a no-op
-    pg.wait_for_function("S.view === 'tpmine'", timeout=15000)
-_real_reload = _Page.reload
-def _reload(self, *a, **k):
-    try: self.evaluate("if (location.hash === '#/tpmine') " + _CLR)         # a reload keeps the address: tests that reload want Data back
-    except Exception: pass
-    return _real_reload(self, *a, **k)
-_Page.reload = _reload
+def open_mzfinder(pg, host="tp-right", timeout=120000, page=False):
+    """Loads the mzFinder package of the page (what Flow and the shared views use) and adds an empty #<host> div where a test mounts a component by hand."""
+    pg.wait_for_function("!!window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=timeout)
+    pg.evaluate("() => window.QTOOLS.ensure()")
+    pg.wait_for_function("!!window.TPTAB && !!window.TPLAZY", timeout=timeout)
+    # the Data view stays visible now and its one-shot decorative leaf (9 s) would keep `getAnimations()` busy: reduced motion, as the a11y setting does
+    pg.evaluate("() => document.documentElement.setAttribute('data-a11y-reduce', '1')")
+    # page=True: the host is a full-screen scrolling page of its own (the table tests measure rows against the viewport)
+    pg.evaluate("([h, page]) => { if (document.getElementById(h)) return; const o = document.createElement('div'); o.className = 'tp'; o.style.display = 'block'; if (page) o.style.cssText += ';position:fixed;inset:0;overflow:auto;z-index:2147483000;background:var(--bg,#fff)'; const d = document.createElement('div'); d.id = h; o.appendChild(d); document.body.appendChild(o); if (window.TPHELP) window.TPHELP.attach(o); }", [host, page])
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
-    if isinstance(selector, str) and TABUI_BTN.search(selector): return open_tabui(self)     # the hidden Tabui button: the exact address instead
     # «Load data» is gone: the files are open already, the click is the first click on a file
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
-    if isinstance(selector, str) and TABUI_BTN.search(selector) and "state" not in k: k["state"] = "attached"
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector):
         return loaded(self, k.get("timeout", 120000))

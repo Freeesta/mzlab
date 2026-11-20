@@ -6,7 +6,7 @@ bytes before FCP and until usable, render-blocking files, engine ready, console 
 
 Scenarios: cold (new context, first visit), warm (reload served by the service worker), dark (warm with dark theme saved),
 cpu4 / cpu4warm (CPU x4), fast4g (CDP 150 ms + 9 Mbps, cold: it does not slow the
-local mirror, numbers equal cold; kept out of the default list), ipad (iPad viewport and touch, cold), draw/flow/tabui (warm, then click the view).
+local mirror, numbers equal cold; kept out of the default list), ipad (iPad viewport and touch, cold), draw/flow (warm, then click the view).
 """
 import argparse, json, statistics, sys, time
 from pathlib import Path
@@ -43,8 +43,7 @@ PROBE = r"""(() => {
   try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.barra.hint", "1"); } catch (_) {}
 })();"""
 
-VIEWS = {"draw": ("#nav button[data-v=draw]", "#v-draw:not([hidden])"), "flow": ("#nav button[data-v=flow]", "#v-flow:not([hidden]), #flowview:not([hidden])"),
-         "tabui": ("", "#v-tpmine:not([hidden]), #tpmine:not([hidden])")}
+VIEWS = {"draw": ("#nav button[data-v=draw]", "#v-draw:not([hidden])"), "flow": ("#nav button[data-v=flow]", "#v-flow:not([hidden]), #flowview:not([hidden])")}
 
 
 def poll(pg, expr, timeout=120.0):
@@ -113,8 +112,7 @@ def one(b, base, scen, browser_name):
     if scen in VIEWS:
         btn, shown = VIEWS[scen]
         t0 = pg.evaluate("performance.now()")
-        if scen == "tabui": pg.evaluate("location.hash = '#/tpmine'")      # no nav button: the exact address (the page is usable here)
-        else: pg.click(btn)
+        pg.click(btn)
         poll(pg, f"!!document.querySelector('{shown}')", 60)
         t1 = pg.evaluate("performance.now()")
         settle(pg, 1000, 20)
@@ -130,7 +128,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site"))
     ap.add_argument("--runs", type=int, default=5)
-    ap.add_argument("--scenari", default="cold,warm,dark,cpu4,cpu4warm,ipad,draw,flow,tabui")
+    ap.add_argument("--scenari", default="cold,warm,dark,cpu4,cpu4warm,ipad,draw,flow")
     ap.add_argument("--browser", default="chromium")
     ap.add_argument("--out")
     a = ap.parse_args()

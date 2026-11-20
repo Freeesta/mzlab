@@ -1,0 +1,179 @@
+{
+ "files": {
+  "aromatics.cdxml": {
+   "reads": {
+    "atoms": 16,
+    "bonds": 17,
+    "charge": 0,
+    "fragments": 2,
+    "inchi": "InChI=1S/C8H7N.C6H7N/c1-2-4-8-7(3-1)5-6-9-8;1-6-2-4-7-5-3-6/h1-6,9H;2-5H,1H3",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "Cc1ccncc1.c1ccc2[nH]ccc2c1",
+   "source_inchi": "InChI=1S/C8H7N.C6H7N/c1-2-4-8-7(3-1)5-6-9-8;1-6-2-4-7-5-3-6/h1-6,9H;2-5H,1H3",
+   "what": "aromatic rings written as alternating double bonds, a heteroaromatic ring and a fused pair"
+  },
+  "charges.cdxml": {
+   "reads": {
+    "atoms": 14,
+    "bonds": 11,
+    "charge": 0,
+    "fragments": 3,
+    "inchi": "InChI=1S/C4H12N.C2H5NO2.C2H4O2/c1-5(2,3)4;3-1-2(4)5;1-2(3)4/h1-4H3;1,3H2,(H,4,5);1H3,(H,3,4)/q+1;;/p-1",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "C[N+](C)(C)C.CC(=O)[O-].[NH3+]CC(=O)[O-]",
+   "source_inchi": "InChI=1S/C4H12N.C2H5NO2.C2H4O2/c1-5(2,3)4;3-1-2(4)5;1-2(3)4/h1-4H3;1,3H2,(H,4,5);1H3,(H,3,4)/q+1;;/p-1",
+   "what": "positive, negative and zwitterionic atoms"
+  },
+  "explicit_h.cdxml": {
+   "reads": {
+    "atoms": 6,
+    "bonds": 5,
+    "charge": 0,
+    "fragments": 1,
+    "inchi": "InChI=1S/CH4O/c1-2/h2H,1H3",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "[H]C([H])([H])O[H]",
+   "source_inchi": "InChI=1S/CH4O/c1-2/h2H,1H3",
+   "what": "hydrogens drawn as atoms"
+  },
+  "fragments.cdxml": {
+   "reads": {
+    "atoms": 14,
+    "bonds": 11,
+    "charge": 0,
+    "fragments": 4,
+    "inchi": "InChI=1S/C6H6.C2H4O2.C2H6O.Na/c1-2-4-6-5-3-1;1-2(3)4;1-2-3;/h1-6H;1H3,(H,3,4);3H,2H2,1H3;/q;;;+1/p-1",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "CC(=O)[O-].[Na+].c1ccccc1.CCO",
+   "source_inchi": "InChI=1S/C6H6.C2H4O2.C2H6O.Na/c1-2-4-6-5-3-1;1-2(3)4;1-2-3;/h1-6H;1H3,(H,3,4);3H,2H2,1H3;/q;;;+1/p-1",
+   "what": "four separate fragments on one page"
+  },
+  "generic_label.cdxml": {
+   "reads": {
+    "atoms": 3,
+    "bonds": 2,
+    "charge": 0,
+    "fragments": 1,
+    "inchi": "InChI=1S/C2H7N/c1-3-2/h3H,1-2H3",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "CNC(=O)OC(C)(C)C",
+   "source_inchi": "InChI=1S/C6H13NO2/c1-6(2,3)9-5(8)7-4/h1-4H3,(H,7,8)",
+   "what": "a label-only node, Boc, that holds no structure (composed here)"
+  },
+  "isotopes.cdxml": {
+   "reads": {
+    "atoms": 13,
+    "bonds": 11,
+    "charge": 0,
+    "fragments": 3,
+    "inchi": "InChI=1S/C6H5F.CH2Cl2.CH4O/c7-6-4-2-1-3-5-6;2-1-3;1-2/h1-5H;1H2;2H,1H3/i7-1;1D;1+1",
+    "isotopes": 3,
+    "radicals": 0
+   },
+   "source": "[13CH3]O.[2H]C(Cl)Cl.[18F]c1ccccc1",
+   "source_inchi": "InChI=1S/C6H5F.CH2Cl2.CH4O/c7-6-4-2-1-3-5-6;2-1-3;1-2/h1-5H;1H2;2H,1H3/i7-1;1D;1+1",
+   "what": "isotope attributes on carbon, hydrogen and fluorine"
+  },
+  "labels.cdxml": {
+   "reads": {
+    "atoms": 19,
+    "bonds": 16,
+    "charge": 0,
+    "fragments": 4,
+    "inchi": "InChI=1S/C7H8O.C3H6O2.2C2H7N/c8-6-7-4-2-1-3-5-7;1-3(4)5-2;1-3-2;1-2-3/h1-5,8H,6H2;1-2H3;3H,1-2H3;2-3H2,1H3",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "OCc1ccccc1.CNC.COC(C)=O.CCN",
+   "source_inchi": "InChI=1S/C7H8O.C3H6O2.2C2H7N/c8-6-7-4-2-1-3-5-7;1-3(4)5-2;1-3-2;1-2-3/h1-5,8H,6H2;1-2H3;3H,1-2H3;2-3H2,1H3",
+   "what": "atom labels and abbreviations: OH, NH, NH2, and Ph and OMe as expanded nodes (composed here)"
+  },
+  "radicals.cdxml": {
+   "reads": {
+    "atoms": 8,
+    "bonds": 5,
+    "charge": 0,
+    "fragments": 3,
+    "inchi": "InChI=1S/C4H9O.C2H5.CH3/c1-4(2,3)5;1-2;/h1-3H3;1H2,2H3;1H3",
+    "isotopes": 0,
+    "radicals": 6
+   },
+   "source": "C[CH2].[CH3].CC(C)(C)[O]",
+   "source_inchi": "InChI=1S/C4H9O.C2H5.CH3/c1-4(2,3)5;1-2;/h1-3H3;1H2,2H3;1H3",
+   "what": "singlet radical atoms"
+  },
+  "reaction.cdxml": {
+   "reaction": {
+    "agents": 0,
+    "products": 1,
+    "reactants": 2,
+    "steps": 1
+   },
+   "reads": {
+    "atoms": 13,
+    "bonds": 10,
+    "charge": 0,
+    "fragments": 3,
+    "inchi": "InChI=1S/C4H8O2.C2H4O2.C2H6O/c1-3-6-4(2)5;1-2(3)4;1-2-3/h3H2,1-2H3;1H3,(H,3,4);3H,2H2,1H3",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "CC(=O)O.CCO>>CC(=O)OCC",
+   "source_inchi": "InChI=1S/C4H8O2/c1-3-6-4(2)5/h3H2,1-2H3",
+   "what": "a reaction scheme: two reactants, an arrow with a text, one product (arrow and step composed here)"
+  },
+  "rings.cdxml": {
+   "reads": {
+    "atoms": 35,
+    "bonds": 37,
+    "charge": 0,
+    "fragments": 4,
+    "inchi": "InChI=1S/C12H24.C10H18.C7H12.C6H12/c1-2-4-6-8-10-12-11-9-7-5-3-1;1-2-6-10(7-3-1)8-4-5-9-10;1-2-7-4-3-6(1)5-7;1-2-4-6-5-3-1/h1-12H2;1-9H2;6-7H,1-5H2;1-6H2",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "C1CCCCC1.C1CCC2(CC1)CCCC2.C1CC2CCC1C2.C1CCCCCCCCCCC1",
+   "source_inchi": "InChI=1S/C12H24.C10H18.C7H12.C6H12/c1-2-4-6-8-10-12-11-9-7-5-3-1;1-2-6-10(7-3-1)8-4-5-9-10;1-2-7-4-3-6(1)5-7;1-2-4-6-5-3-1/h1-12H2;1-9H2;6-7H,1-5H2;1-6H2",
+   "what": "monocycle, spiro, bridged and a twelve-membered ring"
+  },
+  "stereo_ez.cdxml": {
+   "reads": {
+    "atoms": 12,
+    "bonds": 10,
+    "charge": 0,
+    "fragments": 2,
+    "inchi": "InChI=1S/2C4H6O2/c2*1-2-3-4(5)6/h2*2-3H,1H3,(H,5,6)/b3-2+;3-2-",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "C/C=C/C(=O)O.C/C=C\\C(=O)O",
+   "source_inchi": "InChI=1S/2C4H6O2/c2*1-2-3-4(5)6/h2*2-3H,1H3,(H,5,6)/b3-2+;3-2-",
+   "what": "E and Z double bonds from coordinates only"
+  },
+  "stereo_wedge.cdxml": {
+   "reads": {
+    "atoms": 14,
+    "bonds": 13,
+    "charge": 0,
+    "fragments": 2,
+    "inchi": "InChI=1S/C7H14O.C3H7NO2/c1-6-4-2-3-5-7(6)8;1-2(4)3(5)6/h6-8H,2-5H2,1H3;2H,4H2,1H3,(H,5,6)/t6-,7-;2-/m00/s1",
+    "isotopes": 0,
+    "radicals": 0
+   },
+   "source": "C[C@H](N)C(=O)O.C[C@H]1CCCC[C@@H]1O",
+   "source_inchi": "InChI=1S/C7H14O.C3H7NO2/c1-6-4-2-3-5-7(6)8;1-2(4)3(5)6/h6-8H,2-5H2,1H3;2H,4H2,1H3,(H,5,6)/t6-,7-;2-/m00/s1",
+   "what": "wedge and hash bonds on chain and ring stereocentres"
+  }
+ },
+ "rdkit_version": "2026.09.2"
+}

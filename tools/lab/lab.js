@@ -4,7 +4,7 @@
 //     is loaded, no data is read. The date cannot be computed (bad date, no clock) = expired, never open. This is a SOFT block, not security: whoever
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
 //  2. no example files: see below (the build deletes static/esempi; here their buttons go). The two example drawings of Draw stay.
-//  3. only Data and Draw: window.MZLAB_LAB tells the Tabui loader (tpmine-loader.js, which brings Tabui and mzFlow) and carica.js not to start, so no
+//  3. only Data and Draw: window.MZLAB_LAB tells the tool loader (tpmine-loader.js, which brings mzFlow) and carica.js not to start, so no
 //     package is downloaded and no tab is drawn; addresses of any other view go back to #/data. The administrator flag (the Libro editor and the like)
 //     reads as «off» and cannot be written. Nothing is deleted from the program: the normal build is untouched.
 (function () {
@@ -68,14 +68,14 @@
     }, 100);
   } catch (e) { /* the build already ships no examples: nothing to fetch */ }
 
-  // only #/data and #/draw exist; any other address (#/flow, #/tpmine, #/attributio, #/theory, #/practice...) becomes #/data
+  // only #/data and #/draw exist; any other address (#/flow, #/attributio, #/theory, #/practice...) becomes #/data
   function route() {
     try {
       var m = /^#\/(\w+)/.exec(location.hash);
       if (m && m[1] !== "data" && m[1] !== "draw") history.replaceState(null, "", location.pathname + location.search + "#/data");
     } catch (e) { /* old browser */ }
   }
-  // the Tabui and Flow tabs written in index.html have nothing behind them here
+  // the Flow tab written in index.html have nothing behind them here
   document.addEventListener("DOMContentLoaded", function () {
     var late = document.querySelectorAll("#nav [data-late]");
     for (var i = 0; i < late.length; i++) late[i].remove();
