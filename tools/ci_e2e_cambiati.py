@@ -20,6 +20,12 @@ HEAVY = re.compile(r"ketcher|kframe|TPDraw|worker|Pyodide|\.raw|\.wiff", re.I)  
 BUDGET_S = 600        # sum of the nightly seconds of the safety set; the step took about 1.25x that on the runner, plus ~1.5 min of setup: about 12 min for the job
 
 
+def needs(n: str) -> set[str]:
+    """NEEDS of a test, plus `wasm` for any test that calls build_feat(): without the CI-built mzFinder .wasm it would compile it cold, silently, inside this 30 min job (it cancelled PR jobs)."""
+    src = verifica.E2E / f"{n}.py"
+    return verifica.NEEDS.get(n, set()) | ({"wasm"} if src.exists() and "build_feat(" in src.read_text(encoding="utf-8") else set())
+
+
 def core_set() -> tuple[list[str], str]:
     """Safety set for a core file: greedy cover of the `# covers:` prefixes by the cheapest tests (most entries per second) among the allow-listed ones, within BUDGET_S."""
     cost = json.loads(GREEN.read_text(encoding="utf-8"))
@@ -27,7 +33,7 @@ def core_set() -> tuple[list[str], str]:
     by_prefix: dict[str, set[str]] = {}
     for prefix, n in verifica.covers():
         by_prefix.setdefault(prefix, set()).add(n)
-    entries = [{n for n in tests if n not in smoke and not verifica.NEEDS.get(n, set()) & ELSEWHERE and cost.get(n, TEST_CAP_S + 1) <= TEST_CAP_S and (verifica.E2E / f"{n}.py").exists()}
+    entries = [{n for n in tests if n not in smoke and not needs(n) & ELSEWHERE and cost.get(n, TEST_CAP_S + 1) <= TEST_CAP_S and (verifica.E2E / f"{n}.py").exists()}
                for tests in by_prefix.values()]
     entries = [e for e in entries if e]
     left, used, chosen = list(entries), 0, []
@@ -62,7 +68,7 @@ def pick(files: set[str]) -> tuple[list[str], str]:
     if sel == {"-"}:
         return [], why
     smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX)
-    left = sorted(n for n in sel if n not in smoke and not verifica.NEEDS.get(n, set()) & ELSEWHERE)
+    left = sorted(n for n in sel if n not in smoke and not needs(n) & ELSEWHERE)
     gone = len(sel) - len(left)
     note = f"{len(sel)} e2e cover the changed files, {gone} of them run in the smoke round, sito-e2e or the night"
     return left, (note + (f": running {len(left)}" if left else ": nothing left to run"))

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trace-set/1",
+  "title": "trace-set/1: the XICs of a list of m/z, `mzlab-cli trace xic --mz M1,M2,...`",
+  "description": "One trace/1 document per ion, in the order of --mz, all of one file and sample, so each member is byte for byte the document `trace xic` gives for that ion alone. The CSV form (`--format csv`) is wide: the header is rt_min followed by one xic:<mz> column per ion, over the scans the ions share. Code: crates/mzlab-cli/src/trace_xic.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "file",
+    "sample",
+    "n_traces",
+    "traces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "trace-set/1"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "n_traces": {
+      "type": "integer"
+    },
+    "traces": {
+      "type": "array",
+      "items": {
+        "$ref": "trace/1"
+      },
+      "description": "A trace/1 per ion; evidence names its tolerance (tolerance_da, tolerance_ppm) and, with --smooth, the filter (smooth: 3 or 5); a member with no signal says empty: true and why (empty_reason)."
+    }
+  }
+}

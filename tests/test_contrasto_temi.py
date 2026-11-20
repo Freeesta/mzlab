@@ -1,4 +1,4 @@
-"""Contrast (WCAG AA, 4.5:1) of the shared theme variables used by notice boxes (.avv ok/warn/bad), read from app.css."""
+"""Contrast (WCAG AA, 4.5:1) of the shared theme variables used by notice boxes (.notice ok/warn/bad), read from app.css."""
 import re
 from pathlib import Path
 
@@ -52,7 +52,7 @@ def test_warning_boxes_readable():
             box = _mix(_rgb(v["--" + kind]), _rgb(v["--panel"]))
             for fg in ("--ink", "--" + kind):
                 r = _ratio(_rgb(v[fg]), box)
-                assert r >= 4.5, f"{name}: {fg} su riquadro .avv.{kind} = {r:.2f}"
+                assert r >= 4.5, f"{name}: {fg} on box .notice.{kind} = {r:.2f}"
 
 
 def test_text_on_base_backgrounds():

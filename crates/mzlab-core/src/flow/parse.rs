@@ -162,12 +162,14 @@ pub fn parse(bytes: &[u8]) -> Result<Plan> {
     }
     let format = text(&v, "format");
     let legacy = format.as_deref() == Some("mzflow/1");
+    // an unknown format is named before the shape is checked
     if let Some(f) = &format
         && f != "mzflow/2"
         && !legacy
     {
         return Err(Error::new("err.flow.format").with("format", f));
     }
+    super::parse_shape::check_shape(&v, legacy)?;
     let list = |k: &str| v.get(k).map(Value::arr).unwrap_or_default();
     let mut plan = Plan {
         format: format.unwrap_or_else(|| "mzflow/2".into()),

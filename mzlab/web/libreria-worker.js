@@ -555,7 +555,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       try { await FOLD.dir.write(CARTELLA.META + "/catalogo.json", text); } catch (e) { /* the states of the next visit only */ }
     }
     const s = await foldRefresh();
-    return { cat: FOLD.cat, avail: FOLD.cat.librerie.map((/** @type {LibPkg} */ p) => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
+    return { cat: FOLD.cat, avail: FOLD.cat.libraries.map((/** @type {LibPkg} */ p) => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
   /** @type {{ abort: AbortController | null }} */
   const DL = { abort: null };
@@ -565,7 +565,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     DL.abort = new AbortController(); const done = [], failed = [], base = new URL("librerie/", self.location.href).href;
     try {
       for (const id of m.ids) {
-        const pkg = FOLD.cat.librerie.find((/** @type {LibPkg} */ p) => p.id === id);
+        const pkg = FOLD.cat.libraries.find((/** @type {LibPkg} */ p) => p.id === id);
         if (!pkg) { failed.push({ id, key: "lib.dl.err.catalog", params: { detail: id } }); continue; }
         try {
           await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: /** @type {AbortController} */ (DL.abort).signal, onProgress: (/** @type {{ id: string }} */ p) => postMessage({ type: "progress", reqId, ...p }),
@@ -578,7 +578,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       }
     } finally { DL.abort = null; }
     const s = await foldRefresh();
-    return { done, failed, avail: FOLD.cat.librerie.map((/** @type {LibPkg} */ p) => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
+    return { done, failed, avail: FOLD.cat.libraries.map((/** @type {LibPkg} */ p) => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
   // a source stays in the folder (only its index goes); a package or an imported index is removed
   async function foldRemove(/** @type {string} */ id) {

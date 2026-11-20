@@ -1,0 +1,315 @@
+//! `mzlab-cli trace xic`: the extracted ion chromatogram of one m/z (`trace/1`, `rt_min,intensity`) or of a list of m/z (`trace-set/1`, a wide CSV).
+//! Every trace is the page's `api/xic` answer for that m/z, so the points are the bytes the site draws; `--smooth` is the engine's 1-2-1 / 1-4-6-4-1
+//! filter (`peak1d::smooth`) and `--dry-run` names what would be extracted without opening the file's data.
+
+use mzlab_core::error::{Error, Result};
+
+use crate::extract::{self, Parsed};
+use crate::trace_cmd::{self, Answer};
+use crate::Outcome;
+
+pub const HELP_XIC: &str = "mzlab-cli trace xic: the extracted ion chromatogram of one m/z or of a list, as JSON (trace/1, trace-set/1) or CSV, the answers of the page's api/xic.
+
+usage: mzlab-cli trace xic FILE --mz M[,M...] (--ppm P | --da D | --tol P[ppm]|D[da]) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-]
+                           [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
+
+  --mz LIST   the ions' m/z, one or several separated by commas; one gives trace/1, several give trace-set/1 (a trace/1 per ion, in the order given)
+  --ppm P     half-window in ppm of each m/z; --da D half-window in Da; --tol P ppm or D da (a suffix ppm or da is required); one of the three
+  --smooth K  smooth every trace with the engine's filter before the window is cut: 3 (1-2-1) or 5 (1-4-6-4-1); the evidence names it
+  --rt A,B    keep the points with A <= rt <= B (minutes)
+  --ms-level N the level of the scans summed (default 1)
+  --polarity  the + or - part of a mixed-polarity file (a file with no such part gives an empty trace, counted in the evidence)
+  --sample ID the sample of a file with several (.wiff); default the first
+  --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
+  --out PATH  write there instead of the standard output
+  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing) and read nothing; a missing file is still exit 4";
+
+/// Most ions one call extracts (each one reads the section once).
+const MAX_IONS: usize = 500;
+
+struct Job {
+    file: std::path::PathBuf,
+    sample: Option<u32>,
+    win: Option<(f64, f64)>,
+    csv: bool,
+    out: Option<std::path::PathBuf>,
+    mz: Vec<f64>,
+    /// Half-window in ppm (`Some`) or Da (`None`, with `da`).
+    ppm: Option<f64>,
+    da: f64,
+    level: u8,
+    pol: Option<i8>,
+    smooth: Option<usize>,
+    dry: bool,
+}
+
+impl Job {
+    /// Half-window in Da of `mz`.
+    fn tol(&self, mz: f64) -> f64 {
+        self.ppm.map_or(self.da, |p| mz * p * 1e-6)
+    }
+}
+
+/// `--ppm`, `--da` or `--tol`: exactly one, positive; `(ppm, da)`.
+fn tolerance(p: &Parsed) -> std::result::Result<(Option<f64>, f64), String> {
+    let tol = match p.get("--tol") {
+        None => None,
+        Some(t) => {
+            let low = t.to_lowercase();
+            let (num, ppm) = match (low.strip_suffix("ppm"), low.strip_suffix("da")) {
+                (Some(n), _) => (n, true),
+                (_, Some(n)) => (n, false),
+                _ => return Err("--tol needs a unit: 10ppm or 0.2da".into()),
+            };
+            let v = num
+                .trim()
+                .parse::<f64>()
+                .ok()
+                .filter(|v| v.is_finite())
+                .ok_or("--tol needs a number and a unit: 10ppm or 0.2da")?;
+            Some((v, ppm))
+        }
+    };
+    match (p.num("--ppm")?, p.num("--da")?, tol) {
+        (None, None, None) => Err("trace xic needs --ppm, --da or --tol".into()),
+        (Some(ppm), None, None) | (None, None, Some((ppm, true))) if ppm > 0.0 => {
+            Ok((Some(ppm), 0.0))
+        }
+        (None, Some(da), None) | (None, None, Some((da, false))) if da > 0.0 => Ok((None, da)),
+        (a, b, c) if u8::from(a.is_some()) + u8::from(b.is_some()) + u8::from(c.is_some()) > 1 => {
+            Err("give one of --ppm, --da, --tol".into())
+        }
+        _ => Err("the tolerance needs a positive number".into()),
+    }
+}
+
+/// `--mz`: one or more positive numbers, no repeats.
+fn ions(p: &Parsed) -> std::result::Result<Vec<f64>, String> {
+    let list = p.get("--mz").ok_or("trace xic needs --mz")?;
+    let mut mz: Vec<f64> = Vec::new();
+    for w in list.split(',') {
+        let v = w
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .filter(|v| v.is_finite() && *v > 0.0)
+            .ok_or(format!(
+                "--mz needs positive numbers separated by commas, not \"{w}\""
+            ))?;
+        if mz.contains(&v) {
+            return Err(format!("--mz lists {v} twice"));
+        }
+        mz.push(v);
+    }
+    if mz.len() > MAX_IONS {
+        return Err(format!("--mz takes at most {MAX_IONS} ions"));
+    }
+    Ok(mz)
+}
+
+fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'static str>, String> {
+    let Some(p) = extract::parse(
+        args,
+        &[
+            "--mz",
+            "--ppm",
+            "--da",
+            "--tol",
+            "--smooth",
+            "--rt",
+            "--ms-level",
+            "--polarity",
+            "--sample",
+            "--format",
+            "--out",
+        ],
+        &["--dry-run"],
+    )?
+    else {
+        return Ok(Err(HELP_XIC));
+    };
+    let file = trace_cmd::one_file(&p, "trace xic")?;
+    let mz = ions(&p)?;
+    let (ppm, da) = tolerance(&p)?;
+    let pol = match p.get("--polarity") {
+        None => None,
+        Some("+") => Some(1),
+        Some("-") => Some(-1),
+        Some(_) => return Err("--polarity takes + or -".into()),
+    };
+    let smooth = match p.get("--smooth") {
+        None => None,
+        Some("3") => Some(3),
+        Some("5") => Some(5),
+        Some(_) => return Err("--smooth takes 3 or 5".into()),
+    };
+    Ok(Ok(Job {
+        sample: p.sample(&file)?,
+        win: p.window()?,
+        csv: p.csv()?,
+        out: p.out(),
+        file,
+        mz,
+        ppm,
+        da,
+        level: p.level()?,
+        pol,
+        smooth,
+        dry: p.flag("--dry-run"),
+    }))
+}
+
+/// Why a trace has no signal (`None` when it has some): the section holds no scan of that level and polarity, the ion is absent, or the window cut it all.
+fn emptiness(a: &Answer, win: Option<(f64, f64)>) -> Result<Option<&'static str>> {
+    let bad = || Error::new("error.badIndex");
+    let x = extract::tokens(&a.text, "rt").ok_or_else(bad)?;
+    let y = extract::tokens(&a.text, "y").ok_or_else(bad)?;
+    if x.is_empty() {
+        return Ok(Some("no_scans_in_section"));
+    }
+    let seen = |t: &&str| !t.parse::<f64>().is_ok_and(|v| v == 0.0);
+    if !y.iter().any(seen) {
+        return Ok(Some("no_signal"));
+    }
+    let kept = extract::pairs(&x, &y, win);
+    Ok(kept.iter().all(|p| !seen(&p.1)).then_some("outside_window"))
+}
+
+/// The `xicplan/1` document: what the run would extract.
+fn plan(j: &Job) -> String {
+    let num = extract::jnum;
+    let list =
+        j.mz.iter()
+            .map(|&m| {
+                format!(
+                    "{{\"id\":{},\"mz\":{},\"tolerance_da\":{},\"tolerance_ppm\":{}}}",
+                    extract::jstr(&format!("xic:{}", num(m))),
+                    num(m),
+                    num(j.tol(m)),
+                    j.ppm.map_or("null".to_string(), num)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+    let name = j
+        .file
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let win = j.win.map_or("null".to_string(), |(l, h)| {
+        format!("[{},{}]", num(l), num(h))
+    });
+    format!(
+        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{},\"traces\":[{list}]}}",
+        extract::jstr(&name),
+        j.sample.map_or("null".to_string(), |s| s.to_string()),
+        j.level,
+        j.pol.map_or("null".to_string(), |p| format!("\"{}\"", if p > 0 { "+" } else { "-" })),
+        j.smooth.map_or("null".to_string(), |k| k.to_string()),
+        if j.csv { "csv" } else { "json" },
+        j.out
+            .as_ref()
+            .map_or("null".to_string(), |p| extract::jstr(&p.to_string_lossy())),
+        j.mz.len()
+    )
+}
+
+/// The wide CSV of several traces that share their scans: `rt_min,xic:<mz>,...`.
+fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
+    let bad = || Error::new("error.badIndex");
+    let first = &docs.first().ok_or_else(bad)?.1;
+    let mut s = String::from("rt_min");
+    for (id, pts) in docs {
+        if pts.len() != first.len() || pts.iter().zip(first).any(|(a, b)| a.0 != b.0) {
+            return Err(bad());
+        }
+        s += &format!(",{id}");
+    }
+    s.push('\n');
+    for i in 0..first.len() {
+        s += &first[i].0;
+        for (_, pts) in docs {
+            s += &format!(",{}", pts[i].1);
+        }
+        s.push('\n');
+    }
+    Ok(s)
+}
+
+pub fn xic(args: Vec<String>) -> Outcome {
+    let j = match job(args) {
+        Ok(Ok(j)) => j,
+        Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
+        Err(e) => return Outcome::fail(&e),
+    };
+    if j.dry {
+        // the plan is what the run would do: the file must exist (exit 4), nothing is read from it
+        if let Err(e) = std::fs::metadata(&j.file) {
+            return Outcome::fail_error(
+                &Error::new("err.flow.io").with("detail", format!("{}: {e}", j.file.display())),
+            );
+        }
+        return trace_cmd::finish(Ok((plan(&j), String::new())), &j.out);
+    }
+    trace_cmd::finish(
+        extract::with_tmp("xic", |tmp| {
+            let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
+            let mut answers = Vec::new();
+            for &mz in &j.mz {
+                let mut a = trace_cmd::xic_answer(&mut s, mz, j.tol(mz), j.level, j.pol, j.smooth)?;
+                if let Some(p) = j.ppm {
+                    a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
+                }
+                if let Some(why) = emptiness(&a, j.win)? {
+                    a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
+                    s.note += &format!(
+                        "note: xic:{} is empty ({}); exit 0, the trace is all zero or absent\n",
+                        extract::jnum(mz),
+                        why.replace('_', " ")
+                    );
+                }
+                answers.push((mz, a));
+            }
+            let id = |mz: f64| format!("xic:{}", extract::jnum(mz));
+            let text = match (answers.len(), j.csv) {
+                (1, _) => {
+                    let (mz, a) = answers.remove(0);
+                    trace_cmd::render(a, &s, j.win, j.csv, &id(mz))?
+                }
+                (_, false) => {
+                    let mut docs = Vec::new();
+                    for (mz, a) in answers {
+                        let d = trace_cmd::render(a, &s, j.win, false, &id(mz))?;
+                        docs.push(d);
+                    }
+                    format!(
+                        "{{\"schema\":\"trace-set/1\",{},\"n_traces\":{},\"traces\":[{}]}}",
+                        trace_cmd::tail(&s.name, &s),
+                        docs.len(),
+                        docs.join(",")
+                    )
+                }
+                (_, true) => {
+                    let mut cols = Vec::new();
+                    for (mz, a) in &answers {
+                        let x =
+                            extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
+                        let y =
+                            extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
+                        let pts = extract::pairs(&x, &y, j.win)
+                            .into_iter()
+                            .map(|(a, b)| (a.to_string(), b.to_string()))
+                            .collect();
+                        cols.push((id(*mz), pts));
+                    }
+                    wide_csv(&cols)?
+                }
+            };
+            Ok((text, s.note.clone()))
+        }),
+        &j.out,
+    )
+}
+
+#[cfg(test)]
+#[path = "trace_xic_tests.rs"]
+mod tests;

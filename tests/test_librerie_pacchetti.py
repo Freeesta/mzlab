@@ -59,46 +59,46 @@ def stand_in(tmp_path, size=0):
 def test_only_esi_ms2_with_open_licences_are_kept(tmp_path, zip_path):
     out = tmp_path / "out"
     cat = lp.run(out, zip_path, stand_in(tmp_path))
-    by = {x["id"]: x for x in cat["librerie"]}
-    assert by["massbank-pos"]["spettri"] == 2 and by["massbank-neg"]["spettri"] == 3
-    assert by["massbank-pos"]["licenze"] == {"CC BY": 1, "CC0": 1}
-    assert by["massbank-neg"]["licenze"] == {"CC BY": 2, "CC BY-SA": 1}
-    assert by["massbank-pos"]["contributori"] == {"Eawag": 1, "RIKEN": 1}
-    for lib in cat["librerie"][:2]:
-        assert "NC" not in json.dumps(lib["licenze"]) and "dl-de" not in json.dumps(lib["licenze"])
+    by = {x["id"]: x for x in cat["libraries"]}
+    assert by["massbank-pos"]["spectra"] == 2 and by["massbank-neg"]["spectra"] == 3
+    assert by["massbank-pos"]["licenses"] == {"CC BY": 1, "CC0": 1}
+    assert by["massbank-neg"]["licenses"] == {"CC BY": 2, "CC BY-SA": 1}
+    assert by["massbank-pos"]["contributors"] == {"Eawag": 1, "RIKEN": 1}
+    for lib in cat["libraries"][:2]:
+        assert "NC" not in json.dumps(lib["licenses"]) and "dl-de" not in json.dumps(lib["licenses"])
 
 
 def test_the_unito_standards_are_a_package_of_their_own(tmp_path, zip_path):
     cat = lp.run(tmp_path / "out", zip_path, stand_in(tmp_path))
-    u = {x["id"]: x for x in cat["librerie"]}["unito-standard"]
-    assert u["spettri"] == 61 and u["licenze"] == {"CC BY": 61} and "Cristaudo" in u["attribuzione"]
+    u = {x["id"]: x for x in cat["libraries"]}["unito-standard"]
+    assert u["spectra"] == 61 and u["licenses"] == {"CC BY": 61} and "Cristaudo" in u["attribution"]
 
 
 def test_pieces_are_checked_and_rebuild_the_package(tmp_path, zip_path):
     out = tmp_path / "out"
     cat = lp.run(out, zip_path, stand_in(tmp_path, size=lp.PIECE * 2 + 1000))
-    lib = {x["id"]: x for x in cat["librerie"]}["massbank-pos"]
-    assert len(lib["pezzi"]) == 3 and lib["pezzi"][0]["dimensione"] == lp.PIECE
+    lib = {x["id"]: x for x in cat["libraries"]}["massbank-pos"]
+    assert len(lib["pieces"]) == 3 and lib["pieces"][0]["size"] == lp.PIECE
     whole = hashlib.sha256()
-    for p in lib["pezzi"]:
+    for p in lib["pieces"]:
         b = (out / p["file"]).read_bytes()
-        assert len(b) == p["dimensione"] and hashlib.sha256(b).hexdigest() == p["sha256"]
+        assert len(b) == p["size"] and hashlib.sha256(b).hexdigest() == p["sha256"]
         whole.update(b)
-    assert whole.hexdigest() == lib["sha256"] and sum(p["dimensione"] for p in lib["pezzi"]) == lib["dimensione"]
-    assert lib["lettore_min"] == 1 and lib["picchi"] == 2 * lib["spettri"]
+    assert whole.hexdigest() == lib["sha256"] and sum(p["size"] for p in lib["pieces"]) == lib["size"]
+    assert lib["reader_min"] == 1 and lib["peaks"] == 2 * lib["spectra"]
 
 
 def test_the_catalog_file_and_the_external_sources(tmp_path, zip_path):
     out = tmp_path / "out"
     lp.run(out, zip_path, stand_in(tmp_path))
     cat = json.loads((out / "catalogo.json").read_text(encoding="utf-8"))
-    assert cat["formato"] == "librerie/2" and cat["pezzo"] == lp.PIECE
-    assert {"gnps-cc0", "massbank-msp"} <= {e["id"] for e in cat["esterne"]}
-    assert all(e["url"].startswith("https://") for e in cat["esterne"])
-    modes = {f["id"]: f["modo"] for f in cat["fonti"]}
+    assert cat["format"] == "libraries/2" and cat["piece"] == lp.PIECE
+    assert {"gnps-cc0", "massbank-msp"} <= {e["id"] for e in cat["external"]}
+    assert all(e["url"].startswith("https://") for e in cat["external"])
+    modes = {f["id"]: f["mode"] for f in cat["sources"]}
     assert modes["massbank-pos"] == "site" and modes["massbank-msp"] == "external" and modes["mona-gcms"] == "link"
-    site = [f for f in cat["fonti"] if f["modo"] == "site"]
-    assert {f["id"] for f in site} <= {p["id"] for p in cat["librerie"]} and all(f["sha256"] and f["dimensione"] for f in site)
+    site = [f for f in cat["sources"] if f["mode"] == "site"]
+    assert {f["id"] for f in site} <= {p["id"] for p in cat["libraries"]} and all(f["sha256"] and f["size"] for f in site)
     assert len(lp.ZIP_SHA256) == 64 and lp.VERSION in lp.ZIP_URL
 
 
@@ -125,8 +125,8 @@ def test_the_hand_written_catalog_passes_its_check_and_the_check_catches_mistake
     sources = lp.load_sources()
     assert lp.check_sources(sources) == []
     first = sources[0]
-    for change, text in (({"modo": "site", "licenza": "CC-BY-NC-4.0"}, "free licence"), ({"modo": "external", "download": None}, "https download"),
-                         ({"verificato": None}, "date"), ({"id": sources[1]["id"]}, "repeated"), ({"sha256": "abc"}, "malformed")):
+    for change, text in (({"mode": "site", "license": "CC-BY-NC-4.0"}, "free licence"), ({"mode": "external", "download": None}, "https download"),
+                         ({"verified": None}, "date"), ({"id": sources[1]["id"]}, "repeated"), ({"sha256": "abc"}, "malformed")):
         bad = lp.check_sources([{**first, **change}, *sources[1:]])
         assert any(text in b for b in bad), (change, bad)
     assert lp.check_sources([{k: v for k, v in first.items() if k != "kind"}]) != []

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xicplan/1",
+  "title": "xicplan/1: what `mzlab-cli trace xic --dry-run` would extract",
+  "description": "The extraction a run would do, written without reading the data of the file (a missing file is still exit 4). Code: crates/mzlab-cli/src/trace_xic.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "dry_run",
+    "file",
+    "sample",
+    "ms_level",
+    "polarity",
+    "smooth",
+    "rt_window_min",
+    "format",
+    "output",
+    "n_traces",
+    "traces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "xicplan/1"
+    },
+    "dry_run": {
+      "const": true
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "ms_level": {
+      "type": "integer"
+    },
+    "polarity": {
+      "enum": [
+        "+",
+        "-",
+        null
+      ],
+      "description": "null: every scan of the level."
+    },
+    "smooth": {
+      "enum": [
+        3,
+        5,
+        null
+      ],
+      "description": "The smoothing filter, null for none."
+    },
+    "rt_window_min": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "format": {
+      "enum": [
+        "json",
+        "csv"
+      ],
+      "description": "The format the run would write."
+    },
+    "output": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The --out path, null for the standard output."
+    },
+    "n_traces": {
+      "type": "integer"
+    },
+    "traces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mz",
+          "tolerance_da",
+          "tolerance_ppm"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "xic:<mz>, the id of the trace the run writes."
+          },
+          "mz": {
+            "type": "number"
+          },
+          "tolerance_da": {
+            "type": "number",
+            "description": "Half-window in Da (for ppm, of this m/z)."
+          },
+          "tolerance_ppm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

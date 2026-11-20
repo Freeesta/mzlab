@@ -21,6 +21,7 @@ def nomi(version: str) -> dict[str, str]:
         "deb": p + "Linux.deb",
         "cli_x86_64": p + "cli-Linux-x86_64",
         "cli_aarch64": p + "cli-Linux-aarch64",
+        "cli_mac": p + "cli-Mac-aarch64",
         "sito": p + "sito.zip",
         "sbom": p + "sicurezza-SBOM.zip",
     }
@@ -35,7 +36,8 @@ def testo(tag: str, repo: str, changelog: str) -> str:
         f"| [Installer (.exe)]({url('windows')}) | [Disk image (.dmg)]({url('mac')}) "
         f"| [AppImage]({url('appimage')}) · [.deb]({url('deb')}) |\n\n"
         f"Command line for AI agents and servers (static Linux binaries, any distro): [`{n['cli_x86_64']}`]({url('cli_x86_64')}) · "
-        f"[`{n['cli_aarch64']}`]({url('cli_aarch64')}); verify with `SHA256SUMS` (docs/agenti/cli-agenti.md).\n\n"
+        f"[`{n['cli_aarch64']}`]({url('cli_aarch64')}); macOS on Apple silicon (unsigned): [`{n['cli_mac']}`]({url('cli_mac')}); "
+        "verify with `SHA256SUMS` (docs/agenti/cli-agenti.md).\n\n"
         f"`{n['sito']}` is a copy of the website to host yourself or open offline; `{n['sbom']}` holds the software bills of materials "
         "and `SHA256SUMS` the checksums of every file.\n\n" + changelog.strip() + "\n"
     )
