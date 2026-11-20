@@ -255,6 +255,28 @@ fn an_aromatic_ring_that_cannot_alternate() {
     assert_eq!(codes(&out), ["kekule"], "{out}");
 }
 
+#[test]
+fn an_aromatic_hydrogen_the_file_does_not_state_is_reported_with_its_atom() {
+    // imidazole written with aromatic bonds: either N can carry the H, the reader takes the first in file order (atom 0) and says so
+    let ring = [(1, 2, 4), (2, 3, 4), (3, 4, 4), (4, 5, 4), (5, 1, 4)];
+    let out = check(&plain(&["N", "C", "N", "C", "C"], &ring));
+    assert_eq!(codes(&out), ["aromaticH"], "{out}");
+    assert!(
+        out.contains("{\"code\":\"aromaticH\",\"level\":\"note\",\"atoms\":[0],"),
+        "{out}"
+    );
+    // benzene written with aromatic bonds states everything: no remark
+    let six = [
+        (1, 2, 4),
+        (2, 3, 4),
+        (3, 4, 4),
+        (4, 5, 4),
+        (5, 6, 4),
+        (6, 1, 4),
+    ];
+    assert!(codes(&check(&plain(&["C"; 6], &six))).is_empty());
+}
+
 /// Butan-2-ol around C2 at the origin; `st` is the stereo code of the C2-O bond, `from_o` writes it from O.
 fn butanol(st: u8, order: u8) -> String {
     let atoms = [

@@ -23,6 +23,8 @@ pub struct Drawing {
     pub mol: Mol,
     /// False when the bonds written aromatic could not be given alternating orders (they are left single).
     pub kekule: bool,
+    /// Aromatic atoms given a hydrogen that the file does not state (the first that can carry it, heteroatoms first, in file order).
+    pub aromatic_h: Vec<u32>,
     /// Atoms on a bond written aromatic.
     pub arom_atoms: Vec<u32>,
     pub query_atoms: Vec<u32>,
@@ -71,7 +73,8 @@ impl Mol {
         Ok(Drawing {
             sites: stand_in.stereo_sites(),
             mol,
-            kekule,
+            kekule: kekule.is_some(),
+            aromatic_h: kekule.iter().flatten().map(|&i| i as u32).collect(),
             arom_atoms,
             query_atoms,
             query_bonds,

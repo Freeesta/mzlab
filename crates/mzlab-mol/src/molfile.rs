@@ -58,8 +58,9 @@ impl Draft {
         Ok(())
     }
 
-    /// The record and whether the aromatic bonds could be kekulised; with `lenient` a failed kekulisation leaves them single instead of an error.
-    pub(crate) fn finish(mut self, lenient: bool) -> Result<(Mol, bool), MolError> {
+    /// The record and the aromatic atoms given a hydrogen the file does not state (None: the aromatic bonds could not be kekulised); with
+    /// `lenient` a failed kekulisation leaves them single instead of an error.
+    pub(crate) fn finish(mut self, lenient: bool) -> Result<(Mol, Option<Vec<usize>>), MolError> {
         let n = self.atoms.len();
         let ends: Vec<(usize, usize)> = self.bonds.iter().map(|b| (b.a, b.b)).collect();
         let mut orders: Vec<u8> = self.bonds.iter().map(|b| b.order).collect();
@@ -73,10 +74,10 @@ impl Draft {
             })
             .collect();
         let kekule = assign(&ends, &mut orders, &facts);
-        if !kekule && !lenient {
+        if kekule.is_none() && !lenient {
             return Err(fail("the aromatic system cannot be kekulised"));
         }
-        if !kekule {
+        if kekule.is_none() {
             orders = self.bonds.iter().map(|b| b.order.max(1)).collect();
         }
         for (b, &o) in self.bonds.iter_mut().zip(&orders) {

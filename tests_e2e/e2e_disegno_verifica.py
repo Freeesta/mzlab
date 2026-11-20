@@ -91,6 +91,14 @@ try:
                 assert codes == [], (smi, codes, pg.inner_text("#chk-card"))
         step("sulfone, nitro, phosphate, DMSO, pyridine, acetic acid, azide, indole: no remark", groups)
 
+        def aromatic_h():
+            # imidazole written with aromatic bonds: the file does not say which N carries the H; the note names the atom chosen
+            ring = [(1, 2, 4), (2, 4, 4), (4, 3, 4), (3, 5, 4), (5, 1, 4)]
+            assert check(molfile(["N", "C", "C", "N", "C"], ring)) == ["aromaticH"], pg.inner_text("#chk-card")
+            li = pg.locator("#chk-list li").first
+            assert "Note" in li.inner_text() and "N1" in li.inner_text(), li.inner_text()
+        step("an aromatic ring whose H the file does not place: a note says on which atom it was put", aromatic_h)
+
         def pieces_and_empty():
             assert check("CC(=O)[O-].[Na+]") == ["pieces"], pg.inner_text("#chk-card")
             assert "Note" in pg.inner_text("#chk-list li")
