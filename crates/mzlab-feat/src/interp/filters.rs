@@ -48,7 +48,8 @@ pub fn row_facts(t: &crate::table::Aligned) -> Vec<RowFacts> {
             bad_quality: !t.meta.is_empty()
                 && t.meta.get(r).qreason & !crate::quality::REASON_BROAD != 0,
             isotope: !t.iso.is_empty() && t.iso.group[r] != 0 && first[&t.iso.group[r]] != r,
-            tp_status: t.tp.status[r],
+            // a table that never went through the product steps has no status: every row counts as in the view (status 0)
+            tp_status: t.tp.status.get(r).copied().unwrap_or(0),
             mass_error: false,
         })
         .collect()
@@ -215,4 +216,22 @@ pub struct Registry {
     pub hidden: [Vec<u32>; 5],
     /// Decoy masses passed through the filters (`decoys` of `filtri/1`): `(rules, survived)`, None until measured.
     pub decoys: Option<(usize, usize)>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A table from `features.align` alone has no product status: `row_facts` must not index it (the CLI aborted with exit 134 on it).
+    #[test]
+    fn a_table_without_product_status_has_every_row_in_the_view() {
+        let mut t = crate::table::Aligned::with_capacity(2, 3);
+        t.n_files = 2;
+        t.mz = vec![300.0, 400.0, 500.0];
+        t.rt = vec![5.0, 9.0, 7.0];
+        assert!(t.tp.status.is_empty());
+        let facts = row_facts(&t);
+        assert_eq!(facts.len(), 3);
+        assert!(facts.iter().all(|f| first_hidden(f).is_none()));
+    }
 }

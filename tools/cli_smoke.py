@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +53,8 @@ def checks(binary: str) -> None:
     print(ver.strip().splitlines()[0])
     if "mzLab" not in ver:
         fail("--version does not name mzLab")
+    if not re.search(r"\(commit [0-9a-f]{7,40}\)", ver):  # `unknown` means the build knew no commit: not a release binary
+        fail(f"--version does not carry a commit: {ver.splitlines()[0]!r}")
     cat = must_run(binary, ["commands", "--json"])
     print(cat.decode()[:200] + " ...")  # the start of the catalog, like `commands --json | head -c 200` (it is one long line)
     doc = json.loads(cat)

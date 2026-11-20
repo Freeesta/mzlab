@@ -39,8 +39,13 @@ def _git_bash():
 def _bin(tmp_path, curl_body="exit 1\n"):
     b = tmp_path / "bin"
     b.mkdir()
-    (b / "curl").write_text(FAKE_CURL.format(log=(tmp_path / "curl.log").as_posix(), body=curl_body))
-    (b / "npm").write_text("#!/usr/bin/env bash\nexit 1\n")
+    curl = FAKE_CURL.format(log=(tmp_path / "curl.log").as_posix(), body=curl_body)
+    # LF endings: a CRLF shebang names the interpreter "bash\r"
+    (b / "curl").write_text(curl, newline="\n")
+    (b / "npm").write_text("#!/usr/bin/env bash\nexit 1\n", newline="\n")
+    # bash.exe puts its own /ucrt64/bin and /usr/bin before the PATH it is given, so the real curl would win there: the stand-ins are also functions, which come first
+    body = curl.split("\n", 1)[1]
+    (b / "shims.sh").write_text(f"curl() (\n{body})\nnpm() {{ return 1; }}\n", newline="\n")
     for f in b.iterdir():
         f.chmod(0o755)
     return b
@@ -57,7 +62,8 @@ def _run(tmp_path, script=SCRIPT, strict=True, curl_body="exit 1\n"):
         bash = _git_bash()
         git = bash.parent.parent
         env = {"PATH": os.pathsep.join([str(fake), str(git / "usr" / "bin"), str(git / "bin")]), "RUNNER_TEMP": rt.as_posix(),
-               "SYSTEMROOT": os.environ.get("SYSTEMROOT", r"C:\Windows")}   # Windows programs started without it fail to load their DLLs
+               "SYSTEMROOT": os.environ.get("SYSTEMROOT", r"C:\Windows"),   # Windows programs started without it fail to load their DLLs
+               "BASH_ENV": (fake / "shims.sh").as_posix()}
     else:
         bash = "bash"
         env = {"PATH": f"{fake}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(rt)}

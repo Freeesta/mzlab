@@ -16,9 +16,9 @@
         texts: { label: "Molecule", placeholder: "name, formula or mass", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
         onPick: async (/** @type {any} */ row) => {
           const m = (await a.getMolecule(row.id)) || row;
-          const adduct = (m.addotti && m.addotti[0]) || "[M+H]+";
+          const adduct = (m.adducts && m.adducts[0]) || "[M+H]+";
           // a mass-only entry has no formula: the graph then shows masses only
-          set("molecule", m.nome || m.name || ""); set("adduct", adduct); set("smiles", m.smiles || "");
+          set("molecule", m.name || ""); set("adduct", adduct); set("smiles", m.smiles || "");
           set("formula", m.formula ? `${m.formula} ${adduct}` : "");
           done();
         },

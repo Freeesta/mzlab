@@ -11,9 +11,10 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("spettroheader")
 r = Run(port=8987, wd="/tmp/wd_spettroheader")
-# [class, left, right, text overflow] of every visible control of the header of each spectrum panel, in document order
+# [class, left, right, text overflow, top, bottom] of every visible control of the header of each spectrum panel, in document order; the header has two rows (title row, then the
+# .ctl row, a flex wrapper that is not a control itself), so the wrapper is left out and boxes are compared only when they share a row
 BOXES = """() => E.panels.filter(q => q.type === 'spec').map(q => { const hd = q.el.querySelector('.hd');
-  const l = [...hd.querySelectorAll(':scope > *, .ctl > *')].filter(e => e.offsetWidth).map(e => { const b = e.getBoundingClientRect(); return [(e.className.toString() || e.tagName), b.left, b.right, e.scrollWidth - e.clientWidth]; });
+  const l = [...hd.querySelectorAll(':scope > *, .ctl > *')].filter(e => e.offsetWidth && !e.classList.contains('ctl')).map(e => { const b = e.getBoundingClientRect(); return [(e.className.toString() || e.tagName), b.left, b.right, e.scrollWidth - e.clientWidth, b.top, b.bottom]; });
   return { l, over: hd.scrollWidth - hd.clientWidth }; })"""
 try:
     with sync_playwright() as p:
@@ -24,8 +25,10 @@ try:
             """The first problem found at this width, or None (the second pass of fitHd runs 300 ms after the resize: the caller retries)."""
             for h in pg.evaluate(BOXES):
                 if h["over"] > 1: return (w, "header wider than its panel", h["over"])
-                for a, b in zip(h["l"], h["l"][1:]):
-                    if a[2] > b[1] + 1: return (w, "overlap", a, b)
+                for i, a in enumerate(h["l"]):
+                    for b in h["l"][i + 1:]:
+                        same_row = min(a[5], b[5]) - max(a[4], b[4]) > 1
+                        if same_row and a[2] > b[1] + 1 and b[2] > a[1] + 1: return (w, "overlap", a, b)
                 # a label never spills out of its box (the title and the file menu cut with «…» on purpose)
                 spill = [c for c in h["l"] if c[3] > 1 and c[0] != "SELECT" and "ttl" not in c[0]]
                 if spill: return (w, "text spills", spill)

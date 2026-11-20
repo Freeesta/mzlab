@@ -8,6 +8,56 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
+## Which build is this
+- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
+
+## Renamed commands
+- A command name of an earlier build (`channels`, `items`, `manual-table`, ...) is exit 2 with `error/1` `err.cli.command.renamed` (`params.old`, `params.now`) and the new path in the message and in `hint`; `commands --json OLD` (exit 5) puts it in `hint` too. A command that was removed answers `err.cli.command.removed`. The table is `RENAMED` in `crates/mzlab-cli/src/renamed.rs`:
+<!--renames-->
+| old name | now |
+|---|---|
+| `background` | `trace background` |
+| `channels` | `file channels` |
+| `convert` | `file convert` |
+| `dda-window` | `spectrum dda-window` |
+| `elements` | `ion elements` |
+| `folder` | `file list` |
+| `insilico` | `db insilico pack` |
+| `ion-mz` | `ion mz` |
+| `ion-pattern` | `ion pattern` |
+| `items` | `file items` |
+| `manual-table` | `peak table` |
+| `match-mz` | `ion match` |
+| `mol-anal` | `mol anal` |
+| `mol-check` | `mol check` |
+| `mol-cip` | `mol cip` |
+| `mol-cut` | `mol cut` |
+| `mol-export` | `mol export` |
+| `mol-hilite` | `mol hilite` |
+| `mol-label` | `mol label` |
+| `mol-link` | `mol link` |
+| `mol-mech` | `mol mech` |
+| `mol-search` | `mol search` |
+| `mol-sel` | `mol sel` |
+| `msn-graph` | `msn graph` |
+| `msn-lib` | `msn lib` |
+| `msn-rules` | `msn rules` |
+| `normative` | `db normative` |
+| `pair` | `file pair` |
+| `peak-area` | `peak area` |
+| `peak-auto` | `peak auto` |
+| `peak-auto-lr` | `peak auto-lr` |
+| `peak-edges` | `peak edges` |
+| `peak-split` | `peak split` |
+| `peak-window` | `peak window` |
+| `ref-list` | `db ref-list` |
+| `samples` | `sample` |
+| `steps` | `flow steps` |
+| `validate` | `file validate` |
+| `wiff` | `file inventory` |
+| `explain-missing` | removed (no replacement) |
+<!--/renames-->
+
 ## Look at a file first
 - `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
@@ -34,6 +84,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
 <!--/exits-->
+  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with exit 1, `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
 ## Learn the CLI in one call

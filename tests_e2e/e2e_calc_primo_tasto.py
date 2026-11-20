@@ -28,6 +28,8 @@ try:
         # the Disegno view: the calculator is the drop-down under its button
         wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
         wait_for_js(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
+        # the drawing editor takes the focus when its frame finishes loading: wait for it, so a key typed meanwhile is not the one that loses the field
+        wait_for_js(pg, "(k => !!(k && k.contentWindow && k.contentWindow.ketcher))(document.getElementById('kframe'))", 120000); frames(pg, 10)
         pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden")
         for k in KEYS: step(f"drop-down: {k!r} first keeps the panel open", lambda k=k: stays(k))
         pg.click("#calcx"); pg.evaluate("setView('data')")

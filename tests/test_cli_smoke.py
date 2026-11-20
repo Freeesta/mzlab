@@ -9,7 +9,7 @@ import cli_smoke  # noqa: E402
 import pytest  # noqa: E402
 
 
-def fake(tmp: Path, name: str, version: str = "mzlab-cli 1.0.0 (mzLab)", pattern: str = "A") -> str:
+def fake(tmp: Path, name: str, version: str = "mzlab-cli 1.0.0 (commit abc1234) mzLab", pattern: str = "A") -> str:
     """A stand-in for mzlab-cli: a script that answers the four commands without input."""
     p = tmp / name
     p.write_text(
@@ -42,4 +42,10 @@ def test_a_different_output_fails(tmp_path):
 def test_a_binary_that_does_not_name_mzlab_fails(tmp_path):
     with pytest.raises(SystemExit) as e:
         cli_smoke.main([fake(tmp_path, "a", version="other 1.0")])
+    assert e.value.code == 1
+
+
+def test_a_binary_without_a_commit_fails(tmp_path):
+    with pytest.raises(SystemExit) as e:
+        cli_smoke.main([fake(tmp_path, "a", version="mzlab-cli 1.0.0 (commit unknown) mzLab")])
     assert e.value.code == 1

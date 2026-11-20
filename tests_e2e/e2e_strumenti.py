@@ -47,7 +47,7 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
             assert ids == ["file", "addloss", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["Files", "Adducts & losses", "Lists", "Table", "More", "Search"], lab
+            assert lab == ["Files", "Adducts & losses", "Contaminants", "Table", "More", "Search"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «More»"
@@ -345,7 +345,7 @@ try:
             pg.keyboard.press("Escape"); frames(pg, 3)
             if pg.is_visible("#dfiles"): close_side(pg)
             gone("#dfiles")
-        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", palette_search)
+        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcul» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", palette_search)
 
         def palette_hr():
             pg.keyboard.press("Control+k"); pg.keyboard.type("isotop"); wait_for_js(pg, "document.querySelector('#pal-l').innerText.includes('High resolution')")
