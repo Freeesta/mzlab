@@ -10,6 +10,8 @@ mod container;
 pub use container::{container, container_at, container_within};
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
+pub mod dad_align;
+#[cfg(feature = "mappa-dad")]
 pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_ops;

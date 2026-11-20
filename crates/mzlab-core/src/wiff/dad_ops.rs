@@ -2,6 +2,7 @@
 //! wavelength), the part of A that B does not cover is dropped, and every step taken (overlap, interpolation, shift, scale) is reported, never silent.
 
 use super::dad::DadData;
+use super::dad_align::{dad_align, Align};
 use crate::error::{Error, Result};
 use std::fmt::Write;
 
@@ -41,10 +42,13 @@ impl Scale {
 }
 
 /// `shift_min`: B is read at `t - shift_min` (a positive shift moves B later); `scale`: see [`Scale`].
+/// `auto_shift` replaces `shift_min` with the shift estimated by [`dad_align`] (on `focus`, the time window being read, when it is given).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SubOpts {
     pub scale: Scale,
     pub shift_min: f64,
+    pub auto_shift: bool,
+    pub focus: Option<(f64, f64)>,
 }
 
 impl Default for SubOpts {
@@ -52,6 +56,8 @@ impl Default for SubOpts {
         SubOpts {
             scale: Scale::None,
             shift_min: 0.0,
+            auto_shift: false,
+            focus: None,
         }
     }
 }
@@ -74,6 +80,8 @@ pub struct SubReport {
     pub factor: f64,
     pub interp_rt: bool,
     pub interp_nm: bool,
+    /// The estimate behind `shift_min` when it was asked for (`auto_shift`); `None` for a shift given by hand.
+    pub align: Option<Align>,
     pub warnings: Vec<&'static str>,
 }
 
@@ -184,6 +192,22 @@ impl SubReport {
     }
 }
 
+/// The shift to apply: the estimate (with its evidence) when it was asked for, else the number given (0 when it is not finite).
+fn chosen_shift(a: &DadData, b: &DadData, o: &SubOpts) -> (f64, Option<Align>) {
+    if o.auto_shift {
+        let f = dad_align(a, b, o.focus);
+        return (f.shift_min, Some(f));
+    }
+    (
+        if o.shift_min.is_finite() {
+            o.shift_min
+        } else {
+            0.0
+        },
+        None,
+    )
+}
+
 /// `A - scale * B` on the grid of A restricted to the rows and channels that B covers. `Err("err.pda.nooverlap")` when nothing overlaps, `err.pda.none` for an empty matrix.
 #[allow(clippy::cast_possible_truncation)] // the matrix is f32
 pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, SubReport)> {
@@ -193,11 +217,7 @@ pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, S
     if !ok(a) || !ok(b) {
         return Err(Error::new("err.pda.none"));
     }
-    let shift = if o.shift_min.is_finite() {
-        o.shift_min
-    } else {
-        0.0
-    };
+    let (shift, align_found) = chosen_shift(a, b, o);
     let ((rows, interp_rt), (cols, interp_nm)) = (
         align(&a.time_min, &b.time_min, shift),
         align(&a.wavelengths_nm, &b.wavelengths_nm, 0.0),
@@ -260,9 +280,13 @@ pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, S
         factor,
         interp_rt,
         interp_nm,
+        align: align_found,
         warnings: vec![],
     };
     rep.warnings = rep.derive_warnings();
+    if let Some(f) = &rep.align {
+        rep.warnings.extend(f.warnings.iter().copied());
+    }
     Ok((out, rep))
 }
 
@@ -296,7 +320,11 @@ impl SubReport {
                 .collect::<Vec<_>>()
                 .join(","),
         );
-        s.push_str("]}");
+        s.push(']');
+        if let Some(f) = &self.align {
+            let _ = write!(s, ",\"align\":{}", f.to_json());
+        }
+        s.push('}');
         s
     }
 }
