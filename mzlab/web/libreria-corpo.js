@@ -199,14 +199,14 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
   }
   function renderAvail() {
     const d = /** @type {any} */ (document.getElementById("libdlg")), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map((/** @type {Bag} */ a) => [a.id, a.stato]));
-    const rows = A.cat.librerie.map((/** @type {Bag} */ p) => { const s = st.get(p.id) || "new";
-      return `<tr><td><input type="checkbox" data-dl="${EHt(p.id)}" ${s === "installed" ? "disabled" : ""} aria-label="${EHt(p.nome)}"></td><td>${EHt(p.nome)}</td><td>${EHt(p.versione)}</td><td class="num">${fmtN(p.spettri)}</td><td class="num">${mb(p.dimensione)} MB</td><td title="${EHt(p.licenza)}">${EHt(p.licenza.split(";")[0].split(":")[0])}</td><td><span class="sbadge st-${s === "installed" ? "ok" : s === "damaged" ? "bad" : "warn"}">${EHt(avLabel(s))}</span></td></tr>`; });
-    const ext = A.cfg && A.cfg.external ? A.cat.esterne : [];
-    const xrows = ext.map((/** @type {Bag} */ e) => `<tr><td><input type="checkbox" data-dlx="${EHt(e.id)}" aria-label="${EHt(e.nome)}"></td><td>${EHt(e.nome)}</td><td colspan="2" class="num">${e.dimensione ? mb(e.dimensione) + " MB" : ""}</td><td colspan="2" title="${EHt(e.licenza || "")}">${EHt((e.licenza || "").split(":")[0])}</td><td class="sm">${EHt(e.nota || "")}</td></tr>`);
+    const rows = A.cat.libraries.map((/** @type {Bag} */ p) => { const s = st.get(p.id) || "new";
+      return `<tr><td><input type="checkbox" data-dl="${EHt(p.id)}" ${s === "installed" ? "disabled" : ""} aria-label="${EHt(p.name)}"></td><td>${EHt(p.name)}</td><td>${EHt(p.version)}</td><td class="num">${fmtN(p.spectra)}</td><td class="num">${mb(p.size)} MB</td><td title="${EHt(p.license)}">${EHt(p.license.split(";")[0].split(":")[0])}</td><td><span class="sbadge st-${s === "installed" ? "ok" : s === "damaged" ? "bad" : "warn"}">${EHt(avLabel(s))}</span></td></tr>`; });
+    const ext = A.cfg && A.cfg.external ? A.cat.external : [];
+    const xrows = ext.map((/** @type {Bag} */ e) => `<tr><td><input type="checkbox" data-dlx="${EHt(e.id)}" aria-label="${EHt(e.name)}"></td><td>${EHt(e.name)}</td><td colspan="2" class="num">${e.size ? mb(e.size) + " MB" : ""}</td><td colspan="2" title="${EHt(e.license || "")}">${EHt((e.license || "").split(":")[0])}</td><td class="sm">${EHt(e.note || "")}</td></tr>`);
     const head = `<tr><th></th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.avail.col.version")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.avail.col.license")}</th><th>${I18N.t("lib.col.state")}</th></tr>`;
     box.innerHTML = (rows.length ? `<table>${head}${rows.join("")}</table>` : `<p class="muted">${I18N.t("lib.avail.none")}</p>`)
       + (xrows.length ? `<div class="sm" style="margin-top:6px"><b>${I18N.t("lib.avail.ext")}</b> ${I18N.t("lib.avail.ext.hint")}</div><table>${xrows.join("")}</table>` : "")
-      + (A.cat.librerie.length ? `<details class="sm" style="margin-top:6px"><summary>${I18N.t("lib.avail.attr")}</summary>${A.cat.librerie.map((/** @type {Bag} */ p) => `<p><b>${EHt(p.nome)}</b>: ${EHt(p.attribuzione || "")} ${p.url_sorgente ? `<span class="muted">(${EHt(p.url_sorgente)})</span>` : ""}</p>`).join("")}</details>` : "");
+      + (A.cat.libraries.length ? `<details class="sm" style="margin-top:6px"><summary>${I18N.t("lib.avail.attr")}</summary>${A.cat.libraries.map((/** @type {Bag} */ p) => `<p><b>${EHt(p.name)}</b>: ${EHt(p.attribution || "")} ${p.source_url ? `<span class="muted">(${EHt(p.source_url)})</span>` : ""}</p>`).join("")}</details>` : "");
     d.querySelector("#lib-avail-go").hidden = !(rows.length || xrows.length);
   }
   async function downloadTicked() {
@@ -215,7 +215,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     const ids = [...d.querySelectorAll("[data-dl]:checked")].map(c => c.dataset.dl), xids = [...d.querySelectorAll("[data-dlx]:checked")].map(c => c.dataset.dlx);
     if (!ids.length && !xids.length) return;
     busy = true; go.disabled = true; cn.hidden = false;
-    const name = (/** @type {string} */ id) => (avail.cat.librerie.find((/** @type {Bag} */ p) => p.id === id) || avail.cat.esterne.find((/** @type {Bag} */ e) => e.id === id) || { nome: id }).nome;
+    const name = (/** @type {string} */ id) => (avail.cat.libraries.find((/** @type {Bag} */ p) => p.id === id) || avail.cat.external.find((/** @type {Bag} */ e) => e.id === id) || { name: id }).name;
     const all = [...ids, ...xids]; st.innerHTML = "";
     const A = (await import("./avanzamento.js")).avanza(st, { title: I18N.t("lib.avail.job"), n: all.length, cancel: false });      // the shared progress panel; «Cancel» stays the button of the window
     let cur = "";
@@ -228,7 +228,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
         else { const r = await call("download", { ids }, show); done += r.done.length; r.failed.forEach((/** @type {Bag} */ f) => fails.push(`${name(f.id)}: ${errText(f.key, f.params)}`)); }
       }
       for (const id of xids) {
-        try { await nativeJson("lib_download_external", { id }); done++; const e = avail.cat.esterne.find((/** @type {Bag} */ x) => x.id === id); await refresh(); await indexOne(`${e.id}.${e.formato}`); }
+        try { await nativeJson("lib_download_external", { id }); done++; const e = avail.cat.external.find((/** @type {Bag} */ x) => x.id === id); await refresh(); await indexOne(`${e.id}.${e.format}`); }
         catch (e_) { const e = /** @type {Lanciato} */ (e_); fails.push(`${name(id)}: ${e.message}`); }
       }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); fails.push(e.message); }

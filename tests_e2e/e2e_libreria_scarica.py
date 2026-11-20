@@ -74,7 +74,7 @@ def publish(msp, version, wrong_total=False):
         if OUT.exists(): shutil.rmtree(OUT)
         e = lp.entry("prova-pos", "Prova · ESI+ · MS2", 1, version, "Test", "https://example.org", "CC0; prova", {"CC0": 1}, {"Prova": 1}, f, OUT, "Attribuzione di prova " + version)
     if wrong_total: e["sha256"] = "0" * 64
-    (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e], "esterne": []}), encoding="utf-8")
+    (OUT / "catalogo.json").write_text(json.dumps({"format": "libraries/2", "piece": lp.PIECE, "libraries": [e], "external": []}), encoding="utf-8")
     pg.evaluate("T.wipe()"); boot()
     return e
 
@@ -88,7 +88,7 @@ try:
         def boot():
             pg.goto(URL); pg.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=60000); pg.evaluate(JS)
         boot()
-        e1 = publish(MSP1, "1"); assert len(e1["pezzi"]) >= 3, len(e1["pezzi"])
+        e1 = publish(MSP1, "1"); assert len(e1["pieces"]) >= 3, len(e1["pieces"])
         boot()
         def no_network():
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-avail-load", timeout=20000); pg.wait_for_selector("#libdlg #lib-list p.muted", timeout=20000)
@@ -141,18 +141,18 @@ try:
             names = pg.evaluate("T.names()"); assert not any(n.endswith((".piece", ".new")) for n in names), names
             assert pg.evaluate("T.b64", "prova-pos.mzlib") == keep
             # the right total: the update replaces it
-            e2["sha256"] = hashlib_sha(OUT, e2); (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e2], "esterne": []}), encoding="utf-8")
+            e2["sha256"] = hashlib_sha(OUT, e2); (OUT / "catalogo.json").write_text(json.dumps({"format": "libraries/2", "piece": lp.PIECE, "libraries": [e2], "external": []}), encoding="utf-8")
             pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']"); pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
             pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Downloaded and verified: 1')", timeout=30000)
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "2"]], s
             assert "SoloNellaV2" in pg.evaluate("T.search", [QPEAKS, 300.1])
         def hashlib_sha(out, e):
             import hashlib
-            return hashlib.sha256(b"".join((out / p["file"]).read_bytes() for p in e["pezzi"])).hexdigest()
+            return hashlib.sha256(b"".join((out / p["file"]).read_bytes() for p in e["pieces"])).hexdigest()
         step("an update with a wrong total fails and leaves the old package; with the right one it replaces it", update_flow)
         def known_next_visit():
-            e3 = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))["librerie"][0]; e3["versione"] = "3"
-            (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e3], "esterne": []}), encoding="utf-8")
+            e3 = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))["libraries"][0]; e3["version"] = "3"
+            (OUT / "catalogo.json").write_text(json.dumps({"format": "libraries/2", "piece": lp.PIECE, "libraries": [e3], "external": []}), encoding="utf-8")
             pg.click("#lib-avail-load"); pg.wait_for_function("document.querySelector('#lib-avail-list').innerText.includes('Update available')", timeout=20000)
             before = len(reqs); boot()
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "aggiornamento", "2"]], s

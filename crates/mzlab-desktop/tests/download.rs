@@ -74,20 +74,20 @@ fn package(version: &str, fill: u8) -> (Package, Vec<Vec<u8>>) {
     let pieces: Vec<Vec<u8>> = whole.chunks(1000).map(|c| c.to_vec()).collect();
     let pkg = Package {
         id: "massbank-pos".into(),
-        nome: "MassBank".into(),
-        versione: version.into(),
+        name: "MassBank".into(),
+        version: version.into(),
         sha256: sha256_hex(&whole),
-        dimensione: whole.len() as u64,
-        lettore_min: 1,
-        spettri: 7,
-        picchi: 70,
-        polarita: 1,
-        pezzi: pieces
+        size: whole.len() as u64,
+        reader_min: 1,
+        spectra: 7,
+        peaks: 70,
+        polarity: 1,
+        pieces: pieces
             .iter()
             .enumerate()
             .map(|(i, p)| Piece {
                 file: format!("massbank-pos/{i:03}.bin"),
-                dimensione: p.len() as u64,
+                size: p.len() as u64,
                 sha256: sha256_hex(p),
             })
             .collect(),
@@ -107,7 +107,7 @@ fn run(folder: &Folder, port: u16, pkg: &Package) -> Result<usize, DlError> {
 
 fn pieces_of(pkg: &Package, bodies: Vec<Vec<u8>>) -> Behave {
     let map: HashMap<String, Vec<u8>> = pkg
-        .pezzi
+        .pieces
         .iter()
         .zip(bodies)
         .map(|(p, b)| (format!("/static/librerie/{}", p.file), b))
@@ -139,7 +139,7 @@ fn a_package_is_downloaded_checked_and_installed() {
         &std::fs::read(t.path().join("L/.mzlab/massbank-pos.mzlib.pkg.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(side["versione"], "2026.03");
+    assert_eq!(side["version"], "2026.03");
     assert_eq!(side["sha256"], pkg.sha256);
     assert_eq!(side["size"], 2500);
     assert_eq!(side["info"]["n"], 7);
@@ -293,7 +293,7 @@ fn the_old_file_stays_until_the_new_one_is_verified() {
         &std::fs::read(t.path().join("L/.mzlab/massbank-pos.mzlib.pkg.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(side["versione"], "2");
+    assert_eq!(side["version"], "2");
 }
 
 #[test]
@@ -313,7 +313,7 @@ fn a_cancelled_download_stops_between_pieces_and_a_newer_reader_is_refused() {
     assert_eq!(e.key, "lib.dl.err.cancelled");
     assert!(!t.path().join("L/massbank-pos.mzlib").exists());
     let mut newer = pkg.clone();
-    newer.lettore_min = READER + 1;
+    newer.reader_min = READER + 1;
     assert_eq!(
         run(&folder, srv.port, &newer).unwrap_err().key,
         "lib.dl.err.version"
@@ -328,17 +328,17 @@ fn a_cancelled_download_stops_between_pieces_and_a_newer_reader_is_refused() {
 #[test]
 fn the_catalog_v2_lists_sources_with_their_mode() {
     let src = |mode: &str| {
-        serde_json::json!({"formato": "librerie/2", "librerie": [], "fonti": [{"id": "msdial-gcms-fiehnri", "gruppo": "base", "nome": "MS-DIAL", "url": "https://zenodo.org/records/10951913",
-            "download": null, "licenza": "CC-BY-4.0", "formato": "msp", "dimensione": 23073288, "sha256": null, "kind": "experimental", "tech": "gc_ei", "pol": 0,
-            "doi": "10.5281/zenodo.10951913", "verificato": "2026-10-27", "modo": mode}]})
+        serde_json::json!({"format": "libraries/2", "libraries": [], "sources": [{"id": "msdial-gcms-fiehnri", "group": "base", "name": "MS-DIAL", "url": "https://zenodo.org/records/10951913",
+            "download": null, "license": "CC-BY-4.0", "format": "msp", "size": 23073288, "sha256": null, "kind": "experimental", "tech": "gc_ei", "pol": 0,
+            "doi": "10.5281/zenodo.10951913", "verified": "2026-10-27", "mode": mode}]})
             .to_string()
     };
     let c = parse_catalog(src("external").as_bytes()).unwrap();
     assert_eq!(
         (
-            c.fonti[0].modo.as_str(),
-            c.fonti[0].tech.as_str(),
-            c.fonti[0].licenza.as_deref()
+            c.sources[0].mode.as_str(),
+            c.sources[0].tech.as_str(),
+            c.sources[0].license.as_deref()
         ),
         ("external", "gc_ei", Some("CC-BY-4.0"))
     );
@@ -346,15 +346,15 @@ fn the_catalog_v2_lists_sources_with_their_mode() {
         parse_catalog(src("browser").as_bytes()).unwrap_err().key,
         "lib.dl.err.catalog"
     );
-    // a catalog of the first version has no sources
-    let v1 = serde_json::json!({"formato": "librerie/1", "librerie": []}).to_string();
-    assert!(parse_catalog(v1.as_bytes()).unwrap().fonti.is_empty());
+    // a catalog without `sources` reads as an empty list
+    let v1 = serde_json::json!({"format": "libraries/2", "libraries": []}).to_string();
+    assert!(parse_catalog(v1.as_bytes()).unwrap().sources.is_empty());
 }
 
 #[test]
 fn the_catalog_is_read_and_checked() {
     let (pkg, bodies) = package("1", 5);
-    let cat = serde_json::json!({"formato": "librerie/1", "pezzo": 4194304, "librerie": [pkg], "esterne": [{"id": "gnps-cc0", "url": "https://external.gnps2.org/x.mgf", "formato": "mgf"}]});
+    let cat = serde_json::json!({"format": "libraries/2", "piece": 4194304, "libraries": [pkg], "external": [{"id": "gnps-cc0", "url": "https://external.gnps2.org/x.mgf", "format": "mgf"}]});
     let body = cat.to_string().into_bytes();
     let srv = serve(Box::new(move |path, _| {
         if path == "/static/librerie/catalogo.json" {
@@ -365,14 +365,14 @@ fn the_catalog_is_read_and_checked() {
     }));
     let src = Http::with_base(&format!("http://127.0.0.1:{}/", srv.port));
     let c = fetch_catalog(&src).unwrap();
-    assert_eq!(c.librerie.len(), 1);
-    assert_eq!(c.esterne[0].sha256, None);
+    assert_eq!(c.libraries.len(), 1);
+    assert_eq!(c.external[0].sha256, None);
     drop(bodies);
     for bad in [
-        serde_json::json!({"formato": "librerie/9", "librerie": []}),
-        serde_json::json!({"formato": "librerie/1", "librerie": [{"id": "../x", "versione": "1", "sha256": "", "dimensione": 0, "pezzi": []}]}),
-        serde_json::json!({"formato": "librerie/1", "librerie": [{"id": "a", "versione": "1", "sha256": "", "dimensione": 5, "pezzi": [{"file": "a/000.bin", "dimensione": 4, "sha256": ""}]}]}),
-        serde_json::json!({"formato": "librerie/1", "librerie": [{"id": "a", "versione": "1", "sha256": "", "dimensione": 4, "pezzi": [{"file": "b/../../000.bin", "dimensione": 4, "sha256": ""}]}]}),
+        serde_json::json!({"format": "libraries/9", "libraries": []}),
+        serde_json::json!({"format": "libraries/2", "libraries": [{"id": "../x", "version": "1", "sha256": "", "size": 0, "pieces": []}]}),
+        serde_json::json!({"format": "libraries/2", "libraries": [{"id": "a", "version": "1", "sha256": "", "size": 5, "pieces": [{"file": "a/000.bin", "size": 4, "sha256": ""}]}]}),
+        serde_json::json!({"format": "libraries/2", "libraries": [{"id": "a", "version": "1", "sha256": "", "size": 4, "pieces": [{"file": "b/../../000.bin", "size": 4, "sha256": ""}]}]}),
     ] {
         assert_eq!(
             parse_catalog(bad.to_string().as_bytes()).unwrap_err().key,
@@ -397,11 +397,11 @@ fn external_sources_only_from_the_allow_list_and_checked() {
     };
     let ext = External {
         id: "gnps-cc0".into(),
-        nome: "GNPS".into(),
+        name: "GNPS".into(),
         url: format!("http://127.0.0.1:{}/x.mgf", srv.port),
-        formato: "mgf".into(),
+        format: "mgf".into(),
         sha256: Some(sha256_hex(&data)),
-        dimensione: Some(data.len() as u64),
+        size: Some(data.len() as u64),
     };
     let sha = download_external(&folder, &ext, &local, &no_cancel(), &mut |_| {}).unwrap();
     assert_eq!(sha, sha256_hex(&data));
@@ -412,7 +412,7 @@ fn external_sources_only_from_the_allow_list_and_checked() {
     // an unknown SHA-256 (a source that changes) is accepted and returned
     let mut free = ext.clone();
     free.sha256 = None;
-    free.dimensione = None;
+    free.size = None;
     assert_eq!(
         download_external(&folder, &free, &local, &no_cancel(), &mut |_| {}).unwrap(),
         sha256_hex(&data)

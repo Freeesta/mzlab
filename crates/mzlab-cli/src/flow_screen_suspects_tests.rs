@@ -63,7 +63,7 @@ fn mzsus() -> Vec<u8> {
     formulas.sort();
     formulas.dedup();
     let pad = |v: &mut Vec<u8>| v.resize(v.len().next_multiple_of(8), 0);
-    let manifest = br#"{"formato":"sospetti/1","righe":8,"attribuzione":"Invented test list","fonti":[{"id":"test","nome":"Invented","versione":"1","licenza":"CC0","doi":""}]}"#;
+    let manifest = br#"{"format":"suspects/1","rows":8,"attribution":"Invented test list","sources":[{"id":"test","name":"Invented","version":"1","license":"CC0","doi":""}]}"#;
     let mut o = b"MZSU".to_vec();
     o.extend([1, 0, 1, 0]);
     for n in [rows.len(), formulas.len(), 0, manifest.len(), 0, 0] {
