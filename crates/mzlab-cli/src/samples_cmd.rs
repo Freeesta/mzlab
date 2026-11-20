@@ -193,7 +193,14 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
         return Err((4, Error::new("err.session.fileNotFound").with("name", name)));
     }
     crate::sample_select::refuse_mzml(path).map_err(|e| (1, e))?;
-    let fs = crate::flow_set::file_set(path).map_err(|e| (4, e))?;
+    let fs = crate::flow_set::file_set(path).map_err(|e| {
+        let code = if e.key == "err.file.wiffGrowing" {
+            crate::exit::GROWING
+        } else {
+            4
+        };
+        (code, e)
+    })?;
     let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
     let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
     let mut json = mzlab_core::readers::list_samples(&mut *l);
@@ -425,8 +432,11 @@ fn list_run(args: Vec<String>) -> Outcome {
             }
             Err((_, e)) => {
                 // missing or unreadable: no listing is the answer, one error/1 carries the files listed so far
-                let mut o = Outcome::fail_error(&e)
-                    .with_hint("check the path and that the whole pair was copied");
+                let mut o = Outcome::fail_error(&e).with_hint(if e.key == "err.file.wiffGrowing" {
+                    "open it again when the acquisition has ended"
+                } else {
+                    "check the path and that the whole pair was copied"
+                });
                 o.stderr += &err;
                 o.stdout = list_document(&docs).into_bytes();
                 return o;

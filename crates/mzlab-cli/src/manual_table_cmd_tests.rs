@@ -350,7 +350,7 @@ fn a_lone_unnamed_sample_is_named_after_its_file_in_any_case() {
 fn help_lists_the_header_columns_in_order() {
     let h = super::help();
     let head = mzlab_core::manint::HEAD.trim_end();
-    assert_eq!(head.split(',').count(), 14);
+    assert_eq!(head.split(',').count(), 17);
     assert!(
         h.contains(&format!("Columns, in this order: {head}.")),
         "{h}"

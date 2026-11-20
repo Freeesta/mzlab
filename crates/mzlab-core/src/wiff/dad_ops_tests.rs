@@ -74,6 +74,7 @@ fn shift_and_scale_are_applied_and_reported() {
     let o = SubOpts {
         scale: Scale::Factor(2.0),
         shift_min: 0.5,
+        ..SubOpts::default()
     };
     let (d, r) = dad_subtract(&a, &b, &o).unwrap();
     assert!(d.matrix_mau.iter().all(|v| v.abs() < 1e-4));
@@ -81,6 +82,7 @@ fn shift_and_scale_are_applied_and_reported() {
     let fit = SubOpts {
         scale: Scale::Fit,
         shift_min: 0.5,
+        ..SubOpts::default()
     };
     assert!((dad_subtract(&a, &b, &fit).unwrap().1.factor - 2.0).abs() < 1e-3);
 }
@@ -123,4 +125,50 @@ fn every_view_carries_the_report() {
             "{v:?}"
         );
     }
+}
+
+fn peaks(shift: f64) -> DadData {
+    grid(0.0, 0.02, 501, 220.0, 10.0, 3, |t, _| {
+        [2.0, 5.0, 8.0]
+            .iter()
+            .map(|c| 50.0 * (-((t - c - shift) / 0.05).powi(2) / 2.0).exp())
+            .sum()
+    })
+}
+
+#[test]
+fn an_automatic_shift_removes_the_false_peak_and_reports_its_evidence() {
+    let (a, b) = (peaks(0.0), peaks(0.1));
+    let (hand, _) = dad_subtract(&a, &b, &SubOpts::default()).unwrap();
+    let auto = SubOpts {
+        auto_shift: true,
+        ..SubOpts::default()
+    };
+    let (d, r) = dad_subtract(&a, &b, &auto).unwrap();
+    let top = |m: &DadData| m.matrix_mau.iter().fold(0.0f32, |t, v| t.max(v.abs()));
+    assert!(
+        top(&hand) > 20.0 && top(&d) < 5.0,
+        "{} {}",
+        top(&hand),
+        top(&d)
+    );
+    let found = r.align.as_ref().unwrap();
+    assert!((r.shift_min + 0.1).abs() < 0.005 && found.shift_min == r.shift_min);
+    assert!(r.warnings.contains(&"shift_applied"));
+    assert!(r.to_json().contains("\"align\":{\"method\":\"twc_xcorr\""));
+}
+
+#[test]
+fn a_shift_by_hand_has_no_align_member() {
+    let a = peaks(0.0);
+    let (_, r) = dad_subtract(
+        &a,
+        &a,
+        &SubOpts {
+            shift_min: 0.02,
+            ..SubOpts::default()
+        },
+    )
+    .unwrap();
+    assert!(r.align.is_none() && !r.to_json().contains("align"));
 }

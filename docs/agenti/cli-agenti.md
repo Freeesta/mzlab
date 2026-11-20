@@ -61,11 +61,12 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Look at a file first
 - `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic --mz M1,M2,.. --ppm P [--smooth 3|5] [--dry-run]` (one XIC per ion, `trace-set/1` or a wide CSV), `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
-## Linux binaries (for agents in Linux VMs)
-- Every release carries static musl builds of `mzlab-cli` (profile `cli`; no libc or distro dependency, runs on any distro): `mzLab-X.Y.Z-cli-Linux-x86_64` and `mzLab-X.Y.Z-cli-Linux-aarch64` (plain executables), listed in `SHA256SUMS` of the release. The `release` workflow also keeps them, each with a `.sha256` file, as the artifacts `mzlab-cli-linux-x86_64` and `mzlab-cli-linux-aarch64`.
-- Fetch and verify (replace `X.Y.Z`, use `aarch64` on ARM):
+## Prebuilt binaries (no Rust needed)
+- A release carries `mzlab-cli` (profile `cli`) as plain executables: `mzLab-X.Y.Z-cli-Linux-x86_64` and `-cli-Linux-aarch64` (static musl: no libc or distro dependency) and `-cli-Mac-aarch64` (Apple silicon), all listed in `SHA256SUMS`. The macOS binary is **unsigned and not notarized** (no Apple credentials yet); a binary fetched with `curl` carries no quarantine flag and runs. Only a published release is reachable at `releases/latest`: a draft is not (404).
+- Fetch and verify (replace `X.Y.Z`; `a=aarch64` on ARM; macOS: `Mac-aarch64`, `shasum -a 256` instead of `sha256sum`):
   `v=X.Y.Z; a=x86_64; u=https://github.com/Freeesta/mzlab/releases/download/v$v; curl -fsSLO $u/mzLab-$v-cli-Linux-$a -O $u/SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS && chmod +x mzLab-$v-cli-Linux-$a && ./mzLab-$v-cli-Linux-$a --version`
-- Each build is smoke-tested on a runner of its own architecture before it is attached: `--version` (version and citation line) and `flow steps --json`.
+- Before a release is published, `release` (Actions, Run workflow, version empty = dry run) keeps the same files as artifacts `mzlab-cli-linux-x86_64`, `-linux-aarch64`, `-macos-aarch64`, each with a `.sha256` file.
+- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`: `--version`, `commands --json`, `flow steps --json`); the Linux x86_64 one is also compared byte for byte with a native glibc build (`ion pattern`, the catalogs, `file info`, `trace chrom` and `trace xic` on a synthetic file).
 
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
@@ -83,6 +84,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
 | 7 | internal error (a bug): any command |
+| 8 | input still being written |
 <!--/exits-->
   A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with its own exit 7 (not in any command's `exit_codes`: any command can end so), `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
@@ -116,6 +118,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
 `features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
+- Exit 8: a `.wiff` pair whose size changes while it is opened (modified in the last 10 s, size read twice 400 ms apart; `MZLAB_GROW_PROBE_MS`, 0 = off) is refused whole with `err.file.wiffGrowing` (sizes and interval in `params`); retry when the acquisition ends. Opened by `peak table` and `sample list` (catalog) and by every command that opens a vendor file.
 - `sample list` (`sample-list/1`: ONE document, `files` in the order given, a refused file is an inline `error/1` entry, a missing file is a whole-run `error/1` (exit 4, no listing); exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file validate --json` (`mzml-validation/1`, ONE document for all files; a missing file is exit 4 + `error/1`), `file convert --json` (`convert/1`; `--dry-run` lists inputs, readers and sizes and writes nothing; an `.mzML` named as input is `err.file.alreadyMzml`, exit 4) and `file items --no-points` (leaves out `ms2_events`).
 - `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-full-spec.md`).
@@ -126,7 +129,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
   - `db normative build`: exit 1 (a stale list) keeps its `normative-build/1`; exit 3 (pin mismatch) has no document and is an `error/1`.
 - `peak table`: CSV on stdout with a stable header (`docs/agenti/transitions.md`), or `--json` = `{"columns": [NAME], "rows": [{NAME: TEXT}]}` (the same cells, as text); `--columns sn,fig,quality` adds the optional figure columns; `--json` and the CSV both go to stdout (data only; errors on stderr); exit 0 done, 2 usage or data error (unreadable file, bad window or column name).
   `--traces PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
-  `--shifts` and `--auto` answer JSON.
+  `--shifts` and `--auto` answer JSON. Every row ends with `sample_id` (the place of its sample in the order of the files, from 0, empty samples counted: the `file` a window names), `file` (the sample's file name as the engine got it) and `shift_min` (a followed window: the shift its apex search found, in min). `--max-shift MIN` (or `max_shift` on a window; 0 = rigid) refuses a move longer than MIN: the window stays, `origin` is `too_far` and `shift_min` is the refused shift; `--shifts` rows carry `found_shift` for the same evidence.
 
 - `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `reflist-match/1`): `reference-lists.md`.
 

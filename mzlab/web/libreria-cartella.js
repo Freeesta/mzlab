@@ -73,15 +73,15 @@ const CARTELLA = (() => {
     if (o.size === f.size && o.sha256 && (await sha()) === o.sha256) return { stato: "pronta", mtime: f.mtime };
     return { stato: "da_indicizzare" };
   }
-  // A package (`.mzlib` at the top of the folder): `side` = its sidecar { id, versione, sha256, size, mtime } (or null for a file of the user), `cat` = the catalog entry
+  // A package (`.mzlib` at the top of the folder): `side` = its sidecar { id, version, sha256, size, mtime } (or null for a file of the user), `cat` = the catalog entry
   // of that id (if the catalog is known), `headOk` = the file starts with the magic of the format, `sha()` = its SHA-256.
-  async function statoPacchetto(/** @type {{ size: number, mtime: number }} */ f, /** @type {{ size: number, mtime: number, sha256: string, versione: string } | null} */ side, /** @type {{ sha256: string, versione: string } | null | undefined} */ cat, /** @type {boolean} */ headOk, /** @type {() => Promise<string>} */ sha) {
+  async function statoPacchetto(/** @type {{ size: number, mtime: number }} */ f, /** @type {{ size: number, mtime: number, sha256: string, version: string } | null} */ side, /** @type {{ sha256: string, version: string } | null | undefined} */ cat, /** @type {boolean} */ headOk, /** @type {() => Promise<string>} */ sha) {
     if (!side) return { stato: headOk ? "pronta" : "danneggiata" };
     if (f.size !== side.size) return { stato: "danneggiata" };
     let mtime;
     if (f.mtime !== side.mtime) { if ((await sha()) !== side.sha256) return { stato: "danneggiata" }; mtime = f.mtime; }
-    const newer = cat && (cat.versione !== side.versione || cat.sha256 !== side.sha256);
-    return { stato: newer ? "aggiornamento" : "pronta", mtime, nuova: newer ? cat.versione : undefined };
+    const newer = cat && (cat.version !== side.version || cat.sha256 !== side.sha256);
+    return { stato: newer ? "aggiornamento" : "pronta", mtime, nuova: newer ? cat.version : undefined };
   }
   const idOf = (/** @type {string} */ name) => "f:" + name;
   const nameOfId = (/** @type {string} */ id) => id.slice(2);
@@ -177,9 +177,9 @@ const CARTELLA = (() => {
     try { const b = new Uint8Array(await file.slice(0, 36).arrayBuffer()); if (b.length < 36 || !HEAD.every((x, i) => b[i] === x)) return null; const dv = new DataView(b.buffer); return { n: dv.getUint32(8, true), peaks: Number(dv.getBigUint64(16, true)), minReader: dv.getUint16(6, true) }; } catch (e) { return null; }
   }
   // The state of every entry. `cat` = the catalog (or null). Returns { voci: [{ nome, tipo, id, size, mtime, stato, info, nuova }] } sorted by name.
-  async function scan(/** @type {LibDir} */ dir, /** @type {{ librerie?: LibPkg[] } | null} */ cat) {
+  async function scan(/** @type {LibDir} */ dir, /** @type {{ libraries?: LibPkg[] } | null} */ cat) {
     const top = await dir.list(""), sub = await dir.list(META), subSize = new Map(sub.map(f => [f.name, f.size]));
-    const catBy = new Map(((cat && cat.librerie) || []).map(e => [e.id, e])), voci = /** @type {LibVoce[]} */ ([]), seen = new Set();
+    const catBy = new Map(((cat && cat.libraries) || []).map(e => [e.id, e])), voci = /** @type {LibVoce[]} */ ([]), seen = new Set();
     for (const f of top) {
       if (f.name.startsWith(".")) continue;
       if (SRC.test(f.name)) {
@@ -192,7 +192,7 @@ const CARTELLA = (() => {
         const side = await readJson(dir, META + "/" + f.name + ".pkg.json", okPkg), file = await dir.file(f.name), head = await readHead(file);
         const st = await statoPacchetto(f, side, side && catBy.get(side.id), !!head, () => sha256Of(file));
         if (st.mtime != null && side) { side.mtime = st.mtime; await dir.write(META + "/" + f.name + ".pkg.json", JSON.stringify(side)); }
-        voci.push({ nome: f.name, tipo: "pacchetto", id: idOf(f.name), size: f.size, mtime: f.mtime, stato: st.stato, versione: side && side.versione, nuova: st.nuova, info: st.stato === "pronta" || st.stato === "aggiornamento" ? (side && side.info) || (head && { n: head.n, pos: 0, neg: 0, dropped: 0, peaks: head.peaks }) : null });
+        voci.push({ nome: f.name, tipo: "pacchetto", id: idOf(f.name), size: f.size, mtime: f.mtime, stato: st.stato, versione: side && side.version, nuova: st.nuova, info: st.stato === "pronta" || st.stato === "aggiornamento" ? (side && side.info) || (head && { n: head.n, pos: 0, neg: 0, dropped: 0, peaks: head.peaks }) : null });
         seen.add(f.name);
       }
     }

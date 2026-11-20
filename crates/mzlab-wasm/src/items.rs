@@ -127,8 +127,8 @@ impl Engine {
 
     /// `/api/pdasub`: the DAD of the file at `slot` minus the DAD of the file at `ref_slot` (the map, a UV spectrum or a trace, with the report `sub`).
     #[allow(clippy::too_many_arguments)]
-    pub fn item_pda_sub(&mut self, slot: u32, size: f64, read: Function, ref_slot: u32, ref_size: f64, ref_read: Function, view: &str, a: f64, b: f64, scale: &str, shift: f64) -> Result<String, JsValue> {
-        let (o, v) = mzlab_core::itemroutes::pda_sub_args(view, a, b, scale, shift).map_err(|e| error_json(&e))?;
+    pub fn item_pda_sub(&mut self, slot: u32, size: f64, read: Function, ref_slot: u32, ref_size: f64, ref_read: Function, view: &str, a: f64, b: f64, scale: &str, shift: f64, auto: bool) -> Result<String, JsValue> {
+        let (o, v) = mzlab_core::itemroutes::pda_sub_args(view, a, b, scale, shift, auto).map_err(|e| error_json(&e))?;
         let db = {
             let mut mb = self.mzml_of(ref_slot, ref_size, ref_read)?;
             mzlab_core::itemroutes::pda_dad(&mut mb).map_err(|e| error_json(&e))?

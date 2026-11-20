@@ -17,6 +17,8 @@ pub const SELECTOR: u8 = 5;
 pub const OUTPUT: u8 = 6;
 /// A bug of `mzlab-cli` itself: the program panicked (`err.run.internal`); only the panic hook answers with it.
 pub const INTERNAL: u8 = 7;
+/// An input that is still being written (a `.wiff` pair whose size changes): nothing was read; try again when the acquisition has ended.
+pub const GROWING: u8 = 8;
 
 const INPUT_KEYS: &[&str] = &[
     "err.cli.input.missing",
@@ -160,7 +162,12 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.run.internal" => return INTERNAL,
         _ => {}
     }
-    if INPUT_KEYS.contains(&key) || key.starts_with("err.file.") || chem_code(key) == Some(INPUT) {
+    if key == "err.file.wiffGrowing" {
+        GROWING
+    } else if INPUT_KEYS.contains(&key)
+        || key.starts_with("err.file.")
+        || chem_code(key) == Some(INPUT)
+    {
         INPUT
     } else if OUTPUT_KEYS.contains(&key) {
         OUTPUT
@@ -183,6 +190,7 @@ pub fn generic_key(code: u8) -> &'static str {
         SELECTOR => "err.run.selector",
         OUTPUT => "err.run.output",
         INTERNAL => "err.run.internal",
+        GROWING => "err.file.wiffGrowing",
         USAGE => "err.cli.usage",
         _ => "err.run.data",
     }
@@ -219,7 +227,10 @@ mod tests {
         assert_eq!(code_of_key("err.cli.out"), OUTPUT);
         assert_eq!(code_of_key("err.normative.input"), INPUT);
         assert_eq!(code_of_key("err.flow.cancelled"), DATA);
-        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL] {
+        assert_eq!(code_of_key("err.file.wiffGrowing"), GROWING);
+        for c in [
+            DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL, GROWING,
+        ] {
             assert_eq!(code_of_key(generic_key(c)), c);
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);

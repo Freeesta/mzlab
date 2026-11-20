@@ -23,8 +23,8 @@ pub fn help() -> String {
     format!(
 "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--json] [--out PATH]
-       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH
+usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
+       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH) --auto [--params PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
@@ -33,12 +33,16 @@ usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [-
                   I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
                   NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
                   other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
-                  outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
-                  sample alone, by its place I
+                  outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak|too_far); names: a name for one
+                  sample alone, by its place I; \"max_shift\": MIN on a window is its own --max-shift
+  --max-shift MIN  a followed window never moves more than MIN minutes (0 = rigid: windows never move): when the apex found in another sample is farther
+              from the source's apex, the window stays where it was, its origin is too_far, and shift_min holds the shift that was refused; MIN is in
+              retention time units (min); without it a window follows its apex wherever it is
   --sums      after the windows of each channel a row sum with the sum of their areas
   --times PATH    a JSON object {{\"<sample>\": MINUTES or null}} that replaces the time point a sample's name carries (null = none); the others keep theirs
   --shifts    instead of the table, where the FIRST window lands in the other samples, as JSON
-              [{{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"origin\"}}] (the bytes of the page's api/manfollow)
+              [{{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"found_shift\", \"origin\"}}] (the bytes of the page's api/manfollow); found_shift = the shift the
+              apex search found (null without a peak), also when --max-shift refused it (shift 0, origin too_far)
   --auto      instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
               {{\"windows\", \"log\", \"groups\", \"unmatched\"}} (the bytes of the page's api/manauto); no windows file is needed
   --params PATH   with --auto: a JSON file {{\"rt_tol_min\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}}; a missing key keeps its default
@@ -52,6 +56,8 @@ usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [-
   --out PATH  write there instead of the standard output
 
 Columns, in this order: {head}.
+sample_id = the place of the sample in the order of the files (from 0, counting every sample, also an empty one: the I of a window's \"file\"), file = the file name of
+the sample as the engine was given it (Sample.mzML), shift_min = for a followed window the shift (min) its apex search found against the source's apex (empty otherwise).
 channel = m/z of a SIM ion, q1>q3 of a transition, ion N without Q1; time_min = the time point of the sample in minutes, read from its name
 (t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown; label = the name of the window; area in counts x s; snr = peak1d around
 the window. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal point (7.84077E+04), read as numbers by a
@@ -73,6 +79,7 @@ struct Request {
     auto: Option<PathBuf>,
     traces: Option<PathBuf>,
     columns: Vec<String>,
+    max_shift: Option<f64>,
     json: bool,
     out: Option<PathBuf>,
 }
@@ -82,6 +89,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         (Vec::new(), None, false, false, None);
     let (mut auto, mut params, mut times, mut traces) = (false, None, None, None);
     let (mut columns, mut json): (Vec<String>, bool) = (Vec::new(), false);
+    let mut max_shift: Option<f64> = None;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -101,6 +109,15 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                 }
                 columns = l.split(',').map(str::to_string).collect();
             }
+            "--max-shift" => {
+                let v = it.next().ok_or("--max-shift needs a number of minutes")?;
+                max_shift = Some(
+                    v.parse::<f64>()
+                        .ok()
+                        .filter(|m| m.is_finite() && *m >= 0.0)
+                        .ok_or("--max-shift needs a number of minutes, 0 or more")?,
+                );
+            }
             "--sums" => sums = true,
             "--shifts" => shifts = true,
             "--auto" => auto = true,
@@ -113,6 +130,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     }
     if params.is_some() && !auto {
         return Err("--params PATH goes with --auto".into());
+    }
+    if max_shift.is_some() && auto {
+        return Err("--max-shift goes with --windows (a window with follow), not --auto".into());
     }
     if auto && shifts {
         return Err("--auto and --shifts are two answers: pick one".into());
@@ -131,6 +151,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         auto: auto.then(|| params.unwrap_or_default()),
         traces,
         columns,
+        max_shift,
         json,
         out,
     }))
@@ -296,10 +317,15 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
             .ok_or_else(|| Error::new("err.manint.channel"))?;
         let mut w = Out::default();
         mzlab_core::json::write_value(&mut w, first);
+        if let (Some(m), true) = (c.max_shift, first.get("max_shift").is_none()) {
+            // the flag is the default of a window that has none of its own
+            w.0.pop();
+            w.0 += &format!(",\"max_shift\":{m}}}");
+        }
         return mzlab_core::manint::follow_text(&files, &w.0);
     }
-    // the optional columns go with the windows, as the page sends them
-    let windows = if c.columns.is_empty() {
+    // the optional columns and the default `max_shift` go with the windows, as the page sends them
+    let windows = if c.columns.is_empty() && c.max_shift.is_none() {
         windows
     } else {
         let mut o = Out::default();
@@ -310,7 +336,11 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
             }
             o.str(n);
         }
-        o.raw("]}");
+        o.raw("]");
+        if let Some(m) = c.max_shift {
+            o.raw(&format!(",\"max_shift\":{m}"));
+        }
+        o.raw("}");
         o.0
     };
     let csv = mzlab_core::manint::table_text(&files, &windows, c.sums)?;
@@ -396,3 +426,7 @@ mod tests;
 #[cfg(test)]
 #[path = "manual_table_traces_tests.rs"]
 mod traces_tests;
+
+#[cfg(test)]
+#[path = "manual_table_guard_tests.rs"]
+pub(crate) mod guard_tests;
