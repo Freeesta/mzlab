@@ -28,14 +28,14 @@ def test_deterministic(mini):
 def test_read_and_merge(mini):
     _, keys, mass, form, raw, _ = mini
     s = gs.read_suspects(raw)
-    assert s.n == 45 and s.manifest["righe"] == 45
+    assert s.n == 45 and s.manifest["rows"] == 45
     assert list(s.masses) == sorted(s.masses)
     by = {s.hit(i).inchikey14: s.hit(i) for i in range(s.n)}
     h = by[keys[22]]                                           # in SusDat and PubChemLite
     assert h.sources == ("susdat", "pubchemlite") and h.formula == form[keys[22]] and h.mass == mass[keys[22]] and h.reaction == 0
     assert by[keys[0]].sources == ("susdat",) and by[keys[30]].sources == ("pubchemlite",)
     assert by[keys[20]].pubmed == 65535 and by[keys[41]].reaction == 1 and by[keys[42]].reaction == 2 and by[keys[41]].sources == ("pubchemlite", "transpubchem")
-    assert [f["usati"] for f in s.manifest["fonti"]] == [25, 25, 3] and s.manifest["fonti"][0]["letti"] == 27
+    assert [f["used"] for f in s.manifest["sources"]] == [25, 25, 3] and s.manifest["sources"][0]["read"] == 27
 
 
 def test_search_ppm_exact(mini):
@@ -72,16 +72,16 @@ def test_bad_files_rejected():
 def test_licenses_and_package(mini, tmp_path):
     _, _, _, _, raw, _ = mini
     s = gs.read_suspects(raw)
-    assert [f["licenza"] for f in s.manifest["fonti"]] == ["CC-BY-4.0"] * 3 and all(f["doi"] and f["sha256"] for f in s.manifest["fonti"])
+    assert [f["license"] for f in s.manifest["sources"]] == ["CC-BY-4.0"] * 3 and all(f["doi"] and f["sha256"] for f in s.manifest["sources"])
     cat = gs.pacchetto(raw, tmp_path / "pk")
-    pieces = [(tmp_path / "pk" / p["file"]).read_bytes() for p in cat["pezzi"]]
-    assert all(hashlib.sha256(b).hexdigest() == p["sha256"] for b, p in zip(pieces, cat["pezzi"]))
-    assert zlib.decompress(b"".join(pieces)) == raw and cat["sha256"] == hashlib.sha256(raw).hexdigest() and cat["formato"] == "sospetti/1"
-    assert json.loads((tmp_path / "pk" / "catalogo.json").read_text(encoding="utf-8"))["fonti"][0]["licenza"] == "CC-BY-4.0"
+    pieces = [(tmp_path / "pk" / p["file"]).read_bytes() for p in cat["pieces"]]
+    assert all(hashlib.sha256(b).hexdigest() == p["sha256"] for b, p in zip(pieces, cat["pieces"]))
+    assert zlib.decompress(b"".join(pieces)) == raw and cat["sha256"] == hashlib.sha256(raw).hexdigest() and cat["format"] == "suspects/1"
+    assert json.loads((tmp_path / "pk" / "catalogo.json").read_text(encoding="utf-8"))["sources"][0]["license"] == "CC-BY-4.0"
 
 
 def test_pinned_sources_have_licence():
     assert [s["id"] for s in gs.SOURCES] == list(gs.NAMES)
     for s in gs.SOURCES:
-        assert s["licenza"] == "CC-BY-4.0" and s["doi"].startswith("10.5281/zenodo.")
+        assert s["license"] == "CC-BY-4.0" and s["doi"].startswith("10.5281/zenodo.")
         assert all(len(h) == 64 for _, h, _ in s["files"])

@@ -15,6 +15,8 @@ pub const INPUT: u8 = 4;
 pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
+/// A bug of `mzlab-cli` itself: the program panicked (`err.run.internal`); only the panic hook answers with it.
+pub const INTERNAL: u8 = 7;
 /// An input that is still being written (a `.wiff` pair whose size changes): nothing was read; try again when the acquisition has ended.
 pub const GROWING: u8 = 8;
 
@@ -53,6 +55,8 @@ const SELECTOR_KEYS: &[&str] = &[
 const INTEGRITY_PREFIXES: &[&str] = &[
     "err.flow.format",
     "err.flow.json",
+    "err.flow.key.",
+    "err.flow.shape",
     "err.flow.check",
     "err.flow.lineage",
     "err.flow.port.",
@@ -73,6 +77,11 @@ const INTEGRITY_PREFIXES: &[&str] = &[
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
+    "err.dad.msNoLevel",
+    "err.dad.msRange",
+    "err.dad.msEmpty",
+    "err.dad.delayShort",
+    "err.dad.delayNoPeaks",
     "err.flow.cancelled",
     "err.run.data",
     "err.llm.eval.loop",
@@ -149,6 +158,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.run.input" => return INPUT,
         "err.run.selector" => return SELECTOR,
         "err.run.output" => return OUTPUT,
+        "err.run.internal" => return INTERNAL,
         _ => {}
     }
     if key == "err.file.wiffGrowing" {
@@ -178,6 +188,7 @@ pub fn generic_key(code: u8) -> &'static str {
         INPUT => "err.run.input",
         SELECTOR => "err.run.selector",
         OUTPUT => "err.run.output",
+        INTERNAL => "err.run.internal",
         GROWING => "err.file.wiffGrowing",
         USAGE => "err.cli.usage",
         _ => "err.run.data",
@@ -216,11 +227,12 @@ mod tests {
         assert_eq!(code_of_key("err.normative.input"), INPUT);
         assert_eq!(code_of_key("err.flow.cancelled"), DATA);
         assert_eq!(code_of_key("err.file.wiffGrowing"), GROWING);
-        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, GROWING] {
+        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL, GROWING] {
             assert_eq!(code_of_key(generic_key(c)), c);
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
+        assert_eq!(code_of_key("err.run.internal"), INTERNAL);
     }
 
     #[test]

@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from librerie_pacchetti import PIECE, download, sha256_file  # noqa: E402
 
 FORMAT = "mzsus/1"
-CATALOG_FORMAT = "sospetti/1"
+CATALOG_FORMAT = "suspects/1"
 CAS_FORMAT = "mzlab-cas/1"                            # the CAS sidecar read by mzlab_feat::normative::sidecar (the import of official lists)
 CAS_RE = re.compile(r"(?<![0-9A-Za-z-])[0-9]{2,7}-[0-9]{2}-[0-9](?![0-9-])")
 VERSION = 1
@@ -44,14 +44,14 @@ def _zen(record: str, name: str) -> str:
 
 # Pinned sources. `files` = [(name, sha256)]; the first source of a key wins for mass and formula (SusDat, PubChemLite, Transformations).
 SOURCES = [
-    {"id": "susdat", "nome": "NORMAN SusDat (Merged NORMAN Suspect List)", "versione": "NORMAN-SLE-S0.0.6.1 (03/06/2025)", "licenza": "CC-BY-4.0",
-     "doi": "10.5281/zenodo.15741861", "url": "https://doi.org/10.5281/zenodo.15741861", "istituzione": "NORMAN Network",
+    {"id": "susdat", "name": "NORMAN SusDat (Merged NORMAN Suspect List)", "version": "NORMAN-SLE-S0.0.6.1 (03/06/2025)", "license": "CC-BY-4.0",
+     "doi": "10.5281/zenodo.15741861", "url": "https://doi.org/10.5281/zenodo.15741861", "institution": "NORMAN Network",
      "files": [("susdat_2025-06-03-092022.csv", "8b8c4b43e900b752c2e7ba0aa7adb3454617205034f9da5baffdf41250decda9", _zen("15741861", "susdat_2025-06-03-092022.csv"))]},
-    {"id": "pubchemlite", "nome": "PubChemLite for Exposomics", "versione": "3.3.0 (25/09/2026)", "licenza": "CC-BY-4.0",
-     "doi": "10.5281/zenodo.22953038", "url": "https://doi.org/10.5281/zenodo.22953038", "istituzione": "University of Luxembourg (LCSB)",
+    {"id": "pubchemlite", "name": "PubChemLite for Exposomics", "version": "3.3.0 (25/09/2026)", "license": "CC-BY-4.0",
+     "doi": "10.5281/zenodo.22953038", "url": "https://doi.org/10.5281/zenodo.22953038", "institution": "University of Luxembourg (LCSB)",
      "files": [("PubChemLite_exposomics_20260925.csv", "6a258459e1ccf29a5d08e82fcf5240a2fc8afbabe5ba9c678e39aa0801dd89cd", _zen("22953038", "PubChemLite_exposomics_20260925.csv"))]},
-    {"id": "transpubchem", "nome": "Transformations in PubChem", "versione": "PubChemTrans-0.2.3 (21/03/2026)", "licenza": "CC-BY-4.0",
-     "doi": "10.5281/zenodo.19150892", "url": "https://doi.org/10.5281/zenodo.19150892", "istituzione": "University of Luxembourg (LCSB), NCBI/NLM/NIH",
+    {"id": "transpubchem", "name": "Transformations in PubChem", "version": "PubChemTrans-0.2.3 (21/03/2026)", "license": "CC-BY-4.0",
+     "doi": "10.5281/zenodo.19150892", "url": "https://doi.org/10.5281/zenodo.19150892", "institution": "University of Luxembourg (LCSB), NCBI/NLM/NIH",
      "files": [("PubChem_all_transformations.csv", "42817e82e095890ba39287c2548b63a2d11c98e4947efc51f97b8b4928b99f3d", _zen("19150892", "PubChem_all_transformations.csv")),
                ("Transformations_CID_Info_all.csv", "9b49ee33eb01bf59317faf3c7182ff1aa68aaa03b12baee15d3683194d721431", _zen("19150892", "Transformations_CID_Info_all.csv"))]},
 ]
@@ -105,14 +105,14 @@ def read_transpubchem(react: Path, info: Path):
 def merge(streams: list[tuple[str, object]]) -> tuple[list[tuple], dict]:
     """Rows keyed by InChIKey-14 (A-Z only), the sources united; sorted by (mass, key). Rows without a valid key or mass are dropped and counted."""
     acc: dict[str, list] = {}
-    stats = {n: {"letti": 0, "usati": 0} for n, _ in streams}
+    stats = {n: {"read": 0, "used": 0} for n, _ in streams}
     for name, it in streams:
         bit = SOURCE_BITS[name]
         for key, mass, formula, lit, pat, react in it:
-            stats[name]["letti"] += 1
+            stats[name]["read"] += 1
             if len(key) != 14 or not key.isalpha() or not key.isupper() or mass is None or not formula:
                 continue
-            stats[name]["usati"] += 1
+            stats[name]["used"] += 1
             a = acc.get(key)
             if a is None:
                 acc[key] = [mass, formula, bit, min(lit, 65535), min(pat, 65535), react]
@@ -221,11 +221,11 @@ def read_suspects(src) -> Suspects:
     return Suspects(src if isinstance(src, (bytes, bytearray)) else Path(src).read_bytes())
 
 
-def prepare_sources(fonti: list[dict], folder: Path, scarica: bool = True) -> dict[str, list[Path]]:
+def prepare_sources(sources: list[dict], folder: Path, scarica: bool = True) -> dict[str, list[Path]]:
     """Every file of every source in `folder`, SHA-256 checked (a different file stops the build; a missing one is downloaded)."""
     folder.mkdir(parents=True, exist_ok=True)
     out: dict[str, list[Path]] = {}
-    for s in fonti:
+    for s in sources:
         out[s["id"]] = []
         for name, want, url in s["files"]:
             p = folder / name
@@ -242,23 +242,23 @@ def prepare_sources(fonti: list[dict], folder: Path, scarica: bool = True) -> di
     return out
 
 
-def genera(fonti: list[dict], folder: Path, scarica: bool = True) -> bytes:
-    files = prepare_sources(fonti, folder, scarica)
+def genera(sources: list[dict], folder: Path, scarica: bool = True) -> bytes:
+    files = prepare_sources(sources, folder, scarica)
     streams = []
-    for s in fonti:
+    for s in sources:
         p = files[s["id"]]
         it = {"susdat": lambda: read_susdat(p[0]), "pubchemlite": lambda: read_pubchemlite(p[0]), "transpubchem": lambda: read_transpubchem(p[0], p[1])}[s["id"]]()
         streams.append((s["id"], it))
     rows, stats = merge(streams)
-    man = {"formato": FORMAT, "righe": len(rows),
-           "attribuzione": "Suspect index built from NORMAN SusDat (NORMAN Network), PubChemLite for Exposomics and Transformations in PubChem "
+    man = {"format": FORMAT, "rows": len(rows),
+           "attribution": "Suspect index built from NORMAN SusDat (NORMAN Network), PubChemLite for Exposomics and Transformations in PubChem "
                            "(University of Luxembourg and NCBI/NLM/NIH), all CC BY 4.0; the DOIs are in the sources.",
-           "fonti": [{"id": s["id"], "nome": s["nome"], "versione": s["versione"], "licenza": s["licenza"], "doi": s["doi"], "url": s["url"],
-                      "istituzione": s["istituzione"], "bit": SOURCE_BITS[s["id"]], "sha256": {n: h for n, h, _ in s["files"]}, **stats[s["id"]]} for s in fonti]}
+           "sources": [{"id": s["id"], "name": s["name"], "version": s["version"], "license": s["license"], "doi": s["doi"], "url": s["url"],
+                      "institution": s["institution"], "bit": SOURCE_BITS[s["id"]], "sha256": {n: h for n, h, _ in s["files"]}, **stats[s["id"]]} for s in sources]}
     return write_mzsus(rows, man)
 
 
-def pacchetto(raw: bytes, out_dir: Path, fonti: list[dict] | None = None) -> dict:
+def pacchetto(raw: bytes, out_dir: Path, sources: list[dict] | None = None) -> dict:
     """zlib (level 9) of the raw file cut into pieces of PIECE bytes with a SHA-256 each + catalogo.json (the browser inflates with DecompressionStream)."""
     z = zlib.compress(raw, 9)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -267,10 +267,10 @@ def pacchetto(raw: bytes, out_dir: Path, fonti: list[dict] | None = None) -> dic
         b = z[i:i + PIECE]
         name = f"{i // PIECE:03d}.bin"
         (out_dir / name).write_bytes(b)
-        pieces.append({"file": name, "dimensione": len(b), "sha256": hashlib.sha256(b).hexdigest()})
+        pieces.append({"file": name, "size": len(b), "sha256": hashlib.sha256(b).hexdigest()})
     man = read_suspects(raw).manifest
-    cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "compressione": "zlib", "dimensione_compressa": len(z), "dimensione": len(raw),
-           "sha256": hashlib.sha256(raw).hexdigest(), "righe": man["righe"], "fonti": man["fonti"], "attribuzione": man["attribuzione"], "pezzi": pieces}
+    cat = {"format": CATALOG_FORMAT, "piece": PIECE, "compression": "zlib", "compressed_size": len(z), "size": len(raw),
+           "sha256": hashlib.sha256(raw).hexdigest(), "rows": man["rows"], "sources": man["sources"], "attribution": man["attribution"], "pieces": pieces}
     (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return cat
 
@@ -340,7 +340,7 @@ def main() -> None:
     print(f".mzsus: {len(raw) / 1e6:.1f} MB raw, {read_suspects(raw).n} rows")
     if a.pacchetto:
         cat = pacchetto(raw, a.pacchetto)
-        print(f"package: {cat['dimensione_compressa'] / 1e6:.1f} MB compressed in {len(cat['pezzi'])} pieces")
+        print(f"package: {cat['compressed_size'] / 1e6:.1f} MB compressed in {len(cat['pieces'])} pieces")
         cas = package_cas(cas_raw, a.pacchetto / "cas")
         print(f"CAS sidecar: {cas['rows']} rows, {cas['size_compressed'] / 1e6:.1f} MB compressed")
 

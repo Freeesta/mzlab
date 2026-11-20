@@ -1,4 +1,4 @@
-"""«Extract ions (XIC)» window: a contaminant name of the lists (with suggestions, keyboard) fills the ion field, and a signed shift after the name (dibutilftalato+16) is added to the m/z after the adduct; a plain formula and an m/z still work. Synthetic data only."""
+"""«Extract ions (XIC)» window: a contaminant name of the lists (with suggestions, keyboard) fills the ion field, and a signed shift after the name (dibutyl phthalate+16) is added to the m/z after the adduct; a plain formula and an m/z still work. Synthetic data only."""
 # covers: mzlab/web/xic-nomi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,14 +16,14 @@ try:
         pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
         sumtxt = lambda: pg.evaluate("document.querySelector('#xic-rows .xr-sum').textContent")
         def suggest():
-            pg.click("#xic-mz"); pg.fill("#xic-mz", "dibutilftalato"); pg.wait_for_selector("#asksug li")
+            pg.click("#xic-mz"); pg.fill("#xic-mz", "dibutyl phthalate"); pg.wait_for_selector("#asksug li")
             assert any("C16H22O4" in o for o in pg.eval_on_selector_all("#asksug li", "e=>e.map(x=>x.textContent)"))
             pg.press("#xic-mz", "ArrowDown"); pg.press("#xic-mz", "Enter")
             assert pg.input_value("#xic-mz").startswith("C16H22O4"), pg.input_value("#xic-mz")
             assert pg.evaluate("document.querySelector('#xicdlg').open")
         step("a name is suggested and a pick fills the formula (Enter does not extract)", suggest)
         def shifted_name():
-            pg.select_option("#xic-ad", "[M+H]+"); pg.fill("#xic-mz", "dibutilftalato+16")
+            pg.select_option("#xic-ad", "[M+H]+"); pg.fill("#xic-mz", "dibutyl phthalate+16")
             wait_for_js(pg, "document.querySelector('#xic-rows .xr-sum').textContent.includes('295.159')")
         step("a name with a shift: formula, adduct, then +16 Da (279.159 -> 295.159)", shifted_name)
         def plain():

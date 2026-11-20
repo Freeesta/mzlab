@@ -8,8 +8,58 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
+## Which build is this
+- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` (`--json` in any position) is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
+
+## Renamed commands
+- A command name of an earlier build (`channels`, `items`, `manual-table`, ...) is exit 2 with `error/1` `err.cli.command.renamed` (`params.old`, `params.now`) and the new path in the message and in `hint`; `commands --json OLD` (exit 5) puts it in `hint` too. A command that was removed answers `err.cli.command.removed`. The table is `RENAMED` in `crates/mzlab-cli/src/renamed.rs`:
+<!--renames-->
+| old name | now |
+|---|---|
+| `background` | `trace background` |
+| `channels` | `file channels` |
+| `convert` | `file convert` |
+| `dda-window` | `spectrum dda-window` |
+| `elements` | `ion elements` |
+| `folder` | `file list` |
+| `insilico` | `db insilico pack` |
+| `ion-mz` | `ion mz` |
+| `ion-pattern` | `ion pattern` |
+| `items` | `file items` |
+| `manual-table` | `peak table` |
+| `match-mz` | `ion match` |
+| `mol-anal` | `mol anal` |
+| `mol-check` | `mol check` |
+| `mol-cip` | `mol cip` |
+| `mol-cut` | `mol cut` |
+| `mol-export` | `mol export` |
+| `mol-hilite` | `mol hilite` |
+| `mol-label` | `mol label` |
+| `mol-link` | `mol link` |
+| `mol-mech` | `mol mech` |
+| `mol-search` | `mol search` |
+| `mol-sel` | `mol sel` |
+| `msn-graph` | `msn graph` |
+| `msn-lib` | `msn lib` |
+| `msn-rules` | `msn rules` |
+| `normative` | `db normative` |
+| `pair` | `file pair` |
+| `peak-area` | `peak area` |
+| `peak-auto` | `peak auto` |
+| `peak-auto-lr` | `peak auto-lr` |
+| `peak-edges` | `peak edges` |
+| `peak-split` | `peak split` |
+| `peak-window` | `peak window` |
+| `ref-list` | `db ref-list` |
+| `samples` | `sample` |
+| `steps` | `flow steps` |
+| `validate` | `file validate` |
+| `wiff` | `file inventory` |
+| `explain-missing` | removed (no replacement) |
+<!--/renames-->
+
 ## Look at a file first
-- `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
+- `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic --mz M1,M2,.. --ppm P [--smooth 3|5] [--dry-run]` (one XIC per ion, `trace-set/1` or a wide CSV), `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
 ## Linux binaries (for agents in Linux VMs)
 - Every release carries static musl builds of `mzlab-cli` (profile `cli`; no libc or distro dependency, runs on any distro): `mzLab-X.Y.Z-cli-Linux-x86_64` and `mzLab-X.Y.Z-cli-Linux-aarch64` (plain executables), listed in `SHA256SUMS` of the release. The `release` workflow also keeps them, each with a `.sha256` file, as the artifacts `mzlab-cli-linux-x86_64` and `mzlab-cli-linux-aarch64`.
@@ -32,24 +82,27 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 4 | input missing or unreadable |
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
+| 7 | internal error (a bug): any command |
 | 8 | input still being written |
 <!--/exits-->
+  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with its own exit 7 (not in any command's `exit_codes`: any command can end so), `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
 ## Learn the CLI in one call
 - `mzlab-cli commands [--json] [PATH...]`: the `commands/1` catalog: per command its `synopsis` (the usage line of `--help`, from which `args` and `flags` are read, so help and catalog cannot differ), flags with type, unit, default and enum (an argument, a flag or a command leaves out `unit`, `default`, `enum` when null and `repeat`, `required`, `stdin` when false), `stdout` (`format` json|csv|text, `schema` when there is one), `exit_codes` (meanings once at the top) and examples. `PATH...` narrows it (`commands --json flow`); unknown path: exit 5.
-  - The whole listing (no PATH) is compact, about 32 KB against the 40,000-byte cap: a flag used by two or more commands has its `help` once in the top-level `flag_help` (so a new command with `--out` or `--sample` costs nothing for them), `exit_codes` is left out when it is the one derived from the usage line (`derived_exits` in `catalog/doc.rs`), and `examples` when it is only the usage line without its `[optional]` parts.
+  - The whole listing (no PATH) is compact, about 30 KB against the 40,000-byte cap: a flag used by two or more commands has its `help` once in the top-level `flag_help` (so a new command with `--out` or `--sample` costs nothing for them); `exit_codes` is left out when it is the one derived from the usage line (`derived_exits` in `catalog/doc.rs`), and `examples` when it is only the usage line without its `[optional]` parts.
+  - Types: a flag carried by two or more commands that all give it one type other than `string` has that `type` once in the top-level `flag_type`; a flag object with no `type` is its `flag_type`, else a `string`, and an arg with no `kind` is a `path` (`rest` for `...`).
   - The derived exit codes: 0, 1, 2 always; +3 when the path starts with `flow ` or is a verdict command (`VERDICT` in `crates/mzlab-cli/src/contract.rs`); +4 when it has a path or rest argument or a path flag other than `--out`; +5 when it has `--sample` or `--id` or its path starts with `sample `, `dad ` or `msn graph`; +6 when it has `--out`. The derived example is `mzlab-cli ` + the synopsis without its `[optional]` groups (a word with a bracket inside stays) and without `...` tokens. Both rules are also in the `exit_codes_note` / `examples_note` of the listing.
-  - `commands --json PATH...` gives each command in full. To add a command: write its row and `FLAG_HELP` text as before; do not add members to the compact listing without moving something out (the test `the_whole_listing_is_compact_and_the_path_listing_is_full` holds the 33 KB line).
+  - `commands --json PATH...` gives each command in full, always with `type` and `kind`. To add a command: write its row and `FLAG_HELP` text as before; do not add members to the compact listing without moving something out (the test `the_whole_listing_is_compact_and_the_path_listing_is_full` holds the 33 KB line).
 - `mzlab-cli schema [--list | NAME]`: the JSON Schemas of `docs/schemi/` embedded in the binary (`error/1`, `mzflow/2`, `prov/1`, `samples/1`, `design/1`, ...); `--list` is `schemas/1`. `mzflow/2` is the plan the engine reads: `program` and input fingerprints are optional. Unknown name: exit 5.
 - `flow steps --compact` (`steps-compact/1`, under 20 KB: ids, versions, titles, ports, parameter and algorithm names, `executable_native`) and `llm tools --compact` (`tools-compact/1`) are the small forms; `llm tools` names the catalog in `cli_catalog`.
 
 ## Sequence
 0. A plan with `table.stats@1` or `table.drift@1` needs `samples` and `design` inputs: `sample table FILE... > samples.json`, `sample design propose --samples samples.json --out design.json`, `sample design validate design.json --samples samples.json` (exit 3 names each bad key); `design-cli.md`.
 1. `mzlab-cli flow steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `flow steps` gives one line per step.
-2. Write an `mzflow/2` plan with the differences from the defaults only.
-3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed).
-4. `mzlab-cli flow run PLAN.json --in DIR --dry-run [--json]`: checks plan, `--set` and inputs and prints what would run (`flowdry/1`), writes nothing.
+2. `mzlab-cli flow steps --id STEP[@V] --template`: a one-step `mzflow/2` plan to start from (file inputs named after the ports, instance named after the step, every parameter at its default); write the plan with the differences from the defaults only. A plan is `{"format":"mzflow/2","inputs":[{"name":"a.mzML"}],"steps":[{"id","step":"id@V","in":{PORT:"file:NAME"|"INSTANCE.PORT"|[...]},"params":{NAME:VALUE}}]}`. No step: `err.flow.empty` (exit 3) on `flow check`/`run`; the page's editor check accepts an empty canvas.
+3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed). The reader is strict: a key outside the format (`schema`, `param`), a value of the wrong JSON type, no `steps` or an empty one, an unknown step, parameter or port, a missing port or a mistyped value is exit 3, each problem with its `path` (`steps[1].params`, `det.params.min_height`, `det.in.index`) and its values; a typo is never taken for a default.
+4. `mzlab-cli flow run PLAN.json --in DIR --dry-run [--json]`: the same checks plus `--set` and the inputs, then what WOULD run (`flowdry/1`: inputs found, instances in order with their canonical parameters); writes nothing, exit 3 for a wrong plan, 4 for a missing input.
 5. `mzlab-cli flow run PLAN.json --in DIR --out RUN [--json]`: the run; `--json` ends with `flowrun/1`. The same `RUN` can be reused: only changed steps rerun.
 6. Read `RUN/prov.json`, `RUN/report.json` (`mzlab-cli flow report RUN`) and the output files. `mzlab-cli flow record RUN --roles ROLES.json` writes the `mzrun/2` (roles from `mzlab-cli sample table FILE...`, or any `samples/1` whose empty `sha256` is taken from the run); `mzlab-cli flow verify RECORD --json` checks it (`verify/1`, `docs/schemi/verify-1.json`; exit 0 ok, 3 mismatch or refusal; `err.mzrun.commit` means the binary was built without a commit: set `MZLAB_COMMIT`).
 

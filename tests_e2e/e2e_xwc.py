@@ -8,6 +8,7 @@ import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from cli_cmd import cli_command      # the release binary tools/verifica.py built once (a `cargo run` here rebuilt inside the test's timeout)
 import numpy as np
 sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici as ds
 
@@ -88,11 +89,11 @@ try:
 
         q = r.page(p); load(q, [DEMO])
         def parity():
-            if not shutil.which("cargo"):
+            if not (os.environ.get("MZLAB_CLI") or shutil.which("cargo")):
                 return
             site = q.evaluate("fetch('api/uvpropose?k=0').then(r => r.text())")
             win = q.evaluate("fetch('api/uvpropose?k=0&rt0=1&rt1=2').then(r => r.text())")
-            run = lambda *a: subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "trace", "chrom", str(DEMO), "--id", "uv:auto", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+            run = lambda *a: subprocess.run([*cli_command(), "trace", "chrom", str(DEMO), "--id", "uv:auto", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout
             # `uvband/1` wraps the route's members (after `evidence`) unchanged: the page's bytes sit inside the document
             for text, doc in ((site, run()), (win, run("--rt", "1,2"))):
                 assert doc.startswith('{"schema":"uvband/1","id":"uv:auto",') and doc.endswith("}\n"), doc

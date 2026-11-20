@@ -48,7 +48,12 @@ try:
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
-            pg.goto(base); pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
+            for _try in range(3):          # the page left by a reset may still be doing its one isolating reload: that navigation aborts ours, the next one lands
+                try: pg.goto(base); break
+                except Exception as e:
+                    if "ERR_ABORTED" not in str(e) or _try == 2: raise
+                    wait_for_js(pg, "document.readyState === 'complete'", 10000)
+            pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
             if pg.evaluate("!!S.sess"): wait_for_js(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
@@ -103,7 +108,7 @@ try:
                 def warm_ms():
                     t0 = time.time(); q.reload(); q.wait_for_function("window.qqReady", timeout=60000); return (time.time() - t0) * 1000
                 warm = min(warm_ms(), warm_ms())
-                n = len(loads); q.evaluate("QQRESET.run('all')")
+                n = len(loads); q.evaluate("void QQRESET.run('all')")      # not awaited: the reload ends the page's context
                 q.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn')", timeout=30000)
                 q.wait_for_function("crossOriginIsolated === true && window.qqReady", timeout=60000)
                 q.wait_for_timeout(1500)
@@ -203,7 +208,7 @@ try:
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)      # no session left by the previous step
             load_files(); pg.evaluate(SEED_LISTS)
             assert pg.evaluate(COUNT_LISTS) == [1, 1]
-            pg.evaluate("QQRESET.run('all')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn')", timeout=30000)
+            pg.evaluate("void QQRESET.run('all')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn')", timeout=30000)
             pg.wait_for_function("window.qqReady", timeout=60000)
             assert pg.evaluate(COUNT_LISTS) == [0, 0], "user lists and molecules do not survive a Full reset"
         step("Full reset empties user lists and molecules", lists_gone)
@@ -270,12 +275,11 @@ try:
             # the page that follows a reset must not start in «restoring»: pagehide of the old page may not write the marker back
             pg.add_init_script("try { window.__sessAtStart = localStorage.getItem('mzlab.session'); } catch (e) { window.__sessAtStart = 'err'; }")
             load_files()
-            pg.evaluate(f"QQRESET.run('{mode}')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn') || !location.search.includes('reset')", timeout=30000)
+            pg.evaluate(f"void QQRESET.run('{mode}')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn') || !location.search.includes('reset')", timeout=30000)
             # checked as soon as the new document ran its init script, before the engine is ready (afterwards the skeleton is gone anyway)
-            pg.wait_for_function("'__sessAtStart' in window", timeout=30000)
-            assert pg.evaluate("window.__sessAtStart") is None, ("session marker present at the start after a reset", mode)
-            assert pg.evaluate("!document.querySelector('#opening.restoring:not([hidden])') && !document.querySelector('#v-data.opn')"), "no «restoring» skeleton"
-            pg.wait_for_function("window.qqReady", timeout=60000)
+            # one condition evaluated in the page itself: the isolating reload may end this document between two separate calls
+            pg.wait_for_function("'__sessAtStart' in window && window.__sessAtStart === null && !document.querySelector('#opening.restoring:not([hidden])') && !document.querySelector('#v-data.opn')", timeout=30000)
+            pg.wait_for_function("window.qqReady && (crossOriginIsolated || " + ("false" if mode == "all" else "true") + ")", timeout=60000)      # after a Full reset the page reloads once to be isolated: the next step starts after it
         def pagehide_all(): no_marker_after("all")
         step("Full reset: the closing page does not write the session marker back", pagehide_all)
         def pagehide_files(): no_marker_after("files")

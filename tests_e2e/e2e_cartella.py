@@ -44,7 +44,7 @@ try:
               const dir = (n, kids) => ({ isFile: false, isDirectory: true, name: n, createReader() { let i = 0; return { readEntries(ok) { const b = kids.slice(i, i + 1); i += 1; ok(b); } }; } });
               const root = dir('caduta', [file('drop-A.mzML'), file('leggimi.pdf'), file('caduta.log'), dir('dentro', [file('drop-B.mzML')])]);
               const ev = new Event('drop', { bubbles: true, cancelable: true });
-              Object.defineProperty(ev, 'dataTransfer', { value: { files: [], items: [{ kind: 'file', webkitGetAsEntry: () => root }] } });
+              Object.defineProperty(ev, 'dataTransfer', { value: { files: [], items: [{ kind: 'file', getAsFile: () => null, webkitGetAsEntry: () => root }] } });
               document.getElementById('drop').dispatchEvent(ev); }""", b64)
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={before + 2}", timeout=90000)
             n = names(pg); assert "drop-A.mzML" in n and "drop-B.mzML" in n, n

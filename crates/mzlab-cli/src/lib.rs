@@ -28,8 +28,11 @@ mod convert_entries;
 mod convert_help;
 mod convert_report;
 mod dad_cmd;
+mod dad_msat;
 mod design_cmd;
+mod emit;
 pub mod error_text;
+pub(crate) use emit::emit;
 pub mod exit;
 mod extract;
 mod file_index_cmd;
@@ -151,6 +154,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+mod flow_template;
 mod flow_transitions;
 mod idx_cache;
 mod idx_open;
@@ -185,12 +189,14 @@ mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
+mod renamed;
 mod sample_select;
 mod samples_cmd;
 mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
 mod trace_cmd;
+mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
@@ -353,22 +359,6 @@ impl Outcome {
     }
 }
 
-/// The text to the standard output, or to the file of `--out`.
-fn emit(t: impl Into<Vec<u8>>, out: &Option<PathBuf>) -> Outcome {
-    let t: Vec<u8> = t.into();
-    match out {
-        None => Outcome::ok(t),
-        Some(p) => std::fs::write(p, t).map_or_else(
-            |e| {
-                Outcome::fail_error(
-                    &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
-                )
-            },
-            |_| Outcome::ok(Vec::new()),
-        ),
-    }
-}
-
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let (command, o) = executed(args);
@@ -465,10 +455,7 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
             ));
             return ("", o);
         }
-        let o = Outcome::fail_error(
-            &Error::new("err.cli.usage").with("message", format!("unknown command {}", args[0])),
-        );
-        return ("", o);
+        return ("", renamed::unknown_command(args));
     };
     let mut rest = args[n..].to_vec();
     // `db normative` has its own `--cache` (sources folder): it keeps it and never sets the index cache

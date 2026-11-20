@@ -276,7 +276,7 @@ Start here:
 
 For scripts and agents: --json is accepted by every command (the data as JSON on stdout; a failure is one error/1 document on stdout, the
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
-integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 8 input still being written (retry when it ends).";
+integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).";
 
 const HEAD: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.";
 const TAIL: &str = "  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
@@ -291,16 +291,28 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
 pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {
     match args.first().map(String::as_str) {
         None | Some("--help" | "-h") => Some(help()),
-        Some("--version" | "-V") => Some(Outcome::ok(
-            format!(
-                "mzlab-cli {}\n{}\n",
-                crate::citation::VERSION,
-                crate::citation::reminder()
-            )
-            .into_bytes(),
-        )),
+        // `--version` among flags only, in any position (`--json --version`); after a command name it is that command's own argument
+        _ if args.iter().all(|a| a.starts_with('-'))
+            && args.iter().any(|a| a == "--version" || a == "-V") =>
+        {
+            Some(version(args.iter().any(|a| a == "--json")))
+        }
         _ => None,
     }
+}
+
+fn version(json: bool) -> Outcome {
+    if json {
+        return Outcome::ok(crate::citation::version_json().into_bytes());
+    }
+    Outcome::ok(
+        format!(
+            "{}\n{}\n",
+            crate::citation::version_line(),
+            crate::citation::reminder()
+        )
+        .into_bytes(),
+    )
 }
 
 /// The text of `mzlab-cli --help`: where to start, the exit codes and the usage line of every command.

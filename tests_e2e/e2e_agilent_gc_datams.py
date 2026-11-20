@@ -45,7 +45,7 @@ DROP = """async tree => { const file = (rel, hex) => ({ isFile: true, isDirector
   for (const [rel, hex] of Object.entries(tree)) (rel.split("/").length === 3 ? acq : kids).push(file(rel, hex));
   const entry = dir(top, [...kids, dir("AcqData", acq)]);
   const ev = new Event("drop", { bubbles: true, cancelable: true });
-  Object.defineProperty(ev, "dataTransfer", { value: { files: [], items: [{ kind: "file", webkitGetAsEntry: () => entry }] } });
+  Object.defineProperty(ev, "dataTransfer", { value: { files: [], items: [{ kind: "file", getAsFile: () => null, webkitGetAsEntry: () => entry }] } });
   document.getElementById("drop").dispatchEvent(ev); }"""
 try:
     with sync_playwright() as p:

@@ -8,8 +8,8 @@
 2. Only the ESI-MS2 records whose licence is CC0, CC BY or CC BY-SA are kept (never NC, never the German data licence, never GNPS / MoNA / HMDB / NIST:
    those only come from the user). The 61 records of the UniTO standards (tests/golden/librerie/massbank_unito, CC BY) are a package of their own.
 3. The records of each polarity are built into a `.mzlib` by the Rust builder (crates/mzlab-lib, example `build`), cut into pieces of 4 MiB with a SHA-256
-   each (resumable download without Range, checked piece by piece, no change to the CSP) and described in `catalogo.json` (format `librerie/2`: the packages plus `fonti`, the hand-written list of tools/librerie_catalogo.json with the mode `site`|`external`|`link` of each source;
-   `esterne` stays for the readers of `librerie/1`).
+   each (resumable download without Range, checked piece by piece, no change to the CSP) and described in `catalogo.json` (format `libraries/2`: the packages plus `sources`, the hand-written list of tools/librerie_catalogo.json with the mode `site`|`external`|`link` of each source;
+   `external` stays for the readers of `libraries/1`).
 
 Where the download is not possible (network, Zenodo down) the script writes nothing and exits with 0 and a warning: the site is still published,
 without packages (the page says so). A wrong SHA-256 of the download is an error.
@@ -40,7 +40,7 @@ ZIP_SHA256 = "12c6a922929f9bf2484c46586b6101512a415e44680558883b0630c6e47905fb"
 DOI = f"10.5281/zenodo.{ZENODO_RECORD}"
 KEEP_LICENSES = ("CC0", "CC BY", "CC BY-SA")
 PIECE = 4 * 1024 * 1024
-CATALOG_FORMAT = "librerie/2"
+CATALOG_FORMAT = "libraries/2"
 CATALOG_SOURCES = ROOT / "tools" / "librerie_catalogo.json"
 FREE_LICENSES = ("CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0")      # the only ones a `site` source may have (redistribution with attribution)
 MODES = ("site", "external", "link")
@@ -107,7 +107,7 @@ def keep(text: str):
 def filter_zip(zpath: Path, work: Path):
     """Writes pos.txt and neg.txt (the kept records one after the other) and returns the counts per polarity, licence and contributor."""
     out = {"pos": open(work / "pos.txt", "w", encoding="utf-8", newline="\n"), "neg": open(work / "neg.txt", "w", encoding="utf-8", newline="\n")}
-    stats = {"pos": {"n": 0, "licenze": {}, "contributori": {}}, "neg": {"n": 0, "licenze": {}, "contributori": {}}}
+    stats = {"pos": {"n": 0, "licenses": {}, "contributors": {}}, "neg": {"n": 0, "licenses": {}, "contributors": {}}}
     try:
         with zipfile.ZipFile(zpath) as z:
             for info in z.infolist():
@@ -124,8 +124,8 @@ def filter_zip(zpath: Path, work: Path):
                 out[pol].write(text if text.endswith("\n") else text + "\n")
                 s = stats[pol]
                 s["n"] += 1
-                s["licenze"][lic] = s["licenze"].get(lic, 0) + 1
-                s["contributori"][contrib] = s["contributori"].get(contrib, 0) + 1
+                s["licenses"][lic] = s["licenses"].get(lic, 0) + 1
+                s["contributors"][contrib] = s["contributors"].get(contrib, 0) + 1
     finally:
         for f in out.values():
             f.close()
@@ -145,7 +145,7 @@ def header(p: Path) -> dict:
         h = f.read(36)
     if h[:4] != b"MZLB":
         raise SystemExit(f"{p.name}: not a .mzlib")
-    return {"lettore_min": struct.unpack_from("<H", h, 6)[0], "spettri": struct.unpack_from("<I", h, 8)[0], "picchi": struct.unpack_from("<Q", h, 16)[0]}
+    return {"reader_min": struct.unpack_from("<H", h, 6)[0], "spectra": struct.unpack_from("<I", h, 8)[0], "peaks": struct.unpack_from("<Q", h, 16)[0]}
 
 
 def split(p: Path, out_dir: Path, lib_id: str) -> list[dict]:
@@ -161,26 +161,26 @@ def split(p: Path, out_dir: Path, lib_id: str) -> list[dict]:
                 break
             name = f"{i:03d}.bin"
             (d / name).write_bytes(b)
-            pieces.append({"file": f"{lib_id}/{name}", "dimensione": len(b), "sha256": hashlib.sha256(b).hexdigest()})
+            pieces.append({"file": f"{lib_id}/{name}", "size": len(b), "sha256": hashlib.sha256(b).hexdigest()})
             i += 1
     return pieces
 
 
-def entry(lib_id: str, nome: str, pol: int, version: str, source: str, link: str, lic_text: str, lics: dict, contrib: dict, mzlib: Path, out_dir: Path, attribution: str) -> dict:
+def entry(lib_id: str, name: str, pol: int, version: str, source: str, link: str, lic_text: str, lics: dict, contrib: dict, mzlib: Path, out_dir: Path, attribution: str) -> dict:
     h = header(mzlib)
-    return {"id": lib_id, "nome": nome, "versione": version, "sorgente": source, "url_sorgente": link, "licenza": lic_text, "licenze": lics, "contributori": contrib,
-            "polarita": pol, "spettri": h["spettri"], "picchi": h["picchi"], "dimensione": mzlib.stat().st_size, "sha256": sha256_file(mzlib),
-            "lettore_min": h["lettore_min"], "attribuzione": attribution, "pezzi": split(mzlib, out_dir, lib_id)}
+    return {"id": lib_id, "name": name, "version": version, "source": source, "source_url": link, "license": lic_text, "licenses": lics, "contributors": contrib,
+            "polarity": pol, "spectra": h["spectra"], "peaks": h["peaks"], "size": mzlib.stat().st_size, "sha256": sha256_file(mzlib),
+            "reader_min": h["reader_min"], "attribution": attribution, "pieces": split(mzlib, out_dir, lib_id)}
 
 
 def load_sources() -> list[dict]:
-    return json.loads(CATALOG_SOURCES.read_text(encoding="utf-8"))["fonti"]
+    return json.loads(CATALOG_SOURCES.read_text(encoding="utf-8"))["sources"]
 
 
 def check_sources(sources: list[dict]) -> list[str]:
-    """Problems of the hand-written list: ids unique and plain, fields present, `site` only with a free licence, `external` only with a download, `verificato` a date."""
+    """Problems of the hand-written list: ids unique and plain, fields present, `site` only with a free licence, `external` only with a download, `verified` a date."""
     bad, seen = [], set()
-    need = ("id", "gruppo", "nome", "url", "licenza", "formato", "kind", "tech", "pol", "doi", "verificato", "modo", "download", "dimensione", "sha256")
+    need = ("id", "group", "name", "url", "license", "format", "kind", "tech", "pol", "doi", "verified", "mode", "download", "size", "sha256")
     for f in sources:
         i = f.get("id", "?")
         miss = [k for k in need if k not in f]
@@ -190,23 +190,23 @@ def check_sources(sources: list[dict]) -> list[str]:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", i) or i in seen:
             bad.append(f"{i}: id not plain or repeated")
         seen.add(i)
-        if f["modo"] not in MODES or f["gruppo"] not in GROUPS or f["kind"] not in KINDS or f["tech"] not in TECHS or f["pol"] not in (-1, 0, 1):
+        if f["mode"] not in MODES or f["group"] not in GROUPS or f["kind"] not in KINDS or f["tech"] not in TECHS or f["pol"] not in (-1, 0, 1):
             bad.append(f"{i}: mode, group, kind, tech or polarity out of range")
-        if f["modo"] == "site" and f["licenza"] not in FREE_LICENSES:
-            bad.append(f"{i}: `site` needs a free licence, not {f['licenza']}")
-        if f["modo"] == "external" and not str(f["download"] or "").startswith("https://"):
+        if f["mode"] == "site" and f["license"] not in FREE_LICENSES:
+            bad.append(f"{i}: `site` needs a free licence, not {f['license']}")
+        if f["mode"] == "external" and not str(f["download"] or "").startswith("https://"):
             bad.append(f"{i}: `external` needs an https download")
-        if not re.fullmatch(r"\d{4}-\d\d-\d\d", str(f["verificato"])):
-            bad.append(f"{i}: `verificato` is not a date")
+        if not re.fullmatch(r"\d{4}-\d\d-\d\d", str(f["verified"])):
+            bad.append(f"{i}: `verified` is not a date")
         if f["sha256"] is not None and not re.fullmatch(r"[0-9a-f]{64}", f["sha256"]):
             bad.append(f"{i}: sha256 malformed")
     return bad
 
 
 def external_entries(sources: list[dict]) -> list[dict]:
-    """The `external` sources in the shape the readers of `librerie/1` know (the desktop app downloads these)."""
-    keys = ("id", "nome", "url", "formato", "dimensione", "sha256", "licenza")
-    return [{**{k: f[k] for k in keys}, "url": f["download"], "sorgente": f["nome"]} for f in sources if f["modo"] == "external"]
+    """The `external` sources in the shape the readers of `libraries/1` know (the desktop app downloads these)."""
+    keys = ("id", "name", "url", "format", "size", "sha256", "license")
+    return [{**{k: f[k] for k in keys}, "url": f["download"], "source": f["name"]} for f in sources if f["mode"] == "external"]
 
 
 def sources_with_packages(sources: list[dict], libs: list[dict]) -> list[dict]:
@@ -214,10 +214,10 @@ def sources_with_packages(sources: list[dict], libs: list[dict]) -> list[dict]:
     by = {p["id"]: p for p in libs}
     out = []
     for f in sources:
-        if f["modo"] != "site":
+        if f["mode"] != "site":
             out.append(f)
         elif f["id"] in by:
-            out.append({**f, "dimensione": by[f["id"]]["dimensione"], "sha256": by[f["id"]]["sha256"]})
+            out.append({**f, "size": by[f["id"]]["size"], "sha256": by[f["id"]]["sha256"]})
     return out
 
 
@@ -266,7 +266,7 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
             mz = work / f"massbank-{pol}.mzlib"
             build_mzlib(builder, work / f"{pol}.txt", mz)
             libs.append(entry(f"massbank-{pol}", f"MassBank Europe · {label} · MS2", sign, version, "MassBank Europe", "https://massbank.eu",
-                              "Per record: CC0, CC BY or CC BY-SA 4.0; the package as a whole: CC BY-SA 4.0", s["licenze"], s["contributori"], mz, out_dir, ATTRIBUTION))
+                              "Per record: CC0, CC BY or CC BY-SA 4.0; the package as a whole: CC BY-SA 4.0", s["licenses"], s["contributors"], mz, out_dir, ATTRIBUTION))
         n_merged, lic_merged = merged_records(work / "unito.txt")
         if n_merged:
             print(f"UniTO standards: {n_merged} records")
@@ -278,10 +278,10 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
         bad = check_sources(sources)
         if bad:
             raise SystemExit("tools/librerie_catalogo.json: " + "; ".join(bad))
-        cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "librerie": libs, "esterne": external_entries(sources), "fonti": sources_with_packages(sources, libs)}
+        cat = {"format": CATALOG_FORMAT, "piece": PIECE, "libraries": libs, "external": external_entries(sources), "sources": sources_with_packages(sources, libs)}
         (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        total = sum(sum(p["dimensione"] for p in lib["pezzi"]) for lib in libs)
-        print(f"catalogo.json: {len(libs)} packages, {total / 1e6:.1f} MB in {sum(len(lib['pezzi']) for lib in libs)} pieces")
+        total = sum(sum(p["size"] for p in lib["pieces"]) for lib in libs)
+        print(f"catalogo.json: {len(libs)} packages, {total / 1e6:.1f} MB in {sum(len(lib['pieces']) for lib in libs)} pieces")
         return cat
 
 

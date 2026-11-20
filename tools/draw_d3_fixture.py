@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from draw_fixture import ROOT, draw, molfile
+from draw_fixture import ROOT, draw, molfile, picture
 
 # (name, spec, patch); a patch is a list of operations or the object {"ops": [...]}
 ALA = "N[C@@H](C)C(=O)O"
@@ -16,6 +16,10 @@ CASES = [
     ("isotope", "CCO", [{"op": "atom.set", "id": 2, "iso": 18}]),
     ("radical", "CC", [{"op": "atom.set", "id": 1, "rad": 2}]),
     ("label", "c1ccccc1", [{"op": "atom.set", "id": 5, "label": "Ph"}]),
+    ("label on a chain end replaces the symbol", "CCO", [{"op": "atom.set", "id": 0, "label": "OMe"}]),
+    ("label on the left end runs away from the bond", "OCC", [{"op": "atom.set", "id": 0, "label": "OMe"}]),
+    ("label replaces a heteroatom and its hydrogens", "CCN", [{"op": "atom.set", "id": 2, "label": "NHAc"}]),
+    ("label on an added atom", "c1ccccc1", [{"op": "atom.add", "el": "C", "label": "Et"}, {"op": "bond.add", "a": 0, "b": 6}]),
     ("bond order", "CC", [{"op": "bond.set", "a": 0, "b": 1, "o": 2}]),
     ("ring closure", "CCC", [{"op": "bond.add", "a": 0, "b": 2}]),
     ("remove atom", "CCO", [{"op": "remove", "atoms": [2]}]),
@@ -51,6 +55,14 @@ CASES = [
 ]
 
 
+# edited drawings that are also written as svg, png, ket and cdxml (the label cases, charge, added atoms, merged fragments, ...)
+RENDER = {
+    "label", "label on a chain end replaces the symbol", "label on the left end runs away from the bond", "label replaces a heteroatom and its hydrogens",
+    "label on an added atom", "methyl on benzene is toluene", "charge", "element", "bond order", "wedge up", "remove atom", "merge fragments",
+    "merge in a chain", "join fragments by a bond", "atom at a position in bond lengths",
+}
+
+
 def main():
     cases = []
 
@@ -63,12 +75,21 @@ def main():
         if c:
             lines = [x for x in (scene + "\n" + err).splitlines() if x.startswith('{"schema":"error/1"')]
             key = json.loads(lines[0])["error_key"]
-        cases.append({"name": name, "request": {"spec": stdin if stdin is not None else spec, "edit": text}, "exit": c, "error_key": key, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None})
+        case = {"name": name, "request": {"spec": stdin if stdin is not None else spec, "edit": text}, "exit": c, "error_key": key, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None}
+        if name in RENDER:
+            assert c == 0, name
+            for f in ("ket", "cdxml"):
+                case[f] = draw(spec, *sets, "--format", f, stdin=stdin, js=False)[1]
+            case["svg"] = picture(spec, "svg", *sets, stdin=stdin)[1]
+            case["png"] = picture(spec, "png", *sets, stdin=stdin)[2]
+        cases.append(case)
 
     for name, spec, patch in CASES:
         add(name, "smiles:" + spec, patch)
     base = molfile("CC(=O)Nc1ccc(O)cc1")
     add("molfile keeps its coordinates", "-", [{"op": "atom.add", "el": "Cl"}, {"op": "bond.add", "a": 0, "b": 11}], stdin=base)
+    missing = RENDER - {c["name"] for c in cases}
+    assert not missing, f"RENDER names that match no case: {sorted(missing)}"
     out = ROOT / "tests" / "dati" / "draw_d3.json"
     out.write_text(json.dumps({"cases": cases}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(cases)} cases, {sum(1 for c in cases if c['exit'])} errors")
