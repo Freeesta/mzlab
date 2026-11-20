@@ -24,6 +24,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
+       mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE
@@ -129,6 +130,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
+       mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE
@@ -234,6 +236,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]   where products are lost
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
+       mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE

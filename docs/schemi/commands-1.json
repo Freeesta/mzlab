@@ -172,8 +172,7 @@
           "stdout": {
             "type": "object",
             "required": [
-              "format",
-              "schema"
+              "format"
             ],
             "properties": {
               "format": {

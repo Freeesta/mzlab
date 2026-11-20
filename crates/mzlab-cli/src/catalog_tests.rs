@@ -31,7 +31,7 @@ fn every_entry_is_in_the_catalog_with_its_usage_line() {
             .unwrap()
             .trim_start_matches("mzlab-cli ");
         assert_eq!(c["synopsis"], if e.help.is_empty() { e.name } else { want });
-        assert_eq!(c["stdout"]["schema"], e.schema);
+        assert_eq!(c["stdout"]["schema"].as_str().unwrap_or(""), e.schema);
     }
 }
 
@@ -375,4 +375,33 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
     );
     let n = out(&["commands", "--json"]).len();
     assert!(n < 33_000, "the compact listing is {n} bytes");
+}
+
+/// The global `--cache` is the index cache; `db normative build` keeps its own `--cache` (sources folder), and no other command names the flag.
+#[test]
+fn the_global_cache_flag_is_not_the_normative_one() {
+    let doc = crate::execute(&["commands".to_string(), "--json".to_string()]);
+    let v: serde_json::Value = serde_json::from_slice(&doc.stdout).unwrap();
+    let g = v["global_flags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == "--cache")
+        .expect("global --cache");
+    assert!(g["help"].as_str().unwrap().contains("index cache"), "{g}");
+    let n = full(entries().find(|e| e.name == "db normative build").unwrap());
+    let own = n["flags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == "--cache")
+        .expect("normative --cache");
+    assert_eq!(own["help"], "sources folder");
+    for e in entries().filter(|e| e.name != "db normative build") {
+        assert!(
+            !e.help.contains("--cache"),
+            "{}: synopsis names --cache",
+            e.name
+        );
+    }
 }

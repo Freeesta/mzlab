@@ -30,6 +30,13 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["file", "channels", "/nonexistent/x.mzML"],
     &["file", "items", "/nonexistent/x.mzML"],
     &["file", "info", "/nonexistent/x.mzML"],
+    &[
+        "file",
+        "index",
+        "/nonexistent/x.mzML",
+        "--cache",
+        "/nonexistent/cache",
+    ],
     &["trace", "chrom", "/nonexistent/x.mzML", "--id", "tic"],
     &[
         "trace",
