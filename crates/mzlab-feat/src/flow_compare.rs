@@ -2,7 +2,9 @@
 //! "full" CSV `features` writes) against its reference and blank columns (`mzlab_core::statcmp`). Bytes in, text out: `flow run`, `mzlab-cli table compare` and
 //! the browser module `flowstat` all call these, so they write the same bytes. A parameter that is not given takes the engine's default and says so in `choices`.
 
-use crate::import::{read_full, strip_mzml};
+use crate::import::strip_mzml;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::import::read_full;
 use crate::samples::samples_of;
 use crate::store::{origin_from_meta, read_table};
 use mzlab_core::budget::sha256_hex;
@@ -76,6 +78,17 @@ fn load(table: &[u8], name: &str, quantity_name: &str) -> Result<Loaded> {
     if quantity_name == "height" {
         return Err(Error::new("err.compare.quantity"));
     }
+    csv(table, name)
+}
+
+/// The mzmine "full" CSV of the command line. The page holds `.mzfeat` tables only, so the `.wasm` leaves this reader out (it is ~130 KB of the module).
+#[cfg(target_arch = "wasm32")]
+fn csv(_table: &[u8], _name: &str) -> Result<Loaded> {
+    Err(unreadable("the browser reads a .mzfeat table, not a CSV"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn csv(table: &[u8], name: &str) -> Result<Loaded> {
     let text = std::str::from_utf8(table).map_err(|_| unreadable("the table is neither a .mzfeat nor a text CSV"))?;
     let t = read_full(text, name, 0, 0).map_err(|e| unreadable(e.msg))?;
     if t.samples.is_empty() {
