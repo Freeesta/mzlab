@@ -26,12 +26,17 @@ export async function nameToSmiles(text, note, t) {
   return r[0].smiles;
 }
 
-/** Watches the paste events of the editor document: a single line that is neither a SMILES, an InChI nor a molfile/KET is a name (or junk) and is not handed to Ketcher, which would draw query atoms; `note` says so.
+/** True for one line that Ketcher's reader would turn into query atoms: not a SMILES or InChI, not the start of a KET ("{"), of an XML file ("<") or of a base64 CDX ("VmpDRD"). A compound name, or junk. */
+export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:[{<]|VmpDRD)/.test(t) && !isStructureText(t); };
+
+/** Watches the paste events of the editor document: a single line on the canvas that is a name (`isNameLine`) is not handed to Ketcher, which would draw query atoms; `note` says so.
+ * A paste inside one of Ketcher's own fields (text tool, Open dialog, atom label) is that field's business.
  * @param {Document} doc @param {() => void} note shows the «not found» note */
 export function guardPaste(doc, note) {
   doc.addEventListener("paste", e => {
-    const t = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").trim();
-    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || isStructureText(t)) return;
+    const el = /** @type {any} */ (e.target);                              // the iframe has its own Element: no instanceof
+    if (el && el.matches && !el.matches(".cliparea,[data-cliparea]") && (["INPUT", "TEXTAREA", "SELECT"].includes(el.nodeName) || el.isContentEditable)) return;
+    if (!isNameLine((e.clipboardData && e.clipboardData.getData("text/plain")) || "")) return;
     e.preventDefault(); e.stopImmediatePropagation(); note();
   }, true);
 }

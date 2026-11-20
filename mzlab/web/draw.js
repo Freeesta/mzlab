@@ -8,7 +8,7 @@
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
 import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import "./disegno-storage.js";
-import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
+import { initCerca, nameToSmiles, guardPaste, isNameLine } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { structureText } from "./disegno-file.js"; import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
@@ -60,7 +60,9 @@ function start() {
         let txt = "";
         if (file) txt = await structureText(file);
         else txt = /** @type {DataTransfer} */ (e.dataTransfer).getData("text/plain");
-        if (txt) {
+        // an empty file, or one line that is a name: Ketcher would draw nothing, or query atoms
+        if (file ? !txt.trim() || isNameLine(txt) : isNameLine(txt)) dnote(file ? I18N.t("draw.import.unreadable", { name: file.name }) : I18N.t("draw.quick.notFound"));
+        else if (txt) {
           try {
             const before = await k.getKet();
             await k.addFragment(txt);
@@ -746,9 +748,11 @@ Q("#ex-nobg").addEventListener("change", syncBg); syncBg(); freshName();
 Q("#ex-sdfopt").onclick = () => { const p = Q("#ex-sdfpop"), open = p.hidden; p.hidden = !open; Q("#ex-sdfopt").setAttribute("aria-expanded", String(open)); if (open) Q("#ex-ion").focus(); };
 Q("#ex-sdfpop").addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { Q("#ex-sdfpop").hidden = true; Q("#ex-sdfopt").setAttribute("aria-expanded", "false"); Q("#ex-sdfopt").focus(); } });
 Q("#ex-ion").addEventListener("change", () => { NB.drawIon = Q("#ex-ion").value === "none" ? "" : Q("#ex-ion").value; nbSave(); });
-Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
+let quickBusy = false;                               // one «Draw» at a time: a double click would add the structure twice
+Q("#ex-load").onclick = async () => { if (quickBusy) return; quickBusy = true; try { await quickDraw(); } finally { quickBusy = false; } };
+async function quickDraw() { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
-  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } }
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
