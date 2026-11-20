@@ -41,12 +41,12 @@ fn expectation(regola: &str, formula: &str, ione: bool) -> Expectation {
     }
 }
 
-/// The ids of the rules that explain the arc `da` -> `a`.
-fn leads(t: &'static Table, o: &Options, da: &str, a: &str) -> Vec<(String, String)> {
+/// The ids of the rules that explain the arc `from` -> `a`.
+fn leads(t: &'static Table, o: &Options, from: &str, a: &str) -> Vec<(String, String)> {
     let (g, _) = shifted_graph(o, &[0, 1, 2, 3], false, 0.0);
     let v = evaluate_with(t, &g, o, &RuleParams::default());
-    let (p, f) = (find(&g, da), find(&g, a));
-    let i = g.archi.iter().position(|x| x.da == p && x.a == f).unwrap();
+    let (p, f) = (find(&g, from), find(&g, a));
+    let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
     v.edges[i]
         .rules
         .iter()

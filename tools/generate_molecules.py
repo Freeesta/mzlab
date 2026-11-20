@@ -1,4 +1,4 @@
-"""Build mzlab/web/molecole/catalogo.csv (the catalogue of the molecules database, `molecules/1`) from the two lists of before.
+"""Build mzlab/web/molecules/catalogue.csv (the catalogue of the molecules database, `molecules/1`) from the two lists of before.
 
 Run by hand, once:  python3 tools/generate_molecules.py
 Reads TP_Mine/data/composti.csv (catalog `tabui`, in its order) and tests/data/liste/sostanze_hrms.csv (catalog `hrms`; the 43 molecules in both are one record,
@@ -17,7 +17,7 @@ from classes_structure import classes as structure_classes  # noqa: E402  (struc
 
 COMPOUNDS = ROOT / "TP_Mine" / "data" / "composti.csv"
 HRMS = ROOT / "tests" / "data" / "liste" / "sostanze_hrms.csv"
-OUT = ROOT / "mzlab" / "web" / "molecole" / "catalogo.csv"
+OUT = ROOT / "mzlab" / "web" / "molecules" / "catalogue.csv"
 COLUMNS = ["id", "name", "synonyms", "molecular_formula", "charge", "monoisotopic_mass", "smiles", "inchikey", "adducts", "collections", "classes", "cas",
            "pubchem_cid", "notes", "origin", "catalog"]
 HRMS_ADDUCTS = "[M+H]+|[M+Na]+|[M+NH4]+"

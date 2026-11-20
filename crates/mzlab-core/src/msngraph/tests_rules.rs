@@ -94,15 +94,15 @@ fn a_rule_explains_the_loss_of_an_arc_by_formula_and_adduct() {
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
     let v = evaluate_with(t, &g, &o, &RuleParams::default());
     assert_eq!(v.addotto, Some("[M+H]+"));
-    let leads = |da: &str, a: &str| {
-        let (p, f) = (find(&g, da), find(&g, a));
-        let i = g.archi.iter().position(|x| x.da == p && x.a == f).unwrap();
+    let leads = |from: &str, a: &str| {
+        let (p, f) = (find(&g, from), find(&g, a));
+        let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
         v.edges[i].rules.iter().map(|r| r.id).collect::<Vec<_>>()
     };
     // CO leaves a fragment of the m/z 138, so the adduct of the root plays no part: the rule asks for it only on the root
     assert!(leads("C6H8N3O", "C5H8N3").is_empty());
     assert_eq!(leads("C5H8N3", "C4H7N2"), ["hcn"]);
-    assert_eq!(v.explained + v.without_rule, g.archi.len());
+    assert_eq!(v.explained + v.without_rule, g.edges.len());
     assert!(v.explained_intensity > 0.0 && v.explained_intensity < 1.0);
     let e = v.edges.iter().flat_map(|a| &a.rules).next().unwrap();
     assert!(e.mda_error.abs() < 1.0 && !e.radical && e.perche == "test");
@@ -117,7 +117,7 @@ fn a_loss_that_is_the_sum_of_two_rules_is_composite_only_in_a_beam() {
         let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
         let v = evaluate_with(t, &g, &o, &RuleParams::default());
         let (p, f) = (find(&g, "C6H8N3O"), find(&g, "C4H7N2"));
-        let i = g.archi.iter().position(|x| x.da == p && x.a == f).unwrap();
+        let i = g.edges.iter().position(|x| x.from == p && x.to == f).unwrap();
         v.edges[i].composta.clone()
     };
     assert_eq!(among(None), [("co", "hcn"), ("hcn", "co")]);
@@ -167,7 +167,7 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
     let v = crate::json::parse(k.as_bytes()).unwrap();
     let r = v.get("rules").unwrap();
     assert_eq!(r.get("table").and_then(|x| x.str()), Some("fragrules/1"));
-    assert_eq!(r.get("edges").unwrap().arr().len(), g.archi.len());
+    assert_eq!(r.get("edges").unwrap().arr().len(), g.edges.len());
     // the thresholds say where their value comes from and that it is still to be calibrated
     let thresholds = r.get("thresholds").unwrap().arr();
     assert!(thresholds
@@ -246,7 +246,7 @@ fn a_single_spectrum_is_a_graph_of_one_level_with_the_precursor_as_root() {
         &o,
     );
     assert_eq!(g.radici.len(), 1);
-    assert_eq!(g.archi.len(), 1);
+    assert_eq!(g.edges.len(), 1);
     assert_eq!(g.spettri.len(), 1);
     let s = &g.spettri[0];
     assert_eq!(s.precursore, Some(g.radici[0]));
@@ -255,5 +255,5 @@ fn a_single_spectrum_is_a_graph_of_one_level_with_the_precursor_as_root() {
         .picchi
         .iter()
         .any(|p| (p.1 - 100.0).abs() < 1e-9 && p.2.is_some()));
-    assert!(g.nodes[g.archi[0].a].formula.is_some());
+    assert!(g.nodes[g.edges[0].to].formula.is_some());
 }

@@ -149,18 +149,18 @@ export function titolo(what, empty, prefix = TIPI.bug.prefix) {
 }
 
 /** The link that opens a new issue of the public repository with the form of its kind filled in (title, label, the report in the main field, and for a bug the browser and system), at most `URL_MAX`
- * characters: if the report is longer it is cut (and says so), and `troncato` is true. @param {{kind?: string, title: string, body: string, ambiente?: string, cut: string}} p */
+ * characters: if the report is longer it is cut (and says so), and `truncated` is true. @param {{kind?: string, title: string, body: string, ambiente?: string, cut: string}} p */
 export function urlIssue(p) {
   const t = TIPI[/** @type {keyof typeof TIPI} */ (p.kind || "bug")] || TIPI.bug;
   const mk = (/** @type {string} */ body) => `${REPO}/issues/new?template=${t.template}&labels=${t.label}&title=${encodeURIComponent(p.title)}${p.ambiente != null ? `&ambiente=${encodeURIComponent(p.ambiente.slice(0, 200))}` : ""}&${t.field}=${encodeURIComponent(body)}`;
   let url = mk(p.body);
-  if (url.length <= URL_MAX) return { url, troncato: false };
+  if (url.length <= URL_MAX) return { url, truncated: false };
   // never cut a pair of surrogates in two: encodeURIComponent would throw
   const cutAt = (/** @type {number} */ n) => { const h = p.body.slice(0, n); return /[\uD800-\uDBFF]$/.test(h) ? h.slice(0, -1) : h; };
   let lo = 0, hi = p.body.length;
   while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (mk(cutAt(mid) + p.cut).length <= URL_MAX) lo = mid; else hi = mid - 1; }
   url = mk(cutAt(lo) + p.cut);
-  return { url, troncato: true };
+  return { url, truncated: true };
 }
 
 /** longest mailto link (characters, already percent-encoded): many mail programs refuse longer ones */
@@ -172,10 +172,10 @@ export function urlEmail(p) {
   const to = p.user + "@" + p.host;
   const mk = (/** @type {string} */ body) => `mailto:${to}?subject=${encodeURIComponent(p.subject)}&body=${encodeURIComponent(body)}`;
   let url = mk(p.body);
-  if (url.length <= MAIL_MAX) return { url, troncato: false };
+  if (url.length <= MAIL_MAX) return { url, truncated: false };
   const cutAt = (/** @type {number} */ n) => { const h = p.body.slice(0, n); return /[\uD800-\uDBFF]$/.test(h) ? h.slice(0, -1) : h; };
   let lo = 0, hi = p.body.length;
   while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (mk(cutAt(mid) + p.cut).length <= MAIL_MAX) lo = mid; else hi = mid - 1; }
   url = mk(cutAt(lo) + p.cut);
-  return { url, troncato: true };
+  return { url, truncated: true };
 }

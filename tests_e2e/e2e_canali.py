@@ -90,7 +90,7 @@ try:
             d = pg.evaluate("""(async () => { const f = E.files.find(f => (f.label || f.name || '').includes('K_MIRATO-t0')); const c = (await CANALI.canali(f.k)).channels.find(c => c.ms_level === 2);
               const a = await getXic(f.k, 129.96, 0.5, 2, c.id); const b = await getXic(f.k, 129.96, 0.5, 2); return [a.rt.length, b.rt.length]; })()""")
             assert d[0] > 0 and d[0] <= d[1], d
-        step("XIC inside a channel (api/xic canale=)", xic)
+        step("XIC inside a channel (api/xic channel=)", xic)
         def restore():
             rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).channels"); assert rec, rec
         step("the panel saves the group, not the index", restore)

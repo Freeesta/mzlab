@@ -475,7 +475,7 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
 fn the_method_warnings_are_notes_with_their_text() {
     let dir = folder("notes");
     let file = dir.join("n.mzML");
-    let doc = "{&quot;schema&quot;:&quot;method/1&quot;,&quot;warnings&quot;:[{&quot;key&quot;:&quot;meta.troncato&quot;,&quot;place&quot;:&quot;scan 7&quot;},{&quot;key&quot;:&quot;meta.nuovo&quot;,&quot;place&quot;:&quot;x&quot;}]}";
+    let doc = "{&quot;schema&quot;:&quot;method/1&quot;,&quot;warnings&quot;:[{&quot;key&quot;:&quot;meta.truncated&quot;,&quot;place&quot;:&quot;scan 7&quot;},{&quot;key&quot;:&quot;meta.nuovo&quot;,&quot;place&quot;:&quot;x&quot;}]}";
     let text = format!(
         "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab method/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
     );
@@ -488,7 +488,7 @@ fn the_method_warnings_are_notes_with_their_text() {
     assert_eq!(
         lines,
         [
-            "The file is cut short: scan 7. What comes before the cut is read. (meta.troncato)",
+            "The file is cut short: scan 7. What comes before the cut is read. (meta.truncated)",
             "meta.nuovo: x"
         ]
     );

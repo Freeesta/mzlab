@@ -194,7 +194,7 @@ pub(crate) fn raw_lc<M: ReadAt>(m: &mut Mzml<M>) -> Result<Option<bool>> {
         .and_then(|o| o.get("format"))
         .and_then(|f| f.str())
         == Some("thermo-raw");
-    let no_method = doc.contains("\"meta.mancante\"");
+    let no_method = doc.contains("\"meta.missing\"");
     Ok((raw && !no_method).then(|| v.get("lc").is_some()))
 }
 

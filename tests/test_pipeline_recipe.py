@@ -32,20 +32,20 @@ def test_record_has_the_fields_of_the_schema():
     o = r["o"]
     assert o["schema"] == "feature_pipeline/1" and o["giri"] == 1 and o["sospetti"] is None
     assert o["genitore"] == {"formula": "C9H9", "mz": 200.1, "rt": None, "minuti": [0, 5, None]}
-    assert o["regole"]["versione"] == 3 and o["livelli"]["versione"] == 2 and len(o["tabella_sha256"]) == 64 and len(o["ipotesi"]["registro_sha256"]) == 64
+    assert o["regole"]["versione"] == 3 and o["livelli"]["versione"] == 2 and len(o["table_sha256"]) == 64 and len(o["ipotesi"]["registro_sha256"]) == 64
     assert o["ingressi"] == [{"nome": "a.mzidx", "sha256": "ab"}] and o["parametri"] == {"ppm": 5, "floor": None}
     assert set(o) <= set(schema["properties"])
 
 
 def test_check_refuses_incomplete_records():
-    r = run_node("""const o = await R.record(A); const bad = Object.assign({}, o, { recipe: 'no json', tabella_sha256: 'x' }); delete bad.regole;
+    r = run_node("""const o = await R.record(A); const bad = Object.assign({}, o, { recipe: 'no json', table_sha256: 'x' }); delete bad.regole;
 console.log(JSON.stringify({ bad: W.checkFeatureOp(bad), other: W.checkFeatureOp({ op: 'export_report' }), last: R.lastOp([bad, o, { op: 'x' }], W.checkFeatureOp) === o, none: R.lastOp([bad], W.checkFeatureOp) }));""")
-    assert sorted(r["bad"]) == ["recipe", "regole", "tabella_sha256"] and r["other"] == ["op"] and r["last"] is True and r["none"] is None
+    assert sorted(r["bad"]) == ["recipe", "regole", "table_sha256"] and r["other"] == ["op"] and r["last"] is True and r["none"] is None
 
 
 def test_compare_tells_what_differs():
     r = run_node("""const o = await R.record(A);
-const same = R.compare(o, o), files = R.compare(o, Object.assign({}, o, { ingressi: [{ nome: 'a.mzidx', sha256: 'cd' }] })), eng = R.compare(o, Object.assign({}, o, { crate_version: '0.2.0', tabella_sha256: 'f'.repeat(64) }));
+const same = R.compare(o, o), files = R.compare(o, Object.assign({}, o, { ingressi: [{ nome: 'a.mzidx', sha256: 'cd' }] })), eng = R.compare(o, Object.assign({}, o, { crate_version: '0.2.0', table_sha256: 'f'.repeat(64) }));
 console.log(JSON.stringify({ same: same.same, sl: same.lines, files: [files.filesSame, files.lines.length], eng: [eng.same, eng.crateSame, eng.lines.length] }));""")
     assert r["same"] is True and r["sl"] == [] and r["files"] == [False, 1] and r["eng"] == [False, False, 2]
 

@@ -27,7 +27,7 @@ fn tic_points_are_the_bytes_of_the_page_route() {
     assert_eq!(v.get("x_unit").unwrap().str(), Some("min"));
     assert_eq!(v.get("y_unit").unwrap().str(), Some("counts"));
     let mut r = page_routes(&f);
-    let q = mzlab_core::routes::Query::parse("canale=tic&kind=tic");
+    let q = mzlab_core::routes::Query::parse("channel=tic&kind=tic");
     let want = r.handle("/api/chrom", &q).unwrap().unwrap();
     let got = doc_points(&doc);
     assert_eq!(got, route_points(&want, "rt"));

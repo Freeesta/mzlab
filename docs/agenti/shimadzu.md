@@ -27,7 +27,7 @@ Code: `crates/mzlab-lettori/src/shimadzu/` (feature `shimadzu`, cap 327 680 B), 
 - **Identity**: operator, "generatedBy", "modifiedBy", paths and names of data/method/tune/batch files are `Campo::id()`: they stay in the reader document and do **not** pass into the mzML (`Header::run_params` carries the document without identity). Dates: FILETIMEs reported as the file states them (`YYYY-MM-DDThh:mm:ss`, unknown time zone).
 - The `File Property` of a `.qgd` has fixed offsets (`prop.rs::qgd`): version at 4, generatedBy at 20, date at 52, modifiedBy at 60, date at 92, software version at 148, sample name at 204, id at 236, operator at 300, acquisition date at 508, data file at 580, method file at 836, tune file at 1092, batch file at 1604. In the `.lcd` the properties are XML (`@StoX@`/`@FtoX@` for encoded values).
 
-## Not decoded (entries of `warnings`, `meta.nonDecodificato`)
+## Not decoded (entries of `warnings`, `meta.notDecoded`)
 `GC-2010/GC17A Instrument Parameters` (oven and injector program), `GCMS Configuration`, `LSS Raw Data` and `PDA 3D Raw Data` (UV), `GUMM_Information`, `<storage>/Status`, `MS Status Data`, `Mass Parameters`, `Status Curve`, the embedded `.qgm` method, the records of type 0x0e of a FIA `.lcd` (95 in one file) and 2 records of `kind` 101 of a `.qgd` that do not respect the length formula. Non-ASCII text (CP932) becomes `?`.
 
 ## Tests

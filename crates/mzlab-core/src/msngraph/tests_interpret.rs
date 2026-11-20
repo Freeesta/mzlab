@@ -9,9 +9,9 @@ fn con(formula: Option<&str>) -> Options {
     }
 }
 
-fn of_edge<'a>(g: &Graph, v: &'a [EdgeInterp], da: &str, a: &str) -> &'a EdgeInterp {
-    let (p, f) = (find(g, da), find(g, a));
-    v.iter().find(|x| x.da == p && x.a == f).expect("arc")
+fn of_edge<'a>(g: &Graph, v: &'a [EdgeInterp], from: &str, a: &str) -> &'a EdgeInterp {
+    let (p, f) = (find(g, from), find(g, a));
+    v.iter().find(|x| x.from == p && x.a == f).expect("arc")
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn the_table_has_unique_formulas_and_exact_masses() {
 fn with_formulas_a_loss_is_named_or_left_unlisted() {
     let (g, _) = shifted_graph(&con(Some("C8H10N4O2+H")), &[0, 1, 2, 3], false, 0.0);
     let v = interpreta(&g, PPM);
-    assert_eq!(v.len(), g.archi.len());
+    assert_eq!(v.len(), g.edges.len());
     let co = of_edge(&g, &v, "C6H8N3O", "C5H8N3");
     let p = co.loss.as_ref().unwrap();
     assert_eq!(

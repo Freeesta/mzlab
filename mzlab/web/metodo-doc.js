@@ -49,7 +49,7 @@ const METODO_DOC = (() => {
   }
 
   // the `method/1.warnings` keys of the readers; another is shown as it is, with its place
-  const NOTE_KEYS = ["meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.danneggiato", "meta.ioneScartata", "meta.daTabella"];
+  const NOTE_KEYS = ["meta.notDecoded", "meta.missing", "meta.truncated", "meta.damaged", "meta.ionDiscarded", "meta.fromTable"];
   function notes(/** @type {any} */ d) {
     const a = (d.warnings || []).filter((/** @type {any} */ x) => x && x.key);
     if (!a.length) return "";
