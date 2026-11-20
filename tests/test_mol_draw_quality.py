@@ -9,19 +9,20 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import build, build_example, cli_argv, example_argv, run
+from cargo_util import build, build_example, example_argv, run
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import draw_quality as dq  # noqa: E402
 
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
+CLI = ROOT / "target" / "release" / "mzlab-cli"   # `build` leaves it here (or installs the prebuilt one): no `cargo run` per molecule
 P95_LIMIT_US = 1000.0
 CI_MARGIN = 3.0
 
 
 def scene(smiles):
-    p = subprocess.run(cli_argv("mol", "draw", "smiles:" + smiles, "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    p = subprocess.run([str(CLI), "mol", "draw", "smiles:" + smiles, "--json"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert p.returncode == 0, (smiles, p.stderr)
     return json.loads(p.stdout)
 
