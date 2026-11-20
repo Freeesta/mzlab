@@ -161,6 +161,31 @@ fn f_example() -> String {
 }
 
 #[test]
+fn shift_auto_is_the_engine_estimate_with_its_evidence_and_a_bad_value_is_exit_2() {
+    let f = example();
+    let o = dad(&[
+        "spectrum", &f, "--rt", "1,2", "--minus", &f, "--shift", "auto",
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.contains("dad: shift auto = "), "{}", o.stderr);
+    let d = engine_dad();
+    let (opts, view) =
+        mzlab_core::itemroutes::pda_sub_args("spectrum", 1.0, 2.0, "none", 0.0, true).unwrap();
+    let want = mzlab_core::itemroutes::pda_subtract_data(&d, &d, &opts, view).unwrap() + "\n";
+    let got = String::from_utf8(o.stdout).unwrap();
+    assert_eq!(got, want);
+    let v = parse(got.trim().as_bytes()).unwrap();
+    let al = v.get("sub").unwrap().get("align").unwrap();
+    assert_eq!(al.get("method").unwrap().str(), Some("twc_xcorr"));
+    assert_eq!(al.get("shift_min").unwrap().f64(), Some(0.0), "{got}");
+    // a number stays a shift by hand: no align member
+    let o = dad(&["subtract", &f, &f, "--shift", "0.05"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(!String::from_utf8(o.stdout).unwrap().contains("\"align\""));
+    assert_eq!(dad(&["subtract", &f, &f, "--shift", "soon"]).code, 2);
+}
+
+#[test]
 fn trace_csv_is_the_same_points_as_the_json_and_feeds_the_peak_commands() {
     let f = example();
     let j = dad(&["trace", &f, "--nm", "250,260"]);

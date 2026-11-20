@@ -41,9 +41,11 @@ try:
         pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_selector("#drop", timeout=60000); pg2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def twice():
             pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===1", timeout=90000)
+            # the row flash lasts 1.8 s: record that it happened instead of racing it on a slow runner
+            pg2.evaluate("window.__dupflash = false; new MutationObserver(() => { if (document.querySelector('#flist tr.dupflash')) window.__dupflash = true; }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] })")
             pg2.click("#addf"); pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelector('#cartinfo') && /already loaded/.test(document.querySelector('#cartinfo').textContent)", timeout=30000)
             assert count(pg2) == 1, count(pg2)
-            pg2.wait_for_selector("#flist tr.dupflash", timeout=3000)
+            pg2.wait_for_function("window.__dupflash === true", timeout=30000)
             pg2.set_input_files("#pick", [str(D / "a.mzML"), str(D / "a.mzML")]); pg2.wait_for_timeout(1500); assert count(pg2) == 1, count(pg2)
         step("the same file chosen again is ignored: notice «already loaded», its row lights up, no duplicate", twice)
         def fast():
