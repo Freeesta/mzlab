@@ -1,11 +1,11 @@
 // @ts-check
 // @ts-strict
-// TPMINE-PRIVATE  TPGRUPPI_VIEW: the «Compare conditions» view of Tabui. It receives a `gruppi/1` (the output of the Rust module `crates/mzlab-feat/src/gruppi/`) and draws it: the matrix TP × condition,
+// TPMINE-PRIVATE  TPGROUPS_VIEW: the «Compare conditions» view of Tabui. It receives a `groups/1` (the output of the Rust module `crates/mzlab-feat/src/groups/`) and draws it: the matrix TP × condition,
 // the UpSet of the sets, the chart of the chosen TP (grouped bars with one time per condition, overlaid curves with more times, small multiples beyond 8 conditions), the table of the parent per
 // condition and the exports. It computes nothing: every number (areas, ratios, sets, shapes, Prev.) is read from the JSON. Texts in English (Tabui has no `lang/` keys); colours only from CSS variables
 // (Okabe-Ito for the first 8 conditions); every chart has its table of the data (TDATI); no animation.
-//   TPGRUPPI_VIEW.mount(el, gruppi, { parentName, onOpenRow(rowId) }) → { destroy(), setFilter(value), selectRow(rowId), state(), csv(kind) }
-//   TPGRUPPI_VIEW.rowDetail(el, gruppi, rowId) → boolean: the table «by condition» and the chart of one row (the open row of the table of Tabui)
+//   TPGROUPS_VIEW.mount(el, groups, { parentName, onOpenRow(rowId) }) → { destroy(), setFilter(value), selectRow(rowId), state(), csv(kind) }
+//   TPGROUPS_VIEW.rowDetail(el, groups, rowId) → boolean: the table «by condition» and the chart of one row (the open row of the table of Tabui)
 (() => {
   "use strict";
   const G = /** @type {any} */ (window);
@@ -15,7 +15,7 @@
    * @typedef {{ id: string, present: boolean, n_det: number, n_rep: number, area: number | null, area_sd: number | null, cv: number | null, ratio_ref: number | null, shape: string | null, t_max: number | null, t_half_rise: number | null, rate_rel: number | null, kin: GKin[], dark?: GKin[], prev: Record<string, string> }} GCell
    * @typedef {{ row: number, tp_name: string, mz: number, polarity: string, rt: number, neutral_formula: string | null, ion_formula?: string | null, ppm: number | null, other_polarity: number | null, present_in: string[], only_in: string | null, in_all: boolean, cond: GCell[] }} GRow
    * @typedef {{ id: string, factors: Record<string, string>, files: number[], times: number[], replicates: number, controls: Record<string, number[]>, parent: { k: number | null, half_life: number | null, remaining: number | null } }} GCond
-   * @typedef {{ format: string, version: number, reference: string | null, norm: string, conditions: GCond[], rows: GRow[], sets: { conditions: string[], rows: number[] }[], warnings: { code: string, condition?: string }[], parent_name?: string }} Gruppi
+   * @typedef {{ format: string, version: number, reference: string | null, norm: string, conditions: GCond[], rows: GRow[], sets: { conditions: string[], rows: number[] }[], warnings: { code: string, condition?: string }[], parent_name?: string }} Groups
    * @typedef {{ parentName?: string, onOpenRow?: (rowId: number) => void }} GOpts
    */
 
@@ -336,7 +336,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     }
     const setsCsv = () => csvText([["Conditions", "Number of TPs", "TP names"], ...g.sets.map(s => [s.conditions.join(" + "), s.rows.length, s.rows.map(i => byRow.get(i)?.tp_name || i).join("; ")])]);
     const csv = (/** @type {string} */ kind) => (kind === "long" ? longCsv() : kind === "wide" ? wideCsv() : kind === "sets" ? setsCsv() : JSON.stringify(g, null, 1));
-    const fileName = (/** @type {string} */ kind) => ({ long: `tabui_conditions_${parent}_${today()}.csv`, wide: `tabui_conditions-wide_${parent}_${today()}.csv`, sets: `tabui_sets_${parent}_${today()}.csv`, json: `tabui_gruppi_${parent}_${today()}.json` }[kind]);
+    const fileName = (/** @type {string} */ kind) => ({ long: `tabui_conditions_${parent}_${today()}.csv`, wide: `tabui_conditions-wide_${parent}_${today()}.csv`, sets: `tabui_sets_${parent}_${today()}.csv`, json: `tabui_groups_${parent}_${today()}.json` }[kind]);
     const tpFile = (/** @type {string} */ ext) => { const r = st.tp != null ? byRow.get(st.tp) : null; return `tabui_tp-${r ? num(r.mz, 1) : "x"}_conditions.${ext}`; };
     async function doDownload(/** @type {string} */ what) {
       const svg = /** @type {SVGElement | null} */ (what.startsWith("up") ? el.querySelector("#gv-upsvg") : el.querySelector("#gv-tp svg.gv-svg:not(.gv-leg svg)"));
@@ -392,7 +392,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
   }
 
   /** the state shared by the parts of the view (the whole view and the detail of one row) */
-  function context(/** @type {HTMLElement} */ el, /** @type {Gruppi} */ g, /** @type {GOpts} */ opts) {
+  function context(/** @type {HTMLElement} */ el, /** @type {Groups} */ g, /** @type {GOpts} */ opts) {
     if (!document.getElementById("gv-css")) { const st = document.createElement("style"); st.id = "gv-css"; st.textContent = CSS; document.head.appendChild(st); }
     const conds = g.conditions, ids = conds.map(c => c.id), ref = g.reference, rows = g.rows, byRow = new Map(rows.map(r => [r.row, r]));
     const parent = slug(opts.parentName || g.parent_name || "parent");
@@ -408,14 +408,14 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     return V;
   }
 
-  function mount(/** @type {HTMLElement} */ el, /** @type {Gruppi} */ g, /** @type {GOpts} */ opts = {}) {
+  function mount(/** @type {HTMLElement} */ el, /** @type {Groups} */ g, /** @type {GOpts} */ opts = {}) {
     const V = context(el, g, opts), st = V.st;
     // ---- skeleton
     el.innerHTML = `<div class="gv" data-gv>
 <div id="gv-warn"></div>
 <div class="gv-bar" role="group" aria-label="Exports">
  <button type="button" data-ex="long" title="One row per TP × condition × time">Comparison (CSV, long)</button><button type="button" data-ex="wide" title="One row per TP">Comparison (CSV, wide)</button>
- <button type="button" data-ex="sets" title="The sets of conditions and their rows">Sets (CSV)</button><button type="button" data-ex="json" title="The complete gruppi/1 output">gruppi/1 (JSON)</button></div>
+ <button type="button" data-ex="sets" title="The sets of conditions and their rows">Sets (CSV)</button><button type="button" data-ex="json" title="The complete groups/1 output">groups/1 (JSON)</button></div>
 <h3 id="gv-h-mx">Comparison matrix</h3>
 <div class="gv-bar"><label for="gv-flt">Filter</label><select id="gv-flt"></select><span id="gv-n" role="status" aria-live="polite" class="sr-only"></span><span id="gv-nv" class="gv-sub"></span></div>
 <div class="gv-sc" id="gv-mx" tabindex="0" role="region" aria-labelledby="gv-h-mx"></div>
@@ -435,7 +435,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
   }
 
   /** the part of the view that belongs to ONE row, for the open row of the table of Tabui: what the row is in each condition (presence, area, ratio, Prev.) and its chart (same chart and `TDATI` table as the view)
-   * @param {HTMLElement} el @param {Gruppi} g @param {number} rowId the `row` of gruppi/1 (the id of the row in the table) @returns {boolean} false when the output has no such row */
+   * @param {HTMLElement} el @param {Groups} g @param {number} rowId the `row` of groups/1 (the id of the row in the table) @returns {boolean} false when the output has no such row */
   function rowDetail(el, g, rowId) {
     const V = context(el, g, {}), r = V.byRow.get(rowId);
     if (!r) { el.innerHTML = ""; return false; }
@@ -450,7 +450,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
   }
 
   /** the Kinetics tab of Tabui with several conditions: the chart of one TP at a time, one curve per condition (layout, value and comparison are the user's choice), the parent per condition and the exports
-   * @param {HTMLElement} el @param {Gruppi} g @param {GOpts} [opts] */
+   * @param {HTMLElement} el @param {Groups} g @param {GOpts} [opts] */
   function kinetics(el, g, opts = {}) {
     const V = context(el, g, opts);
     el.innerHTML = `<div class="gv" data-gv><div id="gv-warn"></div><div id="gv-tp"></div><h3>Parent compound per condition</h3><div class="gv-sc free" id="gv-par"></div></div>`;
@@ -459,5 +459,5 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     return { destroy() { el.innerHTML = ""; }, selectRow(/** @type {number} */ id) { V.select(id, false); }, state() { return { tp: V.st.tp, mode: V.st.mode, layout: V.st.layout, cmp: V.st.cmp }; } };
   }
 
-  G.TPGRUPPI_VIEW = { mount, rowDetail, kinetics, slug, sci };
+  G.TPGROUPS_VIEW = { mount, rowDetail, kinetics, slug, sci };
 })();

@@ -77,9 +77,9 @@ To extract the feature table from one or more files of the dataset:
 
 ```bash
 # Feature extraction in family mode (default: groups TP5 with the parent)
-cargo run --release -p mzlab-cli -- features tests/data/gruppi/standard.mzML --out /tmp/feat.csv
+cargo run --release -p mzlab-cli -- features tests/data/groups/standard.mzML --out /tmp/feat.csv
 
 # Single-ion feature extraction (shows both the parent 241 and the ISF 197 separately)
 echo '{"mode":"ion"}' > /tmp/params.json
-cargo run --release -p mzlab-cli -- features tests/data/gruppi/standard.mzML --params /tmp/params.json --out /tmp/feat_ion.csv
+cargo run --release -p mzlab-cli -- features tests/data/groups/standard.mzML --params /tmp/params.json --out /tmp/feat_ion.csv
 ```

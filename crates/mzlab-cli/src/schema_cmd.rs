@@ -48,7 +48,7 @@ embed!(
     "folder-1.json",
     "fragrules-1.json",
     "grafico-1.json",
-    "gruppi-1.json",
+    "groups-1.json",
     "highlight-1.json",
     "insilico-1.json",
     "inspection-1.json",

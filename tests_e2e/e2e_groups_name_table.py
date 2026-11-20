@@ -14,7 +14,7 @@ r = Run(port=8967, wd="/tmp/wd_gruppi_tabella_nome")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
-        fs = sorted((ROOT / "tests" / "data" / "gruppi").glob("*.mzML"))[:3]
+        fs = sorted((ROOT / "tests" / "data" / "groups").glob("*.mzML"))[:3]
         stage(pg, fs)
         pg.evaluate("loadScript('groups.js').then(() => { const n = ST.files.map(f => f.name); GROUPS.set(n.slice(0, 2), 'Blank'); })")
         wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2", 10000)

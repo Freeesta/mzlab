@@ -23,7 +23,7 @@ def step(name, fn):
         try: CLSAT.append((name[:30], pg.evaluate("window.__cls")))
         except Exception: pass
     except Exception as e:
-        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_gruppi_su_file.py")][-1]
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_groups_onto_file.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split("\n")[:8])[:500]))
 TAB = "Object.fromEntries(ST.files.map(f => [f.name.replace(/\\.mzML$/, ''), f.ugrp || null]))"
 SIDE = "Object.fromEntries(E.files.filter(f => !f.gone).map(f => [fileBase(f.file).replace(/\\.mzML$/, ''), f.ugrp || null]))"

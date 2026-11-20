@@ -1,4 +1,4 @@
-//! `gruppi/1` as text (keys in English, fixed order) and the input of the module as a JSON document:
+//! `groups/1` as text (keys in English, fixed order) and the input of the module as a JSON document:
 //! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "samples": samples/1, "opts": {...}}` (the matrices as lists of rows).
 
 use super::{build, CondOut, GroupOpts, GroupTable, GroupsOut, RowMeta, RowOut};
@@ -47,12 +47,12 @@ impl Fast for Out {
     }
 }
 
-/// The text of `gruppi/1` for a table, the files and the options.
+/// The text of `groups/1` for a table, the files and the options.
 pub fn groups_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<String> {
     Ok(to_json(&build(tb, cs, opts)?))
 }
 
-/// Builds the groups from the JSON input described in the module header and returns `gruppi/1`.
+/// Builds the groups from the JSON input described in the module header and returns `groups/1`.
 pub fn run_json(input: &[u8]) -> Result<String> {
     let (tb, cs, opts) = parse_input(input)?;
     groups_json(&tb, &cs, &opts)
@@ -214,7 +214,7 @@ fn cell_json(o: &mut Out, c: &super::CondRow) {
 /// Writes the groups in the fixed order of the schema.
 pub fn to_json(g: &GroupsOut) -> String {
     let mut o = Out::default();
-    o.raw("{\"format\":\"gruppi\",\"version\":1,\"reference\":");
+    o.raw("{\"format\":\"groups\",\"version\":1,\"reference\":");
     opt_str(&mut o, g.reference.as_deref());
     o.raw(",\"norm\":\"raw\",\"conditions\":[");
     for (i, c) in g.conditions.iter().enumerate() {

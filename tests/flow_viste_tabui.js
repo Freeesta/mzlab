@@ -1,4 +1,4 @@
-// The Tabui result views of Flow (flow/lazy/flow-views-tabui.js without the DOM): the readers of tptab/1, gruppi/1, interp/1 and reatt/1. Exit code 1 on the first failure.
+// The Tabui result views of Flow (flow/lazy/flow-views-tabui.js without the DOM): the readers of tptab/1, groups/1, interp/1 and reatt/1. Exit code 1 on the first failure.
 const fs = require("fs"), vm = require("vm"), path = require("path"), assert = require("assert");
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
@@ -15,7 +15,7 @@ eq(ip.summary.rows.filter(r => ["Change", "MS2 scans", "Mixed spectra left out",
 eq(ip.classes.rows, [["1", "ring", "open", "", "0.6", "", ""]]);
 eq(F.readReatt({ atoms: [{ i: 0, el: 6, heavy_index: 0, q: -0.1234, f_minus: 0.3333 }] }).rows[0], ["0", "6", "0", "-0.123", "", "", "0.333", ""]);
 // the detail: kinetics by time, the notes in words, the best formula candidates, the conditions where the product is present
-const dt = F.readTptabDetail({ times: [5, 10], rows: [{ row: 3, series: [10.4, 200], notes: 17, fit_candidates: [{ neutral_formula: "C8H9NO", ppm: 1.234, total: 0.912 }] }], gruppi: { conditions: [{ id: "O2" }, { id: "N2" }], rows: [{ row: 3, cond: [{ present: true }, { present: false }] }] } });
+const dt = F.readTptabDetail({ times: [5, 10], rows: [{ row: 3, series: [10.4, 200], notes: 17, fit_candidates: [{ neutral_formula: "C8H9NO", ppm: 1.234, total: 0.912 }] }], groups: { conditions: [{ id: "O2" }, { id: "N2" }], rows: [{ row: 3, cond: [{ present: true }, { present: false }] }] } });
 eq(dt.rows[0], ["3", "5: 10; 10: 200", "in time 0, taken out by the blank", "C8H9NO (1.2 ppm, 0.91)", "O2"]);
 eq([F.viewFor("tp", { label: "x.json" }).id, F.viewFor("tp", { label: "x.csv" }).id], ["tp", "table"]);
 console.log("ok");

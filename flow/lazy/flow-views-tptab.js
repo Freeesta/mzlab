@@ -11,7 +11,7 @@
 
   /** tptab/1 → the detail table (one row per product) @param {any} j @returns {{head: string[], rows: string[][], ids: any[]}} */
   F.readTptabDetail = j => {
-    const times = j.times || [], g = j.gruppi, cond = (/** @type {any} */ r) => g ? (g.rows || []).filter((/** @type {any} */ x) => x.row === r.row).flatMap((/** @type {any} */ x) => (x.cond || []).map((/** @type {any} */ c, /** @type {number} */ k) => c.present ? g.conditions[k].id : "").filter(Boolean)).join(", ") : "";
+    const times = j.times || [], g = j.groups, cond = (/** @type {any} */ r) => g ? (g.rows || []).filter((/** @type {any} */ x) => x.row === r.row).flatMap((/** @type {any} */ x) => (x.cond || []).map((/** @type {any} */ c, /** @type {number} */ k) => c.present ? g.conditions[k].id : "").filter(Boolean)).join(", ") : "";
     return {
       head: ["Row", "Areas by time", "Notes", "Formula candidates", "Conditions"],
       rows: (j.rows || []).map((/** @type {any} */ r) => [String(r.row),
@@ -38,13 +38,13 @@
     const { el } = F, rows = (j.rows || []).slice(0, 300), times = j.times || [];
     const d = F.readTptabDetail(j);
     F.drawTable(host, { caption: `${label}, detail`, head: d.head, rows: d.rows, label: `Detail of ${label}`, ids: d.ids });
-    if (rows.length && j.gruppi && j.gruppi.conditions && j.gruppi.conditions.length > 1 && /** @type {any} */ (globalThis).TPLAZY) {
+    if (rows.length && j.groups && j.groups.conditions && j.groups.conditions.length > 1 && /** @type {any} */ (globalThis).TPLAZY) {
       // several conditions: one curve per condition (the Tabui chart, with its data table), not the areas of all the files in one line
       const box = el("div", { class: "flx-one" }); host.append(box);
       const G = /** @type {any} */ (globalThis);
-      G.TPLAZY.load("gruppi-vista.js").then(() => {
+      G.TPLAZY.load("groups-view.js").then(() => {
         if (!box.isConnected) return;
-        const v = G.TPGRUPPI_VIEW.kinetics(box, j.gruppi, { parentName: label });
+        const v = G.TPGROUPS_VIEW.kinetics(box, j.groups, { parentName: label });
         const stop = F.onSelect((/** @type {string | null} */ id, /** @type {string} */ from) => {
           if (!box.isConnected) { stop(); return; }
           if (from !== "kinetics" && id != null && Number.isFinite(Number(id))) v.selectRow(Number(id));

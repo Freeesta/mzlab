@@ -1,9 +1,9 @@
-"""Tabui, the «Compare conditions» view (TP_Mine/lazy/gruppi-vista.js, TPGRUPPI_VIEW): matrix TP × condition, UpSet, chart of the chosen TP, parent table, exports. The component is mounted by hand in
-#tp-right of the built site (administrator mode) with the synthetic fixtures TP_Mine/tests/gruppi_fixture.json (6 endpoint conditions) and gruppi_fixture_kin.json (3 conditions × 5 times; both made by
-tools/gruppi_fixture_vista.py). Checks: counts of the UpSet equal to `sets`, the filter «Only in O2», bars with one time and curves with more, the files downloaded (name, header, content), the
+"""Tabui, the «Compare conditions» view (TP_Mine/lazy/groups-view.js, TPGROUPS_VIEW): matrix TP × condition, UpSet, chart of the chosen TP, parent table, exports. The component is mounted by hand in
+#tp-right of the built site (administrator mode) with the synthetic fixtures TP_Mine/tests/groups_fixture.json (6 endpoint conditions) and groups_fixture_kin.json (3 conditions × 5 times; both made by
+tools/groups_fixture_view.py). Checks: counts of the UpSet equal to `sets`, the filter «Only in O2», bars with one time and curves with more, the files downloaded (name, header, content), the
 keyboard on the matrix and the UpSet, the table of the data of every chart, axe (light and dark), the first draw of 300 rows × 8 conditions (≤ 500 ms), small multiples with 9 and 12 conditions
-and no horizontal scroll of the page at 360 px. MZLAB_PIPE_SITE reuses a built site. Run from the repo root: python3 tests_e2e/e2e_tabui_gruppi_vista.py"""
-# covers: TP_Mine/lazy/gruppi-vista, TP_Mine/tests/gruppi_fixture, tools/gruppi_fixture_vista
+and no horizontal scroll of the page at 360 px. MZLAB_PIPE_SITE reuses a built site. Run from the repo root: python3 tests_e2e/e2e_tabui_groups_view.py"""
+# covers: TP_Mine/lazy/groups-view, TP_Mine/tests/groups_fixture, tools/groups_fixture_view
 import json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -16,18 +16,18 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
-        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tabui_gruppi_vista.py")][-1]
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tabui_groups_view.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:900]))
 
-FX = json.loads((ROOT / "TP_Mine" / "tests" / "gruppi_fixture.json").read_text(encoding="utf-8"))
-FK = json.loads((ROOT / "TP_Mine" / "tests" / "gruppi_fixture_kin.json").read_text(encoding="utf-8"))
-tmp = Path(tempfile.mkdtemp(prefix="tabui_gruppi_vista_"))
+FX = json.loads((ROOT / "TP_Mine" / "tests" / "groups_fixture.json").read_text(encoding="utf-8"))
+FK = json.loads((ROOT / "TP_Mine" / "tests" / "groups_fixture_kin.json").read_text(encoding="utf-8"))
+tmp = Path(tempfile.mkdtemp(prefix="tabui_groups_view_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
 if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
     subprocess.run(cmd, check=True, capture_output=True)
-shutil.copy2(ROOT / "TP_Mine" / "lazy" / "gruppi-vista.js", site / "static" / "mzfinder" / "lazy" / "gruppi-vista.js")      # fresh source over the site that was built
+shutil.copy2(ROOT / "TP_Mine" / "lazy" / "groups-view.js", site / "static" / "mzfinder" / "lazy" / "groups-view.js")      # fresh source over the site that was built
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
@@ -37,7 +37,7 @@ for _ in range(50):
 AXE = axe_path()
 RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,3).join(' | '))]))"
 
-# a synthetic gruppi/1 with `nc` conditions and `nr` rows (one time): the sets are computed here the way the contract says
+# a synthetic groups/1 with `nc` conditions and `nr` rows (one time): the sets are computed here the way the contract says
 GEN = """([nr, nc]) => {
   const ids = Array.from({ length: nc }, (_, i) => i === 0 ? "Reference" : "Cond " + i), sets = new Map(), rows = [];
   for (let r = 0; r < nr; r++) {
@@ -48,11 +48,11 @@ GEN = """([nr, nc]) => {
     rows.push({ row: r + 1, tp_name: "TP " + (200 + r), mz: 200 + r + 0.3, polarity: "+", rt: 3 + (r % 90) / 10, neutral_formula: null, ppm: null, other_polarity: null, present_in: pres, only_in: pres.length === 1 ? pres[0] : null, in_all: pres.length === nc, cond });
     const key = pres.join("|"); sets.set(key, [...(sets.get(key) || []), r + 1]);
   }
-  return { format: "gruppi", version: 1, reference: "Reference", norm: "raw", conditions: ids.map(id => ({ id, factors: {}, files: [], times: [60], replicates: 1, controls: {}, parent: { k: 0.01, half_life: 69, remaining: 0.5 } })),
+  return { format: "groups", version: 1, reference: "Reference", norm: "raw", conditions: ids.map(id => ({ id, factors: {}, files: [], times: [60], replicates: 1, controls: {}, parent: { k: 0.01, half_life: 69, remaining: 0.5 } })),
     rows, sets: [...sets].sort((a, b) => b[1].length - a[1].length).map(([k, v]) => ({ conditions: k.split("|"), rows: v })), warnings: [] };
 }"""
 MOUNT = """([fx, name]) => { const host = document.querySelector("#tp-right"); host.innerHTML = '<div id="gv-host"></div>'; window.__opened = [];
-  const t0 = performance.now(); window.__V = window.TPGRUPPI_VIEW.mount(document.querySelector("#gv-host"), fx, { parentName: name, onOpenRow: id => window.__opened.push(id) });
+  const t0 = performance.now(); window.__V = window.TPGROUPS_VIEW.mount(document.querySelector("#gv-host"), fx, { parentName: name, onOpenRow: id => window.__opened.push(id) });
   return performance.now() - t0; }"""
 
 WIDE = "() => [...document.querySelectorAll('body *')].filter(e => { if (e.getBoundingClientRect().right <= document.documentElement.clientWidth + 1 || getComputedStyle(e).position === 'fixed') return false; for (let a = e.parentElement; a && a !== document.documentElement; a = a.parentElement) if (getComputedStyle(a).overflowX !== 'visible') return false; return true; }).slice(0, 5).map(e => e.tagName + '#' + e.id + '.' + String(e.className.baseVal ?? e.className) + ' ' + Math.round(e.getBoundingClientRect().right))"
@@ -65,8 +65,8 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")     # the view needs no engine: a build without the .wasm must not block the test
         pg.wait_for_function("typeof window.TDATI === 'object'", timeout=120000)
-        pg.evaluate("() => window.TPLAZY.load('gruppi-vista.js')")
-        pg.wait_for_function("typeof window.TPGRUPPI_VIEW === 'object'", timeout=20000)
+        pg.evaluate("() => window.TPLAZY.load('groups-view.js')")
+        pg.wait_for_function("typeof window.TPGROUPS_VIEW === 'object'", timeout=20000)
         mount = lambda fx, name="Demo Parent": pg.evaluate(MOUNT, [fx, name])
         mount(FX)
 
@@ -183,8 +183,8 @@ try:
             assert len(L) == 1 + len(FX["rows"])
             d = grab('[data-ex="sets"]'); L = Path(d.path()).read_text(encoding="utf-8").splitlines()
             assert L[0] == "Conditions,Number of TPs,TP names" and len(L) == 1 + len(FX["sets"]) and L[1].startswith(" + ".join(FX["sets"][0]["conditions"]) + "," + str(len(FX["sets"][0]["rows"]))), L[:2]
-            d = grab('[data-ex="json"]'); assert re.fullmatch(r"tabui_gruppi_demo-parent_\d{8}\.json", d.suggested_filename)
-            assert json.loads(Path(d.path()).read_text(encoding="utf-8")) == FX, "the JSON is the gruppi/1 as given"
+            d = grab('[data-ex="json"]'); assert re.fullmatch(r"tabui_groups_demo-parent_\d{8}\.json", d.suggested_filename)
+            assert json.loads(Path(d.path()).read_text(encoding="utf-8")) == FX, "the JSON is the groups/1 as given"
             pg.select_option("#gv-flt", "only:O2")
             d = grab('[data-ex="long"]'); L = Path(d.path()).read_text(encoding="utf-8").splitlines()
             assert len(L) == 1 + sum(len(c["kin"]) for r in FX["rows"] if r["only_in"] == "O2" for c in r["cond"]), "the CSV holds the rows shown"

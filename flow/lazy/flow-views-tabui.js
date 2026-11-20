@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): result views of the transformation-product steps. The JSON a step or Tabui writes becomes tables: tptab/1 (products, and the conditions
-// of gruppi/1 with a bar chart of one product), interp/1 (the reading of one row) and reatt/1 (the reactivity of the parent). Pure readers (F.read*) then views.
+// of groups/1 with a bar chart of one product), interp/1 (the reading of one row) and reatt/1 (the reactivity of the parent). Pure readers (F.read*) then views.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -20,7 +20,7 @@
     ids: (j.rows || []).map((/** @type {any} */ r) => r.row),
   });
 
-  /** gruppi/1 → the presence matrix (one row per product, one column per condition), the sets, the parent's kinetics @param {any} g */
+  /** groups/1 → the presence matrix (one row per product, one column per condition), the sets, the parent's kinetics @param {any} g */
   F.readGruppi = g => {
     const ids = (g.conditions || []).map((/** @type {any} */ c) => c.id);
     const cell = (/** @type {any} */ c) => !c.present ? "absent" : `present, area ${fx(c.area, 0)}${c.ratio_ref !== null && c.ratio_ref !== undefined && c.ratio_ref !== 1 ? `, ×${fx(c.ratio_ref, 2)} of the reference` : ""}`;
@@ -100,16 +100,16 @@
   /** JSON → the view of its format; a wrong shape says so @param {string} text @param {string} label @param {HTMLElement} host */
   const open = (text, label, host) => {
     const { el } = F, j = JSON.parse(text), kind = j.schema || j.format;
-    if (kind === "tptab/1" || kind === "gruppi/1") F.watchRows(host, "products");
+    if (kind === "tptab/1" || kind === "groups/1") F.watchRows(host, "products");
     if (kind === "tptab/1") {
       if (!j.rows || !j.rows.length) { host.append(el("p", { class: "fl-note", text: `${label} has no products to show.` })); return; }
       table(host, label, F.readTptab(j), `Table ${label}`);
       if (F.tptabDetail) F.tptabDetail(host, j, label);
-      if (j.gruppi) conditions(host, j.gruppi, label);
-    } else if (kind === "gruppi/1") conditions(host, j, label);
+      if (j.groups) conditions(host, j.groups, label);
+    } else if (kind === "groups/1") conditions(host, j, label);
     else if (kind === "interp/1") { const d = F.readInterp(j); table(host, label, d.summary, `Reading of ${label}`); table(host, `${label}, site classes`, d.classes, `Site classes of ${label}`); }
     else if (kind === "reatt/1" || j.atoms) table(host, label, F.readReatt(j), `Table ${label}`);
-    else host.append(el("p", { class: "fl-note", text: `${label} is not a file this view knows (tptab/1, gruppi/1, interp/1 or reatt/1).` }));
+    else host.append(el("p", { class: "fl-note", text: `${label} is not a file this view knows (tptab/1, groups/1, interp/1 or reatt/1).` }));
   };
   F.openTabui = open;
   F.registerView({ id: "tp", title: "Products", types: ["tp"], accepts: (/** @type {any} */ item) => /\.json$/i.test(item.label), open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => open(await item.text(), item.label, host) });
