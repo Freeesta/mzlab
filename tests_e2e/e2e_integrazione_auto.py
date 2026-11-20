@@ -100,10 +100,9 @@ try:
             need(len(pg.evaluate(ROWS)) == n, "a second run adds nothing: every window overlaps one already there")
         step("a second run adds nothing", once)
         def undo():
-            pg.evaluate("STORIA.annulla()"); frames(pg, 3)
+            pg.evaluate("HISTORY.undo()"); frames(pg, 3)
             wait_for_js(pg, "E.panels.find(q => q.type === 'mrm').ints.length === 0", timeout=30000)
             wait_for_js(pg, "document.querySelector('#manint').hidden || document.querySelectorAll('#manint tbody tr').length === 0", timeout=30000)
-            pg.evaluate("STORIA.rifai && STORIA.rifai()"); frames(pg, 3)
         step("one undo removes them all", undo)
         def unmatched():
             pg.evaluate("loadScript('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol_min: 0.01 }))")

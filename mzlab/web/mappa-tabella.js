@@ -112,9 +112,9 @@ const MAPTAB = (/** @type {MappaCtx} */ c, /** @type {Pick<ReturnType<typeof MAP
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="csv"]').onclick = () => excel(p, true);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
-    box.querySelector('[data-t="clear"]').onclick = () => {          // no question: «Removed · Undo» (storia.js) puts the marks back
+    box.querySelector('[data-t="clear"]').onclick = () => {          // no question: «Removed · Undo» (history.js) puts the marks back
       const gone = pts(p).splice(0), refresh = () => { ptsSave(p); overlay(p); tableNow(p); }; refresh();
-      if (gone.length && STORIA) STORIA.tolto({ what: T("storia.marcature"), p, dati: JSON.stringify(gone), undo: () => { pts(p).splice(0, 0, ...gone); refresh(); }, redo: () => { pts(p).splice(0); refresh(); } });
+      if (gone.length && HISTORY) HISTORY.removed({ what: T("history.marks"), p, data: JSON.stringify(gone), undo: () => { pts(p).splice(0, 0, ...gone); refresh(); }, redo: () => { pts(p).splice(0); refresh(); } });
     };
     box.querySelectorAll("tbody tr[data-i]").forEach((/** @type {ElementoDati} */ tr) => {
       const i = +tr.dataset.i;

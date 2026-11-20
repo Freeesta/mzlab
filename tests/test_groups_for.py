@@ -24,7 +24,7 @@ globalThis.lrTog = () => true; globalThis.ESP = { voce: () => ({ spettri: true }
 globalThis.E = { files: ["MQ_H2O2_T00.mzML", "MQ_N2_T00.mzML", "TW_H2O2_T00.mzML", "QC_std.mzML"].map(file => ({ file })) };
 // the engine stub: the first token of the name is the matrix (none for QC), the second the condition; shaped as `sample-vars/1`
 const NAMES = n => n.replace(/\\.mzML$/, "").split("_");
-globalThis.ask = async () => null; globalThis.STORIA = null;
+globalThis.ask = async () => null; globalThis.HISTORY = null;
 globalThis.fetch = async (_url, { body }) => {
   // the engine's group name: the first token the names share
   if (_url.endsWith("group_name")) { const t = JSON.parse(body).names.map(n => n.split("_")[0]); return { json: async () => ({ name: t.every(x => x === t[0]) ? t[0] : "" }) }; }
@@ -125,12 +125,12 @@ def test_the_name_of_a_new_group_falls_back_to_group_n_when_the_engine_has_none_
 @needs_node
 def test_every_group_action_is_one_step_named_after_the_action():
     out = run("""
-      const pila = { v: [] }; globalThis.STORIA = { pila };
-      COMANDI.fai = (_a, _b, fn) => { fn(); pila.v.push({ cmd: "files.view", w: "storia.campi", t: Date.now() }); };
-      await GROUPS.by({ by: "matrix" }); const w = [pila.v.at(-1).w];
-      GROUPS.set(["QC_std.mzML"], "MQ"); w.push(pila.v.at(-1).w);
-      await GROUPS.onto(["QC_std.mzML"], "TW_H2O2_T00.mzML"); w.push(pila.v.at(-1).w);
-      GROUPS.ungroup("MQ"); w.push(pila.v.at(-1).w);
-      await GROUPS.by(null); w.push(pila.v.at(-1).w);
-      console.log(JSON.stringify([w, pila.v.length]));""")
+      const stack = { v: [] }; globalThis.HISTORY = { stack };
+      COMANDI.fai = (_a, _b, fn) => { fn(); stack.v.push({ cmd: "files.view", w: "history.fields", t: Date.now() }); };
+      await GROUPS.by({ by: "matrix" }); const w = [stack.v.at(-1).w];
+      GROUPS.set(["QC_std.mzML"], "MQ"); w.push(stack.v.at(-1).w);
+      await GROUPS.onto(["QC_std.mzML"], "TW_H2O2_T00.mzML"); w.push(stack.v.at(-1).w);
+      GROUPS.ungroup("MQ"); w.push(stack.v.at(-1).w);
+      await GROUPS.by(null); w.push(stack.v.at(-1).w);
+      console.log(JSON.stringify([w, stack.v.length]));""")
     assert out == [["groups.undo.by", "groups.undo.move", "groups.undo.join", "groups.undo.ungroup", "groups.undo.none"], 5]

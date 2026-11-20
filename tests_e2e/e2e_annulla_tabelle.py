@@ -22,7 +22,7 @@ try:
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
         def undo(): pg.keyboard.press(f"{mod}+z"); tick()
         def redo(): pg.keyboard.press(f"{mod}+Shift+z"); tick()
-        def fresh(): pg.evaluate("STORIA.svuota();document.activeElement&&document.activeElement.blur()")
+        def fresh(): pg.evaluate("HISTORY.clear();document.activeElement&&document.activeElement.blur()")
         ev = pg.evaluate
         def files_view():
             fresh()
@@ -34,8 +34,8 @@ try:
             assert ev("E.panels.map(p=>p.type).sort().join()") == "chrom,spec", "the panels it closed come back"
             redo(); assert ev("E.files[0].vis") is False, "redo hides it"
             undo()
-            n = ev("STORIA.pila.v.length")
-            ev("fileViewDo(()=>{E.files[1].label='zz'})"); assert ev("STORIA.pila.v.length") == n + 1
+            n = ev("HISTORY.stack.v.length")
+            ev("fileViewDo(()=>{E.files[1].label='zz'})"); assert ev("HISTORY.stack.v.length") == n + 1
             undo(); assert ev("E.files[1].label") != "zz", "Ctrl+Z gives the name back"
             first = ev("E.files.map(f=>f.file)")
             ev("reorderFiles(E.files[1].k,E.files[0].k,true)"); tick()
@@ -71,9 +71,9 @@ try:
             fresh()
             ev("openXic(null)") if False else None
             ev("xicDirect(364.4,null,null)"); tick(); pg.wait_for_function(f"!!{XIC}&&{XIC}.traces.length===1")
-            n = ev("STORIA.pila.v.length"); xp = XIC
+            n = ev("HISTORY.stack.v.length"); xp = XIC
             ev(f"addTrace({xp},152.2)"); assert ev(f"{xp}.traces.length") == 2
-            assert ev("STORIA.pila.v.length") == n + 1
+            assert ev("HISTORY.stack.v.length") == n + 1
             undo(); assert ev(f"{xp}.traces.length") == 1, "Ctrl+Z takes the trace out"
             redo(); assert ev(f"{xp}.traces.length") == 2, "redo"
             ev(f"COMANDI.fai('series.visibility',{xp},()=>{{{xp}.hid['x|0|364.4']=true}})")

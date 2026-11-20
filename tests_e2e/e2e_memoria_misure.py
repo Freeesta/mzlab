@@ -131,7 +131,7 @@ SIZER = r"""
 })()
 """
 # globals of the classic scripts are lexical (not on window) and eval is forbidden by the CSP: each one is named here with a typeof guard
-LEX = ["CACHE", "SC", "E", "S", "NB", "PERF", "STORIA"]
+LEX = ["CACHE", "SC", "E", "S", "NB", "PERF", "HISTORY"]
 SIZER = SIZER % (json.dumps(LEX), ", ".join(f"{n}: typeof {n} !== 'undefined' ? {n} : undefined" for n in LEX))
 
 

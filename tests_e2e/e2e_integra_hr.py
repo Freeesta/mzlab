@@ -53,7 +53,7 @@ for kind in ("hr", "lr"):
                         assert over > 0 and over <= zero * (1 + 1e-6), v                              # the engine's own baseline only takes background away (its area is counts x s as well, the default unit)
                 step("the area shown is the Rust area from zero; the engine's baseline is kept on the record", parity)
                 def undo_redo():
-                    pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
+                    pg.evaluate("HISTORY.undo()"); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
                     click_at(pg, 10.2); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===2")
                     click_at(pg, 10.2); wait_for_js(pg, "!document.querySelector('#qnote').hidden")
                     assert pg.evaluate("E.panels.find(q=>q.type==='xic').ints.length") == 2          # a second click adds nothing over the peaks already integrated

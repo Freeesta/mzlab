@@ -169,22 +169,22 @@ function closePanel(/** @type {Pannello} */ p) {
   STATO.rimuovi(p, "close");
 }
 
-/** The X of a panel: it closes at once and «Removed · Undo» opens it again, in its place and with its integrations, zoom and settings (storia.js). @param {any} p */
+/** The X of a panel: it closes at once and «Removed · Undo» opens it again, in its place and with its integrations, zoom and settings (history.js). @param {any} p */
 function chiudiPannello(p) {
-  const dati = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
-  const what = typeof p.title === "string" && p.title ? p.title : I18N.t("storia.pannello");
+  const snapshot = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
+  const what = typeof p.title === "string" && p.title ? p.title : I18N.t("history.panel");
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
   const vis0 = visNow();
   let cur = p;
   const chiudi = () => { closePanel(cur); if (!E.panels.length) untickAll(); after(); };
   chiudi();
-  if (!STORIA) return;
-  STORIA.tolto({ what, tab, dati, redo: chiudi, undo: () => {
+  if (!HISTORY) return;
+  HISTORY.removed({ what, tab, data: snapshot, redo: chiudi, undo: () => {
     visBack(vis0);
-    const sp = JSON.parse(dati); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
+    const sp = JSON.parse(snapshot); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
     const q = riapriPannello(sp);
     for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some((/** @type {Pannello} */ x) => x.id === rel[k]) ? rel[k] : null;
-    STORIA.segui(cur, q); cur = q; after(); ctl(q); redrawAll();
+    HISTORY.follow(cur, q); cur = q; after(); ctl(q); redrawAll();
   } });
 }
 
@@ -205,8 +205,8 @@ function closeAllPanels() {
     workClosedAll();
   };
   go();
-  if (!STORIA || !recs.length) return;
-  STORIA.tolto({ what: I18N.t("storia.pannelli"), dati: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
+  if (!HISTORY || !recs.length) return;
+  HISTORY.removed({ what: I18N.t("history.panels"), data: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
     visBack(vis0); workClosedAll(false);
     const made = /** @type {Map<number, Pannello>} */ (new Map());
     recs.forEach((/** @type {[number, any, any]} */ [id, rec]) => made.set(id, riapriPannello(rec)));
@@ -361,7 +361,7 @@ function addPanel(type, o, after) {
   if (p.type === "spec") { if (window.XICBTN) XICBTN.wire(p); if (window.TABPICCHI) TABPICCHI.wire(p); }
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMANDI.fai("spec.display", p, () => { relB.classList.toggle("on", p.rel = !specRel(p)); }); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
+  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushFields(p, "history.smooth"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
   const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMANDI.fai("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
@@ -804,7 +804,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, (/** @type {string} */ v, /** @type {string|undefined} */ g) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : g === "1" ? setFondo(p, v) : setSub(p, v)));
     else if (k === "cinfo") corrInfoWire(p, x);
-    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
+    else if (k === "snipw") x.onchange = () => { pushFields(p, "history.background"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
   window.CANALI?.wire(p, c);
@@ -1054,7 +1054,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
         p.k = +x.value; activeFile(+x.value); return;
       }
       COMANDI.fai("panel.source", p, () => {  // one undo step: the choice with what it resets (measures, zoom, background)
-      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
+      if (k === "bk" || k === "bg") pushFields(p, "history.blank"); else if (k === "mode") fondoOnStack(p, x.value);
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.hasAttribute("data-num") ? CAMPI.num(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && k === "k") p.kSet = true;  // the file chosen in the menu stays until another choice or a click on a trace of the TIC

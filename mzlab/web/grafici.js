@@ -193,13 +193,13 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
-  pushCampi(p, "storia.bianco");
+  pushFields(p, "history.blank");
   if (p.type === "map") return MAPPA.setCorr(p, v);
   p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);       // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
   ctl(p); draw(p); uiSave();
 }
 // chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
-function setSub(p, v) { pushCampi(p, "storia.bianco"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
+function setSub(p, v) { pushFields(p, "history.blank"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
 // thin grey baseline of a trace (stacked and waterfall views)
 function baseLine(g, y, xa, xb) { g.save(); g.strokeStyle = ecss("--line"); g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke(); g.restore(); }
 // choosing stacked or waterfall switches the automatic background on, unless the student already picked one
@@ -207,10 +207,10 @@ function fondoOnStack(p, mode) { if (mode !== "ovl" && p.fondo && p.fondo.mode =
 function setFondo(p, v) {
   const f = p.fondo; p._pickIbk = false;
   if (v === "tract") {
-    if (f.ib) { pushCampi(p, "storia.fondo"); f.mode = "tract"; }
+    if (f.ib) { pushFields(p, "history.background"); f.mode = "tract"; }
     else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }      // ibkSet records its own step
     else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  } else if (v === "flat") FONDOP.on(p); else { pushCampi(p, "storia.fondo"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
+  } else if (v === "flat") FONDOP.on(p); else { pushFields(p, "history.background"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
   ctl(p); draw(p); uiSave();
 }
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
@@ -243,7 +243,7 @@ function ibkSpectra(p) {
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
-  pushCampi(p, "storia.fondo"); p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
+  pushFields(p, "history.background"); p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
   p._ibkA = null; draw(p); uiSave();
 }
 function ibkPick(p, mode, iv) {

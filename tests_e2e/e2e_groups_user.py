@@ -51,7 +51,7 @@ try:
         def ungroup():
             pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("^Ungroup$")).click()
             wait_for_js(pg, f"!Q('{UG}') && !E.files.some(f => f.ugrp)", 5000)
-            pg.evaluate("STORIA.annulla()")
+            pg.evaluate("HISTORY.undo()")
             wait_for_js(pg, "E.files.filter(f => f.ugrp === 'Blanks').length === 3", 5000)
         step("Ungroup dissolves the group; undo brings it back", ungroup)
         def reload():
@@ -62,7 +62,7 @@ try:
         def remove():
             drawer(pg); pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("Remove group")).click()
             wait_for_js(pg, "E.files.every(f => f.gone)", 5000)
-            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.files.filter(f => !f.gone).length === 3", 5000)
+            pg.evaluate("HISTORY.undo()"); wait_for_js(pg, "E.files.filter(f => !f.gone).length === 3", 5000)
         step("«Remove group from the session» takes the files away with one undo", remove)
     r.close()
 except Exception as e:

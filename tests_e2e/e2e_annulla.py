@@ -1,4 +1,4 @@
-"""STORIA (storia.js): Ctrl/Cmd+Z undoes the last action of the visible tab (zoom, integration, smoothing), Shift+Ctrl+Z / Ctrl+Y redo it;
+"""HISTORY (history.js): Ctrl/Cmd+Z undoes the last action of the visible tab (zoom, integration, smoothing), Shift+Ctrl+Z / Ctrl+Y redo it;
 text fields keep the browser undo; an empty stack says so."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -48,7 +48,7 @@ try:
             pg.evaluate("document.getElementById('tmpin').remove()")
         step("Ctrl+Z in a text field stays the browser's", field)
         def empty():
-            pg.evaluate("STORIA.svuota()"); pg.evaluate("document.activeElement&&document.activeElement.blur()")
+            pg.evaluate("HISTORY.clear()"); pg.evaluate("document.activeElement&&document.activeElement.blur()")
             key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Nothing to undo" in t or "Nothing to undo" in t, t
             assert pg.evaluate("document.getElementById('np-undo').disabled") is True
         step("empty stack: short notice, button disabled", empty)

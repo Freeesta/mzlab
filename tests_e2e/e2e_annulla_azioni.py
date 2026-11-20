@@ -39,7 +39,7 @@ try:
             else: pg.click("#np-redo")
             tick()
         def reset():
-            pg.evaluate(f"(()=>{{const p={SPEC};p.meas=null;p.rul=false;p.el.querySelector('[data-a=rul]').classList.remove('on');STORIA.svuota();draw(p)}})()")
+            pg.evaluate(f"(()=>{{const p={SPEC};p.meas=null;p.rul=false;p.el.querySelector('[data-a=rul]').classList.remove('on');HISTORY.clear();draw(p)}})()")
             pg.evaluate("document.activeElement&&document.activeElement.blur()")
         def ruler_keys():
             reset()
@@ -100,17 +100,17 @@ try:
             reset()
             assert pg.evaluate("COMANDI.senzaGestore()") == [], "every command of the table has its handler"
             pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('spec.ruler',p,()=>{{p.rul=true}},{{unisci:'g'}});COMANDI.fai('spec.ruler',p,()=>{{p.rul=false;p.meas={{ref:1,list:[],key:measKey(p)}}}},{{unisci:'g'}})}})()")
-            assert pg.evaluate("STORIA.pila.v.length") == 1, "steps of one gesture (same unisci, less than 0.8 s) are ONE entry"
+            assert pg.evaluate("HISTORY.stack.v.length") == 1, "steps of one gesture (same unisci, less than 0.8 s) are ONE entry"
             undo(); assert meas() is None and not rul(), "one Ctrl+Z takes the whole gesture back"
             assert pg.evaluate("(()=>{try{COMANDI.fai('nope.x',null,()=>1);return 'no'}catch(e){return 'throws'}})()") == "throws", "an action outside the registry is refused"
         step("registry: handlers present, a gesture is one step, unknown id refused", registry_and_burst)
         def pan_drag():
             reset()
             pg.evaluate(f"(()=>{{const p={SPEC};pushZh(p);p.zoom=[100,400];draw(p)}})()"); tick()
-            n0 = pg.evaluate("STORIA.pila.v.length"); box = pg.evaluate(f"(()=>{{const q={SPEC}.cv.getBoundingClientRect();return {{x:q.left+q.width/2,y:q.top+q.height/2}}}})()")
+            n0 = pg.evaluate("HISTORY.stack.v.length"); box = pg.evaluate(f"(()=>{{const q={SPEC}.cv.getBoundingClientRect();return {{x:q.left+q.width/2,y:q.top+q.height/2}}}})()")
             pg.keyboard.down("Shift"); pg.mouse.move(box["x"], box["y"]); pg.mouse.down(); pg.mouse.move(box["x"] + 60, box["y"], steps=5); pg.mouse.move(box["x"] + 120, box["y"], steps=5); pg.mouse.up(); pg.keyboard.up("Shift"); tick()
             assert pg.evaluate(f"{SPEC}.zoom") != [100, 400], "the drag moved the view"
-            assert pg.evaluate("STORIA.pila.v.length") == n0 + 1, "a whole pan drag is ONE step"
+            assert pg.evaluate("HISTORY.stack.v.length") == n0 + 1, "a whole pan drag is ONE step"
             undo(); assert pg.evaluate(f"{SPEC}.zoom") == [100, 400], "Ctrl+Z puts the view before the pan back"
         step("view: a pan drag is one undoable step", pan_drag)
         def annotations():

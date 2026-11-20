@@ -129,7 +129,7 @@ try:
             need(st["csv"] == cli_table(pg, st), "the names are the bytes of mzlab-cli peak table (`names`)")
             tip = pg.evaluate("document.querySelector('#manint thead th:nth-child(4)').title")
             need(0 < len(tip) <= 60, tip)
-            pg.evaluate("STORIA.annulla()"); frames(pg, 3)
+            pg.evaluate("HISTORY.undo()"); frames(pg, 3)
             wait_for_js(pg, "!MANINT.state().csv.includes(',Caffeine 2,')", timeout=60000)
         step("a name goes to the same peak of every sample (Enter), or to one sample alone (Alt+Enter); an own name stays; undo", names)
         def no_notice():

@@ -60,7 +60,7 @@ def drag(pg, src, dst, where=0.5, rest=0.8, hold=None):
     pg.mouse.up()
 def undo(pg): pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+z")
 def redo(pg): pg.keyboard.press("Control+Shift+z")
-def last(pg): return pg.evaluate("(STORIA.pila.v[STORIA.pila.v.length - 1] || {}).w")
+def last(pg): return pg.evaluate("(HISTORY.stack.v[HISTORY.stack.v.length - 1] || {}).w")
 def esc_rename(pg, expect):
     """The new group's name opens in rename mode with the proposed name; Esc keeps it."""
     wait_for_js(pg, "document.getElementById('askdlg').open", 10000)
