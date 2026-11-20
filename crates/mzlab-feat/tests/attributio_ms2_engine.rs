@@ -149,7 +149,7 @@ fn insilico_score_follows_the_reference() {
     );
     let g: Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
     let (mut same, mut total) = (0, 0);
-    for m in g["molecole"].as_array().unwrap() {
+    for m in g["molecules"].as_array().unwrap() {
         let (peaks, ints) = (nums(&m["peaks"]), nums(&m["intensities"]));
         let pairs: Vec<(f64, f64)> = peaks.iter().cloned().zip(ints).collect();
         let pol = m["pol"].as_str().unwrap();

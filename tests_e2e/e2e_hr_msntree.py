@@ -35,7 +35,7 @@ try:
         step("with the formula the nodes are sub-formulas (261, 244, 145)", fixed)
         def xl():
             with pg.expect_download() as d: pg.click("#mt-xlsx")
-            assert d.value.suggested_filename.startswith("albero_MSn") and os.path.getsize(d.value.path()) > 1500
+            assert d.value.suggested_filename.startswith("MSn_tree") and os.path.getsize(d.value.path()) > 1500
         step("Excel of the MSn tree (paths and peaks)", xl)
         def node():
             pg.click("#mt-tbl tr[data-n='1']"); pg.wait_for_selector("#mt-pk tr[data-mz]", timeout=10000)

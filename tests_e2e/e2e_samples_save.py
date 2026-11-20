@@ -70,7 +70,7 @@ try:
             assert pg.evaluate("E.files.find(f => f.file === 'X_dark-adsorption.mzML').time") == -40, "a positive time written in a dark is read as negative"
             with pg.expect_download() as d: pg.evaluate("() => WORKFLOW.export()")
             wf = json.load(open(d.value.path(), encoding="utf-8"))
-            ops = [o for o in wf["operazioni"] if o.get("op") == "samples"]
+            ops = [o for o in wf["operations"] if o.get("op") == "samples"]
             assert len(ops) == 1 and ops[0]["schema"] == "samples/1" and len(ops[0]["sha256"]) == 64 and len(ops[0]["samples"]) == 6, ops
             before = pg.evaluate(SNAP)
             pg.evaluate("SAMPLES.apply([{file:'X_blank.mzML', role:'sample'}, {file:'X_t030min.mzML', role:'sample'}, {file:'X_t005min.mzML', time:9, tconf:false}])")
@@ -79,7 +79,7 @@ try:
             assert pg.evaluate(SNAP) == before, (pg.evaluate(SNAP), before)
             with pg.expect_download() as d2: pg.evaluate("() => WORKFLOW.export()")
             wf2 = json.load(open(d2.value.path(), encoding="utf-8"))
-            ops2 = [o for o in wf2["operazioni"] if o.get("op") == "samples"]
+            ops2 = [o for o in wf2["operations"] if o.get("op") == "samples"]
             assert len(ops2) == 1 and ops2[0]["sha256"] == ops[0]["sha256"] and ops2[0]["samples"] == ops[0]["samples"], (ops2[0]["sha256"], ops[0]["sha256"])
         step(".mzflow saved and opened again: the SHA-256 of the operation samples does not change", mzflow)
 finally:

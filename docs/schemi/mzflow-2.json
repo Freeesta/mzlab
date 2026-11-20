@@ -592,7 +592,7 @@
         },
         "operations": {
           "type": "array",
-          "description": "the log of mzflow/1, unchanged; a reader also takes the mzflow/1 keys formato, programma and operazioni"
+          "description": "the log of mzflow/1, unchanged"
         }
       }
     },

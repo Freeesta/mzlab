@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// MSn infusion (kind "infusion"): the precursor tree of the file (/api/msn_albero, built in Rust from the index), the nodes as scan filters of the cells
+// MSn infusion (kind "infusion"): the precursor tree of the file (/api/msn_tree, built in Rust from the index), the nodes as scan filters of the cells
 // of the bench (filt = "msn:<id>", with mtol/mce of the tree options added to every request by qs()), the Mean | Sum switch (modo=somma) and the
 // right-click entries of a peak (infusione-menu.js). Classic script, loaded before banco.js; the tree panel is in infusione-albero.js.
 const INF = (() => {
@@ -8,7 +8,7 @@ const INF = (() => {
   const O = { tol: "nom", ce: true, sum: false, lv: 0 };
   const isInf = (/** @type {any} */ f) => !!f && !f.gone && f.kind === "infusion";
   const any = () => E.files.some(isInf);
-  const treeUrl = (/** @type {number} */ k, /** @type {string} */ tol, /** @type {boolean} */ ce) => `api/msn_albero?k=${k}&tol=${tol}&ce=${ce ? 1 : 0}`;
+  const treeUrl = (/** @type {number} */ k, /** @type {string} */ tol, /** @type {boolean} */ ce) => `api/msn_tree?k=${k}&tol=${tol}&ce=${ce ? 1 : 0}`;
   const treeFor = (/** @type {number} */ k, /** @type {string} */ tol, /** @type {boolean} */ ce) => memo(`msn|${k}|${tol}|${ce}`, () => J(treeUrl(k, tol, ce)));
   /** The tree of a file for the options in force. @returns {Promise<any>} */
   const tree = (/** @type {number} */ k) => treeFor(k, O.tol, O.ce);

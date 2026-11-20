@@ -393,8 +393,8 @@ try:
             o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
             assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
             assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
-            wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
-            c = [x for x in wf["operazioni"] if x["op"] == "samples"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
+            wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operations"])
+            c = [x for x in wf["operations"] if x["op"] == "samples"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
         step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
 
@@ -412,7 +412,7 @@ try:
 
         def unknown_op():
             pg.evaluate("window.__msgs = []; const i = window.info; window.info = m => { window.__msgs.push(String(m)); }; null")
-            ok = pg.evaluate("WORKFLOW.applyWorkflow(Object.assign({}, window.__wf, { operazioni: window.__wf.operazioni.concat([{ op: 'dal_futuro' }]) }))")
+            ok = pg.evaluate("WORKFLOW.applyWorkflow(Object.assign({}, window.__wf, { operations: window.__wf.operations.concat([{ op: 'dal_futuro' }]) }))")
             ops = pg.evaluate("NB.ops.map(o => o.op)"); assert "dal_futuro" not in ops and "feature_pipeline" in ops, ops
             assert any("dal_futuro" in m for m in pg.evaluate("window.__msgs")), pg.evaluate("window.__msgs")
         step("a .mzflow with an unknown operation opens with a warning", unknown_op)

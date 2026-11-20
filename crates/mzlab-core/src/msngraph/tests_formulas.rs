@@ -14,12 +14,12 @@ fn con(formula: &str) -> Options {
 }
 
 fn f(g: &Graph, i: usize) -> &NodeFormula {
-    g.nodi[i].formula.as_ref().expect("a formula")
+    g.nodes[i].formula.as_ref().expect("a formula")
 }
 
 /// The node whose candidates include `formula` (the m/z may be shifted).
 fn node(g: &Graph, formula: &str) -> Option<usize> {
-    g.nodi.iter().position(|n| {
+    g.nodes.iter().position(|n| {
         n.formula
             .as_ref()
             .is_some_and(|x| x.candidates.iter().any(|c| c.formula == formula))
@@ -31,7 +31,7 @@ fn keys(g: &Graph) -> Vec<(&str, Option<usize>)> {
 }
 
 fn root(g: &Graph) -> usize {
-    g.nodi
+    g.nodes
         .iter()
         .position(|n| {
             n.formula
@@ -67,11 +67,11 @@ fn every_fragment_gets_its_sub_formula() {
         let c = &n.candidates[0];
         assert!(c.even && c.ppm.abs() < 0.01 && c.window == 10.0 && c.prove.is_empty());
     }
-    assert_eq!(g.nodi.len(), 8);
+    assert_eq!(g.nodes.len(), 8);
     assert_eq!(g.scartati.formula, 0);
     assert!(keys(&g).is_empty(), "{:?}", g.avvisi);
     // the M+1 of the 138 is in its spectrum
-    assert!((g.nodi[find(&g, "C6H8N3O")].m1.unwrap() - 7.0).abs() < 1e-9);
+    assert!((g.nodes[find(&g, "C6H8N3O")].m1.unwrap() - 7.0).abs() < 1e-9);
     // the losses: a known one under its usual name, the others in Hill order
     let loss = |a: &str, b: &str| edge(&g, a, b).unwrap().formula.clone().unwrap().0;
     assert_eq!(loss("C6H8N3O", "C5H8N3"), "CO");
@@ -112,7 +112,7 @@ fn an_ion_of_the_other_polarity_or_unreadable_is_noted() {
     ] {
         let g = shifted_graph(&con(t), &[0, 1, 2, 3], false, 0.0).0;
         assert_eq!(keys(&g), vec![(k, None)], "{t}");
-        assert!(g.nodi.iter().all(|n| n.formula.is_none()) && g.nodi.len() == 8);
+        assert!(g.nodes.iter().all(|n| n.formula.is_none()) && g.nodes.len() == 8);
     }
 }
 
@@ -141,7 +141,7 @@ fn below_mz_150_a_wider_window_needs_an_evidence() {
     // ...but the shifted 124 is within 10 ppm of another sub-formula of the root: a candidate, not an identification
     let n124 = f(&g, node(&g, "C7H8O2").unwrap());
     assert!(n124.candidates[0].ppm.abs() < 10.0 && n124.candidates[0].prove.is_empty());
-    assert_eq!((g.nodi.len(), g.scartati.formula), (5, 3));
+    assert_eq!((g.nodes.len(), g.scartati.formula), (5, 3));
     // two evidences asked: a candidate of the wide window needs both
     let o = Options {
         evidence_min: 2,
@@ -150,7 +150,7 @@ fn below_mz_150_a_wider_window_needs_an_evidence() {
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 15.0);
     assert!(node(&g, "C6H8N3O").is_none());
     for n in g
-        .nodi
+        .nodes
         .iter()
         .filter_map(|n| n.formula.as_ref())
         .filter(|n| n.provenance != Some("root"))
@@ -176,7 +176,7 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
     let removed: Vec<(&str, &str)> = g
         .avvisi
         .iter()
-        .map(|a| (a.chiave, a.albero.as_str()))
+        .map(|a| (a.chiave, a.tree.as_str()))
         .collect();
     let expected = [
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@cid30"),
@@ -315,8 +315,8 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     let (g, j) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &narrow);
     assert!(node(&g, "C6H8N3O").is_none());
     let r = root(&g);
-    assert_eq!(g.nodi[r].width, Some(1.0));
-    let n124 = &g.nodi[node(&g, "C7H8O2").unwrap()];
+    assert_eq!(g.nodes[r].width, Some(1.0));
+    let n124 = &g.nodes[node(&g, "C7H8O2").unwrap()];
     assert_eq!(n124.upstream, Some(1.0));
     let v = crate::json::parse(j.as_bytes()).unwrap();
     let iso = |i: usize| {
@@ -344,18 +344,18 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
 #[test]
 fn the_unexplained_peaks_are_counted_on_their_precursor() {
     let (g, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
-    let ns = |x: &str| g.nodi[node(&g, x).unwrap()].unexplained.clone().unwrap();
+    let ns = |x: &str| g.nodes[node(&g, x).unwrap()].unexplained.clone().unwrap();
     // the 138 lost the 109 of its MS3; the 110 lost the 69 and the 42 of its MS4, the stronger first
     assert_eq!(ns("C6H8N3O").n, 1);
     let n110 = ns("C5H8N3");
     assert_eq!((n110.n, n110.peaks.len()), (2, 2));
     assert!(n110.peaks[0].1 >= n110.peaks[1].1);
-    assert!(g.nodi[root(&g)].unexplained.is_none());
+    assert!(g.nodes[root(&g)].unexplained.is_none());
     // in the spectra a peak with no node is an unexplained one: the clean spectrum is the others
     let ms4 = g
         .spettri
         .iter()
-        .find(|s| s.albero == "195@cid30>138@cid30>110@cid35")
+        .find(|s| s.tree == "195@cid30>138@cid30>110@cid35")
         .unwrap();
     assert_eq!(ms4.picchi.iter().filter(|p| p.2.is_none()).count(), 2);
     assert_eq!(ms4.precursore, node(&g, "C5H8N3"));

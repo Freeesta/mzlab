@@ -52,7 +52,7 @@ pub(crate) struct Pos {
 }
 
 pub(crate) struct Measure {
-    pub(crate) livello: i64,
+    pub(crate) level: i64,
     pub(crate) att: Option<String>,
     pub(crate) ce: Option<f64>,
     pub(crate) rel: f64,
@@ -174,7 +174,7 @@ fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
     let mut pos = HashMap::new();
     for x in view.get("nodes").map_or(&[][..], |a| a.arr()) {
         let best = x.get("best");
-        let albero = x.get("tree");
+        let tree = x.get("tree");
         let radial = x.get("radial").filter(|r| !r.is_null());
         pos.insert(
             s(x, "id").ok_or_else(bad)?,
@@ -190,8 +190,8 @@ fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
                 da: best.and_then(|b| s(b, "from")),
                 entranti: n(x, "incoming").unwrap_or(0.0) as i64,
                 common: x.get("common").and_then(|b| b.bool()).unwrap_or(false),
-                col: albero.and_then(|a| n(a, "col")).unwrap_or(0.0) as i64,
-                row: albero.and_then(|a| n(a, "row")).unwrap_or(0.0) as i64,
+                col: tree.and_then(|a| n(a, "col")).unwrap_or(0.0) as i64,
+                row: tree.and_then(|a| n(a, "row")).unwrap_or(0.0) as i64,
                 ring: radial.and_then(|a| n(a, "ring")).unwrap_or(0.0) as i64,
                 angolo: radial.and_then(|a| n(a, "angle")).unwrap_or(0.0),
             },
@@ -211,7 +211,7 @@ fn read_edges(j: &Value) -> Result<Vec<Edge>> {
                 .map_or(&[][..], |m| m.arr())
                 .iter()
                 .map(|m| Measure {
-                    livello: n(m, "level").unwrap_or(0.0) as i64,
+                    level: n(m, "level").unwrap_or(0.0) as i64,
                     att: s(m, "activation"),
                     ce: n(m, "ce"),
                     rel: n(m, "rel").unwrap_or(0.0),

@@ -22,7 +22,7 @@ use testi_::*;
 /// The two views of the graph.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum View {
-    Albero,
+    Tree,
     Radial,
 }
 
@@ -30,7 +30,7 @@ impl View {
     /// `tree` and `radial`.
     pub fn da_nome(n: &str) -> Option<View> {
         match n {
-            "tree" => Some(View::Albero),
+            "tree" => Some(View::Tree),
             "radial" => Some(View::Radial),
             _ => None,
         }
@@ -257,7 +257,7 @@ fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> 
             )
         })
         .collect();
-    let (boxes, center, anelli) = if view == View::Albero {
+    let (boxes, center, anelli) = if view == View::Tree {
         (lay_out_tree(sc, vis, &size), (0.0, 0.0), Vec::new())
     } else {
         lay_out_radial(sc, vis, &size)

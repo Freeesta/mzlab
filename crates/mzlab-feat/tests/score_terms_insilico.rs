@@ -25,7 +25,7 @@ fn the_shares_of_the_explained_peaks_add_up_to_the_score() {
     );
     let g: Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
     let mut n = 0;
-    for m in g["molecole"].as_array().unwrap() {
+    for m in g["molecules"].as_array().unwrap() {
         let (peaks, ints) = (nums(&m["peaks"]), nums(&m["intensities"]));
         let pairs: Vec<(f64, f64)> = peaks.iter().cloned().zip(ints).collect();
         let fr = fragment_molecule(

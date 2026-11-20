@@ -47,7 +47,7 @@ const WINDOW: f64 = 0.5;
 pub(super) fn warning(g: &mut Graph, key: &'static str, node: Option<usize>) {
     g.avvisi.push(Warning {
         chiave: key,
-        albero: String::new(),
+        tree: String::new(),
         nodo: node,
     });
 }
@@ -104,14 +104,17 @@ fn root(g: &Graph, teo: f64, o: &Options) -> Option<(usize, bool)> {
         .radici
         .iter()
         .copied()
-        .filter(|&i| (g.nodi[i].mz - teo).abs() <= WINDOW)
+        .filter(|&i| (g.nodes[i].mz - teo).abs() <= WINDOW)
         .min_by(|&a, &b| {
-            (g.nodi[a].mz - teo)
+            (g.nodes[a].mz - teo)
                 .abs()
-                .total_cmp(&(g.nodi[b].mz - teo).abs())
+                .total_cmp(&(g.nodes[b].mz - teo).abs())
                 .then(a.cmp(&b))
         })?;
-    Some((r, ((g.nodi[r].mz - teo) / teo * 1e6).abs() <= o.ppm_formula))
+    Some((
+        r,
+        ((g.nodes[r].mz - teo) / teo * 1e6).abs() <= o.ppm_formula,
+    ))
 }
 
 /// Fills `ione`, the formulas of the nodes and of the losses when `o.formula` is given; the nodes with no formula leave the graph.
@@ -132,7 +135,7 @@ pub(super) fn assign(g: &mut Graph, o: &Options) {
     if !entro {
         warning(g, "warn.msngrafo.rootMissing", Some(r));
     }
-    let oss = g.nodi[r].mz;
+    let oss = g.nodes[r].mz;
     g.ione = Some(Ione {
         formula: e.testo(&rc),
         theoretical_mz: teo,

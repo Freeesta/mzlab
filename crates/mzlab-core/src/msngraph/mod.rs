@@ -1,4 +1,4 @@
-//! The fragmentation graph of an MSn infusion (`msn-graph/1`, `docs/agenti/msn-graph.md`): the nodes of the precursor tree (`msnalbero`) and
+//! The fragmentation graph of an MSn infusion (`msn-graph/1`, `docs/agenti/msn-graph.md`): the nodes of the precursor tree (`msntree_build`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
 //! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
 //! of the root given by the user, each fragment gets the sub-formulas within the window of ppm (`formule`), and the others leave the graph.
@@ -58,7 +58,7 @@ pub use view::completa;
 
 use crate::error::{Error, Result};
 use crate::json::Value;
-use crate::msntree_build::Albero;
+use crate::msntree_build::Tree;
 
 /// The newest `msn-graph/N` this engine reads.
 pub const MAX_VERSION: u32 = 1;
@@ -157,9 +157,9 @@ pub struct Spettro {
 }
 
 /// What the graph is made of: the tree of the precursors, the consensus of its MS1 (the root ions) and of each of its nodes, in the order
-/// of `albero.nodi`.
+/// of `tree.nodes`.
 pub struct Input<'a> {
-    pub albero: &'a Albero,
+    pub tree: &'a Tree,
     pub ms1: Option<&'a Spettro>,
     pub spettri: &'a [Spettro],
     /// Width of the isolation window (Da) of each node of the tree, `None` when the file does not say; an empty slice = none known.
@@ -172,13 +172,13 @@ pub struct Input<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Measure {
     /// `Nodo::id` of the tree (the filter `msn:<id>` of the routes).
-    pub albero: String,
+    pub tree: String,
     /// MS level of the spectrum.
     pub level: u8,
     pub att: String,
     /// `NaN` when the energies are merged in the tree.
     pub ce: f64,
-    pub n_scansioni: usize,
+    pub n_scans: usize,
     /// % of the base peak of that spectrum (0 for an isolated precursor not found there).
     pub rel: f64,
 }
@@ -205,9 +205,9 @@ pub struct GNode {
     /// Largest distance of an observation from `mz`, in ppm.
     pub dev_ppm: f64,
     /// MS level of the first spectrum in which it is seen (1 = a root ion of the MS1).
-    pub livello: u8,
+    pub level: u8,
     /// The nodes of the tree whose precursor it is (sorted); empty = only observed.
-    pub albero: Vec<String>,
+    pub tree: Vec<String>,
     /// Number of spectra with the peak.
     pub observations: usize,
     pub rel_max: f64,
@@ -237,7 +237,7 @@ pub struct Unexplained {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpettroG {
     /// `Nodo::id` of the tree.
-    pub albero: String,
+    pub tree: String,
     pub level: u8,
     pub att: String,
     pub ce: f64,
@@ -290,7 +290,7 @@ pub struct Ione {
 pub struct Warning {
     pub chiave: &'static str,
     /// Node of the tree (empty when the note is about the graph).
-    pub albero: String,
+    pub tree: String,
     /// Node of the graph the note is about.
     pub nodo: Option<usize>,
 }
@@ -307,7 +307,7 @@ pub struct Counts {
 /// The graph: nodes in the order (level, m/z), arcs in the order (from, to).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Graph {
-    pub nodi: Vec<GNode>,
+    pub nodes: Vec<GNode>,
     pub archi: Vec<Edge>,
     pub radici: Vec<usize>,
     pub polarita: i8,
@@ -339,7 +339,7 @@ pub(crate) const LOSSES: [(&str, f64); 16] = [
     ("SO2", 63.961901),
 ];
 
-/// The graph of the tree and its spectra (`spettri[i]` = consensus of `albero.nodi[i]`).
+/// The graph of the tree and its spectra (`spettri[i]` = consensus of `tree.nodes[i]`).
 pub fn build(ing: &Input, o: &Options) -> Graph {
     let mut g = merge::merge(ing, o);
     formulas::assign(&mut g, o);

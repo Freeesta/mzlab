@@ -39,19 +39,19 @@ fn golden(name: &str, got: &str) {
 
 #[test]
 fn the_svg_of_both_views_is_the_golden_one() {
-    golden("albero.svg", &svg(&graph(), View::Albero).unwrap());
-    golden("radiale.svg", &svg(&graph(), View::Radial).unwrap());
+    golden("tree.svg", &svg(&graph(), View::Tree).unwrap());
+    golden("radial.svg", &svg(&graph(), View::Radial).unwrap());
     golden(
-        "testi-albero.txt",
-        &(texts(&graph(), View::Albero).unwrap().join("\n") + "\n"),
+        "testi-tree.txt",
+        &(texts(&graph(), View::Tree).unwrap().join("\n") + "\n"),
     );
     golden(
-        "testi-radiale.txt",
+        "testi-radial.txt",
         &(texts(&graph(), View::Radial).unwrap().join("\n") + "\n"),
     );
     // a graph with ambiguous ions, a loss named by its mass, a rule label, a common ion and the negative polarity
     let g2 = std::fs::read_to_string(fixtures().join("g2.json")).unwrap();
-    for (v, n) in [(View::Albero, "albero"), (View::Radial, "radiale")] {
+    for (v, n) in [(View::Tree, "tree"), (View::Radial, "radial")] {
         golden(&format!("g2-{n}.svg"), &svg(&g2, v).unwrap());
         golden(
             &format!("g2-testi-{n}.txt"),
@@ -63,13 +63,13 @@ fn the_svg_of_both_views_is_the_golden_one() {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests_e2e/fixtures/msngrafo_80.json"),
     )
     .unwrap();
-    for (v, n) in [(View::Albero, "albero"), (View::Radial, "radiale")] {
+    for (v, n) in [(View::Tree, "tree"), (View::Radial, "radial")] {
         golden(
             &format!("g80-testi-{n}.txt"),
             &(texts(&g80, v).unwrap().join("\n") + "\n"),
         );
     }
-    let s = svg(&g2, View::Albero).unwrap();
+    let s = svg(&g2, View::Tree).unwrap();
     assert!(
         s.contains("+2 more")
             && s.contains("compatible with ")
@@ -82,7 +82,7 @@ fn the_svg_of_both_views_is_the_golden_one() {
 
 #[test]
 fn the_svg_lives_alone_and_says_what_it_is() {
-    let s = svg(&graph(), View::Albero).unwrap();
+    let s = svg(&graph(), View::Tree).unwrap();
     // colours written in the file, no style sheet, no class, nothing from outside
     assert!(
         s.starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\"")
@@ -107,12 +107,12 @@ fn the_svg_lives_alone_and_says_what_it_is() {
     let nomol = graph()
         .replace(r#""molfile":"#, r#""molfile_":"#)
         .replace(r#""smiles":null"#, r#""smiles":"CCO""#);
-    assert!(svg(&nomol, View::Albero)
+    assert!(svg(&nomol, View::Tree)
         .unwrap()
         .contains("no 2D coordinates"));
     assert!(!svg(
         &graph().replace(r#""molfile":"#, r#""molfile_":"#),
-        View::Albero
+        View::Tree
     )
     .unwrap()
     .contains("no 2D coordinates"));
@@ -146,7 +146,7 @@ fn the_html_is_one_file_with_nothing_outside() {
     );
     // the graph (an msn-graph/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
     assert!(h.contains("\"schema\":\"msn-graph/1\""));
-    let end = html(&graph().replace("msn.mzML", "a</script><b>"), View::Albero).unwrap();
+    let end = html(&graph().replace("msn.mzML", "a</script><b>"), View::Tree).unwrap();
     // the five script elements of the page, no more
     assert_eq!(end.matches("</script>").count(), 5);
 }
@@ -160,7 +160,7 @@ fn a_graph_without_view_is_completed_first() {
         svg(&old, View::Radial).unwrap(),
         svg(&j, View::Radial).unwrap()
     );
-    assert!(svg("{}", View::Albero).is_err());
+    assert!(svg("{}", View::Tree).is_err());
 }
 
 fn dir(tag: &str) -> PathBuf {

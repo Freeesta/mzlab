@@ -147,7 +147,7 @@ pub(super) fn edges_svg(sc: &Scena, d: &Layout, view: View, vis: &HashSet<&str>)
             (LINE, "1".into(), " stroke-dasharray=\"4 3\"")
         };
         let (lx, ly);
-        if view == View::Albero {
+        if view == View::Tree {
             let (x1, y1, x2, y2) = (p.x + p.w, p.y + p.h / 2.0, q.x, q.y + q.h / 2.0);
             let mx = (x1 + x2) / 2.0;
             o += &format!(

@@ -548,7 +548,7 @@ def stage_fragments():
         out.append({"smiles": smi, "pol": pol, "ok": True, "peaks": peaks, "n_bonds": len(r["bonds"]),
                     "bonds": [[b["label"], (b["frag1"] or {}).get("formula"), (b["frag2"] or {}).get("formula")] for b in r["bonds"]],
                     "explained": [[e["peak"], e["formula"], e["mz_th"], e["ppm"], e["loss"], e["bond_label"]] for e in r["explained_peaks"]]})
-    return {"molecole": out}
+    return {"molecules": out}
 
 
 EXPORT = ROOT / "tests/data/attributio/campagna_esportazione"

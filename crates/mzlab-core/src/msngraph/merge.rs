@@ -110,11 +110,11 @@ fn active(o: &Options, att: &str) -> bool {
 
 /// All the observations of the tree, with the notes on the precursors.
 fn observe(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>) -> Vec<Oss> {
-    let nodes = &ing.albero.nodi;
+    let nodes = &ing.tree.nodes;
     let mut obs: Vec<Oss> = vec![];
     for (t, n) in nodes.iter().enumerate() {
         let (_, att, _) = n.key.last().expect("a node of the tree has a path");
-        let par = match n.genitore {
+        let par = match n.parent {
             Some(g) => ing.spettri.get(g),
             None => ing.ms1,
         };
@@ -122,23 +122,23 @@ fn observe(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
         if amb {
             warnings.push(Warning {
                 chiave: "warn.msngrafo.isolation",
-                albero: n.id.clone(),
+                tree: n.id.clone(),
                 nodo: None,
             });
         }
         if found.is_none() {
             warnings.push(Warning {
                 chiave: "warn.msngrafo.precNotFound",
-                albero: n.id.clone(),
+                tree: n.id.clone(),
                 nodo: None,
             });
         }
         let (pm, pr) = found.unwrap_or((n.key.last().unwrap().0, 0.0));
-        let lp = n.genitore.map_or(1, |g| nodes[g].livello);
+        let lp = n.parent.map_or(1, |g| nodes[g].level);
         obs.push(Oss {
             mz: pm,
             rel: pr,
-            sorg: n.genitore,
+            sorg: n.parent,
             level: lp,
             prec_di: Some(t),
             iso_di: None,
@@ -153,7 +153,7 @@ fn observe(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
                 mz: m,
                 rel: r,
                 sorg: Some(t),
-                level: n.livello,
+                level: n.level,
                 prec_di: None,
                 iso_di: mono.map(|i| base + i),
                 m1,
@@ -210,13 +210,13 @@ fn node(gr: &[usize], obs: &[Oss], ing: &Input) -> GNode {
         let w: f64 = peaks.iter().map(|x| x.rel).sum();
         peaks.iter().map(|x| x.mz * x.rel).sum::<f64>() / w
     };
-    let mut albero: Vec<String> = gr
+    let mut tree: Vec<String> = gr
         .iter()
         .filter_map(|&i| obs[i].prec_di)
-        .map(|t| ing.albero.nodi[t].id.clone())
+        .map(|t| ing.tree.nodes[t].id.clone())
         .collect();
-    crate::sortc::slice_ord(&mut albero);
-    albero.dedup();
+    crate::sortc::slice_ord(&mut tree);
+    tree.dedup();
     let mut sorg: Vec<Option<usize>> = peaks.iter().map(|x| x.sorg).collect();
     crate::sortc::slice_ord(&mut sorg);
     sorg.dedup();
@@ -227,8 +227,8 @@ fn node(gr: &[usize], obs: &[Oss], ing: &Input) -> GNode {
             .iter()
             .map(|&i| (obs[i].mz - mz).abs() / mz * 1e6)
             .fold(0.0, f64::max),
-        livello: gr.iter().map(|&i| obs[i].level).min().unwrap_or(1),
-        albero,
+        level: gr.iter().map(|&i| obs[i].level).min().unwrap_or(1),
+        tree,
         observations: sorg.len(),
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotope_of: None,
@@ -257,7 +257,7 @@ fn a_monte(ing: &Input, t: usize) -> Option<f64> {
         if let Some(w) = larghezza(ing, k) {
             m = Some(m.map_or(w, |x| x.min(w)));
         }
-        c = ing.albero.nodi[k].genitore;
+        c = ing.tree.nodes[k].parent;
     }
     m
 }
@@ -265,7 +265,7 @@ fn a_monte(ing: &Input, t: usize) -> Option<f64> {
 /// Every spectrum of the tree in the graph, with its peaks and their nodes.
 fn spettri(ing: &Input, o: &Options, obs: &[Oss], di: &[usize], prec: &[usize]) -> Vec<SpettroG> {
     let mut out = vec![];
-    for (t, n) in ing.albero.nodi.iter().enumerate() {
+    for (t, n) in ing.tree.nodes.iter().enumerate() {
         let (_, att, ce) = n
             .key
             .last()
@@ -281,8 +281,8 @@ fn spettri(ing: &Input, o: &Options, obs: &[Oss], di: &[usize], prec: &[usize]) 
             .map(|(i, x)| (x.mz, x.rel, Some(di[i])))
             .collect();
         out.push(SpettroG {
-            albero: n.id.clone(),
-            level: n.livello,
+            tree: n.id.clone(),
+            level: n.level,
             att,
             ce,
             precursore: Some(prec[t]),
@@ -295,14 +295,14 @@ fn spettri(ing: &Input, o: &Options, obs: &[Oss], di: &[usize], prec: &[usize]) 
 
 /// The spectrum of node `t` of the tree as a measure of an arc.
 fn measure(ing: &Input, t: usize, rel: f64) -> Measure {
-    let n = &ing.albero.nodi[t];
+    let n = &ing.tree.nodes[t];
     let (_, att, ce) = n.key.last().unwrap();
     Measure {
-        albero: n.id.clone(),
-        level: n.livello,
+        tree: n.id.clone(),
+        level: n.level,
         att: att.clone(),
         ce: *ce,
-        n_scansioni: n.scansioni.len(),
+        n_scans: n.scans.len(),
         rel,
     }
 }
@@ -321,7 +321,7 @@ fn edges(
     for (i, x) in obs.iter().enumerate() {
         let Some(s) = x
             .sorg
-            .filter(|&s| active(o, &ing.albero.nodi[s].key.last().unwrap().1))
+            .filter(|&s| active(o, &ing.tree.nodes[s].key.last().unwrap().1))
         else {
             continue;
         };
@@ -330,7 +330,7 @@ fn edges(
             continue;
         }
         let v = m.entry((p, f)).or_default();
-        match v.iter_mut().find(|y| y.albero == ing.albero.nodi[s].id) {
+        match v.iter_mut().find(|y| y.tree == ing.tree.nodes[s].id) {
             Some(y) => y.rel = y.rel.max(x.rel),
             None => v.push(measure(ing, s, x.rel)),
         }
@@ -342,16 +342,16 @@ fn edges(
                     .cmp(&y.level)
                     .then(x.att.cmp(&y.att))
                     .then(x.ce.total_cmp(&y.ce))
-                    .then(x.albero.cmp(&y.albero))
+                    .then(x.tree.cmp(&y.tree))
             });
             let loss = nodes[da].mz - nodes[a].mz;
             let t = o.tol(nodes[da].mz) + o.tol(nodes[a].mz);
             let isolation = ing
-                .albero
-                .nodi
+                .tree
+                .nodes
                 .iter()
                 .enumerate()
-                .any(|(c, n)| prec[c] == a && n.genitore.is_some_and(|g| prec[g] == da));
+                .any(|(c, n)| prec[c] == a && n.parent.is_some_and(|g| prec[g] == da));
             Edge {
                 da,
                 a,
@@ -380,8 +380,8 @@ pub(super) fn merge(ing: &Input, o: &Options) -> Graph {
         .map(|(k, g)| (node(g, &obs, ing), k))
         .collect();
     crate::sortc::slice_by(&mut nodes, |a, b| {
-        a.0.livello
-            .cmp(&b.0.livello)
+        a.0.level
+            .cmp(&b.0.level)
             .then(a.0.mz.total_cmp(&b.0.mz))
             .then(a.1.cmp(&b.1))
     });
@@ -395,25 +395,25 @@ pub(super) fn merge(ing: &Input, o: &Options) -> Graph {
             di[i] = rank[k];
         }
     }
-    let mut nodi: Vec<GNode> = nodes.into_iter().map(|(n, _)| n).collect();
+    let mut nodes: Vec<GNode> = nodes.into_iter().map(|(n, _)| n).collect();
     // a node made only of M+1 peaks (never isolated) is the isotope of the node of the first of them
     for (k, g) in gr.iter().enumerate() {
         let iso_only = g.iter().all(|&i| obs[i].iso_di.is_some());
         if iso_only {
-            nodi[rank[k]].isotope_of = obs[g[0]].iso_di.map(|i| di[i]);
+            nodes[rank[k]].isotope_of = obs[g[0]].iso_di.map(|i| di[i]);
         }
     }
-    let mut prec = vec![0usize; ing.albero.nodi.len()];
+    let mut prec = vec![0usize; ing.tree.nodes.len()];
     for (i, x) in obs.iter().enumerate() {
         if let Some(t) = x.prec_di {
             prec[t] = di[i];
         }
     }
-    let archi = edges(ing, &obs, &di, &prec, &nodi, o);
+    let archi = edges(ing, &obs, &di, &prec, &nodes, o);
     let spettri = spettri(ing, o, &obs, &di, &prec);
-    let radici = (0..nodi.len()).filter(|&i| nodi[i].livello == 1).collect();
+    let radici = (0..nodes.len()).filter(|&i| nodes[i].level == 1).collect();
     Graph {
-        nodi,
+        nodes,
         archi,
         radici,
         polarita: ing.polarita,

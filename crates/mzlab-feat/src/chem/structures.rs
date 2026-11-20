@@ -67,7 +67,7 @@ pub fn strutture_testo(
     let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
     if nodo == "all" {
         let mut all_items = vec![];
-        for (k, _) in g.nodi.iter().enumerate().filter(|(_, n)| n.livello >= 2) {
+        for (k, _) in g.nodes.iter().enumerate().filter(|(_, n)| n.level >= 2) {
             let ing = g.structures_input(k).ok_or_else(bad)?;
             let s = structures(smiles, &ing, ppm)
                 .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;

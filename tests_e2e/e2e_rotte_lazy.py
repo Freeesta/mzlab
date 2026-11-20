@@ -39,7 +39,7 @@ try:
         assert st == 200 and '"samples' in txt, (st, txt[:200])
         st, txt = call("api/stat/profile", "{}")
         assert st in (200, 400), st                          # the route exists in the module; an empty body is a keyed error
-        st, txt = call("api/flow/line", json.dumps({"plan": {"formato": "mzflow/2", "passi": []}}))
+        st, txt = call("api/flow/line", json.dumps({"plan": {"format": "mzflow/2", "steps": []}}))
         assert st in (200, 400), (st, txt[:200])
         assert len(routes()) == n, (n, routes())
         print("OK  the routes answer in the module, which is fetched once")

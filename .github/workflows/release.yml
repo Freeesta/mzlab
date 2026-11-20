@@ -319,14 +319,14 @@ jobs:
         run: |
           export "CC_${TARGET//-/_}=musl-gcc"
           cargo build --locked --profile cli --target "$TARGET" -p mzlab-cli
-      - name: Smoke test of the built binary (--version carries the release version and the citation line; steps --json is a non-empty JSON list)
+      - name: Smoke test of the built binary (--version carries the release version and the citation line; flow steps --json is a non-empty JSON list)
         run: |
           b="target/$TARGET/cli/mzlab-cli"
           file "$b" | grep -E 'statically linked|static-pie'
           out=$("$b" --version); echo "$out"
           grep -q 'please cite it: mzLab ' <<<"$out"
           if [ "$TAG" != dev ]; then grep -qF "mzLab ${TAG#v}, https://github.com/Freeesta/mzlab" <<<"$out"; fi
-          "$b" steps --json | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d and all("citation" in x for x in d), "steps --json"'
+          "$b" flow steps --json | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d and all("citation" in x for x in d), "flow steps --json"'
       - name: Name the binary and write its SHA-256 file
         run: |
           v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)

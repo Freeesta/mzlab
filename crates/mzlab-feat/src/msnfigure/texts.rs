@@ -193,7 +193,7 @@ pub(crate) fn node_tip(sc: &Scena, i: &Ion, p: &Pos) -> String {
                 .as_ref()
                 .map_or(String::new(), |x| format!(" {}", x.to_uppercase()));
             let ce = m.ce.map_or(String::new(), |c| format!(" {}", js_num(c)));
-            out.push(format!("MS{}{att}{ce}: {:.1} %", m.livello, m.rel));
+            out.push(format!("MS{}{att}{ce}: {:.1} %", m.level, m.rel));
         }
     }
     out.join("\n")

@@ -147,11 +147,9 @@ fn program(v: Option<&Value>) -> Program {
     let Some(p) = v else {
         return Program::default();
     };
-    // the keys of mzflow/1 (`nome`, `versione`) are still read
-    let pick = |a: &str, b: &str| text(p, a).or_else(|| text(p, b));
     Program {
-        name: pick("name", "nome").unwrap_or_default(),
-        version: pick("version", "versione").unwrap_or_default(),
+        name: text(p, "name").unwrap_or_default(),
+        version: text(p, "version").unwrap_or_default(),
         commit: text(p, "commit"),
     }
 }
@@ -162,8 +160,7 @@ pub fn parse(bytes: &[u8]) -> Result<Plan> {
     if !matches!(v, Value::Obj(_)) {
         return Err(Error::new("err.flow.json"));
     }
-    // mzflow/1 keys: formato, programma, operazioni
-    let format = text(&v, "format").or_else(|| text(&v, "formato"));
+    let format = text(&v, "format");
     let legacy = format.as_deref() == Some("mzflow/1");
     if let Some(f) = &format
         && f != "mzflow/2"
@@ -174,8 +171,8 @@ pub fn parse(bytes: &[u8]) -> Result<Plan> {
     let list = |k: &str| v.get(k).map(Value::arr).unwrap_or_default();
     let mut plan = Plan {
         format: format.unwrap_or_else(|| "mzflow/2".into()),
-        program: program(v.get("program").or_else(|| v.get("programma"))),
-        operations: v.get("operations").or_else(|| v.get("operazioni")).cloned(),
+        program: program(v.get("program")),
+        operations: v.get("operations").cloned(),
         ..Plan::default()
     };
     for f in list("inputs") {

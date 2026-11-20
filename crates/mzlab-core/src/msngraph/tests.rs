@@ -1,6 +1,6 @@
 use super::*;
 use crate::elements::{mass, parse_formula, ELECTRON};
-use crate::msntree_build::{albero_di, Grouping};
+use crate::msntree_build::{tree_of, Grouping};
 
 type Step = (f64, String, f64);
 /// Paths of the scans, spectra by node id of the tree, MS1.
@@ -109,9 +109,9 @@ pub(super) fn graph_with(
             scans.push(((paths[i].len() + 1) as u8, Some(&paths[i][..])));
         }
     }
-    let al = albero_di(scans, &Grouping::default());
+    let al = tree_of(scans, &Grouping::default());
     let per_node: Vec<Spettro> = al
-        .nodi
+        .nodes
         .iter()
         .map(|n| {
             let mut s = spettri
@@ -129,10 +129,10 @@ pub(super) fn graph_with(
         .collect();
     let g = build(
         &Input {
-            albero: &al,
+            tree: &al,
             ms1: Some(&ms1),
             spettri: &per_node,
-            widths: &vec![st.width; al.nodi.len()],
+            widths: &vec![st.width; al.nodes.len()],
             polarita: if st.negativo { -1 } else { 1 },
         },
         o,
@@ -143,7 +143,7 @@ pub(super) fn graph_with(
 
 pub(super) fn find(g: &Graph, f: &str) -> usize {
     let m = ion(f);
-    g.nodi
+    g.nodes
         .iter()
         .position(|n| (n.mz - m).abs() < 1e-4)
         .unwrap_or_else(|| panic!("no node for {f}"))
@@ -167,21 +167,21 @@ fn nodes_levels_and_counts() {
         ("C3H5N2", 4),
         ("C2H4N", 4),
     ];
-    assert_eq!(g.nodi.len(), levels.len());
+    assert_eq!(g.nodes.len(), levels.len());
     for (f, l) in &levels {
-        assert_eq!(g.nodi[find(&g, f)].livello, *l, "{f}");
+        assert_eq!(g.nodes[find(&g, f)].level, *l, "{f}");
     }
     assert_eq!(g.radici, vec![find(&g, "C8H11N4O2")]);
     assert_eq!(g.scartati.pesanti, 1);
     assert_eq!(g.scartati.isotopi, 1);
     assert_eq!(g.scartati.deboli, 1);
     assert!(g.avvisi.is_empty(), "{:?}", g.avvisi);
-    let n138 = &g.nodi[find(&g, "C6H8N3O")];
+    let n138 = &g.nodes[find(&g, "C6H8N3O")];
     assert_eq!(
-        n138.albero,
+        n138.tree,
         vec!["195@cid30>138@cid30", "195@cid30>138@hcd45"]
     );
-    assert!(g.nodi[find(&g, "C5H5N2O")].albero.is_empty());
+    assert!(g.nodes[find(&g, "C5H5N2O")].tree.is_empty());
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn arcs_losses_measures_and_dag() {
         vec!["HCN"]
     );
     for x in &g.archi {
-        assert!(g.nodi[x.a].mz < g.nodi[x.da].mz);
+        assert!(g.nodes[x.a].mz < g.nodes[x.da].mz);
     }
 }
 
@@ -224,8 +224,12 @@ fn isotopes_kept_on_request() {
     let (g, _) = graph(&o, &[0, 1, 2, 3], false);
     assert_eq!(g.scartati.isotopi, 0);
     let m = ion("C6H8N3O") + 1.003355;
-    let i = g.nodi.iter().position(|n| (n.mz - m).abs() < 1e-4).unwrap();
-    assert_eq!(g.nodi[i].isotope_of, Some(find(&g, "C6H8N3O")));
+    let i = g
+        .nodes
+        .iter()
+        .position(|n| (n.mz - m).abs() < 1e-4)
+        .unwrap();
+    assert_eq!(g.nodes[i].isotope_of, Some(find(&g, "C6H8N3O")));
 }
 
 #[test]
@@ -239,15 +243,15 @@ fn one_activation_only() {
     assert_eq!(a.misure.len(), 1);
     assert_eq!(a.misure[0].att, "HCD");
     // a fragment seen only in the CID spectra is not in the HCD graph
-    assert!(!g.nodi.iter().any(|n| (n.mz - ion("C5H5N2O")).abs() < 1e-4));
+    assert!(!g.nodes.iter().any(|n| (n.mz - ion("C5H5N2O")).abs() < 1e-4));
 }
 
 #[test]
 fn the_drawing_is_one_column_per_level() {
     let (g, _) = graph(&Options::default(), &[0, 1, 2, 3], false);
     let mut seen = std::collections::BTreeSet::new();
-    for n in &g.nodi {
-        assert_eq!(n.pos.0, n.livello as usize - 1);
+    for n in &g.nodes {
+        assert_eq!(n.pos.0, n.level as usize - 1);
         assert!(seen.insert(n.pos));
     }
 }
@@ -259,14 +263,14 @@ fn a_chain_of_close_peaks_is_split() {
         .map(|k| path(&[(1500.0, "CID", 20.0 + k as f64)]))
         .collect();
     let scans: Vec<(u8, Option<&[Step]>)> = paths.iter().map(|p| (2, Some(&p[..]))).collect();
-    let al = albero_di(scans, &Grouping::default());
+    let al = tree_of(scans, &Grouping::default());
     let spettri: Vec<Spettro> = (0..4)
         .map(|k| sp(&[(1000.0 + 0.004 * k as f64, 100.0)]))
         .collect();
     let ms1 = sp(&[(1500.0, 100.0)]);
     let g = build(
         &Input {
-            albero: &al,
+            tree: &al,
             ms1: Some(&ms1),
             spettri: &spettri,
             widths: &[],
@@ -275,7 +279,7 @@ fn a_chain_of_close_peaks_is_split() {
         &Options::default(),
     );
     let near: Vec<f64> = g
-        .nodi
+        .nodes
         .iter()
         .map(|n| n.mz)
         .filter(|m| (m - 1000.0).abs() < 0.1)
@@ -293,7 +297,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
         .iter()
         .map(|p| ((p.len() + 1) as u8, Some(&p[..])))
         .collect();
-    let al = albero_di(scans, &Grouping::default());
+    let al = tree_of(scans, &Grouping::default());
     let spettri = vec![
         sp(&[(ion("C6H8N3O"), 100.0)]),
         sp(&[(ion("C5H8N3"), 100.0)]),
@@ -301,7 +305,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
     let ms1 = sp(&[(ion("C8H11N4O2"), 100.0), (ion("C8H11N4O2") + 0.3, 50.0)]);
     let g = build(
         &Input {
-            albero: &al,
+            tree: &al,
             ms1: Some(&ms1),
             spettri: &spettri,
             widths: &[],
@@ -312,7 +316,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
     let keys: Vec<(&str, &str)> = g
         .avvisi
         .iter()
-        .map(|a| (a.chiave, a.albero.as_str()))
+        .map(|a| (a.chiave, a.tree.as_str()))
         .collect();
     assert_eq!(
         keys,
@@ -321,7 +325,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
             ("warn.msngrafo.precNotFound", "195@cid30>156@cid30")
         ]
     );
-    let n156 = g.nodi.iter().position(|n| n.mz == 156.0).unwrap();
+    let n156 = g.nodes.iter().position(|n| n.mz == 156.0).unwrap();
     let a = g.archi.iter().find(|x| x.a == n156).unwrap();
     assert!(a.isolamento && a.misure[0].rel == 0.0);
 }

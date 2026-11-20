@@ -68,7 +68,7 @@ try:
             import json
             with pg.expect_download() as d: pg.evaluate("RAPPORTO.export('json')")
             rep = json.load(open(d.value.path(), encoding="utf-8"))
-            assert rep["formato"] == "mzreport/1" and rep["alta_risoluzione"] is hr and rep["programma"]["nome"], rep.keys()
+            assert rep["formato"] == "mzreport/1" and rep["alta_risoluzione"] is hr and rep["programma"]["name"], rep.keys()
             shas = pg.evaluate("E.files.map(f=>f.sha256)")
             assert [f["sha256"] for f in rep["disegno_studio"]["file"]] == shas and all(len(x) == 64 for x in shas)       # the fingerprint of the workflow file
             assert rep["qaqc"]["ioni"] and rep["acquisizione"] and rep["elaborazione"]["parametri"]["qaqc"]["ioni"]
@@ -81,7 +81,7 @@ try:
             return rep
         def lr_report():
             rep = report(False)
-            assert any(x["ruolo"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
+            assert any(x["role"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
         step("LR: study report (JSON and HTML) with SHA-256, instrument, parameters, QA/QC, NORMAN order", lr_report)
 
         r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p, qaqc=True)

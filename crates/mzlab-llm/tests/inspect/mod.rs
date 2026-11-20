@@ -177,7 +177,7 @@ pub fn proposals(names: &[&str]) -> Vec<Value> {
 
 pub fn sample_text(c: &Value, order: usize) -> String {
     format!(
-        "{{\"tipo\":{},\"ordine_iniezione\":{order}}}",
+        "{{\"kind\":{},\"injection_order\":{order}}}",
         quoted(c.get("kind").unwrap().str().unwrap())
     )
 }

@@ -20,7 +20,7 @@ fn number(get: &dyn Fn(&str) -> Option<String>, k: &str, por: f64) -> Result<f64
     }
 }
 
-/// `nom` (or absent), `0.01` (Da) or `10ppm`, as `msn_albero` reads `tol`. A copy of `msnroute::tol_of`: sharing it moves the code of the engine,
+/// `nom` (or absent), `0.01` (Da) or `10ppm`, as `msn_tree` reads `tol`. A copy of `msnroute::tol_of`: sharing it moves the code of the engine,
 /// whose `.wasm` has no room to spare.
 fn tol_di(v: Option<&str>) -> Result<Tol> {
     let Some(t) = v.filter(|t| !t.is_empty() && *t != "nom") else {
@@ -112,7 +112,7 @@ pub fn graph_json<M: Scansioni + ?Sized>(
     let l = read(scans, m, r, o.budget)?;
     let g = build(
         &Input {
-            albero: &l.albero,
+            tree: &l.tree,
             ms1: l.ms1.as_ref(),
             spettri: &l.spettri,
             widths: &l.larghezze,

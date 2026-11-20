@@ -198,7 +198,7 @@ impl<R: ReadAt> Routes<R> {
         }
         let n = sids.len() as f64;
         let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
-        let div = if self.msn.opz.somma { 1.0 } else { n };
+        let div = if self.msn.opts.sum { 1.0 } else { n };
         let (mz, y) = cells.finish(div);
         let mut o = Out::default();
         o.raw("{\"sids\":[");

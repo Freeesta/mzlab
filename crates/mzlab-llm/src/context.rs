@@ -212,11 +212,11 @@ fn annot(v: &Value) -> Value {
 }
 
 fn msn(v: &Value) -> Value {
-    let c = v.get("conteggi");
+    let c = v.get("counts");
     let n = |k: &str| c.and_then(|c| c.get(k)).cloned().unwrap_or(Value::Num(0.0));
     Value::Obj(vec![
-        ("nodes".into(), n("nodi")),
-        ("edges".into(), n("archi")),
+        ("nodes".into(), n("nodes")),
+        ("edges".into(), n("edges")),
     ])
 }
 

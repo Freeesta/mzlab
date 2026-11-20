@@ -105,7 +105,7 @@ pub fn interpreta(g: &Graph, ppm: f64) -> Vec<EdgeInterp> {
     g.archi
         .iter()
         .map(|a| {
-            let mz = g.nodi[a.da].mz;
+            let mz = g.nodes[a.da].mz;
             let mut att: Vec<String> = a.misure.iter().map(|m| m.att.clone()).collect();
             crate::sortc::slice_ord(&mut att);
             att.dedup();

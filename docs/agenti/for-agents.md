@@ -3,7 +3,8 @@
 For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
 
 ## Installation
-- Today only from source: `cargo install --path crates/mzlab-cli --profile cli` (needs Rust; the `cli` profile is `opt-level = 3`, in `target/cli/`: `cargo build --profile cli -p mzlab-cli`, about a quarter faster than the `release` profile, which is size-optimised and stays for the `.wasm`; same output bytes), then `mzlab-cli` is in the PATH. The same CLI compiles for `wasm32-wasip1` and runs a plan under node with `tools/wasi_run.mjs`.
+- Linux: every release carries static builds of `mzlab-cli` (x86_64 and aarch64) with a `SHA256SUMS` file: fetch and verify with the command in `cli-agenti.md`.
+- Any other system, or a build with your own commit: from source, `cargo install --path crates/mzlab-cli --profile cli` (needs Rust; the `cli` profile is `opt-level = 3`, in `target/cli/`: `cargo build --profile cli -p mzlab-cli`, about a quarter faster than the `release` profile, which is size-optimised and stays for the `.wasm`; same output bytes), then `mzlab-cli` is in the PATH. The same CLI compiles for `wasm32-wasip1` and runs a plan under node with `tools/wasi_run.mjs`.
 
 ## Recommended sequence
 0. **Learn the CLI**: `mzlab-cli commands --json` (every command, flag, output schema, exit code), `mzlab-cli schema NAME` (any JSON Schema), `mzlab-cli flow steps --compact` (the steps in a few KB).
@@ -14,6 +15,14 @@ For an agent running on the user's computer (Claude Code, Claude Cowork or other
 5. **Outcome**: with `--json` on stdout `flowrun/1` (status, times and SHA-256 of the files of each instance) or `error/1` (`error_key`, `params`, `hint`); exit code 0 all done, 1 some instance in error (the other outputs are written), 2 wrong usage, 3 invalid plan, 4 missing input or different SHA-256.
 6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/1`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/1`.
 7. **Fix**: rerun in the same `RUN` with other `--set`: the cache redoes only the steps that change (`cached` in `prov/1`); `--fresh` redoes everything.
+
+## Five chains (tested)
+Each chain is a test on synthetic data in `crates/mzlab-cli/src/workflow_tests.rs`: every call exits 0 and the call count below is asserted. Add `--cache DIR` (or `MZLAB_CACHE`) to the file commands of a chain that reads the same files twice; `file index FILE...` builds the indexes first (`cli-agenti.md`).
+1. Unknown folder to a CSV (7 calls): `file list DIR --json`; `llm inspect DIR > inspection.json`; `llm params --inspection inspection.json`; `flow steps --compact`; `sample table FILE... > samples.json`; `flow check PLAN.json --json`; `flow run PLAN.json --in DIR --out RUN --json` (the plan ends with `export.table_csv@1`).
+2. Reproducible run (5): `sample table FILE... > roles.json`; `flow check PLAN.json`; `flow run PLAN.json --in DIR --out RUN`; `flow record RUN --roles roles.json --out RUN/run.mzrun.json`; `flow verify RUN/run.mzrun.json --json`.
+3. Trace to peaks (3): `file channels FILE` (take the `id`); `trace chrom FILE --id ID --format csv > trace.csv`; `peak auto-lr trace.csv`.
+4. Statistics (5): `sample table FILE... > samples.json`; `sample design propose --samples samples.json --out design.json`; `sample design validate design.json --samples samples.json`; `flow check PLAN.json`; `flow run PLAN.json --in DIR --out RUN` (a `table.stats@1` plan with the `table`, `samples` and `design` inputs).
+5. Vendor folder triage (5): `file list DIR --json`; `sample list FILE... --json`; `file convert FILE... --out OUT --dry-run --json`; `file convert FILE... --out OUT --json`; `file validate OUT/*.mzML --json`. For a `.wiff`, `file pair FILE --json` comes after the listing and `sample select FILE --sample LIST --json` before the conversion.
 
 ## Example (the basic chain on mzML files)
 ```json

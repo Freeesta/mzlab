@@ -31,12 +31,12 @@ struct State<'a> {
 
 /// The nodes reached from the root along the arcs, isotopes left out.
 fn raggiunti(g: &Graph, r: usize) -> Vec<bool> {
-    let mut vivo = vec![false; g.nodi.len()];
+    let mut vivo = vec![false; g.nodes.len()];
     vivo[r] = true;
     let mut pila = vec![r];
     while let Some(p) = pila.pop() {
         for a in g.archi.iter().filter(|a| a.da == p) {
-            if !vivo[a.a] && g.nodi[a.a].isotope_of.is_none() {
+            if !vivo[a.a] && g.nodes[a.a].isotope_of.is_none() {
                 vivo[a.a] = true;
                 pila.push(a.a);
             }
@@ -66,7 +66,7 @@ fn cand(e: &Elementi, o: &Options, mz: f64, c: Vec<u32>) -> Cand {
 }
 
 fn state<'a>(g: &Graph, e: &'a Elementi, r: usize, rc: &[u32], o: &Options) -> State<'a> {
-    let n = g.nodi.len();
+    let n = g.nodes.len();
     let vivo = raggiunti(g, r);
     let (mut genitori, mut figli) = (vec![vec![]; n], vec![vec![]; n]);
     for a in g.archi.iter().filter(|a| vivo[a.da] && vivo[a.a]) {
@@ -75,13 +75,13 @@ fn state<'a>(g: &Graph, e: &'a Elementi, r: usize, rc: &[u32], o: &Options) -> S
     }
     let mut ordine: Vec<usize> = (0..n).filter(|&i| vivo[i] && i != r).collect();
     crate::sortc::by(&mut ordine, |a, b| {
-        g.nodi[*b].mz.total_cmp(&g.nodi[*a].mz).then(a.cmp(b))
+        g.nodes[*b].mz.total_cmp(&g.nodes[*a].mz).then(a.cmp(b))
     });
     ordine.insert(0, r);
     let mut cs: Vec<Vec<Cand>> = (0..n).map(|_| vec![]).collect();
-    cs[r] = vec![cand(e, o, g.nodi[r].mz, rc.to_vec())];
+    cs[r] = vec![cand(e, o, g.nodes[r].mz, rc.to_vec())];
     for &j in &ordine[1..] {
-        let mz = g.nodi[j].mz;
+        let mz = g.nodes[j].mz;
         let t = finestra(o, mz) * mz * 1e-6;
         cs[j] = e
             .candidates(mz - t, mz + t)
@@ -106,11 +106,11 @@ fn choices(g: &mut Graph, st: &mut State, o: &Options) {
         let j = st.order[1..]
             .iter()
             .copied()
-            .filter(|&j| (g.nodi[j].mz - mz).abs() <= finestra(o, *mz) * mz * 1e-6)
+            .filter(|&j| (g.nodes[j].mz - mz).abs() <= finestra(o, *mz) * mz * 1e-6)
             .min_by(|&a, &b| {
-                (g.nodi[a].mz - mz)
+                (g.nodes[a].mz - mz)
                     .abs()
-                    .total_cmp(&(g.nodi[b].mz - mz).abs())
+                    .total_cmp(&(g.nodes[b].mz - mz).abs())
             });
         let Some(j) = j else {
             warning(g, "warn.msngrafo.fixedNotFound", None);
@@ -126,7 +126,7 @@ fn choices(g: &mut Graph, st: &mut State, o: &Options) {
         if !st.cand[j].iter().any(|x| x.c == c) {
             warning(g, "warn.msngrafo.userConflict", Some(j));
         }
-        st.cand[j] = vec![cand(st.e, o, g.nodi[j].mz, c)];
+        st.cand[j] = vec![cand(st.e, o, g.nodes[j].mz, c)];
         st.user[j] = true;
     }
 }
@@ -146,11 +146,11 @@ fn evidence(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> Vec<&'st
         v.push("rule");
     }
     // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
-    let narrow = g.nodi[j].upstream.is_some_and(|w| w < NARROW);
-    if !narrow && g.nodi[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
+    let narrow = g.nodes[j].upstream.is_some_and(|w| w < NARROW);
+    if !narrow && g.nodes[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
         v.push("isotopes");
     }
-    let msn = !g.nodi[j].albero.is_empty()
+    let msn = !g.nodes[j].tree.is_empty()
         && st.figli[j]
             .iter()
             .any(|&f| st.cand[f].iter().any(|x| x.strict && below(&x.c, c)));
@@ -232,7 +232,7 @@ fn contains(g: &Graph, st: &mut State) -> bool {
     let mut changed = false;
     for k in 1..st.order.len() {
         let p = st.order[k];
-        if g.nodi[p].albero.is_empty() || st.user[p] {
+        if g.nodes[p].tree.is_empty() || st.user[p] {
             continue;
         }
         for &f in &st.figli[p] {
@@ -261,7 +261,7 @@ fn formula(g: &Graph, st: &State, o: &Options, j: usize) -> NodeFormula {
             window: if x.strict {
                 o.ppm_formula
             } else {
-                finestra(o, g.nodi[j].mz)
+                finestra(o, g.nodes[j].mz)
             },
             prove: x.evidence.clone(),
         })
@@ -291,7 +291,7 @@ fn formula(g: &Graph, st: &State, o: &Options, j: usize) -> NodeFormula {
 /// The loss of every arc between two nodes with a choice, the fragment under the precursor.
 fn losses(g: &mut Graph, st: &State) {
     let choice = |i: usize| {
-        let f = g.nodi[i].formula.as_ref()?;
+        let f = g.nodes[i].formula.as_ref()?;
         f.choice.as_ref()?;
         Some(st.cand[i][0].c.clone())
     };
@@ -304,9 +304,9 @@ fn losses(g: &mut Graph, st: &State) {
                 return None;
             }
             let d: Vec<u32> = p.iter().zip(&c).map(|(x, y)| x - y).collect();
-            let oss = g.nodi[a.da].mz - g.nodi[a.a].mz;
+            let oss = g.nodes[a.da].mz - g.nodes[a.a].mz;
             let teo = st.e.mass(&d);
-            Some((st.e.loss_text(&d), (oss - teo) / g.nodi[a.da].mz * 1e6))
+            Some((st.e.loss_text(&d), (oss - teo) / g.nodes[a.da].mz * 1e6))
         })
         .collect();
     for (a, f) in g.archi.iter_mut().zip(v) {
@@ -322,7 +322,7 @@ fn retain_mask<T>(v: &mut Vec<T>, keep: &[bool]) {
 
 /// The peaks of each spectrum whose node leaves the graph, on the node of its precursor: how many nodes, the 3 most intense.
 fn unexplained(g: &mut Graph, keep: &[bool]) {
-    let mut per: Vec<Vec<(usize, f64, f64)>> = vec![vec![]; g.nodi.len()];
+    let mut per: Vec<Vec<(usize, f64, f64)>> = vec![vec![]; g.nodes.len()];
     for sp in &g.spettri {
         let Some(p) = sp.precursore.filter(|&p| keep[p]) else {
             continue;
@@ -341,7 +341,7 @@ fn unexplained(g: &mut Graph, keep: &[bool]) {
         crate::sortc::slice_by(&mut v, |a, b| a.0.cmp(&b.0).then(b.2.total_cmp(&a.2)));
         v.dedup_by_key(|x| x.0);
         crate::sortc::slice_by(&mut v, |a, b| b.2.total_cmp(&a.2).then(a.1.total_cmp(&b.1)));
-        g.nodi[p].unexplained = Some(Unexplained {
+        g.nodes[p].unexplained = Some(Unexplained {
             n: v.len(),
             peaks: v.iter().take(3).map(|x| (x.1, x.2)).collect(),
         });
@@ -370,7 +370,7 @@ fn muchi_non_spiegati(g: &mut Graph) {
 /// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs, spectra and notes follow.
 fn togli(g: &mut Graph, keep: &[bool]) {
     unexplained(g, keep);
-    let mut new = vec![None; g.nodi.len()];
+    let mut new = vec![None; g.nodes.len()];
     let mut k = 0;
     for (i, t) in keep.iter().enumerate() {
         if *t {
@@ -379,15 +379,15 @@ fn togli(g: &mut Graph, keep: &[bool]) {
         }
     }
     let mut removed: Vec<String> = g
-        .nodi
+        .nodes
         .iter()
         .zip(keep)
         .filter(|(_, t)| !**t)
-        .flat_map(|(n, _)| n.albero.iter().cloned())
+        .flat_map(|(n, _)| n.tree.iter().cloned())
         .collect();
-    g.scartati.formula = g.nodi.len() - k;
-    retain_mask(&mut g.nodi, keep);
-    for n in g.nodi.iter_mut() {
+    g.scartati.formula = g.nodes.len() - k;
+    retain_mask(&mut g.nodes, keep);
+    for n in g.nodes.iter_mut() {
         n.isotope_of = n.isotope_of.and_then(|x| new[x]);
     }
     g.archi.retain(|a| keep[a.da] && keep[a.a]);
@@ -406,9 +406,9 @@ fn togli(g: &mut Graph, keep: &[bool]) {
     }
     muchi_non_spiegati(g);
     crate::sortc::slice_ord(&mut removed);
-    g.avvisi.extend(removed.into_iter().map(|albero| Warning {
+    g.avvisi.extend(removed.into_iter().map(|tree| Warning {
         chiave: "warn.msngrafo.isolatedUnexplained",
-        albero,
+        tree,
         nodo: None,
     }));
 }
@@ -440,15 +440,15 @@ pub(super) fn annotate(g: &mut Graph, e: &Elementi, r: usize, rc: Vec<u32>, o: &
             warning(g, "warn.msngrafo.userConflict", Some(j));
         }
     }
-    let mut keep = vec![false; g.nodi.len()];
+    let mut keep = vec![false; g.nodes.len()];
     for &j in &st.order {
         if !st.cand[j].is_empty() {
-            g.nodi[j].formula = Some(formula(g, &st, o, j));
+            g.nodes[j].formula = Some(formula(g, &st, o, j));
             keep[j] = true;
         }
     }
-    for i in 0..g.nodi.len() {
-        if g.nodi[i].isotope_of.is_some_and(|m| keep[m]) {
+    for i in 0..g.nodes.len() {
+        if g.nodes[i].isotope_of.is_some_and(|m| keep[m]) {
             keep[i] = true;
         }
     }

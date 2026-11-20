@@ -19,9 +19,9 @@ fn reads_the_instances_in_order() {
 }
 
 #[test]
-fn reads_the_keys_of_mzflow_1() {
+fn reads_mzflow_1() {
     let p = parse(
-        br#"{"formato":"mzflow/1","programma":{"nome":"mzLab","versione":"0.9","commit":"abc"},"operazioni":[{"op":"campioni"}]}"#,
+        br#"{"format":"mzflow/1","program":{"name":"mzLab","version":"0.9","commit":"abc"},"operations":[{"op":"samples"}]}"#,
     )
     .unwrap();
     assert_eq!(p.format, "mzflow/1");

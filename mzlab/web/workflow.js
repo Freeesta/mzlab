@@ -14,7 +14,6 @@
 // In LR, only spectra with precursor, charge, RT, file name (no candidate annotations or names: principle 1).
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
-  const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
   const KNOWN_OPS = ["feature_pipeline", "samples", "export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "attributio", "workflow_applied"];
   // the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json, written by TP_Mine/js/35_pipeline_recipe.js): the problems of a record, [] when it can be re-applied
   const FEATURE_KEYS = ["schema", "crate_version", "recipe", "parametri", "ingressi", "tabella_sha256", "regole", "livelli", "sospetti", "ipotesi", "giri"];
@@ -59,7 +58,7 @@ const WORKFLOW = (() => {
         sha256: f.sha256 || "",
         dimensione: f.size || 0,
         tipo: f.type || "sample",
-        ruolo: window.SAMPLES_DOC ? SAMPLES_DOC.kindOf(f) : undefined,           // role of samples/1 (the base type above is kept for the old readers)
+        role: window.SAMPLES_DOC ? SAMPLES_DOC.kindOf(f) : undefined,           // role of samples/1 (the base type above is kept for the old readers)
         etichetta: f.label || "",
         tempo: f.time ?? null,
         concentrazione: f.conc ?? null,
@@ -97,10 +96,10 @@ const WORKFLOW = (() => {
       : [{ op: "session_snapshot", t: new Date().toISOString() }];
 
     return {
-      formato: FORMAT,
-      programma: {
-        nome: window.APP_NAME || "",
-        versione: window.MZLAB_VERSION || "0.1.0",
+      format: FORMAT,
+      program: {
+        name: window.APP_NAME || "",
+        version: window.MZLAB_VERSION || "0.1.0",
         commit: window.MZLAB_COMMIT || "dev",
       },
       data_creazione: new Date().toISOString(),
@@ -108,7 +107,7 @@ const WORKFLOW = (() => {
       file: files,
       parametri: parameters,
       pannelli: panels,
-      operazioni: ops,
+      operations: ops,
       candidati: window.RAPPORTO ? RAPPORTO.candidates() : [],
     };
   }
@@ -116,7 +115,7 @@ const WORKFLOW = (() => {
   // the operation `samples` (schema samples/1, the canonical entries and their SHA-256, both from the Rust of mzlab-core): the roles and times of this moment
   async function samplesOp() {
     if (!window.SAMPLES || !window.SAMPLES_DOC) return null;
-    try { const c = await SAMPLES_DOC.canonical(SAMPLES.docNow()), d = JSON.parse(c.json); return { op: "samples", t: new Date().toISOString(), da: "dati", schema: d.schema, samples: d.samples, sha256: c.sha256 }; } catch (_) { return null; }
+    try { const c = await SAMPLES_DOC.canonical(SAMPLES.docNow()), d = JSON.parse(c.json); return { op: "samples", t: new Date().toISOString(), source: "data", schema: d.schema, samples: d.samples, sha256: c.sha256 }; } catch (_) { return null; }
   }
   async function exportWorkflow() {
     if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) {
@@ -125,7 +124,7 @@ const WORKFLOW = (() => {
     }
     const wf = buildWorkflow();
     const co = await samplesOp();
-    if (co) wf.operazioni = wf.operazioni.filter((/** @type {any} */ o) => !(o && o.op === "samples" && o.da === "dati")).concat([co]);
+    if (co) wf.operations = wf.operations.filter((/** @type {any} */ o) => !(o && o.op === "samples" && o.source === "data")).concat([co]);
     const text = JSON.stringify(wf, null, 2);
     const first = E.files.find(f => !f.gone);
     const base = first ? (first.label || first.file).replace(/[^\w.-]+/g, "_") : "sessione";
@@ -139,10 +138,10 @@ const WORKFLOW = (() => {
   async function restoreSamples(/** @type {any} */ wf, /** @type {any[]} */ needed, /** @type {any} */ p) {
     if (!window.SAMPLES || !window.SAMPLES_DOC) return;
     try {
-      const ops = (Array.isArray(wf.operazioni) ? wf.operazioni : []).filter((/** @type {any} */ o) => o && o.op === "samples" && o.schema === "samples/1" && Array.isArray(o.samples));
+      const ops = (Array.isArray(wf.operations) ? wf.operations : []).filter((/** @type {any} */ o) => o && o.op === "samples" && o.schema === "samples/1" && Array.isArray(o.samples));
       if (ops.length) SAMPLES.importDoc({ samples: ops[ops.length - 1].samples });
     } catch (_) { /* the roles of the old shape below still apply */ }
-    SAMPLES.importState(needed.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
+    SAMPLES.importState(needed.map(nf => ({ nome: nf.nome, ruolo: nf.role || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
   }
 
   function openWorkflow() {
@@ -151,7 +150,7 @@ const WORKFLOW = (() => {
       inp = document.createElement("input");
       inp.type = "file";
       inp.id = "wf-open-input";
-      inp.accept = ".mzflow,.mzworkflow,.json";
+      inp.accept = ".mzflow,.json";
       inp.style.display = "none";
       document.body.appendChild(inp);
     }
@@ -172,7 +171,7 @@ const WORKFLOW = (() => {
   }
 
   async function applyWorkflow(wf, wfFileName = "") {
-    if (!wf || (wf.formato !== FORMAT && !LEGACY_FORMATS.includes(wf.formato))) {
+    if (!wf || wf.format !== FORMAT) {
       info(I18N.t("workflow.err.invalidFormat"));
       return false;
     }
@@ -233,8 +232,8 @@ const WORKFLOW = (() => {
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
     await restoreSamples(wf, neededFiles, p);
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
-    if (Array.isArray(wf.operazioni) && typeof NB !== "undefined") {
-      const { keep, unknown } = splitOps(wf.operazioni.slice(0, 500));
+    if (Array.isArray(wf.operations) && typeof NB !== "undefined") {
+      const { keep, unknown } = splitOps(wf.operations.slice(0, 500));
       NB.ops = keep;
       if (unknown.length) {
         const msg = I18N.t("workflow.warn.unknownOps", { ops: unknown.map(String).join(", ") });

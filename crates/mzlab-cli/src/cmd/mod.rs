@@ -198,15 +198,14 @@ pub(crate) fn group_of(args: &[String]) -> Option<(String, Vec<&'static Entry>)>
     (!inside.is_empty()).then_some((path, inside))
 }
 
-/// The command list of `docs/agenti/cli.md` (between its marker lines), written by `mzlab-cli help-md` and `tools/cli_doc.py`: one item per group
-/// with its subcommands (`flow run|check|...`), wrapped under 480 characters.
-pub(crate) fn list_md() -> String {
-    let mut items: Vec<(String, Vec<&str>)> = Vec::new();
-    for e in entries().filter(|e| e.name != "help-md") {
-        let (key, last) = e.name.rsplit_once(' ').unwrap_or(("", e.name));
+/// `names` as items, one per group with its subcommands (`flow run|check|...`), wrapped under 480 characters.
+fn grouped<'a>(names: impl Iterator<Item = &'a str>) -> String {
+    let mut items: Vec<(&str, Vec<&str>)> = Vec::new();
+    for name in names {
+        let (key, last) = name.rsplit_once(' ').unwrap_or(("", name));
         match items.last_mut() {
-            Some((k, v)) if k == key && !key.is_empty() => v.push(last),
-            _ => items.push((key.to_string(), vec![last])),
+            Some((k, v)) if *k == key && !key.is_empty() => v.push(last),
+            _ => items.push((key, vec![last])),
         }
     }
     let mut out = String::new();
@@ -228,6 +227,42 @@ pub(crate) fn list_md() -> String {
         });
     }
     out + &line + "\n"
+}
+
+/// The command list of `docs/agenti/cli.md` (between its marker lines), written by `mzlab-cli help-md` and `tools/cli_doc.py`.
+pub(crate) fn list_md() -> String {
+    grouped(entries().filter(|e| e.name != "help-md").map(|e| e.name))
+}
+
+/// The `--json` list of `docs/agenti/cli-agenti.md` (`help-md json`): what each command does with `--json`, from the same tables the contract reads.
+pub(crate) fn json_md() -> String {
+    let names = || entries().filter(|e| e.name != "help-md").map(|e| e.name);
+    let section = |title: &str, keep: &dyn Fn(&str) -> bool| {
+        format!("- {title}:\n{}", grouped(names().filter(|n| keep(n))))
+    };
+    [
+        section(
+            "JSON already (`--json` only makes a failure an `error/1`)",
+            &json_by_default,
+        ),
+        section("text or CSV, `--json` gives the document", &|n| {
+            reads_json(n) && !json_by_default(n)
+        }),
+        section(
+            "no JSON form (`--json` is exit 2, `err.cli.json.unsupported`)",
+            &|n| !reads_json(n) && !json_by_default(n),
+        ),
+    ]
+    .join("")
+}
+
+/// The exit-code table of `docs/agenti/cli-agenti.md` (`help-md exits`), from the table the catalog prints.
+pub(crate) fn exits_md() -> String {
+    let mut out = String::from("| code | meaning |\n|---|---|\n");
+    for (code, meaning) in crate::catalog::EXIT_MEANING {
+        out += &format!("| {code} | {meaning} |\n");
+    }
+    out
 }
 
 const TOP: &str = "mzlab-cli: LC-MS analysis from the command line, the engine of the mzLab app; the files never leave this computer.

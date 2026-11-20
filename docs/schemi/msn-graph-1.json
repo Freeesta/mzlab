@@ -611,7 +611,7 @@
        "properties": {
         "tree": {
          "type": "string",
-         "description": "Node id of the precursor tree (msn_albero/1), the filter msn:<id>"
+         "description": "Node id of the precursor tree (msn-tree/1), the filter msn:<id>"
         },
         "level": {
          "type": "integer",

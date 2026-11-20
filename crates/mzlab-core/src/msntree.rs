@@ -6,7 +6,7 @@ use crate::composition::{compose, Opts, Ranges};
 use crate::elements::MASS;
 use crate::error::{Error, Result};
 use crate::json::{self, fmt_g, round, Out, Value};
-use crate::msntree_build::{albero_di, consenso, Grouping};
+use crate::msntree_build::{consensus, tree_of, Grouping};
 
 const MAX_SCANS: usize = 60;
 const MAX_PEAKS: usize = 120;
@@ -144,19 +144,19 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
     {
         return Err(Error::new("err.tree.formula").with("formula", f));
     }
-    // nodes and parents from the one builder of the tree (`msnalbero`): a node without the generation before hangs from the nearest ancestor
-    let tree = albero_di(
+    // nodes and parents from the one builder of the tree (`msntree_build`): a node without the generation before hangs from the nearest ancestor
+    let tree = tree_of(
         scans.iter().map(|s| (s.level, Some(&s.path[..]))),
         &Grouping::default(),
     );
-    if tree.nodi.is_empty() {
+    if tree.nodes.is_empty() {
         return Err(Error::new("err.tree.noPath"));
     }
-    if tree.nodi.iter().map(|n| n.key.len()).max().unwrap() < 2 {
+    if tree.nodes.iter().map(|n| n.key.len()).max().unwrap() < 2 {
         return Err(Error::new("err.tree.needStages"));
     }
-    if tree.nodi.len() > 400 {
-        return Err(Error::new("err.tree.tooMany").with("n", tree.nodi.len()));
+    if tree.nodes.len() > 400 {
+        return Err(Error::new("err.tree.tooMany").with("n", tree.nodes.len()));
     }
     let pol = scans
         .iter()
@@ -170,12 +170,12 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
             .take(MAX_SCANS)
             .map(|&i| read(scans[i].index))
             .collect::<Result<Vec<_>>>()?;
-        let (mz, rel, _) = consenso(&spectra, 5.0, 0.5, 0.0);
+        let (mz, rel, _) = consensus(&spectra, 5.0, 0.5, 0.0);
         Ok(Consensus { mz, rel })
     };
     let mut cons: Vec<Consensus> = vec![];
-    for n in &tree.nodi {
-        cons.push(cons_of(&n.scansioni)?);
+    for n in &tree.nodes {
+        cons.push(cons_of(&n.scans)?);
     }
     let ms1c = if tree.ms1.is_empty() {
         None
@@ -187,10 +187,10 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         .map(|(s, a, b)| (s.to_string(), (*a, *b)))
         .collect();
     let mut nodes: Vec<Node> = vec![];
-    for (g, tn) in tree.nodi.iter().enumerate() {
+    for (g, tn) in tree.nodes.iter().enumerate() {
         let nom = tn.key.last().unwrap().0;
-        let path = &scans[tn.scansioni[0]].path;
-        let pk = tn.genitore;
+        let path = &scans[tn.scans[0]].path;
+        let pk = tn.parent;
         let src = match pk {
             Some(q) => Some(&cons[q]),
             None => ms1c.as_ref(),
@@ -273,7 +273,7 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
             path: path.clone(),
             label,
             level: tn.key.len() + 1,
-            scans: tn.scansioni.len(),
+            scans: tn.scans.len(),
             prec: prec.map(|p| round(p, 5)),
             formula: form,
             ppm: bst.as_ref().map(|b| b.1),

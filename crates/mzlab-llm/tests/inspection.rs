@@ -129,7 +129,7 @@ fn nothing_private_goes_out() {
       "lc":{"gradient":[{"t_min":0,"B_pct":5},{"t_min":10,"B_pct":95}],"flow_mL_min":0.3,"oven_C":40},"ms":{"source":{"type":"ESI"}}}"#;
     let name = "Ana\u{202E}fdp.exe 123456789 \u{0007}file.mzML";
     let src = format!(
-        r#"{{"profile":"research","hide_names":false,"files":[{{"name":{},"items":[{item}],"method":{method},"sample":{{"tipo":"sample","ordine_iniezione":1,"note":"private-note"}}}}]}}"#,
+        r#"{{"profile":"research","hide_names":false,"files":[{{"name":{},"items":[{item}],"method":{method},"sample":{{"kind":"sample","injection_order":1,"note":"private-note"}}}}]}}"#,
         quoted(name)
     );
     let out = build_text(&src, 4000).unwrap();
