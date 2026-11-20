@@ -14,7 +14,13 @@ fn every_step_has_a_template_that_reads_and_has_no_parameter_or_port_problem() {
     let reg = steps();
     let mut at_most_input_types = 0;
     for s in &reg {
-        let o = run(&["flow", "steps", "--id", &format!("{}@{}", s.id, s.version), "--template"]);
+        let o = run(&[
+            "flow",
+            "steps",
+            "--id",
+            &format!("{}@{}", s.id, s.version),
+            "--template",
+        ]);
         assert_eq!(o.code, 0, "{}: {}", s.id, o.stderr);
         let plan = parse(&o.stdout)
             .unwrap_or_else(|e| panic!("{}@{} does not read: {}", s.id, s.version, e.key));
@@ -89,7 +95,10 @@ fn plan_dir(tag: &str, plan: &str) -> std::path::PathBuf {
 
 #[test]
 fn a_wrong_plan_is_exit_3_with_its_path_in_check_and_in_dry_run() {
-    let good = String::from_utf8(run(&["flow", "steps", "--id", "features.detect@2", "--template"]).stdout).unwrap();
+    let good = String::from_utf8(
+        run(&["flow", "steps", "--id", "features.detect@2", "--template"]).stdout,
+    )
+    .unwrap();
     let wrong = [
         ("hello", r#"{"hello":"world"}"#.to_string(), "hello"),
         ("schema", good.replacen("\"format\"", "\"schema\"", 1), "schema"),
@@ -128,7 +137,10 @@ fn a_wrong_plan_is_exit_3_with_its_path_in_check_and_in_dry_run() {
 
 #[test]
 fn dry_run_of_a_valid_plan_prints_what_would_run_and_writes_nothing() {
-    let good = String::from_utf8(run(&["flow", "steps", "--id", "features.detect@2", "--template"]).stdout).unwrap();
+    let good = String::from_utf8(
+        run(&["flow", "steps", "--id", "features.detect@2", "--template"]).stdout,
+    )
+    .unwrap();
     let d = plan_dir("dry", &good);
     let o = run(&[
         "flow",
