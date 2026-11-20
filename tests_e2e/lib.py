@@ -160,7 +160,7 @@ def _site():
     return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITE
 # Draw's side cards start folded but for three (disegno-riquadri.js): the tests that work inside them find them open, as a student who opened them
 # would; e2e_disegno_riquadri asks for the real first visit (draw_cards=True).
-_CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorage.setItem('mzlab.disegno.schede',JSON.stringify(Object.fromEntries("
+_CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.draw.tabs'))localStorage.setItem('mzlab.draw.tabs',JSON.stringify(Object.fromEntries("
                "['sel-card','lb-card','cut-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
 _PICK_NEVER = "try{if(!localStorage.getItem('mzlab.pick'))localStorage.setItem('mzlab.pick','never')}catch(e){}"          # the modal «Choose samples» dialog would block a mere stage(); e2e_wiff_choose asks for the default (pick_dialog=True)
 def _extra(c, cards=False, pick=False): [c.add_init_script(js) for off, js in ((cards, _CARDS_OPEN), (pick, _PICK_NEVER)) if not off]
@@ -423,9 +423,9 @@ class Run:
         pg = s.b.new_page(**{"viewport": {"width": 1500, "height": 2200}, "reduced_motion": "no-preference" if motion else "reduce", "draw_cards": draw_cards, **({"has_touch": True} if touch else {}), **ctx})
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
-            pg.add_init_script("try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
             pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e) + " @ " + " | ".join((getattr(e, "stack", "") or "").split("\n")[1:5]))))          # diagnostics: the first stack frames say which script threw

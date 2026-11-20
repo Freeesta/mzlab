@@ -55,7 +55,7 @@ try:
             tab("idn"); assert "Load folder" in body() and "Identify all" not in body(), body()
         step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.banco.info')).tab") == "idn"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bench.info')).tab") == "idn"
             h = pg.evaluate("document.querySelector('#hrinfo').offsetHeight"); assert h >= 160
         step("the tab and the height are remembered", persist)
     r.close()

@@ -11,10 +11,10 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.removeItem('mzlab.admin')")
+        pg.evaluate("localStorage.setItem('mzlab.profile','ricerca'); localStorage.removeItem('mzlab.admin')")
         pg.reload(); ready(pg)
         def no_profile():
-            assert pg.evaluate("localStorage.getItem('mzlab.profilo')") is None, "the old explicit profile is dropped"
+            assert pg.evaluate("localStorage.getItem('mzlab.profile')") is None, "the old explicit profile is dropped"
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
             for bad in ("Profile", "Course", "Research"): assert bad not in t, bad

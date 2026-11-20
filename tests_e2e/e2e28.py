@@ -91,7 +91,7 @@ try:
             n_ppm = pg.locator("#lst-tbody tr .pol").count()           # 5 ppm is far below 0.02 Da at this m/z unless the list is dense there
             pg.click("#lst-unit button[data-u=da]"); pg.fill("#lst-tol", "0.05"); wait_for_js(pg, "CALCQUI.st.da === '0.05'", 5000)
             wait_for_js(pg, "/Da/.test(document.querySelector('#lst-tbody').innerText)", 5000)      # the new window's answer is on screen (errors in Da)
-            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calcqui'))).unit.hr") == "da" and pg.evaluate("CALCQUI.st.da") == "0.05", "remembered like the Adducts & losses panel"
+            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calc.inline'))).unit.hr") == "da" and pg.evaluate("CALCQUI.st.da") == "0.05", "remembered like the Adducts & losses panel"
             hits = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr')].map(r => r.innerText)")
             assert any("Da" in h for h in hits) and "match" in pg.inner_text("#lst-count"), (hits[:2], pg.inner_text("#lst-count"))
             assert pg.evaluate("LISTE.find(LISTE.ensure(), 0, %s, 5).length" % q) == n_ppm, "ppm window of the engine unchanged"

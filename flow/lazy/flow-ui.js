@@ -55,7 +55,7 @@
   F.llmOn = () => {
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
     const s = read("mzlab.llm");
-    return F.research() && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
+    return F.research() && s.on === true && !!s.provider && !!read("mzlab.llm.consensus")[s.provider];
   };
 
   /** the refusal of a facet: the step, its input, what it needs and what the files are (`want` and `have` are lists joined by «|») */

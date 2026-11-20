@@ -43,7 +43,7 @@ try:
             assert pg.evaluate("CALCQUI.opts(CALCQUI.arg('214',0)).unit") == "ppm" and pg.evaluate("CALCQUI.opts(CALCQUI.arg('214.0896',0)).unit") == "ppm"
             pg.evaluate("CALCQUI.set({unit: {hr: null, lr: 'da'}})"); frames(pg, 25)            # the same unit again: the same groups as before
             assert pg.input_value("#calctol") == "0.5" and pg.evaluate("document.querySelectorAll('#calcout .cq-g').length") == n_da
-            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calcqui'))).unit.lr") == "da", "remembered in the settings"
+            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calc.inline'))).unit.lr") == "da", "remembered in the settings"
         step("the Da / ppm selector switches the unit, keeps each value and remembers the choice per mode", unit_switch)
         def lr_30():
             type_("30"); assert "CH2O" in txt() or "CH\u2082O" in txt(), txt()[:300]

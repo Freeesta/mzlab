@@ -53,7 +53,7 @@ try:
             holder.evaluate(GONE)
             holder.evaluate("""() => new Promise((res, rej) => {
               const r = indexedDB.open("mzlab_lab", 2);
-              r.onupgradeneeded = () => { const db = r.result; db.createObjectStore("files"); db.createObjectStore("kv"); db.createObjectStore("liste_utente", { keyPath: "id" }); };
+              r.onupgradeneeded = () => { const db = r.result; db.createObjectStore("files"); db.createObjectStore("kv"); db.createObjectStore("user_lists", { keyPath: "id" }); };
               r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"], "readwrite"); t.objectStore("files").put(new ArrayBuffer(8), "old.mzML"); t.objectStore("kv").put('{"k":1}', "notebook"); t.oncomplete = () => { db.close(); res(true); }; };
               r.onerror = () => rej(String(r.error));
             })""")
@@ -81,7 +81,7 @@ try:
         def session_skeleton_when_clue_present():
             holder.evaluate(GONE)
             c = b.new_context(viewport={"width": 1300, "height": 900})
-            c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
+            c.add_init_script("try { localStorage.setItem('mzlab.session', '1'); } catch (e) {}")
             pg = c.new_page(); pg.goto(URL, wait_until="domcontentloaded")
             assert pg.evaluate("!document.getElementById('opening').hidden && document.getElementById('opening').classList.contains('restoring')"), "restoring box visible with session clue"
             assert pg.evaluate("document.getElementById('wdata').hidden"), "landing hidden with session clue"
@@ -111,7 +111,7 @@ try:
         def wasm_fails_with_session():
             holder.evaluate(GONE)
             c = b.new_context(viewport={"width": 1300, "height": 900}, service_workers="block")
-            c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
+            c.add_init_script("try { localStorage.setItem('mzlab.session', '1'); } catch (e) {}")
             c.route("**/*.wasm", lambda r: r.abort())
             pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))
             pg.goto(URL, wait_until="domcontentloaded")

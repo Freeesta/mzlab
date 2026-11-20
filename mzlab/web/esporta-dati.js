@@ -18,7 +18,7 @@ export const RUNTIME = /^(mzlab|qqq)\.(run|avvii|migrato|memProbe|memBudget(\.lo
 export const DEV = /^(mzlab|qqq)\.(admin|dev\..*)$/;
 export const OURS = /^(mzlab|qqq)[.-]/;
 // IndexedDB stores worth keeping; the others are rebuilt (manifest of OPFS) or are file copies
-export const IDB_STORES = ["notebook", "kv", "liste_utente", "molecules"];
+export const IDB_STORES = ["notebook", "kv", "user_lists", "molecules"];
 
 /** @typedef {{ name: string, bytes: Uint8Array, what: string }} Entry */
 /** @typedef {{ item: string, reason: string }} Left */

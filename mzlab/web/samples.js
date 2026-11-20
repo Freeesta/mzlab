@@ -160,11 +160,11 @@ const SAMPLES = (() => {
   }
 
   // ---------------------------------------------------------------- workflow file
-  const exportState = () => files().map(f => ({ nome: f.file, ruolo: kindOf(f), concentrazione: f.conc ?? null, unita_conc: f.cunit ?? null, replica: f.rep || null }));
+  const exportState = () => files().map(f => ({ name: f.file, role: kindOf(f), concentration: f.conc ?? null, conc_unit: f.cunit ?? null, replicate: f.rep || null }));
   function importState(list) {
     if (!Array.isArray(list)) return 0;
     const ent = [];
-    list.forEach(x => { if (x && x.nome) { const e = { file: x.nome }; const r = KIND[x.ruolo] || x.ruolo; if (SAMPLES_DOC.known(r)) e.role = r; if ("concentrazione" in x) { e.conc = x.concentrazione; e.cunit = x.unita_conc || null; } if ("replica" in x) e.rep = x.replica || ""; ent.push(e); } });
+    list.forEach(x => { if (x && x.name) { const e = { file: x.name }; const r = KIND[x.role] || x.role; if (SAMPLES_DOC.known(r)) e.role = r; if ("concentration" in x) { e.conc = x.concentration; e.cunit = x.conc_unit || null; } if ("replicate" in x) e.rep = x.replicate || ""; ent.push(e); } });
     return apply(ent);
   }
   /** the document samples/1 of the open files (entries of NB.session plus `rep`, the keys of the schema in the order of the Rust) */

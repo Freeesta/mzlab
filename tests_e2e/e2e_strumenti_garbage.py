@@ -63,7 +63,7 @@ try:
             pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
             pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000)
             pg.click("#lw-opt summary"); pg.wait_for_selector("#lw-tol", state="visible")
-            assert sweep(pg, "#libwhat", "localStorage.getItem('mzlab.lib.soglie')") >= 10
+            assert sweep(pg, "#libwhat", "localStorage.getItem('mzlab.lib.thresholds')") >= 10
         step("«What is it?»: precursor, tolerances and thresholds refuse garbage", what_is)
         def what_enter():
             n0 = len(urls); x = pg.locator("#lw-prec"); old = x.input_value()
@@ -71,8 +71,8 @@ try:
             wait_for_js(pg, "document.querySelector('#lw-prec').getAttribute('aria-invalid') === 'true'", 5000)
             assert pg.input_value("#lw-prec") == old, pg.input_value("#lw-prec")
             typed(pg, "#lw-frag", "0,25", "Enter"); assert pg.get_attribute("#lw-frag", "aria-invalid") is None and pg.input_value("#lw-frag") == "0,25"
-            pg.fill("#libwhat [data-thr=entropia_min]", "0,5"); pg.dispatch_event("#libwhat [data-thr=entropia_min]", "change")
-            wait_for_js(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.5; } catch (e) { return false; } })()", 5000)
+            pg.fill("#libwhat [data-thr=entropy_min]", "0,5"); pg.dispatch_event("#libwhat [data-thr=entropy_min]", "change")
+            wait_for_js(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.thresholds')).mzlab.entropy_min === 0.5; } catch (e) { return false; } })()", 5000)
             assert all("abc" not in u for u in urls[n0:])
         step("«What is it?»: Enter in a refused field runs nothing; «0,25» and «0,5» are taken", what_enter)
         def msn_list():
@@ -88,7 +88,7 @@ try:
             M = "E.panels.find(q => q.type === 'map')"; wait_for_js(pg, M + " && " + M + "._a", 60000)
             pg.evaluate(M + ".el.scrollIntoView({block: 'center'})"); frames(pg, 3); pg.click(".pnl.map [data-o=view][data-v='3d']")
             pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g", timeout=60000)
-            assert sweep(pg, "dialog.m3d", "localStorage.getItem('mzlab.mappa')") == 1
+            assert sweep(pg, "dialog.m3d", "localStorage.getItem('mzlab.map')") == 1
             pg.evaluate("document.querySelector('dialog.m3d').close()")
         step("3D map: the threshold refuses garbage", map3d)
     r.close()
