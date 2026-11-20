@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dati_percorsi import percorso  # the one resolver of the private data repository
+from verifica_proc import run_logged
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".verifica"
@@ -48,7 +49,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_raw_riaggiunto": {"sito"}, "e2e_agilent_riaggiunto": {"sito"},
     "e2e_avvio_lento": {"sito"}, "e2e_righe_subito": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm": {"wasm"}, "e2e_llm_consenso": {"wasm"}, "e2e6": {"wasm"}, "e2e_decimali": {"wasm"}, "e2e_disegno_chimica": {"wasm"}, "e2e_menu_info": {"wasm"}, "e2e_menu_link": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
     # the drawing tests (Ketcher + the drawing engine .wasm): green in the nightly, which has the CI-built .wasm, red in `e2e-cambiati`, which builds the site alone
-    "e2e24": {"wasm"}, "e2e_disegno_appunti_tocco": {"wasm"}, "e2e_disegno_analisi": {"wasm"}, "e2e_disegno_cip": {"wasm"}, "e2e_disegno_esporta": {"wasm"}, "e2e_disegno_verifica": {"wasm"}, "e2e_meccanismo": {"wasm"}, "e2e_parziali": {"wasm"}, "e2e_radicali": {"wasm"}, "e2e_radicali_ms": {"wasm"},
+    "e2e24": {"wasm"}, "e2e_disegno_appunti_tocco": {"wasm"}, "e2e_disegno_analisi": {"wasm"}, "e2e_disegno_cip": {"wasm"}, "e2e_disegno_esporta": {"wasm"}, "e2e_disegno_verifica": {"wasm"}, "e2e_meccanismo": {"wasm"}, "e2e_parziali": {"wasm"}, "e2e_disegno_cdxml_rdkit": {"wasm"}, "e2e_radicali": {"wasm"}, "e2e_radicali_ms": {"wasm"},
     "e2e_memoria_riduzioni": {"wasm"},          # its Pipeline steps need the mzFinder engine (static/wasm-feat) that only the CI jobs build
     "e2e_feat_na": {"wasm"}, "e2e_feat_worker": {"wasm"}, "e2e_frammenti": {"wasm"}, "e2e_integra_base": {"wasm"}, "e2e_ruoli_tempi": {"wasm"}, "e2e_taglio": {"wasm"},   # same: the feature-finder and cut-line tests, found red in `e2e-cambiati` one run at a time
 }
@@ -77,7 +78,8 @@ BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR
 NOT_RUN = "TIMEOUT budget, not run"      # the marks of a test the --budget kept from running or cut: never read as a known red (NOTO) or as a pass
 CARGO_MARKS = ("cargo", "cli_command")      # a test source with one of these starts the CLI or the native example: the binaries are built once before the e2e
 CUT = "TIMEOUT budget, cut"
-PROGRESS = False                          # one line per finished e2e on stderr: only with --budget / --parte (the CI), a normal run stays short
+PROGRESS = False                          # a line when each e2e starts and one when it ends, on stderr: only with --budget / --parte / --solo / --cambiati (the CI), a normal run stays short
+HEARTBEAT = 120                           # seconds between the "still running" lines of a long step
 DEADLINE: float | None = None      # --budget: after it nothing starts and what runs is cut, so the report is always written (a CI step killed from outside leaves none)
 
 
@@ -92,12 +94,12 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
             timeout, cut = int(DEADLINE - t0), True
     # the tests print m/z, deltas, symbols: on Windows the console is cp1252 and a print of «Δ» or «🔗» stopped the test with UnicodeEncodeError (CI job windows-chromium)
     env = {**(env if env is not None else os.environ), "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    # The child writes into the log file in its own process group and a timeout kills the whole group (verifica_proc.py): one hung script
+    # fails after its cap instead of silencing the job (PR #3586: 29 min of nothing).
     try:
-        p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
-        out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
-    except subprocess.TimeoutExpired as e:
-        txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
-        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT after {timeout} s"), 124
+        rc, hung = run_logged(cmd, log, timeout, env, cwd, HEARTBEAT, T0 if PROGRESS else None)
+        tail = (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT after {timeout} s (the script and its child processes were killed)") if hung else ""
+        out = log.read_bytes().decode("utf-8", "replace") + (f"\n{tail}" if tail else "")
     except FileNotFoundError as e:
         out, rc = f"command not found: {e}", 127
     log.write_text(out, encoding="utf-8")
@@ -443,7 +445,7 @@ def main() -> None:
     t0 = time.time()
     global DEADLINE, PROGRESS
     DEADLINE = t0 + a.budget if a.budget else None
-    PROGRESS = bool(a.budget or a.parte)
+    PROGRESS = bool(a.budget or a.parte or a.solo or a.cambiati)
     parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
