@@ -121,6 +121,8 @@ def open_mzfinder(pg, host="tp-right", timeout=120000):
     pg.wait_for_function("!!window.QTOOLS && typeof window.QTOOLS.ensure === 'function'", timeout=timeout)
     pg.evaluate("() => window.QTOOLS.ensure()")
     pg.wait_for_function("!!window.TPTAB && !!window.TPLAZY", timeout=timeout)
+    # the Data view stays visible now and its one-shot decorative leaf (9 s) would keep `getAnimations()` busy: reduced motion, as the a11y setting does
+    pg.evaluate("() => document.documentElement.setAttribute('data-a11y-reduce', '1')")
     pg.evaluate("h => { if (!document.getElementById(h)) { const d = document.createElement('div'); d.id = h; document.body.appendChild(d); } }", host)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
