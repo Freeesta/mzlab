@@ -115,7 +115,7 @@ try:
                 assert smi() == "CCO", (name, smi(), note())
         step("a molfile saved as UTF-16 (either byte order) or UTF-8 with a byte order mark is read", utf16)
 
-        SAVED_O = """/"label":"O"/.test(NB.ket || '')"""                 # the autosave runs once the changes have stopped
+        SAVED_O = """/"label":\\s*"O"/.test(NB.ket || '')"""                 # the autosave runs once the changes have stopped
         def double_draw():
             clear(); wait_for_js(pg, "!" + SAVED_O, timeout=15000)
             pg.evaluate(f"(() => {{ const k = {KJ}, add = k.addFragment.bind(k); window.__adds = 0; k.addFragment = x => {{ window.__adds++; return add(x); }}; }})()")
@@ -128,7 +128,7 @@ try:
 
         def pick_while_drawing():
             clear()
-            pg.evaluate(f"""(() => {{ const k = {KJ}, add = k.addFragment.bind(k); k.addFragment = async x => {{ if (x === 'CCO') {{ const f = document.getElementById('ex-smi'); f.value = 'CCN'; document.getElementById('ex-load').click(); }} return add(x); }}; }})()""")
+            pg.evaluate(f"""(() => {{ const k = {KJ}, add = k.addFragment.bind(k); k.addFragment = async x => {{ if (x === 'CCO') {{ k.addFragment = add; const f = document.getElementById('ex-smi'); f.value = 'CCN'; document.getElementById('ex-load').click(); }} return add(x); }}; }})()""")
             pg.fill("#ex-smi", "CCO"); pg.click("#ex-load")
             wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 6 && document.getElementById('ex-smi').value === ''", timeout=15000)
         step("a text entered while a draw runs is drawn next, not lost", pick_while_drawing)
