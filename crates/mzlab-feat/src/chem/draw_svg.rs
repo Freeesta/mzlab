@@ -62,10 +62,20 @@ fn hex(c: Rgb) -> String {
     format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2])
 }
 
+/// Text for an XML element: `& < >` escaped, characters XML 1.0 forbids (controls but tab, CR and LF, U+FFFE and U+FFFF) dropped.
 fn escape(t: &str) -> String {
-    t.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+    let mut o = String::with_capacity(t.len());
+    for c in t.chars() {
+        match c {
+            '&' => o += "&amp;",
+            '<' => o += "&lt;",
+            '>' => o += "&gt;",
+            '\t' | '\n' | '\r' => o.push(c),
+            c if c < ' ' || c == '\u{fffe}' || c == '\u{ffff}' => {}
+            c => o.push(c),
+        }
+    }
+    o
 }
 
 /// The SVG text of a figure; `title` becomes its accessible name.

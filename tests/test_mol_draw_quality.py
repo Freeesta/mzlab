@@ -4,8 +4,10 @@ at most 9 atoms on a bond, no two atom or CIP labels of the SVG overlapping and 
 release p95 of one layout (measured and printed; the limit is 1 ms, asserted with a x3 margin because CI machines are shared)."""
 import json
 import shutil
+import struct
 import subprocess
 import sys
+import zlib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -88,6 +90,30 @@ def test_no_labels_of_the_svg_overlap_in_set_a_and_all_are_inside_the_image(cli_
                 if b[0] < c[2] and c[0] < b[2] and b[1] < c[3] and c[1] < b[3]:
                     bad.append((smi, "overlap", img["labels"][i]["text"], img["labels"][j]["text"]))
     assert bad == [], bad[:5]
+
+
+def test_the_png_is_read_back_by_an_independent_decoder(cli_built):
+    """Chunks split here, every CRC-32 checked with zlib.crc32, IDAT inflated with zlib: the size is the one of the SVG and the scanlines are filter 0."""
+    spec = "smiles:CC(=O)Oc1ccccc1C(=O)O"
+    run_cli = lambda fmt: subprocess.run([str(CLI), "mol", "draw", spec, "--format", fmt], cwd=ROOT, capture_output=True, check=True).stdout
+    png, svg = run_cli("png"), ET.fromstring(run_cli("svg"))
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    pos, chunks = 8, []
+    while pos < len(png):
+        (n,) = struct.unpack(">I", png[pos:pos + 4])
+        kind, data = png[pos + 4:pos + 8], png[pos + 8:pos + 8 + n]
+        (crc,) = struct.unpack(">I", png[pos + 8 + n:pos + 12 + n])
+        assert crc == zlib.crc32(kind + data), kind
+        chunks.append((kind, data))
+        pos += 12 + n
+    assert [k for k, _ in chunks] == [b"IHDR", b"IDAT", b"IEND"]
+    w, h, depth, color = struct.unpack(">IIBB", chunks[0][1][:10])
+    assert (w, h, depth, color) == (int(svg.get("width")), int(svg.get("height")), 8, 2)
+    raw = zlib.decompress(chunks[1][1])
+    assert len(raw) == h * (3 * w + 1)
+    assert all(raw[y * (3 * w + 1)] == 0 for y in range(h))
+    pixels = b"".join(raw[y * (3 * w + 1) + 1:(y + 1) * (3 * w + 1)] for y in range(h))
+    assert any(v != 255 for v in pixels) and pixels[:3] == b"\xff\xff\xff", "ink on a white margin"
 
 
 def test_the_molfile_of_every_drawing_reads_back_as_the_same_record():

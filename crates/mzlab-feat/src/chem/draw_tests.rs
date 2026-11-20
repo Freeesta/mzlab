@@ -148,7 +148,7 @@ fn draw_bad_requests_and_settings_are_told_apart() {
     );
     assert_eq!(
         err_key(draw_json(&req("CCO", ",\"format\":\"png\""))),
-        "err.mol.draw.set"
+        "err.mol.draw.binary"
     );
     assert_eq!(
         err_key(draw_json(&req("smiles:C(C", ""))),

@@ -120,17 +120,21 @@ fn pixels(f: &Figure) -> Vec<u8> {
     img
 }
 
-fn chunk(o: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
-    o.extend_from_slice(&(data.len() as u32).to_be_bytes());
-    let mut body = kind.to_vec();
-    body.extend_from_slice(data);
-    o.extend_from_slice(&body);
-    o.extend_from_slice(&mzlab_core::zip::crc32(&body).to_be_bytes());
+/// One PNG chunk written in place: length, type, the data `fill` appends, and the CRC-32 of type and data (no copy of the data).
+fn chunk(o: &mut Vec<u8>, kind: &[u8; 4], fill: impl FnOnce(&mut Vec<u8>)) {
+    let at = o.len();
+    o.extend_from_slice(&[0; 4]);
+    o.extend_from_slice(kind);
+    fill(o);
+    let n = (o.len() - at - 8) as u32;
+    o[at..at + 4].copy_from_slice(&n.to_be_bytes());
+    let crc = mzlab_core::zip::crc32(&o[at + 4..]);
+    o.extend_from_slice(&crc.to_be_bytes());
 }
 
-/// A zlib stream of "stored" blocks and its Adler-32.
-fn zlib_stored(raw: &[u8]) -> Vec<u8> {
-    let mut z = vec![0x78, 0x01];
+/// Appends a zlib stream of "stored" blocks and its Adler-32.
+fn zlib_stored(raw: &[u8], z: &mut Vec<u8>) {
+    z.extend_from_slice(&[0x78, 0x01]);
     let mut blocks = raw.chunks(65535).peekable();
     if blocks.peek().is_none() {
         z.extend_from_slice(&[1, 0, 0, 0xff, 0xff]);
@@ -147,25 +151,29 @@ fn zlib_stored(raw: &[u8]) -> Vec<u8> {
         s = (s + a) % 65521;
     }
     z.extend_from_slice(&((s << 16) | a).to_be_bytes());
-    z
 }
 
-/// The PNG file of a figure.
+/// The PNG file of a figure. Memory is about twice the pixels (the pixels, then the scanlines with the pixels dropped, then the file).
 pub fn png(f: &Figure) -> Vec<u8> {
     let (w, h) = (f.w as usize, f.h as usize);
-    let img = pixels(f);
-    let mut raw = Vec::with_capacity(h * (w * 3 + 1));
-    for row in img.chunks(w * 3) {
-        raw.push(0);
-        raw.extend_from_slice(row);
-    }
-    let mut o = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
-    let mut head = Vec::new();
-    head.extend_from_slice(&f.w.to_be_bytes());
-    head.extend_from_slice(&f.h.to_be_bytes());
-    head.extend_from_slice(&[8, 2, 0, 0, 0]);
-    chunk(&mut o, b"IHDR", &head);
-    chunk(&mut o, b"IDAT", &zlib_stored(&raw));
-    chunk(&mut o, b"IEND", &[]);
+    let raw = {
+        let img = pixels(f);
+        let mut raw = Vec::with_capacity(h * (w * 3 + 1));
+        for row in img.chunks(w * 3) {
+            raw.push(0);
+            raw.extend_from_slice(row);
+        }
+        raw
+    };
+    let blocks = raw.len() / 65535 + 1;
+    let mut o = Vec::with_capacity(raw.len() + 5 * blocks + 64);
+    o.extend_from_slice(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]);
+    chunk(&mut o, b"IHDR", |d| {
+        d.extend_from_slice(&f.w.to_be_bytes());
+        d.extend_from_slice(&f.h.to_be_bytes());
+        d.extend_from_slice(&[8, 2, 0, 0, 0]);
+    });
+    chunk(&mut o, b"IDAT", |d| zlib_stored(&raw, d));
+    chunk(&mut o, b"IEND", |_| {});
     o
 }

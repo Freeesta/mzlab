@@ -83,6 +83,8 @@ fn highlights_are_halos_by_colour_name_in_the_list_or_the_compact_form() {
         "[{\"atoms\":[7]}]",
         "[{\"atoms\":[0],\"color\":\"mauve\"}]",
         "\"0-0\"",
+        "\"0-2\"",
+        "\"0,1,2,0,1,2\"",
         "[{\"bonds\":[[0]]}]",
     ] {
         let r = format!("{{\"spec\":\"smiles:CCO\",\"format\":\"svg\",\"highlight\":{bad}}}");
@@ -267,7 +269,7 @@ fn png_is_a_valid_rgb_file_of_the_size_of_the_svg_with_ink_on_white() {
         ))
         .unwrap_err()
         .key,
-        "err.mol.draw.set"
+        "err.mol.draw.binary"
     );
 }
 
@@ -281,4 +283,85 @@ fn an_empty_or_bonded_nothing_still_gives_a_picture() {
             .key,
         "err.mol.draw.set"
     );
+}
+
+/// A V3000 molfile of two bonded carbons at `a` and `b`, as the text of a JSON string.
+fn two_atoms(a: &str, b: &str) -> String {
+    let lines = [
+        "title",
+        "  mzlab",
+        "",
+        "  0  0  0     0  0            999 V3000",
+        "M  V30 BEGIN CTAB",
+        "M  V30 COUNTS 2 1 0 0 0",
+        "M  V30 BEGIN ATOM",
+        &format!("M  V30 1 C {a} 0 0"),
+        &format!("M  V30 2 C {b} 0 0"),
+        "M  V30 END ATOM",
+        "M  V30 BEGIN BOND",
+        "M  V30 1 1 1 2",
+        "M  V30 END BOND",
+        "M  V30 END CTAB",
+        "M  END",
+    ];
+    lines.join("\\n")
+}
+
+#[test]
+fn coordinates_that_are_huge_or_not_finite_are_laid_out_again_and_the_picture_stays_small() {
+    let mut read = 0;
+    for (a, b) in [
+        ("0 0", "1e9 1e9"),
+        ("0 0", "1e300 -1e300"),
+        ("nan 0", "1 inf"),
+    ] {
+        let r = format!(
+            "{{\"spec\":\"{}\",\"format\":\"svg\",\"json\":true}}",
+            two_atoms(a, b)
+        );
+        // the file may be refused as unreadable; when it is read the picture is bounded and has no NaN
+        let Ok(text) = draw_json(&r) else { continue };
+        read += 1;
+        let v = json::parse(text.as_bytes()).unwrap();
+        let (w, h) = (
+            v.get("width_px").unwrap().f64().unwrap(),
+            v.get("height_px").unwrap().f64().unwrap(),
+        );
+        assert!(w <= 4096.0 && h <= 4096.0 && w >= 1.0, "{a} {b}: {w} x {h}");
+        let svg = v.get("svg").and_then(Value::str).unwrap();
+        assert!(!svg.contains("NaN") && !svg.contains("inf"), "{a} {b}");
+        assert!(text.contains("beyond 1000 angstrom"), "{a} {b}: {text}");
+    }
+    assert!(read >= 1, "no file was read");
+}
+
+#[test]
+fn the_title_of_a_picture_loses_the_characters_xml_forbids() {
+    let r = "{\"spec\":\"smiles:CCO\",\"format\":\"svg\",\"name\":\"a\\u0001b\\u000bc<d\\ud7ff\\uffff\\te\"}";
+    let svg = draw_json(r).unwrap();
+    assert!(svg.contains("<title>abc&lt;d\u{d7ff}\te</title>"), "{svg}");
+    assert!(svg
+        .chars()
+        .all(|c| c >= ' ' || matches!(c, '\t' | '\n' | '\r')));
+}
+
+#[test]
+fn a_refused_setting_shows_the_value_as_given_and_a_png_as_text_has_its_own_error() {
+    for (extra, value) in [
+        (",\"scale\":true", "true"),
+        (",\"cip\":5", "5"),
+        (",\"cip\":\"maybe\"", "maybe"),
+        (",\"scale\":\"200\"", "200"),
+    ] {
+        let r = format!("{{\"spec\":\"smiles:CCO\",\"format\":\"svg\"{extra}}}");
+        let e = draw_json(&r).unwrap_err();
+        assert_eq!(e.key, "err.mol.draw.set");
+        assert!(
+            e.params.iter().any(|(k, v)| *k == "value" && v == value),
+            "{extra}: {:?}",
+            e.params
+        );
+    }
+    let e = draw_json("{\"spec\":\"smiles:CCO\",\"format\":\"png\"}").unwrap_err();
+    assert_eq!(e.key, "err.mol.draw.binary");
 }

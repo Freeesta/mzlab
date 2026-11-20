@@ -61,6 +61,16 @@ pub(super) fn note(key: &'static str, value: impl ToString) -> Note {
     }
 }
 
+/// A setting as it was given, for the message that refuses it: text as is, `true`/`false`, a number as written in the picture, else empty.
+fn shown(x: &Value) -> String {
+    match (x.str(), x.bool(), x.f64()) {
+        (Some(t), ..) => t.to_string(),
+        (_, Some(b), _) => b.to_string(),
+        (.., Some(n)) => draw_svg::num(n),
+        _ => String::new(),
+    }
+}
+
 fn read_request(v: &Value) -> Result<Request<'_>> {
     let text = |k: &str| v.get(k).and_then(Value::str);
     let spec = text("spec").filter(|s| !s.trim().is_empty());
@@ -81,10 +91,10 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
             (Some(b), _) => b,
             (_, Some("on")) => true,
             (_, Some("off")) => false,
-            (_, t) => {
+            _ => {
                 return Err(Error::new("err.mol.draw.set")
                     .with("name", "cip")
-                    .with("value", t.unwrap_or("")))
+                    .with("value", shown(x)))
             }
         },
     };
@@ -96,7 +106,7 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
                 .ok_or_else(|| {
                     Error::new("err.mol.draw.set")
                         .with("name", "scale")
-                        .with("value", x.str().unwrap_or(""))
+                        .with("value", shown(x))
                 })?
         }
     };
@@ -128,11 +138,7 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
 /// per angstrom, "cip": on|off, "highlight": [{"atoms", "bonds", "color"}], "json": true}` as text. A PNG is bytes: `draw_bytes`, or `"json": true`.
 pub fn draw_json(request: &str) -> Result<String> {
     let a = answer(request)?;
-    String::from_utf8(a.bytes).map_err(|_| {
-        Error::new("err.mol.draw.set")
-            .with("name", "format")
-            .with("value", "png (binary: ask for the bytes or add json)")
-    })
+    String::from_utf8(a.bytes).map_err(|_| Error::new("err.mol.draw.binary"))
 }
 
 /// `draw_json` as bytes: a PNG is the file itself.
@@ -156,9 +162,9 @@ pub fn answer(request: &str) -> Result<Answer> {
         Format::Molfile => d.mol.to_molfile(&d.title).into_bytes(),
         Format::Scene => scene(&d).into_bytes(),
         Format::Svg | Format::Png => {
-            let hl = r.highlight.map_or(Ok(Vec::new()), |h| {
-                draw_hl::highlights(h, d.mol.atoms.len())
-            })?;
+            let hl = r
+                .highlight
+                .map_or(Ok(Vec::new()), |h| draw_hl::highlights(h, &d.mol))?;
             let o = draw_svg::Options {
                 scale: r.scale,
                 cip: r.cip,
@@ -347,6 +353,9 @@ pub(super) fn from_smiles(text: &str) -> Result<Drawn> {
     Ok(blank("smiles", m))
 }
 
+/// Largest coordinate kept from a molfile, in angstrom.
+const MAX_COORD: f64 = 1000.0;
+
 /// A molfile: its coordinates are kept when it has 2D ones that are not all at the origin and `keep` is on; else it is laid out again.
 fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
     let m = Mol::from_molfile(text)
@@ -367,8 +376,14 @@ fn from_molfile(text: &str, keep: bool) -> Result<Drawn> {
         .coords
         .as_ref()
         .is_some_and(|c| c.xy.iter().any(|r| r.iter().take(2).any(|v| *v != 0.0)));
+    // a file can state any number: a coordinate that is not finite or is beyond MAX_COORD angstrom would make an unusable (or huge) picture
+    let sane = m.coords.as_ref().is_none_or(|c| {
+        c.xy.iter()
+            .all(|r| r.iter().all(|v| v.is_finite() && v.abs() <= MAX_COORD))
+    });
     let (why, relay) = match (keep, flat, spread) {
         (false, ..) => ("layout=new", true),
+        _ if !sane => ("coordinates not finite or beyond 1000 angstrom", true),
         (_, false, true) => ("3D coordinates", true),
         (_, _, false) => ("all atoms at the origin", true),
         _ => ("2D coordinates of the file", false),

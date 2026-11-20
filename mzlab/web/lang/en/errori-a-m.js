@@ -58,6 +58,7 @@ I18N.add("en", {
   "err.cli.usage": "{message}",
   "err.msn.rules.document": "The file {path} is not an msn-rules/1 document: pass the output of msn rules.",
   "err.mol.draw.request": "The drawing request is incomplete: it needs a SPEC (a SMILES, a molfile, a name or an InChIKey).",
+  "err.mol.draw.binary": "A PNG is a binary file: ask for its bytes, or add json to get it as base64 in draw-image/1.",
   "err.mol.draw.set": "The setting “{name}” cannot be “{value}”: format is molfile, scene, svg or png; layout is keep or new; scale is 8 to 80 pixels per angstrom; cip is on or off; highlight is atoms and bonds with a colour name.",
   "err.mol.draw.smiles": "The SMILES cannot be read: {message}.",
   "err.mol.draw.molfile": "The molfile cannot be read: {message}.",

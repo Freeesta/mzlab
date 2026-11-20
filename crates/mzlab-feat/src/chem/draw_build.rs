@@ -25,12 +25,11 @@ type Bx = [f64; 4];
 
 /// The picture of a drawn structure; the flag says the scale was reduced to fit `MAX_SIDE`.
 pub fn figure(d: &Drawn, o: &Options) -> (Figure, bool) {
-    let fig = build(d, o, o.scale);
-    let side = f64::from(fig.w.max(fig.h));
+    let (fig, side) = build(d, o, o.scale);
     if side <= MAX_SIDE {
         return (fig, false);
     }
-    (build(d, o, o.scale * (MAX_SIDE - 8.0) / side), true)
+    (build(d, o, o.scale * (MAX_SIDE - 8.0) / side).0, true)
 }
 
 fn geo(d: &Drawn, s: f64) -> Geo<'_> {
@@ -273,7 +272,8 @@ fn bonds(g: &Geo, boxes: &[Option<Bx>], prims: &mut Vec<Prim>) {
 }
 
 /// The frame: the box of every atom and label, with a margin of half a bond.
-fn frame(g: &Geo, labels: Vec<Label>, prims: Vec<Prim>, s: f64) -> Figure {
+/// The figure and its longer side in pixels, as a float (the integer sizes saturate, so a huge drawing would be scaled by a wrong factor).
+fn frame(g: &Geo, labels: Vec<Label>, prims: Vec<Prim>, s: f64) -> (Figure, f64) {
     let mut bb = [f64::MAX, f64::MAX, f64::MIN, f64::MIN];
     let mut grow = |x: f64, y: f64| bb = [bb[0].min(x), bb[1].min(y), bb[2].max(x), bb[3].max(y)];
     for p in &g.pos {
@@ -292,7 +292,7 @@ fn frame(g: &Geo, labels: Vec<Label>, prims: Vec<Prim>, s: f64) -> Figure {
         (bw + 2.0 * margin).ceil().max(1.0),
         (bh + 2.0 * margin).ceil().max(1.0),
     );
-    Figure {
+    let fig = Figure {
         w: w as u32,
         h: h as u32,
         x0: bb[0] - (w - bw) / 2.0,
@@ -300,10 +300,11 @@ fn frame(g: &Geo, labels: Vec<Label>, prims: Vec<Prim>, s: f64) -> Figure {
         scale: s,
         prims,
         labels,
-    }
+    };
+    (fig, w.max(h))
 }
 
-fn build(d: &Drawn, o: &Options, s: f64) -> Figure {
+fn build(d: &Drawn, o: &Options, s: f64) -> (Figure, f64) {
     let g = geo(d, s);
     let (mut labels, runs, boxes) = atom_labels(&g);
     let mut prims = halos(&g, o);

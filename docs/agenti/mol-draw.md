@@ -34,7 +34,7 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 | 5 | not in the db (`err.mol.draw.not_found` with the nearest names in the hint, or `err.mol.draw.not_found_bare` when none is near) |
 | 6 | unwritable `--out` |
 
-Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|smiles|molfile|needDb|inchi|db|not_found|tooBig` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|binary|smiles|molfile|needDb|inchi|db|not_found|not_found_bare|tooBig` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
 
 ## Quality gates (`tests/test_mol_draw_quality.py`, `tools/draw_quality.py`)
 Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, monocycle, fused, bridged_spiro, macrocycle, charged, stereo, salt, druglike). Set B `draw_set_b.tsv`: 100 E/Z double bonds with the expected cis/trans. `draw_reference.json`: RDKit's counts on the same metrics (RDKit is needed only to rewrite the sets: `python3 tools/draw_quality.py --set-out --reference`, seed 20261120). A drawing is clean when it has no clash (atoms closer than 0.45 bond), no atom on a bond (0.3), no crossing, bond-length CV under 0.15 and a mean ring-angle error under 10 degrees.
@@ -55,6 +55,7 @@ One display list (lines, polygons, discs, stroked text) in pixels, built once fr
 - Request keys: `format` (`svg`, `png`), `scale` (pixels per angstrom, 8 to 80, default 24), `cip` (`on`/`off`: R/S marks of stereocentres, E/Z of double bonds, both from the record), `highlight` (`0,1,0-1@red;5@blue`, or a JSON list: atoms, bonds `a-b`, a colour name: red orange yellow green cyan blue purple pink gray), `json` (wrap as `draw-image/1`).
 - Labels: carbon is a vertex unless charged, isotopic or alone; every other atom shows its symbol with its hydrogens (`OH`, `H2N`, `NH3+`), the hydrogens on the side without bonds; bonds stop at the label; wedges are solid, hashed or wavy; CIP marks (R/S/r/s, E/Z) go into the free angle beside their atom or bond; highlights are pale halos under the structure.
 - `draw-image/1` (`docs/schemi/draw-image-1.json`) lists every label box in image pixels, so a caller can check overlaps; `tests/test_mol_draw_quality.py` does it on the 200 molecules of set A (no overlap, all inside the image).
+- Bounded input: a molfile whose coordinates are not finite or pass 1000 angstrom is laid out again (`choices`: `layout`); a highlight list may name each atom and each bond once at most, and a bond must exist in the structure (`err.mol.draw.set`); text of the title is cleaned of characters XML forbids; the PNG needs about twice its pixels in memory (50 MB of pixels at 4096 px a side).
 - A picture over 4096 px on a side is drawn at a smaller scale instead (`choices`: `scale_reduced`, no refusal); the `images` of `draw_d1.json` include that case.
 
 ## Parity and tests

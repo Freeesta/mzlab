@@ -1,9 +1,11 @@
 //! Highlight lists of `mol draw` pictures: the JSON list or the compact text `0,1,0-1@red;5@blue` (atoms, bonds `a-b`, a colour name), checked
-//! against the atom count. Colours are pale halos by name.
+//! against the structure (atoms below the atom count, bonds that exist, at most one item per atom and bond in all). Colours are pale halos by
+//! name.
 
 use super::draw_svg::Rgb;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
+use mzlab_mol::Mol;
 
 /// Pale halo colours by name.
 const COLORS: [(&str, Rgb); 9] = [
@@ -39,27 +41,61 @@ fn color_of(name: &str) -> Result<Rgb> {
         .ok_or_else(|| bad("highlight", name))
 }
 
-/// An atom number below `n`.
-fn atom_in(x: Option<f64>, n: usize) -> Result<u32> {
-    match x {
-        Some(f) if f >= 0.0 && f.fract() == 0.0 && (f as usize) < n => Ok(f as u32),
-        _ => Err(bad("highlight", "atom")),
-    }
+/// What a list may name: the atom count, the bonds of the structure, and how many items are still allowed (each atom and each bond once, so a
+/// hostile list cannot make the picture cost more than the structure itself).
+struct Allowed {
+    n: usize,
+    bonds: Vec<(u32, u32)>,
+    left: usize,
 }
 
-fn pair(a: u32, b: u32) -> Result<(u32, u32)> {
-    if a == b {
-        return Err(bad("highlight", "bond"));
+impl Allowed {
+    fn new(m: &Mol) -> Self {
+        let bonds: Vec<(u32, u32)> = m.written_bonds().iter().map(|b| (b.0, b.1)).collect();
+        Allowed {
+            n: m.atoms.len(),
+            left: m.atoms.len() + bonds.len(),
+            bonds,
+        }
     }
-    Ok((a, b))
+
+    fn take(&mut self) -> Result<()> {
+        if self.left == 0 {
+            return Err(bad("highlight", "too many items"));
+        }
+        self.left -= 1;
+        Ok(())
+    }
+
+    /// An atom number below the atom count.
+    fn atom(&mut self, x: Option<f64>) -> Result<u32> {
+        self.take()?;
+        match x {
+            Some(f) if f >= 0.0 && f.fract() == 0.0 && (f as usize) < self.n => Ok(f as u32),
+            _ => Err(bad("highlight", "atom")),
+        }
+    }
+
+    /// A bond of the structure, in either order.
+    fn bond(&mut self, a: Option<f64>, b: Option<f64>) -> Result<(u32, u32)> {
+        let ends = (self.atom(a)?, self.atom(b)?);
+        if self
+            .bonds
+            .iter()
+            .any(|&p| p == ends || p == (ends.1, ends.0))
+        {
+            Ok(ends)
+        } else {
+            Err(bad("highlight", "bond"))
+        }
+    }
 }
 
 /// The compact form `0,1,0-1@red;5@blue` (atoms, bonds `a-b`, a colour name after `@`, lists apart with `;`).
-fn compact(t: &str, n: usize) -> Result<Vec<Hl>> {
+fn compact(t: &str, ok: &mut Allowed) -> Result<Vec<Hl>> {
     let mut out = Vec::new();
     for list in t.split(';').filter(|l| !l.trim().is_empty()) {
         let (body, name) = list.split_once('@').unwrap_or((list, "yellow"));
-        let num = |x: &str| atom_in(whole(x), n);
         let mut hl = Hl {
             atoms: Vec::new(),
             bonds: Vec::new(),
@@ -67,8 +103,8 @@ fn compact(t: &str, n: usize) -> Result<Vec<Hl>> {
         };
         for tok in body.split(',').map(str::trim).filter(|x| !x.is_empty()) {
             match tok.split_once('-') {
-                Some((a, b)) => hl.bonds.push(pair(num(a)?, num(b)?)?),
-                None => hl.atoms.push(num(tok)?),
+                Some((a, b)) => hl.bonds.push(ok.bond(whole(a), whole(b))?),
+                None => hl.atoms.push(ok.atom(whole(tok))?),
             }
         }
         out.push(hl);
@@ -89,15 +125,18 @@ pub(super) fn decimal(x: &str) -> Option<f64> {
     let frac = if f.is_empty() {
         Some(0.0)
     } else {
-        whole(f).map(|v| v / 10f64.powi(f.len() as i32))
+        // `whole` keeps `f` under 9 digits, so the divisor is exact
+        whole(f).map(|v| v / f.bytes().fold(1.0, |p, _| p * 10.0))
     };
     Some(whole(i)? + frac?)
 }
 
-/// `[{"atoms": [i], "bonds": [[a, b]], "color": name}]` (or the compact text of `compact`), numbers as in the scene, below `n` atoms.
-pub fn highlights(v: &Value, n: usize) -> Result<Vec<Hl>> {
+/// `[{"atoms": [i], "bonds": [[a, b]], "color": name}]` (or the compact text of `compact`) for the structure `m`: atoms below its count, bonds
+/// that exist in it, one item per atom and bond at most.
+pub fn highlights(v: &Value, m: &Mol) -> Result<Vec<Hl>> {
+    let mut ok = Allowed::new(m);
     if let Some(t) = v.str() {
-        return compact(t, n);
+        return compact(t, &mut ok);
     }
     let mut out = Vec::new();
     for l in v.arr() {
@@ -107,13 +146,11 @@ pub fn highlights(v: &Value, n: usize) -> Result<Vec<Hl>> {
             color: color_of(l.get("color").and_then(Value::str).unwrap_or("yellow"))?,
         };
         for a in l.get("atoms").map_or(&[][..], Value::arr) {
-            hl.atoms.push(atom_in(a.f64(), n)?);
+            hl.atoms.push(ok.atom(a.f64())?);
         }
         for b in l.get("bonds").map_or(&[][..], Value::arr) {
             match b.arr() {
-                [a, c] => hl
-                    .bonds
-                    .push(pair(atom_in(a.f64(), n)?, atom_in(c.f64(), n)?)?),
+                [a, c] => hl.bonds.push(ok.bond(a.f64(), c.f64())?),
                 _ => return Err(bad("highlight", "bond")),
             }
         }

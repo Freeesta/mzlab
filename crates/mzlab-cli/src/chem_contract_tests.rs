@@ -120,8 +120,8 @@ fn every_chemistry_entry_with_one_schema_names_it() {
         crate::cmd::entries().filter(|e| e.name.starts_with("mol ") || e.name.starts_with("ion "))
     {
         assert!(!e.exits.is_empty(), "{}: no exit list", e.name);
-        // mol export is text and mol search has two documents: the others carry one tag
-        if !matches!(e.name, "mol export" | "mol search") {
+        // mol export is text; mol search and mol draw have two documents (draw/1, draw-image/1): the others carry one tag
+        if !matches!(e.name, "mol export" | "mol search" | "mol draw") {
             assert!(!e.schema.is_empty(), "{}: no schema", e.name);
         }
     }
