@@ -113,7 +113,7 @@ pub struct Catalog {
 pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
     let c: Catalog = serde_json::from_slice(bytes)
         .map_err(|e| DlError::new("lib.dl.err.catalog", e.to_string()))?;
-    if c.format != "libraries/2" && c.format != "libraries/2" {
+    if c.format != "libraries/2" {
         return Err(DlError::new("lib.dl.err.catalog", c.format));
     }
     // names that become file names: plain only
