@@ -223,25 +223,39 @@ fn the_notes_of_a_series_hold_one_entry_per_file_in_the_given_order() {
 }
 
 #[test]
-fn the_command_writes_the_notes_at_the_path_asked_for_and_nothing_without_it() {
+fn the_command_writes_the_notes_beside_the_table_of_out_and_nothing_without_it() {
     let (d, files) = series();
-    let to = d.join("notes.json");
     let mut args = vec!["features".to_string()];
     args.extend(files.iter().map(|f| f.display().to_string()));
     let plain = crate::execute(&args);
     assert_eq!(plain.code, 0, "{}", plain.stderr);
-    assert!(!to.exists());
-    args.extend(["--notes".to_string(), to.display().to_string()]);
-    let with = crate::execute(&args);
-    assert_eq!(with.code, 0, "{}", with.stderr);
-    // the table is the same bytes with and without the notes
-    assert_eq!(plain.stdout, with.stdout);
-    let doc = mzlab_core::json::parse(&std::fs::read(&to).unwrap()).unwrap();
+    // a folder: the table and the notes in it
+    let out = d.join("out");
+    std::fs::create_dir_all(&out).unwrap();
+    let mut with = args.clone();
+    with.extend(["--out".to_string(), out.display().to_string()]);
+    let o = crate::execute(&with);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(
+        std::fs::read(out.join("features.csv")).unwrap(),
+        plain.stdout
+    );
+    let doc =
+        mzlab_core::json::parse(&std::fs::read(out.join("features-notes.json")).unwrap()).unwrap();
     assert_eq!(
         doc.get("schema").and_then(|v| v.str()),
         Some("features-notes/1")
     );
     assert_eq!(doc.get("files").unwrap().arr().len(), 3);
+    // a file: NAME.notes.json beside it
+    let table = d.join("t.csv");
+    let mut with = args.clone();
+    with.extend(["--out".to_string(), table.display().to_string()]);
+    assert_eq!(crate::execute(&with).code, 0);
+    assert_eq!(
+        std::fs::read(d.join("t.notes.json")).unwrap(),
+        std::fs::read(out.join("features-notes.json")).unwrap()
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 

@@ -1,6 +1,6 @@
 //! What the feature recipe chose by itself for a file: its mass axis and, on unit resolution, the channel defect, the floor and the minimum height, with
 //! the notices a reader of the table needs (profile scans at unit resolution cut one peak at a channel border). One function for the page, the app and
-//! the CLI: `estimate_of` puts the notices in `estimates/1`, `mzlab-cli features` says them on stderr and in `--notes`.
+//! the CLI: `estimate_of` puts the notices in `estimates/1`, `mzlab-cli features` says them on stderr and in `features-notes/1` beside `--out`.
 
 use mzlab_core::flow::value_text;
 use mzlab_core::idxread::{Index, ReadAt};

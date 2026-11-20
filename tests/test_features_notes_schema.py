@@ -1,4 +1,4 @@
-"""features-notes/1 (`mzlab-cli features --notes`) and the `notices` of estimates/1 respect their schemas: the documents the Rust test
+"""features-notes/1 (`mzlab-cli features --out`, beside the table) and the `notices` of estimates/1 respect their schemas: the documents the Rust test
 `the_notes_of_a_series_hold_one_entry_per_file_in_the_given_order` produces on synthetic unit-resolution data (left in a temporary folder by
 MZLAB_JSON_SAMPLES) are validated, and a document that breaks a rule is refused."""
 import json
