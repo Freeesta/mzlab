@@ -36,6 +36,10 @@ try:
         def hist(which): pg.evaluate("(w) => { const b = [...document.querySelector('#kframe').contentDocument.querySelectorAll(`[data-testid=${w}]`)].find(e => e.offsetParent && !e.disabled); b && b.click(); }", which)
         ids = lambda: pg.evaluate(f"[...{KJ}.editor.struct().atoms.keys()]")
         nat = lambda: pg.evaluate(f"{KJ}.editor.struct().atoms.size")
+        def settle(n, ms=6000):      # the engine edits asynchronously: wait for the atom count, not a fixed pause (a slow runner)
+            t0 = time.time()
+            while nat() != n and (time.time() - t0) * 1000 < ms: wait(100)
+            return nat()
         sel = lambda: pg.evaluate(f"({KJ}.editor.selection() || {{}}).atoms || []")
         def menu_rows(): return pg.evaluate("[...document.querySelectorAll('#ctx [role=menuitem]')].filter(e => e.getBoundingClientRect().height > 0).map(e => e.dataset.row)")
         def menu_open(): return pg.evaluate("(() => { const m = document.getElementById('ctx'); return !!m && !m.hidden; })()")
@@ -134,12 +138,12 @@ try:
         def cut_delete():
             n0 = nat(); pg.evaluate(f"{KJ}.editor.selection(null)"); wait(200)
             T("touchStart", [tuple(target)]); wait(800); T("touchEnd", []); wait(900)
-            tap_row("cut"); wait(800); assert nat() == n0 - 6, ("cut", n0, nat())
+            tap_row("cut"); assert settle(n0 - 6) == n0 - 6, ("cut", n0, nat())
             assert pg.evaluate("!document.getElementById('tp-paste-chip').hidden"), "a cut arms the paste too"
             pg.keyboard.press("Escape"); wait(200); assert pg.evaluate("document.getElementById('tp-paste-chip').hidden"), "Esc leaves the paste armed"
             hist("undo"); wait(500); assert nat() == n0
             T("touchStart", [tuple(target)]); wait(800); T("touchEnd", []); wait(900)
-            tap_row("delete"); wait(800); assert nat() == n0 - 6, ("delete", n0, nat())
+            tap_row("delete"); assert settle(n0 - 6) == n0 - 6, ("delete", n0, nat())
         step("Cut and Delete remove the molecule (undo restores it)", cut_delete)
         def system():
             pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=f"http://127.0.0.1:{r.port}")
@@ -158,8 +162,7 @@ try:
             pg.evaluate("document.querySelector('#ctx [data-row=paste]').click()"); wait(500)
             assert pg.evaluate("document.getElementById('tp-paste-chip').hidden"), "a mouse needs no chip"
             P = (cx - 100 if cx > 500 else cx + 260, cy + 140)
-            pg.mouse.move(P[0] - 20, P[1] - 20); pg.mouse.move(*P); wait(300)
-            assert nat() == n0 + 6, "the copy is not on the cursor"
+            pg.mouse.move(P[0] - 20, P[1] - 20); pg.mouse.move(*P); assert settle(n0 + 6) == n0 + 6, "the copy is not on the cursor"
             pg.mouse.down(); pg.mouse.up(); wait(700)
             c = where([i for i in ids() if i not in old]); assert abs(c[0] - P[0]) < 40 and abs(c[1] - P[1]) < 40, f"dropped at {c}, clicked {P}"
         step("with a mouse, Paste puts the copy on the cursor and a click drops it", mouse)
