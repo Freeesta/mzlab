@@ -72,6 +72,7 @@
     "../../mzlab/web/disegno-appunti.js",
     "../../mzlab/web/disegno-menu.js",
     "../../mzlab/web/disegno-selezione.js",
+    "../../mzlab/web/disegno-smiles.js",
     "../../mzlab/web/disegno-link.js",
     "../../mzlab/web/parentesi.js",
     "../../mzlab/web/fair.js",
