@@ -39,7 +39,7 @@ def build_wasm(tmp_path):
 
 def series(tmp_path, profile):
     ser = tmp_path / f"ser_{profile}"
-    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", profile, "--scala", "1.0", "--out", str(ser))
+    run(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", profile, "--scala", "1.0", "--out", str(ser))
     return sorted(str(p) for p in ser.glob("*.mzidx"))
 
 

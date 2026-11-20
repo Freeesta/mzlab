@@ -41,9 +41,9 @@ def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
 
 def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, tmp_path):
     mol = tmp_path / "x.mol"
-    mol.write_text("\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0\nM  END\n", encoding="utf-8")
+    mol.write_bytes(b"\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0\nM  END\n")   # bytes: text mode would write CRLF on Windows and only the command line would see it
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
-    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&structures=all&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
+    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&structures=all&molfile=" + urllib.parse.quote(mol.read_bytes().decode("utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
     want = cli("msn", "graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
@@ -91,7 +91,7 @@ def test_the_library_gets_an_entry_once(pkg, tmp_path):
     a = lib_call(pkg, q, "-")
     assert a["duplicate"] is False and a["library"].startswith('{"schema":"msn-lib/1"')
     f = tmp_path / "msnlib.json"
-    f.write_text(a["library"], encoding="utf-8")
+    f.write_bytes(a["library"].encode("utf-8"))   # bytes: text mode would turn every \n into CRLF on Windows
     again = lib_call(pkg, q, str(f))
     assert again["duplicate"] is True and again["library"] == a["library"]
     # the file is valid JSON and its entry holds the graph the route gives
