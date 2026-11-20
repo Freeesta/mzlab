@@ -11,7 +11,7 @@ Start here:
 
 For scripts and agents: --json is accepted by every command (the data as JSON on stdout; a failure is one error/1 document on stdout, the
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
-integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug).
+integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
@@ -56,7 +56,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--json]   hand integrations of transition / SIM traces, as CSV
+       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json]   hand integrations of transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -118,7 +118,7 @@ Start here:
 
 For scripts and agents: --json is accepted by every command (the data as JSON on stdout; a failure is one error/1 document on stdout, the
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
-integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug).
+integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
@@ -163,7 +163,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--json]   hand integrations of transition / SIM traces, as CSV
+       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json]   hand integrations of transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -225,7 +225,7 @@ Start here:
 
 For scripts and agents: --json is accepted by every command (the data as JSON on stdout; a failure is one error/1 document on stdout, the
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
-integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug).
+integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
@@ -270,7 +270,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--json]   hand integrations of transition / SIM traces, as CSV
+       mzlab-cli peak table FILE... --windows PATH [--traces PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json]   hand integrations of transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -794,8 +794,8 @@ exit 0
 --- stdout
 mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--json] [--out PATH]
-       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH
+usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
+       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH) --auto [--params PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
@@ -804,12 +804,16 @@ usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [-
                   I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
                   NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
                   other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
-                  outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
-                  sample alone, by its place I
+                  outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak|too_far); names: a name for one
+                  sample alone, by its place I; "max_shift": MIN on a window is its own --max-shift
+  --max-shift MIN  a followed window never moves more than MIN minutes (0 = rigid: windows never move): when the apex found in another sample is farther
+              from the source's apex, the window stays where it was, its origin is too_far, and shift_min holds the shift that was refused; MIN is in
+              retention time units (min); without it a window follows its apex wherever it is
   --sums      after the windows of each channel a row sum with the sum of their areas
   --times PATH    a JSON object {"<sample>": MINUTES or null} that replaces the time point a sample's name carries (null = none); the others keep theirs
   --shifts    instead of the table, where the FIRST window lands in the other samples, as JSON
-              [{"file", "tr", "a", "b", "shift", "origin"}] (the bytes of the page's api/manfollow)
+              [{"file", "tr", "a", "b", "shift", "found_shift", "origin"}] (the bytes of the page's api/manfollow); found_shift = the shift the
+              apex search found (null without a peak), also when --max-shift refused it (shift 0, origin too_far)
   --auto      instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
               {"windows", "log", "groups", "unmatched"} (the bytes of the page's api/manauto); no windows file is needed
   --params PATH   with --auto: a JSON file {"rt_tol_min", "half", "valley", "sn", "min_pts", "despike", "split"}; a missing key keeps its default
@@ -822,7 +826,9 @@ usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [-
               answer is JSON already and --json changes nothing
   --out PATH  write there instead of the standard output
 
-Columns, in this order: channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin.
+Columns, in this order: channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin,sample_id,file,shift_min.
+sample_id = the place of the sample in the order of the files (from 0, counting every sample, also an empty one: the I of a window's "file"), file = the file name of
+the sample as the engine was given it (Sample.mzML), shift_min = for a followed window the shift (min) its apex search found against the source's apex (empty otherwise).
 channel = m/z of a SIM ion, q1>q3 of a transition, ion N without Q1; time_min = the time point of the sample in minutes, read from its name
 (t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown; label = the name of the window; area in counts x s; snr = peak1d around
 the window. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal point (7.84077E+04), read as numbers by a
@@ -846,7 +852,7 @@ usage: mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--file I] [--baselin
   --label NAME    the name of the window (column 4, label, of the table)
   --out PATH  write there instead of the standard output
 
-Without --split: {"splits":[MIN,...]}, the times of the valleys. With --split: the CSV of peak table for this window (columns: channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin), a row per part between drop
+Without --split: {"splits":[MIN,...]}, the times of the valleys. With --split: the CSV of peak table for this window (columns: channel,sample,time_min,label,apex_rt_min,area,start_min,end_min,height,snr,baseline,overlap,pv,origin,sample_id,file,shift_min), a row per part between drop
 lines on the window's baseline (overlap = drop, pv = Hp/Hv: the height of the part over the higher valley next to it; Ph. Eur. 2.2.46 takes the
 value of the smaller peak). The areas of the parts add up to the area of the whole window.
 --- stderr

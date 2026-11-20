@@ -74,7 +74,7 @@ fn rows_grouped_by_channel_then_sample_whatever_the_order_drawn() {
     assert_eq!((r[0][5].as_str(), r[0][6].as_str()), ("2.800", "3.200"));
     assert_eq!(
         r[0].len(),
-        13,
+        16,
         "no column for the method's name of the channel: {t}"
     );
 }
@@ -157,7 +157,7 @@ fn a_sum_row_closes_each_channel() {
     assert_eq!(&r[2][..3], ["237.1", "sum", ""]);
     let s: f64 = r[0][4].parse::<f64>().unwrap() + r[1][4].parse::<f64>().unwrap();
     assert_eq!(r[2][4], sci(s, 5));
-    assert_eq!(r[2].len(), 13);
+    assert_eq!(r[2].len(), 16);
     assert_eq!(
         &r[3][..3],
         ["ion 3", "s1", ""],
@@ -327,7 +327,7 @@ fn transitions_closer_than_the_rounding_stay_two_channels() {
 }
 
 // three samples with one peak at 3.0 min: s1 exactly there, s2 drifted by +0.30 min (outside a ±0.2 window), s3 with no peak at all
-fn three() -> String {
+pub(super) fn three() -> String {
     let f = |name: &str, peaks: &[(f64, f64)]| {
         format!(
             "{{\"name\":\"{name}.mzML\",\"transitions\":[{}]}}",

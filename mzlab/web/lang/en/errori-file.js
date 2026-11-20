@@ -2,6 +2,7 @@ I18N.add("en", {
   "err.file.notWiff": "{name} is not a valid .wiff file.",
   "err.file.wiffNoSource": "Comparing a .wiff needs the result first and at least one source after it: only one .wiff was given.",
   "err.file.wiffNoScan": "The .wiff.scan file of {name} is missing: both are needed, with the same name.",
+  "err.file.wiffGrowing": "The file {name} is still being written: its size went from {from} to {to} bytes in {ms} ms, so nothing was read. Wait until the acquisition has ended, then open it again.",
   "err.file.wiffTruncated": "The file {name} is cut short: it is {size} bytes long but its own table needs {needed}, so the samples and the method cannot be read whole and nothing was loaded. Copy the whole .wiff again (with its .wiff.scan).",
   "err.file.cutShort": "The file {name} is cut short: it is {size} bytes long but its own table needs {needed}, so its scans cannot be read whole and nothing was loaded. Copy the whole file again.",
   "err.file.functionsCut": "The folder {name} lists {listed} functions in _FUNCTNS.INF but holds the data of more: the list is cut short, so nothing was loaded. Copy the whole .raw folder again.",

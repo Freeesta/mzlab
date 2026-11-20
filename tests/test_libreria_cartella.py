@@ -55,7 +55,7 @@ def test_the_hash_is_computed_only_when_size_or_date_changed():
     r = run("""
 let n = 0; const sha = async () => { n++; return "aa"; }, meta = { origine: { size: 10, mtime: 5, sha256: "aa" }, bytes: 1 };
 await C.statoSorgente({ size: 10, mtime: 5 }, meta, 1, sha); await C.statoSorgente({ size: 11, mtime: 9 }, meta, 1, sha);
-const side = { id: "x", versione: "1", sha256: "aa", size: 10, mtime: 5 };
+const side = { id: "x", version: "1", sha256: "aa", size: 10, mtime: 5 };
 await C.statoPacchetto({ size: 10, mtime: 5 }, side, null, true, sha);
 return n;""")
     assert r == 0
@@ -63,13 +63,13 @@ return n;""")
 
 def test_states_of_a_package():
     r = run("""
-const sha = async () => "aa", side = { id: "x", versione: "1", sha256: "aa", size: 10, mtime: 5 }, f = { size: 10, mtime: 5 }, cat = { versione: "2", sha256: "bb" };
+const sha = async () => "aa", side = { id: "x", version: "1", sha256: "aa", size: 10, mtime: 5 }, f = { size: 10, mtime: 5 }, cat = { version: "2", sha256: "bb" };
 return [
   (await C.statoPacchetto(f, null, null, true, sha)).stato,           // a file of the user that opens
   (await C.statoPacchetto(f, null, null, false, sha)).stato,
   (await C.statoPacchetto(f, side, null, true, sha)).stato,
   (await C.statoPacchetto(f, side, cat, true, sha)),                  // the catalog has a newer one
-  (await C.statoPacchetto(f, side, { versione: "1", sha256: "aa" }, true, sha)).stato,
+  (await C.statoPacchetto(f, side, { version: "1", sha256: "aa" }, true, sha)).stato,
   (await C.statoPacchetto({ size: 9, mtime: 5 }, side, null, true, sha)).stato,          // truncated
   (await C.statoPacchetto({ size: 10, mtime: 7 }, side, null, true, async () => "cc")).stato,   // same size, other bytes
 ];""")

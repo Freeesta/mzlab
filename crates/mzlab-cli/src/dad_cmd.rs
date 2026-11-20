@@ -18,12 +18,14 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli dad: the optical (DAD / PDA) matrix of a file as JSON, for agents.
 
-usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale none|max|tic|fit|FACTOR] [--shift MIN] [--rt T0[,T1]] [--nm N0[,N1]]
-       mzlab-cli dad spectrum FILE --rt T0[,T1] [--minus B [--scale S] [--shift MIN]]
-       mzlab-cli dad trace FILE --nm N0[,N1] [--minus B [--scale S] [--shift MIN]] [--format json|csv]
+usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale none|max|tic|fit|FACTOR] [--shift MIN|auto] [--rt T0[,T1]] [--nm N0[,N1]]
+       mzlab-cli dad spectrum FILE --rt T0[,T1] [--minus B [--scale S] [--shift MIN|auto]]
+       mzlab-cli dad trace FILE --nm N0[,N1] [--minus B [--scale S] [--shift MIN|auto]] [--format json|csv]
        mzlab-cli dad ms-at FILE --rt T [--offset MIN] [--level N]
        mzlab-cli dad delay FILE
 
+  --shift auto  estimate the shift of B from the two total traces (cross-correlation, refined below one step); the answer's `sub.align` gives it with its
+              correlation, search range and window, and stderr logs it. A number is minutes: B is read at t - shift (positive moves B later)
   subtract    A minus B: B is interpolated onto the grid of A, what B does not cover is dropped; the answer's `sub` says every step (ranges, steps, rows and
               columns kept, shift, scale, warnings). The default view is the report alone; map, spectrum and trace add the data of the difference
   spectrum    the UV spectrum (absorbance against nm) at the retention time(s) --rt; with --minus, of the difference
@@ -47,6 +49,7 @@ struct Req {
     view: String,
     scale: String,
     shift: f64,
+    auto: bool,
     rt: Option<(f64, f64)>,
     nm: Option<(f64, f64)>,
     offset: f64,
@@ -98,7 +101,11 @@ fn option(
             }
         }
         "--scale" => r.scale = val("--scale")?,
-        "--shift" => r.shift = minutes(val("--shift")?, "--shift")?,
+        "--shift" => {
+            let v = val("--shift")?;
+            r.auto = v == "auto";
+            r.shift = if r.auto { 0.0 } else { minutes(v, "--shift")? };
+        }
         "--offset" => r.offset = minutes(val("--offset")?, "--offset")?,
         "--level" => {
             r.level = val("--level")?
@@ -162,6 +169,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
         view: "report".into(),
         scale: "none".into(),
         shift: 0.0,
+        auto: false,
         rt: None,
         nm: None,
         offset: 0.0,
@@ -323,7 +331,19 @@ fn ms_inner<T>(
     })
 }
 
-fn run_req(c: &Req) -> Result<String> {
+/// The shift `--shift auto` found, on stderr: the answer's `sub.align` carries the same numbers.
+fn shift_note(a: &DadData, b: &DadData, o: &mzlab_core::wiff::dad_ops::SubOpts) -> String {
+    let f = mzlab_core::wiff::dad_align::dad_align(a, b, o.focus);
+    let warn = if f.warnings.is_empty() {
+        String::new()
+    } else {
+        format!(" [{}]", f.warnings.join(", "))
+    };
+    format!("dad: shift auto = {:.4} min (correlation {:.3}, {:.3} with no shift; {} {} .. {} min){warn}\n", f.shift_min, f.corr, f.corr_at_zero, f.basis, f.window_min.0, f.window_min.1)
+}
+
+/// The answer; what goes to stderr (the shift found by `--shift auto`) is appended to `notes`.
+fn run_req(c: &Req, notes: &mut String) -> Result<String> {
     let a = &c.files[0];
     for f in c.files.iter().chain(c.minus.iter()) {
         exists(f)?;
@@ -360,7 +380,11 @@ fn run_req(c: &Req) -> Result<String> {
                 view.2,
                 &c.scale,
                 c.shift,
+                c.auto,
             )?;
+            if o.auto_shift {
+                *notes += &shift_note(&da, &db, &o);
+            }
             if view.0 == "report" {
                 let (_, rep) = mzlab_core::wiff::dad_ops::dad_subtract(&da, &db, &o)?;
                 return Ok(format!("{{\"sub\":{}}}", rep.to_json()));
@@ -424,9 +448,15 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let answer = run_req(&c).and_then(|t| if c.csv { trace_csv(&t) } else { Ok(t + "\n") });
+    let mut notes = String::new();
+    let answer =
+        run_req(&c, &mut notes).and_then(|t| if c.csv { trace_csv(&t) } else { Ok(t + "\n") });
     match answer {
-        Ok(t) => crate::emit(t, &c.out),
+        Ok(t) => {
+            let mut o = crate::emit(t, &c.out);
+            o.stderr += &notes;
+            o
+        }
         Err(e) => Outcome::fail_error(&e).with_hint(match e.key {
             "err.sample.unknown" => "list the samples with `mzlab-cli sample list FILE --json`",
             "err.session.fileNotFound" => "check the path",
