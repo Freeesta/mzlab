@@ -24,7 +24,7 @@ No reference at all; deleting changes no build, test, site or app.
 | `tools/measure_reload_summary.py` | 5 291 | 2026-11-14 | `git grep -n measure_reload_summary -- ':!tools/measure_reload_summary.py'`. Summary of `misura_ricarica.py` output; no doc or caller left. |
 | `TP_Mine/tests/rete_vista.html` | 785 | 2026-10-20 | `git grep -n rete_vista -- ':!TP_Mine/tests/rete_vista.html'`. Hand test page of `rete-vista.js`; `tests_e2e/e2e_rete.py` mounts the view itself. |
 
-## PROBABLY-UNUSED (56 files, 1 611 580 bytes)
+## PROBABLY-UNUSED (54 files, 1 575 182 bytes)
 Only self, sibling-README or doc references; no code, test, workflow or build reads them.
 
 ### Assistant study data (14 files, 30 100 bytes)
@@ -56,7 +56,7 @@ Self-contained generator + checker of a TP-name case set; nothing else reads it.
 | `mzlab/web/esempio-trasformazione-m.png` | 88 361 | 2026-10-11 | Same as above. |
 | `mzlab/web/app-icon.svg` | 19 588 | 2026-10-09 | `git grep -n app-icon.svg -- ':!tools/generate_icons.py'` is empty: written by `generate_icons.py`, but `index.html` uses `favicon.svg` and the web manifest the PNG icons. Removing it also means dropping that line of the generator. |
 
-### Docs outside `docs/agenti/` (16 files, 1 289 785 bytes)
+### Docs outside `docs/agenti/` (14 files, 1 253 387 bytes)
 | File | Bytes | Last change | Note |
 |---|---|---|---|
 | `docs/pr-img/adducts-compact/after-expanded.png` | 32 532 | 2026-11-04 | `docs/pr-img/`: before/after screenshots linked only from PR descriptions on GitHub (`git grep -n pr-img -- ':!docs/pr-img'` → only the exclusion in `tools/verifica_aree.py`). Deleting them breaks the images in those merged PR pages. |
@@ -72,8 +72,6 @@ Self-contained generator + checker of a TP-name case set; nothing else reads it.
 | `docs/pr-img/flow-layout/after-1000.png` | 250 732 | 2026-11-14 | as above |
 | `docs/pr-img/flow-layout/before-1000.png` | 262 108 | 2026-11-14 | as above |
 | `docs/letteratura_cc/RAPPORTO.md` | 22 067 | 2026-10-16 | `git grep -n 'RAPPORTO\.md' -- ':!docs/letteratura_cc/RAPPORTO.md'` is empty; the CSVs next to it are live (`tests/data/reattivita/validazione.json`). |
-| `docs/studi/CONFRONTO_MZFLOW.md` | 23 853 | 2026-11-14 | Recent study, not in INDICE; only the roadmap below links it (`git grep -nE 'CONFRONTO_MZFLOW\|ROADMAP_MZFLOW'` outside the pair is empty). |
-| `docs/studi/ROADMAP_MZFLOW.md` | 12 545 | 2026-11-14 | as above |
 | `TP_Mine/tests/gruppi_vista.html` | 607 | 2026-10-16 | Hand test page; only `docs/agenti/groups.md` names it (`e2e_tabui_gruppi_vista.py` mounts the view itself). |
 
 ### Documented manual tools with no caller (18 files, 74 327 bytes)
