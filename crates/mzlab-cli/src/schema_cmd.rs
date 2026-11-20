@@ -110,6 +110,7 @@ embed!(
     "trace-1.json",
     "uvband-1.json",
     "verify-1.json",
+    "version-1.json",
 );
 
 /// The name (`$id`) and the title of an embedded schema.

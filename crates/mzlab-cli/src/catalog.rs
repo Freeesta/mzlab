@@ -324,7 +324,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     }
     if !entries().any(|e| under(e, &path)) {
         let err = mzlab_core::Error::new("err.cli.command.unknown").with("path", path.join(" "));
-        return Outcome::fail_error(&err).with_hint("mzlab-cli commands lists every command");
+        let first: Vec<String> = path.first().map(|w| w.to_string()).into_iter().collect();
+        let hint = match crate::renamed::fate(&first) {
+            Some((old, crate::renamed::Fate::Now(now))) => {
+                format!("{old} is now {now}: mzlab-cli commands --json {now}")
+            }
+            _ => "mzlab-cli commands lists every command".to_string(),
+        };
+        return Outcome::fail_error(&err).with_hint(&hint);
     }
     if json {
         return Outcome::ok(catalog_json(&path).into_bytes());

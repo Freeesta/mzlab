@@ -4,19 +4,45 @@ use super::draw_font::{ADVANCE, CAP};
 use mzlab_mol::trig::{angle, len, unit, V};
 use mzlab_mol::Mol;
 
-/// A label's pieces `(text, size, rise)` in drawing order and its box.
+/// The atom's own text and the rest of a custom label, which lies on the far side of it: the symbol and nothing else without a custom text,
+/// else the first character (the last one when the text runs to the left) and the others.
+fn split_custom(custom: Option<&str>, symbol: &str, left: bool) -> (String, String) {
+    let Some(t) = custom else {
+        return (symbol.to_string(), String::new());
+    };
+    let cs: Vec<char> = t.chars().collect();
+    let cut = if left {
+        cs.len().saturating_sub(1)
+    } else {
+        1.min(cs.len())
+    };
+    let (head, tail) = cs.split_at(cut);
+    let (head, tail) = (
+        head.iter().collect::<String>(),
+        tail.iter().collect::<String>(),
+    );
+    if left {
+        (tail, head)
+    } else {
+        (head, tail)
+    }
+}
+
+/// A label's pieces `(text, size, rise)` in drawing order and its box. A `custom` text (an edit patch's `label`) replaces the symbol and the
+/// hydrogens; it runs away from the bonds (to the left when `left`), the character at the atom being the one next to the bonds.
 pub(super) fn label_of(
     m: &Mol,
     i: usize,
     left: bool,
     at: V,
     f: f64,
+    custom: Option<&str>,
 ) -> (Vec<(String, V, f64)>, [f64; 4]) {
     let a = &m.atoms[i];
     let small = 0.7 * f;
     let mut pieces: Vec<(String, f64, f64)> = Vec::new();
     let mut hyd = Vec::new();
-    if a.h > 0 {
+    if a.h > 0 && custom.is_none() {
         hyd.push(("H".to_string(), f, 0.0));
         if a.h > 1 {
             hyd.push((a.h.to_string(), small, -0.2 * f));
@@ -35,17 +61,21 @@ pub(super) fn label_of(
             0.38 * f,
         )
     });
-    let el = (a.el.clone(), f, 0.0);
+    let (text, rest) = split_custom(custom, &a.el, left);
+    let el = (text, f, 0.0);
+    let rest = (!rest.is_empty()).then_some((rest, f, 0.0));
     let k;
     if left {
         pieces.extend(hyd);
         pieces.extend(iso);
+        pieces.extend(rest);
         k = pieces.len();
         pieces.push(el);
     } else {
         pieces.extend(iso);
         k = pieces.len();
         pieces.push(el);
+        pieces.extend(rest);
         pieces.extend(hyd);
     }
     pieces.extend(chg);
