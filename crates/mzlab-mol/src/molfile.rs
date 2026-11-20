@@ -1,5 +1,5 @@
 //! Molfile (V2000 and V3000, first record of an SDF) into `mol/1`. Atoms keep the order of the file; aromatic bonds (type 4) are kekulised;
-//! hydrogens of B C N O P S F Cl Br I come from the valence rules, other elements get none; stereo is read from wedges (tetrahedral
+//! hydrogens of B C N O P S F Cl Br I Si As Se come from the valence rules, other elements get none; stereo is read from wedges (tetrahedral
 //! centres), the "either" flags and the 2D/3D geometry of double bonds, and enhanced-stereo groups (V3000). Coordinates are kept as a layer.
 //! A double bond with the "either" flag is `unknown`; without the flag its Z/E comes from the drawn coordinates (as RDKit does).
 //! Not read: whether a drawn centre or double bond is really stereogenic (a later package decides), nor stereo from 3D coordinates.
@@ -13,7 +13,9 @@ use crate::molfile_v3000::read_v3000;
 use crate::valence::shortfall;
 
 /// Elements that get implicit hydrogens from the valence rules.
-const ORGANIC: &[&str] = &["B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I"];
+const ORGANIC: &[&str] = &[
+    "B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I", "Si", "As", "Se",
+];
 
 impl Mol {
     /// Reads the first record of a V2000 or V3000 molfile (an SDF is cut at `$$$$`).
