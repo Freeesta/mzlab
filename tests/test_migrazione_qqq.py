@@ -362,7 +362,7 @@ MOCK_IDB_SETUP = """
     const oldDb = new MockDb("qqq_lab");
     oldDb.addStore("files").put("file_bytes_1", "f1.mzML");
     oldDb.addStore("kv").put("dark", "theme");
-    oldDb.addStore("user_lists", "id").put({ id: "lst1", name: "Custom Targets" });
+    oldDb.addStore("liste_utente", "id").put({ id: "lst1", name: "Custom Targets" });
     dbs.set("qqq_lab", oldDb);
 
     const newDb = new MockDb("mzlab_lab");

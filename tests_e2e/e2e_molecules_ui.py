@@ -1,6 +1,6 @@
 """Window «Molecules» (molecules-ui.js, opened by the «Manage» link) and the search box (molecules-field.js), on INVENTED molecules only (Exampline, Provolone B): lazy loading, open and close
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
-surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 6 without losing files / kv / user_lists / manifest, the ARIA combobox with the keyboard, axe.
+surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 6 without losing files / kv / manifest (the old liste_utente store is left as it is), the ARIA combobox with the keyboard, axe.
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecules_ui.py"""
 # covers: mzlab/web/molecules, mzlab/web/molecules-, mzlab/web/qqq-db.js
 import json, os, sys
@@ -241,18 +241,18 @@ try:
               const { upgrade, DB_VER } = await import('./static/qqq-db.js');
               const name = 'mzlab_migra_prova';
               const open = (ver, up) => new Promise((ok, no) => { const q = indexedDB.open(name, ver); q.onupgradeneeded = () => up(q.result); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
-              const v3 = await open(3, db => { db.createObjectStore('files'); db.createObjectStore('kv'); db.createObjectStore('user_lists', { keyPath: 'id' }); db.createObjectStore('manifest', { keyPath: 'path' }); });
-              await new Promise(ok => { const t = v3.transaction(['files', 'kv', 'user_lists', 'manifest'], 'readwrite');
-                t.objectStore('files').put('bytes', 'a.mzML'); t.objectStore('kv').put('{"session":[]}', 'notebook'); t.objectStore('user_lists').put({ id: 'l1', name: 'My list' }); t.objectStore('manifest').put({ path: 'files/a.mzML', bytes: 5 }); t.oncomplete = ok; });
+              const v3 = await open(3, db => { db.createObjectStore('files'); db.createObjectStore('kv'); db.createObjectStore('liste_utente', { keyPath: 'id' }); db.createObjectStore('manifest', { keyPath: 'path' }); });
+              await new Promise(ok => { const t = v3.transaction(['files', 'kv', 'liste_utente', 'manifest'], 'readwrite');
+                t.objectStore('files').put('bytes', 'a.mzML'); t.objectStore('kv').put('{"session":[]}', 'notebook'); t.objectStore('liste_utente').put({ id: 'l1', name: 'My list' }); t.objectStore('manifest').put({ path: 'files/a.mzML', bytes: 5 }); t.oncomplete = ok; });
               v3.close();
               const v4 = await open(DB_VER, upgrade);
               const get = (s, k) => new Promise(ok => { const q = v4.transaction(s).objectStore(s).get(k); q.onsuccess = () => ok(q.result); });
-              const out = { ver: v4.version, stores: [...v4.objectStoreNames].sort(), files: await get('files', 'a.mzML'), kv: await get('kv', 'notebook'), lst: await get('user_lists', 'l1'), man: await get('manifest', 'files/a.mzML'),
+              const out = { ver: v4.version, stores: [...v4.objectStoreNames].sort(), files: await get('files', 'a.mzML'), kv: await get('kv', 'notebook'), lst: await get('liste_utente', 'l1'), man: await get('manifest', 'files/a.mzML'),
                 key: v4.transaction('molecules').objectStore('molecules').keyPath };
               v4.close(); indexedDB.deleteDatabase(name); return out; }""")
-            assert res["ver"] == 6 and res["stores"] == ["files", "kv", "manifest", "molecules", "user_lists"] and res["key"] == "id", res
+            assert res["ver"] == 6 and res["stores"] == ["files", "kv", "liste_utente", "manifest", "molecules", "user_lists"] and res["key"] == "id", res
             assert res["files"] == "bytes" and res["kv"] == '{"session":[]}' and res["lst"] == {"id": "l1", "name": "My list"} and res["man"] == {"path": "files/a.mzML", "bytes": 5}, res
-        step("database 3 -> 6: the new store is added, files / kv / user_lists / manifest keep their rows", migration)
+        step("database 3 -> 6: the new stores are added, files / kv / manifest and the old liste_utente rows are left untouched (no conversion)", migration)
 
         def clean():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")
