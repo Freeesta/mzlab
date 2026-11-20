@@ -54,12 +54,12 @@ fn sort64(v: &mut Vec<u64>) {
         for i in (0..n).step_by(2 * w) {
             let (m, e) = ((i + w).min(n), (i + 2 * w).min(n));
             let (mut a, mut b) = (i, m);
-            for k in i..e {
+            for out in &mut buf[i..e] {
                 if a < m && (b >= e || v[a] <= v[b]) {
-                    buf[k] = v[a];
+                    *out = v[a];
                     a += 1;
                 } else {
-                    buf[k] = v[b];
+                    *out = v[b];
                     b += 1;
                 }
             }
