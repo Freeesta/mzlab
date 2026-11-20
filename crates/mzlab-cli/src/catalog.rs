@@ -71,6 +71,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--inspection", "inspection/1, or -"),
     ("--answers", "answers"),
     ("--da", "tolerance, Da"),
+    ("--template", "a one-step plan"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
     ("--format", "output format (values in the usage line)"),

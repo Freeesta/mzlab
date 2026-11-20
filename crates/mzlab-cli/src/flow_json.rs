@@ -404,7 +404,7 @@ fn check_plan(path: &str, sets: &[String], reg: &[Step]) -> Result<Plan, Outcome
         let err = Error::new("err.cli.file").with("path", path);
         fail(&err, &format!("{path}: {e}"), "check the path of the plan")
     })?;
-    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow template STEP` writes one to start from";
+    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow steps --id STEP --template` writes one to start from";
     let mut plan = parse(&text).map_err(|e| fail(&e, &crate::error_text::human_error(&e), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = sets
         .iter()

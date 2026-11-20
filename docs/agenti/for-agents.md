@@ -40,7 +40,7 @@ The recipe is tested only on the high-resolution TiO2 series: on the flufenacet 
 
 ## Learn the format, then check before running (tested: `flow_template_tests.rs`)
 1. `mzlab-cli flow steps --compact` (ids, ports, parameter names), then `mzlab-cli flow steps --json --id features.detect` for the types, limits and defaults of one step.
-2. `mzlab-cli flow template features.detect@2 > plan.json`: a valid one-step plan; add the steps and links you need (`"in":{"index":["idx.index"]}`) and change only the parameters you want.
+2. `mzlab-cli flow steps --id features.detect@2 --template > plan.json`: a valid one-step plan; add the steps and links you need (`"in":{"index":["idx.index"]}`) and change only the parameters you want.
 3. `mzlab-cli flow check plan.json --json`: exit 3 names every problem with its `path`, e.g. `det.params.min_hight` (unknown parameter), `det.params.min_height` (wrong type), `det.in.index` (missing port), `steps[1].param` (a key the format does not have). `flow run plan.json --in DIR --dry-run` repeats the check with the inputs and prints what WOULD run; it never writes.
 
 ## Several ions from a full-scan file, then a report

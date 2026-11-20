@@ -358,7 +358,7 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
         let msg = format!("{}: {e}", plan_path.display());
         jfail(&err, &msg, "check the path of the plan")
     })?;
-    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow template STEP` writes one to start from";
+    let hint = "a plan is {\"format\":\"mzflow/2\",\"inputs\":[..],\"steps\":[..]}; `mzlab-cli flow steps --id STEP --template` writes one to start from";
     let mut plan =
         parse(&text).map_err(|e| jfail(&e, &crate::error_text::human_error(&e), hint))?;
     apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
