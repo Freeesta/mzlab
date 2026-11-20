@@ -417,14 +417,14 @@ try:
             q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
             q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
-                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
+                localStorage.setItem('mzlab.map', '{"pal":"cividis"}'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.bar.side', 'l') }""")
             q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
-            s = state(); assert "invented-work" in s["opfs"] and "mzlab.mappa" in s["ls"] and "mzlab.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
+            s = state(); assert "invented-work" in s["opfs"] and "mzlab.map" in s["ls"] and "mzlab.bar.side" in s["ls"], s            # a reload in the same run keeps the work
             q.evaluate("window.__before = 1; sessionStorage.clear()"); q.reload(); q.wait_for_function(running, timeout=120000)       # the app was closed and opened again
             s = state()
             assert s["files"] == 0 and "invented-work" not in s["opfs"], s
-            assert "mzlab.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
+            assert "mzlab.map" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.bar.side')") != "l", s["ls"]        # the page writes its own defaults again
             assert q.evaluate("localStorage.getItem('mzlab.prefs')") == '{"theme":"dark"}', "settings stay"
             c3.close()
         step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; settings stay", cold_start)
@@ -441,14 +441,14 @@ try:
             q.evaluate("""async () => { NB.ket = 'CCO'; await nbSave(true);
                 const { DB_NAME, DB_VER, upgrade } = await import(new URL('static/qqq-db.js', location.href).href);      // as the lists code opens it
                 const db = await new Promise((ok, no) => { const r = indexedDB.open(DB_NAME, DB_VER); r.onupgradeneeded = () => upgrade(r.result); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
-                await new Promise((ok, no) => { const t = db.transaction('liste_utente', 'readwrite'); t.objectStore('liste_utente').put({ id: 'app-list', name: 'my list' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); }""")
+                await new Promise((ok, no) => { const t = db.transaction('user_lists', 'readwrite'); t.objectStore('user_lists').put({ id: 'app-list', name: 'my list' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); }""")
             urls = []; q.on("framenavigated", lambda f: urls.append(f.url) if f == q.main_frame else None)
             q.evaluate("window.__before = 1; void QQRESET.run('files')")
             q.wait_for_function(running + " && E.files.length === 0 && !location.search.includes('riparti')", timeout=120000)
             assert [u for u in urls if "riparti=" in u] and all("riparti=file" in u for u in urls if "riparti=" in u), ("the new page finishes «Files», no cold start", urls)
             assert q.evaluate(JSON, "api/state")["j"]["files"] == [], "the native store lists no file"
             got = q.evaluate("""async () => { const db = await new Promise(ok => { const r = indexedDB.open(NOMI.DB); r.onsuccess = () => ok(r.result); });
-                const l = await new Promise(ok => { const g = db.transaction('liste_utente').objectStore('liste_utente').get('app-list'); g.onsuccess = () => ok(!!g.result); }); db.close();
+                const l = await new Promise(ok => { const g = db.transaction('user_lists').objectStore('user_lists').get('app-list'); g.onsuccess = () => ok(!!g.result); }); db.close();
                 const nb = JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}; return { list: l, ket: nb.ket || null, session: (nb.session || []).length }; }""")
             assert got == {"list": True, "ket": "CCO", "session": 0}, ("the drawing and the list stay, the open-files list goes", got)
             c5.close()

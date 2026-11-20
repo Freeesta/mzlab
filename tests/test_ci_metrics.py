@@ -179,7 +179,7 @@ def test_wasm_sizes(tmp_path):
         z.writestr("wasm-dimensioni.json", json.dumps(m))
     api = lambda p: {"artifacts": [{"id": 7, "name": "wasm-dimensioni"}]}  # noqa: E731
     r = s.dati_ci.wasm_rows(RUN["workflow_run"], {"sha": "abc"}, api, lambda p: buf.getvalue())[0]
-    assert r["byte_totali"] == 1000 and r["margine_min_pct"] > 99
+    assert r["byte_totali"] == 1000 and r["margin_min_pct"] > 99
 
 
 def test_recent_cursor_load_compact_export(tmp_path):

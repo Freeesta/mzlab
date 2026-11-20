@@ -10,7 +10,7 @@ All of the user's work lives in THEIR browser; the export gathers it into a sing
 
 ## Button and collection
 - **Button**: none. The "Data and privacy" section of Settings has been removed from the interface: `esporta-dati.js`, `importa-dati.js` and the worker remain as code with no entry point (no other file loads them) and no e2e test; the `export.*` and `import.*` keys left in `lang/*/settings.js` are those the modules use.
-- `mzlab/web/esporta-dati.js`: `collect()` (localStorage, IndexedDB `mzlab_lab` in the stores `notebook`, `kv`, `liste_utente`, `molecole` as JSON with binaries in base64, OPFS `librerie/`), `manifest()`, `pack()`, `run()`, `start()`. `esporta-dati-worker.js` calls `zip`/`unzip` of the engine. The file is `mzlab-dati-<YYYY-MM-DD>.zip` with `manifesto.json` (format `mzlab-dati/1`, version, date, `files` with bytes and meaning, `excluded` with reason), `localStorage.json`, `indexeddb/<store>.json`, `opfs/librerie/…`.
+- `mzlab/web/esporta-dati.js`: `collect()` (localStorage, IndexedDB `mzlab_lab` in the stores `notebook`, `kv`, `user_lists`, `molecules` as JSON with binaries in base64, OPFS `librerie/`), `manifest()`, `pack()`, `run()`, `start()`. `esporta-dati-worker.js` calls `zip`/`unzip` of the engine. The file is `mzlab-dati-<YYYY-MM-DD>.zip` with `manifesto.json` (format `mzlab-dati/1`, version, date, `files` with bytes and meaning, `excluded` with reason), `localStorage.json`, `indexeddb/<store>.json`, `opfs/librerie/…`.
 
 ## Import my data
 - `importa-dati.js` (`begin(d, file)`) reads a ZIP of this format. The worker `esporta-dati-worker.js` (op `unzip`) has Rust read the ZIP; `plan()` accepts only `manifesto.json` with format `mzlab-dati/1` and keeps a localStorage key only if it belongs to mzLab and is not secret, run-time or development (same rules as the export: a tampered file cannot write anything else).
@@ -18,7 +18,7 @@ All of the user's work lives in THEIR browser; the export gathers it into a sing
 
 ## Collection rules
 - **Included**: everything the user creates: preferences and views (localStorage `mzlab.*`, `mzlab-theme`, `mzlab-labels`; the old `qqq.*` only if the matching `mzlab.*` is absent), notebook, user lists, molecules, spectral libraries, session. mzML/raw files and the indexes (`idx/`, `tiles/`) are NOT included unless already saved by the app as user data: they can be rebuilt from the original files.
-- **Excluded, listed in the manifest with the reason**: secrets (every key whose name contains `token`, `key` or `secret`; the assistant key is never saved, it lives only in the `llm/trasporto.html` iframe); run state (`mzlab.run`, `mzlab.avvii`, `mzlab.migrato`, `mzlab.memProbe`, `mzlab.memBudget*`, `mzlab.memLevel`, `mzlab.kprefetch`, sessionStorage); app caches (Cache API `mzlab-app-*`, `mzlab-big-*`, service worker); development and admin flags (`mzlab.admin`, `mzlab.dev.*`).
+- **Excluded, listed in the manifest with the reason**: secrets (every key whose name contains `token`, `key` or `secret`; the assistant key is never saved, it lives only in the `llm/trasporto.html` iframe); run state (`mzlab.run`, `mzlab.launches`, `mzlab.migrated`, `mzlab.memProbe`, `mzlab.memBudget*`, `mzlab.memLevel`, `mzlab.kprefetch`, sessionStorage); app caches (Cache API `mzlab-app-*`, `mzlab-big-*`, service worker); development and admin flags (`mzlab.admin`, `mzlab.dev.*`).
 
 ## Inventory
 | Where | Key / name | Meaning | Format |
@@ -26,22 +26,22 @@ All of the user's work lives in THEIR browser; the export gathers it into a sing
 | localStorage | `mzlab.prefs` | general preferences | JSON object |
 | localStorage | `mzlab.lang`, `mzlab-theme`, `mzlab-labels` | language, theme, chart labels | string |
 | localStorage | `mzlab.a11y` | reading aids and accessibility settings | JSON |
-| localStorage | `mzlab.sessione` | open files and panels (session) | JSON |
-| localStorage | `mzlab.picchi`, `mzlab.calc`, `mzlab.mappa`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`, `mzlab.profilo`, `mzlab.fair`, `mzlab.flgrp`, `mzlab.tunit`, `mzlab.kmd`, `mzlab.qaqc`, `mzlab.riferimento`, `mzlab.bianco`, `mzlab.comp`, `mzlab.infg.frag` | choices of the Data views | JSON or string |
-| localStorage | `mzlab.barra.lato`, `mzlab.barra.lr`, `mzlab.barra.hr`, `mzlab.barra.hint`, `mzlab.banco.info` | sidebar layout and notices already seen | string / JSON |
-| localStorage | `mzlab.lib.soglie`, `mzlab.lib.cartella`, `mzlab.liste.attive`, `mzlab.contaminanti`, `.esclusi`, `.on` | chosen libraries, lists and contaminants | JSON |
-| localStorage | `mzlab.disegno.font`, `.riquadri`, `.strumenti`, `mzlab.pal.recent` | Draw page: font, panels, tools, recent colours | JSON |
+| localStorage | `mzlab.session` | open files and panels (session) | JSON |
+| localStorage | `mzlab.peaks`, `mzlab.calc`, `mzlab.map`, `mzlab.ordine`, `mzlab.pca`, `mzlab.pfas`, `mzlab.profile`, `mzlab.fair`, `mzlab.flgrp`, `mzlab.tunit`, `mzlab.kmd`, `mzlab.qaqc`, `mzlab.reference`, `mzlab.blank`, `mzlab.comp`, `mzlab.infg.frag` | choices of the Data views | JSON or string |
+| localStorage | `mzlab.bar.side`, `mzlab.bar.lr`, `mzlab.bar.hr`, `mzlab.bar.hint`, `mzlab.bench.info` | sidebar layout and notices already seen | string / JSON |
+| localStorage | `mzlab.lib.thresholds`, `mzlab.lib.folder`, `mzlab.lists.active`, `mzlab.contaminants`, `.esclusi`, `.on` | chosen libraries, lists and contaminants | JSON |
+| localStorage | `mzlab.draw.font`, `.riquadri`, `.strumenti`, `mzlab.pal.recent` | Draw page: font, panels, tools, recent colours | JSON |
 | localStorage | `mzlab.tour.lr`, `mzlab.upd.last`, `mzlab.upd.seen`, `mzlab.rel.last`, `mzlab.rel.seen`, `mzlab.reset.note`, `mzlab.logo.gold` | tour, update notices already seen | string / JSON |
-| localStorage | `mzlab.llm`, `mzlab.llm.consenso` | assistant: settings and consents per provider (no keys) | JSON |
+| localStorage | `mzlab.llm`, `mzlab.llm.consensus` | assistant: settings and consents per provider (no keys) | JSON |
 | localStorage | `mzlab.attributio.reviewer`, `mzlab.tabui.*`, `mzlab.pipeline.draft` | admin: reviewer and decisions (not exported from the students' interface) | JSON |
 | IndexedDB `mzlab_lab` | `notebook`, `kv` | notebook; key-value pairs | objects |
-| IndexedDB `mzlab_lab` | `liste_utente`, `molecole`, `manifest` | user lists, molecule store, list of files in OPFS | objects |
+| IndexedDB `mzlab_lab` | `user_lists`, `molecules`, `manifest` | user lists, molecule store, list of files in OPFS | objects |
 | IndexedDB `mzlab_lab` | `files` | files saved by the old engine (fallback only) | blob |
 | IndexedDB `mzlab-libs`, `mzlab-libdir` | `lib`, `h` | spectral libraries and folder pointed to without OPFS (fallback) | blob / handle |
 | OPFS | `librerie/` | saved spectral libraries (`<id>.mzlib`) | binary |
 | OPFS | `mzlab/` (engine root), `idx/`, `tiles/`, `conv/`, `export/` | imported files, indexes, maps and conversions: rebuildable | binary |
 | Cache API | `mzlab-app-*`, `mzlab-big-*`, `mzlab-libs` | offline copy of the app | HTTP responses |
-| sessionStorage | `mzlab.run`, `mzlab.telefono*`, `mzlab.unopen`, `mzlab.convopen`, `mzlab.tour.step` | state of this run | string |
+| sessionStorage | `mzlab.run`, `mzlab.phone*`, `mzlab.unopen`, `mzlab.convopen`, `mzlab.tour.step` | state of this run | string |
 
 Note: keys and folders are read BY NAME from the browser (like `reset.js`, no fixed list): the table explains the families, the collection takes everything that starts with `mzlab`/`qqq` minus the exclusions.
 

@@ -169,7 +169,7 @@ def open_only(p, port, rate, cores, n):
 def one_config(p, port, rate, cores, reps, only=None, patch=None):
     b = p.chromium.launch(args=["--enable-precise-memory-info", "--js-flags=--expose-gc"])
     ctx = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
-    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg.add_init_script(f"Object.defineProperty(navigator, 'hardwareConcurrency', {{get: () => {cores}}});")
     pg.add_init_script(INIT)
     if patch: pg.add_init_script(Path(patch).read_text())            # an experiment under test (A/B): run before and after with the same bench

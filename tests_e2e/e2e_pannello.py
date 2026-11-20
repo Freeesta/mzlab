@@ -17,7 +17,7 @@ def cold(p, vw, vh, saved=None, scheme="light", touch=False):
     r = Run(port=8872, wd="/tmp/wd_pannello"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="en-US", has_touch=touch, color_scheme=scheme, reduced_motion="reduce")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
+    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');"
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
@@ -54,7 +54,7 @@ try:
         step("button always visible; File open on first start (wide screen); tool buttons dock the panel and narrow the charts; second click / Ctrl+B hide it", base)
 
         def side():
-            r, ctx, pg, errs = cold(p, 1440, 900, saved={"mzlab.barra.lato": "right", "mzlab.barra.lr": '{"tab":"losses","open":true,"w":340}'})
+            r, ctx, pg, errs = cold(p, 1440, 900, saved={"mzlab.bar.side": "right", "mzlab.bar.lr": '{"tab":"losses","open":true,"w":340}'})
             try:
                 b = pg.evaluate(BOX)
                 assert pg.is_visible("#dfiles") and b["side"]["r"] > 1430 and b["side"]["w"] > 330 and not overlap(b), b
@@ -67,12 +67,12 @@ try:
         step("right and left side: no overlap, the workspace takes the rest", side)
 
         def vecchi():
-            for saved in ({"mzlab.barra.lr": '{"tab":"file","pinned":true,"open":true,"w":0}', "mzlab.barra.lato": "centro"},
-                          {"mzlab.barra.lr": '{"tab":"nope","open":"si","w":99999}'}, {"mzlab.barra.lr": "not json"}):
+            for saved in ({"mzlab.bar.lr": '{"tab":"file","pinned":true,"open":true,"w":0}', "mzlab.bar.side": "centro"},
+                          {"mzlab.bar.lr": '{"tab":"nope","open":"si","w":99999}'}, {"mzlab.bar.lr": "not json"}):
                 r, ctx, pg, errs = cold(p, 1440, 900, saved=saved)
                 try:
-                    st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))")
-                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "addloss", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") in ("left", "right"), st
+                    st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr'))")
+                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "addloss", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.bar.side')") in ("left", "right"), st
                     b = pg.evaluate(BOX); assert not overlap(b) and b["sw"] <= 1, b
                 finally: ctx.close(); r.close()
                 assert not errs, errs

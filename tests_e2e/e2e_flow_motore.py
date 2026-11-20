@@ -34,7 +34,7 @@ try:
         b = p.chromium.launch()
         pg = b.new_context(viewport={"width": 1400, "height": 1000}, reduced_motion="reduce", accept_downloads=True).new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_selector("#flx-add"); pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")')

@@ -87,17 +87,17 @@ def test_localstorage_migration_first_launch():
     ls.setItem("qqq.prefs", JSON.stringify({ theme: "dark" }));
     ls.setItem("qqq-theme", "dark");
     ls.setItem("qqq-labels", "custom");
-    ls.setItem("qqq.picchi", JSON.stringify({ tol: 0.5 }));
+    ls.setItem("qqq.peaks", JSON.stringify({ tol: 0.5 }));
 
     NOMI.migrateStorage(ls);
 
     console.log(JSON.stringify({
-        migrato: ls.getItem("mzlab.migrato"),
-        avvii: ls.getItem("mzlab.avvii"),
+        migrato: ls.getItem("mzlab.migrated"),
+        avvii: ls.getItem("mzlab.launches"),
         prefs: ls.getItem("mzlab.prefs"),
         theme: ls.getItem("mzlab-theme"),
         labels: ls.getItem("mzlab-labels"),
-        picchi: ls.getItem("mzlab.picchi"),
+        picchi: ls.getItem("mzlab.peaks"),
         old_prefs: ls.getItem("qqq.prefs"),
         old_theme: ls.getItem("qqq-theme"),
     }));
@@ -167,8 +167,8 @@ def test_idempotence_at_second_launch():
     NOMI.migrateStorage(ls); // 2nd launch
 
     console.log(JSON.stringify({
-        migrato: ls.getItem("mzlab.migrato"),
-        avvii: ls.getItem("mzlab.avvii"),
+        migrato: ls.getItem("mzlab.migrated"),
+        avvii: ls.getItem("mzlab.launches"),
         prefs: ls.getItem("mzlab.prefs"),
         old_prefs: ls.getItem("qqq.prefs"),
     }));
@@ -200,13 +200,13 @@ def test_cleanup_at_third_launch():
     NOMI.migrateStorage(ls); // 1st
     NOMI.migrateStorage(ls); // 2nd
     const at2 = {
-        avvii: ls.getItem("mzlab.avvii"),
+        avvii: ls.getItem("mzlab.launches"),
         has_qqq: ls.getItem("qqq.prefs") !== null,
     };
 
     NOMI.migrateStorage(ls); // 3rd
     const at3 = {
-        avvii: ls.getItem("mzlab.avvii"),
+        avvii: ls.getItem("mzlab.launches"),
         has_qqq_prefs: ls.getItem("qqq.prefs"),
         has_qqq_theme: ls.getItem("qqq-theme"),
         has_qqq_labels: ls.getItem("qqq-labels"),
@@ -254,7 +254,7 @@ def test_resilience_to_exceptions():
 
     console.log(JSON.stringify({
         threw,
-        migrato: ls.getItem("mzlab.migrato"),
+        migrato: ls.getItem("mzlab.migrated"),
         old_val: ls.getItem("qqq.prefs"),
     }));
     """
@@ -362,13 +362,13 @@ MOCK_IDB_SETUP = """
     const oldDb = new MockDb("qqq_lab");
     oldDb.addStore("files").put("file_bytes_1", "f1.mzML");
     oldDb.addStore("kv").put("dark", "theme");
-    oldDb.addStore("liste_utente", "id").put({ id: "lst1", name: "Custom Targets" });
+    oldDb.addStore("user_lists", "id").put({ id: "lst1", name: "Custom Targets" });
     dbs.set("qqq_lab", oldDb);
 
     const newDb = new MockDb("mzlab_lab");
     newDb.addStore("files");
     newDb.addStore("kv");
-    newDb.addStore("liste_utente", "id");
+    newDb.addStore("user_lists", "id");
     newDb.addStore("manifest", "path");
     dbs.set("mzlab_lab", newDb);
 """
@@ -386,7 +386,7 @@ def test_indexeddb_migration_full_lifecycle():
       status: await getKv(newDb, "migration_status"),
       runs: await getKv(newDb, "migration_runs"),
       files_count: await countStore(newDb, "files"),
-      liste_count: await countStore(newDb, "liste_utente"),
+      liste_count: await countStore(newDb, "user_lists"),
     }};
     await migrateIdb(newDb, "qqq_lab");
     const r2 = {{ runs: await getKv(newDb, "migration_runs"), deleted: deleted.slice() }};

@@ -133,7 +133,7 @@
   }
   /** the same library compound matched at two or more RT (beyond the group tolerance) → level 3, «isomers not discriminated» */
   function markIsomers(table, results, profile = "attributio") {
-    const tol = LV().thresholds(profile).rt_gruppo_tol_min, by = new Map();
+    const tol = LV().thresholds(profile).rt_group_tol_min, by = new Map();
     for (const f of table.features) { const r = results.get(f.key); if (!r || r.level !== "2a" || !r.best) continue; const k = f.pol + "|" + bestKey(r.best); if (!by.has(k)) by.set(k, []); by.get(k).push(f); }
     for (const fs of by.values()) {
       if (fs.length < 2) continue; const rts = fs.map(f => f.rt), span = Math.max(...rts) - Math.min(...rts); if (span <= tol) continue;

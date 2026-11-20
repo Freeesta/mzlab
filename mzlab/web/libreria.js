@@ -66,7 +66,7 @@ const LIB = (() => {
     // geometry and peaks of the last drawing: the hover of libreria-finestra.js finds the peak under the pointer
     /** @type {Bag} */ (cv)._mg = { X, mid, half, q, r, shq, shl, nlq, nll };
   }
-  // confidence levels: livelli.js (rules and thresholds in the data file livelli-1.js, the user's thresholds in qqq.lib.soglie). The candidates carry ik, ent, cos, shared, dprec (ppm), nlib
+  // confidence levels: livelli.js (rules and thresholds in the data file livelli-1.js, the user's thresholds in qqq.lib.thresholds). The candidates carry ik, ent, cos, shared, dprec (ppm), nlib
   const assess = (/** @type {Bag[]} */ cands, /** @type {Bag} */ o = {}) => LIVELLI.assess({ cands, analogs: o.analogs, nScans: o.nScans, std: o.std || null, formulaUnique: !!o.formulaUnique });
   // the voice of the menu exists only for high-resolution spectra (low resolution gives no answers)
   const isHr = (/** @type {Bag} */ p) => { const q = queryOf(p); return !!(q && profOf(q.f).hr); };

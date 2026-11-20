@@ -220,7 +220,7 @@ pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Ass
     if p.get("cap").is_none() && extra::by_suspect(&p, e, &mut res) {
         return Ok(res);
     }
-    let min = threshold(&p, "analogo_mcos_min");
+    let min = threshold(&p, "analog_mcos_min");
     let top = e.analogs.iter().fold(None, |t: Option<&Analog>, a| {
         t.filter(|t| t.mcos >= a.mcos).or(Some(a))
     });

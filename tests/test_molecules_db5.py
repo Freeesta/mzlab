@@ -19,7 +19,7 @@ def test_database_version_5_adds_only_the_molecules_store():
     code = f"""
     import {{ upgrade, DB_VER }} from {uri!r};
     const made = [];
-    const have = new Set(["files", "kv", "liste_utente", "manifest"]);
+    const have = new Set(["files", "kv", "user_lists", "manifest"]);
     const db = {{ objectStoreNames: {{ contains: n => have.has(n) }}, createObjectStore: (n, o) => {{ made.push([n, o && o.keyPath]); have.add(n); }} }};
     upgrade(db);
     const once = made.length;
@@ -27,9 +27,9 @@ def test_database_version_5_adds_only_the_molecules_store():
     console.log(JSON.stringify({{ ver: DB_VER, made, idempotent: made.length === once }}));
     """
     res = run_node_esm(code)
-    assert res["ver"] == 5 and res["made"] == [["molecules", "id"]] and res["idempotent"], res
+    assert res["ver"] == 6 and res["made"] == [["molecules", "id"]] and res["idempotent"], res
 
 
 def test_names_and_the_schema_name_the_same_version():
-    assert re.search(r"const DB_VER = 5;", (WEB / "nomi.js").read_text(encoding="utf-8"))
-    assert re.search(r"export const DB_VER = 5;", (WEB / "qqq-db.js").read_text(encoding="utf-8"))
+    assert re.search(r"const DB_VER = 6;", (WEB / "nomi.js").read_text(encoding="utf-8"))
+    assert re.search(r"export const DB_VER = 6;", (WEB / "qqq-db.js").read_text(encoding="utf-8"))

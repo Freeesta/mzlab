@@ -112,7 +112,7 @@ try:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
         ctx = b.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36", viewport={"width": 1280, "height": 900}, reduced_motion="reduce")
         ctx.add_init_script(FAKE_TAURI)
-        ctx.add_init_script("try{localStorage.setItem('mzlab.mzfinder','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+        ctx.add_init_script("try{localStorage.setItem('mzlab.mzfinder','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.bar.hint','1');}catch(_){}")
         ctx.route(re.compile(r"http://mzlab\.localhost/.*"), native_route)
         ctx.on("request", lambda r: reqs.append(r.url))
         pg = ctx.new_page()

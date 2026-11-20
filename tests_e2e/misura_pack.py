@@ -35,7 +35,7 @@ INIT = r"""(() => {
   V.run = (act, until, cap) => new Promise(ok => { const t0 = performance.now(); act();
     const poll = () => { if (until()) V.end(t0).then(ok); else if (performance.now() - t0 > (cap || 120000)) ok(null); else requestAnimationFrame(poll); }; poll(); });
 })();"""
-PREFS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+PREFS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"
 GETJ = """async u => { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }"""
 
 

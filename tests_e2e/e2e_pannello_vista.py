@@ -39,7 +39,7 @@ try:
         step("shut: the same trip leaves it shut", closed)
         def riavvio():
             pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.open")
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')).open") is True
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr')).open") is True
         step("the open state is saved for the next start", riavvio)
 finally:
     try: r.close()
