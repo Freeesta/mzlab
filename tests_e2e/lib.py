@@ -124,7 +124,7 @@ def open_mzfinder(pg, host="tp-right", timeout=120000, page=False):
     # the Data view stays visible now and its one-shot decorative leaf (9 s) would keep `getAnimations()` busy: reduced motion, as the a11y setting does
     pg.evaluate("() => document.documentElement.setAttribute('data-a11y-reduce', '1')")
     # page=True: the host is a full-screen scrolling page of its own (the table tests measure rows against the viewport)
-    pg.evaluate("([h, page]) => { if (!document.getElementById(h)) { const d = document.createElement('div'); d.id = h; if (page) d.style.cssText = 'position:fixed;inset:0;overflow:auto;z-index:50;background:var(--bg,#fff)'; document.body.appendChild(d); } }", [host, page])
+    pg.evaluate("([h, page]) => { if (document.getElementById(h)) return; const o = document.createElement('div'); o.className = 'tp'; o.style.display = 'block'; if (page) o.style.cssText += ';position:fixed;inset:0;overflow:auto;z-index:2147483000;background:var(--bg,#fff)'; const d = document.createElement('div'); d.id = h; o.appendChild(d); document.body.appendChild(o); if (window.TPHELP) window.TPHELP.attach(o); }", [host, page])
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # «Load data» is gone: the files are open already, the click is the first click on a file
