@@ -1,5 +1,5 @@
-//! `mzlab-cli trace chrom|xic`: any trace of a file as `trace/1` JSON or a `rt_min,intensity` CSV (what `peak-*` read). `chrom` serves every channel `file channels`
-//! lists (TIC, BPC, scan types, SRM/SIM transitions, UV, analog) with the answers of the page's `api/chrom` and `api/mrm`; `xic` is `api/xic`.
+//! `mzlab-cli trace chrom`: any trace of a file as `trace/1` JSON or a `rt_min,intensity` CSV (what `peak-*` read). `chrom` serves every channel `file channels`
+//! lists (TIC, BPC, scan types, SRM/SIM transitions, UV, analog) with the answers of the page's `api/chrom` and `api/mrm`; `trace xic` (trace_xic.rs) is `api/xic`.
 //! The number tokens are the route's own, so the points are the bytes the site draws.
 
 use std::path::PathBuf;
@@ -25,36 +25,29 @@ usage: mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--fo
   --format F  json (default) or csv with the header rt_min,intensity, the input of every `peak` command
   --out PATH  write there instead of the standard output";
 
-pub const HELP_XIC: &str = "mzlab-cli trace xic: the extracted ion chromatogram of an m/z as JSON (trace/1) or CSV (rt_min,intensity), the answer of the page's api/xic.
-
-usage: mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]
-
-  --mz M      the ion's m/z
-  --ppm P     half-window in ppm of M; --da D half-window in Da (one of the two, never both)
-  --rt A,B    keep the points with A <= rt <= B (minutes)
-  --ms-level N the level of the scans summed (default 1)
-  --polarity  the + or - part of a mixed-polarity file (a file with no such part gives an empty trace, counted in the evidence)
-  --sample ID the sample of a file with several (.wiff); default the first
-  --format F  json (default) or csv with the header rt_min,intensity
-  --out PATH  write there instead of the standard output";
-
 /// A trace the way a route gives it, plus what produced it.
-struct Answer {
+pub(crate) struct Answer {
     /// `{"rt":[..],"y":[..]}` (or the band of `uv:auto`).
-    text: String,
-    y_unit: String,
+    pub(crate) text: String,
+    pub(crate) y_unit: String,
     /// The members of `evidence`, no braces.
-    evidence: String,
-    schema: &'static str,
+    pub(crate) evidence: String,
+    pub(crate) schema: &'static str,
 }
 
-fn tail(file: &str, s: &Sample) -> String {
+pub(crate) fn tail(file: &str, s: &Sample) -> String {
     let sample = s.sample.map_or("null".to_string(), |i| i.to_string());
     format!("\"file\":{},\"sample\":{sample}", extract::jstr(file))
 }
 
 /// The document or CSV of `a` inside `win`.
-fn render(a: Answer, s: &Sample, win: Option<(f64, f64)>, csv: bool, id: &str) -> Result<String> {
+pub(crate) fn render(
+    a: Answer,
+    s: &Sample,
+    win: Option<(f64, f64)>,
+    csv: bool,
+    id: &str,
+) -> Result<String> {
     if a.schema == "uvband/1" {
         if csv {
             // the band is a document of its own (uvband/1): no rt,intensity table to print
@@ -235,7 +228,7 @@ fn chrom_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Re
     }
 }
 
-fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
+pub(crate) fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
     match r {
         Err(e) => crate::sample_select::fail(&e),
         Ok((t, note)) => {
@@ -248,7 +241,7 @@ fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
     }
 }
 
-fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
+pub(crate) fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
     match p.pos.as_slice() {
         [f] => Ok(PathBuf::from(f)),
         [] => Err(format!("{what} needs a file")),
@@ -295,7 +288,13 @@ pub fn chrom(args: Vec<String>) -> Outcome {
 }
 
 /// `api/xic` of the page: the sum of the peaks within `tol` Da of `mz` in the scans of one level, by scan.
-fn xic_answer(s: &mut Sample, mz: f64, tol: f64, level: u8, pol: Option<i8>) -> Result<Answer> {
+pub(crate) fn xic_answer(
+    s: &mut Sample,
+    mz: f64,
+    tol: f64,
+    level: u8,
+    pol: Option<i8>,
+) -> Result<Answer> {
     s.routes.pol = pol;
     let text = s.routes.xic(mz, tol, level)?;
     let used = s
@@ -315,77 +314,6 @@ fn xic_answer(s: &mut Sample, mz: f64, tol: f64, level: u8, pol: Option<i8>) -> 
         evidence: ev,
         schema: "trace/1",
     })
-}
-
-pub fn xic(args: Vec<String>) -> Outcome {
-    let go = || -> std::result::Result<_, String> {
-        let Some(p) = extract::parse(
-            args,
-            &[
-                "--mz",
-                "--ppm",
-                "--da",
-                "--rt",
-                "--ms-level",
-                "--polarity",
-                "--sample",
-                "--format",
-                "--out",
-            ],
-            &[],
-        )?
-        else {
-            return Ok(Err(HELP_XIC));
-        };
-        let file = one_file(&p, "trace xic")?;
-        let mz = p
-            .num("--mz")?
-            .filter(|m| *m > 0.0)
-            .ok_or("trace xic needs --mz")?;
-        let tol = match (p.num("--ppm")?, p.num("--da")?) {
-            (Some(_), Some(_)) => return Err("give --ppm or --da, not both".into()),
-            (Some(ppm), None) if ppm > 0.0 => (mz * ppm * 1e-6, Some(ppm)),
-            (None, Some(da)) if da > 0.0 => (da, None),
-            (None, None) => return Err("trace xic needs --ppm or --da".into()),
-            _ => return Err("--ppm and --da need a positive number".into()),
-        };
-        let pol = match p.get("--polarity") {
-            None => None,
-            Some("+") => Some(1),
-            Some("-") => Some(-1),
-            Some(_) => return Err("--polarity takes + or -".into()),
-        };
-        Ok(Ok((
-            p.sample(&file)?,
-            p.window()?,
-            p.csv()?,
-            p.out(),
-            file,
-            mz,
-            tol,
-            p.level()?,
-            pol,
-        )))
-    };
-    let (sample, win, csv, out, file, mz, (tol, ppm), level, pol) = match go() {
-        Ok(Ok(a)) => a,
-        Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    finish(
-        extract::with_tmp("xic", |tmp| {
-            let mut s = extract::open_sample(&file, sample, tmp)?;
-            let mut a = xic_answer(&mut s, mz, tol, level, pol)?;
-            if let Some(p) = ppm {
-                a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
-            }
-            Ok((
-                render(a, &s, win, csv, &format!("xic:{}", extract::jnum(mz)))?,
-                s.note.clone(),
-            ))
-        }),
-        &out,
-    )
 }
 
 #[cfg(test)]

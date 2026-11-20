@@ -191,6 +191,7 @@ mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
 mod trace_cmd;
+mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
