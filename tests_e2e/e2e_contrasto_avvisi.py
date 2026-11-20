@@ -1,4 +1,4 @@
-"""Warning / info / error / success boxes (class .avv) and the «Acquisition method» window: text readable (>= 4.5:1) in the light and in the dark theme.
+"""Warning / info / error / success boxes (class .notice) and the «Acquisition method» window: text readable (>= 4.5:1) in the light and in the dark theme.
 Checks the contrast of every box variant from its computed colours, and axe-core (color-contrast) on the method window when axe is available."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,7 +16,7 @@ RATIO = """() => {
   const lum = c => { const m = c.match(/[\\d.]+/g).map(Number); if (c.startsWith('color(')) for (let i = 0; i < 3; i++) m[i] *= 255; const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
   const host = document.body, out = [];
   for (const k of ["", "warn", "bad", "ok", "info"]) {
-    const d = document.createElement("div"); d.className = "avv " + k; d.textContent = "x"; host.appendChild(d);
+    const d = document.createElement("div"); d.className = "notice " + k; d.textContent = "x"; host.appendChild(d);
     const cs = getComputedStyle(d), a = lum(cs.color), b = lum(cs.backgroundColor);
     out.push([k || "base", Math.round(((Math.max(a, b) + .05) / (Math.min(a, b) + .05)) * 100) / 100, cs.backgroundColor]);
     d.remove();
@@ -36,7 +36,7 @@ try:
                 bad = [x for x in pg.evaluate(RATIO) if x[1] < 4.5]; assert not bad, bad
             step(f"{theme}: every box variant has contrast >= 4.5:1", boxes)
             def method():
-                pg.click("#np-method"); pg.wait_for_selector(".avv.warn")
+                pg.click("#np-method"); pg.wait_for_selector(".notice.warn")
                 if SHOTS: pg.screenshot(path=os.path.join(SHOTS, f"metodo-{theme}.png"))
                 if AXE:
                     v = pg.evaluate("axe.run(document, {runOnly: {type: 'rule', values: ['color-contrast']}}).then(r => r.violations.map(v => v.nodes.map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,2).join(' | '))).flat())")
