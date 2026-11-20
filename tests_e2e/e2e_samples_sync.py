@@ -140,10 +140,28 @@ try:
             undo(pg); wait_for_js(pg, "ST.files.filter(f => f.ugrp === 'Series A').length === 1 && E.files.filter(f => f.ugrp === 'Series A').length === 1"); wait_both(pg)
         step("a group set in the side list or in the table shows in the other, and Undo moves both", group_both_ways)
         def resume():
+            # real edits first (a role, a time and a group), so the reload has something to keep; both places must show them afterwards
+            table_view(pg)
+            row(pg, "s_t10").locator("select[data-k=type]").select_option("blank")
+            i = row(pg, "s_t30").locator("input[data-k=time]"); i.fill("45"); i.press("Enter")
+            wait_for_js(pg, "[...document.querySelectorAll('#flst .fl')].some(e => e.textContent.includes('45 min'))")
+            pane(pg, "s_t60").click(button="right"); pg.click("text=Move to group")
+            pg.click("text=New group…"); pg.wait_for_selector("#askdlg[open]"); pg.fill("#askdlg input", "Series B"); pg.click("#askok")
+            wait_for_js(pg, "E.files.some(f => f.ugrp === 'Series B')")
+            table_view(pg); row(pg, "s_t0").locator("[data-mv]").click(); pg.locator("[role=menu]:visible").get_by_text("Series B", exact=True).click()
+            wait_for_js(pg, "E.files.filter(f => f.ugrp === 'Series B').length === 2")
+            wait_both(pg)
+            before = pg.evaluate(TABLE)
             saved(pg); pg.reload()
             pg.wait_for_function("typeof E !== 'undefined' && E.files.length >= 5", timeout=90000); ready(pg)
-            wait_both(pg)
-        step("a resumed session has the table and the side list in step", resume)
+            table_view(pg)
+            t, p = wait_both(pg)
+            assert sorted(map(str, t)) == sorted(map(str, before)), ("table after the reload", t, before)
+            by = {x["name"]: x for x in t}
+            assert by["s_t10"]["role"] == "blank" and by["s_t30"]["time"] == "45", by
+            assert {x["name"]: x["tag"] for x in p}["s_t30"] == "45 min", p
+            wait_for_js(pg, "E.files.filter(f => f.ugrp === 'Series B').length === 2 && ST.files.filter(f => f.ugrp === 'Series B').length === 2")
+        step("a resumed session keeps the role, the time and the group in the table and in the side list", resume)
 finally:
     r.close(); r.report(); shutil.rmtree(tmp, ignore_errors=True)
 print("\nSTEPS"); [print(" ", s) for s in steps]
