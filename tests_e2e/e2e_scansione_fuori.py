@@ -14,7 +14,7 @@ def step(name, fn):
 
 D = Path(tempfile.mkdtemp(prefix="fuori_"))
 synth.write_full(D / "P.mzML", 0, seed=1)
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 ASK = "q => fetch(q).then(async x => [x.status, await x.text()])"
 
 r = Run(port=8973, wd="/tmp/wd_scansione_fuori")

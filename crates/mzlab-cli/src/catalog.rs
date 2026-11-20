@@ -13,7 +13,11 @@ use crate::{exit, Outcome};
 /// Flags every command accepts, listed once instead of on every command.
 const GLOBAL: &[(&str, &str)] = &[
     ("--json", "JSON on stdout"),
-    ("--help", "the usage of the command on stdout, exit 0"),
+    (
+        "--cache",
+        "index cache folder or MZLAB_CACHE; not db normative",
+    ),
+    ("--help", "usage on stdout, exit 0"),
 ];
 
 /// What a flag means, by name; the usage line says only its value.
@@ -21,6 +25,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
     ("--set", "NAME=VALUE; repeatable"),
     ("--sample", "ids: 1,3,5 or 2-4"),
+    ("--no-points", "omit the MS2 points"),
     ("--samples", "samples/1 file"),
     ("--from", "window start, min"),
     ("--to", "window end, min"),

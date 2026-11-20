@@ -45,7 +45,7 @@ def run(kind, moves=120, url_extra="?perf", site=False):
         with sync_playwright() as p:
             b = p.chromium.launch(); r.b = b
             pg = b.new_context(viewport={"width": 1440, "height": 950}).new_page()
-            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
             pg.goto(f"http://127.0.0.1:{r.port}/{url_extra}"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(800)
             pg.set_input_files("#pick", [str(f)]); pg.wait_for_timeout(800)
             pg.click("#opbtn"); pg.wait_for_function("typeof E!==\"undefined\"&&E.files.length", timeout=180000); ready(pg)

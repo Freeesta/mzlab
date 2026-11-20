@@ -2,7 +2,7 @@
 // Files open as soon as they are read: upload0 (shell.js) calls OPENNOW.add(name) when a file is in the loading table. The first file of a session starts it (api/explore),
 // the others are appended (api/explore append) in the order of the drop (a file read early waits for the ones dropped before it), with one bootSession at most every 200 ms; a new file starts hidden (bootSession0):
 // the first file read of an upload (not a blank) is then shown by showFirst (starting layout, once per session); the others open on the student's click (area-lavoro.js). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
-// offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: CAMPIONI.apply). Used by shell.js and ruoli-carica.js.
+// offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: SAMPLES.apply). Used by shell.js and ruoli-carica.js.
 "use strict";
 
 // nothing waits in E.pending any more (the progress rows are UPROWS): the waits of the page and of the tests read an empty list
@@ -22,7 +22,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   const world = () => { const r = ST.files.find((/** @type {FileRiga} */ f) => f.kind in GORD && isOpen(f.name)); return r ? !!r.hr : null; };
   // the time of a dark is negative whatever way it got here (name, table, old project)
   const sample = (/** @type {FileRiga} */ f) => { if (RUOLI.roleOf(f) === "dark") f.time = darkTime(f.time); return { file: f.name, time: f.time, type: f.type, conc: isCal(f) ? f.conc : null, cunit: CU[ST.unit][0], label: null }; };
-  /** the row of the table as an entry of CAMPIONI.apply */
+  /** the row of the table as an entry of SAMPLES.apply */
   function entry(/** @type {FileRiga} */ f) {
     const r = RUOLI.roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r });
     if (RUOLI.TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; }
@@ -95,11 +95,11 @@ const OPENNOW = /** @type {any} */ ((() => {
     add(f.name);
   }
   /** a student edit of the sample table on an open file: one undoable step (the writer of Sample metadata) */
-  function edit(/** @type {FileRiga} */ f) { if (isOpen(f.name)) campioniEdit([entry(f)]); }
+  function edit(/** @type {FileRiga} */ f) { if (isOpen(f.name)) samplesEdit([entry(f)]); }
   /** proposals that landed after the files opened: quietly, for the cells the student did not touch */
   function sync() {
     const fs = ST.files.filter((/** @type {FileRiga} */ f) => f.use && !f.ed && (f.gR || f.gT) && isOpen(f.name));
-    if (fs.length) CAMPIONI.apply(fs.map(entry), true);
+    if (fs.length) SAMPLES.apply(fs.map(entry), true);
   }
   // the rare paths (the switch of world, the question of a large folder) load on first use: open-now-raro.js
   const rare = async () => { await carica("m:open-now-raro.js"); return /** @type {any} */ (window).OPENRARO; };

@@ -12,33 +12,38 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli file items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
 
-usage: mzlab-cli file items FILE [--out PATH]
+usage: mzlab-cli file items FILE [--no-points] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); a file of several samples gives its first
+  --no-points omit info.ms2_events, the [rt_min, mz] point of every MS2 (large for a long DDA run)
   --out PATH  write there instead of the standard output
 
 info.ms2_exps lists {prec (m/z), ce (eV, or % when info.nce), ce_mid, ce_spread, n}: ce_mid and ce_spread (35 and 15 for a stepped 20/35/50) are null with a single CE.";
 
-fn parse(args: Vec<String>) -> std::result::Result<Option<(PathBuf, Option<PathBuf>)>, String> {
-    let (mut file, mut out) = (None, None);
+/// The arguments: the file, `--out`, `--no-points`.
+type Parsed = (PathBuf, Option<PathBuf>, bool);
+
+fn parse(args: Vec<String>) -> std::result::Result<Option<Parsed>, String> {
+    let (mut file, mut out, mut no_points) = (None, None, false);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
+            "--no-points" => no_points = true,
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
             _ => return Err("items takes one file".into()),
         }
     }
-    Ok(Some((file.ok_or("items needs a file")?, out)))
+    Ok(Some((file.ok_or("items needs a file")?, out, no_points)))
 }
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
+fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<String> {
     let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -65,20 +70,46 @@ fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
         let size = shell.len() as u64;
         mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(shell, size), &name, &sample)?
     };
-    Ok(document(&items))
+    document(&items, no_points)
+}
+
+/// `info` without its `ms2_events` (the only member that grows with the run: one point per MS2); every other member keeps its bytes.
+fn without_points(info: &str) -> Result<String> {
+    let Ok(mzlab_core::json::Value::Obj(members)) = mzlab_core::json::parse(info.as_bytes()) else {
+        return Err(Error::new("err.file.index").with("detail", "item info is not a JSON object"));
+    };
+    let kept = mzlab_core::json::Value::Obj(
+        members
+            .into_iter()
+            .filter(|(k, _)| k != "ms2_events")
+            .collect(),
+    );
+    let mut o = mzlab_core::json::Out::default();
+    mzlab_core::json::write_value(&mut o, &kept);
+    Ok(o.0)
 }
 
 /// The `items/1` document of the items a file opens as (`file items`, and the `items` member of `file info`).
-pub(crate) fn document(items: &[mzlab_core::lr::OpenItem]) -> String {
+pub(crate) fn document(items: &[mzlab_core::lr::OpenItem], no_points: bool) -> Result<String> {
     let body: Vec<String> = items
         .iter()
-        .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
-        .collect();
-    format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(","))
+        .map(|i| {
+            let info = if no_points {
+                without_points(&i.info)?
+            } else {
+                i.info.to_string()
+            };
+            Ok(format!("{{\"info\":{info},\"hr\":{}}}", i.hr))
+        })
+        .collect::<Result<_>>()?;
+    Ok(format!(
+        "{{\"schema\":\"items/1\",\"items\":[{}]}}",
+        body.join(",")
+    ))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
-    let (file, out) = match parse(args) {
+    let (file, out, no_points) = match parse(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
@@ -88,7 +119,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-items{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(io)
-        .and_then(|_| read(&file, &tmp));
+        .and_then(|_| read(&file, &tmp, no_points));
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail_error(&e),

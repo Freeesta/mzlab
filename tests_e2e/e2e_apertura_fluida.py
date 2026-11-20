@@ -65,7 +65,7 @@ def settled(frames, key, since, tol=0.6):
 
 def second_page(r, p, motion):
     pg = r.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion=motion)
-    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/")
     return pg
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             step("the fade animates opacity only", opacity_only)
             # first visit: from the navigation (landing painted with the side panel open) through the files and the first click to the settled first panel
             pg3 = r.b.new_page(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce")
-            pg3.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+            pg3.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
                                 "window.__nav={cls:0,all:[]};try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__nav.cls+=e.value;window.__nav.all.push([Math.round(e.startTime),+e.value.toFixed(4),(e.sources||[]).map(x=>{const n=x.node;return n&&n.nodeType===1?(n.id?'#'+n.id:n.tagName.toLowerCase()+'.'+String(n.className).split(' ')[0]):'?'}).join(' ')])}}).observe({type:'layout-shift',buffered:true})}catch(_){}")
             pg3.goto(f"http://127.0.0.1:{r.port}/")
             def landing_first_paint():

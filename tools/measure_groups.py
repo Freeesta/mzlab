@@ -35,7 +35,7 @@ def run(n, site, port):
     threading.Thread(target=watch, daemon=True).start()
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 1100}, reduced_motion="reduce"); pg = ctx.new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('qqq.barra.hint','1');localStorage.setItem('qqq.admin','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{port}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
         pg.set_input_files("#pick", paths); pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=480000)
         pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=480000); pg.wait_for_function(f"E.files.length >= {n} && E.pending.length === 0", timeout=900000)

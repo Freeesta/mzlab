@@ -57,7 +57,7 @@ def main():
     try:
         with sync_playwright() as p:
             b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
-            pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.add_init_script(HOOK)
             pg.on("crash", lambda *_: print("PAGE CRASHED", flush=True)); pg.on("pageerror", lambda e: print("pageerror", str(e)[:200], flush=True))
             pg.goto(f"http://127.0.0.1:{a.port}/"); pg.wait_for_timeout(800)

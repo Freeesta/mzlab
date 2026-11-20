@@ -13,7 +13,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:400]))
 
 r = Run(port=8961, wd="/tmp/wd_intestazioni_sovrapposte")
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}"
 # every visible control of every panel header, compared pair by pair (1 px of rounding allowed); the controls group (.ctl) must not hold more than its width,
 # since what it holds would spill over the buttons beside it
 OVERLAP = r"""(() => { const bad = [];

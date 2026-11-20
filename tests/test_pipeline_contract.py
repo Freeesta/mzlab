@@ -22,7 +22,7 @@ def contract():
 def outs(built, tmp_path_factory):
     root, idx, _pkg, table = built
     out = tmp_path_factory.mktemp("contract")
-    run("target/release/examples/table", str(out), str(table), str(root / "campioni.json"), str(root / "spec.json"), "1", *idx)
+    run("target/release/examples/table", str(out), str(table), str(root / "samples.json"), str(root / "spec.json"), "1", *idx)
     return {p.name: json.loads(p.read_text()) for p in out.glob("*.json")}
 
 

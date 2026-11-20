@@ -38,7 +38,7 @@ try:
             from TP_Mine.tests.msn_synth import write_msn, caffeine_nodes
             F = write_msn(synth("a11ymsn") / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
             q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
-            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
                 q.set_input_files("#pick", [str(F)])
@@ -156,7 +156,7 @@ try:
         step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}); q = ctx.new_page()
-            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/?telefono=0", timeout=120000); q.wait_for_timeout(1500)   # a cold new context on macOS webkit takes over 30 s to load (twice in the night, same as line 43)
                 q.set_input_files("#pick", [mz("B_FullMass-t0")]); q.wait_for_timeout(800); open_first(q); ready(q)

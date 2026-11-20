@@ -13,7 +13,7 @@ const fileOf = (/** @type {string | number | null | undefined} */ k) => (k != nu
 // the file chosen by "auto" in a tab: the t0 (a sample at time 0, the first one), otherwise the only blank of the tab, otherwise the first by time (the dark, whose time is negative, never; files without a time come after those with one)
 function autoFile(/** @type {string} */ tab) {
   const fs = tabFiles(tab); if (!fs.length) return null;
-  const dark = (/** @type {MzFile} */ f) => !!window.CDOC && CDOC.kindOf(f) === "dark";
+  const dark = (/** @type {MzFile} */ f) => !!window.SAMPLES_DOC && SAMPLES_DOC.kindOf(f) === "dark";
   const z = fs.filter((/** @type {MzFile} */ f) => f.type === "sample" && f.time === 0 && !dark(f)); if (z.length) return z[0];
   const bl = fs.filter((/** @type {MzFile} */ f) => f.type === "blank"); if (bl.length === 1) return bl[0];
   const timed = fs.filter((/** @type {MzFile} */ f) => f.time != null && isFinite(f.time) && !dark(f));

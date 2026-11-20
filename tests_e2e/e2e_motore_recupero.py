@@ -51,7 +51,7 @@ def step(name, fn):
 if not (SITE / "static" / "wasm" / "mzlab_wasm_bg.wasm").is_file(): raise SystemExit("build the site with its engine first: python3 tools/prepara_sito.py")
 port = free_port(); srv = Srv(("127.0.0.1", port), Pages); threading.Thread(target=srv.serve_forever, daemon=True).start()
 URL = f"http://127.0.0.1:{port}/"
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 
 
 def session(p):

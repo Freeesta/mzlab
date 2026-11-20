@@ -18,5 +18,5 @@ def test_synthetic_files_are_valid_mzml(tmp_path):
     for i in range(0, len(files), 20):
         r = cargo_util.cli("file", "validate", *map(str, files[i:i + 20]), "--json")
         import json
-        bad += [f["file"] for f in json.loads(r.stdout) if not f["valid"]]
+        bad += [f["file"] for f in json.loads(r.stdout)["files"] if not f["valid"]]
     assert not bad, f"invalid synthetic mzML: {bad}: mzlab-cli file validate FILE shows why"

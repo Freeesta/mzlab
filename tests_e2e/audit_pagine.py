@@ -172,7 +172,7 @@ def panels(pg):
 def new_page(p, st):
     b = p.chromium.launch(args=["--enable-precise-memory-info"])
     pg = b.new_page(viewport={"width": 1440, "height": 900}, reduced_motion="no-preference")
-    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     pg.add_init_script(INSTR)
     st["errs"], st["reqs"] = [], []
     pg.on("pageerror", lambda e: st["errs"].append(("pageerror", str(e)[:300])))

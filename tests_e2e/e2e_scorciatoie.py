@@ -23,7 +23,7 @@ try:
         CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         def page_mac(ua):
             c = r.b.new_context(user_agent=ua, viewport={"width": 1200, "height": 900}, reduced_motion="reduce")
-            c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
             return c, q
         def rows_mac(ua):

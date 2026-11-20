@@ -50,11 +50,11 @@ try:
             again = pg.evaluate("PROV.tsv('# mzLab 9 · x\\nq')"); assert again == "# mzLab 9 · x\nq", "never twice"
         step("clipboard text: same helper", clip)
         def meta():
-            pg.evaluate("(()=>{const b=document.createElement('div');b.id='prov-box';document.body.appendChild(b);CAMPIONI.mount(b)})()")
+            pg.evaluate("(()=>{const b=document.createElement('div');b.id='prov-box';document.body.appendChild(b);SAMPLES.mount(b)})()")
             with pg.expect_download() as d: pg.click("#prov-box #cmp-exp")
             d.value.save_as("/tmp/prov_meta.tsv"); t = open("/tmp/prov_meta.tsv", encoding="utf-8").read()
             line_ok(t); assert t.split("\n")[1].startswith("filename\t"), t[:200]
-            back = pg.evaluate("t => CAMPIONI.parseTsv(t)", t); assert len(back["rows"]) == len(SYN) and not back["warnings"], back
+            back = pg.evaluate("t => SAMPLES.parseTsv(t)", t); assert len(back["rows"]) == len(SYN) and not back["warnings"], back
         step("metadata.tsv: the line, and our own import skips it", meta)
         def noroute():
             miss = pg.evaluate("window.MZLAB_LR_MISS || []"); assert not [m for m in miss if "provenance" in m], miss

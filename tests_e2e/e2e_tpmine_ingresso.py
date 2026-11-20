@@ -76,7 +76,7 @@ def rows_ready(pg):
     assert "LC-HRMS" in pg.inner_text("#tp-fsum"), pg.inner_text("#tp-fsum")
 
 
-INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 
 
 def fresh(b):

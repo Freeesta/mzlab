@@ -56,7 +56,7 @@ try:
         def two_tabs():
             pg.evaluate("fetch('api/notebook',{method:'POST',body:'{}'})")
             ctx = r.b.new_context(viewport={"width": 1440, "height": 900})
-            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             a, q = ctx.new_page(), ctx.new_page()
             for t in (a, q): t.goto(f"http://127.0.0.1:{r.port}/#/draw"); t.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             a.fill("#ex-name", "tab_a"); a.dispatch_event("#ex-name", "change"); a.wait_for_function("async()=>{const n=await (await fetch('api/notebook')).json();return n.drawName==='tab_a'}")

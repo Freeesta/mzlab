@@ -34,7 +34,7 @@ try:
         for w, h in VIEWPORTS:
             c = b.new_context(viewport={"width": w, "height": h}, device_scale_factor=2, reduced_motion="no-preference"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector(TAB, timeout=120000)
             wait_for_js(pg, "typeof FLOW !== 'undefined' && typeof FLOW.shell === 'function'", 60000)
             pg.evaluate(OBSERVE); pg.click(TAB); pg.wait_for_selector("#flx-root .fln", timeout=30000)

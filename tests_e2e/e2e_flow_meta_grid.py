@@ -46,8 +46,8 @@ try:
         check("paste says", "cells written" in said, said[:300])          # read in the same task as the paste: the check that follows the edit replaces this line with its own summary
         check("cell value", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "MQ-N2-T0" or pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "TW-N2-T0", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text())
         # the saved document: its SHA is the canonical one
-        wait_for_js(pg, """(async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; return !!i && /^[0-9a-f]{64}$/.test(i.sha256) && (await CDOC.canonical(S.samples[i.name])).sha256 === i.sha256; })()""")
-        same = pg.evaluate("""async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; const d = S.samples[i.name], c = await CDOC.canonical(d); return [c.sha256, i.sha256, d.schema, d.samples.length]; }""")
+        wait_for_js(pg, """(async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; return !!i && /^[0-9a-f]{64}$/.test(i.sha256) && (await SAMPLES_DOC.canonical(S.samples[i.name])).sha256 === i.sha256; })()""")
+        same = pg.evaluate("""async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; const d = S.samples[i.name], c = await SAMPLES_DOC.canonical(d); return [c.sha256, i.sha256, d.schema, d.samples.length]; }""")
         check("sha", same[0] == same[1] and same[2] == "samples/1" and same[3] == N, same)
         check("window of ids", pg.evaluate("S0 = FLOW.current, Object.values(FLOW.current.samples)[0].samples[7].sample_id") in ("TW-C-T1", "MQ-C-T1", "TW-N2-T1", "TW-O2-T1", "MQ-AIR-T1", "TW-AIR-T1", "TW-H2O2-T1", "TW-PMS-T1", "MQ-PMS-T1", "MQ-O2-T1", "MQ-N2-T1", "MQ-H2O2-T1") or True)
         # keyboard: arrows, Enter to edit, Esc to cancel, Tab to commit and move, Ctrl+D

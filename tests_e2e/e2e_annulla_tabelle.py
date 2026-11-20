@@ -45,7 +45,7 @@ try:
         def samples_meta():
             fresh()
             f = ev("E.files[0].file"); old = ev("E.files[0].conc ?? null")
-            ev(f"campioniEdit([{{file:{f!r},conc:3.5,cunit:'mg/L'}}])"); tick()
+            ev(f"samplesEdit([{{file:{f!r},conc:3.5,cunit:'mg/L'}}])"); tick()
             assert ev("E.files[0].conc") == 3.5
             undo(); assert ev("E.files[0].conc ?? null") == old, "Ctrl+Z gives the concentration back"
             redo(); assert ev("E.files[0].conc") == 3.5, "redo"

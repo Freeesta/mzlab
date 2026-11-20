@@ -1,7 +1,7 @@
 """molecules/1 in the page: the routes api/molecules/* answer from the Rust engine. The catalogue (static/molecole/catalogo.csv) is loaded with `load`; the search finds a
 name, a formula and a mass; an invented molecule of the user (to_json -> load) is found and replaces nothing; from_csv/to_csv give the same CSV back; a wrong row gives its error;
 MZLAB_LR_MISS stays empty. Needs the built site (tools/prepara_sito.py). Run from the repo root."""
-# covers: mzlab/web/molecole
+# covers: mzlab/web/molecole, mzlab/web/molecules-
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

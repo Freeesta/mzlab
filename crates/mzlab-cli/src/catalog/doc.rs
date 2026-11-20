@@ -29,8 +29,16 @@ fn help_of(name: &str) -> &'static str {
         .map_or("", |(_, h)| *h)
 }
 
+/// A global flag's help comes from GLOBAL first: a command's own flag of the same name (`db normative build --cache`) has other help.
+fn global_help(name: &str) -> &'static str {
+    GLOBAL
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or("", |(_, h)| *h)
+}
+
 /// `with_help` false: the flag is described once at the top of the compact listing (`flag_help`).
-fn flag_json(f: &Flag, with_required: bool, with_help: bool) -> Value {
+fn flag_json(f: &Flag, with_required: bool, with_help: bool, global: bool) -> Value {
     // Members that are null or false are left out: `commands --json` stays small.
     let mut o = Obj::new()
         .put("name", text(&f.name))
@@ -48,7 +56,12 @@ fn flag_json(f: &Flag, with_required: bool, with_help: bool) -> Value {
         );
     }
     if with_help {
-        o = o.put("help", text(help_of(&f.name)));
+        let h = if global {
+            global_help(&f.name)
+        } else {
+            help_of(&f.name)
+        };
+        o = o.put("help", text(h));
     }
     if f.repeat {
         o = o.b("repeat", true);
@@ -69,9 +82,11 @@ fn stdout_json(e: &Entry) -> Value {
     } else {
         "text"
     };
-    let mut o = Obj::new()
-        .put("format", text(format))
-        .put("schema", text(e.schema));
+    let mut o = Obj::new().put("format", text(format));
+    // like every other member, a schema that is not there is left out
+    if !e.schema.is_empty() {
+        o = o.put("schema", text(e.schema));
+    }
     if !json && crate::cmd::reads_json(e.name) {
         o = o.b("json_flag", true);
     }
@@ -109,6 +124,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
         has("--sample")
             || has("--id")
             || e.name.starts_with("sample ")
+            || e.name.starts_with("dad ")
             || e.name.starts_with("msn graph"),
         exit::SELECTOR,
     );
@@ -166,7 +182,7 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
             Value::Arr(
                 u.flags
                     .iter()
-                    .map(|f| flag_json(f, true, !(compact && uses.get(&f.name) > Some(&1))))
+                    .map(|f| flag_json(f, true, !(compact && uses.get(&f.name) > Some(&1)), false))
                     .collect(),
             ),
         )
@@ -205,10 +221,10 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
         .map(|(n, _)| {
             let f = Flag {
                 name: n.to_string(),
-                kind: "bool",
+                kind: if *n == "--cache" { "path" } else { "bool" },
                 ..Flag::default()
             };
-            flag_json(&f, false, true)
+            flag_json(&f, false, true, true)
         })
         .collect();
     let uses = flag_uses();
@@ -232,8 +248,8 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_help_note", text("a flag with no help of its own takes it from flag_help"))
-            .put("exit_codes_note", text("a command with no exit_codes ends with 0, 1 and 2, plus 3 when its path starts with `flow ` or is a verdict command (VERDICT in crates/mzlab-cli/src/contract.rs), 4 when it has a path or rest argument or a path flag other than --out, 5 when it has --sample or --id or its path starts with `sample ` or `msn graph`, 6 when it has --out; `commands --json PATH` gives the codes of one command"))
-            .put("examples_note", text("a command with no examples has the one example `mzlab-cli ` + its synopsis without the [optional] groups (a word with a bracket inside is kept) and without `...` tokens"));
+            .put("exit_codes_note", text("with no exit_codes a command ends with 0, 1, 2, plus 3 when its path starts with `flow ` or is a verdict command (VERDICT), 4 when it has a path or rest argument or a path flag other than --out, 5 when it has --sample or --id or its path starts with `sample `, `dad ` or `msn graph`, 6 when it has --out; `commands --json PATH` gives one command's codes"))
+            .put("examples_note", text("no examples: the one example is `mzlab-cli ` + the synopsis without [optional] groups (a word with a bracket inside is kept) and `...` tokens"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"
 }

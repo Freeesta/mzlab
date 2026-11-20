@@ -1,6 +1,6 @@
 """One writer and one saving of roles and times (samples/1): an edit in the Data view survives a reload (role, subtype, time, confirmation) and a .mzflow saved and opened again keeps the SHA-256 of its `samples` operation.
 Synthetic files with invented names."""
-# covers: mzlab/web/shell.js, mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/campioni-tabella.js, mzlab/web/ruoli-carica.js
+# covers: mzlab/web/shell.js, mzlab/web/samples.js, mzlab/web/samples-doc.js, mzlab/web/samples-table.js, mzlab/web/ruoli-carica.js
 import sys, os, json, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *
@@ -9,15 +9,15 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
-        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_campioni_salva.py")][-1]
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_samples_save.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 NAMES = ["X_t000min", "X_t005min", "X_t030min", "X_t060min", "X_dark-adsorption", "X_blank"]
 tmp = Path(tempfile.mkdtemp(prefix="cs_"))
 paths = []
 for k, n in enumerate(NAMES):
     p = tmp / f"{n}.mzML"; synth.write_full(p, 5 * k, blank=n.endswith("blank"), seed=k); paths.append(str(p))
-SNAP = "E.files.filter(f=>!f.gone).map(f=>[f.file, CAMPIONI.kindOf(f), f.time??null, f.tconf!==false])"
-r = Run(port=8830 + 150, wd="/tmp/wd_campioni_salva")
+SNAP = "E.files.filter(f=>!f.gone).map(f=>[f.file, SAMPLES.kindOf(f), f.time??null, f.tconf!==false])"
+r = Run(port=8830 + 150, wd="/tmp/wd_samples_save")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -26,7 +26,7 @@ try:
         pg.click("#opbtn"); ready(pg)
         snap = {}
         def edit_and_reload():
-            pg.evaluate("""() => CAMPIONI.apply([{file:'X_blank.mzML', role:'blank'}, {file:'X_t005min.mzML', time:7, tconf:true}, {file:'X_t030min.mzML', role:'qc'}, {file:'X_t060min.mzML', time:61, tconf:false}])""")
+            pg.evaluate("""() => SAMPLES.apply([{file:'X_blank.mzML', role:'blank'}, {file:'X_t005min.mzML', time:7, tconf:true}, {file:'X_t030min.mzML', role:'qc'}, {file:'X_t060min.mzML', time:61, tconf:false}])""")
             snap["a"] = pg.evaluate(SNAP)
             kinds = {x[0]: x for x in snap["a"]}
             assert kinds["X_blank.mzML"][1] == "blank" and kinds["X_t030min.mzML"][1] == "qc" and kinds["X_t005min.mzML"][2] == 7 and kinds["X_t060min.mzML"][3] is False, kinds
@@ -41,9 +41,9 @@ try:
             assert nb and all(x.get("kind") and "time_min" in x for x in nb) and pg.evaluate("NB._v") == 2, nb[:1]
             assert pg.evaluate("(()=>{try{return Object.keys(JSON.parse(localStorage.getItem('mzlab.qaqc')||'{}').roles||{}).length}catch(e){return 0}})()") == 0, "mzlab.qaqc.roles is not written any more"
             assert pg.evaluate("QAQC.roleOf(E.files.find(f=>f.file==='X_t030min.mzML'))") == "qc"
-            pg.evaluate("CAMPIONI.apply([{file:'X_t030min.mzML', role:'dark'}])")
+            pg.evaluate("SAMPLES.apply([{file:'X_t030min.mzML', role:'dark'}])")
             assert pg.evaluate("QAQC.roleOf(E.files.find(f=>f.file==='X_t030min.mzML'))") == "dark" and pg.evaluate("E.files.find(f=>f.file==='X_t030min.mzML').type") == "sample"
-            pg.evaluate("CAMPIONI.apply([{file:'X_t030min.mzML', role:'qc'}])")
+            pg.evaluate("SAMPLES.apply([{file:'X_t030min.mzML', role:'qc'}])")
         step("NB.session is samples/1, mzlab.qaqc.roles is empty, the QA/QC follows the table", one_writer)
         def old_documents():
             """A saved project of the old program: role «t0», blank subtypes, a dark with a positive time. It opens as sample at 0, plain blanks and a negative dark."""
@@ -60,20 +60,20 @@ try:
             assert got["X_blank.mzML"][1] == "blank" and pg.evaluate("E.files.every(f => f.sub == null)"), got
             assert got["X_dark-adsorption.mzML"][1] == "dark" and got["X_dark-adsorption.mzML"][2] == -15, got
             assert "-1" not in str(got["X_t005min.mzML"]) and got["X_t005min.mzML"][2] == 5, got
-            ent = {x["file"]: x for x in pg.evaluate("CDOC.session(E.files.filter(f => !f.gone))")}
+            ent = {x["file"]: x for x in pg.evaluate("SAMPLES_DOC.session(E.files.filter(f => !f.gone))")}
             assert ent["X_t000min.mzML"]["kind"] == "sample" and ent["X_blank.mzML"]["blank_kind"] is None and ent["X_dark-adsorption.mzML"]["time_min"] == -15, ent
-            assert pg.evaluate("CAMPIONI.rows().find(r => r.filename === 'X_blank.mzML').sub") is None
-            assert "blank_type" not in pg.evaluate("CAMPIONI.COLS"), "the TSV has no blank_type column"
+            assert pg.evaluate("SAMPLES.rows().find(r => r.filename === 'X_blank.mzML').sub") is None
+            assert "blank_type" not in pg.evaluate("SAMPLES.COLS"), "the TSV has no blank_type column"
         step("a project with t0, blank:solvent and a positive dark time opens as sample at 0, blank and negative dark", old_documents)
         def mzflow():
-            pg.evaluate("CAMPIONI.apply([{file:'X_blank.mzML', role:'blank'}, {file:'X_t030min.mzML', role:'qc'}, {file:'X_t005min.mzML', time:6, tconf:true}, {file:'X_dark-adsorption.mzML', time:40}])")
+            pg.evaluate("SAMPLES.apply([{file:'X_blank.mzML', role:'blank'}, {file:'X_t030min.mzML', role:'qc'}, {file:'X_t005min.mzML', time:6, tconf:true}, {file:'X_dark-adsorption.mzML', time:40}])")
             assert pg.evaluate("E.files.find(f => f.file === 'X_dark-adsorption.mzML').time") == -40, "a positive time written in a dark is read as negative"
             with pg.expect_download() as d: pg.evaluate("() => WORKFLOW.export()")
             wf = json.load(open(d.value.path(), encoding="utf-8"))
             ops = [o for o in wf["operations"] if o.get("op") == "samples"]
             assert len(ops) == 1 and ops[0]["schema"] == "samples/1" and len(ops[0]["sha256"]) == 64 and len(ops[0]["samples"]) == 6, ops
             before = pg.evaluate(SNAP)
-            pg.evaluate("CAMPIONI.apply([{file:'X_blank.mzML', role:'sample'}, {file:'X_t030min.mzML', role:'sample'}, {file:'X_t005min.mzML', time:9, tconf:false}])")
+            pg.evaluate("SAMPLES.apply([{file:'X_blank.mzML', role:'sample'}, {file:'X_t030min.mzML', role:'sample'}, {file:'X_t005min.mzML', time:9, tconf:false}])")
             assert pg.evaluate(SNAP) != before
             assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 't.mzflow')", wf) is True
             assert pg.evaluate(SNAP) == before, (pg.evaluate(SNAP), before)

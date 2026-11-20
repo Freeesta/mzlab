@@ -14,7 +14,7 @@ usage: mzlab-cli file pair FILE... [--json]
 
   FILE   a .wiff or a .wiff.scan; the file beside it is looked for by name (no file is opened or read)
   --json one wiffpair/1 object on the standard output: {schema, ok, pairs: [{input, half, wanted, found, size, looked_in}]}; found is null when missing
-exit: 0 every companion found; 1 one is missing (the others are still listed); 2 usage (no file, not a .wiff / .wiff.scan)";
+exit: 0 every companion found; 1 one is missing (the others are still listed, the document stays on stdout); 2 usage (no file, not a .wiff / .wiff.scan, one error/1 under --json)";
 
 fn parse(args: Vec<String>) -> Result<Option<(Vec<PathBuf>, bool)>, String> {
     let (mut files, mut json) = (Vec::new(), false);
@@ -91,7 +91,8 @@ pub fn run(args: Vec<String>) -> Outcome {
     Outcome {
         code,
         stdout: text.into_bytes(),
-        stderr: if ok || !json {
+        // the summary goes to stderr in both forms, the data to stdout
+        stderr: if ok {
             String::new()
         } else {
             "pair: a companion is missing\n".into()

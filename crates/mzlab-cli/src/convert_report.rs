@@ -178,11 +178,13 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     Some((n("declared"), n("read"), cause.to_string()))
 }
 
-/// The `--report` document: a JSON array with `{input, output, sha256, spectra, seconds, skipped, conversion, warnings}` (and `centroids` {merged, saturated}
-/// with `--peaks mzlab`) or `{input, error, cause}` per input.
-pub(crate) fn report(items: &[Item]) -> String {
+/// The `convert/1` document (`--report FILE`, and the stdout of `--json`): `{"schema","dry_run":false,"out","items":[...]}` with, per input,
+/// `{input, output, sha256, spectra, seconds, skipped, conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
+pub(crate) fn report(items: &[Item], out: &Path) -> String {
     let mut o = Out::default();
-    o.raw("[");
+    o.raw("{\"schema\":\"convert/1\",\"dry_run\":false,\"out\":")
+        .str(&out.display().to_string())
+        .raw(",\"items\":[");
     for (i, it) in items.iter().enumerate() {
         o.raw(if i > 0 { ",\n" } else { "\n" });
         match it {
@@ -231,7 +233,49 @@ pub(crate) fn report(items: &[Item]) -> String {
             }
         }
     }
-    o.raw("\n]\n");
+    o.raw("\n]}\n");
+    o.0
+}
+
+/// One mzML that `--dry-run` would write.
+pub(crate) struct Planned {
+    pub(crate) input: String,
+    pub(crate) output: String,
+    pub(crate) sample_id: Option<u32>,
+    /// the id of the reader that takes the dataset (`sciex-wiff`, `thermo-raw`, ...), `None` when no reader recognises it
+    pub(crate) reader: Option<&'static str>,
+    pub(crate) input_bytes: u64,
+    pub(crate) empty: bool,
+}
+
+/// The `convert/1` document of `--dry-run`: what would be converted, nothing written.
+pub(crate) fn dry_run(plan: &[Planned], out: &Path) -> String {
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"convert/1\",\"dry_run\":true,\"out\":")
+        .str(&out.display().to_string())
+        .raw(",\"items\":[");
+    for (i, p) in plan.iter().enumerate() {
+        o.raw(if i > 0 { ",\n" } else { "\n" });
+        o.raw("{\"input\":").str(&p.input);
+        o.raw(",\"output\":").str(&p.output);
+        o.raw(",\"sample_id\":");
+        match p.sample_id {
+            Some(id) => o.int(i64::from(id)),
+            None => o.raw("null"),
+        };
+        o.raw(",\"reader\":");
+        match p.reader {
+            Some(r) => o.str(r),
+            None => o.raw("null"),
+        };
+        o.raw(",\"input_bytes\":").int(p.input_bytes as i64);
+        o.raw(if p.empty {
+            ",\"empty\":true}"
+        } else {
+            ",\"empty\":false}"
+        });
+    }
+    o.raw("\n]}\n");
     o.0
 }
 
@@ -258,4 +302,76 @@ pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
         stderr: format!("error: {msg}\nhint: {hint}\n"),
         error: None,
     }
+}
+
+/// The last lines on stderr and the code: every file written, or the number that failed.
+pub(crate) fn summary(items: &[Item], out: &Path, json: bool) -> Outcome {
+    let skipped = items
+        .iter()
+        .filter(|i| matches!(i, Item::Done { skipped: true, .. }))
+        .count();
+    let failed = items
+        .iter()
+        .filter(|i| matches!(i, Item::Failed { .. }))
+        .count();
+    let converted = items.len() - skipped - failed;
+    let stdout: String = items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done { output, .. } => Some(format!("{output}\n")),
+            Item::Failed { .. } => None,
+        })
+        .collect();
+    // what the readers could not read (`method/1.warnings`), one note per entry, as the Method window lists it
+    let notes: String = items
+        .iter()
+        .flat_map(|i| match i {
+            Item::Done { input, notes, .. } => notes
+                .iter()
+                .map(|(k, d)| format!("note: {input}: {}\n", crate::error_text::method_note(k, d)))
+                .collect(),
+            Item::Failed { .. } => Vec::new(),
+        })
+        .collect();
+    let partial = partial_lines(items);
+    let notes = notes + &crate::convert_report::merged_lines(items);
+    let (code, stderr) = if failed == 0 {
+        (
+            if partial.is_empty() { 0 } else { 3 },
+            format!(
+                "{notes}{partial}done: {converted} converted, {skipped} skipped; outputs in {}\n",
+                out.display()
+            ),
+        )
+    } else {
+        let causes: String = items
+            .iter()
+            .filter_map(|i| match i {
+                Item::Failed { input, cause } => Some(format!("error: {input}: {cause}\n")),
+                Item::Done { .. } => None,
+            })
+            .collect();
+        let line = format!(
+            "error: {failed} of {} failed ({converted} converted, {skipped} skipped)\n",
+            items.len()
+        );
+        (1, notes + &partial + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
+    };
+    Outcome {
+        code,
+        stdout: if json { report(items, out) } else { stdout }.into_bytes(),
+        stderr,
+        error: None,
+    }
+}
+
+/// `--report PATH`: the `convert/1` document written there; `Some(outcome)` (exit 2) when the file cannot be written.
+pub(crate) fn write_report(path: Option<&Path>, items: &[Item], out: &Path) -> Option<Outcome> {
+    let path = path?;
+    let e = std::fs::write(path, report(items, out)).err()?;
+    Some(fail(
+        2,
+        &format!("{}: {e}", path.display()),
+        "--report must be a file that can be written",
+    ))
 }

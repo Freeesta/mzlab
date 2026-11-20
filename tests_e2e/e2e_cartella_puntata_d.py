@@ -53,7 +53,7 @@ try:
         def page(nopicker=False):
             c = b.new_context(viewport={"width": 1500, "height": 2000}); c.set_default_timeout(120000); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('nopicker','1');" if nopicker else "") + "}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('nopicker','1');" if nopicker else "") + "}catch(_){}")
             pg.add_init_script(INIT)
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#cartpick", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             return pg

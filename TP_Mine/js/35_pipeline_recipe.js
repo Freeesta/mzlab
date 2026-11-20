@@ -26,7 +26,7 @@
   }
 
   /** the operation «samples» of the log (next to «feature_pipeline»): the canonical samples/1 of the run and its SHA-256, both of the Rust (finder-ruoli.js `canonical`) */
-  function campioniOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, samples: d.samples, sha256: c.sha256 }; }
+  function samplesOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, samples: d.samples, sha256: c.sha256 }; }
 
   /** the last operation feature_pipeline of the log that can be re-applied (null when none) */
   function lastOp(ops, check) {
@@ -44,6 +44,6 @@
     return { same, filesSame: !missing.length, crateSame: now.crate_version === op.crate_version, lines };
   }
 
-  G.PIPEREC = { record, lastOp, compare, campioniOp };
+  G.PIPEREC = { record, lastOp, compare, samplesOp };
   if (typeof module !== "undefined") module.exports = G.PIPEREC;
 })();

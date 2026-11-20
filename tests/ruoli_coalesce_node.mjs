@@ -4,7 +4,7 @@ import fs from "fs";
 import vm from "vm";
 const posts = [];
 const ctx = {
-  I18N: { t: k => k }, EH: s => s, darkTime: x => x, CAMPIONI: { apply() {} }, performance: { now: () => 0 }, setTimeout, clearTimeout,
+  I18N: { t: k => k }, EH: s => s, darkTime: x => x, SAMPLES: { apply() {} }, performance: { now: () => 0 }, setTimeout, clearTimeout,
   fetch: async (u, o) => ({ json: async () => { const b = JSON.parse(o.body); posts.push(b.files.map(f => f.name)); return { samples: b.files.map(f => ({ file: f.name, kind: "sample", time_min: 5 })) }; } }),
 };
 vm.createContext(ctx);

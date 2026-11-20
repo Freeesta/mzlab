@@ -110,7 +110,7 @@ try:
         def other_kind():
             # a fresh visit whose files are not of the starting tab (Full scan): the click on one changes the tab, under no veil
             q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
-            q.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop"); wait_for_js(q, "window.qqReady === true", 60000)
             q.evaluate(HOLD); q.set_input_files("#pick", [str(f) for f in KINDS])
             wait_for_js(q, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length >= 2", 60000)

@@ -11,7 +11,7 @@ use mzlab_core::flow::Plan;
 use mzlab_core::hashio::hash_read_with;
 use mzlab_core::readers::{FileSet, Member};
 use mzlab_core::upload::{known_fingerprints, probe, Fingerprint};
-use mzlab_core::{Error, Result};
+use mzlab_core::Result;
 
 use crate::flow::io;
 
@@ -261,9 +261,10 @@ pub(crate) fn dataset_name(label: &str) -> &str {
 pub(crate) fn sample_index(label: &str, ids: &[u32]) -> Result<usize> {
     match split_sample(label).1 {
         None => Ok(0),
-        Some(id) => ids
-            .iter()
-            .position(|&s| s == id)
-            .ok_or_else(|| Error::new("error.badIndex").with("c", id)),
+        Some(id) => {
+            // the one check of every selector: names the ids the file has (exit 5)
+            mzlab_core::readers::selection::resolve(ids, &[id])?;
+            Ok(ids.iter().position(|&s| s == id).unwrap_or(0))
+        }
     }
 }

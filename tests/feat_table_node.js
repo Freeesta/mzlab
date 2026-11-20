@@ -1,6 +1,6 @@
 // Runs the table bridge of mzFinder (crates/mzlab-feat-table-wasm, wasm-bindgen --target nodejs) and prints what the native example `table` prints: the
 // SHA-256 of every file written (see tests/test_feat_table_wasm.py). The reads come from files, as the worker's come from OPFS.
-// usage: node feat_table_node.js <pkg dir> <out dir> <table.mzfeat> <campioni.json> <spec.json|-> <polarity> [file.mzidx...]
+// usage: node feat_table_node.js <pkg dir> <out dir> <table.mzfeat> <samples.json> <spec.json|-> <polarity> [file.mzidx...]
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");

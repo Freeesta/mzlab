@@ -41,7 +41,7 @@ try:
         def close():
             pg.click("#tour-btn-fine"); pg.wait_for_timeout(300)
             assert not pg.evaluate("TOUR.active") and pg.locator("#tour-dialog").count() == 0
-            assert pg.evaluate("localStorage.getItem('mzlab.tour.lr')") is not None and "saltato" in pg.evaluate("localStorage.getItem('mzlab.tour.lr')")   # untouched
+            assert pg.evaluate("localStorage.getItem('mzlab.tour.lr')") is not None and "skipped" in pg.evaluate("localStorage.getItem('mzlab.tour.lr')")   # untouched
         step("«Finish» closes it and leaves the Data invitation state alone", close)
         def hidden_panels():
             pg.click("#side-toggle"); pg.wait_for_timeout(300)

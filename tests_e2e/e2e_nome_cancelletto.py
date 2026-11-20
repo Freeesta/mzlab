@@ -22,7 +22,7 @@ for x in ("", ".scan"):
     shutil.copy(W / f"fsmrm.wiff{x}", D / f"A#1.wiff{x}"); shutil.copy(W / f"duemrm.wiff{x}", D / f"B.wiff{x}")
 FILES = [str(D / n) for n in ("P#1.mzML", "Q.mzML", "A#1.wiff", "A#1.wiff.scan", "B.wiff", "B.wiff.scan")]
 WANT = ["A_1.mzML", "B.mzML", "P_1.mzML", "Q.mzML"]
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 DONE = f"ST.files.length === {len(WANT)} && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0"
 LISTED = "ST.files.map(f => f.name).sort()"
 

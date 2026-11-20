@@ -23,6 +23,7 @@ mod contract_tests;
 #[cfg(test)]
 mod contract_verdict_tests;
 pub mod convert;
+mod convert_dry;
 mod convert_entries;
 mod convert_help;
 mod convert_report;
@@ -31,6 +32,7 @@ mod design_cmd;
 pub mod error_text;
 pub mod exit;
 mod extract;
+mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
 #[cfg(test)]
@@ -151,6 +153,7 @@ mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
 mod flow_transitions;
+mod idx_cache;
 mod idx_open;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
@@ -382,6 +385,8 @@ mod convert_fixtures;
 #[cfg(test)]
 mod convert_tests;
 #[cfg(test)]
+mod file_sample_contract_tests;
+#[cfg(test)]
 mod flow_budget_tests;
 #[cfg(test)]
 mod flow_cache_tests;
@@ -463,6 +468,12 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         return ("", o);
     };
     let mut rest = args[n..].to_vec();
+    // `db normative` has its own `--cache` (sources folder): it keeps it and never sets the index cache
+    if e.name.starts_with("db normative") {
+        idx_cache::set(None);
+    } else if let Err(m) = idx_cache::take_flag(&mut rest) {
+        return (e.name, Outcome::fail(&m));
+    }
     if cmd::wants_help(&rest) {
         return (e.name, cmd::help_of(e, &rest));
     }
@@ -472,5 +483,14 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         }
         rest.retain(|a| a != "--json");
     }
-    (e.name, (e.run)(rest))
+    let mut o = (e.run)(rest);
+    // `index reused` / `index built`: what the cache did, beside the answer (a failure keeps its message first and alone)
+    let notes = idx_cache::take_notes();
+    if o.code == 0 {
+        o.stderr += &notes;
+    } else {
+        // the message of a failure stays alone in the outcome (`error/1` reads it); the cache's lines still reach the terminal
+        eprint!("{notes}");
+    }
+    (e.name, o)
 }

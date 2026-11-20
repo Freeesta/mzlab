@@ -67,7 +67,7 @@ try:
         step("axe clean with results", axe_ok)
         def narrow():
             ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="en-US", reduced_motion="reduce")
-            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
                 stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Load data"); ready(q)

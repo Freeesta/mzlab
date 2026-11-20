@@ -1,7 +1,7 @@
 """The time point written in a sample name (t0, 3h, 8h, ...) on the built site with the Rust engine: the loading table proposes it (yellow, editable), the file list shows a small muted tag
 beside the name of a SIM file («180min», in the unit of the table, with an accessible label), a name that only looks like a time (H20, a 90-10 ratio, a blank) has none, a time typed in the table replaces the proposal and the tag,
 «Group by» offers the time, and the Manual-integrations table has a Time column after the sample (tag on screen, minutes in the CSV). Synthetic SIM .wiff of tools/wiff_sim.py (sim_tempo: generic labels, invented numbers). Needs the site and the .wasm (python3 tools/prepara_sito.py).
-Run from the repo root: python3 tests_e2e/e2e_tempo_campione.py"""
+Run from the repo root: python3 tests_e2e/e2e_sample_time.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/explore.js, mzlab/web/ordine.js, mzlab/web/ruoli-carica.js, crates/mzlab-core/src/samples/names.rs, tools/wiff_sim.py
 import subprocess, sys, os, tempfile
 from pathlib import Path

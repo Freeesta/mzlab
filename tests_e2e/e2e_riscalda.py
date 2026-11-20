@@ -22,7 +22,7 @@ SHA = """async (p) => { try { let d = await navigator.storage.getDirectory(); d 
 STAMP = """async (n) => { const r = await navigator.storage.getDirectory(), f = await (await (await r.getDirectoryHandle('prova')).getFileHandle(n)).getFile();
   const w = await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('warm'), h = await w.getFileHandle(n + '.json'), m = JSON.parse(await (await h.getFile()).text());
   m.mtime = f.lastModified; const o = await h.createWritable(); await o.write(JSON.stringify(m)); await o.close(); }"""
-NOSTART = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+NOSTART = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 def finished(pg): return pg.evaluate("window.RISCALDA ? window.RISCALDA.state().finished : {}")
 def shown(pg): return pg.evaluate("[ST.files.length, document.querySelectorAll('#flist input[data-k=use]').length, document.querySelectorAll('#fl-up .fl').length]")
 r = Run(port=8830 + 160, wd="/tmp/wd_riscalda"); hot = {}

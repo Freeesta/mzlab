@@ -42,7 +42,7 @@ try:
             assert pg.evaluate("Object.values(NB.sampleEx['X_t000min.mzML']).join('|')") == "10|2.5"
         step("values are typed and checked", fill)
         def export():
-            tx = pg.evaluate("COLS.tsv(CAMPIONI.toTsv(CAMPIONI.rows(), 'min'))")
+            tx = pg.evaluate("COLS.tsv(SAMPLES.toTsv(SAMPLES.rows(), 'min'))")
             lines = [l for l in tx.split("\n") if l]
             dil = pg.evaluate("I18N.t('load.cols.p.dil')")
             assert lines[0].endswith(f"\t{dil}\tPump (bar)"), lines[0]

@@ -2,19 +2,19 @@
 // @ts-noany
 // The window «Molecules» (the «Manage» link of the search box loads this module on the first click and opens it): search the
 // database, add a molecule, edit one (a catalogue molecule is edited as a copy of the user, the catalogue stays), delete the ones of the user, import a CSV or JSON
-// file (one error per wrong row) and export CSV or JSON. Everything that is computed is computed by the engine (molecole-archivio.js); this file is the interface.
-// Keyboard: Tab stays inside the window, Esc goes back from the form or closes, and the focus returns to what opened it. window.MOLDB also has the search box (campo).
-import * as A from "./molecole-archivio.js";
-import { campo } from "./molecole-campo.js";
-import { campiHtml, testiModulo, riempi, leggi } from "./molecole-modulo.js";
+// file (one error per wrong row) and export CSV or JSON. Everything that is computed is computed by the engine (molecules-archive.js); this file is the interface.
+// Keyboard: Tab stays inside the window, Esc goes back from the form or closes, and the focus returns to what opened it. window.MOLDB also has the search box (field).
+import * as A from "./molecules-archive.js";
+import { field } from "./molecules-field.js";
+import { fieldsHtml, formTexts, fill, read } from "./molecules-module.js";
 
-/** @typedef {import("./molecole-archivio.js").ErroreRiga} ErroreRiga */
+/** @typedef {import("./molecules-archive.js").RowError} RowError */
 
 /** @type {any} */
 const W = window;
 const t = (/** @type {string} */ k, /** @type {any} */ p = undefined) => (W.I18N ? W.I18N.t(k, p) : k);
 const STYLE_ID = "mol-style";
-const MAX_ERRORI = 200;
+const MAX_ERRORS = 200;
 const CSS = `#moldlg{position:fixed;inset:0;z-index:6200;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--ink) 45%,transparent)}
 #moldlg[hidden]{display:none}
 #moldlg .mol-box{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;width:min(820px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
@@ -43,27 +43,27 @@ const CSS = `#moldlg{position:fixed;inset:0;z-index:6200;display:flex;align-item
 
 /** @type {HTMLElement | null} */ let dlg = null;
 /** @type {Element | null} */ let back = null;
-/** @type {string | null} */ let inModifica = null;
+/** @type {string | null} */ let editing = null;
 let token = 0;
 
 const q = (/** @type {string} */ s) => /** @type {any} */ ((/** @type {HTMLElement} */ (dlg)).querySelector(s));
-const stato = (/** @type {string} */ msg) => { q("#mol-st").textContent = msg; };
+const status = (/** @type {string} */ msg) => { q("#mol-st").textContent = msg; };
 /** The text of a row error: the key comes from the engine (`error.molecules.*`), the detail is the value that was wrong. */
-const testoErrore = (/** @type {ErroreRiga} */ e) => `${t(`error.molecules.${e.key.slice("error.molecules.".length)}`)}${e.text ? ` (${e.text})` : ""}`;
+const errorText = (/** @type {RowError} */ e) => `${t(`error.molecules.${e.key.slice("error.molecules.".length)}`)}${e.text ? ` (${e.text})` : ""}`;
 
-function mostraErrori(/** @type {ErroreRiga[]} */ errs, /** @type {string} */ titolo) {
+function showErrors(/** @type {RowError[]} */ errs, /** @type {string} */ title) {
   const box = q("#mol-errs");
   box.replaceChildren();
   if (!errs.length) { box.hidden = true; return; }
   const p = document.createElement("p"), ul = document.createElement("ul");
-  p.textContent = titolo;
-  ul.replaceChildren(...errs.slice(0, MAX_ERRORI).map(e => { const li = document.createElement("li"); li.textContent = (e.line ? t("mol.err.row", { row: e.line }) + " " : "") + testoErrore(e); return li; }));
+  p.textContent = title;
+  ul.replaceChildren(...errs.slice(0, MAX_ERRORS).map(e => { const li = document.createElement("li"); li.textContent = (e.line ? t("mol.err.row", { row: e.line }) + " " : "") + errorText(e); return li; }));
   box.append(p, ul);
-  if (errs.length > MAX_ERRORI) { const m = document.createElement("p"); m.textContent = t("mol.err.more", { n: errs.length - MAX_ERRORI }); box.append(m); }
+  if (errs.length > MAX_ERRORS) { const m = document.createElement("p"); m.textContent = t("mol.err.more", { n: errs.length - MAX_ERRORS }); box.append(m); }
   box.hidden = false;
 }
 
-function costruisci() {
+function build() {
   if (!document.getElementById(STYLE_ID)) { const st = document.createElement("style"); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
   const d = document.createElement("div");
   d.id = "moldlg"; d.hidden = true;
@@ -75,34 +75,34 @@ function costruisci() {
 <div id="mol-conf" class="avv warn" role="alertdialog" aria-labelledby="mol-conf-t" hidden><p id="mol-conf-t"></p><div class="mol-row-act"><button type="button" id="mol-conf-ok"></button><button type="button" id="mol-conf-no"></button></div></div>
 <table><caption id="mol-cap"></caption><thead><tr><th scope="col" id="mol-c1"></th><th scope="col" id="mol-c2"></th><th scope="col" id="mol-c3"></th><th scope="col" id="mol-c4"></th><th scope="col" id="mol-c5"><span class="sr-only"></span></th></tr></thead><tbody id="mol-body"></tbody></table>
 </div>
-<form id="mol-form" novalidate hidden><h3 id="mol-fh"></h3><p class="mol-note" id="mol-fn" hidden></p>${campiHtml(t)}
+<form id="mol-form" novalidate hidden><h3 id="mol-fh"></h3><p class="mol-note" id="mol-fn" hidden></p>${fieldsHtml(t)}
 <div id="mol-ferr" class="avv bad" role="alert" hidden></div>
 <div class="mol-row-act"><button type="submit" id="mol-save" class="mol-go"></button><button type="button" id="mol-cancel"></button></div></form>
 <div class="mol-st" id="mol-st" role="status" aria-live="polite"></div></div>`;
   document.body.appendChild(d);
   dlg = d;
-  d.addEventListener("mousedown", ev => { if (ev.target === d) chiudi(); });
+  d.addEventListener("mousedown", ev => { if (ev.target === d) close(); });
   d.addEventListener("keydown", ev => {
-    if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); if (!q("#mol-form").hidden) tornaElenco(); else if (!q("#mol-conf").hidden) chiudiConferma(); else chiudi(); return; }
+    if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); if (!q("#mol-form").hidden) backToList(); else if (!q("#mol-conf").hidden) closeConfirm(); else close(); return; }
     if (ev.key !== "Tab") return;
     const f = /** @type {HTMLElement[]} */ ([...d.querySelectorAll("textarea,input:not([hidden]),button,a[href]")]).filter(e => !e.hasAttribute("disabled") && !e.closest("[hidden]") && e.getAttribute("aria-hidden") !== "true");
     const first = f[0], last = f[f.length - 1], cur = document.activeElement;
     if (ev.shiftKey && cur === first) { ev.preventDefault(); last.focus(); } else if (!ev.shiftKey && cur === last) { ev.preventDefault(); first.focus(); }
   });
-  q("#mol-q input").addEventListener("input", () => { const mio = ++token; setTimeout(() => { if (mio === token) elenco(); }, 200); });
-  q("#mol-x").onclick = chiudi;
-  q("#mol-add").onclick = () => apriModulo(null);
+  q("#mol-q input").addEventListener("input", () => { const run = ++token; setTimeout(() => { if (run === token) list(); }, 200); });
+  q("#mol-x").onclick = close;
+  q("#mol-add").onclick = () => openForm(null);
   q("#mol-imp").onclick = () => q("#mol-file").click();
-  q("#mol-file").onchange = importaFile;
-  q("#mol-csv").onclick = () => scarica("csv");
-  q("#mol-json").onclick = () => scarica("json");
-  q("#mol-cancel").onclick = tornaElenco;
-  q("#mol-conf-no").onclick = chiudiConferma;
-  q("#mol-form").onsubmit = (/** @type {Event} */ ev) => { ev.preventDefault(); salvaModulo(); };
+  q("#mol-file").onchange = importPicked;
+  q("#mol-csv").onclick = () => download("csv");
+  q("#mol-json").onclick = () => download("json");
+  q("#mol-cancel").onclick = backToList;
+  q("#mol-conf-no").onclick = closeConfirm;
+  q("#mol-form").onsubmit = (/** @type {Event} */ ev) => { ev.preventDefault(); saveForm(); };
   return d;
 }
 
-function testi() {
+function texts() {
   q("#mol-h").textContent = t("mol.title");
   q("#mol-x").textContent = t("mol.close");
   q("#mol-add").textContent = t("mol.add");
@@ -115,148 +115,148 @@ function testi() {
   q("#mol-conf-no").textContent = t("mol.cancel");
   [["#mol-c1", "mol.col.name"], ["#mol-c2", "mol.col.formula"], ["#mol-c3", "mol.col.mass"], ["#mol-c4", "mol.col.level"]].forEach(([s, k]) => { q(s).textContent = t(k); });
   q("#mol-c5 span").textContent = t("mol.col.actions");
-  testiModulo(q("#mol-form"), t);
+  formTexts(q("#mol-form"), t);
   q("#mol-q label").textContent = t("mol.search.label");
   q("#mol-q input").placeholder = t("mol.search.placeholder");
 }
 
-function riga(/** @type {{ id: string, name: string, formula: string, mass?: number }} */ m) {
-  const tr = document.createElement("tr"), liv = A.livello(m.id);
-  const cella = (/** @type {string} */ txt, /** @type {string} */ cls = "") => { const td = document.createElement("td"); td.textContent = txt; if (cls) td.className = cls; return td; };
-  const nome = document.createElement("th");
-  nome.scope = "row"; nome.textContent = m.name;
+function row(/** @type {{ id: string, name: string, formula: string, mass?: number }} */ m) {
+  const tr = document.createElement("tr"), lvl = A.level(m.id);
+  const cell = (/** @type {string} */ txt, /** @type {string} */ cls = "") => { const td = document.createElement("td"); td.textContent = txt; if (cls) td.className = cls; return td; };
+  const name = document.createElement("th");
+  name.scope = "row"; name.textContent = m.name;
   const act = document.createElement("td");
   act.className = "mol-act";
-  const bottone = (/** @type {string} */ testo, /** @type {string} */ aria, /** @type {() => void} */ fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = testo; b.setAttribute("aria-label", aria); b.onclick = fn; act.appendChild(b); };
-  bottone(t("mol.edit"), t("mol.edit.aria", { name: m.name }), () => apriModulo(m.id));
-  if (liv !== "catalog") bottone(t("mol.delete"), t("mol.delete.aria", { name: m.name }), () => chiediElimina(m.id, m.name));
-  tr.append(nome, cella(m.formula), cella(m.mass ? m.mass.toFixed(4) : "", "mol-n"), cella(t(`mol.level.${liv}`)), act);
+  const button = (/** @type {string} */ text, /** @type {string} */ aria, /** @type {() => void} */ fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.setAttribute("aria-label", aria); b.onclick = fn; act.appendChild(b); };
+  button(t("mol.edit"), t("mol.edit.aria", { name: m.name }), () => openForm(m.id));
+  if (lvl !== "catalog") button(t("mol.delete"), t("mol.delete.aria", { name: m.name }), () => askDelete(m.id, m.name));
+  tr.append(name, cell(m.formula), cell(m.mass ? m.mass.toFixed(4) : "", "mol-n"), cell(t(`mol.level.${lvl}`)), act);
   return tr;
 }
 
 /** The table: the molecules of the user, or the hits of the search when something is typed (the search is the one of the engine). */
-async function elenco() {
-  const mio = ++token, tx = q("#mol-q input") ? q("#mol-q input").value.trim() : "";
+async function list() {
+  const run = ++token, tx = q("#mol-q input") ? q("#mol-q input").value.trim() : "";
   /** @type {{ id: string, name: string, formula: string, mass?: number }[]} */
-  let righe;
-  try { righe = tx.length >= 2 ? await A.cerca(tx, 50) : A.mieMolecole().sort((a, b) => a.name.localeCompare(b.name)); } catch (_) { stato(t("mol.err.load")); return; }
-  if (mio !== token) return;
-  q("#mol-cap").textContent = tx.length >= 2 ? t("mol.cap.results", { n: righe.length }) : t("mol.cap.mine", { n: righe.length });
-  q("#mol-body").replaceChildren(...righe.map(riga));
+  let lines;
+  try { lines = tx.length >= 2 ? await A.search(tx, 50) : A.myMolecules().sort((a, b) => a.name.localeCompare(b.name)); } catch (_) { status(t("mol.err.load")); return; }
+  if (run !== token) return;
+  q("#mol-cap").textContent = tx.length >= 2 ? t("mol.cap.results", { n: lines.length }) : t("mol.cap.mine", { n: lines.length });
+  q("#mol-body").replaceChildren(...lines.map(row));
   q("#mol-body").dataset.q = tx;
-  stato(righe.length ? "" : t(tx.length >= 2 ? "mol.search.none" : "mol.empty.mine"));
+  status(lines.length ? "" : t(tx.length >= 2 ? "mol.search.none" : "mol.empty.mine"));
 }
 
-function vista(/** @type {"elenco" | "modulo"} */ v) {
-  q("#mol-list").hidden = v !== "elenco";
-  q("#mol-form").hidden = v !== "modulo";
+function view(/** @type {"list" | "form"} */ v) {
+  q("#mol-list").hidden = v !== "list";
+  q("#mol-form").hidden = v !== "form";
 }
 
-function tornaElenco() {
-  vista("elenco");
-  inModifica = null;
+function backToList() {
+  view("list");
+  editing = null;
   const f = q("#mol-q input");
   if (f) f.focus();
-  elenco();
+  list();
 }
 
-async function apriModulo(/** @type {string | null} */ id) {
+async function openForm(/** @type {string | null} */ id) {
   const f = q("#mol-form");
-  inModifica = id;
-  const base = id ? await A.prendi(id) : null;
-  riempi(f, base);
+  editing = id;
+  const base = id ? await A.getMolecule(id) : null;
+  fill(f, base);
   q("#mol-fh").textContent = base ? t("mol.form.edit", { name: base.name }) : t("mol.form.add");
-  const nota = q("#mol-fn");
-  nota.hidden = !(base && base.origin.type === "catalog");
-  nota.textContent = t("mol.form.copyNote");
+  const note = q("#mol-fn");
+  note.hidden = !(base && base.origin.type === "catalog");
+  note.textContent = t("mol.form.copyNote");
   q("#mol-ferr").hidden = true;
-  vista("modulo");
-  q("#mol-f-nome").focus();
+  view("form");
+  q("#mol-f-name").focus();
 }
 
 /** Runs a writer of the archive; a failure of the store (not an error of a row) is one message. */
-async function protetto(/** @type {() => Promise<void>} */ fn) {
-  try { await fn(); } catch (_) { stato(t("mol.err.save")); }
+async function guarded(/** @type {() => Promise<void>} */ fn) {
+  try { await fn(); } catch (_) { status(t("mol.err.save")); }
 }
 
-async function salvaModulo() {
-  await protetto(salvaModuloOra);
+async function saveForm() {
+  await guarded(saveFormNow);
 }
 
-async function salvaModuloOra() {
-  const lettura = leggi(q("#mol-form"), inModifica ? await A.prendi(inModifica) : null);
+async function saveFormNow() {
+  const parsed = read(q("#mol-form"), editing ? await A.getMolecule(editing) : null);
   const errBox = q("#mol-ferr");
-  const mostra = (/** @type {ErroreRiga[]} */ errs) => { errBox.replaceChildren(...errs.map(e => { const p = document.createElement("p"); p.textContent = testoErrore(e); return p; })); errBox.hidden = false; };
-  if ("errori" in lettura) return mostra(lettura.errori);
-  const r = await A.salva(lettura.rec, inModifica || "");
-  if ("errori" in r) return mostra(r.errori);
-  if ("esiste" in r) return mostra([{ line: 0, key: "error.molecules.dupId", text: r.esiste.name }]);
-  const nome = lettura.rec.name || "";
-  mostraErrori([], "");   // a save writes the whole archive again: what the old archive had wrong is gone
-  tornaElenco();
-  stato(t("mol.saved", { name: nome }));
+  const show = (/** @type {RowError[]} */ errs) => { errBox.replaceChildren(...errs.map(e => { const p = document.createElement("p"); p.textContent = errorText(e); return p; })); errBox.hidden = false; };
+  if ("errors" in parsed) return show(parsed.errors);
+  const r = await A.save(parsed.rec, editing || "");
+  if ("errors" in r) return show(r.errors);
+  if ("exists" in r) return show([{ line: 0, key: "error.molecules.dupId", text: r.exists.name }]);
+  const name = parsed.rec.name || "";
+  showErrors([], "");   // a save writes the whole archive again: what the old archive had wrong is gone
+  backToList();
+  status(t("mol.saved", { name: name }));
 }
 
-function chiudiConferma() {
+function closeConfirm() {
   q("#mol-conf").hidden = true;
   q("#mol-conf-ok").onclick = null;
   const f = q("#mol-q input");
   if (f) f.focus();
 }
 
-function chiediElimina(/** @type {string} */ id, /** @type {string} */ nome) {
-  q("#mol-conf-t").textContent = t("mol.delete.confirm", { name: nome }) + " " + t("mol.delete.catalogBack");
+function askDelete(/** @type {string} */ id, /** @type {string} */ name) {
+  q("#mol-conf-t").textContent = t("mol.delete.confirm", { name: name }) + " " + t("mol.delete.catalogBack");
   q("#mol-conf").hidden = false;
-  q("#mol-conf-ok").onclick = () => protetto(async () => {
-    const r = await A.elimina(id);
-    chiudiConferma();
-    if ("errori" in r) mostraErrori(/** @type {ErroreRiga[]} */ (r.errori), t("mol.err.save"));
-    else { await elenco(); stato(t("mol.deleted", { name: nome })); }
+  q("#mol-conf-ok").onclick = () => guarded(async () => {
+    const r = await A.remove(id);
+    closeConfirm();
+    if ("errors" in r) showErrors(/** @type {RowError[]} */ (r.errors), t("mol.err.save"));
+    else { await list(); status(t("mol.deleted", { name: name })); }
   });
   q("#mol-conf-no").focus();
 }
 
-function importaFile() {
-  return protetto(importaFileOra);
+function importPicked() {
+  return guarded(importPickedNow);
 }
 
-async function importaFileOra() {
+async function importPickedNow() {
   const input = /** @type {HTMLInputElement} */ (q("#mol-file")), file = input.files && input.files[0];
   input.value = "";
   if (!file) return;
-  mostraErrori([], "");
-  const r = await A.importa(file.name, await file.text());
-  if ("errori" in r) { mostraErrori(r.errori, t("mol.import.errors", { n: r.errori.length })); stato(""); return; }
-  await elenco();
-  stato(t("mol.import.done", { n: r.n, replaced: r.sostituite, kept: r.tenute }));
+  showErrors([], "");
+  const r = await A.importFile(file.name, await file.text());
+  if ("errors" in r) { showErrors(r.errors, t("mol.import.errors", { n: r.errors.length })); status(""); return; }
+  await list();
+  status(t("mol.import.done", { n: r.n, replaced: r.replaced, kept: r.kept }));
 }
 
-async function scarica(/** @type {"csv" | "json"} */ formato) {
-  const f = await A.esporta(formato);
-  saveBlob(new Blob([f.testo], { type: f.tipo }), f.nome, 1000);
-  stato(t("mol.exported", { file: f.nome }));
+async function download(/** @type {"csv" | "json"} */ format) {
+  const f = await A.exportAs(format);
+  saveBlob(new Blob([f.text], { type: f.type }), f.name, 1000);
+  status(t("mol.exported", { file: f.name }));
 }
 
-export async function apri() {
+export async function open() {
   back = document.activeElement;
-  dlg = dlg || costruisci();
-  testi();
-  vista("elenco");
-  mostraErrori([], "");
+  dlg = dlg || build();
+  texts();
+  view("list");
+  showErrors([], "");
   dlg.hidden = false;
-  stato(t("mol.loading"));
-  try { await A.pronto(); } catch (_) { stato(t("mol.err.load")); return; }
-  const rotti = A.errori();
-  if (rotti.length) mostraErrori(rotti, t("mol.err.archive"));
-  await elenco();
-  if (!rotti.length && !q("#mol-st").textContent) stato("");
+  status(t("mol.loading"));
+  try { await A.ready(); } catch (_) { status(t("mol.err.load")); return; }
+  const broken = A.errors();
+  if (broken.length) showErrors(broken, t("mol.err.archive"));
+  await list();
+  if (!broken.length && !q("#mol-st").textContent) status("");
   q("#mol-q input").focus();
 }
 
-export function chiudi() {
+export function close() {
   if (!dlg || dlg.hidden) return;
   dlg.hidden = true;
   if (back instanceof HTMLElement && back.isConnected) back.focus();
 }
 
-W.MOLDB = { apri, chiudi, campo, cerca: A.cerca };
+W.MOLDB = { open, close, field, search: A.search };

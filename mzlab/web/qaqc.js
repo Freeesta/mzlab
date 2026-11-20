@@ -23,7 +23,7 @@ const QAQC = (() => {
   /** @type {{ ions: any[], ratio: any, feat: any, at: string | null }} */
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
   Object.assign(st, lsObj(KEY));
-  // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
+  // the roles are not stored here any more: they belong to the sample table (samples.js, notebook NB.session)
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...st, roles: {} })); } catch (_) { /* no storage */ } };
 
   // ---------------------------------------------------------------- the series and the type of each file
@@ -35,9 +35,9 @@ const QAQC = (() => {
     return f.type === "blank" ? "blank" : f.type === "standard" ? "standard" : "sample";
   }
   // role of samples/1 -> role of the QA/QC
-  const FROM_CAMPIONI = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };
+  const FROM_SAMPLES = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };
   // st.roles only holds the old roles read at loading (migration of the notebook v1)
-  const roleOf = f => (f.role && FROM_CAMPIONI[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));
+  const roleOf = f => (f.role && FROM_SAMPLES[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));
   const roleName = r => (r === "blank" ? t("qaqc.role.blank") : r === "qc" ? t("qaqc.role.qc") : r === "standard" ? t("qaqc.role.standard") : r === "dark" ? t("qaqc.role.dark") : t("qaqc.role.sample"));
 
   // ---------------------------------------------------------------- ions: m/z or formula, RT expected
@@ -218,7 +218,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     if (st.ions.length) refresh(box);
     box.onchange = e => {
       const r = e.target.closest("select[data-role]");
-      if (r) { campioniEdit([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
+      if (r) { samplesEdit([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
       if (e.target.id === "qq-thr") { st.thr = +e.target.value; save(); if (res.ratio) runRatio().then(() => paint(box)).catch(() => {}); }
       if (e.target.id === "qq-win") { const v = numIt(e.target.value); if (v > 0) { st.win = v; save(); refresh(box); } }
     };

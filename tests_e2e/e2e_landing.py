@@ -13,7 +13,7 @@ import dati_sintetici as ds
 
 CLS_MAX = 0.01
 TIMES = (0, 15, 30, 45, 60)
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 
 # Vitals from the navigation: observers are installed before any script runs.
 VITALS = """() => { const V = window.__v = {fcp: null, lcp: null, cls: 0};
@@ -93,7 +93,7 @@ def first_panel(pg):
 
 
 def race(pg):
-    return pg.evaluate("""() => { const out = [], K = f => typeof CAMPIONI !== 'undefined' && CAMPIONI.kindOf ? CAMPIONI.kindOf(f) : null;
+    return pg.evaluate("""() => { const out = [], K = f => typeof SAMPLES !== 'undefined' && SAMPLES.kindOf ? SAMPLES.kindOf(f) : null;
       for (const f of (typeof ST !== 'undefined' ? ST.files : [])) { const e = (typeof E !== 'undefined' ? E.files : []).find(x => !x.gone && (x.file === f.name || x.file.startsWith(f.name + '#')));
         out.push({name: f.name, st_role: f.kind ?? null, st_time: f.time ?? null, open: !!e, e_role: e ? K(e) : null, e_time: e ? (e.time ?? null) : null,
           agree: !e || (K(e) === (f.kind ?? null) && (e.time ?? null) === (f.time ?? null))}); }
@@ -117,7 +117,7 @@ def render_cost(pg):
       ef = n => Array.from({length: n}, (_, i) => ({k: i, file: 'S' + i + '.mzML', label: 'S' + i, kind: 'full', time: i, lv: 1, type: 'sample'}));
       try { for (const n of [50, 300, 1000]) {
         ST.files = st(n); let t = performance.now(); try { renderFiles(); out['renderFiles_' + n] = Math.round(performance.now() - t); } catch (_) { out['renderFiles_' + n] = null; }
-        E.files = ef(n); t = performance.now(); try { CAMPIONI.paint(box); out['paint_' + n] = Math.round(performance.now() - t); } catch (_) { out['paint_' + n] = null; } }
+        E.files = ef(n); t = performance.now(); try { SAMPLES.paint(box); out['paint_' + n] = Math.round(performance.now() - t); } catch (_) { out['paint_' + n] = null; } }
       } finally { ST.files = realS; E.files = realE; try { renderFiles(); } catch (_) {} }
       return out; }""")
 

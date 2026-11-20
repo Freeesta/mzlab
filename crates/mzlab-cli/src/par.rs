@@ -30,14 +30,14 @@ pub(crate) fn par_map_with<T: Send>(
             let slots: Mutex<Vec<Option<T>>> = Mutex::new((0..n).map(|_| None).collect());
             std::thread::scope(|s| {
                 for _ in 0..workers.min(n) {
-                    s.spawn(|| loop {
+                    s.spawn(crate::idx_cache::carry(|| loop {
                         let k = next.fetch_add(1, Ordering::Relaxed);
                         if k >= n {
                             break;
                         }
                         let r = f(k);
                         slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(r);
-                    });
+                    }));
                 }
             });
             let slots = slots.into_inner().unwrap_or_else(|e| e.into_inner());
@@ -253,7 +253,7 @@ fn pooled(
     let lock = || pool.lock().unwrap_or_else(|e| e.into_inner());
     std::thread::scope(|s| {
         for _ in 0..workers.min(jobs.len()) {
-            s.spawn(|| loop {
+            s.spawn(crate::idx_cache::carry(|| loop {
                 let j = {
                     let mut st = lock();
                     let j = st.next;
@@ -296,7 +296,7 @@ fn pooled(
                         }
                     }
                 }
-            });
+            }));
         }
     });
     let out = collect(pool.into_inner().unwrap_or_else(|e| e.into_inner()));

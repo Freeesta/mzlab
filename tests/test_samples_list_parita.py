@@ -37,7 +37,13 @@ def site(work, wiff: Path):
 def app(wiff: Path):
     """(exit code, stdout, stderr) of `mzlab-cli sample list --json`."""
     p = subprocess.run(cli_argv("sample", "list", str(wiff), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
-    return p.returncode, p.stdout.strip(), p.stderr
+    return p.returncode, unwrap(p.stdout.strip()), p.stderr
+
+
+def unwrap(text: str) -> str:
+    """The one `sample-list/1` document holds each file's own document in `files`: the single file's bytes, as the site writes them."""
+    head, tail = '{"schema":"sample-list/1","files":[', "]}"
+    return text[len(head):-len(tail)] if text.startswith(head) and text.endswith(tail) else text
 
 
 def same_but_refused(site_line: str, app_line: str):
@@ -75,14 +81,14 @@ def test_the_probe_adds_the_size_of_the_scan_file_and_a_cut_copy_exits_1(work):
     rc, text, _ = app(work / "big" / "grande.wiff")
     assert rc == 0 and "probe" not in json.loads(text)
     p = subprocess.run(cli_argv("sample", "list", str(work / "big" / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
-    assert p.returncode == 0 and json.loads(p.stdout)["probe"]["status"] == "ok", p.stdout
+    assert p.returncode == 0 and json.loads(unwrap(p.stdout.strip()))["probe"]["status"] == "ok", p.stdout
     cut = work / "cut"
     cut.mkdir()
     shutil.copy(work / "big" / "grande.wiff", cut / "grande.wiff")
     data = (work / "big" / "grande.wiff.scan").read_bytes()
     (cut / "grande.wiff.scan").write_bytes(data[:-500])
     p = subprocess.run(cli_argv("sample", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
-    assert p.returncode == 1 and json.loads(p.stdout)["probe"]["status"] == "short", (p.returncode, p.stdout)
+    assert p.returncode == 1 and json.loads(unwrap(p.stdout.strip()))["probe"]["status"] == "short", (p.returncode, p.stdout)
     missing = subprocess.run(cli_argv("sample", "list", str(work / "nothing.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert missing.returncode == 4 and "error/1" in missing.stdout
     usage = subprocess.run(cli_argv("sample", "list", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")

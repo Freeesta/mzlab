@@ -154,7 +154,7 @@ try:
         # finger and pen: a 1024x768 touch viewport, the same records
         def touch():
             tp = r.b.new_page(viewport={"width": 1024, "height": 768}, has_touch=True, reduced_motion="reduce")
-            tp.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            tp.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             tp.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(tp, "typeof E==='object' && !!document.querySelector('#pick')")
             load(tp, [LRF], 4000, 1); xic(tp, "194"); integrate(tp, 14.3); mode(tp, "line")
             tp.locator(".ibp[data-k='0']").scroll_into_view_if_needed()
