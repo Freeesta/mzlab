@@ -164,6 +164,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["dad", "trace", "/nonexistent/x.mzML"],
     &["dad", "ms-at", "/nonexistent/x.mzML", "--rt", "1"],
     &["dad", "delay", "/nonexistent/x.mzML"],
+    &["dad", "peaks", "/nonexistent/x.mzML"],
     &["msn", "complete", "/nonexistent/g.json"],
     &[
         "msn",

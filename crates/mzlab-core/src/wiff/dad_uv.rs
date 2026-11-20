@@ -177,7 +177,7 @@ fn baseline_spectrum(dad: &DadData) -> Vec<f64> {
 }
 
 /// The channels with a wavelength in `lo..=hi`, or the single one nearest to the middle when none falls inside; `None` for an empty matrix.
-fn window_cols(dad: &DadData, lo: f64, hi: f64) -> Option<Vec<usize>> {
+pub(super) fn window_cols(dad: &DadData, lo: f64, hi: f64) -> Option<Vec<usize>> {
     let cols: Vec<usize> = dad
         .wavelengths_nm
         .iter()

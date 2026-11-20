@@ -2,68 +2,7 @@
 //! spectrum with exit 0), and the refusal to hand back an empty spectrum or a delay with no peak behind it. Failures are exit 1 (`err.dad.*`).
 
 use mzlab_core::error::{Error, Result};
-
-/// The slack, in cycles, before a time counts as outside the scans or as lying in a hole between them.
-const SLACK: f64 = 1.5;
-/// The least cycle time (minutes) assumed for a level with one scan or a degenerate spacing.
-const MIN_CYCLE: f64 = 0.002;
-
-/// The scan chosen for a time: its own time, the distance to the asked time, and the warning codes of the choice.
-#[derive(Debug, PartialEq)]
-pub(crate) struct Pick {
-    pub rt: f64,
-    pub gap: f64,
-    pub range: (f64, f64),
-    pub warnings: Vec<&'static str>,
-}
-
-/// Median spacing of the scan times, the cycle time of the level.
-fn cycle(times: &[f64]) -> f64 {
-    let mut d: Vec<f64> = times
-        .windows(2)
-        .filter_map(|w| match w {
-            [a, b] => Some(b - a),
-            _ => None,
-        })
-        .filter(|x| *x > 0.0)
-        .collect();
-    d.sort_by(f64::total_cmp);
-    d.get(d.len() / 2).copied().unwrap_or(0.0).max(MIN_CYCLE)
-}
-
-/// The scan of `times` nearest to `t`. `err.dad.msNoLevel` when there is none (the level is not in the file), `err.dad.msRange` when `t` lies more than
-/// 1.5 cycles outside the scans; a time in a hole of more than 1.5 cycles still gets its nearest scan, with the warning `far_from_scan`.
-pub(crate) fn nearest(times: &[f64], t: f64, level: u8) -> Result<Pick> {
-    let lo = times.iter().copied().fold(f64::INFINITY, f64::min);
-    let hi = times.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let Some(rt) = times
-        .iter()
-        .copied()
-        .min_by(|a, b| (a - t).abs().total_cmp(&(b - t).abs()))
-    else {
-        return Err(Error::new("err.dad.msNoLevel").with("level", level));
-    };
-    let c = cycle(times) * SLACK;
-    if t < lo - c || t > hi + c {
-        return Err(Error::new("err.dad.msRange")
-            .with("level", level)
-            .with("rt", t)
-            .with("start", lo)
-            .with("end", hi));
-    }
-    let gap = ((rt - t).abs() * 1e6).round() / 1e6;
-    let warnings = if gap > c {
-        vec!["far_from_scan"]
-    } else {
-        vec![]
-    };
-    Ok(Pick {
-        rt,
-        gap,
-        range: (lo, hi),
-        warnings,
-    })
-}
+pub(crate) use mzlab_core::scanpick::{nearest, Pick};
 
 /// `Ok` when the spectrum answer has peaks; `err.dad.msEmpty` (the scan chosen, nothing in it) otherwise.
 pub(crate) fn has_peaks(spectrum: &str, pick: &Pick, level: u8) -> Result<()> {
@@ -100,33 +39,66 @@ pub(crate) fn delay_evidence(answer: String, has_uv: bool) -> Result<String> {
         .with("corr", num("corr")))
 }
 
+/// The offset a `dad peaks` answer used, as a line for stderr: the user sees which delay was applied and on what evidence.
+pub(crate) fn offset_note(answer: &str) -> String {
+    let Some(v) = mzlab_core::json::parse(answer.as_bytes()).ok() else {
+        return String::new();
+    };
+    let Some(o) = v.get("offset") else {
+        return String::new();
+    };
+    let num = |k: &str| o.get(k).and_then(|x| x.f64());
+    let min = num("min").unwrap_or(0.0);
+    match o.get("source").and_then(|s| s.str()) {
+        Some("delay") => format!(
+            "dad: offset auto = {min} min (delay estimate: {} peaks match the TIC, correlation {})\n",
+            num("peaks").unwrap_or(0.0),
+            num("corr").unwrap_or(0.0)
+        ),
+        Some("none") => "dad: offset auto: no UV peak matches the TIC, 0 min used (warning delay_unmatched)\n".to_string(),
+        _ => format!("dad: offset {min} min (given)\n"),
+    }
+}
+
+/// `dad peaks --format csv`: a row per ion (a peak without ions has one row with the ion columns empty); the numbers are the answer's own.
+pub(crate) fn peaks_csv(answer: &str) -> Result<String> {
+    let bad = || Error::new("error.badIndex");
+    let v = mzlab_core::json::parse(answer.as_bytes()).map_err(|_| bad())?;
+    let mut out =
+        String::from("peak,rt_uv_min,height_mau,lambda_max_nm,rt_ms_min,mz,intensity,rel_pct\n");
+    for p in v.get("peaks").ok_or_else(bad)?.arr() {
+        let num = |k: &str| {
+            p.get(k)
+                .and_then(|x| x.f64())
+                .map_or(String::new(), |x| x.to_string())
+        };
+        let head = format!(
+            "{},{},{},{},{}",
+            num("n"),
+            num("rt_uv"),
+            num("height"),
+            num("lambda_max_nm"),
+            num("rt_ms")
+        );
+        let ions = p.get("ions").map_or(&[][..], |i| i.arr());
+        if ions.is_empty() {
+            out += &format!("{head},,,\n");
+        }
+        for i in ions {
+            let f = |k: &str| {
+                i.get(k)
+                    .and_then(|x| x.f64())
+                    .map_or(String::new(), |x| x.to_string())
+            };
+            out += &format!("{head},{},{},{}\n", f("mz"), f("y"), f("rel"));
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_nearest_scan_is_taken_and_the_gap_is_reported() {
-        let t = [1.0, 1.1, 1.2, 1.3];
-        let p = nearest(&t, 1.14, 1).unwrap();
-        assert_eq!((p.rt, p.gap, p.warnings.len()), (1.1, 0.04, 0));
-        assert_eq!(p.range, (1.0, 1.3));
-    }
-
-    #[test]
-    fn a_time_outside_the_scans_or_a_missing_level_is_an_error_with_the_evidence() {
-        let t = [1.0, 1.1, 1.2, 1.3];
-        let e = nearest(&t, 5.0, 1).unwrap_err();
-        assert_eq!(e.key, "err.dad.msRange");
-        assert_eq!(nearest(&[], 1.0, 2).unwrap_err().key, "err.dad.msNoLevel");
-        // just past the end, within 1.5 cycles, still gets the last scan
-        assert_eq!(nearest(&t, 1.4, 1).unwrap().rt, 1.3);
-    }
-
-    #[test]
-    fn a_hole_between_scans_is_a_warning() {
-        let t = [1.0, 1.1, 1.2, 2.0, 2.1];
-        assert_eq!(nearest(&t, 1.6, 1).unwrap().warnings, ["far_from_scan"]);
-    }
 
     #[test]
     fn delay_with_no_matching_peak_or_no_evidence_is_refused() {
