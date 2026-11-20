@@ -55,7 +55,8 @@ def test_fits_left_target():
 def test_every_step_id_has_its_texts_in_the_language_file():
     # the keys are built from the step id at run time (`tour.<id>.title`, `.text`): a renamed id without its keys only shows as a console warning
     import re
-    ids = re.findall(r'\bid: "(\w+)"', JS.read_text(encoding="utf-8"))
+    # the steps of tour.js and the one the lab edition injects (tools/lab/lab.js)
+    ids = re.findall(r'\bid: "(\w+)"', JS.read_text(encoding="utf-8")) + re.findall(r'\{ id: "(\w+)"', (JS.parents[2] / "tools" / "lab" / "lab.js").read_text(encoding="utf-8"))
     keys = set(re.findall(r'"(tour\.[\w.]+)"', (JS.parent / "lang" / "en" / "tour.js").read_text(encoding="utf-8")))
     assert len(ids) >= 20, ids
     missing = [k for i in ids for k in (f"tour.{i}.title", f"tour.{i}.text") if k not in keys]
