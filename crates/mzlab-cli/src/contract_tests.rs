@@ -1,5 +1,4 @@
-//! The agent contract on every command of the table: `--help`/`-h` with nothing run, unknown options, `--json`, exit codes 4 and 5, `error/1`
-//! and a newline at the end of stdout. python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`); without it the test fails, it never skips.
+//! The agent contract on every command of the table: `--help`/`-h`, unknown options, `--json`, exit codes 4 and 5, `error/1`, a newline at the end of stdout; python3 builds the synthetic `.wiff` (`tools/wiff_grande.py`) and without it the test fails.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
