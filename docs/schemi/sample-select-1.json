@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "sample-select/1",
   "title": "sample-select/1: the sample ids a selection picks",
-  "description": "The answer of `mzlab-cli sample select --json`: the ids `--sample LIST` or `--default` picks, ascending. An id the file does not have is exit 5 with an `error/1`. Code: crates/mzlab-cli/src/samples_cmd.rs.",
+  "description": "The answer of `mzlab-cli sample select --json`: the ids `--sample LIST` or `--default` picks, ascending. An id the file does not have is exit 5 with an `error/1`. Code: crates/mzlab-cli/src/samples_cmd.rs. With `--ranges` it also carries the copy plan of the chosen samples (`bytes`, `total`, `tag`, `members`): the `[start, end)` byte ranges of each member the site copies into OPFS (code: crates/mzlab-core/src/readers/ranges.rs).",
   "type": "object",
   "required": [
     "schema",
@@ -16,6 +16,48 @@
       "type": "array",
       "items": {
         "type": "integer"
+      }
+    },
+    "bytes": {
+      "type": "integer",
+      "description": "Bytes the ranges add up to."
+    },
+    "total": {
+      "type": "integer",
+      "description": "Bytes of all the members."
+    },
+    "tag": {
+      "type": "string",
+      "description": "Hex name of the ranges: the same ranges give the same tag."
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "size",
+          "ranges"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "ranges": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
       }
     }
   }

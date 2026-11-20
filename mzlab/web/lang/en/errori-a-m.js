@@ -24,6 +24,7 @@ I18N.add("en", {
   "err.diff.istd": "To normalize on the internal standard its m/z is needed.",
   "err.diff.range": "Factor between 0 and 100 and RT tolerance between 0 and 10 minutes.",
   "err.map.region": "Empty or invalid map region: RT and m/z must increase.",
+  "error.copyRanges": "The copy plan for «{file}» is not valid, so it was not copied.",
   "error.fileInUse": "The file «{file}» is in use in another mzLab tab. Try again in a moment.",
   "err.analog.none": "This trace does not exist in the file.",
   "err.formula.empty": "Empty formula.",

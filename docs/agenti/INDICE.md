@@ -184,6 +184,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
 | full binary specification and what a sample is made of (area: `.wiff` + `.wiff.scan` reader `crates/mzlab-core/src/wiff/`; read-only `file inventory|verify`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli file pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
+| copying only the byte ranges of the chosen samples of a big `.wiff.scan` into OPFS (`readers::ranges`, `sample select --ranges`, `sample_ranges`, `putSparse`, partial identity Q4 left open) | `docs/agenti/wiff-range-copy.md` |
 | choosing samples of a `.wiff` (or other multi-sample file): listing, `selection::suggest`, `--sample LIST`, the page dialog `wiff-choose.js`, what is not built | `docs/agenti/wiff-sample-choice.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |

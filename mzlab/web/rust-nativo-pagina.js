@@ -28,6 +28,12 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", dataset(members));
       return JSON.parse(r.info);
     },
+    /** the byte ranges of `members` that the samples `text` (`1,3,5`) need, `sample-select/1` plan of the engine (the same plan as `mzlab-cli sample select --ranges`): { members: [{ name, size, ranges: [[start, end], ..] }], .. } */
+    async nativePlan(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ text) {
+      const r = await h.rpc({ op: "natplan", members, text });
+      if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", dataset(members));
+      return JSON.parse(r.info);
+    },
     /** the engine's answer for the sample chooser: `{ op: "natdefault", ids, sizes }` (the ids ticked first) or `{ op: "natselect", present, text }` (`1,3,5`, `2-4`); its refusal is thrown (`err.sample.unknown`, `err.sample.list`) */
     async nativeAsk(/** @type {any} */ m) { const r = await h.rpc(m); if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", ""); return JSON.parse(r.info); },
     /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again (the blob: the desktop app knows a file by its number) */
