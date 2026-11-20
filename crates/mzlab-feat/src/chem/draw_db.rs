@@ -125,6 +125,28 @@ fn nearest(es: &[Entry], w: &str) -> Vec<String> {
     hits.iter().take(NEAREST).map(|h| h.2.to_string()).collect()
 }
 
+/// The rows that answer the query, best first as (row, score): an InChIKey matches its rows at score 0, a name by `score` then by length.
+fn find(es: &[Entry], kind: &str, w: &str, key: &str) -> Vec<(usize, u8)> {
+    if kind == "inchikey" {
+        return (0..es.len())
+            .filter(|&k| es[k].key == key)
+            .map(|k| (k, 0))
+            .collect();
+    }
+    let mut h: Vec<(usize, u8)> = (0..es.len())
+        .filter_map(|k| {
+            es[k]
+                .names
+                .iter()
+                .filter_map(|n| score(n, w))
+                .min()
+                .map(|s| (k, s))
+        })
+        .collect();
+    h.sortc_by_key(|&(k, s)| (s, es[k].name.encode_utf16().count()));
+    h
+}
+
 /// A name or an InChIKey found in the molecules CSV `db`, drawn from its SMILES.
 pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<Drawn> {
     if kind == "inchi" {
@@ -136,25 +158,7 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
     let es = entries(csv)?;
     let w = q.trim().to_lowercase();
     let key = q.to_ascii_uppercase();
-    let mut hits: Vec<(usize, u8)> = if kind == "inchikey" {
-        (0..es.len())
-            .filter(|&k| es[k].key == key)
-            .map(|k| (k, 0))
-            .collect()
-    } else {
-        let mut h: Vec<(usize, u8)> = (0..es.len())
-            .filter_map(|k| {
-                es[k]
-                    .names
-                    .iter()
-                    .filter_map(|n| score(n, &w))
-                    .min()
-                    .map(|s| (k, s))
-            })
-            .collect();
-        h.sortc_by_key(|&(k, s)| (s, es[k].name.encode_utf16().count()));
-        h
-    };
+    let mut hits = find(&es, kind, &w, &key);
     if kind != "inchikey" && hits.is_empty() {
         return Err(Error::new("err.mol.draw.not_found")
             .with("spec", q)
@@ -185,18 +189,14 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
     }
     hits.retain(|h| h.1 == score);
     if hits.len() > 1 {
-        d.warnings.push(note(
-            if kind == "inchikey" {
-                "key_ambiguous"
-            } else {
-                "name_ambiguous"
-            },
-            hits.iter()
-                .take(5)
-                .map(|h| es[h.0].name.as_str())
-                .collect::<Vec<_>>()
-                .join(", "),
-        ));
+        let names = hits.iter().take(5).map(|h| es[h.0].name.as_str());
+        let key = if kind == "inchikey" {
+            "key_ambiguous"
+        } else {
+            "name_ambiguous"
+        };
+        d.warnings
+            .push(note(key, names.collect::<Vec<_>>().join(", ")));
     }
     Ok(d)
 }
