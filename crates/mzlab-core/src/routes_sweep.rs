@@ -127,73 +127,12 @@ impl<R: ReadAt> Routes<R> {
         // a column is made (zeroed) when its window opens, just before its first sum: a whole matrix zeroed first is cold in the cache when the sums come
         // (it was checked against the budget above)
         let mut sorted: Vec<Vec<f64>> = vec![Vec::new(); centres.len()];
-        let walk = |w: &mut [Vec<f64>], idx: &mut crate::idxread::Index<R>| -> Result<()> {
-            let nc = w.len();
-            if nc == 0 {
-                return Ok(());
-            }
-            // each window as the peak range `search` gives a single extraction (so the edges are those of `xic_raw` by construction); the m/z array is
-            // never read, only positions and intensities, as `sum_window` does
-            let mut a = Vec::with_capacity(nc);
-            let mut b = Vec::with_capacity(nc);
-            for k in 0..nc {
-                a.push(idx.search(si, lo[k], false)?);
-                b.push(idx.search(si, hi[k], true)?);
-            }
-            // the windows are cut into runs that overlap (peak ranges of centres in order): each run is one walk, so the peaks between two far-apart
-            // ions are never read; inside a run the live centres are `first..next` (ranges open and close in the order of the centres)
-            let mut c0 = 0;
-            while c0 < nc {
-                let (start, mut end, mut c1) = (a[c0], b[c0], c0 + 1);
-                while c1 < nc && a[c1] < end {
-                    end = end.max(b[c1]);
-                    c1 += 1;
-                }
-                if c1 == c0 + 1 {
-                    // a window of its own is the single extraction itself
-                    if end > start {
-                        w[c0] = idx.sum_window(si, start, end)?;
-                    }
-                    c0 = c1;
-                    continue;
-                }
-                let (mut first, mut next, mut j) = (c0, c0, start);
-                let (mut open_at, mut close_at) = (start, 0u64);
-                if end > start {
-                    idx.each_inten(si, start, end, |p, y| {
-                        if j >= open_at || j >= close_at {
-                            while next < c1 && a[next] <= j {
-                                w[next] = vec![0.0; n];
-                                next += 1;
-                            }
-                            while first < next && b[first] <= j {
-                                first += 1;
-                            }
-                            open_at = if next < c1 { a[next] } else { u64::MAX };
-                            close_at = if first < next { b[first] } else { 0 };
-                        }
-                        j += 1;
-                        if p < n {
-                            if next == first + 1 {
-                                w[first][p] += y;
-                            } else {
-                                for c in &mut w[first..next] {
-                                    c[p] += y;
-                                }
-                            }
-                        }
-                    })?;
-                }
-                c0 = c1;
-            }
-            Ok(())
-        };
         // windows that do not open and close in order (a negative half-window) are summed one by one, like `xic_raw`
         let ordered = lo.windows(2).all(|w| w[0] <= w[1])
             && hi.windows(2).all(|w| w[0] <= w[1])
             && lo.iter().zip(&hi).all(|(l, h)| l <= h);
         if ordered {
-            walk(&mut sorted, &mut self.idx)?;
+            walk_runs(&mut self.idx, si, n, &lo, &hi, &mut sorted)?;
         } else {
             for (k, col) in sorted.iter_mut().enumerate() {
                 let (a, b) = (
@@ -272,4 +211,89 @@ impl<R: ReadAt> Routes<R> {
         }
         Ok(Some(o + "]}"))
     }
+}
+
+/// Fills `w` (one column per window, windows in order) with the sums of the peaks of each window: each window as the peak range `search` gives a single
+/// extraction (so the edges are those of `xic_raw` by construction); the m/z array is never read, only positions and intensities, as `sum_window` does.
+fn walk_runs<R: ReadAt>(
+    idx: &mut crate::idxread::Index<R>,
+    si: usize,
+    n: usize,
+    lo: &[f64],
+    hi: &[f64],
+    w: &mut [Vec<f64>],
+) -> Result<()> {
+    let nc = w.len();
+    let mut a = Vec::with_capacity(nc);
+    let mut b = Vec::with_capacity(nc);
+    for k in 0..nc {
+        a.push(idx.search(si, lo[k], false)?);
+        b.push(idx.search(si, hi[k], true)?);
+    }
+    // the windows are cut into runs that overlap (peak ranges of centres in order): each run is one walk, so the peaks between two far-apart
+    // ions are never read
+    let mut c0 = 0;
+    while c0 < nc {
+        let (start, mut end, mut c1) = (a[c0], b[c0], c0 + 1);
+        while c1 < nc && a[c1] < end {
+            end = end.max(b[c1]);
+            c1 += 1;
+        }
+        if c1 == c0 + 1 {
+            // a window of its own is the single extraction itself
+            if end > start {
+                w[c0] = idx.sum_window(si, start, end)?;
+            }
+        } else if end > start {
+            walk_run(
+                idx,
+                si,
+                n,
+                (&a[c0..c1], &b[c0..c1]),
+                (start, end),
+                &mut w[c0..c1],
+            )?;
+        }
+        c0 = c1;
+    }
+    Ok(())
+}
+
+/// One run of overlapping windows (`ab`: their peak ranges, `span`: the range they cover) in one walk: the live windows are `first..next`, since ranges
+/// open and close in the order of the centres; the first peak of a window makes its column.
+fn walk_run<R: ReadAt>(
+    idx: &mut crate::idxread::Index<R>,
+    si: usize,
+    n: usize,
+    ab: (&[u64], &[u64]),
+    span: (u64, u64),
+    w: &mut [Vec<f64>],
+) -> Result<()> {
+    let (a, b) = ab;
+    let nc = w.len();
+    let (mut first, mut next, mut j) = (0, 0, span.0);
+    let (mut open_at, mut close_at) = (span.0, 0u64);
+    idx.each_inten(si, span.0, span.1, |p, y| {
+        if j >= open_at || j >= close_at {
+            while next < nc && a[next] <= j {
+                w[next] = vec![0.0; n];
+                next += 1;
+            }
+            while first < next && b[first] <= j {
+                first += 1;
+            }
+            open_at = if next < nc { a[next] } else { u64::MAX };
+            close_at = if first < next { b[first] } else { 0 };
+        }
+        j += 1;
+        if p < n {
+            if next == first + 1 {
+                w[first][p] += y;
+            } else {
+                for c in &mut w[first..next] {
+                    c[p] += y;
+                }
+            }
+        }
+    })
 }
