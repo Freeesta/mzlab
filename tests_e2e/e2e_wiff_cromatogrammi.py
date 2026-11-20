@@ -18,7 +18,7 @@ D = Path(tempfile.mkdtemp(prefix="wiff_crom_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_cromatogrammi.py"), str(D)], check=True, capture_output=True)
 WANT = {n: len(ids) for n, ids in json.loads((D / "attesi.json").read_text()).items()}   # every BPC too: the index is built from every decoded scan
 PAIRS = [str(D / f"{n}.wiff{x}") for n in WANT for x in ("", ".scan")]
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"
 DONE = f"ST.files.length === {len(WANT)} && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0"
 COUNTS = "() => Object.fromEntries(E.files.map(f => [String(f.file).split('#')[0].replace(/\\.mzML$/, ''), f.chromatograms]))"      # the items of a mixed sample share its count
 # the index of a sample with `"reader":2` written as `"reader":1` (same length: the offsets of the index stay right)

@@ -3,14 +3,14 @@
 // RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, in-page expand (classic script, loaded after explore.js).
 // The map itself (colours, difference, 3D) is drawn by drawMap in explore.js; this file adds what lives on top of it. Hooks in explore.js:
 // drawMap (zoomImg before the image is drawn, after at the end), attach (wheel, box zoom, click, right click, mouse move), ctl (decorate).
-// Preferences of this browser in localStorage "qqq.mappa".
+// Preferences of this browser in localStorage "qqq.map".
 window.MAPPA = (() => {
   /** @typedef {{ preventDefault: () => void, clientX: number, clientY: number, kbd?: boolean, lp?: boolean }} MenuEv  a (real or synthetic) event that opens the context menu */
   /** @param {string} k @param {Record<string, any>} [o] */
   const T = (k, o) => I18N.t(k, o);
   // grafici.js clampView returns number[]; the zoom of a panel is a pair
   const clampV = (/** @type {number} */ z0, /** @type {number} */ z1, /** @type {number} */ f0, /** @type {number} */ f1) => /** @type {[number, number]} */ (clampView(z0, z1, f0, f1));
-  const PREF_KEY = NOMI.KEY("mappa");
+  const PREF_KEY = NOMI.KEY("map");
   const PREF = (() => { return lsObj(PREF_KEY); })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
   const GRP0 = 0.02, SHAPES = ["circle", "square", "triangle", "diamond"], GLYPH = ["●", "■", "▲", "◆"];

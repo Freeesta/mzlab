@@ -31,7 +31,7 @@ Measures, against the engine, the four ideas from DAG-OT-IDF and MORPHO-MS that 
 - `pauprc`: area under the precision-recall curve of the first candidates ordered by score (equal scores grouped) up to the last cut with true FDP <= 1 %; the maximum is the recall at FDP 1 %.
 - `recall_q01`: share of correct hits accepted at q <= 0.01 on the queries with truth in the library (the power of the null: a null that rejects everything has ECE 0). `q_auc`: probability that a wrong first candidate (trap or error) has a higher q than a correct one, ties counting half; 1 separates fully, 0.5 not at all.
 - Calibration: at 20 log-spaced thresholds tau in [0.001, 0.1] the hits with q <= tau are accepted; `ece` is the mean of |true FDP - highest accepted q|, `fdp_q01` the true FDP at q <= 0.01. q = `decoy::lib_fdr` on the best target and the best decoy of each query, as `best_scores_with`.
-- `gate`: share of queries whose first candidate passes the `shared` gate of `livelli-1.js` (>= `picchi_min` 6, or 3 when the entry has fewer than 6 peaks).
+- `gate`: share of queries whose first candidate passes the `shared` gate of `livelli-1.js` (>= `peaks_min` 6, or 3 when the entry has fewer than 6 peaks).
 - `q_true` / `q_trap`: median q of the true hits and of the traps. Per arm: `ms` (example only) and `det`.
 
 ## Base arms

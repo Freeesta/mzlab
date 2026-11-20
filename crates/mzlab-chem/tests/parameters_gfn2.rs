@@ -1,4 +1,4 @@
-//! The GFN2-xTB parameters of `sci_form::xtb::gfn2_params` (sci-form 0.15.2) used by `xtb`, checked against the parameter file of
+//! The GFN2-xTB parameters of `sci_form::xtb::gfn2_params` (sci-form 2.0.0) used by `xtb`, checked against the parameter file of
 //! dxtb 0.4.0 (`dxtb/_src/param/gfn2/gfn2-xtb.toml`, Apache-2.0, github.com/grimme-lab/dxtb; Bannwarth, Ehlert, Grimme 2019,
 //! doi:10.1021/acs.jctc.8b01176) for the elements of `mol3d`. The table below is copied from that file.
 

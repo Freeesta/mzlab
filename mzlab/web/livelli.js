@@ -3,14 +3,14 @@
 // The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by «Cos'è?», «Identifica tutte le MS2» and mzFinder (same words, same colours).
 // The rules and the thresholds are in the data file livelli-1.js (format «levels/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
 // Every result has two distinct fields: `proposed` (what the programme computes) and `decided` (empty until the chemist decides; 2b can only be written there).
-// The user's thresholds are in localStorage `qqq.lib.soglie` and in the workflow file. Pure functions: no DOM, so that node can test them (tests/test_livelli.py).
+// The user's thresholds are in localStorage `qqq.lib.thresholds` and in the workflow file. Pure functions: no DOM, so that node can test them (tests/test_livelli.py).
 // a standard hit with only a cosine is read on the same threshold and its gate names the score
 const stdGate = (g, std) => (g.id === "stdscore" && std.ent == null ? { ...g, id: "stdscore_cos" } : g);
 // 3a from the listed fragments of a suspect of screen.suspects found in the MS2: never in a capped profile (unit resolution); null when the evidence is short
 const suspectFragments = (sp, P, TT) => (sp && !P.cap && sp.matched > 0 && sp.matched >= (TT.sospetto_frammenti_min ?? 2) ? sp : null);
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
-  const KEY = NOMI.KEY("lib.soglie"), ORDER = D.levels;
+  const KEY = NOMI.KEY("lib.thresholds"), ORDER = D.levels;
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   // lsObj lives in i18n.js (not loaded under node)
   const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
@@ -18,7 +18,7 @@ const LIVELLI = (() => {
 
   // ------------------------------------------------------------ profiles and thresholds
   const names = (all = false) => Object.keys(D.profiles).filter(n => all || D.profiles[n].visible);
-  function profileName(st = read()) { return D.profiles[st.profilo] ? st.profilo : D.default; }
+  function profileName(st = read()) { return D.profiles[st.profile] ? st.profile : D.default; }
   function profile(name) { return D.profiles[name || profileName()]; }
   function thresholds(name, st = read()) {            // data file < the user's values of this profile
     const n = name || profileName(st), base = { ...D.profiles[n].thresholds }, mine = (st[n] && typeof st[n] === "object") ? st[n] : {};
@@ -31,11 +31,11 @@ const LIVELLI = (() => {
   }
   function reset() { write({}); }
   // what the workflow file keeps
-  const exportState = () => ({ formato: D.format, profilo: profileName(), soglie: thresholds() });
+  const exportState = () => ({ format: D.format, profile: profileName(), thresholds: thresholds() });
   // accepts the workflow-file format only
   function importState(o) {
     if (!o || typeof o !== "object") return;
-    if (o.formato === D.format && o.soglie) { const n = D.profiles[o.profilo] ? o.profilo : D.default; write({ profilo: n, [n]: o.soglie }); }
+    if (o.format === D.format && o.thresholds) { const n = D.profiles[o.profile] ? o.profile : D.default; write({ profile: n, [n]: o.thresholds }); }
   }
 
   // ------------------------------------------------------------ the gates
@@ -83,7 +83,7 @@ const LIVELLI = (() => {
     }
     const sp = suspectFragments(inp.suspect, P, TT); if (sp) { res.suspect = sp; return fin("3a", "suspect_fragments", t("lv.dec.3susp", { name: nm(sp), n: sp.matched })); }
     const an = ranked(inp.analogs, "mcos")[0];
-    if (an && TT.analogo_mcos_min != null && an.mcos >= TT.analogo_mcos_min) {
+    if (an && TT.analog_mcos_min != null && an.mcos >= TT.analog_mcos_min) {
       res.analog = an; return fin("3b", "analogo", t("lv.dec.3an", { name: nm(an), cos: num(an.mcos, 2), delta: (an.delta >= 0 ? "+" : "−") + num(Math.abs(an.delta), 4) }));
     }
     if (best) {

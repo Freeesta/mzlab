@@ -25,7 +25,7 @@ try:
                 u = pg.evaluate(UNLABELLED); assert not u, (t, u)
         step("Data (3 tabs): one ?, every button without text has a label", data)
         def tabs():
-            tt = pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt]')].map(b=>b.dataset.tiph||b.title)"); assert len(tt) == 3 and all(len(x) > 20 for x in tt) and len(set(tt)) == 3, tt      # a short phrase per experiment type, all different
+            tt = pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt]')].map(b=>b.dataset.tiph||b.title)"); want = pg.evaluate("['full','ms2','mrm'].map(k => I18N.t('files.grp.tip.' + k))"); assert len(set(tt)) == 3 and sorted(tt) == sorted(want) and all(want), (tt, want)      # the phrase of each experiment type, all different
         step("the tabs say what the experiment is (hover)", tabs)
         def guide():
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(300)

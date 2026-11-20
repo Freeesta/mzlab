@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="cartgo_prof_"), viewport={"width": 1280, "height": 1400}, reduced_motion="reduce")
         pg = r.b.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"); pg.add_init_script(INIT)
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}"); pg.add_init_script(INIT)
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#cartpick", timeout=60000)
         pg.evaluate(PUT, ["a.mzML", A]); pg.evaluate(PUT, ["b.mzML", B])
         def button():
@@ -36,7 +36,7 @@ try:
             pg.wait_for_function("!document.querySelector('#cartgo') && !document.querySelector('#cartbody .cpone')")
             assert count(pg) == 2, count(pg)
         step("each file has its own «Load», «Load all» is under the folder, nothing is loaded twice", button)
-        br2 = p.chromium.launch(); pg2 = br2.new_page(viewport={"width": 1280, "height": 1400}); pg2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        br2 = p.chromium.launch(); pg2 = br2.new_page(viewport={"width": 1280, "height": 1400}); pg2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg2.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_selector("#drop", timeout=60000); pg2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def twice():

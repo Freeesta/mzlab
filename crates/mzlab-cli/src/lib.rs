@@ -355,9 +355,10 @@ impl Outcome {
 }
 
 /// The text to the standard output, or to the file of `--out`.
-fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
+fn emit(t: impl Into<Vec<u8>>, out: &Option<PathBuf>) -> Outcome {
+    let t: Vec<u8> = t.into();
     match out {
-        None => Outcome::ok(t.into_bytes()),
+        None => Outcome::ok(t),
         Some(p) => std::fs::write(p, t).map_or_else(
             |e| {
                 Outcome::fail_error(

@@ -32,7 +32,7 @@ def at(pg, rt):
 def menu(pg, rt=1.0):
     pg.evaluate(f"{MRM}.el.scrollIntoView({{block: 'center'}})"); frames(pg, 3)
     x, y = at(pg, rt); pg.mouse.click(x, y, button="right"); pg.wait_for_selector("#ctx:not([hidden])")
-    return pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e => [e.getAttribute('role'), e.textContent.replace(/^✓\s*/, '').trim(), e.getAttribute('aria-checked')])")
+    return pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e => [e.getAttribute('role'), e.textContent.replace(/^✓\s*|\s*✓$/g, '').trim(), e.getAttribute('aria-checked')])")
 def item(pg, label):
     pg.click(f"#ctx [role^=menuitem]:has-text('{label}')"); ready(pg)
 def load(pg, name):

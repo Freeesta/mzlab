@@ -142,7 +142,7 @@ def self_time(prof, top=10):
 def scenario(r, p, name, f):
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce")
-    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+    ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
     pg = ctx.new_page(); cdp = ctx.new_cdp_session(pg); cdp.send("Performance.enable")
     res = {"file": name, "size_mb": round(os.path.getsize(f) / 1048576, 1), "memory": {}}
     pg.goto(f"http://127.0.0.1:{r.port}/?perf=1")

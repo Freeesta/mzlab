@@ -3,8 +3,9 @@
 molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `highlight/1` of the evidence colours like
 `mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json); the 2D layout of a spec (`draw`, `draw/1` scene and molfile) like `mzlab-cli mol draw`
-and the app, also as KET and CDXML (tests/dati/draw_d1.json, 30 specs). Skipped without cargo, wasm-bindgen or node."""
+and the app, also as KET and CDXML (tests/dati/draw_d1.json, 30 specs; tests/dati/draw_d3.json, the edit patches of `--set edit=`). Skipped without cargo, wasm-bindgen or node."""
 import json
+import zlib
 import shutil
 import subprocess
 from pathlib import Path
@@ -116,38 +117,70 @@ def test_hilite_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
         assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == key
 
 
-def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
-    fx = json.loads((ROOT / "tests" / "dati" / "draw_d1.json").read_text(encoding="utf-8"))
+def check_draw_fixture(pkg, tmp_path, name):
+    """Every case of tests/dati/NAME: the `.wasm` and the release CLI give each answer it holds (or its error key and exit code); returns the fixture and the sorted exit codes."""
+    fx = json.loads((ROOT / "tests" / "dati" / name).read_text(encoding="utf-8"))
     build("-p", "mzlab-cli")
+    cli_bin = str(ROOT / "target" / "release" / "mzlab-cli")
     db = tmp_path / "db.csv"
-    db.write_text(fx["db"], encoding="utf-8")
-    assert len(fx["cases"]) == 30
+    db.write_text(fx.get("db", ""), encoding="utf-8")
+    node = lambda req, mode="draw": subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps(req), mode], cwd=ROOT, capture_output=True)
     for c in fx["cases"]:
         r = c["request"]
-        sets = [x for k in ("layout", "name") if k in r for x in ("--set", f"{k}={r[k]}")] + (["--set", f"db={db}"] if "db" in r else [])
+        sets = [x for k in ("layout", "name", "edit") if k in r for x in ("--set", f"{k}={r[k]}")] + (["--set", f"db={db}"] if "db" in r else [])
         multi = "\n" in r["spec"]
-        for fmt, want in (("scene", c["scene"]), ("molfile", c["molfile"]), ("ket", c["ket"]), ("cdxml", c["cdxml"])):
-            p = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**r, "format": fmt}), "draw"], cwd=ROOT, capture_output=True, encoding="utf-8")
+        for fmt, want in [(f, c[f]) for f in ("scene", "molfile", "ket", "cdxml", "svg", "png") if f in c]:
+            p = node({**r, "format": fmt}, "draw_png" if fmt == "png" else "draw")
             assert (p.returncode == 0) == (c["exit"] == 0), c["name"]
-            args = ["mol", "draw", "-" if multi else r["spec"], *sets, *(["--json"] if fmt == "scene" else []), *(["--format", fmt] if fmt in ("ket", "cdxml") else [])]
-            q = subprocess.run([str(ROOT / "target" / "release" / "mzlab-cli"), *args], cwd=ROOT, input=r["spec"] if multi else None, capture_output=True, encoding="utf-8")
+            args = ["mol", "draw", "-" if multi else r["spec"], *sets, *(["--json"] if fmt == "scene" else []), *(["--format", fmt] if fmt in ("ket", "cdxml", "svg", "png") else [])]
+            q = subprocess.run([cli_bin, *args], cwd=ROOT, input=r["spec"].encode() if multi else None, capture_output=True)
             if c["exit"]:
                 # the same failure everywhere: the key of the wasm, the key of the CLI and its exit code
                 assert json.loads(p.stderr)["error_key"] == c["error_key"], c["name"]
                 assert q.returncode == c["exit"], (c["name"], fmt)
                 if fmt == "scene":
-                    err = [x for x in (q.stdout + "\n" + q.stderr).splitlines() if x.startswith('{"schema":"error/1"')]
+                    err = [x for x in (q.stdout.decode() + "\n" + q.stderr.decode()).splitlines() if x.startswith('{"schema":"error/1"')]
                     assert json.loads(err[0])["error_key"] == c["error_key"], c["name"]
                 continue
-            assert p.stdout == want + "\n", (c["name"], fmt)  # the node runner adds one newline
-            assert q.stdout == want + ("\n" if fmt == "scene" else ""), (c["name"], fmt)  # the CLI ends a JSON answer with a newline
+            if fmt == "png":
+                # the same bytes in the wasm and the CLI, and the file the fixture describes
+                assert p.stdout == q.stdout and (len(p.stdout), zlib.crc32(p.stdout)) == (want["len"], want["crc32"]), c["name"]
+                continue
+            assert p.stdout.decode() == want + "\n", (c["name"], fmt)  # the node runner adds one newline
+            assert q.stdout.decode() == want + ("\n" if fmt == "scene" else ""), (c["name"], fmt)  # the CLI ends a JSON answer with a newline
             if fmt in ("ket", "cdxml"):
                 # `--json` carries the same text in the scene, and so does a scene request of the .wasm
-                j = subprocess.run([str(ROOT / "target" / "release" / "mzlab-cli"), *args, "--json"], cwd=ROOT, input=r["spec"] if multi else None, capture_output=True, encoding="utf-8")
-                w = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**r, "format": "scene", "file": fmt}), "draw"], cwd=ROOT, capture_output=True, encoding="utf-8")
+                j = subprocess.run([cli_bin, *args, "--json"], cwd=ROOT, input=r["spec"].encode() if multi else None, capture_output=True)
+                w = node({**r, "format": "scene", "file": fmt})
                 assert list(json.loads(j.stdout))[0] == "schema" and json.loads(j.stdout)["file"] == want, (c["name"], fmt)
                 assert w.stdout == j.stdout, (c["name"], fmt)
-    assert sorted(c["exit"] for c in fx["cases"] if c["exit"]) == [2, 2, 5]
+    for im in fx.get("images", []):
+        r = im["request"]
+        sets = [x for k in ("scale", "cip", "highlight", "name") if k in r for x in ("--set", f"{k}={r[k]}")]
+        q = subprocess.run([cli_bin, "mol", "draw", r["spec"], "--format", r["format"], *sets, *(["--json"] if r.get("json") else [])], cwd=ROOT, capture_output=True)
+        if im["png"]:
+            p = node(r, "draw_png")
+            assert p.stdout == q.stdout and (len(p.stdout), zlib.crc32(p.stdout)) == (im["png"]["len"], im["png"]["crc32"]), im["name"]
+        else:
+            p = node(r)
+            assert p.stdout.decode() == im["text"] + "\n", im["name"]
+            assert q.stdout.decode() == im["text"] + ("\n" if r.get("json") else ""), im["name"]
+    return fx, sorted(c["exit"] for c in fx["cases"] if c["exit"])
+
+
+def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
+    fx, exits = check_draw_fixture(pkg, tmp_path, "draw_d1.json")
+    assert len(fx["cases"]) == 30
+    assert exits == [2, 2, 5]
+
+
+def test_draw_edit_patches_through_wasm_equal_the_cli_and_the_app_fixture(pkg, tmp_path):
+    fx, exits = check_draw_fixture(pkg, tmp_path, "draw_d3.json")
+    assert len(fx["cases"]) >= 20
+    # a failed operation is a usage error with its key (exit 2); only a drawing over the size limit is exit 1
+    big = [c for c in fx["cases"] if c.get("error_key") == "err.mol.draw.tooBig"]
+    assert big and exits.count(1) == len(big) and set(exits) == {1, 2}
+
 
 def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(pkg, tmp_path):
     """`open/1` of a structure file: the `.wasm` and `mzlab-cli mol open` give the same bytes for the CDXML files of tests/dati/cdxml and for the variants

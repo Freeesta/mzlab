@@ -18,45 +18,45 @@ const RAPPORTO = (() => {
     if (!lv) return;
     const b = lv.best || lv.nearest || lv.analog || null;
     const key = (q && q.title || "") + "|" + (q && q.prec != null ? q.prec : "");
-    cands.set(key, { spettro: q && q.title || "", precursore: q && q.prec != null ? q.prec : null, candidato: b ? (b.name || "") : "", libreria: b ? (b.lib || "") : "",
-      proposto: lv.proposed, deciso: lv.decided || null, livello: lv.decided || lv.proposed, profilo: lv.profile || "", prove: (lv.lines || []).slice(), motivo: lv.decisive || "" });
+    cands.set(key, { spectrum: q && q.title || "", precursor: q && q.prec != null ? q.prec : null, candidate: b ? (b.name || "") : "", library: b ? (b.lib || "") : "",
+      proposed: lv.proposed, decided: lv.decided || null, level: lv.decided || lv.proposed, profile: lv.profile || "", evidence: (lv.lines || []).slice(), reason: lv.decisive || "" });
   }
   const candidates = () => [...cands.values()];
-  const setCandidates = a => { cands.clear(); (a || []).forEach(c => cands.set((c.spettro || "") + "|" + (c.precursore != null ? c.precursore : ""), c)); };
+  const setCandidates = a => { cands.clear(); (a || []).forEach(c => cands.set((c.spectrum || "") + "|" + (c.precursor != null ? c.precursor : ""), c)); };
 
   async function fileInfo(f) {
-    try { const j = await J(`api/fileinfo?k=${f.k}`); return { nome: f.file, strumento: j.instrument || "", seriale: j.serial || "", componenti: j.components || [], analizzatori: j.analyzers || [], software: j.software || [],
-      conversione: j.conversion || [], inizio: j.start || "", scansioni: j.scans, livelli: j.levels || {}, rt: j.rt || [], filtri: Object.keys(j.filters || {}).length ? j.filters : undefined, mz: j.mz_range || undefined }; }
-    catch (e_) { const e = /** @type {Lanciato} */ (e_); return { nome: f.file, errore: String(e && e.message || e) }; }
+    try { const j = await J(`api/fileinfo?k=${f.k}`); return { name: f.file, instrument: j.instrument || "", serial: j.serial || "", components: j.components || [], analyzers: j.analyzers || [], software: j.software || [],
+      conversion: j.conversion || [], start: j.start || "", scans: j.scans, levels: j.levels || {}, rt: j.rt || [], filtri: Object.keys(j.filters || {}).length ? j.filters : undefined, mz: j.mz_range || undefined }; }
+    catch (e_) { const e = /** @type {Lanciato} */ (e_); return { name: f.file, error: String(e && e.message || e) }; }
   }
-  const slim = r => ({ mz: r.mz, rt: r.rt, finestra_rt: r.win, tolleranza: r.tol, unita: r.unit, mediana_area: r.median_area, deriva_rt_per_file: r.rt_drift_per_file, deriva_area_per_file: r.area_drift_per_file,
-    cv_area: r.cv_area, cv_area_qc: r.cv_area_qc, accuratezza_massa: r.mass_accuracy, righe: r.rows });
+  const slim = r => ({ mz: r.mz, rt: r.rt, rt_window: r.win, tolerance: r.tol, unit: r.unit, median_area: r.median_area, rt_drift_per_file: r.rt_drift_per_file, area_drift_per_file: r.area_drift_per_file,
+    cv_area: r.cv_area, cv_area_qc: r.cv_area_qc, mass_accuracy: r.mass_accuracy, rows: r.rows });
 
   // The JSON: from the workflow file (current session, or the one the caller passes) plus the measures
   const qaFeat = () => !!(window.FEATURES && FEATURES.qaqc);      // QA/QC dormant: no measures, no section 4
   async function build(wf) {
     wf = wf || WORKFLOW.buildWorkflow();
-    if (window.QAQC && qaFeat()) { if (!wf.parametri.qaqc) wf.parametri.qaqc = QAQC.exportState(); }
+    if (window.QAQC && qaFeat()) { if (!wf.parameters.qaqc) wf.parameters.qaqc = QAQC.exportState(); }
     const files = (typeof E !== "undefined" ? E.files : []).filter(f => !f.gone);
     const roleOf = n => { const f = files.find(x => x.file === n); return f && window.QAQC ? QAQC.roleOf(f) : "sample"; };
     const hr = isHr();
-    /** @type {any} */ const qa = { ioni: [], rapporto_campione_bianco: null, feature_mzfinder: null };
+    /** @type {any} */ const qa = { ions: [], sample_blank_ratio: null, feature_mzfinder: null };
     if (window.QAQC && qaFeat()) {
       const r = await QAQC.run();
-      qa.ioni = r.ions.filter(o => !o.error).map(o => ({ etichetta: o.ion.label, funzione: o.ion.kind === "known" ? "known ion" : "internal standard", file: o.files, ruoli: o.roles, ...slim(o.r) }));
-      if (QAQC.state.ratio.text) { try { const q = await QAQC.runRatio(); qa.rapporto_campione_bianco = { mz: q.mz, rt: q.rt, soglia: q.thr, area_media_bianchi: q.r.ratio.blank_area, file: q.files, ruoli: q.roles, aree: q.r.rows.map(x => (x ? x.area : 0)), rapporti: q.r.ratio.rows }; } catch (_) { /* ion not found */ } }
-      if (hr) { try { const f = await QAQC.runFeatures(); if (f) qa.feature_mzfinder = { soglia: f.thr, bianchi: f.blanks, campioni: f.samples, righe: f.rows }; } catch (_) { /* no table */ } }
+      qa.ions = r.ions.filter(o => !o.error).map(o => ({ label: o.ion.label, function: o.ion.kind === "known" ? "known ion" : "internal standard", files: o.files, roles: o.roles, ...slim(o.r) }));
+      if (QAQC.state.ratio.text) { try { const q = await QAQC.runRatio(); qa.sample_blank_ratio = { mz: q.mz, rt: q.rt, threshold: q.thr, mean_blank_area: q.r.ratio.blank_area, files: q.files, roles: q.roles, areas: q.r.rows.map(x => (x ? x.area : 0)), ratios: q.r.ratio.rows }; } catch (_) { /* ion not found */ } }
+      if (hr) { try { const f = await QAQC.runFeatures(); if (f) qa.feature_mzfinder = { threshold: f.thr, blanks: f.blanks, samples: f.samples, rows: f.rows }; } catch (_) { /* no table */ } }
     }
     const acq = [];
     for (const f of files.filter(x => (x.lv || 1) === 1 || true)) acq.push(await fileInfo(f));
     return {
-      formato: FORMAT, creato: new Date().toISOString(), lingua: wf.lingua, alta_risoluzione: hr,
-      programma: wf.program,
-      disegno_studio: { file: wf.file.map(f => ({ ...f, role: roleOf(f.nome) })), n_file: wf.file.length, ruoli: Object.fromEntries(["sample", "blank", "qc", "standard", "dark"].map(r => [r, wf.file.filter(f => roleOf(f.nome) === r).length])) },
-      acquisizione: acq,
-      elaborazione: { parametri: wf.parametri, pannelli: wf.pannelli, operations: wf.operations },
+      format: FORMAT, created: new Date().toISOString(), language: wf.language, high_resolution: hr,
+      program: wf.program,
+      study_design: { files: wf.files.map(f => ({ ...f, role: roleOf(f.name) })), n_files: wf.files.length, roles: Object.fromEntries(["sample", "blank", "qc", "standard", "dark"].map(r => [r, wf.files.filter(f => roleOf(f.name) === r).length])) },
+      acquisition: acq,
+      processing: { parameters: wf.parameters, panels: wf.panels, operations: wf.operations },
       qaqc: qaFeat() ? qa : undefined,
-      livelli_confidenza: hr ? (wf.candidati || candidates()) : undefined,
+      confidence_levels: hr ? (wf.candidates || candidates()) : undefined,
     };
   }
 
@@ -71,32 +71,32 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
   const kv = o => Object.entries(o || {}).map(([k, v]) => [k, typeof v === "object" && v !== null ? JSON.stringify(v) : String(v)]);
 
   function html(rep) {
-    const P = rep.programma || {}, D = rep.disegno_studio, A = rep.acquisizione, X = rep.elaborazione, Q = rep.qaqc;
+    const P = rep.program || {}, D = rep.study_design, A = rep.acquisition, X = rep.processing, Q = rep.qaqc;
     const qaOn = !!Q;      // section 4 (QA/QC) exists only when QA/QC is on: the numbering of the next one follows
-    let h = `<!doctype html><html lang="${eh(rep.lingua || "en")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
-    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.name || "", ver: P.version || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
-    h += `<h2>1. ${eh(t("rep.s1"))}</h2><p>${eh(t("rep.s1.sum", { n: D.n_file, s: D.ruoli.sample, b: D.ruoli.blank, q: D.ruoli.qc, st: D.ruoli.standard, d: D.ruoli.dark }))}</p>`;
-    h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.file.map(f => [f.nome, roleTxt(f.role), f.dimensione, f.tempo == null ? "–" : String(f.tempo), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));
+    let h = `<!doctype html><html lang="${eh(rep.language || "en")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
+    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.name || "", ver: P.version || "", commit: P.commit || "", date: (rep.created || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
+    h += `<h2>1. ${eh(t("rep.s1"))}</h2><p>${eh(t("rep.s1.sum", { n: D.n_files, s: D.roles.sample, b: D.roles.blank, q: D.roles.qc, st: D.roles.standard, d: D.roles.dark }))}</p>`;
+    h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.files.map(f => [f.name, roleTxt(f.role), f.size, f.time == null ? "–" : String(f.time), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));
     h += `<h2>2. ${eh(t("rep.s2"))}</h2><p class="m">${eh(t("rep.s2.note"))}</p>`;
-    h += tab([t("qaqc.col.file"), t("rep.instr"), t("rep.analyzers"), t("rep.software"), t("rep.start"), t("rep.scans"), "RT (min)"], A.map(a => [a.nome, a.errore || [a.strumento, a.seriale].filter(Boolean).join(" · "), (a.analizzatori || []).join(", "), (a.software || []).join(", "), a.inizio || "–", a.scansioni == null ? "–" : String(a.scansioni), a.rt && a.rt.length ? a.rt.join(" – ") : "–"]));
-    h += `<h2>3. ${eh(t("rep.s3"))}</h2><p>${eh(t("rep.s3.prog", { name: P.name || "", ver: P.version || "", commit: P.commit || "" }))}</p><h3>${eh(t("rep.params"))}</h3>${tab([t("rep.param"), t("rep.value")], kv(X.parametri).filter(r => r[0] !== "qaqc"))}`;
+    h += tab([t("qaqc.col.file"), t("rep.instr"), t("rep.analyzers"), t("rep.software"), t("rep.start"), t("rep.scans"), "RT (min)"], A.map(a => [a.name, a.error || [a.instrument, a.serial].filter(Boolean).join(" · "), (a.analyzers || []).join(", "), (a.software || []).join(", "), a.start || "–", a.scans == null ? "–" : String(a.scans), a.rt && a.rt.length ? a.rt.join(" – ") : "–"]));
+    h += `<h2>3. ${eh(t("rep.s3"))}</h2><p>${eh(t("rep.s3.prog", { name: P.name || "", ver: P.version || "", commit: P.commit || "" }))}</p><h3>${eh(t("rep.params"))}</h3>${tab([t("rep.param"), t("rep.value")], kv(X.parameters).filter(r => r[0] !== "qaqc"))}`;
     h += `<h3>${eh(t("rep.ops"))}</h3>` + (X.operations && X.operations.length ? tab([t("rep.when"), t("rep.op"), t("rep.detail")], X.operations.map(o => { const { op, t: when, ...rest } = o; return [when || "", op || "", Object.keys(rest).length ? JSON.stringify(rest) : ""]; })) : `<p class="m">–</p>`);
     if (qaOn) {
       h += `<h2>4. ${eh(t("rep.s4"))}</h2><p class="m">${eh(t("rep.s4.note"))}</p>`;
-      if (!Q.ioni.length) h += `<p class="m">${eh(t("rep.s4.none"))}</p>`;
-      Q.ioni.forEach(i => {
-        h += `<h3>${eh(i.etichetta)} — m/z ${num(i.mz, 4)}, RT ${num(i.rt, 2)} (${eh(i.funzione)})</h3>`;
-        h += tab([t("qaqc.col.file"), t("qaqc.col.type"), "RT", "ΔRT", t("qaqc.col.area"), t("qaqc.col.rel"), "Δppm"], i.file.map((f, k) => { const r = i.righe[k]; return [f, roleTxt(i.ruoli[k]), r ? r.rt : "–", r ? r.drt : "–", r ? r.area : "–", r ? r.rel : "–", r && r.dppm != null ? r.dppm : "–"]; }));
-        h += `<p class="m">${eh(t("qaqc.sum.cv", { v: num(i.cv_area, 1) }))}${i.cv_area_qc != null ? " · " + eh(t("qaqc.sum.cvqc", { v: num(i.cv_area_qc, 1) })) : ""} · ${eh(t("qaqc.sum.drift", { v: num(i.deriva_rt_per_file, 4) }))}${i.accuratezza_massa ? " · " + eh(t("qaqc.sum.ppm", { mean: num(i.accuratezza_massa.mean, 2), max: num(i.accuratezza_massa.max_abs, 2), n: i.accuratezza_massa.n })) : ""}</p>`;
+      if (!Q.ions.length) h += `<p class="m">${eh(t("rep.s4.none"))}</p>`;
+      Q.ions.forEach(i => {
+        h += `<h3>${eh(i.label)} — m/z ${num(i.mz, 4)}, RT ${num(i.rt, 2)} (${eh(i.function)})</h3>`;
+        h += tab([t("qaqc.col.file"), t("qaqc.col.type"), "RT", "ΔRT", t("qaqc.col.area"), t("qaqc.col.rel"), "Δppm"], i.files.map((f, k) => { const r = i.rows[k]; return [f, roleTxt(i.roles[k]), r ? r.rt : "–", r ? r.drt : "–", r ? r.area : "–", r ? r.rel : "–", r && r.dppm != null ? r.dppm : "–"]; }));
+        h += `<p class="m">${eh(t("qaqc.sum.cv", { v: num(i.cv_area, 1) }))}${i.cv_area_qc != null ? " · " + eh(t("qaqc.sum.cvqc", { v: num(i.cv_area_qc, 1) })) : ""} · ${eh(t("qaqc.sum.drift", { v: num(i.rt_drift_per_file, 4) }))}${i.mass_accuracy ? " · " + eh(t("qaqc.sum.ppm", { mean: num(i.mass_accuracy.mean, 2), max: num(i.mass_accuracy.max_abs, 2), n: i.mass_accuracy.n })) : ""}</p>`;
       });
-      const R = Q.rapporto_campione_bianco;
-      if (R) h += `<h3>${eh(t("qaqc.ratio"))}</h3><p class="m">${eh(t("qaqc.ratio.sum", { mz: num(R.mz, 4), thr: R.soglia, blank: num(R.area_media_bianchi, 0) }))}</p>` + tab([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: R.soglia })], R.file.map((f, k) => { const q = R.rapporti[k]; return [f, roleTxt(R.ruoli[k]), R.aree[k], !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : q.ratio, !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")]; }));
+      const R = Q.sample_blank_ratio;
+      if (R) h += `<h3>${eh(t("qaqc.ratio"))}</h3><p class="m">${eh(t("qaqc.ratio.sum", { mz: num(R.mz, 4), thr: R.threshold, blank: num(R.mean_blank_area, 0) }))}</p>` + tab([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: R.threshold })], R.files.map((f, k) => { const q = R.ratios[k]; return [f, roleTxt(R.roles[k]), R.areas[k], !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : q.ratio, !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")]; }));
       const F = Q.feature_mzfinder;
-      if (F) { const n = F.righe.filter(x => x.at_least).length; h += `<h3>${eh(t("rep.feat"))}</h3><p class="m">${eh(t("qaqc.feat.sum", { n, tot: F.righe.length, thr: F.soglia, b: F.bianchi.length }))}</p>`; }
+      if (F) { const n = F.rows.filter(x => x.at_least).length; h += `<h3>${eh(t("rep.feat"))}</h3><p class="m">${eh(t("qaqc.feat.sum", { n, tot: F.rows.length, thr: F.threshold, b: F.blanks.length }))}</p>`; }
     }
-    if (rep.livelli_confidenza) {
+    if (rep.confidence_levels) {
       h += `<h2>${qaOn ? 5 : 4}. ${eh(t("rep.s5"))}</h2><p class="m">${eh(t("rep.s5.note"))}</p>`;
-      h += rep.livelli_confidenza.length ? tab([t("rep.spectrum"), t("rep.cand"), t("rep.level"), t("rep.proposed"), t("rep.decided"), t("rep.evidence")], rep.livelli_confidenza.map(c => [c.spettro, [c.candidato, c.libreria].filter(Boolean).join(" · "), c.livello, c.proposto, c.deciso || "–", (c.prove || []).join("; ")])) : `<p class="m">${eh(t("rep.s5.none"))}</p>`;
+      h += rep.confidence_levels.length ? tab([t("rep.spectrum"), t("rep.cand"), t("rep.level"), t("rep.proposed"), t("rep.decided"), t("rep.evidence")], rep.confidence_levels.map(c => [c.spectrum, [c.candidate, c.library].filter(Boolean).join(" · "), c.level, c.proposed, c.decided || "–", (c.evidence || []).join("; ")])) : `<p class="m">${eh(t("rep.s5.none"))}</p>`;
     }
     return h + `</body></html>`;
   }
@@ -104,10 +104,10 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
   async function exportReport(kind) {
     if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) { if (typeof info === "function") info(t("err.report.noFiles")); return null; }
     const rep = await build();
-    const base = "rapporto_" + new Date().toISOString().slice(0, 10);
+    const base = "report_" + new Date().toISOString().slice(0, 10);
     if (kind === "json") dl(base + ".json", JSON.stringify(rep, null, 2), "application/json");
     else dl(base + ".html", html(rep), "text/html");
-    if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("export_report", { formato: kind });
+    if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("export_report", { format: kind });
     return rep;
   }
   return { FORMAT, build, html, export: exportReport, note, candidates, setCandidates };

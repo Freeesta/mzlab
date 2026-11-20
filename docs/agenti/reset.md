@@ -2,9 +2,9 @@
 Entry points: "Full reset" (`QQRESET.run("all")`), "Files" (`QQRESET.run("files")`) and the error-banner reset (`window.qqHardReset()`, the same full wipe as `run("all")`). How it works: `data-3200.md` ("Reset vero"); here only the residue and the measuring tools.
 
 ## What is left
-- **Full reset** and **qqHardReset**: OPFS only `mzlab/` with empty `conv/ feat/ files/ idx/ tiles/ warm/` (recreated by the new page); `mzlab_lab` recreated empty (`kv:1` if a second tab was indexing); caches only `mzlab-app-<version>` (sometimes `mzlab-big-*` from idle prefetch); localStorage only keys written by the new page (`mzlab.avvii`, `mzlab.migrato`, `mzlab.barra.*`, `mzlab.memBudget.log`).
-- **Files**: kept are `librerie`, `mzlab-libs`, `mzlab-libdir`, the preferences, the user lists (`liste_utente:1`) and molecules (`molecole:1`) and the caches that do not start with `mzlab-big-` (also `mzlab-app-*` and foreign caches); the invented folder and database are removed; `kv` is rebuilt (2-3 rows); `conv/ files/ idx/ warm/` stay in `mzlab/`.
-- The session marker `mzlab.sessione` is absent at the start of the new page with all three entry points. After "all" the new page reloads once for isolation (`isolateOnce`) unless it is already `crossOriginIsolated`; "files" reloads once.
+- **Full reset** and **qqHardReset**: OPFS only `mzlab/` with empty `conv/ feat/ files/ idx/ tiles/ warm/` (recreated by the new page); `mzlab_lab` recreated empty (`kv:1` if a second tab was indexing); caches only `mzlab-app-<version>` (sometimes `mzlab-big-*` from idle prefetch); localStorage only keys written by the new page (`mzlab.launches`, `mzlab.migrated`, `mzlab.bar.*`, `mzlab.memBudget.log`).
+- **Files**: kept are `librerie`, `mzlab-libs`, `mzlab-libdir`, the preferences, the user lists (`user_lists:1`) and molecules (`molecules:1`) and the caches that do not start with `mzlab-big-` (also `mzlab-app-*` and foreign caches); the invented folder and database are removed; `kv` is rebuilt (2-3 rows); `conv/ files/ idx/ warm/` stay in `mzlab/`.
+- The session marker `mzlab.session` is absent at the start of the new page with all three entry points. After "all" the new page reloads once for isolation (`isolateOnce`) unless it is already `crossOriginIsolated`; "files" reloads once.
 - Run-to-run spread is large only where the service worker unregister or a second indexing tab is involved (a second tab indexing makes the OPFS wipe retry for about 2 s).
 
 ## How to measure

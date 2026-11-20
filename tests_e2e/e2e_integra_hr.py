@@ -47,10 +47,10 @@ for kind in ("hr", "lr"):
                     v = pg.evaluate("""(async()=>{const p=E.panels.find(q=>q.type==='xic'),s=p._a.sr[0],a=p._a;
                       const r=await QUALITA.autoIntegrate(s.x,s.y,a.x0,a.x1,{smooth:PK.hrSmooth,snr:PK.hrSn});
                       const it=[...p.ints].sort((u,w)=>u.a-w.a);const z=await Promise.all(it.map(i=>QUALITA.peakArea(s.x,s.y,i.a,i.b,1,[])));
-                      return it.map((i,k)=>[i.area,JSON.parse(z[k]).area,!!i.base,i.bm,r[k].area*60])})()""")
+                      return it.map((i,k)=>[i.area,JSON.parse(z[k]).area,!!i.base,i.bm,r[k].area])})()""")
                     for page, zero, has_base, bm, over in v:
-                        assert bm == "zero" and has_base and abs(page - zero) <= 1e-6 * zero, v       # from zero by default: the Rust area from y = 0
-                        assert over > 0 and over <= zero * (1 + 1e-6), v                              # the engine's own baseline only takes background away
+                        assert bm == "zero" and has_base and abs(page - zero) <= 1e-6 * zero, v       # from zero by default: the Rust area from y = 0 (counts x s)
+                        assert over > 0 and over <= zero * (1 + 1e-6), v                              # the engine's own baseline only takes background away (its area is counts x s as well, the default unit)
                 step("the area shown is the Rust area from zero; the engine's baseline is kept on the record", parity)
                 def undo_redo():
                     pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")

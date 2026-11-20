@@ -8,6 +8,12 @@
   const tip = document.createElement("div"); tip.id = "qtip"; tip.hidden = true; document.body.appendChild(tip);
   const SEL = "[title], [data-tip], [data-tiph]";
   let timer = null, cur = null;
+  // the title becomes data-tip; an iframe has no other name, so it keeps the text as its aria-label (axe frame-title)
+  const moveTitle = (/** @type {HTMLElement} */ t) => {
+    if (!t.hasAttribute("title")) return;
+    const v = /** @type {string} */ (t.getAttribute("title")); t.dataset.tip = v; t.removeAttribute("title");
+    if (t.tagName === "IFRAME" && !t.hasAttribute("aria-label")) t.setAttribute("aria-label", v);
+  };
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   // draws the tooltip of t: below, else above, else beside it (never over the element it describes); a tooltip made of HTML (data-tiph) wins over the plain text
   const show = (/** @type {HTMLElement} */ t) => {
@@ -26,7 +32,7 @@
     if (t === cur) return;
     hide();
     if (!t || t.closest("dialog[open]")) return;
-    if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
+    moveTitle(t);
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
@@ -58,7 +64,7 @@
     if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
     lpX = e.clientX; lpY = e.clientY;
     lpT = setTimeout(() => {
-      if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
+      moveTitle(t);
       if (!t.dataset.tip && !t.dataset.tiph) return;
       show(t); lpUp = true; cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
     }, 600);

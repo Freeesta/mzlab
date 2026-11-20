@@ -59,7 +59,7 @@ html = ""
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce"); pg = ctx.new_page()
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")
         pg.wait_for_function("typeof window.PIPEX === 'object' && typeof window.TPREPORT === 'object'", timeout=120000)

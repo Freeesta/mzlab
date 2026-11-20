@@ -50,3 +50,24 @@ pub fn stat_steps() -> Vec<Value> {
     }
     out
 }
+
+/// Where two text answers first differ: the position and the text around it (a report is thousands of characters and the CI log keeps a tail).
+pub fn first_difference(a: &str, w: &str) -> String {
+    let at = a
+        .bytes()
+        .zip(w.bytes())
+        .position(|(x, y)| x != y)
+        .unwrap_or(a.len().min(w.len()));
+    let near = |t: &str| {
+        t.get(at.saturating_sub(120)..(at + 120).min(t.len()))
+            .unwrap_or("?")
+            .to_string()
+    };
+    format!(
+        "  byte {at} of {} / {}\n  app:  ...{}\n  wasm: ...{}",
+        a.len(),
+        w.len(),
+        near(a),
+        near(w)
+    )
+}

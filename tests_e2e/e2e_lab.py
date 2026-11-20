@@ -58,7 +58,7 @@ try:
             assert pg.evaluate("location.hash") == "#/draw"
         step("lab: other addresses go back to #/data, #/draw stays", routes)
         def nolists():      # the reference-lists panel (barra.js, feature "lists") exists in the main site only; a saved layout that points at it must not break the page
-            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z" + "try{for(const k of ['mzlab.barra.lr','mzlab.barra.hr'])localStorage.setItem(k,JSON.stringify({tab:'lists',open:true}))}catch(_){}"); ready(pg)
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z" + "try{for(const k of ['mzlab.bar.lr','mzlab.bar.hr'])localStorage.setItem(k,JSON.stringify({tab:'lists',open:true}))}catch(_){}"); ready(pg)
             pg.wait_for_function("window.BARRA && window.FEATURES", timeout=120000)
             assert pg.evaluate("FEATURES.lists") is False and pg.evaluate("document.querySelector('#np-liste, #sb-panel-lists')") is None
             assert pg.evaluate("BARRA.setTab('lists'), document.querySelector('#sb-panel-lists')") is None
@@ -68,8 +68,8 @@ try:
             assert pg2.evaluate("FEATURES.lists") is True and pg2.evaluate("document.querySelector('#np-liste') !== null && document.querySelector('#sb-panel-lists') !== null")
             for lang in ("en", "it"):      # the tour step on the toolbar names no lists in the lab
                 pg3, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); ready(pg3)
-                pg3.wait_for_function("window.I18N && I18N.t('tour.barra.testo.lab') !== 'tour.barra.testo.lab'", timeout=60000)
-                assert not pg3.evaluate("/liste|reference lists/i.test(I18N.t('tour.barra.testo.lab'))")
+                pg3.wait_for_function("window.I18N && I18N.t('tour.bar.text.lab') !== 'tour.bar.text.lab'", timeout=60000)
+                assert not pg3.evaluate("/liste|reference lists/i.test(I18N.t('tour.bar.text.lab'))")
         step("lab: no reference-lists panel nor button, saved tab harmless; main site keeps both", nolists)
         def banner():
             pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)

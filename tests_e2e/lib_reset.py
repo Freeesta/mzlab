@@ -68,16 +68,16 @@ SEED = r"""async ({ n, kb, ver }) => {
   for (let i = 0; i < n; i++) { await put(files, "synt_" + i + ".mzML"); await put(idx, "synt_" + i + ".mzidx"); }
   for (const name of ["synt-invented", "librerie"]) await put(await root.getDirectoryHandle(name, { create: true }), "x.bin");
   const db = await new Promise((ok, no) => { const q = indexedDB.open("mzlab_lab", ver);
-    q.onupgradeneeded = () => { const d = q.result; for (const [s, k] of [["files", null], ["kv", null], ["liste_utente", "id"], ["manifest", "path"], ["molecules", "id"]]) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, k ? { keyPath: k } : undefined); };
+    q.onupgradeneeded = () => { const d = q.result; for (const [s, k] of [["files", null], ["kv", null], ["user_lists", "id"], ["manifest", "path"], ["molecules", "id"]]) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, k ? { keyPath: k } : undefined); };
     q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); q.onblocked = () => no(new Error("blocked")); });
   const list = typeof LISTE !== "undefined" && LISTE.userList ? LISTE.userList("synt_list", "Synthetic", "synt.csv", []) : { id: "synt_list", name: "Synthetic", items: [] };
-  await new Promise(ok => { const x = db.transaction(["liste_utente", "molecules", "kv"], "readwrite");
-    x.objectStore("liste_utente").put(list); x.objectStore("molecules").put({ id: "synt_mol", name: "synthetic", smiles: "CCO" }); x.objectStore("kv").put("1", "synt_kv");
+  await new Promise(ok => { const x = db.transaction(["user_lists", "molecules", "kv"], "readwrite");
+    x.objectStore("user_lists").put(list); x.objectStore("molecules").put({ id: "synt_mol", name: "synthetic", smiles: "CCO" }); x.objectStore("kv").put("1", "synt_kv");
     x.oncomplete = x.onerror = x.onabort = () => ok(); });
   db.close();
   for (const name of ["mzlab-libs", "mzlab-libdir", "synt-invented-db"]) await new Promise(ok => { const q = indexedDB.open(name, 1); q.onupgradeneeded = () => q.result.createObjectStore("s"); q.onsuccess = () => { q.result.close(); ok(); }; q.onerror = ok; });
   for (const name of ["mzlab-big-synt", "mzlab-app-synt", "synt-other-cache"]) await (await caches.open(name)).put("/synt", new Response("1"));
-  localStorage.setItem("mzlab.lang", "en"); localStorage.setItem("mzlab.mappa", '{"pal":"cividis"}'); localStorage.setItem("mzlab.synt", "1");
+  localStorage.setItem("mzlab.lang", "en"); localStorage.setItem("mzlab.map", '{"pal":"cividis"}'); localStorage.setItem("mzlab.synt", "1");
   return Math.round(performance.now() - t) / 1000;
 }"""
 
@@ -101,7 +101,7 @@ STATE = r"""async () => {
 }"""
 
 # localStorage keys the harness itself writes (lib.py init scripts): left out of the residues
-HARNESS_LS = {"mzlab.tour.lr", "mzlab.barra.hint", "mzlab.pannelli.affianca.hint", "mzlab.safari.seen", "mzlab.disegno.schede", "mzlab.lang"}
+HARNESS_LS = {"mzlab.tour.lr", "mzlab.bar.hint", "mzlab.panels.side_by_side.hint", "mzlab.safari.seen", "mzlab.draw.tabs", "mzlab.lang"}
 
 
 class Marks:

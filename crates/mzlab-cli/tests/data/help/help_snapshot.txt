@@ -78,7 +78,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it (draw_edit/1)
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
@@ -185,7 +185,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it (draw_edit/1)
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
@@ -292,7 +292,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it (draw_edit/1)
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
