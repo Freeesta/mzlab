@@ -4,10 +4,13 @@ use super::Entry;
 use crate::Outcome;
 
 fn run(args: Vec<String>) -> Outcome {
-    if let Some(a) = args.first() {
-        return Outcome::fail(&format!("unknown argument {a}"));
-    }
-    Outcome::ok(super::list_md().into_bytes())
+    let text = match args.as_slice() {
+        [] => super::list_md(),
+        [a] if a == "json" => super::json_md(),
+        [a] if a == "exits" => super::exits_md(),
+        [a, ..] => return Outcome::fail(&format!("unknown argument {a}")),
+    };
+    Outcome::ok(text.into_bytes())
 }
 
 pub(crate) static TABLE: &[Entry] = &[
