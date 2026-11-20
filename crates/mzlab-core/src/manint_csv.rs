@@ -33,7 +33,7 @@ pub(super) fn csv_text(
         let head = field(label);
         for r in &mine {
             out += &format!(
-                "{head},{},{},{},{:.3},{},{:.3},{:.3},{},{},{},{},{},{}\n",
+                "{head},{},{},{},{:.3},{},{:.3},{:.3},{},{},{},{},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
                 minutes_text(samples[r.file].2),
                 field(&labels[r.label]),
@@ -46,7 +46,10 @@ pub(super) fn csv_text(
                 r.base,
                 if r.drop { "drop" } else { "" },
                 r.pv.map_or(String::new(), |v| format!("{v:.1}")),
-                r.origin
+                r.origin,
+                r.file,
+                field(&samples[r.file].3),
+                r.found.map_or(String::new(), |d| format!("{d:.3}"))
             );
             if ext {
                 out.pop();
@@ -61,7 +64,7 @@ pub(super) fn csv_text(
         }
         if sums {
             out += &format!(
-                "{head},sum,,,,{},,,,,,,,{}\n",
+                "{head},sum,,,,{},,,,,,,,,,,{}\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5),
                 if ext { ",,,,,," } else { "" }
             );

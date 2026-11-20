@@ -81,10 +81,49 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
     Ok(out)
 }
 
+/// A member modified less than this many seconds ago may be a file an instrument is still writing: its size is read twice before the pair is opened.
+const RECENT_S: u64 = 10;
+/// How long the two readings are apart (ms); `MZLAB_GROW_PROBE_MS` changes it, 0 turns the check off.
+const PROBE_MS: u64 = 400;
+
+/// Refuses a `.wiff` pair that is still being written (`err.file.wiffGrowing`, exit 8): a member modified in the last `RECENT_S` seconds has its size
+/// read, then again after `PROBE_MS`; a size that changed means the pair is not whole yet. A pair nobody touched lately costs one `stat`.
+fn refuse_growing(list: &[(String, PathBuf)]) -> Result<()> {
+    let wiff = |n: &str| {
+        let n = n.to_lowercase();
+        n.ends_with(".wiff") || n.ends_with(".wiff.scan")
+    };
+    let sizes = |l: &[(String, PathBuf)]| -> Vec<(String, u64)> {
+        l.iter()
+            .filter(|(n, _)| wiff(n))
+            .map(|(n, p)| (n.clone(), std::fs::metadata(p).map_or(0, |m| m.len())))
+            .collect()
+    };
+    let recent = list.iter().filter(|(n, _)| wiff(n)).any(|(_, p)| {
+        std::fs::metadata(p)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|age| age.as_secs() < RECENT_S)
+    });
+    let ms = std::env::var("MZLAB_GROW_PROBE_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(PROBE_MS);
+    if !recent || ms == 0 {
+        return Ok(());
+    }
+    let before = sizes(list);
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+    mzlab_core::wiff::check_stable(&before, &sizes(list), ms)
+}
+
 /// The `FileSet` of the dataset at `path`, its members opened on the disk.
 pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     let mut list = Vec::new();
-    for (name, p) in members(path)? {
+    let found = members(path)?;
+    refuse_growing(&found)?;
+    for (name, p) in found {
         let f = File::open(&p).map_err(io)?;
         list.push(Member {
             nome: name,

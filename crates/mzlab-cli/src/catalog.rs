@@ -64,6 +64,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--auto", "engine peaks, as JSON"),
     ("--traces", "JSON file of traces"),
     ("--columns", "sn, fig, quality"),
+    ("--max-shift", "farthest a followed window moves, min"),
     ("--polarity", "+ or -"),
     ("--mz", "m/z"),
     ("--ppm", "ppm"),
@@ -97,6 +98,7 @@ const FLAG_TYPE: &[(&str, &str, Option<&str>)] = &[
     ("--from", "number", Some("min")),
     ("--to", "number", Some("min")),
     ("--at", "number", Some("min")),
+    ("--max-shift", "number", Some("min")),
 ];
 
 /// Defaults the commands apply when the flag is absent (only those the code states).
@@ -123,6 +125,7 @@ pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     ),
     (exit::OUTPUT, "output write or external source failure"),
     (exit::INTERNAL, "internal error (a bug): any command"),
+    (exit::GROWING, "input still being written"),
 ];
 
 #[derive(Debug, Clone, Default)]
