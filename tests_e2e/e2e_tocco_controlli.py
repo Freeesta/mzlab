@@ -79,7 +79,7 @@ try:
             close()
         step("without the browser's own double click (as on iOS) a double tap still works", as_ios)
         def group_menu():
-            pg.evaluate("async () => { await loadScript('gruppi.js'); return GRUPPI.set([fileBase(E.files[0].file), fileBase(E.files[1].file)], 'Blanks') }"); ready(pg); drawer(pg)
+            pg.evaluate("async () => { await loadScript('groups.js'); return GROUPS.set([fileBase(E.files[0].file), fileBase(E.files[1].file)], 'Blanks') }"); ready(pg); drawer(pg)
             pg.wait_for_selector('#flst .fgh[data-ug="Blanks"]', state="attached", timeout=10000)
             x, y = centre("document.querySelector('#flst .fgh[data-ug=\"Blanks\"]')")
             pg.mouse.click(x, y, button="right"); frames(pg, 6)

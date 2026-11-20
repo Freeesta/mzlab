@@ -30,25 +30,25 @@ try:
         pg.wait_for_function("window.qqReady === true", timeout=60000)
         def singles():
             # one label per file, as «Group by time point» gives with five different time points
-            pg.evaluate("""async () => { await loadScript('gruppi.js'); const m = new Map(E.files.filter(f => !f.gone).map(f => [fileBase(f.file), 'T' + f.file.match(/_t(\\d+)/)[1]]));
-              for (const [b, l] of m) GRUPPI.set([b], l); }""")
+            pg.evaluate("""async () => { await loadScript('groups.js'); const m = new Map(E.files.filter(f => !f.gone).map(f => [fileBase(f.file), 'T' + f.file.match(/_t(\\d+)/)[1]]));
+              for (const [b, l] of m) GROUPS.set([b], l); }""")
             wait_for_js(pg, "E.files.filter(f => f.ugrp).length === 5", 10000); wait_still(pg, "#flst")
             assert pg.evaluate(HEADS) == 0 and pg.evaluate(ROWS) == 5, (pg.evaluate(HEADS), pg.evaluate(ROWS))
             wait_for_js(pg, "document.getElementById('sb-by').hidden", 10000)
             assert not pg.evaluate(BY)
         step("five groups of one file: flat rows, no header, «Group by» hidden", singles)
         def pair():
-            pg.evaluate("""async () => { await loadScript('gruppi.js'); const b = E.files.filter(f => !f.gone).map(f => fileBase(f.file)); GRUPPI.set([b[1]], 'T0'); }""")
+            pg.evaluate("""async () => { await loadScript('groups.js'); const b = E.files.filter(f => !f.gone).map(f => fileBase(f.file)); GROUPS.set([b[1]], 'T0'); }""")
             wait_still(pg, "#flst")
             assert pg.evaluate(HEADS) == 4 and label(pg, "FullScan_t5") == "T0" and label(pg, "FullScan_t0") == "T0"
             assert pg.evaluate("document.querySelector('#flst .fgh[data-ug] em').textContent") == "2"
             wait_for_js(pg, "!document.getElementById('sb-by').hidden", 10000); assert pg.evaluate(BY)
         step("a group of two files: the headers (4 groups) and «Group by» are back", pair)
         def keep():
-            pg.evaluate("""async () => { await loadScript('gruppi.js'); GRUPPI.set([fileBase(E.files.find(f => f.file.includes('_t5')).file)], 'T5'); }""")
+            pg.evaluate("""async () => { await loadScript('groups.js'); GROUPS.set([fileBase(E.files.find(f => f.file.includes('_t5')).file)], 'T5'); }""")
             wait_still(pg, "#flst"); assert pg.evaluate(HEADS) == 0
             assert pg.evaluate("E.ugBy && E.ugBy.by") == "custom" and label(pg, "FullScan_t5") == "T5", "the chosen key or labels were lost"
-            pg.evaluate("""async () => { await loadScript('gruppi.js'); GRUPPI.set([fileBase(E.files.find(f => f.file.includes('_t10')).file)], 'T5'); }""")
+            pg.evaluate("""async () => { await loadScript('groups.js'); GROUPS.set([fileBase(E.files.find(f => f.file.includes('_t10')).file)], 'T5'); }""")
             wait_still(pg, "#flst"); assert pg.evaluate(HEADS) == 4
         step("the labels stay on the files: the headers come back with the next group of two", keep)
         def miss():
