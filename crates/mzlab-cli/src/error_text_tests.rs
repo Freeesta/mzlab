@@ -242,3 +242,43 @@ fn a_value_with_name_words_stays_whole() {
         format!("Channel {id} does not exist in this file. (err.canali.unknown, at=3)")
     );
 }
+
+/// The `"error.x.y"` and `"err.x.y"` literals of the Rust sources of `dir` (tests left out; a literal ending with a dot is a prefix, not a key).
+fn keys_in(dir: &str) -> Vec<String> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(dir);
+    let mut keys = Vec::new();
+    for f in std::fs::read_dir(&root).unwrap().flatten() {
+        let name = f.file_name().to_string_lossy().to_string();
+        if !name.ends_with(".rs") || name.ends_with("tests.rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(f.path()).unwrap();
+        for piece in text.split('"').skip(1).step_by(2) {
+            let key = piece.starts_with("error.") || piece.starts_with("err.");
+            let plain = piece
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_');
+            if key && plain && !piece.ends_with('.') {
+                keys.push(piece.to_string());
+            }
+        }
+    }
+    keys.sort();
+    keys.dedup();
+    keys
+}
+
+/// Every error of the drawing chemistry (`mol label|anal|check|cip|hilite|sel|link|export|cut|mech|search`) has its English text in the terminal:
+/// a key without text would be printed as the key itself.
+#[test]
+fn every_error_of_the_drawing_chemistry_has_its_text() {
+    let keys = keys_in("../mzlab-feat/src/chem");
+    assert!(keys.len() > 30, "{keys:?}");
+    let bare: Vec<&String> = keys.iter().filter(|k| text_of(k).is_none()).collect();
+    assert!(bare.is_empty(), "no English text for {bare:?}");
+    let e = Error::new("error.check.request");
+    assert_eq!(
+        human_error(&e),
+        "The request for the drawing check is not valid JSON with a molfile. (error.check.request)"
+    );
+}
