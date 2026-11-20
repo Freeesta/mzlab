@@ -1,5 +1,6 @@
 //! The parts of an edit patch in progress: its limits, the atoms it holds (`Slot`), the sets of ids it keeps and the lookup of an id.
 
+use mzlab_core::json::Value;
 use mzlab_mol::Atom;
 
 /// Operations in one patch, bytes of a patch given as text, and bonds a drawing may reach: a patch is a short list of edits, and the
@@ -83,5 +84,21 @@ impl Index {
         let i = self.0.partition_point(|&k| ((k >> 32) as u32) < id);
         let k = *self.0.get(i)?;
         ((k >> 32) as u32 == id).then_some(k as u32)
+    }
+}
+
+/// The size of a patch given as a list, counted as its compact JSON text with a number as 8 bytes: the limit `MAX_PATCH` is the one of the
+/// text form.
+pub(super) fn weight(v: &Value) -> usize {
+    match v {
+        Value::Str(s) => s.len() + 2,
+        Value::Arr(a) => 2 + a.iter().map(|x| weight(x) + 1).sum::<usize>(),
+        Value::Obj(e) => {
+            2 + e
+                .iter()
+                .map(|(k, x)| k.len() + 4 + weight(x))
+                .sum::<usize>()
+        }
+        _ => 8,
     }
 }

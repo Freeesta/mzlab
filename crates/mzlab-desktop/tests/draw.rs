@@ -112,3 +112,13 @@ fn draw_route_applies_the_edit_patches_of_the_shared_fixture() {
     }
     assert!(errors >= 10, "{errors}");
 }
+
+/// A patch given as a list in the request is held to the same 64 KiB as the text form, with the same key.
+#[test]
+fn draw_route_refuses_a_patch_list_over_the_size_limit() {
+    let st = State::new();
+    let op = json!({"op": "atom.set", "id": 0, "label": "x".repeat(70)});
+    let big = json!({"kind": "draw", "request": {"spec": "CCO", "edit": vec![op; 1000]}});
+    let e = st.rpc("feat/grafo", &big, &[]).err();
+    assert_eq!(e.map(|e| e.key), Some("err.mol.draw.editJson"));
+}

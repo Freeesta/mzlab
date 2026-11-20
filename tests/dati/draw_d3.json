@@ -210,6 +210,28 @@
    "molfile": "\n  mzLab             2D\n\n  6  5  0  0  1  0  0  0  0  0999 V2000\n    0.0000   -0.6495    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000   -0.6495    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.2500   -1.9486    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.2500    0.6495    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.7500    0.6495    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    1.9486    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  2  1  1  6  0  0  0\n  2  3  1  0  0  0  0\n  2  4  1  0  0  0  0\n  4  5  2  0  0  0  0\n  4  6  1  0  0  0  0\nM  END\n"
   },
   {
+   "name": "wedge on a charged isotope and radical atoms",
+   "request": {
+    "spec": "smiles:[15NH3+][C@@H](C)C[CH2]",
+    "edit": "[{\"op\":\"atom.set\",\"id\":4,\"rad\":2},{\"op\":\"bond.set\",\"a\":1,\"b\":2,\"wedge\":1}]"
+   },
+   "exit": 0,
+   "error_key": null,
+   "scene": "{\"schema\":\"draw/1\",\"spec_kind\":\"smiles\",\"title\":\"\",\"atoms\":[{\"i\":0,\"el\":\"N\",\"chg\":1,\"iso\":15,\"h\":3,\"x_a\":0,\"y_a\":0},{\"i\":1,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":1,\"x_a\":1.5,\"y_a\":0},{\"i\":2,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":3,\"x_a\":2.25,\"y_a\":-1.299},{\"i\":3,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":2,\"x_a\":2.25,\"y_a\":1.299},{\"i\":4,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":1,\"x_a\":3.75,\"y_a\":1.299}],\"bonds\":[{\"a\":1,\"b\":0,\"o\":1,\"wedge\":1},{\"a\":1,\"b\":2,\"o\":1,\"wedge\":0},{\"a\":1,\"b\":3,\"o\":1,\"wedge\":0},{\"a\":3,\"b\":4,\"o\":1,\"wedge\":0}],\"fragments\":[[0,1,2,3,4]],\"choices\":[{\"key\":\"spec_kind\",\"value\":\"smiles\"},{\"key\":\"layout\",\"value\":\"new\"},{\"key\":\"edit\",\"value\":\"2\"},{\"key\":\"edit_h_recounted\",\"value\":\"4\"},{\"key\":\"edit_wedge_dropped\",\"value\":\"1-0\"}],\"warnings\":[]}",
+   "molfile": "\n  mzLab             2D\n\n  5  4  0  0  1  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.2500   -1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.2500    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.7500    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  2  1  1  1  0  0  0\n  2  3  1  0  0  0  0\n  2  4  1  0  0  0  0\n  4  5  1  0  0  0  0\nM  CHG  1   1   1\nM  ISO  1   1  15\nM  RAD  1   5   3\nM  END\n"
+  },
+  {
+   "name": "hydrogens given over the valence",
+   "request": {
+    "spec": "smiles:CCO",
+    "edit": "[{\"op\":\"atom.set\",\"id\":1,\"h\":3}]"
+   },
+   "exit": 0,
+   "error_key": null,
+   "scene": "{\"schema\":\"draw/1\",\"spec_kind\":\"smiles\",\"title\":\"\",\"atoms\":[{\"i\":0,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":3,\"x_a\":0,\"y_a\":0.6495},{\"i\":1,\"el\":\"C\",\"chg\":0,\"iso\":0,\"h\":3,\"x_a\":1.5,\"y_a\":0.6495},{\"i\":2,\"el\":\"O\",\"chg\":0,\"iso\":0,\"h\":1,\"x_a\":2.25,\"y_a\":-0.6495}],\"bonds\":[{\"a\":0,\"b\":1,\"o\":1,\"wedge\":0},{\"a\":1,\"b\":2,\"o\":1,\"wedge\":0}],\"fragments\":[[0,1,2]],\"choices\":[{\"key\":\"spec_kind\",\"value\":\"smiles\"},{\"key\":\"layout\",\"value\":\"new\"},{\"key\":\"edit\",\"value\":\"1\"}],\"warnings\":[{\"key\":\"edit_valence\",\"value\":\"1\"}]}",
+   "molfile": "\n  mzLab             2D\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.6495    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.6495    0.0000 C   0  0  0  0  0  5  0  0  0  0  0  0\n    2.2500   -0.6495    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\nM  END\n"
+  },
+  {
    "name": "stereo dropped when the centre loses a bond",
    "request": {
     "spec": "smiles:N[C@@H](C)C(=O)O",

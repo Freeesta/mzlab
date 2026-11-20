@@ -423,3 +423,67 @@ fn an_edit_after_a_new_layout_and_the_choices_that_log_what_was_decided() {
         Some(0.0)
     );
 }
+
+#[test]
+fn a_patch_given_as_a_list_is_held_to_the_same_size_as_its_text() {
+    let list = |ops: &str| format!(r#"{{"spec":"CCO","format":"molfile","edit":[{ops}]}}"#);
+    let label = "x".repeat(70);
+    let op = format!(r#"{{"op":"atom.set","id":0,"label":"{label}"}}"#);
+    // 1000 operations of about 100 bytes are over 64 KiB as text, so as a list too
+    let e = draw_json(&list(&vec![op.as_str(); 1000].join(","))).expect_err("an error");
+    assert_eq!(e.key, "err.mol.draw.editJson");
+    assert_eq!(param(&e, "message"), "the patch is over 65536 bytes");
+    // 500 of them are under it, in either form
+    let ok = vec![op.as_str(); 500].join(",");
+    assert!(draw_json(&list(&ok)).is_ok());
+    assert!(draw_json(&request("CCO", "molfile", &format!("[{ok}]"))).is_ok());
+}
+
+#[test]
+fn a_wedge_keeps_the_charge_isotope_radical_and_hydrogens_of_the_atoms() {
+    let spec = "[15NH3+][C@@H](C)C[CH2]";
+    let rad = r#"{"op":"atom.set","id":4,"rad":2}"#;
+    let wedge = r#"{"op":"bond.set","a":1,"b":2,"wedge":1}"#;
+    let m = molfile(spec, &format!("[{rad},{wedge}]"));
+    for line in [
+        "M  CHG  1   1   1",
+        "M  ISO  1   1  15",
+        "M  RAD  1   5   3",
+    ] {
+        assert!(m.contains(line), "{line}\n{m}");
+    }
+    // the record read back has the hydrogens of the record: the same as without the wedge
+    let h = |s: &Value| -> Vec<Option<f64>> {
+        s.get("atoms")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|a| a.get("h").and_then(Value::f64))
+            .collect()
+    };
+    let (with, without) = (
+        scene(spec, &format!("[{rad},{wedge}]")),
+        scene(spec, &format!("[{rad}]")),
+    );
+    assert_eq!(h(&with), h(&without));
+    assert_eq!(h(&with)[0], Some(3.0));
+}
+
+#[test]
+fn a_hydrogen_count_the_patch_gives_is_checked_against_the_valence() {
+    // CH2 with 3 hydrogens and 2 bonds is 5: named, and not counted again
+    let s = scene("CCO", r#"[{"op":"atom.set","id":1,"h":3}]"#);
+    let warn = |k: &str| {
+        s.get("warnings")
+            .unwrap()
+            .arr()
+            .iter()
+            .find(|w| w.get("key").and_then(Value::str) == Some(k))
+            .and_then(|w| w.get("value").and_then(Value::str).map(str::to_string))
+    };
+    assert_eq!(warn("edit_valence").as_deref(), Some("1"));
+    assert_eq!(choice(&s, "edit_h_recounted"), None);
+    // within the valence: no warning
+    let s = scene("CCO", r#"[{"op":"atom.set","id":1,"h":1}]"#);
+    assert!(s.get("warnings").unwrap().arr().is_empty());
+}

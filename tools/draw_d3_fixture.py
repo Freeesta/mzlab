@@ -29,6 +29,8 @@ CASES = [
     ("atom at a position in angstrom", "CC", [{"op": "atom.add", "el": "N", "x_a": 2.25, "y_a": 1.3}, {"op": "bond.add", "a": 1, "b": 2}]),
     ("wedge up", ALA, [{"op": "bond.set", "a": 1, "b": 0, "wedge": 1}]),
     ("wedge down", ALA, [{"op": "bond.set", "a": 1, "b": 0, "wedge": -1}]),
+    ("wedge on a charged isotope and radical atoms", "[15NH3+][C@@H](C)C[CH2]", [{"op": "atom.set", "id": 4, "rad": 2}, {"op": "bond.set", "a": 1, "b": 2, "wedge": 1}]),
+    ("hydrogens given over the valence", "CCO", [{"op": "atom.set", "id": 1, "h": 3}]),
     ("stereo dropped when the centre loses a bond", ALA, [{"op": "remove", "atoms": [2]}]),
     ("double bond stereo dropped", "C/C=C/C", [{"op": "bond.set", "a": 1, "b": 2, "o": 1}]),
     ("chain built from one atom", "C", [{"op": "atom.add", "el": "C"}, {"op": "atom.add", "el": "O"}, {"op": "bond.add", "a": 0, "b": 1}, {"op": "bond.add", "a": 1, "b": 2}]),

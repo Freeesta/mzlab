@@ -12,7 +12,7 @@ use mzlab_mol::{is_element, Atom};
 use super::draw::{Drawn, MAX_ATOMS};
 use super::edit_end::finish;
 use super::edit_op::{clip, fail, pair, r4, Op, MAX_ID};
-use super::edit_set::{Index, Sets, Slot, MAX_BONDS, MAX_OPS, MAX_PATCH};
+use super::edit_set::{weight, Index, Sets, Slot, MAX_BONDS, MAX_OPS, MAX_PATCH};
 
 pub(super) struct Ed {
     pub(super) slots: Vec<Slot>,
@@ -73,7 +73,8 @@ impl Ed {
         } else if moved {
             self.sets.h_given.0.retain(|&x| x != id);
         }
-        if moved {
+        // an atom with hydrogens given is still checked against its valence
+        if moved || h.is_some() {
             self.sets.atom.add(id);
         }
         let s = self.slot(op, id)?;
@@ -396,21 +397,32 @@ fn ops_of(v: &Value) -> Result<&[Value]> {
     }
 }
 
+/// A patch over `MAX_PATCH` bytes (as text, or as the text of a list) is refused.
+fn too_long(n: usize) -> Result<()> {
+    if n > MAX_PATCH {
+        return Err(
+            Error::new("err.mol.draw.editJson").with("message", "the patch is over 65536 bytes")
+        );
+    }
+    Ok(())
+}
+
 /// Applies the patch `edit` (a list of operations, or JSON text of one) to the drawing: all operations apply or none does.
 pub(super) fn apply(d: &mut Drawn, edit: &Value) -> Result<()> {
     let parsed;
     let edit = match edit {
         Value::Str(s) => {
-            if s.len() > MAX_PATCH {
-                return Err(Error::new("err.mol.draw.editJson")
-                    .with("message", "the patch text is over 65536 bytes"));
-            }
+            too_long(s.len())?;
             parsed = mzlab_core::json::parse(s.as_bytes()).map_err(|_| {
                 Error::new("err.mol.draw.editJson").with("message", "the patch is not valid JSON")
             })?;
             &parsed
         }
-        v => v,
+        // a patch given as a list is held to the same size (counted as compact text), so every way to give it has one limit
+        v => {
+            too_long(weight(v))?;
+            v
+        }
     };
     let list = ops_of(edit)?;
     if list.len() > MAX_OPS {

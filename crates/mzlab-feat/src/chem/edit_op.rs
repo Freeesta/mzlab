@@ -91,7 +91,7 @@ impl Op<'_> {
         Ok(self.need(k, 0, i64::from(MAX_ID))? as u32)
     }
 
-    /// An id inside the list `k` (at most `max` of them).
+    /// An id (a whole number from 0 to `MAX_ID`) taken from the list `k`.
     pub(super) fn id_in(&self, x: &Value, k: &str) -> Result<u32> {
         match x {
             Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 && *n <= f64::from(MAX_ID) => {
