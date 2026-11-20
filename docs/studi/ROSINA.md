@@ -29,31 +29,101 @@ mzLab reads, on any computer, the files of every vendor, either natively or as a
 ## F. Test protocol
 
 ### F.1 Truth file
-Truth file `verita/1`: one JSON per native file (one per sample in multi-sample containers) with the oracle name, version, options and date, counts, every scan, sample points, chromatograms and metadata. A new oracle adds a truth, never replaces one.
+Truth file `verita/1`: one JSON per native file (one per sample in multi-sample containers). A new oracle adds a truth, never replaces the old one (two oracles that disagree are information).
+- `schema`; `file` (logical name, SHA-256); `oracle` (`name`, `version`, `options`, `date`, `platform`); `counts` (spectra per level, chromatograms per type).
+- `scans[]`: `id`, `rt_min`, `level`, `polarity`, `precursor_mz`, `isolation`, `ce`, `activation`, `profile`, `n_points`, `tic`, `bpi_mz`, `bpi`.
+- `points`: for 8 chosen scans (first, last, median, max TIC, one per level) m/z and intensity as exact numbers.
+- `chromatograms[]`: `id`, `type`, `n`, `sum`, `max`, 16 sample points.
+- `metadata`: field -> value as the oracle gives it, with the vendor name and the expected `metodo/1` path from `SCHEDE.md`.
+- Optional: `tolerance` (`hr`, `lr` or an object that changes single thresholds) and `mobility` (Bruker). Typical size 50-500 KB.
+Generators (in `tools/rosina/`, they read what an oracle produced; the oracles run on Mac or Windows, never in the site): `verita.py MZML` (from the reference mzML), `verita_trfp.py` (ThermoRawFileParser JSON), `verita_timsdata.py` (`timsdata` 1/K0 table), `verita_scandump.py` (from a `scandump/1`).
 
 ### F.2 Test levels (every reader, every corpus file)
 
-| Level | Check |
-|---|---|
-| F0 | structure: recognised, samples, no panic, errors as keys |
-| F1 | counts per level and chromatogram type, id sets |
-| F2 | scans: RT 1e-4 min, level, polarity, precursor, isolation, CE, profile/centroid |
-| F3 | points: HR 0.5 ppm (1 ppm with declared per-scan calibration), LR 1e-3 Da, relative intensity 1e-5 |
-| F4 | chromatograms: TIC, BPC, SRM/SIM, analog, UV; times 1e-4 min, values 1e-6 |
-| F5 | metadata: every truth field equal, mapped with declared conversion, or a defect |
-| F6 | converter: XSD, `FileInfo -v`, `indexedmzML` offsets and SHA-1, round trip, profile/centroid flags |
-| F7 | robustness: fuzz >= 300 s per family, truncation at 1/4, 1/2, 3/4, memory within limits |
-| F8 | scale (local only): time and peak memory on the largest file |
+| Level | Check | Tolerance |
+|---|---|---|
+| F0 | structure: recognised, samples, no panic, errors as keys | none |
+| F1 | counts per level and chromatogram type, id sets | equal |
+| F2 | scans: RT, level, polarity, precursor, isolation, CE, profile/centroid | RT 1e-4 min; m/z 1e-4; rest equal |
+| F3 | points: m/z, intensity, number of points | HR 0.5 ppm (1 ppm with declared per-scan calibration), LR 1e-3 Da; relative intensity 1e-5 (exact f32 if the file stores f32) |
+| F4 | chromatograms: TIC, BPC, SRM/SIM, analog, UV: same ids, times, values | times 1e-4 min; values 1e-6 relative |
+| F5 | metadata: every truth field equal, mapped with declared conversion, or a defect | text equal after declared normalisation (spaces, units) |
+| F6 | converter: XSD, `FileInfo -v`, `indexedmzML` offsets and SHA-1, re-read = reader, profile/centroid flags and `dataProcessing` | no error |
+| F7 | robustness: fuzz >= 300 s per family, truncation at 1/4, 1/2, 3/4, memory within limits | no panic, memory under the ceiling |
+| F8 | scale (local only): time and peak memory on the largest file of the family | written to `docs/agenti/measurements.md` |
 
-Outcome per file: `L` (F0-F5 against an oracle or the authors' mzML), `P` (a level is missing, stated), `NV` (internal consistency only). The format row in `docs/agenti/native-reading.md` follows this outcome.
+Outcome per file: `L` (F0-F5 against V1 or V2 evidence, see Evidence), `P` (a level is missing, stated), `NV` (V7 only). The outcome, not an impression, updates the format row. The format row in `docs/agenti/native-reading.md` follows this outcome.
 
 ### F.3 Where it runs
 - Public CI (`test.yml`): F0-F4 and F6 on synthetic and small public files; F5 on the synthetic `metodo/1` documents.
 - Private nightly workflow in `mzlab-dati` (text in `rosina/WORKFLOW_NOTTE.md`): checks out `Freeesta/mzlab` `main`, runs `cargo test -p mzlab-lettori --features tutte --test 'truth_*'` (one test per family) on every `scratchpad/rosina/verita/**/*.verita.json` (files <= 90 MB); the format x level summary stays in an artefact, never public.
 - Local (Mac): F8 and the files in the big-files folder, with the same test and `MZLAB_DATI_GRANDI=<path>`.
 
-### F.4 Edge cases to find (an empty cell means no file yet)
-Per-scan calibration or lock mass; vendor centroids against profile; polarity switching; multiple scan events or periods; ion mobility (FAIMS, SelexION, drift tube, timsTOF, cyclic); time and intensity units (min, s, ms; Bruker normalisation to 100 ms); format versions (Thermo v57-v66, Analyst 1.4-1.7 and SCIEX OS, Agilent B.0x-12, Waters 4.1/4.2, timsControl 1-5, Shimadzu 5.x); files over 4 GB; several samples per container; truncated or in-acquisition files (Bruker `-wal`); endianness. Fill the cell per vendor in the R-package that covers it.
+### F.4 Edge cases (case x format; an empty cell is "no file", to be found)
+- Per-scan calibration / lock mass: Thermo LTQ Velos Pro and XL lock mass; Agilent Q-TOF `MSMassCal.bin`; Waters MTBLS1584, MTBLS178; Bruker temperature per frame.
+- Vendor centroids against profile: Thermo Q Exactive; SCIEX QTRAP profile (lab); Agilent ST003656 profile + centroids; Waters G2-S; Bruker TSF lines/profile; Shimadzu: no file.
+- Polarity switching: Thermo MTBLS7889, MTBLS1752; SCIEX Zenodo 22673685; Agilent, Waters, Shimadzu: no file.
+- Several scan events or periods: Thermo Tribrid DIA; SCIEX Z15679243 (16 experiments; multiple periods: no file); Agilent time segments; Waters functions; Shimadzu 2020 events.
+- Ion mobility: Thermo FAIMS and SCIEX SelexION: no file; Agilent MTBLS427 6560; Waters Synapt HDMS and cyclic; Bruker timsTOF.
+- Units: Thermo min; SCIEX s or min per experiment; Agilent min; Waters min; Bruker s with normalisation to 100 ms; Shimadzu ms.
+- Format versions: Thermo v57-v66 (count in R-02); SCIEX Analyst 1.4-1.7 / SCIEX OS; Agilent B.0x-12; Waters 4.1/4.2; Bruker timsControl 1-5; Shimadzu 5.x. An unseen version gives an error with the version in `detail`, never a guess.
+- Files over 4 GB: Thermo Astral/large Orbitrap; SCIEX `.wiff.scan` (largest held 1.1 GB); Agilent ST000044 2.1 GB; Waters PXD051707 7.9 GB; Bruker alphatims 1.9 GB.
+- Several samples per container: SCIEX Z22807392 (20 samples). Truncated or in-acquisition files: Bruker PXD074950 `-wal`; the rest to build. Endianness: all little-endian (Bruker SQLite big-endian).
+
+## Method
+Principles: (1) the vendor's own library is the oracle, not only msconvert; every oracle runs only on the Mac or a Windows PC, never in the site, and its result is frozen in a truth file; (2) triangulate: at least two independent sources per file (mzLab reader, vendor oracle, authors' mzML, free reader such as opentfraw, openwraw, timsrust, pyteomics); if mzLab agrees with one only, the field is "to clarify", not "verified"; (3) metadata field by field (`SCHEDE.md`): a field the oracle sees and mzLab does not is a defect (rule "no loss", `docs/agenti/raw-not-extracted.md`); (4) converter conformance: mzML 1.1 XSD, OpenMS `FileInfo -v`, declared `psi-ms.obo` version, `indexedmzML` offsets and SHA-1, mzLab centroids declared in `dataProcessing`, never passed off as the vendor's; (5) robustness and scale: one fuzz target per family seeded from the first KB of truncated real files; one large file per family opened locally with time and peak memory written to `docs/agenti/measurements.md`, 64-bit offsets proven on real files; (6) community: ask for ProteoWizard `vendor_readers/*Test.data` fixtures, propose missing CV terms to HUPO-PSI, ask SCIEX (`.wiff2`) and Bruker (BAF) for documentation, use the NORMAN network for environmental files.
+
+| Oracle | Gives | Runs on |
+|---|---|---|
+| ThermoRawFileParser (RawFileReader) | Thermo reference mzML and JSON metadata (`-m 0`) | Mac (.NET), native |
+| msconvert (ProteoWizard, vendor DLLs) | reference mzML (64 bit, zlib, no peak picking) and one with `peakPicking vendor` | Windows (Parallels on the Mac), by the maintainer; not Mac arm64 (Wine aborts) |
+| `timsdata` (Bruker SDK) | 1/K0 per scan, m/z per frame | Windows (Parallels); on the Mac `opentimspy` gives only TOF and scan indices |
+| MassLynx Raw SDK (Waters) | m/z with and without lock mass, drift time, function headers | Windows; read the licence first |
+| Vendor software (Analyst, Xcalibur, MassHunter, MassLynx, LabSolutions, DataAnalysis) | metadata "as the user sees it" copied by hand (e.g. Analyst of the lab 3200: `.wiff`/`.dam` with the method printout) | instrument PCs |
+| OpenMS `FileInfo -v`, `xmllint --schema mzML1.1.0_idx.xsd`; pyteomics, pymzml, OpenMS, mzmine 4 | syntactic and semantic validation of mzLab mzML; round trip with third-party readers | Mac and CI |
+| cargo-fuzz (`fuzz.yml`, Sunday), ImHex / Kaitai Struct | one target per `mzlab-lettori` family; readable binary spec of observed formats | CI; Mac |
+
+Open-source readers (ProteoWizard `vendor_api` and `vendor_readers`, ThermoRawFileParser, OpenMS, opentims, timsrust, alphatims, pyteomics, pymzml, rainbow, openwraw, opentfraw, openaraw, opensxraw, openszraw) are read to understand, never copied. Oracle outcomes of the maintainer's Windows runs are recorded in the private repo (`coordinamento/dati_esterni/rosina/ORACOLI.md`).
+
+## Evidence (strongest first)
+- V1: same file, oracle that uses the vendor library: same spectra (ppm, relative intensities, scan count, TIC) and same metadata.
+- V2: the authors' own mzML in the same deposit (version declared in the mzML).
+- V3: vendor software on screen (metadata read by hand; numbers of a peak).
+- V4: an independent free reader agrees.
+- V5: a published result on the same dataset (feature or identification count, standard areas) reproduced within the paper's tolerance.
+- V6: a file from a third laboratory (other deposit and instrument).
+- V7: internal consistency (TIC = sum of intensities, index = record) and fuzz corpus without crashes: necessary, never sufficient.
+The converter also needs the PSI validator passed and an identical re-read with 3 third-party readers.
+
+| Format | V1 route | V2 | V3 | V4 | Minimum proof for `L` |
+|---|---|---|---|---|---|
+| Thermo `.raw` | TRFP on the Mac (proven on Q Exactive and TSQ Quantum Access Max, JSON metadata too); msconvert on Windows | rare | Xcalibur if available | opentfraw (the base: not independent) | V1 on one file per instrument family (TSQ, Q Exactive, Orbitrap Tribrid, trap) |
+| SCIEX `.wiff` | msconvert | PIS/NL of Zenodo 7897576, MTBLS1381 | Analyst of the lab 3200 | opensxraw (declared unreliable) | V1 or V2 per instrument and experiment |
+| SCIEX `.wiff2` | msconvert or SCIEX MS Data Converter | rare | SCIEX OS | none | no reader: guide only |
+| Agilent `.D` | msconvert (MHDAC) | ST003656, ST004061, ST004922 (already used) | MassHunter if available | openaraw, rainbow (DAD) | V1/V2 for QqQ, Q-TOF profile, centroids, DAD |
+| Waters `.raw` | msconvert; MassLynx SDK for lock mass and drift | ST004453 (TQ-XS), ST003942, ST003984 | MassLynx if available | openwraw | V1 for TOF, MSe, DDA, lock mass |
+| Bruker TDF/TSF | `timsdata` (m/z, 1/K0) and msconvert on Windows | ProteoWizard fixtures | DataAnalysis if available | timsrust, alphatims | V1 for 1/K0 and compression 2 |
+| Bruker BAF | msconvert, `baf2sql` | rare | DataAnalysis | none | no reader: guide only |
+| Shimadzu `.lcd`/`.qgd` | msconvert (LC only) | none found | LabSolutions if available | openszraw (immature) | V1 for LC; for `.qgd` V3 or a `.cdf` exported from the same file |
+| netCDF/ANDI | no (open format) | `.D` of the same run (done) | exporting software | netCDF4-python, xcms | V2/V4 + ASTM spec |
+| Others' mzML, mzXML, mzData | no (open formats) | conversion of the same native | none | pyteomics, OpenMS | V4 with two third-party readers |
+
+Metadata as a priority of the maintainer: per format a table "vendor field -> place in the file -> `metodo/1` path -> how the vendor software shows it -> automatic oracle" (`rosina/SCHEDE.md`). Format versions: an unseen version gives an error with the version in `detail`, not a guess.
+
+## Packages (E)
+| # | Package | Touches | Depends on | Truths from |
+|---|---|---|---|---|
+| R-00 | Done: shared bench (see Done) | `tools/rosina/`, `crates/mzlab-lettori/tests/`, `fuzz/`, private repo | none | none |
+| LOC-2 | Oracles on the whole corpus: TRFP JSON and mzML on the Mac; msconvert (no peak picking and `peakPicking vendor`) and `timsdata` 1/K0 on Windows; truths with the R-00 scripts; scale (size, time, RAM) | private repo | R-00 | local chat and the maintainer |
+| R-01 | mzML converter: XSD and semantic validation, declared profile/centroids, round trip with third-party readers | `lettori_mzml`, `lettori_centroidi`, writers | R-00 (no vendor oracle needed) | none |
+| R-02 | Thermo: TSQ, PDA, lock mass, traps, metadata against TRFP | module `thermo`, `metodo_raw` | R-00, LOC-2 | TRFP |
+| R-03 | SCIEX `.wiff`: QTRAP 4000-7500, multiple periods, EPI, vial, DAD; TripleTOF/ZenoTOF in a new module `sciex-tof` | `sciex`, new `sciex-tof` | R-00, LOC-2 | the maintainer: Analyst of the 3200 |
+| R-04 | Agilent: Q-TOF 284 B and 6546, DAD, module traces, 6560 honest refusal, metadata | `agilent` | R-00, LOC-2 | msconvert |
+| R-05 | Waters: TOF spectra, MSe, DDA, lock mass, drift | `waters` | R-00, LOC-2 | MassLynx SDK |
+| R-06 | Bruker: 1/K0, compression 2, TSF LC; BAF as a guide | `bruker` | R-00, LOC-2 | `timsdata` |
+| R-07 | Shimadzu: parity with msconvert, polarity, CE/dwell, 9030 in a new module `shimadzu-tof`, PDA | `shimadzu`, new `shimadzu-tof` | R-00, LOC-2 | msconvert |
+| R-08 | Minor open formats: netCDF of LECO/Shimadzu/Thermo, mzData, `metodo/1` of others' mzML on real files; imzML evaluation only | `andi`, new `storici` | R-00 | none |
+Each package touches only its own folder and area file, so they run in parallel. Ceilings: no chat raises an existing one (engine 1 703 936; modules as in `docs/agenti/readers-module.md`; `finder` 512 000; `chem` 569 344). A piece that does not fit goes to a new module of the same family with a proposed ceiling = measurement + 3 %, written by the chat and approved by the Coordinator. Oracle proofs live in tests and `tools/`: zero weight in the site.
 
 ## Decisions
 1. Oracles: data stay on the Mac; ThermoRawFileParser runs there; msconvert and `timsdata` run on Windows (Parallels) by the maintainer. No oracle in GitHub Actions. Until an oracle exists: authors' mzML (V2); Bruker gets an internal comparison.
