@@ -39,9 +39,30 @@ try:
             pg.unroute("**/vendor/ketcher/index.html"); pg.click("#kfail-retry")
             wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.click("#side-toggle"); frames(pg, 3)
         step("2 panels hidden and a direct #/draw address: the failure is still on screen", hidden_panels)
+        def twice():
+            pg.route("**/vendor/ketcher/index.html", lambda route: route.fulfill(status=404, body="not found"))
+            pg.reload(); wait_for_js(pg, FAILED, timeout=10000)
+            pg.click("#kfail-retry"); wait_for_js(pg, "document.getElementById('kfail').hidden", timeout=5000)      # the second attempt is on its way
+            wait_for_js(pg, FAILED, timeout=10000)             # ... and fails too: the notice is back, not an endless «Loading the editor»
+            frames(pg, 3); s = pg.evaluate(STATE); assert s["fail"] and s["inView"] and not s["loading"] and not s["ready"], s
+            assert pg.evaluate("document.activeElement && document.activeElement.id") == "kfail-retry", "the focus is not on the new «Try again»"
+            pg.unroute("**/vendor/ketcher/index.html"); pg.click("#kfail-retry")
+            wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && !document.getElementById('kframe').classList.contains('kwait')", timeout=60000)
+            frames(pg, 3); s = pg.evaluate(STATE); assert not s["fail"] and not s["loading"] and s["frame"] == "visible", s
+        step("3 a direct #/draw address and a retry that fails too: the notice and the button come back, the third try loads the editor", twice)
         r.b.close()
         pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1300, "height": 900})
-        step("3 Ketcher's scripts missing: the same failure and the same way back", lambda: failed_then_retry(pg, "**/vendor/ketcher/**/*.js"))
+        def after_ready():
+            pg.evaluate("() => { const real = window.nbEnsure; window.nbEnsure = () => { window.nbEnsure = real; return Promise.reject(new Error('test: the notebook did not open')); }; }")
+            pg.click("#nav [data-v=draw]"); wait_for_js(pg, FAILED, timeout=60000)
+            frames(pg, 3); s = pg.evaluate(STATE); assert s["fail"] and not s["loading"] and s["frame"] == "hidden", s
+            pg.click("#kfail-retry")
+            wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && !document.getElementById('kframe').classList.contains('kwait')", timeout=60000)
+            frames(pg, 3); s = pg.evaluate(STATE); assert not s["fail"] and not s["loading"] and s["frame"] == "visible", s
+        step("4 a failure after Ketcher is ready: «Try again» is not a dead button", after_ready)
+        r.b.close()
+        pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1300, "height": 900})
+        step("5 Ketcher's scripts missing: the same failure and the same way back", lambda: failed_then_retry(pg, "**/vendor/ketcher/**/*.js"))
 finally:
     r.close()
 for s in steps: print(" ", s)
