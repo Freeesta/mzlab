@@ -1,5 +1,6 @@
-"""Disegno: CDXML written by RDKit (tests/dati/cdxml/, made by tools/cdxml_fixtures.py) opens in Ketcher by the drop, the Open dialog and the paste, and Ketcher's InChI, atom, bond, fragment, charge, isotope and radical counts equal what RDKit itself reads from the same file; files that need a change before Indigo can read them (empty attribute, UTF-16, 8-bit text) get a notice saying what was changed."""
-# covers: mzlab/web/draw.js, mzlab/web/disegno-file.js, mzlab/web/disegno-cerca.js, tests/dati/cdxml/, tools/cdxml_fixtures.py
+"""Disegno: CDXML written by RDKit (tests/dati/cdxml/, made by tools/cdxml_fixtures.py) opens in Ketcher by the drop, the Open dialog and the paste, and Ketcher's InChI, atom, bond, fragment, charge, isotope and radical counts equal what RDKit itself reads from the same file; files that need a change before Indigo can read them (empty attribute, UTF-16, 8-bit text) get a notice saying what was changed. The text Ketcher reads is made by the engine (`open/1`, the molkit .wasm): run from the repo root after tools/build_site.py and
+tools/build_feat_wasm.sh site/static (molkit)."""
+# covers: mzlab/web/draw.js, mzlab/web/disegno-file.js, mzlab/web/disegno-cerca.js, mzlab/web/disegno-verifica.js, tests/dati/cdxml/, tools/cdxml_fixtures.py
 import sys, os, json, base64, re, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 DATA = Path(__file__).resolve().parent.parent / "tests" / "dati" / "cdxml"
@@ -27,7 +28,11 @@ try:
         pg = r.page(p, device_scale_factor=2); pg.set_viewport_size({"width": 1300, "height": 800})
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
-        def clear(): pg.evaluate(f"{KJ}.setMolecule('')"); pg.evaluate("document.getElementById('smi-warn').hidden = true")
+        def clear():
+            pg.evaluate(f"{KJ}.editor.tool('select')")                                # the Open dialog leaves Ketcher's paste tool holding the structure on the cursor; a later tool change would roll it back and wipe what a following paste added
+            pg.evaluate(f"{KJ}.setMolecule('')")
+            wait_for_js(pg, f"{KJ}.editor.struct().isBlank()", timeout=10000)      # Ketcher's promise can resolve before a canvas that held a reaction arrow is empty: a paste made at once would be wiped by the late clear
+            pg.evaluate("document.getElementById('smi-warn').hidden = true")
         def settle():
             wait_for_js(pg, f"!{KJ}.editor.struct().isBlank() || !document.getElementById('smi-warn').hidden", timeout=60000)
             wait_for_js(pg, "!document.querySelector('#kframe').contentWindow.ketcher.editor.struct().isBlank()", timeout=5000)   # an unreadable file never gets here: it is a failure with its notice
@@ -55,7 +60,6 @@ try:
         for name in sorted(EXPECTED):
             raw = (DATA / name).read_bytes(); empty = b'BondLength=""' in raw
             for route, fn in (("drop", lambda: drop(raw, name)), ("Open dialog", lambda: dialog(str(DATA / name))), ("paste", lambda: paste(raw.decode("utf-8")))):
-                if route == "paste" and not empty: continue        # without an empty attribute the paste is Ketcher's own, which reads the system clipboard
                 def one(fn=fn, name=name):
                     got, note = fn(); same(got, name)
                     assert ("BondLength" in note) == empty, note       # the notice names what was dropped, and only when something was

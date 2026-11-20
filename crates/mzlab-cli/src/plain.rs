@@ -22,6 +22,8 @@ pub(crate) mod mol_hilite_cmd;
 pub(crate) mod mol_link_cmd;
 #[path = "mol_mech_cmd.rs"]
 pub(crate) mod mol_mech_cmd;
+#[path = "mol_open_cmd.rs"]
+pub(crate) mod mol_open_cmd;
 #[path = "mol_sel_cmd.rs"]
 pub(crate) mod mol_sel_cmd;
 #[path = "peak_area_cmd.rs"]

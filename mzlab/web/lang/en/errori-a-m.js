@@ -167,6 +167,7 @@ I18N.add("en", {
   "error.gruppi.sizeMismatch": "The groups do not match the table ({what}): rebuild the groups.",
   "error.cip.request": "The request of the CIP descriptors is not valid JSON with a molfile.",
   "error.cip.molfile": "The drawing cannot be read as a molfile.",
+  "error.open.request": "The request to open a structure file is not valid JSON with the file as base64 text.",
   "error.hilite.request": "The request of the evidence colours is not valid.",
   "error.hilite.molfile": "The drawing cannot be read as a molfile.",
   "error.hilite.query": "The evidence structure cannot be matched on the drawing: {detail}.",

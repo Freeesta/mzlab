@@ -80,6 +80,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
+       mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
@@ -186,6 +187,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
+       mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
@@ -292,6 +294,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
+       mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures

@@ -78,6 +78,7 @@ embed!(
     "mzml-validation-1.json",
     "mzrun-2.json",
     "normative-build-1.json",
+    "open-1.json",
     "param-choices-1.json",
     "peak-auto-1.json",
     "param-proposal-1.json",
