@@ -7,6 +7,8 @@ use std::path::PathBuf;
 struct Args {
     files: Vec<PathBuf>,
     out: Option<PathBuf>,
+    /// `--notes`: where to copy `features-notes/1`, what the recipe chose for the first file
+    notes: Option<PathBuf>,
     params: String,
     /// `--sample`: the ids to take of every file with several samples
     sample: Option<Vec<u32>>,
@@ -16,6 +18,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
     let mut r = Args {
         files: Vec::new(),
         out: None,
+        notes: None,
         params: String::new(),
         sample: None,
     };
@@ -25,6 +28,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => r.out = Some(value("a path")?.into()),
+            "--notes" => r.notes = Some(value("a path")?.into()),
             "--preset" | "--params" if set => {
                 return Err("use --preset or --params, not both".into())
             }
@@ -87,6 +91,15 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
     Ok((files, labels))
 }
 
+/// `--notes`: the note of the first file (`features-notes/1`, kept in `tmp` next to its index) copied to the path asked for.
+fn keep_notes(a: &Args, tmp: &std::path::Path) -> std::result::Result<(), String> {
+    let Some(to) = &a.notes else { return Ok(()) };
+    let from = tmp.join("0.notes.json"); // written by `features_note::report` next to `0.mzidx`
+    std::fs::copy(&from, to)
+        .map(|_| ())
+        .map_err(|e| format!("{}: {e}", to.display()))
+}
+
 /// `mzlab-cli features ...`: the feature table in CSV on the standard output or at `--out`.
 fn run(args: Vec<String>) -> Outcome {
     let a = match parse(args.into_iter()) {
@@ -101,6 +114,7 @@ fn run(args: Vec<String>) -> Outcome {
         .map_err(crate::io)
         .and_then(|_| expand(&a))
         .and_then(|(files, labels)| features_of(&files, &labels, &a.params, &tmp));
+    let notes = keep_notes(&a, &tmp);
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
@@ -108,6 +122,9 @@ fn run(args: Vec<String>) -> Outcome {
         // a file that cannot be listed is a data error (1) with its own message, not a usage error
         Err(e) => return Outcome::fail_error(&e),
     };
+    if let Err(e) = notes {
+        return Outcome::fail(&e);
+    }
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),
         Some(p) => {
@@ -126,6 +143,6 @@ fn run(args: Vec<String>) -> Outcome {
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
+    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
 )];
