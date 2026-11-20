@@ -1,12 +1,12 @@
 # Rust engine (`crates/`)
-Editing rule: this file states how the Rust engine is now, verified against the code; rewrite the line a change makes false, never add history, dates or PR numbers.
+Editing rule: this file states how the Rust engine is, verified against the code; rewrite the line a change makes false, never add history, dates or PR numbers.
 Keep it in English and under 16 000 bytes: a new module gets its detail in its own header or area file, here at most a word in the crate line.
 
 Module-level detail lives in the code (module headers) and in the area files listed at the end; to find a module: `python3 tools/indice.py` then `grep -n '<name>' docs/agenti/mappa.md`.
 
 ## What runs where
 - One engine, two targets: the site runs the crates as `.wasm` inside Web Workers (`static/wasm*/`); the desktop app and `mzlab-cli` run the same crates natively (mmap, threads, no wasm caps). Every function exists in both, with a byte-for-byte parity test (CLAUDE.md).
-- Python (`mzlab/`, `tools/*_reference.py`, `tools/golden.py`) is only the reference of the parity tests: a new computation is born in Rust; Python changes only to fix a bug the parity found.
+- Python (`mzlab/`, `tools/*_reference.py`, `tools/golden.py`) is only the reference of the parity tests: a new computation is written in Rust; Python changes only to fix a bug the parity found.
 - Rust returns i18n keys and parameters (`error.rs`, JSON `{error, error_key, params}` at the bridge), never user text.
 
 ## Crates (workspace in `Cargo.toml`; `vendor/opentfraw` is excluded)
@@ -18,6 +18,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `readers-module.md`.
 - `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`libraries.md`).
 - `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-caps.md`).
+- Other `.wasm` bridges, one per lazily loaded module (`crates/mzlab-*-wasm`: `flowcal`, `mol`, `msnfigura`, `normative`, `rotte`, `ticfondo`), each with its purpose in its `lib.rs` header; `mzlab-ops`: the native orchestration of the engines shared by browser bridge, CLI and app.
 - `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn graph.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).

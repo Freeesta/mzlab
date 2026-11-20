@@ -2,7 +2,7 @@
 The "experiment type" is a label and a heuristic for the defaults; the tools work on the selected channel. The engine (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli file channels`) and the page selector (§5) exist; §1 says where the kind still decides, §4 the open work.
 
 ## 1. Where the kind still decides (evidence in the code)
-**Classification (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) gives every item a `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` if `infusion::infusione` (`infusion.rs:110`) recognizes fixed precursors (B: ≤64 MSn keys, median ≥10 scans) and long blocks (C) or a `.raw` method without LC or a name `infus|fia|direct|syringe`; then `ms2` (MSn), `full` (MS1 only), `mrm` (SRM only). A "mixed" file is split into items (`file_parts`, `iteminfo.rs:92`: level × scan type PREC/NL/NG/EMC/TDF/ER × polarity + "MRM"), each with its own `kind`.
+**Classification (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) gives every item a `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` if `infusion::infusione` (`infusion.rs:109`) recognizes fixed precursors (B: ≤64 MSn keys, median ≥10 scans) and long blocks (C) or a `.raw` method without LC or a name `infus|fia|direct|syringe`; then `ms2` (MSn), `full` (MS1 only), `mrm` (SRM only). A "mixed" file is split into items (`file_parts`, `iteminfo.rs:92`: level × scan type PREC/NL/NG/EMC/TDF/ER × polarity + "MRM"), each with its own `kind`.
 
 **Where the kind changes the interface (JS).** Single registry `ESP` in `mzlab/web/esperimenti.js:6-16` (`spettri`, `vista`, `nodi`).
 - Table "1. Data files" (`shell.js`): order `GORD` (85), groups (87-88), Experiment column `expCell` (99-102), name≠kind warning (103), openable only the 4 kinds (139), concentration only `mrm` (71).
@@ -14,9 +14,9 @@ The "experiment type" is a label and a heuristic for the defaults; the tools wor
 - The XIC lens works in the spectrum's channel (`api/xic?canale`, `xic-lente.js`); whether it is proposed is decided by the type (`ESP.predefinito`, field `lente`).
 
 **Engine: what already exists and is almost a channel model.**
-- `Scan::key()` (`idxread.rs:132`) = filter without range for MS1, `ms{n} <nominal masses> @act` for MSn; `/api/filters` (`routes.rs:212`) groups the scans by key `{key, level, n, rt0, rt1, pol}`, computed on request, not stored.
-- `/api/chrom?kind=tic|bpc&level&prec&filt&mz0&mz1` (`routes.rs:151`) filters by key (`Filtro::Testo`) or by tree node (`filt=msn:<id>`, `msnroute.rs:55`); `/api/scanlist?filt` likewise.
-- Non-scan chromatograms: `mzml::ChromKind{Tic,Bpc,Pda,Pressure,Srm,Sic,Analog,Other}` (`mzml.rs:57`), list on request `mzmlhead::Chrom{index,id,kind,q1,q3,ce,name,dwell,n}` (`mzmlhead.rs:96`), in the `Facts` as `srm`, `pda`, `analog[]`.
+- `Scan::key()` (`idxread.rs:127`) = filter without range for MS1, `ms{n} <nominal masses> @act` for MSn; `/api/filters` (`routes.rs:213`) groups the scans by key `{key, level, n, rt0, rt1, pol}`, computed on request, not stored.
+- `/api/chrom?kind=tic|bpc&level&prec&filt&mz0&mz1` (`routes.rs:145`) filters by key (`Filter::Testo` of `msnroute.rs`) or by tree node (`filt=msn:<id>`, `msnroute.rs:55`); `/api/scanlist?filt` likewise.
+- Non-scan chromatograms: `mzml::ChromKind{Tic,Bpc,Pda,Pressure,Srm,Sic,Analog,Other}` (`mzml.rs:64`), list on request `mzmlhead::Chrom{index,id,kind,q1,q3,ce,name,dwell,n}` (`mzmlhead.rs:140`), in the `Facts` as `srm`, `pda`, `analog[]`.
 - Block reading of SRM chromatograms: `Mzml::chromatograms_each` (times and intensities) and `chromatograms_times` (times only) read neighbouring chromatograms together, in spans of up to 16 MiB (`reading.rs::in_spans`), and decode each from its own slice: arrays bit-identical to `chromatogram`/`chromatogram_times`; one beyond the span or out of order forms a span of its own. Used by `facts_from` (`srm_rt`), `fileroutes::mrm_transitions` (`api/mrm`) and `Sorgente::srm`: on the site every read is a Blob slice, so thousands of transitions cost few reads (`reading_tests.rs`: 4000 SRM, <60).
 - `.wiff`: modes in `wiff/modes.rs:42-60` (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; codes 0, 4, 5, 6, 7, 11, 15 confirmed); MRM → one TIC + one `SRM SIC Q1= Q3= … experiment= transition=` chromatogram per transition (`wiff/run.rs:25-49`); DAD → `DadData` (`wiff/dad.rs:33`).
 - Thermo: text filter in `Scan.filter`, `path` from `filter_path` (`scantable.rs:238`); scan SRM/CRM → chromatograms per transition (`mzlab-lettori/src/srm.rs`).
@@ -59,7 +59,7 @@ pub struct Channel {
 }
 pub struct Channels { pub v: Vec<Channel>, pub scan_ids: Vec<u32>, pub experiment: ExperimentType }
 ```
-`scan_ids` is a partition of the MS scans ordered by channel (`Sorgente::Scan{da,a}` = slice): 4 B per scan, no spectral data copied. Built in O(n scans) from the table already in memory (`idx.scans`, ~640 B/scan) + the chromatogram list (`Facts`/`mzmlhead::Chrom`); done once per file and kept in the `Routes` (100 000 scans → 400 KB + a few hundred channels). No change to the `.mzidx` format.
+`scan_ids` is a partition of the MS scans ordered by channel (`Source::Scan{da,a}` = slice): 4 B per scan, no spectral data copied. Built in O(n scans) from the table already in memory (`idx.scans`, ~640 B/scan) + the chromatogram list (`Facts`/`mzmlhead::Chrom`); done once per file and kept in the `Routes` (100 000 scans → 400 KB + a few hundred channels). No change to the `.mzidx` format.
 
 **Experiment type as a label (`ExperimentType`).** `ExperimentType { proposed: &'static str, reason: &'static str }` with descriptive values `lc-full`, `lc-ms2-targeted`, `lc-dda`, `lc-mrm`, `lc-sim` (SIM chromatograms only, even with a UV trace), `msn-infusion`, `mixed`, `uv-only`; computed from `infusion.rs` + channels (`experiment_of`); it is a proposal: the user's value, when it exists, wins and lives in the session. It serves ONLY the defaults (`ESP.predefinito` in `esperimenti.js`): initial channel, XIC lens proposed or not, "alb" tab open at startup.
 
