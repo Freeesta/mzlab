@@ -3,21 +3,21 @@
 
 use mzlab_core::error::Result;
 use mzlab_mol::{allowed_valences, Coords, Mol, Stereo, StereoGroup};
-use std::collections::{BTreeMap, BTreeSet};
 
 use super::draw::{note, too_big, Drawn};
 use super::edit::Ed;
-use super::edit_op::fail;
+use super::edit_op::{fail, pair};
+use super::edit_set::Index;
 
 /// Bonds and atoms a V2000 molfile can count, the only form a wedge round trip is done in.
 const V2000_MAX: usize = 999;
 
-/// The stereo elements that survive the patch, renumbered, and the ids of the ones dropped.
-fn keep_stereo(d: &Drawn, ed: &Ed, at: &BTreeMap<u32, u32>) -> (Vec<Stereo>, Vec<String>) {
+/// The stereo elements that survive the patch, renumbered, and the output indices of the ones dropped (`i` for a stereo centre, `i-j` for a
+/// double bond) when their atoms are still there.
+fn keep_stereo(d: &Drawn, ed: &Ed, ix: &Index) -> (Vec<Stereo>, Vec<String>) {
     let (mut dropped, mut stereo) = (Vec::new(), Vec::new());
-    let hit = |x: u32| ed.sets.shape.contains(&x) || !at.contains_key(&x);
+    let gone = |x: u32| ed.sets.shape.has(x) || ix.get(x).is_none();
     for s in &d.mol.stereo {
-        let map = |x: &u32| at.get(x).copied();
         match s {
             Stereo::Tetra {
                 c,
@@ -26,18 +26,21 @@ fn keep_stereo(d: &Drawn, ed: &Ed, at: &BTreeMap<u32, u32>) -> (Vec<Stereo>, Vec
                 par,
                 status,
             } => {
-                let refs2: Option<Option<Vec<u32>>> =
-                    refs.as_ref().map(|r| r.iter().map(map).collect());
-                match (hit(*c), refs2) {
-                    (false, Some(None)) | (true, _) => dropped.push(c.to_string()),
-                    (false, r) => stereo.push(Stereo::Tetra {
-                        c: at[c],
-                        refs: r.flatten(),
-                        implicit_h: *implicit_h,
-                        par: *par,
-                        status: *status,
-                    }),
+                let Some(ci) = ix.get(*c) else { continue };
+                let refs2 = refs
+                    .as_ref()
+                    .map(|r| r.iter().map(|&x| ix.get(x)).collect::<Option<Vec<u32>>>());
+                if gone(*c) || matches!(refs2, Some(None)) {
+                    dropped.push(ci.to_string());
+                    continue;
                 }
+                stereo.push(Stereo::Tetra {
+                    c: ci,
+                    refs: refs2.flatten(),
+                    implicit_h: *implicit_h,
+                    par: *par,
+                    status: *status,
+                });
             }
             Stereo::Db {
                 a,
@@ -46,24 +49,25 @@ fn keep_stereo(d: &Drawn, ed: &Ed, at: &BTreeMap<u32, u32>) -> (Vec<Stereo>, Vec
                 cfg,
                 status,
             } => {
-                let refs2 = refs.map(|r| (map(&r[0]), map(&r[1])));
-                match (hit(*a) || hit(*b), refs2) {
-                    (false, Some((Some(x), Some(y)))) => stereo.push(Stereo::Db {
-                        a: at[a],
-                        b: at[b],
-                        refs: Some([x, y]),
-                        cfg: *cfg,
-                        status: *status,
-                    }),
-                    (false, None) => stereo.push(Stereo::Db {
-                        a: at[a],
-                        b: at[b],
-                        refs: None,
-                        cfg: *cfg,
-                        status: *status,
-                    }),
-                    _ => dropped.push(format!("{a}-{b}")),
+                let (Some(ia), Some(ib)) = (ix.get(*a), ix.get(*b)) else {
+                    continue;
+                };
+                let refs2 = match refs.map(|r| (ix.get(r[0]), ix.get(r[1]))) {
+                    None => Some(None),
+                    Some((Some(x), Some(y))) => Some(Some([x, y])),
+                    Some(_) => None,
+                };
+                if gone(*a) || gone(*b) || refs2.is_none() {
+                    dropped.push(pair(ia, ib));
+                    continue;
                 }
+                stereo.push(Stereo::Db {
+                    a: ia,
+                    b: ib,
+                    refs: refs2.flatten(),
+                    cfg: *cfg,
+                    status: *status,
+                });
             }
         }
     }
@@ -71,36 +75,25 @@ fn keep_stereo(d: &Drawn, ed: &Ed, at: &BTreeMap<u32, u32>) -> (Vec<Stereo>, Vec
 }
 
 /// The record the slots and bonds make, with the stereo that survived; the second list is what was dropped.
-fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
-    let at: BTreeMap<u32, u32> = ed
-        .slots
-        .iter()
-        .enumerate()
-        .map(|(i, s)| (s.id, i as u32))
-        .collect();
+fn rebuild(d: &Drawn, ed: &Ed, ix: &Index) -> (Mol, Vec<String>) {
     let bonds = ed
         .bonds
         .iter()
-        .map(|&(a, b, o)| {
-            let (x, y) = (at[&a], at[&b]);
-            mzlab_mol::Bond {
+        .filter_map(|&(a, b, o)| {
+            let (x, y) = (ix.get(a)?, ix.get(b)?);
+            Some(mzlab_mol::Bond {
                 a: x.min(y),
                 b: x.max(y),
                 o,
-            }
+            })
         })
         .collect();
-    let (stereo, dropped) = keep_stereo(d, ed, &at);
-    let kept: BTreeSet<u32> = stereo
-        .iter()
-        .filter_map(|s| {
-            if let Stereo::Tetra { c, .. } = s {
-                Some(*c)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let (stereo, dropped) = keep_stereo(d, ed, ix);
+    let kept = |x: u32| {
+        stereo
+            .iter()
+            .any(|s| matches!(s, Stereo::Tetra { c, .. } if *c == x))
+    };
     let groups = d
         .mol
         .groups
@@ -109,9 +102,8 @@ fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
             let atoms: Vec<u32> = g
                 .atoms
                 .iter()
-                .filter_map(|x| at.get(x))
-                .copied()
-                .filter(|x| kept.contains(x))
+                .filter_map(|&x| ix.get(x))
+                .filter(|&x| kept(x))
                 .collect();
             (!atoms.is_empty()).then_some(StereoGroup {
                 kind: g.kind,
@@ -129,13 +121,15 @@ fn rebuild(d: &Drawn, ed: &Ed) -> (Mol, Vec<String>) {
     (m, dropped)
 }
 
-/// Hydrogens counted again, by the lowest allowed valence, for the atoms the patch changed or added and did not give a count for.
-fn count_h(ed: &mut Ed) {
+/// Hydrogens counted again, by the lowest allowed valence, for the atoms the patch changed or added and did not give a count for. Returns the
+/// ids of the atoms counted again and of the changed atoms whose bonds, radical and hydrogens go over every allowed valence (an element
+/// without a valence table is never over).
+fn count_h(ed: &mut Ed) -> (Vec<u32>, Vec<u32>) {
+    let (mut recounted, mut over) = (Vec::new(), Vec::new());
     for k in 0..ed.slots.len() {
         let id = ed.slots[k].id;
         let new = ed.added.contains(&id);
-        let dirty = ed.sets.shape.contains(&id) || ed.sets.atom.contains(&id) || new;
-        if !dirty || ed.sets.h_given.contains(&id) {
+        if !(new || ed.sets.shape.has(id) || ed.sets.atom.has(id)) {
             continue;
         }
         let a = &ed.slots[k].atom;
@@ -146,17 +140,46 @@ fn count_h(ed: &mut Ed) {
             .map(|b| u32::from(b.2))
             .sum::<u32>()
             + u32::from(a.rad);
-        let h = allowed_valences(&a.el, i32::from(a.chg))
-            .into_iter()
-            .find(|&v| v >= total)
-            .map_or(0, |v| v - total);
+        let allowed = allowed_valences(&a.el, i32::from(a.chg));
+        if ed.sets.h_given.has(id) {
+            let with_h = total + u32::from(a.h);
+            if !allowed.is_empty() && allowed.iter().all(|&v| v < with_h) {
+                over.push(id);
+            }
+            continue;
+        }
+        let h = match allowed.iter().find(|&&v| v >= total) {
+            Some(v) => v - total,
+            None => {
+                if !allowed.is_empty() {
+                    over.push(id);
+                }
+                0
+            }
+        };
         ed.slots[k].atom.h = h as u8;
+        recounted.push(id);
     }
+    (recounted, over)
+}
+
+/// The output indices of the atoms `ids` that are still in the record, ascending, as the list a choice carries.
+fn out_list(ix: &Index, n: usize, ids: &[u32]) -> String {
+    let mut hit = vec![false; n];
+    ids.iter().for_each(|&x| {
+        if let Some(i) = ix.get(x) {
+            hit[i as usize] = true;
+        }
+    });
+    let t: Vec<String> = (0..n).filter(|&i| hit[i]).map(|i| i.to_string()).collect();
+    t.join(",")
 }
 
 pub(super) fn finish(d: &mut Drawn, mut ed: Ed, n_ops: usize) -> Result<()> {
-    count_h(&mut ed);
-    let (mut m, dropped) = rebuild(d, &ed);
+    let (recounted, over) = count_h(&mut ed);
+    let ix = Index::of(&ed.slots);
+    let n = ed.slots.len();
+    let (mut m, dropped) = rebuild(d, &ed, &ix);
     // positions: the ones the drawing had or the patch gave stay; the atoms without one are placed around them
     let mut xy: Vec<Option<[f64; 2]>> = ed.slots.iter().map(|s| s.xy).collect();
     let placed: Vec<u32> = ed
@@ -186,16 +209,16 @@ pub(super) fn finish(d: &mut Drawn, mut ed: Ed, n_ops: usize) -> Result<()> {
             .collect(),
         from,
     });
+    let mut wedge_gone = Vec::new();
     if !ed.wedges.is_empty() {
-        m = read_wedges(m, &ed, d)?;
+        (m, wedge_gone) = read_wedges(m, &ed, &ix, d)?;
     }
-    if ed.slots.iter().any(|s| s.label.is_some())
+    let labelled = ed.slots.iter().filter(|s| s.label.is_some()).count();
+    if labelled > 0
         && (m.atoms.len() > V2000_MAX || m.bonds.len() > V2000_MAX || !m.groups.is_empty())
     {
-        d.warnings.push(note(
-            "label_not_in_molfile",
-            "labels are written to a V2000 molfile only",
-        ));
+        d.warnings
+            .push(note("label_not_in_molfile", labelled.to_string()));
     }
     d.labels = ed
         .slots
@@ -204,65 +227,59 @@ pub(super) fn finish(d: &mut Drawn, mut ed: Ed, n_ops: usize) -> Result<()> {
         .filter_map(|(i, s)| s.label.clone().map(|l| (i as u32, l)))
         .collect();
     d.mol = m;
-    d.choices
-        .push(note("edit", format!("{n_ops} operations applied")));
-    let list = |v: &[u32]| v.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
-    if !ed.added.is_empty() {
-        d.choices
-            .push(note("edit_added", format!("atom ids {}", list(&ed.added))));
+    d.choices.push(note("edit", n_ops.to_string()));
+    // the lists are output indices (the `i` of the scene atoms), ascending
+    for (key, list) in [
+        ("edit_added", out_list(&ix, n, &ed.added)),
+        ("edit_placed", out_list(&ix, n, &placed)),
+        ("edit_h_recounted", out_list(&ix, n, &recounted)),
+        ("edit_stereo_dropped", dropped.join(",")),
+        ("edit_wedge_dropped", wedge_gone.join(",")),
+    ] {
+        if !list.is_empty() {
+            d.choices.push(note(key, list));
+        }
     }
-    if !placed.is_empty() {
-        d.choices.push(note(
-            "edit_placed",
-            format!("atom ids {} laid out around the fixed atoms", list(&placed)),
-        ));
-    }
-    if !dropped.is_empty() {
-        d.choices.push(note(
-            "edit_stereo_dropped",
-            format!("stereo of {} dropped: its bonds changed", dropped.join(",")),
-        ));
+    let over = out_list(&ix, n, &over);
+    if !over.is_empty() {
+        d.warnings.push(note("edit_valence", over));
     }
     too_big(&d.mol)
 }
 
+/// The unsigned number in the columns `r` of a molfile line (0 when there is none).
+fn field(l: &str, r: std::ops::Range<usize>) -> usize {
+    l.get(r)
+        .unwrap_or("")
+        .bytes()
+        .filter(u8::is_ascii_digit)
+        .fold(0, |n, c| n * 10 + usize::from(c - b'0'))
+}
+
 /// The record with the wedges of the patch: written as a V2000 molfile with those marks, read back by the reader, which takes the stereo
-/// from the marks and the coordinates. Atoms and their order stay.
-fn read_wedges(m: Mol, ed: &Ed, d: &Drawn) -> Result<Mol> {
-    let at: BTreeMap<u32, u32> = ed
-        .slots
-        .iter()
-        .enumerate()
-        .map(|(i, s)| (s.id, i as u32))
-        .collect();
+/// from the marks and the coordinates. Atoms and their order stay, and so do the hydrogen counts of the record. The second list names the
+/// bonds (`i-j`, output indices) whose own wedge mark went because a mark of the patch starts at the same atom.
+fn read_wedges(m: Mol, ed: &Ed, ix: &Index, d: &Drawn) -> Result<(Mol, Vec<String>)> {
     let last = ed.wedges.last().map_or(0, |w| w.3);
-    let bad = |reason, detail: String| fail(last, "wedge", reason, detail);
+    let bad = |reason, detail: &str| fail(last, "wedge", reason, detail);
     if m.atoms.len() > V2000_MAX || m.bonds.len() > V2000_MAX || !m.groups.is_empty() {
         return Err(bad(
             "wedge_size",
-            "a wedge is set on a V2000 molfile: at most 999 atoms and bonds, no stereo groups"
-                .into(),
+            "a wedge is set on a V2000 molfile: at most 999 atoms and bonds, no stereo groups",
         ));
     }
     let marks: Vec<(usize, usize, i8)> = ed
         .wedges
         .iter()
-        .map(|w| (at[&w.0] as usize + 1, at[&w.1] as usize + 1, w.2))
+        .filter_map(|w| Some((ix.get(w.0)? as usize + 1, ix.get(w.1)? as usize + 1, w.2)))
         .collect();
     let text = m.to_molfile(&d.title);
     let lines: Vec<&str> = text.lines().collect();
-    let n: usize = lines
-        .get(3)
-        .and_then(|l| l.get(0..3))
-        .and_then(|s| s.trim().parse().ok())
-        .unwrap_or(0);
+    let n = lines.get(3).map_or(0, |l| field(l, 0..3));
     let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    let mut gone = Vec::new();
     for l in out.iter_mut().skip(4 + n).take(m.bonds.len()) {
-        let f = |r: std::ops::Range<usize>| {
-            l.get(r)
-                .and_then(|s| s.trim().parse::<usize>().ok())
-                .unwrap_or(0)
-        };
+        let f = |r: std::ops::Range<usize>| field(l, r);
         let (a, b) = (f(0..3), f(3..6));
         let mine = marks
             .iter()
@@ -270,7 +287,12 @@ fn read_wedges(m: Mol, ed: &Ed, d: &Drawn) -> Result<Mol> {
         let (a, b, w) = match mine {
             Some(w) => (w.0, w.1, w.2),
             // another mark that starts at an atom the patch sets a wedge on goes: one wedge per set
-            None if marks.iter().any(|w| w.0 == a) => (a, b, 0),
+            None if marks.iter().any(|w| w.0 == a) => {
+                if f(9..12) != 0 {
+                    gone.push(pair(a as u32 - 1, b as u32 - 1));
+                }
+                (a, b, 0)
+            }
             None => continue,
         };
         let code = match w {
@@ -286,15 +308,19 @@ fn read_wedges(m: Mol, ed: &Ed, d: &Drawn) -> Result<Mol> {
         );
     }
     let mut back =
-        Mol::from_molfile(&(out.join("\n") + "\n")).map_err(|e| bad("molfile", e.to_string()))?;
+        Mol::from_molfile(&(out.join("\n") + "\n")).map_err(|e| bad("molfile", &e.to_string()))?;
     if back.atoms.len() != m.atoms.len()
         || back.atoms.iter().zip(&m.atoms).any(|(x, y)| x.el != y.el)
     {
         return Err(bad(
             "molfile",
-            "the atoms changed when the wedges were read".into(),
+            "the atoms changed when the wedges were read",
         ));
     }
+    // a molfile has no hydrogen count: the counts of the record (the patch's own included) are kept
+    for (x, y) in back.atoms.iter_mut().zip(&m.atoms) {
+        x.h = y.h;
+    }
     back.coords = m.coords;
-    Ok(back)
+    Ok((back, gone))
 }

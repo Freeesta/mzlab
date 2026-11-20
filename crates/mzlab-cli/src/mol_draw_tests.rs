@@ -167,7 +167,7 @@ fn mol_draw_edit_applies_a_patch_inline_or_from_a_file() {
     let inline = run(&["mol", "draw", "c1ccccc1", "--set", &format!("edit={patch}")]);
     assert_eq!(inline.code, 0, "{}", inline.stderr);
     assert!(
-        inline.stderr.contains("choice: edit_added = atom ids 6"),
+        inline.stderr.contains("choice: edit_added = 6"),
         "{}",
         inline.stderr
     );
@@ -194,6 +194,24 @@ fn mol_draw_edit_applies_a_patch_inline_or_from_a_file() {
         "edit=@/no/such/patch.json",
     ]);
     assert_eq!(none.code, 4);
+    // a file over the patch limit or one that is not text is a patch that cannot be read (2), keyed, with its reason
+    let big = std::env::temp_dir().join(format!("mol_draw_edit_big_{}.json", std::process::id()));
+    std::fs::write(&big, " ".repeat(mzlab_feat::chem::draw::MAX_PATCH + 1)).unwrap();
+    let bin = std::env::temp_dir().join(format!("mol_draw_edit_bin_{}.json", std::process::id()));
+    std::fs::write(&bin, [0xff, 0xfe]).unwrap();
+    for f in [&big, &bin] {
+        let o = run(&[
+            "mol",
+            "draw",
+            "CCO",
+            "--set",
+            &format!("edit=@{}", f.to_str().unwrap()),
+        ]);
+        std::fs::remove_file(f).ok();
+        let e = o.error.as_ref().expect("a keyed error");
+        assert_eq!((o.code, e.key.as_str()), (2, "err.mol.draw.editJson"));
+        assert!(e.params.iter().any(|p| p.0 == "message" && !p.1.is_empty()));
+    }
 }
 
 #[test]

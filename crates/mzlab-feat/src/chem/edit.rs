@@ -8,28 +8,11 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 use mzlab_mol::{is_element, Atom};
-use std::collections::BTreeSet;
 
 use super::draw::{Drawn, MAX_ATOMS};
 use super::edit_end::finish;
-use super::edit_op::{fail, r4, Op};
-
-pub(super) struct Slot {
-    pub(super) id: u32,
-    pub(super) atom: Atom,
-    pub(super) xy: Option<[f64; 2]>,
-    pub(super) label: Option<String>,
-}
-
-#[derive(Default)]
-pub(super) struct Sets {
-    /// Atoms whose bonds or bond orders changed: their stereo goes and their hydrogens are counted again.
-    pub(super) shape: BTreeSet<u32>,
-    /// Atoms whose element, charge or radical changed: their hydrogens are counted again.
-    pub(super) atom: BTreeSet<u32>,
-    /// Atoms whose hydrogens the patch states.
-    pub(super) h_given: BTreeSet<u32>,
-}
+use super::edit_op::{clip, fail, pair, r4, Op, MAX_ID};
+use super::edit_set::{Index, Sets, Slot, MAX_BONDS, MAX_OPS, MAX_PATCH};
 
 pub(super) struct Ed {
     pub(super) slots: Vec<Slot>,
@@ -50,25 +33,26 @@ impl Ed {
         self.slots
             .iter_mut()
             .find(|s| s.id == id)
-            .ok_or_else(|| op.err("unknown_atom", id))
+            .ok_or_else(|| op.err_id("unknown_atom", id))
     }
 
     fn bond_at(&self, op: &Op, a: u32, b: u32) -> Result<usize> {
         self.bonds
             .iter()
             .position(|x| same(x, a, b))
-            .ok_or_else(|| op.err("unknown_bond", format!("{a}-{b}")))
+            .ok_or_else(|| op.err("unknown_bond", &pair(a, b)))
     }
 
     fn element(op: &Op, el: &str) -> Result<()> {
         if is_element(el) {
             Ok(())
         } else {
-            Err(op.err("bad_field", format!("el {el}")))
+            Err(op.err("bad_field", &format!("el {}", clip(el))))
         }
     }
 
     /// The fields of an atom shared by `atom.add` and `atom.set`: charge, isotope, radical, hydrogens, label (an empty one clears it).
+    #[inline(never)]
     fn atom_fields(&mut self, op: &Op, id: u32) -> Result<()> {
         let el = op.text("el")?;
         if let Some(el) = el {
@@ -85,12 +69,12 @@ impl Ed {
         }
         let moved = el.is_some() || chg.is_some() || rad.is_some();
         if h.is_some() {
-            self.sets.h_given.insert(id);
+            self.sets.h_given.add(id);
         } else if moved {
-            self.sets.h_given.remove(&id);
+            self.sets.h_given.0.retain(|&x| x != id);
         }
         if moved {
-            self.sets.atom.insert(id);
+            self.sets.atom.add(id);
         }
         let s = self.slot(op, id)?;
         if let Some(el) = el {
@@ -108,16 +92,17 @@ impl Ed {
         Ok(())
     }
 
+    #[inline(never)]
     fn atom_add(&mut self, op: &Op) -> Result<()> {
         op.only(&[
             "id", "el", "chg", "iso", "rad", "h", "label", "x", "y", "x_a", "y_a",
         ])?;
-        let id = match op.int("id", 0, i64::from(u32::MAX >> 1))? {
+        let id = match op.int("id", 0, i64::from(MAX_ID))? {
             Some(id) => id as u32,
             None => self.next,
         };
         if self.slots.iter().any(|s| s.id == id) {
-            return Err(op.err("atom_exists", id));
+            return Err(op.err_id("atom_exists", id));
         }
         let el = op
             .text("el")?
@@ -126,7 +111,7 @@ impl Ed {
         if self.slots.len() >= MAX_ATOMS {
             return Err(Error::new("err.mol.draw.tooBig").with("max", MAX_ATOMS));
         }
-        let xy = op.point("x", "y")?;
+        let xy = op.point(["x", "y", "x_a", "y_a"])?;
         self.slots.push(Slot {
             id,
             atom: Atom {
@@ -144,6 +129,7 @@ impl Ed {
         self.atom_fields(op, id)
     }
 
+    #[inline(never)]
     fn atom_set(&mut self, op: &Op) -> Result<()> {
         op.only(&["id", "el", "chg", "iso", "rad", "h", "label"])?;
         let id = op.id("id")?;
@@ -164,25 +150,31 @@ impl Ed {
         }
     }
 
+    #[inline(never)]
     fn bond_add(&mut self, op: &Op) -> Result<()> {
         op.only(&["a", "b", "o", "wedge"])?;
         let (a, b) = (op.id("a")?, op.id("b")?);
         if a == b {
-            return Err(op.err("self_bond", a));
+            return Err(op.err_id("self_bond", a));
         }
         self.slot(op, a)?;
         self.slot(op, b)?;
         if self.bonds.iter().any(|x| same(x, a, b)) {
-            return Err(op.err("bond_exists", format!("{a}-{b}")));
+            return Err(op.err("bond_exists", &pair(a, b)));
+        }
+        if self.bonds.len() >= MAX_BONDS {
+            return Err(op.err("too_many_bonds", "at most 2500 bonds"));
         }
         let o = op.int("o", 1, 3)?.unwrap_or(1) as u8;
         self.bonds.push((a, b, o));
-        self.sets.shape.extend([a, b]);
+        self.sets.shape.add(a);
+        self.sets.shape.add(b);
         let w = op.wedge()?;
         self.mark(op, a, b, w);
         Ok(())
     }
 
+    #[inline(never)]
     fn bond_set(&mut self, op: &Op) -> Result<()> {
         op.only(&["a", "b", "o", "wedge"])?;
         let (a, b) = (op.id("a")?, op.id("b")?);
@@ -193,30 +185,25 @@ impl Ed {
         }
         if let Some(o) = o.filter(|&o| self.bonds[k].2 != o as u8) {
             self.bonds[k].2 = o as u8;
-            self.sets.shape.extend([a, b]);
+            self.sets.shape.add(a);
+            self.sets.shape.add(b);
         }
         self.mark(op, a, b, w);
         Ok(())
     }
 
+    #[inline(never)]
     fn remove(&mut self, op: &Op) -> Result<()> {
         op.only(&["atoms", "bonds"])?;
         let atoms = op.ids("atoms")?;
-        let pairs: Vec<(u32, u32)> = match op.v.get("bonds") {
-            None => Vec::new(),
-            Some(Value::Arr(l)) => l
-                .iter()
-                .map(|p| match (p.at(0), p.at(1), p.arr().len()) {
-                    (Some(Value::Num(a)), Some(Value::Num(b)), 2)
-                        if a.fract() == 0.0 && b.fract() == 0.0 && *a >= 0.0 && *b >= 0.0 =>
-                    {
-                        Ok((*a as u32, *b as u32))
-                    }
-                    _ => Err(op.err("bad_field", "bonds")),
-                })
-                .collect::<Result<_>>()?,
-            Some(_) => return Err(op.err("bad_field", "bonds")),
-        };
+        let pairs = op
+            .list("bonds", MAX_BONDS)?
+            .iter()
+            .map(|p| match (p.at(0), p.arr().len()) {
+                (Some(a), 2) => Ok((op.id_in(a, "bonds")?, op.id_in(&p.arr()[1], "bonds")?)),
+                _ => Err(op.err("bad_field", "bonds")),
+            })
+            .collect::<Result<Vec<_>>>()?;
         if atoms.is_empty() && pairs.is_empty() {
             return Err(op.err("missing_field", "atoms or bonds"));
         }
@@ -224,7 +211,8 @@ impl Ed {
             let k = self.bond_at(op, a, b)?;
             self.bonds.remove(k);
             self.wedges.retain(|w| !same(&(w.0, w.1, 0), a, b));
-            self.sets.shape.extend([a, b]);
+            self.sets.shape.add(a);
+            self.sets.shape.add(b);
         }
         for &id in &atoms {
             self.slot(op, id)?;
@@ -234,24 +222,33 @@ impl Ed {
             if let Some(at) = at {
                 self.slots.remove(at);
                 for b in self.bonds.iter().filter(|b| b.0 == id || b.1 == id) {
-                    self.sets.shape.insert(if b.0 == id { b.1 } else { b.0 });
+                    self.sets.shape.add(if b.0 == id { b.1 } else { b.0 });
                 }
                 self.bonds.retain(|b| b.0 != id && b.1 != id);
                 self.wedges.retain(|w| w.0 != id && w.1 != id);
-                self.sets.shape.insert(id);
+                self.sets.shape.add(id);
             }
         }
         Ok(())
     }
 
-    /// The atoms of the piece (connected part) that holds `id`.
-    fn piece(&self, id: u32) -> BTreeSet<u32> {
-        let mut seen = BTreeSet::from([id]);
-        let mut todo = vec![id];
+    /// The slots (as a mask over their places) of the piece, the connected part, that holds the atom at place `start`.
+    #[inline(never)]
+    fn piece(&self, ix: &Index, start: u32) -> Vec<bool> {
+        let mut adj = vec![Vec::new(); self.slots.len()];
+        for b in &self.bonds {
+            if let (Some(x), Some(y)) = (ix.get(b.0), ix.get(b.1)) {
+                adj[x as usize].push(y as usize);
+                adj[y as usize].push(x as usize);
+            }
+        }
+        let mut seen = vec![false; self.slots.len()];
+        seen[start as usize] = true;
+        let mut todo = vec![start as usize];
         while let Some(x) = todo.pop() {
-            for b in self.bonds.iter().filter(|b| b.0 == x || b.1 == x) {
-                let y = if b.0 == x { b.1 } else { b.0 };
-                if seen.insert(y) {
+            for &y in &adj[x] {
+                if !seen[y] {
+                    seen[y] = true;
                     todo.push(y);
                 }
             }
@@ -259,14 +256,20 @@ impl Ed {
         seen
     }
 
-    fn shift(&mut self, op: &Op, atoms: &BTreeSet<u32>, d: [f64; 2]) -> Result<()> {
-        for s in self.slots.iter_mut().filter(|s| atoms.contains(&s.id)) {
-            let p = s.xy.ok_or_else(|| op.err("unplaced", s.id))?;
-            s.xy = Some([r4(p[0] + d[0]), r4(p[1] + d[1])]);
+    /// Moves the slots in `mask` by `d` angstrom. An atom without a position is an error when the move names it (`strict`), else it is left for
+    /// the layout at the end.
+    fn shift(&mut self, op: &Op, mask: &[bool], d: [f64; 2], strict: bool) -> Result<()> {
+        for (s, _) in self.slots.iter_mut().zip(mask).filter(|(_, m)| **m) {
+            match s.xy {
+                Some(p) => s.xy = Some([r4(p[0] + d[0]), r4(p[1] + d[1])]),
+                None if strict => return Err(op.err_id("unplaced", s.id)),
+                None => {}
+            }
         }
         Ok(())
     }
 
+    #[inline(never)]
     fn move_atoms(&mut self, op: &Op) -> Result<()> {
         op.only(&["atoms", "dx", "dy", "dx_a", "dy_a"])?;
         let atoms = op.ids("atoms")?;
@@ -274,27 +277,31 @@ impl Ed {
             return Err(op.err("missing_field", "atoms"));
         }
         let d = op
-            .point("dx", "dy")?
+            .point(["dx", "dy", "dx_a", "dy_a"])?
             .ok_or_else(|| op.err("missing_field", "dx, dy"))?;
         for &id in &atoms {
             self.slot(op, id)?;
         }
-        self.shift(op, &atoms.into_iter().collect(), d)
+        let ix = Index::of(&self.slots);
+        let mut mask = vec![false; self.slots.len()];
+        atoms.iter().for_each(|&id| {
+            if let Some(p) = ix.get(id) {
+                mask[p as usize] = true;
+            }
+        });
+        self.shift(op, &mask, d, true)
     }
 
     /// Atom `from` is fused into atom `into`: its bonds go to `into`, which keeps its own element and charge. When the two sit in different
-    /// pieces, the piece of `from` is first moved so that the two atoms coincide.
+    /// pieces, the piece of `from` is first moved so that the two atoms coincide (its atoms without a position stay for the layout).
+    #[inline(never)]
     fn merge(&mut self, op: &Op) -> Result<()> {
         op.only(&["from", "into"])?;
         let (from, into) = (op.id("from")?, op.id("into")?);
         if from == into {
-            return Err(op.err("self_bond", from));
+            return Err(op.err_id("self_bond", from));
         }
         let (pf, pi) = (self.slot(op, from)?.xy, self.slot(op, into)?.xy);
-        let piece = self.piece(from);
-        if let (false, Some(f), Some(i)) = (piece.contains(&into), pf, pi) {
-            self.shift(op, &piece, [i[0] - f[0], i[1] - f[1]])?;
-        }
         let mut bonds = Vec::new();
         for b in self.bonds.iter().filter(|b| b.0 == from || b.1 == from) {
             let other = if b.0 == from { b.1 } else { b.0 };
@@ -304,21 +311,65 @@ impl Ed {
         }
         for &(other, _) in &bonds {
             if self.bonds.iter().any(|x| same(x, into, other)) {
-                return Err(op.err("bond_exists", format!("{into}-{other}")));
+                return Err(op.err("bond_exists", &pair(into, other)));
             }
+        }
+        let ix = Index::of(&self.slots);
+        let piece = self.piece(&ix, ix.get(from).unwrap_or(0));
+        let together = ix.get(into).is_some_and(|p| piece[p as usize]);
+        if let (false, Some(f), Some(i)) = (together, pf, pi) {
+            self.shift(op, &piece, [i[0] - f[0], i[1] - f[1]], false)?;
         }
         self.bonds.retain(|b| b.0 != from && b.1 != from);
         for (other, o) in bonds {
             self.bonds.push((into, other, o));
-            self.sets.shape.insert(other);
+            self.sets.shape.add(other);
         }
         let at = self.slots.iter().position(|s| s.id == from).unwrap_or(0);
         let gone = self.slots.remove(at);
         let keep = self.slot(op, into)?;
         keep.label = keep.label.take().or(gone.label);
         self.wedges.retain(|w| w.0 != from && w.1 != from);
-        self.sets.shape.extend([from, into]);
+        self.sets.shape.add(from);
+        self.sets.shape.add(into);
         Ok(())
+    }
+}
+
+impl Ed {
+    /// The slots, bonds and labels of the drawing the patch starts from.
+    #[inline(never)]
+    fn start(d: &Drawn) -> Ed {
+        let m = &d.mol;
+        let xy = |i: usize| {
+            m.coords
+                .as_ref()
+                .and_then(|c| c.xy.get(i))
+                .filter(|r| r.len() >= 2)
+                .map(|r| [r[0], r[1]])
+        };
+        Ed {
+            slots: m
+                .atoms
+                .iter()
+                .enumerate()
+                .map(|(i, a)| Slot {
+                    id: i as u32,
+                    atom: a.clone(),
+                    xy: xy(i),
+                    label: d
+                        .labels
+                        .iter()
+                        .find(|l| l.0 == i as u32)
+                        .map(|l| l.1.clone()),
+                })
+                .collect(),
+            bonds: m.bonds.iter().map(|b| (b.a, b.b, b.o)).collect(),
+            next: m.atoms.len() as u32,
+            sets: Sets::default(),
+            added: Vec::new(),
+            wedges: Vec::new(),
+        }
     }
 }
 
@@ -350,6 +401,10 @@ pub(super) fn apply(d: &mut Drawn, edit: &Value) -> Result<()> {
     let parsed;
     let edit = match edit {
         Value::Str(s) => {
+            if s.len() > MAX_PATCH {
+                return Err(Error::new("err.mol.draw.editJson")
+                    .with("message", "the patch text is over 65536 bytes"));
+            }
             parsed = mzlab_core::json::parse(s.as_bytes()).map_err(|_| {
                 Error::new("err.mol.draw.editJson").with("message", "the patch is not valid JSON")
             })?;
@@ -358,36 +413,15 @@ pub(super) fn apply(d: &mut Drawn, edit: &Value) -> Result<()> {
         v => v,
     };
     let list = ops_of(edit)?;
-    let m = &d.mol;
-    let xy = |i: usize| {
-        m.coords
-            .as_ref()
-            .and_then(|c| c.xy.get(i))
-            .filter(|r| r.len() >= 2)
-            .map(|r| [r[0], r[1]])
-    };
-    let mut ed = Ed {
-        slots: m
-            .atoms
-            .iter()
-            .enumerate()
-            .map(|(i, a)| Slot {
-                id: i as u32,
-                atom: a.clone(),
-                xy: xy(i),
-                label: d
-                    .labels
-                    .iter()
-                    .find(|l| l.0 == i as u32)
-                    .map(|l| l.1.clone()),
-            })
-            .collect(),
-        bonds: m.bonds.iter().map(|b| (b.a, b.b, b.o)).collect(),
-        next: m.atoms.len() as u32,
-        sets: Sets::default(),
-        added: Vec::new(),
-        wedges: Vec::new(),
-    };
+    if list.len() > MAX_OPS {
+        return Err(fail(
+            MAX_OPS,
+            "?",
+            "too_many_ops",
+            "at most 1000 operations",
+        ));
+    }
+    let mut ed = Ed::start(d);
     for (i, v) in list.iter().enumerate() {
         let name = v.get("op").and_then(Value::str).ok_or_else(|| {
             fail(

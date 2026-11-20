@@ -18,13 +18,17 @@ usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
   --set layout   keep (default: a molfile with 2D coordinates keeps them) or new (lay it out again)
   --set db       a molecules/1 CSV (for example mzlab/web/molecole/catalogo.csv): names and keys are looked up only there
   --set name     the title line of the molfile (default: the molecule's name, or the title of the molfile)
-  --set edit     a patch: a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge), JSON text or @PATH; all or none
+  --set edit     a patch (schema draw_edit/1): a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge), as text
+                 or @PATH, all or none, at most 1000 operations and 65536 bytes; x, y, dx, dy are in bond lengths (1.0 = 1.5 angstrom),
+                 x_a, y_a, dx_a, dy_a in angstrom, never mixed in one operation
   --out PATH     write there instead of the standard output
 
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
 every automatic choice (spec kind, name hit and score, layout kept or new, V2000 or V3000) in `choices`; with a molfile they go to
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
-Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
+Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db, a patch that is not JSON or whose operation
+fails (err.mol.draw.edit names its index and reason, err.mol.draw.editJson); 4 missing file or db, unreadable molfile or request, unreadable
+edit=@PATH; 5 not in the db; 6 --out.";
 
 const NAMES: [&str; 5] = ["format", "layout", "db", "name", "edit"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
@@ -111,7 +115,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let mut set = set;
     // `--set edit=@PATH` reads the patch from a file
     if let Some(path) = set[4].as_deref().and_then(|e| e.strip_prefix('@')) {
-        match read_file(path, MAX_MOLFILE) {
+        match read_patch(path) {
             Ok(t) => set[4] = Some(t),
             Err(o) => return o,
         }
@@ -183,6 +187,19 @@ fn read_file(path: &str, max: u64) -> Result<String, Outcome> {
     let file = std::fs::File::open(path)
         .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", path)))?;
     read_capped(file, max).map_err(|_| Outcome::fail_error(&Error::new("err.mol.draw.request")))
+}
+
+/// The `--set edit=@PATH` patch: a missing file is `err.cli.file` (exit 4), one over the patch limit or not UTF-8 is `err.mol.draw.editJson` (exit 2).
+fn read_patch(path: &str) -> Result<String, Outcome> {
+    let file = std::fs::File::open(path)
+        .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", path)))?;
+    read_capped(file, mzlab_feat::chem::draw::MAX_PATCH as u64).map_err(|why| {
+        let message = why.map_or_else(
+            || "the patch file is not UTF-8 text".to_string(),
+            |w| format!("the patch file is {w}"),
+        );
+        Outcome::fail_error(&Error::new("err.mol.draw.editJson").with("message", message))
+    })
 }
 
 /// The `--set db=PATH` CSV: a missing file is `err.cli.file` (exit 4), an oversized or non-UTF-8 one `err.mol.draw.db` (exit 4).

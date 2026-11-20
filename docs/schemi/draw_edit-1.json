@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "draw_edit/1",
   "title": "draw_edit/1: an edit patch for a drawing",
-  "description": "The patch `mzlab-cli mol draw SPEC --set edit=JSON|@PATH` applies to a drawing (also the `edit` member of the molkit `draw` request and of the app route `kind: \"draw\"`): a list of operations, or the object {\"schema\": \"draw_edit/1\", \"ops\": [...]}, applied in order, all or none. A failure is the error `err.mol.draw.edit` (exit 2) with the `index` of the operation, its `op`, a `reason` word and a `detail`; text that is not a patch is `err.mol.draw.editJson`. Atoms keep their id while the patch runs; coordinates the patch does not touch stay as they are. Stereo elements of atoms whose bonds changed are dropped and logged in `choices` (`edit_stereo_dropped`). Code: crates/mzlab-feat/src/chem/edit.rs.",
+  "description": "The patch `mzlab-cli mol draw SPEC --set edit=JSON|@PATH` applies to a drawing (also the `edit` member of the molkit `draw` request and of the app route `kind: \"draw\"`): a list of operations, or the object {\"schema\": \"draw_edit/1\", \"ops\": [...]}, applied in order, all or none. A failure is the error `err.mol.draw.edit` (exit 2) with the `index` of the operation, its `op`, a `reason` word and a `detail`; text that is not a patch is `err.mol.draw.editJson`. Atoms keep their id while the patch runs; coordinates the patch does not touch stay as they are. Stereo elements of atoms whose bonds changed are dropped and logged in `choices` (`edit_stereo_dropped`). At most 1000 operations, 65536 bytes as text (`err.mol.draw.editJson`), 2500 bonds and 2000 ids in a list; the choices and warnings it adds (`edit_added`, `edit_placed`, `edit_h_recounted`, `edit_stereo_dropped`, `edit_wedge_dropped`, `edit_valence`) are lists of scene atom indices. Code: crates/mzlab-feat/src/chem/edit.rs.",
   "oneOf": [
     {
       "type": "array",
       "items": {
         "$ref": "#/$defs/op"
-      }
+      },
+      "maxItems": 1000
     },
     {
       "type": "object",
@@ -24,7 +25,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/op"
-          }
+          },
+          "maxItems": 1000
         }
       }
     }
@@ -47,7 +49,8 @@
             "id": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "el": {
               "type": "string",
@@ -110,7 +113,8 @@
             "id": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "el": {
               "type": "string",
@@ -160,12 +164,14 @@
             "a": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "b": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "o": {
               "type": "integer",
@@ -203,12 +209,14 @@
             "a": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "b": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "o": {
               "type": "integer",
@@ -246,8 +254,10 @@
               "items": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
-              }
+                "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+                "maximum": 2147483647
+              },
+              "maxItems": 2000
             },
             "bonds": {
               "type": "array",
@@ -256,11 +266,13 @@
                 "items": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+                  "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+                  "maximum": 2147483647
                 },
                 "minItems": 2,
                 "maxItems": 2
-              }
+              },
+              "maxItems": 2500
             }
           }
         },
@@ -281,9 +293,11 @@
               "items": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+                "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+                "maximum": 2147483647
               },
-              "minItems": 1
+              "minItems": 1,
+              "maxItems": 2000
             },
             "dx": {
               "type": "number",
@@ -317,12 +331,14 @@
             "from": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             },
             "into": {
               "type": "integer",
               "minimum": 0,
-              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)"
+              "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+              "maximum": 2147483647
             }
           }
         }

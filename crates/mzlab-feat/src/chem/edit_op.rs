@@ -3,16 +3,36 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 
+use super::draw::MAX_ATOMS;
+
 /// Angstrom per bond length of the drawing.
 const BOND_A: f64 = 1.5;
 
+/// The largest id an atom can have in a patch.
+pub(super) const MAX_ID: u32 = u32::MAX >> 1;
+
+/// The text of a patch echoed in an error, at most 64 bytes.
+pub(super) fn clip(s: &str) -> &str {
+    let mut n = s.len().min(64);
+    while !s.is_char_boundary(n) {
+        n -= 1;
+    }
+    &s[..n]
+}
+
+/// `a-b`, the name of a bond in a failure or a choice.
+#[inline(never)]
+pub(super) fn pair(a: u32, b: u32) -> String {
+    format!("{a}-{b}")
+}
+
 /// The failure of operation `index` (0-based): `op` is its name, `reason` a stable word, `detail` what it was about.
-pub(super) fn fail(index: usize, op: &str, reason: &'static str, detail: impl ToString) -> Error {
+pub(super) fn fail(index: usize, op: &str, reason: &'static str, detail: &str) -> Error {
     Error::new("err.mol.draw.edit")
         .with("index", index)
-        .with("op", op)
+        .with("op", clip(op))
         .with("reason", reason)
-        .with("detail", detail)
+        .with("detail", clip(detail))
 }
 
 /// One operation with the means to fail with its name and index.
@@ -23,8 +43,13 @@ pub(super) struct Op<'a> {
 }
 
 impl Op<'_> {
-    pub(super) fn err(&self, reason: &'static str, detail: impl ToString) -> Error {
+    pub(super) fn err(&self, reason: &'static str, detail: &str) -> Error {
         fail(self.i, self.name, reason, detail)
+    }
+
+    /// The failure about atom `id`.
+    pub(super) fn err_id(&self, reason: &'static str, id: u32) -> Error {
+        self.err(reason, &id.to_string())
     }
 
     /// Only the keys in `ok` (and `op`) may be there: a misspelt key is an error, never ignored.
@@ -63,21 +88,33 @@ impl Op<'_> {
     }
 
     pub(super) fn id(&self, k: &str) -> Result<u32> {
-        Ok(self.need(k, 0, i64::from(u32::MAX >> 1))? as u32)
+        Ok(self.need(k, 0, i64::from(MAX_ID))? as u32)
+    }
+
+    /// An id inside the list `k` (at most `max` of them).
+    pub(super) fn id_in(&self, x: &Value, k: &str) -> Result<u32> {
+        match x {
+            Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 && *n <= f64::from(MAX_ID) => {
+                Ok(*n as u32)
+            }
+            _ => Err(self.err("bad_field", k)),
+        }
+    }
+
+    /// The list `k`, empty when it is absent; longer than `max` is a bad field (a patch never needs more).
+    pub(super) fn list(&self, k: &str, max: usize) -> Result<&[Value]> {
+        match self.v.get(k) {
+            None => Ok(&[]),
+            Some(Value::Arr(a)) if a.len() <= max => Ok(a),
+            Some(_) => Err(self.err("bad_field", k)),
+        }
     }
 
     pub(super) fn ids(&self, k: &str) -> Result<Vec<u32>> {
-        match self.v.get(k) {
-            None => Ok(Vec::new()),
-            Some(Value::Arr(a)) => a
-                .iter()
-                .map(|x| match x {
-                    Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 && *n < 2e9 => Ok(*n as u32),
-                    _ => Err(self.err("bad_field", k)),
-                })
-                .collect(),
-            Some(_) => Err(self.err("bad_field", k)),
-        }
+        self.list(k, MAX_ATOMS)?
+            .iter()
+            .map(|x| self.id_in(x, k))
+            .collect()
     }
 
     pub(super) fn text(&self, k: &str) -> Result<Option<&str>> {
@@ -88,26 +125,23 @@ impl Op<'_> {
         }
     }
 
-    /// A point or a shift as angstrom from `kx`,`ky` (bond lengths) or `kx_a`,`ky_a`; `None` when neither is there.
-    pub(super) fn point(&self, kx: &str, ky: &str) -> Result<Option<[f64; 2]>> {
-        let (ax, ay) = (format!("{kx}_a"), format!("{ky}_a"));
-        let bl = [self.num(kx)?, self.num(ky)?];
-        let an = [self.num(&ax)?, self.num(&ay)?];
-        let (vals, unit, names) = match (
+    /// A point or a shift as angstrom from `n[0]`,`n[1]` (bond lengths) or `n[2]`,`n[3]` (angstrom); `None` when none of them is there.
+    pub(super) fn point(&self, n: [&str; 4]) -> Result<Option<[f64; 2]>> {
+        let bl = [self.num(n[0])?, self.num(n[1])?];
+        let an = [self.num(n[2])?, self.num(n[3])?];
+        let (vals, unit, k) = match (
             bl.iter().any(Option::is_some),
             an.iter().any(Option::is_some),
         ) {
             (false, false) => return Ok(None),
-            (true, true) => {
-                return Err(self.err("units_mixed", format!("{kx}/{ky} with {ax}/{ay}")))
-            }
-            (true, false) => (bl, BOND_A, [kx, ky]),
-            (false, true) => (an, 1.0, [ax.as_str(), ay.as_str()]),
+            (true, true) => return Err(self.err("units_mixed", n[0])),
+            (true, false) => (bl, BOND_A, 0),
+            (false, true) => (an, 1.0, 2),
         };
         match vals {
             [Some(x), Some(y)] => Ok(Some([r4(x * unit), r4(y * unit)])),
-            [None, _] => Err(self.err("missing_field", names[0])),
-            _ => Err(self.err("missing_field", names[1])),
+            [None, _] => Err(self.err("missing_field", n[k])),
+            _ => Err(self.err("missing_field", n[k + 1])),
         }
     }
 

@@ -10,6 +10,8 @@ use mzlab_mol::Mol;
 
 /// Above this many atoms the drawing refuses (a drawing, not a library).
 pub(super) const MAX_ATOMS: usize = 2000;
+/// The longest patch given as text, in bytes (the CLI reads `edit=@PATH` up to it).
+pub const MAX_PATCH: usize = super::edit_set::MAX_PATCH;
 
 /// What the answer is: the molfile text or the `draw/1` scene.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -57,7 +59,7 @@ struct Request<'a> {
     keep: bool,
     db: Option<&'a str>,
     name: Option<&'a str>,
-    edit: Option<Value>,
+    edit: Option<&'a Value>,
 }
 
 pub(super) fn note(key: &'static str, value: impl ToString) -> Note {
@@ -91,7 +93,7 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
         keep: !setting("layout", ["keep", "new"], "keep")?,
         db: text("db"),
         name: text("name"),
-        edit: v.get("edit").filter(|e| !e.is_null()).cloned(),
+        edit: v.get("edit").filter(|e| !e.is_null()),
     })
 }
 
@@ -122,7 +124,7 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
     }
     d.kind = kind;
     d.choices.insert(0, note("spec_kind", kind));
-    if let Some(e) = &r.edit {
+    if let Some(e) = r.edit {
         super::edit::apply(&mut d, e)?;
     }
     if let Some(n) = r.name {

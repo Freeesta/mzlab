@@ -152,7 +152,9 @@ def test_draw_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
 def test_draw_edit_patches_through_wasm_equal_the_cli_and_the_app_fixture(pkg, tmp_path):
     fx, exits = check_draw_fixture(pkg, tmp_path, "draw_d3.json")
     assert len(fx["cases"]) >= 20
-    assert exits and set(exits) == {2}  # every failed operation is a usage error with its key
+    # a failed operation is a usage error with its key (exit 2); only a drawing over the size limit is exit 1
+    big = [c for c in fx["cases"] if c.get("error_key") == "err.mol.draw.tooBig"]
+    assert big and exits.count(1) == len(big) and set(exits) == {1, 2}
 
 
 def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(pkg, tmp_path):

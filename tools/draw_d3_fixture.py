@@ -41,6 +41,11 @@ CASES = [
     ("units mixed", "CCO", [{"op": "atom.add", "el": "C", "x": 1, "y": 1, "x_a": 1}]),
     ("bond exists", "CCO", [{"op": "bond.add", "a": 0, "b": 1}]),
     ("bad json", "CCO", "[{"),
+    ("too many operations", "CCO", [{"op": "x"}] * 1001),
+    ("patch text too long", "CCO", "[" + " " * 65536),
+    ("too many atoms", "C" * 2000, [{"op": "atom.add", "el": "C"}]),
+    ("too many bonds", "C" * 2000, [{"op": "bond.add", "a": 0, "b": k} for k in range(2, 600)]),
+    ("too many ids in a list", "CCO", [{"op": "remove", "atoms": [0] * 2001}]),
 ]
 
 

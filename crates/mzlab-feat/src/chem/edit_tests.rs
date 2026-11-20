@@ -66,8 +66,9 @@ fn a_methyl_on_benzene_is_toluene_and_the_ring_stays_where_it_was() {
         "untouched atoms keep their coordinates"
     );
     let s = scene("c1ccccc1", edit);
-    assert_eq!(choice(&s, "edit_added").as_deref(), Some("atom ids 6"));
-    assert!(choice(&s, "edit_placed").is_some());
+    assert_eq!(choice(&s, "edit_added").as_deref(), Some("6"));
+    assert_eq!(choice(&s, "edit_placed").as_deref(), Some("6"));
+    assert_eq!(choice(&s, "edit").as_deref(), Some("2"));
 }
 
 #[test]
@@ -270,4 +271,155 @@ fn a_molfile_keeps_its_coordinates_and_an_empty_patch_changes_nothing() {
             .collect::<Vec<_>>()
     };
     assert_eq!(rows(&base), rows(&more));
+}
+
+/// A V3000 molfile of a straight chain of `n` atoms (a V2000 one counts to 999 only), with coordinates so that no layout runs.
+fn chain(n: usize) -> String {
+    let mut t = format!("\n  test\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS {n} {} 0 0 0\nM  V30 BEGIN ATOM\n", n - 1);
+    for i in 0..n {
+        t += &format!("M  V30 {} C {}.0 0.0 0 0\n", i + 1, i);
+    }
+    t += "M  V30 END ATOM\nM  V30 BEGIN BOND\n";
+    for i in 1..n {
+        t += &format!("M  V30 {i} 1 {i} {}\n", i + 1);
+    }
+    t + "M  V30 END BOND\nM  V30 END CTAB\nM  END\n"
+}
+
+fn reason(spec: &str, edit: &str) -> (&'static str, String, String) {
+    let e = failure(spec, edit);
+    (
+        e.key,
+        param(&e, "reason").to_string(),
+        param(&e, "index").to_string(),
+    )
+}
+
+#[test]
+fn the_size_of_the_drawing_the_operations_and_the_patch_text_are_bounded() {
+    let full = chain(2000);
+    let e = failure(&full, r#"[{"op":"atom.add","el":"C"}]"#);
+    assert_eq!((e.key, param(&e, "max")), ("err.mol.draw.tooBig", "2000"));
+    let many = format!("[{}]", vec![r#"{"op":"x"}"#; 1001].join(","));
+    assert_eq!(
+        reason("CCO", &many),
+        ("err.mol.draw.edit", "too_many_ops".into(), "1000".into())
+    );
+    let ok = format!(
+        "[{}]",
+        vec![r#"{"op":"move","atoms":[0],"dx":0,"dy":0}"#; 1000].join(",")
+    );
+    assert!(draw_json(&request("CCO", "molfile", &ok)).is_ok());
+    let long = format!("[]{}", " ".repeat(64 << 10));
+    let e = failure("CCO", &long);
+    assert_eq!(e.key, "err.mol.draw.editJson");
+    let ops: Vec<String> = (2..700)
+        .map(|k| format!(r#"{{"op":"bond.add","a":0,"b":{k}}}"#))
+        .collect();
+    // 1999 bonds and at most 2500: the 502nd bond.add (index 501) is the first refused
+    assert_eq!(
+        reason(&full, &format!("[{}]", ops.join(","))),
+        ("err.mol.draw.edit", "too_many_bonds".into(), "501".into())
+    );
+    let wide = vec!["0"; 2001].join(",");
+    let e = failure("CCO", &format!(r#"[{{"op":"remove","atoms":[{wide}]}}]"#));
+    assert_eq!(param(&e, "reason"), "bad_field");
+}
+
+#[test]
+fn a_wedge_on_a_drawing_a_v2000_molfile_cannot_hold_is_refused() {
+    let e = failure(&chain(1000), r#"[{"op":"bond.set","a":0,"b":1,"wedge":1}]"#);
+    assert_eq!(
+        (e.key, param(&e, "reason")),
+        ("err.mol.draw.edit", "wedge_size")
+    );
+}
+
+#[test]
+fn merge_move_and_remove_in_the_corners() {
+    // two bonds would collide
+    assert_eq!(
+        reason("C1CC1", r#"[{"op":"merge","from":0,"into":1}]"#).1,
+        "bond_exists"
+    );
+    // a piece with an atom that has no position yet moves the placed ones; the other waits for the layout
+    let s = scene(
+        "CCO.CC",
+        r#"[{"op":"atom.add","el":"C"},{"op":"bond.add","a":3,"b":5},{"op":"merge","from":3,"into":0}]"#,
+    );
+    assert_eq!(s.get("atoms").unwrap().arr().len(), 5);
+    assert_eq!(choice(&s, "edit_placed").as_deref(), Some("4"));
+    // a move names an atom that has no position: an error
+    assert_eq!(
+        reason(
+            "CCO",
+            r#"[{"op":"atom.add","el":"C"},{"op":"move","atoms":[3],"dx":1,"dy":0}]"#
+        )
+        .1,
+        "unplaced"
+    );
+    // an id that was removed can be used again
+    let s = scene(
+        "CCO",
+        r#"[{"op":"remove","atoms":[2]},{"op":"atom.add","id":2,"el":"N"}]"#,
+    );
+    let el = |i: usize| {
+        s.get("atoms").unwrap().arr()[i]
+            .get("el")
+            .and_then(Value::str)
+            .map(str::to_string)
+    };
+    assert_eq!(
+        (el(2).as_deref(), s.get("bonds").unwrap().arr().len()),
+        (Some("N"), 1)
+    );
+    assert_eq!(choice(&s, "edit_added").as_deref(), Some("2"));
+    // a bond named by two atoms other than the first
+    let s = scene("CCO", r#"[{"op":"remove","bonds":[[1,2]]}]"#);
+    assert_eq!(s.get("bonds").unwrap().arr().len(), 1);
+}
+
+#[test]
+fn an_edit_after_a_new_layout_and_the_choices_that_log_what_was_decided() {
+    let mut o = Out::default();
+    o.raw("{\"spec\":")
+        .str(&molfile("CCO", "[]"))
+        .raw(",\"layout\":\"new\",\"format\":\"molfile\",\"edit\":");
+    o.str(r#"[{"op":"atom.add","el":"C"},{"op":"bond.add","a":2,"b":3}]"#)
+        .raw("}");
+    assert_eq!(
+        can(&draw_json(&o.0).unwrap()),
+        Mol::from_smiles("CCOC").unwrap().can()
+    );
+    // a pentavalent carbon is accepted and named; the hydrogens counted again are listed
+    let s = scene(
+        "CCO",
+        r#"[{"op":"atom.add","el":"C"},{"op":"bond.add","a":1,"b":3,"o":3}]"#,
+    );
+    let warn = s
+        .get("warnings")
+        .unwrap()
+        .arr()
+        .iter()
+        .find(|w| w.get("key").and_then(Value::str) == Some("edit_valence"))
+        .and_then(|w| w.get("value").and_then(Value::str).map(str::to_string));
+    assert_eq!(warn.as_deref(), Some("1"));
+    assert_eq!(choice(&s, "edit_h_recounted").as_deref(), Some("1,3"));
+    // a mark of the patch takes the wedge another bond of the same atom had, and says so
+    let s = scene(
+        "N[C@@H](C)C(=O)O",
+        r#"[{"op":"bond.set","a":1,"b":2,"wedge":1}]"#,
+    );
+    assert_eq!(choice(&s, "edit_wedge_dropped").as_deref(), Some("1-0"));
+    // the hydrogens the patch gives survive a wedge
+    let s = scene(
+        "N[C@@H](C)C(=O)O",
+        r#"[{"op":"atom.set","id":5,"h":0},{"op":"bond.set","a":1,"b":0,"wedge":1}]"#,
+    );
+    assert_eq!(
+        s.get("atoms").unwrap().arr()[5]
+            .get("h")
+            .and_then(Value::f64),
+        Some(0.0)
+    );
 }
