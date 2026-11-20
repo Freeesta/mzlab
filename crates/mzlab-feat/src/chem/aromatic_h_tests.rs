@@ -64,14 +64,11 @@ fn a_hydrogen_count_no_atom_carries_is_refused() {
                 reason.contains(&format!("IMPL_H{count}")) && reason.contains("is not 0 to 4"),
                 "{reason}"
             );
-            for e in [
-                graph::Mol::from_molfile(&text),
-                graph::Mol::part_from_molfile(&text),
-            ] {
-                let e = e.err().unwrap();
-                assert_eq!(e.key, "error.grafo.molfile", "{count}");
-                assert!(e.to_string().contains(&reason), "{e} / {reason}");
-            }
+            let Err(e) = graph::Mol::from_molfile(&text) else {
+                panic!("{count}: read")
+            };
+            assert_eq!(e.key, "error.grafo.molfile", "{count}");
+            assert!(e.to_string().contains(&reason), "{e} / {reason}");
         }
     }
 }
@@ -127,48 +124,208 @@ const RING6: [(usize, usize, u8); 6] = [
     (6, 1, 4),
 ];
 
+/// The hydrogens `graph::Mol` gives the atoms of `text`.
+fn hs(text: &str) -> Vec<u32> {
+    let m = graph::Mol::from_molfile(text).unwrap();
+    m.atoms.iter().map(|a| a.h).collect()
+}
+
 #[test]
-fn a_ring_with_a_hydrogen_too_many_is_refused_by_both_readers_with_the_same_reason() {
-    let benzene = ["C"; 6];
+fn a_ring_that_cannot_be_kekulised_is_read_by_valence_and_never_refused() {
     let pyridine = ["N", "C", "C", "C", "C", "C"];
-    for (name, text) in [
+    for (name, text, h) in [
         (
             "pyridine N with IMPL_H1",
             with(&pyridine, &RING6, &[(1, "1")], &[]),
+            vec![1, 1, 1, 1, 1, 1],
         ),
         (
             "imidazole with IMPL_H1 on both N",
             with(&IMIDAZOLE, &IMIDAZOLE_BONDS, &[(4, "1"), (6, "1")], &[]),
+            vec![3, 0, 1, 1, 1, 1],
         ),
         (
             "benzene C with IMPL_H2",
-            with(&benzene, &RING6, &[(1, "2")], &[]),
-        ),
-        (
-            "pyrrole NH and a C with IMPL_H2",
-            with(&PYRROLE, &RING5, &[(1, "1"), (2, "2")], &[]),
+            with(&["C"; 6], &RING6, &[(1, "2")], &[]),
+            vec![2, 1, 1, 1, 1, 1],
         ),
         (
             "cyclopentadiene written aromatic",
             mf(&["C"; 5], &RING5, &[]),
+            vec![1, 1, 1, 1, 1],
         ),
     ] {
-        let Err(reason) = mzlab_mol::Mol::from_molfile(&text) else {
-            panic!("{name}: read by mzlab-mol")
-        };
-        let reason = reason.to_string();
-        assert!(reason.contains("cannot be kekulised"), "{name}: {reason}");
-        let Err(e) = graph::Mol::from_molfile(&text) else {
-            panic!("{name}: read by graph::Mol")
-        };
-        assert_eq!(e.key, "error.grafo.molfile", "{name}");
-        assert!(e.to_string().contains(&reason), "{name}: {e}");
+        // `mzlab-mol` strict refuses, its lenient reading (`check/1`) warns `kekule`; selection, cut and fragments read on
+        assert!(mzlab_mol::Mol::from_molfile(&text).is_err(), "{name}");
+        assert_eq!(hs(&text), h, "{name}");
         let req = serde_json::json!({ "molfile": text, "part": false }).to_string();
-        let Err(e) = sel_json(&req) else {
-            panic!("{name}: read by selection/1")
-        };
-        assert!(e.to_string().contains(&reason), "{name}: {e}");
+        assert!(sel_json(&req).is_ok(), "{name}");
+        assert!(
+            crate::chem::fragments::fragments_json(&text, -1, -1).is_ok(),
+            "{name}"
+        );
     }
+}
+
+#[test]
+fn what_a_cut_leaves_of_an_aromatic_ring_is_read_again() {
+    // 3-methylpyrrole (N1 with its stated H) and 3-methylfuran after the cut of C2-C3: the other type 4 bonds stay, C2 and C3 are radicals
+    let open = [(1, 2, 4), (3, 4, 4), (4, 5, 4), (5, 1, 4), (4, 6, 1)];
+    let rad = ["M  RAD  2   2   2   3   2"];
+    let pyrrole = with(&["N", "C", "C", "C", "C", "C"], &open, &[(1, "1")], &rad);
+    assert_eq!(hs(&pyrrole), [1, 1, 1, 0, 1, 3]);
+    assert_eq!(sel(&pyrrole, false)["label"]["text"], "C5H7N");
+    assert_eq!(sel(&pyrrole, false)["label"]["unpaired"], 2);
+    let furan = mf(&["O", "C", "C", "C", "C", "C"], &open, &rad);
+    assert_eq!(hs(&furan), [0, 1, 1, 0, 1, 3]);
+    for text in [&pyrrole, &furan] {
+        // a second cut (the methyl) and the fragments of the piece
+        let req = serde_json::json!({ "molfile": text, "bonds": [[3, 5]], "mode": "homolytic" })
+            .to_string();
+        let cut = crate::chem::cut::cut_json(&req);
+        assert!(cut.is_ok(), "{:?}", cut.err().map(|e| e.to_string()));
+        assert!(crate::chem::fragments::fragments_json(text, -1, -1).is_ok());
+    }
+}
+
+#[test]
+fn a_selected_part_of_an_aromatic_ring_follows_one_rule() {
+    // pyridine without C4 and pyridine without C3: both are open pieces, both read by valence (N without H, the ends with two)
+    let without_c4 = mf(
+        &["N", "C", "C", "C", "C"],
+        &[(3, 2, 4), (2, 1, 4), (1, 5, 4), (5, 4, 4)],
+        &[],
+    );
+    assert_eq!(hs(&without_c4), [0, 1, 2, 2, 1]);
+    assert_eq!(sel(&without_c4, true)["label"]["text"], "C4H6N");
+    let without_c3 = mf(
+        &["N", "C", "C", "C", "C"],
+        &[(2, 1, 4), (1, 5, 4), (5, 4, 4), (4, 3, 4)],
+        &[],
+    );
+    assert_eq!(hs(&without_c3), [0, 2, 2, 1, 1]);
+    assert_eq!(sel(&without_c3, true)["label"]["text"], "C4H6N");
+    // three atoms of pyrrole (N with its stated H, two C)
+    let chain = with(&["C", "N", "C"], &[(1, 2, 4), (2, 3, 4)], &[(2, "1")], &[]);
+    assert_eq!(hs(&chain), [2, 1, 2]);
+    assert_eq!(sel(&chain, true)["label"]["text"], "C2H5N");
+    // a part and a drawing are read the same way: the whole ring, and the open piece
+    let ring = with(&PYRROLE, &RING5, &[(1, "1")], &[]);
+    for text in [&ring, &without_c4, &chain] {
+        assert_eq!(sel(text, true)["label"], sel(text, false)["label"]);
+    }
+}
+
+/// `text` with the charge code `code` in the atom line of atom `atom` (1-based).
+fn charge_code(text: &str, atom: usize, code: u8) -> String {
+    let mut lines: Vec<String> = text.lines().map(String::from).collect();
+    lines[3 + atom].replace_range(36..39, &format!("{code:>3}"));
+    lines.join("\n")
+}
+
+#[test]
+fn the_two_readers_read_charges_property_lines_and_bond_types_the_same() {
+    let pyridine = ["N", "C", "C", "C", "C", "C"];
+    let plain = mf(&pyridine, &RING6, &[]);
+    // pyridinium written only in the charge column of the atom line (code 3 = +1)
+    let column = charge_code(&plain, 1, 3);
+    assert_eq!(
+        both(&column),
+        (vec![1, 1, 1, 1, 1, 1], vec![1, 1, 1, 1, 1, 1])
+    );
+    assert_eq!(sel(&column, false)["label"]["text"], "C5H6N+");
+    // an `M  CHG` line anywhere takes the place of every charge of the column
+    let both_ways = mf(&pyridine, &RING6, &["M  CHG  1   2   0"]);
+    let (feat, mol) = both(&charge_code(&both_ways, 1, 3));
+    assert_eq!(
+        (feat, mol),
+        (vec![0, 1, 1, 1, 1, 1], vec![0, 1, 1, 1, 1, 1])
+    );
+    // pyridine N-oxide in the charge column: N+ (code 3), O- (code 5)
+    let mut bonds = RING6.to_vec();
+    bonds.push((1, 7, 1));
+    let oxide = mf(&["N", "C", "C", "C", "C", "C", "O"], &bonds, &[]);
+    let oxide = charge_code(&charge_code(&oxide, 1, 3), 7, 5);
+    assert_eq!(
+        both(&oxide),
+        (vec![0, 1, 1, 1, 1, 1, 0], vec![0, 1, 1, 1, 1, 1, 0])
+    );
+    // a line after the end line, a line without the property prefix, a pair beyond the count of its line: none is read
+    for text in [
+        format!("{plain}\nM  CHG  1   1   1"),
+        mf(&pyridine, &RING6, &["X  CHG  1   1   1"]),
+        mf(&pyridine, &RING6, &["M  CHG  1   2   0   1   1"]),
+    ] {
+        assert_eq!(
+            both(&text),
+            (vec![0, 1, 1, 1, 1, 1], vec![0, 1, 1, 1, 1, 1]),
+            "{text}"
+        );
+        assert_eq!(sel(&text, false)["label"]["text"], "C5H5N");
+    }
+    // the valence column on an aromatic atom (15 = no hydrogens on a ring carbon bearing nothing else: a carbene-like centre)
+    let mut lines: Vec<String> = plain.lines().map(String::from).collect();
+    lines[5].replace_range(48..51, "  3");
+    let stated = lines.join("\n");
+    let (feat, mol) = both(&stated);
+    assert_eq!(feat, mol, "valence column");
+    // a query bond type (8 = any) is a single bond in both lenient readings: ethane with it has six H
+    let any = mf(&["C", "C"], &[(1, 2, 8)], &[]);
+    assert_eq!(hs(&any), [3, 3]);
+    let lenient = mzlab_mol::Mol::drawing_from_molfile(&any).unwrap().mol;
+    assert_eq!(
+        lenient.atoms.iter().map(|a| a.h).collect::<Vec<_>>(),
+        [3, 3]
+    );
+}
+
+#[test]
+fn of_two_damaged_groups_the_same_one_is_named_every_time() {
+    let mut lines: Vec<String> = group(1, 1, "5").to_vec();
+    lines.extend(group(2, 2, "7"));
+    let lines: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let text = mf(&PYRROLE, &RING5, &lines);
+    for _ in 0..20 {
+        let e = graph::Mol::from_molfile(&text)
+            .err()
+            .map(|e| e.to_string())
+            .unwrap_or_default();
+        assert!(e.contains("IMPL_H5"), "{e}");
+        let e = mzlab_mol::Mol::from_molfile(&text)
+            .err()
+            .map(|e| e.to_string())
+            .unwrap_or_default();
+        assert!(e.contains("IMPL_H5"), "{e}");
+    }
+}
+
+#[test]
+fn a_bond_from_an_atom_to_itself_is_named_as_such() {
+    let mut bonds = RING5.to_vec();
+    bonds.push((1, 1, 1));
+    let text = mf(&PYRROLE, &bonds, &[]);
+    let e = mzlab_mol::Mol::from_molfile(&text)
+        .err()
+        .map(|e| e.to_string())
+        .unwrap_or_default();
+    assert!(
+        e.contains("joins atom 1 to itself") && !e.contains("outside"),
+        "{e}"
+    );
+    let atoms: Vec<mzlab_mol::DrawnAtom> = PYRROLE
+        .iter()
+        .map(|el| mzlab_mol::DrawnAtom {
+            el,
+            chg: 0,
+            rad: 0,
+            valence: None,
+        })
+        .collect();
+    let e = mzlab_mol::drawn_hydrogens(&atoms, &[(0, 0, 1)], Vec::new())
+        .err()
+        .map(|e| e.to_string())
+        .unwrap_or_default();
+    assert!(e.contains("joins atom 1 to itself"), "{e}");
 }
 
 #[test]
@@ -226,20 +383,6 @@ fn a_ring_the_file_states_no_hydrogen_for_is_read_the_same_by_both_readers() {
         let (feat, mol) = both(&mf(els, bonds, more));
         assert_eq!((feat, mol), (h.clone(), h), "{els:?} {more:?}");
     }
-}
-
-#[test]
-fn a_selected_part_of_an_aromatic_ring_is_read_by_valence() {
-    // three atoms of pyrrole (N with its stated H, two C): no ring to kekulise, so a whole drawing is refused and a part is read
-    let chain = [(1, 2, 4), (2, 3, 4)];
-    let text = with(&["C", "N", "C"], &chain, &[(2, "1")], &[]);
-    assert!(graph::Mol::from_molfile(&text).is_err());
-    let m = graph::Mol::part_from_molfile(&text).unwrap();
-    assert_eq!(m.atoms.iter().map(|a| a.h).collect::<Vec<_>>(), [2, 1, 2]);
-    assert_eq!(sel(&text, true)["label"]["text"], "C2H5N");
-    // a part that is a whole ring is read as the drawing is
-    let ring = with(&PYRROLE, &RING5, &[(1, "1")], &[]);
-    assert_eq!(sel(&ring, true)["label"], sel(&ring, false)["label"]);
 }
 
 #[test]

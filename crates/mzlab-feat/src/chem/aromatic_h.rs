@@ -6,31 +6,42 @@ use mzlab_mol::DrawnAtom;
 
 use super::smiles::{self, RawAtom, RawBond};
 
-/// Sets the hydrogens of the aromatic atoms of `raw` as `mzlab_mol::Mol::from_molfile` counts them (`drawn_hydrogens`: kekulised, the H
-/// of an `MRV_IMPLICIT_H` data group on its atom, radicals counted) and answers true: the caller must not subtract the radicals again.
-/// `props` are the lines after the bond block, `rad` the `M  RAD` codes. A drawing `mzlab-mol` refuses (a ring that cannot be
-/// kekulised, a hydrogen count outside 0 to 4) is refused with its reason, unless it is a `part` of a drawing: a selected piece of a
-/// ring cannot be kekulised, so its atoms are read by valence (false) and a stated hydrogen counts on the atom whose valence it fills.
+/// Sets the hydrogens of the aromatic atoms of `raw` and answers whether `mzlab-mol` counted them (`drawn_hydrogens`: kekulised, the H
+/// of an `MRV_IMPLICIT_H` data group on its atom, radicals and stated valences counted; the caller must not subtract the radicals
+/// again). `props` are the lines after the bond block, `rad` the `M  RAD` codes, `valence` the valence column. One rule for a drawing
+/// and for a selected part of one: closed aromatic rings that can be kekulised are counted by `mzlab-mol`; an open piece of a ring
+/// (what a cut or a selection leaves: an aromatic atom with one aromatic bond) or a ring that cannot be kekulised is read by valence
+/// (false), a stated hydrogen on the atom whose valence it fills. Never refused for that: `check/1` gives the `kekule` warning of the
+/// same drawing. Only a hydrogen count outside 0 to 4 (a damaged file) is refused, with its reason.
 pub(super) fn apply(
     raw: &mut [RawAtom],
     written: &[RawBond],
     props: &[&str],
     rad: &[(usize, i32)],
-    part: bool,
+    valence: &[Option<u8>],
 ) -> Result<bool> {
     let refuse =
         |e: mzlab_mol::MolError| Error::new("error.grafo.molfile").with("message", e.to_string());
     let stated = mzlab_mol::stated_hydrogens(props, raw.len()).map_err(refuse)?;
-    // a count no atom carries refuses the file whatever it draws, as in `mzlab-mol`
     if !raw.iter().any(|r| r.arom) {
         return Ok(false);
     }
+    let mut ring_bonds = vec![0u8; raw.len()];
+    for &(a, b, order, _) in written {
+        if order == 1.5 {
+            ring_bonds[a] = ring_bonds[a].saturating_add(1);
+            ring_bonds[b] = ring_bonds[b].saturating_add(1);
+        }
+    }
+    let closed = raw.iter().zip(&ring_bonds).all(|(r, n)| !r.arom || *n >= 2);
     let mut atoms: Vec<DrawnAtom> = raw
         .iter()
-        .map(|r| DrawnAtom {
+        .zip(valence)
+        .map(|(r, v)| DrawnAtom {
             el: &r.el,
             chg: r.charge as i8,
             rad: 0,
+            valence: *v,
         })
         .collect();
     for &(i, code) in rad {
@@ -45,14 +56,13 @@ pub(super) fn apply(
         .map(|&(a, b, order, _)| (a, b, if order == 1.5 { 0 } else { order as u8 }))
         .collect();
     match mzlab_mol::drawn_hydrogens(&atoms, &bonds, stated.clone()) {
-        Ok(h) => {
+        Ok(h) if closed => {
             for (r, h) in raw.iter_mut().zip(h).filter(|(r, _)| r.arom) {
                 r.h = Some(u32::from(h));
             }
             Ok(true)
         }
-        Err(e) if !part => Err(refuse(e)),
-        Err(_) => {
+        _ => {
             by_valence(raw, written, stated);
             Ok(false)
         }

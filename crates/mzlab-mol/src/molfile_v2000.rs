@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::elements::is_element;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
 fn field(line: &str, a: usize, b: usize) -> &str {
@@ -104,7 +104,10 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
         if line.starts_with("M  END") {
             break;
         }
-        let Some(kind) = line.get(3..6) else { continue };
+        // a property line starts with `M  `: any other line is not one
+        let Some(kind) = line.strip_prefix("M  ").and_then(|l| l.get(..3)) else {
+            continue;
+        };
         let pairs = || -> Result<Vec<(usize, i32)>, MolError> { property_pairs(line, na) };
         match kind {
             "CHG" => {
@@ -149,7 +152,8 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
 /// (`M  SAL g n atoms`, `M  SDT g field`, `M  SED g data`, up to `M  END`), sorted: an atom named twice has its larger count last.
 pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, MolError> {
     // data groups by number: (atoms, field name, data)
-    let mut data: HashMap<&str, (Vec<usize>, &str, &str)> = HashMap::new();
+    // ordered, so that of two damaged groups the same one is named in every run
+    let mut data: BTreeMap<&str, (Vec<usize>, &str, &str)> = BTreeMap::new();
     for line in lines.iter().take_while(|l| !l.starts_with("M  END")) {
         let kind = line.starts_with("M  ").then(|| line.get(3..6)).flatten();
         let Some(kind @ ("SAL" | "SDT" | "SED")) = kind else {
@@ -181,7 +185,10 @@ pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, 
 
 fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
     let (a, b) = (int(line, 0, 3)? as usize, int(line, 3, 6)? as usize);
-    if a == 0 || b == 0 || a > na || b > na || a == b {
+    if a == b && a != 0 {
+        return Err(fail(format!("bond line {line:?} joins atom {a} to itself")));
+    }
+    if a == 0 || b == 0 || a > na || b > na {
         return Err(fail(format!(
             "bond line {line:?} names atoms outside 1..{na}"
         )));

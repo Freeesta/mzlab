@@ -233,8 +233,7 @@ fn by_valence(mf: &str, n: usize, ks: &[usize], st: &[State]) -> Result<Vec<u32>
             out += &format!("M  RAD  1 {:>3} {:>3}\n", i + 1, x.rad);
         }
     }
-    // the cut may open a ring written aromatic: what is left of it is read by valence
-    Ok(Mol::part_from_molfile(&(out + "M  END"))?
+    Ok(Mol::from_molfile(&(out + "M  END"))?
         .atoms
         .iter()
         .map(|a| a.h)

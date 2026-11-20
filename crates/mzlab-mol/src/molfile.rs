@@ -33,6 +33,8 @@ pub struct DrawnAtom<'a> {
     pub el: &'a str,
     pub chg: i8,
     pub rad: u8,
+    /// The total valence the file states for the atom (`Some(0)`: no bonds and no hydrogens).
+    pub valence: Option<u8>,
 }
 
 /// The hydrogens of the atoms of a drawing, counted by the code of `Mol::from_molfile` (the same kekulisation, stated hydrogens,
@@ -44,12 +46,17 @@ pub fn drawn_hydrogens(
     stated: Vec<(usize, u32)>,
 ) -> Result<Vec<u8>, MolError> {
     let n = atoms.len();
-    if let Some(&(a, b, _)) = bonds.iter().find(|&&(a, b, _)| a >= n || b >= n || a == b) {
-        return Err(fail(format!(
-            "a bond names atoms {} and {} outside 1..{n}",
-            a + 1,
-            b + 1
-        )));
+    for &(a, b, _) in bonds {
+        if a == b {
+            return Err(fail(format!("a bond joins atom {} to itself", a + 1)));
+        }
+        if a >= n || b >= n {
+            return Err(fail(format!(
+                "a bond names atoms {} and {} outside 1..{n}",
+                a + 1,
+                b + 1
+            )));
+        }
     }
     let mut draft = Draft {
         atoms: atoms
@@ -60,7 +67,7 @@ pub fn drawn_hydrogens(
                 chg: a.chg,
                 rad: a.rad,
                 xyz: [0.0; 3],
-                valence: None,
+                valence: a.valence,
                 query: false,
             })
             .collect(),

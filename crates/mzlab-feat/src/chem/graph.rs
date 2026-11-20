@@ -12,6 +12,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
 use super::aromatic_h;
+use super::atom_block::{atom_block, has};
 use super::smiles::{self, normal_valence, RawAtom, RawBond};
 
 /// Atoms the graph accepts (the localisation of the Python version stopped at 64).
@@ -36,15 +37,6 @@ impl Mol {
     /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
     /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic with the hydrogens `mzlab-mol` reads (`aromatic_h`). Disconnected pieces are accepted (the page cuts bonds).
     pub fn from_molfile(mf: &str) -> Result<Mol> {
-        Mol::read_molfile(mf, false)
-    }
-
-    /// `from_molfile` for a selected part of a drawing: a piece of an aromatic ring is read by valence instead of refused.
-    pub fn part_from_molfile(mf: &str) -> Result<Mol> {
-        Mol::read_molfile(mf, true)
-    }
-
-    fn read_molfile(mf: &str, part: bool) -> Result<Mol> {
         let bad = || Error::new("error.grafo.molfile");
         let lines: Vec<&str> = mf.lines().collect();
         let counts = lines.get(3).ok_or_else(bad)?;
@@ -60,19 +52,9 @@ impl Mol {
                 bad()
             });
         }
-        let mut raw: Vec<RawAtom> = Vec::new();
-        for l in &lines[4..4 + na] {
-            let el = l.get(31..34).ok_or_else(bad)?.trim().to_string();
-            if elements::mass_of(&el).is_none() || normal_valence(&el).is_none() {
-                return Err(Error::new("error.grafo.element").with("element", &el));
-            }
-            raw.push(RawAtom {
-                el,
-                arom: false,
-                h: None,
-                charge: 0,
-            });
-        }
+        let rest = &lines[4 + na + nb..];
+        let chg = props(rest, "M  CHG", na);
+        let (mut raw, valence) = atom_block(&lines[4..4 + na], !has(rest, "M  CHG"))?;
         let mut written: Vec<RawBond> = Vec::new();
         for l in &lines[4 + na..4 + na + nb] {
             let (a, b, t) = (num(l, 0, 3), num(l, 3, 6), num(l, 6, 9));
@@ -90,16 +72,20 @@ impl Mol {
             written.push((
                 a as usize - 1,
                 b as usize - 1,
-                if arom { 1.5 } else { t.clamp(1, 3) as f32 },
+                // any other type (a query bond) is read as single, as `mzlab-mol` reads it
+                match t {
+                    4 => 1.5,
+                    2 | 3 => t as f32,
+                    _ => 1.0,
+                },
                 true,
             ));
         }
-        for (i, c) in props(&lines[4 + na + nb..], "M  CHG", na) {
+        for (i, c) in chg {
             raw[i].charge = c;
         }
-        let rest = &lines[4 + na + nb..];
         let rad = props(rest, "M  RAD", na);
-        let counted = aromatic_h::apply(&mut raw, &written, rest, &rad, part)?;
+        let counted = aromatic_h::apply(&mut raw, &written, rest, &rad, &valence)?;
         let mut m = Mol::assemble(raw, written, true);
         for (i, w) in props(rest, "M  ISO", na) {
             m.atoms[i].iso = w.max(0) as u32;
@@ -369,15 +355,18 @@ fn typed_bonds(raw: &[RawAtom], written: Vec<RawBond>) -> Vec<Bond> {
         .collect()
 }
 
-/// The (atom index, value) pairs of the `M  CHG` / `M  ISO` lines (`prefix`) of a molfile with `na` atoms.
+/// The (atom index, value) pairs of the `M  CHG` / `M  ISO` / `M  RAD` lines (`prefix`) of a molfile with `na` atoms: the lines before
+/// `M  END`, as many pairs as the count of the line says.
 pub(super) fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)> {
     let mut out = vec![];
-    for rest in lines.iter().filter_map(|l| l.strip_prefix(prefix)) {
+    let lines = lines.iter().take_while(|l| !l.starts_with("M  END"));
+    for rest in lines.filter_map(|l| l.strip_prefix(prefix)) {
         let v: Vec<i32> = rest
             .split_whitespace()
             .filter_map(|t| t.parse().ok())
             .collect();
-        for p in v.get(1..).unwrap_or(&[]).chunks(2) {
+        let pairs = usize::try_from(v.first().copied().unwrap_or(0)).unwrap_or(0);
+        for p in v.get(1..).unwrap_or(&[]).chunks(2).take(pairs) {
             if let [i, c] = p
                 && *i >= 1
                 && (*i as usize) <= na
