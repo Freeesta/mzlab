@@ -71,6 +71,15 @@ fn radical_code(rad: u8) -> i64 {
     }
 }
 
+/// The CDXML name of a radical (an enumeration there: the numbers belong to binary CDX).
+fn radical_name(rad: u8) -> &'static str {
+    match rad {
+        0 => "",
+        1 => "Doublet",
+        _ => "Triplet",
+    }
+}
+
 /// The text label of a drawing: its title, a plain text line.
 fn label_of(d: &Drawn) -> Option<&str> {
     let t = d.title.lines().next().unwrap_or("").trim();
@@ -162,9 +171,9 @@ fn xml_text(s: &str) -> String {
     out
 }
 
-/// One run of text in the default style (font 3, 10 pt).
+/// One run of text in the default style (font 1, 10 pt).
 fn run(s: &str) -> String {
-    format!("<s font=\"3\" size=\"10\" face=\"0\">{}</s>", xml_text(s))
+    format!("<s font=\"1\" size=\"10\" face=\"0\">{}</s>", xml_text(s))
 }
 
 /// CDXML: one `fragment` with a node per atom (`Element`, `NumHydrogens`, `Charge`, `Isotope`, `Radical`; a label for every atom but a
@@ -178,13 +187,13 @@ pub fn cdxml(d: &Drawn) -> String {
         let (u, v) = ((x - x0 + 1.0) * BOND_PT, (y1 - y + 1.0) * BOND_PT);
         format!("{} {}", fixed(u + 0.0, 2), fixed(v + 0.0, 2))
     };
-    let mut out = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE CDXML SYSTEM \"http://www.camsoft.com/xml/cdxml.dtd\">\n<CDXML CreationProgram=\"mzLab\" BondLength=\"30\">\n<fonttable><font id=\"3\" charset=\"iso-8859-1\" name=\"Arial\"/></fonttable>\n<page id=\"1\">\n");
+    let mut out = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE CDXML SYSTEM \"http://www.camsoft.com/xml/cdxml.dtd\">\n<CDXML CreationProgram=\"mzLab\" BondLength=\"30\">\n<fonttable><font id=\"1\" charset=\"iso-8859-1\" name=\"Arial\"/></fonttable>\n<page id=\"2\">\n");
     if !m.atoms.is_empty() {
-        out += "<fragment id=\"2\">\n";
+        out += "<fragment id=\"3\">\n";
     }
-    // the fragment is object 2, so atom `i` is object `3 + i` and the bonds and the text follow
+    // font 1, page 2, fragment 3: atom `i` is object `4 + i`, and the bonds and the text follow, so no id is used twice
     for (i, a) in m.atoms.iter().enumerate() {
-        out += &format!("<n id=\"{}\" p=\"{}\"", 3 + i, pt(p[i].0, p[i].1));
+        out += &format!("<n id=\"{}\" p=\"{}\"", 4 + i, pt(p[i].0, p[i].1));
         let z = mzlab_mol::atomic_number(&a.el).unwrap_or(6);
         let h = u32::from(a.h);
         if z != 6 {
@@ -193,14 +202,13 @@ pub fn cdxml(d: &Drawn) -> String {
         if z != 6 || h != default_h(m, &sum, i) {
             out += &format!(" NumHydrogens=\"{h}\"");
         }
-        for (name, v) in [
-            ("Charge", i64::from(a.chg)),
-            ("Isotope", i64::from(a.iso)),
-            ("Radical", radical_code(a.rad)),
-        ] {
+        for (name, v) in [("Charge", i64::from(a.chg)), ("Isotope", i64::from(a.iso))] {
             if v != 0 {
                 out += &format!(" {name}=\"{v}\"");
             }
+        }
+        if a.rad > 0 {
+            out += &format!(" Radical=\"{}\"", radical_name(a.rad));
         }
         if z == 6 {
             out += "/>\n";
@@ -213,7 +221,7 @@ pub fn cdxml(d: &Drawn) -> String {
             out += &format!("><t>{}</t></n>\n", run(&format!("{}{hs}", a.el)));
         }
     }
-    let mut id = 3 + m.atoms.len();
+    let mut id = 4 + m.atoms.len();
     for (a, b, order, wedge) in m.written_bonds() {
         let more = match (wedge, order) {
             (1, _) => " Display=\"WedgeBegin\"".to_string(),
@@ -222,7 +230,7 @@ pub fn cdxml(d: &Drawn) -> String {
             (_, 1) => String::new(),
             (_, n) => format!(" Order=\"{n}\""),
         };
-        out += &format!("<b id=\"{id}\" B=\"{}\" E=\"{}\"{more}/>\n", 3 + a, 3 + b);
+        out += &format!("<b id=\"{id}\" B=\"{}\" E=\"{}\"{more}/>\n", 4 + a, 4 + b);
         id += 1;
     }
     if !m.atoms.is_empty() {

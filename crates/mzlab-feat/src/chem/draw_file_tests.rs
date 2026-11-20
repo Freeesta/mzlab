@@ -124,7 +124,12 @@ fn read_cdxml(text: &str) -> Mol {
             -p[1] / 20.0,
             int("Charge"),
             int("Isotope"),
-            int("Radical"),
+            match attr(n, "Radical") {
+                None => 0,
+                Some("Doublet") => 2,
+                Some("Triplet") => 3,
+                Some(other) => panic!("Radical {other}"),
+            },
             attr(n, "NumHydrogens").map(|h| h.parse().unwrap()),
         ));
     }
@@ -298,4 +303,45 @@ fn a_molfile_with_coordinates_keeps_them_in_the_file() {
         a, b,
         "the molfile of a drawing gives the same KET as the SMILES"
     );
+}
+
+#[test]
+fn cdxml_radicals_are_the_enumeration_and_ket_keeps_the_numbers() {
+    let cdxml = file("[CH3]", "cdxml");
+    assert!(cdxml.contains("Radical=\"Doublet\""), "{cdxml}");
+    assert!(!cdxml.contains("Radical=\"2\""), "{cdxml}");
+    assert!(file("[CH3]", "ket").contains("\"radical\":2"));
+    let two = file("[CH2]", "cdxml");
+    assert!(two.contains("Radical=\"Triplet\""), "{two}");
+    assert!(!file("CC", "cdxml").contains("Radical"));
+}
+
+#[test]
+fn cdxml_object_ids_are_unique() {
+    let text = file("CC(=O)Oc1ccccc1C(=O)O", "cdxml");
+    let mut ids: Vec<&str> = text
+        .match_indices(" id=\"")
+        .map(|(i, _)| {
+            let r = &text[i + 5..];
+            &r[..r.find('"').unwrap()]
+        })
+        .collect();
+    let n = ids.len();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), n, "{text}");
+}
+
+#[test]
+fn extra_title_lines_are_logged_as_a_choice() {
+    let ask = |name: &str| {
+        let (d, _) = draw(&request(
+            "CCO",
+            &format!(",\"format\":\"ket\",\"name\":\"{name}\""),
+        ))
+        .unwrap();
+        d.choices.iter().any(|c| c.key == "file_title")
+    };
+    assert!(ask("first\\nsecond"));
+    assert!(!ask("only one"));
 }

@@ -150,10 +150,33 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
         } else {
             "points, 30 per bond, y down"
         };
+        // both writers need an atomic number for every atom: refuse, never turn an unknown label into carbon
+        if let Some(a) = d
+            .mol
+            .atoms
+            .iter()
+            .find(|a| mzlab_mol::atomic_number(&a.el).is_none())
+        {
+            return Err(Error::new("err.mol.draw.element").with("symbol", a.el.as_str()));
+        }
         d.choices.push(note("file_format", f.name()));
         d.choices.push(note("file_scale", scale));
-    }
-    if let Some(n) = r.name {
+        if let Some(n) = r.name {
+            d.title = n.to_string();
+        }
+        let dropped = d
+            .title
+            .lines()
+            .skip(1)
+            .filter(|l| !l.trim().is_empty())
+            .count();
+        if dropped > 0 {
+            d.choices.push(note(
+                "file_title",
+                format!("first line only, {dropped} more dropped"),
+            ));
+        }
+    } else if let Some(n) = r.name {
         d.title = n.to_string();
     }
     Ok((d, r.format))

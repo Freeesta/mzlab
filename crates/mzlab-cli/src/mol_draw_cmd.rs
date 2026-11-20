@@ -1,5 +1,5 @@
-//! `mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout (`draw/1`), as a molfile or, with
-//! `--json`, as a scene of atoms, bonds and fragments. The same bytes as the molkit `.wasm` and the app (`chem::draw`).
+//! `mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH]`: a structure drawn in 2D by the own layout
+//! (`draw/1`), as a molfile, a KET or a CDXML text or, with `--json`, as a scene of atoms, bonds and fragments (the KET or CDXML text in `file`). The same bytes as the molkit `.wasm` and the app (`chem::draw`).
 
 use mzlab_core::error::Error;
 use std::path::{Path, PathBuf};
@@ -10,7 +10,7 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli mol draw: a structure drawn in 2D by mzLab's own layout (draw/1).
 
-usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
+usage: mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml] [--set NAME=VALUE...] [--out PATH] [--json]
 
   SPEC           smiles:TEXT (or a bare SMILES), molfile:TEXT, a molfile path or - (the text has M  END), name:TEXT, inchikey:KEY
                  (or a bare 27-character key), InChI=... followed by its InChIKey. Bare text that is none of these is a name.

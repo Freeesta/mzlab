@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "draw/1",
   "title": "draw/1: a structure drawn in 2D",
-  "description": "The scene of `mzlab-cli mol draw SPEC --json`, of the molkit export `draw` and of the app route `kind: \"draw\"`. Positions are in angstrom (bond length 1.5), atoms 0-based in the order of the record, a wedge belongs to the first atom of its bond (`wedge`: 0 none, 1 up, -1 down, 2 either). `fragments` lists the connected pieces (largest first). `choices` logs every automatic choice (spec_kind, name_hit or key_hit, layout, molfile_version); `warnings` what the user should look at. Code: crates/mzlab-feat/src/chem/draw.rs.",
+  "description": "The scene of `mzlab-cli mol draw SPEC --json`, of the molkit export `draw` and of the app route `kind: \"draw\"`. Positions are in angstrom (bond length 1.5), atoms 0-based in the order of the record, a wedge belongs to the first atom of its bond (`wedge`: 0 none, 1 up, -1 down, 2 either). `fragments` lists the connected pieces (largest first). `choices` logs every automatic choice (spec_kind, name_hit or key_hit, layout, molfile_version, and with a KET or CDXML file file_format, file_scale and file_title); `warnings` what the user should look at. `file_format` and `file` are present only when the request asked for the text of a KET or CDXML file beside the scene (`file`: `ket` or `cdxml`). Code: crates/mzlab-feat/src/chem/draw.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -148,6 +148,16 @@
           }
         }
       }
+    },
+    "file_format": {
+      "enum": [
+        "ket",
+        "cdxml"
+      ]
+    },
+    "file": {
+      "type": "string",
+      "description": "The KET (JSON) or CDXML (XML) text of the same drawing, byte-equal to `mzlab-cli mol draw SPEC --format ket|cdxml`."
     }
   }
 }

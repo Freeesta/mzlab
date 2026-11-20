@@ -95,6 +95,7 @@
   "err.cli.file": "CLI error: a file cannot be read; {path} = the file.",
   "err.msn.rules.document": "CLI error: a file given to msn rules sum is not an msn-rules/1 document; {path} = the file.",
   "err.mol.draw.request": "Error of mol draw; the request has no usable spec.",
+  "err.mol.draw.element": "Error of mol draw; {symbol} = the atom label that is no element.",
   "err.mol.draw.set": "Error of mol draw; {name} = the setting, {value} = the value given.",
   "err.mol.draw.smiles": "Error of mol draw; {message} = technical text from the SMILES reader.",
   "err.mol.draw.molfile": "Error of mol draw; {message} = technical text from the molfile reader.",

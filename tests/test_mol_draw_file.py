@@ -39,7 +39,7 @@ def test_every_molecule_gives_valid_ket_and_wellformed_cdxml(cli_built):
         assert list(ket)[0] == "root" and ket["mol0"]["type"] == "molecule", smi
         n = len(ket["mol0"]["atoms"])
         assert all(0 <= i < n for b in ket["mol0"]["bonds"] for i in b["atoms"]), smi
-        root = ET.fromstring(draw(smi, "cdxml").split("\n", 2)[2].replace("</CDXML>", "</CDXML>"))  # the DOCTYPE line is not XML 1.0 well-formed input for ElementTree
+        root = ET.fromstring(draw(smi, "cdxml").split("\n", 2)[2])  # the DOCTYPE line is not XML 1.0 well-formed input for ElementTree
         assert root.tag == "CDXML" and len(root.findall(".//n")) == n, smi
 
 
