@@ -54,6 +54,36 @@ fn an_intact_ring_keeps_its_hydrogens_next_to_a_cut_or_unkekulisable_one() {
     }
 }
 
+#[test]
+fn many_rings_with_no_stated_hydrogen_each_keep_their_own() {
+    // three pyrroles, none saying which atom carries its hydrogen: more than one search of `mzlab-mol` finds together
+    let (mut els, mut bonds) = (Vec::new(), Vec::new());
+    for ring in 0..3 {
+        els.extend(["N", "C", "C", "C", "C"]);
+        let at = |k: usize| ring * 5 + k;
+        bonds.extend([
+            (at(1), at(2), 4),
+            (at(2), at(3), 4),
+            (at(3), at(4), 4),
+            (at(4), at(5), 4),
+            (at(5), at(1), 4),
+        ]);
+    }
+    let text = mf(&els, &bonds, &[]);
+    assert_eq!(hs(&text), [1; 15]);
+    assert_eq!(sel(&text, false)["label"]["text"], "C12H15N3");
+    // one of them with a ring that cannot be kekulised beside: still each alone
+    els.extend(["C"; 5]);
+    bonds.extend([
+        (16, 17, 4),
+        (17, 18, 4),
+        (18, 19, 4),
+        (19, 20, 4),
+        (20, 16, 4),
+    ]);
+    assert_eq!(hs(&mf(&els, &bonds, &[]))[..15], [1; 15]);
+}
+
 /// `text` with the charge column of the atom line `atom` (1-based) set to `code`.
 fn charge_column(text: &str, atom: usize, code: u8) -> String {
     let mut lines: Vec<String> = text.lines().map(str::to_string).collect();

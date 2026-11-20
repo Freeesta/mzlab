@@ -28,7 +28,7 @@ pub(super) fn apply(
     if !raw.iter().any(|r| r.arom) {
         return Ok(counted);
     }
-    let (system, mut whole) = systems(raw.len(), written);
+    let (system, whole) = systems(raw.len(), written);
     let mut atoms: Vec<DrawnAtom> = raw
         .iter()
         .zip(valence)
@@ -66,25 +66,21 @@ pub(super) fn apply(
             .collect();
         mzlab_mol::drawn_hydrogens(&atoms, &bonds, stated.clone())
     };
-    let mut h = count(&|s| whole[s]);
-    if h.is_err() {
-        // a system fails alone: the others keep their kekulisation
-        let failing: Vec<usize> = (0..whole.len())
-            .filter(|&s| whole[s] && count(&|k| k == s).is_err())
-            .collect();
-        for s in failing {
-            whole[s] = false;
-        }
-        h = count(&|s| whole[s]);
-    }
-    if let Ok(h) = h {
-        for (i, r) in raw
-            .iter_mut()
-            .enumerate()
-            .filter(|(i, r)| r.arom && whole[system[*i]])
-        {
-            r.h = Some(u32::from(h[i]));
-            counted[i] = true;
+    // every closed system at once (what `mzlab-mol` does with the whole file); when that fails, each one from its own run: a
+    // system that fails, or the search of the unstated hydrogens of many systems together, costs the others nothing
+    let runs: Vec<(Option<usize>, Vec<u8>)> = match count(&|s| whole[s]) {
+        Ok(h) => vec![(None, h)],
+        Err(_) => (0..whole.len())
+            .filter(|&s| whole[s])
+            .filter_map(|s| count(&|k| k == s).ok().map(|h| (Some(s), h)))
+            .collect(),
+    };
+    for (only, h) in runs {
+        for (i, r) in raw.iter_mut().enumerate() {
+            if r.arom && whole[system[i]] && only.is_none_or(|s| s == system[i]) {
+                r.h = Some(u32::from(h[i]));
+                counted[i] = true;
+            }
         }
     }
     by_valence(raw, written, stated, &counted);
