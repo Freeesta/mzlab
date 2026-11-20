@@ -1,4 +1,4 @@
-# `mol draw`: own 2D layout and the `draw/1` scene (`mzlab-mol::layout`, `mzlab-feat::chem::draw`)
+# `mol draw`: own 2D layout, the `draw/1` scene and the edit patch (`mzlab-mol::layout`, `mzlab-feat::chem::draw`, `chem::edit`)
 
 A structure written as text (SMILES, molfile, a name or InChIKey of the molecule database) becomes a drawing: coordinates in angstrom, bond length 1.5, the same on the site (molkit `.wasm`), in the app (`feat/grafo`, `kind:"draw"`) and in the CLI (`mzlab-cli mol draw`). No code of other toolkits; RDKit is only the yardstick of the tests (`tools/draw_quality.py`, never a dependency).
 
@@ -23,18 +23,37 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 (an InChIKey with several rows in the db; the first is drawn, the names are listed). In molfile mode the CLI prints them on stderr as `choice: key = value` and `warning: ...`.
 
 ## CLI (`crates/mzlab-cli/src/mol_draw_cmd.rs`)
-`mzlab-cli mol draw SPEC [--set format=molfile|scene] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--out PATH] [--json]`. Plain output is the molfile; `--json` is the scene (`--json` with `--set format=molfile` is a usage error). SPEC is `-` for stdin; a path that exists is read.
+`mzlab-cli mol draw SPEC [--set format=molfile|scene] [--set layout=keep|new] [--set db=PATH] [--set name=TITLE] [--set edit=JSON|@PATH] [--out PATH] [--json]`. Plain output is the molfile; `--json` is the scene (`--json` with `--set format=molfile` is a usage error). SPEC is `-` for stdin; a path that exists is read.
 
 | exit | meaning |
 |---|---|
 | 0 | ok |
 | 1 | over 2000 atoms (`err.mol.draw.tooBig`, data, as every `*.tooBig`) |
-| 2 | unparseable SMILES, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string |
-| 4 | missing or unreadable file or db, a molfile or request that cannot be read (`err.mol.draw.molfile\|request`), a file with no `M  END` |
+| 2 | unparseable SMILES, bad `--set`, a name/key without `--set db` (the hint names the flag), an InChI string, an edit patch that is not JSON or whose operation fails |
+| 4 | missing or unreadable file, db or `edit=@PATH`, a molfile or request that cannot be read (`err.mol.draw.molfile\|request`), a file with no `M  END` |
 | 5 | not in the db (`err.mol.draw.not_found`, hint: the nearest names) |
 | 6 | unwritable `--out` |
 
-Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|smiles|molfile|needDb|inchi|db|not_found|tooBig` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|smiles|molfile|needDb|inchi|db|not_found|tooBig|edit|editJson` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+
+## Edit patch (`chem/edit.rs`, schema `draw_edit/1`)
+`--set edit=JSON` (or `@PATH`; the request member `edit` is the text or the list itself) applies a patch to the drawing after it is laid out: a list of operations, or `{"schema":"draw_edit/1","ops":[...]}`, in order, all or none. Atoms keep their id while the patch runs: the index in the drawing it starts from, a new atom takes the next free id (or the `id` given); bonds are named by their two atoms. The final record renumbers the atoms in order. A misspelt key is an error, never ignored.
+
+| op | fields |
+|---|---|
+| `atom.add` | `el`, optional `id`, `chg`, `iso`, `rad`, `h`, `label`, a position `x`,`y` (bond lengths) or `x_a`,`y_a` (angstrom); without a position the atom is placed once at the end, around the fixed atoms |
+| `atom.set` | `id` and any of `el`, `chg`, `iso`, `rad`, `h`, `label` (an empty label clears it) |
+| `bond.add`, `bond.set` | `a`, `b`, `o` (1-3, single by default), `wedge` (0, 1, -1, 2: on the first atom `a`); `bond.set` needs `o` or `wedge` |
+| `remove` | `atoms` (their bonds go too) and/or `bonds` as `[a,b]` pairs |
+| `move` | `atoms` and the shift `dx`,`dy` (bond lengths) or `dx_a`,`dy_a` (angstrom) |
+| `merge` | `from`, `into`: `from` is fused into `into`, which keeps its element and charge; two pieces are first moved so that the atoms coincide |
+
+- Units are in the key: a bare `x`, `y`, `dx`, `dy` is in bond lengths (1.0 = 1.5 angstrom, as the mzDraw editor), a name ending in `_a` is angstrom; one operation never mixes them (`units_mixed`).
+- Coordinates not touched by the patch stay byte-identical (the layout runs only when an atom has no position, and only the free atoms are taken from it). Hydrogens of an atom whose element, charge, radical or bonds changed are counted again from the lowest allowed valence unless the patch gives `h`.
+- Stereo: elements of atoms whose bonds changed are dropped and logged (`choices`: `edit_stereo_dropped`). A `wedge` is applied as a mark on a V2000 molfile and read back by the reader, so the stereo follows its own rule (up and down give the two enantiomers); another mark starting at the same atom goes. The molfile then shows the writer's choice of wedges (at most 999 atoms and bonds, no stereo groups: `wedge_size`). A `label` is a `label` of the scene atom and an alias line of a V2000 molfile (a V3000 one warns `label_not_in_molfile`).
+- `choices`: `edit` (operations applied), `edit_added` (new ids), `edit_placed`, `edit_stereo_dropped`.
+- Failure: `err.mol.draw.edit` with `index` (0-based), `op`, `reason` and `detail`; reasons `bad_op`, `unknown_op`, `unknown_field`, `missing_field`, `bad_field`, `units_mixed`, `unknown_atom`, `atom_exists`, `unknown_bond`, `bond_exists`, `self_bond`, `unplaced` (a move of an atom not yet placed), `wedge_size`, `molfile`; nothing is drawn. Text that is not a patch is `err.mol.draw.editJson`. Past 2000 atoms the patch fails with `err.mol.draw.tooBig`.
+- Not in the language: rings, templates, undo (the mzDraw editor keeps its own inverse commands; its command log is this patch).
 
 ## Quality gates (`tests/test_mol_draw_quality.py`, `tools/draw_quality.py`)
 Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, monocycle, fused, bridged_spiro, macrocycle, charged, stereo, salt, druglike). Set B `draw_set_b.tsv`: 100 E/Z double bonds with the expected cis/trans. `draw_reference.json`: RDKit's counts on the same metrics (RDKit is needed only to rewrite the sets: `python3 tools/draw_quality.py --set-out --reference`, seed 20261120). A drawing is clean when it has no clash (atoms closer than 0.45 bond), no atom on a bond (0.3), no crossing, bond-length CV under 0.15 and a mean ring-angle error under 10 degrees.
@@ -51,10 +70,14 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 What stays unclean: bridged and spiro cage molecules (cubane and adamantane types: ring-angle error 13-20 degrees, some crossings); RDKit draws the same ones unclean. `python3 tools/draw_quality.py --report` prints the table.
 
 ## Parity and tests
-`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys). The unit tests of `chem/draw_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
+`tests/dati/draw_d1.json` (`python3 tools/draw_fixture.py`): 30 specs (SMILES, molfile keep/new/origin/3D, db name, approximate name, key, three errors) with the scene and molfile the release CLI gives. Read by `tests/test_molkit_wasm.py` (node + `.wasm` against the release CLI: bytes, and for the errors the key and exit code) and `crates/mzlab-desktop/tests/draw.rs` (route `feat/grafo`: bytes and error keys).
+
+`tests/dati/draw_d3.json` (`python3 tools/draw_d3_fixture.py`): 32 edit patches (every operation, wedges, dropped stereo, a molfile spec, six keyed errors) with the same two answers, read by the same two tests (`check_draw_fixture` in the first, the route test `draw_route_applies_the_edit_patches_of_the_shared_fixture` in the second).
+
+The unit tests of `chem/draw_tests.rs`, `chem/edit_tests.rs`, `mol_draw_tests.rs` and `mzlab-mol/tests/layout.rs` use their own inputs.
 
 ## Large molecules
 The size limit (2000 atoms) is checked before any layout work. The cleaning step counts its own steps and stops at a fixed budget (never a clock, so the bytes stay the same everywhere); when it stops, `choices` carries `layout_budget`. Native release: 650- and 1950-atom polyphenylenes and 1900-atom chains draw in 0.18 s median, 0.26 s at most (before the budget: 23 s and over 300 s).
 
 ## Sizes
-molkit `.wasm`: 304560 -> 369440 bytes (+64880, allowance 90000; base = main b27a03922, after the shared-sort change of #3595) after wasm-opt (`tools/moduli/molkit.toml`, cap 512000 unchanged). Catalog `mzlab-cli commands --json` 32441 bytes (guard 33000 in `catalog_tests.rs`).
+molkit `.wasm` (`tools/moduli/molkit.toml`, cap 512000 unchanged): 369440 bytes after wasm-opt before the edit patch; the patch adds 14 % (same local wasm-opt run, 388199 -> 443372 bytes, 842994 -> 995610 raw). Catalog `mzlab-cli commands --json` 32489 bytes (guard 33000 in `catalog_tests.rs`).

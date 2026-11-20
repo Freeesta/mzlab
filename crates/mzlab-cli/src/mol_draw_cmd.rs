@@ -18,6 +18,7 @@ usage: mzlab-cli mol draw SPEC [--set NAME=VALUE...] [--out PATH] [--json]
   --set layout   keep (default: a molfile with 2D coordinates keeps them) or new (lay it out again)
   --set db       a molecules/1 CSV (for example mzlab/web/molecole/catalogo.csv): names and keys are looked up only there
   --set name     the title line of the molfile (default: the molecule's name, or the title of the molfile)
+  --set edit     a patch: a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge), JSON text or @PATH; all or none
   --out PATH     write there instead of the standard output
 
 Angstrom, bond length 1.5; deterministic. Coordinates never decide stereo: wedges come from the stereo of the record. The scene lists
@@ -25,16 +26,16 @@ every automatic choice (spec kind, name hit and score, layout kept or new, V2000
 standard error. An InChI alone is refused: mzLab never parses or hashes one.
 Exit codes: 1 over 2000 atoms; 2 unparseable SMILES, bad option, a name or key without --set db; 4 missing file or db, unreadable molfile or request; 5 not in the db; 6 --out.";
 
-const NAMES: [&str; 4] = ["format", "layout", "db", "name"];
+const NAMES: [&str; 5] = ["format", "layout", "db", "name", "edit"];
 const PREFIXES: [&str; 5] = ["smiles:", "molfile:", "name:", "inchikey:", "InChI="];
 
-/// SPEC, `--out`, `--json` and the four `--set` values (format, layout, db, name).
-type Words = (String, Option<PathBuf>, bool, [Option<String>; 4]);
+/// SPEC, `--out`, `--json` and the five `--set` values (format, layout, db, name, edit).
+type Words = (String, Option<PathBuf>, bool, [Option<String>; 5]);
 
 /// The words of the command line.
 fn parse(args: Vec<String>) -> Result<Words, Outcome> {
     let (mut pos, mut out, mut json) = (Vec::new(), None::<PathBuf>, false);
-    let mut set: [Option<String>; 4] = Default::default();
+    let mut set: [Option<String>; 5] = Default::default();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -49,7 +50,7 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
                     Some(i) => set[i] = Some(v.to_string()),
                     None => {
                         return Err(Outcome::fail(&format!(
-                            "unknown --set name {k} (format, layout, db, name)"
+                            "unknown --set name {k} (format, layout, db, name, edit)"
                         )))
                     }
                 },
@@ -73,7 +74,7 @@ fn parse(args: Vec<String>) -> Result<Words, Outcome> {
 }
 
 /// The request of the engine: SPEC text, the format, the layout and name choices, the database text.
-fn request(spec: &str, json: bool, set: &[Option<String>; 4], db: Option<&str>) -> String {
+fn request(spec: &str, json: bool, set: &[Option<String>; 5], db: Option<&str>) -> String {
     let mut req = Out::default();
     req.raw("{\"spec\":")
         .str(spec)
@@ -91,6 +92,9 @@ fn request(spec: &str, json: bool, set: &[Option<String>; 4], db: Option<&str>) 
     if let Some(d) = db {
         req.raw(",\"db\":").str(d);
     }
+    if let Some(e) = &set[4] {
+        req.raw(",\"edit\":").str(e);
+    }
     req.raw("}");
     req.0
 }
@@ -104,6 +108,14 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(s) => s,
         Err(o) => return o,
     };
+    let mut set = set;
+    // `--set edit=@PATH` reads the patch from a file
+    if let Some(path) = set[4].as_deref().and_then(|e| e.strip_prefix('@')) {
+        match read_file(path, MAX_MOLFILE) {
+            Ok(t) => set[4] = Some(t),
+            Err(o) => return o,
+        }
+    }
     let db = match set[2].as_deref().map(read_db).transpose() {
         Ok(d) => d,
         Err(o) => return o,
@@ -114,7 +126,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 mzlab_feat::chem::draw::Format::Scene => {
                     format!("{}\n", mzlab_feat::chem::draw::scene(&d))
                 }
-                mzlab_feat::chem::draw::Format::Molfile => d.mol.to_molfile(&d.title),
+                mzlab_feat::chem::draw::Format::Molfile => d.molfile(),
             };
             let mut o = crate::emit(text, &out);
             if o.code == 0 && f == mzlab_feat::chem::draw::Format::Molfile {
@@ -164,6 +176,13 @@ fn read_capped(r: impl std::io::Read, max: u64) -> Result<String, Option<String>
 
 fn molfile_error(why: &str) -> Outcome {
     Outcome::fail_error(&Error::new("err.mol.draw.molfile").with("message", why))
+}
+
+/// The text of the file at `path` (a missing one is `err.cli.file`, exit 4; an oversized or non-UTF-8 one is `err.mol.draw.request`).
+fn read_file(path: &str, max: u64) -> Result<String, Outcome> {
+    let file = std::fs::File::open(path)
+        .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", path)))?;
+    read_capped(file, max).map_err(|_| Outcome::fail_error(&Error::new("err.mol.draw.request")))
 }
 
 /// The `--set db=PATH` CSV: a missing file is `err.cli.file` (exit 4), an oversized or non-UTF-8 one `err.mol.draw.db` (exit 4).

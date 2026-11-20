@@ -160,3 +160,64 @@ fn mol_draw_reads_are_capped_and_a_missing_file_is_a_keyed_error() {
         Some("err.cli.file")
     );
 }
+
+#[test]
+fn mol_draw_edit_applies_a_patch_inline_or_from_a_file() {
+    let patch = r#"[{"op":"atom.add","el":"C"},{"op":"bond.add","a":0,"b":6}]"#;
+    let inline = run(&["mol", "draw", "c1ccccc1", "--set", &format!("edit={patch}")]);
+    assert_eq!(inline.code, 0, "{}", inline.stderr);
+    assert!(
+        inline.stderr.contains("choice: edit_added = atom ids 6"),
+        "{}",
+        inline.stderr
+    );
+    assert_eq!(
+        text(&inline).lines().nth(3).unwrap().trim_start().get(..4),
+        Some("7  7")
+    );
+    let p = std::env::temp_dir().join(format!("mol_draw_edit_{}.json", std::process::id()));
+    std::fs::write(&p, patch).unwrap();
+    let from_file = run(&[
+        "mol",
+        "draw",
+        "c1ccccc1",
+        "--set",
+        &format!("edit=@{}", p.to_str().unwrap()),
+    ]);
+    std::fs::remove_file(&p).ok();
+    assert_eq!(text(&from_file), text(&inline));
+    let none = run(&[
+        "mol",
+        "draw",
+        "c1ccccc1",
+        "--set",
+        "edit=@/no/such/patch.json",
+    ]);
+    assert_eq!(none.code, 4);
+}
+
+#[test]
+fn mol_draw_edit_failure_is_a_keyed_usage_error_naming_the_operation() {
+    let bad = r#"[{"op":"atom.set","id":0,"chg":0},{"op":"bond.add","a":1,"b":9}]"#;
+    let o = run(&[
+        "mol",
+        "draw",
+        "CCO",
+        "--json",
+        "--set",
+        &format!("edit={bad}"),
+    ]);
+    assert_eq!(o.code, 2);
+    assert!(
+        o.stdout.is_empty() || !text(&o).contains("draw/1"),
+        "nothing is drawn"
+    );
+    let e = o.error.as_ref().expect("a keyed error");
+    assert_eq!(e.key, "err.mol.draw.edit");
+    let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.as_str());
+    assert_eq!(
+        (param("index"), param("reason")),
+        (Some("1"), Some("unknown_atom"))
+    );
+    assert_eq!(run(&["mol", "draw", "CCO", "--set", "edit=nope"]).code, 2);
+}

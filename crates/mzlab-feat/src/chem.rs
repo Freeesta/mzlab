@@ -14,6 +14,12 @@ pub mod cut;
 pub mod draw;
 #[cfg(feature = "check")]
 mod draw_db;
+#[cfg(feature = "check")]
+mod edit;
+#[cfg(feature = "check")]
+mod edit_end;
+#[cfg(feature = "check")]
+mod edit_op;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

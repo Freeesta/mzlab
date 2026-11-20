@@ -9,7 +9,7 @@ use mzlab_core::molecules;
 use mzlab_mol::Mol;
 
 /// Above this many atoms the drawing refuses (a drawing, not a library).
-const MAX_ATOMS: usize = 2000;
+pub(super) const MAX_ATOMS: usize = 2000;
 
 /// What the answer is: the molfile text or the `draw/1` scene.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -32,6 +32,23 @@ pub struct Drawn {
     pub mol: Mol,
     pub choices: Vec<Note>,
     pub warnings: Vec<Note>,
+    /// Atom labels set by an edit patch (atom index, text): in the scene, and as alias lines of a V2000 molfile.
+    pub labels: Vec<(u32, String)>,
+}
+
+impl Drawn {
+    /// The molfile of the drawing: the record's, with an alias line for each atom label (V2000 only).
+    pub fn molfile(&self) -> String {
+        let mut t = self.mol.to_molfile(&self.title);
+        if self.labels.is_empty() || t.lines().nth(3).is_some_and(|l| l.contains("V3000")) {
+            return t;
+        }
+        t.truncate(t.len() - "M  END\n".len());
+        for (i, l) in &self.labels {
+            t += &format!("A  {:>3}\n{l}\n", i + 1);
+        }
+        t + "M  END\n"
+    }
 }
 
 struct Request<'a> {
@@ -40,6 +57,7 @@ struct Request<'a> {
     keep: bool,
     db: Option<&'a str>,
     name: Option<&'a str>,
+    edit: Option<Value>,
 }
 
 pub(super) fn note(key: &'static str, value: impl ToString) -> Note {
@@ -73,14 +91,16 @@ fn read_request(v: &Value) -> Result<Request<'_>> {
         keep: !setting("layout", ["keep", "new"], "keep")?,
         db: text("db"),
         name: text("name"),
+        edit: v.get("edit").filter(|e| !e.is_null()).cloned(),
     })
 }
 
-/// The answer to a request `{"spec", "format": "molfile"|"scene", "layout": "keep"|"new", "db": CSV text, "name": title}`.
+/// The answer to a request `{"spec", "format": "molfile"|"scene", "layout": "keep"|"new", "db": CSV text, "name": title, "edit": patch}`; the
+/// patch (`chem/edit.rs`) is a list of operations, or the text of one, applied to the drawing.
 pub fn draw_json(request: &str) -> Result<String> {
     let (d, format) = draw(request)?;
     Ok(match format {
-        Format::Molfile => d.mol.to_molfile(&d.title),
+        Format::Molfile => d.molfile(),
         Format::Scene => scene(&d),
     })
 }
@@ -102,6 +122,9 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
     }
     d.kind = kind;
     d.choices.insert(0, note("spec_kind", kind));
+    if let Some(e) = &r.edit {
+        super::edit::apply(&mut d, e)?;
+    }
     if let Some(n) = r.name {
         d.title = n.to_string();
     }
@@ -109,7 +132,7 @@ pub fn draw(request: &str) -> Result<(Drawn, Format)> {
 }
 
 /// The size limit, checked before any layout work.
-fn too_big(m: &Mol) -> Result<()> {
+pub(super) fn too_big(m: &Mol) -> Result<()> {
     if m.atoms.len() > MAX_ATOMS {
         return Err(Error::new("err.mol.draw.tooBig").with("max", MAX_ATOMS));
     }
@@ -219,6 +242,7 @@ fn blank(kind: &'static str, mol: Mol) -> Drawn {
         mol,
         choices: Vec::new(),
         warnings: Vec::new(),
+        labels: Vec::new(),
     }
 }
 
@@ -323,6 +347,9 @@ pub fn scene(d: &Drawn) -> String {
             .int(i64::from(a.iso))
             .raw(",\"h\":")
             .int(i64::from(a.h));
+        if let Some((_, l)) = d.labels.iter().find(|l| l.0 == i as u32) {
+            o.raw(",\"label\":").str(l);
+        }
         o.raw(",\"x_a\":")
             .raw(&coord(xy(i, 0)))
             .raw(",\"y_a\":")

@@ -60,6 +60,10 @@
             "type": "integer",
             "description": "implicit hydrogens"
           },
+          "label": {
+            "type": "string",
+            "description": "text set by an edit patch (atom.set label); a V2000 molfile carries it as an alias line"
+          },
           "x_a": {
             "type": "number"
           },

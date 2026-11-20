@@ -398,10 +398,14 @@ fn draw_probes() -> Probes<'static> {
     );
     // over the 2000-atom limit: data (1), as every `*.tooBig`
     let big: &'static str = Box::leak(format!("smiles:{}", "C".repeat(2001)).into_boxed_str());
+    let edit: &'static str = r#"edit=[{"op":"atom.set","id":9,"chg":1}]"#;
     vec![(
         "mol draw",
         vec![
             (vec!["smiles:CCO"], 0),
+            // an operation that fails is a usage error (2) naming its index, never a partial drawing
+            (vec!["smiles:CCO", "--set", edit], 2),
+            (vec!["smiles:CCO", "--set", "edit=@/no/such/patch.json"], 4),
             (vec![big], 1),
             (vec!["smiles:C(("], 2),
             (vec!["name:caffeine"], 2),
