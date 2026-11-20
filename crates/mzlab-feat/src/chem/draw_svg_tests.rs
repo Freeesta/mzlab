@@ -93,6 +93,31 @@ fn highlights_are_halos_by_colour_name_in_the_list_or_the_compact_form() {
 }
 
 #[test]
+fn everything_of_a_structure_can_be_highlighted_but_not_more_than_its_atoms_and_bonds_in_items() {
+    // benzene: 6 atoms and 6 bonds are 12 items, the whole budget
+    let all = "0,1,2,3,4,5,0-1,1-2,2-3,3-4,4-5,5-0@red";
+    let svg = |spec: &str, h: &str| {
+        draw_json(&format!(
+            "{{\"spec\":\"smiles:{spec}\",\"format\":\"svg\",\"highlight\":\"{h}\"}}"
+        ))
+    };
+    let ok = svg("c1ccccc1", all).unwrap();
+    assert_eq!(ok.matches("<circle ").count(), 6);
+    // the same bonds written the other way round
+    assert!(svg("c1ccccc1", "1-0,2-1,3-2,4-3,5-4,0-5,0,1,2,3,4,5@blue").is_ok());
+    // ethanol: 3 atoms and 2 bonds fill 5 items
+    assert!(svg("CCO", "0,1,2,0-1,1-2").is_ok());
+    let e = svg("CCO", "0,1,2,0-1,1-2,0").unwrap_err();
+    assert_eq!(e.key, "err.mol.draw.set");
+    assert!(
+        e.params.iter().any(|(_, v)| v == "too many items"),
+        "{:?}",
+        e.params
+    );
+    assert!(svg("c1ccccc1", &format!("{all};0@red")).is_err());
+}
+
+#[test]
 fn scale_sets_the_size_and_is_checked() {
     let w = |extra: &str| {
         wrapped("CCO", "svg", extra)

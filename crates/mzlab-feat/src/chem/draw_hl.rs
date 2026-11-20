@@ -41,8 +41,8 @@ fn color_of(name: &str) -> Result<Rgb> {
         .ok_or_else(|| bad("highlight", name))
 }
 
-/// What a list may name: the atom count, the bonds of the structure, and how many items are still allowed (each atom and each bond once, so a
-/// hostile list cannot make the picture cost more than the structure itself).
+/// What a list may name: the atom count, the bonds of the structure, and how many items are still allowed (one per atom and per bond of the
+/// structure, duplicates counted, so a hostile list cannot make the picture cost more than a multiple of the structure itself).
 struct Allowed {
     n: usize,
     bonds: Vec<(u32, u32)>,
@@ -59,6 +59,7 @@ impl Allowed {
         }
     }
 
+    /// One item of the budget.
     fn take(&mut self) -> Result<()> {
         if self.left == 0 {
             return Err(bad("highlight", "too many items"));
@@ -67,18 +68,24 @@ impl Allowed {
         Ok(())
     }
 
-    /// An atom number below the atom count.
-    fn atom(&mut self, x: Option<f64>) -> Result<u32> {
-        self.take()?;
+    /// An atom number below the atom count (no budget).
+    fn index(&self, x: Option<f64>) -> Result<u32> {
         match x {
             Some(f) if f >= 0.0 && f.fract() == 0.0 && (f as usize) < self.n => Ok(f as u32),
             _ => Err(bad("highlight", "atom")),
         }
     }
 
-    /// A bond of the structure, in either order.
+    /// An atom: one item.
+    fn atom(&mut self, x: Option<f64>) -> Result<u32> {
+        self.take()?;
+        self.index(x)
+    }
+
+    /// A bond of the structure, in either order: one item.
     fn bond(&mut self, a: Option<f64>, b: Option<f64>) -> Result<(u32, u32)> {
-        let ends = (self.atom(a)?, self.atom(b)?);
+        self.take()?;
+        let ends = (self.index(a)?, self.index(b)?);
         if self
             .bonds
             .iter()
@@ -132,7 +139,7 @@ pub(super) fn decimal(x: &str) -> Option<f64> {
 }
 
 /// `[{"atoms": [i], "bonds": [[a, b]], "color": name}]` (or the compact text of `compact`) for the structure `m`: atoms below its count, bonds
-/// that exist in it, one item per atom and bond at most.
+/// that exist in it, at most one item per atom and per bond of the structure in all (duplicates count).
 pub fn highlights(v: &Value, m: &Mol) -> Result<Vec<Hl>> {
     let mut ok = Allowed::new(m);
     if let Some(t) = v.str() {
