@@ -1,5 +1,5 @@
 //! `molecules/1`: the CSV and canonical JSON round trips, one error per wrong row, the search (mass in ppm, formula, text), the levels, the catalogue (written
-//! back to the same bytes) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/molecole_tabui_oro.json`, written once; the script and the page are gone).
+//! back to the same bytes) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/molecules_name_box_gold.json`, written once; the script and the page are gone).
 //! The molecules of the tests are invented.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -311,13 +311,14 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
     let common: Vec<usize> = (0..tabui.len())
         .filter(|&k| tabui[k].origin.catalog.len() == 2)
         .collect();
-    let gold = std::fs::read_to_string(root().join("tests/data/molecole_tabui_oro.json")).unwrap();
+    let gold =
+        std::fs::read_to_string(root().join("tests/data/molecules_name_box_gold.json")).unwrap();
     let gold = parse(gold.as_bytes()).unwrap();
-    let expected = gold.get("risultati").unwrap().arr();
+    let expected = gold.get("results").unwrap().arr();
     let qs = queries(&tabui.iter().collect::<Vec<_>>());
     assert_eq!(qs.len(), expected.len());
     assert_eq!(
-        gold.get("righe").and_then(Value::f64),
+        gold.get("rows").and_then(Value::f64),
         Some(tabui.len() as f64)
     );
     let (mut diff, mut numeric, mut extra) = (Vec::new(), 0, 0);

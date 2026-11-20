@@ -144,7 +144,7 @@
   async function recordRun(recipe, parent, op) {
     const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp_2.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minutes: parent.minutes, smiles: parent.smiles } : null });
-    if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
+    if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.table_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
     if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("samples", /** @type {any} */ (window).PIPEREC.samplesOp(await st.R.canonical(st.call, st.cs))); }
     st.last = rec; armAgain();
   }
