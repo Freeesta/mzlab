@@ -24,7 +24,7 @@ const GLOBAL: &[(&str, &str)] = &[
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
     ("--check", "exit 1 if changed"),
-    ("--set", "NAME=VALUE; repeatable"),
+    ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),
     ("--no-points", "omit the MS2 points"),
     ("--samples", "samples/1 file"),
@@ -122,6 +122,7 @@ pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
         "selector not found (sample, channel, node, step)",
     ),
     (exit::OUTPUT, "output write or external source failure"),
+    (exit::INTERNAL, "internal error (a bug): any command"),
 ];
 
 #[derive(Debug, Clone, Default)]

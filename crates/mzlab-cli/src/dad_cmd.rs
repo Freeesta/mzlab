@@ -1,6 +1,6 @@
 //! `mzlab-cli dad subtract|spectrum|trace|ms-at|delay`: the DAD / PDA matrix of a file for agents, the same engine routes as the site and the app (`itemroutes`,
 //! `wiff::dad_ops`). Every answer is JSON on stdout with stable keys; progress and errors go to stderr; with `--json` an error is also an `error/1` on stdout.
-//! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage, 4 a file that is missing, 5 a `--sample` the file does not have.
+//! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps, no scan or peak found), 2 usage, 4 a file that is missing, 5 a `--sample` the file does not have.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -13,6 +13,7 @@ use mzlab_core::mzmlhead::{Chrom, Mzml};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::wiff::dad::DadData;
 
+use crate::dad_msat::{delay_evidence, has_peaks, nearest};
 use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli dad: the optical (DAD / PDA) matrix of a file as JSON, for agents.
@@ -27,13 +28,15 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
               columns kept, shift, scale, warnings). The default view is the report alone; map, spectrum and trace add the data of the difference
   spectrum    the UV spectrum (absorbance against nm) at the retention time(s) --rt; with --minus, of the difference
   trace       the UV trace (absorbance against minutes) at the wavelength(s) --nm; with --minus, of the difference
-  ms-at       the MS1 spectrum and the TIC of the same file at the UV time + --offset (minutes, signed, default 0; the MS time is the UV time plus the offset)
-  delay       the offset the engine estimates by matching the UV peaks with the TIC (`delay`, `peaks`, `corr`): evidence to accept or not, never applied
+  ms-at       the spectrum of the MS scan nearest to the UV time + --offset (minutes, signed, default 0) and the TIC; `scan_rt`, `gap_min`, `ms_range` and
+              `warnings` say which scan was taken; an empty spectrum or a time outside the scans is exit 1, never an empty answer
+  delay       the offset the engine estimates by matching the UV peaks with the TIC (`delay`, `peaks`, `corr`): evidence to accept or not, never applied;
+              no matching peak, or traces too short to compare, is exit 1
   --sample ID the sample of a file with several (.wiff); --minus-sample ID the same for B
   --format F  trace only: json (default) or csv with the header rt_min,intensity, the input of every `peak` command (a difference: its rows too)
   --json      accepted; every answer is JSON, and an error is also an error/1 document on stdout
   --out PATH  write there instead of the standard output
-exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage, 4 a file missing or unreadable, 5 a sample id the file does not have";
+exit codes: 0 done, 1 data error (no DAD, nothing overlaps, no scan or peak found), 2 usage, 4 a file missing or unreadable, 5 a sample id the file does not have";
 
 struct Req {
     verb: String,
@@ -232,6 +235,10 @@ trait MsSide {
     fn spectrum(&mut self, q: &Query) -> Result<String>;
     fn tic(&mut self, q: &Query) -> Result<String>;
     fn delay(&mut self) -> Result<String>;
+    /// The times (minutes) of the scans of `level`, for the choice of the one nearest to a time.
+    fn scan_times(&mut self, level: u8) -> Result<Vec<f64>>;
+    /// Whether the file has an optical trace to compare with the TIC.
+    fn has_uv(&self) -> bool;
 }
 
 struct Side<'a, R: ReadAt, M: ReadAt> {
@@ -255,6 +262,16 @@ impl<R: ReadAt, M: ReadAt> MsSide for Side<'_, R, M> {
     }
     fn delay(&mut self) -> Result<String> {
         self.r.delay(self.m, self.chroms)
+    }
+    fn scan_times(&mut self, level: u8) -> Result<Vec<f64>> {
+        let pol = self.r.pol;
+        match self.r.idx.section_of(level, pol) {
+            Some(si) => Ok(self.r.idx.arrays(si)?.rt.clone()),
+            None => Ok(Vec::new()),
+        }
+    }
+    fn has_uv(&self) -> bool {
+        self.chroms.iter().any(|c| c.kind == "pda")
     }
 }
 
@@ -357,20 +374,29 @@ fn run_req(c: &Req) -> Result<String> {
         "ms-at" => {
             let (t, _) = window(c.rt, "--rt")?;
             let ms = t + c.offset;
-            let spec = Query::parse(&format!("rt0={ms}&rt1={ms}&level={}", c.level));
             let tic = Query::parse(&format!("kind=tic&level={}", c.level));
             with_ms(a, c.sample, &mut |s| {
+                // a window of one instant holds no scan unless its time is exactly the asked one: take the scan nearest to it and say which
+                let pick = nearest(&s.scan_times(c.level)?, ms, c.level)?;
+                let spec = Query::parse(&format!("rt0={0}&rt1={0}&level={1}", pick.rt, c.level));
+                let spectrum = s.spectrum(&spec)?;
+                has_peaks(&spectrum, &pick, c.level)?;
+                let warn: Vec<String> = pick.warnings.iter().map(|w| format!("\"{w}\"")).collect();
                 Ok(format!(
-                    "{{\"rt_uv\":{t},\"rt_ms\":{ms},\"offset_min\":{},\"level\":{},\"ms_file\":{},\"spectrum\":{},\"tic\":{}}}",
+                    "{{\"rt_uv\":{t},\"rt_ms\":{ms},\"offset_min\":{},\"level\":{},\"ms_file\":{},\"scan_rt\":{},\"gap_min\":{},\"ms_range\":[{},{}],\"warnings\":[{}],\"spectrum\":{spectrum},\"tic\":{}}}",
                     c.offset,
                     c.level,
                     json_str(&a.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned())),
-                    s.spectrum(&spec)?,
+                    pick.rt,
+                    pick.gap,
+                    pick.range.0,
+                    pick.range.1,
+                    warn.join(","),
                     s.tic(&tic)?
                 ))
             })
         }
-        _ => with_ms(a, c.sample, &mut |s| s.delay()),
+        _ => with_ms(a, c.sample, &mut |s| delay_evidence(s.delay()?, s.has_uv())),
     }
 }
 

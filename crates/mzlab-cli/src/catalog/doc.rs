@@ -21,6 +21,23 @@ fn flag_uses() -> BTreeMap<String, usize> {
     n
 }
 
+/// The type of each flag (other than string, the default) that two or more commands carry and all give the same type: said once at the top of the compact listing (`flag_type`).
+fn shared_types() -> BTreeMap<String, &'static str> {
+    let mut seen: BTreeMap<String, (usize, Option<&'static str>)> = BTreeMap::new();
+    for e in entries() {
+        for f in usage_of(e).flags {
+            let s = seen.entry(f.name).or_insert((0, Some(f.kind)));
+            s.0 += 1;
+            if s.1 != Some(f.kind) {
+                s.1 = None;
+            }
+        }
+    }
+    seen.into_iter()
+        .filter_map(|(n, (c, k))| k.filter(|k| c > 1 && *k != "string").map(|k| (n, k)))
+        .collect()
+}
+
 fn help_of(name: &str) -> &'static str {
     FLAG_HELP
         .iter()
@@ -37,12 +54,19 @@ fn global_help(name: &str) -> &'static str {
         .map_or("", |(_, h)| *h)
 }
 
-/// `with_help` false: the flag is described once at the top of the compact listing (`flag_help`).
-fn flag_json(f: &Flag, with_required: bool, with_help: bool, global: bool) -> Value {
+/// `with_help` false: the flag is described once at the top of the compact listing (`flag_help`); `with_type` false: its type is in `flag_type`.
+fn flag_json(
+    f: &Flag,
+    with_required: bool,
+    with_help: bool,
+    with_type: bool,
+    global: bool,
+) -> Value {
     // Members that are null or false are left out: `commands --json` stays small.
-    let mut o = Obj::new()
-        .put("name", text(&f.name))
-        .put("type", text(f.kind));
+    let mut o = Obj::new().put("name", text(&f.name));
+    if with_type {
+        o = o.put("type", text(f.kind));
+    }
     if let Some(u) = f.unit {
         o = o.put("unit", text(u));
     }
@@ -144,8 +168,14 @@ fn skeleton(u: &Usage) -> String {
     format!("mzlab-cli {}", kept.join(" "))
 }
 
-/// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, the derived exit codes, a skeleton example).
-fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Value {
+/// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, `flag_type`, an argument of kind `path`,
+/// the derived exit codes, a skeleton example).
+fn command_json(
+    e: &Entry,
+    compact: bool,
+    uses: &BTreeMap<String, usize>,
+    types: &BTreeMap<String, &'static str>,
+) -> Value {
     let u = usage_of(e);
     let exits = exits_of(e, &u);
     let examples: Vec<String> = if e.examples.is_empty() {
@@ -163,9 +193,10 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
                 u.args
                     .iter()
                     .map(|a| {
-                        let mut o = Obj::new()
-                            .put("name", text(&a.name))
-                            .put("kind", text(a.kind));
+                        let mut o = Obj::new().put("name", text(&a.name));
+                        if !(compact && (a.kind == "path" || a.kind == "rest" && a.name == "...")) {
+                            o = o.put("kind", text(a.kind));
+                        }
                         if a.required {
                             o = o.b("required", true);
                         }
@@ -182,7 +213,16 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
             Value::Arr(
                 u.flags
                     .iter()
-                    .map(|f| flag_json(f, true, !(compact && uses.get(&f.name) > Some(&1)), false))
+                    .map(|f| {
+                        let shared = compact && uses.get(&f.name) > Some(&1);
+                        // the type is the flag's own, else its `flag_type`, else string
+                        let typed = compact
+                            && match types.get(&f.name) {
+                                Some(k) => *k == f.kind,
+                                None => f.kind == "string",
+                            };
+                        flag_json(f, true, !shared, !typed, false)
+                    })
                     .collect(),
             ),
         )
@@ -224,13 +264,14 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
                 kind: if *n == "--cache" { "path" } else { "bool" },
                 ..Flag::default()
             };
-            flag_json(&f, false, true, true)
+            flag_json(&f, false, true, true, true)
         })
         .collect();
     let uses = flag_uses();
+    let types = shared_types();
     let commands: Vec<Value> = entries()
         .filter(|e| under(e, path))
-        .map(|e| command_json(e, compact, &uses))
+        .map(|e| command_json(e, compact, &uses, &types))
         .collect();
     let mut doc = Obj::new()
         .put("schema", text("commands/1"))
@@ -243,12 +284,17 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .filter(|(_, n)| **n > 1)
             .fold(Obj::new(), |o, (name, _)| o.put(name, text(help_of(name))))
             .done();
+        let types_json = types
+            .iter()
+            .fold(Obj::new(), |o, (name, k)| o.put(name, text(k)))
+            .done();
         doc = doc
             .b("compact", true)
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
-            .put("flag_help_note", text("no flag help: see flag_help"))
-            .put("exit_codes_note", text("no exit_codes: 0, 1, 2; 3 for a `flow ` path or VERDICT; 4 with a path or rest argument or a path flag but --out; 5 with --sample, --id or a `sample `, `dad ` or `msn graph` path; 6 with --out; `commands --json PATH` gives the exact codes"))
+            .put("flag_type", types_json)
+            .put("flag_help_note", text("no flag help: see flag_help; no flag type: see flag_type, else string; no arg kind: path, or `...` (rest)"))
+            .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out; exact: `commands --json PATH`"))
             .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"

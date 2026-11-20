@@ -15,6 +15,8 @@ pub const INPUT: u8 = 4;
 pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
+/// A bug of `mzlab-cli` itself: the program panicked (`err.run.internal`); only the panic hook answers with it.
+pub const INTERNAL: u8 = 7;
 
 const INPUT_KEYS: &[&str] = &[
     "err.cli.input.missing",
@@ -73,9 +75,13 @@ const INTEGRITY_PREFIXES: &[&str] = &[
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
+    "err.dad.msNoLevel",
+    "err.dad.msRange",
+    "err.dad.msEmpty",
+    "err.dad.delayShort",
+    "err.dad.delayNoPeaks",
     "err.flow.cancelled",
     "err.run.data",
-    "err.run.internal",
     "err.llm.eval.loop",
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
@@ -150,6 +156,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.run.input" => return INPUT,
         "err.run.selector" => return SELECTOR,
         "err.run.output" => return OUTPUT,
+        "err.run.internal" => return INTERNAL,
         _ => {}
     }
     if INPUT_KEYS.contains(&key) || key.starts_with("err.file.") || chem_code(key) == Some(INPUT) {
@@ -174,6 +181,7 @@ pub fn generic_key(code: u8) -> &'static str {
         INPUT => "err.run.input",
         SELECTOR => "err.run.selector",
         OUTPUT => "err.run.output",
+        INTERNAL => "err.run.internal",
         USAGE => "err.cli.usage",
         _ => "err.run.data",
     }
@@ -210,12 +218,12 @@ mod tests {
         assert_eq!(code_of_key("err.cli.out"), OUTPUT);
         assert_eq!(code_of_key("err.normative.input"), INPUT);
         assert_eq!(code_of_key("err.flow.cancelled"), DATA);
-        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT] {
+        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT, INTERNAL] {
             assert_eq!(code_of_key(generic_key(c)), c);
         }
         assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
         assert_eq!(code_of_key("err.pda.none"), DATA);
-        assert_eq!(code_of_key("err.run.internal"), DATA);
+        assert_eq!(code_of_key("err.run.internal"), INTERNAL);
     }
 
     #[test]
