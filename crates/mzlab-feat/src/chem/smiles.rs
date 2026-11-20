@@ -240,27 +240,29 @@ pub(super) fn read(smiles: &str) -> Result<(Vec<RawAtom>, Vec<RawBond>)> {
     Ok((r.raw, r.bonds))
 }
 
-/// Valences an atom without written hydrogens can fill, lowest first. With `by_charge` (a molfile: the charge is on an atom whose hydrogens are
-/// implicit) a singly charged N, P, O or S takes the valences of the element with the same electrons (N+ like C, S+ like P, O- like F), so a
-/// quaternary N+ or a sulfonium S+ carries no hydrogen; any other charged atom loses one valence per charge.
-fn valences(el: &str, charge: i32, by_charge: bool) -> Vec<f32> {
+/// The lowest valence an atom without written hydrogens can fill once `used` are taken, None when it has more bonds than any. With `by_charge`
+/// (a molfile: the charge is on an atom whose hydrogens are implicit) a singly charged N, P, O or S takes the valences of the element with the
+/// same electrons (N+ like C, S+ like P, O- like F), so a quaternary N+ or a sulfonium S+ carries no hydrogen; any other charged atom loses
+/// one valence per charge.
+fn valence_for(el: &str, charge: i32, by_charge: bool, used: f32) -> Option<f32> {
     let normal = normal_valence(el).unwrap_or(0) as f32;
     let q = if by_charge { charge } else { 0 };
-    match (el, q) {
-        ("N" | "P", 0) => vec![3.0, 5.0],
-        ("S", 0) => vec![2.0, 4.0, 6.0],
-        ("N" | "P", 1) => vec![4.0],
-        ("O", 1) => vec![3.0],
-        ("S", 1) => vec![3.0, 5.0],
-        ("N", -1) => vec![2.0],
-        ("P", -1) => vec![2.0, 4.0, 6.0],
-        ("O" | "S", -1) => vec![1.0],
-        ("N" | "P" | "O" | "S", q) => vec![(normal + q as f32).max(0.0)],
-        (_, q) => vec![(normal - q.abs() as f32).max(0.0)],
-    }
+    let ladder: &[f32] = match (el, q) {
+        ("N" | "P", 0) => &[3.0, 5.0],
+        ("S", 0) => &[2.0, 4.0, 6.0],
+        ("N" | "P", 1) => &[4.0],
+        ("O", 1) => &[3.0],
+        ("S", 1) => &[3.0, 5.0],
+        ("N", -1) => &[2.0],
+        ("P", -1) => &[2.0, 4.0, 6.0],
+        ("O" | "S", -1) => &[1.0],
+        ("N" | "P" | "O" | "S", q) => &[(normal + q as f32).max(0.0)],
+        (_, q) => &[(normal - q.abs() as f32).max(0.0)],
+    };
+    ladder.iter().copied().find(|v| *v >= used)
 }
 
-/// Atoms with their hydrogens: those written in brackets, the others by valence (`valences`).
+/// Atoms with their hydrogens: those written in brackets, the others by valence (`valence_for`).
 pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond], by_charge: bool) -> Vec<Atom> {
     let mut used = vec![0f32; raw.len()];
     for b in bonds {
@@ -273,18 +275,17 @@ pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond], by_charge: bool) -> Vec<Atom
         .map(|(i, r)| {
             let h = r.h.unwrap_or_else(|| {
                 // a substituted aromatic nitrogen (pyrrole type, three bonds) gives its lone pair, not a ring electron: it carries no hydrogen;
-                // an aromatic N+ (pyridinium) gives a ring electron like a carbon
+                // an aromatic N+ (pyridinium) gives a ring electron like a carbon, and so does an aromatic O+ or S+ with only its two ring
+                // bonds (pyrylium, thiopyrylium); with a third bond the O+ or S+ gives its lone pair instead
                 let plus = by_charge && r.charge == 1;
-                let extra = if r.arom && (r.el == "C" || (r.el == "N" && (used[i] < 3.0 || plus))) {
-                    1.0
-                } else {
-                    0.0
+                let ring_electron = match r.el.as_str() {
+                    "C" => true,
+                    "N" => used[i] < 3.0 || plus,
+                    "O" | "S" => plus && used[i] < 3.0,
+                    _ => false,
                 };
-                let u = used[i] + extra;
-                let free = valences(&r.el, r.charge, by_charge)
-                    .into_iter()
-                    .find(|v| *v >= u)
-                    .map_or(0.0, |v| v - u);
+                let u = used[i] + if r.arom && ring_electron { 1.0 } else { 0.0 };
+                let free = valence_for(&r.el, r.charge, by_charge, u).map_or(0.0, |v| v - u);
                 free.round().max(0.0) as u32
             });
             Atom {
