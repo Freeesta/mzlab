@@ -337,7 +337,8 @@ fn origin_mzml() -> Vec<u8> {
             ] {
                 let d = (rt - apex) / w;
                 mz.push(m + 0.001 * k as f64);
-                intensity.push((h * (-0.5 * d * d).exp() + 400.0 * noise()) as f32);
+                intensity.push((h * libm::exp(-0.5 * d * d) + 400.0 * noise()) as f32);
+                // libm: the same bits on every platform, the std `exp` is the C library of the target
             }
         }
         let mut order: Vec<usize> = (0..mz.len()).collect();
@@ -389,9 +390,12 @@ fn the_origin_route_gives_the_same_report_in_the_app_and_in_the_wasm() {
         .iter()
         .filter(|w| matches!(from_wasm(w), Got::Text(t) if t.contains("\"x_snr\"")))
         .count();
+    // short on purpose: the CI log keeps only the tail of this message, and the count must stay in it
+    let heads: Vec<String> = wasm[1..].iter().map(|w| format!("{w:.160?}")).collect();
     assert!(
         reports >= 6,
-        "{reports} origin reports carry a profile similarity: {wasm:?}"
+        "{reports} origin reports carry a profile similarity; answers:\n{}",
+        heads.join("\n")
     );
 }
 

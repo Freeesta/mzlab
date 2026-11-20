@@ -23,37 +23,92 @@ fn register_index_open_and_route() {
     let name = "FullScan_t10.mzML";
     let r = |op: &str, p: serde_json::Value| st.rpc(op, &p, &[]);
     assert_eq!(text(r("lr_boot", json!({})).unwrap()), "[]");
-    let put: serde_json::Value = serde_json::from_str(&text(r("lr_put", json!({"name": name, "fid": id})).unwrap())).unwrap();
+    let put: serde_json::Value = serde_json::from_str(&text(
+        r("lr_put", json!({"name": name, "fid": id})).unwrap(),
+    ))
+    .unwrap();
     assert!(put["size"].as_u64().unwrap() > 1000);
     r("lr_index", json!({"name": name})).unwrap();
     let entry = text(r("lr_entry", json!({"name": name})).unwrap());
     assert!(entry.contains("\"kind\":\"full\""), "{entry}");
-    assert!(text(r("idxopen", json!({"slot": 0, "name": name})).unwrap()).contains("\"scans\":1110"));
-    let tic = text(r("route", json!({"slot": 0, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap());
+    assert!(
+        text(r("idxopen", json!({"slot": 0, "name": name})).unwrap()).contains("\"scans\":1110")
+    );
+    let tic = text(
+        r(
+            "route",
+            json!({"slot": 0, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"}),
+        )
+        .unwrap(),
+    );
     assert!(tic.starts_with("{\"rt\":["), "{tic}");
-    assert_eq!(text(r("route", json!({"slot": 9, "path": "/api/chrom", "query": ""})).unwrap()), "", "a slot that is not open is not answered");
+    assert_eq!(
+        text(
+            r(
+                "route",
+                json!({"slot": 9, "path": "/api/chrom", "query": ""})
+            )
+            .unwrap()
+        ),
+        "",
+        "a slot that is not open is not answered"
+    );
     // api/canali reads the chromatograms of the mzML too (op `canali`, as the wasm engine); the plain route then serves the same channels from the cache
     let channels = text(r("canali", json!({"slot": 0, "name": name, "fid": id})).unwrap());
-    assert!(channels.starts_with("{\"schema\":\"channels/1\""), "{channels}");
-    assert_eq!(text(r("route", json!({"slot": 0, "path": "/api/canali", "query": "?k=0"})).unwrap()), channels);
+    assert!(
+        channels.starts_with("{\"schema\":\"channels/1\""),
+        "{channels}"
+    );
+    assert_eq!(
+        text(
+            r(
+                "route",
+                json!({"slot": 0, "path": "/api/canali", "query": "?k=0"})
+            )
+            .unwrap()
+        ),
+        channels
+    );
     assert!(r("nope", json!({})).is_err());
     let tic_of = |pol: i64| {
         r("idxopen", json!({"slot": 1, "name": name, "pol": pol})).unwrap();
-        text(r("route", json!({"slot": 1, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap())
+        text(
+            r(
+                "route",
+                json!({"slot": 1, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"}),
+            )
+            .unwrap(),
+        )
     };
     assert_eq!(tic_of(0), tic, "pol 0 = every section");
-    assert_ne!(tic_of(-1), tic, "pol is applied to the index as set_polarity of the wasm does");
-    let space: serde_json::Value = serde_json::from_str(&text(r("lr_space", json!({"free": "derived"})).unwrap())).unwrap();
-    assert_eq!(space["idx"], 0, "free = \"derived\" removes every index, as the wasm does: {space}");
-    r("lr_index", json!({"name": name})).unwrap();                      // made again from the source for the rest of the test
-    r("lr_kv_set", json!({"key": "notebook", "value": "{\"session\":[]}"})).unwrap();
+    assert_ne!(
+        tic_of(-1),
+        tic,
+        "pol is applied to the index as set_polarity of the wasm does"
+    );
+    let space: serde_json::Value =
+        serde_json::from_str(&text(r("lr_space", json!({"free": "derived"})).unwrap())).unwrap();
+    assert_eq!(
+        space["idx"], 0,
+        "free = \"derived\" removes every index, as the wasm does: {space}"
+    );
+    r("lr_index", json!({"name": name})).unwrap(); // made again from the source for the rest of the test
+    r(
+        "lr_kv_set",
+        json!({"key": "notebook", "value": "{\"session\":[]}"}),
+    )
+    .unwrap();
 
-    let st2 = State::new();                                              // a new run of the app on the same folders
+    let st2 = State::new(); // a new run of the app on the same folders
     st2.set_data_folder(data.path().join("app"));
     st2.set_index_folder(data.path().join("idx")).unwrap();
     let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
     assert!(boot.contains("\"indexed\":true"), "{boot}");
-    assert!(text(st2.rpc("lr_kv_get", &json!({"key": "notebook"}), &[]).unwrap()).contains("session"));
+    assert!(text(
+        st2.rpc("lr_kv_get", &json!({"key": "notebook"}), &[])
+            .unwrap()
+    )
+    .contains("session"));
     st2.rpc("lr_clear", &json!({}), &[]).unwrap();
     assert_eq!(text(st2.rpc("lr_boot", &json!({}), &[]).unwrap()), "[]");
     assert!(ex.exists(), "the file of the student is never touched");
@@ -68,12 +123,17 @@ fn validate_mzml_gives_the_bytes_of_the_command_line_report() {
     st.set_index_folder(data.path().join("idx")).unwrap();
     let (id, _) = st.pick(ex.clone()).unwrap();
     let name = "FullScan_t10.mzML";
-    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
+    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[])
+        .unwrap();
     let got = text(st.rpc("lr_valida", &json!({"name": name}), &[]).unwrap());
     let report = mzlab_core::mzml_validate::validate(std::fs::File::open(&ex).unwrap()).unwrap();
     assert_eq!(got, mzlab_core::mzml_validate::json_un_file(name, &report));
     assert!(got.starts_with("{\"schema\":\"mzml-validation/1\",\"files\":[{\"file\":\"FullScan_t10.mzML\",\"valid\":"), "{got}");
-    assert!(st.rpc("lr_valida", &json!({"name": "absent.mzML"}), &[]).is_err(), "a file that is not in the list");
+    assert!(
+        st.rpc("lr_valida", &json!({"name": "absent.mzML"}), &[])
+            .is_err(),
+        "a file that is not in the list"
+    );
 }
 
 #[test]
@@ -86,15 +146,31 @@ fn a_file_warmed_ahead_is_hidden_and_claimed_with_the_same_index() {
     let (id, _) = st.pick(ex).unwrap();
     let name = "FullScan_t10.mzML";
     let r = |op: &str, p: serde_json::Value| st.rpc(op, &p, &[]);
-    let w: serde_json::Value = serde_json::from_str(&text(r("lr_warm", json!({"name": name, "fid": id})).unwrap())).unwrap();
+    let w: serde_json::Value = serde_json::from_str(&text(
+        r("lr_warm", json!({"name": name, "fid": id})).unwrap(),
+    ))
+    .unwrap();
     assert!(w["size"].as_u64().unwrap() > 1000, "{w}");
-    assert_eq!(text(r("lr_boot", json!({})).unwrap()), "[]", "a warm file is not in the list");
-    assert!(text(r("lr_warm", json!({"name": name, "fid": id})).unwrap()).contains("skipped"), "same file, nothing to redo");
-    let hit: serde_json::Value = serde_json::from_str(&text(r("lr_warm_claim", json!({"name": name, "fid": id})).unwrap())).unwrap();
+    assert_eq!(
+        text(r("lr_boot", json!({})).unwrap()),
+        "[]",
+        "a warm file is not in the list"
+    );
+    assert!(
+        text(r("lr_warm", json!({"name": name, "fid": id})).unwrap()).contains("skipped"),
+        "same file, nothing to redo"
+    );
+    let hit: serde_json::Value = serde_json::from_str(&text(
+        r("lr_warm_claim", json!({"name": name, "fid": id})).unwrap(),
+    ))
+    .unwrap();
     assert_eq!(hit["hit"], true, "{hit}");
     let entry = text(r("lr_entry", json!({"name": name})).unwrap());
     assert!(entry.contains("\"kind\":\"full\""), "{entry}");
-    assert!(text(r("lr_boot", json!({})).unwrap()).contains(name), "after the claim it is a normal file");
+    assert!(
+        text(r("lr_boot", json!({})).unwrap()).contains(name),
+        "after the claim it is a normal file"
+    );
     let miss = text(r("lr_warm_claim", json!({"name": name, "fid": id})).unwrap());
     assert_eq!(miss, "{\"hit\":false}", "a claim is used once");
 }
@@ -105,17 +181,49 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
     let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
-    assert!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("\"molecules\":[]"));
+    assert!(
+        r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("\"molecules\":[]")
+    );
     let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Esempina","formula":"C10H15NO"}]}"#;
-    assert_eq!(r("lr_molecules_archive", json!({"mop": "write", "body": doc})), "{}");
+    assert_eq!(
+        r("lr_molecules_archive", json!({"mop": "write", "body": doc})),
+        "{}"
+    );
     r("lr_clear", json!({}));
     let file = std::fs::read_to_string(data.path().join("app/molecules.json")).unwrap();
-    assert_eq!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})), file, "the page gets the bytes of the file");
-    assert!(file.starts_with("{\"schema\":\"molecules/1\",\"molecules\":[{") && file.contains("\"id\":\"u:"), "{file}");
+    assert_eq!(
+        r("lr_molecules_archive", json!({"mop": "read", "body": ""})),
+        file,
+        "the page gets the bytes of the file"
+    );
+    assert!(
+        file.starts_with("{\"schema\":\"molecules/1\",\"molecules\":[{")
+            && file.contains("\"id\":\"u:"),
+        "{file}"
+    );
     let st2 = State::new();
     st2.set_data_folder(data.path().join("app"));
-    assert_eq!(text(st2.rpc("lr_molecules_archive", &json!({"mop": "read", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
-    assert!(st2.rpc("lr_molecules_archive", &json!({"mop": "write", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
+    assert_eq!(
+        text(
+            st2.rpc(
+                "lr_molecules_archive",
+                &json!({"mop": "read", "body": ""}),
+                &[]
+            )
+            .unwrap()
+        ),
+        file,
+        "a new run reads it back"
+    );
+    assert!(
+        st2.rpc(
+            "lr_molecules_archive",
+            &json!({"mop": "write", "body": "{}"}),
+            &[]
+        )
+        .is_err(),
+        "a document that is not molecules/1 is refused"
+    );
 }
 
 #[test]
@@ -129,10 +237,20 @@ fn an_old_molecule_file_is_read_so_the_engine_refuses_it_and_the_next_save_remov
     let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
     let got = r("lr_molecules_archive", json!({"mop": "read", "body": ""}));
     assert_eq!(got, old, "the page gets the old bytes");
-    assert!(r("lr_molecules", json!({"mop": "load", "body": format!("{{\"user\":{got}}}")})).contains("error.molecules.oldFormat"));
+    assert!(r(
+        "lr_molecules",
+        json!({"mop": "load", "body": format!("{{\"user\":{got}}}")})
+    )
+    .contains("error.molecules.oldFormat"));
     let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Nuova","formula":"CH4"}]}"#;
-    assert_eq!(r("lr_molecules_archive", json!({"mop": "write", "body": doc})), "{}");
-    assert!(!data.path().join("app/molecole.json").exists() && data.path().join("app/molecules.json").exists());
+    assert_eq!(
+        r("lr_molecules_archive", json!({"mop": "write", "body": doc})),
+        "{}"
+    );
+    assert!(
+        !data.path().join("app/molecole.json").exists()
+            && data.path().join("app/molecules.json").exists()
+    );
 }
 
 #[test]
@@ -140,11 +258,21 @@ fn uploading_the_same_name_again_is_found_by_its_new_size() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
-    let first = st.upload_chunk("again.mzML", 0, 3, None, b"abc").unwrap().unwrap();
+    let first = st
+        .upload_chunk("again.mzML", 0, 3, None, b"abc")
+        .unwrap()
+        .unwrap();
     assert_eq!(st.find("again.mzML", 3), Some(first));
-    let second = st.upload_chunk("again.mzML", 0, 5, None, b"abcde").unwrap().unwrap();
+    let second = st
+        .upload_chunk("again.mzML", 0, 5, None, b"abcde")
+        .unwrap()
+        .unwrap();
     assert_eq!(second, first, "same path, same number");
-    assert_eq!(st.find("again.mzML", 5), Some(first), "the lookup by the new size works");
+    assert_eq!(
+        st.find("again.mzML", 5),
+        Some(first),
+        "the lookup by the new size works"
+    );
     assert_eq!(st.find("again.mzML", 3), None, "the old size is gone");
 }
 
@@ -154,15 +282,39 @@ fn a_file_sent_again_with_its_date_is_not_written_again() {
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
     let t = 1_700_000_000_123u64;
-    let first = st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"abc").unwrap().unwrap();
+    let first = st
+        .upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"abc")
+        .unwrap()
+        .unwrap();
     let path = data.path().join("app/files/uno.D~AcqData~MSScan.bin");
-    let ms = |p: &Path| std::fs::metadata(p).unwrap().modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+    let ms = |p: &Path| {
+        std::fs::metadata(p)
+            .unwrap()
+            .modified()
+            .unwrap()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    };
     assert_eq!(ms(&path), t, "the received file keeps the date of the File");
-    let again = st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"xyz").unwrap().unwrap();
+    let again = st
+        .upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t), b"xyz")
+        .unwrap()
+        .unwrap();
     assert_eq!(again, first, "same path, same number");
-    assert_eq!(std::fs::read(&path).unwrap(), b"abc", "same name, size and date: the first piece is not written");
-    st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t + 1), b"xyz").unwrap().unwrap();
-    assert_eq!((std::fs::read(&path).unwrap(), ms(&path)), (b"xyz".to_vec(), t + 1), "another date: the file is written again");
+    assert_eq!(
+        std::fs::read(&path).unwrap(),
+        b"abc",
+        "same name, size and date: the first piece is not written"
+    );
+    st.upload_chunk("uno.D~AcqData~MSScan.bin", 0, 3, Some(t + 1), b"xyz")
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (std::fs::read(&path).unwrap(), ms(&path)),
+        (b"xyz".to_vec(), t + 1),
+        "another date: the file is written again"
+    );
 }
 
 /// Registers the example, builds its index and opens it in the first slot of the page's list (1_000_001); returns the engine, the name and the keep-alive folders.
@@ -174,9 +326,10 @@ fn indexed_example() -> (State, tempfile::TempDir, &'static str) {
     st.set_index_folder(data.path().join("idx")).unwrap();
     let (id, _) = st.pick(ex).unwrap();
     let name = "FullScan_t10.mzML";
-    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
+    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[])
+        .unwrap();
     st.rpc("lr_index", &json!({"name": name}), &[]).unwrap();
-    st.rpc("lr_entry", &json!({"name": name}), &[]).unwrap();      // opens the index in the first slot of the page's list
+    st.rpc("lr_entry", &json!({"name": name}), &[]).unwrap(); // opens the index in the first slot of the page's list
     (st, data, name)
 }
 
@@ -188,8 +341,12 @@ fn slot_answers(st: &State) -> bool {
 fn freeing_derived_indexes_closes_them_first() {
     let (st, _keep, _) = indexed_example();
     assert!(slot_answers(&st));
-    st.rpc("lr_space", &json!({"free": "derived"}), &[]).unwrap();
-    assert!(!slot_answers(&st), "the index is unmapped before its file is deleted");
+    st.rpc("lr_space", &json!({"free": "derived"}), &[])
+        .unwrap();
+    assert!(
+        !slot_answers(&st),
+        "the index is unmapped before its file is deleted"
+    );
 }
 
 #[test]
@@ -202,23 +359,31 @@ fn a_file_changed_on_disk_loses_its_index_at_the_next_boot_even_after_another_li
     st.set_data_folder(data.path().join("app"));
     st.set_index_folder(data.path().join("idx")).unwrap();
     let (id, _) = st.pick(f.clone()).unwrap();
-    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[]).unwrap();
+    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[])
+        .unwrap();
     st.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
     let mut b = std::fs::read(&f).unwrap();
     b.extend_from_slice(b"\n");
-    std::fs::write(&f, b).unwrap();                                       // the student writes the file again under the same name
-    st.rpc("lr_space", &json!({}), &[]).unwrap();                         // a listing that is not the boot
+    std::fs::write(&f, b).unwrap(); // the student writes the file again under the same name
+    st.rpc("lr_space", &json!({}), &[]).unwrap(); // a listing that is not the boot
     let st2 = State::new();
     st2.set_data_folder(data.path().join("app"));
     st2.set_index_folder(data.path().join("idx")).unwrap();
     let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
-    assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
-    st2.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    assert!(
+        boot.contains("\"indexed\":false"),
+        "the index of the old bytes is dropped: {boot}"
+    );
+    st2.rpc("lr_index", &json!({"name": "a.mzML"}), &[])
+        .unwrap();
     let st3 = State::new();
     st3.set_data_folder(data.path().join("app"));
     st3.set_index_folder(data.path().join("idx")).unwrap();
     let boot = text(st3.rpc("lr_boot", &json!({}), &[]).unwrap());
-    assert!(boot.contains("\"indexed\":true"), "the index built after the change is kept: {boot}");
+    assert!(
+        boot.contains("\"indexed\":true"),
+        "the index built after the change is kept: {boot}"
+    );
 }
 
 /// Other bytes of the same size with the date put back (a copy that keeps the date): size and date agree, the probe does not.
@@ -227,7 +392,12 @@ fn same_size_and_date(f: &Path) {
     let mut b = std::fs::read(f).unwrap();
     b[0..5].copy_from_slice(b"<?XML");
     std::fs::write(f, b).unwrap();
-    std::fs::File::options().write(true).open(f).unwrap().set_modified(when).unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(f)
+        .unwrap()
+        .set_modified(when)
+        .unwrap();
 }
 
 #[test]
@@ -241,19 +411,30 @@ fn a_file_replaced_with_the_same_size_and_date_loses_its_index() {
     st.set_data_folder(data.path().join("app"));
     st.set_index_folder(data.path().join("idx")).unwrap();
     let (id, _) = st.pick(f.clone()).unwrap();
-    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[]).unwrap();
+    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[])
+        .unwrap();
     st.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
     let (wid, _) = st.pick(g.clone()).unwrap();
-    st.rpc("lr_warm", &json!({"name": "w.mzML", "fid": wid}), &[]).unwrap();
+    st.rpc("lr_warm", &json!({"name": "w.mzML", "fid": wid}), &[])
+        .unwrap();
     same_size_and_date(&g);
-    let miss = text(st.rpc("lr_warm_claim", &json!({"name": "w.mzML", "fid": wid}), &[]).unwrap());
-    assert_eq!(miss, "{\"hit\":false}", "a warm index of the old bytes is not claimed");
+    let miss = text(
+        st.rpc("lr_warm_claim", &json!({"name": "w.mzML", "fid": wid}), &[])
+            .unwrap(),
+    );
+    assert_eq!(
+        miss, "{\"hit\":false}",
+        "a warm index of the old bytes is not claimed"
+    );
     same_size_and_date(&f);
     let st2 = State::new();
     st2.set_data_folder(data.path().join("app"));
     st2.set_index_folder(data.path().join("idx")).unwrap();
     let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
-    assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
+    assert!(
+        boot.contains("\"indexed\":false"),
+        "the index of the old bytes is dropped: {boot}"
+    );
 }
 
 #[test]
@@ -268,18 +449,34 @@ fn the_reset_files_backstop_forgets_the_files_and_keeps_the_drawing() {
     let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
     r("lr_put", json!({"name": "FullScan_t10.mzML", "fid": id}));
     r("lr_index", json!({"name": "FullScan_t10.mzML"}));
-    r("lr_kv_set", json!({"key": "notebook", "value": "{\"ket\":\"K\",\"session\":[\"FullScan_t10.mzML\"],\"sampleCols\":{}}"}));
-    r("lr_kv_set", json!({"key": "cartella.puntata", "value": "x"}));
+    r(
+        "lr_kv_set",
+        json!({"key": "notebook", "value": "{\"ket\":\"K\",\"session\":[\"FullScan_t10.mzML\"],\"sampleCols\":{}}"}),
+    );
+    r(
+        "lr_kv_set",
+        json!({"key": "cartella.puntata", "value": "x"}),
+    );
     let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Esempina","formula":"C10H15NO"}]}"#;
     r("lr_molecules_archive", json!({"mop": "write", "body": doc}));
     let drop = json!({"stores": ["files", "manifest"], "kv": ["cartella.puntata"], "notebook": ["session", "ui", "sampleCols", "sampleEx"]});
     r("lr_clear", json!({"scope": "files", "drop": drop}));
     assert_eq!(r("lr_boot", json!({})), "[]", "no file comes back");
-    let kv: serde_json::Value = serde_json::from_str(&r("lr_kv_get", json!({"key": "notebook"}))).unwrap();
+    let kv: serde_json::Value =
+        serde_json::from_str(&r("lr_kv_get", json!({"key": "notebook"}))).unwrap();
     let nb: serde_json::Value = serde_json::from_str(kv["value"].as_str().unwrap()).unwrap();
     assert_eq!(nb["ket"], "K", "the drawing stays: {nb}");
-    assert!(nb.get("session").is_none() && nb.get("sampleCols").is_none(), "{nb}");
-    assert_eq!(r("lr_kv_get", json!({"key": "cartella.puntata"})), "{\"value\":null}");
-    assert!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("Esempina"), "the molecules stay");
+    assert!(
+        nb.get("session").is_none() && nb.get("sampleCols").is_none(),
+        "{nb}"
+    );
+    assert_eq!(
+        r("lr_kv_get", json!({"key": "cartella.puntata"})),
+        "{\"value\":null}"
+    );
+    assert!(
+        r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("Esempina"),
+        "the molecules stay"
+    );
     assert!(ex.exists(), "the file of the student is never touched");
 }
