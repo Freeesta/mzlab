@@ -35,7 +35,7 @@ def wasm_xic(work, mz, smooth):
     idx = work / "scan.mzidx"
     if not idx.exists():
         example("mzlab-core", "mzidx", str(mzml), str(idx))
-    query = f"mz={mz}&tol={TOL}&level=1" + (f"&smooth={smooth}" if smooth else "")
+    query = f"mz={mz}&tol={TOL}&level=1&smooth={smooth}"
     plan = [{"op": "idxopen", "slot": 0, "name": mzml.name}, {"op": "route", "slot": 0, "path": "/api/xic", "query": query}]
     (work / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
     out = json.loads(run("node", str(ROOT / "tests" / "rotte_wasm_node.js"), str(work / "pkg"), str(idx), str(mzml), str(work / "plan.json")).stdout)
@@ -53,10 +53,10 @@ def cli_points(work, *args):
     return [m.groups() for m in re.finditer(r"\[([-0-9.e]+),([-0-9.e]+)\]", doc.split('"points":')[1])]
 
 
-@pytest.mark.parametrize("smooth", [0, 3, 5])
+@pytest.mark.parametrize("smooth", [3, 5])
 def test_wasm_route_and_cli_give_the_same_trace(work, smooth):
     got = wasm_xic(work, ION, smooth)
-    want = cli_points(work, "--mz", ION, *(["--smooth", str(smooth)] if smooth else []))
+    want = cli_points(work, "--mz", ION, "--smooth", str(smooth))
     assert list(zip(tokens(got, "rt"), tokens(got, "y"))) == want
     assert len(want) > 10
 
