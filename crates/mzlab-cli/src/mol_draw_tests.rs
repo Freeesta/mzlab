@@ -160,3 +160,46 @@ fn mol_draw_reads_are_capped_and_a_missing_file_is_a_keyed_error() {
         Some("err.cli.file")
     );
 }
+
+#[test]
+fn mol_draw_writes_ket_and_cdxml_as_text_or_in_the_scene() {
+    let spec = "C[C@H](N)C(=O)O";
+    let ket = run(&["mol", "draw", spec, "--format", "ket"]);
+    assert_eq!(ket.code, 0, "{}", ket.stderr);
+    assert!(
+        text(&ket).starts_with("{\"root\":{\"nodes\":[{\"$ref\":\"mol0\"}]}"),
+        "{}",
+        text(&ket)
+    );
+    assert!(
+        ket.stderr.contains("choice: file_format = ket"),
+        "{}",
+        ket.stderr
+    );
+    let cdxml = run(&["mol", "draw", spec, "--set", "format=cdxml"]);
+    assert_eq!(cdxml.code, 0, "{}", cdxml.stderr);
+    assert!(text(&cdxml).starts_with("<?xml") && text(&cdxml).ends_with("</CDXML>\n"));
+    for (kind, plain) in [("ket", &ket), ("cdxml", &cdxml)] {
+        let j = run(&["mol", "draw", spec, "--format", kind, "--json"]);
+        assert_eq!(j.code, 0, "{}", j.stderr);
+        let t = text(&j);
+        assert!(t.starts_with("{\"schema\":\"draw/1\""), "{t}");
+        let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
+        assert_eq!(v.get("file_format").and_then(|x| x.str()), Some(kind));
+        assert_eq!(
+            v.get("file").and_then(|x| x.str()),
+            Some(text(plain).as_str())
+        );
+        assert!(j.stderr.is_empty());
+    }
+}
+
+#[test]
+fn mol_draw_format_errors_are_usage_errors() {
+    assert_eq!(run(&["mol", "draw", "CCO", "--format", "png"]).code, 2);
+    assert_eq!(run(&["mol", "draw", "CCO", "--format"]).code, 2);
+    assert_eq!(
+        run(&["mol", "draw", "CCO", "--format", "molfile", "--json"]).code,
+        2
+    );
+}

@@ -1,4 +1,4 @@
-"""Writes tests/dati/draw_d1.json: 30 synthetic `mol draw` requests with the scene and the molfile the release CLI answers (the scene without the newline the CLI prints after JSON; the site, the app and the
+"""Writes tests/dati/draw_d1.json: 30 synthetic `mol draw` requests with the scene, the molfile, the KET and the CDXML the release CLI answers (the scene without the newline the CLI prints after JSON; the site, the app and the
 CLI must give these bytes; read by tests/test_molkit_wasm.py and crates/mzlab-desktop/tests/draw.rs). Usage: python3 tools/draw_fixture.py"""
 import json
 import re
@@ -43,12 +43,15 @@ def main():
             sets += ["--set", f"db={dbfile}"]
         c, scene, err = draw(spec, *sets, stdin=stdin)
         c2, mol, _ = draw(spec, *sets, stdin=stdin, js=False)
+        # the KET and CDXML texts of the same drawing (`--format`, no `--json`)
+        files = {f: draw(spec, *sets, "--format", f, stdin=stdin, js=False) for f in ("ket", "cdxml")}
         req = {"spec": stdin if stdin is not None else spec, **({"db": db} if "db" in opts else {}), **{k: v for k, v in opts.items() if k != "db"}}
         key = None
         if c:
             lines = [x for x in (scene + "\n" + err).splitlines() if x.startswith('{"schema":"error/1"')]
             key = json.loads(lines[0])["error_key"]
-        cases.append({"name": name, "request": req, "exit": c, "error_key": key, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None})
+        cases.append({"name": name, "request": req, "exit": c, "error_key": key, "scene": scene.rstrip("\n") if c == 0 else None, "molfile": mol if c2 == 0 else None,
+                      **{f: files[f][1] if files[f][0] == 0 else None for f in files}})
 
     for i, s in enumerate(SMILES):
         add(f"smiles {i}", "smiles:" + s)
