@@ -1,6 +1,6 @@
 # Range copy of a `.wiff.scan` into OPFS (PR 5 of the wiff chooser plan)
 
-Plan: `wiff-sample-choice.md`; dialog: `wiff-sample-dialog.md`; `--sample`: `sample-flag.md`.
+Plan, dialog and `--sample`: `wiff-sample-choice.md`.
 
 ## What it does
 - When the chooser leaves samples out, the page copies to OPFS only the byte ranges its chosen samples need, not the whole `.wiff.scan`. The `.wiff` (container, small) is always copied whole; the skipped sections stay zeros in the OPFS file (`truncate(size)` after the ranges), so every offset the reader uses is unchanged.

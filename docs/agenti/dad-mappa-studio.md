@@ -81,7 +81,7 @@ New module in `mzlab-core` (feature `mappa-dad`, no logic in JS), pure functions
   - `mzlab-cli dad spectrum FILE --rt R [--rt-end R2] [--ref B …]`, `dad trace FILE --nm N [--bw W] [--ref B …]`, `dad ms-at FILE --rt R [--offset MIN] [--trace tic|bpc|eic --mz M --ppm P]`, `dad delay FILE`.
   - `--json`: one document per call with stable keys (above), exit codes as the other commands (`cli.md`: 0 ok, 2 usage/unreadable, plus a distinct code for "no DAD matrix" and "no overlap"; to be fixed when step 2 reads `cli.md`).
 - Parity tests: for each route the site answer (Node/wasm test harness) = the app op = the CLI `--json` on the same synthetic pairs (`tools/wiff_riferimento.py` `dad=` and `tools/dati_sintetici_uv.py`), byte for byte, as `routes_parity.rs`; cases: same grid, different RT grid, different nm range and step, no overlap, no DAD, large matrix (reduced).
-- Wasm cost: the pure functions are small; measure per `wasm-caps.md` (`mzlab-wasm` cap; ≤ 1 % over the old cap accepted with the entry in `wasm-caps-measurements.md`; above → stop and ask). Nothing is gated out of a module.
+- Wasm cost: the pure functions are small; measure per `wasm-caps.md` (`mzlab-wasm` cap; ≤ 1 % over the old cap accepted with the `misura` entry of its `tools/moduli/*.toml`; above → stop and ask). Nothing is gated out of a module.
 - Data to reproduce with: synthetic only; files of `mzlab-dati` (via `tools/dati_percorsi.py`) only for local checks, never committed.
 
 ### 5.4 Card design for C (linked MS information)
@@ -116,7 +116,7 @@ The DAD map already has two strips; C must not take them away. Proposal (mockup)
 ## 7. Split into small PRs (one PR each, after the owner's go)
 
 1. This page (docs only).
-2. Engine: `dad_subtract` + regridding + scale + `dad_spectrum_at/dad_trace_at/dad_ms_at/dad_delay` in `mzlab-core`; routes in wasm and app; CLI `dad subtract|spectrum|trace|ms-at|delay` with `--json`; parity tests site = app = CLI byte for byte; `wasm-caps-measurements.md` entry; `docs/agenti/dad.md` updated.
+2. Engine: `dad_subtract` + regridding + scale + `dad_spectrum_at/dad_trace_at/dad_ms_at/dad_delay` in `mzlab-core`; routes in wasm and app; CLI `dad subtract|spectrum|trace|ms-at|delay` with `--json`; parity tests site = app = CLI byte for byte; `misura` entry in `tools/moduli/*.toml`; `docs/agenti/dad.md` updated.
 3. Card A: DAD subtraction (load `ref`, offer only files with a matrix, scale control, an always-visible note of grid changes/overlap/warnings, chip and legend say what is subtracted; no silent no-op), e2e with two synthetic pairs of different grids.
 4. Card B: strips show the UV spectrum and UV trace (plain and subtracted), titles and units fixed; e2e on hover.
 5. Card D: 3D for `kind=pda` (plain and subtracted), WebGL2/lost-context path checked, e2e where the browser has WebGL2 (else the technical box is asserted).
