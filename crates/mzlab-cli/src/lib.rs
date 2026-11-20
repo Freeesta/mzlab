@@ -29,7 +29,9 @@ mod convert_help;
 mod convert_report;
 mod dad_cmd;
 mod design_cmd;
+mod emit;
 pub mod error_text;
+pub(crate) use emit::emit;
 pub mod exit;
 mod extract;
 mod file_index_cmd;
@@ -192,6 +194,7 @@ mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
 mod trace_cmd;
+mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
@@ -351,22 +354,6 @@ impl Outcome {
             }
         }
         self
-    }
-}
-
-/// The text to the standard output, or to the file of `--out`.
-fn emit(t: impl Into<Vec<u8>>, out: &Option<PathBuf>) -> Outcome {
-    let t: Vec<u8> = t.into();
-    match out {
-        None => Outcome::ok(t),
-        Some(p) => std::fs::write(p, t).map_or_else(
-            |e| {
-                Outcome::fail_error(
-                    &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
-                )
-            },
-            |_| Outcome::ok(Vec::new()),
-        ),
     }
 }
 
