@@ -18,7 +18,7 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
-        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_gruppi_trascina.py")][-1]
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_groups_drag.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split("\n")[:8])[:500]))
 LABELS = "Object.fromEntries(E.files.filter(f => !f.gone).map(f => [fileBase(f.file).replace(/\\.mzML$/, ''), f.ugrp || null]))"
 def count(pg, label): return pg.evaluate("(l) => E.files.filter(f => f.ugrp === l).length", label)

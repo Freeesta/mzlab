@@ -1,4 +1,4 @@
-//! Groups of experiments, `gruppi/1` (`docs/agenti/groups.md`, schema `docs/schemi/gruppi-1.json`): the same degradation in several conditions,
+//! Groups of experiments, `groups/1` (`docs/agenti/groups.md`, schema `docs/schemi/groups-1.json`): the same degradation in several conditions,
 //! compared on ONE alignment. Input: the matrix rows x files, the metadata of the rows and the canonical `samples/1`; output: per row and condition
 //! the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as "Prev." suggestions, the exact
 //! sets of conditions and the decay of the parent per condition. The module reads no file and never realigns: it uses the rows it receives.
@@ -20,7 +20,7 @@ use presence::{CondModel, GStat};
 pub use presence::Controls;
 
 /// Cell states of `GroupTable::state` are the ones of `crate::table` (`CELL_DETECTED`, `CELL_FILLED`, `CELL_ABSENT`); a targeted cell counts as detected.
-pub const FORMAT: &str = "gruppi";
+pub const FORMAT: &str = "groups";
 pub const VERSION: u32 = 1;
 
 /// What the caller knows of one row of the table (the module never looks inside the file).
@@ -54,7 +54,7 @@ pub struct GroupTable {
     pub rows: Vec<RowMeta>,
 }
 
-/// The options (`gruppi/1`); `norm` is `"raw"`, the only one implemented.
+/// The options (`groups/1`); `norm` is `"raw"`, the only one implemented.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupOpts {
     pub reference: Option<String>,

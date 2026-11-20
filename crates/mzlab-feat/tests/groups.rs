@@ -1,4 +1,4 @@
-//! `gruppi/1`: the fixture byte for byte, presence with replicates, sets and ratios, controls (shared and per condition), the "Prev." suggestions,
+//! `groups/1`: the fixture byte for byte, presence with replicates, sets and ratios, controls (shared and per condition), the "Prev." suggestions,
 //! warnings, errors and determinism under permutation of the columns.
 
 mod groups_common;
@@ -7,7 +7,7 @@ use groups_common::*;
 use mzlab_core::json::{parse, Value};
 use mzlab_feat::groups::{build, groups_json, run_json, GroupOpts, GroupTable};
 
-const FIXTURE: &str = "tests/data/gruppi_fixture.json";
+const FIXTURE: &str = "tests/data/groups_fixture.json";
 
 fn fixture_text() -> String {
     let (tb, cs, opts) = scenario();
@@ -19,11 +19,11 @@ fn fixture_text() -> String {
 #[test]
 fn fixture_is_byte_for_byte() {
     let text = fixture_text();
-    if std::env::var("GRUPPI_FIXTURE_WRITE").is_ok() {
+    if std::env::var("GROUPS_FIXTURE_WRITE").is_ok() {
         std::fs::write(FIXTURE, &text).unwrap();
     }
     let file = std::fs::read_to_string(FIXTURE).expect("fixture");
-    assert_eq!(file, text, "regenerate with GRUPPI_FIXTURE_WRITE=1");
+    assert_eq!(file, text, "regenerate with GROUPS_FIXTURE_WRITE=1");
     // The JSON entry of the module gives the expected text from the input of the file.
     let (head, tail) = file.split_once(",\n\"expected\":").unwrap();
     let input = head.strip_prefix("{\"input\":").unwrap();

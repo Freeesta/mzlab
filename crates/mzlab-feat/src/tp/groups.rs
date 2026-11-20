@@ -1,4 +1,4 @@
-//! The conditions of a high-resolution series in the table of the products: `gruppi/1` built from the table of the features and the facts the caller knows of
+//! The conditions of a high-resolution series in the table of the products: `groups/1` built from the table of the features and the facts the caller knows of
 //! the best hypothesis of each row, and the treated files of each condition for the network. Nothing here is read with fewer than two conditions: one
 //! condition (or none) leaves `tptab/1` and the network exactly as they are.
 
@@ -103,7 +103,7 @@ fn group_table(t: &Aligned, rows: &[usize], infos: &[RowInfo]) -> GroupTable {
     g
 }
 
-/// `gruppi/1` of the rows `rows`, or `None` with fewer than two conditions.
+/// `groups/1` of the rows `rows`, or `None` with fewer than two conditions.
 pub fn groups_json(
     t: &Aligned,
     cs: &[Sample],

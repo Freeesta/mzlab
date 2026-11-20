@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Writes the synthetic `gruppi/1` kinetic fixture the Compare-conditions view is tried on (TP_Mine/tests/gruppi_fixture_kin.json: 3 conditions x 5 times;
-TP_Mine/tests/gruppi_fixture.json is the expected output of the Rust module, copied from crates/mzlab-feat/tests/data/gruppi_fixture.json). Test data only: every number is made up here and follows the contract of
+"""Writes the synthetic `groups/1` kinetic fixture the Compare-conditions view is tried on (TP_Mine/tests/groups_fixture_kin.json: 3 conditions x 5 times;
+TP_Mine/tests/groups_fixture.json is the expected output of the Rust module, copied from crates/mzlab-feat/tests/data/groups_fixture.json). Test data only: every number is made up here and follows the contract of
 docs/agenti/groups.md (presence, ratio to the reference, sets, shape, prev), so the view has something to draw
-before the Rust module is wired in. Run: python3 tools/gruppi_fixture_vista.py"""
+before the Rust module is wired in. Run: python3 tools/groups_fixture_view.py"""
 import json, itertools
 from pathlib import Path
 
@@ -64,7 +64,7 @@ def build(conds, times, rows, ref, replicates, parents):
         out_rows.append({"row": rid, "tp_name": r["name"], "mz": r["mz"], "polarity": r.get("pol", "+"), "rt": r["rt"], "neutral_formula": None, "ppm": None, "other_polarity": None,
                          "present_in": pres, "only_in": pres[0] if len(pres) == 1 else None, "in_all": len(pres) == len(conds), "cond": cond})
         sets.setdefault(tuple(pres), []).append(rid)
-    return {"format": "gruppi", "version": 1, "reference": ref, "norm": "raw", "parent_name": PARENT,
+    return {"format": "groups", "version": 1, "reference": ref, "norm": "raw", "parent_name": PARENT,
             "conditions": [{"id": c, "factors": {}, "files": [], "times": times[c], "replicates": replicates[c],
                             "controls": {"t0": [0], "blank": [1], "std": [2], "dark": []}, "parent": parents[c]} for c in conds],
             "rows": out_rows,
@@ -90,6 +90,6 @@ def kinetic():
 
 
 if __name__ == "__main__":
-    for name, fx in (("gruppi_fixture_kin.json", kinetic()),):
+    for name, fx in (("groups_fixture_kin.json", kinetic()),):
         (OUT / name).write_text(json.dumps(fx, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(name, len(fx["rows"]), "rows", len(fx["conditions"]), "conditions", len(fx["sets"]), "sets")
