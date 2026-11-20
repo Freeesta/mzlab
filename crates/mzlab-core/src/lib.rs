@@ -37,7 +37,7 @@ pub mod chromeleon;
 pub mod chrom_background;
 #[cfg(test)]
 mod chrom_background_test;
-#[cfg(test)]
+#[cfg(all(test, feature = "statcmp"))]
 mod statcmp_test;
 pub mod ticbg;
 pub mod ticbg_route;
@@ -225,7 +225,9 @@ pub mod pca;
 pub mod qaqc;
 pub mod statistics;
 pub mod statmat;
+#[cfg(feature = "statcmp")]
 pub mod statcmp;
+#[cfg(feature = "statcmp")]
 mod statcmp_plan;
 pub mod statref;
 pub mod statroute;

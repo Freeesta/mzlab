@@ -7,8 +7,10 @@ license.workspace = true
 
 [features]
 # the Thermo `.raw` reader (`raw`, `rawlettore`, `rawfilter`, `metodo_raw`, the `opentfraw` dependency): the engine (mzlab-wasm) leaves it off and reaches it through the `thermo` readers module
-default = ["thermo", "mappa-dad", "precursori"]
+default = ["thermo", "mappa-dad", "precursori", "statcmp"]
 thermo = ["dep:opentfraw"]
+# `compare/1` (`statcmp`, `statcmp_plan`): `table.compare` and `mzlab-cli table compare` use it; the engine and the `rotte` module (under a size limit, no compare route) leave it off with `default-features = false`
+statcmp = []
 # the precursor chain, activation and energy of `<precursorList>` in the mzML writer (`mzmlwrite/spectrum.rs`): the readers that fill `SpectrumExtra::precursors` turn it on; the engine and the other readers modules (under a size limit) leave it off
 precursori = []
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
