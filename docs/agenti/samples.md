@@ -46,7 +46,7 @@ No migration from older notebooks or `.mzflow` files: a document with other key 
 - The panel shows a file/role/time table (native `select` and `input`, `aria-label`, focus restored after every edit) with a single unit selector; the proposed time is yellow until you confirm it (Enter or "Confirm times"). Short warnings in `role=status` come from the `validate` codes; "Run" is off, with the reason in the `title`, if `validate` is blocking.
 - The pipeline receives `minutes[]` from `per_tp` and the canonical `samples/1` (`samples` of the parent → `build_evidence_to`, optional trailing parameter: TP gate 1 reads the roles, infusion is never a control); the run log also carries the `samples` operation (canonical JSON and SHA-256 from Rust); Feature QC uses roles and minutes of the model.
 
-## Tabui LR file table (`TP_Mine/lazy/groups-samples.js`)
+## Tabui LR file table
 - After `TPLAZY.load("groups-samples.js")`, `TPGRUPPI_FILES.mount(el, names, {R, call, nb, save, onChange})` draws File | Role | Condition | Time | Replicate (native `select`/`input`, `aria-label`, focus restored after every edit); `20_tpmine.js` mounts it in `#tp-cfiles` and gives the Dig the `samples/1` (`docs/agenti/groups.md`, "Innesto in Tabui LR").
 - The page that mounts the table waits for `window.nbEnsure()`, otherwise the notebook does not save. Roles, times, conditions (`series`), replicates and warnings are those of `finder-ruoli.js` (`build`, `check`, `canonical`) on top of `api/samples/<op>`: no name rule in JS.
 - "Condition" has a `datalist` of the labels in use; "Set condition…" assigns it to the checked files; the proposed conditions and times are yellow until "Confirm conditions" is pressed (page state: entries already in `NB.samples` at mount count as confirmed).
