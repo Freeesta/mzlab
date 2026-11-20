@@ -1,4 +1,4 @@
-//! `mzlab-cli flow steps [--json] [--id ID[@V]]`: the registry of Flow steps of this very binary, so an agent reads the versions it will run.
+//! `mzlab-cli flow steps [--json] [--id ID[@V] [--template]]`: the registry of Flow steps of this very binary, so an agent reads the versions it will run.
 //! The JSON is the `step/1` array of the exported `docs/schemi/steps-*-1.json`, each step with `executable_native` and `citation` added at the end.
 
 use mzlab_core::error::Error;
@@ -13,16 +13,17 @@ use crate::Outcome;
 
 const HELP: &str = "mzlab-cli flow steps: the steps a Flow plan can use, from the registry of this program.
 
-usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION]]
+usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION] [--template]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with \"executable_native\" and \"citation\" at the end
   --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names, algorithm ids and
                     executable_native, no prose (a few KB; --json is the full descriptors)
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
+  --template        with --id: not the descriptor but a one-step mzflow/2 plan to edit (a file input per required port, every parameter at its default; `flow check` reads it)
   --help            this text
 
-exit codes: 0 done, 2 usage or an unknown step (err.flow.step.unknown)";
+exit codes: 0 done, 2 usage, 5 unknown step (err.flow.step.unknown)";
 
 /// The step descriptor with `"executable_native"` after its last key.
 fn with_native(s: &Step) -> String {
@@ -90,19 +91,23 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         fail(&err, msg, "mzlab-cli flow steps --help")
     };
     let mut id = None;
-    let mut compact = false;
+    let (mut compact, mut template) = (false, false);
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
             "--json" => {}
             "--compact" => compact = true,
+            "--template" => template = true,
             "--id" => match it.next() {
                 Some(v) => id = Some(v),
                 None => return usage("--id needs a step id"),
             },
             s => return usage(&format!("unknown option {s}")),
         }
+    }
+    if template && id.is_none() {
+        return usage("--template needs --id STEP");
     }
     let reg = steps();
     let mut list: Vec<&Step> = reg.iter().collect();
@@ -121,6 +126,9 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             );
         };
         list = vec![last];
+    }
+    if let (true, [one]) = (template, list.as_slice()) {
+        return crate::flow_template::template(one);
     }
     let stdout = if compact {
         compact_json(&list)

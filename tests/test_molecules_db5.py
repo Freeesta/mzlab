@@ -1,5 +1,5 @@
-"""IndexedDB version 5 (mzlab/web/qqq-db.js): the store `molecules` of the molecules of the user is added to a database that has the four stores of version 3 (or 4), nothing else changes,
-and nomi.js names the same version. The real-browser migration with rows in every store is a step of tests_e2e/e2e_molecules_ui.py."""
+"""IndexedDB upgrade (mzlab/web/qqq-db.js, version 6): the store `user_lists` is added to a real version 5 database (files, kv, liste_utente, manifest, molecules) and nothing else changes:
+the old `liste_utente` store and its rows are not touched, and nomi.js names the same version. The real-browser migration with rows in every store is a step of tests_e2e/e2e_molecules_ui.py."""
 import json
 import re
 import subprocess
@@ -19,18 +19,26 @@ def test_database_version_6_adds_the_user_lists_store_and_leaves_the_old_one():
     uri = (WEB / "qqq-db.js").as_uri()
     code = f"""
     import {{ upgrade, DB_VER }} from {uri!r};
-    const made = [];
-    const rows = {{ liste_utente: [{{ id: "l1", name: "My list" }}] }};
-    const have = new Set(["files", "kv", "liste_utente", "manifest", "molecules"]);
-    const db = {{ objectStoreNames: {{ contains: n => have.has(n) }}, createObjectStore: (n, o) => {{ made.push([n, o && o.keyPath]); have.add(n); }} }};
+    const made = [], touched = [];
+    // every store is a real Map of rows; any call that could change a row or drop a store is recorded
+    const stores = new Map(["files", "kv", "liste_utente", "manifest", "molecules"].map(n => [n, new Map()]));
+    stores.get("liste_utente").set("l1", {{ id: "l1", name: "My list" }});
+    const before = JSON.stringify([...stores].map(([n, m]) => [n, [...m]]));
+    const db = {{
+      objectStoreNames: {{ contains: n => stores.has(n) }},
+      createObjectStore: (n, o) => {{ made.push([n, o && o.keyPath]); stores.set(n, new Map()); }},
+      deleteObjectStore: n => touched.push(["delete", n]),
+      transaction: n => {{ touched.push(["transaction", n]); return {{}}; }},
+    }};
     upgrade(db);
     const once = made.length;
     upgrade(db);
-    console.log(JSON.stringify({{ ver: DB_VER, made, idempotent: made.length === once, old: [...have].includes("liste_utente"), rows: rows.liste_utente }}));
+    const rows = JSON.stringify([...stores].filter(([n]) => n !== "user_lists").map(([n, m]) => [n, [...m]]));
+    console.log(JSON.stringify({{ ver: DB_VER, made, idempotent: made.length === once, touched, same: rows === before, old: stores.get("liste_utente").get("l1") }}));
     """
     res = run_node_esm(code)
     assert res["ver"] == 6 and res["made"] == [["user_lists", "id"]] and res["idempotent"], res
-    assert res["old"] and res["rows"] == [{"id": "l1", "name": "My list"}], res
+    assert res["touched"] == [] and res["same"] and res["old"] == {"id": "l1", "name": "My list"}, res
 
 
 def test_names_and_the_schema_name_the_same_version():

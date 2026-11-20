@@ -197,6 +197,37 @@ fn draw_route_applies_the_edit_patches_of_the_shared_fixture() {
         }
     }
     assert!(errors >= 10, "{errors}");
+    // the edited drawings the fixture also asks for as pictures and files: the same bytes through the route
+    let mut rendered = 0;
+    for c in cases.iter().filter(|c| c["svg"].is_string()) {
+        rendered += 1;
+        for format in ["ket", "cdxml", "svg", "png"] {
+            let mut request = c["request"].clone();
+            request["format"] = json!(format);
+            let got = st
+                .rpc(
+                    "feat/grafo",
+                    &json!({"kind": "draw", "request": request}),
+                    &[],
+                )
+                .unwrap();
+            match c[format].as_object() {
+                Some(p) => assert_eq!(
+                    png_of(&bytes(got)),
+                    (p["len"].as_u64().unwrap(), p["crc32"].as_u64().unwrap()),
+                    "{} {format}",
+                    c["name"]
+                ),
+                None => assert_eq!(
+                    text(got),
+                    c[format].as_str().unwrap(),
+                    "{} {format}",
+                    c["name"]
+                ),
+            }
+        }
+    }
+    assert_eq!(rendered, 15);
 }
 
 /// A patch given as a list in the request is held to the same 64 KiB as the text form, with the same key.

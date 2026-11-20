@@ -59,7 +59,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 <!--/renames-->
 
 ## Look at a file first
-- `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic`, `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
+- `file info FILE...` answers in one call what a file holds (container, samples, `items/1`, `channels/1`, proposed kind). Then `trace chrom FILE --id ID --format csv | peak auto-lr -`, `trace xic --mz M1,M2,.. --ppm P [--smooth 3|5] [--dry-run]` (one XIC per ion, `trace-set/1` or a wide CSV), `spectrum get|list`: JSON starts with `"schema"`, CSV is `rt_min,intensity`; unknown channel id or scan: exit 5. Wiff inventory: `file inventory`.
 
 ## Linux binaries (for agents in Linux VMs)
 - Every release carries static musl builds of `mzlab-cli` (profile `cli`; no libc or distro dependency, runs on any distro): `mzLab-X.Y.Z-cli-Linux-x86_64` and `mzLab-X.Y.Z-cli-Linux-aarch64` (plain executables), listed in `SHA256SUMS` of the release. The `release` workflow also keeps them, each with a `.sha256` file, as the artifacts `mzlab-cli-linux-x86_64` and `mzlab-cli-linux-aarch64`.
@@ -97,9 +97,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Sequence
 0. A plan with `table.stats@1` or `table.drift@1` needs `samples` and `design` inputs: `sample table FILE... > samples.json`, `sample design propose --samples samples.json --out design.json`, `sample design validate design.json --samples samples.json` (exit 3 names each bad key); `design-cli.md`.
 1. `mzlab-cli flow steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `flow steps` gives one line per step.
-2. Write an `mzflow/2` plan with the differences from the defaults only.
-3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed).
-4. `mzlab-cli flow run PLAN.json --in DIR --dry-run [--json]`: checks plan, `--set` and inputs and prints what would run (`flowdry/1`), writes nothing.
+2. `mzlab-cli flow steps --id STEP[@V] --template`: a one-step `mzflow/2` plan to start from (file inputs named after the ports, instance named after the step, every parameter at its default); write the plan with the differences from the defaults only. A plan is `{"format":"mzflow/2","inputs":[{"name":"a.mzML"}],"steps":[{"id","step":"id@V","in":{PORT:"file:NAME"|"INSTANCE.PORT"|[...]},"params":{NAME:VALUE}}]}`. No step: `err.flow.empty` (exit 3) on `flow check`/`run`; the page's editor check accepts an empty canvas.
+3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed). The reader is strict: a key outside the format (`schema`, `param`), a value of the wrong JSON type, no `steps` or an empty one, an unknown step, parameter or port, a missing port or a mistyped value is exit 3, each problem with its `path` (`steps[1].params`, `det.params.min_height`, `det.in.index`) and its values; a typo is never taken for a default.
+4. `mzlab-cli flow run PLAN.json --in DIR --dry-run [--json]`: the same checks plus `--set` and the inputs, then what WOULD run (`flowdry/1`: inputs found, instances in order with their canonical parameters); writes nothing, exit 3 for a wrong plan, 4 for a missing input.
 5. `mzlab-cli flow run PLAN.json --in DIR --out RUN [--json]`: the run; `--json` ends with `flowrun/1`. The same `RUN` can be reused: only changed steps rerun.
 6. Read `RUN/prov.json`, `RUN/report.json` (`mzlab-cli flow report RUN`) and the output files. `mzlab-cli flow record RUN --roles ROLES.json` writes the `mzrun/2` (roles from `mzlab-cli sample table FILE...`, or any `samples/1` whose empty `sha256` is taken from the run); `mzlab-cli flow verify RECORD --json` checks it (`verify/1`, `docs/schemi/verify-1.json`; exit 0 ok, 3 mismatch or refusal; `err.mzrun.commit` means the binary was built without a commit: set `MZLAB_COMMIT`).
 

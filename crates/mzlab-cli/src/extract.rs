@@ -159,6 +159,9 @@ impl Parsed {
             .find(|(n, _)| n == k)
             .map(|(_, v)| v.as_str())
     }
+    pub fn flag(&self, k: &str) -> bool {
+        self.flags.iter().any(|f| f == k)
+    }
     pub fn num(&self, k: &str) -> std::result::Result<Option<f64>, String> {
         self.get(k)
             .map(|v| {

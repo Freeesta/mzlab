@@ -57,7 +57,7 @@
     },
     "evidence": {
       "type": "object",
-      "description": "Where the points come from: source or route, channel, tolerance (tolerance_da, tolerance_ppm), scans_in_section, points_in_source, rt_window_min."
+      "description": "Where the points come from: source or route, channel, tolerance (tolerance_da, tolerance_ppm), scans_in_section, points_in_source, rt_window_min, smooth (3 or 5, XIC only) and, for an XIC with no signal, empty: true with empty_reason (no_scans_in_section, no_signal or outside_window)."
     }
   }
 }

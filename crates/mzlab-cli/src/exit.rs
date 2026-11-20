@@ -51,6 +51,8 @@ const SELECTOR_KEYS: &[&str] = &[
 const INTEGRITY_PREFIXES: &[&str] = &[
     "err.flow.format",
     "err.flow.json",
+    "err.flow.key.",
+    "err.flow.shape",
     "err.flow.check",
     "err.flow.lineage",
     "err.flow.port.",

@@ -48,7 +48,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
-    Entry::new("trace xic", "mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV", crate::trace_cmd::xic)
+    Entry::new("trace xic", "mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol T) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; --dry-run xicplan/1", crate::trace_xic::xic)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
     Entry::new("trace background", "mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON", crate::plain::background_cmd::run),
