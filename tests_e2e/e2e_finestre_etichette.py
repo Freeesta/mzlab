@@ -14,7 +14,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:400]))
 
 r = Run(port=8962, wd="/tmp/wd_finestre_etichette")
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1')}catch(_){}"
 # every visible label of the open dialog with its control (label.control: wrapped or for=): the text of the label (its text nodes outside the control) and the
 # control on one row at most 120 px apart (fields of a section share a column: a short label is that far from it at most) (a radio or checkbox before its text, the centre of its mark at most 24 px from it), or the control under the text, aligned to it; label of a radio
 # or checkbox at least 24 px tall (the target); nothing past the right edge of the dialog

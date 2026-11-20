@@ -135,7 +135,7 @@ try:
             pg.mouse.up(); wait_for_js(pg, "BARRA.side === 'right' && document.querySelector('#dfiles').getBoundingClientRect().right > 1480")
             assert pg.evaluate("BARRA.side") == "right" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().right") > 1480, pg.evaluate("BARRA.side")
             assert pg.locator(".sb-dz").count() == 0
-            assert pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "right"
+            assert pg.evaluate("localStorage.getItem('mzlab.bar.side')") == "right"
             pg.keyboard.press("Alt+Shift+ArrowLeft"); wait_for_js(pg, "BARRA.side === 'left' && document.querySelector('#dfiles').getBoundingClientRect().left < 20")
             assert pg.evaluate("BARRA.side") == "left" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().left") < 20
             pg.keyboard.press("Alt+Shift+ArrowRight"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
@@ -146,22 +146,22 @@ try:
             assert pg.evaluate("Q('#dpanels').getBoundingClientRect().left") > w_dp + 150, "the charts move to the free side"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
             close_side(pg); gone("#dfiles")
-        step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", side)
+        step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.bar.side", side)
 
         def ricorda():
             pg.click("#stbar [data-cmd=addloss]"); pg.click("#al-t-losses"); wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')")
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
-            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "addloss" and st["sub"] == "losses" and st["open"] and "pinned" not in st, st
+            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr'))"); assert st["w"] == 320 and st["tab"] == "addloss" and st["sub"] == "losses" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && (BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"), "open, tool, side and width come back"
             assert pg.is_visible("#sb-panel-losses"), "the restored panel is painted"
             close_side(pg); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
-            pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
-            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert "pinned" not in st and st["w"] == 280 and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") == "left", st
-            pg.evaluate("localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg)
+            pg.evaluate("localStorage.setItem('mzlab.bar.side','bogus'); localStorage.setItem('mzlab.bar.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
+            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr'))"); assert "pinned" not in st and st["w"] == 280 and pg.evaluate("localStorage.getItem('mzlab.bar.side')") == "left", st
+            pg.evaluate("localStorage.setItem('mzlab.bar.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg)
             assert pg.evaluate("BARRA.width") <= 560, "a width out of range goes back to the default"
-            pg.evaluate("localStorage.removeItem('mzlab.barra.lr'); localStorage.removeItem('mzlab.barra.lato')"); pg.reload(); ready(pg)
+            pg.evaluate("localStorage.removeItem('mzlab.bar.lr'); localStorage.removeItem('mzlab.bar.side')"); pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles"), "first start: open"
         step("state remembered after reload (open, side, width, tool); old states (pinned, bad side, width 0 or huge) are cleaned", ricorda)
 
@@ -190,11 +190,11 @@ try:
             assert pg.evaluate("typeof BARRA.setLabels") == "undefined" and pg.evaluate(FIT)["lvl"] == "all"
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.locator("#uip-etich").count() == 0, "no labels option in the settings"
             pg.keyboard.press("Escape")
-            pg.evaluate("localStorage.setItem('mzlab.barra.etichette','hidden')"); pg.reload(); ready(pg)
+            pg.evaluate("localStorage.setItem('mzlab.bar.labels','hidden')"); pg.reload(); ready(pg)
             assert pg.evaluate(FIT)["lvl"] == "all", "an old saved value is ignored: the labels follow the width"
             resize(1024, 800)
             f = pg.evaluate(FIT); assert not f["clipped"] and f["wrapped"] == 0, f
-            pg.evaluate("localStorage.removeItem('mzlab.barra.etichette')"); resize(1500, 1000)
+            pg.evaluate("localStorage.removeItem('mzlab.bar.labels')"); resize(1500, 1000)
             assert pg.evaluate("BARRA.fitStats.max") < 50
         step("labels are always automatic: no option in the settings, an old saved value is ignored", preferenza)
 
@@ -258,11 +258,11 @@ try:
 
         def hr_stato():
             pg.click("#stbar [data-cmd=addloss]"); pg.evaluate("BARRA.setWidth(400)")
-            hr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')||'null')")
+            hr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr')||'null')")
             assert hr["open"] and hr["w"] == 400 and hr["tab"] == "addloss" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
             close_side(pg)
-        step("HR state in mzlab.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
+        step("HR state in mzlab.bar.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
 
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def narrow():
@@ -277,13 +277,13 @@ try:
             assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             pg.keyboard.press("Escape"); gone("#dfiles"); shown("#dpanels")
             assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
-            pg.evaluate("localStorage.removeItem('mzlab.barra.hr')"); pg.set_viewport_size({"width": 1500, "height": 1000})
+            pg.evaluate("localStorage.removeItem('mzlab.bar.hr')"); pg.set_viewport_size({"width": 1500, "height": 1000})
         step("under 900 px the panel is a sheet (replaces the workspace, × and Esc give it back)", narrow)
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
                 ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, reduced_motion="reduce")
-                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
                 try:
                     stage(q, [EX]); q.click("text=Load data"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); ready(q)     # the session lives in the browser: a new context opens the file itself
@@ -305,7 +305,7 @@ try:
 
         def phone():
             ctx = r.b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True, reduced_motion="reduce")
-            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
                 stage(q, [EX]); q.click("text=Load data"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); ready(q)     # the session lives in the browser: a new context opens the file itself

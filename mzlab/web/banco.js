@@ -359,7 +359,7 @@ const BANCO = (() => {
     ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')],
     ["alb", I18N.t("bn.i9.alb"), ICON.tree],
     ["gra", I18N.t("bn.i9.gra"), svg('<rect x="1.5" y="6" width="4" height="4" rx=".8"/><rect x="10.5" y="2" width="4" height="4" rx=".8"/><rect x="10.5" y="10" width="4" height="4" rx=".8"/><path d="M5.5 8h2.5V4h2.5M8 8v4h2.5"/>')]];
-  const IK = NOMI.KEY("banco.info");
+  const IK = NOMI.KEY("bench.info");
   const ist = (() => { const o = lsObj(IK); return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
   const num = (v, d = 4) => (v == null || !Number.isFinite(+v) ? "" : String(+(+v).toFixed(d)));

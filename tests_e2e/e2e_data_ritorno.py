@@ -17,7 +17,7 @@ try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
         pg = r.b.new_page(viewport={"width": 1500, "height": 1000}, reduced_motion="no-preference")
-        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         stage(pg, FILES); pg.wait_for_selector("#dpanels .pnl canvas", timeout=60000); ready(pg)
         for other in ("draw", "flow"):

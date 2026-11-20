@@ -82,7 +82,7 @@ try:
             files = []
             for t in (0, 15, 30, 45, 60):
                 ds.full_scan(d / f"B_FullMass-t{t}.mzML", t, rng); files.append(str(d / f"B_FullMass-t{t}.mzML"))
-            init = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}"
+            init = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');}catch(_){}"
             drop = """(sel) => { const i = document.querySelector('#__tmpdrop'), t = document.querySelector(sel), dt = new DataTransfer(); for (const f of i.files) dt.items.add(f);
               for (const ty of ['dragenter', 'dragover', 'drop']) t.dispatchEvent(new DragEvent(ty, {bubbles: true, cancelable: true, dataTransfer: dt})); i.remove(); }"""
             for w in (1440, 820):

@@ -8,9 +8,9 @@ const W_ = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {any} */ a) => W_.I18N.t(k, a);
 const EHt = (/** @type {unknown} */ s) => EH(s == null ? "" : s);
 const LIB = () => W_.LIB, LV = () => W_.LIVELLI;
-const THR_KEYS = ["entropia_min", "picchi_min", "precursore_ppm_max", "scansioni_min", "margine_min", "entropia_provvisorio", "analogo_mcos_min"];
+const THR_KEYS = ["entropy_min", "peaks_min", "precursor_ppm_max", "scans_min", "margin_min", "entropy_provisional", "analog_mcos_min"];
 /** @type {Record<string, string>} */
-const THR_NUM = { entropia_min: "0:1", picchi_min: "0: i", precursore_ppm_max: ">0", scansioni_min: "0: i", margine_min: "0:1", entropia_provvisorio: "0:1", analogo_mcos_min: "0:1" };
+const THR_NUM = { entropy_min: "0:1", peaks_min: "0: i", precursor_ppm_max: ">0", scans_min: "0: i", margin_min: "0:1", entropy_provisional: "0:1", analog_mcos_min: "0:1" };
 // neutral change between a query and an analogue: the usual transformations first, then the simplest formula within 3 mDa (the composition of the engine)
 const TRANSF = () => [[15.9949146, t("lib.tr.hydroxylation")], [-2.01565, t("lib.tr.dehydrogenation")], [13.97926, "+O −2H"], [-26.01565, "−C₂H₂"], [1.97926, "−CH₂ +O"], [-56.0626, t("lib.tr.dealkylation")],
   [18.010565, "+H₂O"], [-18.010565, "−H₂O"], [-27.9949146, "−CO"], [2.01565, "+2H"], [-14.01565, t("lib.tr.demethylation")], [14.01565, t("lib.tr.methylation")], [-43.98983, "−CO₂"], [31.98983, "+O₂"]];

@@ -147,6 +147,22 @@ fn find(es: &[Entry], kind: &str, w: &str, key: &str) -> Vec<(usize, u8)> {
     h
 }
 
+/// No entry at all: the nearest names, when there are any, else the short message without that clause.
+fn not_found(kind: &str, q: &str, es: &[Entry], w: &str) -> Error {
+    let near = if kind == "inchikey" {
+        Vec::new()
+    } else {
+        nearest(es, w)
+    };
+    if near.is_empty() {
+        Error::new("err.mol.draw.not_found_bare").with("spec", q)
+    } else {
+        Error::new("err.mol.draw.not_found")
+            .with("spec", q)
+            .with("nearest", near.join(", "))
+    }
+}
+
 /// A name or an InChIKey found in the molecules CSV `db`, drawn from its SMILES.
 pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<Drawn> {
     if kind == "inchi" {
@@ -159,15 +175,8 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
     let w = q.trim().to_lowercase();
     let key = q.to_ascii_uppercase();
     let mut hits = find(&es, kind, &w, &key);
-    if kind != "inchikey" && hits.is_empty() {
-        return Err(Error::new("err.mol.draw.not_found")
-            .with("spec", q)
-            .with("nearest", nearest(&es, &w).join(", ")));
-    }
     let Some(&(top, score)) = hits.first() else {
-        return Err(Error::new("err.mol.draw.not_found")
-            .with("spec", q)
-            .with("nearest", ""));
+        return Err(not_found(kind, q, &es, &w));
     };
     let m = &es[top];
     let mut d = from_smiles(&m.smiles)?;

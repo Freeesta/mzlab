@@ -120,8 +120,8 @@ fn every_chemistry_entry_with_one_schema_names_it() {
         crate::cmd::entries().filter(|e| e.name.starts_with("mol ") || e.name.starts_with("ion "))
     {
         assert!(!e.exits.is_empty(), "{}: no exit list", e.name);
-        // mol export is text and mol search has two documents: the others carry one tag
-        if !matches!(e.name, "mol export" | "mol search") {
+        // mol export is text; mol search and mol draw have two documents (draw/1, draw-image/1): the others carry one tag
+        if !matches!(e.name, "mol export" | "mol search" | "mol draw") {
             assert!(!e.schema.is_empty(), "{}: no schema", e.name);
         }
     }
@@ -398,10 +398,14 @@ fn draw_probes() -> Probes<'static> {
     );
     // over the 2000-atom limit: data (1), as every `*.tooBig`
     let big: &'static str = Box::leak(format!("smiles:{}", "C".repeat(2001)).into_boxed_str());
+    let edit: &'static str = r#"edit=[{"op":"atom.set","id":9,"chg":1}]"#;
     vec![(
         "mol draw",
         vec![
             (vec!["smiles:CCO"], 0),
+            // an operation that fails is a usage error (2) naming its index, never a partial drawing
+            (vec!["smiles:CCO", "--set", edit], 2),
+            (vec!["smiles:CCO", "--set", "edit=@/no/such/patch.json"], 4),
             (vec![big], 1),
             (vec!["smiles:C(("], 2),
             (vec!["name:caffeine"], 2),

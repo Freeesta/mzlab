@@ -40,7 +40,7 @@ try:
             globals()["A0"] = s["a"]
         step("the flat window is found by the program and the chip says «automatic»", auto)
         def keyboard():
-            pg.locator(f"{PANEL} [data-o=cinfo]").click(); pg.wait_for_selector(f"{PANEL} .corrbar [data-ib='fl+']", state="visible")      # the chip lives in the «Correzioni» popover
+            pg.locator(f"{PANEL} [data-o=cinfo]").click(); pg.wait_for_selector(f"{PANEL} .corrbar [data-ib='fl+']", state="visible")      # the chip lives in the corrections popover
             pg.locator(f"[data-ib='fl+']").first.focus(); pg.keyboard.press("ArrowRight"); ready(pg)
             pg.wait_for_function(f"{CP}.fondo.ib.mod === true", timeout=10000); ready(pg)
             s = state(); assert s["a"][0] > A0[0] and s["mod"], (s, A0)
@@ -48,10 +48,10 @@ try:
             ae = pg.evaluate("document.activeElement && (document.activeElement.dataset.ib || document.activeElement.outerHTML.slice(0, 80))"); assert ae == "fl+", ("the focus must stay on the arrow", ae)
         step("one arrow key moves the window: «modificata da te» and the restore button appear, the focus stays", keyboard)
         def drag():
-            for _ in range(3):      # the «Correzioni» popover covers the top of the chart (and the handle): Escape closes it; a key sent while the header is redrawn under load can be lost, so wait for it to be shut
+            for _ in range(3):      # the corrections popover covers the top of the chart (and the handle): Escape closes it; a key sent while the header is redrawn under load can be lost, so wait for it to be shut
                 pg.keyboard.press("Escape"); ready(pg)
                 if pg.evaluate(f"{CP}.corrbar.hidden"): break
-            assert pg.evaluate(f"{CP}.corrbar.hidden"), "the «Correzioni» popover did not close with Escape"
+            assert pg.evaluate(f"{CP}.corrbar.hidden"), "the corrections popover did not close with Escape"
             before = state()["a"][0]; box = pg.evaluate(f"(()=>{{const p={CP},a=p._a,r=p.cv.getBoundingClientRect(),ib=p.fondo.ib;return {{x:r.left+(a.X(ib.a[0])+a.X(ib.a[1]))/2,y:r.top+M.t+5,dx:60}}}})()")
             pg.mouse.move(box["x"], box["y"]); pg.mouse.down(); pg.mouse.move(box["x"] + box["dx"], box["y"], steps=6); pg.mouse.up(); ready(pg)
             assert abs(state()["a"][0] - before) > 1e-6 and state()["mod"], (before, state())

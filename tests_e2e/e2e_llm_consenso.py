@@ -86,7 +86,7 @@ try:
             assert pg.locator("dialog[open]").count() == 0 and not pg.is_checked("#llm-on")
             pg.click("#uip-llm label:has(#llm-on)"); pg.wait_for_selector("dialog[open]"); pg.click("#llm-c-ok")
             pg.wait_for_selector("#llm-prev", timeout=10000)
-            assert "mzlab.llm.consenso" in pg.evaluate("Object.keys(localStorage).join(' ')")
+            assert "mzlab.llm.consensus" in pg.evaluate("Object.keys(localStorage).join(' ')")
         step("turning on asks the consent (Esc closes it, accepting stores it)", consent)
         def preview():
             pg.fill("#llm-msg", "hello"); pg.click("#llm-prev"); pg.wait_for_selector("#llm-prevout:not([hidden])")
@@ -133,8 +133,8 @@ try:
                 prev = q.inner_text("#llm-c-sent")
                 assert host + "/v1/messages" in prev and "x-mzlab-session" in prev and '"model"' in prev and "Explain these files" in prev, prev[:300]
                 q.click("#llm-c-ok"); q.wait_for_selector("#flx-llm:not([hidden])", timeout=30000)
-                assert "mzlab-demo" in q.evaluate("sessionStorage.getItem('mzlab.llm.consenso') || ''")
-                assert "mzlab-demo" not in q.evaluate("localStorage.getItem('mzlab.llm.consenso') || ''"), "the demo consent is per visit"
+                assert "mzlab-demo" in q.evaluate("sessionStorage.getItem('mzlab.llm.consensus') || ''")
+                assert "mzlab-demo" not in q.evaluate("localStorage.getItem('mzlab.llm.consensus') || ''"), "the demo consent is per visit"
                 assert q.locator("#llm-owner-box").is_hidden(), "no passphrase field before the proxy asks for it"
                 # phase 0: the proxy is closed to visitors (403) -> the owner passphrase field
                 q.click('#flx-llm [data-chip="llm.chip.explain"]')
@@ -168,7 +168,7 @@ try:
                 assert small == 0, small
                 # a new visit (another tab) asks again
                 q2 = c.new_page(); q2.goto("http://127.0.0.1:%d/" % r.port); ready(q2)
-                assert "mzlab-demo" not in q2.evaluate("sessionStorage.getItem('mzlab.llm.consenso') || ''")
+                assert "mzlab-demo" not in q2.evaluate("sessionStorage.getItem('mzlab.llm.consensus') || ''")
                 c.close()
             finally:
                 node.terminate()

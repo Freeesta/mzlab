@@ -91,7 +91,7 @@ class Page:
         ctx = s.br.new_context(viewport={"width": vp[0], "height": vp[1]}, has_touch=s.a.tablet, is_mobile=s.a.tablet, reduced_motion="reduce",
                                accept_downloads=True)
         ctx.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));"
-                            "localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+                            "localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
         ctx.add_init_script(INSTR)
         pg = s.pg = ctx.new_page()
         s.errs = []

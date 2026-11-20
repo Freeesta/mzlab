@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "draw-image/1",
+  "title": "draw-image/1: a structure picture with the boxes of its labels",
+  "description": "The wrapper of `mzlab-cli mol draw SPEC --format svg|png --json`, of the molkit exports `draw` and `draw_png` with `json: true` and of the app route `kind: \"draw\"`. `svg` holds the SVG text, `png_base64` the PNG bytes (exactly one of the two). Sizes and label boxes are in image pixels (origin top left); `px_per_angstrom` is the scale. `labels` lists the atom labels and CIP marks that were drawn, so a caller can check for overlaps. `choices` and `warnings` are as in draw/1. Code: crates/mzlab-feat/src/chem/draw_svg.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "spec_kind",
+    "title",
+    "format",
+    "width_px",
+    "height_px",
+    "px_per_angstrom",
+    "labels",
+    "choices",
+    "warnings"
+  ],
+  "oneOf": [
+    {
+      "required": ["svg"]
+    },
+    {
+      "required": ["png_base64"]
+    }
+  ],
+  "properties": {
+    "schema": {
+      "const": "draw-image/1"
+    },
+    "spec_kind": {
+      "enum": ["smiles", "molfile", "name", "inchikey"]
+    },
+    "title": {
+      "type": "string"
+    },
+    "format": {
+      "enum": ["svg", "png"]
+    },
+    "width_px": {
+      "type": "integer"
+    },
+    "height_px": {
+      "type": "integer"
+    },
+    "px_per_angstrom": {
+      "type": "number"
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "atom", "text", "left_px", "top_px", "right_px", "bottom_px"],
+        "properties": {
+          "kind": {
+            "enum": ["atom", "cip"],
+            "description": "an atom label, or an R/S (atom) or E/Z (bond a-other) mark"
+          },
+          "atom": {
+            "type": "integer"
+          },
+          "other": {
+            "type": "integer",
+            "description": "the second atom of the bond of an E/Z mark"
+          },
+          "text": {
+            "type": "string"
+          },
+          "left_px": {
+            "type": "number"
+          },
+          "top_px": {
+            "type": "number"
+          },
+          "right_px": {
+            "type": "number"
+          },
+          "bottom_px": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "svg": {
+      "type": "string"
+    },
+    "png_base64": {
+      "type": "string"
+    }
+  }
+}

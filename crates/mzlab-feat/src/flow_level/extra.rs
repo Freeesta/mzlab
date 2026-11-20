@@ -48,7 +48,7 @@ impl Params {
     pub fn overrides(&self) -> [(&'static str, f64); 4] {
         [
             ("std_rt_max", self.std_rt_max),
-            ("std_entropia_min", self.std_score_min),
+            ("std_entropy_min", self.std_score_min),
             ("std_ppm_max", self.std_ppm_max),
             ("sospetto_frammenti_min", self.suspect_fragments_min),
         ]

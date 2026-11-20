@@ -15,7 +15,7 @@ def cold(p, vw, vh, hash_="", saved=None, touch=False):
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, has_touch=touch, is_mobile=False, reduced_motion="reduce")
     pg = ctx.new_page()
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
+    init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');"
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/{hash_}"); pg.wait_for_timeout(800)
@@ -31,9 +31,9 @@ try:
         for vw, vh, tag, touch in ((1280, 800, "1280", False), (1440, 900, "1440", False), (1024, 1366, "iPad", True)):
             for h in ("", "#/data"):
                 step(f"{tag} {h or 'no hash'}: the drawer opens and is visible", lambda vw=vw, vh=vh, h=h, touch=touch: cold(p, vw, vh, h, touch=touch))
-        step("side right saved", lambda: cold(p, 1440, 900, saved={"mzlab.barra.lato": "right"}))
-        step("open saved", lambda: cold(p, 1440, 900, saved={"mzlab.barra.lr": '{"tab":"file","open":true}'}))
-        step("stale width saved", lambda: cold(p, 1440, 900, saved={"mzlab.barra.lr": '{"tab":"calc","w":0}'}))
+        step("side right saved", lambda: cold(p, 1440, 900, saved={"mzlab.bar.side": "right"}))
+        step("open saved", lambda: cold(p, 1440, 900, saved={"mzlab.bar.lr": '{"tab":"file","open":true}'}))
+        step("stale width saved", lambda: cold(p, 1440, 900, saved={"mzlab.bar.lr": '{"tab":"calc","w":0}'}))
 finally: pass
 bad = [s for s in steps if s[1] != "ok"]
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

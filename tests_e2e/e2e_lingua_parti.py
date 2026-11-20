@@ -15,7 +15,7 @@ while True:      # until the server listens (refused connections return at once)
     try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
     except OSError: pass
 URL = f"http://127.0.0.1:{PORT}/"
-SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
+SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
 # every static element shows the catalog text of its key (none left waiting with a stale text of the page)
 STATIC = """() => { const P = { app: window.APP_NAME || '' }, bad = [];
   for (const el of document.querySelectorAll('[data-i18n]')) { const k = el.getAttribute('data-i18n'); if (el.textContent !== I18N.t(k, P)) bad.push(k); }

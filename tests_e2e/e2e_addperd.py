@@ -29,7 +29,7 @@ if __name__ == "__main__":
                 pg.click("#stbar [data-cmd=addloss]")
                 wait_for_js(pg, "(() => { const e = document.querySelector('#sb-panel-losses'); return !!e && e.offsetParent !== null; })()", 15000)
                 assert pg.is_visible("#sb-panel-losses"), "the last tab is back"
-                st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["sub"] == "losses", st
+                st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.bar.lr'))"); assert st["sub"] == "losses", st
             step("last tab remembered", remembered)
             def palette():
                 pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("adducts")

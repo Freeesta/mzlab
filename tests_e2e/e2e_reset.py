@@ -18,7 +18,7 @@ SEED = """async () => {
   for (const n of ['mzlab', 'invented-by-another-part', 'librerie']) { const d = await root.getDirectoryHandle(n, { create: true }); const f = await d.getFileHandle('x.bin', { create: true }); const w = await f.createWritable(); await w.write(new Uint8Array([1, 2, 3])); await w.close(); }
   for (const n of ['mzlab-libs', 'mzlab-libdir', 'invented-db']) await new Promise(res => { const q = indexedDB.open(n, 1); q.onupgradeneeded = () => q.result.createObjectStore('s'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = res; });
   for (const n of ['mzlab-big-x', 'mzlab-app-x', 'other-cache']) await (await caches.open(n)).put('/a', new Response('1'));
-  localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
+  localStorage.setItem('mzlab.map', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
 }"""
 STATE = """async () => ({
   opfs: await (async () => { const out = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) out.push(n); return out.sort(); })(),
@@ -32,14 +32,14 @@ SEED_LISTS = """async () => {
   await LISTE.ready();                                   // the lists code opens its connection to mzlab_lab here
   const { DB_NAME, DB_VER, upgrade } = await import('/static/qqq-db.js');
   const db = await new Promise((ok, no) => { const q = indexedDB.open(DB_NAME, DB_VER); q.onupgradeneeded = () => upgrade(q.result); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
-  await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecules'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'usr_reset', name: 'x', items: [] }); t.objectStore('molecules').put({ id: 'mol_reset' }); t.oncomplete = ok; t.onerror = () => no(t.error); });
+  await new Promise((ok, no) => { const t = db.transaction(['user_lists', 'molecules'], 'readwrite'); t.objectStore('user_lists').put({ id: 'usr_reset', name: 'x', items: [] }); t.objectStore('molecules').put({ id: 'mol_reset' }); t.oncomplete = ok; t.onerror = () => no(t.error); });
   db.close();
 }"""
 COUNT_LISTS = """async () => {
   const { DB_NAME, DB_VER, upgrade } = await import('/static/qqq-db.js');
   const db = await new Promise((ok, no) => { const q = indexedDB.open(DB_NAME, DB_VER); q.onupgradeneeded = () => upgrade(q.result); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
   const n = s => new Promise((ok, no) => { const q = db.transaction(s).objectStore(s).count(); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
-  const r = [await n('liste_utente'), await n('molecules')]; db.close(); return r;
+  const r = [await n('user_lists'), await n('molecules')]; db.close(); return r;
 }"""
 try:
     with sync_playwright() as p:
@@ -75,7 +75,7 @@ try:
             assert s["mzlab"] == [] and "invented-by-another-part" not in s["opfs"] and "librerie" in s["opfs"], s["opfs"]
             assert "invented-db" not in s["idb"] and "mzlab-libs" in s["idb"] and "mzlab-libdir" in s["idb"], s["idb"]
             assert "mzlab-big-x" not in s["caches"] and "other-cache" in s["caches"], s["caches"]
-            assert "mzlab.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
+            assert "mzlab.map" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
         def ready_start(q):
             q.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000); q.wait_for_timeout(500)
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
@@ -96,7 +96,7 @@ try:
             assert set(s["idb"]) <= {"mzlab_lab", "qqq_lab"}, s["idb"]
             # the fresh page may fill its own caches again (the app, and the idle prefetch of OpenChemLib in the big cache): the seeded ones are gone
             assert all(c.startswith("mzlab-app") or c.startswith("mzlab-big-") and c != "mzlab-big-x" for c in s["caches"]), s["caches"]
-            assert "mzlab.invented" not in s["ls"] and "mzlab.mappa" not in s["ls"], s["ls"]
+            assert "mzlab.invented" not in s["ls"] and "mzlab.map" not in s["ls"], s["ls"]
         step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def isolated_after():
             # a visitor's tab (no guard preset by the harness): first visit isolates itself, a Full reset must end isolated again with no manual reload
@@ -165,7 +165,7 @@ try:
             wait_for_js(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
-            assert "librerie" in s["opfs"] and "mzlab.mappa" in s["ls"], s                         # the same as «Files»
+            assert "librerie" in s["opfs"] and "mzlab.map" in s["ls"], s                         # the same as «Files»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
         step("«Files»: empty list, memory released, loading again works", clear_all)
         def keep_work():
@@ -177,7 +177,7 @@ try:
             NBKET = "(async () => { try { return !!JSON.parse(await (await fetch('api/notebook')).text()).ket; } catch (e) { return false; } })()"
             wait_for_js(pg, NBKET, 15000)                                                       # the notebook holds the drawing
             pg.evaluate("""(async () => { const db = await new Promise((ok, no) => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
-              await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecules'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'keep-list', name: 'my list' }); t.objectStore('molecules').put({ id: 'keep-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); })()""")
+              await new Promise((ok, no) => { const t = db.transaction(['user_lists', 'molecules'], 'readwrite'); t.objectStore('user_lists').put({ id: 'keep-list', name: 'my list' }); t.objectStore('molecules').put({ id: 'keep-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); })()""")
             load_files(); pg.evaluate("location.hash = '#/draw'")
             wait_for_js(pg, "(async () => { try { return (JSON.parse(await (await fetch('api/notebook')).text()).session || []).length > 0; } catch (e) { return false; } })()", 15000)   # the notebook names the open files
             # a change not saved yet when the button is pressed: the closing page must neither lose it nor write its old notebook (file list) back over the reset
@@ -188,7 +188,7 @@ try:
             pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
             got = pg.evaluate("""(async () => { const db = await new Promise(ok => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); });
               const one = (st, k) => new Promise(ok => { const g = db.transaction(st).objectStore(st).get(k); g.onsuccess = () => ok(g.result || null); }), all = st => new Promise(ok => { const g = db.transaction(st).objectStore(st).count(); g.onsuccess = () => ok(g.result); });
-              const r = { list: await one('liste_utente', 'keep-list'), mol: await one('molecules', 'keep-mol'), files: await all('files'), manifest: await all('manifest') }; db.close(); return r; })()""")
+              const r = { list: await one('user_lists', 'keep-list'), mol: await one('molecules', 'keep-mol'), files: await all('files'), manifest: await all('manifest') }; db.close(); return r; })()""")
             assert got["list"] and got["mol"], ("the saved list and molecule stay", got)
             assert got["files"] == 0 and got["manifest"] == 0, ("the loaded files are gone", got)
             wait_for_js(pg, NBKET, 30000)
@@ -228,11 +228,11 @@ try:
         WORK = """async (ket) => {                                  // the drawing as draw.js saves it, a saved list and a saved molecule in their stores
           NB.ket = ket; await nbSave(true);
           const db = await new Promise((ok, no) => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
-          await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecules'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'held-list', name: 'my list' }); t.objectStore('molecules').put({ id: 'held-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close();
+          await new Promise((ok, no) => { const t = db.transaction(['user_lists', 'molecules'], 'readwrite'); t.objectStore('user_lists').put({ id: 'held-list', name: 'my list' }); t.objectStore('molecules').put({ id: 'held-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close();
         }"""
         KEPT = """async () => { const db = await new Promise(ok => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); });
           const one = (st, k) => new Promise(ok => { const g = db.transaction(st).objectStore(st).get(k); g.onsuccess = () => ok(g.result || null); });
-          const r = { list: !!(await one('liste_utente', 'held-list')), mol: !!(await one('molecules', 'held-mol')), ket: (JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}).ket || null }; db.close(); return r; }"""
+          const r = { list: !!(await one('user_lists', 'held-list')), mol: !!(await one('molecules', 'held-mol')), ket: (JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}).ket || null }; db.close(); return r; }"""
         def held(mode, hold):
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)      # a clean start
             load_files(); ket = "CC(=O)Nc1ccc(O)cc1"; pg.evaluate(WORK, ket)
@@ -273,7 +273,7 @@ try:
         step("Full reset with a stored file still held: unchanged, ?riparti=1 and nothing of the user stays", all_held_opfs)
         def no_marker_after(mode):
             # the page that follows a reset must not start in «restoring»: pagehide of the old page may not write the marker back
-            pg.add_init_script("try { window.__sessAtStart = localStorage.getItem('mzlab.sessione'); } catch (e) { window.__sessAtStart = 'err'; }")
+            pg.add_init_script("try { window.__sessAtStart = localStorage.getItem('mzlab.session'); } catch (e) { window.__sessAtStart = 'err'; }")
             load_files()
             pg.evaluate(f"void QQRESET.run('{mode}')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn') || !location.search.includes('reset')", timeout=30000)
             # checked as soon as the new document ran its init script, before the engine is ready (afterwards the skeleton is gone anyway)
