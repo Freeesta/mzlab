@@ -1,5 +1,5 @@
 """Draw, text and files that reach the editor: a paste inside one of Ketcher's own fields (text tool, Open dialog) is left alone, a compound name dropped on
-the canvas draws nothing (as a pasted one), an empty file gets a notice, a UTF-16 molfile is read, a double click on «Draw» draws once.
+the canvas draws nothing (as a pasted one), an empty file gets a notice, a UTF-16 molfile is read, one «Draw» runs at a time.
 Needs the built site (tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_draw_input.py"""
 # covers: mzlab/web/draw.js, mzlab/web/disegno-cerca.js, mzlab/web/disegno-file.js
 import sys, os, base64; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -115,15 +115,41 @@ try:
                 assert smi() == "CCO", (name, smi(), note())
         step("a molfile saved as UTF-16 (either byte order) or UTF-8 with a byte order mark is read", utf16)
 
+        SAVED_O = """/"label":"O"/.test(NB.ket || '')"""                 # the autosave runs once the changes have stopped
         def double_draw():
-            clear(); pg.fill("#ex-smi", "CCO")
+            clear(); wait_for_js(pg, "!" + SAVED_O, timeout=15000)
+            pg.evaluate(f"(() => {{ const k = {KJ}, add = k.addFragment.bind(k); window.__adds = 0; k.addFragment = x => {{ window.__adds++; return add(x); }}; }})()")
+            pg.fill("#ex-smi", "CCO")
             pg.evaluate("(() => { const b = document.getElementById('ex-load'); b.click(); b.click(); })()")
-            wait_for_js(pg, f"!{KJ}.editor.struct().isBlank() && document.getElementById('ex-smi').value === ''", timeout=15000)
-            wait_for_js(pg, "/atoms/.test(NB.ket || '')", timeout=15000)          # the autosave runs once the changes have stopped: a second drawing would be in by now
-            assert smi() == "CCO", smi()
-            pg.fill("#ex-smi", "CCN"); pg.click("#ex-load")          # the button works again afterwards
-            wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 6", timeout=15000)
+            wait_for_js(pg, SAVED_O, timeout=15000)                         # saved after the last change: a second drawing would be in by now
+            assert pg.evaluate("window.__adds") == 1, pg.evaluate("window.__adds")
+            assert smi() == "CCO" and pg.input_value("#ex-smi") == "", (smi(), pg.input_value("#ex-smi"))
         step("a double click on «Draw» draws the structure once", double_draw)
+
+        def pick_while_drawing():
+            clear()
+            pg.evaluate(f"""(() => {{ const k = {KJ}, add = k.addFragment.bind(k); k.addFragment = async x => {{ if (x === 'CCO') {{ const f = document.getElementById('ex-smi'); f.value = 'CCN'; document.getElementById('ex-load').click(); }} return add(x); }}; }})()""")
+            pg.fill("#ex-smi", "CCO"); pg.click("#ex-load")
+            wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 6 && document.getElementById('ex-smi').value === ''", timeout=15000)
+        step("a text entered while a draw runs is drawn next, not lost", pick_while_drawing)
+
+        def silent_editor():
+            clear()
+            pg.evaluate(f"""(() => {{ const k = {KJ}; window.__add = k.addFragment; k.addFragment = () => new Promise(() => {{}});
+              const st = window.setTimeout; window.__st = st; window.setTimeout = (f, ms, ...a) => st(f, ms === 20000 ? 300 : ms, ...a); }})()""")
+            pg.fill("#ex-smi", "CCO"); pg.click("#ex-load")
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
+            assert "did not answer" in note(), note()
+            pg.evaluate(f"(() => {{ {KJ}.addFragment = window.__add; window.setTimeout = window.__st; }})()")
+            pg.click("#ex-load")                                             # the button is not left dead
+            wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 3", timeout=15000)
+        step("an editor that never answers gets a notice and «Draw» works again", silent_editor)
+
+        def element_words():
+            clear(); pg.evaluate(DROP_TEXT, "Co nitrate")
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
+            assert "not found" in note() and smi() == "", (note(), smi())
+        step("a name whose first word is spelled like atoms draws nothing", element_words)
 finally:
     r.close()
 r.report()

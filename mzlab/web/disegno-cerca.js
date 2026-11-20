@@ -27,10 +27,12 @@ export async function nameToSmiles(text, note, t) {
   return r[0].smiles;
 }
 
-/** True for one line that is a structure as written: a SMILES or InChI, a reaction SMILES ("CC=O.OCC>>CC(=O)OCC"), either one followed by a title (a .smi line, "CCO ethanol") or by a CXSMILES block ("|...|"). */
+/** True for one line that is a structure as written: a SMILES or InChI, a reaction SMILES ("CC=O.OCC>>CC(=O)OCC"), either one followed by a title (a .smi line, "CCO ethanol") or by a CXSMILES block ("|...|").
+ * Before a title, a word with an aromatic atom and no ring digit is not a SMILES: "Co nitrate", "Sc oxide" and "In vitro" are names. */
 const isStructureLine = (/** @type {string} */ t) => {
-  const first = t.split(/\s+/)[0], parts = first.split(">");
-  return isStructureText(t) || isStructureText(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || looksLikeSmiles(x)));
+  const first = t.split(/\s+/)[0], parts = first.split(">"), alone = first === t;
+  const ok = (/** @type {string} */ w) => looksLikeSmiles(w) && (alone || /\d/.test(w) || !/[cnops]/.test(w.replace(/Cl|Br|\[[^\]]*\]/g, "")));
+  return isStructureText(t) || /^InChI=/i.test(first) || ok(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || ok(x)));
 };
 
 /** True for one line that Ketcher's reader would turn into query atoms: not a structure line, not the start of a KET ("{") or of a base64 CDX ("VmpDRD"), not a CDXML (`isCdxml`). A compound name, or junk. */
