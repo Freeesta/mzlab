@@ -39,7 +39,7 @@ Set A `tests/dati/draw_set_a.tsv`: 200 invented molecules in 9 families (chain, 
 
 | gate | limit | measured |
 |---|---|---|
-| set A clean | at least 90 % and, per family, at least RDKit | 184/200 (RDKit 184); bridged_spiro 4 = RDKit 4, macrocycle 20 vs 20 |
+| set A clean | at least 90 % and, per family, at least RDKit | 184/200 (RDKit 184); bridged_spiro 4 = RDKit 4, macrocycle 20 = 20 |
 | set B E/Z wrong | 0/100 | 0/100 |
 | molfile read back, same `mol/1` core (stereo included) | 300/300 | 300/300 |
 | fragments apart | at least 1.5 bonds | 0 under |
