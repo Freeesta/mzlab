@@ -169,36 +169,35 @@ fn max_shift_keeps_a_window_where_it_was_and_writes_the_shift_it_refused() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// A copy of the `.wiff` pair `src` in `live` whose `.scan` is still being appended to: returns the copy's path and the writer to join once the test is done.
+pub(crate) fn growing_pair(src: &Path, live: &Path) -> (String, std::thread::JoinHandle<()>) {
+    std::fs::create_dir_all(live).unwrap();
+    std::fs::copy(src, live.join("L.wiff")).unwrap();
+    let data = std::fs::read(format!("{}.scan", src.display())).unwrap();
+    let scan = live.join("L.wiff.scan");
+    std::fs::write(&scan, b"").unwrap();
+    let writer = std::thread::spawn(move || {
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new().append(true).open(scan).unwrap();
+        for c in data.chunks(4000) {
+            f.write_all(c).unwrap();
+            f.flush().unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(40));
+        }
+    });
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    (live.join("L.wiff").display().to_string(), writer)
+}
+
 /// A `.wiff.scan` that keeps growing while the pair is opened is refused with exit 7 and `err.file.wiffGrowing` (sizes and interval in its parameters),
 /// by `peak table` and by `sample list`; once the writer is done the same pair opens.
 #[test]
 fn a_pair_that_grows_while_it_is_opened_ends_with_exit_7() {
     let Some(d) = fixture("grow") else { return };
-    let live = d.join("live");
-    std::fs::create_dir_all(&live).unwrap();
-    std::fs::copy(d.join("sim3.wiff"), live.join("L.wiff")).unwrap();
-    let data = std::fs::read(d.join("sim3.wiff.scan")).unwrap();
-    let scan = live.join("L.wiff.scan");
-    std::fs::write(&scan, b"").unwrap();
-    let writer = {
-        let scan = scan.clone();
-        std::thread::spawn(move || {
-            use std::io::Write;
-            let mut f = std::fs::OpenOptions::new().append(true).open(scan).unwrap();
-            for c in data.chunks(4000) {
-                f.write_all(c).unwrap();
-                f.flush().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(40));
-            }
-        })
-    };
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    let (lw, writer) = growing_pair(&d.join("sim3.wiff"), &d.join("live"));
     let w = d.join("w.json");
     std::fs::write(&w, r#"[{"file":1,"tr":0,"a":1.89,"b":2.19}]"#).unwrap();
-    let (lw, wp) = (
-        live.join("L.wiff").display().to_string(),
-        w.display().to_string(),
-    );
+    let wp = w.display().to_string();
     let o = run(&[&lw, "--windows", &wp, "--json"]);
     assert_eq!(o.code, 7, "{}", o.stderr);
     let out = String::from_utf8(o.stdout).unwrap();

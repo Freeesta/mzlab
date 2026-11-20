@@ -429,4 +429,4 @@ mod traces_tests;
 
 #[cfg(test)]
 #[path = "manual_table_guard_tests.rs"]
-mod guard_tests;
+pub(crate) mod guard_tests;

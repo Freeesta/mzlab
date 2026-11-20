@@ -42,7 +42,7 @@ fn the_exits_of_every_peak_command_are_listed() {
                 "{n}: {what} gives {c}, not in {exits:?}"
             );
         }
-        // nothing outside done / data / usage / input, and 6 (output) exactly when the command writes with --out
+        // nothing outside done / data / usage / input / still-being-written, and 6 (output) exactly when the command writes with --out
         let out = crate::cmd::entries()
             .find(|e| e.name == n)
             .unwrap()
@@ -50,7 +50,7 @@ fn the_exits_of_every_peak_command_are_listed() {
             .contains("--out");
         assert_eq!(exits.contains(&6), out, "{n}: {exits:?}");
         assert!(
-            exits.iter().all(|c| [0, 1, 2, 4, 6].contains(c)),
+            exits.iter().all(|c| [0, 1, 2, 4, 6, 7].contains(c)),
             "{n}: {exits:?}"
         );
     }
