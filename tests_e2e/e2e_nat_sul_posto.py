@@ -53,7 +53,7 @@ try:
         step("with room the members are copied, as before (the reference indexes)", copied)
         def in_place():
             members = sum(os.path.getsize(f) for f in PAIR); room = sum(v for k, v in ref["walk"].items() if not k.startswith("files/nat~"))
-            limit(room + (1 << 20))          # the stubs and indexes fit, the members do not
+            limit(room + (3 << 20))          # the stubs and indexes fit (with the temporary copies of the builds running together), the members (more than 4 MB) do not
             a.evaluate("window.__notes = []")
             a.set_input_files("#pick", PAIR)
             try: wait_for_js(a, DONE, 120000)
