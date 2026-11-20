@@ -48,7 +48,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
@@ -156,7 +156,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
@@ -264,7 +264,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [-
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
