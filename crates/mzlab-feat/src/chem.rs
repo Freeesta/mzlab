@@ -34,6 +34,14 @@ mod draw_png;
 mod draw_spec;
 #[cfg(feature = "check")]
 mod draw_svg;
+#[cfg(feature = "check")]
+mod edit;
+#[cfg(feature = "check")]
+mod edit_end;
+#[cfg(feature = "check")]
+mod edit_op;
+#[cfg(feature = "check")]
+mod edit_set;
 pub mod fragmenter;
 pub mod fragments;
 pub mod graph;

@@ -67,6 +67,8 @@ I18N.add("en", {
   "err.mol.draw.inchi": "An InChI alone cannot be drawn: mzLab does not read InChI. Give the InChIKey (inchikey:KEY) or write it after the InChI.",
   "err.mol.draw.db": "The molecules database cannot be read: {message}.",
   "err.mol.draw.not_found": "“{spec}” is not in the molecules database. Nearest names: {nearest}.",
+  "err.mol.draw.edit": "Edit operation {index} ({op}) failed: {reason} ({detail}). Nothing was changed.",
+  "err.mol.draw.editJson": "The edit patch cannot be read: {message}.",
   "err.mol.draw.not_found_bare": "“{spec}” is not in the molecules database.",
   "err.mol.draw.tooBig": "The structure has more than {max} atoms: the drawing is for molecules, not libraries.",
   "err.cli.file": "The file {path} cannot be read.",

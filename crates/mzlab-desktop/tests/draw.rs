@@ -148,3 +148,63 @@ fn draw_route_gives_the_pictures_with_options_of_the_fixture() {
         }
     }
 }
+
+/// The edit patches of `tests/dati/draw_d3.json` (the patch as text or as a list in the request) give the bytes of the CLI and the molkit `.wasm` through
+/// the same route, and a failed operation keeps its key.
+#[test]
+fn draw_route_applies_the_edit_patches_of_the_shared_fixture() {
+    let st = State::new();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let fx: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join("tests/dati/draw_d3.json")).unwrap(),
+    )
+    .unwrap();
+    let cases = fx["cases"].as_array().unwrap();
+    assert!(cases.len() >= 20, "{}", cases.len());
+    let mut errors = 0;
+    for c in cases {
+        // the patch once as the text the CLI takes, once as the list itself
+        let as_list =
+            serde_json::from_str::<serde_json::Value>(c["request"]["edit"].as_str().unwrap()).ok();
+        for (format, want) in [("scene", &c["scene"]), ("molfile", &c["molfile"])] {
+            for list in [false, true] {
+                let mut request = c["request"].clone();
+                request["format"] = json!(format);
+                if list {
+                    match &as_list {
+                        Some(l) => request["edit"] = l.clone(),
+                        None => continue,
+                    }
+                }
+                let got = st.rpc(
+                    "feat/grafo",
+                    &json!({"kind": "draw", "request": request}),
+                    &[],
+                );
+                match want.as_str() {
+                    Some(w) => assert_eq!(text(got.unwrap()), w, "{} {format}", c["name"]),
+                    None => {
+                        errors += 1;
+                        assert_eq!(
+                            got.err().map(|e| e.key.to_string()),
+                            c["error_key"].as_str().map(str::to_string),
+                            "{} {format}",
+                            c["name"]
+                        );
+                    }
+                }
+            }
+        }
+    }
+    assert!(errors >= 10, "{errors}");
+}
+
+/// A patch given as a list in the request is held to the same 64 KiB as the text form, with the same key.
+#[test]
+fn draw_route_refuses_a_patch_list_over_the_size_limit() {
+    let st = State::new();
+    let op = json!({"op": "atom.set", "id": 0, "label": "x".repeat(70)});
+    let big = json!({"kind": "draw", "request": {"spec": "CCO", "edit": vec![op; 1000]}});
+    let e = st.rpc("feat/grafo", &big, &[]).err();
+    assert_eq!(e.map(|e| e.key), Some("err.mol.draw.editJson"));
+}
