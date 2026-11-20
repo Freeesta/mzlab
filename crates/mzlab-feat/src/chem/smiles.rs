@@ -240,8 +240,28 @@ pub(super) fn read(smiles: &str) -> Result<(Vec<RawAtom>, Vec<RawBond>)> {
     Ok((r.raw, r.bonds))
 }
 
-/// Atoms with their hydrogens: those written in brackets, the others by valence.
-pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond]) -> Vec<Atom> {
+/// Valences an atom without written hydrogens can fill, lowest first. With `by_charge` (a molfile: the charge is on an atom whose hydrogens are
+/// implicit) a singly charged N, P, O or S takes the valences of the element with the same electrons (N+ like C, S+ like P, O- like F), so a
+/// quaternary N+ or a sulfonium S+ carries no hydrogen; any other charged atom loses one valence per charge.
+fn valences(el: &str, charge: i32, by_charge: bool) -> Vec<f32> {
+    let normal = normal_valence(el).unwrap_or(0) as f32;
+    let q = if by_charge { charge } else { 0 };
+    match (el, q) {
+        ("N" | "P", 0) => vec![3.0, 5.0],
+        ("S", 0) => vec![2.0, 4.0, 6.0],
+        ("N" | "P", 1) => vec![4.0],
+        ("O", 1) => vec![3.0],
+        ("S", 1) => vec![3.0, 5.0],
+        ("N", -1) => vec![2.0],
+        ("P", -1) => vec![2.0, 4.0, 6.0],
+        ("O" | "S", -1) => vec![1.0],
+        ("N" | "P" | "O" | "S", q) => vec![(normal + q as f32).max(0.0)],
+        (_, q) => vec![(normal - q.abs() as f32).max(0.0)],
+    }
+}
+
+/// Atoms with their hydrogens: those written in brackets, the others by valence (`valences`).
+pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond], by_charge: bool) -> Vec<Atom> {
     let mut used = vec![0f32; raw.len()];
     for b in bonds {
         let v = if b.order == 1.5 { 1.0 } else { b.order };
@@ -252,20 +272,19 @@ pub(super) fn fill(raw: &[RawAtom], bonds: &[Bond]) -> Vec<Atom> {
         .enumerate()
         .map(|(i, r)| {
             let h = r.h.unwrap_or_else(|| {
-                // a substituted aromatic nitrogen (pyrrole type, three bonds) gives its lone pair, not a ring electron: it carries no hydrogen
-                let extra = if r.arom && (r.el == "C" || (r.el == "N" && used[i] < 3.0)) {
+                // a substituted aromatic nitrogen (pyrrole type, three bonds) gives its lone pair, not a ring electron: it carries no hydrogen;
+                // an aromatic N+ (pyridinium) gives a ring electron like a carbon
+                let plus = by_charge && r.charge == 1;
+                let extra = if r.arom && (r.el == "C" || (r.el == "N" && (used[i] < 3.0 || plus))) {
                     1.0
                 } else {
                     0.0
                 };
                 let u = used[i] + extra;
-                let normal = normal_valence(&r.el).unwrap_or(0) as f32;
-                let free = if u > normal && matches!(r.el.as_str(), "N" | "P" | "S") {
-                    let ladder: &[f32] = if r.el == "S" { &[4.0, 6.0] } else { &[5.0] };
-                    ladder.iter().find(|v| **v >= u).map_or(0.0, |v| v - u)
-                } else {
-                    normal - u
-                };
+                let free = valences(&r.el, r.charge, by_charge)
+                    .into_iter()
+                    .find(|v| *v >= u)
+                    .map_or(0.0, |v| v - u);
                 free.round().max(0.0) as u32
             });
             Atom {
