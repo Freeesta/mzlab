@@ -85,8 +85,8 @@
     passo: function (step, el) {
       var drop = document.getElementById("drop");
       if (typeof E !== "undefined" && E.files && E.files.length && E.panels && E.panels.length) return null;
-      if (!drop || !drop.offsetParent || (step.id !== "file" && step.id !== "gruppi" && el && el.offsetParent)) return null;
-      return { id: "carica", target: function () { return drop; }, carica: function (done) {
+      if (!drop || !drop.offsetParent || (step.id !== "file" && step.id !== "groups" && el && el.offsetParent)) return null;
+      return { id: "load", target: function () { return drop; }, carica: function (done) {
         return setInterval(function () { if (E.files.length && E.panels.length) done(); }, 400);
       } };
     }
