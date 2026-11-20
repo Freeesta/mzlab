@@ -18,6 +18,8 @@ pub(super) struct Geo<'a> {
     pub nb: Vec<Vec<usize>>,
     pub bl: f64,
     pub f: f64,
+    /// The text an edit patch gave an atom, shown instead of its symbol.
+    pub lab: Vec<Option<&'a str>>,
 }
 
 /// A box `[left, top, right, bottom]`.
@@ -57,6 +59,7 @@ fn geo(d: &Drawn, s: f64) -> Geo<'_> {
         nb,
         bl: 1.5 * s,
         f: 0.42 * 1.5 * s,
+        lab: (0..n).map(|i| d.label_at(i)).collect(),
     }
 }
 
@@ -69,14 +72,14 @@ fn atom_labels(g: &Geo) -> (Vec<Label>, Vec<Prim>, Vec<Option<Bx>>) {
     let mut boxes: Vec<Option<Bx>> = vec![None; n];
     for (i, slot) in boxes.iter_mut().enumerate() {
         let a = &g.m.atoms[i];
-        if a.el == "C" && a.chg == 0 && a.iso == 0 && !g.nb[i].is_empty() {
+        if a.el == "C" && a.chg == 0 && a.iso == 0 && !g.nb[i].is_empty() && g.lab[i].is_none() {
             continue;
         }
         let sx: f64 = g.nb[i].iter().map(|&j| g.pos[j][0] - g.pos[i][0]).sum();
         let first = sx > 0.1 * g.bl;
-        let mut pick = label_of(g.m, i, first, g.pos[i], g.f);
-        if a.h > 0 && labels.iter().any(|l| overlap(&l.bx, &pick.1, 0.0)) {
-            let alt = label_of(g.m, i, !first, g.pos[i], g.f);
+        let mut pick = label_of(g.m, i, first, g.pos[i], g.f, g.lab[i]);
+        if (a.h > 0 || g.lab[i].is_some()) && labels.iter().any(|l| overlap(&l.bx, &pick.1, 0.0)) {
+            let alt = label_of(g.m, i, !first, g.pos[i], g.f, g.lab[i]);
             if !labels.iter().any(|l| overlap(&l.bx, &alt.1, 0.0)) {
                 pick = alt;
             }
