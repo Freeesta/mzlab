@@ -35,13 +35,14 @@ r = Run(port=8971, wd="/tmp/wd_dsmiles")
 try:
     with sync_playwright() as p:
         global pg
-        pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
+        pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1440, "height": 900})
         def fallback():
             pg.route("**/wasm-feat/**", lambda route: route.fulfill(status=404, body="not found"))      # the engine is not there
             pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=90000)
             draw(SMI); poll(lambda: atoms() == 13)
             assert note() == "", note()
             assert pg.input_value("#ex-smi") == "", "the field is emptied after a drawing"
+            assert pg.evaluate("async s => (await import('/static/disegno-smiles.js')).layoutSmiles(s)", SMI) == {}, "the engine answered: the block did not work"
         step("the engine not there: «Draw» still draws, with Ketcher's own layout", fallback)
         pg.unroute("**/wasm-feat/**"); pg.reload()                      # a new page: the manifest of the engine is asked again
         pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=90000)
