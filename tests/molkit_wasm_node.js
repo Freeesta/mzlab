@@ -9,7 +9,8 @@ try {
   const mode = process.argv[4];
   if (mode === "size") { process.stdout.write(w.open_size(Number(process.argv[3])) + "\n"); process.exit(0); }   // the second argument is a number of bytes
   if (mode === "open") { process.stdout.write(w.open_file(fs.readFileSync(process.argv[3])) + "\n"); process.exit(0); }
-  if (mode === "draw_png") { process.stdout.write(Buffer.from(w.draw_png(process.argv[3]))); process.exit(0); }   // raw bytes, no newline
+  // raw bytes, no newline; exit only once the pipe took them all (a PNG is over the pipe buffer, and exiting at once cut it short on CI)
+  if (mode === "draw_png") { process.stdout.write(Buffer.from(w.draw_png(process.argv[3])), () => process.exit(0)); return; }
   const out = mode === "moiety" ? w.flow_moiety(process.argv[3], fs.readFileSync(process.argv[5])) : ({ sub: w.substructure, cip: w.cip, hilite: w.hilite, draw: w.draw }[mode] || w.check)(process.argv[3]);
   process.stdout.write(out + (mode === "moiety" ? "" : "\n"));
 } catch (e) {
