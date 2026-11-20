@@ -276,7 +276,7 @@ Start here:
 
 For scripts and agents: --json is accepted by every command (the data as JSON on stdout; a failure is one error/1 document on stdout, the
 text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain error (partial outputs written); 2 usage; 3 plan, schema or
-integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure.";
+integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 input still being written (retry when it ends).";
 
 const HEAD: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.";
 const TAIL: &str = "  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given

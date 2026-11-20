@@ -2,6 +2,7 @@
   "err.file.notWiff": "{name} = file name.",
   "err.file.wiffNoSource": "file verify called with fewer than two .wiff/.wiff.scan pairs (the file under test and at least one source). No parameters.",
   "err.file.wiffNoScan": "{name} = name of the .wiff file.",
+  "err.file.wiffGrowing": "{name} = the member of the pair that changed size (.wiff or .wiff.scan); {from} and {to} = its size in bytes at the two readings; {ms} = milliseconds between the readings.",
   "err.file.wiffTruncated": "{name} = name of the .wiff file; {size} = file size in bytes; {needed} = bytes required by the file's sector table.",
   "err.file.cutShort": "Truncated vendor file (interrupted copy). {name} = file name; {size} = file size in bytes; {needed} = bytes required by the file's internal table.",
   "err.file.functionsCut": "Waters .raw folder whose function list is truncated (interrupted copy). {name} = folder name; {listed} = functions the list contains.",

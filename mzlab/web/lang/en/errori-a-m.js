@@ -1,5 +1,6 @@
 I18N.add("en", {
   "err.manint.channel": "An integration window names no trace of the open files.",
+  "err.manint.maxShift": "The farthest a followed window may move (max_shift) is a number of minutes, 0 or more.",
   "err.manint.columns": "Unknown column group of the integrations table: {column} (sn, fig, quality).",
   "err.manint.baseline": "Unknown baseline of an integration: {baseline} (zero, edges, or line with its two points).",
   "err.http": "error {status}",
