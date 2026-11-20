@@ -110,10 +110,10 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | list of MSn experiments of a DDA file, "MSn tree" window (Experiments/Tree tabs, `msn-elenco.js`, `lev`/`z` columns of `/api/dda`); MS3-only files (`msn_level`, level, `/api/ms2tr`, titles); MSn graph figure; rule tests (`msn rules`) | `docs/agenti/msn-manual.md` |
 | library (area: infusion MSn fragmentation graph (`msn-graph/1`: ions…) | `docs/agenti/msnlib.md` |
 | mutation tests (`cargo-mutants`) of `mzlab-lettori` and the wiff module: commands, samples, survivors and why they stay | `docs/agenti/mutants.md` |
-| mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | mzDraw competitor study: editors, depictors, toolkits and Rust crates (matrix, sizes, licences, layout benchmarks, licence verdict, ideas to copy) | `docs/agenti/mzdraw-competitors.md` |
 | mzDraw formats: conformity matrix (read/write, what is lost, spec terms, public golden files), images and clipboard carrying the molecule, settings file `mzdraw-settings/1` and journal presets, document format `mzdraw/1`, annotations, import report | `docs/agenti/mzdraw-formats.md` |
 | mzDraw plan: feature priorities P0-P3, risks, owner decisions, ready implementation prompts (format catalog, settings, layout benchmark, images with molecule, RXN/RDF, CML/MRV) | `docs/agenti/mzdraw-plan.md` |
+| mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | broad bands (`broad.rs`), targeted pass options (`target.rs`: estimated peaks, /\ shape check, merging overlapping rows), RT correction and alignment (`rtmap.rs`, `rtwarp.rs`), kinetics as evidence (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
 | dependencies between `crates/mzlab-feat` modules (big cycle, back edges, cuts, splitting the attribution engine into a crate) | `docs/agenti/mzfeat-cycles.md` |
 | low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
