@@ -154,9 +154,10 @@ pub fn sg_filter(y: &[f64], m: usize, deriv: bool) -> Vec<f64> {
         .collect()
 }
 
-/// The estimator named beside the `sn_min` S/N of `lr_edges`: the noise is the residual of the smoothing divided by sqrt(1 - c0) (the raw-trace sigma).
+/// The estimator named beside the `sn_min` S/N of `lr_edges` (a name only: the help of `peak edges` is pinned): the noise is the residual of the smoothing over sqrt(1 - c0), its
+/// raw-trace sigma; a manual region gives its own SD (n - 1, `noise_sd`) as it is.
 pub const SNR_ESTIMATOR: &str =
-    "smoothed apex over the local baseline, divided by 1.4826 MAD of the Savitzky-Golay residual (RMS or a manual region by choice) / sqrt(1 - c0)";
+    "smoothed apex over the local baseline, divided by the residual noise of the smoothing (1.4826 MAD or RMS) over sqrt(1 - c0); a manual region gives its own SD (n - 1)";
 
 /// Standard deviation (n - 1) of the signal around the straight line fitted in the stretch [a, b] (a drift is not noise); `None` under 5 points.
 pub fn noise_sd(xs: &[f64], ys: &[f64], a: f64, b: f64) -> Option<f64> {
