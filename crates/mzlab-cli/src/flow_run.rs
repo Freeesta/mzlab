@@ -176,16 +176,7 @@ pub(crate) fn prepare(
         return Ok(Err(problems));
     }
     let plan = crate::flow_compare::expand(plan, reg)?;
-    let mut problems = mzlab_core::flow::check(&plan, reg, Platform::current());
-    // a plan with nothing to run is a wrong plan (a misspelt key, a wrong file), never a successful empty run
-    if plan.steps.is_empty() {
-        problems.push(Problem {
-            instance: String::new(),
-            port: String::new(),
-            error_key: "err.flow.empty",
-            params: Vec::new(),
-        });
-    }
+    let mut problems = mzlab_core::flow::check_run(&plan, reg, Platform::current());
     for s in plan.steps.iter().filter(|s| !executable(&s.step)) {
         problems.push(Problem {
             instance: s.id.clone(),

@@ -1068,5 +1068,18 @@
         }
       ]
     }
+  },
+  {
+    "expect": [],
+    "name": "an empty plan has no problem for the editor (a canvas starts empty); running it is refused by check_run with err.flow.empty",
+    "plan": {
+      "format": "mzflow/2",
+      "inputs": [],
+      "program": {
+        "name": "mzLab",
+        "version": "1"
+      },
+      "steps": []
+    }
   }
 ]

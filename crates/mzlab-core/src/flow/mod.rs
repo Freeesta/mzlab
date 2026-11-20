@@ -33,7 +33,7 @@ pub use prov::{
     build_agent, prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
 pub use run::{
-    execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
+    check_run, execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
     Outcome, Results, Run, Runner,
 };
 pub use run_report::{build as run_report_build, Output, RunReport};

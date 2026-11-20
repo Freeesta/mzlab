@@ -6,9 +6,7 @@ use super::{record, Artifact, Ctx, Outcome, Results, Run};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::flow::sched::{JobId, Sched};
-use crate::flow::{
-    check, parse, plan_json, prov_json, run_report_build, Agent, Mem, Output, Platform,
-};
+use crate::flow::{parse, plan_json, prov_json, run_report_build, Agent, Mem, Output, Platform};
 use crate::json::{parse as parse_json, Value};
 use crate::step::{registry_from_value, DataType, Step};
 
@@ -107,7 +105,7 @@ pub fn record_jobs(plan_text: &[u8], registry: &[Step], jobs: &str) -> Result<(R
 /// `record_jobs` of the reports as read: the parameters of an error keep the order the runner gave them.
 fn record_reports(plan_text: &[u8], registry: &[Step], reports: &Value) -> Result<(Run, String)> {
     let plan = parse(plan_text)?;
-    let problems = check(&plan, registry, Platform::current());
+    let problems = crate::flow::check_run(&plan, registry, Platform::current());
     if !problems.is_empty() {
         return Err(crate::flow::check_error(&problems));
     }
