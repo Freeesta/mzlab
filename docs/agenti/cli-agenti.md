@@ -9,7 +9,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
 ## Which build is this
-- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
+- `mzlab-cli --version` prints `mzlab-cli X.Y.Z (commit abc1234)` (the git short SHA the binary was built from: `MZLAB_COMMIT`, else git at build time; `unknown` when the build knew neither) and the citation line; `mzlab-cli --version --json` (`--json` in any position) is `version/1` (`name`, `version`, `commit` full, `commit_short`, `citation`; `commit` is `null` when unknown). There is no build date: two builds of one commit answer alike, so no output depends on the clock. Compare `commit` with the repository before trusting a command list from memory.
 
 ## Renamed commands
 - A command name of an earlier build (`channels`, `items`, `manual-table`, ...) is exit 2 with `error/1` `err.cli.command.renamed` (`params.old`, `params.now`) and the new path in the message and in `hint`; `commands --json OLD` (exit 5) puts it in `hint` too. A command that was removed answers `err.cli.command.removed`. The table is `RENAMED` in `crates/mzlab-cli/src/renamed.rs`:
@@ -82,8 +82,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 4 | input missing or unreadable |
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
+| 7 | internal error (a bug): any command |
 <!--/exits-->
-  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with exit 1, `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
+  A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with its own exit 7 (not in any command's `exit_codes`: any command can end so), `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
 ## Learn the CLI in one call

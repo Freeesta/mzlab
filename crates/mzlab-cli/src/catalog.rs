@@ -119,6 +119,7 @@ pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
         "selector not found (sample, channel, node, step)",
     ),
     (exit::OUTPUT, "output write or external source failure"),
+    (exit::INTERNAL, "internal error (a bug): any command"),
 ];
 
 #[derive(Debug, Clone, Default)]
