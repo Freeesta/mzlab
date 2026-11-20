@@ -2,6 +2,7 @@
 //! S-groups only the `MRV_IMPLICIT_H` data group (`M  SAL`, `M  SDT`, `M  SED`).
 
 use crate::codec::MolError;
+use crate::sortm::SortM;
 use crate::elements::is_element;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
 use std::collections::HashMap;
@@ -173,7 +174,7 @@ fn stated_h(lines: &[&str], na: usize) -> Vec<(usize, u32)> {
             out.extend(list.iter().map(|&a| (a, h)));
         }
     }
-    out.sort_unstable();
+    out.sortm();
     out
 }
 

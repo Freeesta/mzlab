@@ -2,6 +2,7 @@
 //! ranking, because the whole `molecules` search would add about 70 KB to the molkit `.wasm`. The ranking is that of the molecule box (equal, starts with,
 //! starts a word, contains); the nearest names are the ones a typing slip away.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::molecules;
 
@@ -120,7 +121,7 @@ fn nearest(es: &[Entry], w: &str) -> Vec<String> {
             hits.push((b, e.name.encode_utf16().count(), &e.name));
         }
     }
-    hits.sort_by_key(|h| (h.0, h.1));
+    hits.sortc_by_key(|h| (h.0, h.1));
     hits.iter().take(NEAREST).map(|h| h.2.to_string()).collect()
 }
 
@@ -151,7 +152,7 @@ pub(super) fn from_db(kind: &'static str, q: &str, db: Option<&str>) -> Result<D
                     .map(|s| (k, s))
             })
             .collect();
-        h.sort_by_key(|&(k, s)| (s, es[k].name.encode_utf16().count()));
+        h.sortc_by_key(|&(k, s)| (s, es[k].name.encode_utf16().count()));
         h
     };
     if kind != "inchikey" && hits.is_empty() {
