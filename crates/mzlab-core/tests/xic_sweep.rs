@@ -170,6 +170,12 @@ fn the_route_and_the_smoothed_columns_are_the_page_routes_per_ion() {
         .unwrap();
     assert_eq!(d, e);
     assert!(r.handle("/api/xic", &Query::parse("sweep=1:0:1")).is_err());
+    // a half-window that is not above 0 (or not a number) is refused, as the CLI refuses it
+    for tol in ["0", "-1", "nan", "inf"] {
+        let q = format!("sweep=100:110:1&tol={tol}");
+        let e = r.handle("/api/xic", &Query::parse(&q)).unwrap_err();
+        assert_eq!(e.key, "err.xic.sweep.tol", "{tol}");
+    }
     assert!(r
         .handle("/api/xic", &Query::parse("sweep=100:110:1&mz=100"))
         .is_err());

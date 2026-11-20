@@ -215,15 +215,67 @@ fn a_sweep_of_an_unknown_sample_is_exit_5() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
+/// An mzML of `n` Q1 scans with one peak each: enough scans for a sweep of 20,000 centres to be over half the memory budget.
+fn many_scans(n: usize) -> Vec<u8> {
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_spectra(n).unwrap();
+    for i in 0..n {
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("sample=1 period=1 cycle={} experiment=1", i + 1),
+            level: 1,
+            rt: 0.001 * i as f64,
+            polarity: 1,
+            profile: false,
+            filter: "+ p ESI Q1MS [100.000-400.000]".into(),
+            precursor: None,
+            mz: vec![150.0],
+            intensity: vec![1.0e3],
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
 #[test]
-fn a_matrix_over_the_budget_is_exit_1_with_its_phase_named() {
-    // the engine refuses before building (tests/xic_sweep.rs of mzlab-core); here the refusal is a data error (1), its text names the phase
-    let e = mzlab_core::budget::refusal("xicSweep", 3 << 30, 1 << 30);
-    let o = crate::Outcome::fail_error(&e);
+fn a_matrix_over_the_budget_is_exit_1_with_the_hint_through_the_command() {
+    // 20,000 centres x 3,500 scans x 8 B = 560 MB, over half of the 1 GiB native budget: refused before the matrix is built
+    let d = crate::extract::tests::dir("xic_sweep_budget");
+    let f = d.join("many.mzML");
+    std::fs::write(&f, many_scans(3500)).unwrap();
+    let f = f.to_string_lossy().into_owned();
+    let o = run(&["trace", "xic", &f, "--sweep", "100:20099:1", "--da", "0.5"]);
     assert_eq!(o.code, 1, "{}", o.stderr);
     assert!(
-        o.stderr.contains("sweep") && o.stderr.contains("error.memoryBudget"),
+        o.stderr.contains("error.memoryBudget")
+            && o.stderr.contains("hint: sweep a narrower LO:HI"),
         "{}",
         o.stderr
     );
+    let j = run(&[
+        "trace",
+        "xic",
+        &f,
+        "--sweep",
+        "100:20099:1",
+        "--da",
+        "0.5",
+        "--json",
+    ]);
+    assert_eq!(j.code, 1);
+    let e = parse(String::from_utf8_lossy(&j.stdout).trim().as_bytes()).unwrap();
+    let hint = e.get("hint").and_then(|h| h.str()).unwrap_or("");
+    assert!(hint.contains("narrower LO:HI"), "{e:?}");
+    assert_eq!(
+        e.get("error_key").and_then(|k| k.str()),
+        Some("error.memoryBudget")
+    );
+    // a list of ions is one extraction each and takes no matrix: the same file answers it
+    let l = run(&["trace", "xic", &f, "--mz", "150,151", "--da", "0.5"]);
+    assert_eq!(l.code, 0, "{}", l.stderr);
+    let _ = std::fs::remove_dir_all(d);
 }

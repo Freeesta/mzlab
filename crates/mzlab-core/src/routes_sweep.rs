@@ -186,6 +186,10 @@ impl<R: ReadAt> Routes<R> {
             .and_then(|s| s.trim().parse::<f64>().ok())
             .unwrap_or(1.0);
         let tol = q.num("tol")?.unwrap_or(step / 2.0);
+        // the CLI asks for a half-window above 0; the route is the same call, so it takes no other
+        if !(tol.is_finite() && tol > 0.0) {
+            return Err(Error::new("err.xic.sweep.tol"));
+        }
         let smooth = match q.some("smooth") {
             None => None,
             Some("3") => Some(3),

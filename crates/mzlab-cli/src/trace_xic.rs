@@ -14,7 +14,7 @@ usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | 
                            [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
 
   --mz LIST   the ions' m/z, one or several separated by commas; one gives trace/1, several give trace-set/1 (a trace/1 per ion, in the order given)
-  --sweep S   LO:HI:STEP, the centres LO+i*STEP (at most 20000): the bytes of --mz with that list, in one pass; --tol defaults to STEP/2 da
+  --sweep S   LO:HI:STEP, the centres LO+i*STEP (at most 20000): the bytes of --mz with that list, in one call; --tol defaults to STEP/2 da
   --ppm P     half-window in ppm of each m/z; --da D half-window in Da; --tol P ppm or D da (a suffix ppm or da is required); one of the three (required with --mz)
   --smooth K  smooth every trace with the engine's filter before the window is cut: 3 (1-2-1) or 5 (1-4-6-4-1); the evidence names it
   --rt A,B    keep the points with A <= rt <= B (minutes)
@@ -298,19 +298,24 @@ fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
     Ok(s)
 }
 
-/// The documents of a run: one extraction of every ion (one pass for several), each with its evidence, then the one document, the set or the wide CSV.
+/// The documents of a run: one extraction of every ion (one call for a sweep), each with its evidence, then the one document, the set or the wide CSV.
 fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
     let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
     s.note += &j.default_note();
     let mut answers = Vec::new();
-    // several ions are one pass over the peaks (`Routes::xic_sweep`), the same bytes as one extraction each
     let tols: Vec<f64> = j.mz.iter().map(|&m| j.tol(m)).collect();
-    let mut found = if j.mz.len() > 1 {
+    // `--sweep` is one call for the whole matrix (`Routes::xic_sweep`); a list is one extraction per ion, as the page asks them (the sweep is not
+    // faster per call in-process, so a list does not pay its memory check)
+    let mut found = if j.sweep.is_some() {
         trace_cmd::xic_answers(&mut s, &j.mz, &tols, j.level, j.pol, j.smooth)?
     } else {
-        vec![trace_cmd::xic_answer(
-            &mut s, j.mz[0], tols[0], j.level, j.pol, j.smooth,
-        )?]
+        let mut v = Vec::with_capacity(j.mz.len());
+        for (&mz, &tol) in j.mz.iter().zip(&tols) {
+            v.push(trace_cmd::xic_answer(
+                &mut s, mz, tol, j.level, j.pol, j.smooth,
+            )?);
+        }
+        v
     }
     .into_iter();
     for &mz in &j.mz {
@@ -379,11 +384,14 @@ pub fn xic(args: Vec<String>) -> Outcome {
         }
         return trace_cmd::finish(Ok((plan(&j), j.default_note())), &j.out);
     }
-    let o = trace_cmd::finish(extract::with_tmp("xic", |tmp| run(&j, tmp)), &j.out);
-    if o.error
-        .as_ref()
-        .is_some_and(|f| f.key == "error.memoryBudget")
-    {
+    let mut o = trace_cmd::finish(extract::with_tmp("xic", |tmp| run(&j, tmp)), &j.out);
+    // the refusal of the matrix is a data limit (1) and has a way out; a memory refusal of the index build keeps the code of its key
+    let swept = o.error.as_ref().is_some_and(|f| {
+        f.key == "error.memoryBudget"
+            && f.params.iter().any(|(k, v)| k == "fase" && v == "xicSweep")
+    });
+    if swept {
+        o.code = crate::exit::DATA;
         return o.with_hint(
             "sweep a narrower LO:HI or a larger STEP, or split the sweep in several calls",
         );

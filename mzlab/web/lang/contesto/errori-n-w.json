@@ -31,6 +31,7 @@
   "err.xic.sweep.mz": "CLI usage error of trace xic: both --mz and --sweep, or neither, were given.",
   "err.xic.sweep.spec": "CLI usage error of trace xic: --sweep is not LO:HI:STEP with numbers, STEP above 0 and LO below HI.",
   "err.xic.sweep.size": "CLI usage error of trace xic: the sweep has more centres than one call takes. {n} = the number of centres.",
+  "err.xic.sweep.tol": "Usage error of api/xic?sweep=: the tol (half-window in Da) is not a number above 0.",
   "error.memoryBudgetFase.xicSweep": "XIC sweep (trace xic --sweep, api/xic?sweep=) rejected before starting: centres x scans x 8 bytes exceeds half the engine budget. {stima_mb} = estimated MB, {budget_mb} = engine budget in MB.",
   "error.memoryBudgetFase.read": "Step that reads a whole mzML (spectra.ms2, formula.ms1) rejected before starting because the estimate from the file's tags (points, spectra, MGF text) exceeds the budget. {stima_mb} = estimated MB, {budget_mb} = engine budget in MB.",
   "error.memoryBudgetFase.msnGraph": "MSn graph rejected while reading the spectra of a consensus because the estimate (extrapolated from the spectra already read) exceeds the engine budget. {stima_mb} = estimated MB of the spectra, {budget_mb} = budget in MB.",

@@ -80,6 +80,7 @@ I18N.add("en", {
   "err.xic.sweep.mz": "trace xic takes either --mz (a list of m/z) or --sweep LO:HI:STEP, one of the two.",
   "err.xic.sweep.spec": "--sweep takes three numbers first:last:step, with step above 0 and first below last, for example 100:1000:1.",
   "err.xic.sweep.size": "The sweep has {n} centres and one call takes at most 20000: use a larger STEP or a narrower LO:HI.",
+  "err.xic.sweep.tol": "The half-window of a sweep is a number above 0.",
   "err.uv.manifest": "The list of mzML files of the step is not valid.",
   "err.subxic.many": "Formula too large: {n} sub-formulas. Write a smaller one.",
   "err.subxic.lr": "The XIC from a formula needs a high-resolution file.",

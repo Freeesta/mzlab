@@ -44,7 +44,7 @@ The recipe is tested only on the high-resolution TiO2 series: on the flufenacet 
 3. `mzlab-cli flow check plan.json --json`: exit 3 names every problem with its `path`, e.g. `det.params.min_hight` (unknown parameter), `det.params.min_height` (wrong type), `det.in.index` (missing port), `steps[1].param` (a key the format does not have). `flow run plan.json --in DIR --dry-run` repeats the check with the inputs and prints what WOULD run; it never writes.
 
 ## Several ions from a full-scan file, then a report
-`trace xic` answers one m/z per call (the page's `api/xic`), or every m/z of a range in one pass with `--sweep LO:HI:STEP --format csv` (the same bytes as the list); loop it for a few ions, integrate each trace, and keep the calls as the record:
+`trace xic` answers one m/z per call (the page's `api/xic`), or every m/z of a range in one call with `--sweep LO:HI:STEP --format csv` (the same bytes as the list; one call and one index load, not faster per ion than a loop in one process); loop it for a few ions, integrate each trace, and keep the calls as the record:
 ```sh
 for mz in 364.4 194.2 152.2; do
   mzlab-cli trace xic sample.mzML --mz $mz --ppm 500 --rt 12,16.5 --format csv --out xic_$mz.csv   # rt_min,intensity
