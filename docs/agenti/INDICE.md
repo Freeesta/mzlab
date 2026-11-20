@@ -120,7 +120,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzFinder input: `.mzidx` for every chosen file or from IndexedDB (`TP_Mine/files/finder-idx.js`), user transformation list in Rust | `docs/agenti/mzfinder-input.md` |
 | LR dig (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-lr.md` |
 | MS2 interface and rule, MS2 targets and step "1 · Files" (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-ms2.md` |
-| mzFinder: HR products table (`TPTAB`, `TPRIGA`, `TPDEC`), live Dig (`js/24_tpmine_diretta.js`, `TPLIVE`), parent-TP pairs and HR interface (`js/21_tpmine_hr.js`, `mass_network`, prediction) | `docs/agenti/mzfinder-table.md` |
+| mzFinder: HR products table (`TPTAB`, `TPRIGA`, `TPDEC`), engine progress, parent-TP pairs (`mass_network`, prediction) | `docs/agenti/mzfinder-table.md` |
 | untargeted tables, identity and third-party table readers (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-untargeted.md` |
 | validation (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/mzfinder-validation.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` |
