@@ -123,7 +123,7 @@ fn select(sel: &str, names: &[String], cols: &[Col], has_meta: bool) -> R<Vec<us
     Ok(found)
 }
 
-/// The time of every column: from the samples document, else parsed from the names by the one parser of `sample table` (`samples::propose`).
+/// The time of every column: from the samples document, else parsed from the names by the one name parser of `sample table` (`samples::role_and_minutes`: no series, no replicate logic).
 fn columns(inp: &CmpIn) -> Vec<Col> {
     match inp.meta {
         Some(meta) => meta
@@ -134,11 +134,9 @@ fn columns(inp: &CmpIn) -> Vec<Col> {
             })
             .collect(),
         None => {
-            let files: Vec<(String, String, String)> = inp.names.iter().map(|n| (n.clone(), String::new(), String::new())).collect();
-            let proposed = crate::samples::propose(&files);
             (0..inp.names.len())
                 .map(|i| {
-                    let time = proposed.get(i).and_then(|p| p.time_min);
+                    let time = crate::samples::role_and_minutes(&inp.names[i]).1;
                     Col { time, origin: if time.is_some() { "name" } else { "none" }, role: None }
                 })
                 .collect()
@@ -260,6 +258,26 @@ fn classify(max: f64, pc: f64, r_ref: f64, r_blank: f64, absent: bool, shape: Op
     ("unchanged", why)
 }
 
+/// The `roles`, `params` and `choices` of the report: what was selected, the numbers used, and why the pseudocount is what it is.
+fn header(inp: &CmpIn, o: &CmpOpts, p: &Plan, pc: f64, origin: &str) -> (Value, Value, Vec<Value>) {
+    let sel = |s: &str, v: &[usize]| Obj::new().put("selector", text(s)).put("columns", names_of(inp, v)).done();
+    let roles_v = Obj::new()
+        .put("reference", sel(&o.ref_sel, &p.reference))
+        .put("blank", sel(&o.blank_sel, &p.blank))
+        .put("treated", Obj::new().put("columns", names_of(inp, &p.treated)).done())
+        .done();
+    let params = Obj::new().put("quantity", text(&p.quantity)).n("factor", p.factor).n("pseudocount", pc).put("pseudocount_origin", text(origin)).n("floor", p.floor).n("rho_min", p.rho_min).done();
+    let mut choices = p.choices.clone();
+    let why = match origin {
+        "given" => "given with --pseudocount",
+        "blanks" => "3 x the median of the positive values of the blank columns, not below the floor",
+        "reference" => "no positive blank value: 3 x the median of the positive values of the reference, not below the floor",
+        _ => "no positive blank or reference value: the floor",
+    };
+    choices.push(choice("pseudocount", num(pc), why));
+    (roles_v, params, choices)
+}
+
 /// `compare/1` of `inp` under `o`; the rows keep the order of the table, so the bytes are stable.
 pub fn compare(inp: &CmpIn, o: &CmpOpts) -> R<Value> {
     check(inp)?;
@@ -317,21 +335,7 @@ pub fn compare(inp: &CmpIn, o: &CmpOpts) -> R<Value> {
                 .done(),
         );
     }
-    let sel = |s: &str, v: &[usize]| Obj::new().put("selector", text(s)).put("columns", names_of(inp, v)).done();
-    let roles_v = Obj::new()
-        .put("reference", sel(&o.ref_sel, &p.reference))
-        .put("blank", sel(&o.blank_sel, &p.blank))
-        .put("treated", Obj::new().put("columns", names_of(inp, &p.treated)).done())
-        .done();
-    let params = Obj::new().put("quantity", text(&p.quantity)).n("factor", p.factor).n("pseudocount", pc).put("pseudocount_origin", text(&origin)).n("floor", p.floor).n("rho_min", p.rho_min).done();
-    let mut choices = p.choices;
-    let why = match origin.as_str() {
-        "given" => "given with --pseudocount",
-        "blanks" => "3 x the median of the positive values of the blank columns, not below the floor",
-        "reference" => "no positive blank value: 3 x the median of the positive values of the reference, not below the floor",
-        _ => "no positive blank or reference value: the floor",
-    };
-    choices.push(choice("pseudocount", num(pc), why));
+    let (roles_v, params, choices) = header(inp, o, &p, pc, &origin);
     let cnt = CLASSES.iter().zip(counts).fold(Obj::new(), |o, (c, k)| o.put(c, int(k))).done();
     Ok(Obj::new()
         .put("schema", text("compare/1"))
