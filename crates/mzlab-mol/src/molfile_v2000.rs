@@ -2,9 +2,9 @@
 //! S-groups only the `MRV_IMPLICIT_H` data group (`M  SAL`, `M  SDT`, `M  SED`).
 
 use crate::codec::MolError;
-use crate::sortm::SortM;
 use crate::elements::is_element;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
+use crate::sortm::SortM;
 use std::collections::HashMap;
 
 /// The text between columns `a` and `b` (0-based, `b` exclusive), trimmed; empty when the line is shorter.
