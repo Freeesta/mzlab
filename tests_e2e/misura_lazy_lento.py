@@ -57,7 +57,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", required=True, help="built site folder (tools/prepara_sito.py)")
     ap.add_argument("--delays", default="0,3000,6000,9000,12000", help="ms between the file loaded and the first use, one fresh visit each")
-    ap.add_argument("--probe", choices=["loadScript", "cmp"], default="loadScript")
+    ap.add_argument("--probe", choices=["lazy", "cmp"], default="lazy")
     ap.add_argument("--file", help="data file to load instead of two small synthetic ones (an HR mzML for --probe cmp)")
     ap.add_argument("--runs", type=int, default=1, help="fresh visits per delay")
     ap.add_argument("--out", required=True)

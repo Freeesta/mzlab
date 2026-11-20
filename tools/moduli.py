@@ -20,7 +20,7 @@ OPT = ("@motore", "@estesi")
 CAMPI = {"uscita": str, "pacchetto": str, "wasm_opt": str, "parte": str, "tetto": int, "nota": str}
 
 
-def loadScript(testi: dict[str, str] | None = None) -> dict[str, dict]:
+def load_manifests(testi: dict[str, str] | None = None) -> dict[str, dict]:
     """name -> record, in file-name order; `testi` (name -> toml text) replaces the files, for a git base."""
     if testi is None:
         testi = {p.stem: p.read_text(encoding="utf-8") for p in sorted(DIR.glob("*.toml"))}
@@ -31,7 +31,7 @@ def da_base(ref: str) -> dict[str, dict]:
     # an unknown ref must fail, never read as "no modules" (every cap would then look new and pass)
     elenco = subprocess.run(["git", "ls-tree", "--name-only", ref, "tools/moduli/"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
     testi = {Path(f).stem: subprocess.run(["git", "show", f"{ref}:{f}"], cwd=ROOT, capture_output=True, text=True, check=True).stdout for f in elenco if f.endswith(".toml")}
-    return loadScript(testi)
+    return load_manifests(testi)
 
 
 def errori(mod: dict[str, dict]) -> list[str]:
@@ -135,7 +135,7 @@ def main() -> int:
     ap.add_argument("--base", metavar="REF")
     a = ap.parse_args()
     sys.stdout.reconfigure(newline="\n")      # the shell scripts read the output: no CR from a Windows stdout
-    mod = loadScript()
+    mod = load_manifests()
     if a.elenco:
         print("\n".join(n for n, r in mod.items() if r["parte"] == a.elenco))
     elif a.tetto or a.riga:
