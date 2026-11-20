@@ -275,7 +275,7 @@ fn fails(o: &CmpOpts) -> (Option<&'static str>, String) {
         names: &names,
         meta: None,
     };
-    let e = compare(&inp, o).err().expect("must fail");
+    let e = compare(&inp, o).expect_err("must fail");
     (e.key, e.text)
 }
 
