@@ -271,6 +271,25 @@ fn peaks_answer(c: &Req) -> Result<String> {
     with_ms(&c.files[0], c.sample, &mut |s| s.peaks(&da, &po, &mo))
 }
 
+/// What a `subtract`, `spectrum` or `trace` is asked for: the view and its window (`--rt` for a spectrum, `--nm` for a trace); `report` is the report alone.
+fn sub_view(c: &Req) -> Result<(&'static str, f64, f64)> {
+    let window = |p: Option<(f64, f64)>, what: &str| {
+        p.ok_or_else(|| Error::new("err.pda.window").with("need", what))
+    };
+    Ok(match (c.verb.as_str(), c.view.as_str()) {
+        ("spectrum", _) | ("subtract", "spectrum") => {
+            let (x, y) = window(c.rt, "--rt")?;
+            ("spectrum", x, y)
+        }
+        ("trace", _) | ("subtract", "trace") => {
+            let (x, y) = window(c.nm, "--nm")?;
+            ("trace", x, y)
+        }
+        (_, "map") => ("map", 0.0, 0.0),
+        _ => ("report", 0.0, 0.0),
+    })
+}
+
 /// The shift `--shift auto` found, on stderr: the answer's `sub.align` carries the same numbers.
 fn shift_note(a: &DadData, b: &DadData, o: &mzlab_core::wiff::dad_ops::SubOpts) -> String {
     let f = mzlab_core::wiff::dad_align::dad_align(a, b, o.focus);
@@ -288,24 +307,10 @@ fn run_req(c: &Req, notes: &mut String) -> Result<String> {
     for f in c.files.iter().chain(c.minus.iter()) {
         exists(f)?;
     }
-    let window = |p: Option<(f64, f64)>, what: &str| {
-        p.ok_or_else(|| Error::new("err.pda.window").with("need", what))
-    };
     match c.verb.as_str() {
         "subtract" | "spectrum" | "trace" => {
             let da = dad_of(a, c.sample)?;
-            let view = match (c.verb.as_str(), c.view.as_str()) {
-                ("spectrum", _) | ("subtract", "spectrum") => {
-                    let (x, y) = window(c.rt, "--rt")?;
-                    ("spectrum", x, y)
-                }
-                ("trace", _) | ("subtract", "trace") => {
-                    let (x, y) = window(c.nm, "--nm")?;
-                    ("trace", x, y)
-                }
-                (_, "map") => ("map", 0.0, 0.0),
-                _ => ("report", 0.0, 0.0),
-            };
+            let view = sub_view(c)?;
             let Some(b) = &c.minus else {
                 return match view.0 {
                     "spectrum" => mzlab_core::wiff::dad_uv::dad_spectrum_json(&da, view.1, view.2),
@@ -336,6 +341,9 @@ fn run_req(c: &Req, notes: &mut String) -> Result<String> {
             pda_subtract_data(&da, &db, &o, pv)
         }
         "ms-at" => {
+            let window = |p: Option<(f64, f64)>, what: &str| {
+                p.ok_or_else(|| Error::new("err.pda.window").with("need", what))
+            };
             let (t, _) = window(c.rt, "--rt")?;
             let ms = t + c.offset;
             let tic = Query::parse(&format!("kind=tic&level={}", c.level));
