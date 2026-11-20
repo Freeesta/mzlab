@@ -194,6 +194,18 @@ pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcom
     o
 }
 
+/// What `main` answers when the program panics (the release profile aborts, so a hook answers before the abort): the failure `err.run.internal`,
+/// exit 1, one `error/1` on stdout under `--json`. A command should refuse bad input with 2 or 4 before it gets here; this is the net under a bug.
+pub fn panic_outcome(args: &[String], detail: &str) -> crate::Outcome {
+    let detail: String = detail.chars().take(300).collect();
+    let o = crate::Outcome::fail_error(
+        &mzlab_core::Error::new("err.run.internal").with("detail", detail),
+    )
+    .with_hint("this is a bug of mzlab-cli: report the command line, no data is needed");
+    let command = crate::cmd::find(args).map_or("", |(e, _)| e.name);
+    with_help(args, crate::contract::finish(args, command, o))
+}
+
 #[path = "stdout.rs"]
 mod stdout;
 pub use stdout::write_stdout;
@@ -201,3 +213,7 @@ pub use stdout::write_stdout;
 #[cfg(test)]
 #[path = "error_text_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "no_panic_tests.rs"]
+mod no_panic_tests;
