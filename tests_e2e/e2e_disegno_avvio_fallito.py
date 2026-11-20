@@ -40,10 +40,14 @@ try:
             wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.click("#side-toggle"); frames(pg, 3)
         step("2 panels hidden and a direct #/draw address: the failure is still on screen", hidden_panels)
         def twice():
-            pg.route("**/vendor/ketcher/index.html", lambda route: route.fulfill(status=404, body="not found"))
+            hits = [0]
+            def gone(route): hits[0] += 1; route.fulfill(status=404, body="not found")
+            pg.route("**/vendor/ketcher/index.html", gone)
             pg.reload(); wait_for_js(pg, FAILED, timeout=10000)
-            pg.click("#kfail-retry"); wait_for_js(pg, "document.getElementById('kfail').hidden", timeout=5000)      # the second attempt is on its way
-            wait_for_js(pg, FAILED, timeout=10000)             # ... and fails too: the notice is back, not an endless «Loading the editor»
+            n = hits[0]
+            with pg.expect_request("**/vendor/ketcher/index.html", timeout=10000): pg.click("#kfail-retry")      # the click hides the notice at once and asks for the frame again
+            assert hits[0] > n, "«Try again» did not ask for Ketcher's page again"
+            wait_for_js(pg, FAILED, timeout=10000)             # ... and that attempt fails too: the notice is back, not an endless «Loading the editor»
             frames(pg, 3); s = pg.evaluate(STATE); assert s["fail"] and s["inView"] and not s["loading"] and not s["ready"], s
             assert pg.evaluate("document.activeElement && document.activeElement.id") == "kfail-retry", "the focus is not on the new «Try again»"
             pg.unroute("**/vendor/ketcher/index.html"); pg.click("#kfail-retry")
@@ -51,7 +55,7 @@ try:
             frames(pg, 3); s = pg.evaluate(STATE); assert not s["fail"] and not s["loading"] and s["frame"] == "visible", s
         step("3 a direct #/draw address and a retry that fails too: the notice and the button come back, the third try loads the editor", twice)
         r.b.close()
-        pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1300, "height": 900})
+        pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1300, "height": 900}); home = pg.url
         def after_ready():
             pg.evaluate("() => { const real = window.nbEnsure; window.nbEnsure = () => { window.nbEnsure = real; return Promise.reject(new Error('test: the notebook did not open')); }; }")
             pg.click("#nav [data-v=draw]"); wait_for_js(pg, FAILED, timeout=60000)
@@ -60,9 +64,23 @@ try:
             wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && !document.getElementById('kframe').classList.contains('kwait')", timeout=60000)
             frames(pg, 3); s = pg.evaluate(STATE); assert not s["fail"] and not s["loading"] and s["frame"] == "visible", s
         step("4 a failure after Ketcher is ready: «Try again» is not a dead button", after_ready)
+        def keeps_drawing():
+            assert pg.evaluate("TPDraw.load('CCO')"); wait_for_js(pg, "typeof NB !== 'undefined' && !!NB.ket && NB.ket.includes('\"O\"')", timeout=10000)
+            pg.evaluate("async () => { await nbSave(true); }")
+            pg.goto(home); pg.reload(); pg.wait_for_selector("#nav [data-v=draw]")
+            # the saved drawing is put back, then the next step of the start fails once
+            pg.evaluate("""() => { const real = window.nbEnsure; window.nbEnsure = async () => { window.nbEnsure = real; await real();
+              const ed = document.getElementById('kframe').contentWindow.ketcher.editor, sub = ed.subscribe; ed.subscribe = () => { ed.subscribe = sub; throw new Error('test: failure after the drawing was put back'); }; }; }""")
+            pg.click("#nav [data-v=draw]"); wait_for_js(pg, FAILED, timeout=60000)
+            assert not pg.evaluate("TPDraw.ready()"), "the editor counts as ready under the failure notice"
+            pg.click("#kfail-retry")
+            wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && !document.getElementById('kframe').classList.contains('kwait')", timeout=60000)
+            frames(pg, 3); smi = pg.evaluate("TPDraw.smiles()"); assert smi in ("CCO", "OCC", "C(C)O"), ("the saved drawing is not back after the retry", smi)
+            assert pg.evaluate("NB.ket.includes('\"O\"')"), "the retry overwrote the saved drawing with a blank one"
+        step("5 a failure after the saved drawing was put back: the retry shows it again and does not overwrite it", keeps_drawing)
         r.b.close()
         pg = r.page(p, service_workers="block"); pg.set_viewport_size({"width": 1300, "height": 900})
-        step("5 Ketcher's scripts missing: the same failure and the same way back", lambda: failed_then_retry(pg, "**/vendor/ketcher/**/*.js"))
+        step("6 Ketcher's scripts missing: the same failure and the same way back", lambda: failed_then_retry(pg, "**/vendor/ketcher/**/*.js"))
 finally:
     r.close()
 for s in steps: print(" ", s)

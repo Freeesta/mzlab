@@ -44,7 +44,7 @@ function start() {
       }, 400);
     }
     // first-paint.js already started the frame on a direct #/draw address (and may have seen the ready message before this listener existed)
-    if (reload) { reload = false; K = null; /** @type {any} */ (window).MZLAB_KETCHER_READY = false; guardStorage(); fr.src = "static/vendor/ketcher/index.html"; }   // «Try again»: the frame is loaded anew
+    if (reload) { reload = false; restored = false; /** @type {any} */ (window).MZLAB_KETCHER_READY = false; guardStorage(); fr.src = "static/vendor/ketcher/index.html"; }   // «Try again»: the frame is loaded anew
     else if (!fr.getAttribute("src")) fr.src = "static/vendor/ketcher/index.html";
     else queueMicrotask(watch);                            // started by first-paint.js: it may have failed already (looked at once `starting` holds this attempt)
     early(); fr.addEventListener("load", loaded, { once: true });   // before Ketcher focuses its clipboard textarea
@@ -66,7 +66,7 @@ function start() {
     
     onReady(); return k; });
   // a failure before or after Ketcher is ready: the next start() is a new attempt on a frame loaded anew, so «Try again» always does something
-  whole.catch(e => { console.error(e); if (me !== attempt) return; starting = null; reload = true; Q("#kfail").hidden = false; if (retried) Q("#kfail-retry").focus(); retried = false; });   // never Ketcher's raw English: the cause stays in the console; the frame stays hidden under the notice
+  whole.catch(e => { console.error(e); if (me !== attempt) return; K = null; starting = null; reload = true; Q("#kfail").hidden = false; if (retried) Q("#kfail-retry").focus(); retried = false; });   // never Ketcher's raw English: the cause stays in the console; the frame stays hidden under the notice
   whole.then(() => FRAME.next(() => FRAME.next(() => fr.classList.remove("kwait"))), () => {});
   whole.finally(() => FRAME.next(() => FRAME.next(() => { if (me === attempt) Q("#kload").hidden = true; }))).catch(() => {});
   return whole;
@@ -747,7 +747,7 @@ Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v)
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { start().catch(() => {}); await everReady; return true; }, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { start().catch(() => {}); await everReady; return true; } /* never rejects: it stays pending while the failure notice shows, until a start succeeds */, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
