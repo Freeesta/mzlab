@@ -71,6 +71,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--inspection", "inspection/1, or -"),
     ("--answers", "answers"),
     ("--da", "tolerance, Da"),
+    ("--tol", "tolerance with a unit: 10ppm or 0.2da"),
+    ("--smooth", "smoothing points: 3 or 5"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
     ("--format", "json (default) or csv"),
