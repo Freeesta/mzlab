@@ -66,6 +66,13 @@ export async function openFile(/** @type {Uint8Array} */ bytes) {
   return JSON.parse((await carica()).open_file(bytes));
 }
 
+/** Whether a file of this many bytes is read: `{limit}`, else the engine refuses (`error.open.tooBig`, with the size and the limit). Asked before the file is read, so a huge drop costs nothing.
+ * @returns {Promise<{ limit: number }>} */
+export async function openSize(/** @type {number} */ size) {
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) return JSON.parse(await rpc("open", JSON.stringify({ size })));
+  return JSON.parse((await carica()).open_size(size));
+}
+
 /** the message of an engine error (`{error_key, params}` text) or of anything else */
 export function message(/** @type {any} */ e) {
   try { const j = JSON.parse(String(e)); if (j.error_key) return t(j.error_key, j.params || {}); } catch (_) { /* not JSON */ }

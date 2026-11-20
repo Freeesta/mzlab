@@ -20,16 +20,27 @@ const unavailable = (/** @type {any} */ e) => Object.assign(new Error(e && e.mes
  * An engine refusal (a file over the size limit) is thrown as the error with its text; an engine that is not there is thrown with `unavailable` set.
  * @param {Uint8Array} bytes @returns {Promise<{ text: string, changes: { key: string, params?: Record<string, string> }[] }>} */
 async function engineText(bytes) {
+  const r = await engineCall(v => v.openFile(bytes));
+  return { text: r.text, changes: r.changes.map(changeText) };
+}
+
+/** Runs one engine call: an engine refusal is thrown as an error with its text, an engine that is not there with `unavailable` set.
+ * @param {(v: any) => Promise<any>} call */
+async function engineCall(call) {
   let v;
   try { v = await import("./disegno-verifica.js"); } catch (e) { throw unavailable(e); }
-  let r;
-  try { r = await v.openFile(bytes); } catch (e) {
+  try { return await call(v); } catch (e) {
     let refused = false;
     try { refused = !!JSON.parse(String(e)).error_key; } catch (_) { /* not an engine error */ }
     if (refused) throw new Error(v.message(e));
     throw unavailable(e);
   }
-  return { text: r.text, changes: r.changes.map(changeText) };
+}
+
+/** Asks the engine whether a file of this size is read, before the file is: a refusal (over the engine's limit, which is not repeated here) is thrown with its text, an engine that is not there is not in the way.
+ * @param {number} size */
+async function checkSize(size) {
+  try { await engineCall(v => v.openSize(size)); } catch (e) { if (!(/** @type {any} */ (e)).unavailable) throw e; }
 }
 
 /** The same, or, when the engine is not there, the bytes as UTF-8 text with no change: Ketcher then reads the file as it did before the engine route, a drop is never lost to it.
@@ -47,6 +58,7 @@ export const isCdxml = (/** @type {string} */ t) => /^\s*\uFEFF?\s*(?:<\?xml[^>]
 
 /** @param {File} file */
 export async function readStructure(file) {
+  await checkSize(file.size);
   return engineText(new Uint8Array(await file.arrayBuffer()));
 }
 
@@ -82,7 +94,7 @@ export function mountImport(doc, k, ui) {
     const dt = /** @type {DataTransfer} */ (e.dataTransfer), file = dt.files[0];
     if (file) {
       let r;
-      try { r = await engineOrRaw(new Uint8Array(await file.arrayBuffer())); } catch (err_) { note(t("draw.import.failed", { message: /** @type {Error} */ (err_).message })); return; }   // a file over the size limit is told, not dropped; an engine that is not there is not in the way
+      try { await checkSize(file.size); r = await engineOrRaw(new Uint8Array(await file.arrayBuffer())); } catch (err_) { note(t("draw.import.failed", { message: /** @type {Error} */ (err_).message })); return; }   // a file over the size limit is told, not dropped; an engine that is not there is not in the way
       if (r.text.trim()) await add(r.text, file.name, changesNote(file.name, r.changes, t)); else note(t("draw.import.unreadable", { name: file.name }));
       return;
     }

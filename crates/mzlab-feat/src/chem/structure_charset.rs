@@ -69,19 +69,26 @@ fn utf16(bytes: &[u8], le: bool) -> (String, usize) {
     (text, bad)
 }
 
-/// `Some(little endian)` for text with no byte-order mark that is UTF-16 of mostly ASCII: its first 64 bytes have a NUL in every second place
-/// (the high byte) and none in the others.
+/// `Some(little endian)` for text with no byte-order mark that is UTF-16 of mostly Latin text: in the first 512 bytes at least 9 in 10 of the bytes
+/// in one place of each pair (the high byte) are NUL and at most 1 in 10 of the others. Text whose head is mostly past U+00FF has no NUL
+/// high bytes and stays undetected.
 fn nul_utf16(bytes: &[u8]) -> Option<bool> {
-    let head = &bytes[..bytes.len().min(64)];
+    let head = &bytes[..bytes.len().min(512) & !1];
     if head.len() < 4 {
         return None;
     }
-    let at = |par: usize| head.iter().skip(par).step_by(2);
-    let (even_nul, odd_nul) = (at(0).all(|b| *b == 0), at(1).all(|b| *b == 0));
-    let (even_ok, odd_ok) = (at(0).all(|b| *b != 0), at(1).all(|b| *b != 0));
-    if odd_nul && even_ok {
+    let n = head.len() / 2;
+    let nuls = |par: usize| {
+        head.iter()
+            .skip(par)
+            .step_by(2)
+            .filter(|b| **b == 0)
+            .count()
+    };
+    let (even, odd) = (nuls(0), nuls(1));
+    if odd * 10 >= n * 9 && even * 10 <= n {
         Some(true)
-    } else if even_nul && odd_ok {
+    } else if even * 10 >= n * 9 && odd * 10 <= n {
         Some(false)
     } else {
         None

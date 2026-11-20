@@ -161,9 +161,16 @@ def test_open_through_wasm_equals_the_cli_for_every_fixture_and_feeding_variant(
 def test_open_refuses_a_file_over_the_limit_the_same_way_in_the_wasm_and_the_cli(pkg, tmp_path):
     """8 MiB is the limit of `open/1`: the `.wasm` throws `error.open.tooBig` with the size, the CLI answers one `error/1` with exit 1."""
     big = tmp_path / "big.cdxml"
-    big.write_bytes(b" " * ((8 << 20) + 1))
+    size = (8 << 20) + 1000
+    big.write_bytes(b" " * size)
+    refusal = {"error_key": "error.open.tooBig", "params": {"size": str(size), "limit": str(8 << 20)}}
     site = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), str(big), "open"], cwd=ROOT, capture_output=True, encoding="utf-8")
-    assert site.returncode == 1 and json.loads(site.stderr) == {"error_key": "error.open.tooBig", "params": {"size": str((8 << 20) + 1), "limit": str(8 << 20)}}
+    assert site.returncode == 1 and json.loads(site.stderr) == refusal
+    # the size alone, as the page asks it before reading a dropped file: the same refusal, and the limit when the file is read
+    asked = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), str(size), "size"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert asked.returncode == 1 and json.loads(asked.stderr) == refusal
+    assert json.loads(run("node", "tests/molkit_wasm_node.js", str(pkg), "1000", "size")) == {"limit": 8 << 20}
     c = subprocess.run(cli_argv("mol", "open", str(big)), cwd=ROOT, capture_output=True, encoding="utf-8")
     e = json.loads(c.stdout)
     assert c.returncode == 1 and e["schema"] == "error/1" and e["error_key"] == "error.open.tooBig", c.stdout
+    assert e["params"] == refusal["params"], c.stdout

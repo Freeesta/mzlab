@@ -321,6 +321,21 @@ fn open_route_gives_the_bytes_of_the_function_for_every_fixture_and_variant() {
         &[],
     );
     assert_eq!(err.err().map(|e| e.key), Some("error.open.tooBig"));
+    // the size alone, as the page asks it before reading a dropped file: the limit, or the refusal with the real size
+    let max = mzlab_feat::chem::structure_file::MAX_BYTES;
+    let asked = |size: usize| {
+        st.rpc(
+            "feat/grafo",
+            &json!({"kind": "open", "request": {"size": size}}),
+            &[],
+        )
+    };
+    assert_eq!(text(asked(1000).unwrap()), format!("{{\"limit\":{max}}}"));
+    let Err(e) = asked(max + 1000) else {
+        panic!("a file over the limit is refused")
+    };
+    assert_eq!(e.key, "error.open.tooBig");
+    assert_eq!(e.params[0], ("size", (max + 1000).to_string()));
     let bad = st.rpc(
         "feat/grafo",
         &json!({"kind": "open", "request": {"data": "not base64!"}}),

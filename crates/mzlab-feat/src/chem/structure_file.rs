@@ -6,6 +6,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out};
+use std::collections::BTreeSet;
 
 #[path = "structure_charset.rs"]
 mod charset;
@@ -38,6 +39,7 @@ pub struct Opened {
 pub fn tidy_cdxml(text: &str) -> (String, Vec<String>) {
     let (mut out, mut removed, mut i, mut root) =
         (String::with_capacity(text.len()), Vec::new(), 0, false);
+    let mut seen = BTreeSet::new(); // the names in `removed`, for a lookup that stays fast with many distinct names
     while i < text.len() {
         let rest = &text[i..];
         let k = rest.find('<').unwrap_or(rest.len());
@@ -61,7 +63,7 @@ pub fn tidy_cdxml(text: &str) -> (String, Vec<String>) {
                         return (out, removed);
                     }
                 }
-                out.push_str(&strip_empty(tag, &mut removed));
+                out.push_str(&strip_empty(tag, &mut removed, &mut seen));
                 i += n;
             }
             Markup::Text => {
@@ -189,7 +191,7 @@ fn is_root(tag: &str) -> bool {
 
 /// The tag without its attributes of empty value (`name=""` or `name=''`, with the white space before it). The tag is read left to right in
 /// tokens, a quoted string is skipped whole wherever it stands, so a quoted value is never read as attributes.
-fn strip_empty(tag: &str, removed: &mut Vec<String>) -> String {
+fn strip_empty(tag: &str, removed: &mut Vec<String>, seen: &mut BTreeSet<String>) -> String {
     let b = tag.as_bytes();
     let (mut out, mut copied, mut p) = (String::new(), 0, name_end(b, 1));
     while p < b.len() {
@@ -223,9 +225,15 @@ fn strip_empty(tag: &str, removed: &mut Vec<String>) -> String {
         let close = open + 1 + tag[open + 1..].find(q as char).unwrap_or(b.len());
         if close == open + 1 {
             out.push_str(&tag[copied..p]);
+            // the next token must not fuse with the name before the dropped attribute (`a=""x=""`)
+            if b.get(close + 1)
+                .is_some_and(|c| !c.is_ascii_whitespace() && *c != b'>' && *c != b'/')
+            {
+                out.push(' ');
+            }
             copied = close + 1;
             let name = &tag[start..end];
-            if !removed.iter().any(|n| n == name) {
+            if seen.insert(name.to_string()) {
                 removed.push(name.to_string());
             }
         }
@@ -238,14 +246,27 @@ fn strip_empty(tag: &str, removed: &mut Vec<String>) -> String {
 /// The largest structure file read (8 MiB): the engine runs on the page thread of the site, and no drawing file comes near it.
 pub const MAX_BYTES: usize = 8 << 20;
 
+/// Refuses a file of this size (`error.open.tooBig`, the real size and the limit in the error): the one test the engine, the CLI (from the file
+/// metadata) and the site (from `file.size`, before the file is read) all run.
+pub fn check_size(size: u64) -> Result<()> {
+    if size > MAX_BYTES as u64 {
+        return Err(Error::new("error.open.tooBig")
+            .with("size", size)
+            .with("limit", MAX_BYTES));
+    }
+    Ok(())
+}
+
+/// `{"limit": L}` when a file of this size is read, else the `error.open.tooBig` of `check_size`.
+pub fn size_json(size: u64) -> Result<String> {
+    check_size(size)?;
+    Ok(format!("{{\"limit\":{MAX_BYTES}}}"))
+}
+
 /// What the editor reads for the bytes of a structure file, and what was changed on the way; a file over `MAX_BYTES` is refused
 /// (`error.open.tooBig`, the size and the limit in the error), never cut.
 pub fn open_bytes(bytes: &[u8]) -> Result<Opened> {
-    if bytes.len() > MAX_BYTES {
-        return Err(Error::new("error.open.tooBig")
-            .with("size", bytes.len())
-            .with("limit", MAX_BYTES));
-    }
+    check_size(bytes.len() as u64)?;
     if bytes.starts_with(CDX_MAGIC) {
         return Ok(Opened {
             text: base64(bytes),
@@ -306,10 +327,18 @@ pub fn open_json_bytes(bytes: &[u8]) -> Result<String> {
     open_bytes(bytes).map(|o| o.json())
 }
 
-/// `open/1` of a request `{"data": "<the file, base64>"}` (the app has no binary request): the same text as `open_json_bytes`.
+/// `open/1` of a request `{"data": "<the file, base64>"}` (the app has no binary request): the same text as `open_json_bytes`. A request
+/// `{"size": N}` asks only whether a file of N bytes is read: `{"limit": L}` when it is, else the `error.open.tooBig` of `check_size`.
 pub fn open_json(request: &str) -> Result<String> {
     let bad = || Error::new("error.open.request");
     let v = json::parse(request.as_bytes()).map_err(|_| bad())?;
+    if let Some(n) = v.get("size").and_then(json::Value::f64) {
+        return if n >= 0.0 {
+            size_json(n as u64)
+        } else {
+            Err(bad())
+        };
+    }
     let bytes =
         unbase64(v.get("data").and_then(json::Value::str).ok_or_else(bad)?).ok_or_else(bad)?;
     open_json_bytes(&bytes)

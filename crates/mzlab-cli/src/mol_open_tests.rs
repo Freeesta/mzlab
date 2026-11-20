@@ -70,6 +70,21 @@ fn a_file_over_the_limit_is_one_error_document_exit_1_and_an_unreadable_input_ex
 }
 
 #[test]
+fn the_refusal_of_a_big_file_reports_its_real_size() {
+    let max = mzlab_feat::chem::structure_file::MAX_BYTES;
+    let p = file("bigger.cdxml", &vec![b' '; max + 1000]);
+    let o = run(&["mol", "open", p.to_str().unwrap()]);
+    std::fs::remove_file(&p).ok();
+    assert_eq!(o.code, 1);
+    let out = String::from_utf8(o.stdout).unwrap();
+    assert!(
+        out.contains(&format!("\"size\":\"{}\"", max + 1000))
+            && out.contains(&format!("\"limit\":\"{max}\"")),
+        "{out}"
+    );
+}
+
+#[test]
 fn a_file_read_as_it_is_exits_0_under_check() {
     let p = file("b.cdxml", b"<CDXML Name=\"a\"><page/></CDXML>");
     assert_eq!(

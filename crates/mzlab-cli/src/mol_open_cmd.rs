@@ -22,23 +22,35 @@ in this order. A UTF-16 declaration is rewritten as UTF-8. Binary CDX (VjCD) com
 fidelity to any drawing program is claimed. A file over 8 MiB is refused (error.open.tooBig, exit 1): the page reads it on its own thread.
 Exit codes: 0 ok, 1 --check and a change or a file over the limit, 2 usage, 4 file or standard input unreadable, 6 --out not writable.";
 
-/// The bytes of `src` (`-`: the standard input), at most one byte over the limit so that the engine refuses a file that is too large without it being read whole.
+/// The bytes of `src` (`-`: the standard input). A file over the limit is refused with its real size, from the file metadata and without reading it;
+/// the standard input is read to one byte over the limit, then only counted, so the error has the real size and memory stays bounded.
 fn read_input(src: &str) -> std::result::Result<Vec<u8>, Outcome> {
+    use mzlab_feat::chem::structure_file::{check_size, MAX_BYTES};
     use std::io::Read;
-    let limit = mzlab_feat::chem::structure_file::MAX_BYTES as u64 + 1;
+    let limit = MAX_BYTES as u64 + 1;
     let unreadable = |e: std::io::Error| {
         let path = if src == "-" { "standard input" } else { src };
         Outcome::fail_error(
             &mzlab_core::Error::new("err.cli.file").with("path", format!("{path}: {e}")),
         )
     };
+    let refuse = |size: u64| check_size(size).map_err(|e| Outcome::fail_error(&e));
     let mut b = Vec::new();
     if src == "-" {
-        std::io::stdin().take(limit).read_to_end(&mut b)
+        let mut s = std::io::stdin();
+        (&mut s)
+            .take(limit)
+            .read_to_end(&mut b)
+            .map_err(unreadable)?;
+        if b.len() as u64 >= limit {
+            let more = std::io::copy(&mut s, &mut std::io::sink()).map_err(unreadable)?;
+            refuse(b.len() as u64 + more)?;
+        }
     } else {
-        std::fs::File::open(src).and_then(|f| f.take(limit).read_to_end(&mut b))
+        let f = std::fs::File::open(src).map_err(unreadable)?;
+        refuse(f.metadata().map_err(unreadable)?.len())?;
+        f.take(limit).read_to_end(&mut b).map_err(unreadable)?;
     }
-    .map_err(unreadable)?;
     Ok(b)
 }
 

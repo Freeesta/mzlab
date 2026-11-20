@@ -326,6 +326,18 @@ fn utf16_without_a_byte_order_mark_is_told_by_its_nul_bytes() {
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?><CDXML><s>\u{fc}</s></CDXML>"
         );
     }
+    // a few characters past U+00FF in the head (a Greek name, a U+0100 with a NUL low byte) do not hide it
+    let xml = format!(
+        "<CDXML BondLength=\"\"><s>\u{3b1}\u{3b2} \u{100}</s><t>{}</t></CDXML>",
+        "x".repeat(300)
+    );
+    let mut b = Vec::new();
+    for u in xml.encode_utf16() {
+        b.extend(u.to_le_bytes());
+    }
+    let o = open_ok(&b);
+    assert_eq!(o.changes[0], Change::Charset("UTF-16LE".into()));
+    assert!(o.text.contains("\u{3b1}\u{3b2} \u{100}") && !o.text.contains('\0'));
     // plain text with a stray NUL is not UTF-16
     assert!(open_ok(b"<CDXML a=\"b\"><s>x\0y</s></CDXML>")
         .changes
@@ -343,12 +355,9 @@ fn the_names_are_an_array_and_each_fix_carries_its_own_fields() {
         j,
         r#"{"schema":"open/1","text":"<CDXML/>","changes":[{"fix":"charset","charset":"UTF-16"},{"fix":"empty","names":["a","b"]}]}"#
     );
-    assert!(
-        open_json_bytes(b"<CDXML>\xff</CDXML>")
-            .unwrap()
-            .contains(r#"{"fix":"replaced","count":1}"#)
-            == false
-    ); // no declaration: windows-1252, nothing replaced
+    assert!(!open_json_bytes(b"<CDXML>\xff</CDXML>")
+        .unwrap()
+        .contains(r#"{"fix":"replaced","count":1}"#)); // no declaration: windows-1252, nothing replaced
     assert!(
         open_json_bytes(b"<?xml encoding=\"utf-8\"?><CDXML>\xff</CDXML>")
             .unwrap()
@@ -426,4 +435,59 @@ fn a_file_over_the_cap_is_refused_with_its_size() {
     );
     assert_eq!(open_json_bytes(&big).unwrap_err().key, "error.open.tooBig");
     assert!(open_bytes(&big[..MAX_BYTES]).is_ok());
+}
+
+#[test]
+fn a_dropped_attribute_never_fuses_its_neighbours() {
+    for (input, text) in [
+        (r#"<CDXML a=""x="1"/>"#, r#"<CDXML x="1"/>"#),
+        (r#"<CDXML a=""x=""/>"#, r#"<CDXML x=""/>"#),
+        (r#"<CDXML a="" x=""/>"#, r#"<CDXML/>"#),
+        (r#"<CDXML a=""/>"#, r#"<CDXML/>"#),
+        (r#"<CDXML a=""b="2"/>"#, r#"<CDXML b="2"/>"#),
+    ] {
+        assert_eq!(tidy(input).0, text, "{input}");
+    }
+    assert!(tidy(r#"<CDXML a=""x=""/>"#).0.starts_with("<CDXML "));
+}
+
+#[test]
+fn many_distinct_empty_attribute_names_are_read_in_linear_time() {
+    let n = 200_000;
+    let t = format!(
+        "<CDXML{}/>",
+        (0..n).map(|i| format!(" a{i}=\"\"")).collect::<String>()
+    );
+    let start = std::time::Instant::now();
+    let (out, removed) = tidy(&t);
+    let took = start.elapsed();
+    assert!(
+        took < std::time::Duration::from_secs(2),
+        "{} bytes took {took:?}",
+        t.len()
+    );
+    assert_eq!((out.as_str(), removed.len()), ("<CDXML/>", n));
+    assert_eq!(
+        (removed[0].as_str(), removed[n - 1].as_str()),
+        ("a0", "a199999")
+    );
+}
+
+#[test]
+fn the_size_question_gives_the_limit_or_the_refusal_with_the_size() {
+    assert_eq!(
+        open_json(r#"{"size": 1000}"#).unwrap(),
+        format!("{{\"limit\":{MAX_BYTES}}}")
+    );
+    assert_eq!(
+        size_json(MAX_BYTES as u64).unwrap(),
+        format!("{{\"limit\":{MAX_BYTES}}}")
+    );
+    let e = open_json(&format!(r#"{{"size": {}}}"#, 20 << 20)).unwrap_err();
+    assert_eq!(e.key, "error.open.tooBig");
+    assert_eq!(e.params[0], ("size", (20u64 << 20).to_string()));
+    assert_eq!(
+        open_json(r#"{"size": -1}"#).unwrap_err().key,
+        "error.open.request"
+    );
 }

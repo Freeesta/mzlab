@@ -6,6 +6,23 @@ from pathlib import Path
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 
 
+# an engine that refuses over a limit of 100 bytes, in place of ./disegno-verifica.js (which needs a window and the `.wasm`): node's resolve hook gives the page code this module
+STUB_ENGINE = (
+    "export const openSize = async n => { if (n > 100) throw JSON.stringify({ error_key: 'error.open.tooBig', params: { size: String(n), limit: '100' } }); return { limit: 100 }; };"
+    "export const openFile = async b => ({ text: new TextDecoder().decode(b), changes: [] });"
+    "export const message = e => 'refused ' + JSON.parse(e).params.size;"
+)
+
+
+def run_stub(body):
+    hooks = "export async function resolve(s, c, next) { return s.endsWith('disegno-verifica.js') ? { url: 'data:text/javascript,' + encodeURIComponent(process.env.STUB), shortCircuit: true } : next(s, c); }"
+    reg = "import { register } from 'node:module'; register('data:text/javascript,' + encodeURIComponent(process.env.HOOKS));"
+    r = subprocess.run(["node", "--input-type=module", "-e", reg + "\nawait import('data:text/javascript,' + encodeURIComponent(process.env.MAIN));"],
+                       capture_output=True, encoding="utf-8", env={**__import__("os").environ, "STUB": STUB_ENGINE, "HOOKS": hooks, "MAIN": f"import {{ mountImport, readStructure }} from {(WEB / 'disegno-file.js').as_uri()!r};\n(async () => {{ console.log(JSON.stringify(await (async () => {{ {body} }})())); }})();"})
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
 def run(body):
     src = f"import {{ changesNote, isCdxml, mountImport }} from {(WEB / 'disegno-file.js').as_uri()!r};\n(async () => {{ console.log(JSON.stringify(await (async () => {{ {body} }})())); }})();"
     r = subprocess.run(["node", "--input-type=module", "-e", src], capture_output=True, encoding="utf-8")
@@ -58,3 +75,16 @@ def test_a_paste_into_a_text_field_is_never_taken_over_and_a_cdxml_paste_on_the_
     const plain = ev({ closest: () => null, isContentEditable: false }, "CC(=O)O"); L.paste(plain); out.plain = plain.prevented;
     return out;""")
     assert got == {"textarea": False, "input": False, "select": False, "editable": False, "canvas": True, "plain": False}, got
+
+
+def test_a_drop_over_the_engines_limit_is_refused_before_the_file_is_read():
+    got = run_stub(WIRED + """
+    let read = 0;
+    const file = size => ({ name: "big.cdxml", size, arrayBuffer: async () => { read++; return new TextEncoder().encode("<CDXML/>").buffer; } });
+    const drop = f => ({ dataTransfer: { files: [f], getData: () => "" }, preventDefault() {}, stopPropagation() {} });
+    await L["body:drop"](drop(file(2e9)));
+    const refused = { read, notes: notes.slice() };
+    await L["body:drop"](drop(file(50)));
+    return { refused, after: { read, added } };""")
+    assert got["refused"] == {"read": 0, "notes": ['draw.import.failed{"message":"refused 2000000000"}']}, got
+    assert got["after"] == {"read": 1, "added": ["<CDXML/>"]}, got
