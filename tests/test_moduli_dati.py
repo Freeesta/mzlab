@@ -120,3 +120,42 @@ def test_measure_does_not_write_if_missing_or_over(tmp_path, monkeypatch):
 
 def test_every_module_has_its_measure():
     assert [n for n, r in moduli.carica().items() if "misura" not in r] == []
+
+
+def _mod(cap, exception=None):
+    r = {"tetto": cap}
+    if exception is not None:
+        r["exception"] = exception
+    return {"chem": r}
+
+
+EXC = {"cap": 655360, "date": "2026-11-20", "reason": "owner decision 20 Nov 2026, sci-form 2.0.0"}
+
+
+def test_exception_lets_exactly_its_cap_through():
+    """(a) chem at 655 360 B passes with the entry; the line is printed with its reason."""
+    out = moduli.cambi(_mod(655360, EXC), _mod(569344))
+    assert len(out) == 1 and not out[0].startswith("FAIL") and "EXCEPTION 2026-11-20" in out[0]
+
+
+def test_same_jump_without_the_entry_fails():
+    """(b) the same jump without the entry, or with an entry for another cap, still fails."""
+    assert moduli.cambi(_mod(655360), _mod(569344))[0].startswith("FAIL")
+    assert moduli.cambi(_mod(655360, dict(EXC, cap=640000)), _mod(569344))[0].startswith("FAIL")
+    assert moduli.cambi(_mod(660000, EXC), _mod(569344))[0].startswith("FAIL")
+
+
+def test_other_module_over_the_rule_still_fails():
+    """(c) another module over 1.10 x fails; the chem entry gives it nothing."""
+    mod = {"chem": {"tetto": 655360, "exception": EXC}, "motore": {"tetto": 2_600_000}}
+    base = {"chem": {"tetto": 569344}, "motore": {"tetto": 2_300_000}}
+    out = moduli.cambi(mod, base)
+    assert [x.startswith("FAIL") for x in out if "motore" in x] == [True]
+    assert not any(x.startswith("FAIL") for x in out if x.startswith("chem"))
+
+
+def test_exception_shape_is_checked():
+    rec = {"uscita": "u", "pacchetto": "p", "wasm_opt": "@motore", "parte": "a", "tetto": 655360, "nota": "n"}
+    assert moduli.errori({"chem": dict(rec, exception=EXC)}) == []
+    assert moduli.errori({"chem": dict(rec, exception=dict(EXC, cap=1))})
+    assert moduli.errori({"chem": dict(rec, exception={"cap": 655360})})
