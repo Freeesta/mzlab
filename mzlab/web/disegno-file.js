@@ -5,13 +5,14 @@
 // dropped, because Indigo draws nothing from a file that has one. Binary CDX (starts with "VjCD") changes nothing: it goes in as base64, the form the Open dialog gives it.
 const CDX_MAGIC = [0x56, 0x6a, 0x43, 0x44];
 
-/** Drops the attributes with an empty value from every start tag of a CDXML text (a quoted value may hold `>`, `<` or the other quote). Other text comes back unchanged.
+/** Drops the attributes with an empty value from every start tag of a CDXML text (a quoted value may hold `>`, `<` or the other quote; comments and CDATA sections are left as they are). Other text comes back unchanged.
  * @param {string} text @returns {{ text: string, removed: string[] }} `removed`: the attribute names, each once */
 export function tidyCdxml(text) {
   if (!/<CDXML[\s>]/.test(text)) return { text, removed: [] };
   const removed = new Set();
   const attr = /(\s+)([A-Za-z_][\w.:-]*)(\s*=\s*)("[^"]*"|'[^']*')/g;
-  const out = text.replace(/<[A-Za-z](?:"[^"]*"|'[^']*'|[^<>"'])*>/g, tag => tag.replace(attr, (all, _ws, name, _eq, value) => {
+  // comments and CDATA sections come first in the pattern so that markup written inside them is never read as a tag
+  const out = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[A-Za-z](?:"[^"]*"|'[^']*'|[^<>"'])*>/g, tag => tag.startsWith("<!") ? tag : tag.replace(attr, (all, _ws, name, _eq, value) => {
     if (value.length > 2) return all;
     removed.add(name); return "";
   }));

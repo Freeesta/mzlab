@@ -94,6 +94,16 @@ try:
             data = base.replace(frag, many).encode(); assert len(data) > 70000
             got, note = drop(data, "big.cdxml"); assert got["atoms"] == 60 * 16 and got["fragments"] == 120, got
         step("a 70 kB file with 60 pairs of molecules", big)
+        # the paste guard: a single line of CDXML is drawn, any other single line that starts with "<" is a name or junk and stays out of Ketcher
+        def one_line():
+            got, note = paste(" ".join((DATA / "aromatics.cdxml").read_text(encoding="utf-8").split())); same(got, "aromatics.cdxml"); assert "BondLength" in note, note
+        step("paste: one line of CDXML is drawn", one_line)
+        def blocked():
+            clear(); pg.evaluate(PASTE, "<foo bar>")
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=30000)
+            assert pg.inner_text("#smi-warn") == "Compound not found and not a SMILES"
+            assert pg.evaluate(f"{KJ}.editor.struct().isBlank()"), "the canvas changed"
+        step("paste: a single line that starts with < and is not CDXML is blocked", blocked)
         # a file that is not a structure: the notice names it and the canvas stays as it was (the drawing already on it is the same before and after)
         KET = f"{KJ}.getKet()"
         def refused(data, name):

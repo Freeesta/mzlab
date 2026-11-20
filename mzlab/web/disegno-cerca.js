@@ -31,7 +31,7 @@ export async function nameToSmiles(text, note, t) {
 export function guardPaste(doc, note) {
   doc.addEventListener("paste", e => {
     const t = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").trim();
-    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || /<CDXML[\s>]/.test(t) || isStructureText(t)) return;
+    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || /^(?:<\?xml[^>]*\?>\s*)?(?:<!DOCTYPE[^>]*>\s*)?<CDXML[\s>]/.test(t) || isStructureText(t)) return;
     e.preventDefault(); e.stopImmediatePropagation(); note();
   }, true);
 }

@@ -35,6 +35,11 @@ def test_a_quoted_value_may_hold_a_bracket_or_the_other_quote_and_is_never_edite
     assert got[2] == {"text": '<CDXML><t v="a b=&quot;&quot;"/><u /></CDXML>', "removed": ["w"]}
 
 
+def test_markup_inside_a_comment_or_a_cdata_section_is_not_a_tag():
+    got = run("""return tidyCdxml('<CDXML a=""><!-- <x b=""> --><s><![CDATA[<y c="">]]></s></CDXML>');""")
+    assert got == {"text": '<CDXML><!-- <x b=""> --><s><![CDATA[<y c="">]]></s></CDXML>', "removed": ["a"]}
+
+
 def test_empty_attributes_go_from_every_start_tag_not_only_the_root():
     got = run("""return tidyCdxml('<CDXML><page><fragment id="1" Name=""><n z=""/></fragment></page></CDXML>');""")
     assert got == {"text": "<CDXML><page><fragment id=\"1\"><n/></fragment></page></CDXML>", "removed": ["Name", "z"]}
