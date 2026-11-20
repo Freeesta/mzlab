@@ -387,6 +387,17 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     results.append(("data used by the e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · no .dam")]))
 
 
+def checks_first(results, rapida: bool, night: bool) -> None:
+    """Syntax, texts, limits, pytest and prova_hr. The night (--parte) skips pytest: its own jobs run it, and a second serial one took 1800 s of part 1 (50 e2e not run)."""
+    js_syntax(results)
+    i18n(results)
+    codice(results)
+    if not night:
+        pytest(results, 1800)
+    if not rapida:
+        hr_round(results)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rapida", action="store_true", help="syntax + pytest + e2e3")
@@ -420,13 +431,7 @@ def main() -> None:
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
     if not a.fumo and not a.ultimi_falliti and not a.solo and (not parte or parte[0] == 1):      # --solo = e2e only: `--solo e2e_rust` after part 5 ran a second pytest past 1800 s
-        js_syntax(results)
-        i18n(results)
-        codice(results)
-        if not parte:      # the night (--parte) has its own `pytest` jobs on five setups: a second serial pytest here took 1800 s of part 1 and starved its e2e (run 44635648355: 50 e2e not run)
-            pytest(results, 1800)
-        if not a.rapida:
-            hr_round(results)
+        checks_first(results, a.rapida, bool(parte))
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.rapida or a.fumo else set())
         if a.ultimi_falliti and not only:
