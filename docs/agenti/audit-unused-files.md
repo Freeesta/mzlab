@@ -28,7 +28,7 @@ No reference at all; deleting changes no build, test, site or app.
 Only self, sibling-README or doc references; no code, test, workflow or build reads them.
 
 ### Assistant study data (14 files, 30 100 bytes)
-Proof: `git grep -nE 'copioni|oro/(G|U|fumo)|insiemi\.json' -- ':!docs/studi'` gives only `tools/italian_words.tsv` (dictionary) and a base64 match inside `mzlab/web/esempi/HRMS_t000.mzML`. They are described in `docs/studi/assistente-dati/06-valutazione.md` and `prompt/00_esecuzione-test.md` for an `assist run --copione` command that `mzlab-cli` does not have. `oro/R.jsonl` and `reg/*.jsonl` are live (`llm_scope_tests.rs`, `llm_assist_session_tests.rs`).
+Proof: `git grep -nE 'copioni|oro/(G|U|fumo)|insiemi\.json' -- ':!docs/studi'` gives only `tools/italian_words.tsv` (dictionary) and a base64 match inside `mzlab/web/esempi/HRMS_t000.mzML`. They are described in `docs/agenti/llm-eval.md`; `mzlab-cli` has no runner for them. `oro/R.jsonl` and `reg/*.jsonl` are live (`llm_scope_tests.rs`, `llm_assist_session_tests.rs`).
 
 | File | Bytes | Last change |
 |---|---|---|
@@ -124,7 +124,6 @@ Oldest or zero-basename-reference groups that are live, with what reads them.
 | `fuzz/regressioni/` (3) | 89 557 | 2026-10-31 | `crates/mzlab-lettori/tests/fuzz_readers.rs` reads the folder. |
 | `vendor/opentfraw/` (33) | 509 320 | 2026-10-12 | Path dependency of `mzlab-core` feature `thermo`; all its modules are reached. |
 | `crates/mzlab-desktop/icons/` (6) | 394 257 | 2026-10-10 | Tauri `icon` list in `tauri.conf.json`. |
-| `docs/studi/assistente-dati/prompt/` (11) | 51 467 | 2026-10-22 | `crates/mzlab-llm/tests/assist.rs` reads the folder (prompts are exact copies). |
 | `mzlab/web/lang/{it,en,contesto}/` (126) | 892 860 | 2026-10-24 | Loaded by the list in `lang/it.js`/`lang/en.js`; context read by `tools/controlla_i18n.py` and `tools/lang_catalog.py`. |
 | `tools/moduli/*.toml` (32) | 8 369 | 2026-11-14 | `tools/build_feat_wasm.sh`, `tools/build_lettori_wasm.sh`, `tools/ci_wasm_dimensioni.py`, `tests/test_moduli_dati.py`. |
 | `proxy/test/*.test.mjs` (5) | 24 456 | 2026-11-03 | `proxy/test/all.mjs` imports every `*.test.mjs`. |
