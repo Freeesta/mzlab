@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML
+ id="1"
+ BondLength=""
+><page
+ id="2"
+><fragment
+ id="3"
+><n
+ id="4"
+ p="57.60 -97.88"
+/><n
+ id="5"
+ p="43.20 -72.94"
+/><n
+ id="6"
+ p="57.60 -48"
+ Element="7"
+/><n
+ id="7"
+ p="14.40 -72.94"
+/><n
+ id="8"
+ p="0 -97.88"
+ Element="8"
+/><n
+ id="9"
+ p="0 -48"
+ Element="8"
+/><n
+ id="10"
+ p="96 28.80"
+/><n
+ id="11"
+ p="120.94 14.40"
+/><n
+ id="12"
+ p="145.88 28.80"
+/><n
+ id="13"
+ p="170.82 14.40"
+/><n
+ id="14"
+ p="170.82 -14.40"
+/><n
+ id="15"
+ p="145.88 -28.80"
+/><n
+ id="16"
+ p="120.94 -14.40"
+/><n
+ id="17"
+ p="96 -28.80"
+ Element="8"
+/><b
+ id="18"
+ B="4"
+ E="5"
+ Display="WedgedHashEnd"
+/><b
+ id="19"
+ B="5"
+ E="6"
+/><b
+ id="20"
+ B="5"
+ E="7"
+/><b
+ id="21"
+ B="7"
+ E="8"
+ Order="2"
+/><b
+ id="22"
+ B="7"
+ E="9"
+/><b
+ id="23"
+ B="10"
+ E="11"
+ Display="WedgedHashEnd"
+/><b
+ id="24"
+ B="11"
+ E="12"
+/><b
+ id="25"
+ B="12"
+ E="13"
+/><b
+ id="26"
+ B="13"
+ E="14"
+/><b
+ id="27"
+ B="14"
+ E="15"
+/><b
+ id="28"
+ B="15"
+ E="16"
+/><b
+ id="29"
+ B="16"
+ E="17"
+ Display="WedgeBegin"
+/><b
+ id="30"
+ B="16"
+ E="11"
+/></fragment></page></CDXML>

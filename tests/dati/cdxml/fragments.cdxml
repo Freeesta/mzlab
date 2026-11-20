@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML
+ id="1"
+ BondLength=""
+><page
+ id="2"
+><fragment
+ id="3"
+><n
+ id="4"
+ p="0 -44.14"
+/><n
+ id="5"
+ p="24.94 -58.54"
+/><n
+ id="6"
+ p="24.94 -87.34"
+ Element="8"
+/><n
+ id="7"
+ p="49.88 -44.14"
+ Element="8"
+ NumHydrogens="0"
+ Charge="-1"
+/><n
+ id="8"
+ p="88.28 -106.54"
+ Element="11"
+ NumHydrogens="0"
+ Charge="1"
+/><n
+ id="9"
+ p="184.28 0"
+/><n
+ id="10"
+ p="169.88 -24.94"
+/><n
+ id="11"
+ p="141.08 -24.94"
+/><n
+ id="12"
+ p="126.68 0"
+/><n
+ id="13"
+ p="141.08 24.94"
+/><n
+ id="14"
+ p="169.88 24.94"
+/><n
+ id="15"
+ p="222.68 4.80"
+/><n
+ id="16"
+ p="247.62 -9.60"
+/><n
+ id="17"
+ p="272.57 4.80"
+ Element="8"
+/><b
+ id="18"
+ B="4"
+ E="5"
+/><b
+ id="19"
+ B="5"
+ E="6"
+ Order="2"
+/><b
+ id="20"
+ B="5"
+ E="7"
+/><b
+ id="21"
+ B="9"
+ E="10"
+/><b
+ id="22"
+ B="10"
+ E="11"
+ Order="2"
+/><b
+ id="23"
+ B="11"
+ E="12"
+/><b
+ id="24"
+ B="12"
+ E="13"
+ Order="2"
+/><b
+ id="25"
+ B="13"
+ E="14"
+/><b
+ id="26"
+ B="15"
+ E="16"
+/><b
+ id="27"
+ B="16"
+ E="17"
+/><b
+ id="28"
+ B="14"
+ E="9"
+ Order="2"
+/></fragment></page></CDXML>

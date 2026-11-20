@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE CDXML SYSTEM "https://static.chemistry.revvitycloud.com/cdxml/CDXML.dtd" >
+<CDXML
+ id="1"
+ BondLength=""
+><page
+ id="2"
+><fragment
+ id="3"
+><n
+ id="4"
+ p="49.88 0"
+/><n
+ id="5"
+ p="24.94 14.40"
+ Element="8"
+/><n
+ id="6"
+ p="74.82 -14.40"
+ Element="1"
+/><n
+ id="7"
+ p="64.28 24.94"
+ Element="1"
+/><n
+ id="8"
+ p="35.48 -24.94"
+ Element="1"
+/><n
+ id="9"
+ p="0 0"
+ Element="1"
+/><b
+ id="10"
+ B="4"
+ E="5"
+/><b
+ id="11"
+ B="4"
+ E="6"
+/><b
+ id="12"
+ B="4"
+ E="7"
+/><b
+ id="13"
+ B="4"
+ E="8"
+/><b
+ id="14"
+ B="5"
+ E="9"
+/></fragment></page></CDXML>

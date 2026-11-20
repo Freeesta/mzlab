@@ -23,10 +23,17 @@ The core is in CLAUDE.md; the rest of the Drawing area is in `drawing.md`.
 
 ## What is not copied from ChemDraw
 - No resource (icons, cursors, templates, style sheets, example documents) and no text (help, tooltips, menus, notices): the words are ours, in `lang/`. No trademark as a feature name ("ChemDraw-style", "ChemDraw-compatible"). No proprietary algorithm rebuilt from the documentation (NMR rules, ClogP, commercial pKa): estimates come from published methods (Crippen) and say "estimate"; journal formats are described with their numbers.
-- **ChemDraw-format files** (`.cdxml` text, binary `.cdx`) open in the Drawing tab through Ketcher's own reader (Indigo), by three routes:
-  - Ketcher's Open dialog (its file chooser has no `accept` filter).
-  - A drop on the canvas (`draw.js`): `structureText` of `disegno-file.js` reads the file; one starting with `VjCD` goes in as base64, as the Open dialog does. No format is parsed in JS.
-  - Pasted text.
-  A file Indigo cannot read leaves the canvas as it was and shows `draw.import.unreadable` with the file name.
-  Page only (the editor is Ketcher in an iframe): no Rust or CLI route. Synthetic fixture `tests/dati/benzene_label.cdxml`, test `e2e_disegno_cdxml`.
+- **ChemDraw-format files** (`.cdxml` text, binary `.cdx`) open in the Drawing tab through Ketcher's own reader (Indigo), by three routes, all wired by `mountImport` of `disegno-file.js`:
+  - Ketcher's Open dialog (its file chooser has no `accept` filter): a `.cdxml` that needs a change below is swapped for the changed copy before Ketcher reads the input.
+  - A drop on the canvas: `readStructure` reads the file; one starting with `VjCD` goes in as base64, as the Open dialog does.
+  - Pasted text: only CDXML with an empty attribute is added by `mountImport`; any other paste is Ketcher's own.
+  - No format is parsed in JS. Three changes come first and each is named in the notice `draw.import.changed` under the SMILES field, never silently: empty attributes dropped from the start tags (RDKit writes `BondLength=""` and Indigo then draws nothing, without an error), UTF-16 and 8-bit text decoded as the byte-order mark or the XML declaration says (a UTF-16 declaration is rewritten as UTF-8).
+  - A file Indigo cannot read leaves the canvas as it was and shows `draw.import.unreadable` with the file name.
+  - Page only (the editor is Ketcher in an iframe): no Rust or CLI route.
+- **What was tried and read** (`e2e_disegno_cdxml_rdkit`, files of `tests/dati/cdxml/` written by `tools/cdxml_fixtures.py` with RDKit's `MolToCDXMLBlock`; `expected.json` holds RDKit's own reading of each file, `MolsFromCDXMLFile`): for every file and every route Ketcher gives the same atom, bond, fragment, charge, isotope and radical counts and the same InChI as RDKit.
+  - Read: aromatic and fused rings, wedge and hash stereo, E and Z double bonds, charges, isotopes (`[2H]` is drawn as the label D), radicals (RDKit writes one unpaired electron as `Radical="Singlet"`, and Ketcher and RDKit both read it as a singlet), spiro, bridged and large rings, several fragments on a page, hydrogens drawn as atoms, two pages, a 70 kB file.
+  - Composed in the generator, not written by RDKit (it has no text or reaction writer), so checked against the CDXML element names and RDKit's reader only: a reaction scheme (two reactants, an arrow with a text, one product: Ketcher gives the arrow and the two sides), the labels OH, NH, NH2, and Ph and OMe as expanded nodes that hold their own fragment.
+  - A label-only node (`NodeType="Unspecified"`, such as Boc) stays a pseudo atom named Boc in Ketcher; RDKit reads the same node as a carbon.
+  - Not covered: files from Open Babel, Marvin, ChemDraw and ChemDoodle, binary `.cdx` from any writer but Ketcher itself, text styles, colours, graphics and everything else that is not a structure.
+  - Two pages with the same ids are not read by Indigo (blank canvas); a very large file loads slowly (400 copies of a two-molecule drawing, 6,400 atoms, took minutes).
 - CDX and CDXML come from Indigo inside Ketcher: never claim fidelity or compatibility with ChemDraw files and no `.cdx` rebuilt in Rust. mzLab writes and documents only open formats: molfile V2000/V3000, SDF, SMILES, InChI, `mol/1`.
