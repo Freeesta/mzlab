@@ -24,10 +24,10 @@ fn node(mz: f64, level: u8) -> GNode {
     }
 }
 
-fn arco(da: usize, a: usize) -> Edge {
+fn arc(from: usize, to: usize) -> Edge {
     Edge {
-        da,
-        a,
+        from,
+        to,
         perdita: 0.0,
         compatibili: vec![],
         formula: None,
@@ -44,7 +44,7 @@ fn graph() -> Graph {
             node(144.04439, 3),
             node(120.5, 2),
         ],
-        archi: vec![arco(0, 1), arco(0, 3), arco(1, 2)],
+        edges: vec![arc(0, 1), arc(0, 3), arc(1, 2)],
         radici: vec![0],
         polarita: 1,
         spettri: vec![SpettroG {

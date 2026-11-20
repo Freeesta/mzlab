@@ -6,13 +6,35 @@
 //! This file holds the operations; `edit_op.rs` reads their fields, `edit_end.rs` builds the record.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::Value;
+use mzlab_core::json::{Out, Value};
 use mzlab_mol::{is_element, Atom};
 
 use super::draw::{Drawn, MAX_ATOMS};
 use super::edit_end::finish;
 use super::edit_op::{clip, fail, pair, r4, Op, MAX_ID};
 use super::edit_set::{weight, Index, Sets, Slot, MAX_BONDS, MAX_OPS, MAX_PATCH};
+
+impl Drawn {
+    /// The molfile of the drawing: the record's, with an alias line for each atom label (V2000 only).
+    pub fn molfile(&self) -> String {
+        let mut t = self.mol.to_molfile(&self.title);
+        if self.labels.is_empty() || t.lines().nth(3).is_some_and(|l| l.contains("V3000")) {
+            return t;
+        }
+        t.truncate(t.len() - "M  END\n".len());
+        for (i, l) in &self.labels {
+            t += &format!("A  {:>3}\n{l}\n", i + 1);
+        }
+        t + "M  END\n"
+    }
+}
+
+/// The `label` of atom `i` in the scene, when the patch set one.
+pub(super) fn put_label(o: &mut Out, d: &Drawn, i: usize) {
+    if let Some((_, l)) = d.labels.iter().find(|l| l.0 == i as u32) {
+        o.raw(",\"label\":").str(l);
+    }
+}
 
 pub(super) struct Ed {
     pub(super) slots: Vec<Slot>,

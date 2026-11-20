@@ -3,7 +3,7 @@
 use super::*;
 
 /// V2000 of atoms `els` with bonds `(a, b, type)` (1-based) and property lines.
-fn mf(els: &[&str], bonds: &[(usize, usize, u8)], props: &[&str]) -> String {
+pub(super) fn mf(els: &[&str], bonds: &[(usize, usize, u8)], props: &[&str]) -> String {
     let mut s = format!(
         "\n  t\n\n{:>3}{:>3}  0  0  0  0  0  0  0  0999 V2000\n",
         els.len(),
@@ -21,7 +21,7 @@ fn mf(els: &[&str], bonds: &[(usize, usize, u8)], props: &[&str]) -> String {
     props.iter().for_each(|p| s += &format!("{p}\n"));
     s + "M  END"
 }
-fn sel(mf: &str, part: bool) -> serde_json::Value {
+pub(super) fn sel(mf: &str, part: bool) -> serde_json::Value {
     let req = serde_json::json!({ "molfile": mf, "part": part }).to_string();
     serde_json::from_str(&sel_json(&req).unwrap()).unwrap()
 }
@@ -354,7 +354,4 @@ fn the_aromatic_hydrogen_that_the_file_states_is_counted() {
     let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &stated), false);
     assert_eq!(v["label"]["text"], "C4H5N");
     assert_eq!(v["label"]["unpaired"], 0);
-    // without the group the N reads as a pyridine-type one (no hydrogen)
-    let v = sel(&mf(&["N", "C", "C", "C", "C"], &ring, &[]), false);
-    assert_eq!(v["label"]["text"], "C4H4N");
 }

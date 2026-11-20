@@ -48,7 +48,7 @@ fn a_side_member_that_cannot_be_read_is_named_and_the_run_read() {
     assert_eq!(l.index(0).unwrap().len(), 3);
     let doc = l.method(0).unwrap();
     assert!(
-        doc.contains("meta.danneggiato") && doc.contains("AcqData/MSTS.xml: could not be read"),
+        doc.contains("meta.damaged") && doc.contains("AcqData/MSTS.xml: could not be read"),
         "{doc}"
     );
 }

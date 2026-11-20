@@ -30,7 +30,7 @@ impl<R: ReadAt> Routes<R> {
     pub(crate) fn with_opts<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let opts = Opts {
             group: group_of(q, "mtol", "mce")?,
-            sum: q.get("modo") == Some("somma"),
+            sum: q.get("mode") == Some("sum"),
         };
         let before = std::mem::replace(&mut self.msn.opts, opts);
         let out = f(self);
@@ -54,7 +54,7 @@ impl<R: ReadAt> Routes<R> {
     /// The filter of a request; `msn:<id>` is a node of the tree of the grouping of the request (`err.msn.node` when there is none).
     pub(crate) fn filtro<'a>(&mut self, f: Option<&'a str>) -> Result<Option<Filter<'a>>> {
         let Some(f) = f else { return Ok(None) };
-        if let Some(id) = f.strip_prefix("canale:") {
+        if let Some(id) = f.strip_prefix("channel:") {
             return self.channel_filter(id).map(Some);
         }
         let Some(id) = f.strip_prefix("msn:") else {
@@ -116,7 +116,7 @@ impl<R: ReadAt> Routes<R> {
 }
 
 /// What a request asks of the helpers deep in the routes: the grouping that `filt=msn:<id>` refers to (`mtol=nom|<Da>|<n>ppm`, `mce=1|0`)
-/// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::with_opts`).
+/// and `mode=sum` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::with_opts`).
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Opts {
     pub group: Grouping,

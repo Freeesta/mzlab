@@ -1,4 +1,4 @@
-//! Reading out a built `Canali`: the scans of a channel, its memory and its JSON (`api/canali`, `mzlab-cli file channels`).
+//! Reading out a built `Canali`: the scans of a channel, its memory and its JSON (`api/channels`, `mzlab-cli file channels`).
 
 use super::*;
 

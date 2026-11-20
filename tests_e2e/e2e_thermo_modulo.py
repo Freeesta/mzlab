@@ -114,7 +114,7 @@ try:
             pg3 = page(b, [])
             r = pg3.evaluate("""async head => { const rb = await window.MZLAB_RUST_READY;
               const blob = new Blob([Uint8Array.from(atob(head), c => c.charCodeAt(0))]);
-              try { await rb.nativeSamples([{ name: "rotto.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
+              try { await rb.nativeSamples([{ name: "broken.raw", blob }]); return { ok: true }; } catch (e) { return { ok: false, key: e.json && e.json.error_key, message: String(e.message) }; } }""", head)
             assert not r["ok"] and str(r["key"]).startswith("err.file."), r
         step("a truncated .raw is refused", broken)
         def baf():

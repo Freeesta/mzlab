@@ -1,4 +1,4 @@
-"""`api/canali` of the engine .wasm (mzlab-wasm, through Node) gives the same bytes as `mzlab-cli canali` (the same core functions) on public synthetic files:
+"""`api/channels` of the engine .wasm (mzlab-wasm, through Node) gives the same bytes as `mzlab-cli file channels` (the same core functions) on public synthetic files:
 the MSn infusion of the repository, an SRM acquisition and an SRM + product-ion one. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil

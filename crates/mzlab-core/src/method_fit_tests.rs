@@ -1,5 +1,5 @@
 //! `fit`: a document that fits is the same text; a long one, as an Orbitrap method of some 17 000 XML items and a 400 KB XML text makes, is cut
-//! to the room and still parses, with its sections, the head of `campi`, the texts of the file and a `meta.troncato` warning for each cut.
+//! to the room and still parses, with its sections, the head of `campi`, the texts of the file and a `meta.truncated` warning for each cut.
 
 use super::*;
 use crate::json;
@@ -61,7 +61,7 @@ fn a_long_document_is_cut_to_the_room_and_still_parses() {
     );
     let warnings = format!("{:?}", v.get("warnings").unwrap());
     assert!(
-        warnings.contains("meta.troncato")
+        warnings.contains("meta.truncated")
             && warnings.contains("fields")
             && !warnings.contains("raw"),
         "{warnings}"

@@ -48,6 +48,7 @@
     "../../mzlab/web/disegno-file.js",
     "../../mzlab/web/disegno-pulito.js",
     "../../mzlab/web/disegno-storage.js",
+    "../../mzlab/web/disegno-avvio.js",
     "../../mzlab/web/disegno-cerca.js",
     "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/disegno-frammenti.js",

@@ -30,6 +30,7 @@ embed!(
     "design_proposal-1.json",
     "draw-1.json",
     "draw_edit-1.json",
+    "draw-image-1.json",
     "elements-1.json",
     "error-1.json",
     "evalrun-1.json",

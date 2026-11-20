@@ -88,8 +88,8 @@ async function listText() {
     if (!file) throw new Error(t("draw.sub.file.none"));
     return { text: file.text, label: file.name };
   }
-  const r = await fetch("static/molecole/catalogo.csv");
-  if (!r.ok) throw new Error("catalogo.csv: " + r.status);
+  const r = await fetch("static/molecules/catalogue.csv");
+  if (!r.ok) throw new Error("catalogue.csv: " + r.status);
   return { text: await r.text(), label: t("draw.sub.source.cat") };
 }
 

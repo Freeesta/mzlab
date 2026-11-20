@@ -12,7 +12,7 @@ fn req(spec: &str, extra: &str) -> String {
 
 fn catalog() -> String {
     let p = format!(
-        "{}/../../mzlab/web/molecole/catalogo.csv",
+        "{}/../../mzlab/web/molecules/catalogue.csv",
         env!("CARGO_MANIFEST_DIR")
     );
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{p}: {e}"))
@@ -97,9 +97,14 @@ fn draw_a_name_that_is_not_there_names_the_nearest() {
         "{:?}",
         e.params
     );
+    // nothing near it: the message without the "nearest names" clause
     assert_eq!(
         err_key(with_db("ZZZZZZZZZZZZZZ-ZZZZZZZZZZ-Z")),
-        "err.mol.draw.not_found"
+        "err.mol.draw.not_found_bare"
+    );
+    assert_eq!(
+        err_key(with_db("qqqqqqqqqqqq")),
+        "err.mol.draw.not_found_bare"
     );
 }
 
@@ -143,7 +148,7 @@ fn draw_bad_requests_and_settings_are_told_apart() {
     );
     assert_eq!(
         err_key(draw_json(&req("CCO", ",\"format\":\"png\""))),
-        "err.mol.draw.set"
+        "err.mol.draw.binary"
     );
     assert_eq!(
         err_key(draw_json(&req("smiles:C(C", ""))),

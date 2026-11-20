@@ -42,7 +42,7 @@ pub(crate) struct Ion {
 pub(crate) struct Pos {
     pub(crate) livelli: Vec<i64>,
     pub(crate) rel: Option<f64>,
-    pub(crate) da: Option<String>,
+    pub(crate) from: Option<String>,
     pub(crate) entranti: i64,
     pub(crate) common: bool,
     pub(crate) col: i64,
@@ -59,7 +59,7 @@ pub(crate) struct Measure {
 }
 
 pub(crate) struct Edge {
-    pub(crate) da: String,
+    pub(crate) from: String,
     pub(crate) a: String,
     pub(crate) measures: Vec<Measure>,
     pub(crate) formula: Option<String>,
@@ -92,11 +92,11 @@ pub(crate) fn n(v: &Value, k: &str) -> Option<f64> {
 }
 
 /// The rule ids shown under a loss: at most two (the weak ones tagged), `+n` for the rest; empty when no rule explains it.
-pub(crate) fn rule_of(j: &Value, da: &str, a: &str) -> String {
+pub(crate) fn rule_of(j: &Value, from: &str, a: &str) -> String {
     let Some(r) = j.get("rules").and_then(|r| r.get("edges")).and_then(|l| {
         l.arr()
             .iter()
-            .find(|x| s(x, "from").as_deref() == Some(da) && s(x, "to").as_deref() == Some(a))
+            .find(|x| s(x, "from").as_deref() == Some(from) && s(x, "to").as_deref() == Some(a))
     }) else {
         return String::new();
     };
@@ -187,7 +187,7 @@ fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
                     .map(|l| l as i64)
                     .collect(),
                 rel: n(x, "rel"),
-                da: best.and_then(|b| s(b, "from")),
+                from: best.and_then(|b| s(b, "from")),
                 entranti: n(x, "incoming").unwrap_or(0.0) as i64,
                 common: x.get("common").and_then(|b| b.bool()).unwrap_or(false),
                 col: tree.and_then(|a| n(a, "col")).unwrap_or(0.0) as i64,
@@ -203,7 +203,7 @@ fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
 fn read_edges(j: &Value) -> Result<Vec<Edge>> {
     let mut edges = Vec::new();
     for a in j.get("edges").map_or(&[][..], |a| a.arr()) {
-        let (da, to) = (s(a, "from").ok_or_else(bad)?, s(a, "to").ok_or_else(bad)?);
+        let (from, to) = (s(a, "from").ok_or_else(bad)?, s(a, "to").ok_or_else(bad)?);
         let p = a.get("loss");
         edges.push(Edge {
             measures: a
@@ -225,8 +225,8 @@ fn read_edges(j: &Value) -> Result<Vec<Edge>> {
                 .iter()
                 .filter_map(|c| c.str().map(str::to_string))
                 .collect(),
-            rule: rule_of(j, &da, &to),
-            da,
+            rule: rule_of(j, &from, &to),
+            from,
             a: to,
         });
     }
@@ -239,7 +239,7 @@ pub(crate) fn scena(graph: &str) -> Result<Scena> {
     let view = j.get("view").ok_or_else(bad)?;
     let ioni = read_ions(&j)?;
     let pos = read_pos(view)?;
-    let archi = read_edges(&j)?;
+    let arcs = read_edges(&j)?;
     let best = view
         .get("edges")
         .map_or(&[][..], |a| a.arr())
@@ -257,7 +257,7 @@ pub(crate) fn scena(graph: &str) -> Result<Scena> {
     Ok(Scena {
         ions: ioni,
         pos,
-        edges: archi,
+        edges: arcs,
         best,
         charge: if n(&j, "polarity") == Some(-1.0) {
             "-"

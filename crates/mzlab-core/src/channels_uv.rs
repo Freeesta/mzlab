@@ -1,5 +1,5 @@
 //! UV (PDA/DAD) and analog channels (`uv:twc`, `uv:<nm>±<bw>`, `uv:auto`, `an:<i>`) of a file: listed next to `tic` as roots, read through the routes that already
-//! serve them (`pda_trace`, `pda_wavelength`, `pda_spectrum`, `analog`), so `canale=` answers byte for byte what `kind=pda` and `api/analog` answer.
+//! serve them (`pda_trace`, `pda_wavelength`, `pda_spectrum`, `analog`), so `channel=` answers byte for byte what `kind=pda` and `api/analog` answer.
 
 use crate::channels::{Channel, Famiglia, Source};
 use crate::error::{Error, Result};

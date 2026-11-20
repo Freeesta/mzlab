@@ -248,6 +248,6 @@ pub const KINDS: [&str; 11] = [
     "B_MS2-t15.mzML",
     "HR_DDA-Exploris-t30.mzML",
     "HR_DDA-Fusion-t30.mzML",
-    "HR_rotto-t30.mzML",
+    "HR_broken-t30.mzML",
     "D_DIA-t0.mzML",
 ];

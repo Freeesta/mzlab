@@ -181,7 +181,7 @@ fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     missing
         .then(|| {
             obj(vec![
-                ("key", Some(V::s("meta.nonDecodificato"))),
+                ("key", Some(V::s("meta.notDecoded"))),
                 ("place", Some(V::s("Scan trailer: records not found"))),
             ])
         })
@@ -200,8 +200,8 @@ fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
         .iter()
         .map(|w| {
             let key = match w {
-                opentfraw::Warning::Truncated { .. } => "meta.troncato",
-                opentfraw::Warning::Skipped { .. } => "meta.nonDecodificato",
+                opentfraw::Warning::Truncated { .. } => "meta.truncated",
+                opentfraw::Warning::Skipped { .. } => "meta.notDecoded",
             };
             obj(vec![
                 ("key", Some(V::s(key))),
@@ -218,26 +218,26 @@ fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
         |key: &str, text: String| obj(vec![("key", Some(V::s(key))), ("place", Some(V::s(text)))]);
     let mut out = Vec::new();
     if n.order_unknown > 0 {
-        out.push(note("meta.nonDecodificato", format!(
+        out.push(note("meta.notDecoded", format!(
             "MS order of {} of {} scans (precursor-ion, neutral-loss or MS9 and above): their level is unknown, though their filter text says ms",
             n.order_unknown, n.scans
         )));
     }
     if n.event_by_class > 0 {
-        out.push(note("meta.nonDecodificato", format!(
+        out.push(note("meta.notDecoded", format!(
             "the own scan event of {} of {} scans: the event table is cut short, so each takes the event its number names, unchecked (level, polarity, filter)",
             n.event_by_class, n.scans
         )));
     }
     if n.calibration_unknown > 0 {
-        out.push(note("meta.nonDecodificato", format!(
+        out.push(note("meta.notDecoded", format!(
             "profile calibration of {} of {} scans (a count of coefficients no known conversion uses): their profile is refused, it would be in frequency units",
             n.calibration_unknown, n.scans
         )));
     }
     if n.ion_rejected > 0 {
         out.push(obj(vec![
-            ("key", Some(V::s("meta.ioneScartata"))),
+            ("key", Some(V::s("meta.ionDiscarded"))),
             (
                 "place",
                 Some(V::s(format!(
@@ -249,7 +249,7 @@ fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
     }
     if n.srm_from_table > 0 {
         out.push(obj(vec![
-            ("key", Some(V::s("meta.daTabella"))),
+            ("key", Some(V::s("meta.fromTable"))),
             (
                 "place",
                 Some(V::s(format!(
@@ -276,13 +276,13 @@ fn block_warnings(blocks: &[String]) -> Vec<Option<V>> {
     let mut w = Vec::new();
     if detectors::has_3d_field(blocks) {
         w.push(obj(vec![
-            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("key", Some(V::s("meta.notDecoded"))),
             ("place", Some(V::s("UV 3D field (PDA spectra)"))),
         ]));
     }
     if blocks.is_empty() {
         w.push(obj(vec![
-            ("key", Some(V::s("meta.mancante"))),
+            ("key", Some(V::s("meta.missing"))),
             ("place", Some(V::s("Method"))),
         ]));
     }
@@ -295,7 +295,7 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     missing
         .then(|| {
             obj(vec![
-                ("key", Some(V::s("meta.nonDecodificato"))),
+                ("key", Some(V::s("meta.notDecoded"))),
                 ("place", Some(V::s("Status log"))),
             ])
         })
@@ -307,7 +307,7 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
 fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>>) {
     let not_decoded = |at: &str| {
         obj(vec![
-            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("key", Some(V::s("meta.notDecoded"))),
             ("place", Some(V::s(at))),
         ])
     };
@@ -352,7 +352,7 @@ fn method_blocks<R: Read + Seek>(
         let lost = raw.raw_file_info.preamble.method_file_present && !scanned.is_empty();
         let w = lost.then(|| {
             obj(vec![
-                ("key", Some(V::s("meta.nonDecodificato"))),
+                ("key", Some(V::s("meta.notDecoded"))),
                 (
                     "place",
                     Some(V::s(

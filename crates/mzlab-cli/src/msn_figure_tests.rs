@@ -174,7 +174,7 @@ fn dir(tag: &str) -> PathBuf {
 fn the_command_and_figure_write_the_same_bytes() {
     let d = dir("cmd");
     let msn = fixtures().join("../golden/ref/msntree_rotta/msn.mzML");
-    let (g, mol) = (d.join("g.json"), fixtures().join("molecola.mol"));
+    let (g, mol) = (d.join("g.json"), fixtures().join("molecule.mol"));
     let made = cli(&[
         "msn",
         "graph",
@@ -277,7 +277,7 @@ fn the_step_writes_the_bytes_of_the_command() {
         d.join("msn.mzML"),
     )
     .unwrap();
-    let mol = std::fs::read_to_string(fixtures().join("molecola.mol")).unwrap();
+    let mol = std::fs::read_to_string(fixtures().join("molecule.mol")).unwrap();
     let run = |format: &str, view: &str| {
         let plan = serde_json::json!({"format":"mzflow/2","inputs":[{"name":"msn.mzML","type":"mzml"}],"steps":[
             {"id":"g","step":"spectra.msn_graph@1","in":{"source":"file:msn.mzML"},"params":{"formula":"C14H15N3O5+","molfile":mol}},

@@ -16,7 +16,7 @@ const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const KNOWN_OPS = ["feature_pipeline", "samples", "export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "attributio", "workflow_applied"];
   // the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json, written by TP_Mine/js/35_pipeline_recipe.js): the problems of a record, [] when it can be re-applied
-  const FEATURE_KEYS = ["schema", "crate_version", "recipe", "parametri", "ingressi", "tabella_sha256", "regole", "livelli", "sospetti", "ipotesi", "giri"];
+  const FEATURE_KEYS = ["schema", "crate_version", "recipe", "parametri", "ingressi", "table_sha256", "regole", "livelli", "sospetti", "ipotesi", "giri"];
   function checkFeatureOp(o) {
     const bad = [];
     if (!o || o.op !== "feature_pipeline") return ["op"];
@@ -24,7 +24,7 @@ const WORKFLOW = (() => {
     if (o.schema !== "feature_pipeline/1") bad.push("schema");
     try { if (typeof o.recipe !== "string" || typeof JSON.parse(o.recipe) !== "object") bad.push("recipe"); } catch (_) { bad.push("recipe"); }
     if (!Array.isArray(o.ingressi) || o.ingressi.some(i => !i || !i.nome || !i.sha256)) bad.push("ingressi");
-    if (!/^[0-9a-f]{64}$/.test(String(o.tabella_sha256 || ""))) bad.push("tabella_sha256");
+    if (!/^[0-9a-f]{64}$/.test(String(o.table_sha256 || ""))) bad.push("table_sha256");
     return bad.filter((k, i) => bad.indexOf(k) === i);
   }
 
