@@ -1,4 +1,4 @@
-"""Flow «This browser» runs table.stats@1, table.pca@1 and table.kmd@1 (module `flowstat`): a synthetic series of 2 blanks and 2 conditions of 4 injections (some compounds up in the treatment,
+"""Flow «This browser» runs table.stats@1, table.pca@1, table.kmd@1 and table.compare@1 (module `flowstat`): a synthetic series of 2 blanks and 2 conditions of 4 injections (some compounds up in the treatment,
 a CH2 homologous series for the Kendrick mass defect). The plan detect → align → gapfill → stats, pca (two scalings) and kmd (CF2 and CH2) goes to `mzlab-cli flow run`, and every text the browser
 keeps is the native file byte for byte (same SHA-256); every job is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`), and the
 `flowstat` .wasm is fetched only when one of these steps runs. On a table.filter view of the table the same steps give the native texts too. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
@@ -53,8 +53,8 @@ def sample(f):
 SAMPLES = json.dumps({"samples": [sample(f) for f in FILES], "schema": "samples/1"}, separators=(",", ":"))
 DESIGN = json.dumps({"conditions": [{"levels": {}, "name": n, "replicates": 4} for n in ("ref", "trt")], "comparisons": [{"kind": "vs_reference"}], "factors": [], "batches": [],
                      "reference": "ref", "schema": "design/1"}, separators=(",", ":"))
-IDS = ("st", "pc", "pa", "kf", "kc")
-VIEW = ("vst", "vpc", "vkm")   # the same steps on a table.filter view of the table
+IDS = ("st", "pc", "pa", "kf", "kc", "cm", "cs")   # cm: compare with no samples file (the roles by the names), cs: with it
+VIEW = ("vst", "vpc", "vkm", "vcm")   # the same steps on a table.filter view of the table
 
 def plan(stat):
     """The plan: index → detect → align → gap filling, and (with `stat`) the statistics of the table."""
@@ -69,10 +69,13 @@ def plan(stat):
                {"id": "pa", "step": "table.pca@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"scaling": "auto", "ncomp": 3}},
                {"id": "kf", "step": "table.kmd@1", "in": {"table": "gap.table"}},
                {"id": "kc", "step": "table.kmd@1", "in": {"table": "gap.table"}, "params": {"unit": "CH2", "tol_mda": 2}},
+               {"id": "cm", "step": "table.compare@1", "in": {"table": "gap.table"}, "params": {"ref": "ST_R*", "blank": "ST_B*"}},
+               {"id": "cs", "step": "table.compare@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"ref": "ST_R*", "blank": "role:blank"}},
                {"id": "flt", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 4, "normalize": "sum"}},
                {"id": "vst", "step": "table.stats@1", "in": {"table": "flt.table", "samples": "file:samples.json", "design": "file:design.json"}},
                {"id": "vpc", "step": "table.pca@1", "in": {"table": "flt.table", "samples": "file:samples.json"}},
-               {"id": "vkm", "step": "table.kmd@1", "in": {"table": "flt.table"}, "params": {"unit": "CH2", "tol_mda": 2}}]
+               {"id": "vkm", "step": "table.kmd@1", "in": {"table": "flt.table"}, "params": {"unit": "CH2", "tol_mda": 2}},
+               {"id": "vcm", "step": "table.compare@1", "in": {"table": "flt.table"}, "params": {"ref": "ST_R*", "blank": "ST_B*"}}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_stat_"))
@@ -155,7 +158,9 @@ try:
             assert json.loads(kept["st.json"])["schema"] == "stat/1", kept["st.json"][:200]
             assert kept["pc.json"] != kept["pa.json"] and kept["kf.json"] != kept["kc.json"], "the parameters did not reach the engine"
             assert json.loads(kept["kc.json"]).get("series"), ("the CH2 series was not found", kept["kc.json"][:400])
-        step("the browser gives the stat/1, PCA and Kendrick texts of the native flow run, byte for byte", first)
+            cm = json.loads(kept["cm.json"]); assert cm["schema"] == "compare/1" and cm["table"]["path"] == "gap.mzfeat" and cm["rows"], kept["cm.json"][:300]
+            assert json.loads(kept["cs.json"])["roles"]["blank"]["columns"] == cm["roles"]["blank"]["columns"], "role:blank did not find the blanks of the samples file"
+        step("the browser gives the stat/1, PCA, Kendrick and compare/1 texts of the native flow run, byte for byte", first)
 
         def view():
             kept = pg.evaluate(KEPT)

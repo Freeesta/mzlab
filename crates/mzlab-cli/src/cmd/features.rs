@@ -128,4 +128,11 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
     "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
-)];
+), Entry::new(
+    "table compare",
+    "mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products",
+    crate::table_compare_cmd::run,
+)
+.schema("compare/1")
+.exits(&[0, 2, 4, 5, 6])
+.examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"])];

@@ -1,4 +1,4 @@
-//! The statistics steps of the Flow in the browser (`.wasm` `flowstat`): `table.stats`, `table.pca` and `table.kmd`, the texts of `mzlab_feat::flow_stat`, the functions `flow run` calls.
+//! The statistics steps of the Flow in the browser (`.wasm` `flowstat`): `table.stats`, `table.pca`, `table.kmd` and `table.compare`, the texts of `mzlab_feat::flow_stat`, the functions `flow run` calls.
 //! A module of its own (the PCA engine and Welch/ANOVA do not fit `flowtab`), loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -33,4 +33,17 @@ pub fn flow_pca(
 pub fn flow_kmd(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;
     mzlab_feat::flow_stat::kmd_text(&params, table).map_err(crate::js_err)
+}
+
+/// The `compare/1` text of `table.compare` on `table` (the bytes of a `.mzfeat`, named `name`) with an optional `samples/1` document (empty = none). Errors are JSON `{"error_key","params"}` texts.
+#[wasm_bindgen]
+pub fn flow_compare(
+    params_json: &str,
+    name: &str,
+    table: &[u8],
+    samples: &[u8],
+) -> std::result::Result<String, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    let samples = (!samples.is_empty()).then_some(samples);
+    mzlab_feat::flow_compare::compare_text(&params, name, table, samples).map_err(crate::js_err)
 }

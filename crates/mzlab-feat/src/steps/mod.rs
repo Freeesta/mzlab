@@ -62,6 +62,7 @@ pub fn registry() -> Vec<Step> {
         stats::stats(),
         stats::pca(),
         stats::kmd(),
+        stats::compare(),
         stats::plausible(),
         detect::ms2_link(),
         table::export_csv(),

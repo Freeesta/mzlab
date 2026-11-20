@@ -88,6 +88,11 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--replay", "recordings"),
     ("--against", "sources to compare"),
     ("--params", "Pipeline numbers"),
+    ("--ref", "reference columns"),
+    ("--blank", "blank columns"),
+    ("--quantity", "area or height"),
+    ("--factor", "ratio threshold"),
+    ("--pseudocount", "auto or a number"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

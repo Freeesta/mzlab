@@ -88,6 +88,10 @@ mod flow_insilico;
 #[cfg(test)]
 mod flow_iso_grouper_tests;
 mod flow_json;
+mod flow_tablecmp;
+mod table_compare_cmd;
+#[cfg(test)]
+mod table_compare_cmd_tests;
 mod flow_kmd;
 mod flow_level;
 mod flow_link;

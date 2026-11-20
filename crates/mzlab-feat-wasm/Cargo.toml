@@ -18,7 +18,7 @@ flow_ms2 = []
 flow_formula = ["mzlab-feat/untargeted"]
 # `flow_tab` = the Flow table steps that do not fit `table` (`run_tab.rs`: `table.drift`): a .wasm of its own, `flowtab`, loaded only by their executors; NOT among the defaults.
 flow_tab = []
-# `flow_stat` = `table.stats`, `table.pca`, `table.kmd` of the Flow (`run_stat.rs`): a .wasm of its own, `flowstat`, loaded only by their executor (`flow-web-stat.js`); NOT among the defaults.
+# `flow_stat` = `table.stats`, `table.pca`, `table.kmd`, `table.compare` of the Flow (`run_stat.rs`): a .wasm of its own, `flowstat`, loaded only by their executor (`flow-web-stat.js`); NOT among the defaults.
 flow_stat = []
 # `detect` carries `mzlab-feat/untargeted` for what `features.detect` and `features.align` reach of it: the isotope finder (`flow_isofinder`, `isofinder`), the algorithm
 # `adap_localmin` (`flow`, `adap`, `resolve`, `arpls`, `smooth`, `pipeline_stream`) and the table algorithm `align_mzmine` (`flow_align`, `join`, `gapfill`); about 136 KB of `hr` before wasm-opt.

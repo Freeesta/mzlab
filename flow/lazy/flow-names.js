@@ -62,6 +62,7 @@
     "table.kmd": ["Kendrick mass defect", "search", "Lists the series of ions that share the same mass defect."],
     "table.pca": ["Explore with PCA", "process", "Shows how the samples group along the main components."],
     "table.stats": ["Compare conditions", "process", "Tests each compound between the conditions of the design."],
+    "table.compare": ["Compare with the reference", "process", "Puts each signal against the reference and the blank to flag candidate transformation products."],
     "tp.dig_lr": ["Dig unit-resolution series", "search", "Scores the possible products of a parent in a series at unit resolution."],
     "table.plausible": ["Check the values", "process", "Runs seven sanity checks on the numbers of the table and reports what looks wrong."],
     "export.inclusion": ["Save inclusion list", "output", "Writes the m/z and time windows of the expected products as a CSV for the next acquisition."],

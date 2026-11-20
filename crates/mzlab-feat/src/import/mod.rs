@@ -35,4 +35,4 @@ impl ImportError {
 pub use gnps::{read_gnps_library, read_gnps_network};
 pub use mgf::{attach_ms2, read_mgf};
 pub use msdial::{parse_spectrum, read_msdial};
-pub use mzmine::{merge_annotations, read_edges, read_full, read_quant};
+pub use mzmine::{merge_annotations, read_edges, read_full, read_quant, strip_mzml};
