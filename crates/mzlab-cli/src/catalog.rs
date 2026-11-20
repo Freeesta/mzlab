@@ -13,8 +13,11 @@ use crate::{exit, Outcome};
 /// Flags every command accepts, listed once instead of on every command.
 const GLOBAL: &[(&str, &str)] = &[
     ("--json", "JSON on stdout"),
-    ("--cache", "index cache folder, or MZLAB_CACHE; not db normative; after the command name, not --cache=DIR"),
-    ("--help", "the usage of the command on stdout, exit 0"),
+    (
+        "--cache",
+        "index cache folder or MZLAB_CACHE; not db normative",
+    ),
+    ("--help", "usage on stdout, exit 0"),
 ];
 
 /// What a flag means, by name; the usage line says only its value.

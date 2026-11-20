@@ -29,8 +29,16 @@ fn help_of(name: &str) -> &'static str {
         .map_or("", |(_, h)| *h)
 }
 
+/// A global flag's help comes from GLOBAL first: a command's own flag of the same name (`db normative build --cache`) has other help.
+fn global_help(name: &str) -> &'static str {
+    GLOBAL
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or("", |(_, h)| *h)
+}
+
 /// `with_help` false: the flag is described once at the top of the compact listing (`flag_help`).
-fn flag_json(f: &Flag, with_required: bool, with_help: bool) -> Value {
+fn flag_json(f: &Flag, with_required: bool, with_help: bool, global: bool) -> Value {
     // Members that are null or false are left out: `commands --json` stays small.
     let mut o = Obj::new()
         .put("name", text(&f.name))
@@ -48,7 +56,12 @@ fn flag_json(f: &Flag, with_required: bool, with_help: bool) -> Value {
         );
     }
     if with_help {
-        o = o.put("help", text(help_of(&f.name)));
+        let h = if global {
+            global_help(&f.name)
+        } else {
+            help_of(&f.name)
+        };
+        o = o.put("help", text(h));
     }
     if f.repeat {
         o = o.b("repeat", true);
@@ -169,7 +182,7 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
             Value::Arr(
                 u.flags
                     .iter()
-                    .map(|f| flag_json(f, true, !(compact && uses.get(&f.name) > Some(&1))))
+                    .map(|f| flag_json(f, true, !(compact && uses.get(&f.name) > Some(&1)), false))
                     .collect(),
             ),
         )
@@ -211,7 +224,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
                 kind: if *n == "--cache" { "path" } else { "bool" },
                 ..Flag::default()
             };
-            flag_json(&f, false, true)
+            flag_json(&f, false, true, true)
         })
         .collect();
     let uses = flag_uses();
