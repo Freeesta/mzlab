@@ -24,7 +24,7 @@ const GLOBAL: &[(&str, &str)] = &[
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
     ("--check", "exit 1 if changed"),
-    ("--set", "NAME=VALUE; repeatable"),
+    ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),
     ("--no-points", "omit the MS2 points"),
     ("--samples", "samples/1 file"),
@@ -71,6 +71,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--inspection", "inspection/1, or -"),
     ("--answers", "answers"),
     ("--da", "tolerance, Da"),
+    ("--tol", "10ppm or 0.2da"),
+    ("--smooth", "3 or 5 points"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
     ("--format", "output format (values in the usage line)"),
@@ -81,6 +83,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--adduct", "adduct with signed shift"),
     ("--compact", "compact form"),
     ("--list", "list names"),
+    ("--template", "a one-step plan"),
     ("--replay", "recordings"),
     ("--against", "sources to compare"),
     ("--params", "Pipeline numbers"),
@@ -119,6 +122,7 @@ pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
         "selector not found (sample, channel, node, step)",
     ),
     (exit::OUTPUT, "output write or external source failure"),
+    (exit::INTERNAL, "internal error (a bug): any command"),
 ];
 
 #[derive(Debug, Clone, Default)]

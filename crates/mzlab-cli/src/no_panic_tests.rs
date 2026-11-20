@@ -31,6 +31,12 @@ fn no_command_panics_on_an_empty_or_garbage_input() {
             b"\x00\xff\xfe not a file,\n,,\n1e999,NaN,-1\n{[\n".to_vec(),
         ),
         ("empty.json", b"{}".to_vec()),
+        // a valid plan that aligns peaks no step produced (the input that once made `explain-missing` panic); the command it was made for is
+        // gone and no command reads an `.mzfeat`, so the plan is what still reaches the same state
+        (
+            "align_only.json",
+            br#"{"format":"mzflow/2","inputs":[],"steps":[{"id":"ali","step":"features.align@1","in":{"peaks":["det.peaks"]}}]}"#.to_vec(),
+        ),
     ];
     let mut panicked = Vec::new();
     for (file, bytes) in &files {
@@ -44,13 +50,16 @@ fn no_command_panics_on_an_empty_or_garbage_input() {
                 match r {
                     Err(_) => panicked.push(args.join(" ").replace(p, file)),
                     Ok(o) => {
-                        assert!(o.code <= 6, "{args:?}: exit {}", o.code);
+                        assert!(o.code <= 6, "{args:?}: exit {}", o.code); // 7 is the panic hook only
                         if o.code != 0 && args.iter().any(|a| a == "--json") {
                             let text = String::from_utf8_lossy(&o.stdout);
+                            // a verdict command keeps its own document on exit 1 or 3 (the answer the site computes), any other failure is an error/1
+                            let own = crate::contract::is_verdict(&args)
+                                && matches!(o.code, 1 | 3)
+                                && text.contains("\"schema\":\"")
+                                && !text.contains("\"schema\":\"error/1\"");
                             assert!(
-                                text.contains("\"schema\":\"error/1\"")
-                                    || o.code == 1
-                                    || o.code == 3,
+                                own || text.contains("\"schema\":\"error/1\""),
                                 "{args:?}: exit {} without an error/1: {text}",
                                 o.code
                             );
@@ -64,12 +73,12 @@ fn no_command_panics_on_an_empty_or_garbage_input() {
 }
 
 #[test]
-fn a_panic_ends_as_exit_1_with_an_error_document() {
+fn a_panic_ends_as_exit_7_with_an_error_document() {
     let args: Vec<String> = ["file", "info", "x.mzML", "--json"]
         .map(String::from)
         .to_vec();
     let o = crate::error_text::panic_outcome(&args, "index out of bounds at src/x.rs:1");
-    assert_eq!(o.code, 1);
+    assert_eq!(o.code, 7);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["schema"], "error/1");
     assert_eq!(v["error_key"], "err.run.internal");
@@ -83,5 +92,5 @@ fn a_panic_ends_as_exit_1_with_an_error_document() {
     // a command with no JSON form, without --json: stderr only, stdout empty
     let plain =
         crate::error_text::panic_outcome(&["features".to_string(), "x.mzML".to_string()], "boom");
-    assert_eq!((plain.code, plain.stdout.is_empty()), (1, true));
+    assert_eq!((plain.code, plain.stdout.is_empty()), (7, true));
 }

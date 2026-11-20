@@ -1,5 +1,5 @@
 //! `mzlab-cli`: the logic is in `lib.rs` (the tests call it without starting a process).
-//! A panic (the release profile aborts) still ends as an answer with exit 1 and, under `--json`, one `error/1`, never a bare signal 134.
+//! A panic (the release profile aborts) still ends as an answer with exit 7 and, under `--json`, one `error/1`, never a bare signal 134.
 
 use std::process::ExitCode;
 
@@ -28,6 +28,10 @@ fn main() -> ExitCode {
         ));
         std::process::exit(i32::from(code));
     }));
+    // debug builds only: lets the process test of the hook panic on purpose
+    if cfg!(debug_assertions) && std::env::var_os("MZLAB_TEST_PANIC").is_some() {
+        panic!("panic on purpose");
+    }
     let o = mzlab_cli::execute(&args);
     ExitCode::from(answer(&o))
 }

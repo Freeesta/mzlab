@@ -42,12 +42,57 @@
   /** the facets a file input declares @param {any} v */
   const observed = v => ({ resolution: (v && v.resolution || []).filter((/** @type {any} */ x) => typeof x === "string"), polarity: (v && v.polarity || []).filter(Number.isFinite), ms_levels: (v && v.ms_levels || []).filter(Number.isFinite) });
 
+  const ROOT = ["format", "program", "inputs", "steps", "operations"], INPUT = ["name", "sha256", "bytes", "type", "facets"];
+  const STEP = ["id", "step", "algorithm", "preset", "label", "in", "params"];
+  /** @param {string} path @param {string} expected */
+  const shape = (path, expected) => fail("err.flow.shape", { path, expected });
+  const isObj = (/** @type {any} */ x) => !!x && typeof x === "object" && !Array.isArray(x);
+  /** the keys of `v` when all are in `allowed`, as flow::parse_shape does @param {any} v @param {string} path @param {string[]} allowed */
+  const members = (v, path, allowed) => {
+    if (!isObj(v)) throw shape(path, "object");
+    for (const k of Object.keys(v)) if (!allowed.includes(k)) throw fail("err.flow.key.unknown", { path: path ? `${path}.${k}` : k });
+    return Object.entries(v);
+  };
+  /** @param {any} v @param {string} path */
+  const needText = (v, path) => { if (typeof v !== "string") throw shape(path, "string"); };
+  /** flow::parse_shape::check_shape: keys and JSON types of the file @param {any} v @param {boolean} legacy */
+  const checkShape = (v, legacy) => {
+    members(v, "", ROOT);
+    if (Array.isArray(v.steps)) {
+      v.steps.forEach((/** @type {any} */ st, /** @type {number} */ i) => {
+        const path = `steps[${i}]`;
+        for (const [k, x] of members(st, path, STEP)) {
+          const at = `${path}.${k}`;
+          if (k === "params" && !isObj(x)) throw shape(at, "object");
+          else if (k === "in") {
+            for (const [port, r] of members(x, at, Object.keys(isObj(x) ? x : {}))) {
+              const p = `${at}.${port}`;
+              if (Array.isArray(r)) r.forEach((y, j) => needText(y, `${p}[${j}]`));
+              else if (typeof r !== "string") throw shape(p, "string or array of strings");
+            }
+          } else if (k !== "params") needText(x, at);
+        }
+      });
+    } else if (v.steps !== undefined || !legacy) throw shape("steps", "array");
+    if (v.inputs !== undefined) {
+      if (!Array.isArray(v.inputs)) throw shape("inputs", "array");
+      v.inputs.forEach((/** @type {any} */ f, /** @type {number} */ i) => {
+        const path = `inputs[${i}]`;
+        for (const [k, x] of members(f, path, INPUT)) {
+          if (k === "bytes" ? typeof x !== "number" : k === "facets" ? !isObj(x) : typeof x !== "string") throw shape(`${path}.${k}`, k === "bytes" ? "number" : k === "facets" ? "object" : "string");
+        }
+      });
+    }
+    if (v.format !== undefined) needText(v.format, "format");
+  };
+
   /** flow::parse: the plan as the checker reads it; throws an Error with {key, params} for a file that is not an mzflow/2 object
    * @param {any} v the parsed JSON */
   F.normalize = v => {
     if (!v || typeof v !== "object" || Array.isArray(v)) throw fail("err.flow.json", {});
     const format = text(v, "format");
     if (format != null && format !== "mzflow/2") throw fail("err.flow.format", { format });
+    checkShape(v, false);
     const list = (/** @type {string} */ k) => Array.isArray(v[k]) ? v[k] : [];
     const inputs = list("inputs").map(f => {
       const name = text(f, "name");
