@@ -7,7 +7,8 @@ const fp = /** @type {any} */ (window);
 // Dati is the work area from the first paint, except on the address of another view (#/draw, #/flow, …): applyView takes over with the shell
 if (/^#\/(?!data(\/|$))\w/.test(location.hash)) { const vd = document.getElementById("v-data"); if (vd) vd.hidden = true; }
 // THE switch of Tabui's visibility: false hides its nav button (the tool stays registered and opens on the exact address #/tpmine); true shows it again.
-// Nothing else decides this: no other file looks at the flag, the button just stays out of the page.
+// index.html writes `data-hide-tabui` on #nav so the button is never drawn before this script runs (drawing it and hiding it later shifted the header, CLS > 0);
+// the switch only takes the attribute off. Nothing else decides this: no other file looks at the flag.
 const TABUI_VISIBLE = false;
 { const nav = document.getElementById("nav"); if (nav && TABUI_VISIBLE) nav.removeAttribute("data-hide-tabui"); }      // index.html ships #nav with the attribute (app.css hides the button of an #nav that carries it) so that a frame drawn before this script has the final width
 // a tab of the tools (Flow, Tabui) clicked before tpmine-loader.js has run: kept here and replayed by the loader, so a fast click is not lost
