@@ -64,6 +64,12 @@ impl Mol {
             if a < 1 || b < 1 || a as usize > na || b as usize > na {
                 return Err(bad());
             }
+            if a == b {
+                return Err(bad().with(
+                    "message",
+                    format!("molfile: a bond joins atom {a} to itself"),
+                ));
+            }
             let arom = t == 4;
             if arom {
                 raw[a as usize - 1].arom = true;
@@ -81,9 +87,7 @@ impl Mol {
                 true,
             ));
         }
-        for (i, c) in chg {
-            raw[i].charge = c;
-        }
+        super::atom_block::charges(&mut raw, chg)?;
         let rad = props(rest, "M  RAD", na);
         let counted = aromatic_h::apply(&mut raw, &written, rest, &rad, &valence)?;
         let mut m = Mol::assemble(raw, written, true);
@@ -93,7 +97,7 @@ impl Mol {
         // a radical mark takes the place of hydrogens: one for a doublet, two for a singlet or triplet
         for (i, r) in rad {
             // the hydrogens of an aromatic atom read by `mzlab-mol` already count its radical
-            if counted && m.atoms[i].arom {
+            if counted[i] {
                 continue;
             }
             let less = if r == 2 {

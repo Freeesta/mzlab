@@ -147,3 +147,7 @@ mod aromatic_h_tests;
 #[cfg(test)]
 #[path = "sel_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "reader_bounds_tests.rs"]
+mod reader_bounds_tests;

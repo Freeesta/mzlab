@@ -74,6 +74,18 @@ fn atom_line(line: &str) -> Result<(DraftAtom, i8, u8), MolError> {
     Ok((atom, charge, rad))
 }
 
+/// A charge as the record keeps it; one outside -15 to 15 (what a molfile can state) is a damaged file, not a value to cut.
+pub(crate) fn charge(v: i32, atom: usize) -> Result<i8, MolError> {
+    if (-15..=15).contains(&v) {
+        Ok(v as i8)
+    } else {
+        Err(fail(format!(
+            "the charge {v} of atom {} is not -15 to 15",
+            atom + 1
+        )))
+    }
+}
+
 pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
     let counts = lines.get(3).copied().unwrap_or("");
     // a negative count would wrap into a huge one
@@ -117,7 +129,7 @@ pub(crate) fn read_v2000(lines: &[&str]) -> Result<Draft, MolError> {
                     seen_chg = true;
                 }
                 for (a, v) in pairs()? {
-                    legacy_charge[a] = v as i8;
+                    legacy_charge[a] = charge(v, a)?;
                 }
             }
             "ISO" => {
@@ -186,13 +198,13 @@ pub fn stated_hydrogens(lines: &[&str], na: usize) -> Result<Vec<(usize, u32)>, 
 
 fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
     let (a, b) = (int(line, 0, 3)? as usize, int(line, 3, 6)? as usize);
-    if a == b && a != 0 {
-        return Err(fail(format!("bond line {line:?} joins atom {a} to itself")));
-    }
     if a == 0 || b == 0 || a > na || b > na {
         return Err(fail(format!(
             "bond line {line:?} names atoms outside 1..{na}"
         )));
+    }
+    if a == b {
+        return Err(fail(format!("bond line {line:?} joins atom {a} to itself")));
     }
     let (order, query) = match int(line, 6, 9)? {
         t @ 1..=3 => (t as u8, 0),

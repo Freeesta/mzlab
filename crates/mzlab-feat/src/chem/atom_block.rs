@@ -43,3 +43,15 @@ pub(super) fn has(lines: &[&str], prefix: &str) -> bool {
     let mut lines = lines.iter().take_while(|l| !l.starts_with("M  END"));
     lines.any(|l| l.starts_with(prefix))
 }
+
+/// Sets the charges of `M  CHG` lines; one outside -15 to 15 (what a molfile can state) is a damaged file, refused with its value.
+pub(super) fn charges(raw: &mut [RawAtom], chg: Vec<(usize, i32)>) -> Result<()> {
+    for (i, c) in chg {
+        if !(-15..=15).contains(&c) {
+            let message = format!("molfile: the charge {c} of atom {} is not -15 to 15", i + 1);
+            return Err(Error::new("error.grafo.molfile").with("message", message));
+        }
+        raw[i].charge = c;
+    }
+    Ok(())
+}

@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::model::GroupKind;
 use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
-use crate::molfile_v2000::symbol;
+use crate::molfile_v2000::{charge, symbol};
 use std::collections::HashMap;
 
 /// Whitespace-separated tokens, keeping `( ... )` groups whole.
@@ -141,7 +141,10 @@ fn atom(t: &[String]) -> Result<DraftAtom, MolError> {
             Some(m) => number::<f64>(m)?.round() as u16,
             None => iso,
         },
-        chg: p.get("CHG").map_or(Ok(0), |v| number(v))?,
+        chg: match p.get("CHG") {
+            Some(v) => charge(number(v)?, number::<usize>(&t[0]).unwrap_or(1).max(1) - 1)?,
+            None => 0,
+        },
         rad,
         valence: match p.get("VAL").map(|v| number::<i32>(v)) {
             Some(Ok(-1)) => Some(0),

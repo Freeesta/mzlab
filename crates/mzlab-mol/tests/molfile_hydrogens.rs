@@ -269,3 +269,23 @@ M  V30 END SGROUP\nM  V30 END CTAB\nM  END\n")
     assert!(Mol::from_molfile(&v2000("4")).is_ok());
     assert!(Mol::from_molfile(&v3000("0")).is_ok());
 }
+
+#[test]
+fn a_charge_no_molfile_states_is_refused_with_its_value() {
+    let v3000 = |chg: i32| {
+        format!("\n  t\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 1 0 0 0 0\nM  V30 BEGIN ATOM\n\
+M  V30 1 N 0 0 0 0 CHG={chg}\nM  V30 END ATOM\nM  V30 END CTAB\nM  END\n")
+    };
+    for chg in [16, -16, 100] {
+        let v2000 = plain(&["N"], &[], &[])
+            .replace("M  END\n", &format!("M  CHG  1   1 {chg:>3}\nM  END\n"));
+        for text in [v2000, v3000(chg)] {
+            let e = Mol::from_molfile(&text).err().unwrap().to_string();
+            assert!(
+                e.contains(&format!("the charge {chg} of atom 1 is not -15 to 15")),
+                "{e}"
+            );
+        }
+    }
+    assert_eq!(Mol::from_molfile(&v3000(-15)).unwrap().atoms[0].chg, -15);
+}
