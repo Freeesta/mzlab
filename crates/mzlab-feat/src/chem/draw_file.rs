@@ -171,7 +171,7 @@ pub fn ket(d: &Drawn) -> Result<String> {
     Ok(o.0)
 }
 
-/// The text of an XML attribute or element: the five markup characters escaped, other control characters dropped.
+/// The text of an XML attribute or element: the five markup characters escaped, control characters and U+FFFE/U+FFFF (XML 1.0 forbids them) dropped.
 fn xml_text(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
@@ -181,7 +181,7 @@ fn xml_text(s: &str) -> String {
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&apos;"),
-            c if c.is_control() => {}
+            c if c.is_control() || c == '\u{fffe}' || c == '\u{ffff}' => {}
             c => out.push(c),
         }
     }

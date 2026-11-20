@@ -415,3 +415,40 @@ fn edited_drawings_read_back_as_the_same_molecule_and_carry_their_labels() {
         }
     }
 }
+
+/// The request that draws `spec` with the atom-0 label `label` (as the JSON text the writer of the patch makes) in `format`.
+fn labelled(spec: &str, label: &str, format: &str) -> String {
+    let mut lit = Out::default();
+    lit.str(label);
+    let patch = format!("[{{\"op\":\"atom.set\",\"id\":0,\"label\":{}}}]", lit.0);
+    draw_json(&request(
+        spec,
+        &format!(",\"format\":\"{format}\",\"edit\":{patch}"),
+    ))
+    .unwrap()
+}
+
+#[test]
+fn a_label_with_markup_quotes_and_non_ascii_characters_is_escaped_in_both_files() {
+    let label = "é<&>\"'";
+    let ket = labelled("CCO", label, "ket");
+    let v: serde_json::Value = serde_json::from_str(&ket).expect("KET is JSON");
+    assert_eq!(v["mol0"]["atoms"][0]["alias"].as_str(), Some(label));
+    let cdxml = labelled("CCO", label, "cdxml");
+    assert!(cdxml.contains(">é&lt;&amp;&gt;&quot;&apos;</s>"), "{cdxml}");
+    assert!(!cdxml.contains("<&") && !cdxml.contains("&>"), "{cdxml}");
+    // the file is still the same molecule
+    let want = draw(&request("CCO", "")).unwrap().0.mol.can();
+    assert_eq!(read_ket(&ket).can(), want);
+    assert_eq!(read_cdxml(&cdxml).can(), want);
+}
+
+#[test]
+fn xml_forbidden_characters_of_a_label_are_dropped_from_the_cdxml() {
+    // U+FFFE and U+FFFF are not XML 1.0 characters; KET (JSON) may carry them
+    let label = "A\u{fffe}B\u{ffff}C\u{1}";
+    let cdxml = labelled("CCO", label, "cdxml");
+    assert!(cdxml.contains(">ABC</s>"), "{cdxml}");
+    assert!(!cdxml.contains(['\u{fffe}', '\u{ffff}', '\u{1}']));
+    assert!(labelled("CCO", label, "ket").contains("\"alias\":\"A"));
+}

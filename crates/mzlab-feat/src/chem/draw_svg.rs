@@ -1,6 +1,6 @@
 //! The picture of `mol draw`: the drawn structure becomes a list of primitives (lines, polygons, discs, text runs) in pixels, written as SVG
-//! here and rasterised by `draw_png`. Rules: carbon is a vertex unless it is charged, isotopic or alone; every other atom shows its symbol with
-//! its hydrogens (`OH`, `H2N`, `NH3+`), the hydrogens on the side without bonds; bonds stop at the label; a double bond sits inside its ring or
+//! here and rasterised by `draw_png`. Rules: carbon is a vertex unless it is charged, isotopic, alone or labelled by an edit patch; every other atom shows its symbol
+//! with its hydrogens (`OH`, `H2N`, `NH3+`), the hydrogens on the side without bonds (a patch label replaces symbol and hydrogens); bonds stop at the label; a double bond sits inside its ring or
 //! on the side of its substituents, centred when it ends in a terminal atom or both sides are alike; wedges are solid, hashed or wavy;
 //! CIP marks (R/S/r/s, E/Z) go into the free angle beside their atom or bond; highlights are pale halos under the structure. Arithmetic is
 //! `+ - * /` and `sqrt` only, so the bytes are the same in every build.

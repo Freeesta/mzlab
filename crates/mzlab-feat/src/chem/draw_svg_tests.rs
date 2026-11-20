@@ -407,8 +407,8 @@ fn a_patch_label_replaces_the_symbol_and_the_hydrogens_in_the_picture() {
     // the bond comes from the right: the text runs to the left, still one label
     assert_eq!(texts(&edit("OCC", &set(0, "OMe")), "atom"), ["OMe"]);
     // charge and isotope stay beside the text
-    let c = format!("[{{\"op\":\"atom.set\",\"id\":2,\"chg\":1,\"label\":\"Me3N\"}}]");
-    assert_eq!(texts(&edit("CCN", &c), "atom"), ["Me3N+"]);
+    let c = r#"[{"op":"atom.set","id":2,"chg":1,"label":"Me3N"}]"#;
+    assert_eq!(texts(&edit("CCN", c), "atom"), ["Me3N+"]);
     // the text shows in both pictures, and a patch without a label changes nothing
     let plain = image("CCO", "");
     assert_eq!(plain, image("CCO", ",\"edit\":[]"));
@@ -438,4 +438,33 @@ fn a_custom_label_is_anchored_by_the_character_next_to_the_bonds() {
     let (runs, bx) = label_of(&m, 2, true, [0.0, 0.0], f, Some("OMe"));
     assert_eq!(runs.iter().map(|r| r.0.as_str()).collect::<String>(), "OMe");
     assert!((bx[2] - half).abs() < 1e-9 && bx[0] < -half);
+}
+
+#[test]
+fn a_label_with_markup_quotes_non_ascii_and_forbidden_characters_gives_valid_pictures() {
+    let draw = |label: &str, format: &str| {
+        let mut lit = mzlab_core::json::Out::default();
+        lit.str(label);
+        format!(
+            "{{\"spec\":\"smiles:CCO\",\"format\":\"{format}\",\"edit\":[{{\"op\":\"atom.set\",\"id\":0,\"label\":{}}}]}}",
+            lit.0
+        )
+    };
+    let svg = draw_json(&draw("é<&>\"'", "svg")).unwrap();
+    // the bond comes from the right, so the text runs left in two runs: all but the last character, then the last
+    assert!(
+        svg.contains(">é&lt;&amp;&gt;\"</text>") && svg.contains(">'</text>"),
+        "{svg}"
+    );
+    assert!(!svg.contains("<&"));
+    // a character the stroke font lacks is blank in the PNG, and nothing panics
+    let png = draw_bytes(&draw("é<&>\"'", "png")).unwrap();
+    assert!(png.starts_with(&[0x89, b'P', b'N', b'G']));
+    let svg = draw_json(&draw("A\u{fffe}B\u{ffff}C", "svg")).unwrap();
+    assert!(
+        svg.contains(">AB</text>") && svg.contains(">C</text>"),
+        "{svg}"
+    );
+    assert!(!svg.contains(['\u{fffe}', '\u{ffff}']));
+    assert!(draw_bytes(&draw("A\u{fffe}B", "png")).is_ok());
 }

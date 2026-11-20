@@ -88,6 +88,8 @@ def main():
         add(name, "smiles:" + spec, patch)
     base = molfile("CC(=O)Nc1ccc(O)cc1")
     add("molfile keeps its coordinates", "-", [{"op": "atom.add", "el": "Cl"}, {"op": "bond.add", "a": 0, "b": 11}], stdin=base)
+    missing = RENDER - {c["name"] for c in cases}
+    assert not missing, f"RENDER names that match no case: {sorted(missing)}"
     out = ROOT / "tests" / "dati" / "draw_d3.json"
     out.write_text(json.dumps({"cases": cases}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(cases)} cases, {sum(1 for c in cases if c['exit'])} errors")
