@@ -277,7 +277,7 @@ fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -
         .as_array()
         .unwrap()
         .iter()
-        .any(|a| a.get("kind").map_or(true, |k| k == "path" || k == "rest"))
+        .any(|a| a.get("kind").is_none_or(|k| k == "path" || k == "rest"))
         || flags.iter().any(|f| {
             let t = f
                 .get("type")
