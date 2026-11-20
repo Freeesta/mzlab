@@ -62,3 +62,14 @@ def test_every_step_id_has_its_texts_in_the_language_file():
     missing = [k for i in ids for k in (f"tour.{i}.title", f"tour.{i}.text") if k not in keys]
     assert not missing, missing
     assert all(k[:-4] + ".title" in keys for k in keys if k.endswith(".try") and k.count(".") == 2), keys
+
+
+def test_every_step_id_compared_in_the_code_is_a_known_step():
+    # a literal compared with `step.id` that names no step (a renamed id left behind) silently never matches
+    import re
+    lab = JS.parents[2] / "tools" / "lab" / "lab.js"
+    texts = [JS.read_text(encoding="utf-8"), lab.read_text(encoding="utf-8")]
+    known = set(re.findall(r'\{? ?id: "(\w+)"', texts[0])) | set(re.findall(r'\{ id: "(\w+)"', texts[1]))
+    used = {m for t in texts for m in re.findall(r'step\.id\s*[!=]==\s*"(\w+)"', t)}
+    assert used, "no comparison found: the pattern is stale"
+    assert used <= known, sorted(used - known)
