@@ -16,7 +16,7 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 /// An input that is still being written (a `.wiff` pair whose size changes): nothing was read; try again when the acquisition has ended.
-pub const GROWING: u8 = 7;
+pub const GROWING: u8 = 8;
 
 const INPUT_KEYS: &[&str] = &[
     "err.cli.input.missing",

@@ -1,5 +1,5 @@
 //! `mzlab-cli peak table`: the `sample_id` / `file` columns tie every row to its sample on the SIM `.wiff` of `tools/wiff_sim.py` (a blank among the
-//! samples), `--max-shift` keeps a followed window where it was (`too_far`), and a `.wiff` pair that grows while it is opened ends with exit 7.
+//! samples), `--max-shift` keeps a followed window where it was (`too_far`), and a `.wiff` pair that grows while it is opened ends with exit 8.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -189,7 +189,7 @@ pub(crate) fn growing_pair(src: &Path, live: &Path) -> (String, std::thread::Joi
     (live.join("L.wiff").display().to_string(), writer)
 }
 
-/// A `.wiff.scan` that keeps growing while the pair is opened is refused with exit 7 and `err.file.wiffGrowing` (sizes and interval in its parameters),
+/// A `.wiff.scan` that keeps growing while the pair is opened is refused with exit 8 and `err.file.wiffGrowing` (sizes and interval in its parameters),
 /// by `peak table` and by `sample list`; once the writer is done the same pair opens.
 #[test]
 fn a_pair_that_grows_while_it_is_opened_ends_with_exit_7() {
@@ -199,15 +199,15 @@ fn a_pair_that_grows_while_it_is_opened_ends_with_exit_7() {
     std::fs::write(&w, r#"[{"file":1,"tr":0,"a":1.89,"b":2.19}]"#).unwrap();
     let wp = w.display().to_string();
     let o = run(&[&lw, "--windows", &wp, "--json"]);
-    assert_eq!(o.code, 7, "{}", o.stderr);
+    assert_eq!(o.code, 8, "{}", o.stderr);
     let out = String::from_utf8(o.stdout).unwrap();
     assert!(
-        out.contains("\"error_key\":\"err.file.wiffGrowing\"") && out.contains("\"code\":7"),
+        out.contains("\"error_key\":\"err.file.wiffGrowing\"") && out.contains("\"code\":8"),
         "{out}"
     );
     assert!(o.stderr.contains("still being written"), "{}", o.stderr);
     let l = execute(&["sample".into(), "list".into(), lw.clone(), "--json".into()]);
-    assert_eq!(l.code, 7, "{}", l.stderr);
+    assert_eq!(l.code, 8, "{}", l.stderr);
     writer.join().unwrap();
     // finished: the size no longer changes, the pair opens
     let done = run(&[&lw, "--windows", &wp]);

@@ -243,7 +243,7 @@ fn flags_are_described_and_typed_like_the_usage_line() {
             .as_array()
             .unwrap()
             .iter()
-            .all(|x| x.as_u64().unwrap() <= 7));
+            .all(|x| x.as_u64().unwrap() <= 8));
     }
 }
 

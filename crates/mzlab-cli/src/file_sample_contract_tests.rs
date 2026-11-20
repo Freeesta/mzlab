@@ -255,7 +255,7 @@ fn assert_listed(seen: &std::collections::BTreeMap<&str, std::collections::BTree
     }
 }
 
-/// `sample list` on a pair whose `.scan` is still being written (started right here, so it is still growing when probed) is exit 7.
+/// `sample list` on a pair whose `.scan` is still being written (started right here, so it is still growing when probed) is exit 8.
 fn probe_growing(
     wiff: &str,
     dir: &Path,
@@ -264,7 +264,7 @@ fn probe_growing(
     let (live, writer) =
         crate::manual_table_cmd::guard_tests::growing_pair(Path::new(wiff), &dir.join("live"));
     let r = run(&["sample", "list", &live]);
-    assert_eq!(r.code, 7, "{}", r.stderr);
+    assert_eq!(r.code, 8, "{}", r.stderr);
     seen.entry("sample list").or_default().insert(r.code);
     writer.join().unwrap();
 }

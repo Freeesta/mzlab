@@ -86,7 +86,7 @@ const RECENT_S: u64 = 10;
 /// How long the two readings are apart (ms); `MZLAB_GROW_PROBE_MS` changes it, 0 turns the check off.
 const PROBE_MS: u64 = 400;
 
-/// Refuses a `.wiff` pair that is still being written (`err.file.wiffGrowing`, exit 7): a member modified in the last `RECENT_S` seconds has its size
+/// Refuses a `.wiff` pair that is still being written (`err.file.wiffGrowing`, exit 8): a member modified in the last `RECENT_S` seconds has its size
 /// read, then again after `PROBE_MS`; a size that changed means the pair is not whole yet. A pair nobody touched lately costs one `stat`.
 fn refuse_growing(list: &[(String, PathBuf)]) -> Result<()> {
     let wiff = |n: &str| {

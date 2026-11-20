@@ -32,7 +32,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | 4 | input missing or unreadable |
 | 5 | selector not found (sample, channel, node, step) |
 | 6 | output write or external source failure |
-| 7 | input still being written |
+| 8 | input still being written |
 <!--/exits-->
   Which codes a command can end with: `commands --json PATH` (`exit_codes`; the derived rule is in the listing's `exit_codes_note`). Every non-zero code is one `error/1` on stdout under `--json`.
 
@@ -64,7 +64,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
 `features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
-- Exit 7: a `.wiff` pair whose size changes while it is opened (modified in the last 10 s, size read twice 400 ms apart; `MZLAB_GROW_PROBE_MS`, 0 = off) is refused whole with `err.file.wiffGrowing` (sizes and interval in `params`); retry when the acquisition ends. Opened by `peak table` and `sample list` (catalog) and by every command that opens a vendor file.
+- Exit 8: a `.wiff` pair whose size changes while it is opened (modified in the last 10 s, size read twice 400 ms apart; `MZLAB_GROW_PROBE_MS`, 0 = off) is refused whole with `err.file.wiffGrowing` (sizes and interval in `params`); retry when the acquisition ends. Opened by `peak table` and `sample list` (catalog) and by every command that opens a vendor file.
 - `sample list` (`sample-list/1`: ONE document, `files` in the order given, a refused file is an inline `error/1` entry, a missing file is a whole-run `error/1` (exit 4, no listing); exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file validate --json` (`mzml-validation/1`, ONE document for all files; a missing file is exit 4 + `error/1`), `file convert --json` (`convert/1`; `--dry-run` lists inputs, readers and sizes and writes nothing; an `.mzML` named as input is `err.file.alreadyMzml`, exit 4) and `file items --no-points` (leaves out `ms2_events`).
 - `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-full-spec.md`).

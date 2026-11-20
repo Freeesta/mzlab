@@ -50,7 +50,7 @@ fn the_exits_of_every_peak_command_are_listed() {
             .contains("--out");
         assert_eq!(exits.contains(&6), out, "{n}: {exits:?}");
         assert!(
-            exits.iter().all(|c| [0, 1, 2, 4, 6, 7].contains(c)),
+            exits.iter().all(|c| [0, 1, 2, 4, 6, 8].contains(c)),
             "{n}: {exits:?}"
         );
     }
