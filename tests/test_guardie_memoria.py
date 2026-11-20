@@ -82,7 +82,9 @@ def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
     for name, got in measured.items():
         assert set(got) == set(want[name]), (name, sorted(got), sorted(want[name]))
         over = {k: (got[k], want[name][k]) for k in got if got[k] > want[name][k] * SLACK}
-        assert not over, f"{name}: peak of the linear memory above the recorded value + 10 %: {over}"
+        # the SHA-256 of the series is in the message: a different input (numpy's exp/log vary with the CPU) and a different engine look alike otherwise
+        series_sha = hashlib.sha256(b"".join(Path(i).read_bytes() for i in big)).hexdigest()[:16]
+        assert not over, f"{name}: peak of the linear memory above the recorded value + 10 %: {over} (series {series_sha}, numpy {sys.modules['numpy'].__version__})"
 
 
 def test_a_new_exported_function_that_returns_a_whole_vec_is_refused(monkeypatch, tmp_path):
