@@ -265,6 +265,14 @@ fn an_aromatic_hydrogen_the_file_does_not_state_is_reported_with_its_atom() {
         out.contains("{\"code\":\"aromaticH\",\"level\":\"note\",\"atoms\":[0],"),
         "{out}"
     );
+    // the same ring with the hydrogen stated on the other N (the data group of Ketcher): nothing was chosen
+    let stated = plain(&["N", "C", "N", "C", "C"], &ring).replace(
+        "M  END",
+        "M  STY  1   1 DAT\nM  SAL   1  1   3\nM  SDT   1 MRV_IMPLICIT_H\nM  SED   1 IMPL_H1\nM  END",
+    );
+    assert!(codes(&check(&stated)).is_empty());
+    // pyrrole: only the N can carry it, nothing was chosen
+    assert!(codes(&check(&plain(&["N", "C", "C", "C", "C"], &ring))).is_empty());
     // benzene written with aromatic bonds states everything: no remark
     let six = [
         (1, 2, 4),

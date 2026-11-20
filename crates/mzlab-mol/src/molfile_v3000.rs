@@ -3,7 +3,7 @@
 
 use crate::codec::MolError;
 use crate::model::GroupKind;
-use crate::molfile::{fail, Draft, DraftAtom, DraftBond, Wedge};
+use crate::molfile::{fail, implicit_h, Draft, DraftAtom, DraftBond, Wedge};
 use crate::molfile_v2000::symbol;
 use std::collections::HashMap;
 
@@ -65,6 +65,7 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
     let mut atoms = Vec::new();
     let mut raw_bonds: Vec<Vec<String>> = Vec::new();
     let mut collections = Vec::new();
+    let mut raw_groups: Vec<Vec<String>> = Vec::new();
     let mut block = "";
     for l in logical_lines(lines) {
         let t = tokens(&l);
@@ -74,6 +75,7 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
                     "ATOM" => "ATOM",
                     "BOND" => "BOND",
                     "COLLECTION" => "COLLECTION",
+                    "SGROUP" => "SGROUP",
                     _ => "",
                 }
             }
@@ -87,6 +89,7 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
                 }
                 "BOND" => raw_bonds.push(t),
                 "COLLECTION" => collections.extend(collection(&t, &ids)?),
+                "SGROUP" => raw_groups.push(t),
                 _ => {}
             },
         }
@@ -98,10 +101,26 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
         .iter()
         .map(|t| bond(t, &ids))
         .collect::<Result<_, _>>()?;
+    let mut stated_h = Vec::new();
+    for t in &raw_groups {
+        let p = props(t);
+        let field = p.get("FIELDNAME").copied().unwrap_or("");
+        let Some(h) = implicit_h(field, p.get("FIELDDATA").copied().unwrap_or("")) else {
+            continue;
+        };
+        let list = p.get("ATOMS").copied().unwrap_or("");
+        let list = list.trim_matches(|c| c == '(' || c == ')');
+        for id in list.split_whitespace().skip(1) {
+            if let Some(&a) = id.parse().ok().and_then(|id: usize| ids.get(&id)) {
+                stated_h.push((a, h));
+            }
+        }
+    }
     Ok(Draft {
         atoms,
         bonds,
         collections,
+        stated_h,
     })
 }
 

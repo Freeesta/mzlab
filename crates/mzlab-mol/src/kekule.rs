@@ -87,7 +87,7 @@ pub(crate) struct Facts<'a> {
 
 /// Turns the aromatic bonds (`orders[i] == 0`, between `ends[i]`) into single or double ones, so that every aromatic atom that needs a
 /// double bond gets exactly one. None when no assignment exists; else the atoms that were given a hydrogen the input does not state
-/// (empty when it states them all), so that the caller can report the choice.
+/// when another atom could carry it as well (empty when nothing was chosen), so that the caller can report the choice.
 pub(crate) fn assign(
     ends: &[(usize, usize)],
     orders: &mut [u8],
@@ -125,12 +125,25 @@ pub(crate) fn assign(
             skip.iter().for_each(|&i| v[i] = false);
             kekulize(n, &pairs, &v).map(|d| (d, skip.to_vec()))
         };
-        flexible.iter().find_map(|&i| with_h(&[i])).or_else(|| {
-            flexible
+        let carbons = |v: &[usize]| v.iter().filter(|&&i| atoms[i].el == "C").count();
+        let mut one = flexible.iter().filter_map(|&i| with_h(&[i]));
+        let mut two = flexible.iter().enumerate().flat_map(|(k, &i)| {
+            let with_h = &with_h;
+            flexible[k + 1..]
                 .iter()
-                .enumerate()
-                .find_map(|(k, &i)| flexible[k + 1..].iter().find_map(|&j| with_h(&[i, j])))
-        })
+                .filter_map(move |&j| with_h(&[i, j]))
+        });
+        // the first that works is taken; it is a choice (reported) only when another atom of the same kind works too
+        let (doubles, given) = one.next().or_else(|| two.next())?;
+        let same = |(_, other): (_, Vec<usize>)| {
+            other.len() == given.len() && carbons(&other) == carbons(&given)
+        };
+        let choice = if given.len() == 1 {
+            one.any(same)
+        } else {
+            two.any(same)
+        };
+        Some((doubles, if choice { given } else { Vec::new() }))
     })?;
     for &i in &aromatic {
         let (f, t) = ends[i];

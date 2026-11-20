@@ -23,7 +23,8 @@ pub struct Drawing {
     pub mol: Mol,
     /// False when the bonds written aromatic could not be given alternating orders (they are left single).
     pub kekule: bool,
-    /// Aromatic atoms given a hydrogen that the file does not state (the first that can carry it, heteroatoms first, in file order).
+    /// Aromatic atoms given a hydrogen that the file does not state, when another atom could carry it too (the first that can, heteroatoms
+    /// first, in file order, is taken).
     pub aromatic_h: Vec<u32>,
     /// Atoms on a bond written aromatic.
     pub arom_atoms: Vec<u32>,

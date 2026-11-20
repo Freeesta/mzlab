@@ -1,5 +1,5 @@
 //! Molfile (V2000 and V3000, first record of an SDF) into `mol/1`. Atoms keep the order of the file; aromatic bonds (type 4) are kekulised;
-//! hydrogens of B C N O P S F Cl Br I Si As Se come from the valence rules, other elements get none; stereo is read from wedges (tetrahedral
+//! hydrogens of B C N O P S F Cl Br I Si As Se come from the valence rules (an `MRV_IMPLICIT_H` data group says which aromatic atom has one), other elements get none; stereo is read from wedges (tetrahedral
 //! centres), the "either" flags and the 2D/3D geometry of double bonds, and enhanced-stereo groups (V3000). Coordinates are kept as a layer.
 //! A double bond with the "either" flag is `unknown`; without the flag its Z/E comes from the drawn coordinates (as RDKit does).
 //! Not read: whether a drawn centre or double bond is really stereogenic (a later package decides), nor stereo from 3D coordinates.
@@ -64,7 +64,7 @@ impl Draft {
         let n = self.atoms.len();
         let ends: Vec<(usize, usize)> = self.bonds.iter().map(|b| (b.a, b.b)).collect();
         let mut orders: Vec<u8> = self.bonds.iter().map(|b| b.order).collect();
-        let facts: Vec<Facts> = self
+        let mut facts: Vec<Facts> = self
             .atoms
             .iter()
             .map(|a| Facts {
@@ -73,6 +73,9 @@ impl Draft {
                 h: 0,
             })
             .collect();
+        for &(i, h) in &self.stated_h {
+            facts[i].h = h;
+        }
         let kekule = assign(&ends, &mut orders, &facts);
         if kekule.is_none() && !lenient {
             return Err(fail("the aromatic system cannot be kekulised"));
@@ -184,6 +187,14 @@ pub(crate) struct Draft {
     pub atoms: Vec<DraftAtom>,
     pub bonds: Vec<DraftBond>,
     pub collections: Vec<(GroupKind, Vec<usize>)>,
+    /// Hydrogens an `MRV_IMPLICIT_H` data group states for an atom (how Ketcher, Marvin and RDKit say which aromatic atom carries the H).
+    pub stated_h: Vec<(usize, u32)>,
+}
+
+/// The hydrogen count of the data `IMPL_Hn` of an `MRV_IMPLICIT_H` group; None for any other field.
+pub(crate) fn implicit_h(field: &str, data: &str) -> Option<u32> {
+    (field == "MRV_IMPLICIT_H").then_some(())?;
+    data.trim_matches('"').strip_prefix("IMPL_H")?.parse().ok()
 }
 
 /// Hydrogens and unpaired electrons of an atom whose bonds add up to `sum`: a stated valence fixes the total (the rest is hydrogens,
