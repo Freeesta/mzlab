@@ -185,6 +185,7 @@ mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
+mod renamed;
 mod sample_select;
 mod samples_cmd;
 mod schema_cmd;
@@ -465,10 +466,7 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
             ));
             return ("", o);
         }
-        let o = Outcome::fail_error(
-            &Error::new("err.cli.usage").with("message", format!("unknown command {}", args[0])),
-        );
-        return ("", o);
+        return ("", renamed::unknown_command(args));
     };
     let mut rest = args[n..].to_vec();
     // `db normative` has its own `--cache` (sources folder): it keeps it and never sets the index cache
