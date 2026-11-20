@@ -59,7 +59,7 @@ def test_wasm_and_cli_give_the_same_bytes_with_and_without_samples(work):
     for samples in (None, work / "samples.json"):
         got = wasm(work, table, samples)
         assert not got.startswith("ERROR"), got
-        assert got == native(work, table, samples)
+        assert got == native(work, table, samples).removesuffix("\n")   # the command ends its standard output with a newline, the text has none
         assert json.loads(got)["schema"] == "compare/1" and json.loads(got)["rows"]
 
 
