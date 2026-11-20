@@ -285,7 +285,8 @@ fn the_scene_can_carry_the_file_and_the_bytes_are_fixed() {
 #[test]
 fn a_bad_format_or_file_setting_is_an_error_with_its_name() {
     for extra in [
-        ",\"format\":\"png\"",
+        ",\"format\":\"gif\"",
+        ",\"format\":\"svg\",\"file\":\"ket\"",
         ",\"format\":\"molfile\",\"file\":\"ket\"",
         ",\"format\":\"scene\",\"file\":\"molfile\"",
         ",\"format\":\"ket\",\"file\":\"ket\"",

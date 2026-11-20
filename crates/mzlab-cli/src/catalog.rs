@@ -73,7 +73,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--da", "tolerance, Da"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
-    ("--format", "json (default) or csv"),
+    ("--format", "output format (values in the usage line)"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
     ("--conv", "conversation"),
