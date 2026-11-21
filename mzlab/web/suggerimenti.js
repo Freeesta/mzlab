@@ -1,7 +1,7 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// One queue for the hints that point at something: the tour (and its invitation), «the tools are here» (barra.js) and «drag here to place side by side» (affianca.js).
+// One queue for the hints that point at something: the tour (and its invitation), «the tools are here» (barra.js) and «drag here to place side by side» (arrange.js).
 // Never two at once: a hint asks with SUGG.chiedi(id, mostra); while another is on screen it waits (a new request with the same id only renews `mostra`) and is shown,
 // in order of request, when the screen is free. `mostra()` says whether it showed the hint; a hint that no longer applies returns false and leaves the queue. Classic script.
 const SUGG = (() => {

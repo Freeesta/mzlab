@@ -1,5 +1,5 @@
 """Panels of the Data view (9/10): Correction outside the popover and with any file, RT interval, ruler anchored to labels and cancelled by zoom, isotope simulation off with the zoom, no Sight/Ridge."""
-# covers: mzlab/web/mappa.js, mzlab/web/affianca.js, mzlab/web/layout.js, mzlab/web/pannelli.js
+# covers: mzlab/web/mappa.js, mzlab/web/arrange.js, mzlab/web/layout.js, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

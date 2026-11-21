@@ -18,7 +18,7 @@ try:
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
-        notice = lambda: pg.evaluate("document.getElementById('tolto-box') ? 1 : 0")
+        notice = lambda: pg.evaluate("document.getElementById('removed-box') ? 1 : 0")
         pending = "HISTORY.stack.v.some(e => e.kind === 'removed' && e.expires)"
         dialogs = lambda: pg.evaluate("document.querySelectorAll('dialog[open]').length")
         FK = "E.files.find(f => f.kind === 'full' && !f.gone).k"

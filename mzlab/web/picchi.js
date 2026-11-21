@@ -175,9 +175,9 @@ function peakParams() {
     <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}${sec("lrall", ["lrSmooth", "lrValley", "lrSn"]).replace("</fieldset>", `<label class="pk-row"><span>${I18N.t("pk.lrSplit")}</span><select data-pk="lrSplit">${[0, 1].map(v => `<option value="${v}"${PK.lrSplit === v ? " selected" : ""}>${I18N.t(`pk.split.${v}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.lrSplit.h")}</span></label></fieldset>`)}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
-    Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
+    Q("#pk-def").onclick = () => { COMMANDS.run("peaks.settings", COMMANDS.GLOBAL, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
-      COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
+      COMMANDS.run("peaks.settings", COMMANDS.GLOBAL, () => {
         document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const v = numIt(i.value); if (v >= 0) PK[i.dataset.pk] = v; });
         PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.lrSmooth = PK.lrSmooth ? Math.max(3, Math.round(PK.lrSmooth) | 1) : 0;
       });
@@ -201,10 +201,10 @@ if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "t
   voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
-// the peak-finding parameters and the columns of the integration table are one undoable action (comandi.js)
-COMANDI.gestore("peaks.settings", {
-  leggi: () => JSON.stringify([PK, INTOPT]),
-  applica: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); /** @type {any} */ (window).MANINT?.sync(); },
+// the peak-finding parameters and the columns of the integration table are one undoable action (commands.js)
+COMMANDS.handler("peaks.settings", {
+  read: () => JSON.stringify([PK, INTOPT]),
+  apply: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); /** @type {any} */ (window).MANINT?.sync(); },
 });
 
 // ------------------------------------------------------------------ spettri
@@ -508,7 +508,7 @@ function contLegend(/** @type {Bag} */ p) {
   if (n) h += `<span class="cont-cnt" role="status">${I18N.t(p.showHid ? "cont.cnt.shown" : "cont.cnt", { n })} · <button type="button" class="cont-show">${I18N.t(p.showHid ? "cont.hide" : "cont.show")}</button></span>`;
   if (!h) return;
   p.leg2.insertAdjacentHTML("beforeend", h);
-  const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { COMANDI.fai("series.visibility", p, () => { p.showHid = !p.showHid; }); draw(p); };
+  const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { COMMANDS.run("series.visibility", p, () => { p.showHid = !p.showHid; }); draw(p); };
   const l = p.leg2.querySelector(".cont-lb");
   if (l) l.onclick = (/** @type {MouseEvent} */ e) => {
     e.stopPropagation();

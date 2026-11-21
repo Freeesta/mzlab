@@ -1,5 +1,5 @@
 """Guided tour of the Data view (low-resolution only): invitation, 15 steps, try-it steps, keyboard, HR exclusion, example file."""
-# covers: mzlab/web/barre-maniglie.js, mzlab/web/tour.js, mzlab/web/barra.js, mzlab/web/affianca.js, mzlab/web/suggerimenti.js, mzlab/web/pannelli.js
+# covers: mzlab/web/barre-maniglie.js, mzlab/web/tour.js, mzlab/web/barra.js, mzlab/web/arrange.js, mzlab/web/suggerimenti.js, mzlab/web/pannelli.js
 # covers: mzlab/web/grafici.js, mzlab/web/picchi.js, mzlab/web/tooltip.js, mzlab/web/eventi.js, mzlab/web/qaqc.js, mzlab/web/riferimento.js
 # covers: mzlab/web/stat.js
 import json, sys, os, shutil
@@ -220,7 +220,7 @@ try:
         hd = pg.inner_text("#tour-dialog .tour-hd")
         assert "Step 4 of 9 · Tools and moving around" in hd, hd
 
-        # Step 5: affianca (the handle of the panels)
+        # Step 5: arrange (the handle of the panels)
         pg.click("#tour-btn-next")
         wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 5 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")

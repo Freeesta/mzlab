@@ -187,7 +187,7 @@ def visible(r, cat):
 # Classes: A useful (adds information), B redundant (repeats what is visible), C to redo, D to remove, - not a tooltip.
 # Keys are I18N keys or "file:line" for sites without one (paths relative to mzlab/web unless prefixed).
 NOT_TOOLTIP = {"appname.js:6", "appname.js:8", "avvio.js:4", "banco.js:63", "banco.js:67", "dda.js:118", "dda.js:299", "dda.js:308",
-               "eventi.js:274", "pannelli.js:161", "pannelli.js:358", "pannelli.js:649", "pannelli.js:651", "pannelli-annulla.js:25",
+               "eventi.js:274", "pannelli.js:161", "pannelli.js:358", "pannelli.js:649", "pannelli.js:651", "panels-undo.js:25",
                "tabs.js:206", "tabs.js:208", "index.html:8", "shell.js:137", "xic-lente.js:115", "llm/llm-clienti.js:56",
                "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
 OVERRIDE = {
@@ -201,7 +201,7 @@ OVERRIDE = {
     "spec.dm.tip.ls": ("C", "gesture hint only (to merge with the common hover)"),
 }
 ZONES = [
-    ("pannelli", "Panels, chart toolbars, bar, legends", ("pannelli", "grafici", "barra", "banco", "eventi", "scroll", "touch", "affianca", "xic-", "sottrazione", "fondo", "gradiente", "canali", "tdati", "etichette", "azioni", "visualizza", "paletta", "avanzamento")),
+    ("pannelli", "Panels, chart toolbars, bar, legends", ("pannelli", "grafici", "barra", "banco", "eventi", "scroll", "touch", "arrange", "xic-", "sottrazione", "fondo", "gradiente", "canali", "tdati", "etichette", "azioni", "visualizza", "paletta", "avanzamento")),
     ("spettri", "Spectrum, map, DDA, XIC, integration", ("spettro", "picchi", "mappa", "dda", "uv-", "metodo", "origine", "kmd", "pca", "qaqc", "profilo", "pfas", "ident", "calc", "elementare", "composizione")),
     ("liste", "Files, lists, libraries, tables, calculator", ("explore", "lista", "liste", "libreria", "tables", "tabella", "campioni", "shell", "conversione", "ruoli", "settings", "aggiorna", "predefinito", "perf", "help", "registro", "rapporto", "fair", "sito", "telefono", "index.html", "tpmine-loader", "llm", "libro")),
     ("disegno", "Draw, fragmentation graph, infusion", ("draw", "disegno", "infusione", "molecole", "msn")),

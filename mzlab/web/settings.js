@@ -39,10 +39,10 @@ function uipSave() {
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
-// the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js)
-COMANDI.gestore("app.settings", {
-  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
-  applica: (_p, snap) => {
+// the preferences (theme, colours, reading, high-resolution options) are one undoable action (commands.js)
+COMMANDS.handler("app.settings", {
+  read: () => JSON.stringify([UIP.theme, UIP.pal, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
+  apply: (_p, snap) => {
     const [theme, pal, hrPpm, hrDec, a11y, xicLens] = JSON.parse(snap);
     Object.assign(UIP, { theme, pal, hrPpm, hrDec, xicLens: xicLens !== false }); QA11Y.write(a11y); uipSave(); uipApply();
     CACHE.clear(); SC.m.clear(); SC.n.clear();
@@ -50,7 +50,7 @@ COMANDI.gestore("app.settings", {
   },
 });
 /** @param {() => void} f */
-const uipDo = f => COMANDI.fai("app.settings", COMANDI.GLOBALE, f);
+const uipDo = f => COMMANDS.run("app.settings", COMMANDS.GLOBAL, f);
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);

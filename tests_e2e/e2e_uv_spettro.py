@@ -57,9 +57,9 @@ try:
             pg.evaluate(f"{UV}.zoom=null"); pg.evaluate(f"drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels follow the zoom", uv_labels_zoom)
         def uv_labels_off():
-            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = false }}); drawSoon({UV})"); frames(pg, 3)
+            pg.evaluate(f"COMMANDS.run('spec.display', {UV}, () => {{ {UV}.etpk = false }}); drawSoon({UV})"); frames(pg, 3)
             assert pg.evaluate(f"{LBU}.length") == 0
-            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
+            pg.evaluate(f"COMMANDS.run('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
             t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(held at )?\d+\.\d\d min", t.strip()), t

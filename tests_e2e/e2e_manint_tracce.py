@@ -57,7 +57,7 @@ try:
             # a noise zone for each trace (the first tenth of it), the three optional groups on; then the card asks the engine again
             pg.evaluate("""(() => { for (const p of E.panels) { if (!p.ints || !p.ints.length || ESP.mrm(p)) continue;
               const it = p.ints[0], s = p._a.sr.find(q => q.key === it.key), n = Math.floor(s.x.length / 10); setNoiseZone(p, it, [s.x[0], s.x[n]]); }
-              COMANDI.fai('peaks.settings', COMANDI.GLOBALE, () => { INTOPT.sn = INTOPT.par = INTOPT.q = true; }); E.panels.forEach(p => draw(p)); })()""")
+              COMMANDS.run('peaks.settings', COMMANDS.GLOBAL, () => { INTOPT.sn = INTOPT.par = INTOPT.q = true; }); E.panels.forEach(p => draw(p)); })()""")
             pg.wait_for_function("MANINT.rows(MANTR.csv())[0].includes('gaussian') && MANINT.rows(MANTR.csv())[0].includes('sn_zone')", timeout=60000)
             heads = pg.locator("#manint-x th").all_inner_texts()
             for h in ["S/N (noise zone)", "w½ (min)", "N (plates)", "Tailing (USP, 5%)", "Gaussian similarity", "Asymmetry 10%", "Noise score"]: assert h in heads, (h, heads)

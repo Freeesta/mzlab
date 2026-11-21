@@ -1,4 +1,4 @@
-"""Undo of the actions of the Data view, one step per action of the registry (comandi.js): the ruler of the spectrum (clicks, button, Esc), the keys
+"""Undo of the actions of the Data view, one step per action of the registry (commands.js): the ruler of the spectrum (clicks, button, Esc), the keys
 with the focus on a button, a checkbox or a select, redo, the state of the buttons. Steps in TODO are known gaps of the undo not ported yet: they must
 FAIL today and the test fails as soon as one passes (then it moves out of TODO), so the list only shrinks."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -98,11 +98,11 @@ try:
         step("keys: Ctrl+Z in a text field stays the browser's", text_field)
         def registry_and_burst():
             reset()
-            assert pg.evaluate("COMANDI.senzaGestore()") == [], "every command of the table has its handler"
-            pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('spec.ruler',p,()=>{{p.rul=true}},{{unisci:'g'}});COMANDI.fai('spec.ruler',p,()=>{{p.rul=false;p.meas={{ref:1,list:[],key:measKey(p)}}}},{{unisci:'g'}})}})()")
+            assert pg.evaluate("COMMANDS.withoutHandler()") == [], "every command of the table has its handler"
+            pg.evaluate(f"(()=>{{const p={SPEC};COMMANDS.run('spec.ruler',p,()=>{{p.rul=true}},{{merge:'g'}});COMMANDS.run('spec.ruler',p,()=>{{p.rul=false;p.meas={{ref:1,list:[],key:measKey(p)}}}},{{merge:'g'}})}})()")
             assert pg.evaluate("HISTORY.stack.v.length") == 1, "steps of one gesture (same unisci, less than 0.8 s) are ONE entry"
             undo(); assert meas() is None and not rul(), "one Ctrl+Z takes the whole gesture back"
-            assert pg.evaluate("(()=>{try{COMANDI.fai('nope.x',null,()=>1);return 'no'}catch(e){return 'throws'}})()") == "throws", "an action outside the registry is refused"
+            assert pg.evaluate("(()=>{try{COMMANDS.run('nope.x',null,()=>1);return 'no'}catch(e){return 'throws'}})()") == "throws", "an action outside the registry is refused"
         step("registry: handlers present, a gesture is one step, unknown id refused", registry_and_burst)
         def pan_drag():
             reset()
@@ -115,7 +115,7 @@ try:
         step("view: a pan drag is one undoable step", pan_drag)
         def annotations():
             reset()
-            pg.evaluate(f"(()=>{{const p={SPEC};p.anns=p.anns||[];COMANDI.fai('spec.annotation',p,()=>p.anns.push({{x:364.4,text:'a'}}));draw(p)}})()")
+            pg.evaluate(f"(()=>{{const p={SPEC};p.anns=p.anns||[];COMMANDS.run('spec.annotation',p,()=>p.anns.push({{x:364.4,text:'a'}}));draw(p)}})()")
             assert pg.evaluate(f"{SPEC}.anns.length") == 1
             undo(); assert pg.evaluate(f"{SPEC}.anns.length") == 0, "Ctrl+Z takes the note back"
             redo(); assert pg.evaluate(f"{SPEC}.anns.length") == 1, "redo puts it back"
@@ -123,13 +123,13 @@ try:
         def opzioni():
             reset()
             old = pg.evaluate(f"{SPEC}.thr")
-            pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('spec.display',p,()=>{{p.thr=({{}}.x??{old}) + 7}});draw(p)}})()")
+            pg.evaluate(f"(()=>{{const p={SPEC};COMMANDS.run('spec.display',p,()=>{{p.thr=({{}}.x??{old}) + 7}});draw(p)}})()")
             undo(); assert pg.evaluate(f"{SPEC}.thr") == old, "Ctrl+Z restores the display option"
             redo(); assert pg.evaluate(f"{SPEC}.thr") == old + 7
         step("display options: change, undo, redo", opzioni)
         def sorgente():
             reset()
-            pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('panel.source',p,()=>{{p.log=!p.log}});draw(p)}})()")
+            pg.evaluate(f"(()=>{{const p={SPEC};COMMANDS.run('panel.source',p,()=>{{p.log=!p.log}});draw(p)}})()")
             was = pg.evaluate(f"!!{SPEC}.log")
             undo(); assert pg.evaluate(f"!!{SPEC}.log") != was, "Ctrl+Z restores the panel choice"
         step("panel source: choice, undo", sorgente)

@@ -12,7 +12,7 @@
       const hrE = t.ion && window.HR && HR.xicEdges(t, p), nm = (/** @type {string} */ v) => hrE ? (isFinite(numIt(v)) && numIt(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(q[0].value), hi = nm(q[1].value), ok = lo != null && hi != null && hi > lo, d = hrE ? 5 : 2;
       if (!ok) { q.forEach(i => { i.value = i.defaultValue; }); return CAMPI.note(I18N.t(lo == null || hi == null ? "xic.edge.num" : "xic.edge.order"), x); }
-      COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, d); t.w = rh((hi - lo) / 2, d); t.label = hrE ? `m/z ${t.mz.toFixed(4)}` : `m/z ${lo}\u2013${hi}`; delete t.ion; delete t.obs; });
+      COMMANDS.run("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, d); t.w = rh((hi - lo) / 2, d); t.label = hrE ? `m/z ${t.mz.toFixed(4)}` : `m/z ${lo}\u2013${hi}`; delete t.ion; delete t.obs; });
       keepFocus(p, () => { ctl(p); draw(p); }); uiSave();
     });
     x.onchange = go; x.onblur = go;
@@ -30,7 +30,7 @@
       if (bad) { q.forEach(i => { i.value = i.defaultValue; }); CAMPI.note(I18N.t(bad === "num" ? "ctl.range.num" : "ctl.range.order"), x); return; }
       keepFocus(p, () => {
         if (rt) { pushZh(p); if (lo == null) { p.zoom = null; p.zoomY = null; draw(p); } else zoomTo(p, lo, hi); }
-        else { const r2 = (/** @type {number | null} */ v) => v == null ? null : Math.round(v * 100) / 100; COMANDI.fai("panel.source", p, () => { p.mz0 = r2(lo); p.mz1 = r2(hi); ctl(p); }); draw(p); }
+        else { const r2 = (/** @type {number | null} */ v) => v == null ? null : Math.round(v * 100) / 100; COMMANDS.run("panel.source", p, () => { p.mz0 = r2(lo); p.mz1 = r2(hi); ctl(p); }); draw(p); }
         uiSave();
       });
       q.forEach(i => { i.defaultValue = i.value; });   // an RT zoom keeps these fields: the pair is applied, a later blur must not apply it again

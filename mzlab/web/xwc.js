@@ -37,7 +37,7 @@ export async function band(from, nm0, nm1, k, add) {
   const p = add ? target(from) : null;
   if (!p) return (g.UVSPEC ||= await import("./uv-spettro.js")).openWl(anchor(from), nm0, nm1, k);
   if ((p.mz0 === nm0 && p.mz1 === nm1) || (p.xw || []).some((/** @type {number[]} */ b) => b[0] === nm0 && b[1] === nm1)) return p;
-  COMANDI.fai("panel.source", p, () => { p.xw = [...(p.xw || []), [nm0, nm1]]; });
+  COMMANDS.run("panel.source", p, () => { p.xw = [...(p.xw || []), [nm0, nm1]]; });
   draw(p); uiSave();
   return p;
 }

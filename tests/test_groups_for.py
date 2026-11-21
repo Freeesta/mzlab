@@ -43,7 +43,7 @@ def run(code):
     lf = (WEB / "lista-file.js").read_text(encoding="utf-8")
     js = STUBS + f"""
 const vm = require("vm"); vm.runInThisContext({json.dumps(gr)});
-globalThis.COMANDI = {{ gestore() {{}}, fai: (_a, _b, fn) => {{ steps++; fn(); }}, GLOBALE: 0 }};
+globalThis.COMMANDS = {{ handler() {{}}, run: (_a, _b, fn) => {{ steps++; fn(); }}, GLOBAL: 0 }};
 vm.runInThisContext({json.dumps(lf)});
 const G = () => E.files.map(f => f.ugrp || null);
 (async () => {{ {code} }})().catch(e => {{ console.error(e); process.exit(1); }});
@@ -126,7 +126,7 @@ def test_the_name_of_a_new_group_falls_back_to_group_n_when_the_engine_has_none_
 def test_every_group_action_is_one_step_named_after_the_action():
     out = run("""
       const stack = { v: [] }; globalThis.HISTORY = { stack };
-      COMANDI.fai = (_a, _b, fn) => { fn(); stack.v.push({ cmd: "files.view", w: "history.fields", t: Date.now() }); };
+      COMMANDS.run = (_a, _b, fn) => { fn(); stack.v.push({ cmd: "files.view", w: "history.fields", t: Date.now() }); };
       await GROUPS.by({ by: "matrix" }); const w = [stack.v.at(-1).w];
       GROUPS.set(["QC_std.mzML"], "MQ"); w.push(stack.v.at(-1).w);
       await GROUPS.onto(["QC_std.mzML"], "TW_H2O2_T00.mzML"); w.push(stack.v.at(-1).w);

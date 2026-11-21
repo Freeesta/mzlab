@@ -82,7 +82,7 @@ try:
             assert pg.evaluate(f"JSON.stringify({S2}.lblOn)") != "undefined"
             x, y, _ = where(pg, 212.2, 0.5); pg.mouse.click(x, y); frames(pg, 4)
             assert pg.evaluate(f"!{S2}._a.lbls.some(l=>l.m!=null&&Math.abs(l.m-212.2)<0.01)"), "removed"
-            pg.evaluate(f"COMANDI.annulla ? COMANDI.annulla() : 0")
+            pg.evaluate(f"COMMANDS.undo ? COMMANDS.undo() : 0")
         step("a click pins the label of a small peak and removes the one of a labelled peak", pin)
         def msn3():
             pg.evaluate(f"(()=>{{const p={S2};p.level=3;p.prec=212.2;p.lblOn=[];p.lblOff=[];draw(p)}})()"); frames(pg, 6)
