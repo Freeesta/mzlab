@@ -1,7 +1,7 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "feature_pipeline/2",
- "title": "feature_pipeline/2: the operation of the pipeline of mzFinder in an mzflow/1 file",
+ "$id": "feature_pipeline/3",
+ "title": "feature_pipeline/3: the operation of the pipeline of mzFinder in an mzflow/1 file",
  "description": "One entry of `operations` of a .mzflow (mzlab/web/workflow.js, KNOWN_OPS). It carries everything needed to re-apply the pipeline on the same files and get the same .mzfeat: the recipe with the proof of every estimated value, the version of the engine, the SHA-256 of the inputs and of the table, the rules and levels used and the register of the hypotheses. Written by TP_Mine/js/35_pipeline_recipe.js.",
  "type": "object",
  "required": [
@@ -28,7 +28,7 @@
    "description": "UTC timestamp of the run"
   },
   "schema": {
-   "const": "feature_pipeline/2"
+   "const": "feature_pipeline/3"
   },
   "crate_version": {
    "type": "string",
@@ -135,7 +135,7 @@
    ],
    "properties": {
     "name": {
-     "const": "livelli/1"
+     "const": "levels/1"
     },
     "version": {
      "type": [
@@ -182,7 +182,7 @@
      ]
     }
    },
-   "description": "register of the hypotheses (ipotesi/1): searched, found and hash of its JSON"
+   "description": "register of the hypotheses (hypotheses/2): searched, found and hash of its JSON"
   },
   "runs": {
    "const": 1,

@@ -194,7 +194,7 @@ function rowOps(submit, call) {
   return {
     // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text. `tableFile`: CSV or mzTab-M in the polarity of the table and its files (as `flow run`).
     ms2File: ({ table, samples, spec, sha, pol, kind, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text; }), tableFile: ({ table, samples, sha, kind, view, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "table_file", table: table.slice(), samples, sha, kind, view: view || "", paths })).text; }), tableView: ({ table, samples, params }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "table_view", table: table.slice(), samples, params })).text; }),
-    // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
+    // XIC of every file, MS1 at the best apex and MS2 of one row (`row_traces/2`), read from the .mzidx in OPFS. Resolves with the text.
     rowTraces: ({ table, samples, id, ppm, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text; }),
     // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
     // `params` the JSON text of the options (ion, z, tol_ppm, elements, nitrogen, rdb_min, max_results). Resolves with the JSON text.

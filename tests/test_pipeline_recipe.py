@@ -1,5 +1,5 @@
 """Recipe of the pipeline of mzFinder in the .mzflow (TP_Mine/js/35_pipeline_recipe.js, mzlab/web/workflow.js) with node: the record of the operation «feature_pipeline» has the fields of
-docs/schemi/feature_pipeline-2.json, the check refuses incomplete records, the comparison of a re-application tells what differs, a reader that does not know the operation ignores it with a warning."""
+docs/schemi/feature_pipeline-3.json, the check refuses incomplete records, the comparison of a re-application tells what differs, a reader that does not know the operation ignores it with a warning."""
 import json
 import shutil
 import subprocess
@@ -26,11 +26,11 @@ const A = {{ recipe: JSON.stringify({{ ppm: 5, floor: null }}), proofs: [1], par
 
 
 def test_record_has_the_fields_of_the_schema():
-    schema = json.loads((ROOT / "docs/schemi/feature_pipeline-2.json").read_text())
+    schema = json.loads((ROOT / "docs/schemi/feature_pipeline-3.json").read_text())
     r = run_node("const o = await R.record(A); console.log(JSON.stringify({o, bad: W.checkFeatureOp(o)}));")
     assert r["bad"] == []
     o = r["o"]
-    assert o["schema"] == "feature_pipeline/2" and o["runs"] == 1 and o["suspects"] is None
+    assert o["schema"] == "feature_pipeline/3" and o["runs"] == 1 and o["suspects"] is None
     assert o["parent"] == {"formula": "C9H9", "mz": 200.1, "rt": None, "minutes": [0, 5, None]}
     assert o["rules"]["version"] == 3 and o["levels"]["version"] == 2 and len(o["table_sha256"]) == 64 and len(o["hypotheses"]["registry_sha256"]) == 64
     assert o["inputs"] == [{"name": "a.mzidx", "sha256": "ab"}] and o["params"] == {"ppm": 5, "floor": None}
@@ -47,6 +47,13 @@ def test_a_record_of_the_old_version_is_refused():
     r = run_node("""const o = await R.record(A); const old = { op: 'feature_pipeline', schema: 'feature_pipeline/1', recipe: '{}', parametri: {}, ingressi: [] };
 console.log(JSON.stringify({ bad: W.checkFeatureOp(old), last: R.lastOp([old], W.checkFeatureOp) }));""")
     assert r["bad"] == ["schema"] and r["last"] is None
+
+
+def test_a_record_of_version_2_is_refused_not_read_as_3():
+    # /2 is complete (every key present) but names the levels profile in Italian: it is refused as it is, never read as a new record
+    r = run_node("""const o = await R.record(A); const old = Object.assign({}, o, { schema: 'feature_pipeline/2' });
+console.log(JSON.stringify({ bad: W.checkFeatureOp(old), ok: W.checkFeatureOp(o), last: R.lastOp([old], W.checkFeatureOp) }));""")
+    assert r["bad"] == ["schema"] and r["ok"] == [] and r["last"] is None
 
 
 def test_compare_tells_what_differs():

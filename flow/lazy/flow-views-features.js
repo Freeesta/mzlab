@@ -12,7 +12,7 @@
     return { inputs, names: inputs.map((/** @type {any} */ i) => String((i && i.name) || "").replace(/\.(mzidx|mzml)$/i, "")), pol: meta && meta.polarity < 0 ? -1 : 1 };
   };
 
-  /** the family of each row of a table, read once per row from `riga/1` as the rows come into view: `get(id)` is the size or null while unknown, `members(id)` the ions; `redraw` is called (debounced) when more are known
+  /** the family of each row of a table, read once per row from `row/2` as the rows come into view: `get(id)` is the size or null while unknown, `members(id)` the ions; `redraw` is called (debounced) when more are known
    * @param {any} session @param {() => void} redraw */
   F.familyLoader = (session, redraw) => {
     /** @type {Map<number, any>} */ const known = new Map(), asked = new Set();

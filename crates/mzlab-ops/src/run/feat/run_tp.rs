@@ -1,5 +1,5 @@
 //! What `tp.generate` does, shared by the native executor (`mzlab-cli`, `flow_generate.rs`) and the browser (the export `tp_generate` below): the parent file, the
-//! parameters of the hypotheses and the registry `ipotesi/1`. The structure graph of a SMILES comes in as text (the CLI makes it with `chem`, the page with the
+//! parameters of the hypotheses and the registry `hypotheses/2`. The structure graph of a SMILES comes in as text (the CLI makes it with `chem`, the page with the
 //! `grafo` .wasm), so this module needs no chemistry. The same goes for `tp.link@2` up to the proofs (`link_evidence`, export `tp_link_evidence`): the interpretation of
 //! the rows comes after, from the `LinkRun` this gives (`interp.rs`).
 
@@ -114,7 +114,7 @@ pub fn hypo_params(get: &dyn Fn(&str) -> Option<Value>) -> HypoParams {
     }
 }
 
-/// `ipotesi/1` text of a parent under the rules (`regole_tp_3.json` bytes): what the engine could find, never a verdict.
+/// `hypotheses/2` text of a parent under the rules (`regole_tp_3.json` bytes): what the engine could find, never a verdict.
 pub fn generate_text(
     rules: &[u8],
     formula: &str,
@@ -212,7 +212,7 @@ fn parent_rt(table: &[u8], mz: f64) -> Result<f64> {
         .ok_or_else(|| Error::new("err.flow.link.parent").with("mz", mz))
 }
 
-/// The hypotheses, the search in the series and the proofs on `table` for the parent `p`; `hypotheses` has to be the `ipotesi/1` of `tp.generate` for this
+/// The hypotheses, the search in the series and the proofs on `table` for the parent `p`; `hypotheses` has to be the `hypotheses/2` of `tp.generate` for this
 /// parent in this polarity. `given` is the polarity the plan sets, if it does, else the files' when the detection took both; the recipe takes the polarity that results. `lap(name)` is called after each phase.
 #[allow(clippy::too_many_arguments)]
 pub fn link_evidence<I: ReadAt>(

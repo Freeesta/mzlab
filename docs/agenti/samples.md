@@ -31,7 +31,7 @@ One Rust model of the roles and times of the files of a series, for the Data vie
 
 ## `per_tp(&[Sample]) -> PerTp`
 - 0-based indices by role: `treated` (sample with time > 0), `t0`, `blank`, `dark`, `infusion`, `std` (with `calibration`), `qc`, `untimed` (sample without a usable time).
-- `minutes[]` compatible with `feature_pipeline/2` (`parent.minutes`): the time of the treated, 0 for the t0, null for all others; infusion is null and lives only in its index, never among the controls.
+- `minutes[]` compatible with `feature_pipeline/3` (`parent.minutes`): the time of the treated, 0 for the t0, null for all others; infusion is null and lives only in its index, never among the controls.
 
 A document with other key names is refused (`error.badSamples`).
 

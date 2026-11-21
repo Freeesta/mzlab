@@ -407,7 +407,7 @@ pub fn cross_polarity(
     .map_err(js_err)
 }
 
-/// The `riga/1` of the row with `id`: summaries, identity and one cell per file. An id the table does not have is `error.rowNotFound`.
+/// The `row/2` of the row with `id`: summaries, identity and one cell per file. An id the table does not have is `error.rowNotFound`.
 #[wasm_bindgen]
 pub fn table_row(
     table_read: Function,
@@ -418,7 +418,7 @@ pub fn table_row(
     core::row_json(&mut table_reader(table_read), size as u64, samples_json, id).map_err(js_err)
 }
 
-/// The `riga_tracce/1` of the row with `id`: XIC of every file, MS1 at the best apex and MS2, read from the `.mzidx` of the series
+/// The `row_traces/2` of the row with `id`: XIC of every file, MS1 at the best apex and MS2, read from the `.mzidx` of the series
 /// (`index_read(k, offset, length)`, `index_sizes[k]` bytes) within `ppm` of the m/z of the row.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]

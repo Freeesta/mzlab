@@ -43,9 +43,9 @@ fn hyp(formula: &str, mz: f64, src: &str) -> Hyp {
 fn the_closest_hypothesis_is_the_change_and_the_others_alternatives() {
     let p = f("C13H24N4O3S");
     let (a, b, far) = (
-        hyp("C13H24N4O4S", 333.1591, "regola"),
-        hyp("C13H24N4O3S2", 333.1593, "rete"),
-        hyp("C13H22N4O3S", 315.0, "regola"),
+        hyp("C13H24N4O4S", 333.1591, "rule"),
+        hyp("C13H24N4O3S2", 333.1593, "network"),
+        hyp("C13H22N4O3S", 315.0, "rule"),
     );
     let c = candidates(333.1591, &p, &[&b, &a, &far]);
     assert_eq!(c.len(), 2);

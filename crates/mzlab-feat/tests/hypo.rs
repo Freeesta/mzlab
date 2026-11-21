@@ -95,8 +95,8 @@ fn two_runs_give_the_same_registry() {
     assert_eq!(sha(&a), sha(&b));
     assert!(a.hyps.windows(2).all(|w| w[0].mz <= w[1].mz));
     assert!(a.hyps.iter().enumerate().all(|(i, h)| h.id as usize == i));
-    assert_eq!(a.by_source()["famiglia"], 5);
-    assert_eq!(a.by_source()["importata"], 1);
+    assert_eq!(a.by_source()["family"], 5);
+    assert_eq!(a.by_source()["imported"], 1);
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn a_cleavage_product_takes_one_reaction_of_the_rules() {
         .hyps
         .iter()
         .filter(|h| {
-            h.steps == 2 && h.sources & SRC_CLEAVAGE != 0 && h.label.starts_with("rottura+")
+            h.steps == 2 && h.sources & SRC_CLEAVAGE != 0 && h.label.starts_with("cleavage+")
         })
         .collect();
     assert!(!products.is_empty());
@@ -254,8 +254,11 @@ fn a_cleavage_product_takes_one_reaction_of_the_rules() {
     assert!(run(1)
         .hyps
         .iter()
-        .all(|h| h.label != "rottura" || h.steps == 1));
-    assert!(run(1).hyps.iter().all(|h| !h.label.starts_with("rottura+")));
+        .all(|h| h.label != "cleavage" || h.steps == 1));
+    assert!(run(1)
+        .hyps
+        .iter()
+        .all(|h| !h.label.starts_with("cleavage+")));
     // same twice, byte for byte
     assert_eq!(sha(&two), sha(&run(2)));
 }

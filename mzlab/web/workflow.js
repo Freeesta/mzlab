@@ -15,15 +15,15 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const KNOWN_OPS = ["feature_pipeline", "samples", "export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "attributio", "workflow_applied"];
-  // the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-2.json, written by TP_Mine/js/35_pipeline_recipe.js): the problems of a record, [] when it can be re-applied
+  // the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-3.json, written by TP_Mine/js/35_pipeline_recipe.js): the problems of a record, [] when it can be re-applied
   const FEATURE_KEYS = ["schema", "crate_version", "recipe", "params", "inputs", "table_sha256", "rules", "levels", "suspects", "hypotheses", "runs"];
   function checkFeatureOp(o) {
     const bad = [];
     if (!o || o.op !== "feature_pipeline") return ["op"];
-    // a record of the old version (Italian keys) is refused as it is, never read as a new one: the only problem it reports is its schema
-    if (o.schema === "feature_pipeline/1") return ["schema"];
+    // a record of an old version (Italian keys, the Italian name of the levels profile) is refused as it is, never read as a new one: the only problem it reports is its schema
+    if (o.schema === "feature_pipeline/1" || o.schema === "feature_pipeline/2") return ["schema"];
     for (const k of FEATURE_KEYS) if (!(k in o)) bad.push(k);
-    if (o.schema !== "feature_pipeline/2") bad.push("schema");
+    if (o.schema !== "feature_pipeline/3") bad.push("schema");
     try { if (typeof o.recipe !== "string" || typeof JSON.parse(o.recipe) !== "object") bad.push("recipe"); } catch (_) { bad.push("recipe"); }
     if (!Array.isArray(o.inputs) || o.inputs.some(i => !i || !i.name || !i.sha256)) bad.push("inputs");
     if (!/^[0-9a-f]{64}$/.test(String(o.table_sha256 || ""))) bad.push("table_sha256");

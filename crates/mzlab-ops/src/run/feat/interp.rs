@@ -57,7 +57,7 @@ pub fn site_params(get: &dyn Fn(&str) -> Option<f64>) -> SiteParams {
     }
 }
 
-/// `filtri/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `ipotesi/1` `hypotheses`, under the thresholds `get` gives (`tp.filter@2`).
+/// `filtri/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `hypotheses/2` `hypotheses`, under the thresholds `get` gives (`tp.filter@2`).
 pub fn refilter_text(
     get: &dyn Fn(&str) -> Option<f64>,
     tp: &[u8],

@@ -14,12 +14,14 @@ use crate::store_read::read_table_from;
 fn user(e: String) -> Error {
     match e.as_str() {
         "error.interp.noTp" => Error::new("error.interp.noTp").with("detail", "table"),
+        // an old registry is refused with its own message (it names the new format), not wrapped as a failure
+        "error.hypo.registryFormat" => Error::new("error.hypo.registryFormat"),
         _ => Error::new("error.interp.failed").with("detail", e),
     }
 }
 
 /// Interprets the rows of the `.mzfeat` (`size` bytes) and writes it again, with the block, to `sink`. `open(k)` gives the index of file `k` of the
-/// series, `infusion` the one of the infusion file when there is one; `registry` is the `ipotesi/1` JSON (may be empty).
+/// series, `infusion` the one of the infusion file when there is one; `registry` is the `hypotheses/2` JSON (may be empty).
 #[allow(clippy::too_many_arguments)]
 pub fn run_to<R: ReadAt, I: ReadAt, W: WriteAt>(
     table: &mut R,
@@ -54,9 +56,9 @@ pub fn run_to_with<R: ReadAt, I: ReadAt, W: WriteAt>(
     sink: &mut W,
 ) -> Result<()> {
     let (parent_json, registry, polarity) = what;
-    let (t, _) = read_table_from(table, size)?;
     let parent = series::parent(parent_json).map_err(user)?;
     let (hyps, _, _) = series::registry(registry).map_err(user)?;
+    let (t, _) = read_table_from(table, size)?;
     let mut hyps: Vec<_> = hyps.into_iter().collect();
     hyps.sortc_by_key(|h| h.0);
     let hyps: Vec<_> = hyps.into_iter().map(|h| h.1).collect();

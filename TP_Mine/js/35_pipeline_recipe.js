@@ -1,5 +1,5 @@
 // @ts-strict
-// TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-2.json; the reader and the check of
+// TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-3.json; the reader and the check of
 // the record are in mzlab/web/workflow.js) and the comparison of a re-application with the table that was recorded. Pure but for UNT.sha256Hex (a global of the page, injected by the node tests).
 (() => {
   "use strict";
@@ -13,12 +13,12 @@
     const rulesText = a.rules == null ? null : typeof a.rules === "string" ? a.rules : new TextDecoder().decode(a.rules);
     const reg = a.out.registry == null ? null : typeof a.out.registry === "string" ? a.out.registry : new TextDecoder().decode(a.out.registry);
     return {
-      op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/2", crate_version: a.crate, recipe: a.recipe, params: JSON.parse(a.recipe), proofs: a.proofs || null,
+      op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/3", crate_version: a.crate, recipe: a.recipe, params: JSON.parse(a.recipe), proofs: a.proofs || null,
       parent: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minutes: a.parent.minutes.map(m => (Number.isFinite(m) ? m : null)), ...(a.parent.smiles ? { smiles: a.parent.smiles } : {}) } : null,
       inputs: (a.data.meta.inputs || []).map(i => ({ name: i.name, sha256: i.sha256 })),
       table_sha256: await sha(a.out.evid || a.out.table),
       rules: rulesText == null ? null : { name: "regole_tp/3", version: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },
-      levels: a.levels == null ? null : { name: "livelli/1", version: verOf(a.levels, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
+      levels: a.levels == null ? null : { name: "levels/1", version: verOf(a.levels, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
       suspects: a.suspects || null,
       hypotheses: { tried: a.out.tried || 0, found: a.out.found || 0, registry_sha256: reg == null ? null : await sha(bytesOf(reg)) },
       runs: 1,

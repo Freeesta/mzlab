@@ -1,4 +1,4 @@
-//! The row of the table for the page (`riga/1`) and its traces (`riga_tracce/1`): the values agree with the sheet of the export and with the summaries of the
+//! The row of the table for the page (`row/2`) and its traces (`row_traces/2`): the values agree with the sheet of the export and with the summaries of the
 //! `.mzfeat`; the traces come from the index of a synthetic series (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -175,7 +175,7 @@ fn the_row_agrees_with_the_sheet_and_with_the_summaries() {
             "canonical JSON: the same bytes every time"
         );
         let v = parse(text.as_bytes()).unwrap();
-        assert_eq!(v.get("schema").unwrap().str(), Some("riga/1"));
+        assert_eq!(v.get("schema").unwrap().str(), Some("row/2"));
         let line = rows.at(r + 1).unwrap();
         let cell = |i: usize| line.at(i).unwrap();
         assert_eq!(num(&v, "id"), cell(0).f64());
@@ -314,7 +314,7 @@ fn the_traces_come_from_the_index_of_every_file() {
         "canonical JSON"
     );
     let v = parse(text.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").unwrap().str(), Some("riga_tracce/1"));
+    assert_eq!(v.get("schema").unwrap().str(), Some("row_traces/2"));
     let xic = v.get("xic").unwrap().at(0).unwrap();
     let (x, y) = (floats(xic, "rt"), floats(xic, "y"));
     assert!(

@@ -51,7 +51,7 @@ fn the_plan_gives_the_registry_of_the_engine() {
     let d = dir("eng");
     std::fs::write(d.join("parent.txt"), format!("{FORMULA}\n")).unwrap();
     let got = run(&d, "{}").unwrap();
-    assert!(got.starts_with("{\"format\":\"ipotesi/1\""), "{got}");
+    assert!(got.starts_with("{\"format\":\"hypotheses/2\""), "{got}");
     assert_eq!(got, engine(None, &HypoParams::default()));
     assert_eq!(got, run(&d, "{}").unwrap());
     // the parameters reach the engine

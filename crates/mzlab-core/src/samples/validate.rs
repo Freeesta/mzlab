@@ -1,5 +1,5 @@
 //! What a series lacks, as stable codes (the pages put the words), and what the TP path needs: indices by role and the minutes of
-//! `feature_pipeline/2` (`parent.minutes`: the time of a sample or a time zero, null otherwise; the infusion is never a control).
+//! `feature_pipeline/3` (`parent.minutes`: the time of a sample or a time zero, null otherwise; the infusion is never a control).
 
 use super::Sample;
 use crate::json::Out;
@@ -139,7 +139,7 @@ pub fn validate_json(a: &[Warning]) -> String {
     j.0
 }
 
-/// Indices (0-based, in the order of the files) by role, and the minutes of `feature_pipeline/2`.
+/// Indices (0-based, in the order of the files) by role, and the minutes of `feature_pipeline/3`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PerTp {
     /// Samples with a time over zero.

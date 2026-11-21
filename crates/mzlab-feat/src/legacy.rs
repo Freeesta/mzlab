@@ -59,7 +59,7 @@ pub fn classify<R: ReadAt>(
 }
 
 /// `api.run` on high-resolution files after the pipeline: `files_json` and `parent_json` as the page passes them, `table` the bytes of the
-/// `series_evid.mzfeat` of the LC files (in the order of `series::lc_files`), `registry` the `ipotesi/1` JSON, `open(k)` the index of file `k`.
+/// `series_evid.mzfeat` of the LC files (in the order of `series::lc_files`), `registry` the `hypotheses/2` JSON, `open(k)` the index of file `k`.
 pub fn dig<R: ReadAt>(
     files_json: &str,
     parent_json: &str,

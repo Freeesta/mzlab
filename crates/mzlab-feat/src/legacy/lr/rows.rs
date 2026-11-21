@@ -1,5 +1,5 @@
 //! The entries of the low-resolution Dig on the table of the pipeline: the parent (its row also measures the calibration offset), one entry per
-//! hypothesis of `ipotesi/1` (one per chromatographic peak when its nominal m/z has isomers) and the unexpected ions (rows that match nothing,
+//! hypothesis of `hypotheses/2` (one per chromatographic peak when its nominal m/z has isomers) and the unexpected ions (rows that match nothing,
 //! grow over time and are absent at t0 and in the blank).
 
 use std::collections::HashSet;
@@ -31,7 +31,7 @@ pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
 const UID: i64 = 100_000;
 const ISO_STEP: i64 = 10_000;
 
-/// A hypothesis of `ipotesi/1` that names a product of the parent.
+/// A hypothesis of `hypotheses/2` that names a product of the parent.
 #[derive(Debug, Clone)]
 pub struct Hyp {
     pub label: String,
@@ -50,6 +50,7 @@ pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
         return Ok(Vec::new());
     }
     let v = json::parse(registry.as_bytes()).map_err(|e| e.to_string())?;
+    crate::hypo::check_registry_format(&v)?;
     let text = |h: &Value, k: &str| {
         h.get(k)
             .and_then(Value::str)
@@ -74,7 +75,7 @@ pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
         .filter(|h| {
             strs(h, "sources")
                 .iter()
-                .any(|s| s == "regola" || s == "rottura")
+                .any(|s| s == "rule" || s == "cleavage")
         })
         .map(|h| Hyp {
             label: text(h, "label"),

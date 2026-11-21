@@ -1,5 +1,5 @@
 """Untargeted tables (TP_Mine/js/25_untarget.js): the readers recognise the columns by name (mzMine full table, annotations, FBMN quant + MGF + IIN edges, MS-DIAL alignment, GNPS2
-library and network), the rules of Attributio on structures / lipids / propagated names / analogues, and the external evidence read with the profile «attributio» of livelli/1.
+library and network), the rules of Attributio on structures / lipids / propagated names / analogues, and the external evidence read with the profile «attributio» of levels/1.
 The readers are Rust (crates/mzlab-feat/src/import; the .wasm for node is built by tests/conftest.py); whole tables, quoted fields and CRLF are compared with the answers of the old JS readers by crates/mzlab-feat/tests/import_parity.rs.
 The fixtures in tests/data/untargeted/ are written by hand in the format of each program (nothing real). The parity with the synthetic campaign of the data repository runs only with MZLAB_DATI."""
 import csv

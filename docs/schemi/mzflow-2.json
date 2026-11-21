@@ -701,7 +701,7 @@
               },
               "estimates": {
                 "type": "object",
-                "description": "parameter -> proof of the estimate (as the proofs of feature_pipeline/2)"
+                "description": "parameter -> proof of the estimate (as the proofs of feature_pipeline/3)"
               },
               "used": {
                 "type": "array",

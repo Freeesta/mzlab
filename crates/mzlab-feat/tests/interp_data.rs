@@ -54,9 +54,15 @@ fn registry() -> (String, Vec<f64>) {
         .map(|f| mass(&parse_formula(f).unwrap()) + PROTON)
         .collect();
     let items: Vec<String> = RULES.iter().zip(&mz).enumerate().map(|(i, (f, m))| {
-        format!(r#"{{"id":{},"label":"r{i}","formula":"{f}","mz":{m},"level":3,"sources":["regola"]}}"#, i + 1)
+        format!(r#"{{"id":{},"label":"r{i}","formula":"{f}","mz":{m},"level":3,"sources":["rule"]}}"#, i + 1)
     }).collect();
-    (format!(r#"{{"hypotheses":[{}]}}"#, items.join(",")), mz)
+    (
+        format!(
+            r#"{{"format":"hypotheses/2","hypotheses":[{}]}}"#,
+            items.join(",")
+        ),
+        mz,
+    )
 }
 
 /// The metrics as JSON: counts of the pass, the decoys of `filtri/1` and one line per interpreted row (m/z, RT, change, confidence of the position).

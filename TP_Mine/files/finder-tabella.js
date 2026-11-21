@@ -60,7 +60,7 @@ async function engine(deps) {
 const samplesCall = (/** @type {string} */ op, /** @type {string} */ j) => /** @type {any} */ (mod).samples(op, j);
 
 /**
- * riga/1 of one row of the table of the last Dig, with its traces (riga_tracce/1: XIC of every file, MS1 at the best apex) read from the .mzidx of the series.
+ * row/2 of one row of the table of the last Dig, with its traces (row_traces/2: XIC of every file, MS1 at the best apex) read from the .mzidx of the series.
  * The traces are null when they cannot be read (the row is then drawn without them).
  * @param {{manifest: () => Promise<any>, url: (p: string) => string, sha: (b: ArrayBuffer) => Promise<string>}} deps
  * @param {{table: Uint8Array, lc: string[], files: any[]}} run

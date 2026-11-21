@@ -1,4 +1,4 @@
-//! The row of the table for the page, `riga/1`, and its traces, `riga_tracce/1`: everything the `.mzfeat` knows about one row (summaries, identity, one cell per
+//! The row of the table for the page, `row/2`, and its traces, `row_traces/2`: everything the `.mzfeat` knows about one row (summaries, identity, one cell per
 //! file) and, read from the `.mzidx` of the series, the XIC of every file, the MS1 at the best apex and the MS2 of the row. Numbers only: no verdict. A summary
 //! that was not computed is `null`, never a made-up number.
 
@@ -18,8 +18,8 @@ use crate::rowident::{adduct_names, SRC_DETECTED};
 use crate::samples::Sample;
 use crate::table::RowQ;
 
-pub const SCHEMA: &str = "riga/1";
-pub const TRACES_SCHEMA: &str = "riga_tracce/1";
+pub const SCHEMA: &str = "row/2";
+pub const TRACES_SCHEMA: &str = "row_traces/2";
 /// Most points of the XIC of a file.
 pub const MAX_POINTS: usize = 400;
 /// Widths of the peak that the XIC shows on each side of its edges.
@@ -53,7 +53,7 @@ fn fin(v: f32) -> Option<f64> {
     Some(f64::from(v)).filter(|x| x.is_finite())
 }
 
-/// The `riga/1` of the row with `id`: `{schema, id, mz, rt, rt_lo, rt_hi, charge, quality, iso_m1, ms2, ident, cells}`. `quality`, `ms2` and `ident` are
+/// The `row/2` of the row with `id`: `{schema, id, mz, rt, rt_lo, rt_hi, charge, quality, iso_m1, ms2, ident, cells}`. `quality`, `ms2` and `ident` are
 /// `null` when the table has no such summary for the row (a targeted row has no quality).
 pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
     let r = check(t, s, id)?;
@@ -283,7 +283,7 @@ fn xic_of<R: ReadAt>(
     Ok((rts, x, y))
 }
 
-/// One spectrum of `riga_tracce/1`: `{"file", <extra>, "mz", "y"}`.
+/// One spectrum of `row_traces/2`: `{"file", <extra>, "mz", "y"}`.
 fn spectrum(o: &mut Out, file: &str, extra: (&str, f64), mz: &[f64], y: &[f64]) {
     o.raw("{\"file\":")
         .str(file)
@@ -354,7 +354,7 @@ fn ms2_of<R: ReadAt>(
         .map(|(m, v)| (prec, m, v)))
 }
 
-/// The `riga_tracce/1` of the row with `id`: `xic` (one per file: `rt`, `y` in the window of the edges of the peak plus `PAD_WIDTHS` widths on each side, at
+/// The `row_traces/2` of the row with `id`: `xic` (one per file: `rt`, `y` in the window of the edges of the peak plus `PAD_WIDTHS` widths on each side, at
 /// most `MAX_POINTS`), `ms1` (spectrum at the apex of the file with the largest area, from `SPEC_BELOW` below to `SPEC_ABOVE` above the m/z of the row) and
 /// `ms2` (the one `ms2spec` chooses for the exports, from `RowMeta::ms2_file`); `ms1` and `ms2` are `null` when there is none. `open(k)` gives the index of file `k`.
 pub fn traces<R: ReadAt>(

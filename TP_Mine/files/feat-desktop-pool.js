@@ -135,7 +135,7 @@ export function createDesktopPool(opts = {}) {
     async table(kind, p) { return (await call("feat/table", { kind, ...p })).text(); },
     /** the MS2 text (FBMN `.mgf`, SIRIUS `.ms`) of the table: the best MS2 of each row is read from the index of its file @param {{ samples: string, spec: string, sha: string, pol: number, kind: string, paths: string[] }} a */
     ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
-    /** the traces of one row (`riga_tracce/1`): XIC of every file, MS1 at the best apex and MS2, read from the index of each file @param {{ samples: string, sha: string, id: number, ppm: number, paths: string[] }} a */
+    /** the traces of one row (`row_traces/2`): XIC of every file, MS1 at the best apex and MS2, read from the index of each file @param {{ samples: string, sha: string, id: number, ppm: number, paths: string[] }} a */
     rowTraces(a) { return pool.table("row_traces", { samples: a.samples, sha256: a.sha, id: a.id, ppm: a.ppm, names: a.paths.map(nameOf) }); },
     /** the interpretation of the rows (`interp/1`): the app holds the table and replaces it with the one that has the block @param {{ parent: string, registry: string, polarity: number, paths: string[], infusion: number }} a */
     async interpBuild(a) {

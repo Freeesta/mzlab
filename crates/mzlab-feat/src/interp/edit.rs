@@ -1,4 +1,4 @@
-//! The modification of a row: the difference of neutral formula from the parent given by its best hypothesis (`ipotesi/1`), the alternatives within
+//! The modification of a row: the difference of neutral formula from the parent given by its best hypothesis (`hypotheses/2`), the alternatives within
 //! the tolerance and the isotope check of the MS1 at the apex (M+1/M, M+2/M, sulfur count). Used by `interp::build_row`.
 
 use crate::sortc::SortC;
@@ -76,9 +76,9 @@ fn source_of(h: &Hyp) -> &'static str {
     let has = |s: &str| h.sources.iter().any(|x| x == s);
     if has("rule") {
         "rule"
-    } else if has("rottura") {
+    } else if has("cleavage") {
         "cleavage"
-    } else if has("rete") {
+    } else if has("network") {
         "network"
     } else {
         "formula"
