@@ -62,7 +62,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | "Group by" of the file list (`#sb-by`, `groups.js`, `groups-for.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
 | experiment groups in Tabui: conditions, `groups/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/groups-view.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
-| statistics in HR: feature table, blank, difference from the reference, PCA | `docs/agenti/high-resolution-statistics.md` |
+| statistics in HR: feature table, blank, difference from the reference, PCA; `table compare` (each feature against reference and blank, candidate products, `compare/1`) | `docs/agenti/high-resolution-statistics.md` |
 | HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/high-resolution.md` |
 | registry of state-changing actions (`commands.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `HISTORY` entries) | `docs/agenti/history-removed.md` |
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |

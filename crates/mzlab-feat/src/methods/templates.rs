@@ -22,6 +22,7 @@ pub(super) const TEMPLATES: &[(&str, &str, &str)] = &[
     ("table.stats", "", "Per-feature statistics were computed (floor {floor}, pseudocount {pseudocount})."),
     ("table.pca", "", "A principal component analysis was run ({ncomp} components, {transform} transform, {scaling} scaling, minimum detections {min_detect})."),
     ("table.kmd", "", "Series of the {unit} unit were searched on the Kendrick mass defect (tolerance {tol_mda} mDa, at least {min_members} members)."),
+    ("table.compare", "", "Each feature was compared with the reference and the blank columns (factor {factor}, pseudocount {pseudocount})."),
     ("table.plausible", "", "Plausibility checks were applied to the features (m/z {mz_min} to {mz_max}, RT up to {rt_max}, width up to {width_max}, ppm up to {ppm_max})."),
     ("spectra.ms2", "", "MS2 spectra were collected (minimum intensity {min_intensity}, m/z tolerance {tol_da} Da, RT tolerance {rt_tol} min)."),
     ("formula.ms1", "", "Formula candidates were listed from the MS1 data (ion {ion}, tolerance {tol_ppm} ppm, at most {max_results} candidates, ring and double bond equivalents at least {rdb_min})."),

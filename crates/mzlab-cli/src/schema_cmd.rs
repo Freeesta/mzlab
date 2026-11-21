@@ -18,6 +18,7 @@ embed!(
     "assist-roles-1.json",
     "channels-1.json",
     "check-1.json",
+    "compare-1.json",
     "cip-1.json",
     "commands-1.json",
     "convert-1.json",
