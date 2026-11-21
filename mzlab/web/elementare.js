@@ -95,11 +95,11 @@ const ELEM = (() => {
     if (window.BARRA) BARRA.setTab("cmp");
     if (window.BANCO) BANCO.renderInfo();
   }
-  // the actions of the spectrum menu (registry azioni/1, high resolution): «Generate formula» for the peak, clear the formulas drawn
+  // the actions of the spectrum menu (registry actions/1, high resolution): «Generate formula» for the peak, clear the formulas drawn
   if (typeof AZIONI !== "undefined") {
-    AZIONI.registra({ id: "spec.generate", group: "gen", ordine: 1, views: ["spec"], visible: c => !!c.a?.hrp, available: c => c.has, nome: c => I18N.t("ctx.spec.generate", { mz: c.lab }),
-      esegui: c => generate({ mz: c.m, sp: c.p, spec: c.a.data[0].d, polarity: c.pol }) });
-    AZIONI.registra({ id: "spec.fmClear", group: "gen", ordine: 2, views: ["spec"], visible: c => !!c.a?.hrp, available: c => !!c.p?.fm?.length, nome: () => I18N.t("cx.clear"), esegui: c => { c.p.fm = []; draw(c.p); } });
+    AZIONI.register({ id: "spec.generate", group: "gen", order: 1, views: ["spec"], visible: c => !!c.a?.hrp, available: c => c.has, name: c => I18N.t("ctx.spec.generate", { mz: c.lab }),
+      run: c => generate({ mz: c.m, sp: c.p, spec: c.a.data[0].d, polarity: c.pol }) });
+    AZIONI.register({ id: "spec.fmClear", group: "gen", order: 2, views: ["spec"], visible: c => !!c.a?.hrp, available: c => !!c.p?.fm?.length, name: () => I18N.t("cx.clear"), run: c => { c.p.fm = []; draw(c.p); } });
   }
   return { generate, takeCtx, hasCtx, copyText, bindEls, bindPeriodic, DEFAULT_ELS, parse, ser, applyTo, peakFor };
 })();

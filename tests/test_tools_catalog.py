@@ -53,7 +53,7 @@ def test_ui_actions_are_registered():
             continue
         registered |= set(re.findall(r'(?:reg|registra)\(\s*\{\s*id:\s*"([^"]+)"', f.read_text(encoding="utf-8", errors="ignore")))
     for a in ui_actions():
-        assert a in registered or a in NOT_YET, f"{a} is not registered in mzlab/web (azioni/1)"
+        assert a in registered or a in NOT_YET, f"{a} is not registered in mzlab/web (actions/1)"
     for a in NOT_YET:
         assert a not in registered, f"{a} is registered now: drop it from NOT_YET"
 

@@ -216,7 +216,7 @@ def draw_tic20(pg, port):
     if ms:
         nx = pg.evaluate("E.panels.filter(p => p.type === 'xic').length")
         o["xic_20_files"] = run_in(pg, """() => { const p = E.panels.find(q => q.type === 'spec' && q.tab === E.tab), a = p._a, m = %s;
-            AZIONI.esegui("spec.xic", { vista: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: { preventDefault() {}, clientX: 0, clientY: 0 }, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }); }""" % ms[0],
+            AZIONI.run("spec.xic", { view: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: { preventDefault() {}, clientX: 0, clientY: 0 }, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }); }""" % ms[0],
                                   f"() => E.panels.filter(p => p.type === 'xic').length > {nx} && E.panels.filter(p => p.type === 'xic').every(p => p._a)")
     else: o["xic_20_files"] = {"error": "no labelled peak"}
     return o

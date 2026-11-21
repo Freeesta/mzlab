@@ -60,7 +60,7 @@ const BARRA = (() => {
   // the side panel and its toolbar button have their place also while the files are being opened (skeleton, no session yet: nothing moves when the session arrives) and while «+» shows the drop area (S.adding)
   const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && (!!S.opening && !S.sess || !!S.sess && !!S.adding);
   /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
-  const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
+  const inTextField = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
   const sheet = () => window.innerWidth < SHEET;
   const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
     : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
@@ -152,9 +152,9 @@ const BARRA = (() => {
   const lateCmds = () => {
     const addCmd = (/** @type {any} */ c) => { if (!CMD.some(x => x.id === c.id)) CMD.push(c); };
     if (window.MAPPA) MAPPA.CMDS.filter((/** @type {Bag} */ c) => c.views.includes("map")).forEach((/** @type {Bag} */ c) => addCmd({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
-    // the arrangement of the panel in use (actions disp.* of azioni/1, registered by arrange.js): only in the palette, for the active panel when the action applies to it
-    const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { vista: p.type, p } : null; };
-    if (typeof AZIONI !== "undefined") AZIONI.voci.filter((/** @type {{ id: string, group: string, views: string[], icona?: string, [k: string]: any }} */ a) => a.group === "disp").forEach((/** @type {{ id: string, group: string, views: string[], icona?: string, [k: string]: any }} */ a) => addCmd({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.icona || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.mostra(a, c) && AZIONI.pronta(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.esegui(a.id, c); } }));
+    // the arrangement of the panel in use (actions disp.* of actions/1, registered by arrange.js): only in the palette, for the active panel when the action applies to it
+    const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { view: p.type, p } : null; };
+    if (typeof AZIONI !== "undefined") AZIONI.actions.filter((/** @type {{ id: string, group: string, views: string[], iconKey?: string, [k: string]: any }} */ a) => a.group === "disp").forEach((/** @type {{ id: string, group: string, views: string[], iconKey?: string, [k: string]: any }} */ a) => addCmd({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.iconKey || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.shown(a, c) && AZIONI.ready(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.run(a.id, c); } }));
   }; lateCmds();
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
@@ -916,7 +916,7 @@ const BARRA = (() => {
         return;
       }
       // side of the drawer from the keyboard
-      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && inData() && !inCampo(e.target)) {
+      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && inData() && !inTextField(e.target)) {
         e.preventDefault(); e.stopPropagation();
         setSide(e.key === "ArrowLeft" ? "left" : "right");
         return;

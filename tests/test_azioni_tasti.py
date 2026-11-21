@@ -1,4 +1,4 @@
-"""The shortcuts of the registry azioni/1 (field `shortcut`): no key twice in the same view, none reserved by the browser, text for Mac and Windows."""
+"""The shortcuts of the registry actions/1 (field `shortcut`): no key twice in the same view, none reserved by the browser, text for Mac and Windows."""
 import json
 import re
 import subprocess
@@ -17,7 +17,7 @@ def keys():
         for m in re.finditer(r'id: "([\w.]+)"[^\n]*?shortcut: (\{[^}]*\})', f.read_text(encoding="utf8")):
             out.append((m.group(1), dict(re.findall(r'(\w+): ("[^"]*"|true|false)', m.group(2)))))
     src = (WEB / "azioni-tasti.js").read_text(encoding="utf8")
-    for k, v, code in re.findall(r'vista\("(\w+)", "(\w+)", "(Digit\d)"', src):
+    for k, v, code in re.findall(r'view\("(\w+)", "(\w+)", "(Digit\d)"', src):
         out.append(("app." + k, {"code": f'"{code}"', "alt": "true", "where": '"view"'}))
     for k, key in re.findall(r'passo\("(\w+)", "[\w.]+", "(Arrow\w+)"', src):
         out.append(("app." + k, {"key": f'"{key}"', "alt": "true", "where": '"view"'}))
@@ -56,7 +56,7 @@ def test_no_key_reserved_by_the_browser():
 def test_text_mac_and_windows():
     js = (f"const fs=require('fs');const A=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
           "const r=[];for(const p of ['MacIntel','Linux x86_64']){Object.defineProperty(globalThis,'navigator',{value:{platform:p},configurable:true});"
-          "r.push([{key:'o',mod:true,where:'view'},{code:'Digit1',alt:true,where:'view'},{key:'x',where:'chart'},{key:'Enter',where:'chart'}].map(s=>A.testo(s)));}console.log(JSON.stringify(r));")
+          "r.push([{key:'o',mod:true,where:'view'},{code:'Digit1',alt:true,where:'view'},{key:'x',where:'chart'},{key:'Enter',where:'chart'}].map(s=>A.keyText(s)));}console.log(JSON.stringify(r));")
     mac, win = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", check=True).stdout)
     assert mac == ["⌘O", "⌥1", "X", "Enter"] and win == ["Ctrl+O", "Alt+1", "X", "Enter"]
 
@@ -64,6 +64,6 @@ def test_text_mac_and_windows():
 def test_pressed():
     js = (f"const fs=require('fs');const A=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
           "const e=(o)=>Object.assign({key:'',code:'',ctrlKey:false,metaKey:false,altKey:false,shiftKey:false},o);"
-          "console.log(JSON.stringify([A.premuto({key:'x'},e({key:'x'})),A.premuto({key:'x'},e({key:'X',shiftKey:true})),A.premuto({key:'x'},e({key:'x',ctrlKey:true})),"
-          "A.premuto({key:'o',mod:true},e({key:'o',metaKey:true})),A.premuto({code:'Digit1',alt:true},e({code:'Digit1',key:'¡',altKey:true})),A.premuto({key:'?'},e({key:'?',shiftKey:true})),A.premuto({key:'Enter'},e({key:'Enter'}))]));")
+          "console.log(JSON.stringify([A.pressed({key:'x'},e({key:'x'})),A.pressed({key:'x'},e({key:'X',shiftKey:true})),A.pressed({key:'x'},e({key:'x',ctrlKey:true})),"
+          "A.pressed({key:'o',mod:true},e({key:'o',metaKey:true})),A.pressed({code:'Digit1',alt:true},e({code:'Digit1',key:'¡',altKey:true})),A.pressed({key:'?'},e({key:'?',shiftKey:true})),A.pressed({key:'Enter'},e({key:'Enter'}))]));")
     assert json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, encoding="utf-8", check=True).stdout) == [True, False, False, True, True, True, True]

@@ -17,7 +17,7 @@ try:
             pg.evaluate("setTab('full')"); ready(pg)
             pg.evaluate("E.files.forEach(f => { f.vis = true; })")
             sp = "E.panels.find(p => p.tab === 'full' && p.type === 'spec')"
-            ctx = lambda m: f"(() => {{ const p = {sp}; return AZIONI.doubleClick({{ vista: 'spec', p, m: {m}, has: true, a: p._a, lab: '{m}', px: 0, py: 0 }}); }})()"
+            ctx = lambda m: f"(() => {{ const p = {sp}; return AZIONI.doubleClick({{ view: 'spec', p, m: {m}, has: true, a: p._a, lab: '{m}', px: 0, py: 0 }}); }})()"
             n0 = pg.evaluate("E.panels.filter(p => p.type === 'xic').length"); m0 = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').length")
             assert pg.evaluate(ctx(150.3)) is True; ready(pg)
             assert pg.evaluate("E.panels.filter(p => p.type === 'xic').length") > n0, "no MS2 for 150.3: its XIC opens"

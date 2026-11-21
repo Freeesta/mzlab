@@ -256,9 +256,9 @@ function ibkMenuItems(p) {
   if (ibOf(p)) it.push(...FONDOP.menu(p), { label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
   return it;
 }
-// the background-of-a-stretch entries of the menu of a trace (registry azioni/1): the rows of ibkMenuItems
-if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.ibk", group: "tools", ordine: 2, views: ["chrom", "xic", "mrm"],
-  voci: c => ibkMenuItems(c.p).map(/** @param {any} i */ i => ({ nome: i.label, esegui: i.fn })) });
+// the background-of-a-stretch entries of the menu of a trace (registry actions/1): the rows of ibkMenuItems
+if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.ibk", group: "tools", order: 2, views: ["chrom", "xic", "mrm"],
+  rows: c => ibkMenuItems(c.p).map(/** @param {any} i */ i => ({ name: i.label, run: i.fn })) });
 function legend(p, all, note = "") {
   const sw = c => `<i style="background:${c}"></i>`, off = h => (h ? " off" : "");
   const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);

@@ -1,8 +1,8 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// Icons of the actions of the registry azioni/1 (azioni.js): one table for the right-click menu and the palette. 16x16, stroke = currentColor (follows the theme and the grey of a
-// disabled entry), decorative (aria-hidden: the name of the action is the text next to it). An action gets its icon from the key `icona` or, when it has none, from POR_ID.
+// Icons of the actions of the registry actions/1 (azioni.js): one table for the right-click menu and the palette. 16x16, stroke = currentColor (follows the theme and the grey of a
+// disabled entry), decorative (aria-hidden: the name of the action is the text next to it). An action gets its icon from the key `iconKey` or, when it has none, from POR_ID.
 // The map actions (mappa.js) bring their own `svg`. Classic script, loaded before azioni.js.
 const AZIONI_ICONE = (() => {
   /** @type {Record<string, string>} */
@@ -51,7 +51,7 @@ const AZIONI_ICONE = (() => {
     equal: '<path d="M3 5.5h10M3 10.5h10"/>',
     trash: '<path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.7 9h5.6l.7-9M7 7v4M9 7v4"/>',
   };
-  // the icon of the actions that do not name one (`icona` of the action wins)
+  // the icon of the actions that do not name one (`iconKey` of the action wins)
   /** @type {Record<string, string>} */
   const POR_ID = {
     "spec.copy": "copy", "spec.extractMs2": "ms2", "spec.xic": "xic", "spec.xicPrev": "xic", "spec.xicNext": "xic", "spec.peak": "target", "spec.overlay": "overlay", "spec.measure": "measure", "spec.annotate": "note",

@@ -64,7 +64,7 @@ try:
             assert pg.evaluate(f"{LB}.length") == 0 and pg.evaluate(f"{CH}.etpk") is False
             pg.evaluate(f"ETPK.toggle({CH})"); labels(pg, 1)
             assert pg.evaluate(f"{CH}.etpk") is True
-            assert pg.evaluate("AZIONI.per({vista:'chrom', p:" + CH + ", k:0, x:1}).some(a => a.id === 'chrom.etpk')")
+            assert pg.evaluate("AZIONI.forContext({view:'chrom', p:" + CH + ", k:0, x:1}).some(a => a.id === 'chrom.etpk')")
         step("the control hides and shows the labels (and is in the menu of the chromatogram)", control)
         def at(dx, dy=0):
             # client coordinates of the first label (its centre) moved by dx, dy; the label record and the canvas origin

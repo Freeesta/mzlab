@@ -10,7 +10,7 @@
 //   - operations sequence with UTC timestamp
 // MGF and MSP exports:
 //   - from spectrum context menu (MS2)
-//   - from «Identifica tutte le MS2» (HR)
+//   - from «Identifica all le MS2» (HR)
 // In LR, only spectra with precursor, charge, RT, file name (no candidate annotations or names: principle 1).
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
@@ -418,10 +418,10 @@ const WORKFLOW = (() => {
   };
 })();
 window.WORKFLOW = WORKFLOW;
-// the actions of the spectrum menu (registry azioni/1): an MS2 spectrum as MGF or MSP
+// the actions of the spectrum menu (registry actions/1): an MS2 spectrum as MGF or MSP
 if (typeof AZIONI !== "undefined") {
   /** @param {any} c */
   const ms2 = c => c.p.level === 2;
-  AZIONI.registra({ id: "spec.exportMgf", group: "lib", ordine: 2, views: ["spec"], menu: false, download: true, visible: ms2, nome: () => I18N.t("ctx.spec.exportMgf"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
-  AZIONI.registra({ id: "spec.exportMsp", group: "lib", ordine: 2, views: ["spec"], menu: false, download: true, visible: ms2, nome: () => I18N.t("ctx.spec.exportMsp"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
+  AZIONI.register({ id: "spec.exportMgf", group: "lib", order: 2, views: ["spec"], menu: false, download: true, visible: ms2, name: () => I18N.t("ctx.spec.exportMgf"), run: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
+  AZIONI.register({ id: "spec.exportMsp", group: "lib", order: 2, views: ["spec"], menu: false, download: true, visible: ms2, name: () => I18N.t("ctx.spec.exportMsp"), run: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
 }

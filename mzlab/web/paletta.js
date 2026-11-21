@@ -37,7 +37,7 @@ const palRecentIds = () => { try { const a = JSON.parse(localStorage.getItem(PAL
 const palRemember = (/** @type {string} */ id) => { try { localStorage.setItem(PAL_RECENT, JSON.stringify([id, ...palRecentIds().filter(x => x !== id)].slice(0, PAL_RECENT_N))); } catch (_) { /* no storage */ } };
 
 // the key of a command that is also an action of the registry (field `azione`): the text of its shortcut, as the system writes it
-const palKey = (/** @type {any} */ c) => { const a = c.azione && typeof AZIONI !== "undefined" ? AZIONI.voce(c.azione) : null; return a && a.shortcut ? `<kbd class="pal-k">${EH(AZIONI.testo(a.shortcut))}</kbd>` : ""; };
+const palKey = (/** @type {any} */ c) => { const a = c.azione && typeof AZIONI !== "undefined" ? AZIONI.get(c.azione) : null; return a && a.shortcut ? `<kbd class="pal-k">${EH(AZIONI.keyText(a.shortcut))}</kbd>` : ""; };
 
 // a selectable row: icon, text (html), tail (html), accessible name, action
 const palCmdRow = (/** @type {any} */ c) => ({ ic: c.ic(), html: EH(BARRA.name(c)), tail: palKey(c) + `<span class="pal-g">${EH(I18N.t(`pal.grp.${palGroupOf(c)}`))}</span>`, aria: "", run: () => { if (!c.teo) palRemember(c.id); c.run(); } });

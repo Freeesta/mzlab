@@ -80,11 +80,11 @@
       if (panelTr(p)) { COMMANDS.run("panel.source", p, () => { p.tr = keys.length === all.length || !keys.length ? "" : keys; }); ctl(p); draw(p); uiSave(); }
       else { reveal(openWithUndo(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true, tr: keys.length === all.length ? "" : keys, title: all.every(x => x.sim) ? "@sim" : undefined }))); }
     };
-    const out = [{ nome: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, esegui: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
+    const out = [{ name: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, run: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({
-      nome: x.name ? `${label(x.key)} ${x.name}` : label(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
+      name: x.name ? `${label(x.key)} ${x.name}` : label(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
-      esegui: (/** @type {MouseEvent | undefined} */ ev) => {
+      run: (/** @type {MouseEvent | undefined} */ ev) => {
         const multi = panelTr(p) && ev && (ev.ctrlKey || ev.metaKey), range = panelTr(p) && ev && ev.shiftKey;
         if (range && p._ionAnc != null) {
           const a = Math.min(p._ionAnc, i), b = Math.max(p._ionAnc, i); set(all.slice(a, b + 1).map(y => y.key)); return;
@@ -137,8 +137,8 @@
   function wireArea(p) { const b = p.el.querySelector('[data-a="area"]'); if (b) b.onclick = () => { p.area = p.area === false; syncArea(p); draw(p); uiSave(); }; }
 
   // a file of transitions or SIM ions has no XIC: the same place of the menu holds the ions to extract (a submenu, a check mark each)
-  AZIONI.registra({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
-    nome: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), sotto: (/** @type {any} */ c) => rows(c) });
+  AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
+    name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
   window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
 })();

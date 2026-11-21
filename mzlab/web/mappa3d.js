@@ -614,9 +614,9 @@ export function open(p, opener) {
   /** @param {{ i: number, j: number } | null} hit */
   function ad3(hit) {
     return {
-      vista: "map3d", kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
+      view: "map3d", kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
       resetAll: () => { resetCam(35, 32); },
-      view: (/** @type {number} */ n) => setView(n), zoomBy: (/** @type {number} */ f) => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
+      camera: (/** @type {number} */ n) => setView(n), zoomBy: (/** @type {number} */ f) => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
       // the menu must live inside the modal dialog to be seen and used
       host: () => dlg.appendChild(/** @type {any} */ (ctxEl())),
       // the XIC and the spectrum appear in the panels of the page

@@ -204,11 +204,11 @@ const COMP = (() => {
     });
   }
   // the chromatogram menu: the fragmentation tree of a high-resolution MS2 file
-  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.tree", group: "lib", ordine: 2, views: ["chrom"], nome: () => I18N.t("ctx.chrom.tree"),
-    visible: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files[c.k].kind === ESP.ms2, esegui: c => tree(c.k) });
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.tree", group: "lib", order: 2, views: ["chrom"], name: () => I18N.t("ctx.chrom.tree"),
+    visible: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files[c.k].kind === ESP.ms2, run: c => tree(c.k) });
   // the chromatogram menu: the mass error of the contaminant ions of a high-resolution MS1 file (masscal.js, loaded on first use)
-  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.masscal", group: "lib", ordine: 3, views: ["chrom"], nome: () => I18N.t("ctx.chrom.masscal"),
-    visible: c => !!window.HR && HR.isHr(E.files[c.k], 1) && E.files[c.k].kind !== ESP.ms2, esegui: c => import("./masscal.js").then(m => m.open(c.k)) });
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.masscal", group: "lib", order: 3, views: ["chrom"], name: () => I18N.t("ctx.chrom.masscal"),
+    visible: c => !!window.HR && HR.isHr(E.files[c.k], 1) && E.files[c.k].kind !== ESP.ms2, run: c => import("./masscal.js").then(m => m.open(c.k)) });
   return { open, observed, tree, rd, wr, num, IONS, BUILTIN, qs, prepSpec, scoreParams, afterFit, obsText };
 })();
 window.COMP = COMP;

@@ -196,9 +196,9 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }
-// the integration entries of the menu of a trace (registry azioni/1): the rows of intMenuItems, one action
-if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", group: "tools", ordine: 1, views: ["chrom", "xic", "mrm"],
-  voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
+// the integration entries of the menu of a trace (registry actions/1): the rows of intMenuItems, one action
+if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.int", group: "tools", order: 1, views: ["chrom", "xic", "mrm"],
+  rows: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ name: i.label, icon: i.icon, run: i.fn })) });
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
 // the peak-finding parameters and the columns of the integration table are one undoable action (commands.js)

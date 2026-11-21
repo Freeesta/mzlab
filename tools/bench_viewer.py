@@ -6,7 +6,7 @@ CASES (default `lr,hrc`): `lr` 3200-like Full Scan (1500 scans x 500 centroids),
 profile (400 x 50 000), `lr20` (20 `lr` files), `hr15` (15 `hrc` files); `NAME:SCANSxPEAKS` changes the size, `NAME:SCANSxPEAKSxFILES` also the number of files.
 Files are written by `bench_map.write_file` (fixed seeds, scan by scan) into WD; without `--site` the site is built in WD/site as pages.yml does.
 Gestures (each >= REPS repetitions, default 30; the time runs from the event of the user, captured in the page, to the end of the `draw()` of the panel
-that shows the result): G1 click on the TIC -> spectrum; G2 `AZIONI.esegui("spec.xic")` on a labelled peak -> XIC panel, one file; G3 the same with all the
+that shows the result): G1 click on the TIC -> spectrum; G2 `AZIONI.run("spec.xic")` on a labelled peak -> XIC panel, one file; G3 the same with all the
 files of the tab visible (multi-file cases); G4 pointer sweep over the spectrum (frames only: the lens does not exist yet); G5 Ctrl+wheel zoom and Shift+drag
 pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by the bench, see SYN); G6 ArrowRight; M heap of the page and of the engine
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
@@ -193,7 +193,7 @@ class Gestures(Base):
         s.collect("G1_click_tic_to_spectrum", rows)
 
     def xic_reps(s, label, n):
-        """AZIONI.esegui('spec.xic') on labelled peaks of spectra taken at different places (the page memoises an XIC per m/z: every repetition is a new one)"""
+        """AZIONI.run('spec.xic') on labelled peaks of spectra taken at different places (the page memoises an XIC per m/z: every repetition is a new one)"""
         c = s.centre(s.panel("chrom")); rows = []; done = 0; i = 0
         while done < n and i < n * 4:
             x = s.ev(f"(() => {{ const a = {s.panel('chrom')}._a; return a.X(a.x0 + (a.x1 - a.x0) * (0.06 + 0.88 * (({i} * 0.381966) % 1))); }})()"); i += 1
@@ -202,7 +202,7 @@ class Gestures(Base):
             s.take()
             for m in ms[: max(1, min(3, n - done))]:
                 s.ev(f"""(() => {{ const p = {s.panel('spec')}, a = p._a, m = {m}; __V.mark = performance.now();
-                  AZIONI.esegui("spec.xic", {{ vista: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: {{ preventDefault() {{}}, clientX: 0, clientY: 0 }}, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }}); }})()""")
+                  AZIONI.run("spec.xic", {{ view: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: {{ preventDefault() {{}}, clientX: 0, clientY: 0 }}, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }}); }})()""")
                 t = s.ev("__V.mark"); s.quiet(); lg = s.take()
                 rows.append(s.analyse(lg, ["xic"], t_start=t)); done += 1
                 s.ev("(() => { const xs = E.panels.filter(p => p.type === 'xic'); xs.forEach(closePanel); })()"); s.quiet(); s.take()

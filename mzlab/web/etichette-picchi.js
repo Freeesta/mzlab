@@ -147,7 +147,7 @@ function rows(p, s) {
 }
 
 if (typeof AZIONI !== "undefined") {
-  AZIONI.registra({ id: "chrom.etpk", group: "view", views: ["chrom", "xic", "mrm", "spec"], visible: (/** @type {any} */ c) => c.vista !== "spec" ? !isAnalog(c.p.kind) : !!c.p.uv, attiva: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
-    nome: () => T("ctx.chrom.etpk"), aria: () => T("ctx.chrom.etpk.aria"), esegui: (/** @type {any} */ c) => toggle(c.p) });
+  AZIONI.register({ id: "chrom.etpk", group: "view", views: ["chrom", "xic", "mrm", "spec"], visible: (/** @type {any} */ c) => c.view !== "spec" ? !isAnalog(c.p.kind) : !!c.p.uv, checked: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
+    name: () => T("ctx.chrom.etpk"), aria: () => T("ctx.chrom.etpk.aria"), run: (/** @type {any} */ c) => toggle(c.p) });
 }
 window.ETPK = { on, draw, drawUv, labelsOf, ready, rows, toggle, hit };

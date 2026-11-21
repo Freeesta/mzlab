@@ -179,5 +179,5 @@ const FAIR = (() => {
   return { LICENSES, ADDUCTS, adductMass, instrumentType, check, record, siriusMs, massbank, sirius, specOf, available };
 })();
 if (typeof window !== "undefined") window.FAIR = FAIR;
-// the actions of the spectrum menu (registry azioni/1): a high-resolution MS2 spectrum as a MassBank record or a SIRIUS .ms file
+// the actions of the spectrum menu (registry actions/1): a high-resolution MS2 spectrum as a MassBank record or a SIRIUS .ms file
 if (typeof module !== "undefined") module.exports = FAIR;

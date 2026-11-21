@@ -1,4 +1,4 @@
-"""Shortcuts of the registry azioni/1: one keydown runs the field `shortcut` of the actions. Letters only with the focus on a chart and never in a text field;
+"""Shortcuts of the registry actions/1: one keydown runs the field `shortcut` of the actions. Letters only with the focus on a chart and never in a text field;
 Ctrl/⌘ and Alt+1-2 anywhere; the panel «Shortcuts» (key ?) lists the registry (axe clean); the keys of the registry in the palette."""
 # covers: mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js, mzlab/web/paletta.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,7 +41,7 @@ try:
         def option_tab_not_taken():
             c, q = page_mac(SAFARI)
             try:
-                assert q.evaluate("AZIONI.voci.some(a => a.id === 'app.tabSafari')"), "no ⌥Tab action with a Mac Safari UA"
+                assert q.evaluate("AZIONI.actions.some(a => a.id === 'app.tabSafari')"), "no ⌥Tab action with a Mac Safari UA"
                 # Alt+Tab sends an Alt keydown first: the listener keeps only the Tab one (a `once` listener would be spent on Alt)
                 q.evaluate("window.__tabPrev = null; addEventListener('keydown', e => { if (e.key === 'Tab') window.__tabPrev = e.defaultPrevented; })")
                 q.keyboard.press("Alt+Tab"); prev = q.evaluate("window.__tabPrev")
@@ -58,7 +58,7 @@ try:
             pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Shift+?")
             wait_for_js(pg, "document.querySelector('#scorc[open]')")
             got = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.querySelector('kbd').textContent)")
-            want = pg.evaluate("AZIONI.voci.filter(a => a.shortcut).map(a => AZIONI.testo(a.shortcut))")
+            want = pg.evaluate("AZIONI.actions.filter(a => a.shortcut).map(a => AZIONI.keyText(a.shortcut))")
             assert got and set(got) <= set(want), (got, want)
             for k in ("Alt+1", "Alt+2", "Ctrl+O", "Ctrl+E", "?") if pg.evaluate("!/Mac/.test(navigator.platform)") else ("⌥1", "⌘O", "⌘E", "?"):
                 assert k in got, (k, got)
@@ -138,7 +138,7 @@ try:
         def palette_key():
             pg.keyboard.press("Control+k"); wait_for_js(pg, "PALETTE.isOpen")
             pg.fill("#pal-in", "report")
-            dbg = pg.evaluate("[PALETTE.search('report').map(c => c.id), [BARRA.commands.find(c => c.id === 'report').azione, !!AZIONI.voce('app.esporta'), document.querySelector('#pal-l li .pal-t').parentElement.innerHTML.replace(/<svg.*<\/svg>/s, '')]]")
+            dbg = pg.evaluate("[PALETTE.search('report').map(c => c.id), [BARRA.commands.find(c => c.id === 'report').azione, !!AZIONI.get('app.esporta'), document.querySelector('#pal-l li .pal-t').parentElement.innerHTML.replace(/<svg.*<\/svg>/s, '')]]")
             assert pg.locator("#pal-l .pal-k").count() >= 1, ("the palette shows the key of the report", dbg)
             pg.keyboard.press("Escape")
         step("the palette shows the key", palette_key)

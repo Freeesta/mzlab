@@ -4,7 +4,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | If you touch… | Read |
 |---|---|
 | accessibility of the whole application (WCAG 2.1/2.2 AA, axe-core, controls, known gaps and tolerated rules) | `docs/agenti/accessibility.md` |
-| panel actions (`azioni/1` registry, right-click menu, Shift+F10) | `docs/agenti/actions.md` |
+| panel actions (`actions/1` registry, right-click menu, Shift+F10) | `docs/agenti/actions.md` |
 | headless 2D depiction for agents (`mol draw` study: own Rust layout vs RDKit MinimalLib, Indigo, Rust crates; sizes, licences, quality on a synthetic set with RDKit as oracle, gates) | `docs/agenti/agent-draw.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profile/centroids/MS2, LC/MS method, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
 | Agilent `.D` folder reader (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |

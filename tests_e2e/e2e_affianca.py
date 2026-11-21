@@ -86,8 +86,8 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#ctx .mrow > [data-azione]')].every(d => d.getBoundingClientRect().width >= 24 && d.getBoundingClientRect().height >= 24)")
             pg.keyboard.press("Escape")
             # the rest of the arrangement is still in the registry (palette) and in the menu of the grip; grey when there is nothing to do
-            run = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; return AZIONI.pronta(AZIONI.voce('{aid}'), {{vista: p.type, p}}); }})()")
-            do = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; AZIONI.esegui('{aid}', {{vista: p.type, p}}); }})()")
+            run = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; return AZIONI.ready(AZIONI.get('{aid}'), {{view: p.type, p}}); }})()")
+            do = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; AZIONI.run('{aid}', {{view: p.type, p}}); }})()")
             assert not run("disp.uguali") and not run("disp.intera") and not run("disp.ripristina")           # alone in its row, nothing to restore
             pg.evaluate(f"ARRANGE.run({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); wait_shape("2,1")
             assert run("disp.uguali") and run("disp.intera") and run("disp.ripristina")

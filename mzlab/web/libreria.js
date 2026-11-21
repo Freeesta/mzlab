@@ -109,16 +109,16 @@ const LIB = (() => {
   const win = async () => { await loadScript("m:libreria-finestra.js"); return /** @type {Bag} */ (window).LIBWIN; };
   const whatIs = async (/** @type {Pannello} */ p) => (await win()).whatIs(p);
   const identifyAll = async (/** @type {number} */ k) => (await win()).identifyAll(k);
-  // the action of the spectrum menu (registry azioni/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
-  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "spec.lib", group: "lib", ordine: 1, views: ["spec"], visible: (/** @type {Bag} */ c) => c.p.level === 2,
-    nome: (/** @type {Bag} */ c) => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), esegui: (/** @type {Bag} */ c) => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
+  // the action of the spectrum menu (registry actions/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "spec.lib", group: "lib", order: 1, views: ["spec"], visible: (/** @type {Bag} */ c) => c.p.level === 2,
+    name: (/** @type {Bag} */ c) => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), run: (/** @type {Bag} */ c) => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
-  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", group: "lib", views: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
-    visible: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: (/** @type {Bag} */ c) => identifyAll(c.k) });
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.identAll", group: "lib", views: ["chrom"], name: () => I18N.t("ctx.chrom.identAll"),
+    visible: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), run: (/** @type {Bag} */ c) => identifyAll(c.k) });
   // «MS2 at this RT…» on a total trace of a DDA file: the MS2 scan nearest in time goes to the MS2 panel (hidden when the file has no MS2)
-  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.ms2AtRt", group: "extract", ordine: 2, views: ["chrom"], voci: (/** @type {Bag} */ c) => {
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.ms2AtRt", group: "extract", order: 2, views: ["chrom"], rows: (/** @type {Bag} */ c) => {
     const f = E.files[c.k]; if (!f || !f.dda || !window.DDA || !DDA.ms2Item(f) || c.x == null) return [];
-    return [{ nome: I18N.t("ctx.chrom.ms2AtRt"), tip: I18N.t("ctx.chrom.ms2AtRt.tip"), esegui: async () => {
+    return [{ name: I18N.t("ctx.chrom.ms2AtRt"), tip: I18N.t("ctx.chrom.ms2AtRt.tip"), run: async () => {
       DDA.ensure(c.p); const s1 = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.link === c.p.id && q.el), s2 = s1 && E.panels.find((/** @type {Bag} */ q) => q.id === s1.duo && q.el); if (!s2) return;
       const D = await DDA.get(f.k), i = DDA.nearest(D.rt, c.x); if (i < 0) return;
       await DDA.selectMs2(s2, D.sid[i]); s2.el.scrollIntoView({ block: "nearest", behavior: "smooth" });
