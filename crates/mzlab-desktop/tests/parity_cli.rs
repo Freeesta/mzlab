@@ -201,12 +201,10 @@ fn offset_xic(run: &dyn Fn(&[&str]) -> String, route: &dyn Fn(&str, &str) -> Str
         ]);
         let routed = route("/api/xic", &format!("?mz=300&tol=0.5&level=1&mzoff={spec}"));
         assert!(doc.contains(&route_points(&routed, "rt")), "{spec}");
+        // `"mz_offset_da":D,"mz_offset":{...}` (the evidence object holds no other braces)
         let evidence = |t: &str| {
-            t[t.find("\"mz_offset_da\":").unwrap()..]
-                .split("},")
-                .next()
-                .unwrap()
-                .to_string()
+            let from = &t[t.find("\"mz_offset_da\":").unwrap()..];
+            from[..from.find('}').unwrap() + 1].to_string()
         };
         assert_eq!(evidence(&doc), evidence(&routed), "{spec}");
     }
