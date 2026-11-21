@@ -320,10 +320,10 @@
     if (s.pop) closePop(p); else { s.pend = false; refresh(p); }
   } });
   // keys on the focused spectrum (not in a text field): the labelled peaks in order of m/z
-  /** @param {string} id @param {string} tasto @param {string} et @param {() => string} nome @param {number} d */
-  const key = (id, tasto, et, nome, d) => AZIONI.registra({ id, viste: ["spec"], gruppo: "xic", menu: false, scorciatoia: { tasto, dove: "chart", et },
-    nome, disponibile: (/** @type {any} */ c) => !ms2(c.p) && !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
-  key("spec.xicPrev", ",", "scorc.xicPrev", () => T("scorc.xicPrev"), -1); key("spec.xicNext", ".", "scorc.xicNext", () => T("scorc.xicNext"), 1);
+  /** @param {string} id @param {string} key @param {string} label @param {() => string} nome @param {number} d */
+  const keyAction = (id, key, label, nome, d) => AZIONI.registra({ id, views: ["spec"], group: "xic", menu: false, shortcut: { key, where: "chart", label },
+    nome, available: (/** @type {any} */ c) => !ms2(c.p) && !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
+  keyAction("spec.xicPrev", ",", "scorc.xicPrev", () => T("scorc.xicPrev"), -1); keyAction("spec.xicNext", ".", "scorc.xicNext", () => T("scorc.xicNext"), 1);
 
   /** Starts the requests of the XIC panel about to be created in the current tab (getXic memoises them): they run while addPanel builds the DOM, and draw() finds them done or under way. @param {any} tr */
   function prefetch(tr) {

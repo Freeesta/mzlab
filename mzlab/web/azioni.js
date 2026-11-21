@@ -6,12 +6,12 @@
 // Classic script, loaded after esperimenti.js; the modules register their actions in their own files (mappa.js for the RT x m/z map).
 /**
  * @typedef {{ vista: string, [k: string]: any }} Contesto
- * @typedef {{ id: string, gruppo: string, viste: string[], icona?: string, menu?: boolean, barra?: boolean,
- *   visibile?: (c: Contesto) => boolean, disponibile?: (c: Contesto) => boolean, attiva?: (c: Contesto) => boolean,
+ * @typedef {{ id: string, group: string, views: string[], icona?: string, menu?: boolean, barra?: boolean,
+ *   visible?: (c: Contesto) => boolean, available?: (c: Contesto) => boolean, attiva?: (c: Contesto) => boolean,
  *   nome?: (c: Contesto) => string, aria?: (c: Contesto) => string, voce?: (c: Contesto) => string, tip?: (c: Contesto) => string, svg?: (c: Contesto) => string,
- *   scorciatoia?: Scorciatoia, esegui?: (c: Contesto) => any, ordine?: number, doppio?: (c: Contesto) => boolean, doppioOrd?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
- * @typedef {{ tasto?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, dove: "chart" | "view", et?: string }} Scorciatoia
- *   tasto = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; dove = "chart": only with the focus on a chart, "view": anywhere in the view; et = i18n key of the short label
+ *   shortcut?: Scorciatoia, esegui?: (c: Contesto) => any, ordine?: number, doubleClick?: (c: Contesto) => boolean, doubleClickOrder?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
+ * @typedef {{ key?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, where: "chart" | "view", label?: string }} Scorciatoia
+ *   key = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; where = "chart": only with the focus on a chart, "view": anywhere in the view; label = i18n key of the short label
  * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, esegui: () => any }} Riga
  * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} VoceAzione
  */
@@ -36,7 +36,7 @@ const AZIONI = (() => {
   /** @param {Azione} a */
   function registra(a) {
     if (voci.some(v => v.id === a.id)) throw new Error("AZIONI: id already registered: " + a.id);
-    if (!GROUPS.includes(a.gruppo)) throw new Error("AZIONI: unknown group " + a.gruppo + " of " + a.id);
+    if (!GROUPS.includes(a.group)) throw new Error("AZIONI: unknown group " + a.group + " of " + a.id);
     // the icon of the action: its own key, else the table of azioni-icone.js
     if (!a.icona && typeof AZIONI_ICONE !== "undefined") a.icona = AZIONI_ICONE.POR_ID[a.id];
     voci.push(a);
@@ -48,14 +48,14 @@ const AZIONI = (() => {
   /** @param {string} id */
   const voce = id => voci.find(v => v.id === id);
   /** @param {Azione} a @param {Contesto} c */
-  const mostra = (a, c) => (a.viste.includes(c.vista) || a.viste.includes("*")) && (!a.visibile || a.visibile(c));
+  const mostra = (a, c) => (a.views.includes(c.vista) || a.views.includes("*")) && (!a.visible || a.visible(c));
   /** @param {Azione} a @param {Contesto} c */
-  const pronta = (a, c) => !a.disponibile || a.disponibile(c);
+  const pronta = (a, c) => !a.available || a.available(c);
   // the actions of the view in the order of the groups (inside a group: `ordine`, then the order of registration)
-  /** @param {Contesto} c @param {"menu" | "barra" | "tutte"} [dove] */
-  function elenco(c, dove = "menu") {
-    const l = voci.filter(a => mostra(a, c) && (dove === "tutte" || (dove === "menu" ? a.menu !== false : a.barra === true)));
-    return l.sort((a, b) => GROUPS.indexOf(a.gruppo) - GROUPS.indexOf(b.gruppo) || (a.ordine || 0) - (b.ordine || 0) || voci.indexOf(a) - voci.indexOf(b));
+  /** @param {Contesto} c @param {"menu" | "barra" | "tutte"} [where] */
+  function elenco(c, where = "menu") {
+    const l = voci.filter(a => mostra(a, c) && (where === "tutte" || (where === "menu" ? a.menu !== false : a.barra === true)));
+    return l.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || (a.ordine || 0) - (b.ordine || 0) || voci.indexOf(a) - voci.indexOf(b));
   }
   // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups;
   // an action with `voci` gives several rows (one per open XIC, per measure…), all with its id
@@ -67,13 +67,13 @@ const AZIONI = (() => {
     for (const a of elenco(c)) {
       if (a.voci) {
         const ok = pronta(a, c), rs = a.voci(c);
-        if (rs.length && last && a.gruppo !== last) items.push("-");
-        if (rs.length) last = a.gruppo;
+        if (rs.length && last && a.group !== last) items.push("-");
+        if (rs.length) last = a.group;
         rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon || icona(a, c), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.esegui }));
         continue;
       }
-      if (last && a.gruppo !== last) items.push("-");
-      last = a.gruppo;
+      if (last && a.group !== last) items.push("-");
+      last = a.group;
       const nome = a.nome ? a.nome(c) : a.id;
       if (a.sotto) { items.push({ id: a.id, label: nome, aria: nome, icon: icona(a, c), check: null, dim: !pronta(a, c), off: !pronta(a, c), fn: () => {}, sub: () => a.sotto(c) }); continue; }
       items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: icona(a, c),
@@ -88,31 +88,31 @@ const AZIONI = (() => {
       return out;
     }, []);
   }
-  // the downloads of a view (`scarico: true`, never in the right-click menu): rows of the download button of the panel, only the available ones
+  // the downloads of a view (`download: true`, never in the right-click menu): rows of the download button of the panel, only the available ones
   /** @param {Contesto} c */
-  const scarichi = c => elenco(c, "tutte").filter(a => a.scarico && pronta(a, c)).map(a => ({ label: a.nome ? a.nome(c) : a.id, icon: icona(a, c), fn: () => esegui(a.id, c) }));
+  const scarichi = c => elenco(c, "tutte").filter(a => a.download && pronta(a, c)).map(a => ({ label: a.nome ? a.nome(c) : a.id, icon: icona(a, c), fn: () => esegui(a.id, c) }));
   /** @param {string} id @param {Contesto} c */
   function esegui(id, c) {
     const a = voce(id);
     if (a && a.esegui && mostra(a, c) && pronta(a, c)) return a.esegui(c);
   }
-  // the double click on a graph: the first available action that claims it (`doppio(c)` true), by `doppioOrd` (default 5); false when none does
+  // the double click on a graph: the first available action that claims it (`doubleClick(c)` true), by `doubleClickOrder` (default 5); false when none does
   /** @param {Contesto} c */
-  function doppio(c) {
-    const l = elenco(c, "tutte").filter(a => a.doppio && pronta(a, c) && a.doppio(c)).sort((a, b) => (a.doppioOrd ?? 5) - (b.doppioOrd ?? 5));
+  function doubleClick(c) {
+    const l = elenco(c, "tutte").filter(a => a.doubleClick && pronta(a, c) && a.doubleClick(c)).sort((a, b) => (a.doubleClickOrder ?? 5) - (b.doubleClickOrder ?? 5));
     if (!l.length) return false;
     esegui(l[0].id, c);
     return true;
   }
-  return { formato: "azioni/1", GROUPS, voci, registra, voce, elenco, per, scarichi, pulisci: pulisciMenu, esegui, mostra, pronta, doppio, icona };
+  return { formato: "azioni/1", GROUPS, voci, registra, voce, elenco, per, scarichi, pulisci: pulisciMenu, esegui, mostra, pronta, doubleClick, icona };
 })();
-// ---- shortcuts: the field `scorciatoia` of an action, ONE keydown for all of them (the functions are also added to AZIONI)
+// ---- shortcuts: the field `shortcut` of an action, ONE keydown for all of them (the functions are also added to AZIONI)
 const TASTI = (() => {
   const { voci, mostra, pronta, esegui } = AZIONI;
   const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
   /** The text of a shortcut as the user's system writes it: ⌘O / ⌥1 on the Mac, Ctrl+O / Alt+1 elsewhere. @param {Scorciatoia} s */
   function testo(s) {
-    const n = String(s.tasto || "").replace("Arrow", "").replace("Left", "←").replace("Right", "→"), t = s.code ? s.code.replace(/^(Digit|Key)/, "") : n.length > 1 ? n : n.toUpperCase();
+    const n = String(s.key || "").replace("Arrow", "").replace("Left", "←").replace("Right", "→"), t = s.code ? s.code.replace(/^(Digit|Key)/, "") : n.length > 1 ? n : n.toUpperCase();
     if (mac()) return (s.mod ? "⌘" : "") + (s.alt ? "⌥" : "") + (s.shift ? "⇧" : "") + t;
     return [s.mod ? "Ctrl" : "", s.alt ? "Alt" : "", s.shift ? "Shift" : "", t].filter(Boolean).join("+");
   }
@@ -120,12 +120,12 @@ const TASTI = (() => {
   function premuto(s, e) {
     if (!!s.mod !== (e.ctrlKey || e.metaKey) || !!s.alt !== e.altKey) return false;
     if (s.code) return e.code === s.code && !!s.shift === e.shiftKey;
-    const k = String(s.tasto || "");
+    const k = String(s.key || "");
     if (k === "?") return e.key === "?";
     return !e.shiftKey === !s.shift && (e.key || "").toLowerCase() === k.toLowerCase();
   }
   /** The actions with a shortcut for this view, in the order of registration. @param {string} vista */
-  const conTasto = vista => voci.filter(a => a.scorciatoia && (a.viste.includes(vista) || a.viste.includes("*")));
+  const conTasto = vista => voci.filter(a => a.shortcut && (a.views.includes(vista) || a.views.includes("*")));
   // the text field or dialog that keeps its own keys
   /** @param {EventTarget | null} t */
   const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
@@ -147,7 +147,7 @@ const TASTI = (() => {
     return c;
   }
   /** @param {KeyboardEvent} e */
-  function tasto(e) {
+  function onKey(e) {
     if (e.defaultPrevented || e.isComposing || e.repeat || typeof E === "undefined") return;
     if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
     const combo = e.ctrlKey || e.metaKey || e.altKey;
@@ -158,12 +158,12 @@ const TASTI = (() => {
     const vista = p ? p.type : (typeof S !== "undefined" && S.view) || "data";
     const c = p ? contestoGrafico(p, e) : { vista, p: E.active, e };
     for (const a of conTasto(vista)) {
-      const s = /** @type {Scorciatoia} */ (a.scorciatoia);
-      if ((s.dove === "chart" && !p) || !premuto(s, e) || !mostra(a, c) || !pronta(a, c)) continue;
+      const s = /** @type {Scorciatoia} */ (a.shortcut);
+      if ((s.where === "chart" && !p) || !premuto(s, e) || !mostra(a, c) || !pronta(a, c)) continue;
       e.preventDefault(); e.stopPropagation(); esegui(a.id, c); return;
     }
   }
-  if (typeof document !== "undefined") document.addEventListener("keydown", tasto);
+  if (typeof document !== "undefined") document.addEventListener("keydown", onKey);
   return { testo, premuto, conTasto, inCampo, pannelloDi, contestoGrafico };
 })();
 Object.assign(AZIONI, TASTI);

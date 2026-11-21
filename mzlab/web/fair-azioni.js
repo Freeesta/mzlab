@@ -9,6 +9,6 @@ if (typeof AZIONI !== "undefined") {
   const can = c => { try { const x = window.WORKFLOW && WORKFLOW.extractSpecData(c.p); return !!x && !x.isLr; } catch (_) { return false; } };
   /** @param {any} c @param {"massbank" | "sirius"} f */
   const run = (c, f) => loadScript("m:fair.js").then(() => FAIR[f](c.p));
-  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => run(c, "massbank") });
-  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => run(c, "sirius") });
+  AZIONI.registra({ id: "spec.exportMassbank", group: "lib", ordine: 3, views: ["spec"], menu: false, download: true, visible: ok, available: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => run(c, "massbank") });
+  AZIONI.registra({ id: "spec.exportSirius", group: "lib", ordine: 3, views: ["spec"], menu: false, download: true, visible: ok, available: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => run(c, "sirius") });
 }

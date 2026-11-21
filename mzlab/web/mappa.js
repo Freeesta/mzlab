@@ -774,22 +774,22 @@ window.MAPPA = (() => {
   // the commands are actions of the registry azioni/1 (azioni.js), views "map" (2D) and "map3d" (the 3D viewer); the context of an action is the adapter
   const V2 = ["map", "map3d"];
   const nameOf = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
-  const cmd = (/** @type {string} */ id, /** @type {string} */ gruppo, /** @type {string} */ ic, /** @type {string[]} */ viste, /** @type {Record<string, any>} */ o) => AZIONI.registra({ id, gruppo, ic, viste, nome: (/** @type {Record<string, any>} */ ad) => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: (/** @type {Record<string, any>} */ ad) => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
+  const cmd = (/** @type {string} */ id, /** @type {string} */ group, /** @type {string} */ ic, /** @type {string[]} */ views, /** @type {Record<string, any>} */ o) => AZIONI.registra({ id, group, ic, views, nome: (/** @type {Record<string, any>} */ ad) => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: (/** @type {Record<string, any>} */ ad) => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
   // with an RT stretch selected (Alt + drag) the spectrum is the average over it
   const short = (/** @type {string} */ id) => ({ voce: (/** @type {Record<string, any>} */ ad) => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : id === "mapxic" && ad.p._a?.pda ? T("cmd.mapxic.menuWl") : T(`cmd.${id}.menu`) });
   const hasPt = (/** @type {Record<string, any>} */ ad) => !!ad.pt();
   const CMDS = [
-    cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), disponibile: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "xic") }),
-    cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), disponibile: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "spec") }),
+    cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), available: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "xic") }),
+    cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), available: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "spec") }),
     cmd("maplock", "lock", "lock", V2, { attiva: (/** @type {Record<string, any>} */ ad) => ad.locked(), esegui: (/** @type {Record<string, any>} */ ad) => ad.toggleLock() }),
-    cmd("mapmark", "lock", "mark", ["map"], { disponibile: hasPt, attiva: (/** @type {Record<string, any>} */ ad) => ad.marked(), esegui: (/** @type {Record<string, any>} */ ad) => ad.toggleMark() }),
+    cmd("mapmark", "lock", "mark", ["map"], { available: hasPt, attiva: (/** @type {Record<string, any>} */ ad) => ad.marked(), esegui: (/** @type {Record<string, any>} */ ad) => ad.toggleMark() }),
     cmd("mapreset", "view", "home", V2, { esegui: (/** @type {Record<string, any>} */ ad) => ad.resetAll() }),
     cmd("map3top", "view", "top", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(1) }),
     cmd("map3rt", "view", "side", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(2) }),
     cmd("map3mz", "view", "spec", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(3) }),
     cmd("mapzin", "zoom", "plus", V2, { menu: false, esegui: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(0.7) }),
     cmd("mapzout", "zoom", "minus", V2, { menu: false, esegui: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(1 / 0.7) }),
-    cmd("mapcopy", "copy", "copy", V2, { disponibile: hasPt, esegui: async (/** @type {Record<string, any>} */ ad) => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
+    cmd("mapcopy", "copy", "copy", V2, { available: hasPt, esegui: async (/** @type {Record<string, any>} */ ad) => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
     cmd("maphelp", "help", "help", V2, { esegui: (/** @type {Record<string, any>} */ ad) => help(ad.kind) })
   ];
   const runCmd = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => AZIONI.esegui(id, /** @type {{ vista: string, [k: string]: any }} */ (ad));
@@ -908,7 +908,7 @@ window.MAPPA = (() => {
   }
   // the 2D map of the active tab the palette acts on
   const activeMap = () => { const q = E.active; if (q && q.type === "map" && is2d(q) && E.panels.includes(q)) return q; return (typeof tabPanels === "function" ? tabPanels() : []).find((/** @type {Pannello} */ x) => x.type === "map" && is2d(x)) || null; };
-  const paletteOk = (/** @type {Record<string, any>} */ c) => { const p = activeMap(); return !!p && c.viste.includes("map") && (!c.visibile || c.visibile(ad2(p, null))); };
+  const paletteOk = (/** @type {Record<string, any>} */ c) => { const p = activeMap(); return !!p && c.views.includes("map") && (!c.visible || c.visible(ad2(p, null))); };
   const paletteRun = (/** @type {string} */ id) => { const p = activeMap(); if (p) runCmd(id, ad2(p, null)); };
   // touch: one finger draws the zoom box, two fingers move and pinch, a double tap = whole view, a long press = the menu
   function touchInit(/** @type {Pannello} */ p, /** @type {HTMLCanvasElement} */ cv) {

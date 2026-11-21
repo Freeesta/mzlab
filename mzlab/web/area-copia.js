@@ -57,11 +57,11 @@ document.addEventListener("mouseup", e => {
   const [px, py] = where(e, d.p); const l = hit(d.p, px, py) || d.l;      // the label may have been redrawn (new object) or the pointer slid off its box: the one pressed is copied
   copy(d.p, l, [e.clientX, e.clientY]);
 }, true);
-if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.copyArea", gruppo: "tools", ordine: 0, viste: ["chrom", "xic", "mrm"],
-  visibile: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.copy.menu"),
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.copyArea", group: "tools", ordine: 0, views: ["chrom", "xic", "mrm"],
+  visible: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.copy.menu"),
   esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) copy(c.p, l); } });
 // the baseline of the integration under the pointer or selected (key B): its dialog in integra-base.js, loaded on demand
-if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.baseline", gruppo: "tools", ordine: 0, viste: ["chrom", "xic", "mrm"], scorciatoia: { tasto: "b", dove: "chart", et: "scorc.base" },
-  visibile: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.base.menu"),
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "int.baseline", group: "tools", ordine: 0, views: ["chrom", "xic", "mrm"], shortcut: { key: "b", where: "chart", label: "scorc.base" },
+  visible: (/** @type {Bag} */ c) => !!target(c.p, c.x, c.px, c.py), nome: () => I18N.t("int.base.menu"),
   esegui: (/** @type {Bag} */ c) => { const l = target(c.p, c.x, c.px, c.py); if (l) loadScript("integra-base.js").then(() => INTBASE.open(c.p, l.int)); } });
 window.AREACOPY = { target, copy, put, say: notice };

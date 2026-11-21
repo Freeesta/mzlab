@@ -137,7 +137,7 @@
   function wireArea(p) { const b = p.el.querySelector('[data-a="area"]'); if (b) b.onclick = () => { p.area = p.area === false; syncArea(p); draw(p); uiSave(); }; }
 
   // a file of transitions or SIM ions has no XIC: the same place of the menu holds the ions to extract (a submenu, a check mark each)
-  AZIONI.registra({ id: "mrm.estrai", gruppo: "xic", viste: ["chrom", "mrm"], visibile: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
+  AZIONI.registra({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     nome: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), sotto: (/** @type {any} */ c) => rows(c) });
 
   window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };

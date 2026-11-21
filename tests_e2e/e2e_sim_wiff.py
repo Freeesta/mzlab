@@ -397,7 +397,7 @@ try:
             wait_for_js(pg, "!MANINT.state().csv.includes(',drop,')", timeout=60000)
             need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "no drop line: whole again")
             menu = pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split')")
-            need(menu and menu["scorciatoia"]["tasto"] == "v", menu)
+            need(menu and menu["shortcut"]["key"] == "v", menu)
         step("«Split at the valleys»: the engine's drop line (= peak split), moved by mouse, keys and finger, confirmed into one row per part (= peak table), undo, depth, Esc", split)
         def split_hand():
             need = lambda c, m: c or throw(m)
@@ -448,7 +448,7 @@ try:
             pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"({IT}.splits || [])[0] === {t1}", timeout=10000); need(pg.evaluate(f"{IT}.splits.length") == 2, "undo of the drag")
             pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000)
             pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"!({IT}.splits || []).length", timeout=10000)
-            need(pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split.hand')")["scorciatoia"]["tasto"] == "m", "key M")
+            need(pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split.hand')")["shortcut"]["key"] == "m", "key M")
         step("«Split by hand»: a click splits at the pointer (guide line), every part its own label and row, drag, Delete, Esc, one undo step per action", split_hand)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():

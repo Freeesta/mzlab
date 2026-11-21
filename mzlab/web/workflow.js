@@ -422,6 +422,6 @@ window.WORKFLOW = WORKFLOW;
 if (typeof AZIONI !== "undefined") {
   /** @param {any} c */
   const ms2 = c => c.p.level === 2;
-  AZIONI.registra({ id: "spec.exportMgf", gruppo: "lib", ordine: 2, viste: ["spec"], menu: false, scarico: true, visibile: ms2, nome: () => I18N.t("ctx.spec.exportMgf"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
-  AZIONI.registra({ id: "spec.exportMsp", gruppo: "lib", ordine: 2, viste: ["spec"], menu: false, scarico: true, visibile: ms2, nome: () => I18N.t("ctx.spec.exportMsp"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
+  AZIONI.registra({ id: "spec.exportMgf", group: "lib", ordine: 2, views: ["spec"], menu: false, download: true, visible: ms2, nome: () => I18N.t("ctx.spec.exportMgf"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
+  AZIONI.registra({ id: "spec.exportMsp", group: "lib", ordine: 2, views: ["spec"], menu: false, download: true, visible: ms2, nome: () => I18N.t("ctx.spec.exportMsp"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
 }

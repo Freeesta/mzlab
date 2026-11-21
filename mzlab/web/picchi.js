@@ -197,7 +197,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   return items;
 }
 // the integration entries of the menu of a trace (registry azioni/1): the rows of intMenuItems, one action
-if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "tools", ordine: 1, viste: ["chrom", "xic", "mrm"],
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", group: "tools", ordine: 1, views: ["chrom", "xic", "mrm"],
   voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
