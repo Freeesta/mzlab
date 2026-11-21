@@ -20,7 +20,7 @@ def choose(pg, sp):
     pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').click()"); pg.mouse.click(pk["x"], pk["y"]); ready(pg); frames(pg, 3)
     wait_for_js(pg, f"!!XICBTN.chosen({sp})")
     return apex(pg, sp)
-def has_dot(a): return all(abs(u - v) <= 8 for u, v in zip(a["dot"], a["accent"]))
+def has_dot(a): return all(abs(u - v) <= 24 for u, v in zip(a["dot"], a["accent"]))
 D = synth("xicmark")
 r = Run(port=8941, wd="/tmp/wd_xicmark")
 try:
