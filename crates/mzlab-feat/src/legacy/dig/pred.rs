@@ -10,7 +10,7 @@ impl Cand {
         if self
             .hyp
             .as_ref()
-            .is_some_and(|h| h.label.starts_with("rottura"))
+            .is_some_and(|h| h.label.starts_with("cleavage"))
         {
             return (false, "a cleavage has no single mass difference".into());
         }

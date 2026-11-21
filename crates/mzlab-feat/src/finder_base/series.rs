@@ -1,5 +1,5 @@
 //! What the adapter reads: the files of the Dig (as the page passes them to `api.run`), the parent, the table of the series with its `evid/1` graph
-//! and the registry `ipotesi/1` of the hypotheses.
+//! and the registry `hypotheses/2` of the hypotheses.
 
 use std::collections::HashMap;
 
@@ -144,12 +144,13 @@ pub struct Hyp {
     pub alternatives: Vec<String>,
 }
 
-/// The registry `ipotesi/1` by id, and the number of hypotheses tried and found.
+/// The registry `hypotheses/2` by id, and the number of hypotheses tried and found.
 pub fn registry(text: &str) -> Res<(HashMap<u32, Hyp>, u32, u32)> {
     if text.trim().is_empty() {
         return Ok((HashMap::new(), 0, 0));
     }
     let v = json::parse(text.as_bytes()).map_err(|e| e.to_string())?;
+    crate::hypo::check_registry_format(&v)?;
     let strs = |x: &Value, k: &str| -> Vec<String> {
         x.get(k)
             .map(Value::arr)

@@ -25,7 +25,7 @@ pub type Res<T> = Result<T, String>;
 pub struct Inputs<'a> {
     pub table: &'a Aligned,
     pub parent: &'a Parent,
-    /// The registry `ipotesi/1` as a list.
+    /// The registry `hypotheses/2` as a list.
     pub hyps: &'a [Hyp],
     pub polarity: i8,
     /// The thresholds of the link (`LinkParams::default()` is the page's).

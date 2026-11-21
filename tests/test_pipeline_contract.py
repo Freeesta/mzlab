@@ -46,12 +46,12 @@ def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
 
 def test_the_keys_of_the_row_are_in_the_row_and_its_traces(outs):
     c, row, tr = contract(), outs["riga.json"], outs["riga_tracce.json"]
-    assert row["schema"] == "riga/1" and set(c["row"]) <= set(row) and row["id"] == 3
+    assert row["schema"] == "row/2" and set(c["row"]) <= set(row) and row["id"] == 3
     assert row["quality"] is None or set(c["rowQuality"]) <= set(row["quality"])
     assert row["ms2"] is None or set(c["rowMs2"]) <= set(row["ms2"])
     assert row["ident"] is None or set(c["rowIdent"]) <= set(row["ident"])
     assert len(row["cells"]) == len(outs["qc.json"]["file"]) and all(set(c["rowCell"]) <= set(x) for x in row["cells"])
-    assert tr["schema"] == "riga_tracce/1" and set(c["traces"]) <= set(tr) and all(set(c["traceXic"]) <= set(x) for x in tr["xic"])
+    assert tr["schema"] == "row_traces/2" and set(c["traces"]) <= set(tr) and all(set(c["traceXic"]) <= set(x) for x in tr["xic"])
     assert len(tr["xic"]) == len(row["cells"]) and all(0 < len(x["rt"]) == len(x["y"]) <= 400 for x in tr["xic"])
     assert tr["ms1"] is None or set(c["traceMs1"]) <= set(tr["ms1"])
     assert tr["ms2"] is None or set(c["traceMs2"]) <= set(tr["ms2"])

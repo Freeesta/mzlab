@@ -310,7 +310,7 @@ fn products<R: ReadAt>(
 }
 
 /// `api.run` on a low-resolution series after the pipeline: `table` = the `.mzfeat` of the full-scan columns (in the order of `plan::columns`),
-/// `registry` = the `ipotesi/1` JSON of the hypotheses of the parent, `open(k)` = the `.mzidx` of column `k` (the XICs of `peakchk`).
+/// `registry` = the `hypotheses/2` JSON of the hypotheses of the parent, `open(k)` = the `.mzidx` of column `k` (the XICs of `peakchk`).
 pub fn dig<R: ReadAt>(
     files_json: &str,
     parent_json: &str,

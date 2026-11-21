@@ -37,7 +37,7 @@ embed!(
     "error-1.json",
     "evalrun-1.json",
     "evid-1.json",
-    "feature_pipeline-2.json",
+    "feature_pipeline-3.json",
     "features-notes-1.json",
     "features-plan-1.json",
     "features-report-1.json",

@@ -111,7 +111,7 @@ async function tpTable(rows) {
   const m = await import(base() + "mzfinder/finder-tabella.js");
   return m.tpTable({ manifest, url: featUrl, sha }, lastRun, rows);
 }
-/** riga/1 and the traces of one row of the last Dig (finder-tabella.js); "null" when there is none @param {number} id */
+/** row/2 and the traces of one row of the last Dig (finder-tabella.js); "null" when there is none @param {number} id */
 async function tpRow(id) {
   if (last !== "rust" || !lastRun) return "null";
   const m = await import(base() + "mzfinder/finder-tabella.js");

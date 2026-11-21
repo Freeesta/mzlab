@@ -1,4 +1,4 @@
-"""The TP rules file (regole_tp/3) and the pipeline record (feature_pipeline/2) use English keys; the old Italian ones must not come back."""
+"""The TP rules file (regole_tp/3) and the pipeline record (feature_pipeline/3) use English keys; the old Italian ones must not come back."""
 import re
 import subprocess
 from pathlib import Path

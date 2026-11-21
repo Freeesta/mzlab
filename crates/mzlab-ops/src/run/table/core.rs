@@ -343,13 +343,13 @@ fn ms2_note(text: String, info: &ms2spec::SpecInfo) -> String {
     out
 }
 
-/// The `riga/1` of the row with `id` (`error.rowNotFound` when the table has none).
+/// The `row/2` of the row with `id` (`error.rowNotFound` when the table has none).
 pub fn row_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     row::row(&t, &s, id)
 }
 
-/// The `riga_tracce/1` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
+/// The `row_traces/2` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
 pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     r: &mut R,
     size: u64,

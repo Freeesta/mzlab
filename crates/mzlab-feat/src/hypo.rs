@@ -29,14 +29,22 @@ pub const SRC_IMPORTED: u8 = 8;
 pub const SRC_CLEAVAGE: u8 = 16;
 pub const SRC_NETWORK: u8 = 32;
 
-pub const REGISTRY_FORMAT: &str = "ipotesi/1";
+pub const REGISTRY_FORMAT: &str = "hypotheses/2";
+
+/// Refuses a registry of another format or version (`hypotheses/2` and its Italian source names are not converted): `error.hypo.registryFormat`.
+pub fn check_registry_format(v: &mzlab_core::json::Value) -> std::result::Result<(), String> {
+    match v.get("format").and_then(mzlab_core::json::Value::str) {
+        Some(REGISTRY_FORMAT) => Ok(()),
+        _ => Err("error.hypo.registryFormat".to_string()),
+    }
+}
 const SRC_NAMES: [(u8, &str); 6] = [
-    (SRC_RULE, "regola"),
-    (SRC_SUSPECT, "sospetti"),
-    (SRC_FAMILY, "famiglia"),
-    (SRC_IMPORTED, "importata"),
-    (SRC_CLEAVAGE, "rottura"),
-    (SRC_NETWORK, "rete"),
+    (SRC_RULE, "rule"),
+    (SRC_SUSPECT, "suspects"),
+    (SRC_FAMILY, "family"),
+    (SRC_IMPORTED, "imported"),
+    (SRC_CLEAVAGE, "cleavage"),
+    (SRC_NETWORK, "network"),
 ];
 
 #[derive(Debug, Clone)]
@@ -296,7 +304,7 @@ impl Registry {
             .count()
     }
 
-    /// The registry as JSON (`ipotesi/1`): the base of the SHA-256 that compares two runs.
+    /// The registry as JSON (`hypotheses/2`): the base of the SHA-256 that compares two runs.
     pub fn to_json(&self) -> String {
         let mut o = Out::default();
         o.raw("{\"format\":")

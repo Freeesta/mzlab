@@ -1,7 +1,7 @@
 // @ts-check
 // TPMINE-PRIVATE  Step «Table» of the Feature table (window.PIPET): normalisation and filters as a view of the table (the engine counts «N of M rows» and the rows), and the rows of the view
 // in a TPTAB (`#ft-t`): few columns, the first two fixed, one row open at a time with TPRIGA (head, Overview, Samples, Identity, Quality). The open row asks the engine for `session.row(id)`
-// (`riga/1`) and `session.traces(id, ppm)` (`riga_tracce/1`, XIC and spectra from the `.mzidx` of the series, not from the file open in Data). Nothing is computed here: the page builds the
+// (`row/2`) and `session.traces(id, ppm)` (`row_traces/2`, XIC and spectra from the `.mzidx` of the series, not from the file open in Data). Nothing is computed here: the page builds the
 // parameters of the view, formats and draws. Texts in English (mzFinder convention); the helps are keys of the catalogue of Tabui.
 (() => {
   "use strict";
@@ -80,7 +80,7 @@
     if (!G.TPDEC) return null;
     return { series: () => ({ files: o.names, formula: o.formula || "" }), key: (/** @type {FtRow} */ r) => G.TPDEC.rowKey(r.mz, r.rt, true), level: levelOf };
   }
-  /** the open row: `riga/1` and `riga_tracce/1` once per row (cache) and the model TpRiga built from them */
+  /** the open row: `row/2` and `row_traces/2` once per row (cache) and the model TpRiga built from them */
   function rowModels(/** @type {any} */ o, /** @type {any} */ cols, /** @type {(r: FtRow) => string} */ identText, /** @type {(r: FtRow) => any} */ levelOf, /** @type {(t: string) => void} */ warn) {
     /** @type {Map<number, { row?: any, rowErr?: string, interp?: any, interpErr?: string, tr?: any, trErr?: string, rowP?: Promise<void>, trP?: Promise<void> }>} */ const cache = new Map();
     const entry = (/** @type {number} */ id) => { let e = cache.get(id); if (!e) cache.set(id, e = {}); return e; };

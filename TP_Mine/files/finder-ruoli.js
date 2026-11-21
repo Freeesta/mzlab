@@ -37,7 +37,7 @@ export async function build(call, names, nb) {
 
 /** warnings of the Rust (`validate`) for the files: codes only, the words are the page's */
 export const check = async (/** @type {Call} */ call, /** @type {Sample[]} */ cs) => /** @type {{warnings: Warning[], blocking: boolean}} */ (JSON.parse(await call("validate", doc(cs))));
-/** the indices per role and `minutes[]` (feature_pipeline/2) of the Rust (`per_tp`) */
+/** the indices per role and `minutes[]` (feature_pipeline/3) of the Rust (`per_tp`) */
 export const forTp = async (/** @type {Call} */ call, /** @type {Sample[]} */ cs) => /** @type {{treated: number[], t0: number[], blank: number[], dark: number[], infusion: number[], minutes: (number | null)[]}} */ (JSON.parse(await call("per_tp", doc(cs))));
 /** canonical samples/1 of the files and its SHA-256, both of the Rust (what the operation `samples` of the .mzflow records) */
 export const canonical = async (/** @type {Call} */ call, /** @type {Sample[]} */ cs) => ({ json: await call("canonical", doc(cs)), sha256: await call("digest", doc(cs)) });

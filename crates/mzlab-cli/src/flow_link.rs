@@ -72,7 +72,7 @@ fn report_phases(hypo: Duration, evidence: Duration, total: Duration) {
 }
 
 /// The `.mzfeat` with `tp/1` and `interp/1` of the table `table` of the series `series` (the files of `lin`), for the parent file `parent` and the
-/// `samples/1` `samples`; `hypotheses` is the `ipotesi/1` of `tp.generate`, which has to be the one of this parent.
+/// `samples/1` `samples`; `hypotheses` is the `hypotheses/2` of `tp.generate`, which has to be the one of this parent.
 pub fn link_bytes(
     r: &FileRunner,
     job: &Job,

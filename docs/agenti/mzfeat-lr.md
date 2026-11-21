@@ -47,7 +47,7 @@ The pipeline of `crates/mzlab-feat` also runs on LR data (SCIEX 3200 QTRAP, Q1 f
   `flow_lr_bench_tests` has a third arm C (profile with the defaults): precision 0.35, recall 1.00, split 0.07, 142 rows on the blank, like the centroid step (A); the profile path with `centroid`/`recenter` off (B) keeps its numbers.
 
 ## Levels
-- Profile `lr` of `livelli/1` (hidden): never above 3 (`tetto`: all passed gates give 3), 4 if the nominal formula alone explains the ion, otherwise 5. The profile has no `punti`: the table `PointsTable::bundled()` reads only the default profile.
+- Profile `lr` of `levels/1` (hidden): never above 3 (`tetto`: all passed gates give 3), 4 if the nominal formula alone explains the ion, otherwise 5. The profile has no `punti`: the table `PointsTable::bundled()` reads only the default profile.
 
 ## Proof
 - `cargo test -p mzlab-feat --test lr_fullscan`: synthetic series (5 times + blank, 270 Q1 scans, deterministic noise, calibration shift +0.30 Da) built in Rust with `MzmlWriter` → `upload::prepare` → `mzidx`.
