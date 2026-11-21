@@ -32,7 +32,7 @@ def test_every_module_is_built_by_a_script():
             assert (ROOT / "crates" / r["pacchetto"] / "Cargo.toml").is_file(), n
     chiavi = [k for r in mod.values() for k in r.get("chiavi", {})]
     assert len(chiavi) == len(set(chiavi)) == 29
-    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 29))
+    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 30))
 
 
 def test_workflow_caps_come_from_the_data():
