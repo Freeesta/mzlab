@@ -177,6 +177,37 @@ fn median(v: &mut [f64]) -> f64 {
     }
 }
 
+/// The scans around the apex `ap` that hold at least half of it, the higher neighbour first, at most `MAX_SCANS`: `(first, last)`.
+fn around(ys: &[f64], ap: usize, inside: &dyn Fn(usize) -> bool) -> (usize, usize) {
+    let (n, apex) = (ys.len(), ys[ap]);
+    let (mut lo, mut hi) = (ap, ap);
+    let ok = |p: Option<usize>| p.filter(|&p| p < n && inside(p) && ys[p] >= KEEP * apex);
+    while hi - lo + 1 < MAX_SCANS {
+        let (l, r) = (ok(lo.checked_sub(1)), ok(Some(hi + 1)));
+        match (l, r) {
+            (Some(l), Some(r)) if ys[l] > ys[r] => lo = l,
+            (_, Some(r)) => hi = r,
+            (Some(l), None) => lo = l,
+            (None, None) => break,
+        }
+    }
+    (lo, hi)
+}
+
+/// The intensity-weighted centroid of the peaks of each scan in `lo..=hi` that has any, with the scan's total intensity.
+fn centroids(peaks: &[(usize, f64, f64)], lo: usize, hi: usize) -> Vec<(f64, f64)> {
+    let mut sums = vec![(0.0, 0.0); hi - lo + 1];
+    for &(p, m, i) in peaks.iter().filter(|x| (lo..=hi).contains(&x.0)) {
+        let s = &mut sums[p - lo];
+        s.0 += m * i;
+        s.1 += i;
+    }
+    sums.into_iter()
+        .filter(|s| s.1 > 0.0)
+        .map(|s| (s.0 / s.1, s.1))
+        .collect()
+}
+
 /// The offset measured on the ion at `mz` (within ±`MAX_OFFSET` Da, inside ±0.5 min of `rt` when given) in the MS1 section of polarity `pol`:
 /// the apex of the 3-point smoothed XIC (it needs a signal of at least `MIN_SNR` times the median of the trace and three scans at half the apex),
 /// then the intensity-weighted centroid of the peaks in the window in each scan around it (at most `MAX_SCANS`), and the intensity-weighted median
@@ -233,32 +264,11 @@ pub fn estimate<R: ReadAt>(
     if apex <= 0.0 || snr < MIN_SNR {
         return Ok(miss(snr, apex));
     }
-    // the scans around the apex that hold at least half of it, the higher neighbour first, at most MAX_SCANS
-    let (mut lo, mut hi) = (ap, ap);
-    let ok = |p: Option<usize>| p.filter(|&p| p < n && inside(p) && ys[p] >= KEEP * apex);
-    while hi - lo + 1 < MAX_SCANS {
-        let (l, r) = (ok(lo.checked_sub(1)), ok(Some(hi + 1)));
-        match (l, r) {
-            (Some(l), Some(r)) if ys[l] > ys[r] => lo = l,
-            (_, Some(r)) => hi = r,
-            (Some(l), None) => lo = l,
-            (None, None) => break,
-        }
-    }
+    let (lo, hi) = around(&ys, ap, &inside);
     if hi - lo + 1 < 3 {
         return Ok(miss(snr, apex));
     }
-    let mut sums = vec![(0.0, 0.0); hi - lo + 1];
-    for &(p, m, i) in peaks.iter().filter(|x| (lo..=hi).contains(&x.0)) {
-        let s = &mut sums[p - lo];
-        s.0 += m * i;
-        s.1 += i;
-    }
-    let mut cents: Vec<(f64, f64)> = sums
-        .into_iter()
-        .filter(|s| s.1 > 0.0)
-        .map(|s| (s.0 / s.1, s.1))
-        .collect();
+    let mut cents = centroids(&peaks, lo, hi);
     if cents.is_empty() {
         return Ok(miss(snr, apex));
     }
