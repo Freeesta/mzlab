@@ -298,7 +298,7 @@
     if (s.pend) extract(p, false);
     return false;                                           // the ruler code of specClick follows and does nothing: the ruler is off here
   }
-  /** small dot on the apex of the chosen peak (a ring would cover the m/z label above it); the halo keeps it readable on any background @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
+  /** small dot on the apex of the chosen peak, high resolution only (a ring would cover the m/z label above it); the halo keeps it readable on any background @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
   function mark(p, g, X, Y, W, d0) {
     const s = ST.get(p); if (!s || !s.sel || p._exp) return;
     const sel = s.sel;
@@ -306,7 +306,7 @@
     let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - sel.m) < 0.3 && (j < 0 || Math.abs(v - sel.m) < Math.abs(d0.mz[j] - sel.m))) j = i; });
     g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 2;
     if (j < 0) { g.setLineDash([4, 3]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, M.t + 2); g.stroke(); }
-    else {
+    else if (p._a && p._a.hrp) {                           // low resolution (unit mass): no dot on the apex, the choice stays in the XIC button label
       const py = Math.max(M.t + 6, Y(d0.y[j]));
       g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = ecss("--panel"); g.stroke(); g.fillStyle = ecss("--accent"); g.fill();
     }
