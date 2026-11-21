@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "xicplan/1",
   "title": "xicplan/1: what `mzlab-cli trace xic --dry-run` would extract",
-  "description": "The extraction a run would do, written without reading the data of the file (a missing file is still exit 4). With --sweep: the sweep and its matrix. Code: crates/mzlab-cli/src/trace_xic.rs.",
+  "description": "The extraction a run would do, written without reading the data of the file (a missing file is still exit 4; only an auto: --mz-offset reads the data of its estimate and puts the evidence here). With --sweep: the sweep and its matrix. Code: crates/mzlab-cli/src/trace_xic.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -146,6 +146,14 @@
     "matrix_bytes_per_scan": {
       "type": "integer",
       "description": "Only with --sweep: n x 8 bytes; times the scans of the section is the matrix the run holds (the scans are not read in a dry run). The run is refused (error.memoryBudget, exit 1) when the matrix is over half the memory budget."
+    },
+    "mz_offset_da": {
+      "type": "number",
+      "description": "The m/z offset in force (--mz-offset), Da; present only when nonzero or measured. Convention as in trace/1. With auto the plan reads the data of the estimate."
+    },
+    "mz_offset": {
+      "type": "object",
+      "description": "The offset's mode and evidence, as in trace/1."
     }
   }
 }

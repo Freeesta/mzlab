@@ -3,6 +3,7 @@
 //! filter (`peak1d::smooth`) and `--dry-run` names what would be extracted without opening the file's data.
 
 use mzlab_core::error::{Error, Result};
+use mzlab_core::mzcal::{Offset, Spec};
 
 use crate::extract::{self, Parsed};
 use crate::trace_cmd::{self, Answer};
@@ -11,7 +12,7 @@ use crate::Outcome;
 pub const HELP_XIC: &str = "mzlab-cli trace xic: the extracted ion chromatogram of one m/z or of a list, as JSON (trace/1, trace-set/1) or CSV, the answers of the page's api/xic.
 
 usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol P[ppm]|D[da]] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-]
-                           [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
+                           [--mz-offset DA|auto:MZ[@RT]] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
 
   --mz LIST   the ions' m/z, one or several separated by commas; one gives trace/1, several give trace-set/1 (a trace/1 per ion, in the order given)
   --sweep S   LO:HI:STEP, the centres LO+i*STEP (at most 20000): the bytes of --mz with that list, in one call; --tol defaults to STEP/2 da
@@ -20,10 +21,11 @@ usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | 
   --rt A,B    keep the points with A <= rt <= B (minutes)
   --ms-level N the level of the scans summed (default 1)
   --polarity  the + or - part of a mixed-polarity file (a file with no such part gives an empty trace, counted in the evidence)
+  --mz-offset the instrument's m/z offset (observed - true, |DA| <= 0.6): windows centre on M + offset and the trace reports M; auto:MZ[@RT] measures it per file on that ion
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
   --out PATH  write there instead of the standard output
-  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing; a missing file is still exit 4";
+  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4";
 
 /// Most ions one call extracts (each one reads the section once).
 const MAX_IONS: usize = 500;
@@ -44,6 +46,7 @@ struct Job {
     dry: bool,
     /// `--sweep` as `(lo, hi, step)` and whether the half-window is the default STEP/2.
     sweep: Option<((f64, f64, f64), bool)>,
+    off: mzlab_core::mzcal::Spec,
 }
 
 impl Job {
@@ -152,6 +155,7 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
             "--rt",
             "--ms-level",
             "--polarity",
+            "--mz-offset",
             "--sample",
             "--format",
             "--out",
@@ -209,6 +213,7 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         smooth,
         dry: p.flag("--dry-run"),
         sweep,
+        off: crate::mz_offset::flag(&p)?,
     }))
 }
 
@@ -229,7 +234,7 @@ fn emptiness(a: &Answer, win: Option<(f64, f64)>) -> Result<Option<&'static str>
 }
 
 /// The `xicplan/1` document: what the run would extract.
-fn plan(j: &Job) -> String {
+fn plan(j: &Job, off: &mzlab_core::mzcal::Offset) -> String {
     let num = extract::jnum;
     let list =
         j.mz.iter()
@@ -262,7 +267,7 @@ fn plan(j: &Job) -> String {
         )
     });
     format!(
-        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{}{sweep},\"traces\":[{list}]}}",
+        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{}{sweep}{}{},\"traces\":[{list}]}}",
         extract::jstr(&name),
         j.sample.map_or("null".to_string(), |s| s.to_string()),
         j.level,
@@ -272,7 +277,9 @@ fn plan(j: &Job) -> String {
         j.out
             .as_ref()
             .map_or("null".to_string(), |p| extract::jstr(&p.to_string_lossy())),
-        j.mz.len()
+        j.mz.len(),
+        if off.members().is_empty() { "" } else { "," },
+        off.members()
     )
 }
 
@@ -302,6 +309,9 @@ fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
 fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
     let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
     s.note += &j.default_note();
+    let off = j.off.resolve(&mut s.routes.idx, j.pol)?;
+    s.note += &crate::mz_offset::lines(&s.name, &off);
+    s.routes.mz_off = off.da;
     let mut answers = Vec::new();
     let tols: Vec<f64> = j.mz.iter().map(|&m| j.tol(m)).collect();
     // `--sweep` is one call for the whole matrix (`Routes::xic_sweep`); a list is one extraction per ion, as the page asks them (the sweep is not
@@ -322,6 +332,9 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
         let mut a = found.next().ok_or(Error::new("error.badIndex"))?;
         if let Some(p) = j.ppm {
             a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
+        }
+        if !off.members().is_empty() {
+            a.evidence += &format!(",{}", off.members());
         }
         if let Some(why) = emptiness(&a, j.win)? {
             a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
@@ -382,7 +395,21 @@ pub fn xic(args: Vec<String>) -> Outcome {
                 &Error::new("err.flow.io").with("detail", format!("{}: {e}", j.file.display())),
             );
         }
-        return trace_cmd::finish(Ok((plan(&j), j.default_note())), &j.out);
+        // an `auto` offset is the one thing the plan reads data for: its evidence is part of what the run would do
+        let planned = match j.off {
+            Spec::Auto { .. } => extract::with_tmp("xic", |tmp| {
+                let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
+                let off = j.off.resolve(&mut s.routes.idx, j.pol)?;
+                let note = crate::mz_offset::lines(&s.name, &off);
+                Ok((off, note))
+            }),
+            Spec::Fixed(da) => Ok((Offset { da, auto: None }, String::new())),
+            Spec::Zero => Ok((Offset::default(), String::new())),
+        };
+        return trace_cmd::finish(
+            planned.map(|(off, note)| (plan(&j, &off), j.default_note() + &note)),
+            &j.out,
+        );
     }
     let mut o = trace_cmd::finish(extract::with_tmp("xic", |tmp| run(&j, tmp)), &j.out);
     // the refusal of the matrix is a data limit (1) and has a way out; a memory refusal of the index build keeps the code of its key

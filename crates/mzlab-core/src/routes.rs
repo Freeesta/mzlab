@@ -78,13 +78,15 @@ pub struct Routes<R: ReadAt> {
     pub(crate) sweep: Option<crate::routes_sweep::Memo>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
+    /// The m/z offset of the instrument, Da (`mzcal`): an XIC of m/z M integrates around M + `mz_off`. 0 = none; set for a request by `mzoff=` and by callers that measured it.
+    pub mz_off: f64,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
     pub(crate) msn: crate::msnroute::Msn,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), sweep: None, pol: None, msn: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), sweep: None, pol: None, mz_off: 0.0, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -101,6 +103,7 @@ impl<R: ReadAt> Routes<R> {
         self.with_opts(q, |r| match path {
             "/api/chrom" => r.chrom(q),
             "/api/xic" => r.xic_route(q),
+            "/api/mzcal" => r.mzcal_route(q),
             "/api/filters" => r.filters().map(Some),
             "/api/scanlist" => r.scanlist(q),
             "/api/nearest_scan" => r.nearest_scan(q),
@@ -131,7 +134,7 @@ impl<R: ReadAt> Routes<R> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok((Vec::new(), Vec::new()));
         };
-        let (lo, hi) = (mz - tol, mz + tol);
+        let (lo, hi) = (mz + self.mz_off - tol, mz + self.mz_off + tol);
         let a = self.idx.search(si, lo, false)?;
         let b = self.idx.search(si, hi, true)?;
         let n = self.idx.sections[si].n_scans;

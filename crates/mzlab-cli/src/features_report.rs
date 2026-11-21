@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use mzlab_core::error::Result;
 use mzlab_core::flow::value_text;
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::axis::MassAxis;
@@ -49,6 +50,14 @@ fn share(n: &Note) -> f64 {
 
 /// The recipe of the series in one line: the axis with the numbers of the first file and, on the unit axis, the three switches.
 fn recipe_line(recipe: &Recipe, first: Option<&Note>) -> String {
+    let line = recipe_base(recipe, first);
+    match recipe.screen.mz_offset {
+        s if s.is_zero() => line,
+        s => format!("{line}, mz_offset={s}"),
+    }
+}
+
+fn recipe_base(recipe: &Recipe, first: Option<&Note>) -> String {
     let (floor, min_height) = first.map_or((recipe.detect.floor, recipe.detect.min_height), |n| {
         (n.floor, n.min_height)
     });
@@ -76,13 +85,14 @@ fn defect_of(recipe: &Recipe) -> f64 {
     }
 }
 
-/// `features-plan/1`: the decision of each member from its index; nothing is detected.
+/// `features-plan/1`: the decision of each member from its index; nothing is detected, except that an `auto:` m/z offset is measured on the index
+/// (its evidence is in the plan, and its lines go to stderr as in a run).
 pub(crate) fn plan_text(
     recipe: &Recipe,
     idxs: &[PathBuf],
     files: &[PathBuf],
     labels: &[String],
-) -> String {
+) -> Result<String> {
     let m = members(recipe, idxs, files, labels);
     let mut o = Out::default();
     o.raw("{\"schema\":\"features-plan/1\",\"recipe\":")
@@ -93,14 +103,24 @@ pub(crate) fn plan_text(
             .raw("{\"member\":")
             .str(&x.name);
         o.raw(&format!(
-            ",\"unit\":{},\"profile_fraction\":{},\"centroid\":{}}}",
+            ",\"unit\":{},\"profile_fraction\":{},\"centroid\":{}",
             x.note.unit,
             num(share(&x.note)),
             x.centroid
         ));
+        let spec = recipe.screen.mz_offset;
+        if !spec.is_zero() {
+            let f = spec.resolve(
+                &mut crate::idx_open::open(&idxs[k])?,
+                recipe.detect.polarity,
+            )?;
+            eprint!("{}", crate::mz_offset::lines(&x.name, &f));
+            o.raw(",").raw(&f.members());
+        }
+        o.raw("}");
     }
     o.raw("]}\n");
-    o.0
+    Ok(o.0)
 }
 
 fn row(o: &mut Out, r: (f64, f64)) {
@@ -116,14 +136,18 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
             .raw("{\"member\":")
             .str(&x.name);
         o.raw(&format!(
-            ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}}}",
+            ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}{}}}",
             x.note.unit,
             num(share(&x.note)),
             x.centroid,
             num(defect_of(recipe)),
             num(s.map_or(0.0, |s| s.mz_da)),
             s.is_some_and(|s| s.applied),
-            rows.get(k).copied().unwrap_or(0)
+            rows.get(k).copied().unwrap_or(0),
+            // only with `--mz-offset`, so the report of a run without it keeps its bytes
+            log.offsets
+                .get(k)
+                .map_or(String::new(), |f| format!(",{}", f.members()))
         ));
     }
 }
@@ -143,6 +167,9 @@ pub(crate) fn report_text(
         .as_ref()
         .map(|e| e.take())
         .unwrap_or_default();
+    for (x, f) in m.iter().zip(&log.offsets) {
+        eprint!("{}", crate::mz_offset::lines(&x.name, f));
+    }
     let mut o = Out::default();
     o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
         .str(&recipe_line(recipe, m.first().map(|x| &x.note)));

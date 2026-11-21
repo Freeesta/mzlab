@@ -14,6 +14,8 @@ struct Args {
     sample: Option<Vec<u32>>,
     /// `--centroid auto|on|off`: whether profile scans at unit resolution are centroided before detection
     centroid: Option<String>,
+    /// `--mz-offset DA|auto:MZ[@RT]`: the instrument's m/z offset, applied per file before the grouping (`mz_offset` of `features.align`)
+    mz_offset: Option<String>,
     /// `--report`: where `features-report/1` goes
     report: Option<PathBuf>,
     /// `--dry-run`: print `features-plan/1`, detect nothing, write nothing
@@ -28,6 +30,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
         params: String::new(),
         sample: None,
         centroid: None,
+        mz_offset: None,
         report: None,
         dry_run: false,
     };
@@ -45,6 +48,11 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
                     m @ ("auto" | "on" | "off") => Some(m.to_string()),
                     m => return Err(format!("unknown --centroid mode {m}: use auto, on or off")),
                 }
+            }
+            "--mz-offset" => {
+                let t = value("DA or auto:MZ[@RT]")?;
+                crate::mz_offset::check(&t)?;
+                r.mz_offset = Some(t);
             }
             "--preset" | "--params" if set => {
                 return Err("use --preset or --params, not both".into())
@@ -108,8 +116,8 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
     Ok((files, labels))
 }
 
-/// `params` (the JSON text of the recipe, empty for the defaults) with the `centroid` key of `--centroid`.
-fn with_centroid(params: &str, mode: Option<&str>) -> String {
+/// `params` (the JSON text of the recipe, empty for the defaults) with the string key `key` set to `mode` (`--centroid`, `--mz-offset`).
+fn with_key(params: &str, key: &str, mode: Option<&str>) -> String {
     use mzlab_core::json::{parse, Value};
     let Some(mode) = mode else {
         return params.to_string();
@@ -118,8 +126,8 @@ fn with_centroid(params: &str, mode: Option<&str>) -> String {
         Ok(Value::Obj(f)) => f,
         _ => Vec::new(),
     };
-    fields.retain(|(k, _)| k != "centroid");
-    fields.push(("centroid".into(), Value::Str(mode.into())));
+    fields.retain(|(k, _)| k != key);
+    fields.push((key.into(), Value::Str(mode.into())));
     mzlab_core::flow::value_text(&Value::Obj(fields))
 }
 
@@ -164,7 +172,8 @@ fn run(args: Vec<String>) -> Outcome {
         .map_err(crate::io)
         .and_then(|_| expand(&a))
         .and_then(|(files, labels)| {
-            let params = with_centroid(&a.params, a.centroid.as_deref());
+            let params = with_key(&a.params, "centroid", a.centroid.as_deref());
+            let params = with_key(&params, "mz_offset", a.mz_offset.as_deref());
             if a.dry_run {
                 return features_plan_of(&files, &labels, &params, &tmp)
                     .map(|p| (p, String::new()));
@@ -226,7 +235,7 @@ fn out_failure(to: &std::path::Path, e: &std::io::Error) -> Outcome {
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
+    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
 ), Entry::new(
     "table compare",

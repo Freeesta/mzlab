@@ -26,6 +26,10 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--notes", "features-notes/1 file"),
     ("--report", "features-report/1 file"),
     ("--centroid", "profile scans: auto, on, off"),
+    (
+        "--mz-offset",
+        "observed-true Da (|DA|<=0.6), or auto:MZ[@RT] on a known ion",
+    ),
     ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),

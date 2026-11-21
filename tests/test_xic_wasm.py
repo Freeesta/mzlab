@@ -97,3 +97,38 @@ def test_wasm_sweep_route_and_cli_give_the_same_wide_csv(work):
         assert [(r[0], r[col]) for r in rows] == list(zip(tokens(m, "rt"), tokens(m, "y")))
     # and the sweep is the list: the CLI with the expanded --mz gives the same table
     assert cli("trace", "xic", str(work / "scan.mzML"), "--da", TOL, "--mz", "240,241,242,243", "--smooth", "5", "--format", "csv").stdout.splitlines() == csv
+
+
+def wasm_route(work, path, query):
+    mzml = work / "scan.mzML"
+    idx = work / "scan.mzidx"
+    if not idx.exists():
+        example("mzlab-core", "mzidx", str(mzml), str(idx))
+    plan = [{"op": "idxopen", "slot": 0, "name": mzml.name}, {"op": "route", "slot": 0, "path": path, "query": query}]
+    (work / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    out = json.loads(run("node", str(ROOT / "tests" / "rotte_wasm_node.js"), str(work / "pkg"), str(idx), str(mzml), str(work / "plan.json")).stdout)
+    assert "s" in out[1], out[1]
+    return out[1]["s"]
+
+
+def evidence(text):
+    """The `"mz_offset":{...}` object of an output (no nested braces)."""
+    return re.search(r'"mz_offset":(\{[^{}]*\})', text).group(1)
+
+
+@pytest.mark.parametrize("spec", ["0.24", "-0.31", "auto:229.1", "auto:229.1@7.0"])
+def test_wasm_mzoff_route_and_cli_give_the_same_trace_and_evidence(work, spec):
+    ion = "229.1"
+    got = wasm_route(work, "/api/xic", f"mz={ion}&tol={TOL}&level=1&mzoff={spec}")
+    doc = cli("trace", "xic", str(work / "scan.mzML"), "--da", TOL, "--mz", ion, "--mz-offset", spec).stdout
+    want = [m.groups() for m in re.finditer(r"\[([-0-9.e]+),([-0-9.e]+)\]", doc.split('"points":')[1])]
+    assert list(zip(tokens(got, "rt"), tokens(got, "y"))) == want
+    assert evidence(got) == evidence(doc)
+    assert re.search(r'"mz_offset_da":(-?[0-9.]+)', got).group(1) == re.search(r'"mz_offset_da":(-?[0-9.]+)', doc).group(1)
+
+
+def test_wasm_mzcal_route_is_the_evidence_of_the_cli_estimate(work):
+    got = wasm_route(work, "/api/mzcal", "mz=229.1&rt=7.0")
+    plan = cli("trace", "xic", str(work / "scan.mzML"), "--da", TOL, "--mz", "229.1", "--mz-offset", "auto:229.1@7.0", "--dry-run").stdout
+    assert evidence(got) == evidence(plan)
+    assert got == "{" + re.search(r'("mz_offset_da":.*?"mz_offset":\{[^{}]*\})', plan).group(1) + "}"

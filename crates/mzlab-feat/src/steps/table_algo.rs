@@ -3,6 +3,15 @@
 
 use mzlab_core::step::{Algorithm, Applicability, Param, Reference, Status};
 
+/// `mz_offset` of `features.align` (`lrscreen_offset.rs`).
+pub(super) fn mz_offset_param() -> Param {
+    Param::text("mz_offset", "m/z offset")
+        .default_str("0")
+        .doc("The instrument's m/z offset, observed minus true, in Da (|DA| up to 0.6): a number, or auto:MZ[@RT] to measure it per file on the known ion at m/z MZ (near RT min). It is subtracted from each file's m/z before the grouping, so rows hold corrected m/z; the gap filling reads the raw scans at m/z plus the offset; recenter then works on the corrected m/z")
+        .tip("Subtracts the instrument's m/z offset (Da, observed minus true) from each file; auto:MZ[@RT] measures it on a known ion.")
+        .advanced()
+}
+
 fn mzmine3() -> Reference {
     Reference {
         doi: "10.1038/s41587-023-01690-2",
