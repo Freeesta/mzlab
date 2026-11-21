@@ -196,6 +196,14 @@ const OUTPUT_KEYS: &[&str] = &[
     "rows",
 ];
 
+/// Whether the output is the `report/2` of a table; the old `report/1` is refused, never read as "no table report".
+fn is_table_report(v: &Value) -> Result<bool> {
+    match v.get("schema").and_then(|s| s.str()) {
+        Some("report/1") => Err(Error::new("err.flow.format.reportOld")),
+        s => Ok(s == Some("report/2")),
+    }
+}
+
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
@@ -240,11 +248,7 @@ pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
             continue;
         };
         regulatory.read(&v);
-        // a table report of the old key set is refused, never read as "no table report"
-        if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
-            return Err(Error::new("err.flow.format.reportOld"));
-        }
-        if v.get("schema").and_then(|s| s.str()) == Some("report/2") {
+        if is_table_report(&v)? {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
         }
         if v.get("format").and_then(|s| s.str()) == Some("annot/1") {
