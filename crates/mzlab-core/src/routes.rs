@@ -74,6 +74,8 @@ pub struct Routes<R: ReadAt> {
     /// The pyramid of map tiles of each level (`maptiles`), built on first use; `None` = the level has none.
     pub(crate) tiles: Vec<(u8, Option<std::sync::Arc<crate::maptiles::Pyramid>>, u64)>,
     pub(crate) cells: crate::mapscan::CellStore,
+    /// The matrix of the last `xic_sweep`, dropped with the scan cells by `trim_cache`.
+    pub(crate) sweep: Option<crate::routes_sweep::Memo>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
@@ -82,7 +84,7 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), pol: None, msn: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), sweep: None, pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -385,7 +387,7 @@ pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
 pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    map_cache_bytes(files) + tiles_cache_bytes(files) + crate::mapscan::cells_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+    map_cache_bytes(files) + tiles_cache_bytes(files) + crate::mapscan::cells_cache_bytes(files) + files.values().filter_map(|r| r.sweep.as_ref()).map(|m| m.bytes()).sum::<usize>() + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
 }
 
 /// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
@@ -418,13 +420,15 @@ pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R
         let cells = files.iter().flat_map(|(k, r)| r.cells.tables.iter().enumerate().map(move |(i, c)| (c.3, 2u8, *k, i)));
         let blocks = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, 3u8, *k, 0)));
         let zooms = files.iter().filter_map(|(k, r)| r.cells.zoom.as_ref().map(|z| (z.tick, 4u8, *k, 0)));
-        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).chain(zooms).min_by_key(|e| (e.0, e.1)) else { break };
+        let sweeps = files.iter().filter_map(|(k, r)| r.sweep.as_ref().map(|m| (m.2, 5u8, *k, 0)));
+        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).chain(zooms).chain(sweeps).min_by_key(|e| (e.0, e.1)) else { break };
         if let Some(r) = files.get_mut(&k) {
             match kind {
                 0 => drop(r.maps.remove(i)),
                 1 => drop(r.tiles.remove(i)),
                 2 => drop(r.cells.tables.remove(i)),
                 4 => drop(r.cells.zoom.take()),
+                5 => drop(r.sweep.take()),
                 _ => drop(r.idx.evict_oldest()),
             }
         }

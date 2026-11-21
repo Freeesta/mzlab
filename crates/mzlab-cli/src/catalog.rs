@@ -68,6 +68,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--max-shift", "farthest a followed window moves, min"),
     ("--polarity", "+ or -"),
     ("--mz", "m/z"),
+    ("--sweep", "LO:HI:STEP, = --mz list; --tol default STEP/2"),
     ("--ppm", "ppm"),
     ("--rt-tol", "RT window, min"),
     ("--inspection", "inspection/1, or -"),

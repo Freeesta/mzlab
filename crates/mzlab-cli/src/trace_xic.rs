@@ -10,11 +10,12 @@ use crate::Outcome;
 
 pub const HELP_XIC: &str = "mzlab-cli trace xic: the extracted ion chromatogram of one m/z or of a list, as JSON (trace/1, trace-set/1) or CSV, the answers of the page's api/xic.
 
-usage: mzlab-cli trace xic FILE --mz M[,M...] (--ppm P | --da D | --tol P[ppm]|D[da]) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-]
+usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol P[ppm]|D[da]] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-]
                            [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
 
   --mz LIST   the ions' m/z, one or several separated by commas; one gives trace/1, several give trace-set/1 (a trace/1 per ion, in the order given)
-  --ppm P     half-window in ppm of each m/z; --da D half-window in Da; --tol P ppm or D da (a suffix ppm or da is required); one of the three
+  --sweep S   LO:HI:STEP, the centres LO+i*STEP (at most 20000): the bytes of --mz with that list, in one call; --tol defaults to STEP/2 da
+  --ppm P     half-window in ppm of each m/z; --da D half-window in Da; --tol P ppm or D da (a suffix ppm or da is required); one of the three (required with --mz)
   --smooth K  smooth every trace with the engine's filter before the window is cut: 3 (1-2-1) or 5 (1-4-6-4-1); the evidence names it
   --rt A,B    keep the points with A <= rt <= B (minutes)
   --ms-level N the level of the scans summed (default 1)
@@ -22,7 +23,7 @@ usage: mzlab-cli trace xic FILE --mz M[,M...] (--ppm P | --da D | --tol P[ppm]|D
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
   --out PATH  write there instead of the standard output
-  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing) and read nothing; a missing file is still exit 4";
+  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing; a missing file is still exit 4";
 
 /// Most ions one call extracts (each one reads the section once).
 const MAX_IONS: usize = 500;
@@ -41,9 +42,22 @@ struct Job {
     pol: Option<i8>,
     smooth: Option<usize>,
     dry: bool,
+    /// `--sweep` as `(lo, hi, step)` and whether the half-window is the default STEP/2.
+    sweep: Option<((f64, f64, f64), bool)>,
 }
 
 impl Job {
+    /// The stderr line when `--sweep` took the half-window itself.
+    fn default_note(&self) -> String {
+        match self.sweep {
+            Some((_, true)) => format!(
+                "note: --tol defaults to STEP/2 = {} Da\n",
+                extract::jnum(self.da)
+            ),
+            _ => String::new(),
+        }
+    }
+
     /// Half-window in Da of `mz`.
     fn tol(&self, mz: f64) -> f64 {
         self.ppm.map_or(self.da, |p| mz * p * 1e-6)
@@ -83,6 +97,24 @@ fn tolerance(p: &Parsed) -> std::result::Result<(Option<f64>, f64), String> {
     }
 }
 
+/// `--sweep` as `((lo, hi, step), centres)`; `--mz` and `--sweep` are one or the other.
+#[allow(clippy::type_complexity)]
+fn sweep(p: &Parsed) -> std::result::Result<Option<((f64, f64, f64), Vec<f64>)>, String> {
+    let Some(spec) = p.get("--sweep") else {
+        return Ok(None);
+    };
+    let centres = mzlab_core::routes_sweep::parse_sweep(spec).map_err(|e| {
+        e.params
+            .iter()
+            .fold(e.key.to_string(), |a, (k, v)| format!("{a} {k}={v}"))
+    })?;
+    let n: Vec<f64> = spec
+        .split(':')
+        .filter_map(|t| t.trim().parse().ok())
+        .collect();
+    Ok(Some(((n[0], n[1], n[2]), centres)))
+}
+
 /// `--mz`: one or more positive numbers, no repeats.
 fn ions(p: &Parsed) -> std::result::Result<Vec<f64>, String> {
     let list = p.get("--mz").ok_or("trace xic needs --mz")?;
@@ -112,6 +144,7 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         args,
         &[
             "--mz",
+            "--sweep",
             "--ppm",
             "--da",
             "--tol",
@@ -129,8 +162,27 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         return Ok(Err(HELP_XIC));
     };
     let file = trace_cmd::one_file(&p, "trace xic")?;
-    let mz = ions(&p)?;
-    let (ppm, da) = tolerance(&p)?;
+    if p.get("--mz").is_some() == p.get("--sweep").is_some() {
+        return Err("err.xic.sweep.mz".into());
+    }
+    let sw = sweep(&p)?;
+    let (mz, ppm, da, sweep) = match sw {
+        None => {
+            let (ppm, da) = tolerance(&p)?;
+            (ions(&p)?, ppm, da, None)
+        }
+        Some((spec, centres)) => {
+            let given = ["--ppm", "--da", "--tol"]
+                .iter()
+                .any(|f| p.get(f).is_some());
+            let (ppm, da) = if given {
+                tolerance(&p)?
+            } else {
+                (None, spec.2 / 2.0)
+            };
+            (centres, ppm, da, Some((spec, !given)))
+        }
+    };
     let pol = match p.get("--polarity") {
         None => None,
         Some("+") => Some(1),
@@ -156,6 +208,7 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         pol,
         smooth,
         dry: p.flag("--dry-run"),
+        sweep,
     }))
 }
 
@@ -198,8 +251,18 @@ fn plan(j: &Job) -> String {
     let win = j.win.map_or("null".to_string(), |(l, h)| {
         format!("[{},{}]", num(l), num(h))
     });
+    let sweep = j.sweep.map_or(String::new(), |((lo, hi, step), dflt)| {
+        format!(
+            ",\"sweep\":{{\"lo\":{},\"hi\":{},\"step\":{},\"n\":{},\"tol_default\":{dflt}}},\"matrix_bytes_per_scan\":{}",
+            num(lo),
+            num(hi),
+            num(step),
+            j.mz.len(),
+            j.mz.len() * 8
+        )
+    });
     format!(
-        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{},\"traces\":[{list}]}}",
+        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{}{sweep},\"traces\":[{list}]}}",
         extract::jstr(&name),
         j.sample.map_or("null".to_string(), |s| s.to_string()),
         j.level,
@@ -235,6 +298,77 @@ fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
     Ok(s)
 }
 
+/// The documents of a run: one extraction of every ion (one call for a sweep), each with its evidence, then the one document, the set or the wide CSV.
+fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
+    let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
+    s.note += &j.default_note();
+    let mut answers = Vec::new();
+    let tols: Vec<f64> = j.mz.iter().map(|&m| j.tol(m)).collect();
+    // `--sweep` is one call for the whole matrix (`Routes::xic_sweep`); a list is one extraction per ion, as the page asks them (the sweep is not
+    // faster per call in-process, so a list does not pay its memory check)
+    let mut found = if j.sweep.is_some() {
+        trace_cmd::xic_answers(&mut s, &j.mz, &tols, j.level, j.pol, j.smooth)?
+    } else {
+        let mut v = Vec::with_capacity(j.mz.len());
+        for (&mz, &tol) in j.mz.iter().zip(&tols) {
+            v.push(trace_cmd::xic_answer(
+                &mut s, mz, tol, j.level, j.pol, j.smooth,
+            )?);
+        }
+        v
+    }
+    .into_iter();
+    for &mz in &j.mz {
+        let mut a = found.next().ok_or(Error::new("error.badIndex"))?;
+        if let Some(p) = j.ppm {
+            a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
+        }
+        if let Some(why) = emptiness(&a, j.win)? {
+            a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
+            s.note += &format!(
+                "note: xic:{} is empty ({}); exit 0, the trace is all zero or absent\n",
+                extract::jnum(mz),
+                why.replace('_', " ")
+            );
+        }
+        answers.push((mz, a));
+    }
+    let id = |mz: f64| format!("xic:{}", extract::jnum(mz));
+    let text = match (answers.len(), j.csv) {
+        (1, _) => {
+            let (mz, a) = answers.remove(0);
+            trace_cmd::render(a, &s, j.win, j.csv, &id(mz))?
+        }
+        (_, false) => {
+            let mut docs = Vec::new();
+            for (mz, a) in answers {
+                let d = trace_cmd::render(a, &s, j.win, false, &id(mz))?;
+                docs.push(d);
+            }
+            format!(
+                "{{\"schema\":\"trace-set/1\",{},\"n_traces\":{},\"traces\":[{}]}}",
+                trace_cmd::tail(&s.name, &s),
+                docs.len(),
+                docs.join(",")
+            )
+        }
+        (_, true) => {
+            let mut cols = Vec::new();
+            for (mz, a) in &answers {
+                let x = extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
+                let y = extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
+                let pts = extract::pairs(&x, &y, j.win)
+                    .into_iter()
+                    .map(|(a, b)| (a.to_string(), b.to_string()))
+                    .collect();
+                cols.push((id(*mz), pts));
+            }
+            wide_csv(&cols)?
+        }
+    };
+    Ok((text, s.note.clone()))
+}
+
 pub fn xic(args: Vec<String>) -> Outcome {
     let j = match job(args) {
         Ok(Ok(j)) => j,
@@ -248,68 +382,27 @@ pub fn xic(args: Vec<String>) -> Outcome {
                 &Error::new("err.flow.io").with("detail", format!("{}: {e}", j.file.display())),
             );
         }
-        return trace_cmd::finish(Ok((plan(&j), String::new())), &j.out);
+        return trace_cmd::finish(Ok((plan(&j), j.default_note())), &j.out);
     }
-    trace_cmd::finish(
-        extract::with_tmp("xic", |tmp| {
-            let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
-            let mut answers = Vec::new();
-            for &mz in &j.mz {
-                let mut a = trace_cmd::xic_answer(&mut s, mz, j.tol(mz), j.level, j.pol, j.smooth)?;
-                if let Some(p) = j.ppm {
-                    a.evidence += &format!(",\"tolerance_ppm\":{}", extract::jnum(p));
-                }
-                if let Some(why) = emptiness(&a, j.win)? {
-                    a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
-                    s.note += &format!(
-                        "note: xic:{} is empty ({}); exit 0, the trace is all zero or absent\n",
-                        extract::jnum(mz),
-                        why.replace('_', " ")
-                    );
-                }
-                answers.push((mz, a));
-            }
-            let id = |mz: f64| format!("xic:{}", extract::jnum(mz));
-            let text = match (answers.len(), j.csv) {
-                (1, _) => {
-                    let (mz, a) = answers.remove(0);
-                    trace_cmd::render(a, &s, j.win, j.csv, &id(mz))?
-                }
-                (_, false) => {
-                    let mut docs = Vec::new();
-                    for (mz, a) in answers {
-                        let d = trace_cmd::render(a, &s, j.win, false, &id(mz))?;
-                        docs.push(d);
-                    }
-                    format!(
-                        "{{\"schema\":\"trace-set/1\",{},\"n_traces\":{},\"traces\":[{}]}}",
-                        trace_cmd::tail(&s.name, &s),
-                        docs.len(),
-                        docs.join(",")
-                    )
-                }
-                (_, true) => {
-                    let mut cols = Vec::new();
-                    for (mz, a) in &answers {
-                        let x =
-                            extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
-                        let y =
-                            extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
-                        let pts = extract::pairs(&x, &y, j.win)
-                            .into_iter()
-                            .map(|(a, b)| (a.to_string(), b.to_string()))
-                            .collect();
-                        cols.push((id(*mz), pts));
-                    }
-                    wide_csv(&cols)?
-                }
-            };
-            Ok((text, s.note.clone()))
-        }),
-        &j.out,
-    )
+    let mut o = trace_cmd::finish(extract::with_tmp("xic", |tmp| run(&j, tmp)), &j.out);
+    // the refusal of the matrix is a data limit (1) and has a way out; a memory refusal of the index build keeps the code of its key
+    let swept = o.error.as_ref().is_some_and(|f| {
+        f.key == "error.memoryBudget"
+            && f.params.iter().any(|(k, v)| k == "fase" && v == "xicSweep")
+    });
+    if swept {
+        o.code = crate::exit::DATA;
+        return o.with_hint(
+            "sweep a narrower LO:HI or a larger STEP, or split the sweep in several calls",
+        );
+    }
+    o
 }
 
 #[cfg(test)]
 #[path = "trace_xic_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "trace_xic_sweep_tests.rs"]
+mod sweep_tests;
