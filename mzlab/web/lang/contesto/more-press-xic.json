@@ -43,7 +43,6 @@
   "spec.scanLine.one": "{of} = \"/N\" (total number) or empty.",
   "spec.scanLine.avg": "Line above the spectrum when the average of several scans is shown; {n} = number of scans.",
   "spec.scanLine.ce": "Line above the spectrum: collision energy; {ce} = value in eV.",
-  "spec.scanLine.merge": "Line above the spectrum: says the engine merges the centroids of the same nominal mass (low-resolution files).",
   "tbl.pt.monoOnly": "Line of the element card when only the monoisotopic mass is known; {m} = mass (number).",
   "tbl.pt.card": "Line of the element card in the periodic table; {w} = average mass, {m} = monoisotopic mass (numbers).",
   "tbl.pt.aria": "Screen-reader name of an element tile; {name}, {s} = symbol, {z} = atomic number, {cls} = class, {m} = monoisotopic mass, {w} = average mass.",
