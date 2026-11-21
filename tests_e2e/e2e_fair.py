@@ -19,7 +19,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); ready(pg)
         pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(" + S2 + ",D.sid[3])})()"); pg.wait_for_timeout(2500)
         def open_dl():
-            # the MassBank record and the SIRIUS file are in the download menu of the panel (scarico: true in fair.js), not in the right-click menu
+            # the MassBank record and the SIRIUS file are in the download menu of the panel (download: true in fair.js), not in the right-click menu
             pg.evaluate("(()=>{const s=" + S2 + ";s.el.scrollIntoView({block:'center'})})()")
             pg.evaluate("(()=>{const s=" + S2 + ";s.el.querySelector('[data-a=\"dl\"]').click()})()")
             pg.wait_for_timeout(400)
