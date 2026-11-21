@@ -3,8 +3,8 @@ import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-FILES = ["../../docs/agenti/data-3200.md", "index.html", "calc-qui.js", "calc-qui-html.js", "calc-qui-ui.js", "calc-qui-pannello.js", "lang/en/calcqui.js"]
-OLD = re.compile(r"\bgruppi\b|[\"'](liste|perdite|addotti)[\"']|cq\.g\.(liste|perdite|addotti)|\bfunction (liste|perdite|addotti)\b|\blisteRows\b")
+FILES = ["../../docs/agenti/data-3200.md", "index.html", "calc-addotti.js", "calc-qui.js", "calc-qui-html.js", "calc-qui-ui.js", "calc-qui-pannello.js", "lang/en/calcqui.js"]
+OLD = re.compile(r"\bgruppi\b|[\"'](liste|perdite|addotti)[\"']|cq\.g\.(liste|perdite|addotti)|\bfunction (liste|perdite|addotti)\b|\blisteRows\b|CALCQUI\.(apri|cerca|apriAddotti|apriPerdite)\b|\bapriAddotti\b|\bapriPerdite\b|\bgruppo\b")
 
 
 def test_old_calculator_names_are_gone():

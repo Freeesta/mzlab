@@ -668,9 +668,9 @@ function calcSearch(/** @type {HTMLElement} */ b, /** @type {string} */ v, /** @
   b.hidden = false;
   b.title = I18N.t("calc.toLosses", { v });
   b.onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) { CALCQUI.cerca(null, sub); return; }
+    if (window.BARRA && BARRA.isDataView()) { CALCQUI.search(null, sub); return; }
     calcBox.close();
-    CALCQUI.cerca(v, sub || "losses");
+    CALCQUI.search(v, sub || "losses");
   };
 }
 Q("#calcin").oninput = calcRun;

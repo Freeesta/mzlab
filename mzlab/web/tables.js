@@ -93,7 +93,7 @@
       : { ctl: root.querySelector("#nl-ctl"), out: root.querySelector("#nl-res"), idp: "nlq", quiet: true, numOnly: true, arg: () => ({ text: NL.q, ans: 0 }) });
     const toAd = root.querySelector("#nl-to-ad");
     const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); if (toAd) toAd.hidden = !CALCQUI.numberOf(NL.q); CALCQUI.later(view); };
-    if (toAd) { toAd.onclick = () => { const n = CALCQUI.numberOf(NL.q); if (n) CALCQUI.apriAddotti(n); }; toAd.hidden = !CALCQUI.numberOf(NL.q); }
+    if (toAd) { toAd.onclick = () => { const n = CALCQUI.numberOf(NL.q); if (n) CALCQUI.openAdducts(n); }; toAd.hidden = !CALCQUI.numberOf(NL.q); }
     const wire = () => {
       root.querySelectorAll(".nlrow").forEach((/** @type {any} */ b) => b.onclick = () => { const id = b.dataset.d, d = b.closest(".nlr").querySelector(".nldet"); if (NL.open.has(id)) NL.open.delete(id); else NL.open.add(id); d.hidden = !NL.open.has(id); b.setAttribute("aria-expanded", NL.open.has(id)); });
       root.querySelectorAll("[data-go]").forEach((/** @type {HTMLElement} */ a) => a.onclick = (/** @type {Event} */ e) => { e.preventDefault(); show(/** @type {string} */ (a.dataset.go)); });

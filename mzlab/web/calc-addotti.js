@@ -13,6 +13,6 @@ const CALCADD = (() => {
   const catalog = () => catP || (catP = table("", "", "", "").then(t => t.rows));
 
   /** Opens the calculator with a difference already typed (a pair of peaks of a spectrum): the adduct differences are one of its groups. */
-  function showDelta(/** @type {number} */ v) { CALCQUI.apri(v, { gruppo: "diff" }); }
+  function showDelta(/** @type {number} */ v) { CALCQUI.open(v, { group: "diff" }); }
   return { table, catalog, shiftText: CALCADDHTML.shiftText, showDelta };
 })();
