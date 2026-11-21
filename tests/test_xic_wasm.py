@@ -69,3 +69,31 @@ def test_wasm_route_and_cli_give_the_same_wide_csv(work):
     for col, mz in enumerate(ions, 1):
         got = wasm_xic(work, mz, 5)
         assert [(r[0], r[col]) for r in rows] == list(zip(tokens(got, "rt"), tokens(got, "y")))
+
+
+def wasm_sweep(work, spec, smooth):
+    mzml = work / "scan.mzML"
+    idx = work / "scan.mzidx"
+    if not idx.exists():
+        example("mzlab-core", "mzidx", str(mzml), str(idx))
+    query = f"sweep={spec}&tol={TOL}&level=1&smooth={smooth}"
+    plan = [{"op": "idxopen", "slot": 0, "name": mzml.name}, {"op": "route", "slot": 0, "path": "/api/xic", "query": query}]
+    (work / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    out = json.loads(run("node", str(ROOT / "tests" / "rotte_wasm_node.js"), str(work / "pkg"), str(idx), str(mzml), str(work / "plan.json")).stdout)
+    assert "s" in out[1], out[1]
+    return out[1]["s"]
+
+
+def test_wasm_sweep_route_and_cli_give_the_same_wide_csv(work):
+    spec = "240:243:1"
+    csv = cli("trace", "xic", str(work / "scan.mzML"), "--da", TOL, "--sweep", spec, "--smooth", "5", "--format", "csv").stdout.splitlines()
+    assert csv[0] == "rt_min,xic:240,xic:241,xic:242,xic:243"
+    rows = [r.split(",") for r in csv[1:]]
+    got = wasm_sweep(work, spec, 5)
+    assert got.startswith('{"schema":"trace-set/1","n_traces":4,')
+    members = got.split('{"id":')[1:]
+    assert len(members) == 4
+    for col, m in enumerate(members, 1):
+        assert [(r[0], r[col]) for r in rows] == list(zip(tokens(m, "rt"), tokens(m, "y")))
+    # and the sweep is the list: the CLI with the expanded --mz gives the same table
+    assert cli("trace", "xic", str(work / "scan.mzML"), "--da", TOL, "--mz", "240,241,242,243", "--smooth", "5", "--format", "csv").stdout.splitlines() == csv

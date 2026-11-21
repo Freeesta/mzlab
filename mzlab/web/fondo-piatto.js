@@ -26,7 +26,7 @@ const FONDOP = (() => {
   const menu = p => { const ib = ibf(p); return ib && ib.mod ? [{ label: I18N.t("fondo.flat.restore"), fn: () => restore(p) }] : []; };
   /** Switches the background to the automatic flat window (the window itself is found when the traces are corrected). @param {any} p */
   function on(p) {
-    pushCampi(p, "storia.fondo"); p.fondo = { ...p.fondo, mode: "tract", ib: { mode: "median", a: [0, 0], b: null, flat: true } };
+    pushFields(p, "history.background"); p.fondo = { ...p.fondo, mode: "tract", ib: { mode: "median", a: [0, 0], b: null, flat: true } };
   }
   /** Sets the window from t0 (min) keeping its width; marks it as moved. @param {any} p @param {number} t0 */
   function put(p, t0) {
@@ -37,12 +37,12 @@ const FONDOP = (() => {
   /** One step of the arrows or buttons: a quarter of the window. @param {any} p @param {number} dir -1 | 1 @param {boolean} big */
   function step(p, dir, big) {
     const ib = ibf(p); if (!ib) return;
-    pushCampi(p, "storia.fondo"); put(p, ib.a[0] + dir * (ib.a[1] - ib.a[0]) / 4 * (big ? 5 : 1)); draw(p); uiSave();
+    pushFields(p, "history.background"); put(p, ib.a[0] + dir * (ib.a[1] - ib.a[0]) / 4 * (big ? 5 : 1)); draw(p); uiSave();
   }
   /** Back to the automatic window. @param {any} p */
   function restore(p) {
     const ib = ibf(p); if (!ib) return;
-    pushCampi(p, "storia.fondo"); const { mod: _m, ...rest } = ib; p.fondo = { ...p.fondo, ib: rest }; draw(p); uiSave();
+    pushFields(p, "history.background"); const { mod: _m, ...rest } = ib; p.fondo = { ...p.fondo, ib: rest }; draw(p); uiSave();
   }
   /** Is (px, py) on the handle of the window? @param {any} p @param {number} px @param {number} py */
   function gripAt(p, px, py) {
@@ -50,7 +50,7 @@ const FONDOP = (() => {
     return px >= a.X(ib.a[0]) - 3 && px <= a.X(ib.a[1]) + 3 && py >= M.t && py <= M.t + GRIP;
   }
   /** Start of a drag on the handle: one undo step for the whole drag. @param {any} p @param {number} x time under the mouse */
-  function begin(p, x) { const ib = ibf(p); if (!ib) return null; pushCampi(p, "storia.fondo"); return { x0: x, t0: ib.a[0] }; }
+  function begin(p, x) { const ib = ibf(p); if (!ib) return null; pushFields(p, "history.background"); return { x0: x, t0: ib.a[0] }; }
   /** The handle of the window, drawn over the band. @param {CanvasRenderingContext2D} g @param {any} ib @param {(t: number) => number} X @param {number} W */
   function drawGrip(g, ib, X, W) {
     const xa = Math.max(X(ib.a[0]), M.l), xb = Math.min(X(ib.a[1]), W - M.r); if (!(xb > xa)) return;

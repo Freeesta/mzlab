@@ -178,7 +178,7 @@ function xlsx() {
 function wireOpts(el) {
   el.querySelectorAll("input[data-opt]").forEach(i => i.addEventListener("change", () => {
     const k = /** @type {HTMLInputElement} */ (i).dataset.opt || "";
-    COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT[k] = /** @type {HTMLInputElement} */ (i).checked; }); st.sig = ""; soon();
+    COMMANDS.run("peaks.settings", COMMANDS.GLOBAL, () => { INTOPT[k] = /** @type {HTMLInputElement} */ (i).checked; }); st.sig = ""; soon();
   }));
   el.querySelectorAll("button[data-nz]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();

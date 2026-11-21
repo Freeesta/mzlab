@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "trace-set/1",
-  "title": "trace-set/1: the XICs of a list of m/z, `mzlab-cli trace xic --mz M1,M2,...`",
-  "description": "One trace/1 document per ion, in the order of --mz, all of one file and sample, so each member is byte for byte the document `trace xic` gives for that ion alone. The CSV form (`--format csv`) is wide: the header is rt_min followed by one xic:<mz> column per ion, over the scans the ions share. Code: crates/mzlab-cli/src/trace_xic.rs.",
+  "title": "trace-set/1: the XICs of a list of m/z, `mzlab-cli trace xic --mz M1,M2,...` or `--sweep LO:HI:STEP`",
+  "description": "`--sweep LO:HI:STEP` gives exactly the bytes of `--mz` with the same centres as a list. One trace/1 document per ion, in the order of --mz, all of one file and sample, so each member is byte for byte the document `trace xic` gives for that ion alone. The CSV form (`--format csv`) is wide: the header is rt_min followed by one xic:<mz> column per ion, over the scans the ions share. Code: crates/mzlab-cli/src/trace_xic.rs.",
   "type": "object",
   "required": [
     "schema",

@@ -1,5 +1,5 @@
 """Double click = new spectrum with its RT in the title; up/down arrows and sliding panels; the Method button stands out."""
-# covers: mzlab/web/legende.js, mzlab/web/affianca.js, mzlab/web/layout.js
+# covers: mzlab/web/legende.js, mzlab/web/arrange.js, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

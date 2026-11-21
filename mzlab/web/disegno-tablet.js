@@ -1,15 +1,17 @@
 // Ketcher on tablets (Draw tab): its hidden clipboard textarea must neither scroll the page nor be a keyboard stop, and the top bar
-// must stay reachable in a narrow window (iPad split view); at a coarse pointer its small controls grow to 24 px, a long press on a tool
+// must stay reachable in a narrow window (iPad split view, a tablet held upright); at a coarse pointer its small controls grow to 24 px, a long press on a tool
 // shows its name, and a skip link jumps over its ~38 Tab stops. Mounted into the Ketcher iframe document by draw.js.
 const CSS =
   // the textarea sits at the bottom of the iframe: focusing it made the parent scroll to it; fixed at the corner it stays invisible and harmless
   '.cliparea,[data-cliparea]{position:fixed!important;top:0!important;left:0!important}' +
-  // below 600 px the top bar wraps to a second row (undo and redo stay in the first); the height change is read back by fit() on resize
-  '@media (max-width:599px){html [class*="App-module_top"],html [class*="App-module_top"]>*{flex-wrap:wrap!important;row-gap:2px}html [class*="App-module_top"],html [class*="App-module_top"]>*{height:auto!important}html [class*="App-module_app"]{grid-template-rows:auto minmax(0,1fr)!important}}';   // html: wins over the nowrap of draw.js, which is added later
+  // a top bar whose controls do not fit in one row (draw.js measures it and sets data-tp-wrap) wraps to a second one; the height change is read back by fit()
+  'html[data-tp-wrap] [class*="App-module_top"],html[data-tp-wrap] [class*="App-module_top"]>*{flex-wrap:wrap!important;row-gap:2px;height:auto!important}html[data-tp-wrap] [class*="App-module_app"]{grid-template-rows:auto minmax(0,1fr)!important}';   // html: wins over the nowrap of draw.js, which is added later
 
 // targets of 24 px (WCAG 2.5.8) and the long-press tooltip (colours copied from the page's CSS variables when it opens)
 const TOUCH_CSS =
-  '@media (pointer:coarse){[data-testid=copy-button-dropdown-triangle]{min-width:24px!important;min-height:24px!important;display:inline-flex;align-items:center;justify-content:center}' +
+  // the grown triangle sits beside Copy, not over it: a tap on Copy must copy
+  '@media (pointer:coarse){[data-testid=copy-button-dropdown-triangle]{position:static!important;min-width:24px!important;min-height:24px!important;display:inline-flex;align-items:center;justify-content:center}' +
+  ':has(>[data-testid=copy-button-dropdown-triangle]){display:inline-flex!important;align-items:center;width:auto!important}' +
   '[data-testid=close-window-button]{min-width:24px;min-height:24px;display:inline-flex;align-items:center;justify-content:center}' +
   // the drag-a-file text and the image-recognition tile (never available here) say nothing a touch user can use
   '[data-testid=open-from-image-button],[data-testid=open-from-file-button] button>div{display:none!important}}' +

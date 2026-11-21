@@ -3,7 +3,7 @@
 // Peak info of the spectrum cards: the extra lines of the box that opens on a peak (relative intensity, shift from the precursor, close peaks, formula and notes),
 // the highlighted stick, the arrow keys that walk the peaks (announced to the screen reader) and the click that pins or removes the label of a peak.
 // The numbers are the ones of the peak table (tabella-picchi.js): `top`, `dmz` and `nl` below are used by both, so the box and the table never disagree.
-// Classic helpers used by name: I18N, EH, spanOf, lowerIdx, COMANDI, FRAME, draw, uiSave, showHover, hideHover, putHover, M.
+// Classic helpers used by name: I18N, EH, spanOf, lowerIdx, COMMANDS, FRAME, draw, uiSave, showHover, hideHover, putHover, M.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -75,7 +75,7 @@
   /** the label of a peak: on when it is there, off when it is not. The choice is kept with the card (lblOn: pinned, lblOff: removed) and is one undo step. @param {any} p @param {number} m */
   function toggle(p, m) {
     const shown = (p._a.lbls || []).some((/** @type {any} */ l) => l.m != null && Math.abs(l.m - m) < EPS);
-    COMANDI.fai("spec.display", p, () => {
+    COMMANDS.run("spec.display", p, () => {
       const on = (p.lblOn || []).filter((/** @type {number} */ v) => Math.abs(v - m) >= EPS), off = (p.lblOff || []).filter((/** @type {number} */ v) => Math.abs(v - m) >= EPS);
       if (shown) off.push(m); else on.push(m);
       p.lblOn = on.slice(-KEEP); p.lblOff = off.slice(-KEEP);

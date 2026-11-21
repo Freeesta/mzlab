@@ -59,12 +59,12 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Flow: names, groups and view cards of the MSn infusion model | `docs/agenti/flow-ux.md` |
 | web runner of the Flow ("This browser": `flow/lazy/flow-web-{run,ui,worker}.js`, `flow:web-step` events, `estimate_series` estimate, phone/tablet warning, Run off above the high level) | `docs/agenti/flow-web.md` |
 | external agents (Claude Code, Cowork) using `mzlab-cli` from the shell: sequence, the five tested chains (`workflow_tests.rs`), plan examples | `docs/agenti/for-agents.md` |
-| "Group by" of the file list (`#sb-by`, `gruppi.js`, `gruppi-per.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
-| experiment groups in Tabui: conditions, `gruppi/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/gruppi-vista.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
+| "Group by" of the file list (`#sb-by`, `groups.js`, `groups-for.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
+| experiment groups in Tabui: conditions, `groups/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/groups-view.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
-| statistics in HR: feature table, blank, difference from the reference, PCA | `docs/agenti/high-resolution-statistics.md` |
+| statistics in HR: feature table, blank, difference from the reference, PCA; `table compare` (each feature against reference and blank, candidate products, `compare/1`) | `docs/agenti/high-resolution-statistics.md` |
 | HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/high-resolution.md` |
-| registry of state-changing actions (`comandi.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/history-removed.md` |
+| registry of state-changing actions (`commands.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `HISTORY` entries) | `docs/agenti/history-removed.md` |
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |

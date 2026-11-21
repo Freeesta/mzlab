@@ -1,7 +1,7 @@
 //! `mzlab-cli spectrum get|list`: one mass spectrum (at a retention time, a window or a scan) as `spectrum/1` or an `mz,intensity` CSV, and the scan list as `scanlist/1`
 //! or CSV. Both are the answers of the page's `api/spectrum`, `api/nearest_scan` and `api/scanlist`; the number tokens are the route's own.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, write_value, Out, Value};
@@ -10,9 +10,12 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, Parsed, Sample};
 use crate::Outcome;
 
+#[path = "spectrum_minus.rs"]
+mod minus;
+
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
-usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]
+usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
 
   --rt MIN    the scan nearest to MIN (minutes) at the level; the evidence names it
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
@@ -20,6 +23,11 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
   --ms-level N the level (default 1, or the level of --scan)
   --id CHANNEL only the scans of an ms:<key> or dd:<level> channel `file channels` lists
   --sample ID the sample of a file with several (.wiff); default the first
+  --minus FILE a blank: its mean spectrum is subtracted (the engine's `/api/spectrum` with a background: lines where the difference is above zero,
+              factor 1, 5 ppm at high resolution; the evidence's `minus` says the window and the scan used); with --minus-sample and no FILE, the blank is
+              another sample of FILE
+  --minus-sample ID the sample of the blank (a file of several samples)
+  --minus-rt A,B the blank's window in minutes; default the window of --rt, or the blank's scan nearest to a single --rt or --scan
   --format F  json (default) or csv with the header mz,intensity
   --out PATH  write there instead of the standard output";
 
@@ -64,14 +72,19 @@ fn text_of(pairs: &[(&str, String)]) -> String {
 }
 
 /// What the request asks for, after the file was read.
-enum At {
+pub(crate) enum At {
     Scan(i64),
     Nearest(f64),
     Window(f64, f64),
 }
 
 /// The index of the scan `at` names, `None` for a window.
-fn scan_index(s: &mut Sample, at: &At, level: u8, chan: Option<&str>) -> Result<Option<usize>> {
+pub(crate) fn scan_index(
+    s: &mut Sample,
+    at: &At,
+    level: u8,
+    chan: Option<&str>,
+) -> Result<Option<usize>> {
     Ok(match at {
         At::Scan(no) => {
             let scans = &s.routes.idx.scans;
@@ -123,6 +136,7 @@ fn get_one(
     level: Option<u8>,
     chan: Option<&str>,
     csv: bool,
+    minus: &mut Option<minus::Minus>,
 ) -> Result<String> {
     let mut level = level.unwrap_or(1);
     let mut resolved = "null".to_string();
@@ -160,10 +174,19 @@ fn get_one(
     if let Some(c) = chan {
         pairs.push(("channel", c.into()));
     }
-    let text = s
-        .routes
-        .handle("/api/spectrum", &query(&pairs))?
-        .ok_or_else(|| Error::new("err.scan.none"))?;
+    let (text, minus_ev) = match minus {
+        None => (
+            s.routes
+                .handle("/api/spectrum", &query(&pairs))?
+                .ok_or_else(|| Error::new("err.scan.none"))?,
+            String::new(),
+        ),
+        Some(m) => {
+            let single = !matches!(at, At::Window(..));
+            let (t, e) = minus::answer(s, m, &pairs, (lo, hi), single, level)?;
+            (t, format!(",{e}"))
+        }
+    };
     let bad = || Error::new("error.badIndex");
     let x = extract::tokens(&text, "mz").ok_or_else(bad)?;
     let y = extract::tokens(&text, "y").ok_or_else(bad)?;
@@ -179,7 +202,7 @@ fn get_one(
         s.sample.map_or("null".to_string(), |i| i.to_string())
     );
     let ev = format!(
-        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}}}",
+        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}{minus_ev}}}",
         extract::jstr(&text_of(&pairs)),
         ans
     );
@@ -196,6 +219,9 @@ pub fn get(args: Vec<String>) -> Outcome {
                 "--ms-level",
                 "--id",
                 "--sample",
+                "--minus",
+                "--minus-sample",
+                "--minus-rt",
                 "--format",
                 "--out",
             ],
@@ -216,6 +242,10 @@ pub fn get(args: Vec<String>) -> Outcome {
             (None, Some(n)) => At::Scan(n.parse().map_err(|_| "--scan needs a scan number")?),
         };
         let level = p.get("--ms-level").map(|_| p.level()).transpose()?;
+        let blank = blank_of(&p, &file)?;
+        if blank.is_some() && p.get("--id").is_some() {
+            return Err("--minus is not for --id (the blank is read at the same level)".into());
+        }
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,
@@ -224,9 +254,10 @@ pub fn get(args: Vec<String>) -> Outcome {
             at,
             level,
             p.get("--id").map(String::from),
+            blank,
         )))
     };
-    let (sample, csv, out, file, at, level, chan) = match go() {
+    let (sample, csv, out, file, at, level, chan, blank) = match go() {
         Ok(Ok(a)) => a,
         Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
@@ -234,13 +265,49 @@ pub fn get(args: Vec<String>) -> Outcome {
     finish(
         extract::with_tmp("spectrum", |tmp| {
             let mut s = extract::open_sample(&file, sample, tmp)?;
+            let mut m = match &blank {
+                Some((f, id, w)) => Some(minus::open(f, *id, *w, tmp)?),
+                None => None,
+            };
             Ok((
-                get_one(&mut s, &at, level, chan.as_deref(), csv)?,
+                get_one(&mut s, &at, level, chan.as_deref(), csv, &mut m)?,
                 s.note.clone(),
             ))
         }),
         &out,
     )
+}
+
+/// The blank of `--minus FILE [--minus-sample ID] [--minus-rt A,B]`: its file (`FILE` itself with only `--minus-sample`), sample and window.
+#[allow(clippy::type_complexity)]
+fn blank_of(
+    p: &Parsed,
+    file: &Path,
+) -> std::result::Result<Option<(PathBuf, Option<u32>, Option<(f64, f64)>)>, String> {
+    let named = p.get("--minus").map(PathBuf::from);
+    if named.is_none() && p.get("--minus-sample").is_none() {
+        return match p.get("--minus-rt") {
+            Some(_) => Err("--minus-rt needs --minus or --minus-sample".into()),
+            None => Ok(None),
+        };
+    }
+    let blank = named.unwrap_or_else(|| file.to_path_buf());
+    let window = p
+        .get("--minus-rt")
+        .map(|v| {
+            let num = |x: &str| {
+                x.parse::<f64>()
+                    .ok()
+                    .filter(|x| x.is_finite())
+                    .ok_or("--minus-rt needs minutes: A or A,B".to_string())
+            };
+            let (a, b) = v.split_once(',').unwrap_or((v, v));
+            let (a, b) = (num(a)?, num(b)?);
+            Ok::<_, String>((a.min(b), a.max(b)))
+        })
+        .transpose()?;
+    let id = p.sample_of("--minus-sample", &blank)?;
+    Ok(Some((blank, id, window)))
 }
 
 fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {

@@ -51,6 +51,7 @@
           "structure.moiety",
           "structure.reactivity",
           "structure.render",
+          "table.compare",
           "table.drift",
           "table.filter",
           "table.kmd",
@@ -121,6 +122,7 @@
               "structure.moiety@1",
               "structure.reactivity@1",
               "structure.render@1",
+              "table.compare@1",
               "table.drift@1",
               "table.filter@2",
               "table.kmd@1",
@@ -225,6 +227,7 @@
               "structure.moiety@1",
               "structure.reactivity@1",
               "structure.render@1",
+              "table.compare@1",
               "table.drift@1",
               "table.filter@2",
               "table.kmd@1",
@@ -2274,6 +2277,43 @@
           },
           {
             "properties":{
+              "step":{"const":"table.compare@1"},
+              "name":{"enum":["ref","blank","quantity","factor","pseudocount","floor","rho_min"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"string",
+                    "description":"Comma list of case-insensitive globs over the file names (t0*), or role:reference, role:blank, time:0 when the samples file is wired"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Globs or role:/time: selectors for the blank files; a column cannot also be a reference column"
+                  },
+                  {"enum":["area","height"],"description":"area (default) or height; a CSV table carries areas only"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Ratio a feature must reach against the reference and the blank (default 3)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Added to both sides of every ratio; default 3 x the median of the positive blank values"
+                  },
+                  {"type":"number","minimum":0,"description":"Smallest estimated pseudocount (default 1000)"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "description":"Spearman rho over time that makes a rise or a fall (default 0.5)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"table.drift@1"},
               "name":{"enum":["method","span"]},
               "value":{
@@ -3095,6 +3135,7 @@
                 "structure.moiety@1",
                 "structure.reactivity@1",
                 "structure.render@1",
+                "table.compare@1",
                 "table.drift@1",
                 "table.filter@2",
                 "table.kmd@1",

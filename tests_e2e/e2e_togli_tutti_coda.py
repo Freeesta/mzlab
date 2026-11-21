@@ -42,7 +42,7 @@ try:
         def undo_queued():
             drop_stalled()
             pg.evaluate("removeAllFiles()"); wait_for_js(pg, f"{OPEN} === 0")
-            assert pg.evaluate("STORIA.annulla()"), "nothing to undo"; pg.evaluate("window.__go = true")
+            assert pg.evaluate("HISTORY.undo()"), "nothing to undo"; pg.evaluate("window.__go = true")
             wait_for_js(pg, f"UPBUSY === 0 && OPENNOW.busy() === 0 && {OPEN} === {N}", 60000)
             hold(pg, 7000)      # past the window: an undone removal frees nothing
             assert pg.evaluate(OPEN) == N and pg.evaluate("ST.files.length") == N

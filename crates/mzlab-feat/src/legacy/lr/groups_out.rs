@@ -1,4 +1,4 @@
-//! The block `gruppi` of the summary (`gruppi/1`, `docs/agenti/groups.md`) for a series that compares conditions: the rows of the Dig on the cells of
+//! The block `groups` of the summary (`groups/1`, `docs/agenti/groups.md`) for a series that compares conditions: the rows of the Dig on the cells of
 //! the ONE table of the pipeline (no second peak search, no new alignment), the roles of the columns as `samples/1` and the options of the settings.
 //! A series with fewer than two conditions has no block.
 
@@ -99,7 +99,7 @@ fn meta(d: &LrDig, e: &Entry, name: &str) -> RowMeta {
     }
 }
 
-/// `gruppi/1` of the rows shown (`found`, with their TP names), `None` with fewer than two conditions or when the module refuses the input.
+/// `groups/1` of the rows shown (`found`, with their TP names), `None` with fewer than two conditions or when the module refuses the input.
 pub fn block(d: &LrDig, names: &[String], found: &[bool]) -> Option<String> {
     if cond::conditions(&d.lc).len() < 2 {
         return None;

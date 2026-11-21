@@ -37,6 +37,8 @@ pub mod chromeleon;
 pub mod chrom_background;
 #[cfg(test)]
 mod chrom_background_test;
+#[cfg(all(test, feature = "statcmp"))]
+mod statcmp_test;
 pub mod ticbg;
 pub mod ticbg_route;
 pub mod ticbg_synth;
@@ -68,6 +70,8 @@ pub mod isoscore;
 pub mod isotable;
 pub mod nuclides;
 pub mod itemroutes;
+#[cfg(feature = "mappa-dad")]
+pub mod pdapeaks;
 pub mod infusion;
 pub mod iteminfo;
 pub mod chromlist;
@@ -188,6 +192,7 @@ pub mod channels;
 pub mod channels_uv;
 pub mod routes;
 pub mod routes_open;
+pub mod routes_sweep;
 pub mod routes_xicbin;
 pub mod scaninfo;
 pub mod scanstats;
@@ -205,6 +210,7 @@ pub mod mzrun;
 pub mod step;
 pub mod scantable;
 pub mod spechead;
+pub mod scanpick;
 pub mod specdiff;
 pub mod specpeaks;
 pub mod spectrum;
@@ -221,6 +227,10 @@ pub mod pca;
 pub mod qaqc;
 pub mod statistics;
 pub mod statmat;
+#[cfg(feature = "statcmp")]
+pub mod statcmp;
+#[cfg(feature = "statcmp")]
+mod statcmp_plan;
 pub mod statref;
 pub mod statroute;
 pub mod kendrick;

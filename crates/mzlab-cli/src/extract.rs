@@ -200,20 +200,24 @@ impl Parsed {
     }
     /// `--sample ID`: one id, never for an mzML.
     pub fn sample(&self, file: &Path) -> std::result::Result<Option<u32>, String> {
-        let Some(v) = self.get("--sample") else {
+        self.sample_of("--sample", file)
+    }
+    /// The sample id given by `key` (`--sample`, `--minus-sample`) for `file`.
+    pub fn sample_of(&self, key: &str, file: &Path) -> std::result::Result<Option<u32>, String> {
+        let Some(v) = self.get(key) else {
             return Ok(None);
         };
         if is_mzml(file) {
-            return Err(
-                "--sample is for a file of several samples (.wiff, ...), an mzML holds one".into(),
-            );
+            return Err(format!(
+                "{key} is for a file of several samples (.wiff, ...), an mzML holds one"
+            ));
         }
         match crate::sample_select::parse(v)
             .map_err(|e| crate::error_text::human_error(&e))?
             .as_slice()
         {
             [one] => Ok(Some(*one)),
-            _ => Err("--sample takes one sample id here".into()),
+            _ => Err(format!("{key} takes one sample id here")),
         }
     }
     pub fn out(&self) -> Option<PathBuf> {

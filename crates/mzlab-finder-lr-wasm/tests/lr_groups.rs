@@ -1,6 +1,6 @@
-//! The Dig on a series that compares conditions (`docs/agenti/groups.md`): the 38 synthetic mzML of `tests/data/gruppi/` (6 conditions × 3 times × 2
+//! The Dig on a series that compares conditions (`docs/agenti/groups.md`): the 38 synthetic mzML of `tests/data/groups/` (6 conditions × 3 times × 2
 //! replicates, a blank and a standard of the parent; the truth is `attesi.json` and its `README.md`), the roles and conditions from
-//! `samples::propose`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
+//! `samples::propose`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `groups`.
 //! Criteria 1-4 of `docs/agenti/groups.md`.
 
 use mzlab_core::samples;
@@ -15,7 +15,7 @@ const BENTAZONE: &str = r#"{"name": "Bentazone", "neutral": "C10H12N2O3S"}"#;
 const CONDS: [&str; 6] = ["Air", "Ar", "He", "N2", "O2", "Reference"];
 
 fn dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/data/gruppi")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/data/groups")
 }
 
 /// The names of the mzML, sorted.
@@ -62,7 +62,7 @@ fn summary_of(d: &lr::LrDig) -> Value {
     serde_json::from_str(&summary(d, "{}")).unwrap()
 }
 
-/// The row of the block `gruppi` whose nominal m/z is `mz`.
+/// The row of the block `groups` whose nominal m/z is `mz`.
 fn row_of(g: &Value, mz: u32) -> &Value {
     g["rows"]
         .as_array()
@@ -114,9 +114,9 @@ fn strs(v: &Value) -> Vec<String> {
 
 #[test]
 fn presence_sets_shapes_and_ratios_follow_the_truth() {
-    let d = run(&names(), true, r#"{"gruppi":{"reference":"O2"}}"#);
+    let d = run(&names(), true, r#"{"groups":{"reference":"O2"}}"#);
     let s = summary_of(&d);
-    let g = &s["gruppi"];
+    let g = &s["groups"];
     assert_eq!(
         strs(
             &g["conditions"]
@@ -185,7 +185,7 @@ fn presence_sets_shapes_and_ratios_follow_the_truth() {
 #[test]
 fn the_parent_decays_in_the_active_conditions_only() {
     let s = summary_of(&run(&names(), true, "{}"));
-    let conds = s["gruppi"]["conditions"].as_array().unwrap();
+    let conds = s["groups"]["conditions"].as_array().unwrap();
     let rem = |c: &str| {
         conds.iter().find(|x| x["id"] == c).unwrap()["parent"]["remaining"]
             .as_f64()
@@ -202,7 +202,7 @@ fn the_parent_decays_in_the_active_conditions_only() {
 
 #[test]
 fn one_condition_leaves_the_output_as_it_was() {
-    // the series of one condition: the same bytes with the condition written or not, and no block `gruppi`
+    // the series of one condition: the same bytes with the condition written or not, and no block `groups`
     let n: Vec<String> = names()
         .into_iter()
         .filter(|n| n.starts_with("Air_") || n == "bianco.mzML")
@@ -211,7 +211,7 @@ fn one_condition_leaves_the_output_as_it_was() {
         summary_of(&run(&n, true, "{}")),
         summary_of(&run(&n, false, "{}")),
     );
-    assert!(a.get("gruppi").is_none() && b.get("gruppi").is_none());
+    assert!(a.get("groups").is_none() && b.get("groups").is_none());
     assert_eq!(a["rows"], b["rows"]);
     assert_eq!(a["files"].as_array().unwrap().len(), n.len());
 }
@@ -230,14 +230,14 @@ fn a_time_per_condition_never_grows_over_time() {
             assert_eq!(c.status, "n/a", "{}: {}", e.name, c.text);
         }
     }
-    assert!(s["gruppi"]["rows"].as_array().unwrap().len() > 3);
+    assert!(s["groups"]["rows"].as_array().unwrap().len() > 3);
 }
 
 #[test]
 fn one_name_per_product_in_every_condition() {
     // the drift of RT between the runs does not split a product: no two rows within 0.5 Da and 0.3 min
     let s = summary_of(&run(&names(), true, "{}"));
-    let rows = s["gruppi"]["rows"].as_array().unwrap();
+    let rows = s["groups"]["rows"].as_array().unwrap();
     for (i, a) in rows.iter().enumerate() {
         for b in &rows[i + 1..] {
             let (dm, dt) = (
@@ -294,9 +294,9 @@ fn first_diff(a: &Value, b: &Value, path: &str) -> String {
 
 #[test]
 fn the_order_of_the_files_does_not_change_the_block() {
-    let first = stable(summary_of(&run(&names(), true, "{}"))["gruppi"].clone());
+    let first = stable(summary_of(&run(&names(), true, "{}"))["groups"].clone());
     for seed in 1..=5 {
-        let g = stable(summary_of(&run(&shuffled(names(), seed), true, "{}"))["gruppi"].clone());
+        let g = stable(summary_of(&run(&shuffled(names(), seed), true, "{}"))["groups"].clone());
         assert_eq!(first_diff(&g, &first, ""), "", "permutation {seed}");
     }
 }
@@ -330,7 +330,7 @@ fn the_other_polarity_pairs_equal_neutral_masses() {
 }
 
 /// `cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture scale` with `N=20` or `N=40` under `/usr/bin/time -v`:
-/// the whole native pipeline (detection, alignment, Dig, block `gruppi`) of N full-scan files of the folder (`docs/agenti/measurements.md`).
+/// the whole native pipeline (detection, alignment, Dig, block `groups`) of N full-scan files of the folder (`docs/agenti/measurements.md`).
 #[test]
 #[ignore]
 fn scale() {

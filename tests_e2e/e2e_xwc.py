@@ -70,7 +70,7 @@ try:
             assert abs(got["max"] - TRUE["b"]["max"]) < 0.02 * TRUE["b"]["max"] and got["c"][0] != got["c"][1], (got, TRUE["b"])
         step("popover by keyboard: Enter opens it on λ, Esc closes it back on the arrow; 230 nm with Shift+Enter is one more trace of the XWC panel", popover)
         def undo():
-            pg.evaluate("STORIA.annulla()")
+            pg.evaluate("HISTORY.undo()")
             wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 1 && !({XWC}.xw || []).length", timeout=30000)
         step("the added band is undone like any change of the panel's source", undo)
         def spec():

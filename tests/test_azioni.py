@@ -116,16 +116,16 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
 
 
 def test_arrangement_actions_show_in_every_view_and_have_texts():
-    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (affianca.js) exist in the catalog; layout.js never names an experiment."""
+    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (arrange.js) exist in the catalog; layout.js never names an experiment."""
     r = run("""AZIONI.registra({id:'t.all',gruppo:'disp',viste:['*'],nome:()=>'x',esegui:()=>0});
       console.log(JSON.stringify(['spec','chrom','mrm'].map(v=>AZIONI.per({vista:v}).some(i=>i.id==='t.all'))))""")
     assert r == [True, True, True]
-    src = (WEB / "affianca.js").read_text(encoding="utf-8")
-    keys = set(re.findall(r'"(aff\.menu\.[\w.]+)"', src))
+    src = (WEB / "arrange.js").read_text(encoding="utf-8")
+    keys = set(re.findall(r'"(arrange\.menu\.[\w.]+)"', src))
     assert len(keys) >= 6, keys
     for lang in ("en",):
         cat = lang_catalog.testo(lang)
-        for k in keys | {f"cmd.disp.{i}.{f}" for i in ("affianca", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
+        for k in keys | {f"cmd.disp.{i}.{f}" for i in ("arrange", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
             assert f'"{k}"' in cat, (lang, k)
     assert not re.search(r"""["'](?:full|ms2|mrm|spec|chrom)["']""", (WEB / "layout.js").read_text(encoding="utf-8"))
 

@@ -115,6 +115,7 @@ fn the_cli_extraction_commands_hold_the_bytes_of_the_app_routes() {
     let inter = nums.iter().zip(&pts).all(|(a, b)| near(a, b));
     assert!(halves || inter, "the XIC of the app and of the CLI differ");
     smoothed_and_listed_xic(&run, &route, &file);
+    swept_xic(&run, &route, &file);
 }
 
 /// The smoothed XIC holds the bytes of the app's route with `smooth`, and a list of ions the documents of each ion alone.
@@ -141,4 +142,43 @@ fn smoothed_and_listed_xic(
         format!("{head},\"traces\":[{},{}]}}", first.trim(), alone.trim())
     );
     assert!(head.starts_with("{\"schema\":\"trace-set/1\"") && head.ends_with("\"n_traces\":2"));
+}
+
+/// A sweep: `--sweep` is the bytes of `--mz` with the expanded list, and each trace of the app's route (`/api/xic?sweep=`, the one the site asks through
+/// the wasm `route`) is the points of the same ion in the CLI document.
+fn swept_xic(run: &dyn Fn(&[&str]) -> String, route: &dyn Fn(&str, &str) -> String, file: &str) {
+    let sweep = run(&[
+        "trace",
+        "xic",
+        file,
+        "--sweep",
+        "299:302:1",
+        "--da",
+        "0.5",
+        "--smooth",
+        "3",
+    ]);
+    let list = run(&[
+        "trace",
+        "xic",
+        file,
+        "--mz",
+        "299,300,301,302",
+        "--da",
+        "0.5",
+        "--smooth",
+        "3",
+    ]);
+    assert_eq!(sweep, list);
+    let routed = route("/api/xic", "?sweep=299:302:1&tol=0.5&level=1&smooth=3");
+    assert!(routed.starts_with("{\"schema\":\"trace-set/1\",\"n_traces\":4,"));
+    let members: Vec<&str> = routed.split("{\"id\":").skip(1).collect();
+    assert_eq!(members.len(), 4);
+    for m in members {
+        assert!(
+            sweep.contains(&route_points(m, "rt")),
+            "{}",
+            &m[..m.len().min(80)]
+        );
+    }
 }

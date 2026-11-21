@@ -13,16 +13,16 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 STUBS = """
 globalThis.window = globalThis; globalThis.MZLAB_BROWSER = true;
-globalThis.COMANDI = { gestore() {}, fai: (_a, _b, fn) => fn(), GLOBALE: 0 };
+globalThis.COMMANDS = { handler() {}, run: (_a, _b, fn) => fn(), GLOBAL: 0 };
 globalThis.I18N = { t: k => k };
 globalThis.N = { renderFiles: 0, renderFileList: 0, renderNav: 0, paintFiles: 0, redrawAll: 0, posts: [] };
 for (const k of ["renderFiles", "renderFileList", "renderNav", "paintFiles", "redrawAll"]) globalThis[k] = () => { N[k]++; };
 globalThis.toolbar = () => {}; globalThis.ctl = () => {}; globalThis.uiSave = () => {}; globalThis.cleanupOrphanPanels = () => {}; globalThis.relayout = () => {}; globalThis.fitHost = () => {};
-globalThis.panelRec = q => q; globalThis.riapriPannello = () => {}; globalThis.mergeFiles = () => {}; globalThis.J = async () => ({ session: E.files.map(f => ({ file: f.file })) });
+globalThis.panelRec = q => q; globalThis.reopenPanel = () => {}; globalThis.mergeFiles = () => {}; globalThis.J = async () => ({ session: E.files.map(f => ({ file: f.file })) });
 globalThis.STATO = { file(k) { E.cur = k; } }; globalThis.BARRA = null;
 globalThis.tabFiles = () => E.files.filter(f => !f.gone);
 globalThis.post = async (_u, b) => { N.posts.push(b.name); return { files: [] }; };
-globalThis.STORIA = { tolto(o) { globalThis.ENTRY = o; } };
+globalThis.HISTORY = { removed(o) { globalThis.ENTRY = o; } };
 globalThis.CONVROWS = { dropEnded() {}, clearDone() {} };      // the summary of the loading (conversione.js): nothing ended to drop here
 globalThis.OPENNOW = { isOpen: n => E.files.some(f => !f.gone && f.file === n), held: () => false, hold() {}, release: () => false, tick() {}, idle: async () => {} };
 const n = 200;
@@ -60,14 +60,14 @@ def test_undo_of_remove_all_repaints_once():
 
 @needs_node
 def test_freeing_the_batch_asks_every_file_and_repaints_the_table_once():
-    out = run(f"removeAllFiles(); N.renderFiles = 0; await ENTRY.scade(); console.log(JSON.stringify({SNAP}))")
+    out = run(f"removeAllFiles(); N.renderFiles = 0; await ENTRY.expires(); console.log(JSON.stringify({SNAP}))")
     assert out["posts"] == 200 and out["renderFiles"] == 1 and out["gone"] == 200
 
 
 @needs_node
 def test_rows_read_but_not_open_are_freed_with_the_batch():
     extra = "ST.files.push({ name: 'Q_0.mzML', use: true }, { name: 'Q_1.mzML', use: false });"
-    out = run(f"{extra} removeAllFiles(); N.renderFiles = 0; await ENTRY.scade(); console.log(JSON.stringify({{ ...{SNAP}, q: N.posts.filter(x => x.startsWith('Q_')) }}))")
+    out = run(f"{extra} removeAllFiles(); N.renderFiles = 0; await ENTRY.expires(); console.log(JSON.stringify({{ ...{SNAP}, q: N.posts.filter(x => x.startsWith('Q_')) }}))")
     assert out["posts"] == 202 and sorted(out["q"]) == ["Q_0.mzML", "Q_1.mzML"] and out["renderFiles"] == 1 and out["gone"] == 200
 
 

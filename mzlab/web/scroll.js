@@ -179,7 +179,7 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
   if (!E.files.length || typingNow() || e.ctrlKey || e.metaKey || e.altKey) return;
   // the arrows on a divider between side-by-side panels resize them
-  if (/** @type {Element} */ (e.target).closest?.(".aff-sep")) return;
+  if (/** @type {Element} */ (e.target).closest?.(".arrange-sep")) return;
   // a table box that scrolls sideways (.qq-scroll, focusable) keeps the arrows: they scroll it
   if (/** @type {Element} */ (e.target).closest?.(".qq-scroll")) return;
   if (e.key === " ") {

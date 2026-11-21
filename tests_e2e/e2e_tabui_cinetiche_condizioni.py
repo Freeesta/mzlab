@@ -1,6 +1,6 @@
-"""Tabui, the Kinetics tab with several conditions (TPGRUPPI_VIEW.kinetics in TP_Mine/lazy/gruppi-vista.js): one curve per condition on the same time axis, overlaid or side by side, area or % of max or % of each own
+"""Tabui, the Kinetics tab with several conditions (TPGROUPS_VIEW.kinetics in TP_Mine/lazy/groups-view.js): one curve per condition on the same time axis, overlaid or side by side, area or % of max or % of each own
 max, the dark control as a dashed curve, the comparison of conditions that share a name part (TW_PMS against MQ_PMS), the table of the data and axe. Synthetic fixture (3 conditions renamed TW_PMS, MQ_PMS, TW_H2O2 from
-TP_Mine/tests/gruppi_fixture_kin.json, with a dark course added). MZLAB_PIPE_SITE reuses a built site. Run from the repo root: python3 tests_e2e/e2e_tabui_cinetiche_condizioni.py"""
+TP_Mine/tests/groups_fixture_kin.json, with a dark course added). MZLAB_PIPE_SITE reuses a built site. Run from the repo root: python3 tests_e2e/e2e_tabui_cinetiche_condizioni.py"""
 import json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -16,15 +16,15 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tabui_cinetiche_condizioni.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:900]))
 
-FX = json.loads((ROOT / "TP_Mine" / "tests" / "gruppi_fixture.json").read_text(encoding="utf-8"))
-FK = json.loads((ROOT / "TP_Mine" / "tests" / "gruppi_fixture_kin.json").read_text(encoding="utf-8"))
+FX = json.loads((ROOT / "TP_Mine" / "tests" / "groups_fixture.json").read_text(encoding="utf-8"))
+FK = json.loads((ROOT / "TP_Mine" / "tests" / "groups_fixture_kin.json").read_text(encoding="utf-8"))
 tmp = Path(tempfile.mkdtemp(prefix="tabui_cinetiche_cond_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
 if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
     subprocess.run(cmd, check=True, capture_output=True)
-shutil.copy2(ROOT / "TP_Mine" / "lazy" / "gruppi-vista.js", site / "static" / "mzfinder" / "lazy" / "gruppi-vista.js")      # fresh source over the site that was built
+shutil.copy2(ROOT / "TP_Mine" / "lazy" / "groups-view.js", site / "static" / "mzfinder" / "lazy" / "groups-view.js")      # fresh source over the site that was built
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
@@ -56,9 +56,9 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); open_mzfinder(pg)
         pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")
         pg.wait_for_function("typeof window.TDATI === 'object'", timeout=120000)
-        pg.evaluate("() => window.TPLAZY.load('gruppi-vista.js')")
-        pg.wait_for_function("typeof window.TPGRUPPI_VIEW === 'object'", timeout=20000)
-        pg.evaluate("([fx, row]) => { document.querySelector('#tp-right').innerHTML = '<div id=\"gv-host\"></div>'; window.__V = window.TPGRUPPI_VIEW.kinetics(document.querySelector('#gv-host'), fx, {parentName: 'Demo'}); window.__V.selectRow(row); }", [FXD, ROW])
+        pg.evaluate("() => window.TPLAZY.load('groups-view.js')")
+        pg.wait_for_function("typeof window.TPGROUPS_VIEW === 'object'", timeout=20000)
+        pg.evaluate("([fx, row]) => { document.querySelector('#tp-right').innerHTML = '<div id=\"gv-host\"></div>'; window.__V = window.TPGROUPS_VIEW.kinetics(document.querySelector('#gv-host'), fx, {parentName: 'Demo'}); window.__V.selectRow(row); }", [FXD, ROW])
         N = lambda sel: pg.locator(sel).count()
 
         def overlay():

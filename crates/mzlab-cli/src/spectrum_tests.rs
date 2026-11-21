@@ -187,3 +187,184 @@ fn a_file_without_scans_lists_none() {
     assert!(doc.contains("\"n_scans\":0"), "{doc}");
     let _ = std::fs::remove_dir_all(d);
 }
+
+/// A sample and a blank written in a new folder: the sample has the ion at 257.3 growing with its time, the blank none of it.
+fn sample_and_blank(tag: &str) -> (std::path::PathBuf, String, String) {
+    let d = dir(tag);
+    let (f, b) = (d.join("sample.mzML"), d.join("blank.mzML"));
+    std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
+    std::fs::write(&b, crate::tests::mzml(0.0)).unwrap();
+    let name = |p: &std::path::Path| p.to_string_lossy().into_owned();
+    (d.clone(), name(&f), name(&b))
+}
+
+#[test]
+fn a_blank_is_the_engine_spectrum_with_a_background_byte_for_byte() {
+    let (d, f, b) = sample_and_blank("spec_minus");
+    let doc = text(run(&[
+        "spectrum", "get", &f, "--rt", "2.9,3.1", "--minus", &b,
+    ]));
+    let (mut main, mut bg) = (page_routes(&f), page_routes(&b));
+    let q = Query::parse("rt0=2.9&rt1=3.1&level=1&bgk=1&bgrt0=2.9&bgrt1=3.1");
+    let req = main.diff_request(&q).unwrap().unwrap();
+    let want = mzlab_core::specdiff::spectrum_diff(&mut main, Some(&mut bg), &req)
+        .unwrap()
+        .unwrap();
+    assert_eq!(doc_points(&doc), route_points(&want, "mz"));
+    // the ion both files hold at 3.0 min is gone, the one only the sample holds later is left
+    assert!(
+        !doc_points(&doc)
+            .iter()
+            .any(|(mz, _)| mz.starts_with("241.")),
+        "{doc}"
+    );
+    let later = text(run(&[
+        "spectrum", "get", &f, "--rt", "4.1,4.3", "--minus", &b,
+    ]));
+    assert!(
+        doc_points(&later)
+            .iter()
+            .any(|(mz, _)| mz.starts_with("257.")),
+        "{later}"
+    );
+    // every choice is in the evidence: the file, the window, the factor and the clip
+    let v = parse(doc.trim().as_bytes()).unwrap();
+    let ev = v.get("evidence").unwrap();
+    let m = ev.get("minus").unwrap();
+    assert_eq!(m.get("file").unwrap().str(), Some("blank.mzML"));
+    assert_eq!(m.get("window_min").unwrap().arr().len(), 2);
+    assert_eq!(m.get("factor").unwrap().f64(), Some(1.0));
+    assert!(doc.contains("\"diff\":true"), "{doc}");
+    let csv = text(run(&[
+        "spectrum", "get", &f, "--rt", "2.9,3.1", "--minus", &b, "--format", "csv",
+    ]));
+    assert_eq!(csv.lines().count(), doc_points(&doc).len() + 1);
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn the_blank_window_is_given_or_taken_from_the_main_one_or_the_nearest_scan() {
+    let (d, f, b) = sample_and_blank("spec_minus_win");
+    // a window of the sample's own file as the blank (3.0 min holds 241.3): the later spectrum keeps 257.3 and, clipped, loses nothing else
+    let own = text(run(&[
+        "spectrum",
+        "get",
+        &f,
+        "--rt",
+        "4.1,4.3",
+        "--minus",
+        &f,
+        "--minus-rt",
+        "2.9,3.1",
+    ]));
+    let v = parse(own.trim().as_bytes()).unwrap();
+    let w = v.get("evidence").unwrap().get("minus").unwrap();
+    assert_eq!(w.get("window_min").unwrap().arr()[0].f64(), Some(2.9));
+    assert!(w.get("scan").unwrap().f64().is_none() && own.contains("\"scan\":null"));
+    // a single time: the blank's scan nearest to it is used and named
+    let one = text(run(&["spectrum", "get", &f, "--rt", "3.01", "--minus", &b]));
+    assert!(one.contains("\"minus\":{\"file\":\"blank.mzML\""), "{one}");
+    assert!(one.contains("\"scan\":{\"scan_no\":"), "{one}");
+    let by_no = text(run(&["spectrum", "get", &f, "--scan", "51", "--minus", &b]));
+    assert_eq!(doc_points(&one), doc_points(&by_no));
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn a_bad_blank_is_usage_or_a_missing_file_with_an_error_document() {
+    let (d, f, b) = sample_and_blank("spec_minus_bad");
+    for a in [
+        vec![
+            "spectrum", "get", &f, "--rt", "3", "--minus", &b, "--id", "tic",
+        ],
+        vec!["spectrum", "get", &f, "--rt", "3", "--minus-rt", "1,2"],
+        vec!["spectrum", "get", &f, "--rt", "3", "--minus-sample", "2"],
+        vec![
+            "spectrum",
+            "get",
+            &f,
+            "--rt",
+            "3",
+            "--minus",
+            &b,
+            "--minus-rt",
+            "x",
+        ],
+    ] {
+        assert_eq!(run(&a).code, 2, "{a:?}");
+    }
+    let o = run(&[
+        "spectrum",
+        "get",
+        &f,
+        "--rt",
+        "3",
+        "--minus",
+        "/nonexistent/b.mzML",
+        "--json",
+    ]);
+    assert_eq!(o.code, 4, "{}", o.stderr);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"schema\":\"error/1\""));
+    let _ = std::fs::remove_dir_all(d);
+}
+
+/// A profile mzML of MS1 scans only (no MS2 level to take a mean of).
+fn profile_ms1(tag: &str) -> (std::path::PathBuf, String) {
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let d = dir(tag);
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_spectra(4).unwrap();
+    for k in 0..4 {
+        let (mz, y): (Vec<f64>, Vec<f32>) = (0..200)
+            .map(|i| {
+                let m = 100.0 + f64::from(i) * 0.01;
+                (
+                    m,
+                    (1000.0 * (-((m - 101.0) / 0.2).powi(2)).exp() + 5.0) as f32,
+                )
+            })
+            .unzip();
+        w.spectrum(&mzlab_core::mzml::Spectrum {
+            index: k,
+            id: format!("scan={}", k + 1),
+            level: 1,
+            rt: k as f64,
+            polarity: 1,
+            profile: true,
+            mz,
+            intensity: y,
+            ..Default::default()
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let f = d.join("p.mzML");
+    std::fs::write(&f, w.finish().unwrap()).unwrap();
+    (d, f.to_string_lossy().into_owned())
+}
+
+#[test]
+fn a_blank_with_no_spectrum_to_subtract_from_is_exit_1_with_its_key() {
+    let (d, f) = profile_ms1("spec_minus_none");
+    let o = run(&[
+        "spectrum",
+        "get",
+        &f,
+        "--rt",
+        "0,2",
+        "--ms-level",
+        "2",
+        "--minus",
+        &f,
+        "--minus-rt",
+        "0,2",
+        "--json",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let e = String::from_utf8(o.stdout).unwrap();
+    assert!(e.contains("\"schema\":\"error/1\""), "{e}");
+    assert!(e.contains("err.spectrum.minus"), "{e}");
+    let _ = std::fs::remove_dir_all(d);
+}

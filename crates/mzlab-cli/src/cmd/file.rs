@@ -48,18 +48,19 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
-    Entry::new("trace xic", "mzlab-cli trace xic FILE --mz M[,M..] (--ppm P | --da D | --tol T) [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; --dry-run xicplan/1", crate::trace_xic::xic)
+    Entry::new("trace xic", "mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z: trace/1, trace-set/1, CSV; a tolerance is needed with --mz; --dry-run xicplan/1", crate::trace_xic::xic)
         .schema("trace/1")
-        .exits(&[0, 2, 4, 5, 6]),
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("trace background", "mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON", crate::plain::background_cmd::run),
     Entry::new("dad subtract", "mzlab-cli dad subtract FILE ...   the DAD matrix A minus B", |a| crate::dad_cmd::run(pre("subtract", a))),
     Entry::new("dad spectrum", "mzlab-cli dad spectrum FILE ...   the UV spectrum at a time", |a| crate::dad_cmd::run(pre("spectrum", a))),
     Entry::new("dad trace", "mzlab-cli dad trace FILE ...   the UV trace at a wavelength", |a| crate::dad_cmd::run(pre("trace", a))),
     Entry::new("dad ms-at", "mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time", |a| crate::dad_cmd::run(pre("ms-at", a))),
     Entry::new("dad delay", "mzlab-cli dad delay FILE ...   the delay between the DAD and the MS", |a| crate::dad_cmd::run(pre("delay", a))),
-    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV", crate::spectrum_cmd::get)
+    Entry::new("dad peaks", "mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions", |a| crate::dad_cmd::run(pre("peaks", a))),
+    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank", crate::spectrum_cmd::get)
         .schema("spectrum/1")
-        .exits(&[0, 2, 4, 5, 6]),
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("spectrum list", "mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)", crate::spectrum_cmd::list)
         .schema("scanlist/1")
         .exits(&[0, 2, 4, 5, 6]),

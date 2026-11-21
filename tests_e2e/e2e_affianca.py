@@ -1,5 +1,5 @@
 # e2e_affianca: grip of the panels: drag to a side zone, menu (no dragging), Alt+arrows, Esc, divider, undo (Ctrl+Z), narrow window
-# covers: mzlab/web/affianca.js
+# covers: mzlab/web/arrange.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -17,10 +17,10 @@ try:
         rows = lambda: pg.evaluate("(() => { const l = stackOrder().slice(-3).map(q => q.id); return LAYOUT.righeDi(stackOrder()).map(r => r.map(q => q.id).filter(i => l.includes(i))).filter(r => r.length) })()")
         rects = lambda: pg.evaluate("stackOrder().slice(-3).map(q => [q.id, q.x, q.y, q.w, q.h])")
         def grip_box(i):
-            return pg.evaluate("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); const b = q.el.querySelector('.aff-grip').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2, b.width, b.height]; }", i)
+            return pg.evaluate("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); const b = q.el.querySelector('.arrange-grip').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2, b.width, b.height]; }", i)
         def grip_click(i):
             # the element itself, not a point read before: after an undo the panels still move, and Playwright clicks once the grip is in view and stable
-            pg.evaluate_handle("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); return q.el.querySelector('.aff-grip'); }", i).as_element().click()
+            pg.evaluate_handle("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); return q.el.querySelector('.arrange-grip'); }", i).as_element().click()
         def drag_to_right_of(src, dst):
             b = grip_box(src)
             t = pg.evaluate("(i) => { const r = stackOrder().at(i - 3).el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }", dst)
@@ -34,13 +34,13 @@ try:
         step("grip has a target of at least 24 px", target_size)
         def drag():
             drag_to_right_of(2, 1)
-            assert pg.evaluate("document.querySelector('.aff-prev') !== null"), "no preview"
-            assert pg.evaluate("document.querySelector('.aff-prev').getAttribute('aria-hidden')") == "true"
+            assert pg.evaluate("document.querySelector('.arrange-prev') !== null"), "no preview"
+            assert pg.evaluate("document.querySelector('.arrange-prev').getAttribute('aria-hidden')") == "true"
             pg.mouse.up(); pg.wait_for_timeout(300)
             rr = rows(); assert [len(x) for x in rr] == [1, 2], rr
             g = rects(); assert g[1][2] == g[2][2] and g[1][1] < g[2][1], g
-            assert pg.evaluate("document.getElementById('aff-bar')") is None, "no pop-up with an Undo button"
-            assert pg.inner_text("#aff-live").startswith("Side by side"), pg.inner_text("#aff-live")
+            assert pg.evaluate("document.getElementById('arrange-bar')") is None, "no pop-up with an Undo button"
+            assert pg.inner_text("#arrange-live").startswith("Side by side"), pg.inner_text("#arrange-live")
         step("drag the grip to the right zone of another panel: two side by side", drag)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))
         def undo():
@@ -50,24 +50,24 @@ try:
         def esc():
             drag_to_right_of(2, 1); pg.keyboard.press("Escape"); pg.mouse.up(); pg.wait_for_timeout(200)
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
-            assert pg.evaluate("document.querySelector('.aff-prev') === null")
+            assert pg.evaluate("document.querySelector('.arrange-prev') === null")
         step("Esc cancels the drag", esc)
         def menu():
-            grip_click(2); wait_for_js(pg, "!!document.querySelector('.aff-menu')")
-            assert pg.evaluate("!!document.querySelector('.aff-menu [role=menuitem]')")
+            grip_click(2); wait_for_js(pg, "!!document.querySelector('.arrange-menu')")
+            assert pg.evaluate("!!document.querySelector('.arrange-menu [role=menuitem]')")
             num = pg.evaluate("stackOrder().at(-2).num")      # the row of the previous panel: «N · title» in the part «Place beside»
-            pg.click(f".aff-menu button:text-matches('^{num} · ')"); pg.wait_for_timeout(300)
+            pg.click(f".arrange-menu button:text-matches('^{num} · ')"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 2], rows()
         step("menu 'Place beside' does it without dragging", menu)
         def equal_full():
-            grip_click(2); pg.click(".aff-menu button >> nth=-3"); pg.wait_for_timeout(300)      # the menu ends with Full width, Equal widths, Reset
+            grip_click(2); pg.click(".arrange-menu button >> nth=-3"); pg.wait_for_timeout(300)      # the menu ends with Full width, Equal widths, Reset
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("menu 'Full width'", equal_full)
         def keys():
-            g = grip_box(2); pg.evaluate("stackOrder().at(-1).el.querySelector('.aff-grip').focus()")
+            g = grip_box(2); pg.evaluate("stackOrder().at(-1).el.querySelector('.arrange-grip').focus()")
             pg.keyboard.press("Alt+ArrowLeft"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 2], rows()
-            assert "2" in pg.inner_text("#aff-live") or pg.inner_text("#aff-live") != ""
+            assert "2" in pg.inner_text("#arrange-live") or pg.inner_text("#arrange-live") != ""
             pg.keyboard.press("Alt+ArrowDown"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("Alt+arrows on the grip", keys)
@@ -79,7 +79,7 @@ try:
                 wait_for_js(pg, f"(()=>{{const p={P};p.cv.scrollIntoView({{block:'center'}});p.cv.focus();return document.activeElement===p.cv&&!!p._a&&!!p._a.X}})()")
                 pg.keyboard.press("Shift+F10"); wait_for_js(pg, "!document.querySelector('#ctx').hidden")
                 return pg.evaluate("[...document.querySelectorAll('#ctx [data-azione^=\\'disp.\\']')].map(d=>[d.dataset.azione,d.getAttribute('aria-disabled')==='true',d.textContent.replace(/\\u2713/g,'')])")
-            pg.evaluate("AFFIANCA.ripristina()"); wait_shape("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            pg.evaluate("ARRANGE.restore()"); wait_shape("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
             it = open_menu(); ids = [i[0] for i in it]
             assert ids == ["disp.su", "disp.giu"], ids           # the right-click menu keeps only Move up / Move down, side by side in one row
             assert pg.evaluate("document.querySelectorAll('#ctx .mrow > [data-azione]').length") == 2
@@ -89,26 +89,26 @@ try:
             run = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; return AZIONI.pronta(AZIONI.voce('{aid}'), {{vista: p.type, p}}); }})()")
             do = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; AZIONI.esegui('{aid}', {{vista: p.type, p}}); }})()")
             assert not run("disp.uguali") and not run("disp.intera") and not run("disp.ripristina")           # alone in its row, nothing to restore
-            pg.evaluate(f"AFFIANCA.fai({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); wait_shape("2,1")
+            pg.evaluate(f"ARRANGE.run({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); wait_shape("2,1")
             assert run("disp.uguali") and run("disp.intera") and run("disp.ripristina")
             do("disp.uguali"); wait_for_js(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
             a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
             do("disp.intera"); wait_shape("1,1,1")
-            pg.evaluate("AFFIANCA.fai(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); wait_shape("2,1")
+            pg.evaluate("ARRANGE.run(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); wait_shape("2,1")
             do("disp.ripristina"); wait_shape("1,1,1")
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
             pg.keyboard.press("Control+z"); wait_shape("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
             # the grip menu also resets the layout
-            grip_click(2); pg.click(".aff-menu button >> nth=-1"); wait_shape("1,1,1")
+            grip_click(2); pg.click(".arrange-menu button >> nth=-1"); wait_shape("1,1,1")
         step("right-click menu: Move up / Move down in one row; the other arrangement actions stay in the registry and the grip menu", disp_menu)
         def divider():
-            pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)
-            s = pg.query_selector(".aff-sep"); assert s, "no divider"
-            assert pg.evaluate("document.querySelector('.aff-sep').getAttribute('role')") == "separator"
-            ids = pg.evaluate("document.querySelector('.aff-sep')._key").split(":")           # the two panels the first divider sits between
+            pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; ARRANGE.run(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)
+            s = pg.query_selector(".arrange-sep"); assert s, "no divider"
+            assert pg.evaluate("document.querySelector('.arrange-sep').getAttribute('role')") == "separator"
+            ids = pg.evaluate("document.querySelector('.arrange-sep')._key").split(":")           # the two panels the first divider sits between
             wid = lambda: pg.evaluate("ids => ids.map(i => stackOrder().find(q => String(q.id) === i).w)", ids)
             w0 = wid()[0]
-            pg.focus(".aff-sep"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
+            pg.focus(".arrange-sep"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
             w1 = wid()[0]; assert w1 == w0 + 16, (w0, w1)
             pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
             a, b = wid(); assert abs(a - b) <= 8, (a, b)

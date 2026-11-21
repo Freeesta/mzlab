@@ -68,7 +68,7 @@ try:
         step("the page engine and mzlab-cli peak auto-lr give the same bytes", parity)
         def undo_again():
             n = pg.evaluate(f"{M}.ints.length")
-            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{M}.ints.length===0")
+            pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"{M}.ints.length===0")
             pg.evaluate(f"INTTUTTI.run({M})"); wait_for_js(pg, f"{M}.ints.length==={n}")
             pg.evaluate(f"INTTUTTI.run({M}).then(()=>1)")                        # run() is async: evaluate waits until it has drawn
             assert pg.evaluate(f"{M}.ints.length") == n                                     # a second run adds nothing over the peaks already there

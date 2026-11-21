@@ -168,7 +168,7 @@ function attach(p) {
         return;
       }
       if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
-      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1, true, true)); if (STORIA) STORIA.gruppo(go); else go(); } else draw(p); return; }
+      if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1, true, true)); if (HISTORY) HISTORY.group(go); else go(); } else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
       if (p.type === "spec") { pushZh(p); if (Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); p.zoom = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); }
@@ -297,11 +297,11 @@ function liveSpec(s, from) {
   if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
   draw(s); uiSave();
 }
-COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); rtLabel(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
+COMMANDS.handler("panel.link", { read: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), apply: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); rtLabel(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
 /** @param {any} s */
-const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
+const spLinkFreeze = s => COMMANDS.run("panel.link", s, () => freezeSpec(s));
 /** @param {any} s @param {any} from */
-const spLinkFollow = (s, from) => COMANDI.fai("panel.link", s, () => liveSpec(s, from));
+const spLinkFollow = (s, from) => COMMANDS.run("panel.link", s, () => liveSpec(s, from));
 function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec, ...extra });
@@ -315,7 +315,7 @@ function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   
   stackAfter(s, from); relayout(); fitHost();
   // Do NOT reveal(s) so the viewport does not shift randomly
-  return apriAnnullabile(s);
+  return openWithUndo(s);
 }
 
 // The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
@@ -410,7 +410,7 @@ function ctxFor(p, e, x, px, py) {
   reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda" && !(window.SIMUI && SIMUI.ions(c.p).length), scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMMANDS.run("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
 })();
 
 // the actions common to every graph but the map (registry azioni/1): zoom reset (first in the menu, grey without a zoom) and the annotations (last, grey away from one);
@@ -419,7 +419,7 @@ function ctxFor(p, e, x, px, py) {
 async function editAnn(p, ann) {
   const v = await ask(I18N.t("ctx.ann.prompt"), ann.text);
   if (v == null) return;
-  COMANDI.fai("spec.annotation", p, () => { if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v; });
+  COMMANDS.run("spec.annotation", p, () => { if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v; });
   draw(p);
 }
 (() => {
@@ -431,7 +431,7 @@ async function editAnn(p, ann) {
   reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
   reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
-    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
+    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMMANDS.run("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
@@ -531,11 +531,11 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ toolbar
-Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", { tab: suTab(tabNuovo()) })));
-Q("#np-spec").onclick = () => { const t = suTab(tabNuovo(true)), f = scanFiles(tabFiles(t).filter(x => x.vis))[0] || scanFiles(tabFiles(t))[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1, tab: t }))); };
+Q("#np-chrom").onclick = () => reveal(openWithUndo(addPanel("chrom", { tab: suTab(tabNuovo()) })));
+Q("#np-spec").onclick = () => { const t = suTab(tabNuovo(true)), f = scanFiles(tabFiles(t).filter(x => x.vis))[0] || scanFiles(tabFiles(t))[0]; reveal(openWithUndo(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1, tab: t }))); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
-Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(openWithUndo(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
+Q("#np-mrm").onclick = () => reveal(openWithUndo(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
@@ -601,7 +601,7 @@ ESC.registra({
       draw(p); uiSave();
       if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
     };
-    if (p.type === "spec") COMANDI.fai("spec.ruler", p, passo); else passo();   // one press = one undo step
+    if (p.type === "spec") COMMANDS.run("spec.ruler", p, passo); else passo();   // one press = one undo step
   },
 });
 document.addEventListener("keydown", e => {
@@ -675,5 +675,5 @@ function calcSearch(/** @type {HTMLElement} */ b, /** @type {string} */ v, /** @
 }
 Q("#calcin").oninput = calcRun;
 
-// the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)
-COMANDI.gestore("spec.annotation", { leggi: p => JSON.stringify(p.anns || []), applica: (p, snap) => { p.anns = JSON.parse(snap); } });
+// the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (commands.js)
+COMMANDS.handler("spec.annotation", { read: p => JSON.stringify(p.anns || []), apply: (p, snap) => { p.anns = JSON.parse(snap); } });

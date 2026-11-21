@@ -89,7 +89,7 @@ document.addEventListener("keydown", e => {
   const q = tabPanels().filter((/** @type {Pannello} */ x) => x.el).sort(LAYOUT.ordine)[Number(e.key) - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
-function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), tabPanels().length ? 0 : 520) + "px"; pairArrows(); }
+function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.ARRANGE) ARRANGE.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), tabPanels().length ? 0 : 520) + "px"; pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
 function pairArrows() {
   const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach((/** @type {Element} */ e) => e.remove());
@@ -169,22 +169,22 @@ function closePanel(/** @type {Pannello} */ p) {
   STATO.rimuovi(p, "close");
 }
 
-/** The X of a panel: it closes at once and «Removed · Undo» opens it again, in its place and with its integrations, zoom and settings (storia.js). @param {any} p */
-function chiudiPannello(p) {
-  const dati = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
-  const what = typeof p.title === "string" && p.title ? p.title : I18N.t("storia.pannello");
+/** The X of a panel: it closes at once and «Removed · Undo» opens it again, in its place and with its integrations, zoom and settings (history.js). @param {any} p */
+function closePanelWithUndo(p) {
+  const snapshot = JSON.stringify(panelRec(p)), tab = p.tab, rel = { link: p.link, src: p.src, dda: p.dda, dock: p.dock, duo: p.duo };
+  const what = typeof p.title === "string" && p.title ? p.title : I18N.t("history.panel");
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
   const vis0 = visNow();
   let cur = p;
   const chiudi = () => { closePanel(cur); if (!E.panels.length) untickAll(); after(); };
   chiudi();
-  if (!STORIA) return;
-  STORIA.tolto({ what, tab, dati, redo: chiudi, undo: () => {
+  if (!HISTORY) return;
+  HISTORY.removed({ what, tab, data: snapshot, redo: chiudi, undo: () => {
     visBack(vis0);
-    const sp = JSON.parse(dati); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
-    const q = riapriPannello(sp);
+    const sp = JSON.parse(snapshot); sp.y = (sp.y || 0) - 0.5;  // ahead of the panels that moved up into its place (relayout sorts by y)
+    const q = reopenPanel(sp);
     for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some((/** @type {Pannello} */ x) => x.id === rel[k]) ? rel[k] : null;
-    STORIA.segui(cur, q); cur = q; after(); ctl(q); redrawAll();
+    HISTORY.follow(cur, q); cur = q; after(); ctl(q); redrawAll();
   } });
 }
 
@@ -205,11 +205,11 @@ function closeAllPanels() {
     workClosedAll();
   };
   go();
-  if (!STORIA || !recs.length) return;
-  STORIA.tolto({ what: I18N.t("storia.pannelli"), dati: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
+  if (!HISTORY || !recs.length) return;
+  HISTORY.removed({ what: I18N.t("history.panels"), data: JSON.stringify(recs.map((/** @type {any[]} */ r) => r[1])), redo: go, undo: () => {
     visBack(vis0); workClosedAll(false);
     const made = /** @type {Map<number, Pannello>} */ (new Map());
-    recs.forEach((/** @type {[number, any, any]} */ [id, rec]) => made.set(id, riapriPannello(rec)));
+    recs.forEach((/** @type {[number, any, any]} */ [id, rec]) => made.set(id, reopenPanel(rec)));
     const now = (/** @type {number | null} */ id) => id == null ? null : made.get(id)?.id ?? null;
     recs.forEach((/** @type {[number, any, any]} */ [id, , rel]) => { const q = /** @type {any} */ (made.get(id)); for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = now(rel[k]); });
     relayout(); fitHost(); renderFileList(); renderNav(); syncWork(); uiSave(); made.forEach(q => ctl(q)); redrawAll();
@@ -354,15 +354,15 @@ function addPanel(type, o, after) {
   };
   fsB.onclick = () => p._setMax(!el.classList.contains("max"));
   hdMoreInit(p);
-  AFFIANCA.grip(p);
+  ARRANGE.grip(p);
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
-  const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMANDI.fai("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
+  const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMMANDS.run("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
   if (p.type === "spec") { if (window.XICBTN) XICBTN.wire(p); if (window.TABPICCHI) TABPICCHI.wire(p); }
-  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMANDI.fai("spec.display", p, () => { relB.classList.toggle("on", p.rel = !specRel(p)); }); draw(p); uiSave(); };
+  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMMANDS.run("spec.display", p, () => { relB.classList.toggle("on", p.rel = !specRel(p)); }); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
-  const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMANDI.fai("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
+  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushFields(p, "history.smooth"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
+  const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMMANDS.run("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
   if (dlB) dlB.onclick = (/** @type {MouseEvent} */ e) => {
@@ -396,8 +396,8 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = (/** @type {Event} */ e) => { p.intf = /** @type {HTMLSelectElement} */ (e.target).value; };
   }
   if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });  // under this chromatogram (xwc.js on a DAD)
-  el.querySelector(".x").onclick = () => chiudiPannello(p);
-  el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { COMANDI.fai("panel.rename", p, () => { p.title = v === ptitle(p.title) ? p.title : v; }); ctl(p); uiSave(); } };
+  el.querySelector(".x").onclick = () => closePanelWithUndo(p);
+  el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { COMMANDS.run("panel.rename", p, () => { p.title = v === ptitle(p.title) ? p.title : v; }); ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
 }
@@ -788,15 +788,15 @@ function ctl(/** @type {Pannello} */ p) {
       if (e.key !== "Escape" || !p._parOpen) return; e.stopPropagation();
       cpP?.querySelectorAll("input").forEach((/** @type {HTMLInputElement} */ i) => { i.value = i.defaultValue; }); parToggle(false); cpB.focus(); };
     window.ZRESET?.wire(p, c);
-    const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
+    const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMMANDS.run("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
     if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("pointerdown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach((/** @type {HTMLInputElement} */ x) => {
     const k = /** @type {string} */ (x.dataset.o);
     if (k === "fpop") x.onclick = (/** @type {MouseEvent} */ e) => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
-    else if (k === "gdelay") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
-    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMANDI.fai("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
-    else if (k === "pdaAlign") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
+    else if (k === "gdelay") x.onchange = () => { COMMANDS.run("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
+    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMMANDS.run("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
+    else if (k === "pdaAlign") x.onchange = () => { COMMANDS.run("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
     else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, x);  // xic-bordi.js: absolute m/z edges
     else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);  // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
@@ -804,7 +804,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, (/** @type {string} */ v, /** @type {string|undefined} */ g) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : g === "1" ? setFondo(p, v) : setSub(p, v)));
     else if (k === "cinfo") corrInfoWire(p, x);
-    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
+    else if (k === "snipw") x.onchange = () => { pushFields(p, "history.background"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
   window.CANALI?.wire(p, c);
@@ -889,7 +889,7 @@ function hdMoreInit(/** @type {Pannello} */ p) {
 /** @param {Pannello} p @param {number} mz @param {string} [label] @param {number | null} [w] */
 function addTrace(p, mz, label, w) {
   mz = rh(mz, w != null ? 2 : 1);  // (a window centre is half of two 0.1 values: two decimals, the edges stay at one) unit-resolution instrument: one decimal is all that means anything
-  COMANDI.fai("xic.traces", p, () => p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) }));
+  COMMANDS.run("xic.traces", p, () => p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) }));
   ctl(p); draw(p);
 }
 const numMz = (/** @type {string} */ t) => { const v = CAMPI.num(t); return v != null && isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
@@ -922,8 +922,8 @@ function xicDirect(mz, after, panel, over) {
   XIC_LAST = { mz };
   const tr = over || xicTraceFor(mz, panel);
   if (!(panel && E.panels.includes(panel))) window.XICBTN?.prefetch(tr);
-  if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => panel.traces.push(tr)); ctl(panel); draw(panel); reveal(panel); return panel; }
-  const np = apriAnnullabile(addPanel("xic", { traces: [tr] }));
+  if (panel && E.panels.includes(panel)) { COMMANDS.run("xic.traces", panel, () => panel.traces.push(tr)); ctl(panel); draw(panel); reveal(panel); return panel; }
+  const np = openWithUndo(addPanel("xic", { traces: [tr] }));
   if (after && E.panels.includes(after)) {
     np.el.classList.add("drag"); np.y = after.y + after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
     stackAfter(np, after); relayout(); fitHost();
@@ -1012,9 +1012,9 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
     let np;
-    if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
+    if (panel && E.panels.includes(panel)) { COMMANDS.run("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
     else {
-      np = apriAnnullabile(addPanel("xic", { traces, tab: suTab(nt) }));
+      np = openWithUndo(addPanel("xic", { traces, tab: suTab(nt) }));
       if (pre.after && E.panels.includes(pre.after)) {
         np.el.classList.add("drag"); np.y = pre.after.y + pre.after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
         stackAfter(np, pre.after); relayout(); fitHost();
@@ -1053,8 +1053,8 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {  // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
         p.k = +x.value; activeFile(+x.value); return;
       }
-      COMANDI.fai("panel.source", p, () => {  // one undo step: the choice with what it resets (measures, zoom, background)
-      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
+      COMMANDS.run("panel.source", p, () => {  // one undo step: the choice with what it resets (measures, zoom, background)
+      if (k === "bk" || k === "bg") pushFields(p, "history.blank"); else if (k === "mode") fondoOnStack(p, x.value);
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.hasAttribute("data-num") ? CAMPI.num(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && k === "k") p.kSet = true;  // the file chosen in the menu stays until another choice or a click on a trace of the TIC
@@ -1064,9 +1064,9 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       draw(p);
 }
 
-// the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
+// the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (commands.js)
 const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "channels", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi", "xw"];
-COMANDI.gestore("panel.source", {
-  leggi: (/** @type {Pannello} */ p) => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
-  applica: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
+COMMANDS.handler("panel.source", {
+  read: (/** @type {Pannello} */ p) => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
+  apply: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
 });

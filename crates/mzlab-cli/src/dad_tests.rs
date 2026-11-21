@@ -225,3 +225,83 @@ fn trace_csv_is_the_same_points_as_the_json_and_feeds_the_peak_commands() {
         assert_eq!(dad(&a).code, 2, "{a:?}");
     }
 }
+
+#[test]
+fn peaks_give_lambda_max_and_ions_and_say_which_offset_was_used() {
+    let f = example();
+    let o = dad(&["peaks", &f, "--top", "2"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.contains("dad: offset auto"), "{}", o.stderr);
+    let t = String::from_utf8(o.stdout).unwrap();
+    let v = parse(t.trim().as_bytes()).unwrap();
+    let peaks = v.get("peaks").unwrap().arr();
+    assert!(!peaks.is_empty(), "{t}");
+    for p in peaks {
+        for k in [
+            "rt_uv",
+            "height",
+            "lambda_max_nm",
+            "rt_ms",
+            "scan_rt",
+            "gap_min",
+        ] {
+            assert!(p.get(k).and_then(|x| x.f64()).is_some(), "{k}: {t}");
+        }
+        let ions = p.get("ions").unwrap().arr();
+        assert!(!ions.is_empty() && ions.len() <= 2);
+        let y: Vec<f64> = ions.iter().filter_map(|i| i.get("y")?.f64()).collect();
+        assert!(y.windows(2).all(|w| w[0] >= w[1]), "strongest first: {t}");
+        assert_eq!(ions[0].get("rel").unwrap().f64(), Some(100.0));
+    }
+    assert_eq!(
+        v.get("trace").unwrap().get("kind").unwrap().str(),
+        Some("twc")
+    );
+    // the CSV has a row per ion with the answer's own numbers; a given offset is `source: given` and is logged
+    let c = dad(&[
+        "peaks", &f, "--top", "2", "--offset", "0.1", "--format", "csv",
+    ]);
+    assert_eq!(c.code, 0, "{}", c.stderr);
+    assert!(c.stderr.contains("(given)"), "{}", c.stderr);
+    let csv = String::from_utf8(c.stdout).unwrap();
+    let mut rows = csv.lines();
+    assert_eq!(
+        rows.next(),
+        Some("peak,rt_uv_min,height_mau,lambda_max_nm,rt_ms_min,mz,intensity,rel_pct")
+    );
+    assert_eq!(rows.count(), peaks.len() * 2);
+}
+
+#[test]
+fn peaks_usage_errors_are_exit_2() {
+    let f = example();
+    for a in [
+        vec!["peaks", &f, "--top", "0"],
+        vec!["peaks", &f, "--top", "many"],
+        vec!["peaks", &f, "--offset", "soon"],
+        vec!["ms-at", &f, "--rt", "1", "--offset", "auto"],
+        vec!["peaks"],
+    ] {
+        assert_eq!(dad(&a).code, 2, "{a:?}");
+    }
+    assert_eq!(dad(&["peaks", "/nonexistent/x.mzML"]).code, 4);
+}
+
+#[test]
+fn a_peak_outside_the_ms_scans_is_kept_without_ions_and_says_why() {
+    let f = example();
+    let o = dad(&["peaks", &f, "--offset", "500"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let t = String::from_utf8(o.stdout).unwrap();
+    let v = parse(t.trim().as_bytes()).unwrap();
+    let peaks = v.get("peaks").unwrap().arr();
+    assert!(!peaks.is_empty());
+    for p in peaks {
+        assert_eq!(p.get("ions").unwrap().arr().len(), 0, "{t}");
+        assert_eq!(
+            p.get("warnings").unwrap().arr()[0].str(),
+            Some("ms_out_of_range")
+        );
+        assert!(p.get("scan_rt").unwrap().f64().is_none());
+    }
+}

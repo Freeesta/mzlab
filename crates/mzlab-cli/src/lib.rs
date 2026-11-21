@@ -24,6 +24,7 @@ mod convert_entries;
 mod convert_help;
 mod convert_report;
 mod dad_cmd;
+mod dad_ms;
 mod dad_msat;
 mod design_cmd;
 mod emit;
@@ -150,6 +151,7 @@ mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+mod flow_tablecmp;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
@@ -194,6 +196,9 @@ mod samples_cmd;
 mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
+mod table_compare_cmd;
+#[cfg(test)]
+mod table_compare_cmd_tests;
 mod trace_cmd;
 mod trace_xic;
 #[cfg(not(target_family = "wasm"))]

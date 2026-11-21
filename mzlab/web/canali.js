@@ -2,7 +2,7 @@
 "use strict";
 // Channels of the files (api/channels, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (group),
 // the tree selector of the chromatogram and MRM panels and the default channel of an experiment type. Only glue: every number comes from the engine.
-// Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP.
+// Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMMANDS, ctl, draw, uiSave, CAL, ESP.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -212,10 +212,10 @@
       const srm = tree.filter(isTr), cur = solo ? new Set() : new Set(ticked(p, tree));
       if (cur.has(group)) cur.delete(group); else cur.add(group);
       const pick = srm.filter(n => cur.has(n.group)).map(nodeKey);
-      if (pick.length) { COMANDI.fai("panel.source", p, () => { p.tr = pick.length === srm.length ? "" : pick; }); ctl(p); draw(p); uiSave(); }
+      if (pick.length) { COMMANDS.run("panel.source", p, () => { p.tr = pick.length === srm.length ? "" : pick; }); ctl(p); draw(p); uiSave(); }
       return;
     }
-    COMANDI.fai("panel.source", p, () => {
+    COMMANDS.run("panel.source", p, () => {
       const cur = new Set(isOther(p) ? [] : chosen(p)); if (cur.has(group)) cur.delete(group); else cur.add(group);
       const order = tree.map(n => n.group).filter(o => cur.has(o));
       if (order.length) setMs(p, order);
@@ -224,20 +224,20 @@
   }
   /** «All» of a transition / SIM picker: every channel is plotted @param {any} p */
   function pickAll(p) {
-    COMANDI.fai("panel.source", p, () => { p.tr = ""; });
+    COMMANDS.run("panel.source", p, () => { p.tr = ""; });
     ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-all")); if (b) b.focus();
   }
   /** «None»: no channel is plotted (p.tr = [], the chart says so); a click on a channel then starts again from it @param {any} p */
   function pickNone(p) {
-    COMANDI.fai("panel.source", p, () => { p.tr = []; });
+    COMMANDS.run("panel.source", p, () => { p.tr = []; });
     ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-none")); if (b) b.focus();
   }
   /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
   function pickKind(p, v) {
     if (ESP.mrm(p) || ms2Chrom(p)) { p._canOpen = false; ctl(p); return void loadScript("canali-uv.js").then(() => CANALIUV(p, v)); }
-    COMANDI.fai("panel.source", p, () => { p.kind = v; p.channels = undefined; });
+    COMMANDS.run("panel.source", p, () => { p.kind = v; p.channels = undefined; });
     p._canOpen = false; ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-o="kind"]')); if (b) b.focus();
   }

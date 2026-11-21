@@ -1,0 +1,10 @@
+uscita = "wasm-feat/flowcompare"
+pacchetto = "mzlab-feat-wasm"
+feature = "flow_compare"
+senza_default = true
+chiavi = { flowcompare = 29 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 249856
+misura = 225237
+nota = "table.compare of the Flow (each feature against the reference and the blank), loaded only by its executor; a module of its own so that flowstat does not grow (inside it: 331239 -> 398066 B, +20 %); cap = measurement x 1.10 rounded to 4 KiB; measured locally with the CI pipeline (wasm-bindgen, wasm_opt.sh @motore), the CI step rewrites it"

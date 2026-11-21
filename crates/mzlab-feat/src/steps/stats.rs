@@ -1,5 +1,5 @@
-//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`. They run natively and in the `.wasm` `flowstat`
-//! (`flow_stat`), never in the `.wasm` `table`. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
+//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`, `table.compare`. They run natively and in the `.wasm` `flowstat` (`flow_stat`;
+//! `table.compare` in `flowcompare`, `flow_compare`), never in the `.wasm` `table`. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
 
 use crate::plausible::Limits;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
@@ -9,6 +9,14 @@ fn flowstat() -> RunsIn {
         wasm: Some("flowstat"),
         wasm_ceiling_bytes: Some(super::FEAT_CEILING),
         native: true,
+    }
+}
+
+/// `table.compare` has a `.wasm` of its own: the shared name parser and the reference engine would take `flowstat` past its growth rule.
+fn flowcompare() -> RunsIn {
+    RunsIn {
+        wasm: Some("flowcompare"),
+        ..flowstat()
     }
 }
 
@@ -122,6 +130,40 @@ pub(super) fn kmd() -> Step {
             "table.kmd",
             "Kendrick mass defect",
             "KM and KMD of every ion and the series of ions that share the KMD, with their members, steps and retention trend. A series is a candidate with its evidence, never an identification.",
+        )
+    }
+}
+
+/// `table.compare`: every feature against the reference columns and the blank columns, to flag candidate transformation products (`statcmp::compare`).
+/// No parameter has a default here: one that is not given takes the engine's default and says so in the `choices` of `compare/1`, as the CLI's does.
+pub(super) fn compare() -> Step {
+    let params = vec![
+        Param::text("ref", "Reference columns")
+            .doc("Comma list of case-insensitive globs over the file names (t0*), or role:reference, role:blank, time:0 when the samples file is wired"),
+        Param::text("blank", "Blank columns")
+            .doc("Globs or role:/time: selectors for the blank files; a column cannot also be a reference column"),
+        Param::choice("quantity", "Quantity", &["area", "height"])
+            .doc("area (default) or height; a CSV table carries areas only"),
+        Param::number("factor", "Factor").min(0.0).doc("Ratio a feature must reach against the reference and the blank (default 3)"),
+        Param::number("pseudocount", "Pseudocount")
+            .min(0.0)
+            .doc("Added to both sides of every ratio; default 3 x the median of the positive blank values"),
+        Param::number("floor", "Pseudocount floor").min(0.0).advanced().doc("Smallest estimated pseudocount (default 1000)"),
+        Param::number("rho_min", "Smallest rho").min(0.0).max(1.0).advanced().doc("Spearman rho over time that makes a rise or a fall (default 0.5)"),
+    ];
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Feature table"),
+            Port { optional: true, ..Port::new("samples", DataType::Samples, "Roles and times of the files") },
+        ],
+        outs: vec![Port::new("report", DataType::Report, "Each feature against the reference and the blank (compare/1)")],
+        params,
+        runs_in: flowcompare(),
+        errors: vec!["error.badStatInput", "err.compare.input", "err.compare.param", "err.compare.selector", "err.compare.overlap", "err.compare.samples", "err.compare.quantity", "err.stat.ref.notreated"],
+        ..Step::core(
+            "table.compare",
+            "Compare to reference and blank",
+            "Each feature against the reference (t0) and the blank columns: levels, ratios, log2 fold changes, shape over time and a class (candidate, blank_artefact, decreasing, unchanged, no_signal) that only sorts and filters; every row is kept.",
         )
     }
 }

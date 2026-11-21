@@ -70,6 +70,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--max-shift", "farthest a followed window moves, min"),
     ("--polarity", "+ or -"),
     ("--mz", "m/z"),
+    ("--sweep", "LO:HI:STEP, = --mz list; --tol default STEP/2"),
     ("--ppm", "ppm"),
     ("--rt-tol", "RT window, min"),
     ("--inspection", "inspection/1, or -"),
@@ -79,6 +80,9 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--smooth", "3 or 5 points"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
+    ("--minus", "blank file to subtract"),
+    ("--minus-sample", "sample of the blank"),
+    ("--minus-rt", "blank window, min"),
     ("--format", "output format (values in the usage line)"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
@@ -91,6 +95,11 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--replay", "recordings"),
     ("--against", "sources to compare"),
     ("--params", "Pipeline numbers"),
+    ("--ref", "reference columns"),
+    ("--blank", "blank columns"),
+    ("--quantity", "area or height"),
+    ("--factor", "ratio threshold"),
+    ("--pseudocount", "auto or a number"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

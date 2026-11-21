@@ -131,6 +131,13 @@ impl<R: ReadAt> Routes<R> {
     /// `/api/xic?mz&tol&level[&filt][&smooth=3|5]`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`), then smoothed
     /// by `smooth` points (`peak1d::smooth`); with neither it is not this route's.
     pub(crate) fn xic_route(&mut self, q: &Query) -> Result<Option<String>> {
+        if let Some(sp) = q.some("sweep") {
+            return if q.some("filt").is_some() {
+                Ok(None)
+            } else {
+                self.sweep_route(sp, q)
+            };
+        }
         let Some(mz) = q.num("mz")? else {
             return Ok(None);
         };

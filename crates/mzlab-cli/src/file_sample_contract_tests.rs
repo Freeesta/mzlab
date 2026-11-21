@@ -31,7 +31,7 @@ fn is_error(o: &Outcome, code: u8, key: &str) -> Value {
 
 fn mzml() -> String {
     format!(
-        "{}/../../tests/data/gruppi/N2_t10_r1.mzML",
+        "{}/../../tests/data/groups/N2_t10_r1.mzML",
         env!("CARGO_MANIFEST_DIR")
     )
 }

@@ -149,7 +149,7 @@ try:
             wait_for_js(pg, f"performance.now() > {t0} + 3000", 10000)      # the second removal starts halfway through the 6 s of the first
             pg.evaluate("removeFile(E.files.find(f => f.file === 'M_Blank_1.mzML' && !f.gone))")
             wait_for_js(pg, f"!{ROW30}", 30000)          # the first is freed while the second still waits for its undo
-            pg.evaluate("STORIA.annulla()"); ready(pg)
+            pg.evaluate("HISTORY.undo()"); ready(pg)
             assert pg.evaluate("E.files.some(f => f.file === 'M_Blank_1.mzML' && !f.gone) && E.files.every((f, k) => f.k === k)"), pg.evaluate("E.files.map(f => f.k + ':' + f.file + (f.gone ? ':gone' : ''))")
             pg.evaluate("soloFile(E.files.find(f => f.file === 'M_Blank_1.mzML'))"); ready(pg)
             pg.set_input_files("#pick", [str(F[1])]); wait_for_js(pg, f"!!{T30}", 60000); loaded(pg); ready(pg)

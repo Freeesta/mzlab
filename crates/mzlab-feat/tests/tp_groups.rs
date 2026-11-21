@@ -1,4 +1,4 @@
-//! The conditions in the table of the products (`tptab/1` with `gruppi/1`) and in the network (`arcs_in`): synthetic data only.
+//! The conditions in the table of the products (`tptab/1` with `groups/1`) and in the network (`arcs_in`): synthetic data only.
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::samples::{self, number_replicates};
@@ -110,8 +110,8 @@ fn six_conditions_give_groups_with_the_formulas_and_the_presence_of_the_truth() 
     let s = samples_of(&cs);
     let out = table_json_cond(&t, &s, Some(&[0, 1, 2, 3]), Some((&cs, &infos()))).unwrap();
     let v = parse(out.as_bytes()).unwrap();
-    let g = v.get("gruppi").expect("gruppi/1 with six conditions");
-    assert_eq!(g.get("format").and_then(|x| x.str()), Some("gruppi"));
+    let g = v.get("groups").expect("groups/1 with six conditions");
+    assert_eq!(g.get("format").and_then(|x| x.str()), Some("groups"));
     assert_eq!(g.get("version").and_then(|x| x.f64()), Some(1.0));
     let rows = g.get("rows").unwrap().arr();
     let present: Vec<Vec<&str>> = rows.iter().map(|r| texts(r, "present_in")).collect();
@@ -192,7 +192,7 @@ fn with_one_condition_the_text_is_the_one_without_conditions() {
         plain,
         table_json_cond(&t, &s, Some(&[0, 1, 2, 3]), Some((&cs, &[]))).unwrap()
     );
-    assert!(!plain.contains("gruppi"));
+    assert!(!plain.contains("groups"));
 }
 
 /// blank, t0 and five times for each of the conditions A and B.

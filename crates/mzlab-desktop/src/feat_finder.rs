@@ -282,7 +282,7 @@ impl State {
             _ => return text("null".to_string()),
         };
         let s = |k: &str| p[k].as_str().unwrap_or("");
-        // with `samples_doc` (the `samples/1` of the files) the answer carries `gruppi` for two or more conditions; `infos` = the rows' best hypothesis
+        // with `samples_doc` (the `samples/1` of the files) the answer carries `groups` for two or more conditions; `infos` = the rows' best hypothesis
         if !s("samples_doc").is_empty() {
             return text(mzlab_ops::run::table::core::tp_table_cond_json(
                 &mut Slice(table),

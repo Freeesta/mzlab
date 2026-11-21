@@ -26,7 +26,7 @@
   "corr.file.short": "Short label of the Correction button when subtraction of a file is active.",
   "chk.precursorsN": "{list} = precursor m/z values separated by commas.",
   "chk.reachesTo": "{t} = last RT of the file in minutes.",
-  "aff.where": "Announcement for screen readers after a move; {n} = panel number, {r} = row, {t} = total rows, {i} = position in the row, {m} = panels in the row.",
+  "arrange.where": "Announcement for screen readers after a move; {n} = panel number, {r} = row, {t} = total rows, {i} = position in the row, {m} = panels in the row.",
   "disp.xmz": "Ion m/z field of a high-resolution XIC in the display options; {input} = the numeric field.",
   "disp.xtol": "Interval (half-width) field of a high-resolution XIC; {input} = the numeric field.",
   "disp.xunit": "Choice of the interval unit of an XIC (ppm or Da); {select} = the menu.",

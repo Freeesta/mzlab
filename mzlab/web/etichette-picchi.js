@@ -138,7 +138,7 @@ function drawUv(p, g, c) {
 }
 
 /** @param {any} p */
-const toggle = p => { COMANDI.fai("spec.display", p, () => { p.etpk = !on(p, p._a && p._a.sr ? p._a.sr.length : 1); }); drawSoon(p); uiSave(); };
+const toggle = p => { COMMANDS.run("spec.display", p, () => { p.etpk = !on(p, p._a && p._a.sr ? p._a.sr.length : 1); }); drawSoon(p); uiSave(); };
 
 /** The labels of trace `s` shown now (none when off, not ready or not the labelled trace): [{ rt, apex, text }] for the data table. @param {any} p @param {any} s */
 function rows(p, s) {

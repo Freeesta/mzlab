@@ -161,8 +161,8 @@ try:
             bad = []; SP = "E.panels.find(q => q.type === 'spec' && q.el.querySelector('[data-a=par]'))"
             for sel, opener in (("#colpop", "colorFile(E.files[0], { clientX: 300, clientY: 200 })"), ("#fpop", "fileMenu(document.querySelector('.pnl .hd button'))"),
                                 ("#uipset", "uipOpen(document.getElementById('np-set'))"), (".pnl > .sp-pop", f"(q => specParams(q, q.el.querySelector('[data-a=par]')))({SP})"),
-                                (".aff-menu", "(q => affOpenMenu(q, q._grip))(E.panels.find(q => q._grip))")):
-                shut = f"affCloseMenu(false); document.querySelector({sel!r})?.remove()"          # the menu of «side by side» keeps a reference: closed by its own function
+                                (".arrange-menu", "(q => arrOpenMenu(q, q._grip))(E.panels.find(q => q._grip))")):
+                shut = f"arrCloseMenu(false); document.querySelector({sel!r})?.remove()"          # the menu of «side by side» keeps a reference: closed by its own function
                 quick = pg.evaluate(f"(() => {{ {opener}; {TAP}; const o = !!document.querySelector({sel!r}); {shut}; return o; }})()")
                 kept = pg.evaluate(f"(() => {{ document.body.addEventListener('pointerdown', () => {opener}, {{ once: true }}); {TAP}; const o = !!document.querySelector({sel!r}); {shut}; return o; }})()")
                 if quick: bad.append(f"{sel}: a tap right after the opening leaves it open")
