@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-FILES = ["index.html", "calc-qui.js", "calc-qui-html.js", "calc-qui-ui.js", "calc-qui-pannello.js", "lang/en/calcqui.js"]
+FILES = ["../../docs/agenti/data-3200.md", "index.html", "calc-qui.js", "calc-qui-html.js", "calc-qui-ui.js", "calc-qui-pannello.js", "lang/en/calcqui.js"]
 OLD = re.compile(r"\bgruppi\b|[\"'](liste|perdite|addotti)[\"']|cq\.g\.(liste|perdite|addotti)|\bfunction (liste|perdite|addotti)\b|\blisteRows\b")
 
 
