@@ -88,14 +88,14 @@ const CALCQUIG = (() => {
   const DIFF_REF = 400;                                     // m/z the adduct engine uses for the ppm window of a difference
   const { diffDa, ppmFor, polOk } = CALCQUI;
   /** Known ions of the lists (contaminants, Keller, suspects) at `v` as an ion m/z. */
-  function liste(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
+  function lists(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
     if (!dep.idx) return null;
     const items = o.unit === "ppm" ? dep.find(dep.idx, o.pol, v, o.tol, false) : dep.findNominal(dep.idx, o.pol, v, o.tol);
     const near = items.length ? Math.min(...items.map((/** @type {any} */ x) => (o.unit === "ppm" ? Math.abs(x.err) : Math.abs(x.diffDa)) / o.tol)) : 1;
-    return { id: "liste", n: items.length, near, items };
+    return { id: "lists", n: items.length, near, items };
   }
   /** Single losses, pairs and repetitions that explain `v` as a mass difference. */
-  function perdite(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
+  function losses(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
     const w = diffDa(o, v), c = dep.lossCombos(v, dep.mass, w, dep.losses.filter((/** @type {any} */ l) => !l.pol || polOk(o.pol, l.pol)));
     const row = (/** @type {string} */ kind, /** @type {any[]} */ ls, /** @type {number} */ n) => {
       const m = ls.reduce((a, l) => a + dep.mass(l.f), 0) * n;
@@ -103,17 +103,17 @@ const CALCQUIG = (() => {
     };
     const items = [...c.single.map((/** @type {any[]} */ x) => row("single", x, 1)), ...c.pairs.map((/** @type {any[]} */ p) => row("pair", p, 1)), ...c.reps.map((/** @type {any} */ r) => row("rep", [r.l], r.n))]
       .sort((a, b) => Math.abs(a.err) - Math.abs(b.err));
-    return { id: "perdite", n: items.length, near: items.length ? Math.abs(items[0].err) / w : 1, items };
+    return { id: "losses", n: items.length, near: items.length ? Math.abs(items[0].err) / w : 1, items };
   }
   /** The adducts: for a number its implied neutral masses (the number taken as an observed m/z), for a formula its table, for nothing (`a.catalogue`) the standard list with its mass shifts. */
-  async function addotti(/** @type {{ kind: string, v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
+  async function adducts(/** @type {{ kind: string, v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
     const isNum = a.kind === "num", obs = isNum ? a.v : 0;
     const ref = obs || DIFF_REF, f = isNum || a.kind === "none" ? "" : a.text;
     if (!f && !obs && !a.catalogue) return null;
     const tab = await dep.table(f, obs ? String(obs) : "", String(ppmFor(o, ref)), "");
     const rows = tab.rows.filter((/** @type {any} */ r) => polOk(o.pol, r.pol));
     const hit = tab.best != null && polOk(o.pol, tab.rows[tab.best].pol) ? tab.rows[tab.best] : null;
-    return { id: "addotti", n: rows.length, near: hit ? Math.abs(hit.ppm || 0) * (o.unit === "ppm" ? 1 : ref * 1e-6) / o.tol : 2, items: rows, tab, formula: !!f, obs: false, catalogue: !f && !obs };
+    return { id: "adducts", n: rows.length, near: hit ? Math.abs(hit.ppm || 0) * (o.unit === "ppm" ? 1 : ref * 1e-6) / o.tol : 2, items: rows, tab, formula: !!f, obs: false, catalogue: !f && !obs };
   }
   /** The pairs of adducts whose difference is `v` (a number), or the characteristic differences (otherwise). */
   async function differenze(/** @type {{ kind: string, v: number }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
@@ -126,14 +126,14 @@ const CALCQUIG = (() => {
 
   /** The groups for the argument, tightest match first; empty groups are dropped (the catalogue of differences stays for a formula or an empty field).
    * dep: { idx, find, findNominal, table, mass, losses, lossCombos }  @returns {Promise<CqGroup[]>} */
-  async function gruppi(/** @type {{ kind: "none" | "num" | "formula", v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
+  async function groups(/** @type {{ kind: "none" | "num" | "formula", v: number, text: string, catalogue?: boolean }} */ a, /** @type {any} */ o, /** @type {any} */ dep) {
     /** @type {any[]} */ const gs = [];
     const isNum = a.kind === "num" && a.v > 0;
-    if (isNum) gs.push(liste(a.v, o, dep), perdite(a.v, o, dep));
-    const [ad, df] = await Promise.all([addotti(a, o, dep), differenze(a, o, dep)]);
+    if (isNum) gs.push(lists(a.v, o, dep), losses(a.v, o, dep));
+    const [ad, df] = await Promise.all([adducts(a, o, dep), differenze(a, o, dep)]);
     gs.push(ad, df);
     return gs.filter(g => g && (g.n > 0 || g.id === "diff" && g.catalogue)).sort((x, y) => x.near - y.near);
   }
-  return Object.assign(CALCQUI, { gruppi, liste, perdite });
+  return Object.assign(CALCQUI, { groups, lists, losses });
 })();
 if (typeof module !== "undefined") module.exports = CALCQUI;

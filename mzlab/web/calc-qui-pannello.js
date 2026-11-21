@@ -22,7 +22,7 @@
     if (opt.q != null) q.value = String(opt.q);
     const view = CALCQUI.mount({
       ctl: /** @type {HTMLElement} */ (root.querySelector(`#${id}-ctl`)), out: /** @type {HTMLElement} */ (root.querySelector(`#${id}-out`)), idp: id, quiet: true,
-      groups: ["addotti", "diff"], catalogue: true, arg: () => ({ text: q.value, ans: 0 }),
+      groups: ["adducts", "diff"], catalogue: true, arg: () => ({ text: q.value, ans: 0 }),
     });
     const upd = () => { loss.hidden = !numberOf(q.value); CALCQUI.later(view); };
     q.addEventListener("input", upd);
@@ -45,7 +45,7 @@
     if (!q || !ad || !ls || !ctl) return null;
     const arg = () => ({ text: q.value, ans: typeof CALC !== "undefined" ? CALC.ans : 0 });
     const views = [
-      CALCQUI.mount({ ctl, out: ad, idp: "al", quiet: true, flat: true, groups: ["addotti", "diff"], catalogue: true, arg }),
+      CALCQUI.mount({ ctl, out: ad, idp: "al", quiet: true, flat: true, groups: ["adducts", "diff"], catalogue: true, arg }),
     ];
     const losses = window.QQQRef ? QQQRef.mountLosses(ls) : null;
     page = { q, views, losses };
