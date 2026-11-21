@@ -75,7 +75,7 @@ fn a_row_is_rejected_by_the_first_rule_it_fails() {
     assert_eq!(v.rows, vec![0, 1]);
     assert_eq!(v.area(&t, 1, 0), None, "the blank has no peak there");
     assert!(v.area(&t, 0, 2).is_some());
-    assert!(v.counts_json().contains("\"tenute\":2") && v.counts_json().starts_with("{\"righe\":4"));
+    assert!(v.counts_json().contains("\"kept\":2") && v.counts_json().starts_with("{\"rows\":4"));
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn filled_cells_count_as_measured_and_the_spec_round_trips() {
     let other = view::build(&t, &s, &Method::Sum, &rules).unwrap();
     assert_ne!(v.digest(&t), other.digest(&t));
     assert!(parse(v.spec_json().as_bytes()).is_ok());
-    assert!(view::from_spec(&t, &s, br#"{"filtra":[{"regola":"inventata"}]}"#).is_err());
+    assert!(view::from_spec(&t, &s, br#"{"filter":[{"rule":"inventata"}]}"#).is_err());
     assert_eq!(view::from_spec(&t, &s, b"{}").unwrap().rows.len(), 4);
 }
 
@@ -124,11 +124,11 @@ fn qc_and_report_hold_only_numbers() {
     assert!(sd > 0.0 && sd < 0.1);
     let doc = report::to_json(&t, &s, Some(&v), &"ab".repeat(32));
     let d = parse(doc.as_bytes()).unwrap();
-    assert_eq!(d.get("schema").and_then(|x| x.str()), Some("report/1"));
-    assert_eq!(d.get("righe").and_then(|x| x.f64()), Some(4.0));
-    assert_eq!(d.get("celle").unwrap().get("rilevate").and_then(|x| x.f64()), Some(11.0));
+    assert_eq!(d.get("schema").and_then(|x| x.str()), Some("report/2"));
+    assert_eq!(d.get("rows").and_then(|x| x.f64()), Some(4.0));
+    assert_eq!(d.get("cells").unwrap().get("detected").and_then(|x| x.f64()), Some(11.0));
     assert_eq!(doc, report::to_json(&t, &s, Some(&v), &"ab".repeat(32)));
-    assert!(report::to_json(&t, &s, None, "x").contains("\"vista\":null"));
+    assert!(report::to_json(&t, &s, None, "x").contains("\"view\":null"));
     assert!(report::header_lines(&t, &s, Some(&v), "x").iter().all(|l| l.starts_with("# ")));
 }
 
@@ -159,11 +159,11 @@ fn qc_json_has_the_blank_share_the_rejections_and_no_isotope_ratio_without_summa
     assert!(qc::isotope_ratio(&t, None).is_none());
     let v = view::build(&t, &s, &Method::None, &[Rule::MinDetected(2)]).unwrap();
     let j = parse(qc::to_json(&t, &s, Some(&v)).as_bytes()).unwrap();
-    assert_eq!(j.get("bianchi").and_then(|b| b.get("righe_con_picco")).and_then(|x| x.f64()), Some(qc::blank_share(&t, &s, Some(&v)).2 as f64));
-    let sc = j.get("scartate").unwrap().arr();
+    assert_eq!(j.get("blanks").and_then(|b| b.get("rows_with_peak")).and_then(|x| x.f64()), Some(qc::blank_share(&t, &s, Some(&v)).2 as f64));
+    let sc = j.get("discarded").unwrap().arr();
     assert_eq!(sc.len(), 1);
-    assert_eq!(sc[0].get("regola").and_then(|x| x.str()), Some("min_rilevati"));
-    assert!(j.get("m1_su_m").unwrap().is_null());
+    assert_eq!(sc[0].get("rule").and_then(|x| x.str()), Some("min_detected"));
+    assert!(j.get("m1_over_m").unwrap().is_null());
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable() {
     s[2].time_min = Some(10.0);
     s[3].time_min = Some(10.0);
     // row 1 areas 2e6 and 4e6: mean 3e6, SD n-1 = 1.414e6 (0.4714), SD n = 1e6 (0.3333); the median row is row 2 (5e5, 9e5)
-    let spec = |extra: &str| format!("{{\"filtra\":[]{extra}}}");
+    let spec = |extra: &str| format!("{{\"filter\":[]{extra}}}");
     let new = view::from_spec(&t, &s, spec("").as_bytes()).unwrap();
     let old = view::from_spec(&t, &s, spec(",\"cv_ddof\":0").as_bytes()).unwrap();
     let (gn, go) = (qc::groups(&t, &s, Some(&new)), qc::groups(&t, &s, Some(&old)));
@@ -187,8 +187,8 @@ fn replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable() {
 fn cv_ddof_round_trips_changes_the_digest_is_written_in_qc_and_rejects_other_values() {
     use mzlab_feat::qc;
     let (t, s) = (table(), samples());
-    let new = view::from_spec(&t, &s, b"{\"filtra\":[]}").unwrap();
-    let old = view::from_spec(&t, &s, b"{\"filtra\":[],\"cv_ddof\":0}").unwrap();
+    let new = view::from_spec(&t, &s, b"{\"filter\":[]}").unwrap();
+    let old = view::from_spec(&t, &s, b"{\"filter\":[],\"cv_ddof\":0}").unwrap();
     assert!(!new.spec_json().contains("cv_ddof"), "default keeps the spec and the digest of existing views");
     assert!(old.spec_json().contains("\"cv_ddof\":0"));
     let back = view::from_spec(&t, &s, old.spec_json().as_bytes()).unwrap();
@@ -198,7 +198,17 @@ fn cv_ddof_round_trips_changes_the_digest_is_written_in_qc_and_rejects_other_val
     let q = |v: Option<&view::View>| parse(qc::to_json(&t, &s, v).as_bytes()).unwrap().get("cv_ddof").and_then(|x| x.f64());
     assert_eq!((q(None), q(Some(&new)), q(Some(&old))), (Some(1.0), Some(1.0), Some(0.0)));
     for bad in ["2", "-1", "0.5", "true", "\"0\""] {
-        let spec = format!("{{\"filtra\":[],\"cv_ddof\":{bad}}}");
+        let spec = format!("{{\"filter\":[],\"cv_ddof\":{bad}}}");
         assert!(view::from_spec(&t, &s, spec.as_bytes()).is_err(), "{bad}");
+    }
+}
+
+/// A spec saved with the Italian keys is refused with a clear error; its filters are never dropped silently.
+#[test]
+fn a_spec_with_the_old_italian_keys_is_refused() {
+    let (t, s) = (table(), samples());
+    for old in [r#"{"filtra":[]}"#, r#"{"normalizza":{"metodo":"nessuna"}}"#, r#"{"etichette":{}}"#] {
+        let e = view::from_spec(&t, &s, old.as_bytes()).unwrap_err();
+        assert_eq!(e.key, "error.viewSpecOld", "{old}");
     }
 }

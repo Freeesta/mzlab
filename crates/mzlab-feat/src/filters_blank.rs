@@ -142,7 +142,7 @@ pub fn passes(
 }
 
 /// Per-file labels of the series (batch, matrix, series, group) that the matched blank rule and the replicate rule read; empty when no rule needs them. They travel in
-/// the spec of the view (`etichette`), so the digest covers them.
+/// the spec of the view (`labels`), so the digest covers them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Labels {
     pub batch: Vec<String>,
@@ -175,10 +175,10 @@ impl Labels {
         let mut j = Out::default();
         j.raw("{");
         for (i, (key, list)) in [
-            ("lotto", &self.batch),
-            ("matrice", &self.matrix),
-            ("serie", &self.series),
-            ("gruppo", &self.group),
+            ("batch", &self.batch),
+            ("matrix", &self.matrix),
+            ("series", &self.series),
+            ("group", &self.group),
         ]
         .into_iter()
         .enumerate()
@@ -193,7 +193,7 @@ impl Labels {
         j.0
     }
 
-    /// The `etichette` object; every list is empty or has one entry per file.
+    /// The `labels` object; every list is empty or has one entry per file.
     pub fn from_json(v: &Value, n_files: usize) -> Result<Labels> {
         let list = |k: &str| -> Result<Vec<String>> {
             let Some(a) = v.get(k) else {
@@ -210,10 +210,10 @@ impl Labels {
             Ok(out)
         };
         Ok(Labels {
-            batch: list("lotto")?,
-            matrix: list("matrice")?,
-            series: list("serie")?,
-            group: list("gruppo")?,
+            batch: list("batch")?,
+            matrix: list("matrix")?,
+            series: list("series")?,
+            group: list("group")?,
         })
     }
 }
@@ -371,16 +371,16 @@ pub fn qc_cv_percent(t: &Aligned, row: usize, qc: &[usize]) -> Option<f64> {
 
 const QUANTITY: [(&str, Quantity); 3] = [
     ("area", Quantity::Area),
-    ("altezza", Quantity::Height),
-    ("area_norm", Quantity::NormArea),
+    ("height", Quantity::Height),
+    ("norm_area", Quantity::NormArea),
 ];
-const STAT: [(&str, Stat); 2] = [("media", Stat::Mean), ("massimo", Stat::Max)];
+const STAT: [(&str, Stat); 2] = [("mean", Stat::Mean), ("max", Stat::Max)];
 const MATCHING: [(&str, Matching); 3] = [
-    ("tutti", Matching::All),
-    ("lotto", Matching::Batch),
-    ("matrice", Matching::Matrix),
+    ("all", Matching::All),
+    ("batch", Matching::Batch),
+    ("matrix", Matching::Matrix),
 ];
-const SCOPE: [(&str, Scope); 2] = [("max", Scope::MaxFeature), ("ciascuna", Scope::EachFeature)];
+const SCOPE: [(&str, Scope); 2] = [("max", Scope::MaxFeature), ("each", Scope::EachFeature)];
 
 fn name<T: PartialEq + Copy>(table: &[(&'static str, T)], x: T) -> &'static str {
     table.iter().find(|(_, v)| *v == x).map_or("", |(n, _)| n)
@@ -397,27 +397,27 @@ fn pick<T: Copy>(table: &[(&str, T)], v: &Value, key: &str, default: T) -> Resul
     }
 }
 
-/// The fields of the options after `valore`, all of them.
+/// The fields of the options after `value`, all of them.
 pub fn write_json(j: &mut Out, o: &BlankOpts) {
-    j.raw(",\"grandezza\":")
+    j.raw(",\"quantity\":")
         .str(name(&QUANTITY, o.quantity))
-        .raw(",\"statistica\":")
+        .raw(",\"statistic\":")
         .str(name(&STAT, o.stat))
-        .raw(",\"ambito\":")
+        .raw(",\"scope\":")
         .str(name(&SCOPE, o.scope));
     j.raw(if o.subtract {
-        ",\"sottrai\":true"
+        ",\"subtract\":true"
     } else {
-        ",\"sottrai\":false"
+        ",\"subtract\":false"
     });
     if o.matching != Matching::All {
-        j.raw(",\"abbinamento\":").str(name(&MATCHING, o.matching));
+        j.raw(",\"matching\":").str(name(&MATCHING, o.matching));
     }
     if o.keep_istd {
-        j.raw(",\"istd_esente\":true");
+        j.raw(",\"istd_exempt\":true");
     }
     if o.detected_only {
-        j.raw(",\"celle_bianco\":\"rilevate\"");
+        j.raw(",\"blank_cells\":\"detected\"");
     }
 }
 
@@ -425,20 +425,20 @@ pub fn write_json(j: &mut Out, o: &BlankOpts) {
 pub fn read_json(v: &Value) -> Result<BlankOpts> {
     let d = BlankOpts::default();
     Ok(BlankOpts {
-        quantity: pick(&QUANTITY, v, "grandezza", d.quantity)?,
-        stat: pick(&STAT, v, "statistica", d.stat)?,
-        scope: pick(&SCOPE, v, "ambito", d.scope)?,
+        quantity: pick(&QUANTITY, v, "quantity", d.quantity)?,
+        stat: pick(&STAT, v, "statistic", d.stat)?,
+        scope: pick(&SCOPE, v, "scope", d.scope)?,
         subtract: v
-            .get("sottrai")
+            .get("subtract")
             .map_or(Ok(false), |b| b.bool().ok_or_else(bad))?,
-        matching: pick(&MATCHING, v, "abbinamento", d.matching)?,
+        matching: pick(&MATCHING, v, "matching", d.matching)?,
         keep_istd: v
-            .get("istd_esente")
+            .get("istd_exempt")
             .map_or(Ok(false), |b| b.bool().ok_or_else(bad))?,
-        detected_only: match v.get("celle_bianco").map(Value::str) {
+        detected_only: match v.get("blank_cells").map(Value::str) {
             None => false,
-            Some(Some("rilevate")) => true,
-            Some(Some("tutte")) => false,
+            Some(Some("detected")) => true,
+            Some(Some("all")) => false,
             Some(_) => return Err(bad()),
         },
     })

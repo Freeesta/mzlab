@@ -35,7 +35,7 @@ fn the_report_is_stable_and_follows_the_inputs() {
     assert_eq!(a, crate::flow_report::report(&dir.join("work")).unwrap());
     assert_eq!(sha_of(&a, "q.mgf"), sha_of(&report(&dir), "q.mgf"));
     let v = parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/1"));
+    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/2"));
     assert_eq!(
         v.get("steps").unwrap().arr()[0]
             .get("status")
@@ -94,7 +94,7 @@ fn a_report_ends_with_exactly_one_newline() {
     let o = run(&["flow", "report", w]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let t = String::from_utf8(o.stdout).unwrap();
-    assert!(t.starts_with("{\"schema\":\"run-report/1\""), "{t}");
+    assert!(t.starts_with("{\"schema\":\"run-report/2\""), "{t}");
     assert!(t.ends_with('\n') && !t.ends_with("\n\n"));
     let file = dir.join("r.json");
     let o = run(&["flow", "report", w, "--out", file.to_str().unwrap()]);
@@ -104,4 +104,14 @@ fn a_report_ends_with_exactly_one_newline() {
     let bad = run(&["flow", "report", w, "--out", "/nonexistent/dir/r.json"]);
     assert_eq!(bad.code, 6, "{}", bad.stderr);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_run_folder_with_a_table_report_of_the_old_format_is_refused() {
+    let dir = crate::flow_ident_tests::fixture("corsa_old");
+    report(&dir);
+    let work = dir.join("work");
+    std::fs::write(work.join("t.json"), br#"{"schema":"report/1","righe":4}"#).unwrap();
+    let e = crate::flow_report::report(&work).unwrap_err();
+    assert_eq!(e.key, "err.flow.format.reportOld");
 }

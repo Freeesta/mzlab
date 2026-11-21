@@ -96,7 +96,7 @@ embed!(
     "reflist-1.json",
     "regole_tp-2.json",
     "rete-1.json",
-    "run-report-1.json",
+    "run-report-2.json",
     "runorder-1.json",
     "sample-list-1.json",
     "sample-select-1.json",

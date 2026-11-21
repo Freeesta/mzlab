@@ -1,4 +1,4 @@
-//! The native executor of `report.methods@1`: the methods text of a `run-report/1` run record. The text is `mzlab_feat::methods::methods_text`, shared with the browser; this file only reads and
+//! The native executor of `report.methods@1`: the methods text of a `run-report/2` run record. The text is `mzlab_feat::methods::methods_text`, shared with the browser; this file only reads and
 //! writes the files. Called by `flow.rs`.
 
 use crate::flow::{io, read_one, Exec, FileRunner};

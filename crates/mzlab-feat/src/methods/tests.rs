@@ -1,4 +1,4 @@
-//! `report.methods@1` on a fixed `run-report/1` record: the Markdown is the golden file byte for byte, in both styles.
+//! `report.methods@1` on a fixed `run-report/2` record: the Markdown is the golden file byte for byte, in both styles.
 
 use super::{methods_text, placeholders, template, templated};
 use mzlab_core::json::Value;
@@ -93,7 +93,7 @@ fn every_placeholder_of_a_template_is_a_word_of_the_table() {
 fn the_isotope_grouper_adds_its_sentence_to_the_detection() {
     let run = |iso: &str| {
         let record = format!(
-            r#"{{"schema":"run-report/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+            r#"{{"schema":"run-report/2","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
 {{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"iso_ppm","value":5,"state":"fixed"}},
 {{"name":"iso_abs_da","value":0.0015,"state":"fixed"}},{{"name":"iso_rt_tol","value":0.05,"state":"fixed"}},{{"name":"iso_max_charge","value":2,"state":"fixed"}},
 {{"name":"iso_representative","value":"most_intense","state":"fixed"}}]}}]}}"#
@@ -112,7 +112,7 @@ fn the_isotope_grouper_adds_its_sentence_to_the_detection() {
 fn the_isotope_finder_adds_its_sentence_to_the_detection() {
     let run = |iso: &str| {
         let record = format!(
-            r#"{{"schema":"run-report/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+            r#"{{"schema":"run-report/2","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
 {{"name":"floor","value":20000,"state":"fixed"}},{{"name":"isotopes","value":"{iso}","state":"fixed"}},{{"name":"finder_ppm","value":15,"state":"fixed"}},
 {{"name":"finder_abs_da","value":0.005,"state":"fixed"}},{{"name":"finder_max_charge","value":3,"state":"fixed"}},{{"name":"finder_elements","value":"H,C,N,O,S","state":"fixed"}},
 {{"name":"finder_require_c13","value":true,"state":"fixed"}},{{"name":"finder_auto","value":false,"state":"fixed"}}]}}]}}"#
@@ -132,7 +132,7 @@ fn the_isotope_finder_adds_its_sentence_to_the_detection() {
 fn the_window_area_adds_its_sentence_to_the_detection() {
     let run = |from: &str| {
         let record = format!(
-            r#"{{"schema":"run-report/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+            r#"{{"schema":"run-report/2","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
 {{"name":"floor","value":20000,"state":"fixed"}},{{"name":"area_from","value":"{from}","state":"fixed"}}]}}]}}"#
         );
         methods_text(&style("paragraph"), record.as_bytes()).unwrap()
@@ -159,7 +159,7 @@ fn the_window_area_adds_its_sentence_to_the_detection() {
 fn the_wide_stitch_adds_its_sentence_to_the_detection() {
     let run = |how: &str| {
         let record = format!(
-            r#"{{"schema":"run-report/1","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
+            r#"{{"schema":"run-report/2","steps":[{{"instance":"det","step":"features.detect@1","algorithm":"masstrace@1","status":"ok","params":[
 {{"name":"floor","value":20000,"state":"fixed"}},{{"name":"stitch","value":"{how}","state":"fixed"}}]}}]}}"#
         );
         methods_text(&style("paragraph"), record.as_bytes()).unwrap()
@@ -176,7 +176,7 @@ fn the_wide_stitch_adds_its_sentence_to_the_detection() {
 /// `max_gap` of the mass traces is named as the missed scans it counts, as in `features.gapfill`.
 #[test]
 fn the_mass_trace_sentence_names_the_missed_scans() {
-    let record = r#"{"schema":"run-report/1","steps":[{"instance":"det","step":"features.detect@2","algorithm":"masstrace@1","status":"ok","params":[
+    let record = r#"{"schema":"run-report/2","steps":[{"instance":"det","step":"features.detect@2","algorithm":"masstrace@1","status":"ok","params":[
 {"name":"floor","value":20000,"state":"fixed"},{"name":"min_points","value":5,"state":"fixed"},{"name":"max_gap","value":1,"state":"fixed"}]}]}"#;
     let text = methods_text(&style("paragraph"), record.as_bytes()).unwrap();
     assert!(

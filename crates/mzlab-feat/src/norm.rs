@@ -1,5 +1,5 @@
 //! Normalisation of the areas, a view over the aligned table: one factor per file, applied when the cells are read. The `.mzfeat` keeps the areas as
-//! they were measured; the method and its parameters are what the `normalizza` operation of the `.mzflow` records.
+//! they were measured; the method and its parameters are what the `normalize` operation of the `.mzflow` records.
 //!
 //! A cell counts when its state is not `CELL_ABSENT` and its area is a finite number above zero. Blanks and dark files are not part of the target
 //! the factors aim at (they are scaled, but they do not decide the scale).
@@ -166,14 +166,14 @@ pub fn normalised(t: &Aligned, factors: &[f64], row: usize, file: usize) -> Opti
 }
 
 impl Method {
-    /// The parameters of the `normalizza` operation: `{"metodo":"nessuna"|"somma"|"mediana"|"istd", "istd":{...}}`.
+    /// The parameters of the `normalize` operation: `{"method":"none"|"sum"|"median"|"istd", "istd":{...}}`.
     pub fn to_json(&self) -> String {
         let mut j = Out::default();
-        j.raw("{\"metodo\":");
+        j.raw("{\"method\":");
         match self {
-            Method::None => j.str("nessuna"),
-            Method::Sum => j.str("somma"),
-            Method::Median => j.str("mediana"),
+            Method::None => j.str("none"),
+            Method::Sum => j.str("sum"),
+            Method::Median => j.str("median"),
             Method::Istd(r) => {
                 j.str("istd").raw(",\"istd\":");
                 match r {
@@ -202,10 +202,10 @@ impl Method {
 
     pub fn from_json(v: &Value) -> Result<Method> {
         let num = |o: &Value, k: &str| o.get(k).and_then(Value::f64);
-        match v.get("metodo").and_then(Value::str) {
-            Some("nessuna") => Ok(Method::None),
-            Some("somma") => Ok(Method::Sum),
-            Some("mediana") => Ok(Method::Median),
+        match v.get("method").and_then(Value::str) {
+            Some("none") => Ok(Method::None),
+            Some("sum") => Ok(Method::Sum),
+            Some("median") => Ok(Method::Median),
             Some("istd") => {
                 let o = v.get("istd").ok_or_else(bad)?;
                 if let Some(id) = num(o, "id") {

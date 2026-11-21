@@ -1,5 +1,5 @@
-"""`mzlab-cli flow report` on a real run of a synthetic plan (files of tools/dati_sintetici.py, never lab data): the `run-report/1` text validates against
-docs/schemi/run-report-1.json, comes out with the same bytes twice, carries the `report/1` of the table, and the SHA-256 of an input follows its bytes."""
+"""`mzlab-cli flow report` on a real run of a synthetic plan (files of tools/dati_sintetici.py, never lab data): the `run-report/2` text validates against
+docs/schemi/run-report-2.json, comes out with the same bytes twice, carries the `report/2` of the table, and the SHA-256 of an input follows its bytes."""
 import json
 import subprocess
 import sys
@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici  # noqa: E402
 
-SCHEMA = json.loads((ROOT / "docs/schemi/run-report-1.json").read_text())
+SCHEMA = json.loads((ROOT / "docs/schemi/run-report-2.json").read_text())
 PLAN = {
     "format": "mzflow/2",
     "inputs": [{"name": f"{n}.mzML", "type": "mzml"} for n in "ab"],
@@ -36,8 +36,8 @@ def run(folder, tmp, seed):
     work.mkdir()
     r = subprocess.run([str(ROOT / "target/release/examples/flow"), str(folder / "plan.json"), str(work), "1"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
-    # the CSV step does not write the table report: a report/1 left beside prov.json is included as it is
-    (work / "report.json").write_text('{"schema":"report/1","rows":3}\n')
+    # the CSV step does not write the table report: a report/2 left beside prov.json is included as it is
+    (work / "report.json").write_text('{"schema":"report/2","rows":3}\n')
     cli = [str(ROOT / "target/release/mzlab-cli"), "flow", "report", str(work)]
     a = subprocess.run(cli, capture_output=True, text=True)
     assert a.returncode == 0, a.stderr[-2000:]
@@ -60,7 +60,7 @@ def test_validates_and_is_stable(corsa):
 
 
 def test_includes_the_table_report(corsa):
-    assert json.loads(corsa[0][0])["report"] == {"schema": "report/1", "rows": 3}
+    assert json.loads(corsa[0][0])["report"] == {"schema": "report/2", "rows": 3}
 
 
 def test_an_input_that_changes_changes_its_sha256(corsa):
@@ -71,7 +71,7 @@ def test_an_input_that_changes_changes_its_sha256(corsa):
 
 def test_old_and_new_engine_both_validate():
     """The build keys of `engine` are optional: a report written before them is still valid, and one with all of them too."""
-    old = {"schema": "run-report/1", "engine": {"name": "mzLab", "version": "1.0.0", "commit": "abc1234", "platform": "native"},
+    old = {"schema": "run-report/2", "engine": {"name": "mzLab", "version": "1.0.0", "commit": "abc1234", "platform": "native"},
            "inputs": [], "lists": [], "steps": [], "total_ms": 0, "levels": {"files": 0, "rows": 0, "auto": {}, "other": {}}}
     sha = "a" * 64
     new = json.loads(json.dumps(old))

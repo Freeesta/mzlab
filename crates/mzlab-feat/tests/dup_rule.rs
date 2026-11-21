@@ -57,7 +57,7 @@ fn a_chain_keeps_both_ends_and_a_tie_keeps_the_first_row() {
 fn the_rule_goes_to_json_and_back() {
     let rules = vec![Rule::Duplicates(5.0, 0.1)];
     let text = filters::to_json(&rules);
-    assert!(text.contains("\"duplicati\""));
+    assert!(text.contains("\"duplicates\""));
     assert_eq!(
         filters::from_json(&parse(text.as_bytes()).unwrap()).unwrap(),
         rules

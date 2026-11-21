@@ -31,12 +31,12 @@ fn duplicate_axis(spec: &str, unit: bool) -> Result<()> {
     let Ok(v) = mzlab_core::json::parse(spec.as_bytes()) else {
         return Ok(());
     };
-    let rules = v.get("filtra").map_or(&[][..], |f| f.arr());
+    let rules = v.get("filter").map_or(&[][..], |f| f.arr());
     for rule in rules
         .iter()
-        .filter(|r| r.get("regola").and_then(|x| x.str()) == Some("duplicati"))
+        .filter(|r| r.get("rule").and_then(|x| x.str()) == Some("duplicates"))
     {
-        let (wrong, axis) = if unit { ("ppm", "Da") } else { ("da", "ppm") };
+        let (wrong, axis) = if unit { ("ppm", "Da") } else { ("from", "ppm") };
         if rule.get(wrong).is_some() {
             let param = if unit { "dup_ppm" } else { "dup_da" };
             return Err(Error::new("err.flow.param.axis")
@@ -47,7 +47,7 @@ fn duplicate_axis(spec: &str, unit: bool) -> Result<()> {
     Ok(())
 }
 
-/// The view of the parameters `spec` (`{"normalizza":..., "filtra":[...]}`); an empty text is no view.
+/// The view of the parameters `spec` (`{"normalize":..., "filter":[...]}`); an empty text is no view.
 fn view_of(t: &Aligned, s: &[Sample], spec: &str) -> Result<Option<View>> {
     if spec.trim().is_empty() {
         return Ok(None);
@@ -71,7 +71,7 @@ fn ctx<'a>(
     }
 }
 
-/// The view of a table (an empty `spec` keeps every row, areas as measured): `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
+/// The view of a table (an empty `spec` keeps every row, areas as measured): `{"digest", "rows":[id of every row kept], "factors":[per file], "counts":{...}}`.
 pub fn view_json<R: ReadAt>(
     r: &mut R,
     size: u64,
@@ -88,13 +88,13 @@ pub fn view_json<R: ReadAt>(
     let spec = if spec.trim().is_empty() { "{}" } else { spec };
     let v = view::from_spec(&t, &s, spec.as_bytes())?;
     let mut o = Out::default();
-    o.raw("{\"digest\":").str(&v.digest(&t)).raw(",\"righe\":[");
+    o.raw("{\"digest\":").str(&v.digest(&t)).raw(",\"rows\":[");
     for (i, &row) in v.rows.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .int(i64::from(t.id(row as usize)));
     }
-    o.raw("],\"fattori\":").floats(&v.factors);
-    o.raw(",\"conteggi\":").raw(&v.counts_json()).raw("}");
+    o.raw("],\"factors\":").floats(&v.factors);
+    o.raw(",\"counts\":").raw(&v.counts_json()).raw("}");
     Ok(o.0)
 }
 
@@ -118,7 +118,7 @@ pub fn view_json_origin<R: ReadAt>(
 
 pub use mzlab_feat::view_table::{is_view, table_of_view, view_origin};
 
-/// The `report/1` of a table under the view `spec` (empty = the whole table).
+/// The `report/2` of a table under the view `spec` (empty = the whole table).
 pub fn report_json<R: ReadAt>(
     r: &mut R,
     size: u64,
@@ -208,7 +208,7 @@ pub fn samples_json(files_json: &str) -> Result<String> {
     Ok(samples::to_json(&samples::propose(&files)))
 }
 
-/// The `qc/1` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
+/// The `qc/2` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
 pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;

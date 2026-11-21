@@ -76,7 +76,7 @@
     return h;
   }
 
-  /** the provenance block: versions, recipe, table, samples and inputs @param {any} r `report/1` @param {{ profile?: string, recipe_sha256?: string, rules?: string, inputs?: { name: string, sha256: string }[] } | null} p */
+  /** the provenance block: versions, recipe, table, samples and inputs @param {any} r `report/2` @param {{ profile?: string, recipe_sha256?: string, rules?: string, inputs?: { name: string, sha256: string }[] } | null} p */
   function provenance(r, p) {
     const q = p || {};
     return `<h2>Provenance</h2><table>${th(["Item", "Value"])}${kv("mzlab-feat", r.crate)}${kv("Rules", q.rules || "not recorded")}${kv("Profile", q.profile || "not recorded")}`
