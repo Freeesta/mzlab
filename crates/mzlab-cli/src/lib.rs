@@ -2,13 +2,9 @@
 //! A thin wrapper: the index of each file is built as the desktop app builds it, the recipe comes from `run::recipe_for` (the one behind the panel
 //! "Pipeline"), the steps are `run::detect` and `run::align`, and the CSV is the export "full" of the table (`core::table_file`), so the numbers are the ones of the page.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::Out;
-use mzlab_ops::run::feat::run;
-use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod argv;
 mod catalog;
@@ -36,6 +32,9 @@ pub mod error_text;
 pub(crate) use emit::emit;
 pub mod exit;
 mod extract;
+#[cfg(test)]
+mod features_lr_tests;
+mod features_series;
 mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
@@ -220,56 +219,7 @@ pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> 
 
 pub(crate) use idx_open::open;
 
-/// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
-pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
-    features_of(files, &vec![String::new(); files.len()], params, tmp)
-}
-
-/// `features` of the samples `labels` name: `NAME@ID` is the sample `ID` of the dataset `files[k]`, an empty label the first (or only) sample.
-pub fn features_of(
-    files: &[PathBuf],
-    labels: &[String],
-    params: &str,
-    tmp: &Path,
-) -> Result<String> {
-    let idxs: Vec<PathBuf> = (0..files.len())
-        .map(|k| tmp.join(format!("{k}.mzidx")))
-        .collect();
-    let (recipe, detected, weak) = crate::par::index_and_detect(files, labels, &idxs, params)?;
-    let mut series = crate::par::Series(detected, weak);
-    let origin = run::origin_of(&mut series)?;
-    eprintln!("align {} file(s)", files.len());
-    let mut table = Vec::new();
-    let budget = MemBudget::mb(mzlab_core::budget_auto::native_auto_mb());
-    run::align_to_par(
-        &mut series,
-        &budget,
-        &recipe,
-        &|k| open(&idxs[k]),
-        &mut table,
-    )?;
-    let mut list = Out::default();
-    list.raw("{\"files\":[");
-    for (k, (name, sha)) in origin.inputs.iter().enumerate() {
-        list.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
-            .str(name)
-            .raw(",\"sha256\":")
-            .str(sha)
-            .raw("}");
-    }
-    list.raw("]}");
-    let samples = samples_json(&list.0)?;
-    let polarity = recipe.detect.polarity.map_or(1, i32::from);
-    table_file(
-        &mut mzlab_feat::store::Slice(&table),
-        table.len() as u64,
-        &samples,
-        "",
-        &sha256_hex(&table),
-        polarity,
-        "full",
-    )
-}
+pub use features_series::{features, features_full, features_of, features_plan_of};
 
 /// Why a run failed, in the words of `error/1`: the key the texts and docs know, its parameters and the hint.
 #[derive(Debug, Clone, Default)]

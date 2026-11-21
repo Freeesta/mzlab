@@ -7,6 +7,8 @@ use std::path::PathBuf;
 
 #[path = "features_note.rs"]
 mod features_note;
+#[path = "features_report.rs"]
+pub(crate) mod features_report;
 
 /// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.
 pub(crate) fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
@@ -70,6 +72,25 @@ pub(crate) fn index_and_detect(
     Ok(detected)
 }
 
+/// The recipe with the collector of what the unit-resolution steps do by themselves (`features-report/1`); it never changes a byte of a table.
+fn with_evidence(mut r: mzlab_feat::recipe::Recipe) -> mzlab_feat::recipe::Recipe {
+    r.screen.evidence = Some(mzlab_feat::lrscreen::Evidence::new());
+    r
+}
+
+/// The indexes of the series and its recipe, with no detection (`features --dry-run`).
+pub(crate) fn index_only(
+    files: &[PathBuf],
+    labels: &[String],
+    idxs: &[PathBuf],
+    params: &str,
+) -> Result<mzlab_feat::recipe::Recipe> {
+    par_map(files.len(), |k| index_one(files, labels, idxs, k))
+        .into_iter()
+        .collect::<Result<Vec<()>>>()?;
+    run::recipe_for(params, &mut open(&idxs[0])?)
+}
+
 fn detect_all(
     files: &[PathBuf],
     labels: &[String],
@@ -83,7 +104,7 @@ fn detect_all(
     par_map(files.len(), |k| index_one(files, labels, idxs, k))
         .into_iter()
         .collect::<Result<Vec<()>>>()?;
-    let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
+    let recipe = with_evidence(run::recipe_for(params, &mut open(&idxs[0])?)?);
     let detected = par_map(files.len(), |k| detect_one(files, labels, idxs, k, &recipe))
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
@@ -284,7 +305,9 @@ fn pooled(
                         lock().indexed[k] = Some(r);
                         if k == 0 {
                             let made = ok.then(|| {
-                                open(&idxs[0]).and_then(|mut ix| run::recipe_for(params, &mut ix))
+                                open(&idxs[0])
+                                    .and_then(|mut ix| run::recipe_for(params, &mut ix))
+                                    .map(with_evidence)
                             });
                             set_recipe(&mut lock(), made);
                         }

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "features-plan/1",
+  "title": "features-plan/1: what `mzlab-cli features --dry-run` would do, printed on stdout (nothing is detected or written)",
+  "description": "The members of the series, their unit/profile/centroid decision read from the index, and the recipe line. Code: crates/mzlab-cli/src/features_report.rs.",
+  "type": "object",
+  "required": ["schema", "recipe", "members"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "features-plan/1" },
+    "recipe": { "type": "string" },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["member", "unit", "profile_fraction", "centroid"],
+        "additionalProperties": false,
+        "properties": {
+          "member": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
+          "unit": { "type": "boolean" },
+          "profile_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+          "centroid": { "type": "boolean", "description": "its profile scans would be centroided before detection" }
+        }
+      }
+    }
+  }
+}

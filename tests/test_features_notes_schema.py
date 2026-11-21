@@ -46,9 +46,9 @@ def test_a_document_of_the_cli_respects_its_schema(samples, name):
 def test_the_notices_of_the_notes_and_of_the_estimate_are_the_same_items(samples):
     notes = json.loads((samples / "features-notes.json").read_text())
     estimate = json.loads((samples / "estimates.json").read_text())
-    # the first file of the series is all profile: its notes and its estimate say the same notice
+    # the first file of the series is all profile, so by default it is centroided: its notes and its estimate say the same notice
     assert notes["files"][0]["notices"] == estimate["notices"]
-    assert notes["files"][0]["notices"][0]["key"] == "warn.features.profileUnit"
+    assert notes["files"][0]["notices"][0]["key"] == "note.features.centroided"
 
 
 def test_a_notice_without_its_parameters_or_a_second_series_member_is_refused():

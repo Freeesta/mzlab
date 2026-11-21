@@ -335,7 +335,7 @@ fn the_estimate_finds_counts_the_unit_the_step_and_the_width() {
     assert!(e.peaks >= 8 && (e.params.w - 0.7).abs() < 0.12, "{e:?}");
 }
 
-fn profile_file(n: usize, profile: bool) -> Vec<u8> {
+pub(super) fn profile_file(n: usize, profile: bool) -> Vec<u8> {
     use crate::mzml::{ChromKind, Chromatogram, Spectrum};
     use crate::mzmlwrite::{Header, MzmlWriter};
     let mut rng = Rng(5);

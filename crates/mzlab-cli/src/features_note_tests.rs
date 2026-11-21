@@ -56,7 +56,15 @@ struct Case {
 }
 
 impl Case {
+    /// The recipe of the defaults: `centroid` auto, so profile scans are centroided and the notice is the note that says so.
     fn new(profiles: usize) -> Case {
+        Case::with(profiles, mzlab_feat::lrscreen::Switch::Auto)
+    }
+    /// `--centroid off`: the profile points are kept and the warning stays.
+    fn off(profiles: usize) -> Case {
+        Case::with(profiles, mzlab_feat::lrscreen::Switch::Off)
+    }
+    fn with(profiles: usize, centroid: mzlab_feat::lrscreen::Switch) -> Case {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!("mzlab_fnote_{k}_{}", std::process::id()));
@@ -66,7 +74,8 @@ impl Case {
         crate::build_index_of(&f, "", &idx, mzlab_core::budget_auto::native_index_budget())
             .unwrap();
         let mut index = crate::open(&idx).unwrap();
-        let recipe = Recipe::for_index(&mut index).unwrap();
+        let mut recipe = Recipe::for_index(&mut index).unwrap();
+        recipe.screen.centroid = centroid;
         let note = note_of(&recipe, &index);
         Case { dir, note }
     }
@@ -82,7 +91,7 @@ impl Drop for Case {
 }
 
 #[test]
-fn unit_resolution_profile_data_get_the_recipe_line_and_the_warning() {
+fn unit_resolution_profile_data_get_the_recipe_line_and_the_note_that_they_were_centroided() {
     let l = Case::new(40).lines();
     assert_eq!(l.len(), 2, "{l:?}");
     assert!(
@@ -95,6 +104,18 @@ fn unit_resolution_profile_data_get_the_recipe_line_and_the_warning() {
         "{}",
         l[0]
     );
+    assert!(
+        l[1].starts_with("note: q1.mzML: 40 of 40 MS1 scans are profile mode"),
+        "{}",
+        l[1]
+    );
+    assert!(l[1].ends_with("(note.features.centroided)"), "{}", l[1]);
+}
+
+#[test]
+fn centroid_off_keeps_the_profile_warning() {
+    let l = Case::off(40).lines();
+    assert_eq!(l.len(), 2, "{l:?}");
     assert!(
         l[1].starts_with("warning: q1.mzML: 40 of 40 MS1 scans are profile mode"),
         "{}",
@@ -122,7 +143,10 @@ fn the_warning_starts_at_half_of_the_ms1_scans_profile() {
     assert!(below[0].ends_with("19 of 40 MS1 scans in profile mode"));
     let at = Case::new(20).lines();
     assert_eq!(at.len(), 2, "{at:?}");
-    assert!(at[1].starts_with("warning: q1.mzML: 20 of 40 MS1 scans are profile mode"));
+    assert!(at[1].starts_with("note: q1.mzML: 20 of 40 MS1 scans are profile mode"));
+    let off = Case::off(20).lines();
+    assert_eq!(off.len(), 2, "{off:?}");
+    assert!(off[1].starts_with("warning: q1.mzML: 20 of 40 MS1 scans are profile mode"));
 }
 
 #[test]
@@ -150,10 +174,12 @@ fn the_notes_say_what_the_stderr_lines_say() {
     );
     assert!(
         t.ends_with(
-            ",\"profile_scans\":20,\"ms1_scans\":40,\"notices\":[{\"key\":\"warn.features.profileUnit\",\"params\":{\"profile\":20,\"scans\":40}}]}]}\n"
+            ",\"profile_scans\":20,\"ms1_scans\":40,\"notices\":[{\"key\":\"note.features.centroided\",\"params\":{\"profile\":20,\"scans\":40}}]}]}\n"
         ),
         "{t}"
     );
+    let off = notes_text(&[("q1.mzML".to_string(), Case::off(20).note.clone())]);
+    assert!(off.ends_with("\"notices\":[{\"key\":\"warn.features.profileUnit\",\"params\":{\"profile\":20,\"scans\":40}}]}]}\n"), "{off}");
     let below = notes_text(&[("q1.mzML".to_string(), Case::new(19).note.clone())]);
     assert!(below.ends_with("\"notices\":[]}]}\n"), "{below}");
 }

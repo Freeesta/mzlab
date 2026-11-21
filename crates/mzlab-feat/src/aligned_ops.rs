@@ -117,7 +117,7 @@ impl Aligned {
     }
 
     /// Keeps the rows for which `keep(table, row)` is true; the cells, the members and the summaries follow their row.
-    fn retain_rows(&mut self, keep: impl Fn(&Aligned, usize) -> bool) {
+    pub(crate) fn retain_rows(&mut self, keep: impl Fn(&Aligned, usize) -> bool) {
         let nf = self.n_files;
         let mut out = Aligned {
             n_files: nf,

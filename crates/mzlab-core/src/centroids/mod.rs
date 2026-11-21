@@ -10,6 +10,7 @@ mod convert;
 mod detect;
 mod emit;
 mod grid;
+mod index;
 mod params;
 mod shoulder;
 mod smooth;
@@ -23,6 +24,8 @@ mod tests_grid_sat;
 #[cfg(test)]
 mod tests_hr;
 #[cfg(test)]
+mod tests_index;
+#[cfg(test)]
 mod tests_merged;
 #[cfg(test)]
 mod tests_model;
@@ -30,6 +33,7 @@ mod tests_model;
 mod tests_pin;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
+pub use index::{centroid_index, profile_share, Centroided};
 pub use params::{estimate, Estimate};
 
 /// How the intensities of the file are made: whole multiples of one unit (detector counts) or continuous values.
