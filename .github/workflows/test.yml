@@ -376,19 +376,12 @@ jobs:
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo --parte ${{ matrix.parte }}/2
-      # the site above has no molkit (tools/prepara_sito.py does not build it): build it as tools/build_feat_wasm.sh does (cargo_wasm.sh, wasm-bindgen, tools/wasm_opt.sh with its cap and
-      # wasm-opt set from tools/moduli/molkit.toml), so the size step below measures it after wasm-opt, like the readers; strict: no wasm-opt, no unoptimised figure
-      - name: Build molkit with wasm-opt (for the size step)
+      # the site above has no feature modules (tools/prepara_sito.py does not build them): build molkit and flowcompare with wasm-opt (tools/build_misura_ci.sh) so the size step below measures them; strict: no wasm-opt, no unoptimised figure
+      - name: Build molkit and flowcompare with wasm-opt (for the size step)
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
         env:
           MZLAB_WASM_OPT_STRICT: "1"
-        run: |
-          eval "$(python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"export {k}={v!r}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]')"
-          IFS='|' read -r uscita pacchetto flags tetto opt <<<"$(python3 tools/moduli.py --riga molkit)"
-          # shellcheck disable=SC2086
-          tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p "$pacchetto" $flags
-          wasm-bindgen --target web --no-typescript --out-dir "site/static/$uscita" "target/wasm32-unknown-unknown/release/${pacchetto//-/_}.wasm"
-          tools/wasm_opt.sh "site/static/$uscita/${pacchetto//-/_}_bg.wasm" "$tetto" molkit "$opt"
+        run: tools/build_misura_ci.sh molkit flowcompare
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
