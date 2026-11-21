@@ -3,8 +3,8 @@
 
 Used before pushing a PR branch (CLAUDE.md). Standard library only (the regenerators are the repository's own tools).
 
-    python3 tools/fondi_main.py [--senza-controlli]
-Exit 0: merged and `pre_pr.py --veloce` green. 1: conflicts in human files (merge left open, files printed). 2: checks red.
+    python3 tools/fondi_main.py [--no-checks]
+Exit 0: merged and `pre_pr.py --fast` green. 1: conflicts in human files (merge left open, files printed). 2: checks red.
 """
 from __future__ import annotations
 
@@ -63,13 +63,13 @@ def fondi(root: Path = ROOT, generati: dict[str, list[str]] = GENERATI, out=prin
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--senza-controlli", action="store_true", help="skip pre_pr.py --veloce")
+    ap.add_argument("--no-checks", action="store_true", help="skip pre_pr.py --fast")
     a = ap.parse_args()
     if fondi():
         return 1
-    if a.senza_controlli:
+    if a.no_checks:
         return 0
-    return 2 if subprocess.run([PY, "tools/pre_pr.py", "--veloce"], cwd=ROOT).returncode else 0
+    return 2 if subprocess.run([PY, "tools/pre_pr.py", "--fast"], cwd=ROOT).returncode else 0
 
 
 if __name__ == "__main__":

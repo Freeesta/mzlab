@@ -98,7 +98,7 @@ jobs:
         run: python tests_e2e/webkit_sonda.py site 2>&1 | tee site-persistent.txt
       - name: One smoke test (the real one, as the nightly runs it)
         if: always()
-        run: python tools/verifica.py --browser webkit --fumo --solo e2e3 2>&1 | tee smoke.txt
+        run: python tools/verifica.py --browser webkit --smoke --only e2e3 2>&1 | tee smoke.txt
       - name: System log and crash reports
         if: always()
         run: |

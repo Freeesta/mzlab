@@ -1,13 +1,13 @@
 """Converts the files of the instruments to mzML, the only format the program reads (no reader of proprietary formats is built in).
 
-    python tools/converti.py CARTELLA [-o USCITA] [--trfp PERCORSO] [--prova]
+    python tools/converti.py CARTELLA [-o USCITA] [--trfp PERCORSO] [--trial]
 
 * .raw (Thermo): converted here with ThermoRawFileParser (centroids of the manufacturer, indexed mzML, zlib). The program is looked for in --trfp, in
   the variable THERMORAWFILEPARSER, in the PATH (ThermoRawFileParser, ThermoRawFileParser.exe; the .exe runs with mono outside Windows).
 * .wiff (Sciex): the SCIEX reader only exists for Windows, so the command of MSConvert in Docker is printed (to run it by hand).
 * .d (Agilent, Bruker, Waters): the MSConvert command is printed.
 
---prova prints what would be run without running anything. The files already converted (same name .mzML in the output folder) are skipped.
+--trial prints what would be run without running anything. The files already converted (same name .mzML in the output folder) are skipped.
 """
 from __future__ import annotations
 
@@ -94,13 +94,13 @@ def convert(folder: Path, output: Path, trfp_path: str | None = None, test: bool
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("cartella", type=Path, help="folder with the instrument files")
-    ap.add_argument("-o", "--uscita", type=Path, help="folder of the mzML files (default: CARTELLA/mzML)")
+    ap.add_argument("-o", "--output", type=Path, help="folder of the mzML files (default: CARTELLA/mzML)")
     ap.add_argument("--trfp", help="path of ThermoRawFileParser (or of its folder)")
-    ap.add_argument("--prova", action="store_true", help="show the commands without running them")
+    ap.add_argument("--trial", action="store_true", help="show the commands without running them")
     a = ap.parse_args(argv)
     if not a.cartella.is_dir():
         print(f"{a.cartella} is not a folder."); return 2
-    r = convert(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
+    r = convert(a.cartella, a.output or a.cartella / "mzML", a.trfp, a.trial)
     return 1 if r["errori"] else 0
 
 

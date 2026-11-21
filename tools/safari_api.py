@@ -1,6 +1,6 @@
 """Static check against the floor of the site (Chrome/Edge 111, Firefox 121, Safari 16.4; docs/agenti/compat-safari.md): greps the interface sources
 (mzlab/web, flow, TP_Mine; classic scripts, modules, workers, sw.js, CSS) for web APIs, JS syntax and CSS that one of the three lacks. Each use must be listed, with its count and
-the guard or fallback that covers it, in tools/safari_api_ammesse.txt; a new or unlisted use fails. Run: python3 tools/safari_api.py [--elenco].
+the guard or fallback that covers it, in tools/safari_api_ammesse.txt; a new or unlisted use fails. Run: python3 tools/safari_api.py [--list].
 """
 from __future__ import annotations
 
@@ -183,7 +183,7 @@ def controlla() -> list[str]:
 
 
 def main() -> int:
-    if "--elenco" in sys.argv:
+    if "--list" in sys.argv:
         for (f, sid), lines in sorted(scan().items()):
             print(f"{f}::{sid}::{len(lines)}  # lines {','.join(map(str, lines))}")
         return 0

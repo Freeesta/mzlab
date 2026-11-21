@@ -48,7 +48,7 @@ def main():
     ap.add_argument("--rounds", type=int, default=7, help="ABAB rounds; the samples of all rounds are pooled")
     ap.add_argument("--max-slowdown", type=float, default=3.0)
     a = ap.parse_args()
-    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(work := Path(tempfile.mkdtemp()) / "ser"))
+    run("python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(work := Path(tempfile.mkdtemp()) / "ser"))
     idx = sorted(str(p) for p in work.glob("*.mzidx"))
     run("tools/cargo_wasm.sh", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", FEATURES)
     pkgs = {"base": build_pkg(work.parent, "base", ""), "variant": build_pkg(work.parent, "variant", a.extra)}

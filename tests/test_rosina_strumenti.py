@@ -60,7 +60,7 @@ def test_the_validator_rejects_a_broken_truth():
 
 
 def test_from_command_line_the_truth_is_valid_json(tmp_path):
-    out = subprocess.run([sys.executable, str(STR / "verita.py"), str(FIX / "sintetico.mzML"), "--oracolo", "msconvert", "3.0.24", "-", "--campione", "2"], capture_output=True, text=True, check=True)
+    out = subprocess.run([sys.executable, str(STR / "verita.py"), str(FIX / "sintetico.mzML"), "--oracle", "msconvert", "3.0.24", "-", "--sample", "2"], capture_output=True, text=True, check=True)
     d = json.loads(out.stdout)
     assert d["oracolo"]["nome"] == "msconvert" and d["file"]["campione"] == 2 and out.stderr == ""
 
@@ -150,10 +150,10 @@ def _http(req, body):
 
 def test_download_rejects_the_cap_escaping_paths_and_non_https_urls(tmp_path, capsys):
     tsv = _large(tmp_path, [["a", "https://x.test/a", "a.bin", 30_000_000_000, ""]])
-    assert scarica.main([str(tsv), str(tmp_path / "d"), "--tetto-gb", "20"]) == 2
+    assert scarica.main([str(tsv), str(tmp_path / "d"), "--cap-gb", "20"]) == 2
     assert "ceiling" in capsys.readouterr().err
     tsv = _large(tmp_path, [["a", "https://x.test/a", "../fuori.bin", 10, ""], ["b", "http://x.test/b", "b.bin", 10, ""]])
-    assert scarica.main([str(tsv), str(tmp_path / "d"), "--prova"]) == 1
+    assert scarica.main([str(tsv), str(tmp_path / "d"), "--trial"]) == 1
     err = capsys.readouterr().err
     assert "outside DEST" in err and "not https" in err
     assert not (tmp_path / "fuori.bin").exists()
@@ -197,16 +197,16 @@ def test_index_accepts_a_correct_row_and_writes_the_markdown(tmp_path):
 )
 def test_index_rejects_what_the_vocabulary_does_not_allow(tmp_path, capsys, field, value, messaggio):
     p = _index(tmp_path, {**ROW, field: value})
-    assert index.main([str(p), "--controlla"]) == 1
+    assert index.main([str(p), "--verify"]) == 1
     assert messaggio in capsys.readouterr().err
 
 
 def test_index_rejects_repeated_paths_and_missing_columns(tmp_path, capsys):
-    assert index.main([str(_index(tmp_path, ROW, ROW)), "--controlla"]) == 1
+    assert index.main([str(_index(tmp_path, ROW, ROW)), "--verify"]) == 1
     assert "repeated" in capsys.readouterr().err
     p = tmp_path / "corto.tsv"
     p.write_text("percorso\tproduttore\nx\tthermo\n")
-    assert index.main([str(p), "--controlla"]) == 1
+    assert index.main([str(p), "--verify"]) == 1
     assert "missing column" in capsys.readouterr().err
 
 

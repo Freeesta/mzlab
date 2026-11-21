@@ -49,19 +49,19 @@ jobs:
               git fetch -q --filter=blob:none --unshallow origin main || true ;;
             *) exit 0 ;;
           esac
-          python3 tools/ci_metrics.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
+          python3 tools/ci_metrics.py "$cmd" --data-dir dati/eventi.jsonl --new nuovi.jsonl --cursor cursore-nuovo.json
           # best-effort backfill of the green-to-merge time of old rows, 30 per poll (a lost publish race just repeats it)
-          case "$GITHUB_EVENT_NAME" in schedule|workflow_dispatch|push) python3 tools/ci_metrics.py riempi-verde --dati dati/eventi.jsonl || true ;; esac
+          case "$GITHUB_EVENT_NAME" in schedule|workflow_dispatch|push) python3 tools/ci_metrics.py riempi-verde --data-dir dati/eventi.jsonl || true ;; esac
           # GitHub fires the cron only a few times a day: every push to main also polls the completed runs (rows are deduplicated, the cursor only advances)
           if [ "$GITHUB_EVENT_NAME" = push ]; then
-            python3 tools/ci_metrics.py registra-recenti --dati dati/eventi.jsonl --nuovi nuovi-recenti.jsonl --cursore cursore-nuovo.json
+            python3 tools/ci_metrics.py registra-recenti --data-dir dati/eventi.jsonl --new nuovi-recenti.jsonl --cursor cursore-nuovo.json
             cat nuovi-recenti.jsonl >> nuovi.jsonl
-            python3 tools/ci_metrics.py registra-coda --nuovi nuovi-coda.jsonl
+            python3 tools/ci_metrics.py registra-coda --new nuovi-coda.jsonl
             cat nuovi-coda.jsonl >> nuovi.jsonl
           fi
           # pull request events (opened, pushed heads, merged/closed) are read from the API, metadata only; rows are deduplicated
           case "$GITHUB_EVENT_NAME" in schedule|workflow_dispatch|push)
-            python3 tools/ci_metrics.py registra-pr-recenti --dati dati/eventi.jsonl --nuovi nuovi-pr.jsonl
+            python3 tools/ci_metrics.py registra-pr-recenti --data-dir dati/eventi.jsonl --new nuovi-pr.jsonl
             cat nuovi-pr.jsonl >> nuovi.jsonl ;;
           esac
       # metrics are best effort: a failed publish must never turn a pull request red
@@ -70,9 +70,9 @@ jobs:
         working-directory: dati
         run: |
           for i in 1 2 3 4 5; do
-            python3 ../tools/ci_metrics.py accoda ../nuovi.jsonl --dati eventi.jsonl --cursore ../cursore-nuovo.json
+            python3 ../tools/ci_metrics.py accoda ../nuovi.jsonl --data-dir eventi.jsonl --cursor ../cursore-nuovo.json
             # new rows go to eventi-YYYY-MM.jsonl; files of 50 MB or more are never rewritten (GitHub refuses 100 MB)
-            [ "$(cat eventi*.jsonl | wc -c)" -gt 4000000 ] && python3 ../tools/ci_metrics.py compatta --dati eventi.jsonl
+            [ "$(cat eventi*.jsonl | wc -c)" -gt 4000000 ] && python3 ../tools/ci_metrics.py compatta --data-dir eventi.jsonl
             git add -A
             git diff --cached --quiet && exit 0
             git commit -qm "stat-ci: events"

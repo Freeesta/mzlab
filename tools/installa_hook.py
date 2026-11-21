@@ -2,7 +2,7 @@
 """Installs tools/hook_pre_push.sh as .git/hooks/pre-push (run by hand once, and by the SessionStart hook of .claude/settings.json).
 
     python3 tools/installa_hook.py          # install; never overwrites a pre-push hook that is not ours
-    python3 tools/installa_hook.py --togli  # remove ours
+    python3 tools/installa_hook.py --remove  # remove ours
 """
 from __future__ import annotations
 
@@ -45,4 +45,4 @@ def togli(root: Path = ROOT) -> str:
 
 
 if __name__ == "__main__":
-    print(togli() if "--togli" in sys.argv else install())
+    print(togli() if "--remove" in sys.argv else install())

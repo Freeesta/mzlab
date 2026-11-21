@@ -8,7 +8,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 D = Path(tempfile.mkdtemp(prefix="mzlab-cart-"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "librerie_cartella_sintetica.py"), str(D), "--n", "4000", "--altri", "60"], check=True, stdout=subprocess.DEVNULL)
+subprocess.run([sys.executable, str(ROOT / "tools" / "librerie_cartella_sintetica.py"), str(D), "--n", "4000", "--others", "60"], check=True, stdout=subprocess.DEVNULL)
 JS = """async () => {
   const files = [...document.getElementById('cartdir').files], ok = files.filter(f => /\\.(msp|mgf|json|jsonl|ndjson|mzlib)$/i.test(f.name));
   const lt = []; new PerformanceObserver(l => { for (const e of l.getEntries()) lt.push(Math.round(e.duration)); }).observe({ entryTypes: ['longtask'] });

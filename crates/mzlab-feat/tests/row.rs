@@ -269,7 +269,7 @@ fn reference_index() -> Option<std::path::PathBuf> {
     let ok = Command::new("python3")
         .arg(root().join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", "identita"])
+        .args(["--only", "identita"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

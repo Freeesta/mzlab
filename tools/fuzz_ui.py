@@ -1,9 +1,9 @@
 """Seeded interaction fuzzer of the site: random but reproducible keys, clicks, drags, wheel, resizes, views, dialogs, files, theme and reloads.
 After every step it checks the page (errors, rejections, stuck busy state, focus lost to the body after a dialog, duplicated rows, NaN shown, broken
-invariants) and logs long tasks; `--cicli N` measures DOM nodes, listeners and JS heap over N open/close cycles. A failure is minimised to a short
+invariants) and logs long tasks; `--cycles N` measures DOM nodes, listeners and JS heap over N open/close cycles. A failure is minimised to a short
 replay (seed + steps, JSON) that `--replay` runs again. Needs the built site (tools/prepara_sito.py); synthetic files only (tools/dati_sintetici.py).
 
-    python3 tools/fuzz_ui.py --seed 7 --passi 150 [--vista data|draw|flow|hr|mix] [--tablet] [--cicli 12] [--minimizza] [--out DIR]
+    python3 tools/fuzz_ui.py --seed 7 --steps 150 [--view data|draw|flow|hr|mix] [--tablet] [--cycles 12] [--minimize] [--out DIR]
     python3 tools/fuzz_ui.py --replay DIR/fail-7.json
 """
 from __future__ import annotations
@@ -264,12 +264,12 @@ class Fuzz(Steps):
         by_user = st["a"] == "key" and st["k"] in ("Escape", "Enter", "Space") or st["a"] in ("click", "tap") and getattr(s, "in_dlg", False)
         if closed and by_user and before["focus"] != "body" and after["focus"] == "body" and not after["iframe"]:  # already on the body: a click on nothing, not the dialog
             out.append("focus fell to the body after closing %s" % before["dlg"])
-        if s.a.ignora: out = [x for x in out if not re.search(s.a.ignora, x)]
+        if s.a.ignore: out = [x for x in out if not re.search(s.a.ignore, x)]
         return out, after
 
     def prepare(s):
         """The starting state of the chosen view: files loaded for Data and HR, the view open for Draw and Flow."""
-        v = s.a.vista
+        v = s.a.view
         if v in ("data", "mix", "hr"):
             lib._real_sif(s.pg, "#pick", [str(f) for f in s.files])
             lib.wait_for_js(s.pg, f"typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= {len(s.files)}", 120000)
@@ -279,12 +279,12 @@ class Fuzz(Steps):
         s.quiet(60)
 
     def play(s, p, steps=None, seed=0):
-        """Run the steps given (replay) or draw `--passi` from the seed. Returns (steps run, index of the first failing step or None, problems)."""
+        """Run the steps given (replay) or draw `--steps` from the seed. Returns (steps run, index of the first failing step or None, problems)."""
         r = lib.Run(port=lib.free_port(), wd=f"/tmp/wd_fuzz_{os.getpid()}")
         try:
             s.open(p, r); s.prepare()
             rng, done = random.Random(seed), []
-            total = len(steps) if steps is not None else s.a.passi
+            total = len(steps) if steps is not None else s.a.steps
             st_before = s.pg.evaluate(STATE)
             for i in range(total):
                 st = steps[i] if steps is not None else s.gen(rng, i)
@@ -301,7 +301,7 @@ class Fuzz(Steps):
                 if ran is not None or probs: s.log.append({"i": i, "st": st, "ran": ran, "p": probs})
                 if s.a.v: print(f"  {i:3d} {time.time() - t_step:5.1f}s {'ran ' if ran else 'skip'} {json.dumps(st)[:150]}", flush=True)
                 if probs:
-                    try: s.pg.screenshot(path=str(Path(s.a.out) / f"fail-{s.a.vista}-{seed}.png"))
+                    try: s.pg.screenshot(path=str(Path(s.a.out) / f"fail-{s.a.view}-{seed}.png"))
                     except Exception: pass
                     return done, i, probs
                 st_before = st_after or st_before
@@ -317,7 +317,7 @@ def leak(s, p):
     try:
         s.open(p, r); s.prepare()
         pg, rows = s.pg, []
-        for c in range(s.a.cicli):
+        for c in range(s.a.cycles):
             for sel in CYCLE_DIALOGS:
                 if pg.locator(sel).count() and pg.locator(sel).first.is_visible():
                     pg.click(sel); s.quiet(10); pg.keyboard.press("Escape"); s.quiet(10)
@@ -388,13 +388,13 @@ def minimise(args, files, p, steps, probs):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--seed", type=int, default=1)
-    ap.add_argument("--passi", type=int, default=120)
-    ap.add_argument("--vista", default="data", choices=["data", "draw", "flow", "hr", "mix"])
+    ap.add_argument("--steps", type=int, default=120)
+    ap.add_argument("--view", default="data", choices=["data", "draw", "flow", "hr", "mix"])
     ap.add_argument("--tablet", action="store_true", help="1024x768 touch tablet")
     ap.add_argument("--busy", type=float, default=30.0, help="seconds after which a busy state counts as stuck")
-    ap.add_argument("--cicli", type=int, default=0, help="leak run: N open/close cycles instead of random steps")
-    ap.add_argument("--minimizza", action="store_true")
-    ap.add_argument("--ignora", help="regular expression of known problems not to stop at (a fix in flight)")
+    ap.add_argument("--cycles", type=int, default=0, help="leak run: N open/close cycles instead of random steps")
+    ap.add_argument("--minimize", action="store_true")
+    ap.add_argument("--ignore", help="regular expression of known problems not to stop at (a fix in flight)")
     ap.add_argument("-v", action="store_true", help="print every step")
     ap.add_argument("--replay")
     ap.add_argument("--out", default=str(ROOT / "tests_e2e" / "shots" / "fuzz"))
@@ -403,9 +403,9 @@ def main():
     if a.replay:
         rep = json.loads(Path(a.replay).read_text())
         for k in ("vista", "tablet", "seed"): setattr(a, k, rep[k])
-    files = files_for(a.vista, out / "dati")
+    files = files_for(a.view, out / "dati")
     with sync_playwright() as p:
-        if a.cicli:
+        if a.cycles:
             rows = leak(Fuzz(a, files), p)
             for i, r_ in enumerate(rows): print(i + 1, r_)
             d = {k: rows[-1][k] - rows[1][k] for k in ("nodes", "listeners")} if len(rows) > 2 else {}
@@ -416,14 +416,14 @@ def main():
         done, i, probs = f.play(p, steps=rep["steps"] if a.replay else None, seed=a.seed)
         for d_ in f.long[:20]: print("long task %d ms at step %d: %s" % (d_[2], d_[0], json.dumps(d_[1])))
         if i is None:
-            print(f"OK seed {a.seed} view {a.vista}{' tablet' if a.tablet else ''}: {len(done)} steps, {sum(1 for x in f.log if x['ran'] is False)} skipped, {len(f.long)} long tasks")
+            print(f"OK seed {a.seed} view {a.view}{' tablet' if a.tablet else ''}: {len(done)} steps, {sum(1 for x in f.log if x['ran'] is False)} skipped, {len(f.long)} long tasks")
             return 0
         print(f"FAIL seed {a.seed} at step {i}: {probs}")
         steps = done
-        if a.minimizza:
+        if a.minimize:
             steps = minimise(a, files, p, done, probs)
-        rep = {"seed": a.seed, "vista": a.vista, "tablet": a.tablet, "problems": probs, "steps": steps}
-        fp = out / f"fail-{a.vista}-{a.seed}{'-tab' if a.tablet else ''}.json"
+        rep = {"seed": a.seed, "vista": a.view, "tablet": a.tablet, "problems": probs, "steps": steps}
+        fp = out / f"fail-{a.view}-{a.seed}{'-tab' if a.tablet else ''}.json"
         fp.write_text(json.dumps(rep, indent=1))
         print("replay:", fp, f"({len(steps)} steps)")
         return 1

@@ -1,9 +1,9 @@
 """One command that checks the whole program and prints a SHORT summary (made to save the reader's time and tokens).
 
     python3 tools/verifica.py                 # everything: JS syntax, pytest, every e2e that can run here
-    python3 tools/verifica.py --rapida        # JS syntax + pytest + the e2e smoke test (e2e3): ~2 minutes
-    python3 tools/verifica.py --solo e2e6,e2e18
-    python3 tools/verifica.py --ultimi-falliti   # only the e2e that were FAIL in the previous run (.verifica/ultimo.md)
+    python3 tools/verifica.py --quick        # JS syntax + pytest + the e2e smoke test (e2e3): ~2 minutes
+    python3 tools/verifica.py --only e2e6,e2e18
+    python3 tools/verifica.py --last-failed   # only the e2e that were FAIL in the previous run (.verifica/ultimo.md)
     python3 tools/verifica.py --setup         # first install what is missing (pytest, playwright + chromium), then check
 
 Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository (Freeesta/mzlab-dati: dati/3200 qtrap/mzML + dam/, real lab files; found by tools/dati_percorsi.py
@@ -78,7 +78,7 @@ BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR
 NOT_RUN = "TIMEOUT budget, not run"      # the marks of a test the --budget kept from running or cut: never read as a known red (NOTO) or as a pass
 CARGO_MARKS = ("cargo", "cli_command")      # a test source with one of these starts the CLI or the native example: the binaries are built once before the e2e
 CUT = "TIMEOUT budget, cut"
-PROGRESS = False                          # a line when each e2e starts and one when it ends, on stderr: only with --budget / --parte / --solo / --cambiati (the CI), a normal run stays short
+PROGRESS = False                          # a line when each e2e starts and one when it ends, on stderr: only with --budget / --part / --only / --changed (the CI), a normal run stays short
 HEARTBEAT = 120                           # seconds between the "still running" lines of a long step
 DEADLINE: float | None = None      # --budget: after it nothing starts and what runs is cut, so the report is always written (a CI step killed from outside leaves none)
 
@@ -149,7 +149,7 @@ def i18n(results) -> None:
 def codice(results) -> None:
     """The index of the code can be generated and covers every source file (tools/indice.py); the size limits do not get worse (tools/controlla.py)."""
     subprocess.run([sys.executable, str(ROOT / "tools" / "indice.py")], capture_output=True)          # refresh the generated docs/agenti/mappa.md
-    for name, script, args in (("code map", "indice.py", ["--controlla"]), ("size limits", "controlla.py", [])):
+    for name, script, args in (("code map", "indice.py", ["--verify"]), ("size limits", "controlla.py", [])):
         t0 = time.time()
         p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
         out = (p.stdout or "") + (p.stderr or "")
@@ -302,7 +302,7 @@ def judge(out: str, rc: int) -> list[str]:
 CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js")       # explore.js split by topic, in the order of index.html
 
 
-from verifica_aree import DOCS, NO_E2E, changed_tests, covers  # noqa: E402,F401  (the --cambiati table lives in verifica_aree.py)
+from verifica_aree import DOCS, NO_E2E, changed_tests, covers  # noqa: E402,F401  (the --changed table lives in verifica_aree.py)
 
 
 def last_failed() -> set[str]:
@@ -325,7 +325,7 @@ WEIGHT_DEFAULT = 6
 def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
     """Part k of n (1-based) of the e2e `names`, the same on every call.
     Night (the CI of notte.yml): the slow ones first, dealt in turn; part 1 also runs syntax, texts and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
-    plain (--fumo --parte): longest first (WEIGHT, else WEIGHT_DEFAULT; ties by name), each test to the part with the least time so far, so the parts take about the same time."""
+    plain (--smoke --part): longest first (WEIGHT, else WEIGHT_DEFAULT; ties by name), each test to the part with the least time so far, so the parts take about the same time."""
     if plain:
         load, out = [0] * n, []
         for x in sorted(names, key=lambda x: (-WEIGHT.get(x, WEIGHT_DEFAULT), x)):
@@ -338,10 +338,10 @@ def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]
 
 
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
-    """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--solo) or when the CI says the full site is in place (--sito-pronto)."""
+    """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--only) or when the CI says the full site is in place (--site-ready)."""
     return ("needs a .dam file (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
             "only with the real lab data" if "veri" in need and src != "veri" else
-            "builds the site with Pyodide: run it apart (--solo)" if "sito" in need and not only and not sito_pronto else "")
+            "builds the site with Pyodide: run it apart (--only)" if "sito" in need and not only and not sito_pronto else "")
 
 
 def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False, plain: bool = False) -> None:
@@ -407,7 +407,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
 
 
 def checks_first(results, rapida: bool, night: bool) -> None:
-    """Syntax, texts, limits, pytest and prova_hr. The night (--parte) skips pytest: its own jobs run it, and a second serial one took 1800 s of part 1 (50 e2e not run)."""
+    """Syntax, texts, limits, pytest and prova_hr. The night (--part) skips pytest: its own jobs run it, and a second serial one took 1800 s of part 1 (50 e2e not run)."""
     js_syntax(results)
     i18n(results)
     codice(results)
@@ -419,21 +419,21 @@ def checks_first(results, rapida: bool, night: bool) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--rapida", action="store_true", help="syntax + pytest + e2e3")
-    ap.add_argument("--solo", default="", help="only these e2e, comma-separated (e.g. e2e6,e2e18)")
-    ap.add_argument("--senza-e2e", action="store_true")
+    ap.add_argument("--quick", action="store_true", help="syntax + pytest + e2e3")
+    ap.add_argument("--only", default="", help="only these e2e, comma-separated (e.g. e2e6,e2e18)")
+    ap.add_argument("--no-e2e", action="store_true")
     ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser of the e2e tests (default chromium; webkit = the Safari engine)")
-    ap.add_argument("--fumo", action="store_true", help="only the smoke e2e (SMOKE), without JS syntax and pytest: it is the round of the CI «browser» job")
+    ap.add_argument("--smoke", action="store_true", help="only the smoke e2e (SMOKE), without JS syntax and pytest: it is the round of the CI «browser» job")
     ap.add_argument("--setup", action="store_true", help="install pytest, playwright and chromium if missing")
     ap.add_argument("--timeout", type=int, default=600, help="seconds per e2e (default 600)")
-    ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
+    ap.add_argument("--parallel", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
                     help="e2e run together (default: CPU - 1, at most 6; 1 = one at a time)")
-    ap.add_argument("--ultimi-falliti", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
-    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts and prova_hr (pytest has its own jobs in the night), every part a share of the e2e")
+    ap.add_argument("--last-failed", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
+    ap.add_argument("--part", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts and prova_hr (pytest has its own jobs in the night), every part a share of the e2e")
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
-    ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
-    ap.add_argument("--cambiati", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
-    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
+    ap.add_argument("--site-ready", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --part mode too")
+    ap.add_argument("--changed", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
+    ap.add_argument("--show-ok", "--tutto", dest="show_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
     a = ap.parse_args()
     if a.browser:
         os.environ["MZLAB_BROWSER"] = a.browser
@@ -445,25 +445,25 @@ def main() -> None:
     t0 = time.time()
     global DEADLINE, PROGRESS
     DEADLINE = t0 + a.budget if a.budget else None
-    PROGRESS = bool(a.budget or a.parte or a.solo or a.cambiati)
-    parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
+    PROGRESS = bool(a.budget or a.part or a.only or a.changed)
+    parte = tuple(int(x) for x in a.part.split("/")) if a.part else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
-        ap.error("--parte wants K/N with 1 <= K <= N")
-    if not a.fumo and not a.ultimi_falliti and not a.solo and (not parte or parte[0] == 1):      # --solo = e2e only: `--solo e2e_rust` after part 5 ran a second pytest past 1800 s
-        checks_first(results, a.rapida, bool(parte))
-    if not a.senza_e2e:
-        only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.rapida or a.fumo else set())
-        if a.ultimi_falliti and not only:
+        ap.error("--part wants K/N with 1 <= K <= N")
+    if not a.smoke and not a.last_failed and not a.only and (not parte or parte[0] == 1):      # --only = e2e only: `--only e2e_rust` after part 5 ran a second pytest past 1800 s
+        checks_first(results, a.quick, bool(parte))
+    if not a.no_e2e:
+        only = {s.strip().removesuffix(".py") for s in a.only.split(",") if s.strip()} or (set(SMOKE) | (set(SMOKE_CHROMIUM_LINUX) if browser_name() == "chromium" and sys.platform.startswith("linux") else set()) if a.quick or a.smoke else set())
+        if a.last_failed and not only:
             only = last_failed()
             if not only:
                 results.append(("e2e", "INFO", 0, ["no e2e FAIL in the previous round (.verifica/ultimo.md)"]))
         run = True
-        if a.cambiati and not only:
+        if a.changed and not only:
             sel, why = changed_tests()
-            results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
+            results.append(("e2e scelti da --changed", "INFO", 0, [why]))
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
-        if run and not (a.ultimi_falliti and not only):
-            e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto, plain=a.fumo)
+        if run and not (a.last_failed and not only):
+            e2e(results, only, a.timeout, "", a.parallel, parte, a.site_ready, plain=a.smoke)
     known = known_reds()
     extra = known_greens(results, known)
     results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known and not (notes and notes[0].startswith("TIMEOUT budget")) else
@@ -480,7 +480,7 @@ def main() -> None:
     lines += ["", "Full logs: .verifica/log/<name>.log (read them only for the FAIL ones)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")
-    if a.mostra_ok:
+    if a.show_ok:
         print(text)
     else:          # fewer tokens for whoever reads it: only what is not OK, plus how many are OK (the full list is in .verifica/ultimo.md)
         ok = [r for r in results if r[1] == "OK"]

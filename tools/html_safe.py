@@ -5,7 +5,7 @@ A line of mzlab/web/*.js that assigns innerHTML / outerHTML or calls insertAdjac
 tools/html_sicuro_base.json; the count can only go down.
 
     python3 tools/html_safe.py            # exit 1 if a file has more such lines than its base
-    python3 tools/html_safe.py --aggiorna # lower the base to the current counts (refuses to raise it)
+    python3 tools/html_safe.py --update # lower the base to the current counts (refuses to raise it)
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def main() -> int:
     now = misura()
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     bad = peggiori(now, base) if BASE.exists() else []
-    if "--aggiorna" in sys.argv:
+    if "--update" in sys.argv:
         if bad:
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
             return 1

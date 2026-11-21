@@ -2,7 +2,7 @@
 """Vendor-reference harness: `mzlab-cli file convert` output against an mzML written by an independent converter (msconvert,
 ThermoRawFileParser) for the same vendor file. Datasets, tolerances and the expected-fail list are in
 `tools/external_reference.json` (public dataset names only; the files live in the private data repository).
-    python3 tools/external_reference.py [--solo NAME] [--cli PATH] [--json FILE] [--keep DIR]
+    python3 tools/external_reference.py [--only NAME] [--cli PATH] [--json FILE] [--keep DIR]
 Without the data repository it prints «SKIPPED: no data» and exits 0. Exit 1 when a check fails that is not expected to,
 or when an expected failure passes (the list only shrinks). Standard library only; a dev tool, not part of the program."""
 import argparse
@@ -448,7 +448,7 @@ def report(r: dict) -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--solo", action="append", help="only datasets whose name contains this text (repeatable)")
+    ap.add_argument("--only", action="append", help="only datasets whose name contains this text (repeatable)")
     ap.add_argument("--cli", help="mzlab-cli binary (default target/release, built when missing)")
     ap.add_argument("--json", help="write the full results here")
     ap.add_argument("--keep", help="keep the converted mzML in this folder")
@@ -461,7 +461,7 @@ def main(argv=None) -> int:
     if dati_percorsi.radice() is None:
         banner("SKIPPED: no data (private data repository not found; see tools/dati_percorsi.py)")
         return 0
-    sets = [d for d in m["datasets"] if not a.solo or any(s in d["name"] for s in a.solo)]
+    sets = [d for d in m["datasets"] if not a.only or any(s in d["name"] for s in a.only)]
     cli = find_cli(a.cli)
     results = []
     for d in sets:

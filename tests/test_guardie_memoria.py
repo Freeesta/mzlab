@@ -39,7 +39,7 @@ def build_wasm(tmp_path):
 
 def series(tmp_path, profile):
     ser = tmp_path / f"ser_{profile}"
-    run(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", profile, "--scala", "1.0", "--out", str(ser))
+    run(sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", profile, "--scale", "1.0", "--out", str(ser))
     return sorted(str(p) for p in ser.glob("*.mzidx"))
 
 
@@ -76,7 +76,7 @@ def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
     # the way in slabs (small budget) gives the same bytes as the way in memory
     assert done["completo_blocchi"][1] == done["memoria"][1], "the slabs do not give the bytes of the way in memory"
     if os.environ.get("MZLAB_UPDATE_GUARDS") or os.environ.get("MZLAB_GUARDIE_CREA"):
-        GUARD.write_text(json.dumps({"serie": "piccolo e completo (feat_mirato.py --seme 2 --scala 1.0); completo_blocchi = completo con budget di %d MB" % BLOCKS_MB,
+        GUARD.write_text(json.dumps({"serie": "piccolo e completo (feat_mirato.py --seed 2 --scale 1.0); completo_blocchi = completo con budget di %d MB" % BLOCKS_MB,
                                      "soglia": "valore registrato + 10 %", **measured}, indent=1) + "\n", encoding="utf-8")
     want = json.loads(GUARD.read_text(encoding="utf-8"))
     for name, got in measured.items():

@@ -20,7 +20,7 @@ tmp = Path(tempfile.mkdtemp(prefix="feat_worker_"))
 
 # the series, the native reference and the two .wasm
 data = tmp / "data"; data.mkdir()
-sh(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(data))
+sh(sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(data))
 idx = sorted(p.name for p in data.glob("*.mzidx"))
 shutil.copy(ROOT / "TP_Mine/data/regole_tp_3.json", data / "regole_tp_3.json")
 nat = tmp / "nat"; nat.mkdir()

@@ -1,6 +1,6 @@
 """Study tool for the `mol/1` record (docs/agenti/mol.md): what SMILES, molfile and InChI keep or lose on a small real set, and a round trip through the
 proposed `mol/1` record (atoms, Kekulé bonds, explicit stereo with status). RDKit and Open Babel are references only (pip install rdkit
-openbabel-wheel); nothing here runs in the site. Usage: python3 tools/struttura_dato/confronto.py [--json OUT] [--molfiles DIR] [--composti CSV] [--golden OUT]"""
+openbabel-wheel); nothing here runs in the site. Usage: python3 tools/struttura_dato/confronto.py [--json OUT] [--molfiles DIR] [--compounds CSV] [--golden OUT]"""
 
 import argparse
 import json
@@ -377,7 +377,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json")
     ap.add_argument("--molfiles")
-    ap.add_argument("--composti", help="TP_Mine/data/composti.csv")
+    ap.add_argument("--compounds", help="TP_Mine/data/composti.csv")
     ap.add_argument("--golden-molfile", help="write the golden molfiles of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden_molfile.json)")
     ap.add_argument("--golden-stereo", help="write the stereogenicity golden data (crates/mzlab-mol/tests/data/golden_stereo.json)")
     ap.add_argument("--golden", help="write the golden data of crates/mzlab-mol (crates/mzlab-mol/tests/data/golden.json)")
@@ -391,8 +391,8 @@ def main():
     if a.golden_molfile:
         molfile_golden(a.golden_molfile)
         return
-    if a.composti:
-        compounds(a.composti)
+    if a.compounds:
+        compounds(a.compounds)
         return
     rows = []
     for name, smi, note in SET:

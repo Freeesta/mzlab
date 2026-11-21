@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--tag", required=True, help="vX.Y.Z")
     ap.add_argument("--repo", required=True, help="owner/name")
-    ap.add_argument("--notes", required=True, type=Path, help="the CHANGELOG section (tools/versione.py --nota)")
+    ap.add_argument("--notes", required=True, type=Path, help="the CHANGELOG section (tools/versione.py --note)")
     a = ap.parse_args(argv)
     sys.stdout.write(testo(a.tag, a.repo, a.notes.read_text(encoding="utf-8")))
     return 0

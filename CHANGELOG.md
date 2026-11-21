@@ -1,6 +1,6 @@
 # Changelog
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions: [SemVer](https://semver.org/) `MAJOR.MINOR.PATCH` (the first release is 1.0.0). Written in English only: the section of a tag becomes the text of its GitHub release (`tools/versione.py --nota`, `tools/note_release.py`). Sections: Added / Changed / Fixed.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions: [SemVer](https://semver.org/) `MAJOR.MINOR.PATCH` (the first release is 1.0.0). Written in English only: the section of a tag becomes the text of its GitHub release (`tools/versione.py --note`, `tools/note_release.py`). Sections: Added / Changed / Fixed.
 
 Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into the section `## [X.Y.Z] - YYYY-MM-DD`, bring the same version into `Cargo.toml`, `crates/mzlab-desktop/tauri.conf.json` and `CITATION.cff` (`python3 tools/versione.py --tag vX.Y.Z` checks it), then see `docs/agenti/release.md`.
 

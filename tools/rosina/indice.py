@@ -1,5 +1,5 @@
 """Checks `INDICE.tsv` of the data repository (docs/studi/ROSINA.md D) and writes `INDICE.md` from it. No data inside.
-    python3 tools/rosina/indice.py INDICE.tsv [--md INDICE.md] [--controlla]
+    python3 tools/rosina/indice.py INDICE.tsv [--md INDICE.md] [--verify]
 Rules: the columns of D, the closed vocabulary of `esperimenti` (separated by `,` or `;`), `ridistribuibile` in si/no/da-verificare, `verita` in si/no, a licence for every
 row that is `si`, a `produttore` of the list, no empty `percorso`, no repeated `percorso`. Exit 1 with one line per problem."""
 import argparse
@@ -70,7 +70,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("tsv", type=Path)
     ap.add_argument("--md", type=Path, help="where to write INDICE.md")
-    ap.add_argument("--controlla", action="store_true", help="only check (do not write)")
+    ap.add_argument("--verify", action="store_true", help="only check (do not write)")
     a = ap.parse_args(argv)
     with a.tsv.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t")
@@ -80,7 +80,7 @@ def main(argv=None) -> int:
         print(p, file=sys.stderr)
     if problems:
         return 1
-    if a.md and not a.controlla:
+    if a.md and not a.verify:
         a.md.write_text(markdown(righe), encoding="utf-8")
     return 0
 

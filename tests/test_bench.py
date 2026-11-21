@@ -244,7 +244,7 @@ def test_mzfinder_on_small_d2_in_bench1(tmp_path):
 
 @pytest.mark.skipif(not BUILDABLE, reason="cargo not available")
 def test_cli_writes_the_files(tmp_path):
-    assert R.main(["--d2", "--seme", "7", "--profilo", "piccolo", "--out", str(tmp_path)]) == 0
+    assert R.main(["--d2", "--seed", "7", "--profile", "piccolo", "--out", str(tmp_path)]) == 0
     assert A.leggi(tmp_path / "bench1.json")["strumento"] == "mzfinder"
     assert json.loads((tmp_path / "rapporto.json").read_text())["dataset"] == "D2/piccolo/7" and (tmp_path / "rapporto.md").read_text().startswith("# Benchmark")
 
@@ -283,7 +283,7 @@ def test_report_from_tables_with_groups(tmp_path):
     for name, factor in (("mzlab", 2.0), ("altro", 3.0)):
         rows = [{"mz": 100.0 + i, "rt": 2.0, "aree": [factor * 100.0, factor * 100.0, 50.0, 50.0]} for i in range(6)]
         (tmp_path / f"{name}.json").write_text(A.a_json(A.tabella(name, "D1", "predefinita", ["SA1", "SA2", "SB1", "SB2"], rows)))
-    assert R.main(["--verita", str(tmp_path / "v.json"), "--tipo", "d1", "--rt-tol", "0.2", "--gruppi", "A=SA1,SA2", "B=SB1,SB2", "--tabelle", str(tmp_path / "mzlab.json"),
+    assert R.main(["--truth", str(tmp_path / "v.json"), "--kind", "d1", "--rt-tol", "0.2", "--groups", "A=SA1,SA2", "B=SB1,SB2", "--tables", str(tmp_path / "mzlab.json"),
                    str(tmp_path / "altro.json"), "--out", str(tmp_path / "o")]) == 0
     r = json.loads((tmp_path / "o" / "rapporto.json").read_text())
     assert r["strumenti"]["mzlab/predefinita"]["P1"]["n"] == 6 and r["strumenti"]["mzlab/predefinita"]["P1"]["valore"] == 1.0   # the unseen compound is left out

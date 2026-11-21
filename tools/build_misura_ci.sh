@@ -4,7 +4,7 @@
 set -eu
 eval "$(python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"export {k}={v!r}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]')"
 for n in "$@"; do
-  IFS='|' read -r uscita pacchetto flags tetto opt <<<"$(python3 tools/moduli.py --riga "$n")"
+  IFS='|' read -r uscita pacchetto flags tetto opt <<<"$(python3 tools/moduli.py --row "$n")"
   # shellcheck disable=SC2086
   tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p "$pacchetto" $flags
   wasm-bindgen --target web --no-typescript --out-dir "site/static/$uscita" "target/wasm32-unknown-unknown/release/${pacchetto//-/_}.wasm"

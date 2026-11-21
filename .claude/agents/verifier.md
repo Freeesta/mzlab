@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Runs tools/verifica.py (with --cambiati, --solo NAMES or complete) and reports ONLY the failed tests with the cause read from the logs. Use instead of reading logs in the main chat.
+description: Runs tools/verifica.py (with --changed, --only NAMES or complete) and reports ONLY the failed tests with the cause read from the logs. Use instead of reading logs in the main chat.
 tools: Bash, Read, Grep
 model: haiku
 effort: low

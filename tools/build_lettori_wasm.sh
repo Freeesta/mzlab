@@ -6,8 +6,8 @@ set -eu
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
 . tools/wasm_paralleli.sh   # the wasm-bindgen + wasm-opt of a family run in the background while cargo builds the next one
-for n in $(python3 tools/moduli.py --elenco lettori); do
-  IFS='|' read -r uscita pacchetto flags tetto opt <<<"$(python3 tools/moduli.py --riga "$n")"
+for n in $(python3 tools/moduli.py --list lettori); do
+  IFS='|' read -r uscita pacchetto flags tetto opt <<<"$(python3 tools/moduli.py --row "$n")"
   # shellcheck disable=SC2086
   tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p "$pacchetto" $flags </dev/null
   # cargo writes the same file for every family: wasm_pack copies it at once

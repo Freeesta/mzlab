@@ -27,11 +27,11 @@ fn series() -> Option<PathBuf> {
     let ok = Command::new("python3")
         .arg(root().join("tools/feat_mirato.py"))
         .args([
-            "--seme",
+            "--seed",
             "2",
-            "--profilo",
+            "--profile",
             "piccolo",
-            "--scala",
+            "--scale",
             "0.05",
             "--out",
         ])

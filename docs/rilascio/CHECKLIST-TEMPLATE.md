@@ -3,7 +3,7 @@
 Copy to `CHECKLIST-vX.Y.Z.md` (same folder), tick every box with `[x]`: `tools/gate_release.py` refuses the tag while one is still open.
 
 ## Maps
-- [ ] `python3 tools/indice.py --controlla` is green; `graphify-out` updated if present
+- [ ] `python3 tools/indice.py --verify` is green; `graphify-out` updated if present
 - [ ] every area file of `docs/agenti/` is cited in §5 of `CLAUDE.md`
 
 ## Guides for agents
@@ -23,4 +23,4 @@ Copy to `CHECKLIST-vX.Y.Z.md` (same folder), tick every box with `[x]`: `tools/g
 
 ## Release notes
 - [ ] `CHANGELOG.md` has the section `## [X.Y.Z]` in English, with no leftover «Unreleased»
-- [ ] `python3 tools/versione.py --nota vX.Y.Z` prints the notes
+- [ ] `python3 tools/versione.py --note vX.Y.Z` prints the notes

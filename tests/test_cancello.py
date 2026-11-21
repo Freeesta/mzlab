@@ -148,5 +148,5 @@ def test_option_in_the_command_line_writes_the_files(tmp_path):
     if not BUILDABLE:
         pytest.skip("cargo not available")
     dest = tmp_path / "cancello.json"
-    assert VF.main(["--cancello", "--sintetico", "piccolo", "--seme", "2", "--senza-wasm", "--data", DATA, "--lavoro", str(tmp_path / "l"), "--cancello-json", str(dest)]) == 0
+    assert VF.main(["--cancello", "--synthetic", "piccolo", "--seed", "2", "--no-wasm", "--data", DATA, "--workdir", str(tmp_path / "l"), "--cancello-json", str(dest)]) == 0
     assert json.loads(dest.read_text(encoding="utf-8"))["format"] == "cancello/2" and (tmp_path / "l" / "cancello_rapporto.md").exists()

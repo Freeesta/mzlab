@@ -5,7 +5,7 @@ Tool only (never shipped in the site). Needs ATTRIBUTIO_SRC=<path of Attributio'
 Stages: campagna, letture, rilevazione, livelli, identita, nomi, membri, proposte, decisioni, sirius, standard, abbinamenti (synthetic campaign) and sorbenti (campaign of the per-sorbent lists).
 
     ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_reference.py
-    ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_reference.py --controlla
+    ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_reference.py --verify
 """
 from __future__ import annotations
 
@@ -714,13 +714,13 @@ def main() -> int:
     from attributio_tox_reference import tox_stages
 
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--campagna", type=Path, default=CAMPAIGN)
-    ap.add_argument("--uscita", type=Path, default=OUTPUT)
-    ap.add_argument("--sorbenti", type=Path, default=SORBENTS)
-    ap.add_argument("--uscita-sorbenti", type=Path, default=OUTPUT_SORBENTS)
-    ap.add_argument("--uscita-esportazione", type=Path, default=OUTPUT_EXPORT)
-    ap.add_argument("--solo", nargs="+", metavar="STADIO", help="write only these stages (e.g. spiegazioni frammenti)")
-    ap.add_argument("--controlla", action="store_true",
+    ap.add_argument("--campaign", type=Path, default=CAMPAIGN)
+    ap.add_argument("--output", type=Path, default=OUTPUT)
+    ap.add_argument("--sorbents", type=Path, default=SORBENTS)
+    ap.add_argument("--sorbents-output", type=Path, default=OUTPUT_SORBENTS)
+    ap.add_argument("--export-output", type=Path, default=OUTPUT_EXPORT)
+    ap.add_argument("--only", nargs="+", metavar="STADIO", help="write only these stages (e.g. spiegazioni frammenti)")
+    ap.add_argument("--verify", action="store_true",
                     help="compare livelli.json with livelli_attesi.csv (exit 1 on difference)")
     a = ap.parse_args()
     src = os.environ.get("ATTRIBUTIO_SRC")
@@ -728,36 +728,36 @@ def main() -> int:
         print("ATTRIBUTIO_SRC=<path of Attributio's src/> is required", file=sys.stderr)
         return 2
     root = Path(src).expanduser().resolve()
-    C = load(root, a.campagna.resolve())
+    C = load(root, a.campaign.resolve())
     from attributio.annotate import load_annotations
     feat = load_annotations(C)
-    esp = a.uscita_esportazione
+    esp = a.export_output
     stages = {
         "quantificazione": lambda: write(esp, "quantificazione.json", stage_quantification(root)),
         "schymanski": lambda: write(esp, "schymanski.json", stage_schymanski(root)),
         "pubblicazione": lambda: write(esp, "pubblicazione.json", stage_publication(root)),
         "gradiente": lambda: write(esp, "gradiente.json", stage_gradient(root)),
-        "campagna": lambda: write(a.uscita, "campagna.json", stage_campaign(C)),
-        "letture": lambda: write(a.uscita, "letture.json", stage_reads(C)),
-        "rilevazione": lambda: write(a.uscita, "rilevazione.json", stage_detection(C)),
-        "livelli": lambda: write(a.uscita, "livelli.json", stage_levels(feat)),
-        "identita": lambda: write(a.uscita, "identita.json", stage_identity(feat, C)),
-        "nomi": lambda: write(a.uscita, "nomi.json", stage_names()),
-        "membri": lambda: write(a.uscita, "membri.json", stage_members(feat, C)),
-        "proposte": lambda: write(a.uscita, "proposte.json", stage_proposals(C)),
-        "decisioni": lambda: write(a.uscita, "decisioni.json", stage_decisions(C, feat)),
-        "abbinamenti": lambda: write(a.uscita, "abbinamenti.json", stage_matches()),
-        "formule": lambda: write(a.uscita, "formule.json", stage_formulas()),
-        "sirius": lambda: write(a.uscita, "sirius.json", stage_sirius(C)),
-        "standard": lambda: write(a.uscita, "standard.json", stage_standard(C)),
-        "spiegazioni": lambda: write(a.uscita, "spiegazioni.json", stage_explanations()),
-        "frammenti": lambda: write(a.uscita, "frammenti.json", stage_fragments()),
-        "sorbenti": lambda: write(a.uscita_sorbenti, "sorbenti.json", stage_sorbents(load(root, a.sorbenti.resolve()))),
+        "campagna": lambda: write(a.output, "campagna.json", stage_campaign(C)),
+        "letture": lambda: write(a.output, "letture.json", stage_reads(C)),
+        "rilevazione": lambda: write(a.output, "rilevazione.json", stage_detection(C)),
+        "livelli": lambda: write(a.output, "livelli.json", stage_levels(feat)),
+        "identita": lambda: write(a.output, "identita.json", stage_identity(feat, C)),
+        "nomi": lambda: write(a.output, "nomi.json", stage_names()),
+        "membri": lambda: write(a.output, "membri.json", stage_members(feat, C)),
+        "proposte": lambda: write(a.output, "proposte.json", stage_proposals(C)),
+        "decisioni": lambda: write(a.output, "decisioni.json", stage_decisions(C, feat)),
+        "abbinamenti": lambda: write(a.output, "abbinamenti.json", stage_matches()),
+        "formule": lambda: write(a.output, "formule.json", stage_formulas()),
+        "sirius": lambda: write(a.output, "sirius.json", stage_sirius(C)),
+        "standard": lambda: write(a.output, "standard.json", stage_standard(C)),
+        "spiegazioni": lambda: write(a.output, "spiegazioni.json", stage_explanations()),
+        "frammenti": lambda: write(a.output, "frammenti.json", stage_fragments()),
+        "sorbenti": lambda: write(a.sorbents_output, "sorbenti.json", stage_sorbents(load(root, a.sorbents.resolve()))),
     }
     stages.update(tox_stages(frame_rows, write, lambda: load(root, CAMPAIGN)))
-    for nome in a.solo or list(stages):
+    for nome in a.only or list(stages):
         stages[nome]()
-    return controlla(a.uscita, a.campagna) if a.controlla else 0
+    return controlla(a.output, a.campaign) if a.verify else 0
 
 
 if __name__ == "__main__":

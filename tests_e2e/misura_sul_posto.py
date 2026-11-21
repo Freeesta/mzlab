@@ -2,7 +2,7 @@
 index read from the copy; B = the index read straight from the user's File (Blob slices, no copy). Runs interleave A and B, prints median and min-max
 of each phase and the SHA-256 of every .mzidx (they must all be equal).
 
-    python3 tests_e2e/misura_sul_posto.py FILE.mzML [--static site/static] [--giri 10] [--aiuti 3] [--out run.json]
+    python3 tests_e2e/misura_sul_posto.py FILE.mzML [--static site/static] [--rounds 10] [--helpers 3] [--out run.json]
 
 The same file is read by both arms, so the page cache of the system serves both alike. Build first: python3 tools/build_site.py (or a static
 folder with wasm/mzlab_wasm.js and idx-worker.js)."""
@@ -89,7 +89,7 @@ def summary(runs, arm, key):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("file"); ap.add_argument("--static", default=str(ROOT / "site" / "static"))
-    ap.add_argument("--giri", type=int, default=10); ap.add_argument("--aiuti", type=int, default=3); ap.add_argument("--out"); ap.add_argument("--chrome"); ap.add_argument("--solo")
+    ap.add_argument("--rounds", type=int, default=10); ap.add_argument("--helpers", type=int, default=3); ap.add_argument("--out"); ap.add_argument("--chrome"); ap.add_argument("--only")
     a = ap.parse_args()
     s = serve(Path(a.static)); runs = []
     with sync_playwright() as p:
@@ -98,14 +98,14 @@ def main():
         pg.on("pageerror", lambda e: print("pageerror", e, file=sys.stderr))
         pg.goto(f"http://127.0.0.1:{s.server_address[1]}/t.html"); pg.wait_for_function("window.READY === true")
         pg.set_input_files("#f", a.file)
-        for i in range(a.giri):
-            if a.solo: arm_list = (a.solo,)
-            for arm in ((a.solo,) if a.solo else ("A", "B") if i % 2 == 0 else ("B", "A")):
-                r = pg.evaluate("([arm, n]) => window.giro(arm, n)", [arm, a.aiuti]); runs.append(r)
+        for i in range(a.rounds):
+            if a.only: arm_list = (a.only,)
+            for arm in ((a.only,) if a.only else ("A", "B") if i % 2 == 0 else ("B", "A")):
+                r = pg.evaluate("([arm, n]) => window.giro(arm, n)", [arm, a.helpers]); runs.append(r)
                 print(json.dumps(r), flush=True)
         b.close(); shutil.rmtree(prof, ignore_errors=True)
     s.shutdown()
-    out = {"file_bytes": Path(a.file).stat().st_size, "aiuti": a.aiuti, "runs": runs,
+    out = {"file_bytes": Path(a.file).stat().st_size, "aiuti": a.helpers, "runs": runs,
            "A": {k: summary(runs, "A", k) for k in ("copy_ms", "index_ms", "total_ms")}, "B": {k: summary(runs, "B", k) for k in ("index_ms", "total_ms")},
            "shas": sorted({r["sha"] for r in runs}), "errors": [r for r in runs if r["op"] != "done"]}
     print(json.dumps({k: out[k] for k in ("A", "B", "shas", "errors")}, indent=1))

@@ -1,5 +1,5 @@
 {
- "serie": "piccolo e completo (feat_mirato.py --seme 2 --scala 1.0); completo_blocchi = completo con budget di 24 MB",
+ "serie": "piccolo e completo (feat_mirato.py --seed 2 --scale 1.0); completo_blocchi = completo con budget di 24 MB",
  "soglia": "valore registrato + 10 %",
  "byte": {
   "detect": 33554432,

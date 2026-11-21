@@ -27,7 +27,7 @@ def test_installs_removes_and_respects_foreign_hook(tmp_path):
     r = repo(tmp_path)
     assert "installed" in ih.install(r)
     h = r / ".git" / "hooks" / "pre-push"
-    assert h.is_file() and h.stat().st_mode & 0o111 and "pre_pr.py --veloce" in h.read_text()
+    assert h.is_file() and h.stat().st_mode & 0o111 and "pre_pr.py --fast" in h.read_text()
     assert "removed" in ih.togli(r) and not h.exists()
     h.write_text("#!/bin/sh\necho mine\n")
     assert "left alone" in ih.install(r) and h.read_text().endswith("mine\n")

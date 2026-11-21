@@ -1,7 +1,7 @@
 //! The whole pipeline of `untargeted::pipeline` (ADAP -> resolver -> join -> gap filling -> table) on the four synthetic files of the gold data
 //! (`tests/data/untargeted/mzmine410/`) against `gapfilled.csv`, the final list of mzmine 4.10: the rows and the cells (feature or filled cell, with
 //! height and area) agree for at least 0.99 of the gold cells and the table has no cell that mzmine leaves empty. The mzML files are written by
-//! `tools/bench/oro_mzmine.py --genera` (python3 with numpy; skipped without). The gold CSV keeps four significant digits: heights and areas agree
+//! `tools/bench/oro_mzmine.py --generate` (python3 with numpy; skipped without). The gold CSV keeps four significant digits: heights and areas agree
 //! within 1.2e-3 relative. Also the recipe JSON and the round trip of the store.
 #![cfg(feature = "untargeted")]
 
@@ -62,7 +62,7 @@ fn synthetic() -> Option<Vec<Index<Vec<u8>>>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .current_dir(&root)
         .output()

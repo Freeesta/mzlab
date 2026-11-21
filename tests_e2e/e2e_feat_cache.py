@@ -16,7 +16,7 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("  ", ("wasm", "SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm")); sys.exit(0)
 tmp = Path(tempfile.mkdtemp(prefix="feat_cache_"))
 data = tmp / "data"; data.mkdir()
-sh(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(data))
+sh(sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(data))
 idx = sorted(p.name for p in data.glob("*.mzidx"))
 build_wasm(tmp)
 srv, URL = serve(tmp)

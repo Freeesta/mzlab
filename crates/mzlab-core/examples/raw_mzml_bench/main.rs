@@ -1,8 +1,8 @@
 //! Bench of the Thermo `.raw` → mzML conversion: phases, scaling over threads, micro-benchmarks, why threads slow it down (D8), what `mzlab-cli file convert`
 //! adds to the writer (D11) and the floor `T_min` of the roofline. It changes no byte of the output. One JSON object on stdout (or `--json FILE`).
 //!
-//! `cargo run --profile cli -p mzlab-core --example raw_mzml_bench -- --file X.raw --etichetta LAB-B --giri 5`
-//! `... -- --denso DIR --gb 2` (the dense synthetic case, generated in DIR when absent), `... -- --solo micro,d8` (machine only).
+//! `cargo run --profile cli -p mzlab-core --example raw_mzml_bench -- --file X.raw --label LAB-B --rounds 5`
+//! `... -- --dense DIR --gb 2` (the dense synthetic case, generated in DIR when absent), `... -- --only micro,d8` (machine only).
 //! Launched and collected by `tools/bench/raw_mzml.py`; numbers and method in `docs/agenti/raw-mzml.md`.
 mod count;
 mod d8;
@@ -63,13 +63,13 @@ fn args() -> Args {
     while let Some(x) = it.next() {
         match x.as_str() {
             "--file" => a.file = Some(v(&mut it, &x).into()),
-            "--denso" => a.denso = Some(v(&mut it, &x).into()),
+            "--dense" => a.denso = Some(v(&mut it, &x).into()),
             "--gb" => a.gb = v(&mut it, &x).parse().expect("--gb"),
             "--forma" => a.shape = v(&mut it, &x),
             "--cancella" => a.delete = true,
-            "--etichetta" => a.etichetta = v(&mut it, &x),
-            "--giri" => a.giri = v(&mut it, &x).parse().expect("--giri"),
-            "--solo" => a.only = v(&mut it, &x).split(',').map(str::to_string).collect(),
+            "--label" => a.etichetta = v(&mut it, &x),
+            "--rounds" => a.giri = v(&mut it, &x).parse().expect("--rounds"),
+            "--only" => a.only = v(&mut it, &x).split(',').map(str::to_string).collect(),
             "--thread" => {
                 a.thread = v(&mut it, &x)
                     .split(',')

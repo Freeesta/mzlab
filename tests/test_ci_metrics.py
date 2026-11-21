@@ -338,7 +338,7 @@ def test_commands_skip_frozen_files(tmp_path, monkeypatch):
     monkeypatch.setattr(s.ci_metrics_file, "LIMIT_B", 10)                # the legacy file counts as oversized
     calls = []
     monkeypatch.setattr(s, "fill_green", lambda rows, massimo=30: calls.append(1) or 0)
-    monkeypatch.setattr(sys, "argv", ["ci_metrics.py", "riempi-verde", "--dati", str(dati)])
+    monkeypatch.setattr(sys, "argv", ["ci_metrics.py", "riempi-verde", "--data-dir", str(dati)])
     before = dati.read_bytes()
     assert s.main() == 0 and not calls and dati.read_bytes() == before
 

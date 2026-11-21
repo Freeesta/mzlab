@@ -1,10 +1,10 @@
 """Times the site load of a maker's file (a synthetic Thermo .raw of crates/mzlab-lettori/examples/thermo_synthetic, no laboratory data): from the drop to the
 sample row being usable, the last event of phase «read» (the copy, or the builder hashing a member itself), and the SHA-256 of the .mzidx (it must not change).
-A Playwright context is ephemeral like a private window: Chromium keeps about 1 GiB of OPFS there, so a bigger file is read in place; --profilo runs in a
+A Playwright context is ephemeral like a private window: Chromium keeps about 1 GiB of OPFS there, so a bigger file is read in place; --profile runs in a
 persistent profile (a normal window). Each run reloads the page after the last sample was removed. Needs the site with the readers modules
 (tools/prepara_sito.py, then tools/build_lettori_wasm.sh site/static).
 
-    python3 tests_e2e/misura_raw_carico.py FILE.raw [--giri 5] [--out run.json] [--cpu 1] [--profilo]"""
+    python3 tests_e2e/misura_raw_carico.py FILE.raw [--rounds 5] [--out run.json] [--cpu 1] [--profile]"""
 import argparse, json, os, shutil, statistics, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -18,12 +18,12 @@ SHAS = """async () => { const d = await (await (await navigator.storage.getDirec
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("file"); ap.add_argument("--giri", type=int, default=5); ap.add_argument("--out"); ap.add_argument("--cpu", type=float, default=1); ap.add_argument("--profilo", action="store_true")
+    ap = argparse.ArgumentParser(); ap.add_argument("file"); ap.add_argument("--rounds", type=int, default=5); ap.add_argument("--out"); ap.add_argument("--cpu", type=float, default=1); ap.add_argument("--profile", action="store_true")
     a = ap.parse_args()
     r = Run(port=8981, wd="/tmp/wd_misura_raw"); runs = []; dirs = []
     try:
         with sync_playwright() as p:
-            if a.profilo:
+            if a.profile:
                 d = tempfile.mkdtemp(prefix="mzlab-profilo-"); dirs.append(d)
                 pg = p.chromium.launch_persistent_context(d, viewport={"width": 1500, "height": 2200}, reduced_motion="reduce", **CHROME).new_page()
                 pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
@@ -32,7 +32,7 @@ def main():
                 pg = r.page(p)
             pg.add_init_script(EV)
             if a.cpu > 1: pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": a.cpu})
-            for i in range(a.giri):
+            for i in range(a.rounds):
                 pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
                 pg.evaluate("window.__ev = []")
                 t0 = pg.evaluate("performance.now()")

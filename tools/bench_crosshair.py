@@ -1,5 +1,5 @@
-"""Cost of the sight (crosshair) of the RT x m/z map: `python3 tools/bench_crosshair.py [--scrivi]` (Chromium, development server, synthetic files).
-Per pointer move: time of the requests, of the drawing, requests per move and requests still in flight; `--scrivi` prints the markdown table."""
+"""Cost of the sight (crosshair) of the RT x m/z map: `python3 tools/bench_crosshair.py [--write]` (Chromium, development server, synthetic files).
+Per pointer move: time of the requests, of the drawing, requests per move and requests still in flight; `--write` prints the markdown table."""
 import sys, os, json, statistics, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tests_e2e"))
 from lib import *          # noqa: E402,F401

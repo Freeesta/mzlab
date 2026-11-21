@@ -1,10 +1,10 @@
 """Probe of the boot path a returning user meets and misura_primo_paint.py does not: a service worker (SW) the browser stopped, a network with latency,
 the V8 code cache, the order of the boot steps, and the isolation reload. Measures, never asserts (docs/agenti/measurements-loading.md).
 
-    python3 tests_e2e/misura_avvio_sw.py --mirror DIR [--runs 5] [--rtt 0,40,150] [--cpu 1,4] [--scenari warm,warm-restarted,cold,trace-warm,trace-restarted]
+    python3 tests_e2e/misura_avvio_sw.py --mirror DIR [--runs 5] [--rtt 0,40,150] [--cpu 1,4] [--scenarios warm,warm-restarted,cold,trace-warm,trace-restarted]
                                          [--out run.json]            # local mirror of --url with GitHub-Pages headers (filled from --url once)
-    python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold   # the live site
-    python3 tests_e2e/misura_avvio_sw.py --varianti main=DIR0,A=DIR1,B=DIR1?nav=cache [--rtt ...]   # built sites side by side, one mirror each
+    python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --rtt 0 --cpu 1 --scenarios warm,warm-restarted,cold   # the live site
+    python3 tests_e2e/misura_avvio_sw.py --variants main=DIR0,A=DIR1,B=DIR1?nav=cache [--rtt ...]   # built sites side by side, one mirror each
 
 Scenarios (every combination of --rtt and --cpu, interleaved over --runs, one new Chromium per run):
   cold            first visit, ends on the second page (after the isolation reload); also the bytes/requests of the first, non-isolated page.
@@ -12,7 +12,7 @@ Scenarios (every combination of --rtt and --cpu, interleaved over --runs, one ne
   warm-restarted  the same, but the SW is stopped over CDP (ServiceWorker.stopAllWorkers) before the reload.
   --warm-reloads N measures the Nth reload in warm / warm-restarted (default 1); every load also records its longest task before qqReady.
   trace-warm / trace-restarted (rtt 0 only)  third load under a Chromium trace (v8, v8.wasm, disabled-by-default-v8.compile, devtools.timeline).
---varianti NAME=DIR[?QUERY],...: every combination for every variant, interleaved; the first visit carries ?QUERY (a switch the SW remembers, such as nav=cache),
+--variants NAME=DIR[?QUERY],...: every combination for every variant, interleaved; the first visit carries ?QUERY (a switch the SW remembers, such as nav=cache),
 then one more load of the plain address before the measured reload, in every variant alike. All times are ms from the navigation start of the measured page. Boot steps come from the page itself (init script: script `load` events, the engine
 worker's `ready` message, setters on window.qqReady / MZLAB_LR, a wrapper of window.fetch for api/state): no product file is touched.
 """
@@ -171,7 +171,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, wa
     else:
         wait_fill(pg)
         pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
-        if query is not None:         # --varianti: the plain address once, so the measured reload carries no switch in its URL
+        if query is not None:         # --variants: the plain address once, so the measured reload carries no switch in its URL
             pg.goto(base + "#/data"); poll(pg, USABLE, 240); pump(pg, 1500)
         for _ in range((loads if scen.startswith("trace") else warm_loads) - 1):
             pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # loads 2..n-1; Chromium writes the code cache after the earlier ones
@@ -284,17 +284,17 @@ def main():
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--rtt", default="0,40,150", help="ms every answer of the mirror waits (ignored for the live site)")
     ap.add_argument("--cpu", default="1,4")
-    ap.add_argument("--scenari", default="warm,warm-restarted,cold,trace-warm,trace-restarted")
+    ap.add_argument("--scenarios", default="warm,warm-restarted,cold,trace-warm,trace-restarted")
     ap.add_argument("--trace-reloads", type=int, default=2, help="reloads after the first visit in the trace scenarios; the last one is traced (the code cache may need more than 2)")
     ap.add_argument("--warm-reloads", type=int, default=1, help="reloads after the first visit in warm / warm-restarted; the last one is measured (3 = the 4th load)")
-    ap.add_argument("--varianti", help="NAME=DIR[?QUERY],...: built sites measured side by side (one mirror each, no --url); ?QUERY goes on the first visit")
+    ap.add_argument("--variants", help="NAME=DIR[?QUERY],...: built sites measured side by side (one mirror each, no --url); ?QUERY goes on the first visit")
     ap.add_argument("--out")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
     variants: dict = {}       # name -> (base, query or None)
-    if a.varianti:
+    if a.variants:
         served: dict = {}
-        for item in a.varianti.split(","):
+        for item in a.variants.split(","):
             name, spec = item.split("=", 1)
             d, _, q = spec.partition("?")
             served.setdefault(d, serve_dir(d))
@@ -302,21 +302,21 @@ def main():
     else:
         variants[""] = (serve_mirror(a.mirror, a.url) if a.mirror else a.url, None)
     combos = []
-    for s in a.scenari.split(","):
+    for s in a.scenarios.split(","):
         for cpu in [int(x) for x in a.cpu.split(",")]:
             for rtt in ([0] if s.startswith("trace") else [int(x) for x in a.rtt.split(",")]):
                 for v in variants:
                     combos.append((v, s, rtt, cpu))
     results: dict = {k: [] for k in combos}
     exe = "/opt/pw-browsers/chromium"
-    proxy = {"server": os.environ["HTTPS_PROXY"]} if os.environ.get("HTTPS_PROXY") and not (a.mirror or a.varianti) else None
+    proxy = {"server": os.environ["HTTPS_PROXY"]} if os.environ.get("HTTPS_PROXY") and not (a.mirror or a.variants) else None
     with sync_playwright() as p:
         for i in range(a.runs):                 # interleaved: every combination once per round
             for k in combos:
                 b = p.chromium.launch(proxy=proxy, **({"executable_path": exe} if os.path.isfile(exe) else {}))
                 try:
                     base, q = variants[k[0]]
-                    results[k].append(one(b, base, *k[1:], mirror=bool(a.mirror or a.varianti), loads=a.trace_reloads, warm_loads=a.warm_reloads, query=q))
+                    results[k].append(one(b, base, *k[1:], mirror=bool(a.mirror or a.variants), loads=a.trace_reloads, warm_loads=a.warm_reloads, query=q))
                     print(f"run {i + 1} {k}: ok", flush=True)
                 except Exception as e:
                     print(f"run {i + 1} {k}: {str(e)[:200]}", flush=True)

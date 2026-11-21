@@ -6,8 +6,8 @@ lines over 600 characters (counted per file) and files over 25 KB. It also fails
 tools/safari_api_ammesse.txt does not list (tools/safari_api.py).
 
     python3 tools/controlla.py             # report + exit 1 if worse than the base
-    python3 tools/controlla.py --lista     # also print every entry over a limit
-    python3 tools/controlla.py --aggiorna  # rewrite the base from the current code; refuses if anything got worse
+    python3 tools/controlla.py --list     # also print every entry over a limit
+    python3 tools/controlla.py --update  # rewrite the base from the current code; refuses if anything got worse
 """
 from __future__ import annotations
 
@@ -270,10 +270,10 @@ def rules_expected(update: bool = False) -> list[str]:
 def main() -> int:
     now = misura()
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
-    # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
+    # a limit that is not in the base file yet starts from the current state (--update writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--aggiorna" in sys.argv) + rules_frame("--aggiorna" in sys.argv) + rules_expected("--aggiorna" in sys.argv) + safari_api.controlla() + html_safe.peggiori(html_safe.misura(), json.loads(html_safe.BASE.read_text(encoding="utf-8")) if html_safe.BASE.exists() else {})
-    if "--aggiorna" in sys.argv:
+    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--update" in sys.argv) + rules_frame("--update" in sys.argv) + rules_expected("--update" in sys.argv) + safari_api.controlla() + html_safe.peggiori(html_safe.misura(), json.loads(html_safe.BASE.read_text(encoding="utf-8")) if html_safe.BASE.exists() else {})
+    if "--update" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
             return 1
@@ -288,7 +288,7 @@ def main() -> int:
           f"{MAX_DOC_LINE} characters, {len(now['doc_kb'])} over 25 KB")
     for w in neighbors() + neighbor_tolerance(now, base) + hot_neighbors(caldi()):
         print("WARN near the limit: " + w)
-    if "--lista" in sys.argv:
+    if "--list" in sys.argv:
         for kind in KINDS:
             for k, v in sorted(now[kind].items(), key=lambda kv: -kv[1]):
                 print(f"  {v:5d}  {k}")
@@ -296,7 +296,7 @@ def main() -> int:
         print("FAIL " + b)
     shrunk = [k for kind in KINDS for k in base[kind] if k not in now[kind]]
     if shrunk and not bad:
-        print(f"note: {len(shrunk)} entries of the base are now under the limit: run python3 tools/controlla.py --aggiorna to narrow it")
+        print(f"note: {len(shrunk)} entries of the base are now under the limit: run python3 tools/controlla.py --update to narrow it")
     return 1 if bad else 0
 
 

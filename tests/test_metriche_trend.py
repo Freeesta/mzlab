@@ -67,5 +67,5 @@ def test_cli_report_from_files(tmp_path, capsys):
         for day in (0, 10, 20, 30, 40):
             f.write(json.dumps({"v": 1, "part": "site", "recorded": f"2026-10-0{1 + day // 20}T00:00:00Z", **{k: v for k, v in rec(day).items() if k != "ci"}}) + "\n")
     out = tmp_path / "r.html"
-    assert m.main(["--rapporto", "--dati", str(d), "--html", str(out)]) == 0
+    assert m.main(["--report", "--data-dir", str(d), "--html", str(out)]) == 0
     assert "tests.pytest" in capsys.readouterr().out and out.read_text().startswith("<!doctype html>")

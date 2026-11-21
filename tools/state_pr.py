@@ -2,7 +2,7 @@
 """One line per open PR of Freeesta/mzlab: head SHA, required checks, mergeable state, auto-merge.
 
 Read-only, standard library only. Used by the COO instead of checking PRs by hand.
-Usage: python3 tools/state_pr.py [--stato PATH]  (PATH: stato.json of the private repo;
+Usage: python3 tools/state_pr.py [--state PATH]  (PATH: stato.json of the private repo;
 default $MZLAB_STATO or ../mzlab-dati/coordinamento/stato.json when present).
 Auth: none; the cloud session proxy authenticates api.github.com.
 """
@@ -98,9 +98,9 @@ def load_chats(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stato")
+    ap.add_argument("--state")
     args = ap.parse_args()
-    chats = load_chats(args.stato)
+    chats = load_chats(args.state)
     prot, _ = get(f"{API}/branches/main/protection/required_status_checks")
     required = prot["contexts"]
     prs = list(pages(f"{API}/pulls?state=open&per_page=100"))

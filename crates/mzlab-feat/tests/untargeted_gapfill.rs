@@ -1,6 +1,6 @@
 //! Gap filler of mzmine 3.9.0 rewritten in Rust (`untargeted::gapfill`): the cells that `gapfilled.csv` fills and `aligned.csv` leaves empty are the
 //! cells that the Rust filler fills from the `.mzidx` of the four synthetic files, with the same m/z, RT, height and area. The mzML files are not in
-//! the repository: `tools/bench/oro_mzmine.py --genera` writes them (python3 with numpy; the test is skipped without). The gold CSV keeps four significant
+//! the repository: `tools/bench/oro_mzmine.py --generate` writes them (python3 with numpy; the test is skipped without). The gold CSV keeps four significant
 //! digits, so the areas agree within 6e-4 relative (half of the last digit), not within 1e-6.
 
 use std::collections::BTreeMap;
@@ -137,7 +137,7 @@ fn fills_the_cells_like_mzmine() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .current_dir(&root)
         .output()

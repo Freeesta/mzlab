@@ -1,7 +1,7 @@
-"""Checks the interface texts of mzLab (English only: mzlab/web/lang/en/<area>.js). Part of `python3 tools/verifica.py --rapida`.
+"""Checks the interface texts of mzLab (English only: mzlab/web/lang/en/<area>.js). Part of `python3 tools/verifica.py --quick`.
 
     python3 tools/controlla_i18n.py            # checks; exit code 1 if something is wrong
-    python3 tools/controlla_i18n.py --elenco   # also lists, file by file, Italian words still found outside the catalog
+    python3 tools/controlla_i18n.py --list   # also lists, file by file, Italian words still found outside the catalog
 
 What is checked:
  1. every key used (`t("..")`, `data-i18n*="..")`, keys of Python messages) exists in the catalog; no orphan key;
@@ -484,7 +484,7 @@ def run(listing: bool = False) -> list[str]:
 
 
 def main() -> None:
-    errs = run("--elenco" in sys.argv)
+    errs = run("--list" in sys.argv)
     if errs:
         print(f"i18n: {len(errs)} problems")
         for e in errs[:60]:

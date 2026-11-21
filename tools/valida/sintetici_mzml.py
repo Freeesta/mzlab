@@ -4,7 +4,7 @@ One file = survey scans every CICLO min (centroids, noise, continuous background
 selectable ion, an MS2 in which all the ions inside the isolation window are fragmented together (this is what makes an MS2 chimeric).
 
 `generate_wide` writes the bench lot of smeared peaks (blank + samples, `verita.json`): broad Gaussian/EMG bands (FWHM 60-240 s), double plateaus and
-bands with narrow peaks on top, over a common gradient background; used by tools/bench (`python3 tools/valida/sintetici_mzml.py OUT --seme N`)."""
+bands with narrow peaks on top, over a common gradient background; used by tools/bench (`python3 tools/valida/sintetici_mzml.py OUT --seed N`)."""
 from __future__ import annotations
 
 import argparse
@@ -348,10 +348,10 @@ def generate_wide(out: Path, seme: int = 11, n_campioni: int = 3, n_larghi: int 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Bench lot of smeared peaks: blank + samples + verita.json")
     ap.add_argument("out")
-    ap.add_argument("--seme", type=int, default=11)
-    ap.add_argument("--campioni", type=int, default=3)
+    ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--samples", type=int, default=3)
     a = ap.parse_args()
-    v = generate_wide(Path(a.out), a.seme, a.campioni)
+    v = generate_wide(Path(a.out), a.seed, a.samples)
     print(a.out, len(v["ioni"]), "truth rows,", len(v["file"]), "files")
 
 

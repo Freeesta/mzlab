@@ -1,5 +1,5 @@
 """Replace one `## ` section of a markdown file and keep the others: used by tools that write their own measurements into a
-docs/agenti area file (tools/bench.py --librerie --scrivi). No dependency, so the tests import it without Playwright."""
+docs/agenti area file (tools/bench.py --libraries --write). No dependency, so the tests import it without Playwright."""
 
 
 def replace_section(txt: str, head: str, sec: list[str]) -> str:

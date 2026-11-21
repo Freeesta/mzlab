@@ -36,4 +36,4 @@ def test_doc_only_steps_are_cheap():
 
 def test_fast_does_not_exit_2_for_e2e():
     text = (ROOT / "tools" / "pre_pr.py").read_text(encoding="utf-8")
-    assert "--completo" in text and "return 2" in text and "if veloce and not solo_doc" in text
+    assert "--full" in text and "return 2" in text and "if veloce and not solo_doc" in text

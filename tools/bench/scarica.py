@@ -1,10 +1,10 @@
 """Download of the files of a benchmark manifest (`bench/manifesto/1`, kept in the private repository) with SHA-256 verification.
 
 Resumable (HTTP Range on a `.part` file), one file at a time, never inside git: the raw data go to a cache directory given on the command line.
-The manifest lists `file_grezzi` (raw data), `file_verita` (truth tables) and `file_metadati`; `--gruppo` picks which. A file whose hash differs is deleted
-and the run fails. `--elimina` removes a downloaded file (disk is scarce: raw files of D1 weigh 7.4 GB).
+The manifest lists `file_grezzi` (raw data), `file_verita` (truth tables) and `file_metadati`; `--group` picks which. A file whose hash differs is deleted
+and the run fails. `--delete` removes a downloaded file (disk is scarce: raw files of D1 weigh 7.4 GB).
 
-    python3 tools/bench/scarica.py MANIFESTO.json CARTELLA [--gruppo file_grezzi] [--solo SA1.raw ...] [--elimina SA1.raw ...]
+    python3 tools/bench/scarica.py MANIFESTO.json CARTELLA [--group file_grezzi] [--only SA1.raw ...] [--delete SA1.raw ...]
 """
 from __future__ import annotations
 
@@ -94,17 +94,17 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("manifesto")
     ap.add_argument("cartella")
-    ap.add_argument("--gruppo", action="append", choices=GROUPS, help="default: file_grezzi")
-    ap.add_argument("--solo", nargs="*", help="only these file names")
-    ap.add_argument("--elimina", nargs="*", help="delete these downloaded files and exit")
+    ap.add_argument("--group", action="append", choices=GROUPS, help="default: file_grezzi")
+    ap.add_argument("--only", nargs="*", help="only these file names")
+    ap.add_argument("--delete", nargs="*", help="delete these downloaded files and exit")
     a = ap.parse_args(argv)
     folder = Path(a.cartella)
-    if a.elimina:
-        for n in a.elimina:
+    if a.delete:
+        for n in a.delete:
             (folder / n).unlink(missing_ok=True)
         return 0
     m = json.loads(Path(a.manifesto).read_text(encoding="utf-8"))
-    for v in voci(m, a.gruppo or ("file_grezzi",), a.solo):
+    for v in voci(m, a.group or ("file_grezzi",), a.only):
         print(f"{v['nome']} ...", flush=True)
         p = download(v, folder)
         print(f"  ok {p.stat().st_size} B sha256 {v.get('sha256', '')[:12]}", flush=True)

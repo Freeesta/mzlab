@@ -84,7 +84,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Flow input formats (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-formats.md` |
 | page load (FCP, LCP, engine ready, KB before paint by scenario; `tests_e2e/misura_primo_paint.py`); first file vs ten files, `rotte`, `thermo`, memory (`misura_caricamento.py --scenarios`) | `docs/agenti/measurements-loading.md` |
 | measurement on slow computers (CPU throttled 1×/4×/6×, 2/4 cores: demo open, line drag, maps, XIC, memory; `tests_e2e/misura_macchine.py`) | `docs/agenti/measurements-machines.md` |
-| warm page loads: navigation preload and the `?nav=cache` switch of the service worker measured against main (RTT, CPU, restarted SW, loads until a deploy shows; `tests_e2e/misura_avvio_sw.py --varianti`) | `docs/agenti/measurements-navigation.md` |
+| warm page loads: navigation preload and the `?nav=cache` switch of the service worker measured against main (RTT, CPU, restarted SW, loads until a deploy shows; `tests_e2e/misura_avvio_sw.py --variants`) | `docs/agenti/measurements-navigation.md` |
 | loading an mzML in one pass (OPFS copy and index from the same bytes): limit, switched-off spike `una-passata.js`, design (`tests_e2e/misura_una_passata.py`, `build_mzml_streamed`) | `docs/agenti/measurements-one-pass.md` |
 | Rust and module measurements (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-rust.md` |
 | vendor readers, `.raw`, `.wiff`, `.D` (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/measurements-speed-raw.md` |

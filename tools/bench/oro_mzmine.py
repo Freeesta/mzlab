@@ -3,9 +3,9 @@
 The files carry every case that the stages of mzmine treat differently: isolated Gaussians, two peaks that touch (valley at 40 % and 70 % of the lower apex), a trace
 with a hole of one zero, a long background trace with a peak on top, an isotope pair of charge 1 and one of charge 2, a retention-time drift between files (join),
 and a peak that one file lacks (gap filling: it is below the minimum height there but present in the raw data). Usage:
-    python3 tools/bench/oro_mzmine.py --genera DIR        write the four mzML (they never go into the repository)
-    python3 tools/bench/oro_mzmine.py --oro [DIR]         run mzmine 3.9.0 and write the CSV and the README of `tests/data/untargeted/mzmine39/`
-    python3 tools/bench/oro_mzmine.py --reale MZML_DIR DEST  ADAP lists of mzmine on the first two mzML of a folder (real-data test of the ADAP builder)"""
+    python3 tools/bench/oro_mzmine.py --generate DIR        write the four mzML (they never go into the repository)
+    python3 tools/bench/oro_mzmine.py --gold [DIR]         run mzmine 3.9.0 and write the CSV and the README of `tests/data/untargeted/mzmine39/`
+    python3 tools/bench/oro_mzmine.py --real MZML_DIR DEST  ADAP lists of mzmine on the first two mzML of a folder (real-data test of the ADAP builder)"""
 from __future__ import annotations
 
 import argparse
@@ -247,9 +247,9 @@ def _readme(shas: dict[str, str], java: list[str], xml_a: str, xml_b: str) -> st
     return f"""# Gold data of mzmine 3.9.0 per stage (synthetic files)
 
 Output of mzmine 3.9.0 on four small synthetic mzML files of ours (all numbers invented, fixed seed), one CSV per stage. They are the reference of the parity tests of the stages
-rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DIR` writes them again, byte for byte.
+rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not in the repository: `tools/bench/oro_mzmine.py --generate DIR` writes them again, byte for byte.
 
-- **Written on**: {date.today().isoformat()} by `python3 tools/bench/oro_mzmine.py --oro` (it checks first that every parameter name of the batch exists in the parameter classes of the module: mzmine ignores the others without a word).
+- **Written on**: {date.today().isoformat()} by `python3 tools/bench/oro_mzmine.py --gold` (it checks first that every parameter name of the batch exists in the parameter classes of the module: mzmine ignores the others without a word).
 - **mzmine**: 3.9.0, bioconda package `mzmine-3.9.0-hdfd78af_0.tar.bz2`, sha256 `{corri_mzmine.BIOCONDA_SHA256}`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`).
 - **JDK**: {java[0]}{' / ' + java[1] if len(java) > 1 else ''} (Adoptium OpenJDK 20, `{corri_mzmine.JDK20_URL}`).
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
@@ -278,17 +278,17 @@ Four files, 0.2-6 min, one scan every 0.01 min, 60 000 resolving power invented,
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--genera", metavar="DIR")
-    ap.add_argument("--oro", nargs="?", const=str(DEST), metavar="DIR")
-    ap.add_argument("--reale", nargs=2, metavar=("MZML_DIR", "DEST"), help="ADAP lists of mzmine on the first mzML of a folder (for the real-data test)")
+    ap.add_argument("--generate", metavar="DIR")
+    ap.add_argument("--gold", nargs="?", const=str(DEST), metavar="DIR")
+    ap.add_argument("--real", nargs=2, metavar=("MZML_DIR", "DEST"), help="ADAP lists of mzmine on the first mzML of a folder (for the real-data test)")
     a = ap.parse_args()
-    if a.genera:
-        for n, h in generate(Path(a.genera)).items():
+    if a.generate:
+        for n, h in generate(Path(a.generate)).items():
             print(h, n)
-    if a.oro:
-        write_gold(Path(a.oro))
-    if a.reale:
-        write_real(Path(a.reale[0]), Path(a.reale[1]))
+    if a.gold:
+        write_gold(Path(a.gold))
+    if a.real:
+        write_real(Path(a.real[0]), Path(a.real[1]))
 
 
 if __name__ == "__main__":

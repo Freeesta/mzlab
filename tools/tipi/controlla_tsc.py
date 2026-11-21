@@ -2,7 +2,7 @@
 """Job «tipi»: runs tsc on the projects (pagina, moduli, worker, stretto, stretto-worker, stretto2, stretto2-worker, stretto3, stretto3-worker) and compares the errors per file with tools/tipi/base_errori.json.
 
 Fails when a file has more errors than its base, or has errors and is not in the base. The base only goes down:
-`--aggiorna` rewrites it with min(base, now) and refuses to raise a number or add a file. Errors in vendor/ and wasm/ are not counted.
+`--update` rewrites it with min(base, now) and refuses to raise a number or add a file. Errors in vendor/ and wasm/ are not counted.
 """
 import json, os, re, signal, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
@@ -61,7 +61,7 @@ def main():
     base = {k: n for k, n in base.items() if not k.startswith("stretto")}
     peggio = ["%s: %d errors (base %d)" % (k, n, base.get(k, 0)) for k, n in sorted(ora.items()) if n > base.get(k, 0)]
     print("tsc errors: %d in %d files (base %d in %d)" % (sum(ora.values()), len(ora), sum(base.values()), len(base)))
-    if "--aggiorna" in sys.argv:
+    if "--update" in sys.argv:
         if peggio:
             print("\n".join(peggio)); return 1
         new = {k: n for k, n in ora.items() if n > 0}
@@ -72,7 +72,7 @@ def main():
         print("Worse than tools/tipi/base_errori.json (fix the new errors; the base only goes down):\n" + "\n".join(peggio)); return 1
     meglio = [k for k, n in base.items() if ora.get(k, 0) < n]
     if meglio:
-        print("Better than the base in %d files: run python3 tools/tipi/controlla_tsc.py --aggiorna and commit it." % len(meglio))
+        print("Better than the base in %d files: run python3 tools/tipi/controlla_tsc.py --update and commit it." % len(meglio))
     return 0
 
 

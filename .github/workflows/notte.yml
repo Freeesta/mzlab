@@ -144,8 +144,8 @@ jobs:
         env:
           SOLO: ${{ inputs.solo }}
         run: |
-          args=(--browser "${{ matrix.browser }}" --fumo)
-          if [ -n "$SOLO" ]; then args+=(--solo "$SOLO"); fi
+          args=(--browser "${{ matrix.browser }}" --smoke)
+          if [ -n "$SOLO" ]; then args+=(--only "$SOLO"); fi
           python tools/verifica.py "${args[@]}"
       # the post step of the cache action saves on a miss; the record vouches for the crates this run compiled, so the next night reuses them
       - name: Record the tree of the cache
@@ -220,10 +220,10 @@ jobs:
           if [ "${{ matrix.parte }}" = core ]; then
             tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
             wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-            tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
+            tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --cap motore)" engine @motore
             tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
             wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-            tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
+            tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --cap librerie)" libraries @motore
             tools/build_lettori_wasm.sh site/static
           else
             tools/build_feat_wasm.sh site/static "${{ matrix.parte == 'feat-a' && 'a' || 'b' }}"
@@ -236,7 +236,7 @@ jobs:
 
 
   # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
-  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts and prova_hr), each with its own report .verifica/ultimo.md
+  # in five parallel parts (tools/verifica.py --part K/5: part 1 also does syntax, texts and prova_hr), each with its own report .verifica/ultimo.md
   completa:
     if: inputs.solo == ''
     name: completa (${{ matrix.parte }}/5)
@@ -309,7 +309,7 @@ jobs:
       # part 1 does syntax, texts and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
       - name: Complete verification (part ${{ matrix.parte }}/5)
         timeout-minutes: 55
-        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget ${{ matrix.parte == 1 && 2820 || 2400 }}
+        run: python tools/verifica.py --browser chromium --site-ready --part ${{ matrix.parte }}/5 --budget ${{ matrix.parte == 1 && 2820 || 2400 }}
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
       # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
@@ -321,7 +321,7 @@ jobs:
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          python tools/verifica.py --browser chromium --solo e2e_rust
+          python tools/verifica.py --browser chromium --only e2e_rust
       # times and memory of the two engines (skipped without the real data: bench.py needs Full Scan files)
       - name: Measures
         if: matrix.parte == 5

@@ -20,7 +20,7 @@ def argomenti(descrizione: str, extra=None) -> argparse.Namespace:
     ap.add_argument("out_dir")
     ap.add_argument("--dataset", default="D1")
     ap.add_argument("--config", default="predefinita")
-    ap.add_argument("--solo", nargs="*", help="only these mzML stems (smoke tests)")
+    ap.add_argument("--only", nargs="*", help="only these mzML stems (smoke tests)")
     if extra:
         extra(ap)
     return ap.parse_args()

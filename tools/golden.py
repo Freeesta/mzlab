@@ -1,8 +1,8 @@
 """Golden data: the results of the Python engine frozen in JSON (tests/golden/), the reference for any other engine (Rust).
 
-    python3 tools/golden.py --crea        # recompute and WRITE tests/golden/*.json (only when the reference engine changes on purpose)
-    python3 tools/golden.py --controlla   # recompute and COMPARE with the JSON; exit 1 on any difference
-    python3 tools/golden.py --sintetici DIR   # write only the two synthetic mzML files (the Rust tests read them)
+    python3 tools/golden.py --create        # recompute and WRITE tests/golden/*.json (only when the reference engine changes on purpose)
+    python3 tools/golden.py --verify   # recompute and COMPARE with the JSON; exit 1 on any difference
+    python3 tools/golden.py --synthetic DIR   # write only the two synthetic mzML files (the Rust tests read them)
 
 Sources: the anonymous example files of mzlab/web/esempi (Full Scan, MS2, MRM) and two synthetic files written by
 tools/dati_sintetici.py with a fixed seed (a Full Scan and an MRM, peaks of known shape). No compound names.
@@ -306,17 +306,17 @@ def check(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = False
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--crea", action="store_true")
-    g.add_argument("--controlla", action="store_true")
-    g.add_argument("--sintetici", metavar="DIR", help="only write the two synthetic mzML files of the golden data in DIR")
+    g.add_argument("--create", action="store_true")
+    g.add_argument("--verify", action="store_true")
+    g.add_argument("--synthetic", metavar="DIR", help="only write the two synthetic mzML files of the golden data in DIR")
     ap.add_argument("--skip-missing", action="store_true", help="skip files whose source .mzML is missing")
     args = ap.parse_args(argv)
-    if args.sintetici:
-        for p in write_synthetic(Path(args.sintetici)).values():
+    if args.synthetic:
+        for p in write_synthetic(Path(args.synthetic)).values():
             print(p)
         return 0
     new = compute(skip_missing=args.skip_missing)
-    if args.crea:
+    if args.create:
         GOLDEN.mkdir(parents=True, exist_ok=True)
         for name, data in new.items():
             (GOLDEN / f"{name}.json").write_text(json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
@@ -324,7 +324,7 @@ def main(argv=None) -> int:
         return 0
     old = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(GOLDEN.glob("*.json"))}
     if not old:
-        print("no golden files: run --crea"); return 1
+        print("no golden files: run --create"); return 1
     bad = check(new, old, skip_missing=args.skip_missing)
     for b in bad:
         print("FAIL", b)

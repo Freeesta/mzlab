@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Checks to run before opening a PR, in the order of the CI, stopping at the first failure (about 1-2 minutes, plus clippy when `crates/` changed).
 
-    python3 tools/pre_pr.py            # locally: all the steps; in the cloud (no browser, CLAUDE_CODE_REMOTE or no Playwright): same as --veloce
-    python3 tools/pre_pr.py --completo   # all the steps even in the cloud
-    python3 tools/pre_pr.py --senza-e2e  # skip `verifica.py --cambiati` (the e2e of the changed files)
-    python3 tools/pre_pr.py --veloce     # only the cheap checks (well under 2 minutes, never clippy or e2e): adds the CSP hash and prints which e2e would run
+    python3 tools/pre_pr.py            # locally: all the steps; in the cloud (no browser, CLAUDE_CODE_REMOTE or no Playwright): same as --fast
+    python3 tools/pre_pr.py --full   # all the steps even in the cloud
+    python3 tools/pre_pr.py --no-e2e  # skip `verifica.py --changed` (the e2e of the changed files)
+    python3 tools/pre_pr.py --fast     # only the cheap checks (well under 2 minutes, never clippy or e2e): adds the CSP hash and prints which e2e would run
 
 When the diff against origin/main touches only documents (the list of tools/ci_solo_doc.py) it runs just code map, size limits and prints «solo documenti».
 Steps: code map, size limits, i18n, JS syntax (only when `mzlab/web/` differs from origin/main), generated globals, tsc, Rust format, clippy and machete (only when the Rust paths of the CI differ from origin/main), e2e of the changed files.
-Every step prints its name before it starts, so a long one is never silent. Exit 0 = green; with --veloce (also the cloud default) the e2e and clippy are not run and the output says the CI will run them. With --completo, e2e skipped for lack of a browser give exit 2.
+Every step prints its name before it starts, so a long one is never silent. Exit 0 = green; with --fast (also the cloud default) the e2e and clippy are not run and the output says the CI will run them. With --full, e2e skipped for lack of a browser give exit 2.
 Merge `origin/main` first (`git merge origin/main`): the checks compare with the files as the merge leaves them.
 """
 from __future__ import annotations
@@ -53,27 +53,27 @@ def files_cambiati() -> list[str]:
 
 def doc_only_steps() -> list[tuple[str, list[str]]]:
     """The checks a documents-only diff needs."""
-    p = [("code map", [PY, "tools/indice.py", "--controlla"]), ("size limits", [PY, "tools/controlla.py"]),
+    p = [("code map", [PY, "tools/indice.py", "--verify"]), ("size limits", [PY, "tools/controlla.py"]),
          ("paths in the docs", [PY, "tools/check_link_docs.py"])]
     return p
 
 
-# prints the e2e that `verifica.py --cambiati` would run, without running them
+# prints the e2e that `verifica.py --changed` would run, without running them
 SELECTION_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica as v; sel, why = v.changed_tests(); print(why)"]
 
 
 def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
-        ("code map", [PY, "tools/indice.py", "--controlla"]),
+        ("code map", [PY, "tools/indice.py", "--verify"]),
         ("size limits", [PY, "tools/controlla.py"]),
         ("paths in the docs", [PY, "tools/check_link_docs.py"]),
         ("languages (i18n)", [PY, "tools/controlla_i18n.py"]),
-        ("caps of the .wasm modules against the base", [PY, "tools/moduli.py", "--controlla", "--base", "origin/main"]),
+        ("caps of the .wasm modules against the base", [PY, "tools/moduli.py", "--verify", "--base", "origin/main"]),
     ]
     if shutil.which("node") and changed("mzlab/web/"):
         p.append(("JS syntax (javascript job)", JS_SYNTAX))
     p += [
-        ("type globals", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
+        ("type globals", [PY, "tools/tipi/genera_globali.py", "--verify"]),
         ("tsc", [PY, "tools/tipi/controlla_tsc.py"]),
     ]
     if (ROOT / "tools" / "check_import.py").exists():
@@ -83,7 +83,7 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
         if changed(*RUST):
-            p.append(("cargo fmt against the base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
+            p.append(("cargo fmt against the base", [PY, "tools/controlla_rust.py", "--only-fmt"]))
         p.append(("e2e that would run", SELECTION_E2E))
         return p
     if changed(*RUST):
@@ -91,17 +91,17 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
         if shutil.which("cargo-machete"):
             p.append(("unused dependencies (cargo machete)", ["cargo", "machete"]))
     if con_e2e:
-        p.append(("e2e of the changed files", [PY, "tools/verifica.py", "--cambiati"]))
+        p.append(("e2e of the changed files", [PY, "tools/verifica.py", "--changed"]))
     return p
 
 
 def main() -> int:
     skipped = False
-    veloce = "--veloce" in sys.argv or (in_cloud() and "--completo" not in sys.argv)
+    veloce = "--fast" in sys.argv or (in_cloud() and "--full" not in sys.argv)
     solo_doc = ci_solo_doc.solo(files_cambiati())
     if solo_doc:
         print("solo documenti: only the checks the documents need")
-    listing = doc_only_steps() if solo_doc else steps("--senza-e2e" not in sys.argv and not veloce, veloce)
+    listing = doc_only_steps() if solo_doc else steps("--no-e2e" not in sys.argv and not veloce, veloce)
     for i, (name, cmd) in enumerate(listing, 1):
         print(f"...  [{i}/{len(listing)}] {name}", flush=True)
         t0 = time.time()

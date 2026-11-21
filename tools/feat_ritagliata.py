@@ -1,6 +1,6 @@
 """Synthetic series cut in RT, for the parity of the cells not measured (`CELL_NA`) between the `.wasm` and the native engine.
 
-    python3 tools/feat_ritagliata.py --out DIR [--taglio 3:10] [--seme 2]
+    python3 tools/feat_ritagliata.py --out DIR [--cutoff 3:10] [--seed 2]
 
 The series `piccolo` of `feat_mirato.py`, then the files `t05min` and `t20min` are cut to the scans between LO and HI minutes (a valve that sends the flow to
 the mass spectrometer only for a part of the run): the other files stay whole. Writes the `.mzML` and `.mzidx` of DIR (reference only: never in the site)."""
@@ -33,12 +33,12 @@ def cut(text: str, lo: float, hi: float) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", required=True)
-    ap.add_argument("--taglio", default="3:10")
-    ap.add_argument("--seme", type=int, default=2)
+    ap.add_argument("--cutoff", default="3:10")
+    ap.add_argument("--seed", type=int, default=2)
     a = ap.parse_args()
     out = Path(a.out)
-    lo, hi = (float(x) for x in a.taglio.split(":"))
-    feat_mirato.genera(a.seme, "piccolo", 1.0, out)
+    lo, hi = (float(x) for x in a.cutoff.split(":"))
+    feat_mirato.genera(a.seed, "piccolo", 1.0, out)
     for stem in CUT:
         f = out / f"SIN_{stem}.mzML"
         f.write_text(cut(f.read_text(encoding="utf-8"), lo, hi), encoding="utf-8")

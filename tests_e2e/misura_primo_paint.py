@@ -2,7 +2,7 @@
 (tests_e2e/misura_ricarica.py Mirror) and measures, per scenario and as the median of --runs: FCP, LCP, CLS, long tasks until usable, requests and
 bytes before FCP and until usable, render-blocking files, engine ready, console warnings. Measures, never asserts (the guard is e2e_budget_avvio.py).
 
-    python3 tests_e2e/misura_primo_paint.py --site site [--runs 5] [--scenari cold,warm,...] [--out run.json] [--browser chromium|webkit]
+    python3 tests_e2e/misura_primo_paint.py --site site [--runs 5] [--scenarios cold,warm,...] [--out run.json] [--browser chromium|webkit]
 
 Scenarios: cold (new context, first visit), warm (reload served by the service worker), dark (warm with dark theme saved),
 cpu4 / cpu4warm (CPU x4), fast4g (CDP 150 ms + 9 Mbps, cold: it does not slow the
@@ -128,7 +128,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site"))
     ap.add_argument("--runs", type=int, default=5)
-    ap.add_argument("--scenari", default="cold,warm,dark,cpu4,cpu4warm,ipad,draw,flow")
+    ap.add_argument("--scenarios", default="cold,warm,dark,cpu4,cpu4warm,ipad,draw,flow")
     ap.add_argument("--browser", default="chromium")
     ap.add_argument("--out")
     a = ap.parse_args()
@@ -137,7 +137,7 @@ def main():
     out = {}
     with sync_playwright() as p:
         bt = getattr(p, a.browser)
-        for scen in a.scenari.split(","):
+        for scen in a.scenarios.split(","):
             runs = []
             for _ in range(a.runs):
                 exe = "/opt/pw-browsers/chromium"

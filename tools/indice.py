@@ -1,7 +1,7 @@
 """Writes docs/agenti/mappa.md: one line per first-party source file (purpose + where its main functions start), grouped by folder.
 
     python3 tools/indice.py              # rewrite docs/agenti/mappa.md
-    python3 tools/indice.py --controlla  # exit 1 if a tracked source file is missing from the index or one has no folder group (CI); no files are written
+    python3 tools/indice.py --verify  # exit 1 if a tracked source file is missing from the index or one has no folder group (CI); no files are written
 
 The file is generated and NOT committed (.gitignore): it would conflict on every parallel merge.
 
@@ -140,7 +140,7 @@ def render() -> str:
 
 def main() -> int:
     text = render()
-    if "--controlla" in sys.argv:
+    if "--verify" in sys.argv:
         missing = [f for f in tracked() if not any(f.startswith(g[1]) for g in GROUPS)]
         if missing:
             print("files in no group of the index (add their folder to GROUPS in tools/indice.py):\n  " + "\n  ".join(missing[:20]))

@@ -28,7 +28,7 @@ def built(tmp_path_factory):
     ser = root / "ser"
     # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
     with ThreadPoolExecutor(2) as pool:
-        made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
+        made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser))
         build("-p", "mzlab-feat-wasm", "--example", "native", runner=run)
         build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
         made.result()
@@ -230,7 +230,7 @@ def weak(built):
     """The series `debole` (tools/feat_mirato.py: `piccolo` plus thousands of weak features in every file) and the bytes of the native engine in memory."""
     root, _, _ = built
     ser = root / "ser-debole"
-    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "debole", "--out", str(ser))
+    run("python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "debole", "--out", str(ser))
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
     assert len(idx) == 6
     ref, _ = native(root, idx, "ref-debole", "--recipe", '{"mode":"family"}')

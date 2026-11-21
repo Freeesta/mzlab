@@ -1,7 +1,7 @@
 """Gold data of mzmine 4.10 per stage on the four synthetic mzML of `oro_mzmine.py` -> `tests/data/untargeted/mzmine410/`.
 Same files, same stages and same CSV formats as the 3.9.0 set (`tests/data/untargeted/mzmine39/`), plus the output of the reworked isotope finder. Usage:
-    python3 tools/bench/oro_mzmine410.py --oro [DIR]       run mzmine 4.10 and write the CSV and the README (DIR default: the folder above)
-    python3 tools/bench/oro_mzmine410.py --oro DIR --versione 4.10.6    the same with another release of the table `VERSIONI`
+    python3 tools/bench/oro_mzmine410.py --gold [DIR]       run mzmine 4.10 and write the CSV and the README (DIR default: the folder above)
+    python3 tools/bench/oro_mzmine410.py --gold DIR --version 4.10.6    the same with another release of the table `VERSIONI`
 The mzmine package (portable zip, own JDK) is downloaded once into `~/.cache/mzlab/mzmine<version>` (or `MZMINE410_DIR`) and its sha256 is checked."""
 from __future__ import annotations
 
@@ -214,9 +214,9 @@ def _readme(versione: str, shas: dict[str, str], shas_410: dict[str, str], mm: P
     return f"""# Gold data of mzmine {versione} per stage (synthetic files)
 
 Output of mzmine {versione} on the four synthetic mzML files of the 3.9.0 set (`tests/data/untargeted/mzmine39/`, same numbers and same hashes), one CSV per stage, same formats. Reference of the parity tests `crates/mzlab-feat/tests/untargeted_*_410.rs`.
-The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DIR` writes them again, byte for byte.
+The mzML files are not in the repository: `tools/bench/oro_mzmine.py --generate DIR` writes them again, byte for byte.
 
-- **Written on**: {date.today().isoformat()} by `python3 tools/bench/oro_mzmine410.py --oro` (it checks first that every parameter name of the batch exists in the parameter classes of `mzmine-community-{versione}.jar`: mzmine ignores the others without a word).
+- **Written on**: {date.today().isoformat()} by `python3 tools/bench/oro_mzmine410.py --gold` (it checks first that every parameter name of the batch exists in the parameter classes of `mzmine-community-{versione}.jar`: mzmine ignores the others without a word).
 - **mzmine**: {versione}, `{URL.format(v=versione)}`, sha256 `{VERSIONS[versione]}`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`, branch master checked).
 - **JDK**: the one inside the package (`lib/runtime`): {java[0]}{' / ' + java[1] if len(java) > 1 else ''}.
 - **Platform**: {plataforma}
@@ -232,10 +232,10 @@ The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DI
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--oro", nargs="?", const=str(DEST), metavar="DIR", required=True)
-    ap.add_argument("--versione", default=VERSION, choices=sorted(VERSIONS))
+    ap.add_argument("--gold", nargs="?", const=str(DEST), metavar="DIR", required=True)
+    ap.add_argument("--version", default=VERSION, choices=sorted(VERSIONS))
     a = ap.parse_args()
-    write_gold(Path(a.oro), a.versione)
+    write_gold(Path(a.gold), a.version)
 
 
 if __name__ == "__main__":

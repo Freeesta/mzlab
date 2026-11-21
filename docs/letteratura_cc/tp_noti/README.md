@@ -152,7 +152,7 @@ To query the Crossref API and verify the validity in real time of all 32 DOIs:
 
 ### Repository Compliance Checks
 ```bash
-python3 tools/indice.py --controlla
+python3 tools/indice.py --verify
 python3 tools/controlla.py
 python3 -m pytest -q tests/test_esempi_anonimi.py
 ```

@@ -23,7 +23,7 @@ fn proof(t: &PointsTable, kind: Kind, value: f64, support: Option<f64>, opposed:
 fn json_of_the_crate_is_what_the_data_file_gives() {
     let ok = Command::new("python3")
         .arg(root().join("tools/export_levels.py"))
-        .arg("--controlla")
+        .arg("--verify")
         .status()
         .map(|s| s.success());
     let node = Command::new("node").arg("--version").output().is_ok();

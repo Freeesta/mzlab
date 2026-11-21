@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_golden_check():
     r = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "golden.py"), "--controlla", "--skip-missing"],
+        [sys.executable, str(ROOT / "tools" / "golden.py"), "--verify", "--skip-missing"],
         capture_output=True,
         text=True,
         encoding="utf-8",

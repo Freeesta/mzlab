@@ -2,7 +2,7 @@
 """Speed tables of the Thermo `.raw` reader against the RFR oracle (criteria A5/A6, docs/agenti/thermo-speed.md).
 
   thermo_velocita.py unisci BANCO.jsonl RFR.jsonl > UNITO.tsv   join `banco/1` (ours) and `banco/1` with reader=rfr, by file id
-  thermo_velocita.py tabella UNITO.tsv --sha SHA40 [--maquina TEXT]   Markdown tables per family
+  thermo_velocita.py tabella UNITO.tsv --sha SHA40 [--machine TEXT]   Markdown tables per family
 
 UNITO.tsv columns: id, family, bytes, n_scans, rfr_ok, our_ok, rfr_open_ms, rfr_read_all_ms, our_open_ms, our_read_all_ms.
 Speed tables use only files that BOTH readers open; the others are counted apart with the reason. Only aggregates are printed: no file name."""
@@ -79,6 +79,6 @@ if __name__ == "__main__":
     t = s.add_parser("tabella")
     t.add_argument("unito")
     t.add_argument("--sha", required=True)
-    t.add_argument("--maquina")
+    t.add_argument("--machine")
     a = p.parse_args()
-    unisci(a.ours, a.rfr) if a.cmd == "unisci" else tabella(a.unito, a.sha, a.maquina)
+    unisci(a.ours, a.rfr) if a.cmd == "unisci" else tabella(a.unito, a.sha, a.machine)
