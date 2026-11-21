@@ -17,7 +17,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".mzml.gz"],
     riconosci: recognize,
-    open: open,
+    open,
 };
 
 /// `x.mzXML.gz`: the same inflate, then the reader of `mzxml.rs` (registry of the app and the CLI only).

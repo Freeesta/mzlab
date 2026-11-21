@@ -25,7 +25,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".raw"],
     riconosci: recognize,
-    open: open,
+    open,
 };
 
 impl WatersReader {

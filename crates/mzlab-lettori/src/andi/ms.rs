@@ -28,7 +28,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".cdf", ".nc"],
     riconosci: recognize,
-    open: open,
+    open,
 };
 
 impl AndiReader {
