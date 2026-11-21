@@ -179,7 +179,7 @@ const cursorText = (/** @type {Bag} */ p) => { if (p.overlay === "press") { cons
 // the overlays of the chromatogram menu (registry azioni/1): the pressure trace and the gradient over the graph
 if (typeof AZIONI !== "undefined") {
   /** @param {string} id @param {string} nome @param {string} aria @param {(c: any) => boolean} have */
-  const over = (id, nome, aria, have) => AZIONI.registra({ id: "chrom." + id, gruppo: "view", viste: ["chrom", "xic", "mrm"], visibile: have, attiva: (/** @type {Bag} */ c) => c.p.overlay === id,
+  const over = (id, nome, aria, have) => AZIONI.registra({ id: "chrom." + id, group: "view", views: ["chrom", "xic", "mrm"], visible: have, attiva: (/** @type {Bag} */ c) => c.p.overlay === id,
     nome: () => T(nome), aria: () => T(aria), esegui: (/** @type {Bag} */ c) => { COMMANDS.run("spec.display", c.p, () => { c.p.overlay = c.p.overlay === id ? null : id; }); drawSoon(c.p); uiSave(); } });
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));

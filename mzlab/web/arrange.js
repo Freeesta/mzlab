@@ -250,8 +250,8 @@ function arrRestore() {
 }
 const arrSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {
-  const reg = (/** @type {any} */ o) => AZIONI.registra({ gruppo: "disp", viste: ["*"], visibile: (/** @type {any} */ c) => c.vista !== "map" && !!c.p && !!c.p.el && !!c.p.full && arrEligible(c.p), ...o });
-  reg({ id: "disp.arrange", ordine: 1, menu: false, nome: () => ARR_T("arrange.menu.beside"), disponibile: (/** @type {any} */ c) => arrOthers(c.p).length > 0,
+  const reg = (/** @type {any} */ o) => AZIONI.registra({ group: "disp", views: ["*"], visible: (/** @type {any} */ c) => c.vista !== "map" && !!c.p && !!c.p.el && !!c.p.full && arrEligible(c.p), ...o });
+  reg({ id: "disp.arrange", ordine: 1, menu: false, nome: () => ARR_T("arrange.menu.beside"), available: (/** @type {any} */ c) => arrOthers(c.p).length > 0,
     esegui: (/** @type {any} */ c) => { if (c.p._grip) arrOpenMenu(c.p, c.p._grip); },
     voci: (/** @type {any} */ c) => {
       const p = c.p, o = arrOthers(p);
@@ -260,12 +260,12 @@ if (typeof AZIONI !== "undefined") {
     } });
   // only Move up / Move down are in the context menu (one row); the rest is the grip menu, the palette and dragging
   const via = (/** @type {string} */ id, /** @type {number} */ ordine, /** @type {string} */ key, /** @type {(p: any) => any} */ move, /** @type {any} */ extra = { menu: false }) =>
-    reg({ id, ordine, ...extra, nome: () => ARR_T(key), disponibile: (/** @type {any} */ c) => arrOkFor(c.p, move(c.p)), esegui: (/** @type {any} */ c) => { const d = move(c.p); if (d) arrRun(c.p, d, arrWide(d)); } });
+    reg({ id, ordine, ...extra, nome: () => ARR_T(key), available: (/** @type {any} */ c) => arrOkFor(c.p, move(c.p)), esegui: (/** @type {any} */ c) => { const d = move(c.p); if (d) arrRun(c.p, d, arrWide(d)); } });
   via("disp.su", 2, "arrange.menu.up", p => arrVertical(p, -1), { fila: "mv" });
   via("disp.giu", 3, "arrange.menu.down", p => arrVertical(p, 1), { fila: "mv" });
   via("disp.intera", 4, "arrange.menu.full", p => { const m = arrMate(p); return m ? { k: "giu", t: m.id } : null; });
   via("disp.uguali", 5, "arrange.menu.equal", p => arrMate(p) ? { k: "uguali" } : null);
-  reg({ id: "disp.ripristina", ordine: 6, menu: false, nome: () => ARR_T("arrange.menu.reset"), disponibile: () => arrSplit(), esegui: () => arrRestore() });
+  reg({ id: "disp.ripristina", ordine: 6, menu: false, nome: () => ARR_T("arrange.menu.reset"), available: () => arrSplit(), esegui: () => arrRestore() });
 }
 
 const ARRANGE = { grip: arrGrip, sync: arrSync, undo: arrUndo, last: arrLast, run: arrRun, redo: arrRedo, restore: arrRestore, eligible: arrEligible };

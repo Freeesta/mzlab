@@ -17,8 +17,8 @@ def run(code):
 
 def test_menu_order_separators_and_grey_entries():
     r = run("""const log=[];
-      const reg=(id,gruppo,o)=>AZIONI.registra({id,gruppo,viste:['v'],nome:()=>id,esegui:()=>log.push(id),...o});
-      reg('h','help');reg('x','extract',{disponibile:c=>c.ok});reg('l','lock',{attiva:()=>true});reg('z','zoom',{menu:false,barra:true});reg('o','copy',{viste:['w']});
+      const reg=(id,group,o)=>AZIONI.registra({id,group,views:['v'],nome:()=>id,esegui:()=>log.push(id),...o});
+      reg('h','help');reg('x','extract',{available:c=>c.ok});reg('l','lock',{attiva:()=>true});reg('z','zoom',{menu:false,barra:true});reg('o','copy',{views:['w']});
       const m=AZIONI.per({vista:'v',ok:false});
       m.filter(i=>i!=='-').forEach(i=>i.fn());
       AZIONI.esegui('x',{vista:'v',ok:true});AZIONI.esegui('o',{vista:'v'});
@@ -28,10 +28,10 @@ def test_menu_order_separators_and_grey_entries():
     assert r["log"] == ["l", "h", "x"], "a grey entry does nothing; an action of another view does nothing"
 
 
-@pytest.mark.parametrize("bad", ["AZIONI.registra({id:'a',gruppo:'help',viste:[],nome:()=>'',esegui:()=>0})",
-                                 "AZIONI.registra({id:'b',gruppo:'nope',viste:[],nome:()=>'',esegui:()=>0})"])
+@pytest.mark.parametrize("bad", ["AZIONI.registra({id:'a',group:'help',views:[],nome:()=>'',esegui:()=>0})",
+                                 "AZIONI.registra({id:'b',group:'nope',views:[],nome:()=>'',esegui:()=>0})"])
 def test_duplicate_id_or_unknown_group_is_refused(bad):
-    r = run(f"AZIONI.registra({{id:'a',gruppo:'help',viste:[],nome:()=>'',esegui:()=>0}});let e=null;try{{{bad}}}catch(x){{e=x.message}};console.log(JSON.stringify(e))")
+    r = run(f"AZIONI.registra({{id:'a',group:'help',views:[],nome:()=>'',esegui:()=>0}});let e=null;try{{{bad}}}catch(x){{e=x.message}};console.log(JSON.stringify(e))")
     assert r and r.startswith("AZIONI:")
 
 
@@ -46,9 +46,9 @@ def test_map_actions_have_texts():
 
 
 def test_rows_of_one_action_and_order_inside_a_group():
-    r = run("""const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:()=>0,...o});
+    r = run("""const reg=(id,o)=>AZIONI.registra({id,group:'xic',views:['v'],nome:()=>id,esegui:()=>0,...o});
       reg('b',{ordine:2});reg('a',{ordine:1});reg('n',{voci:c=>c.xs.map(x=>({nome:'n'+x,dim:x===2,esegui:()=>0}))});reg('e',{voci:()=>[]});
-      AZIONI.registra({id:'h',gruppo:'help',viste:['v'],nome:()=>'h',esegui:()=>0});
+      AZIONI.registra({id:'h',group:'help',views:['v'],nome:()=>'h',esegui:()=>0});
       const m=AZIONI.per({vista:'v',xs:[1,2]});
       console.log(JSON.stringify(m.map(i=>i==='-'?'-':[i.id,i.label,i.dim])))""")
     assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
@@ -80,15 +80,15 @@ def test_trace_actions_have_texts():
 
 def test_double_click_takes_the_first_available_claim():
     r = run("""const log=[];
-      const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:c=>log.push(id),...o});
-      reg('main',{doppio:()=>true,doppioOrd:9});reg('zoom',{doppio:c=>c.z,disponibile:c=>c.z,doppioOrd:2});reg('ann',{doppio:c=>c.a,doppioOrd:1,disponibile:c=>c.a});reg('quiet',{});
-      const out=[AZIONI.doppio({vista:'v'}),AZIONI.doppio({vista:'v',z:true}),AZIONI.doppio({vista:'v',z:true,a:true}),AZIONI.doppio({vista:'w'})];
+      const reg=(id,o)=>AZIONI.registra({id,group:'xic',views:['v'],nome:()=>id,esegui:c=>log.push(id),...o});
+      reg('main',{doubleClick:()=>true,doubleClickOrder:9});reg('zoom',{doubleClick:c=>c.z,available:c=>c.z,doubleClickOrder:2});reg('ann',{doubleClick:c=>c.a,doubleClickOrder:1,available:c=>c.a});reg('quiet',{});
+      const out=[AZIONI.doubleClick({vista:'v'}),AZIONI.doubleClick({vista:'v',z:true}),AZIONI.doubleClick({vista:'v',z:true,a:true}),AZIONI.doubleClick({vista:'w'})];
       console.log(JSON.stringify({out,log}))""")
     assert r["log"] == ["main", "zoom", "ann"] and r["out"] == [True, True, True, False]
 
 
 def test_reset_zoom_first_and_annotations_last():
-    r = run("""const reg=(id,g)=>AZIONI.registra({id,gruppo:g,viste:['v'],nome:()=>id,esegui:()=>0});
+    r = run("""const reg=(id,g)=>AZIONI.registra({id,group:g,views:['v'],nome:()=>id,esegui:()=>0});
       reg('ann','ann');reg('x','xic');reg('help','help');reg('reset','reset');
       console.log(JSON.stringify(AZIONI.per({vista:'v'}).map(i=>i==='-'?'-':i.id)))""")
     assert r == ["reset", "-", "x", "-", "help", "-", "ann"]
@@ -98,8 +98,8 @@ def test_icons_of_the_actions_exist_and_are_decorative():
     """Every key of the id -> icon table is a drawing; the drawings are decorative (aria-hidden) and follow the theme (currentColor); an action gets its icon from the table."""
     js = (f"const fs=require('fs');const I=new Function(fs.readFileSync({str(WEB / 'azioni-icone.js')!r},'utf8')+';return AZIONI_ICONE;')();"
           f"const AZIONI=new Function('AZIONI_ICONE',fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')(I);"
-          "const a=AZIONI.registra({id:'spec.copy',gruppo:'copy',viste:['v'],nome:()=>'x',esegui:()=>0});const b=AZIONI.registra({id:'zz',gruppo:'copy',viste:['v'],icona:'xic',nome:()=>'x',esegui:()=>0});"
-          "const c=AZIONI.registra({id:'yy',gruppo:'copy',viste:['v'],nome:()=>'x',esegui:()=>0});const m=AZIONI.per({vista:'v'});"
+          "const a=AZIONI.registra({id:'spec.copy',group:'copy',views:['v'],nome:()=>'x',esegui:()=>0});const b=AZIONI.registra({id:'zz',group:'copy',views:['v'],icona:'xic',nome:()=>'x',esegui:()=>0});"
+          "const c=AZIONI.registra({id:'yy',group:'copy',views:['v'],nome:()=>'x',esegui:()=>0});const m=AZIONI.per({vista:'v'});"
           "console.log(JSON.stringify({missing:Object.entries(I.POR_ID).filter(([k,v])=>!I.DISEGNI[v]).map(([k])=>k),svg:Object.keys(I.DISEGNI).map(k=>I.svg(k)),got:[a.icona,b.icona,c.icona||null],menu:m.map(i=>i.icon?1:0)}));")
     r = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
     assert not r["missing"], r["missing"]
@@ -116,8 +116,8 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
 
 
 def test_arrangement_actions_show_in_every_view_and_have_texts():
-    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (arrange.js) exist in the catalog; layout.js never names an experiment."""
-    r = run("""AZIONI.registra({id:'t.all',gruppo:'disp',viste:['*'],nome:()=>'x',esegui:()=>0});
+    """Actions with views ['*'] show in any view; the keys of the arrangement actions (arrange.js) exist in the catalog; layout.js never names an experiment."""
+    r = run("""AZIONI.registra({id:'t.all',group:'disp',views:['*'],nome:()=>'x',esegui:()=>0});
       console.log(JSON.stringify(['spec','chrom','mrm'].map(v=>AZIONI.per({vista:v}).some(i=>i.id==='t.all'))))""")
     assert r == [True, True, True]
     src = (WEB / "arrange.js").read_text(encoding="utf-8")
@@ -132,9 +132,9 @@ def test_arrangement_actions_show_in_every_view_and_have_texts():
 
 def test_unavailable_entries_are_hidden_and_separators_stay_clean():
     """Every menu hides what is not available now (`off`); no separator is left first, last or doubled; info rows stay."""
-    r = run("""const reg=(id,gruppo,o)=>AZIONI.registra({id,gruppo,viste:['v'],nome:()=>id,esegui:()=>0,...o});
-      reg('a','reset',{disponibile:c=>c.ok});reg('b','value',{voci:()=>[{nome:'info',dim:true,info:true,esegui:()=>0}]});reg('c','xic',{disponibile:c=>c.ok});
-      reg('d','cont',{disponibile:c=>c.ok});reg('e','help');reg('f','ann',{disponibile:c=>c.ok});
+    r = run("""const reg=(id,group,o)=>AZIONI.registra({id,group,views:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('a','reset',{available:c=>c.ok});reg('b','value',{voci:()=>[{nome:'info',dim:true,info:true,esegui:()=>0}]});reg('c','xic',{available:c=>c.ok});
+      reg('d','cont',{available:c=>c.ok});reg('e','help');reg('f','ann',{available:c=>c.ok});
       const names=l=>AZIONI.pulisci(l).map(i=>i==='-'?'-':i.id);
       console.log(JSON.stringify({off:names(AZIONI.per({vista:'v',ok:false})),on:names(AZIONI.per({vista:'v',ok:true})),
         fila:AZIONI.pulisci([{fila:[{id:'x',off:true}]},{label:'m'},'-','-',{label:'n'},'-']).map(i=>i==='-'?'-':i.label||i.fila)}))""")
@@ -144,7 +144,7 @@ def test_unavailable_entries_are_hidden_and_separators_stay_clean():
 
 
 def test_downloads_of_a_view_come_from_the_registry_not_from_the_menu():
-    r = run("""const reg=(id,o)=>AZIONI.registra({id,gruppo:'lib',viste:['v'],nome:()=>id,esegui:()=>0,...o});
-      reg('d1',{menu:false,scarico:true});reg('d2',{menu:false,scarico:true,disponibile:c=>c.ok});reg('m');
+    r = run("""const reg=(id,o)=>AZIONI.registra({id,group:'lib',views:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('d1',{menu:false,download:true});reg('d2',{menu:false,download:true,available:c=>c.ok});reg('m');
       console.log(JSON.stringify({menu:AZIONI.per({vista:'v',ok:true}).map(i=>i.id),dl:AZIONI.scarichi({vista:'v',ok:false}).map(i=>i.label),dl2:AZIONI.scarichi({vista:'v',ok:true}).map(i=>i.label)}))""")
     assert r == {"menu": ["m"], "dl": ["d1"], "dl2": ["d1", "d2"]}

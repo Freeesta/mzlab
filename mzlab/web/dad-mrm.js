@@ -76,15 +76,15 @@ function table(p, d) {
   if (up) P.update = (/** @type {any} */ p) => { up(p); if (p.overlay === "twc" && p.cv && !p._exp) TDATI.attach(p.cv, () => table(p, P.data(p))); };
 }
 
-AZIONI.registra({ id: "mrm.uvAtRt", gruppo: "extract", viste: ["mrm"], visibile: here, nome: () => T("ctx.uv.atRt"), doppioOrd: 3,
-  doppio: (/** @type {any} */ c) => !!c.p._a && !c.p.el.classList.contains("max"),
+AZIONI.registra({ id: "mrm.uvAtRt", group: "extract", views: ["mrm"], visible: here, nome: () => T("ctx.uv.atRt"), doubleClickOrder: 3,
+  doubleClick: (/** @type {any} */ c) => !!c.p._a && !c.p.el.classList.contains("max"),
   esegui: async (/** @type {any} */ c) => {
     const p = c.p, k = E.files[c.k] && E.files[c.k].pda ? c.k : dadOf(p)[0].k, t = c.x - shift(p);
     if (c.dbl) { p.sel = null; p.cur = c.x; draw0(p); }
     return (g.UVSPEC ||= await import("./uv-spettro.js")).open(p, k, t, t);
   } });
 /** a check of the view group, undoable like the other display options @param {string} id @param {string} nome @param {string} aria @param {(p: any) => boolean} on @param {(p: any) => void} flip */
-const check = (id, nome, aria, on, flip) => AZIONI.registra({ id, gruppo: "view", viste: ["mrm"], visibile: here, attiva: (/** @type {any} */ c) => on(c.p), nome: () => T(nome), aria: () => T(aria),
+const check = (id, nome, aria, on, flip) => AZIONI.registra({ id, group: "view", views: ["mrm"], visible: here, attiva: (/** @type {any} */ c) => on(c.p), nome: () => T(nome), aria: () => T(aria),
   esegui: (/** @type {any} */ c) => { COMMANDS.run("spec.display", c.p, () => flip(c.p)); drawSoon(c.p); uiSave(); } });
 check("mrm.twc", "ctx.mrm.twc", "ctx.mrm.twc.aria", p => p.overlay === "twc", p => { p.overlay = p.overlay === "twc" ? null : "twc"; });
 check("mrm.pdaAlign", "disp.pdaAlign", "disp.pdaAlign.title", p => !!p.pdaAlign, p => { p.pdaAlign = !p.pdaAlign; });

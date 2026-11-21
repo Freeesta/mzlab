@@ -39,7 +39,7 @@ try:
             right_at(MAP, w[0] * 0.5, w[1] * 0.5); ms = pg.evaluate(IDS); close()
             assert kb == ms == want, (kb, ms, want)
             bar = pg.evaluate(f"[...{MAP}.el.querySelectorAll('.mznav [data-nav]')].map(b=>b.dataset.nav)")
-            assert bar and all(pg.evaluate(f"(AZIONI.voce('{i}')||{{viste:[]}}).viste.includes('map')") for i in bar), bar
+            assert bar and all(pg.evaluate(f"(AZIONI.voce('{i}')||{{views:[]}}).views.includes('map')") for i in bar), bar
             pal = pg.evaluate("MAPPA.CMDS.filter(c=>MAPPA.paletteOk(c)).map(c=>c.id)")
             assert set(want) <= set(pal), (want, pal)
         step("map 2D: right click = Shift+F10 = the registry; the bar and the palette use registered actions", map2d)
@@ -59,7 +59,7 @@ try:
             keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
               return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                 noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.some(x=>x==='spec'||x==='*'))}})()"""); close()
+                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{views:[]}).views.some(x=>x==='spec'||x==='*'))}})()"""); close()
             assert r["n"] >= 5 and not r["free"] and not r["bad"] and not r["noic"], r
             assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
         step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
@@ -70,7 +70,7 @@ try:
                 keyboard(sel); r = pg.evaluate("""(v=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
                   return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                     noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.some(x=>x===v||x==='*'))}})""" + f"('{vista}')"); close()
+                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{views:[]}).views.some(x=>x===v||x==='*'))}})""" + f"('{vista}')"); close()
                 assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
                 assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"], r["ids"]
                 assert "ann.edit" not in r["ids"], r["ids"]      # the annotation entries need an annotation under the pointer (none here: p.anns is empty)

@@ -36,9 +36,9 @@ const METODO_INCL = (() => {
   const ctxOf = (/** @type {number} */ i) => ({ vista: "metodo", f: cur.f, v: cur.items[i], i, ms2: cur.ms2.get(i) || null });
   const closeDlg = () => { const d = /** @type {HTMLDialogElement | null} */ (document.getElementById("bigdlg")); if (d && d.open) d.close(); };
   if (typeof AZIONI !== "undefined") {
-    AZIONI.registra({ id: "metodo.xic", gruppo: "xic", viste: ["metodo"], nome: (/** @type {any} */ c) => T("method.doc.btn.xic.tip", { mz: n(c.v.mz) }),
+    AZIONI.registra({ id: "metodo.xic", group: "xic", views: ["metodo"], nome: (/** @type {any} */ c) => T("method.doc.btn.xic.tip", { mz: n(c.v.mz) }),
       esegui: (/** @type {any} */ c) => { closeDlg(); return openXic(null, { mz: c.v.mz, diretto: true }); } });
-    AZIONI.registra({ id: "metodo.ms2", gruppo: "ms2", viste: ["metodo"], disponibile: (/** @type {any} */ c) => !!c.ms2,
+    AZIONI.registra({ id: "metodo.ms2", group: "ms2", views: ["metodo"], available: (/** @type {any} */ c) => !!c.ms2,
       nome: (/** @type {any} */ c) => (c.ms2 ? T("method.doc.btn.ms2.tip", { mz: n(c.v.mz), rt: n(c.ms2.rt) }) : noMs2()),
       esegui: (/** @type {any} */ c) => { closeDlg(); return DDA.openEntry(c.f, c.v.mz, win(c.v)); } });
   }

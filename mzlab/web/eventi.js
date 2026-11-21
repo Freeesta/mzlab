@@ -208,7 +208,7 @@ function attach(p) {
     // every other graph, from the registry: annotation = edit it; zoomed = whole view (Esc / undo reverts); not zoomed = the graph's main action
     const x = xd(rect(e)), ds = p._dsel; p._dsel = null;
     if (!p.sel && ds && e.timeStamp - ds[1] < 800 && x >= ds[0][0] && x <= ds[0][1]) { p.sel = ds[0]; draw(p); }      // the first click of the pair cleared the range it was in: the double click is for that range
-    await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
+    await AZIONI.doubleClick({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
   cv.addEventListener("keydown", e => {
@@ -382,13 +382,13 @@ function ctxFor(p, e, x, px, py) {
 (() => {
   const V = ["chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
-  const reg = o => AZIONI.registra({ viste: V, ...o });
+  const reg = o => AZIONI.registra({ views: V, ...o });
   // the spectra of a trace: not for the MRM (it has no scans to average); not in the menu: a click or drag, the double click and Enter already do it
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
-  reg({ id: "chrom.avgSel", menu: false, gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda", nome: () => T("ctx.spec.avgSel"), scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettroSel" }, doppioOrd: 1.5, doppio: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda" && !!c.p._a && c.x >= c.p.sel[0] && c.x <= c.p.sel[1] && !c.p.el.classList.contains("max"), esegui: /** @param {any} c */ c => { const [r0, r1] = c.p.sel; newSpec(c.p, r0, r1, nearestFile(c.p, (r0 + r1) / 2)); } });  // inside the dragged range: double click / Enter; `doppioOrd` 1.5 < view.resetZoom, so the selection beats the zoom
-  reg({ id: "chrom.specAtRt", menu: false, gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
-    doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
+  reg({ id: "chrom.avgSel", menu: false, group: "extract", visible: spettri, available: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda", nome: () => T("ctx.spec.avgSel"), shortcut: { key: "Enter", where: "chart", label: "scorc.spettroSel" }, doubleClickOrder: 1.5, doubleClick: /** @param {any} c */ c => !!c.p.sel && c.p.kind !== "pda" && !!c.p._a && c.x >= c.p.sel[0] && c.x <= c.p.sel[1] && !c.p.el.classList.contains("max"), esegui: /** @param {any} c */ c => { const [r0, r1] = c.p.sel; newSpec(c.p, r0, r1, nearestFile(c.p, (r0 + r1) / 2)); } });  // inside the dragged range: double click / Enter; `doubleClickOrder` 1.5 < view.resetZoom, so the selection beats the zoom
+  reg({ id: "chrom.specAtRt", menu: false, group: "extract", visible: spettri, shortcut: { key: "Enter", where: "chart", label: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
+    doubleClick: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
     esegui: /** @param {any} c */ async c => {
       const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
       let r0 = x - dt / 2, r1 = x + dt / 2, kk = k, at = x;
@@ -401,15 +401,15 @@ function ctxFor(p, e, x, px, py) {
   // DAD trace: the double click gives the UV spectrum at that time (shifted back by «Allinea DAD e massa»), a selection the mean
   /** @param {any} p */
   const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
-  reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,
-    doppio: /** @param {any} c */ c => c.p.kind === "pda" && !!c.p._a && !c.p.el.classList.contains("max"),
+  reg({ id: "chrom.uvAtRt", group: "extract", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doubleClickOrder: 3,
+    doubleClick: /** @param {any} c */ c => c.p.kind === "pda" && !!c.p._a && !c.p.el.classList.contains("max"),
     esegui: /** @param {any} c */ c => { if (c.dbl) { c.p.sel = null; c.p.cur = c.x; draw(c.p); } return uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p)); } });
-  reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
+  reg({ id: "chrom.uvAvgSel", group: "extract", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", available: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
     esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
-  reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda" && !(window.SIMUI && SIMUI.ions(c.p).length), scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
-  reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
-  reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
+  reg({ id: "chrom.wl", group: "xic", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", shortcut: { key: "x", where: "chart", label: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
+  reg({ id: "chrom.xic", group: "xic", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind !== "pda" && !(window.SIMUI && SIMUI.ions(c.p).length), shortcut: { key: "x", where: "chart", label: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  reg({ id: "xic.addIon", group: "xic", views: ["xic"], shortcut: { key: "x", where: "chart", label: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
+  reg({ id: "chrom.annotate", group: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMMANDS.run("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
 })();
 
@@ -425,12 +425,12 @@ async function editAnn(p, ann) {
 (() => {
   const V = ["spec", "chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
-  const reg = o => AZIONI.registra({ viste: V, ...o });
-  reg({ id: "view.resetZoom", gruppo: "reset", disponibile: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppio: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppioOrd: 2,
+  const reg = o => AZIONI.registra({ views: V, ...o });
+  reg({ id: "view.resetZoom", group: "reset", available: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClick: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClickOrder: 2,
     nome: () => T("ctx.resetZoom"), esegui: /** @param {any} c */ c => { pushZh(c.p); c.p.zoom = null; c.p.zoomY = null; if (c.dbl) c.p.sel = null; draw(c.p); if (c.dbl) uiSave(); } });
-  reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
+  reg({ id: "ann.edit", group: "ann", ordine: 1, visible: /** @param {any} c */ c => !!c.near, available: /** @param {any} c */ c => !!c.near, doubleClick: /** @param {any} c */ c => !!c.near, doubleClickOrder: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
-  reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
+  reg({ id: "ann.delete", group: "ann", ordine: 2, visible: /** @param {any} c */ c => !!c.near, available: /** @param {any} c */ c => !!c.near,
     nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMMANDS.run("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
