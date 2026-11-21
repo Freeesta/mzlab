@@ -1,4 +1,4 @@
-"""`table.compare@1` in the `flowstat` .wasm (mzlab-feat-wasm, feature `flow_stat`, through Node: `flow_compare`, the function the browser calls) gives the same bytes as
+"""`table.compare@1` in the `flowcompare` .wasm (mzlab-feat-wasm, feature `flow_compare`, through Node: `flow_compare`, the function the browser calls) gives the same bytes as
 `mzlab-cli table compare` on the same `.mzfeat` of the synthetic unit-resolution files of `tools/lr_synthetic.py` (with and without a samples file) and as the native step of a `flow run` on them.
 The golden file `tests/golden/compare_lr.json` is checked by `table_compare_cmd_tests.rs`. Skipped without cargo, wasm-bindgen, node or numpy."""
 import json
@@ -28,7 +28,7 @@ def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("compare")
     import lr_synthetic
     lr_synthetic.make(d, 1)
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_stat")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_compare")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
     build("-p", "mzlab-cli")
     names = [str(d / n) for n in NAMES]

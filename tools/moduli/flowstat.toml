@@ -6,5 +6,5 @@ chiavi = { flowstat = 9 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000
-misura = 398066
-nota = "table.stats, table.pca, table.kmd and table.compare of the Flow; standard cap. table.compare: 331239 -> 398066 B (+20 %, same local wasm-bindgen + wasm-opt @motore pipeline): statcmp, flow_compare and the shared name parser samples::role_and_minutes (~25 KB, one parser for times with sample table)"
+misura = 334607
+nota = "table.stats, table.pca, table.kmd of the Flow; standard cap"

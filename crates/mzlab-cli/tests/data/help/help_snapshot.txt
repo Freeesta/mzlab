@@ -14,7 +14,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -123,7 +123,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -232,7 +232,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan

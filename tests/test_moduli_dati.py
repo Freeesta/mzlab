@@ -31,7 +31,7 @@ def test_every_module_is_built_by_a_script():
         if r["parte"] != "core":
             assert (ROOT / "crates" / r["pacchetto"] / "Cargo.toml").is_file(), n
     chiavi = [k for r in mod.values() for k in r.get("chiavi", {})]
-    assert len(chiavi) == len(set(chiavi)) == 28
+    assert len(chiavi) == len(set(chiavi)) == 29
     assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 29))
 
 

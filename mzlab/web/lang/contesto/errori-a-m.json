@@ -20,6 +20,7 @@
   "err.compare.input": "Engine error message; {detail} = the file and why it cannot be read.",
   "err.compare.overlap": "Engine error message; {detail} = the columns in both the reference and the blank.",
   "err.compare.param": "Engine error message; {detail} = the setting that is wrong.",
+  "err.compare.quantity": "Engine error message shown when the height is asked of a CSV table, which carries areas only.",
   "err.compare.samples": "Engine error message; {detail} = the selector that needs the samples file.",
   "err.compare.selector": "Engine error message; {detail} = the selector and the columns of the table.",
   "err.comp.element": "{part} = text written by the user.",

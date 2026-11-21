@@ -35,7 +35,7 @@ GROUPS = {
         "mzlab-mol-wasm", "mzlab-msngrafo-wasm", "mzlab-msnregole-wasm", "mzlab-normative-wasm", "mzlab-ticfondo-wasm", "mzlab-flowcal-wasm")] + [
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features finder",
         f"build --target {WASM} -p mzlab-feat-wasm --features untargeted",
-        f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features flow_stat",
+        f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features flow_compare",
         f"build --target {WASM} -p mzlab-attributio-wasm --features rev",
         f"build --target {WASM} -p mzlab-attributio-wasm --features all",
     ],

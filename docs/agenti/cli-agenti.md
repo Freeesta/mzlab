@@ -114,9 +114,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 `flow report|record`, `file info|index|inventory|verify|items|channels`, `sample vars|group|table|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|list|dda-window`, `peak auto|auto-lr|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `ion mz|pattern|match`
 `mol label|anal|check|cip|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
-`flow run|check|steps|verify|command`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
+`table compare`, `flow run|check|steps|verify|command`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
-`features`, `table compare`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
+`features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
 - `features` has no `--json` and no `--dry-run`; its machine-readable side channel is `features-notes/1` written at `--notes PATH`, or beside `--out` (`features-notes.json` in a folder, `NAME.notes.json` beside `NAME.csv`; one entry per file with the notices the stderr lines carry; `cli-passi.md`).
 - Exit 8: a `.wiff` pair whose size changes while it is opened (modified in the last 10 s, size read twice 400 ms apart; `MZLAB_GROW_PROBE_MS`, 0 = off) is refused whole with `err.file.wiffGrowing` (sizes and interval in `params`); retry when the acquisition ends. Opened by `peak table` and `sample list` (catalog) and by every command that opens a vendor file.

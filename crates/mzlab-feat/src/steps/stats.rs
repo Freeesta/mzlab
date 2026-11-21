@@ -1,5 +1,5 @@
-//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`, `table.compare`. They run natively and in the `.wasm` `flowstat`
-//! (`flow_stat`), never in the `.wasm` `table`. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
+//! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`, `table.compare`. They run natively and in the `.wasm` `flowstat` (`flow_stat`;
+//! `table.compare` in `flowcompare`, `flow_compare`), never in the `.wasm` `table`. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
 
 use crate::plausible::Limits;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
@@ -9,6 +9,14 @@ fn flowstat() -> RunsIn {
         wasm: Some("flowstat"),
         wasm_ceiling_bytes: Some(super::FEAT_CEILING),
         native: true,
+    }
+}
+
+/// `table.compare` has a `.wasm` of its own: the shared name parser and the reference engine would take `flowstat` past its growth rule.
+fn flowcompare() -> RunsIn {
+    RunsIn {
+        wasm: Some("flowcompare"),
+        ..flowstat()
     }
 }
 
@@ -150,7 +158,7 @@ pub(super) fn compare() -> Step {
         ],
         outs: vec![Port::new("report", DataType::Report, "Each feature against the reference and the blank (compare/1)")],
         params,
-        runs_in: flowstat(),
+        runs_in: flowcompare(),
         errors: vec!["error.badStatInput", "err.compare.input", "err.compare.param", "err.compare.selector", "err.compare.overlap", "err.compare.samples", "err.compare.quantity", "err.stat.ref.notreated"],
         ..Step::core(
             "table.compare",

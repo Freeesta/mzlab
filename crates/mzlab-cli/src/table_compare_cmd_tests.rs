@@ -472,3 +472,6 @@ fn the_output_on_the_invented_table_is_the_golden_file() {
         "run with MZLAB_UPDATE_COMPARE=1 to rewrite it"
     );
 }
+
+#[path = "table_compare_json_tests.rs"]
+mod json;

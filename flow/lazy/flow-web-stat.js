@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): table.stats, table.pca, table.kmd and table.compare in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd`, `flow_compare` of the `flowstat` .wasm (loaded here only, when one of
+// Flow (administrator mode): table.stats, table.pca, table.kmd and table.compare in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowstat` .wasm and `flow_compare` of the `flowcompare` .wasm (each loaded here only, when one of
 // these steps runs): `mzlab_feat::flow_stat`, the functions `flow run` calls, so stat/1, the PCA answer, the Kendrick text and compare/1 are the same bytes (compare/1 names its table: the file name the native run reads, `tab.name`). The table is the alignment (or gap filling)
 // of the same plan, kept in OPFS, or the table a `table.filter` view of it stands for (`F.liveJobs.tableOf`); `samples` and `design` are files of the plan (their text in S.samplesJson). The text is kept like the other results, under the key of the job. English only.
 (() => {
@@ -46,7 +46,7 @@
       m.table = await tab.read();
       ports.forEach((port, i) => { m[port] = enc(/** @type {string} */ (texts[i])); });
       let text;
-      try { text = await p.ident("flowstat", fn, m); } catch (e) { throw asError(e); }
+      try { text = await p.ident(fn === "flow_compare" ? "flowcompare" : "flowstat", fn, m); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });

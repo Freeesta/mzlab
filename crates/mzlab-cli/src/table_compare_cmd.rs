@@ -12,7 +12,7 @@ use crate::Outcome;
 pub const HELP: &str = "mzlab-cli table compare: each feature against the reference (t0) and the blank, to flag candidate transformation products.
 
 usage: mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N]
-                               [--format json|csv] [--dry-run] [--out PATH]
+                               [--format json|csv] [--json] [--dry-run] [--out PATH]
 
   TABLE         the `features` CSV (mzmine full table, areas) or a .mzfeat
   --ref SEL     the reference columns; --blank SEL the blank columns. SEL: comma list of case-insensitive globs over the column names (t0*, MQ*,blank*),
@@ -22,11 +22,12 @@ usage: mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json]
   --factor F    ratio a feature needs against the reference and the blank (default 3)
   --pseudocount auto (default: 3 x the median of the positive blank values, else of the reference, else 1000) or a number
   --format F    json (default, compare/1) or csv (one row per feature, reasons joined by ;)
+  --json        the same as --format json (it cannot be given with --format csv)
   --dry-run     print compare-plan/1 and compute nothing
   --out PATH    write there instead of the standard output
 
 Class (sorts and filters only, every row is kept): no_signal, blank_artefact, candidate, decreasing, unchanged; the first rule that matches decides (see `choices`).
-Exit codes: 0 ok; 2 usage (bad option, a column in both lists, a role: selector without --samples); 4 table or samples missing or unreadable; 5 selector matches no column; 6 --out cannot be written.";
+Exit codes: 0 ok; 2 usage (bad option, --json with --format csv, a column in both lists, a role: selector without --samples); 4 table or samples missing or unreadable; 5 selector matches no column; 6 --out cannot be written.";
 
 struct Job {
     table: std::path::PathBuf,
@@ -48,6 +49,8 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         "--format",
         "--out",
     ];
+    // `parse` drops `--json` (it is the default here); it only matters next to `--format csv`
+    let json = args.iter().any(|a| a == "--json");
     let Some(p) = extract::parse(args, &valued, &["--dry-run"])? else {
         return Ok(Err(HELP));
     };
@@ -76,11 +79,15 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
             num(p.num("--pseudocount")?.unwrap_or(f64::NAN)),
         )),
     }
+    let csv = p.csv()?;
+    if json && csv {
+        return Err("--json and --format csv exclude each other".into());
+    }
     Ok(Ok(Job {
         table,
         samples: p.get("--samples").map(Into::into),
         params,
-        csv: p.csv()?,
+        csv,
         dry: p.flag("--dry-run"),
         out: p.out(),
     }))
