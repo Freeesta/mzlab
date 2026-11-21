@@ -61,6 +61,7 @@ pub mod flow_rtpredict;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
+pub mod flow_compare;
 pub mod flow_stat;
 pub mod gapfill;
 pub mod groups;

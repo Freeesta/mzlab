@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "compare/1",
+  "title": "compare/1: every feature against the reference and the blank",
+  "description": "The answer of `mzlab-cli table compare` and the output of the Flow step `table.compare@1`, byte for byte. Each feature of a time-course table against its reference columns (t0) and its blank columns: levels, ratios (x + pc) / (y + pc), log2 fold changes, the shape over time and the time course of the blank, and a class that only sorts and filters; every row is kept, in the order of the table. Class rules, the first that matches decides: 1 no_signal: max_treated <= pseudocount; 2 blank_artefact: ratio_blank < factor (reason blank_level) or blank_rho >= rho_min with the blank maximum above the pseudocount (reason blank_rises); 3 candidate: absent_in_reference or ratio_ref >= factor (reasons absent_in_reference, above_reference); 4 decreasing: ratio_ref <= 1/factor or shape falls (reasons below_reference, falls); 5 unchanged. no_signal carries the reason below_pseudocount. Code: crates/mzlab-core/src/statcmp.rs, crates/mzlab-feat/src/flow_compare.rs.",
+  "type": "object",
+  "required": ["schema", "table", "roles", "params", "choices", "counts", "rows"],
+  "properties": {
+    "schema": {"const": "compare/1"},
+    "table": {
+      "type": "object",
+      "description": "The table read: the file name as given (no folder), the SHA-256 of its bytes, its rows (features) and columns (files).",
+      "required": ["path", "sha256", "rows", "columns"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string"},
+        "rows": {"type": "integer"},
+        "columns": {"type": "integer"}
+      }
+    },
+    "roles": {
+      "type": "object",
+      "description": "The columns of each role: the reference and blank selectors as given and what they matched; every other column is treated.",
+      "required": ["reference", "blank", "treated"],
+      "properties": {
+        "reference": {"$ref": "#/$defs/selected"},
+        "blank": {"$ref": "#/$defs/selected"},
+        "treated": {
+          "type": "object",
+          "required": ["columns"],
+          "properties": {"columns": {"type": "array", "items": {"type": "string"}}}
+        }
+      }
+    },
+    "params": {
+      "type": "object",
+      "description": "The values used. The pseudocount is in the unit of the quantity; its origin is given (--pseudocount), blanks (3 x the median of the positive blank values), reference or floor.",
+      "required": ["quantity", "factor", "pseudocount", "pseudocount_origin", "floor", "rho_min"],
+      "properties": {
+        "quantity": {"enum": ["area", "height"]},
+        "factor": {"type": "number"},
+        "pseudocount": {"type": "number"},
+        "pseudocount_origin": {"enum": ["given", "blanks", "reference", "floor"]},
+        "floor": {"type": "number"},
+        "rho_min": {"type": "number"}
+      }
+    },
+    "choices": {
+      "type": "array",
+      "description": "Every default used, the time of every column (key time:NAME, the reason is its origin: samples, name or none), the pseudocount with its origin and the class rules.",
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "reason"],
+        "properties": {"key": {"type": "string"}, "value": {}, "reason": {"type": "string"}}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["candidate", "blank_artefact", "decreasing", "unchanged", "no_signal"],
+      "properties": {
+        "candidate": {"type": "integer"},
+        "blank_artefact": {"type": "integer"},
+        "decreasing": {"type": "integer"},
+        "unchanged": {"type": "integer"},
+        "no_signal": {"type": "integer"}
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "mz", "rt_min", "ref_level", "blank_level", "max_treated", "max_file", "t_max_min", "ratio_ref", "ratio_blank", "log2fc_ref", "log2fc_blank", "absent_in_reference", "shape", "rho", "blank_rho", "class", "reasons"],
+        "properties": {
+          "id": {"type": "string", "description": "The id of the CSV row, or the 1-based row number of a .mzfeat."},
+          "mz": {"type": "number"},
+          "rt_min": {"type": "number"},
+          "ref_level": {"type": "number", "description": "Maximum of the reference columns."},
+          "blank_level": {"type": "number", "description": "Maximum of the blank columns."},
+          "max_treated": {"type": "number"},
+          "max_file": {"type": "string", "description": "The treated column with the maximum."},
+          "t_max_min": {"type": ["number", "null"], "description": "Time of the maximum of the per-time means; null without times."},
+          "ratio_ref": {"type": "number", "description": "(max_treated + pc) / (ref_level + pc)."},
+          "ratio_blank": {"type": "number", "description": "(max_treated + pc) / (blank_level + pc)."},
+          "log2fc_ref": {"type": "number"},
+          "log2fc_blank": {"type": "number"},
+          "absent_in_reference": {"type": "boolean", "description": "ref_level <= pseudocount."},
+          "shape": {"enum": ["rises", "rises_falls", "falls", "flat", null]},
+          "rho": {"type": ["number", "null"], "description": "Spearman of the treated time course against time."},
+          "blank_rho": {"type": ["number", "null"], "description": "Spearman of the blank columns against their times; null with fewer than 3 timed blanks."},
+          "class": {"enum": ["candidate", "blank_artefact", "decreasing", "unchanged", "no_signal"]},
+          "reasons": {"type": "array", "items": {"enum": ["below_pseudocount", "blank_level", "blank_rises", "absent_in_reference", "above_reference", "below_reference", "falls"]}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "selected": {
+      "type": "object",
+      "required": ["selector", "columns"],
+      "properties": {"selector": {"type": "string"}, "columns": {"type": "array", "items": {"type": "string"}}}
+    }
+  }
+}

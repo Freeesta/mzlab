@@ -31,6 +31,7 @@ const INPUT_KEYS: &[&str] = &[
     "err.normative.input",
     "err.msn.rules.document",
     "error.badIndex",
+    "err.compare.input",
 ];
 const OUTPUT_KEYS: &[&str] = &[
     "err.cli.out",
@@ -41,6 +42,7 @@ const OUTPUT_KEYS: &[&str] = &[
 ];
 const SELECTOR_KEYS: &[&str] = &[
     "err.sample.unknown",
+    "err.compare.selector",
     "err.canali.unknown",
     "err.scan.unknown",
     "err.msn.node",

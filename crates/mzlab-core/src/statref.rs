@@ -64,7 +64,7 @@ fn ptp(v: &[f64]) -> f64 {
 }
 
 /// `_spearman`: Pearson of the ranks (`np.corrcoef`); None below three points or when a series is constant.
-fn spearman(x: &[f64], y: &[f64]) -> Option<f64> {
+pub(crate) fn spearman(x: &[f64], y: &[f64]) -> Option<f64> {
     if x.len() < 3 || ptp(x) == 0.0 || ptp(y) == 0.0 {
         return None;
     }

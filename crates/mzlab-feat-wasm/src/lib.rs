@@ -69,6 +69,8 @@ pub mod run_ms2;
 pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
+#[cfg(feature = "flow_compare")]
+pub mod run_compare;
 
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.

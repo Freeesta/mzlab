@@ -1,13 +1,16 @@
 // @ts-check
-// Flow (administrator mode): table.stats, table.pca and table.kmd in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowstat` .wasm (loaded here only, when one of
-// these steps runs): `mzlab_feat::flow_stat`, the functions `flow run` calls, so stat/1, the PCA answer and the Kendrick text are the same bytes. The table is the alignment (or gap filling)
+// Flow (administrator mode): table.stats, table.pca, table.kmd and table.compare in this browser. The texts are `flow_stats`, `flow_pca`, `flow_kmd` of the `flowstat` .wasm and `flow_compare` of the `flowcompare` .wasm (each loaded here only, when one of
+// these steps runs): `mzlab_feat::flow_stat`, the functions `flow run` calls, so stat/1, the PCA answer, the Kendrick text and compare/1 are the same bytes (compare/1 names its table: the file name the native run reads, `tab.name`). The table is the alignment (or gap filling)
 // of the same plan, kept in OPFS, or the table a `table.filter` view of it stands for (`F.liveJobs.tableOf`); `samples` and `design` are files of the plan (their text in S.samplesJson). The text is kept like the other results, under the key of the job. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   // step -> the .wasm function and the plan files it reads besides the table
   /** @type {Record<string, [string, string[]]>} */
-  const OPS = { "table.stats": ["flow_stats", ["samples", "design"]], "table.pca": ["flow_pca", ["samples"]], "table.kmd": ["flow_kmd", []] };
+  const OPS = { "table.stats": ["flow_stats", ["samples", "design"]], "table.pca": ["flow_pca", ["samples"]], "table.kmd": ["flow_kmd", []], "table.compare": ["flow_compare", ["samples"]] };
+  // the plan files a step may leave unwired (an empty text goes to the .wasm)
+  /** @type {Record<string, string[]>} */
+  const OPTIONAL = { "table.compare": ["samples"] };
   const STEPS = Object.keys(OPS);
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
   const enc = (/** @type {string} */ s) => new TextEncoder().encode(s);
@@ -23,10 +26,12 @@
     return typeof t === "string" ? t : null;
   };
 
-  /** table.stats | table.pca | table.kmd @param {any} x @param {any} spec @param {any} inst */
+  /** table.stats | table.pca | table.kmd | table.compare @param {any} x @param {any} spec @param {any} inst */
   const run = async (x, spec, inst) => {
     const [fn, ports] = OPS[base(inst)], j = J().job(spec), p = await kit().getPool();
-    const texts = ports.map(port => fileText(x, inst, port));
+    const optional = OPTIONAL[base(inst)] || [];
+    // an optional port that is not wired is an empty text; a wired one the browser does not hold still waits for the computer
+    const texts = ports.map(port => (optional.includes(port) && !F.refs(inst, port).length ? "" : fileText(x, inst, port)));
     const tab = await J().tableOf(x, p, inst, "table");
     if (!tab || texts.includes(null)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     const shas = await Promise.all(texts.map(t => J().sha(/** @type {string} */ (t))));
@@ -36,10 +41,12 @@
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
       /** @type {Record<string, any>} */
-      const m = { params, table: await tab.read() };
+      const m = { params };
+      if (fn === "flow_compare") m.name = tab.name;
+      m.table = await tab.read();
       ports.forEach((port, i) => { m[port] = enc(/** @type {string} */ (texts[i])); });
       let text;
-      try { text = await p.ident("flowstat", fn, m); } catch (e) { throw asError(e); }
+      try { text = await p.ident(fn === "flow_compare" ? "flowcompare" : "flowstat", fn, m); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
