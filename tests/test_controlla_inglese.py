@@ -24,19 +24,19 @@ def test_comments():
 
 
 def test_lexers_keep_comments_strings_and_lines_apart():
-    src = 'const a = /\'x/; // chiudi il pannello\nlet campoNome = "history.background";\n'
+    src = 'const a = /\'x/; // chiudi il pannello\nlet campoNome = "storia.fondo";\n'
     com, ids, strs = ci.lex_c_like(src, ".js")
     assert com == [(1, " chiudi il pannello")]
-    assert (2, "campoNome") in ids and (2, "history.background") in strs
+    assert (2, "campoNome") in ids and (2, "storia.fondo") in strs
     r = ci.scan_file("x.js", src)
-    assert r["comments"] == [1] and "campoNome" in r["idents"] and "history.background" in r["keys"]
+    assert r["comments"] == [1] and "campoNome" in r["idents"] and "storia.fondo" in r["keys"]
     com, _, strs = ci.lex_python('"""Modulo di prova."""\nx = """non un docstring"""\n')
     assert [t for _, t in com] == ["Modulo di prova."] and strs[0][1] == "non un docstring"
 
 
 def test_lang_files_read_keys_only():
-    _, _, keys = ci.lex_lang('I18N.add("en", {\n  "history.background": "Background removed",\n  "app.title": "Analysis"\n});\n')
-    assert [k for _, k in keys] == ["history.background", "app.title"]
+    _, _, keys = ci.lex_lang('I18N.add("en", {\n  "storia.fondo": "Background removed",\n  "app.title": "Analysis"\n});\n')
+    assert [k for _, k in keys] == ["storia.fondo", "app.title"]
 
 
 def test_paths_and_rename_map():
