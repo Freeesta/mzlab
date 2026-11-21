@@ -16,14 +16,14 @@ def step(name, fn):
 D = synth("intestazioni")
 r = Run(port=8958, wd="/tmp/wd_intestazioni")
 
-# every panel header: one row per line, the MS² spectrum header two lines (fitHd lets the content overflow by 1 px as scrollWidth rounds it, so the edges are compared with 1.5 px), every control inside it, no scrolling content, a chart at least 100 px high
+# every panel header: one row per line, the MS² spectrum header (ms2c) two lines (fitHd lets the content overflow by 1 px as scrollWidth rounds it, so the edges are compared with 1.5 px), every control inside it, no scrolling content, a chart at least 100 px high
 CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {
   const hd = p.el.querySelector('.hd'), hr = hd.getBoundingClientRect();
   const items = [...hd.querySelectorAll(':scope > *, .ctl > *, .tbs > *')].filter(e => e.offsetParent && !e.closest('.hmore') && !e.classList.contains('rd') && !e.classList.contains('hmore') && e.getBoundingClientRect().width);
   // the MS² spectrum header is two lines by design (#3435): the title and buttons, then the fragments controls (.ctl) on their own line; every other header is one line.
   // at narrow widths the spectrum title row may itself wrap (flex-wrap), so only its controls line is held to one row; nothing may be cut or outside, and the .ctl line stays below.
   // Each line is measured on its own (the controls of one line share a row); the two lines of the spectrum must be two distinct rows, one under the other.
-  const two = p.type === 'spec' && !!hd.querySelector(':scope > .ctl'), mids = e => e.map(x => { const q = x.getBoundingClientRect(); return q.top + q.height / 2; });
+  const two = p.type === 'spec' && p.el.classList.contains('ms2c') && !!hd.querySelector(':scope > .ctl'), mids = e => e.map(x => { const q = x.getBoundingClientRect(); return q.top + q.height / 2; });
   const spread = m => m.length ? Math.max(...m) - Math.min(...m) : 0, inCtl = e => !!e.closest('.ctl');
   const top = two ? items.filter(e => !inCtl(e)) : items, low = two ? items.filter(inCtl) : [];
   const out = items.filter(e => { const q = e.getBoundingClientRect(); return q.right > hr.right + 1.5 || q.left < hr.left - 1.5; }).map(e => e.className || e.tagName);
