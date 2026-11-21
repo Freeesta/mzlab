@@ -133,13 +133,13 @@ pub(super) fn compare() -> Step {
         Param::text("ref", "Reference columns")
             .doc("Comma list of case-insensitive globs over the file names (t0*), or role:reference, role:blank, time:0 when the samples file is wired"),
         Param::text("blank", "Blank columns")
-            .doc("Comma list of globs or role:/time: selectors for the blank files; a column cannot be in both lists, every other column is treated"),
+            .doc("Globs or role:/time: selectors for the blank files; a column cannot also be a reference column"),
         Param::choice("quantity", "Quantity", &["area", "height"])
             .doc("area (default) or height; a CSV table carries areas only"),
         Param::number("factor", "Factor").min(0.0).doc("Ratio a feature must reach against the reference and the blank (default 3)"),
         Param::number("pseudocount", "Pseudocount")
             .min(0.0)
-            .doc("Added to both sides of every ratio; without a value it is 3 x the median of the positive blank values, else of the reference, else the floor"),
+            .doc("Added to both sides of every ratio; default 3 x the median of the positive blank values"),
         Param::number("floor", "Pseudocount floor").min(0.0).advanced().doc("Smallest estimated pseudocount (default 1000)"),
         Param::number("rho_min", "Smallest rho").min(0.0).max(1.0).advanced().doc("Spearman rho over time that makes a rise or a fall (default 0.5)"),
     ];

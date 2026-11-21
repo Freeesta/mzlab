@@ -2194,7 +2194,7 @@
                   },
                   {
                     "type":"string",
-                    "description":"Comma list of globs or role:/time: selectors for the blank files; a column cannot be in both lists, every other column is treated"
+                    "description":"Globs or role:/time: selectors for the blank files; a column cannot also be a reference column"
                   },
                   {"enum":["area","height"],"description":"area (default) or height; a CSV table carries areas only"},
                   {
@@ -2205,7 +2205,7 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "description":"Added to both sides of every ratio; without a value it is 3 x the median of the positive blank values, else of the reference, else the floor"
+                    "description":"Added to both sides of every ratio; default 3 x the median of the positive blank values"
                   },
                   {"type":"number","minimum":0,"description":"Smallest estimated pseudocount (default 1000)"},
                   {
