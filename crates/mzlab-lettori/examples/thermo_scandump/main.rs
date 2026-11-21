@@ -412,7 +412,7 @@ fn main() {
     let t0 = Instant::now();
     let mut src = Cursor::new(bytes.as_slice());
     let raw = RawFileReader::open(&mut src).expect("open");
-    let mut l = (rawreader::ENTRY.apri)(fileset(&name, bytes.clone()), &Limits::desktop())
+    let mut l = (rawreader::ENTRY.open)(fileset(&name, bytes.clone()), &Limits::desktop())
         .expect("lettore");
     let open_ms = t0.elapsed().as_secs_f64() * 1e3;
     let n = l.index(0).expect("index").len();

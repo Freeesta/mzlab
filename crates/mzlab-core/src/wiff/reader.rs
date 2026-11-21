@@ -57,7 +57,7 @@ pub(super) struct Part {
     /// (the engine reads MRM dense only): the module reads it.
     #[cfg(feature = "sciex")]
     other_version: bool,
-    /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
+    /// `scans` and `indice` are built (`open_solo` builds only the injection it is asked for; the others on their first use).
     ready: bool,
 }
 
@@ -99,10 +99,10 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".wiff", ".wiff.scan"],
     riconosci,
-    apri,
+    open,
 };
 
-/// Injection `c` is of a variant: its method (any time) or a block of another version (once its index is built; `apri_solo` leaves the other injections unbuilt,
+/// Injection `c` is of a variant: its method (any time) or a block of another version (once its index is built; `open_solo` leaves the other injections unbuilt,
 /// and the probe of the page does not read their blocks: the method says it for a pair of one instrument).
 #[cfg(feature = "sciex")]
 fn variant_of(parts: &[Part], c: usize) -> bool {
@@ -118,7 +118,7 @@ impl WiffReader {
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
-    /// Injection `c` with its index built (the heads of its blocks read now when `apri_solo` left it out).
+    /// Injection `c` with its index built (the heads of its blocks read now when `open_solo` left it out).
     pub(super) fn ready(&mut self, c: usize) -> Result<&Part> {
         let p = self
             .parts
@@ -129,7 +129,7 @@ impl WiffReader {
                 build(p, &mut self.scan, self.scan_len, self.scan_member)?;
             }
             p.w.readable()?;
-            // the list of samples told 0 scans for an injection `apri_solo` left out
+            // the list of samples told 0 scans for an injection `open_solo` left out
             if let Some(k) = self.campioni.get_mut(c) {
                 k.scansioni = p.scans.len();
             }
@@ -330,7 +330,7 @@ pub(super) fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
         .ok_or_else(|| Error::new("err.file.wiff").with("detail", "member"))
 }
 
-fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     open_only(fs, limits, None)
 }
 
@@ -340,7 +340,7 @@ pub fn open_only(fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Bo
     open_with(fs, limits, only, false)
 }
 
-/// Opens the pair for a listing (`readers::apri_listing`): the container and the `Idx` rows give the samples, no block head is read and the sections the index lacks
+/// Opens the pair for a listing (`readers::open_listing`): the container and the `Idx` rows give the samples, no block head is read and the sections the index lacks
 /// are not looked for (`listing::counts`). An index or a chromatogram asked later reads the heads of that sample then, as after `open_only`.
 pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     open_with(fs, limits, None, true)

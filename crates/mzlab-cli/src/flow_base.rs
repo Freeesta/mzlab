@@ -420,7 +420,7 @@ pub(crate) fn write_mzml_with(
     stop: &Stop,
 ) -> Result<Written> {
     let mut pace = mzlab_core::pace::Pace::new(step);
-    let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
+    let mut reader = mzlab_lettori::open(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
     let lost = reader.losses(sample)?;

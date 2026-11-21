@@ -51,7 +51,7 @@ fn set_of(members: &[(String, Vec<u8>)]) -> FileSet {
 
 /// Reads everything a page and the CLI read; `Err` names the first non-finite number met.
 fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
-    let Ok(mut l) = mzlab_lettori::apri(set_of(members), &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open(set_of(members), &Limits::sito()) else {
         return Ok(());
     };
     for c in 0..l.samples().len() {
@@ -98,7 +98,7 @@ fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
                 }
             }
         }
-        let _ = mzlab_core::readers_mzml::scrivi(l.as_mut(), c, Vec::new(), &mut |_, _| {});
+        let _ = mzlab_core::readers_mzml::write(l.as_mut(), c, Vec::new(), &mut |_, _| {});
     }
     Ok(())
 }

@@ -52,7 +52,7 @@ fn counted(
         }],
     };
     (
-        mzlab_lettori::apri(fs, &Limits::sito()).unwrap(),
+        mzlab_lettori::open(fs, &Limits::sito()).unwrap(),
         read_items,
     )
 }

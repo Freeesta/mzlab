@@ -85,7 +85,7 @@ Two synthetic Orbitrap DDA files (`tools/hr_reference.py`, ~15.000 MS1 peaks per
 
 ## Reader modules (`tools/build_lettori_wasm.sh`, after `wasm_opt -Oz`)
 - `.wasm` of mzFinder and of the readers: measures, caps (a merged module has a group cap, not the per-module ones) and separate build in `docs/agenti/wasm-caps.md`. The engine `.wasm` weighs 1 439 240 B (without the Thermo reader, which lives in the `thermo` module).
-- Memory of the `thermo` module (`tools/bench_raw.py`, initial memory 32 MB) on the 595 MB DDA BAF (56 061 scans): after `apri` 33.5 MB (`apri` 1.0 s), after `indice` 48.0 MB (186 ms, JSON of 13.7 MB), peak of all steps 122 MB (`to_mzml` 21.8 s); on smaller files 44.4 MB for 7 952 scans and 85.1 MB for 16 524.
+- Memory of the `thermo` module (`tools/bench_raw.py`, initial memory 32 MB) on the 595 MB DDA BAF (56 061 scans): after `open` 33.5 MB (`open` 1.0 s), after `indice` 48.0 MB (186 ms, JSON of 13.7 MB), peak of all steps 122 MB (`to_mzml` 21.8 s); on smaller files 44.4 MB for 7 952 scans and 85.1 MB for 16 524.
 
 ## `desktop` profile (`Cargo.toml`, `opt-level = 3` against `"z"`)
 - `mzlab_wasm.wasm` with `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` with and without the profile (identical). Native `.raw` times with `raw_times` and the `desktop` profile (595 MB DDA): table 8.33 → 5.30 s, `.mzidx` 7.07 → 3.59 s, mzML 13.99 → 12.15 s.

@@ -86,7 +86,7 @@ fn the_fake_reader_serves_the_generated_scans() {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("d.bin");
     generate(&f, &SMALL, false).unwrap();
-    let mut l = Denso::apri(&f).unwrap();
+    let mut l = Denso::open(&f).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 3);
     for k in 0..3 {
         let (mut b, mut v) = (Vec::new(), Verita::default());

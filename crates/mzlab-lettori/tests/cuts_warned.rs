@@ -20,7 +20,7 @@ fn fs(name: &str, b: &[u8]) -> FileSet {
 
 /// The scans of the first sample and its missing count, or the key of the first error.
 fn read(name: &str, b: &[u8]) -> Result<(Vec<Spectrum>, usize), &'static str> {
-    let mut l = mzlab_lettori::apri(fs(name, b), &Limits::sito()).map_err(|e| e.key)?;
+    let mut l = mzlab_lettori::open(fs(name, b), &Limits::sito()).map_err(|e| e.key)?;
     if l.samples().is_empty() {
         return Ok((Vec::new(), 0));
     }

@@ -21,7 +21,7 @@ fn abre(
     b: Vec<u8>,
     l: &Limits,
 ) -> Result<Box<dyn mzlab_core::readers::Reader>, &'static str> {
-    mzlab_lettori::apri(file_set(name, b), l).map_err(|e| e.key)
+    mzlab_lettori::open(file_set(name, b), l).map_err(|e| e.key)
 }
 
 #[test]

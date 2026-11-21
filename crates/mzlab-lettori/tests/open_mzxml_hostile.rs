@@ -120,10 +120,10 @@ fn without_scans_or_with_another_xml_does_not_open() {
     let empty = format!("{}</msRun></mzXML>", HEAD_WITHOUT_SCAN());
     assert_eq!(mzxml_error(empty.into_bytes()), "err.file.xml");
     // named .mzXML but not one: a cut or damaged copy, said with its name and size; an empty one is told apart
-    let r = mzlab_lettori::apri(file_set("x.mzXML", b"<altro/>".to_vec()), &Limits::sito());
+    let r = mzlab_lettori::open(file_set("x.mzXML", b"<altro/>".to_vec()), &Limits::sito());
     let e = r.err().unwrap();
     assert_eq!((e.key, e.params.len()), ("err.file.notThisFormat", 3));
-    let r = mzlab_lettori::apri(file_set("x.mzXML", Vec::new()), &Limits::sito());
+    let r = mzlab_lettori::open(file_set("x.mzXML", Vec::new()), &Limits::sito());
     assert_eq!(r.err().map(|e| e.key), Some("err.file.empty"));
 }
 

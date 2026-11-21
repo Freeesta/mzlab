@@ -19,7 +19,7 @@ fn reader(b: Vec<u8>) -> Box<dyn Reader> {
             sha1: None,
         }],
     };
-    match mzlab_lettori::apri(set, &Limits::sito()) {
+    match mzlab_lettori::open(set, &Limits::sito()) {
         Ok(l) => l,
         Err(e) => panic!("refused: {} {:?}", e.key, e.params),
     }

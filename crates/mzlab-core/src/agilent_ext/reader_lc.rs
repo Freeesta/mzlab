@@ -12,7 +12,7 @@ const ACQ_METHOD: &str = "AcqData/AcqMethod.xml";
 const UNDECODED_MAX: u64 = 4 << 20;
 
 /// The members under `AcqData/` (not in a subfolder) that an LC/MS run keeps besides the data: (index, path in the folder). `MSPeak.bin`, `MSProfile.bin` and the
-/// files `apri` reads for the data are not among them.
+/// files `open` reads for the data are not among them.
 fn lc_extras(fs: &FileSet) -> Vec<(usize, String)> {
     const KNOWN: [&str; 13] = [
         SCAN,

@@ -178,7 +178,7 @@ fn peak_rss_mb() -> f64 {
 fn open(path: &str, cen: bool) -> (Box<dyn Reader>, Counters, f64) {
     let (fs, c) = set(path);
     let t = Instant::now();
-    let l = readers::apri(fs, &Limits::sito()).expect("open");
+    let l = readers::open(fs, &Limits::sito()).expect("open");
     let l = if cen {
         readers_centroids::centroidato(l)
     } else {
@@ -223,7 +223,7 @@ fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
     let t = Instant::now();
     let (mut fs, _) = set(path);
     upload::without_sha1(&mut fs);
-    let l2 = readers::apri(fs, &Limits::sito()).expect("open");
+    let l2 = readers::open(fs, &Limits::sito()).expect("open");
     let mut l2 = l2;
     let mut out = Cursor::new(Vec::new());
     let mut sp = scratch(tmp);
@@ -366,7 +366,7 @@ fn mzml(l: &mut dyn Reader, n: usize, c: &Counters) {
     };
     readers_mzml::write_with(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
     line(
-        "write mzML (scrivi)",
+        "write mzML",
         t.elapsed().as_secs_f64(),
         c,
         &format!(

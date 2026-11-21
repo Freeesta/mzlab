@@ -57,7 +57,7 @@ fn convert(dir: &Path, dad: bool) -> Vec<u8> {
             member(dir, "dadmetodo.wiff.scan"),
         ],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open(fs, &Limits::sito()).unwrap();
     assert!(
         l.variant(0),
         "version-1 blocks make the pair a variant of the module"

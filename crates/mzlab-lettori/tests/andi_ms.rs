@@ -146,7 +146,7 @@ fn the_method_carries_instrument_operator_and_every_attribute() {
 #[test]
 fn writes_as_mzml_and_reads_back() {
     let mut l = open_andi(andi_ms(&FLAT_RUN));
-    let out = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let out = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8(out).unwrap();
     assert!(text.contains("<spectrum "));
     assert!(text.contains("Model 7"));
@@ -172,7 +172,7 @@ fn an_andi_chromatogram_is_a_sample_with_an_analog_trace() {
     assert!((c.time[2] - (30.0 + 1.0) / 60.0).abs() < 1e-12);
     assert!((c.intensity[3] - (1000.0 + 21.0)).abs() < 1e-9);
     assert!(l.chromatogram(0, "altro").is_err());
-    let out = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let out = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("FID1A"));
 }
 

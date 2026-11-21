@@ -32,7 +32,7 @@ fn seeds() -> Vec<Vec<u8>> {
 }
 
 fn everything(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open(file_set(byte), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
@@ -78,7 +78,7 @@ fn a_bare_header_is_refused_with_a_key() {
         let mut b = vec![0x01, 0xA1];
         b.extend("Finnigan".encode_utf16().flat_map(u16::to_le_bytes));
         b.resize(len, 0);
-        if let Err(e) = mzlab_lettori::apri(file_set(b), &Limits::sito()) {
+        if let Err(e) = mzlab_lettori::open(file_set(b), &Limits::sito()) {
             assert!(e.key.starts_with("err."), "{}", e.key);
         }
     }
@@ -120,7 +120,7 @@ fn every_version_number_is_read_or_refused_with_a_key() {
         .iter()
         .enumerate()
         {
-            match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limits::sito()) {
+            match mzlab_lettori::open(file_set(with_version(v, tail)), &Limits::sito()) {
                 Ok(_) => assert!(VERIFIED.contains(&v), "version {v} (tail {k}) opened"),
                 Err(e) => {
                     assert!(e.key.starts_with("err."), "{}", e.key);

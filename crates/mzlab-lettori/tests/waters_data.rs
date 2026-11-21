@@ -37,7 +37,7 @@ pub fn folder(rel: &str) -> Option<FileSet> {
     Some(FileSet { membri: members })
 }
 
-pub fn apri(rel: &str) -> Option<Box<dyn Reader>> {
+pub fn open(rel: &str) -> Option<Box<dyn Reader>> {
     let fs = folder(rel)?;
     Some(
         mzlab_lettori::open_bare(fs, &Limits::sito())
@@ -64,7 +64,7 @@ const FOLDERS: &[&str] = &[
 #[test]
 fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
     for rel in FOLDERS {
-        let Some(mut l) = apri(rel) else { continue };
+        let Some(mut l) = open(rel) else { continue };
         let idx = l.index(0).unwrap().to_vec();
         assert!(
             idx.windows(2).all(|w| w[0].rt <= w[1].rt),
@@ -141,7 +141,7 @@ fn chromatograms_match_the_msconvert_mzml() {
         return;
     }
     let rel = "waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038";
-    let Some(mut l) = apri(&format!("{rel}.raw")) else {
+    let Some(mut l) = open(&format!("{rel}.raw")) else {
         return;
     };
     let Some(mz) = dati_percorsi::percorso(&format!("dati/formati/{rel}.mzML")) else {

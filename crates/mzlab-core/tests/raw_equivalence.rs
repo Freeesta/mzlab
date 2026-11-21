@@ -33,13 +33,13 @@ fn hashes(path: &Path) -> (String, String, String, String) {
     };
     let mut fs = set();
     let imp = upload::impronte(&mut fs).expect("fingerprint");
-    let mut l: Box<dyn Reader> = readers::apri(set(), &Limits::sito()).expect("open");
+    let mut l: Box<dyn Reader> = readers::open(set(), &Limits::sito()).expect("open");
     let p = upload::prepare_reader(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
     let mut out = Cursor::new(Vec::new());
     mzidx::build_reader(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("mzidx");
     let mzidx = hex(&out.into_inner());
     let mut mz = Sha256Sink::default();
-    readers_mzml::scrivi(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
+    readers_mzml::write(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
     let metodo = hex(l.method(0).expect("metodo").as_bytes());
     let n = l.index(0).unwrap().len();
     let mut h = Sha256::new();
@@ -191,7 +191,7 @@ fn scan_data_and_transport_give_the_same_scan() {
                 sha1: None,
             }],
         };
-        let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+        let mut l = readers::open(fs, &Limits::sito()).unwrap();
         let index = l.index(0).unwrap().to_vec();
         let riletto =
             mzlab_core::transport::decode_index(&mzlab_core::transport::encode_index(&index))
@@ -266,7 +266,7 @@ fn the_table_header_has_the_fields_of_the_full_header() {
                 sha1: None,
             }],
         };
-        let Ok(mut l) = readers::apri(fs, &Limits::sito()) else {
+        let Ok(mut l) = readers::open(fs, &Limits::sito()) else {
             continue;
         };
         let full = l.mzml_header(0).unwrap().expect("full header");

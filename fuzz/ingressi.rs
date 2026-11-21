@@ -93,7 +93,7 @@ pub fn wiff(data: &[u8]) {
     }
     let membri = vec![("x.wiff", w.to_vec()), ("x.wiff.scan", scan.to_vec())];
     let _ = readers::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = readers::apri(insieme(membri), &Limits::sito()) else {
+    let Ok(mut l) = readers::open(insieme(membri), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {

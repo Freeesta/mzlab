@@ -48,7 +48,7 @@ fn a_refused_sample_carries_its_reason_and_an_empty_one_stays_empty() {
             member("rifiutato.wiff.scan", scan),
         ],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+    let mut l = readers::open(fs, &Limits::sito()).unwrap();
     let got = readers::samples_json(&mut *l);
     assert_eq!(got, LISTING, "the listing of the site and of the app");
     let v: serde_json::Value = serde_json::from_str(&got).unwrap();

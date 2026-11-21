@@ -14,7 +14,7 @@ fn main() {
             sha1: None,
         }],
     };
-    let mut l = readers::apri(set, &Limits::desktop()).expect("recognise");
+    let mut l = readers::open(set, &Limits::desktop()).expect("recognise");
     let out = std::io::BufWriter::new(std::fs::File::create(&a[2]).expect("create mzML"));
     let conv = Conversion {
         peaks: if a.get(3).is_some_and(|p| p == "profile") {

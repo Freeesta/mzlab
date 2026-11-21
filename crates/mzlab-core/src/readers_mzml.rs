@@ -25,7 +25,7 @@ fn simple(l: &dyn Reader, c: usize) -> Header {
     }
 }
 
-/// The header `scrivi` writes for sample `c`.
+/// The header `write` writes for sample `c`.
 pub(crate) fn file_header(l: &mut dyn Reader, c: usize) -> Result<Header> {
     Ok(match l.mzml_header(c)? {
         Some(h) => h,
@@ -209,7 +209,7 @@ fn uv_spettri<W: Write>(
     Ok(())
 }
 
-/// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
+/// A conversion of one sample to mzML: the one entry of every route (`write*` are its short forms).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Conversion<'a> {
     pub peaks: Peaks,
@@ -309,7 +309,7 @@ fn spettri<W: Write>(
 }
 
 /// Writes sample `c` of `l` as mzML to `out`; `progress(done, total)` counts the spectra.
-pub fn scrivi<W: Write>(
+pub fn write<W: Write>(
     l: &mut dyn Reader,
     c: usize,
     out: W,
@@ -318,7 +318,7 @@ pub fn scrivi<W: Write>(
     Conversion::default().write(l, c, out, progress)
 }
 
-/// `scrivi` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
+/// `write` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
 pub fn write_with<W: Write>(
     l: &mut dyn Reader,
     c: usize,
@@ -334,7 +334,7 @@ pub fn write_with<W: Write>(
 }
 
 /// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
-/// after the conversion. The spectra and chromatograms are those of `scrivi_con`.
+/// after the conversion. The spectra and chromatograms are those of `write_con`.
 pub fn write_indexed<W: Write>(
     l: &mut dyn Reader,
     c: usize,
@@ -351,7 +351,7 @@ pub fn write_indexed<W: Write>(
     conv.write(l, c, out, progress)
 }
 
-/// The chromatograms of sample `c` that hold points, numbered again from 0 as `scrivi` writes them.
+/// The chromatograms of sample `c` that hold points, numbered again from 0 as `write` writes them.
 fn chromatograms<W: Write>(l: &mut dyn Reader, c: usize, w: &mut MzmlWriter<W>) -> Result<()> {
     let mut traces = Vec::new();
     for v in l.chromatograms(c)? {
@@ -371,7 +371,7 @@ fn chromatograms<W: Write>(l: &mut dyn Reader, c: usize, w: &mut MzmlWriter<W>) 
     Ok(())
 }
 
-/// The mzML of sample `c` without its spectra: the header and the chromatograms exactly as `scrivi` writes them, then a comment that names the
+/// The mzML of sample `c` without its spectra: the header and the chromatograms exactly as `write` writes them, then a comment that names the
 /// polarities of the scans (what a whole mzML says of them where `mzmlhead::Mzml::header_polarity` looks). What the routes that read the header
 /// and the chromatograms of a file (`mzmlhead::Mzml`) read for a vendor file; its scans come from the reader (`ReadAt::lettore`).
 pub fn guscio(l: &mut dyn Reader, c: usize) -> Result<Vec<u8>> {

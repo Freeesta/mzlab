@@ -21,10 +21,10 @@ fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
 
 #[test]
 fn a_frame_without_calibration_is_left_out_and_counted() {
-    let ok = mzlab_lettori::apri(folder(block2(), tdf_frames_cal(&[0], 3, 1)), &limits());
+    let ok = mzlab_lettori::open(folder(block2(), tdf_frames_cal(&[0], 3, 1)), &limits());
     assert!(ok.is_ok(), "{:?}", ok.err().map(|e| e.key));
     // a run whose only frame has no usable calibration: nothing can be read, refused at open
-    let e = mzlab_lettori::apri(folder(block2(), tdf_frames_cal(&[0], 3, 7)), &limits())
+    let e = mzlab_lettori::open(folder(block2(), tdf_frames_cal(&[0], 3, 7)), &limits())
         .err()
         .unwrap();
     assert_eq!(e.key, "err.file.brukerCalibration");
@@ -38,7 +38,7 @@ fn a_frame_without_calibration_is_left_out_and_counted() {
     let n = b.len() as i64;
     let whole = [b.clone(), b.clone(), b].concat();
     let tdf = db(&tdf_tables(&[0, n, 2 * n], 3, &[1, 7, 1]));
-    let mut l = mzlab_lettori::apri(folder(whole, tdf), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(whole, tdf), &limits()).unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (2, 1));
     assert_eq!(
         l.losses(0).unwrap(),
@@ -59,7 +59,7 @@ fn an_undecodable_frame_is_zero_in_the_bpc() {
     }
     let whole = [b.clone(), bad, b].concat();
     let mut l =
-        mzlab_lettori::apri(folder(whole, tdf_frames(&[0, n, 2 * n], 3)), &limits()).unwrap();
+        mzlab_lettori::open(folder(whole, tdf_frames(&[0, n, 2 * n], 3)), &limits()).unwrap();
     assert!(l.scan(0, 1).is_err());
     let bpc = l.chromatogram(0, "BPC").unwrap();
     assert_eq!(bpc.intensity.len(), 3);
@@ -78,7 +78,7 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
         "CREATE TABLE GlobalMetadata (Key TEXT, Value TEXT)",
         page,
     ));
-    let mut l = mzlab_lettori::apri(folder(block2(), db(&tables)), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(block2(), db(&tables)), &limits()).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 1);
     assert_eq!(l.scan(0, 0).unwrap().mz.len(), 2);
     let doc = l.method(0).unwrap();
@@ -95,7 +95,7 @@ fn a_cut_bin_and_a_frame_without_calibration_are_both_said() {
     let n = b.len() as i64;
     let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
     let tdf = db(&tdf_tables(&[0, n, 2 * n, 3 * n], 3, &[1, 7, 1, 1]));
-    let mut l = mzlab_lettori::apri(folder(bin, tdf), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(bin, tdf), &limits()).unwrap();
     // the losses keep the cut `_bin` cause and count both; the method document counts the uncalibrated one
     assert_eq!(
         l.losses(0).unwrap(),
@@ -116,11 +116,11 @@ fn a_damaged_page_of_frames_leaves_out_its_frames_and_counts_it() {
     let tims: Vec<i64> = (0..300).map(|i| i * n).collect();
     let bin: Vec<u8> = b.iter().copied().cycle().take(300 * b.len()).collect();
     let whole = db_rows(&tdf_rows(&tims, 3, &[1; 300]));
-    let mut l = mzlab_lettori::apri(folder(bin.clone(), whole.clone()), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(bin.clone(), whole.clone()), &limits()).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 300);
     let mut broken = whole;
     broken[PAG] = 99;
-    let mut l = mzlab_lettori::apri(folder(bin, broken), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(bin, broken), &limits()).unwrap();
     // the frames of the other leaves are read, those of the damaged one are absent (their number is not in the file: not guessed)
     let read = l.index(0).unwrap().len();
     assert!(read > 0 && read < 300, "{read}");

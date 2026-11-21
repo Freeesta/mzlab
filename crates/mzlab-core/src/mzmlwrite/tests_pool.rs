@@ -40,7 +40,7 @@ fn spettri(n: usize) -> Vec<(Spectrum, SpectrumExtra)> {
         .collect()
 }
 
-fn apri(opz: Options, indexed: bool, n: usize) -> MzmlWriter<Vec<u8>> {
+fn open(opz: Options, indexed: bool, n: usize) -> MzmlWriter<Vec<u8>> {
     let h = Header {
         run: "x".into(),
         ..Default::default()
@@ -62,7 +62,7 @@ fn chiudi(mut w: MzmlWriter<Vec<u8>>) -> Vec<u8> {
 
 /// The file without the pool: one `spectrum_with` after the other.
 fn without_group(s: &[(Spectrum, SpectrumExtra)], opz: Options, indexed: bool) -> Vec<u8> {
-    let mut w = apri(opz, indexed, s.len());
+    let mut w = open(opz, indexed, s.len());
     s.iter()
         .for_each(|(sp, ex)| w.spectrum_with(sp, ex).unwrap());
     chiudi(w)
@@ -74,7 +74,7 @@ fn with_group(
     indexed: bool,
     thread: usize,
 ) -> Vec<u8> {
-    let mut w = apri(Options { thread, ..opz }, indexed, s.len());
+    let mut w = open(Options { thread, ..opz }, indexed, s.len());
     w.spettri(s.iter().cloned().map(Ok)).unwrap();
     chiudi(w)
 }
@@ -118,7 +118,7 @@ fn no_threads_and_an_empty_run_work() {
 
 /// What the writer has written when the pool stopped: the file up to the first `n` spectra, never closed.
 fn up_to(s: &[(Spectrum, SpectrumExtra)], n: usize, indexed: bool) -> Vec<u8> {
-    let mut w = apri(Options::default(), indexed, s.len());
+    let mut w = open(Options::default(), indexed, s.len());
     s[..n]
         .iter()
         .for_each(|(sp, ex)| w.spectrum_with(sp, ex).unwrap());
@@ -129,7 +129,7 @@ fn up_to(s: &[(Spectrum, SpectrumExtra)], n: usize, indexed: bool) -> Vec<u8> {
 fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() {
     let s = spettri(2000);
     for thread in [1, 4, 7] {
-        let mut w = apri(
+        let mut w = open(
             Options {
                 thread,
                 ..Options::default()
@@ -160,7 +160,7 @@ fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() 
 #[test]
 fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
     let s = spettri(300);
-    let mut w = apri(
+    let mut w = open(
         Options {
             thread: 5,
             ..Options::default()
@@ -193,7 +193,7 @@ fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
 #[test]
 fn a_reader_error_is_returned_after_the_spectra_before_it() {
     let s = spettri(300);
-    let mut w = apri(
+    let mut w = open(
         Options {
             thread: 3,
             ..Options::default()
@@ -238,7 +238,7 @@ fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
             "threads={thread}"
         );
     }
-    let mut w = apri(Options { thread: 3, ..opz }, false, s.len());
+    let mut w = open(Options { thread: 3, ..opz }, false, s.len());
     let guasto =
         |enc: &mut Encoding, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
             if k == 41 {

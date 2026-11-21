@@ -20,7 +20,7 @@ How to read the columns: the seconds per step are the sum over the 12 instances 
 - Align and gapfill do not depend on the format.
 
 ## Bruker timsTOF `.d` (synthetic DDA-PASEF)
-`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- scrivi X.d --cycles 100` writes 1100 frames (100 MS1 of 60 000 points, 1000 PASEF of 15 000 points with 12 precursors), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` gives the ms per phase and the FNV signature of all points (equal before and after every change). 4 CPUs, files in the system cache, noise ±5 %.
+`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- write X.d --cycles 100` writes 1100 frames (100 MS1 of 60 000 points, 1000 PASEF of 15 000 points with 12 precursors), `analysis.tdf_bin` 80 MB in zstd (codec 2); `measure X.d` gives the ms per phase and the FNV signature of all points (equal before and after every change). 4 CPUs, files in the system cache, noise ±5 %.
 
 | phase (12 100 spectra, 16 M points) | native ms | `.wasm` in Node (mzML) |
 |---|---|---|
@@ -28,7 +28,7 @@ How to read the columns: the seconds per step are the sum over the 12 instances 
 | index (TIC of the MS2: decoding of every frame) | 423 | — |
 | BPC | 245 | — |
 | all spectra | 910 | — |
-| mzML (`readers_mzml::scrivi`, reopened file) | 1 610 | 6 040 |
+| mzML (`readers_mzml::write`, reopened file) | 1 610 | 6 040 |
 
 - Profile (callgrind, 88 frames, all phases): frame decoding is 50 % of the instructions and zstd is 58 % of that; the deflate of the written mzML 33 %. The merge by TOF index (11-bit radix of 1024 points, `sort_tof` in `crates/mzlab-lettori/src/bruker/spectra.rs`) and the cut by scans weigh less than 10 %; point-by-point sorting and filtering (41 % of the instructions) is not used.
 - The index step decodes every PASEF frame once for the TIC of the MS2, and the conversion decodes them again: the double pass remains.

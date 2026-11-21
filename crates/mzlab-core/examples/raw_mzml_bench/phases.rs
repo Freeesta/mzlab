@@ -32,9 +32,9 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn apri(&self) -> Box<dyn Reader> {
+    pub fn open(&self) -> Box<dyn Reader> {
         match &self.origin {
-            Origin::Denso(p) => Box::new(Denso::apri(p).expect("dense case")),
+            Origin::Denso(p) => Box::new(Denso::open(p).expect("dense case")),
             Origin::Raw(p) => {
                 let name = p
                     .file_name()
@@ -47,7 +47,7 @@ impl Source {
                         sha1: None,
                     }],
                 };
-                readers::apri(fs, &Limits::desktop()).expect("the reader opens the file")
+                readers::open(fs, &Limits::desktop()).expect("the reader opens the file")
             }
         }
     }
@@ -94,7 +94,7 @@ impl Write for Sink {
 }
 
 pub fn opening(src: &Source, giri: usize) -> Value {
-    let (g, l) = repeat(giri, || src.apri());
+    let (g, l) = repeat(giri, || src.open());
     let mut l = l;
     let n = l.index(0).map_or(0, |v| v.len());
     json!({"fase": "apertura", "scansioni": n, "misura": summary(&g)})
@@ -105,7 +105,7 @@ pub fn file_header(src: &Source, giri: usize) -> (Value, Header) {
     let mut h = None;
     let mut rest = Vec::new();
     for _ in 0..giri.max(1) {
-        let mut l = src.apri();
+        let mut l = src.open();
         let (g, r) = repeat(1, || l.mzml_header(0));
         rest.push(g.into_iter().next().expect("one run"));
         h = r.ok().flatten();
@@ -266,7 +266,7 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
         v("livello1-indicizzato-su-file", 1, false, true, true),
     ];
     let mut rows = Vec::new();
-    let mut l = src.apri();
+    let mut l = src.open();
     let mut mediane: Vec<Median> = Vec::new();
     for var in variants {
         let (row, m) = measure_variant(src, &mut *l, giri, h, tmp, var);
@@ -312,7 +312,7 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
     })
 }
 
-/// The whole conversion through `Conversione::scrivi` at each number of threads and zlib level, into a sink: time, CPU, memory, allocations and the
+/// The whole conversion through `Conversione::write` at each number of threads and zlib level, into a sink: time, CPU, memory, allocations and the
 /// SHA-256 of the output (the same at every thread count: F9).
 pub fn scale(
     src: &Source,
@@ -326,7 +326,7 @@ pub fn scale(
     let mut evidence = Vec::new();
     for &lv in levels {
         for &t in thread {
-            let mut l = src.apri();
+            let mut l = src.open();
             let opz = Options {
                 livello: lv,
                 numpress: false,

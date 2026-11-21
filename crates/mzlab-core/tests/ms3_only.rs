@@ -46,8 +46,8 @@ fn ms3_mzml() -> Option<Vec<u8>> {
     let set = FileSet {
         membri: vec![member("ms3.wiff"), member("ms3.wiff.scan")],
     };
-    let mut l = readers::apri(set, &Limits::sito()).unwrap();
-    let xml = mzlab_core::readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::open(set, &Limits::sito()).unwrap();
+    let xml = mzlab_core::readers_mzml::write(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap();
     let _ = std::fs::remove_dir_all(&out);
     Some(xml)
 }

@@ -31,7 +31,7 @@ fn set(dir: &Path, name: &str) -> FileSet {
 }
 
 fn same(dir: &Path, name: &str) -> usize {
-    let mut l = readers::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(dir, name), &Limits::sito()).unwrap();
     assert_eq!(l.format().id(), "sciex-wiff");
     let ole = container(
         std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(),
@@ -95,7 +95,7 @@ fn same(dir: &Path, name: &str) -> usize {
         for want in chroms {
             assert_eq!(&l.chromatogram(c, &want.id).unwrap(), want);
         }
-        let via = mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+        let via = mzlab_core::readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         let back = mzlab_core::mzml::read(&via[..]).unwrap();
         assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML");
         assert_eq!(
@@ -169,7 +169,7 @@ fn a_full_scan_with_a_dad_reads_the_same_through_the_registry() {
 
 /// An injection in the sample table with no `Idx` stream (it acquired nothing) is listed with 0 scans and its number, not dropped: the samples after it keep theirs.
 fn no_idx(dir: &Path, name: &str) {
-    let mut l = readers::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(dir, name), &Limits::sito()).unwrap();
     let got: Vec<(u32, usize)> = l.samples().iter().map(|c| (c.id, c.scansioni)).collect();
     assert_eq!(got, [(1, 1), (2, 0), (3, 1)], "{name}: samples");
     assert!(
@@ -185,7 +185,7 @@ fn no_idx(dir: &Path, name: &str) {
 
 /// A `.wiff.scan` cut in half: the scans beyond its end are counted by `mancanti` and left out of the index, the others still read.
 fn truncated(dir: &Path, name: &str) {
-    let mut whole = readers::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut whole = readers::open(set(dir, name), &Limits::sito()).unwrap();
     let mut fs = set(dir, name);
     let scan = &mut fs.membri[1];
     let mut bytes = vec![0u8; scan.dim as usize / 2];
@@ -209,9 +209,9 @@ fn truncated(dir: &Path, name: &str) {
     }
 }
 
-/// `apri_solo` (the builder of one index): sample `c` gives the index of the whole opening, the others are listed with 0 scans and give their own index when asked.
+/// `open_solo` (the builder of one index): sample `c` gives the index of the whole opening, the others are listed with 0 scans and give their own index when asked.
 fn one_sample(dir: &Path, name: &str) {
-    let mut all = readers::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut all = readers::open(set(dir, name), &Limits::sito()).unwrap();
     let n = all.samples().len();
     assert!(n > 1, "{name}: a container with more samples");
     for c in 0..n {
@@ -260,12 +260,12 @@ fn mzml_of(mut l: Box<dyn readers::Reader>, c: usize) -> Vec<u8> {
 }
 
 fn mzml_of_one_sample(dir: &Path, name: &str) {
-    let n = readers::apri(set(dir, name), &Limits::sito())
+    let n = readers::open(set(dir, name), &Limits::sito())
         .unwrap()
         .samples()
         .len();
     for c in 0..n {
-        let all = mzml_of(readers::apri(set(dir, name), &Limits::sito()).unwrap(), c);
+        let all = mzml_of(readers::open(set(dir, name), &Limits::sito()).unwrap(), c);
         let only = mzml_of(
             mzlab_core::wiff::reader::open_only(set(dir, name), &Limits::sito(), Some(c)).unwrap(),
             c,
@@ -289,9 +289,9 @@ fn mzml_with_known_sha1(dir: &Path, name: &str) {
         .membri
         .iter_mut()
         .for_each(|m| m.sha1 = Some(String::new()));
-    let want = mzml_of(readers::apri(set(dir, name), &Limits::sito()).unwrap(), 0);
+    let want = mzml_of(readers::open(set(dir, name), &Limits::sito()).unwrap(), 0);
     for (what, fs) in [("known", known), ("empty", empty)] {
-        let got = mzml_of(readers::apri(fs, &Limits::sito()).unwrap(), 0);
+        let got = mzml_of(readers::open(fs, &Limits::sito()).unwrap(), 0);
         assert!(got == want, "{name}: mzML with a {what} SHA-1");
     }
 }
@@ -328,7 +328,7 @@ fn a_wiff_alone_is_not_sure_and_not_a_wiff_is_refused() {
         Some("sciex-wiff")
     );
     assert_eq!(
-        readers::apri(alone, &Limits::sito()).err().unwrap().key,
+        readers::open(alone, &Limits::sito()).err().unwrap().key,
         "err.file.wiffNoScan"
     );
     let mut text = wiff(b"hello world, not an OLE container".to_vec(), "x.wiff");

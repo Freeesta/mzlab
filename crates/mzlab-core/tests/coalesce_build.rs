@@ -33,7 +33,7 @@ impl Spill for Tally {
 fn coalesced_index_is_the_same() {
     let mut l = Finto::vario(1500, 400, 31);
     let mut mz = Vec::new();
-    readers_mzml::scrivi(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
+    readers_mzml::write(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
     let p = upload::prepare(&mut mz.clone(), mz.len() as u64, "c.mzML").unwrap();
     let budget = 1 << 20;
     let build = |join: bool| {

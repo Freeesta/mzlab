@@ -42,7 +42,7 @@ fn keep<T>(r: Result<T>, keys: &mut Vec<String>) -> Option<T> {
 fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
     let _ = readers::riconosci(&mut fileset(m));
-    let Some(mut l) = keep(readers::apri(fileset(m), &Limits::sito()), &mut k) else {
+    let Some(mut l) = keep(readers::open(fileset(m), &Limits::sito()), &mut k) else {
         return k;
     };
     for c in 0..l.samples().len().min(3) {
@@ -61,7 +61,7 @@ fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
         }
         keep(l.method(c), &mut k);
         keep(
-            readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
+            readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}),
             &mut k,
         );
     }
@@ -227,7 +227,7 @@ fn the_seeds_read_whole() {
         );
         let k = read_all(&seed);
         assert!(k.is_empty(), "{name}: {:?}", MET.lock().unwrap());
-        let mut l = readers::apri(fileset(&seed), &Limits::sito()).unwrap();
+        let mut l = readers::open(fileset(&seed), &Limits::sito()).unwrap();
         let ix = l.index(0).unwrap().to_vec();
         // the MRM visits of the QqQ become traces, the Q-TOF centroids scans
         let read = if name == "qqq" {

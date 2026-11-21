@@ -26,7 +26,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".qgd", ".lcd"],
     riconosci: recognize,
-    apri,
+    open,
 };
 
 /// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`). `Ignoto` and `Rotto`: a `.qgd`/`.lcd`
@@ -106,7 +106,7 @@ fn cut_before(m: &mut mzlab_core::readers::Member) -> Option<Error> {
     )
 }
 
-fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let refused = fs.not_accepted();
     let (i, c) = find(&mut fs).ok_or(refused)?;
     match &c {

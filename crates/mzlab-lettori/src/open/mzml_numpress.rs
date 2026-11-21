@@ -1,5 +1,5 @@
 //! An mzML whose arrays are MS-Numpress (msconvert `--numpressLinear/--numpressPic/--numpressSlof/--numpressAll`), as a `Lettore`. The engine of the page refuses it
-//! (`err.file.numpress`); the module reads it and `readers_mzml::scrivi` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/readers-module.md).
+//! (`err.file.numpress`); the module reads it and `readers_mzml::write` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/readers-module.md).
 //! The index comes from one pass over the offsets (`mzlab_core::scantable`, the headers only); `scansione(c, k)` reads the bytes of spectrum `k` and gives them to `mzml::parse`,
 //! whose numpress decoding is on in this build (`mzlab_core::numpress`, feature `estesi`). Reference of the codecs: the MS-Numpress documentation; the code is written from it.
 
@@ -38,7 +38,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".mzml"],
     riconosci: recognize,
-    apri,
+    open,
 };
 
 /// A borrowed `ReadAt` (`Mzml` owns its reader).
@@ -365,7 +365,7 @@ impl Reader for NumpressReader {
     }
 }
 
-pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub(super) fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs.find(".mzml").ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
     let m = fs.membri.get_mut(i).ok_or(refused)?;

@@ -44,7 +44,7 @@ fn a_side_member_that_cannot_be_read_is_named_and_the_run_read() {
     let fs = FileSet {
         membri: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak), ts],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).expect("the run opens");
+    let mut l = readers::open(fs, &Limits::sito()).expect("the run opens");
     assert_eq!(l.index(0).unwrap().len(), 3);
     let doc = l.method(0).unwrap();
     assert!(
@@ -68,7 +68,7 @@ fn an_mrm_visit_that_does_not_decode_leaves_the_srm_chromatograms_and_is_counted
     let fs = FileSet {
         membri: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak)],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).expect("the run opens");
+    let mut l = readers::open(fs, &Limits::sito()).expect("the run opens");
     let srm: Vec<_> = l
         .chromatograms(0)
         .expect("the chromatograms are listed")

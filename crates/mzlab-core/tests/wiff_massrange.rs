@@ -116,7 +116,7 @@ fn every_announced_transition_is_read() {
         srm[3].id
     );
     assert_eq!((srm[3].q1, srm[3].q3), (Some(q1), Some(q3)));
-    let mut l = readers::apri(set(&dir, "tabella"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "tabella"), &Limits::sito()).unwrap();
     let chroms = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = chroms.iter().map(|c| c.id.as_str()).collect();
     let want_ids: Vec<&str> = run.chromatograms.iter().map(|c| c.id.as_str()).collect();
@@ -139,7 +139,7 @@ fn a_table_that_disagrees_with_its_header_is_refused() {
             ("1", expected.to_string().as_str()),
             "{name}"
         );
-        let e = readers::apri(set(&dir, name), &Limits::sito())
+        let e = readers::open(set(&dir, name), &Limits::sito())
             .err()
             .unwrap_or_else(|| panic!("{name}: Lettore"));
         assert_eq!(e.key, "err.file.wiffMassRange", "{name}: Lettore");
@@ -168,7 +168,7 @@ fn a_counted_sim_table_gives_each_ion_its_mass() {
         assert!(c.id.contains(&format!(" dwell={dwell} ")), "{}", c.id);
         assert_eq!((c.q1, c.q3), (Some(q1), None), "{}", c.id);
     }
-    let mut l = readers::apri(set(&dir, "sim"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "sim"), &Limits::sito()).unwrap();
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()

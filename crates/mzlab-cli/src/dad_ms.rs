@@ -108,7 +108,7 @@ fn ms_inner<T>(
             chroms: &chroms,
         });
     }
-    let mut l = mzlab_lettori::apri(
+    let mut l = mzlab_lettori::open(
         crate::flow_set::file_set(file)?,
         &mzlab_core::readers::Limits::desktop(),
     )?;

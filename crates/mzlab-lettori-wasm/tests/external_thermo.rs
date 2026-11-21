@@ -102,7 +102,7 @@ impl Write for Fingerprint {
 
 fn mzml(l: &mut dyn Reader) -> (u64, u64) {
     let w =
-        readers_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
+        readers_mzml::write(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
     (w.0, w.1)
 }
 
@@ -154,7 +154,7 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         return;
     }
     for f in &files {
-        let mut direct = (rawreader::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
+        let mut direct = (rawreader::ENTRY.open)(set(f), &Limits::sito()).unwrap();
         let mut s = Sessions::default();
         let h = s.insert(mzlab_lettori::open_bare(set(f), &Limits::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();

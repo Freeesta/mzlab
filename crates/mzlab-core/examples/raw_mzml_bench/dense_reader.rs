@@ -40,7 +40,7 @@ fn entry(k: usize, c: &[u8]) -> ScanEntry {
 }
 
 impl Denso {
-    pub fn apri(path: &Path) -> std::io::Result<Self> {
+    pub fn open(path: &Path) -> std::io::Result<Self> {
         let file = File::open(path)?;
         let mut n = [0u8; 8];
         file.read_exact_at(&mut n, 0)?;

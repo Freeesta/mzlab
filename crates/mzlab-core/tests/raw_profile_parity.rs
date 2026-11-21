@@ -296,7 +296,7 @@ fn compare() -> Option<Report> {
                 sha1: None,
             }],
         };
-        let mut l = readers::apri(set, &Limits::sito()).unwrap();
+        let mut l = readers::open(set, &Limits::sito()).unwrap();
         let conv = Conversion {
             peaks: Peaks::Profilo,
             ..Conversion::default()

@@ -19,7 +19,7 @@ use crate::rpc::{io_error, text, Answer};
 /// How many index builds of Data are running: the queue waits for them to end.
 static INDEXING: AtomicUsize = AtomicUsize::new(0);
 
-/// Held while an index is built (`IdxBuilder::scrivi`): the queue leaves the cores to it.
+/// Held while an index is built (`IdxBuilder::write`): the queue leaves the cores to it.
 pub(crate) struct Indexing;
 
 impl Indexing {

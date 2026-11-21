@@ -46,10 +46,10 @@ fn fixture(tag: &str) -> Option<PathBuf> {
     let set = FileSet {
         membri: vec![member("sim.wiff"), member("sim.wiff.scan")],
     };
-    let mut l = readers::apri(set, &Limits::sito()).unwrap();
+    let mut l = readers::open(set, &Limits::sito()).unwrap();
     for c in 0..2 {
         let bytes =
-            mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+            mzlab_core::readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         std::fs::write(d.join(format!("s{}.mzML", c + 1)), bytes).unwrap();
     }
     Some(d)

@@ -41,7 +41,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".raw"],
     riconosci,
-    apri,
+    open,
 };
 
 pub struct RawReader {
@@ -65,7 +65,7 @@ fn raw_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.raw").with("detail", e)
 }
 
-fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
         .find(".raw")
         .ok_or_else(|| Error::new("err.file.raw").with("detail", "no .raw member"))?;

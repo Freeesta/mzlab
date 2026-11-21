@@ -1,5 +1,5 @@
 //! The samples of a maker's file (`.raw`, `.wiff` + `.wiff.scan`, a `.D` folder) read as they are, no mzML written: the native twin of
-//! `mzlab-wasm/src/natives.rs`. A dataset is a `FileSet` of memory-mapped members opened with the readers of the registry (`readers::apri`); a slot is
+//! `mzlab-wasm/src/natives.rs`. A dataset is a `FileSet` of memory-mapped members opened with the readers of the registry (`readers::open`); a slot is
 //! sample `c` of a dataset, and the routes that read the file besides its index read the `guscio` of the sample (the mzML without its spectra) and the
 //! reader. The registered file of such a sample is an entry of the store with `nat` (`store.rs`).
 
@@ -38,7 +38,7 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
 
 /// The reader of a dataset; with `centroid` its profile scans become centroids.
 pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<dyn Reader>> {
-    let l = mzlab_lettori::apri(fileset(members)?, &Limits::desktop())?;
+    let l = mzlab_lettori::open(fileset(members)?, &Limits::desktop())?;
     Ok(if centroid {
         readers_centroids::centroidato(l)
     } else {
@@ -50,7 +50,7 @@ pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<
 /// container and index alone (the `.wiff.scan` is not read).
 pub(crate) fn samples(members: &[(String, PathBuf)], listing: bool) -> Result<String> {
     let mut l = if listing {
-        mzlab_lettori::apri_listing(fileset(members)?, &Limits::desktop())?
+        mzlab_lettori::open_listing(fileset(members)?, &Limits::desktop())?
     } else {
         open(members, false)?
     };

@@ -251,7 +251,7 @@ fn through_the_module(bytes: Vec<u8>) {
             sha1: None,
         }],
     };
-    let Ok(mut l) = mzlab_lettori::apri(set, &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open(set, &Limits::sito()) else {
         return;
     };
     let n = l.index(0).map_or(0, <[_]>::len);
@@ -448,7 +448,7 @@ fn an_srm_run_without_events_has_no_polarity() {
     let r = open(&b).unwrap();
     let m = opentfraw::scan_metadata(&r, &mut Cursor::new(b.clone()), 1).unwrap();
     assert_eq!((m.ms_level, m.polarity), (Some(2), None));
-    let mut l = mzlab_lettori::apri(
+    let mut l = mzlab_lettori::open(
         mzlab_core::readers::FileSet {
             membri: vec![mzlab_core::readers::Member {
                 nome: "x.raw".into(),

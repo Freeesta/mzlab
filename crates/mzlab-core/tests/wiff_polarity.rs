@@ -57,7 +57,7 @@ fn srm_chromatograms_carry_the_polarity_of_their_experiment() {
     )
     .unwrap();
     let mut scan = std::fs::read(dir.join("polarita.wiff.scan")).unwrap();
-    let mut l = readers::apri(set(&dir), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir), &Limits::sito()).unwrap();
     let width = want["transitions"].as_u64().unwrap() as usize;
     for (c, n) in [1u32, 2, 3].into_iter().enumerate() {
         let pol = want[n.to_string()].as_str();

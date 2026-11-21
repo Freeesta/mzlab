@@ -116,7 +116,7 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
         crate::build_index_of(&p, "", &a, budget).unwrap();
         let mut fs = crate::flow_set::file_set(&p).unwrap();
         let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
-        let mut l = mzlab_lettori::apri(fs, &mzlab_core::readers::Limits::desktop()).unwrap();
+        let mut l = mzlab_lettori::open(fs, &mzlab_core::readers::Limits::desktop()).unwrap();
         let mut out = std::io::Cursor::new(Vec::new());
         mzlab_core::upload::index_reader_with(
             &mut *l,

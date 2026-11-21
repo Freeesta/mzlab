@@ -1,4 +1,4 @@
-//! What two sources of the same count of a folder do not agree on, as notices of `apri`: the channels of a SIR/MRM function (`_FUNCTNS.INF` against the records per scan of
+//! What two sources of the same count of a folder do not agree on, as notices of `open`: the channels of a SIR/MRM function (`_FUNCTNS.INF` against the records per scan of
 //! the IDX, and scans with fewer records than the others), the functions (`_extern.inf` against `_FUNCTNS.INF`), scans past a DAT cut short and a missing `_HEADER.TXT`.
 //! Nothing is guessed: the notice names what is absent. `losses` counts the scans of the index that are not read, with the key of the cause (`Reader::losses`).
 

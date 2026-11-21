@@ -28,7 +28,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".cdf", ".nc"],
     riconosci: recognize,
-    apri: open,
+    open: open,
 };
 
 impl AndiReader {
@@ -427,7 +427,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let cdf = Cdf::apri(&mut dati, dim, limits)?;
+    let cdf = Cdf::open(&mut dati, dim, limits)?;
     let testata = AndiHeader::read(&cdf, &mut dati, limits)?;
     let mut l = AndiReader {
         data: dati,

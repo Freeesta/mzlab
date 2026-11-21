@@ -42,7 +42,7 @@ pub fn samples_json(l: &mut dyn Reader) -> String {
 }
 
 /// The superset `samples_list/1`: `samples_json` plus `schema`, `bytes`, `scan` and, per sample, `kinds`, `polarity`, `rt`, `tic`, `method`, `missing`.
-/// A reader that opened the dataset without reading its data file (`readers::apri_listing`) lists from the index alone.
+/// A reader that opened the dataset without reading its data file (`readers::open_listing`) lists from the index alone.
 pub fn list_samples(l: &mut dyn Reader) -> String {
     write(l, true)
 }

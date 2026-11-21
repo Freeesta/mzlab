@@ -39,7 +39,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".mzxml"],
     riconosci: recognize,
-    apri: open,
+    open: open,
 };
 
 impl MzxmlReader {

@@ -159,10 +159,10 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
     let Some((dir, want)) = reference() else {
         return;
     };
-    let mut l = readers::apri(set(&dir, "variante"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "variante"), &Limits::sito()).unwrap();
     assert!(l.variant(0));
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     assert!(
@@ -236,9 +236,9 @@ fn the_module_lists_the_chromatograms_of_run_once_the_scans_are_written() {
     let Some((dir, want)) = reference() else {
         return;
     };
-    let mut l = readers::apri(set(&dir, "variante"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "variante"), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     let ids: Vec<&str> = xml
@@ -265,10 +265,10 @@ fn a_3200_with_version_3_blocks_is_a_variant() {
     let Some((dir, _)) = reference() else {
         return;
     };
-    let mut l = readers::apri(set(&dir, "epi3200"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "epi3200"), &Limits::sito()).unwrap();
     assert!(l.variant(0));
     assert_eq!(l.samples()[0].scansioni, 2);
-    let mut l = readers::apri(set(&dir, "prodotto"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "prodotto"), &Limits::sito()).unwrap();
     assert!(!l.variant(0));
 }
 
@@ -288,7 +288,7 @@ fn what_the_reader_does_not_know_is_refused_never_read_as_a_full_scan() {
                 .unwrap_or_else(|| panic!("{name}: read")),
         };
         assert_eq!(detail(&err), text, "{name}");
-        let via = readers::apri(set(&dir, name), &Limits::sito());
+        let via = readers::open(set(&dir, name), &Limits::sito());
         assert_eq!(
             detail(&via.err().unwrap_or_else(|| panic!("{name}: registry"))),
             text,
@@ -340,7 +340,7 @@ fn damaged_files_are_refused_or_read_never_a_panic() {
 #[test]
 fn wiff_sample_names_date() {
     let Some((dir, _)) = reference() else { return };
-    let l = readers::apri(set(&dir, "nomi"), &Limits::sito()).unwrap();
+    let l = readers::open(set(&dir, "nomi"), &Limits::sito()).unwrap();
     let samples = l.samples();
     assert_eq!(samples.len(), 5);
     assert_eq!(samples[0].nome, "Sample_A");
@@ -378,7 +378,7 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
         .iter()
         .zip(nums(&want["bpc"]))
         .all(|(a, b)| close(*a, b)));
-    let mut l = readers::apri(set(&dir, "totale"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "totale"), &Limits::sito()).unwrap();
     // listing the chromatograms decodes no scan: the BPC is there once the writer has gone through the scans
     let ids = |l: &mut dyn readers::Reader| {
         l.chromatograms(0)
@@ -389,7 +389,7 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
     };
     assert_eq!(ids(&mut *l), ["TIC"]);
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     let got: Vec<f64> = xml
@@ -421,7 +421,7 @@ fn an_ms3_sample_is_read_and_a_refused_sample_does_not_fail_the_pair() {
         return;
     };
     let r = &want["ms3"];
-    let mut l = readers::apri(set(&dir, "ms3"), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, "ms3"), &Limits::sito()).unwrap();
     let names: Vec<_> = l.samples().iter().map(|s| s.nome.clone()).collect();
     let wanted: Vec<_> = r["names"]
         .as_array()
@@ -431,7 +431,7 @@ fn an_ms3_sample_is_read_and_a_refused_sample_does_not_fail_the_pair() {
         .collect();
     assert_eq!(names, wanted);
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     let sp = r["spectra"].as_array().unwrap();
@@ -451,8 +451,8 @@ fn an_ms3_sample_is_read_and_a_refused_sample_does_not_fail_the_pair() {
         sp.len()
     );
     // the first sample reads as before, the refused one says why when its data are asked for
-    assert!(mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).is_ok());
-    let e = mzlab_core::readers_mzml::scrivi(&mut *l, 2, Vec::new(), &mut |_, _| {})
+    assert!(mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).is_ok());
+    let e = mzlab_core::readers_mzml::write(&mut *l, 2, Vec::new(), &mut |_, _| {})
         .expect_err("sample 3 is refused");
     assert_eq!(detail(&e), "scan type code 21 (experiment 1)");
 }

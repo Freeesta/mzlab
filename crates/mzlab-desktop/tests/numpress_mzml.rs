@@ -115,9 +115,9 @@ fn a_numpress_mzml_opens_in_the_app_and_answers_as_its_plain_twin() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::readers::Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open(set, &mzlab_core::readers::Limits::desktop()).unwrap();
     let mut out = Vec::new();
-    mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
     std::fs::write(&again, out).unwrap();
     let (tic2, sp2) =
         answers(dir.path(), &again, "again.mzML", false).expect("the module's mzML opens");

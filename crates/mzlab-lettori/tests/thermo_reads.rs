@@ -31,7 +31,7 @@ fn opening_and_indexing_a_run_takes_few_reads() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open(set, &Limits::sito()).unwrap();
     let n = l.index(0).unwrap().len();
     assert_eq!(n, scans as usize);
     eprintln!(
@@ -42,7 +42,7 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     );
     assert!(calls.get() < n / 4, "{} reads", calls.get());
     // the rows are the same as from a plain slice
-    let mut r = mzlab_lettori::apri(
+    let mut r = mzlab_lettori::open(
         FileSet {
             membri: vec![Member {
                 nome: "x.raw".into(),

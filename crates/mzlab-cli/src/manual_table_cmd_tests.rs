@@ -265,14 +265,14 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let set = FileSet {
         membri: vec![member("sim3.wiff"), member("sim3.wiff.scan")],
     };
-    let mut l = readers::apri(set, &Limits::sito()).unwrap();
+    let mut l = readers::open(set, &Limits::sito()).unwrap();
     let mut files = Vec::new();
     for (c, name) in ["Blank", "Sample_A", "Sample_B", "Sample_C"]
         .iter()
         .enumerate()
     {
         let bytes =
-            mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+            mzlab_core::readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         let p = d.join(format!("{name}.mzML"));
         std::fs::write(&p, bytes).unwrap();
         files.push(p);

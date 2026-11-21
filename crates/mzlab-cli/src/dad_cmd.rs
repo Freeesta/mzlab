@@ -244,7 +244,7 @@ fn dad_of(file: &Path, sample: Option<u32>) -> Result<Arc<DadData>> {
         let size = f.metadata().map_err(idx_err)?.len();
         return pda_dad(&mut Mzml::new(f, size));
     }
-    let mut l = mzlab_lettori::apri(
+    let mut l = mzlab_lettori::open(
         crate::flow_set::file_set(file)?,
         &mzlab_core::readers::Limits::desktop(),
     )?;

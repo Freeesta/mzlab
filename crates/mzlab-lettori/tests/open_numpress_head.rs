@@ -104,7 +104,7 @@ fn read_from_header(byte: Vec<u8>) -> (u64, u64) {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open(fs, &Limits::sito()).unwrap();
     let before = read_items.get();
     l.mzml_header(0).unwrap();
     (read_items.get() - before, dim)
@@ -136,7 +136,7 @@ fn a_plain_mzml_is_not_captured_by_the_numpress_module() {
         .map(|i| 100.0 + f64::from(i as u32) * 0.011)
         .collect();
     x[0].intensities = x[0].mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
-    let r = mzlab_lettori::apri(
+    let r = mzlab_lettori::open(
         file_set("campione.mzML", mzml_di(&x, Cod::Piano, None)),
         &Limits::sito(),
     );

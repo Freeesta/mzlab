@@ -296,7 +296,7 @@ pub fn corpus(
         let tol = tolerance_of(&v, tol);
         let c = v["file"]["campione"].as_u64().unwrap_or(0) as usize;
         let fs = set_of(&native).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
-        let l = match mzlab_lettori::apri(fs, &mzlab_core::readers::Limits::desktop()) {
+        let l = match mzlab_lettori::open(fs, &mzlab_core::readers::Limits::desktop()) {
             Ok(mut l) => compare(&mut *l, &v, c, tol, &rel),
             Err(e) => Ratio {
                 file: rel.clone(),

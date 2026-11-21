@@ -25,9 +25,9 @@ fn isolation_target_is_isolation_mz_and_charge_is_written() {
     let fs = FileSet {
         membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open(fs, &Limits::desktop()).unwrap();
     let mut out = Vec::new();
-    mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
     let x = String::from_utf8(out).unwrap();
     let blocks: Vec<&str> = x.split("<precursor>").skip(1).collect();
     assert_eq!(blocks.len(), 120);

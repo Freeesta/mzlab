@@ -1,5 +1,5 @@
 //! The `.mzidx` of a vendor file set (`docs/agenti/mzidx.md`, version 3 with `READER_FLAG`), straight from a `Lettore`, with no mzML written and read again:
-//! the rows are the ones `scantable` reads from the header of each spectrum as `readers_mzml::scrivi` would write it (built from the scan itself,
+//! the rows are the ones `scantable` reads from the header of each spectrum as `readers_mzml::write` would write it (built from the scan itself,
 //! with no text), and the spectra given to the builder are the ones the mzML would give back. Only the first two columns of a row change:
 //! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::index`.
 
@@ -13,7 +13,7 @@ use crate::readers_centroids::Centroidato;
 use crate::readers_mzml;
 use crate::scantable::{Rows, Table, Where};
 
-/// Scan `k` of sample `c` as the mzML written by `readers_mzml::scrivi` reads back: the arrays cut to the shorter of m/z and intensity; a scan whose
+/// Scan `k` of sample `c` as the mzML written by `readers_mzml::write` reads back: the arrays cut to the shorter of m/z and intensity; a scan whose
 /// data do not decode has no points, as the mzML writes it (`readers::Skips`).
 pub(crate) fn spettro(l: &mut dyn Reader, c: usize, k: usize) -> Result<Spectrum> {
     let s = l.scan(c, k);

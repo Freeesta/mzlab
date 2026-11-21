@@ -285,8 +285,8 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     Ok(o.0)
 }
 
-/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`apri_solo`), the method of the others is enough for `reasons`;
-/// any other set opens as `apri`.
+/// The reader of `fs` for `probe`: a SCIEX pair builds the index of sample 0 only (`open_solo`), the method of the others is enough for `reasons`;
+/// any other set opens as `open`.
 fn open_probe(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
 ) -> mzlab_core::Result<Box<dyn mzlab_core::readers::Reader>> {
@@ -295,10 +295,10 @@ fn open_probe(
     {
         return mzlab_lettori::finite::wiff_sample(fs, &Limits::sito(), 0);
     }
-    mzlab_lettori::apri(fs, &Limits::sito())
+    mzlab_lettori::open(fs, &Limits::sito())
 }
 
-/// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
+/// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`open_solo`, as the engine does), any other set opens as `open`.
 fn open_sample(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
     c: usize,
@@ -310,7 +310,7 @@ fn open_sample(
         return Ok(Box::new(mzlab_lettori::srm::SrmFromScans::new(l)));
     }
     let _ = c;
-    mzlab_lettori::apri(fs, &Limits::sito())
+    mzlab_lettori::open(fs, &Limits::sito())
 }
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra the file declares beyond the ones read (`Reader::losses`).
@@ -402,7 +402,7 @@ pub fn open_with_sha1(
     open_members(fs)
 }
 fn open_members(fs: FileSet) -> Result<u32, JsValue> {
-    // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `ExternalReader` and decides itself what it does with them
+    // as it is, without the SRM traces of `mzlab_lettori::open`: the engine reads the module through `ExternalReader` and decides itself what it does with them
     let l = mzlab_lettori::open_bare(fs, &Limits::sito()).map_err(|e| error_json(&e))?;
     with_sessions(|s| Ok(s.insert(l)))
 }

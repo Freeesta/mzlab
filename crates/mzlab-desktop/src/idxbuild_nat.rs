@@ -17,7 +17,7 @@ impl IdxBuilder {
             // they have a SHA-1 already (empty): the index never reads it
             let mut fs = natives::fileset(&nat.members)?;
             upload::without_sha1(&mut fs);
-            let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
+            let l = mzlab_lettori::open(fs, &Limits::desktop())?;
             let mut l = if nat.centroid {
                 readers_centroids::centroidato(l)
             } else {

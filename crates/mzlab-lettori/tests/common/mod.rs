@@ -170,11 +170,11 @@ pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
 }
 
 pub fn open(byte: Vec<u8>) -> Box<dyn Reader> {
-    mzlab_lettori::apri(file_set("campione.mzML", byte), &Limits::sito()).unwrap()
+    mzlab_lettori::open(file_set("campione.mzML", byte), &Limits::sito()).unwrap()
 }
 
 pub fn error(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(file_set("campione.mzML", byte), &Limits::sito()) {
+    match mzlab_lettori::open(file_set("campione.mzML", byte), &Limits::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             // a hostile array is found when the scan is read
@@ -189,7 +189,7 @@ pub fn error(byte: Vec<u8>) -> &'static str {
 }
 
 pub fn written_mzml(l: &mut Box<dyn Reader>) -> Vec<u8> {
-    readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
+    readers_mzml::write(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
 pub mod andi;

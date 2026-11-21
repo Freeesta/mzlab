@@ -197,7 +197,7 @@ fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
 
 #[test]
 fn a_hand_made_folder_opens_and_sums_the_scans() {
-    let mut l = mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     assert_eq!(l.format().id(), "bruker-tdf");
     assert_eq!(l.index(0).unwrap().len(), 1);
     let s = l.scan(0, 0).unwrap();
@@ -211,7 +211,7 @@ fn a_hand_made_folder_opens_and_sums_the_scans() {
 #[test]
 fn a_timstof_is_high_resolution() {
     // the header names the quadrupole-TOF: the scan table reads the run as high resolution (hr1), as the page and the record show it
-    let mut l = mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     let p = mzlab_core::upload::prepare_reader(&mut *l, 0, &[], "x.d").unwrap();
     assert!(p.table.hr1);
 }
@@ -219,7 +219,7 @@ fn a_timstof_is_high_resolution() {
 #[test]
 fn bpc_equal_before_and_after_the_round_trip() {
     // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
-    let open = || mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
+    let open = || mzlab_lettori::open(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     let before = open().chromatogram(0, "BPC").unwrap();
     let mut l = open();
     let n = l.index(0).unwrap().len();
@@ -242,7 +242,7 @@ fn bpc_equal_before_and_after_the_round_trip() {
 #[test]
 fn fake_zstd_and_broken_blocks_are_keyed_errors() {
     let key = |bin: Vec<u8>, np: i64| {
-        let mut l = mzlab_lettori::apri(folder(bin, minimal_tdf(np)), &limits()).unwrap();
+        let mut l = mzlab_lettori::open(folder(bin, minimal_tdf(np)), &limits()).unwrap();
         l.scan(0, 0).err().map(|e| e.key)
     };
     assert!(key(block2(), 3).is_none());
@@ -277,7 +277,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
     let tims = [0, n, 2 * n, 3 * n, 4 * n];
     let whole: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
     let mut l =
-        mzlab_lettori::apri(folder(whole.clone(), tdf_frames(&tims, 3)), &limits()).unwrap();
+        mzlab_lettori::open(folder(whole.clone(), tdf_frames(&tims, 3)), &limits()).unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (5, 0));
     assert_eq!(l.losses(0).unwrap(), Losses::complete(5));
     // cut inside the fourth block, at its first byte, and inside its header: three frames read, two counted
@@ -287,7 +287,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
         3 * b.len() + 3,
         4 * b.len() - 1,
     ] {
-        let mut l = mzlab_lettori::apri(
+        let mut l = mzlab_lettori::open(
             folder(whole[..cut].to_vec(), tdf_frames(&tims, 3)),
             &limits(),
         )
@@ -309,7 +309,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
         assert_eq!((tic.time.len(), bpc.time.len()), (3, 3));
     }
     // the frames out of order in the table, the cut one first
-    let mut l = mzlab_lettori::apri(
+    let mut l = mzlab_lettori::open(
         folder(
             whole[..2 * b.len() + 4].to_vec(),
             tdf_frames(&[2 * n, 0, n], 3),
@@ -319,7 +319,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
     .unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (2, 1));
     // nothing left: an empty index, every spectrum counted
-    let mut l = mzlab_lettori::apri(folder(Vec::new(), tdf_frames(&tims, 3)), &limits()).unwrap();
+    let mut l = mzlab_lettori::open(folder(Vec::new(), tdf_frames(&tims, 3)), &limits()).unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (0, 5));
     assert_eq!(l.losses(0).unwrap().cause, "warn.file.brukerCutBin");
 }
@@ -330,13 +330,13 @@ fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
     let n = b.len() as i64;
     let whole: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
     let conv = |bin: Vec<u8>| {
-        let mut l = mzlab_lettori::apri(
+        let mut l = mzlab_lettori::open(
             folder(bin, tdf_frames(&[0, n, 2 * n, 3 * n, 4 * n], 3)),
             &limits(),
         )
         .unwrap();
         let mut out = Vec::new();
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+        mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
         String::from_utf8(out).unwrap()
     };
     let cut = conv(whole[..3 * b.len() + 9].to_vec());
@@ -349,7 +349,7 @@ fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
 fn no_truncation_of_a_folder_database_panics() {
     let t = minimal_tdf(3);
     for n in (0..t.len()).step_by(211) {
-        if let Ok(mut l) = mzlab_lettori::apri(folder(block2(), t[..n].to_vec()), &limits()) {
+        if let Ok(mut l) = mzlab_lettori::open(folder(block2(), t[..n].to_vec()), &limits()) {
             let _ = l.index(0).map(|v| v.len());
             let _ = l.scan(0, 0);
         }
@@ -367,7 +367,7 @@ fn baf_only_says_how_to_export() {
             sha1: None,
         }],
     };
-    let e = mzlab_lettori::apri(fs, &limits()).err().unwrap();
+    let e = mzlab_lettori::open(fs, &limits()).err().unwrap();
     assert_eq!(e.key, "err.file.brukerBaf");
 }
 
@@ -402,14 +402,14 @@ fn legacy_bruker_folders_have_named_keys() {
         let fs = FileSet {
             membri: names.iter().map(|n| m(n)).collect(),
         };
-        let e = mzlab_lettori::apri(fs, &limits()).err().unwrap();
+        let e = mzlab_lettori::open(fs, &limits()).err().unwrap();
         assert_eq!(e.key, key, "{names:?}");
     }
     // a lone `fid` outside a `.d` folder, without its `acqu`, is nobody's: not accepted
     let fs = FileSet {
         membri: vec![m("run/fid")],
     };
-    let e = mzlab_lettori::apri(fs, &limits()).err().unwrap();
+    let e = mzlab_lettori::open(fs, &limits()).err().unwrap();
     assert_eq!(e.key, "err.file.notAccepted");
 }
 
@@ -429,7 +429,7 @@ fn a_folder_missing_one_of_its_files_says_which() {
         (vec!["analysis.tdf"], "analysis.tdf_bin"),
     ] {
         let members = names.iter().map(|n| m(n, minimal_tdf(1))).collect();
-        let e = mzlab_lettori::apri(FileSet { membri: members }, &limits())
+        let e = mzlab_lettori::open(FileSet { membri: members }, &limits())
             .err()
             .unwrap();
         assert_eq!(e.key, "err.file.brukerNoBin", "{names:?}");
@@ -444,7 +444,7 @@ fn a_folder_missing_one_of_its_files_says_which() {
             e.params
         );
     }
-    let e = mzlab_lettori::apri(folder(block2(), Vec::new()), &limits())
+    let e = mzlab_lettori::open(folder(block2(), Vec::new()), &limits())
         .err()
         .unwrap();
     assert!(

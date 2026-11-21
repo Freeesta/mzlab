@@ -56,8 +56,8 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
-    let mut l = readers::apri(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
-    let bytes = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::open(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
+    let bytes = mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them
     assert_eq!(text.matches("<activation>").count(), want.len());
@@ -161,8 +161,8 @@ fn a_negative_mode_energy_is_written_as_its_magnitude() {
         return;
     };
     let want = want["transizioni"]["negative"].as_array().unwrap();
-    let mut l = readers::apri(pair(&dir, "transizioni_neg"), &Limits::sito()).unwrap();
-    let bytes = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::open(pair(&dir, "transizioni_neg"), &Limits::sito()).unwrap();
+    let bytes = mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.contains("ce=-"), "a signed energy in an id");
     assert_eq!(text.matches("name=\"collision energy\"").count(), 2);

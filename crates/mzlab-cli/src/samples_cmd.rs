@@ -201,7 +201,7 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
         };
         (code, e)
     })?;
-    let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
+    let mut l = mzlab_lettori::open_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
     let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
     let mut json = mzlab_core::readers::list_samples(&mut *l);
     let mut cut = false;

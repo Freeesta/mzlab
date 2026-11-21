@@ -30,14 +30,14 @@ pub(crate) fn refuse_mzml(path: &Path) -> Result<()> {
 /// The sample ids of the dataset at `path`, from its container and index alone.
 pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
     let fs = crate::flow_set::file_set(path)?;
-    let l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    let l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
     Ok(l.samples().iter().map(|s| s.id).collect())
 }
 
 /// The ids and section bytes (0 when the reader gives none) of the samples of `path`, from the container and index alone.
 pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
     let fs = crate::flow_set::file_set(path)?;
-    let l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    let l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
     let s = l.samples();
     Ok((
         s.iter().map(|x| x.id).collect(),
@@ -56,7 +56,7 @@ pub(crate) fn plan(path: &Path, wanted: &[u32]) -> Result<mzlab_core::readers::r
             (n.to_string(), m.dim)
         })
         .collect();
-    let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    let mut l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
     mzlab_core::readers::ranges::plan(&l.listing(), &members, wanted)
 }
 

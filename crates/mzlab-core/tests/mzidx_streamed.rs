@@ -57,7 +57,7 @@ fn orbitrap() -> Header {
 
 fn mzml(mut l: Finto) -> Vec<u8> {
     let mut mz = Vec::new();
-    readers_mzml::scrivi(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
+    readers_mzml::write(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
     mz
 }
 

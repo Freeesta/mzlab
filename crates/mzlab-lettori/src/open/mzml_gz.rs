@@ -17,7 +17,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".mzml.gz"],
     riconosci: recognize,
-    apri: open,
+    open: open,
 };
 
 /// `x.mzXML.gz`: the same inflate, then the reader of `mzxml.rs` (registry of the app and the CLI only).
@@ -27,7 +27,7 @@ pub const ENTRY_MZXML: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".mzxml.gz"],
     riconosci: recognize_mzxml,
-    apri: open_mzxml,
+    open: open_mzxml,
 };
 
 /// A `ReadAt` seen as a `Read`, from the start.
@@ -66,7 +66,7 @@ fn sees(fs: &mut FileSet, suffix: &str, roots: &[&str]) -> Fiducia {
         return Fiducia::No;
     };
     let head = fs.testa(i, 64 << 10);
-    // too short for the magic bytes: a damaged gzip of this name, which `apri` refuses with `err.file.zlib` as the page's inflate does
+    // too short for the magic bytes: a damaged gzip of this name, which `open` refuses with `err.file.zlib` as the page's inflate does
     if head.len() < 2 {
         return Fiducia::Forse;
     }
@@ -74,7 +74,7 @@ fn sees(fs: &mut FileSet, suffix: &str, roots: &[&str]) -> Fiducia {
         return Fiducia::No;
     }
     let mut text = Vec::new();
-    // a short or cut stream still gives its first bytes; the error is the caller's at `apri`
+    // a short or cut stream still gives its first bytes; the error is the caller's at `open`
     let _ = Members::new(&head[..])
         .take(HEAD as u64)
         .read_to_end(&mut text);
@@ -90,12 +90,12 @@ fn sees(fs: &mut FileSet, suffix: &str, roots: &[&str]) -> Fiducia {
 }
 
 fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    super::mzml_numpress::apri(inflate(fs, ".mzml.gz", limits)?, limits)
+    super::mzml_numpress::open(inflate(fs, ".mzml.gz", limits)?, limits)
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
 fn open_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    (super::mzxml::ENTRY.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
+    (super::mzxml::ENTRY.open)(inflate(fs, ".mzxml.gz", limits)?, limits)
 }
 
 /// The set with its gzip member inflated into memory, named without `.gz`.

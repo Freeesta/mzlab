@@ -56,7 +56,7 @@ fn run(wiff: &str, c: usize, cen: bool) {
         wiff.rsplit('/').next().unwrap(),
         if cen { "CENTROIDS" } else { "PROFILE" }
     );
-    let mut l = readers::apri(fileset(wiff), &Limits::sito()).expect("open");
+    let mut l = readers::open(fileset(wiff), &Limits::sito()).expect("open");
     if cen {
         l = readers_centroids::centroidato(l);
     }

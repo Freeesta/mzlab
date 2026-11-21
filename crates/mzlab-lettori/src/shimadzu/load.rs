@@ -1,4 +1,4 @@
-//! The data of a Shimadzu file read once at `apri`: the raw stream, the index of the scans (time, TIC, event, SIM or scan), the chromatograms (TIC, and one SRM per transition of an MRM
+//! The data of a Shimadzu file read once at `open`: the raw stream, the index of the scans (time, TIC, event, SIM or scan), the chromatograms (TIC, and one SRM per transition of an MRM
 //! file) and the events seen. What a spectrum holds is decoded on request (`rec.rs`); the stream layout is in docs/agenti/shimadzu.md.
 
 use std::collections::HashMap;

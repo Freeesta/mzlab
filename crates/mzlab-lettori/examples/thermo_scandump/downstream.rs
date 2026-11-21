@@ -110,7 +110,7 @@ pub fn add_downstream(
 ) {
     let entries = l.index(0).expect("index").to_vec();
     let mut mzml = Vec::new();
-    readers_mzml::scrivi(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
+    readers_mzml::write(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
     let written = precursors_of(&String::from_utf8_lossy(&mzml));
     let mut filtered = Vec::new();
     {

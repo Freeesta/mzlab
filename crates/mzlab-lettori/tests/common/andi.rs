@@ -418,11 +418,11 @@ pub fn andi_chromatogram(n: usize) -> Vec<u8> {
 }
 
 pub fn open_andi(byte: Vec<u8>) -> Box<dyn Reader> {
-    mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()).unwrap()
+    mzlab_lettori::open(super::file_set("campione.cdf", byte), &Limits::sito()).unwrap()
 }
 
 pub fn andi_error(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()) {
+    match mzlab_lettori::open(super::file_set("campione.cdf", byte), &Limits::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             for k in 0..l.index(0).map(|i| i.len()).unwrap_or(0) {

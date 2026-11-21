@@ -54,7 +54,7 @@ fn dependent_product_scans_get_no_invented_precursor() {
     };
     let ole = container(std::fs::read(dir.join("ida.wiff")).unwrap(), "ida.wiff").unwrap();
     let mut scan = std::fs::read(dir.join("ida.wiff.scan")).unwrap();
-    let mut l = readers::apri(set(&dir), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir), &Limits::sito()).unwrap();
     for (c, n) in [1u32, 2].into_iter().enumerate() {
         let rows = want["ida"][n.to_string()].as_array().unwrap();
         let w = Wiff::open(&ole, "ida.wiff", Some(scan.len() as u64), n).unwrap();

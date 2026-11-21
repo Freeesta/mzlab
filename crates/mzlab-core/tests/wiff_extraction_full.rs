@@ -73,7 +73,7 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
                 },
             ],
         };
-        let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+        let mut l = readers::open(fs, &Limits::sito()).unwrap();
         let twc = l.chromatogram(0, "DAD TWC").unwrap();
         assert_eq!(twc.kind, ChromKind::Pda);
         assert_eq!(twc.unit, "mAU");
@@ -147,7 +147,7 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
             },
         ],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+    let mut l = readers::open(fs, &Limits::sito()).unwrap();
     let doc = json::parse(l.method(0).unwrap().as_bytes()).unwrap();
     let tr_json = doc
         .get("ms")

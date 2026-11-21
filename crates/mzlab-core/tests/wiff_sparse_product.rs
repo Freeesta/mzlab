@@ -82,7 +82,7 @@ fn read_as_listed(name: &str) -> Option<(readers::Losses, Value, Vec<f64>)> {
         .unwrap()
         .run(&mut scan)
         .unwrap();
-    let mut l = readers::apri(set(&dir, name), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir, name), &Limits::sito()).unwrap();
     let n = l.index(0).unwrap().len();
     assert_eq!(
         (run.spectra.len(), n),

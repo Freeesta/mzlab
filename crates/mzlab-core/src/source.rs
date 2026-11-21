@@ -26,7 +26,7 @@ pub trait Scansioni {
 }
 
 /// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
-/// of a vendor-file index, the peaks of its `Lettore` and the header fields the mzML of `readers_mzml::scrivi` would have (`scan_text`).
+/// of a vendor-file index, the peaks of its `Lettore` and the header fields the mzML of `readers_mzml::write` would have (`scan_text`).
 impl<M: ReadAt> Scansioni for M {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
         Ok(self.spettro_mobilita(sc)?.0)
@@ -90,7 +90,7 @@ fn spectrum_and_mobility(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobil
 }
 
 /// The text of the `<spectrum>` of a row up to its arrays, as the mzML has it: read by offset, or written for a scan of a `Lettore` as
-/// `readers_mzml::scrivi` writes it (the header only, no arrays). For what is searched in the text of the scans (scan window, injection time).
+/// `readers_mzml::write` writes it (the header only, no arrays). For what is searched in the text of the scans (scan window, injection time).
 pub fn scan_text<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
     if let (Some(k), Some((l, c))) = (sc.k, m.reader()) {
         let s = crate::mzidx_reader::spettro(&mut *l, c, k)?;
@@ -251,7 +251,7 @@ impl Traces for ReaderSource<'_> {
         self.l.chromatogram(self.c, id)
     }
 
-    /// The header `readers_mzml::scrivi` writes for the sample.
+    /// The header `readers_mzml::write` writes for the sample.
     fn file_header(&mut self) -> Result<String> {
         let h = crate::readers_mzml::file_header(&mut *self.l, self.c)?;
         let mut doc = MzmlWriter::new(Vec::new(), &h)?.finish()?;

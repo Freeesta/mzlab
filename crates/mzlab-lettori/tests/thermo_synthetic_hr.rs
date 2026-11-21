@@ -40,7 +40,7 @@ fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
+    let mut l = mzlab_lettori::open(set, &Limits::sito()).expect("open");
     let ix = l.index(0).expect("index").to_vec();
     assert_eq!(ix.len(), 66);
     for (k, v) in ix.iter().enumerate() {
@@ -88,7 +88,7 @@ fn a_v66_file_relabelled_with_an_unverified_version_is_refused_with_its_number()
                 sha1: None,
             }],
         };
-        match mzlab_lettori::apri(set, &Limits::sito()) {
+        match mzlab_lettori::open(set, &Limits::sito()) {
             Ok(_) => panic!("v{v} opened"),
             Err(e) => {
                 assert_eq!(e.key, "err.file.rawVersion", "v{v}");
@@ -142,7 +142,7 @@ fn scans_without_a_readable_event_have_no_ms_level() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
+    let mut l = mzlab_lettori::open(set, &Limits::sito()).expect("open");
     let ix = l.index(0).expect("index").to_vec();
     assert_eq!(ix.len(), 12);
     assert!(
@@ -210,7 +210,7 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
+    let mut l = mzlab_lettori::open(set, &Limits::sito()).expect("open");
     let n = l.index(0).expect("index").len();
     let mut h = Sha256::new();
     for k in 0..n {
@@ -287,8 +287,8 @@ fn dda_windows(
         }],
     };
     let members = upload::impronte(&mut set).unwrap();
-    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).expect("open");
-    let mzml = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = mzlab_lettori::open(set, &Limits::desktop()).expect("open");
+    let mzml = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
     let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
     let pb = upload::prepare_reader(&mut *l, 0, &members, "dda.mzML").unwrap();

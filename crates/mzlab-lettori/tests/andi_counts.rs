@@ -10,7 +10,7 @@ const NC_FILL_DOUBLE: f64 = 9.969_209_968_386_869e36;
 /// What a reader gives of a file: per scan the RT, TIC and the bits of every point; `None` for an error, with `missing` when scans are counted as lost.
 fn result(b: Vec<u8>) -> Result<(usize, Vec<String>), &'static str> {
     let mut l =
-        mzlab_lettori::apri(common::file_set("run.cdf", b), &Limits::sito()).map_err(|e| e.key)?;
+        mzlab_lettori::open(common::file_set("run.cdf", b), &Limits::sito()).map_err(|e| e.key)?;
     let ix = l.index(0).map_err(|e| e.key)?.to_vec();
     let mut out = Vec::new();
     for (k, e) in ix.iter().enumerate() {

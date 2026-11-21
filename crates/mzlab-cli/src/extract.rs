@@ -93,7 +93,7 @@ pub(crate) fn open_sample(file: &Path, sample: Option<u32>, tmp: &Path) -> Resul
     // the sample is checked before its index is built: the ids of the file name the others
     let mut l = match mzml {
         true => None,
-        false => Some(mzlab_lettori::apri(
+        false => Some(mzlab_lettori::open(
             crate::flow_set::file_set(file)?,
             &mzlab_core::readers::Limits::desktop(),
         )?),

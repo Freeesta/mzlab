@@ -19,7 +19,7 @@ fn gz(b: &[u8]) -> Vec<u8> {
 
 /// The key the app gives (`"ok"` when the file opens and its index reads).
 fn app(b: &[u8]) -> String {
-    match mzlab_lettori::apri(file_set("x.mzML.gz", b.to_vec()), &Limits::sito()) {
+    match mzlab_lettori::open(file_set("x.mzML.gz", b.to_vec()), &Limits::sito()) {
         Ok(mut l) => match l.index(0) {
             Ok(_) => "ok".into(),
             Err(e) => e.key.to_string(),

@@ -105,7 +105,7 @@ fn open(byte: Vec<u8>) -> (Box<dyn Reader>, Rc<Cell<usize>>) {
             sha1: None,
         }],
     };
-    (mzlab_lettori::apri(fs, &Limits::sito()).unwrap(), reads)
+    (mzlab_lettori::open(fs, &Limits::sito()).unwrap(), reads)
 }
 
 #[test]

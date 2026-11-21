@@ -48,7 +48,7 @@ impl Function {
     }
 }
 
-/// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
+/// The functions of `bytes` (`open` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
 pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Function>>> {
     if !b.len().is_multiple_of(RECORD) {
         return Ok(None);

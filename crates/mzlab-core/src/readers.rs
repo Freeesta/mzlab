@@ -1,7 +1,7 @@
 //! The contract of the readers of vendor files (`docs/agenti/extending.md`): a `Lettore` serves the scans of a file by position, one at a time, so that the pages
-//! read a `.raw`, a `.wiff` or a `.D` as they read an mzML, and the conversion to mzML is one export among the others (`scrivi_mzml`, the one writer).
+//! read a `.raw`, a `.wiff` or a `.D` as they read an mzML, and the conversion to mzML is one export among the others (`write_mzml`, the one writer).
 //! A format is a `ReaderEntry` (how to recognise it, how to open it) in the static registry `LETTORI`; nothing is loaded at run time.
-//! `Limiti` is passed to every `apri`: depth, entries and bytes that a damaged or hostile file may ask for are bounded by construction.
+//! `Limiti` is passed to every `open`: depth, entries and bytes that a damaged or hostile file may ask for are bounded by construction.
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -277,7 +277,7 @@ pub trait Reader {
     }
     /// The `method/1` document of the sample (`docs/agenti/method.md`).
     fn method(&mut self, c: usize) -> Result<String>;
-    /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `readers_mzml::scrivi` makes a plain one from the format.
+    /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `readers_mzml::write` makes a plain one from the format.
     fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(None)
     }
@@ -318,7 +318,7 @@ pub struct ReaderEntry {
     /// Extensions that suggest the format (for messages and for the `accept=` of the file pickers), lower case with the dot.
     pub estensioni: &'static [&'static str],
     pub riconosci: fn(&mut FileSet) -> Fiducia,
-    pub apri: fn(FileSet, &Limits) -> Result<Box<dyn Reader>>,
+    pub open: fn(FileSet, &Limits) -> Result<Box<dyn Reader>>,
 }
 
 /// The formats, one line each. A new format is a module that implements `Lettore`, its `ENTRY` and a line here; nothing else changes.
@@ -347,24 +347,24 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 }
 
 /// Opens `fs` with the reader that recognises it, behind the non-finite guard (`readers_finite::Finished`); `err.file.notAccepted` when none does.
-pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut fs = fs;
     let refused = fs.not_accepted();
     let v = riconosci(&mut fs).ok_or(refused)?;
-    let l = (v.apri)(fs, limits)?;
+    let l = (v.open)(fs, limits)?;
     Ok(Box::new(crate::readers_finite::Finished::new(l)))
 }
 
-/// `apri` for a listing (`list_samples`): a SCIEX pair is read from its container and its index alone, the `.wiff.scan` is not read (its scan counts are the
-/// index's, and sections the index lacks are not looked for); any other format opens as `apri` does.
-pub fn apri_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+/// `open` for a listing (`list_samples`): a SCIEX pair is read from its container and its index alone, the `.wiff.scan` is not read (its scan counts are the
+/// index's, and sections the index lacks are not looked for); any other format opens as `open` does.
+pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut fs = fs;
     let refused = fs.not_accepted();
     let v = riconosci(&mut fs).ok_or(refused)?;
     let l = if v.id == crate::wiff::reader::ENTRY.id {
         crate::wiff::reader::open_listing(fs, limits)?
     } else {
-        (v.apri)(fs, limits)?
+        (v.open)(fs, limits)?
     };
     Ok(Box::new(crate::readers_finite::Finished::new(l)))
 }
