@@ -27,7 +27,7 @@ pub fn radice() -> Option<PathBuf> {
         .find(|c| MARKERS.iter().any(|m| c.join(m).exists()))
 }
 
-// The data repository was tidied (reorganize-step1): folders moved. (old prefix, new prefix, name test); `percorso`
+// The data repository was tidied (reorganize-step1): folders moved. (old prefix, new prefix, name test); `path`
 // tries the path as asked, then the moved/unmoved twin, so code and data can merge in any order.
 type Move = (&'static str, &'static str, fn(&str) -> bool);
 const MOVES: &[Move] = &[
@@ -116,7 +116,7 @@ fn gemelli(rel: &str) -> Vec<String> {
 
 /// Existing path for `rel` (or its moved/unmoved twin), or None when there is no data repository or no such path: then the test that asked says
 /// so on the terminal (`skipped: no data`), so that a pass without the data never reads as a pass on the data.
-pub fn percorso(rel: &str) -> Option<PathBuf> {
+pub fn path(rel: &str) -> Option<PathBuf> {
     let found = radice().and_then(|r| {
         std::iter::once(rel.to_string())
             .chain(gemelli(rel))

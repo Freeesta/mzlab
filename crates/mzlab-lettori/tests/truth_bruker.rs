@@ -12,6 +12,6 @@ fn truth_bruker() {
         "bruker",
         |r| r.starts_with("bruker/"),
         truth::Tol::HR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

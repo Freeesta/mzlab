@@ -139,7 +139,7 @@ pub(crate) fn rows_before_double(
     Ok((rows.finish(ncr, None), rows_cen.finish(ncr, None)))
 }
 
-/// The rows of a vendor-file index: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
+/// The rows of a vendor-file index: `[membro, offset, length]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
 pub fn rows_json(t: &mut Table, entries: &[ScanEntry]) -> String {
     for (k, r) in t.rows.iter_mut().enumerate() {
         r.at = Some(Box::new(Where {

@@ -71,7 +71,7 @@ pub(super) fn header_cut(header: Option<&[u8]>) -> bool {
     })
 }
 
-/// The error `chiave` about one `file` of the folder, with the folder name.
+/// The error `key` about one `file` of the folder, with the folder name.
 pub(super) fn in_file(c: &Folder, key: &'static str, file: &str) -> Error {
     Error::new(key).with("name", &c.name).with("file", file)
 }

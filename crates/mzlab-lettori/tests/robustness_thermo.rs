@@ -18,7 +18,7 @@ fn file_set(byte: Vec<u8>) -> FileSet {
 }
 
 fn seeds() -> Vec<Vec<u8>> {
-    if dati_percorsi::percorso("dati/formati/thermo/raw").is_none() {
+    if dati_percorsi::path("dati/formati/thermo/raw").is_none() {
         eprintln!("SKIP robustezza_thermo: no data repository, bare header only");
         return vec![vec![0x01, 0xA1, 0x46, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x6e, 0x00]; 1];
     }
@@ -27,7 +27,7 @@ fn seeds() -> Vec<Vec<u8>> {
         "dati/formati/thermo/pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw",
     ]
     .iter()
-    .filter_map(|r| dati_percorsi::percorso(r).and_then(|p| std::fs::read(p).ok()))
+    .filter_map(|r| dati_percorsi::path(r).and_then(|p| std::fs::read(p).ok()))
     .collect()
 }
 

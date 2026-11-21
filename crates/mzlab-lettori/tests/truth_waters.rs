@@ -12,6 +12,6 @@ fn truth_waters() {
         "waters",
         |r| r.starts_with("waters/"),
         truth::Tol::HR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

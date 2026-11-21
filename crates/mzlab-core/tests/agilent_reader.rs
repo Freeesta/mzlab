@@ -79,7 +79,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
                 .find(|r| format!("scan={}", r.id) == e.id)
                 .unwrap();
             assert_eq!(
-                (p.offset, p.lunghezza, e.tic),
+                (p.offset, p.length, e.tic),
                 (r.offset, r.bytes, r.tic),
                 "{label} {k}"
             );

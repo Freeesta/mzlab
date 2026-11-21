@@ -288,11 +288,11 @@ pub struct Ione {
 /// A note on one node of the tree (`warn.msngrafo.*`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Warning {
-    pub chiave: &'static str,
+    pub key: &'static str,
     /// Node of the tree (empty when the note is about the graph).
     pub tree: String,
     /// Node of the graph the note is about.
-    pub nodo: Option<usize>,
+    pub node: Option<usize>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]

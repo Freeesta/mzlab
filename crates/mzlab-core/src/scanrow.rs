@@ -4,7 +4,7 @@ use crate::idxread::{Scan, KINDS};
 use crate::json::Value;
 use crate::readers::Position;
 
-/// `[membro, offset, lunghezza]` of a row of version 2, or `null`.
+/// `[membro, offset, length]` of a row of version 2, or `null`.
 fn posizione(v: &Value) -> Option<Option<Position>> {
     if v.is_null() {
         return Some(None);
@@ -13,11 +13,11 @@ fn posizione(v: &Value) -> Option<Option<Position>> {
     Some(Some(Position {
         membro: u16::try_from(n(0)? as u64).ok()?,
         offset: n(1)? as u64,
-        lunghezza: u32::try_from(n(2)? as u64).ok()?,
+        length: u32::try_from(n(2)? as u64).ok()?,
     }))
 }
 
-/// The scan of a row of the index: `start,end` (version 1) or `[membro,offset,lunghezza] | null, k` (version 2, `nativo`) in its first two columns.
+/// The scan of a row of the index: `start,end` (version 1) or `[membro,offset,length] | null, k` (version 2, `nativo`) in its first two columns.
 pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
     let f = |i: usize| r.at(i).and_then(Value::f64);
     // an offset or a scan number is never negative or NaN: such a row is a damaged index, not a scan at 0

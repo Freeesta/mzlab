@@ -31,7 +31,7 @@ impl Module for Fake {
                 position: Some(Position {
                     membro: 0,
                     offset: 4096,
-                    lunghezza: 77,
+                    length: 77,
                 }),
             },
             ScanEntry {
@@ -96,7 +96,7 @@ fn the_replies_become_the_types_of_the_contract() {
         Some(Position {
             membro: 0,
             offset: 4096,
-            lunghezza: 77
+            length: 77
         })
     );
     assert_eq!(

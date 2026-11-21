@@ -146,7 +146,7 @@ pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     for (i, x) in v.ions.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"node\":")
-            .str(&format!("n{}", x.nodo))
+            .str(&format!("n{}", x.node))
             .raw(",\"rule\":")
             .str(x.regola)
             .raw(",\"error_mda\":")

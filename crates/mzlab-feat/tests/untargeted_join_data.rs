@@ -26,7 +26,7 @@ fn dir() -> Option<PathBuf> {
     if let Some(d) = std::env::var_os("MZLAB_MZMINE_FASI").map(PathBuf::from) {
         return d.is_dir().then_some(d);
     }
-    dati_percorsi::percorso("dati/HRMS/mzmine39_fasi").filter(|d| d.is_dir())
+    dati_percorsi::path("dati/HRMS/mzmine39_fasi").filter(|d| d.is_dir())
 }
 
 fn key(file: &str, mz: f64, rt: f64) -> String {

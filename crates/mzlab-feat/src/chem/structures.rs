@@ -60,12 +60,12 @@ pub fn strutture_testo(
     g: &Graph,
     j: &str,
     smiles: Option<&str>,
-    (nodo, ppm): (&str, f64),
+    (node, ppm): (&str, f64),
 ) -> CoreResult<String> {
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
-    let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
-    if nodo == "all" {
+    let bad = || Error::new("err.msngrafo.badNode").with("node", node);
+    if node == "all" {
         let mut all_items = vec![];
         for (k, _) in g.nodes.iter().enumerate().filter(|(_, n)| n.level >= 2) {
             let ing = g.structures_input(k).ok_or_else(bad)?;
@@ -77,7 +77,7 @@ pub fn strutture_testo(
         }
         return Ok(with_all_structures(j, &all_items));
     }
-    let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
+    let k: usize = node.trim_start_matches('n').parse().map_err(|_| bad())?;
     let ing = g.structures_input(k).ok_or_else(bad)?;
     let s = structures(smiles, &ing, ppm)
         .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
@@ -92,7 +92,7 @@ pub fn structures(smiles: &str, ing: &StructuresInput, ppm: f64) -> Result<Struc
     let frag = fragment_molecule(smiles, pol, &peaks, ppm, MAX_BONDS)?;
     let mixture = smiles.split('.').filter(|p| !p.trim().is_empty()).count() > 1;
     let mut out = Structures {
-        node: ing.nodo,
+        node: ing.node,
         smiles: smiles.to_string(),
         mz: ing.mz,
         ppm_tol: ppm,

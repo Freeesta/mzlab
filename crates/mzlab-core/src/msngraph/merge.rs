@@ -121,16 +121,16 @@ fn observe(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
         let (found, amb) = precursore(par, n.key.last().unwrap().0);
         if amb {
             warnings.push(Warning {
-                chiave: "warn.msngrafo.isolation",
+                key: "warn.msngrafo.isolation",
                 tree: n.id.clone(),
-                nodo: None,
+                node: None,
             });
         }
         if found.is_none() {
             warnings.push(Warning {
-                chiave: "warn.msngrafo.precNotFound",
+                key: "warn.msngrafo.precNotFound",
                 tree: n.id.clone(),
-                nodo: None,
+                node: None,
             });
         }
         let (pm, pr) = found.unwrap_or((n.key.last().unwrap().0, 0.0));

@@ -13,7 +13,7 @@ use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 mod dati_percorsi;
 
 fn root() -> Option<PathBuf> {
-    dati_percorsi::percorso("dati/formati/agilent/D").filter(|p| p.is_dir())
+    dati_percorsi::path("dati/formati/agilent/D").filter(|p| p.is_dir())
 }
 
 /// The `.d` folders of the run directories, sorted.

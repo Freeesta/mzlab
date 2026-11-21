@@ -34,7 +34,7 @@ fn log() -> StatusLog {
 #[test]
 fn a_channel_is_its_value_when_constant_else_its_range_with_the_unit() {
     let f = fields(&log());
-    let get = |k: &str| f.iter().find(|c| c.chiave == k);
+    let get = |k: &str| f.iter().find(|c| c.key == k);
     let v = get("Spray Voltage (min..max)").expect("range");
     assert_eq!(
         (v.valore.as_str(), v.unita.as_deref()),
@@ -52,7 +52,7 @@ fn a_channel_is_its_value_when_constant_else_its_range_with_the_unit() {
         get("Time (min..max)").map(|c| c.valore.as_str()),
         Some("0..1.5")
     );
-    assert!(f.iter().all(|c| !c.chiave.contains("Ion Source")));
+    assert!(f.iter().all(|c| !c.key.contains("Ion Source")));
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn a_schema_that_ends_at_the_records_is_found_and_the_records_read() {
         ("Spray Voltage", "V", &[3000.0, 3001.0, 3002.0][..])
     );
     let f = fields(&log);
-    assert!(f.iter().any(|c| c.chiave == "Status" && c.valore == "Ok"));
+    assert!(f.iter().any(|c| c.key == "Status" && c.valore == "Ok"));
 }
 
 #[test]
@@ -215,7 +215,7 @@ fn a_channel_of_finite_numbers_gives_what_the_text_of_every_value_gave() {
             let b = channel_before(label, &vals);
             let key = |c: &Option<Field>| {
                 c.as_ref()
-                    .map(|c| (c.chiave.clone(), c.valore.clone(), c.unita.clone()))
+                    .map(|c| (c.key.clone(), c.valore.clone(), c.unita.clone()))
             };
             assert_eq!(key(&a), key(&b), "{label} {values:?}");
         }

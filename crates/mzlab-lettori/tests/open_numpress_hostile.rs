@@ -112,7 +112,7 @@ fn rows_over_the_limit_are_an_error() {
 // ---- real files (the private data repository) ----
 
 fn real(name: &str) -> Option<Vec<u8>> {
-    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzML_numpress") else {
+    let Some(d) = dati_percorsi::path("dati/formati/aperti/mzML_numpress") else {
         eprintln!("SKIP open_numpress {name}: no data repository (MZLAB_DATI)");
         return None;
     };

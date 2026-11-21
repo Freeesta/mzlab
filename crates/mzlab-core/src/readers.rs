@@ -185,7 +185,7 @@ pub struct Sample {
 pub struct Position {
     pub membro: u16,
     pub offset: u64,
-    pub lunghezza: u32,
+    pub length: u32,
 }
 
 /// One row of the index of a sample: what is known of a scan before its peaks are read.

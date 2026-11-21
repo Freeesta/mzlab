@@ -21,7 +21,7 @@ fn file_set(byte: Vec<u8>) -> FileSet {
 }
 
 fn real() -> Vec<Vec<u8>> {
-    let Some(d) = dati_percorsi::percorso("dati/formati/shimadzu").filter(|p| p.is_dir()) else {
+    let Some(d) = dati_percorsi::path("dati/formati/shimadzu").filter(|p| p.is_dir()) else {
         eprintln!("SKIP robustezza_shimadzu: no data repository, synthetic seeds only");
         return Vec::new();
     };

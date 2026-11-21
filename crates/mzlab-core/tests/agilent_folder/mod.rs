@@ -11,7 +11,7 @@ pub mod dati_percorsi;
 
 /// The `GC-MS` folder of the data repository, if there is one (see `tools/dati_percorsi.rs`).
 pub fn gcms() -> Option<PathBuf> {
-    dati_percorsi::percorso("dati/GC-MS")
+    dati_percorsi::path("dati/GC-MS")
 }
 
 pub fn read(d: &Path, f: &str) -> Option<Vec<u8>> {

@@ -61,7 +61,7 @@ fn ours(folder: &Path) -> String {
 
 #[test]
 fn every_cv_of_msconvert_is_in_our_mzml() {
-    let Some(gc) = dati_percorsi::percorso("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
+    let Some(gc) = dati_percorsi::path("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
         eprintln!("SKIP agilent_cv: no data repository (MZLAB_DATI)");
         return;
     };

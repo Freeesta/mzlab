@@ -63,7 +63,7 @@ pub struct Structures {
 /// candidate formulas it already has (formula, theoretical m/z).
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructuresInput {
-    pub nodo: usize,
+    pub node: usize,
     pub mz: f64,
     pub polarita: i8,
     pub picchi: Vec<(f64, f64)>,
@@ -72,7 +72,7 @@ pub struct StructuresInput {
 }
 
 impl Graph {
-    /// The input of the cleavages of node `nodo`; `None` when there is no such node. The peaks are those of the spectra of which the node is the precursor
+    /// The input of the cleavages of node `node`; `None` when there is no such node. The peaks are those of the spectra of which the node is the precursor
     /// (the highest relative intensity when several energies give the same m/z), ordered by m/z.
     pub fn structures_input(&self, node: usize) -> Option<StructuresInput> {
         let n: &GNode = self.nodes.get(node)?;
@@ -93,7 +93,7 @@ impl Graph {
                 .collect()
         });
         Some(StructuresInput {
-            nodo: node,
+            node,
             mz: n.mz,
             polarita: self.polarita,
             picchi: peaks,

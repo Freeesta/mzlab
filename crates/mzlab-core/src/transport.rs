@@ -77,7 +77,7 @@ pub fn encode_index(v: &[ScanEntry]) -> Vec<u8> {
     column(&mut o, v.iter().map(|r| r.precursore.unwrap_or(f64::NAN)));
     for r in v {
         let (m, off, len) = match r.position {
-            Some(p) => (f64::from(p.membro), p.offset as f64, f64::from(p.lunghezza)),
+            Some(p) => (f64::from(p.membro), p.offset as f64, f64::from(p.length)),
             None => (-1.0, 0.0, 0.0),
         };
         column(&mut o, [m, off, len].into_iter());
@@ -198,7 +198,7 @@ pub fn decode_index(b: &[u8]) -> Result<Vec<ScanEntry>> {
                 position: (pos[3 * i] >= 0.0).then(|| Position {
                     membro: pos[3 * i] as u16,
                     offset: pos[3 * i + 1] as u64,
-                    lunghezza: pos[3 * i + 2] as u32,
+                    length: pos[3 * i + 2] as u32,
                 }),
             })
         })

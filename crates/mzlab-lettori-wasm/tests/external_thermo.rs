@@ -16,7 +16,7 @@ use mzlab_wasm::external::{ExternalReader, Module};
 mod dati_percorsi;
 
 fn raw_files() -> Vec<PathBuf> {
-    let Some(hrms) = dati_percorsi::percorso("dati/HRMS").filter(|p| p.is_dir()) else {
+    let Some(hrms) = dati_percorsi::path("dati/HRMS").filter(|p| p.is_dir()) else {
         return Vec::new();
     };
     let mut out = Vec::new();

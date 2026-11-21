@@ -240,7 +240,7 @@ pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
         })
         .collect();
     crate::sortc::slice_by(&mut fields, |a, b| {
-        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+        (&a.origine, &a.key).cmp(&(&b.origine, &b.key))
     });
     let mut seen: Vec<&str> = Vec::new();
     for i in items.iter().filter(|i| i.name == "undecoded bytes") {

@@ -25,7 +25,7 @@ mod dati_percorsi;
 
 #[test]
 fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_extraction_full: no data repository (MZLAB_DATI)");
         return;
     };
@@ -90,7 +90,7 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
 
 #[test]
 fn mrm_fine_parameters_and_hplc_gradient_extraction() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else {
         return;
     };
     let wiff_bytes = std::fs::read(folder.join("MRM.wiff")).unwrap();
@@ -167,7 +167,7 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
 
 #[test]
 fn spectrum_tic_invariant_and_auxiliary_device_logs() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else {
         return;
     };
     for name in ["FullMass", "MS2"] {
@@ -211,7 +211,7 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
     }
 
     if let Some(bytes) =
-        dati_percorsi::percorso("dati/formati/sciex/wiff/triplequad5500_mrm_Z14418483/NEG.wiff")
+        dati_percorsi::path("dati/formati/sciex/wiff/triplequad5500_mrm_Z14418483/NEG.wiff")
             .and_then(|p| std::fs::read(p).ok())
     {
         let ole = container(bytes, "NEG.wiff").unwrap();
@@ -221,7 +221,7 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
         assert!(lc_acq.gradient.len() >= 2);
     }
 
-    if let Some(bytes) = dati_percorsi::percorso(
+    if let Some(bytes) = dati_percorsi::path(
         "dati/formati/sciex/wiff/qtrap5500_mrm_PXD001506/Duodenum_MRM_SMB_01.wiff",
     )
     .and_then(|p| std::fs::read(p).ok())
@@ -236,8 +236,8 @@ fn spectrum_tic_invariant_and_auxiliary_device_logs() {
 #[test]
 fn tof_sciex_os_ida_streams_and_scan_blocks() {
     let (Some(wiff_path), Some(scan_path)) = (
-        dati_percorsi::percorso("dati/Erica/Test IDA PFAS untargeted.wiff"),
-        dati_percorsi::percorso("dati/Erica/Test IDA PFAS untargeted.wiff.scan"),
+        dati_percorsi::path("dati/Erica/Test IDA PFAS untargeted.wiff"),
+        dati_percorsi::path("dati/Erica/Test IDA PFAS untargeted.wiff.scan"),
     ) else {
         return;
     };

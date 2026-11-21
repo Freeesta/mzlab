@@ -234,7 +234,7 @@ impl Finto {
                 position: (k % 9 != 8).then_some(Position {
                     membro: (k % 2) as u16,
                     offset: 100 * k as u64,
-                    lunghezza: 77,
+                    length: 77,
                 }),
             })
             .collect();

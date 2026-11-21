@@ -111,7 +111,7 @@ fn an_expected_ion_is_found_on_the_node_of_its_mass() {
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
     let v = evaluate_with(t, &g, &o, &RuleParams::default());
     assert_eq!(v.ions.len(), 1);
-    assert_eq!(v.ions[0].nodo, find(&g, "C5H8N3"));
+    assert_eq!(v.ions[0].node, find(&g, "C5H8N3"));
     assert!(evaluate_with(t, &g, &con(vec![]), &RuleParams::default())
         .ions
         .is_empty());

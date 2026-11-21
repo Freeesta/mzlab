@@ -28,7 +28,7 @@ fn after_times(b: &[u8]) -> (usize, usize) {
 
 #[test]
 fn the_tree_after_the_head_holds_the_tic_and_the_ion_traces() {
-    let Some(gc) = dati_percorsi::percorso("dati/GC-MS") else {
+    let Some(gc) = dati_percorsi::path("dati/GC-MS") else {
         eprintln!("SKIP agilent_tree: no data repository (MZLAB_DATI)");
         return;
     };

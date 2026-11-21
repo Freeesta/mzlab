@@ -295,18 +295,18 @@ pub fn tree_of<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping) 
     let at: HashMap<&Key, usize> = keys.iter().enumerate().map(|(i, k)| (k, i)).collect();
     for k in &keys {
         let (pk, depth) = find_parent(k, &by_nominal, &groups);
-        let chiave: Vec<(f64, String, f64)> = k
+        let key: Vec<(f64, String, f64)> = k
             .iter()
             .enumerate()
             .map(|(s, (m, a, ce))| (codes.mz(s, *m), a.clone(), f64::from_bits(*ce)))
             .collect();
         out.nodes.push(Node {
-            id: node_id(&chiave),
+            id: node_id(&key),
             level: (k.len() + 1) as u8,
             parent: at.get(&pk).copied(),
             skip: (depth - 1) as u8,
             scans: groups[k].clone(),
-            key: chiave,
+            key,
         });
     }
     out

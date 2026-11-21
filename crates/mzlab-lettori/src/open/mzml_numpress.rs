@@ -401,7 +401,7 @@ pub(super) fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> 
             position: Some(Position {
                 membro: 0,
                 offset: r.start,
-                lunghezza: length,
+                length,
             }),
         });
     }

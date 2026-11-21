@@ -96,7 +96,7 @@ fn negative_point_count_or_indices_outside_the_points_do_not_panic() {
 /// Every real `.cdf` of the data repository: the scans counted, the points sorted and finite, the TIC of the file equal to the sum of the points, the times increasing.
 #[test]
 fn real_cdfs_open_and_the_counts_match() {
-    let Some(d) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
+    let Some(d) = dati_percorsi::path("dati/formati/aperti/netcdf_cdf") else {
         eprintln!("SKIP andi: no data repository (MZLAB_DATI)");
         return;
     };

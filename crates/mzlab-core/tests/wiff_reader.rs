@@ -56,7 +56,7 @@ fn same(dir: &Path, name: &str) -> usize {
             );
             assert!(index[k]
                 .position
-                .is_some_and(|p| p.membro == 1 && p.lunghezza > 0));
+                .is_some_and(|p| p.membro == 1 && p.length > 0));
             let got = l.scan(c, k).unwrap();
             assert_eq!(
                 (
@@ -298,7 +298,7 @@ fn mzml_with_known_sha1(dir: &Path, name: &str) {
 
 #[test]
 fn the_real_files_read_the_same_through_the_registry() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_reader: no data repository (MZLAB_DATI)");
         return;
     };

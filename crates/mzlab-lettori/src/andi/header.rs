@@ -55,7 +55,7 @@ impl AndiHeader {
             }
         }
         mzlab_core::sortc::slice_by(&mut t.fields, |a, b| {
-            (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+            (&a.origine, &a.key).cmp(&(&b.origine, &b.key))
         });
         Ok(t)
     }

@@ -50,7 +50,7 @@ pub(super) fn entry(k: usize, r: Row, t: &Head) -> Result<ScanEntry> {
         position: Some(Position {
             membro: 0,
             offset: r.start,
-            lunghezza: length,
+            length,
         }),
     })
 }

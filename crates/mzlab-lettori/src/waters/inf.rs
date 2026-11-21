@@ -10,7 +10,7 @@ const ENTRIES_MAX: usize = 5000;
 #[derive(Debug, Clone, Default)]
 pub(super) struct Entry {
     pub(super) section: String,
-    pub(super) chiave: String,
+    pub(super) key: String,
     pub(super) valore: String,
 }
 
@@ -44,7 +44,7 @@ pub(super) struct WatersHeader {
 }
 
 impl WatersHeader {
-    /// The value of `chiave` when the file gives one.
+    /// The value of `key` when the file gives one.
     pub(super) fn get(&self, key: &str) -> Option<&str> {
         self.entries
             .iter()
@@ -223,7 +223,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
         if e.voci.len() < ENTRIES_MAX {
             e.voci.push(Entry {
                 section: sezione.clone(),
-                chiave: k,
+                key: k,
                 valore: v,
             });
         }
@@ -303,7 +303,7 @@ pub(super) fn inlet(t: &str) -> Inlet {
         if l.entries.len() < ENTRIES_MAX {
             l.entries.push(Entry {
                 section: sezione.clone(),
-                chiave: k.to_string(),
+                key: k.to_string(),
                 valore: v.to_string(),
             });
         }

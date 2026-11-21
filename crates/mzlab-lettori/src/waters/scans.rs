@@ -53,7 +53,7 @@ impl WatersReader {
                 position: f.dat.map(|m| Position {
                     membro: u16::try_from(m).unwrap_or(0),
                     offset: r.offset,
-                    lunghezza: u32::try_from(
+                    length: u32::try_from(
                         u64::from(r.count) * f.cod.map_or(0, |c| c.width() as u64),
                     )
                     .unwrap_or(u32::MAX),

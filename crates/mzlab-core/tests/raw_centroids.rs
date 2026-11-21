@@ -14,7 +14,7 @@ use opentfraw::ScanMode;
 mod dati_percorsi;
 
 fn raws() -> Vec<PathBuf> {
-    let Some(dir) = dati_percorsi::percorso("dati/formati") else {
+    let Some(dir) = dati_percorsi::path("dati/formati") else {
         return Vec::new();
     };
     let Ok(rd) = std::fs::read_dir(dir) else {

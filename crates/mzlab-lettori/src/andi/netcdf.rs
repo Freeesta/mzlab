@@ -212,7 +212,7 @@ impl Cdf {
         for _ in 0..c.list(TAG_DIM)? {
             c.name()?;
             let length = u64::from(c.u32()?);
-            self.dim.push(Dim { lunghezza: length });
+            self.dim.push(Dim { length });
         }
         Ok(())
     }
@@ -234,7 +234,7 @@ impl Cdf {
             let kind = Kind::da(c.u32()?)?;
             let vsize = u64::from(c.u32()?);
             let begin = c.offset(v64)?;
-            let record = dims.first().is_some_and(|&d| self.dim[d].lunghezza == 0);
+            let record = dims.first().is_some_and(|&d| self.dim[d].length == 0);
             if begin > self.size && !record {
                 return Err(broken("variable starts past the end of the file"));
             }
@@ -289,8 +289,8 @@ impl Cdf {
     /// The length of a dimension (the number of records for the unlimited one).
     pub fn length_dim(&self, d: usize) -> u64 {
         match self.dim.get(d) {
-            Some(x) if x.lunghezza == 0 => self.numrecs,
-            Some(x) => x.lunghezza,
+            Some(x) if x.length == 0 => self.numrecs,
+            Some(x) => x.length,
             None => 0,
         }
     }
@@ -394,7 +394,7 @@ pub enum Kind {
 
 pub struct Dim {
     /// 0: the unlimited (record) dimension.
-    pub lunghezza: u64,
+    pub length: u64,
 }
 
 pub enum Val {
@@ -449,7 +449,7 @@ pub(super) fn broken(why: &str) -> Error {
 fn per_record(dim: &[Dim], v: &Var) -> u64 {
     v.dims[1..]
         .iter()
-        .fold(1u64, |a, &d| a.saturating_mul(dim[d].lunghezza))
+        .fold(1u64, |a, &d| a.saturating_mul(dim[d].length))
 }
 
 /// `x * scale_factor + add_offset` for the stored numbers of `v` (the file keeps `(t - offset) / factor`).

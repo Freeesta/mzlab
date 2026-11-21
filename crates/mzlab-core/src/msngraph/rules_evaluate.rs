@@ -57,7 +57,7 @@ pub struct EdgeVal {
     pub warnings: Vec<&'static str>,
 }
 
-/// A rule whose product would fall below the trap cut-off of the spectrum of node `nodo`: it cannot be observed there.
+/// A rule whose product would fall below the trap cut-off of the spectrum of node `node`: it cannot be observed there.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unobservable {
     pub node: usize,
@@ -69,7 +69,7 @@ pub struct Unobservable {
 /// A rule of kind `ion` that a node of the graph matches by m/z.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RuleIon {
-    pub nodo: usize,
+    pub node: usize,
     pub regola: &'static str,
     pub errore_mda: f64,
 }
@@ -349,10 +349,10 @@ fn rule_ions(c: &Ctx) -> Vec<RuleIon> {
             let giu = (x.mz - mz) * 1000.0;
             let gia = v
                 .iter()
-                .any(|y: &RuleIon| y.nodo == n && y.regola == r.r.id);
+                .any(|y: &RuleIon| y.node == n && y.regola == r.r.id);
             if giu.abs() <= c.p.toll_mda && !gia {
                 v.push(RuleIon {
-                    nodo: n,
+                    node: n,
                     regola: &r.r.id,
                     errore_mda: giu,
                 });

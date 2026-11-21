@@ -5,12 +5,12 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OLD_WORDS = ["apri", "scrivi"]
+OLD_WORDS = ["apri", "scrivi", "chiave", "lunghezza", "percorso", "nodo"]
 OLD = re.compile(r"(?<![A-Za-z0-9])(" + "|".join(OLD_WORDS) + r")(?![a-z0-9])")
 SKIP = {"tests/test_no_old_rust_names.py"}
 
 
-STRING = re.compile(r'"(?:\\.|[^"\\])*"')
+STRING = re.compile(r'r(#*)"(?s:.*?)"\1|"(?:\\.|[^"\\])*"')
 DOC_API = re.compile(r"::(" + "|".join(OLD_WORDS) + r")(?![a-z0-9])|(" + "|".join(OLD_WORDS) + r")_(solo|indicizzato)")
 
 

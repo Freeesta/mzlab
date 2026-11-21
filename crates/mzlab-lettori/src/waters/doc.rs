@@ -185,7 +185,7 @@ fn source(l: &WatersReader) -> Option<String> {
     l.ext
         .voci
         .iter()
-        .find(|v| v.section == "Source Information" && v.chiave == "Type")
+        .find(|v| v.section == "Source Information" && v.key == "Type")
         .map(|v| v.valore.clone())
 }
 
@@ -231,8 +231,8 @@ fn fields_of(origin: &str, entries: &[Entry], dest: &mut Vec<Field>) {
         } else {
             format!("{origin}#{}", v.section)
         };
-        let c = Field::new(&o, &v.chiave, &v.valore);
-        dest.push(if identifier(&v.chiave, &v.valore) {
+        let c = Field::new(&o, &v.key, &v.valore);
+        dest.push(if identifier(&v.key, &v.valore) {
             c.id()
         } else {
             c

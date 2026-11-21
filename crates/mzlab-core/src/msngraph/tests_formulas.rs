@@ -27,7 +27,7 @@ fn node(g: &Graph, formula: &str) -> Option<usize> {
 }
 
 fn keys(g: &Graph) -> Vec<(&str, Option<usize>)> {
-    g.avvisi.iter().map(|a| (a.chiave, a.nodo)).collect()
+    g.avvisi.iter().map(|a| (a.key, a.node)).collect()
 }
 
 fn root(g: &Graph) -> usize {
@@ -173,11 +173,7 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
         ..con("C8H11N4O2")
     };
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 15.0);
-    let removed: Vec<(&str, &str)> = g
-        .avvisi
-        .iter()
-        .map(|a| (a.chiave, a.tree.as_str()))
-        .collect();
+    let removed: Vec<(&str, &str)> = g.avvisi.iter().map(|a| (a.key, a.tree.as_str())).collect();
     let expected = [
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@cid30"),
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@hcd45"),
@@ -191,7 +187,7 @@ fn most_intensity_unexplained_is_noted_on_the_graph_only_then() {
     let note = |g: &Graph| {
         g.avvisi
             .iter()
-            .any(|a| a.chiave == "warn.msngrafo.mostUnexplained")
+            .any(|a| a.key == "warn.msngrafo.mostUnexplained")
     };
     let (good, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
     assert!(!note(&good), "{:?}", good.avvisi);

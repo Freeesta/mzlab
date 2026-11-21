@@ -30,7 +30,7 @@ const PROTON: f64 = 1.007_276;
 const RULES: [&str; 4] = ["C13H24N4O4S", "C13H24N4O5S", "C12H22N4O3S", "C13H22N4O3S"];
 
 fn files() -> Vec<PathBuf> {
-    let mut v: Vec<PathBuf> = dati_percorsi::percorso("dati/HRMS/Timolol")
+    let mut v: Vec<PathBuf> = dati_percorsi::path("dati/HRMS/Timolol")
         .into_iter()
         .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
         .map(|e| e.path())

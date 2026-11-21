@@ -133,7 +133,7 @@ fn compare(w: &Wiff, got: &Run, want: &Run, label: &str) -> usize {
 /// `MZLAB_WIFF_CASE=MS2` runs that mode only. FullMass and MS2 are compared with the profile export (the centroided one drops sparse product-ion scans).
 #[test]
 fn real_files_match_proteowizard() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_parity: no data repository (MZLAB_DATI)");
         return;
     };
@@ -151,7 +151,7 @@ fn real_files_match_proteowizard() {
         let ole = container(bytes, wiff).unwrap();
         let scan = std::fs::read(folder.join(format!("{wiff}.wiff.scan"))).unwrap();
         let len = scan.len() as u64;
-        let mut files: Vec<PathBuf> = dirs.iter().filter_map(|d| dati_percorsi::percorso(d)).filter_map(|d| std::fs::read_dir(d).ok()).flat_map(|r| r.flatten().map(|e| e.path())).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
+        let mut files: Vec<PathBuf> = dirs.iter().filter_map(|d| dati_percorsi::path(d)).filter_map(|d| std::fs::read_dir(d).ok()).flat_map(|r| r.flatten().map(|e| e.path())).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
         files.sort();
         eprintln!("wiff_parity {wiff}: {} mzML", files.len());
         for f in files {
@@ -225,7 +225,7 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
 /// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
 #[test]
 fn the_header_of_a_real_file_carries_model_time_and_hashes() {
-    let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else { return };
+    let Some(folder) = dati_percorsi::path("dati/3200 qtrap/wiff") else { return };
     let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else { return };
     let ole = container(bytes.clone(), "MRM.wiff").unwrap();
     let mut scan = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();

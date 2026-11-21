@@ -46,9 +46,9 @@ const WINDOW: f64 = 0.5;
 
 pub(super) fn warning(g: &mut Graph, key: &'static str, node: Option<usize>) {
     g.avvisi.push(Warning {
-        chiave: key,
+        key,
         tree: String::new(),
-        nodo: node,
+        node,
     });
 }
 

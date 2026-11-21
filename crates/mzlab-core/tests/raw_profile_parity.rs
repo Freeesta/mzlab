@@ -264,7 +264,7 @@ struct Report {
 }
 
 fn compare() -> Option<Report> {
-    let Some(d) = dati_percorsi::percorso("dati/HRMS/Profile raw") else {
+    let Some(d) = dati_percorsi::path("dati/HRMS/Profile raw") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return None;
     };
