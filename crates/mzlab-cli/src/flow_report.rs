@@ -1,4 +1,4 @@
-//! `mzlab-cli flow report RUNDIR [--out FILE]`: the `run-report/1` report of a run folder, the one `examples/flow.rs` leaves (`prov.json` next to the files the steps made).
+//! `mzlab-cli flow report RUNDIR [--out FILE]`: the `run-report/2` report of a run folder, the one `examples/flow.rs` leaves (`prov.json` next to the files the steps made).
 
 use std::path::{Path, PathBuf};
 
@@ -13,7 +13,7 @@ fn io(path: &Path) -> impl Fn(std::io::Error) -> Error + '_ {
     move |e| Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
 }
 
-/// The `run-report/1` text of the folder: `prov.json` and every `.json` file beside it.
+/// The `run-report/2` text of the folder: `prov.json` and every `.json` file beside it.
 pub fn report(dir: &Path) -> Result<String> {
     let prov_path = dir.join("prov.json");
     let prov = std::fs::read(&prov_path).map_err(io(&prov_path))?;
@@ -31,6 +31,13 @@ pub fn report(dir: &Path) -> Result<String> {
                 .map_or(String::new(), |n| n.to_string_lossy().into_owned()),
             bytes,
         ));
+    }
+    // the old `report/1` of a table is refused here (the CLI reads run folders; the site passes no output files), never read as "no table report"
+    if kept
+        .iter()
+        .any(|(_, b)| b.starts_with(b"{\"schema\":\"report/1\""))
+    {
+        return Err(Error::new("err.flow.format.reportOld"));
     }
     let outputs: Vec<Output> = kept
         .iter()

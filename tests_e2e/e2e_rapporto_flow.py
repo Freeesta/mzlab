@@ -18,12 +18,12 @@ def run_doc(n_steps=3, n_params=2, rows=4):
            "params_sha256": hx(i), "params": [{"name": f"p{j}", "value": j * 1.5, "state": "estimated" if j == 0 else "fixed", **({"proof": {"hist": [1, 2]}} if j == 0 else {})} for j in range(n_params)]}
           for i in range(n_steps)]
     if n_steps > 2: st[2]["error_key"] = "err.x"
-    return {"schema": "run-report/1", "engine": {"name": "mzLab", "version": "1.0", "platform": "native"}, "plan_sha256": hx(99),
+    return {"schema": "run-report/2", "engine": {"name": "mzLab", "version": "1.0", "platform": "native"}, "plan_sha256": hx(99),
             "inputs": [{"name": "<img src=x onerror=window.PWNED=1>.mzML", "bytes": 2048, "sha256": hx(1), "type": "mzml"}], "lists": [{"name": "lib.msp", "bytes": 10, "sha256": hx(2), "type": "library"}],
             "steps": st, "total_ms": round(sum(s["ms"] for s in st), 1), "levels": {"files": 1, "rows": 4, "auto": {"2a": 2, "3a": 1}, "other": {"1": 1}},
-            "report": {"schema": "report/1", "righe": rows, "file": 2, "celle": {"rilevate": 5, "mirate": 0, "riempite": 1, "assenti": 2},
-                       "qc": {"schema": "qc/1", "file": [{"file": "a.mzML", "rilevati": 3, "mirati": 0, "riempiti": 1, "assenti": 0, "area_totale": 1e6}],
-                              "gruppi": [{"tipo": "sample", "gruppo": "g", "tempo_min": 0, "file": 2, "righe": 4, "cv_mediano": 0.12}], "standard_cv": None, "scartate": [{"regola": "blank", "righe": 1}]}}}
+            "report": {"schema": "report/2", "rows": rows, "file": 2, "cells": {"detected": 5, "targeted": 0, "filled": 1, "absent": 2},
+                       "qc": {"schema": "qc/2", "file": [{"file": "a.mzML", "detected": 3, "targeted": 0, "filled": 1, "absent": 0, "total_area": 1e6}],
+                              "groups": [{"kind": "sample", "group": "g", "time_min": 0, "file": 2, "rows": 4, "median_cv": 0.12}], "standard_cv": None, "discarded": [{"rule": "blank", "rows": 1}]}}}
 
 HOST = """<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><title>host</title><style>:root{--ink:#1a1a1a;--line:#999;--accent:#0072B2;--bad:#D55E00}body{background:#fff;margin:0}</style></head>
 <body><main id="m"></main><script src="rapporto-flow.js"></script></body></html>"""
@@ -77,7 +77,7 @@ try:
         step("each section can be turned off and on", toggle)
         def download():
             with pg.expect_download() as d: pg.click("button[data-rf=json]")
-            f = d.value; data = json.loads(Path(f.path()).read_text()); assert f.suggested_filename == "report.json" and data["schema"] == "run-report/1"
+            f = d.value; data = json.loads(Path(f.path()).read_text()); assert f.suggested_filename == "report.json" and data["schema"] == "run-report/2"
         step("Download JSON gives the run as it was given", download)
         def pdf():
             out = tmp / "r.pdf"; pg.pdf(path=str(out)); assert out.stat().st_size > 2000

@@ -25,7 +25,7 @@
   /** @type {Promise<any> | null} */ let libP = null;
   /** the `lib` .wasm (the one of the library page), loaded once */
   const lib = () => libP || (libP = (async () => {
-    const c = await F.tpCtx("regole_tp_2.json"), mod = await import(/* webpackIgnore: true */ new URL("wasm-lib/mzlab_lib_wasm.js", c.base).href);
+    const c = await F.tpCtx("regole_tp_3.json"), mod = await import(/* webpackIgnore: true */ new URL("wasm-lib/mzlab_lib_wasm.js", c.base).href);
     await mod.default();
     return mod;
   })().catch(e => { libP = null; throw e; }));

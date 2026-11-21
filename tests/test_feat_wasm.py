@@ -13,7 +13,7 @@ from cargo_util import build, cli
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
-PARENT = ["--parent", "C21H32N2O2", "--rules", str(ROOT / "TP_Mine/data/regole_tp_2.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
+PARENT = ["--parent", "C21H32N2O2", "--rules", str(ROOT / "TP_Mine/data/regole_tp_3.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
 
 
 def run(*a):
@@ -311,7 +311,7 @@ def built_sizes(built, tmp_path_factory):
 
 def test_fewer_sizes_than_files_is_an_error_and_not_a_trap(built_sizes):
     idx, pkg = built_sizes
-    out = run("node", str(ROOT / "tests" / "feat_wasm_sizes_node.js"), str(pkg), str(ROOT / "TP_Mine/data/regole_tp_2.json"), *idx)
+    out = run("node", str(ROOT / "tests" / "feat_wasm_sizes_node.js"), str(pkg), str(ROOT / "TP_Mine/data/regole_tp_3.json"), *idx)
     assert out.splitlines() == ["ok align_untargeted_to", "ok align_untargeted_to afterwards", "ok build_evidence_to", "ok build_evidence_to afterwards"], out
 
 

@@ -1,5 +1,5 @@
 //! What the page knows of the structure of the parent, as the JSON of `grafo/1` (`chem::graph::analyse_json`, which runs in its own `.wasm`) with an optional
-//! `"profile"`: `{"profile":"fotocatalisi","formula":"C13H24N4O3S","groups":[..],"fragments":[..]}`. Other keys are ignored; empty text = nothing known.
+//! `"profile"`: `{"profile":"photocatalysis","formula":"C13H24N4O3S","groups":[..],"fragments":[..]}`. Other keys are ignored; empty text = nothing known.
 
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};

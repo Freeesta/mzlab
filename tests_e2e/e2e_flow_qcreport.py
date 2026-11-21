@@ -1,5 +1,5 @@
 """Flow «This browser» runs qc.run_order@1 (the injection sequence of the sample table) and report.methods@1 (the methods text of a run record), both in the `flowtab` module: a synthetic series of 8 injections
-in 2 batches, a sample table, a design of batches and the run-report/1 fixture of tests/golden/feat. The plan goes to `mzlab-cli flow run`; the texts the browser keeps are the native files byte for byte (same SHA-256); every job
+in 2 batches, a sample table, a design of batches and the run-report/2 fixture of tests/golden/feat. The plan goes to `mzlab-cli flow run`; the texts the browser keeps are the native files byte for byte (same SHA-256); every job
 is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`), and the `flowtab` .wasm is fetched only when one of these steps runs.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_qcreport.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request

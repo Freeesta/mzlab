@@ -33,15 +33,15 @@ fn new_rule(r: &Row) -> Value {
     let s = |x: &str| Value::Str(x.to_string());
     Value::Obj(vec![
         ("id".into(), s(&r.name)),
-        ("nome".into(), s(&r.name)),
-        ("delta_formula".into(), Value::Str(delta_text(&r.delta))),
+        ("name".into(), s(&r.name)),
+        ("formula_delta".into(), Value::Str(delta_text(&r.delta))),
         (
-            "passi_max".into(),
+            "max_steps".into(),
             Value::Num(f64::from(r.max_repeat.unwrap_or(2))),
         ),
-        ("livello_previsione".into(), Value::Num(4.0)),
-        ("fonte".into(), s("transformation_table")),
-        ("direzione_rt".into(), s("libera")),
+        ("prediction_level".into(), Value::Num(4.0)),
+        ("source".into(), s("transformation_table")),
+        ("rt_direction".into(), s("free")),
     ])
 }
 
@@ -78,30 +78,29 @@ fn member<'a>(v: &'a mut Value, key: &str) -> Option<&'a mut Value> {
     }
 }
 
-/// The `regole_tp` file `base` (`/1` list or the default profile of `/2`) with the rows of `text` as rules.
+/// The `regole_tp` file `base` (its default profile) with the rows of `text` as rules.
 pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     let rows = crate::lists::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
+    // an old base file is refused with the stable key of the rules reader, never merged into
+    if file.get("version").and_then(Value::f64) != Some(f64::from(crate::hypo::RULES_VERSION)) {
+        return Err("error.hypo.rulesVersion".to_string());
+    }
     let default = file
-        .get("predefinito")
+        .get("default_profile")
         .and_then(Value::str)
         .map(String::from);
-    let flat = file.get("regole").is_some();
-    let holder = if flat {
-        Some(&mut file)
-    } else {
-        default
-            .as_deref()
-            .and_then(|d| member(&mut file, "profili").and_then(|p| member(p, d)))
-    };
-    let Some(Value::Arr(list)) = holder.and_then(|h| member(h, "regole")) else {
+    let holder = default
+        .as_deref()
+        .and_then(|d| member(&mut file, "profiles").and_then(|p| member(p, d)));
+    let Some(Value::Arr(list)) = holder.and_then(|h| member(h, "rules")) else {
         return Err(unreadable());
     };
     let mut known: Vec<Delta> = list
         .iter()
         .map(|r| {
-            let t = r.get("delta_formula").and_then(Value::str).unwrap_or("");
+            let t = r.get("formula_delta").and_then(Value::str).unwrap_or("");
             parse_delta(t).unwrap_or_default()
         })
         .collect();
@@ -112,8 +111,8 @@ pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
             list.len() - 1
         });
         if let Some(l) = literature(&r.comment) {
-            set(&mut list[at], "livello_previsione", Value::Num(2.0));
-            set(&mut list[at], "fonte", Value::Str(format!("lit:{l}")));
+            set(&mut list[at], "prediction_level", Value::Num(2.0));
+            set(&mut list[at], "source", Value::Str(format!("lit:{l}")));
         }
     }
     let mut o = Out::default();

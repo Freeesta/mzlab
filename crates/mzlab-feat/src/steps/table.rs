@@ -291,7 +291,7 @@ fn blank_params() -> Vec<Param> {
             .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
         Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
             .default_str("all")
-            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as blank_fallback; not with the subtraction")
             .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
         Param::boolean("blank_keep_istd", "Keep the internal standard")
             .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),

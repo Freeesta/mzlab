@@ -22,7 +22,7 @@ from .tabelle import Table
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
 CELLA_RILEVATA, TARGETED_CELL, FILLED_CELL, CELLA_ASSENTE = 0, 1, 2, 3
 EXAMPLE = ROOT / "target" / "release" / "examples" / "native"
-REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_2.json")
+REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_3.json")
 
 
 def open_data(data: bytes) -> tuple[dict, dict]:

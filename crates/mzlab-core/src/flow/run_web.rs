@@ -1,5 +1,5 @@
 //! The record of a run made by an executor that has no `Runner` (the page of the site runs the jobs in workers and reports what each made): `record_jobs`
-//! reads those reports and writes the record with the same `record` as `flow run`, so `prov/1` and `run-report/1` have the bytes of the native run apart from
+//! reads those reports and writes the record with the same `record` as `flow run`, so `prov/1` and `run-report/2` have the bytes of the native run apart from
 //! the declared fields (time, memory peak, agent). Used by the engine `.wasm` (`flow_record`).
 
 use super::{record, Artifact, Ctx, Outcome, Results, Run};
@@ -122,7 +122,7 @@ fn record_reports(plan_text: &[u8], registry: &[Step], reports: &Value) -> Resul
 }
 
 /// `op` `prov`: `{"plan": text, "registry": [step/1], "jobs": [...]}` gives the `prov/1` text; `run_report`: `{"prov": text, "outputs": [{"name","text"}]}` gives the
-/// `run-report/1` text of that record with the `.json` files the steps made. `agent` is the program that ran (the caller knows its version).
+/// `run-report/2` text of that record with the `.json` files the steps made. `agent` is the program that ran (the caller knows its version).
 pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
     let b = parse_json(body.as_bytes())?;
     let field = |k: &str| text(&b, k).ok_or_else(bad);

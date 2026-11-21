@@ -20,7 +20,7 @@ use mzlab_ops::run::feat::run::{self, RowSources};
 use crate::flow_base::Files;
 
 pub(crate) const FORMULA: &str = "C22H31N3O4S";
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_3.json");
 const NAMES: [&str; 6] = [
     "SIN_blank",
     "SIN_dark",

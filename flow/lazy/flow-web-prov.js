@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the record of a run of «This browser». When the live run has made every step of the base chain (index, detection, alignment, gap filling) the facts the record asks of
 // the files in OPFS (size and SHA-256, the source of each index, the estimates and the memory of a job: worker-flow-web.js) go to the engine (api/flow/sched/record_prov, record_run_report), which writes
-// `prov/1` and `run-report/1` with the same Rust as `flow run`. The two texts are kept in OPFS (mzlab/flow/prov.json, report.json) and in `F.webProv.last`. Used by flow-live.js at the end of a run.
+// `prov/1` and `run-report/2` with the same Rust as `flow run`. The two texts are kept in OPFS (mzlab/flow/prov.json, report.json) and in `F.webProv.last`. Used by flow-live.js at the end of a run.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);

@@ -10,7 +10,7 @@ const fds = files.map(f => fs.openSync(f, "r"));
 const sizes = Float64Array.from(files, f => fs.statSync(f).size);
 const read = (k, off, len) => { const b = new Uint8Array(len); fs.readSync(fds[k], b, 0, len, off); return b; };
 const rd = k => (_, off, len) => read(k, off, len);
-const rules = fs.readFileSync(path.join(__dirname, "..", "TP_Mine/data/regole_tp_2.json"));
+const rules = fs.readFileSync(path.join(__dirname, "..", "TP_Mine/data/regole_tp_3.json"));
 const paths = {
   detect_ion: r => files.map((f, k) => w.detect_file(rd(k), sizes[k], path.basename(f), r || '{"mode":"ion"}')),
   detect_family: () => files.map((f, k) => w.detect_file(rd(k), sizes[k], path.basename(f), '{"mode":"family"}')),

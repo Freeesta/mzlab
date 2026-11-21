@@ -1,5 +1,5 @@
 //! Filters of the rows of the aligned table, a view over it: an ordered list of rules, each row is kept or rejected by the first rule it fails. The
-//! `.mzfeat` is not changed; the list is what the `filtra` operation of the `.mzflow` records.
+//! `.mzfeat` is not changed; the list is what the `filter` operation of the `.mzflow` records.
 //!
 //! Files that are blanks or dark are never counted as samples. A rule that cannot be evaluated (no blank in the series, no summaries in the table) is
 //! an error, never a silent pass.
@@ -55,19 +55,19 @@ pub enum Rule {
 /// QC files needed when the rule does not say.
 pub const QC_MIN_FILES: usize = 3;
 
-/// Names of the rules in the `filtra` operation, in the order of `Rule`.
+/// Names of the rules in the `filter` operation, in the order of `Rule`.
 const NAMES: [&str; 11] = [
-    "min_rilevati",
+    "min_detected",
     "min_area",
-    "min_altezza",
-    "bianco",
+    "min_height",
+    "blank",
     "mz",
     "rt",
     "ms2",
     "qc_cv_max",
-    "duplicati",
-    "bianco_larga",
-    "repliche_min",
+    "duplicates",
+    "broad_blank",
+    "min_replicates",
 ];
 
 impl Rule {
@@ -345,44 +345,40 @@ pub fn apply_extra(
         .collect())
 }
 
-/// The `filtra` operation: `[{"regola":"min_rilevati","valore":3}, {"regola":"mz","da":100,"a":500}, ...]`.
+/// The `filter` operation: `[{"rule":"min_detected","value":3}, {"rule":"mz","from":100,"to":500}, ...]`.
 pub fn to_json(rules: &[Rule]) -> String {
     let mut j = Out::default();
     j.raw("[");
     for (i, r) in rules.iter().enumerate() {
-        j.raw(if i > 0 {
-            ",{\"regola\":"
-        } else {
-            "{\"regola\":"
-        })
-        .str(r.name());
+        j.raw(if i > 0 { ",{\"rule\":" } else { "{\"rule\":" })
+            .str(r.name());
         match *r {
-            Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
+            Rule::MinDetected(n) => j.raw(",\"value\":").int(n as i64),
             Rule::MinArea(x)
             | Rule::MinHeight(x)
             | Rule::Blank(x)
             | Rule::BroadBlank(x)
-            | Rule::MinReplicates(x) => j.raw(",\"valore\":").num(x),
-            Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
+            | Rule::MinReplicates(x) => j.raw(",\"value\":").num(x),
+            Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"from\":").num(a).raw(",\"to\":").num(b),
             Rule::BlankWith(x, ref o) => {
-                j.raw(",\"valore\":").num(x);
+                j.raw(",\"value\":").num(x);
                 fb::write_json(&mut j, o);
                 &mut j
             }
             Rule::Ms2 => &mut j,
             Rule::QcCv(x, n) => j
-                .raw(",\"valore\":")
+                .raw(",\"value\":")
                 .num(x)
                 .raw(",\"qc_min_files\":")
                 .int(n as i64),
             Rule::QcCvZero(x, n) => j
-                .raw(",\"valore\":")
+                .raw(",\"value\":")
                 .num(x)
                 .raw(",\"qc_min_files\":")
                 .int(n as i64)
                 .raw(",\"qc_zero\":true"),
             Rule::Duplicates(tol, rt) if tol < 0.0 => {
-                j.raw(",\"da\":").num(-tol).raw(",\"rt_min\":").num(rt)
+                j.raw(",\"from\":").num(-tol).raw(",\"rt_min\":").num(rt)
             }
             Rule::Duplicates(ppm, rt) => j.raw(",\"ppm\":").num(ppm).raw(",\"rt_min\":").num(rt),
         };
@@ -402,29 +398,29 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
     v.arr()
         .iter()
         .map(|o| {
-            Ok(match o.get("regola").and_then(Value::str) {
-                Some("min_rilevati") => Rule::MinDetected(num(o, "valore")?.max(0.0) as usize),
-                Some("min_area") => Rule::MinArea(num(o, "valore")?),
-                Some("min_altezza") => Rule::MinHeight(num(o, "valore")?),
-                Some("bianco") => {
+            Ok(match o.get("rule").and_then(Value::str) {
+                Some("min_detected") => Rule::MinDetected(num(o, "value")?.max(0.0) as usize),
+                Some("min_area") => Rule::MinArea(num(o, "value")?),
+                Some("min_height") => Rule::MinHeight(num(o, "value")?),
+                Some("blank") => {
                     let opts = fb::read_json(o)?;
-                    let fold = num(o, "valore")?;
+                    let fold = num(o, "value")?;
                     if opts == BlankOpts::default() {
                         Rule::Blank(fold)
                     } else {
                         Rule::BlankWith(fold.max(1.0), opts)
                     }
                 }
-                Some("bianco_larga") => Rule::BroadBlank(num(o, "valore")?),
-                Some("repliche_min") => Rule::MinReplicates(num(o, "valore")?),
-                Some("mz") => Rule::Mz(num(o, "da")?, num(o, "a")?),
-                Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
+                Some("broad_blank") => Rule::BroadBlank(num(o, "value")?),
+                Some("min_replicates") => Rule::MinReplicates(num(o, "value")?),
+                Some("mz") => Rule::Mz(num(o, "from")?, num(o, "to")?),
+                Some("rt") => Rule::Rt(num(o, "from")?, num(o, "to")?),
                 Some("ms2") => Rule::Ms2,
                 Some("qc_cv_max") => {
                     let n = o
                         .get("qc_min_files")
                         .map_or(Ok(QC_MIN_FILES as f64), |_| num(o, "qc_min_files"))?;
-                    let (max, n) = (num(o, "valore")?.max(0.0), n.max(0.0) as usize);
+                    let (max, n) = (num(o, "value")?.max(0.0), n.max(0.0) as usize);
                     match o.get("qc_zero") {
                         None => Rule::QcCv(max, n),
                         Some(z) if z.bool() == Some(false) => Rule::QcCv(max, n),
@@ -432,10 +428,10 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                         Some(_) => return Err(bad()),
                     }
                 }
-                Some("duplicati") => {
+                Some("duplicates") => {
                     // the unit axis spells the window in Da (`da`), the other in ppm
-                    let tol = match o.get("da") {
-                        Some(_) => da(num(o, "da")?.max(0.0)),
+                    let tol = match o.get("from") {
+                        Some(_) => da(num(o, "from")?.max(0.0)),
                         None => num(o, "ppm")?.max(0.0),
                     };
                     Rule::Duplicates(tol, num(o, "rt_min")?.max(0.0))

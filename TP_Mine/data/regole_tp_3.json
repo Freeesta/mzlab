@@ -1,0 +1,77 @@
+{ "format": "regole_tp",
+  "version": 3,
+  "default_profile": "photocatalysis",
+  "profiles": {
+    "photocatalysis": {
+      "name": "TiO2/UV: ·OH radicals, h+ holes, O2·−",
+      "rules": [
+        {"id": "hydroxylation", "name": "hydroxylation", "class": "hydroxylation", "formula_delta": "+O", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "more_polar"},
+        {"id": "dihydroxylation", "name": "dihydroxylation", "class": "hydroxylation", "formula_delta": "+O2", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "more_polar"},
+        {"id": "trihydroxylation", "name": "trihydroxylation", "class": "hydroxylation", "formula_delta": "+O3", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "more_polar"},
+        {"id": "dehydrogenation", "name": "dehydrogenation", "class": "dehydrogenation", "formula_delta": "-H2", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "free"},
+        {"id": "hydration", "name": "hydration", "class": "hydration", "formula_delta": "+H2O", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "more_polar"},
+        {"id": "dehydration", "name": "dehydration", "class": "dehydration", "formula_delta": "-H2O", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "less_polar"},
+        {"id": "methylation", "name": "methylation", "class": "methylation", "formula_delta": "+CH2", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "less_polar"},
+        {"id": "carboxylation", "name": "carboxylation", "class": "carboxylation", "formula_delta": "+CO2", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "more_polar"},
+        {"id": "oxidation_to_carbonyl_alpha", "name": "oxidation to carbonyl alpha", "class": "oxidation_to_carbonyl", "formula_delta": "-H2+O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups_any": ["alpha_ch_hetero"]}},
+        {"id": "oxidation_to_carbonyl", "name": "oxidation to carbonyl", "class": "oxidation_to_carbonyl", "formula_delta": "-H2+O", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "free", "fallback": true},
+        {"id": "n_demethylation", "name": "n demethylation", "class": "dealkylation", "formula_delta": "-CH2", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"groups": ["n_methyl"]}},
+        {"id": "n_deisopropylation", "name": "n deisopropylation", "class": "dealkylation", "formula_delta": "-C3H6", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"groups": ["n_isopropyl"]}},
+        {"id": "n_detertbutylation", "name": "n detertbutylation", "class": "dealkylation", "formula_delta": "-C4H8", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"groups": ["n_tbutyl"]}},
+        {"id": "dealkylation_ch2", "name": "dealkylation ch2", "class": "dealkylation", "formula_delta": "-CH2", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups_any": ["n_alkyl", "o_alkyl"]}},
+        {"id": "dealkylation_c2h4", "name": "dealkylation c2h4", "class": "dealkylation", "formula_delta": "-C2H4", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups_any": ["n_alkyl", "o_alkyl"]}},
+        {"id": "dealkylation_c3h6", "name": "dealkylation c3h6", "class": "dealkylation", "formula_delta": "-C3H6", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups_any": ["n_alkyl", "o_alkyl"]}},
+        {"id": "dealkylation_c4h8", "name": "dealkylation c4h8", "class": "dealkylation", "formula_delta": "-C4H8", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups_any": ["n_alkyl", "o_alkyl"]}},
+        {"id": "demethylation", "name": "demethylation", "class": "dealkylation", "formula_delta": "-CH2", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "more_polar", "fallback": true},
+        {"id": "loss_of_c2h4", "name": "loss of c2h4", "class": "dealkylation", "formula_delta": "-C2H4", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "more_polar", "fallback": true},
+        {"id": "loss_of_c4h8", "name": "loss of c4h8", "class": "dealkylation", "formula_delta": "-C4H8", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "more_polar", "fallback": true},
+        {"id": "loss_of_propene_n_deisopropylation", "name": "loss of propene n deisopropylation", "class": "dealkylation", "formula_delta": "-C3H6", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "more_polar", "requires": {"all": {"N": 1}}, "fallback": true},
+        {"id": "oxidative_deamination_primary", "name": "oxidative deamination primary", "class": "oxidative_deamination", "formula_delta": "-NH3+O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups": ["amine_primary"]}},
+        {"id": "oxidative_deamination", "name": "oxidative deamination", "class": "oxidative_deamination", "formula_delta": "-NH3+O", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "free", "requires": {"all": {"N": 1}}, "fallback": true},
+        {"id": "ring_opening_o2", "name": "ring opening o2", "class": "ring_opening", "formula_delta": "+O2", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["ring_hetero_saturated"]}},
+        {"id": "ring_opening_minus_co", "name": "ring opening minus co", "class": "ring_opening", "formula_delta": "-C+O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["ring_hetero_saturated"]}},
+        {"id": "ring_opening_minus_c2h2", "name": "ring opening minus c2h2", "class": "ring_opening", "formula_delta": "-C2H2", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["ring_hetero_saturated"]}},
+        {"id": "ring_opening_minus_c2h4o", "name": "ring opening minus c2h4o", "class": "ring_opening", "formula_delta": "-C2H4O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["ring_hetero_saturated"]}},
+        {"id": "ring_opening_minus_c4h6o", "name": "ring opening minus c4h6o", "class": "ring_opening", "formula_delta": "-C4H6O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["ring_hetero_saturated"]}},
+        {"id": "loss_of_co", "name": "loss of co", "class": "ring_opening", "formula_delta": "-CO", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "free", "fallback": true},
+        {"id": "loss_of_c2h2", "name": "loss of c2h2", "class": "ring_opening", "formula_delta": "-C2H2", "max_steps": 2, "prediction_level": 4, "source": "transformation_table", "rt_direction": "free", "fallback": true},
+        {"id": "photo_kolbe", "name": "photo kolbe", "class": "decarboxylation", "formula_delta": "-CO2", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "less_polar", "requires": {"groups": ["carboxylic_acid"]}},
+        {"id": "photo_kolbe_oxidised", "name": "photo kolbe oxidised", "class": "decarboxylation", "formula_delta": "-CO2+O", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "less_polar", "requires": {"groups": ["carboxylic_acid"]}},
+        {"id": "decarboxylation", "name": "decarboxylation", "class": "decarboxylation", "formula_delta": "-CO2", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "more_polar", "requires": {"all": {"O": 2}}, "fallback": true},
+        {"id": "reductive_dechlorination", "name": "reductive dechlorination", "class": "dehalogenation", "formula_delta": "-Cl+H", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "less_polar", "requires": {"any": ["Cl"]}},
+        {"id": "hydrolytic_dechlorination", "name": "hydrolytic dechlorination", "class": "dehalogenation", "formula_delta": "-Cl+OH", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"any": ["Cl"]}},
+        {"id": "reductive_debromination", "name": "reductive debromination", "class": "dehalogenation", "formula_delta": "-Br+H", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "less_polar", "requires": {"any": ["Br"]}},
+        {"id": "hydrolytic_debromination", "name": "hydrolytic debromination", "class": "dehalogenation", "formula_delta": "-Br+OH", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"any": ["Br"]}},
+        {"id": "hydrolytic_defluorination", "name": "hydrolytic defluorination", "class": "dehalogenation", "formula_delta": "-F+OH", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "more_polar", "requires": {"any": ["F"]}},
+        {"id": "reductive_deiodination", "name": "reductive deiodination", "class": "dehalogenation", "formula_delta": "-I+H", "max_steps": 2, "prediction_level": 2, "source": "lit:ARCHITETTO_TP_FOTOCATALISI 1.2", "rt_direction": "less_polar", "requires": {"any": ["I"]}},
+        {"id": "s_oxidation_sulfoxide", "name": "s oxidation sulfoxide", "class": "s_oxidation", "formula_delta": "+O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["sulfide"]}},
+        {"id": "s_oxidation_sulfone", "name": "s oxidation sulfone", "class": "s_oxidation", "formula_delta": "+O2", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["sulfide"]}},
+        {"id": "desulfonylation_so2", "name": "desulfonylation so2", "class": "desulfonylation", "formula_delta": "-SO2", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups": ["sulfonyl"]}},
+        {"id": "desulfonylation_so3", "name": "desulfonylation so3", "class": "desulfonylation", "formula_delta": "-SO3", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups": ["sulfonyl"]}},
+        {"id": "loss_of_so2", "name": "loss of so2", "class": "desulfonylation", "formula_delta": "-SO2", "max_steps": 2, "prediction_level": 3, "source": "transformation_table", "rt_direction": "free", "requires": {"all": {"S": 1, "O": 2}}, "fallback": true},
+        {"id": "n_oxidation", "name": "n oxidation", "class": "n_oxidation", "formula_delta": "+O", "max_steps": 2, "prediction_level": 4, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups_any": ["amine_tertiary", "amine_aromatic"]}},
+        {"id": "nitrosation", "name": "nitrosation", "class": "n_oxidation", "formula_delta": "+NO-H", "max_steps": 2, "prediction_level": 4, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups_any": ["amine_tertiary", "amine_aromatic"]}},
+        {"id": "denitration_h", "name": "denitration h", "class": "denitration", "formula_delta": "-NO2+H", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups": ["nitro"]}},
+        {"id": "denitration_oh", "name": "denitration oh", "class": "denitration", "formula_delta": "-NO2+OH", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "free", "requires": {"groups": ["nitro"]}},
+        {"id": "aldehyde_oxidation", "name": "aldehyde oxidation", "class": "aldehyde_oxidation", "formula_delta": "+O", "max_steps": 2, "prediction_level": 3, "source": "class:photocatalysis", "rt_direction": "more_polar", "requires": {"groups": ["aldehyde"]}}
+      ]
+    },
+    "ozone_chlorine": {
+      "name": "ozone and chlorine",
+      "frozen": true,
+      "rules": [
+      ]
+    },
+    "metabolism_I_II": {
+      "name": "phase I and II metabolism",
+      "inherits": "photocatalysis",
+      "rules": [
+        {"id": "glucuronidation", "name": "glucuronidation", "class": "conjugation", "formula_delta": "+C6H8O6", "max_steps": 2, "prediction_level": 3, "source": "class:metabolism_I_II", "rt_direction": "more_polar"},
+        {"id": "sulfation", "name": "sulfation", "class": "conjugation", "formula_delta": "+SO3", "max_steps": 2, "prediction_level": 3, "source": "class:metabolism_I_II", "rt_direction": "more_polar"},
+        {"id": "acetylation", "name": "acetylation", "class": "conjugation", "formula_delta": "+C2H2O", "max_steps": 2, "prediction_level": 3, "source": "class:metabolism_I_II", "rt_direction": "free"},
+        {"id": "glutathione_conjugation", "name": "glutathione conjugation", "class": "conjugation", "formula_delta": "+C10H15N3O6S", "max_steps": 2, "prediction_level": 3, "source": "class:metabolism_I_II", "rt_direction": "more_polar"},
+        {"id": "glycine_conjugation", "name": "glycine conjugation", "class": "conjugation", "formula_delta": "+C2H3NO", "max_steps": 2, "prediction_level": 3, "source": "class:metabolism_I_II", "rt_direction": "more_polar"}
+      ]
+    }
+  }
+}

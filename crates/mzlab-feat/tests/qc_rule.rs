@@ -81,7 +81,7 @@ fn the_rule_goes_to_json_and_back() {
     let rules = vec![Rule::QcCv(25.5, 4), Rule::MinArea(1e5)];
     let j = filters::to_json(&rules);
     assert!(
-        j.contains("\"regola\":\"qc_cv_max\",\"valore\":25.5,\"qc_min_files\":4"),
+        j.contains("\"rule\":\"qc_cv_max\",\"value\":25.5,\"qc_min_files\":4"),
         "{j}"
     );
     assert_eq!(
@@ -89,6 +89,6 @@ fn the_rule_goes_to_json_and_back() {
         rules
     );
     // the minimum is 3 when the operation does not say
-    let v = parse(br#"[{"regola":"qc_cv_max","valore":30}]"#).unwrap();
+    let v = parse(br#"[{"rule":"qc_cv_max","value":30}]"#).unwrap();
     assert_eq!(filters::from_json(&v).unwrap(), vec![Rule::QcCv(30.0, 3)]);
 }

@@ -114,7 +114,7 @@ pub fn hypo_params(get: &dyn Fn(&str) -> Option<Value>) -> HypoParams {
     }
 }
 
-/// `ipotesi/1` text of a parent under the rules (`regole_tp_2.json` bytes): what the engine could find, never a verdict.
+/// `ipotesi/1` text of a parent under the rules (`regole_tp_3.json` bytes): what the engine could find, never a verdict.
 pub fn generate_text(
     rules: &[u8],
     formula: &str,

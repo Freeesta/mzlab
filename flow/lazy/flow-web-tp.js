@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the steps of the transformation products that run in this browser. `tp.generate` calls the `hr` .wasm of the site in the page (the registry `ipotesi/1` of a parent
-// is a few milliseconds of work) with the rules of the campaign (regole_tp_2.json) and, for a SMILES, the structure the `grafo` .wasm gives: the same text as the native `flow run`. English only.
+// is a few milliseconds of work) with the rules of the campaign (regole_tp_3.json) and, for a SMILES, the structure the `grafo` .wasm gives: the same text as the native `flow run`. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -21,8 +21,8 @@
   const engine = async () => {
     if (loaded) return loaded;
     loaded = (async () => {
-      const c = await F.tpCtx("regole_tp_2.json"), man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
-      const rules = c.files["regole_tp_2.json"];
+      const c = await F.tpCtx("regole_tp_3.json"), man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
+      const rules = c.files["regole_tp_3.json"];
       if (!rules || !man.proofs) throw fail("error.featFailed");
       return { hr: await open(c.base, man.proofs), grafo: man.grafo ? await open(c.base, man.grafo) : null, rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules };
     })().catch(e => { loaded = null; throw e; });
@@ -110,7 +110,7 @@
         if (!m.table) return null;
         const pr = JSON.parse(params); m.ppm = pr.ppm ?? 10; m.minFragments = pr.min_fragments ?? 0;
         m.samples = (sref && S.samplesJson && S.samplesJson[sref]) || "";
-        const rules = G.QTOOLS.ctx.files["regole_tp_2.json"];
+        const rules = G.QTOOLS.ctx.files["regole_tp_3.json"];
         m.rules = typeof rules === "string" ? new TextEncoder().encode(rules) : rules;
       }
       return { name: inst.id + NAMES[kind], text: await c.p.tpPost(m) };

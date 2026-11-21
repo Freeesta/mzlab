@@ -22,7 +22,7 @@ use crate::flow_nature::of_files;
 use mzlab_core::step::DataType;
 use mzlab_feat::nature::{open_polarity, polarity_estimate};
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_3.json");
 
 fn param(job: &Job, name: &str) -> Option<f64> {
     job.resolved

@@ -21,16 +21,16 @@
   const html = () => `<details open><summary>Export and report</summary><p class="mut">Files of the rows kept by the filters of the step Table, with the areas normalised as chosen there.</p>
     <div class="px-bar">${BUTTONS.map(b => `<button type="button" id="px-${b[0]}" title="${esc(b[2])}">${esc(b[1])}</button>`).join("")}</div><div id="px-msg" class="mut" role="status"></div></details>`;
 
-  /** the report as a page: all the numbers are those of `report/1` */
+  /** the report as a page: all the numbers are those of `report/2` */
   function reportHtml(/** @type {any} */ r, /** @type {string[]} */ names, /** @type {{ tp?: any, provenance?: any }} */ more = {}) {
-    const row = (/** @type {any[]} */ c, /** @type {string} */ t = "td") => `<tr>${c.map(x => `<${t}${t === "th" ? ' scope="col"' : ""}>${esc(x)}</${t}>`).join("")}</tr>`, f = G.PIPEQC.fmt, q = r.qc, cl = r.celle, v = r.vista;
+    const row = (/** @type {any[]} */ c, /** @type {string} */ t = "td") => `<tr>${c.map(x => `<${t}${t === "th" ? ' scope="col"' : ""}>${esc(x)}</${t}>`).join("")}</tr>`, f = G.PIPEQC.fmt, q = r.qc, cl = r.cells, v = r.view;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Tabui report</title><style>:root{color-scheme:light;--ink:#111;--bg:#fff;--line:#767676;--c1:#0072B2;--c2:#D55E00}body{font:14px/1.45 system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:var(--ink);background:var(--bg)}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid var(--line);padding:3px 8px;text-align:left}code{word-break:break-all}caption{text-align:left;font-size:12px}figure{margin:12px 0;break-inside:avoid}figcaption{font-weight:600}</style></head><body>
 <h1>Tabui feature table</h1>${G.TPREPORT ? G.TPREPORT.provenance(r, more.provenance) : `<p>mzlab-feat ${esc(r.crate)}<br>Table SHA-256 <code>${esc(r.table_sha256)}</code><br>Samples SHA-256 <code>${esc(r.samples_sha256)}</code></p>`}
-<h2>Series</h2><p>${r.righe} rows, ${r.file} files: ${names.map(esc).join(", ")}.</p>
-<table>${row(["Detected cells", "Targeted", "Filled", "Absent"], "th")}${row([cl.rilevate, cl.mirate, cl.riempite, cl.assenti])}</table>
-<h2>View</h2>${v ? `<p>${v.conteggi.tenute} of ${v.conteggi.righe} rows kept.</p><p>Parameters: <code>${esc(JSON.stringify(v.parametri))}</code></p>` : "<p>No filter or normalisation: the whole table, areas as measured.</p>"}
-<h2>Quality control</h2><table>${row(["File", "Detected", "Targeted", "Filled", "Absent", "Total area"], "th")}${q.file.map((/** @type {any} */ x) => row([x.file, x.rilevati, x.mirati, x.riempiti, x.assenti, f(x.area_totale)])).join("")}</table>
-${q.gruppi.length ? `<table>${row(["Type", "Group", "Time (min)", "Files", "Rows", "Median CV"], "th")}${q.gruppi.map((/** @type {any} */ g) => row([g.tipo, g.gruppo, f(g.tempo_min), g.file, g.righe, f(g.cv_mediano)])).join("")}</table>` : "<p>No condition has two or more replicates.</p>"}
+<h2>Series</h2><p>${r.rows} rows, ${r.file} files: ${names.map(esc).join(", ")}.</p>
+<table>${row(["Detected cells", "Targeted", "Filled", "Absent"], "th")}${row([cl.detected, cl.targeted, cl.filled, cl.absent])}</table>
+<h2>View</h2>${v ? `<p>${v.counts.kept} of ${v.counts.rows} rows kept.</p><p>Parameters: <code>${esc(JSON.stringify(v.params))}</code></p>` : "<p>No filter or normalisation: the whole table, areas as measured.</p>"}
+<h2>Quality control</h2><table>${row(["File", "Detected", "Targeted", "Filled", "Absent", "Total area"], "th")}${q.file.map((/** @type {any} */ x) => row([x.file, x.detected, x.targeted, x.filled, x.absent, f(x.total_area)])).join("")}</table>
+${q.groups.length ? `<table>${row(["Type", "Group", "Time (min)", "Files", "Rows", "Median CV"], "th")}${q.groups.map((/** @type {any} */ g) => row([g.kind, g.group, f(g.time_min), g.file, g.rows, f(g.median_cv)])).join("")}</table>` : "<p>No condition has two or more replicates.</p>"}
 <p>Stability of the internal standard (CV of its area): ${q.standard_cv == null ? "no standard chosen" : f(q.standard_cv)}.</p>
 ${G.TPREPORT ? G.TPREPORT.section(more.tp) : ""}</body></html>`;
   }

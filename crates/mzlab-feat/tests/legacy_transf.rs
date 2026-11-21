@@ -1,5 +1,5 @@
 //! The list of transformations of mzFinder in Rust (`legacy::transf`) against the frozen answers of the former Python engine:
-//! the rows, the rules that the list adds to `TP_Mine/data/regole_tp_2.json`, the `lit:` references and the error texts.
+//! the rows, the rules that the list adds to `TP_Mine/data/regole_tp_3.json`, the `lit:` references and the error texts.
 
 use mzlab_feat::hypo::Rules;
 use mzlab_feat::legacy::transf;
@@ -24,7 +24,7 @@ fn transformations_match_python() {
         &std::fs::read(root.join("tests/golden/finder_transf.json")).unwrap(),
     )
     .unwrap();
-    let base = std::fs::read(root.join("TP_Mine/data/regole_tp_2.json")).unwrap();
+    let base = std::fs::read(root.join("TP_Mine/data/regole_tp_3.json")).unwrap();
     let base_rules = Rules::parse(&base).unwrap().rules;
     let n_base = base_rules.len();
     for case in golden["cases"].as_array().unwrap() {
@@ -99,4 +99,13 @@ fn describe_rows_for_the_table() {
     assert!(rows[2]["error"].is_string());
     assert_eq!(rows[3]["class"], "halogen");
     assert_eq!(rows[3]["lit"], true);
+}
+
+#[test]
+fn an_old_base_rules_file_is_refused_with_the_rules_version_key() {
+    let old = br#"{"format":"regole_tp","version":2,"default_profile":"x","profiles":{}}"#;
+    assert_eq!(
+        transf::merge(old, "").unwrap_err(),
+        "error.hypo.rulesVersion"
+    );
 }

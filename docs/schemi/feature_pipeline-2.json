@@ -1,7 +1,7 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "feature_pipeline/1",
- "title": "feature_pipeline/1: the operation of the pipeline of mzFinder in an mzflow/1 file",
+ "$id": "feature_pipeline/2",
+ "title": "feature_pipeline/2: the operation of the pipeline of mzFinder in an mzflow/1 file",
  "description": "One entry of `operations` of a .mzflow (mzlab/web/workflow.js, KNOWN_OPS). It carries everything needed to re-apply the pipeline on the same files and get the same .mzfeat: the recipe with the proof of every estimated value, the version of the engine, the SHA-256 of the inputs and of the table, the rules and levels used and the register of the hypotheses. Written by TP_Mine/js/35_pipeline_recipe.js.",
  "type": "object",
  "required": [
@@ -10,14 +10,14 @@
   "schema",
   "crate_version",
   "recipe",
-  "parametri",
-  "ingressi",
+  "params",
+  "inputs",
   "table_sha256",
-  "regole",
-  "livelli",
-  "sospetti",
-  "ipotesi",
-  "giri"
+  "rules",
+  "levels",
+  "suspects",
+  "hypotheses",
+  "runs"
  ],
  "properties": {
   "op": {
@@ -28,7 +28,7 @@
    "description": "UTC timestamp of the run"
   },
   "schema": {
-   "const": "feature_pipeline/1"
+   "const": "feature_pipeline/2"
   },
   "crate_version": {
    "type": "string",
@@ -38,18 +38,18 @@
    "type": "string",
    "description": "the exact text of the recipe (JSON) given to the engine"
   },
-  "parametri": {
+  "params": {
    "type": "object",
    "description": "the recipe parsed: polarity, mode, floor (absent = estimated by the engine), min_height, min_points, ppm, rt_tol, fill"
   },
-  "prove": {
+  "proofs": {
    "type": [
     "object",
     "null"
    ],
    "description": "the proofs of the estimated values (histogram, point chosen, sigma, number of points); null when no preview was made"
   },
-  "genitore": {
+  "parent": {
    "type": [
     "object",
     "null"
@@ -70,7 +70,7 @@
       "null"
      ]
     },
-    "minuti": {
+    "minutes": {
      "type": "array",
      "items": {
       "type": [
@@ -86,16 +86,16 @@
    },
    "description": "the parent of the hypotheses (null = no proofs, only the table)"
   },
-  "ingressi": {
+  "inputs": {
    "type": "array",
    "items": {
     "type": "object",
     "required": [
-     "nome",
+     "name",
      "sha256"
     ],
     "properties": {
-     "nome": {
+     "name": {
       "type": "string"
      },
      "sha256": {
@@ -108,16 +108,16 @@
    "type": "string",
    "description": "SHA-256 of the .mzfeat of the series (with the section evid when there is a parent)"
   },
-  "regole": {
+  "rules": {
    "type": [
     "object",
     "null"
    ],
    "properties": {
-    "nome": {
-     "const": "regole_tp/1"
+    "name": {
+     "const": "regole_tp/3"
     },
-    "versione": {
+    "version": {
      "type": [
       "integer",
       "null"
@@ -128,16 +128,16 @@
     }
    }
   },
-  "livelli": {
+  "levels": {
    "type": [
     "object",
     "null"
    ],
    "properties": {
-    "nome": {
+    "name": {
      "const": "livelli/1"
     },
-    "versione": {
+    "version": {
      "type": [
       "integer",
       "null"
@@ -148,13 +148,13 @@
     }
    }
   },
-  "sospetti": {
+  "suspects": {
    "type": [
     "object",
     "null"
    ],
    "properties": {
-    "versione": {
+    "version": {
      "type": [
       "integer",
       "null"
@@ -166,16 +166,16 @@
    },
    "description": "index of the suspects; null when absent"
   },
-  "ipotesi": {
+  "hypotheses": {
    "type": "object",
    "properties": {
-    "cercate": {
+    "tried": {
      "type": "integer"
     },
-    "trovate": {
+    "found": {
      "type": "integer"
     },
-    "registro_sha256": {
+    "registry_sha256": {
      "type": [
       "string",
       "null"
@@ -184,24 +184,24 @@
    },
    "description": "register of the hypotheses (ipotesi/1): searched, found and hash of its JSON"
   },
-  "giri": {
+  "runs": {
    "const": 1,
    "description": "rounds of the pipeline (one)"
   }
  },
  "$defs": {
-  "normalizza": {
+  "normalize": {
    "type": "object",
-   "description": "parameters of the `normalizza` operation (mzlab-feat norm.rs, Method::to_json): the normalisation is a view over the table, the .mzfeat keeps the measured areas",
+   "description": "parameters of the `normalize` operation (mzlab-feat norm.rs, Method::to_json): the normalisation is a view over the table, the .mzfeat keeps the measured areas",
    "required": [
-    "metodo"
+    "method"
    ],
    "properties": {
-    "metodo": {
+    "method": {
      "enum": [
-      "nessuna",
-      "somma",
-      "mediana",
+      "none",
+      "sum",
+      "median",
       "istd"
      ]
     },
@@ -229,37 +229,37 @@
     }
    }
   },
-  "filtra": {
+  "filter": {
    "type": "array",
-   "description": "parameters of the `filtra` operation (filters.rs): an ordered list of rules; a row is rejected by the first rule it fails",
+   "description": "parameters of the `filter` operation (filters.rs): an ordered list of rules; a row is rejected by the first rule it fails",
    "items": {
     "type": "object",
     "required": [
-     "regola"
+     "rule"
     ],
     "properties": {
-     "regola": {
+     "rule": {
       "enum": [
-       "min_rilevati",
+       "min_detected",
        "min_area",
-       "min_altezza",
-       "bianco",
+       "min_height",
+       "blank",
        "mz",
        "rt",
        "ms2",
        "qc_cv_max"
       ]
      },
-     "valore": {
+     "value": {
       "type": "number"
      },
      "qc_min_files": {
       "type": "integer"
      },
-     "da": {
+     "from": {
       "type": "number"
      },
-     "a": {
+     "to": {
       "type": "number"
      }
     }

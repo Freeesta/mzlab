@@ -1,5 +1,5 @@
 //! The native executor of `table.filter@2`: the view (`view_json_origin`, the one the page asks of the table `.wasm`) of a `.mzfeat` under the rules the
-//! parameters of the step spell, in the language of the engine (`filtra`/`normalizza`). The roles come from the samples file, a `samples/1` document.
+//! parameters of the step spell, in the language of the engine (`filter`/`normalize`). The roles come from the samples file, a `samples/1` document.
 
 use crate::flow::{read_one, write_made, FileRunner};
 use mzlab_core::error::Result;

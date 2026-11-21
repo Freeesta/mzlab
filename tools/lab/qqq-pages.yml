@@ -45,7 +45,7 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      # the identity of the build for option_env! (prov/1, run-report/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      # the identity of the build for option_env! (prov/1, run-report/2): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
       - name: Build identity of the WASM modules
         run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
@@ -121,7 +121,7 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      # the identity of the build for option_env! (prov/1, run-report/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      # the identity of the build for option_env! (prov/1, run-report/2): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
       - name: Build identity of the WASM modules
         run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
@@ -188,7 +188,7 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      # the identity of the build for option_env! (prov/1, run-report/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      # the identity of the build for option_env! (prov/1, run-report/2): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
       - name: Build identity of the WASM modules
         run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build

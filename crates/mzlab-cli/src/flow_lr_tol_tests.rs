@@ -118,9 +118,9 @@ fn a_unit_axis_table_filters_duplicates_in_da_and_refuses_ppm() {
         Ok(std::fs::read_to_string(d.join("work/f.json")).unwrap())
     };
     let kept = run(r#"{"dup_da":0.3}"#).unwrap();
-    assert!(kept.contains("\"tenute\":2"), "{kept}");
+    assert!(kept.contains("\"kept\":2"), "{kept}");
     let none = run(r#"{"dup_da":0.1}"#).unwrap();
-    assert!(none.contains("\"tenute\":3"), "{none}");
+    assert!(none.contains("\"kept\":3"), "{none}");
     let e = run(r#"{"dup_ppm":10}"#).unwrap_err();
     assert!(
         e.contains("err.flow.param.axis") && e.contains("dup_ppm"),

@@ -1,4 +1,4 @@
-"""Contract of the Feature table of mzFinder with the table engine: every key of the JSON of `qc/1`, of the view and of the rows of the sheet that TP_Mine/js/36_feature_qc.js and
+"""Contract of the Feature table of mzFinder with the table engine: every key of the JSON of `qc/2`, of the view and of the rows of the sheet that TP_Mine/js/36_feature_qc.js and
 37_feature_table.js and 38_feature_export.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `table`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
 page shows cannot come from anywhere but the engine. Skipped without cargo, wasm-bindgen or node (the series is the one of test_feat_table_wasm.py)."""
 import json
@@ -29,16 +29,16 @@ def outs(built, tmp_path_factory):
 def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
     c = contract()
     qc, view, rows = outs["qc.json"], outs["view.json"], outs["features.rows.json"]
-    assert qc["schema"] == "qc/1"
+    assert qc["schema"] == "qc/2"
     assert set(c["qc"]) <= set(qc) and qc["file"] and set(c["qcFile"]) <= set(qc["file"][0])
-    assert set(c["blank"]) <= set(qc["bianchi"]) and all(set(c["rejected"]) <= set(x) for x in qc["scartate"]) and qc["scartate"] and (qc["m1_su_m"] is None or set(c["m1"]) <= set(qc["m1_su_m"]))
-    assert qc["gruppi"] == [] or set(c["qcGroup"]) <= set(qc["gruppi"][0])
-    assert set(c["view"]) <= set(view) and set(c["counts"]) <= set(view["conteggi"])
+    assert set(c["blank"]) <= set(qc["blanks"]) and all(set(c["rejected"]) <= set(x) for x in qc["discarded"]) and qc["discarded"] and (qc["m1_over_m"] is None or set(c["m1"]) <= set(qc["m1_over_m"]))
+    assert qc["groups"] == [] or set(c["qcGroup"]) <= set(qc["groups"][0])
+    assert set(c["view"]) <= set(view) and set(c["counts"]) <= set(view["counts"])
     assert set(c["rows"]) <= set(rows) and set(c["sheet"]) <= set(rows["hojas"][0])
     pl = outs["plausible.json"]
     assert pl["schema"] == "plausible/1" and set(c["plausible"]) <= set(pl) and all(set(c["plausibleCheck"]) <= set(x) for x in pl["checks"])
     rep = outs["report.json"]
-    assert rep["schema"] == "report/1" and set(c["report"]) <= set(rep) and set(c["cells"]) <= set(rep["celle"]) and set(c["reportView"]) <= set(rep["vista"] or {"parametri": 0, "conteggi": 0})
+    assert rep["schema"] == "report/2" and set(c["report"]) <= set(rep) and set(c["cells"]) <= set(rep["cells"]) and set(c["reportView"]) <= set(rep["view"] or {"params": 0, "counts": 0})
     # the grid reads the sheet by position: six columns, then area and state of each file
     n = len(qc["file"])
     assert all(len(r) == 6 + 2 * n for r in rows["hojas"][0]["filas"])
@@ -64,5 +64,5 @@ def test_the_page_names_no_key_the_contract_does_not_list():
 
 
 def test_the_spec_of_the_page_is_read_by_the_engine(outs):
-    assert SPEC["normalizza"]["metodo"] in ("somma", "mediana", "nessuna")
-    assert outs["view.json"]["conteggi"]["tenute"] == len(outs["view.json"]["righe"])
+    assert SPEC["normalize"]["method"] in ("sum", "median", "none")
+    assert outs["view.json"]["counts"]["kept"] == len(outs["view.json"]["rows"])

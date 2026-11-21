@@ -36,11 +36,11 @@ def test_no_italian_in_tabui_strings():
 
 
 def test_rule_profiles_in_english():
-    prof = json.loads((TP / "data" / "regole_tp_2.json").read_text(encoding="utf-8"))
+    prof = json.loads((TP / "data" / "regole_tp_3.json").read_text(encoding="utf-8"))
     def names(o):
         if isinstance(o, dict):
             for k, v in o.items():
-                if k == "nome" and isinstance(v, str):
+                if k == "name" and isinstance(v, str):
                     yield v
                 else:
                     yield from names(v)

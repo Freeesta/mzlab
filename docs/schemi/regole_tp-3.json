@@ -1,0 +1,53 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "regole_tp/3",
+ "title": "regole_tp/3: the rules of transformation of a parent, in profiles",
+ "description": "File TP_Mine/data/regole_tp_3.json, read by crates/mzlab-feat/src/hypo/rules.rs. A rule is a signed change of formula with the class of its mechanism, the retention-time direction expected in reversed phase, the level of the prediction (2 literature, 3 class, 4 generic) and preconditions on the elements and on the functional groups of the parent. The functional groups come from the SMILES of the parent (crates/mzlab-feat/src/chem/graph.rs, names in docs/agenti/mzfeat-tp.md): a rule with groups is used only when the structure is known; a rule with `fallback` only when it is not. Older versions (`regole_tp/1`, `/2`: Italian keys) are refused with `error.hypo.rulesVersion`, never converted; the registry of the hypotheses (`ipotesi/1`, field `rules_version`) says which version made it.",
+ "type": "object",
+ "required": ["format", "version", "default_profile", "profiles"],
+ "properties": {
+  "format": {"const": "regole_tp"},
+  "version": {"const": 3},
+  "default_profile": {"type": "string", "description": "name of the profile used when none is asked for"},
+  "profiles": {
+   "type": "object",
+   "description": "profiles by name: `photocatalysis` (TiO2/UV), `ozone_chlorine` (frozen until there are data), `metabolism_I_II`",
+   "additionalProperties": {
+    "type": "object",
+    "required": ["rules"],
+    "properties": {
+     "name": {"type": "string"},
+     "frozen": {"type": "boolean", "description": "true: the profile has no rules yet and asking for it is an error (error.hypo.profileFrozen)"},
+     "inherits": {"type": "string", "description": "name of a profile whose rules come first (one level)"},
+     "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}}
+    }
+   }
+  }
+ },
+ "$defs": {
+  "rule": {
+   "type": "object",
+   "required": ["id", "formula_delta", "max_steps", "prediction_level", "source", "rt_direction"],
+   "properties": {
+    "id": {"type": "string", "description": "label of the rule in the hypotheses; ids of a profile are distinct. On the same change of formula the first rule of the file gives the label and the level"},
+    "name": {"type": "string"},
+    "class": {"type": "string", "description": "mechanistic class; the id when absent"},
+    "formula_delta": {"type": "string", "description": "'+O', '-H2+O', '-Cl+OH', '-NO2+H'"},
+    "max_steps": {"type": "integer", "minimum": 1, "description": "times the rule may repeat in one path"},
+    "prediction_level": {"enum": [2, 3, 4]},
+    "source": {"type": "string", "description": "'transformation_table', 'lit:...' or 'class:...'"},
+    "rt_direction": {"enum": ["more_polar", "less_polar", "free"]},
+    "fallback": {"type": "boolean", "description": "used only when the structure of the parent is not known"},
+    "requires": {
+     "type": "object",
+     "properties": {
+      "all": {"type": "object", "additionalProperties": {"type": "integer"}, "description": "elements the parent must have, with the least count"},
+      "any": {"type": "array", "items": {"type": "string"}, "description": "at least one of these elements"},
+      "groups": {"type": "array", "items": {"type": "string"}, "description": "all these functional groups"},
+      "groups_any": {"type": "array", "items": {"type": "string"}, "description": "at least one of these functional groups"}
+     }
+    }
+   }
+  }
+ }
+}

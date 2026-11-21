@@ -30,7 +30,7 @@ MSP = "\n".join([rec("Match", PREC, PEAKS), rec("Partial", PREC, PEAKS[:4]), rec
 STUB = """() => {
   const ms2 = { mz: %s, y: %s };
   const session = {
-    view: async () => ({ conteggi: { tenute: 1, righe: 1 } }), qc: async () => ({ scartate: [] }),
+    view: async () => ({ counts: { kept: 1, rows: 1 } }), qc: async () => ({ discarded: [] }),
     rows: async () => [["id"], [1, %s, 5.0, 4.9, 5.1, 1, 1000, "DETECTED"]],
     row: async () => ({ rt: 5.0, rt_lo: 4.9, rt_hi: 5.1, cells: [{ type: "sample", state: "detected", area: 1000, time: 0, apex_rt: 5.0 }], quality: null, ms2: { file: "a" } }),
     traces: async () => ({ xic: [{ file: "a", rt: [4.8, 5, 5.2], y: [10, 1000, 10] }], ms1: { mz: [%s], y: [1000] }, ms2 }),

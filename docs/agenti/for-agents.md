@@ -13,7 +13,7 @@ For an agent running on the user's computer (Claude Code, Claude Cowork or other
 3. **Check without writing**: `mzlab-cli flow check PLAN.json [--set ...] --json` checks the plan without the inputs (`flowcheck/1`, code 3 with the problems); `mzlab-cli flow run PLAN.json --in FOLDER --dry-run` checks plan, `--set` and inputs and prints the inputs found and the instances in order with the canonical parameters; code 3 = invalid plan (one `instance.port:key` line per problem on stderr), 4 = missing input; with `--json` on stdout `flowdry/1`.
 4. **Run**: `mzlab-cli flow run PLAN.json --in FOLDER --out RUN [--set INSTANCE.NAME=VALUE ...] [--workers N]`; progress on stderr, one line per job (`--progress jsonl`: one JSON line per job).
 5. **Outcome**: with `--json` on stdout `flowrun/1` (status, times and SHA-256 of the files of each instance) or `error/1` (`error_key`, `params`, `hint`); exit code 0 all done, 1 some instance in error (the other outputs are written), 2 wrong usage, 3 invalid plan, 4 missing input or different SHA-256.
-6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/1`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/1`.
+6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/2`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/2`.
 7. **Fix**: rerun in the same `RUN` with other `--set`: the cache redoes only the steps that change (`cached` in `prov/1`); `--fresh` redoes everything.
 
 ## Five chains (tested)
@@ -51,7 +51,7 @@ for mz in 364.4 194.2 152.2; do
   mzlab-cli peak auto-lr xic_$mz.csv > peaks_$mz.json                                              # {"params","peaks":[rt, area, ...]}
 done
 ```
-At unit resolution give the window in Da (`--da 0.3`), in ppm for high resolution. There is no Flow step that extracts XICs yet, so a plan cannot do it: the plan examples above start from the index. After a plan run, `mzlab-cli flow report RUN` writes the `run-report/1` of the run.
+At unit resolution give the window in Da (`--da 0.3`), in ppm for high resolution. There is no Flow step that extracts XICs yet, so a plan cannot do it: the plan examples above start from the index. After a plan run, `mzlab-cli flow report RUN` writes the `run-report/2` of the run.
 
 ## Rules for the agent
 - The CLI uses no network and reads and writes only in `--in` and `--out`; do not delete user files: the run folder is the only place to write.

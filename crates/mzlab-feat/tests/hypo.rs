@@ -1,4 +1,4 @@
-//! Hypotheses of the targeted pass: with the rules file `TP_Mine/data/regole_tp_2.json` the hypotheses of the rules have the masses of the frozen
+//! Hypotheses of the targeted pass: with the rules file `TP_Mine/data/regole_tp_3.json` the hypotheses of the rules have the masses of the frozen
 //! answers of the former Python list (golden file `ipotesi_regole.json`), the order and the ids are stable (same SHA-256 twice), and the other
 //! sources work.
 
@@ -15,7 +15,7 @@ fn root() -> PathBuf {
 }
 
 fn rules() -> Rules {
-    Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()).unwrap()
+    Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_3.json")).unwrap()).unwrap()
 }
 
 fn none<'a>() -> Inputs<'a> {
@@ -101,18 +101,20 @@ fn two_runs_give_the_same_registry() {
 
 #[test]
 fn unknown_version_and_format_are_refused() {
-    let e = Rules::parse(br#"{"format":"regole_tp","version":3,"regole":[]}"#)
-        .err()
-        .unwrap();
-    assert_eq!(e.key, "error.hypo.rulesVersion");
+    // an old file (`/1`, `/2`) or a newer one is refused, never converted; the error names the version found and the one read
+    for v in [1, 2, 4] {
+        let doc = format!(r#"{{"format":"regole_tp","version":{v},"profiles":{{}}}}"#);
+        let e = Rules::parse(doc.as_bytes()).err().unwrap();
+        assert_eq!(e.key, "error.hypo.rulesVersion");
+    }
     assert_eq!(
-        Rules::parse(br#"{"format":"altro","version":1}"#)
+        Rules::parse(br#"{"format":"other","version":3}"#)
             .err()
             .unwrap()
             .key,
         "error.hypo.rulesFormat"
     );
-    let bad = br#"{"format":"regole_tp","version":1,"regole":[{"id":"x","delta_formula":"+Qq","passi_max":1,"livello_previsione":4,"fonte":"transformation_table","direzione_rt":"libera"}]}"#;
+    let bad = br#"{"format":"regole_tp","version":3,"default_profile":"p","profiles":{"p":{"rules":[{"id":"x","formula_delta":"+Qq","max_steps":1,"prediction_level":4,"source":"transformation_table","rt_direction":"free"}]}}}"#;
     assert_eq!(Rules::parse(bad).err().unwrap().key, "error.hypo.rule");
 }
 

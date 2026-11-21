@@ -28,7 +28,7 @@
   CALCQUI.follow(filesMode, () => { const n = files().some((/** @type {any} */ f) => f.polarity === "negative"), p = files().some((/** @type {any} */ f) => f.polarity === "positive"); return n && p ? 0 : n ? -1 : 1; });
   CALCQUI.load();
 
-  /** @param {boolean} lists only a typed m/z looks in the lists (CALCQUI.liste): the empty panel at boot must not fetch the 700 KB contaminant lists */
+  /** @param {boolean} lists only a typed m/z looks in the lists (CALCQUI.lists): the empty panel at boot must not fetch the 700 KB contaminant lists */
   async function deps(lists) {
     const L = lists && window.LISTE;
     if (L) await LISTE.ready();                                                               // each numeric render asks again: a failed read is retried (liste.js)
@@ -46,7 +46,7 @@
     const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = { ...CALCQUI.arg(t.text, t.ans), catalogue: !!v.cfg.catalogue };
     if (v.cfg.idp === "calc" && docked()) {                                                   // docked in the Adducts & losses page: the lists under it answer; only the line on how a formula was read stays
       v.cfg.out.innerHTML = "";
-      if (a.kind === "formula" && v.cfg.after) { const gs = await CALCQUI.gruppi(a, o, await deps(false)); if (my === v.seq) v.cfg.after(a, gs); }
+      if (a.kind === "formula" && v.cfg.after) { const gs = await CALCQUI.groups(a, o, await deps(false)); if (my === v.seq) v.cfg.after(a, gs); }
       return;
     }
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
@@ -56,12 +56,12 @@
       return;
     }
     const dp = await deps(a.kind === "num");
-    let gs = await CALCQUI.gruppi(a, o, dp);
+    let gs = await CALCQUI.groups(a, o, dp);
     if (my !== v.seq) return;
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
     if (v.cfg.pick) gs = v.cfg.pick(gs);
-    if (v.cfg.combos) gs = gs.filter(g => g.id === "perdite").map(g => { const items = g.items.filter((/** @type {Bag} */ x) => x.kind !== "single"); return { ...g, items, n: items.length }; }).filter(g => g.n > 0);
-    const ad = gs.find(g => g.id === "addotti");
+    if (v.cfg.combos) gs = gs.filter(g => g.id === "losses").map(g => { const items = g.items.filter((/** @type {Bag} */ x) => x.kind !== "single"); return { ...g, items, n: items.length }; }).filter(g => g.n > 0);
+    const ad = gs.find(g => g.id === "adducts");
     v.tab = ad ? ad.tab : null; v.formula = ad && /** @type {Bag} */ (ad).formula ? ad.tab.formula || "" : "";
     v.diffs = v.open.has("diff");
     v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula", flat: !!v.cfg.flat });
@@ -171,7 +171,7 @@
     arg: () => ({ text: /** @type {HTMLInputElement} */ (Q1("#calcin")).value, ans: CALC.ans }),
     after: (a, gs) => {
       if (a.kind !== "formula") return;
-      const ad = gs.find(g => g.id === "addotti"), f = ad && ad.tab.formula, sum = Q1("#calcsum");
+      const ad = gs.find(g => g.id === "adducts"), f = ad && ad.tab.formula, sum = Q1("#calcsum");
       if (sum) sum.innerHTML = f && a.text.replace(/\s+/g, "") !== f ? I18N.t("calc.interpreted", { formula: fmtFormula(f) }) : "";
     },
   });

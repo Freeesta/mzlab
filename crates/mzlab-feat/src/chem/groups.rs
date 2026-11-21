@@ -1,11 +1,11 @@
-//! Functional groups of a structure: the preconditions of `regole_tp/2`. Names are in `docs/agenti/mzfeat-tp.md`.
+//! Functional groups of a structure: the preconditions of `regole_tp/3`. Names are in `docs/agenti/mzfeat-tp.md`.
 
 use std::collections::BTreeSet;
 
 use super::graph::Mol;
 
 impl Mol {
-    /// Names of the functional groups present, sorted. They are the keys of the `gruppi` preconditions of `regole_tp/2`.
+    /// Names of the functional groups present, sorted. They are the keys of the `gruppi` preconditions of `regole_tp/3`.
     pub fn groups(&self) -> Vec<&'static str> {
         let mut g: BTreeSet<&'static str> = BTreeSet::new();
         for i in 0..self.atoms.len() {

@@ -91,16 +91,16 @@ fn spec(rules: &str, method: &str, labels: &Labels) -> String {
     let l = if labels.is_empty() {
         String::new()
     } else {
-        format!(",\"etichette\":{}", labels.to_json())
+        format!(",\"labels\":{}", labels.to_json())
     };
-    format!("{{\"normalizza\":{method},\"filtra\":[{rules}]{l}}}")
+    format!("{{\"normalize\":{method},\"filter\":[{rules}]{l}}}")
 }
 
-const NONE: &str = r#"{"metodo":"nessuna"}"#;
-const ISTD: &str = r#"{"metodo":"istd","istd":{"id":4}}"#;
+const NONE: &str = r#"{"method":"none"}"#;
+const ISTD: &str = r#"{"method":"istd","istd":{"id":4}}"#;
 
 fn blank(extra: &str) -> String {
-    format!(r#"{{"regola":"bianco","valore":3,"statistica":"media"{extra}}}"#)
+    format!(r#"{{"rule":"blank","value":3,"statistic":"mean"{extra}}}"#)
 }
 
 #[test]
@@ -111,11 +111,7 @@ fn a_blank_of_batch_2_only_removes_the_row_for_batch_2_with_batch_matching() {
         all.contains(&CONTAM),
         "all blanks dilute the contaminant: {all:?}"
     );
-    let matched = kept(&spec(
-        &blank(r#","abbinamento":"lotto""#),
-        NONE,
-        &labels(true),
-    ));
+    let matched = kept(&spec(&blank(r#","matching":"batch""#), NONE, &labels(true)));
     assert!(
         !matched.contains(&CONTAM),
         "matched blanks remove it: {matched:?}"
@@ -130,13 +126,13 @@ fn a_sample_with_no_blank_of_its_batch_falls_back_to_all_blanks_and_says_so() {
     l.batch[7] = "B3".into();
     l.batch[8] = "B3".into();
     l.batch[9] = "B3".into();
-    let s = spec(&blank(r#","abbinamento":"lotto""#), NONE, &l);
+    let s = spec(&blank(r#","matching":"batch""#), NONE, &l);
     let v = view::from_spec(&table(), &samples(), s.as_bytes()).unwrap();
     let f = v.fallback.clone().unwrap();
     assert_eq!(f.iter().filter(|&&x| x).count(), 3, "{f:?}");
     assert!(f[7] && f[8] && f[9] && !f[4]);
     assert!(v.rows.contains(&CONTAM), "all blanks again");
-    assert!(v.counts_json().contains("\"bianco_ripiego\":[false"));
+    assert!(v.counts_json().contains("\"blank_fallback\":[false"));
     // without a matching rule nothing is recorded
     let plain = view::from_spec(
         &table(),
@@ -153,11 +149,11 @@ fn matching_by_matrix_reads_the_matrix_labels() {
         matrix: labels(true).batch,
         ..Labels::default()
     };
-    let got = kept(&spec(&blank(r#","abbinamento":"matrice""#), NONE, &l));
+    let got = kept(&spec(&blank(r#","matching":"matrix""#), NONE, &l));
     assert!(!got.contains(&CONTAM));
     // a rule that matches batches with no batch label compares with all blanks
     let none = kept(&spec(
-        &blank(r#","abbinamento":"lotto""#),
+        &blank(r#","matching":"batch""#),
         NONE,
         &Labels::default(),
     ));
@@ -166,7 +162,7 @@ fn matching_by_matrix_reads_the_matrix_labels() {
 
 #[test]
 fn a_replicate_fraction_keeps_two_of_three_in_one_group_and_drops_one_of_three_everywhere() {
-    let rule = r#"{"regola":"repliche_min","valore":0.67}"#;
+    let rule = r#"{"rule":"min_replicates","value":0.67}"#;
     let got = kept(&spec(rule, NONE, &Labels::default()));
     assert!(
         got.contains(&TWO),
@@ -200,7 +196,7 @@ fn a_replicate_fraction_keeps_two_of_three_in_one_group_and_drops_one_of_three_e
         &table(),
         &samples(),
         spec(
-            r#"{"regola":"repliche_min","valore":1.5}"#,
+            r#"{"rule":"min_replicates","value":1.5}"#,
             NONE,
             &Labels::default()
         )
@@ -228,34 +224,34 @@ fn normalising_by_the_standard_gives_the_factors_of_norm() {
 #[test]
 fn the_standard_row_can_skip_the_blank_rule() {
     // the standard is in the blanks at 1e6: the blank rule (3 x the largest blank) drops it unless it is kept
-    let max = r#","statistica":"massimo""#;
+    let max = r#","statistic":"max""#;
     let drop = |extra: &str| {
         kept(&spec(
-            &format!(r#"{{"regola":"bianco","valore":3{max}{extra}}}"#),
+            &format!(r#"{{"rule":"blank","value":3{max}{extra}}}"#),
             ISTD,
             &Labels::default(),
         ))
     };
     assert!(!drop("").contains(&STD));
-    assert!(drop(r#","istd_esente":true"#).contains(&STD));
+    assert!(drop(r#","istd_exempt":true"#).contains(&STD));
     // there must be a standard to keep
-    let s = spec(&blank(r#","istd_esente":true"#), NONE, &Labels::default());
+    let s = spec(&blank(r#","istd_exempt":true"#), NONE, &Labels::default());
     assert!(view::from_spec(&table(), &samples(), s.as_bytes()).is_err());
 }
 
 #[test]
 fn the_defaults_write_the_old_json_and_the_new_rules_round_trip() {
-    let plain = r#"{"normalizza":{"metodo":"nessuna"},"filtra":[{"regola":"bianco","valore":3,"grandezza":"area","statistica":"massimo","ambito":"max","sottrai":false}]}"#;
-    let s = r#"[{"regola":"bianco","valore":3,"statistica":"massimo"}]"#;
+    let plain = r#"{"normalize":{"method":"none"},"filter":[{"rule":"blank","value":3,"quantity":"area","statistic":"max","scope":"max","subtract":false}]}"#;
+    let s = r#"[{"rule":"blank","value":3,"statistic":"max"}]"#;
     let v = view::from_spec(
         &table(),
         &samples(),
-        format!("{{\"filtra\":{s}}}").as_bytes(),
+        format!("{{\"filter\":{s}}}").as_bytes(),
     )
     .unwrap();
     assert_eq!(v.spec_json(), plain);
     let full = spec(
-        &blank(r#","abbinamento":"matrice","istd_esente":true"#),
+        &blank(r#","matching":"matrix","istd_exempt":true"#),
         ISTD,
         &labels(true),
     );

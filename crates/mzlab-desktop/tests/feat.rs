@@ -161,7 +161,7 @@ fn hypotheses_and_proofs(
     parent_json: &str,
 ) -> (Vec<u8>, String) {
     let rec = run::recipe_from_json("").unwrap();
-    let rules = std::fs::read_to_string(e.root.join("TP_Mine/data/regole_tp_2.json")).unwrap();
+    let rules = std::fs::read_to_string(e.root.join("TP_Mine/data/regole_tp_3.json")).unwrap();
     let hy = e.json(
         "feat/hypotheses",
         json!({"names": NAMES, "rules": rules, "structure": "", "parent": PARENT, "recipe": ""}),
@@ -221,7 +221,7 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
         Ok::<_, String>(open(&e.paths[k]))
     })
     .unwrap();
-    let rules = std::fs::read(e.root.join("TP_Mine/data/regole_tp_2.json")).unwrap();
+    let rules = std::fs::read(e.root.join("TP_Mine/data/regole_tp_3.json")).unwrap();
     let net = mzlab_feat::hypo::Rules::parse(&rules)
         .map_or("null".into(), |r| legacy::network::mass_network(&d, &r));
     assert_eq!(summary, legacy::out::summary_with(&d, "{}", "{}", &net));
@@ -261,7 +261,7 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
             "feat/table",
             json!({"kind": "view", "samples": samples, "spec": ""})
         )
-        .contains("\"righe\""));
+        .contains("\"rows\""));
     let tp = e.r(
         "feat/table",
         json!({"kind": "tp_table", "samples": samples, "spec": "[0]"}),
