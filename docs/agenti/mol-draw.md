@@ -34,7 +34,7 @@ Scene: `{schema, spec_kind, title, atoms:[{i,el,chg,iso,h,x_a,y_a}], bonds:[{a,b
 | 5 | not in the db (`err.mol.draw.not_found` with the nearest names in the hint, or `err.mol.draw.not_found_bare` when none is near) |
 | 6 | unwritable `--out` |
 
-Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|binary|smiles|molfile|needDb|inchi|db|not_found|not_found_bare|tooBig|element|edit|editJson` (limit 2000 atoms), texts in `lang/en/errori-a-m.js`.
+Under `--json` a failure is one `error/1`. Error keys: `err.mol.draw.request|set|binary|smiles|molfile|needDb|inchi|db|not_found|not_found_bare|tooBig|element|edit|editJson` (limit 2000 atoms), texts in `lang/en/errors-a-m.js`.
 
 ## KET and CDXML (`chem/draw_file.rs`)
 Open formats written by our own code from their public documentation (the KET JSON schema, the CDX SDK object pages; field mapping as in the public mzDraw writers); not tested against ChemDraw or Ketcher, and nothing claims their fidelity. One molecule holds every atom and bond (a salt is one KET molecule or one CDXML fragment), `written_bonds()` gives the wedges (narrow end first), the title is one plain text label under the structure.

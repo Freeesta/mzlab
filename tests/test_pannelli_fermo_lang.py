@@ -6,7 +6,7 @@ WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 
 
 def _catalog(lang):
-    return (WEB / "lang" / lang / "altre-lv-predef.js").read_text(encoding="utf-8")
+    return (WEB / "lang" / lang / "more-lv-defaults.js").read_text(encoding="utf-8")
 
 
 def test_label_is_keyed_not_hardcoded():

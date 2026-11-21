@@ -199,7 +199,7 @@ try:
             assert V0[0] in body, ("the page of the cached build got a file of the new one", body)
             note = pc.locator("#sw-nuova[role=status]")
             note.wait_for(state="visible", timeout=150000)
-            # the text comes from the catalogue loaded at start-up (lang/<L>/altre-press-xic.js), not from the key
+            # the text comes from the catalogue loaded at start-up (lang/<L>/more-press-xic.js), not from the key
             assert note.locator("span").inner_text().strip() == "New version ready", note.inner_text()
             assert note.get_by_role("button").inner_text().strip() == "Reload", note.inner_text()
             assert verc() == V0[0], "no reload by itself"
