@@ -310,7 +310,7 @@ fn parent_offset(feats: &[&FileFeatures], parent: &str, polarity: i8, rt: Option
         .unwrap_or(0.0)
 }
 
-/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_2.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
+/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_3.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
 /// the parameters of the targeted pass.
 fn hypotheses_setup(
     rules: &[u8],

@@ -1,5 +1,5 @@
 // A JS caller that passes fewer sizes than files must get {"error_key":"error.badIndex"}, not a trap (the module is built with panic = "abort").
-// usage: node feat_wasm_sizes_node.js <pkg dir> <regole_tp_2.json> <file.mzidx>... ; prints one line per check, "ok <name>" or "FAIL <name>: <why>".
+// usage: node feat_wasm_sizes_node.js <pkg dir> <regole_tp_3.json> <file.mzidx>... ; prints one line per check, "ok <name>" or "FAIL <name>: <why>".
 const fs = require("fs");
 const path = require("path");
 const [pkg, rules, ...files] = process.argv.slice(2);

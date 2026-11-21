@@ -52,7 +52,7 @@
   }
   /** the parent of the proofs (null without the formula or the rules) */
   async function parentOf(files) {
-    const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp_2.json"];
+    const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp_3.json"];
     if (!st.gated || !f || !rules) return null;
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
@@ -142,7 +142,7 @@
   // ------------------------------------------------------------ recipe: the record goes to the log of operations (.mzflow), «Re-apply» runs the last one again
   const levelsText = async () => { const s = document.querySelector('script[src*="livelli-1.js"]'); try { return s ? await (await fetch(s.src)).text() : null; } catch (_) { return null; } };
   async function recordRun(recipe, parent, op) {
-    const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp_2.json"] || null, levels: await levelsText(),
+    const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp_3.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minutes: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.table_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
     if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("samples", /** @type {any} */ (window).PIPEREC.samplesOp(await st.R.canonical(st.call, st.cs))); }
@@ -152,8 +152,8 @@
   function armAgain() { const b = st.box && st.box.querySelector("#pipe-again"); if (b) b.disabled = !!st.busy || !lastOp(); }
   function again() {
     const op = lastOp(); if (!op) return;
-    st.ctx.apply(op.parametri);
-    const g = op.genitore; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : ""; $("#pipe-psmi").value = g && g.smiles ? g.smiles : "";
+    st.ctx.apply(op.params);
+    const g = op.parent; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : ""; $("#pipe-psmi").value = g && g.smiles ? g.smiles : "";
     if (g && st.cs) edit(() => g.minutes.forEach((m, i) => { if (m != null && st.cs[i]) { st.R.setRole(st.cs, i, m === 0 ? "t0" : "sample"); st.R.setTime(st.cs, i, m, "min"); } })); run(op);
   }
 
@@ -182,10 +182,10 @@
   }
   /** what the report says of the run: the recipe (profile and SHA-256), the rules and the inputs of the table */
   async function provenance() {
-    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp_2.json"];
+    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp_3.json"];
     let rec = {}; try { rec = JSON.parse(text); } catch (_) { /* a recipe that is not JSON has no profile */ }
     const rv = typeof rules === "string" ? rules : rules ? new TextDecoder().decode(rules) : "", ver = /"version"\s*:\s*(\d+)/.exec(rv);
-    return { profile: rec.profile, recipe_sha256: await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(text)), rules: rv ? "regole_tp/1" + (ver ? " v" + ver[1] : "") + " SHA-256 " + (await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(rv))) : "", inputs: st.data.meta.inputs || [] };
+    return { profile: rec.profile, recipe_sha256: await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(text)), rules: rv ? "regole_tp" + (ver ? " v" + ver[1] : "") + " SHA-256 " + (await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(rv))) : "", inputs: st.data.meta.inputs || [] };
   }
   /** what the interpretation of the rows needs (parent, hypotheses, infusion); none without a gate table or without a parent */
   function interpInput(out) {

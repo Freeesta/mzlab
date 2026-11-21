@@ -686,7 +686,7 @@
        },
        "estimates": {
         "type": "object",
-        "description": "parameter -> proof of the estimate (as the proofs of feature_pipeline/1)"
+        "description": "parameter -> proof of the estimate (as the proofs of feature_pipeline/2)"
        },
        "used": {
         "type": "array",
@@ -803,7 +803,7 @@
     },
     "rule": {
      "type": "string",
-     "description": "id of the rule or library entry that proposed it (e.g. a regole_tp/2 rule)"
+     "description": "id of the rule or library entry that proposed it (e.g. a regole_tp/3 rule)"
     },
     "map": {
      "type": "array",

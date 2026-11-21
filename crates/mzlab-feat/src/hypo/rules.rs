@@ -1,5 +1,5 @@
-//! The photocatalytic rules as data: `TP_Mine/data/regole_tp_2.json`, format `regole_tp/2` (profiles, mechanistic classes, preconditions on the functional
-//! groups of the parent: `docs/schemi/regole_tp-2.json`, `docs/agenti/mzfeat.md`); a `regole_tp/1` file (one flat list, elements only) is still read.
+//! The photocatalytic rules as data: `TP_Mine/data/regole_tp_3.json`, format `regole_tp/3` (profiles, mechanistic classes, preconditions on the functional
+//! groups of the parent: `docs/schemi/regole_tp-3.json`, `docs/agenti/mzfeat.md`); an older version is refused, never converted.
 //! A rule is a signed change of formula; the lists can be replaced without touching the code.
 
 use std::collections::BTreeMap;
@@ -9,8 +9,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 
 pub const FORMAT: &str = "regole_tp";
-/// Newest version read (`regole_tp/2`); a `/1` file is read too and says so in `Rules::version`.
-pub const VERSION: u32 = 2;
+/// The only version read (`regole_tp/3`); `/1` and `/2` files are refused with `error.hypo.rulesVersion`.
+pub const VERSION: u32 = 3;
 
 /// Signed element counts (a change of formula, or a formula), ordered by element symbol.
 pub type Counts = BTreeMap<String, i64>;
@@ -57,7 +57,7 @@ pub struct Rule {
     /// Elements that the parent must have: all of `all` (with at least that count), at least one of `any`.
     pub all: Counts,
     pub any: Vec<String>,
-    /// Mechanistic class (`/2`; the id in a `/1` file).
+    /// Mechanistic class (the id when the file gives none).
     pub class: String,
     /// Functional groups the parent must have (all of `groups_all`, one of `groups_any`); a rule with groups is used only when the structure is known.
     pub groups_all: Vec<String>,
@@ -69,9 +69,9 @@ pub struct Rule {
 #[derive(Debug, Clone)]
 pub struct Rules {
     pub rules: Vec<Rule>,
-    /// Version of the file read (1 or 2).
+    /// Version of the file read (always `VERSION`).
     pub version: u32,
-    /// Profile of the rules (empty in a `/1` file).
+    /// Profile of the rules.
     pub profile: String,
 }
 
@@ -115,10 +115,10 @@ pub fn parse_delta(text: &str) -> Result<Counts> {
 
 fn dir_of(s: &str) -> Result<Dir> {
     match s {
-        "piu_polare" => Ok(Dir::MorePolar),
-        "meno_polare" => Ok(Dir::LessPolar),
-        "libera" => Ok(Dir::Free),
-        _ => Err(bad("direzione_rt")),
+        "more_polar" => Ok(Dir::MorePolar),
+        "less_polar" => Ok(Dir::LessPolar),
+        "free" => Ok(Dir::Free),
+        _ => Err(bad("rt_direction")),
     }
 }
 
@@ -126,7 +126,7 @@ fn counts_of(v: Option<&Value>) -> Result<Counts> {
     let mut out = Counts::new();
     if let Some(Value::Obj(o)) = v {
         for (k, n) in o {
-            out.insert(k.clone(), n.f64().ok_or_else(|| bad("richiede"))? as i64);
+            out.insert(k.clone(), n.f64().ok_or_else(|| bad("requires"))? as i64);
         }
     }
     Ok(out)
@@ -135,15 +135,15 @@ fn counts_of(v: Option<&Value>) -> Result<Counts> {
 fn rule_of(v: &Value) -> Result<Rule> {
     let text = |k: &str| v.get(k).and_then(Value::str).ok_or_else(|| bad(k));
     let id = text("id")?.to_string();
-    let delta_text = text("delta_formula")?.to_string();
+    let delta_text = text("formula_delta")?.to_string();
     let delta =
         parse_delta(&delta_text).map_err(|_| Error::new("error.hypo.rule").with("id", &id))?;
-    let source = text("fonte")?;
+    let source = text("source")?;
     if source != "transformation_table"
         && !source.starts_with("lit:")
-        && !source.starts_with("classe:")
+        && !source.starts_with("class:")
     {
-        return Err(bad("fonte"));
+        return Err(bad("source"));
     }
     let num = |k: &str| {
         v.get(k)
@@ -151,7 +151,7 @@ fn rule_of(v: &Value) -> Result<Rule> {
             .map(|x| x as u8)
             .ok_or_else(|| bad(k))
     };
-    let need = v.get("richiede");
+    let need = v.get("requires");
     let list = |k: &str| -> Vec<String> {
         need.and_then(|n| n.get(k))
             .map(|a| {
@@ -167,15 +167,15 @@ fn rule_of(v: &Value) -> Result<Rule> {
         id: id.clone(),
         delta,
         delta_text,
-        max_steps: num("passi_max")?.max(1),
-        level: num("livello_previsione")?,
+        max_steps: num("max_steps")?.max(1),
+        level: num("prediction_level")?,
         source: source.to_string(),
-        dir: dir_of(text("direzione_rt")?)?,
-        all: counts_of(need.and_then(|n| n.get("tutti")))?,
-        any: list("almeno_uno"),
-        class: text("classe").map_or_else(|_| id.clone(), String::from),
-        groups_all: list("gruppi"),
-        groups_any: list("gruppi_almeno_uno"),
+        dir: dir_of(text("rt_direction")?)?,
+        all: counts_of(need.and_then(|n| n.get("all")))?,
+        any: list("any"),
+        class: text("class").map_or_else(|_| id.clone(), String::from),
+        groups_all: list("groups"),
+        groups_any: list("groups_any"),
         fallback: v.get("fallback").and_then(Value::bool).unwrap_or(false),
     })
 }
@@ -195,45 +195,37 @@ impl Rules {
         Self::parse_profile(bytes, None)
     }
 
-    /// The same with a profile of a `/2` file (`None` = the default one). A profile that is frozen (no data yet) or missing is refused; a `/1` file has
-    /// no profiles. A profile can `eredita` (inherit) the rules of another.
+    /// The same with a profile of the file (`None` = the default one). A profile that is frozen (no data yet) or missing is refused. A profile can inherit (`inherits`) the rules of another.
     pub fn parse_profile(bytes: &[u8], profile: Option<&str>) -> Result<Rules> {
         let v = json::parse(bytes).map_err(|_| bad("json"))?;
         if v.get("format").and_then(Value::str) != Some(FORMAT) {
             return Err(bad("format"));
         }
         let found = v.get("version").and_then(Value::f64).unwrap_or(0.0) as u32;
-        if found == 1 && profile.is_none() {
-            return Ok(Rules {
-                rules: rules_of(&v, "regole")?,
-                version: 1,
-                profile: String::new(),
-            });
-        }
         if found != VERSION {
             return Err(Error::new("error.hypo.rulesVersion")
                 .with("found", found)
                 .with("need", VERSION));
         }
         let name = profile
-            .or_else(|| v.get("predefinito").and_then(Value::str))
+            .or_else(|| v.get("default_profile").and_then(Value::str))
             .unwrap_or("");
         let prof = v
-            .get("profili")
+            .get("profiles")
             .and_then(|p| p.get(name))
             .ok_or_else(|| Error::new("error.hypo.profile").with("profile", name))?;
-        if prof.get("congelato").and_then(Value::bool) == Some(true) {
+        if prof.get("frozen").and_then(Value::bool) == Some(true) {
             return Err(Error::new("error.hypo.profileFrozen").with("profile", name));
         }
         let mut rules = Vec::new();
-        if let Some(base) = prof.get("eredita").and_then(Value::str) {
+        if let Some(base) = prof.get("inherits").and_then(Value::str) {
             let b = v
-                .get("profili")
+                .get("profiles")
                 .and_then(|p| p.get(base))
                 .ok_or_else(|| Error::new("error.hypo.profile").with("profile", base))?;
-            rules = rules_of(b, "regole")?;
+            rules = rules_of(b, "rules")?;
         }
-        rules.extend(rules_of(prof, "regole")?);
+        rules.extend(rules_of(prof, "rules")?);
         Ok(Rules {
             rules,
             version: found,

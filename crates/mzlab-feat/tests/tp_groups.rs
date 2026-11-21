@@ -241,7 +241,7 @@ fn kinetics(n: usize) -> (Aligned, Vec<samples::Sample>, Vec<f64>, Vec<Vec<usize
 }
 
 fn rules() -> Rules {
-    let j = r#"{"format":"regole_tp","version":1,"regole":[{"id":"oh","nome":"hydroxylation","delta_formula":"+O","passi_max":1,"livello_previsione":3,"fonte":"transformation_table","direzione_rt":"piu_polare"}]}"#;
+    let j = r#"{"format":"regole_tp","version":3,"default_profile":"p","profiles":{"p":{"rules":[{"id":"oh","name":"hydroxylation","formula_delta":"+O","max_steps":1,"prediction_level":3,"source":"transformation_table","rt_direction":"more_polar"}]}}}"#;
     Rules::parse(j.as_bytes()).unwrap()
 }
 

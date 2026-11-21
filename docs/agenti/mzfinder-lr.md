@@ -1,6 +1,6 @@
 # mzFinder low resolution in Rust
 
-The mzFinder Dig on a unit-resolution series (3200 QTRAP, full scan) runs in Rust: the table rows are the peaks of the `crates/mzlab-feat` pipeline (profile `lr`: detection, alignment, L7 hypotheses with `regole_tp_2.json`), then an adapter writes the JSON of the `run` and `detail` calls, which the worker routes (`TPCALL`) return unchanged.
+The mzFinder Dig on a unit-resolution series (3200 QTRAP, full scan) runs in Rust: the table rows are the peaks of the `crates/mzlab-feat` pipeline (profile `lr`: detection, alignment, L7 hypotheses with `regole_tp_3.json`), then an adapter writes the JSON of the `run` and `detail` calls, which the worker routes (`TPCALL`) return unchanged.
 
 ## LR Dig: files
 - `legacy/lr/cond.rs` (view, score and generation per condition) and `groups_out.rs` (`gruppi` block of the output): `docs/agenti/groups.md`.
@@ -11,7 +11,7 @@ The mzFinder Dig on a unit-resolution series (3200 QTRAP, full scan) runs in Rus
 - `TP_Mine/files/finder-lr.js` (module imported by `tpmine-worker.js`): `run(ctx, args)` → JSON of `api.run` or `false` (the worker replies with an error); `ofDig(ctx, fn, args)` for `detail`, `frag_tree`, `frag_tree_compare` when `last === "rust-lr"`.
 ## LR Dig: when it runs in Rust
 - All files of type `full` (and at most `ms2` and `mrm`), each with its `.mzidx` in OPFS (`mzlab/idx/`), parent with formula or SMILES (`plan.rust`), default transformations. The `ms2` files (EPI) are not columns: `plan_json` lists them in `ms2` and the worker opens their index after that of the columns.
-- `mrm` files: no index; `plan_json` lists them in `mrm`, `finder-lr.js` reads their mzML from the bytes sent by the page (`held` of the worker) and `run` adds `mrm` to the summary. A parent known only by m/z stays in Rust (no hypothesis: its row and the unexpected ions, empty registry); the user's transformation list (`a[3]`) is merged into `regole_tp_2.json` with `finder_transformations`, as in HR.
+- `mrm` files: no index; `plan_json` lists them in `mrm`, `finder-lr.js` reads their mzML from the bytes sent by the page (`held` of the worker) and `run` adds `mrm` to the summary. A parent known only by m/z stays in Rust (no hypothesis: its row and the unexpected ions, empty registry); the user's transformation list (`a[3]`) is merged into `regole_tp_3.json` with `finder_transformations`, as in HR.
 - Order in the worker: detect (phase `calibration`), hypotheses (`candidates`), alignment and Dig (`xic`, with the `live()` load of the candidates that pass), then `unexpected`, `ms2`, `tables`.
 
 ## LR Dig: semantics
