@@ -162,6 +162,11 @@ impl Recipe {
                 .peak_finder
                 .as_ref()
                 .map_or(String::new(), |p| format!("\npeak_finder={p:?}"))
+            + &if self.screen.mz_offset.is_zero() {
+                String::new()
+            } else {
+                format!("\nmz_offset={}", self.screen.mz_offset)
+            }
     }
 
     /// Fingerprint (16 hex digits) of `file_text`: the name of the per-file cache.

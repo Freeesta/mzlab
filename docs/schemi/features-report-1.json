@@ -23,7 +23,9 @@
           "defect": { "type": "number", "description": "channel centre offset, Da (0 on the ppm axis)" },
           "mz_shift_da": { "type": "number", "description": "m/z shift of the file against the series, Da; 0 when it was not measured" },
           "recentred": { "type": "boolean", "description": "the shift was subtracted (it is at least 0.05 Da)" },
-          "rows": { "type": "integer", "minimum": 0, "description": "features detected in the file, before the alignment" }
+          "rows": { "type": "integer", "minimum": 0, "description": "features detected in the file, before the alignment" },
+          "mz_offset_da": { "type": "number", "description": "the m/z offset subtracted from the file before the grouping (--mz-offset), Da, observed - true; present only with --mz-offset" },
+          "mz_offset": { "type": "object", "description": "mode fixed, or auto with ion_mz, rt_min, status (ok, wide, not_found), n_scans, apex_rt_min, apex_intensity, spread_da, snr (as in trace/1)" }
         }
       }
     },

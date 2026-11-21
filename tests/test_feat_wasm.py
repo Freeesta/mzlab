@@ -369,3 +369,28 @@ def test_the_unit_resolution_switches_reach_the_node_module(built, lr_drift):
     c_off, _ = plain(root, lr_drift["centroid"], pkg, "lr_c_off", '{"centroid": "off"}')
     for f in sorted(p.name for p in c_auto.iterdir() if p.suffix == ".mzfeatf"):
         assert (c_auto / f).read_bytes() == (c_off / f).read_bytes(), f
+
+
+@pytest.fixture(scope="module")
+def lr_offsets(built):
+    """The 5-sample series of tools/lr_synthetic.py with the instrument offsets +0.24 +- 0.05 Da (centroid mzML), indexed by the CLI."""
+    root, _, _ = built
+    d = root / "lr_offsets"
+    run("python3", "tools/lr_synthetic.py", str(d), "--offset-series", "centroid")
+    files = sorted(str(p) for p in d.glob("offs-s*.mzML"))
+    listed = json.loads(cli("file", "index", "--cache", str(root / "lr_cache"), *files).stdout)["files"]
+    out = [str(root / "lr_cache" / f["key"]) for f in listed]
+    assert len(out) == 5
+    return out
+
+
+@pytest.mark.parametrize("recipe,tag", [('{"mz_offset": "auto:130.2"}', "auto"), ('{"mz_offset": "0.24"}', "fixed")])
+def test_the_mz_offset_gives_the_same_bytes_native_and_in_node(built, lr_offsets, recipe, tag):
+    """`mz_offset` of `features.align` (a number, or measured per file on a known ion from its index) is applied by the .wasm as natively: every `.mzfeatf`
+    and the `series.mzfeat` have the same bytes, and the table differs from the one without it."""
+    root, _, pkg = built
+    nat_dir, wasm_dir = plain(root, lr_offsets, pkg, f"lr_off_{tag}", recipe)
+    for f in sorted(p.name for p in nat_dir.iterdir()):
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    base, _ = plain(root, lr_offsets, pkg, f"lr_off_none_{tag}", "")
+    assert (nat_dir / "series.mzfeat").read_bytes() != (base / "series.mzfeat").read_bytes()

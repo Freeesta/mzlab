@@ -200,6 +200,9 @@ mod table_compare_cmd;
 #[cfg(test)]
 mod table_compare_cmd_tests;
 mod trace_cmd;
+mod mz_offset;
+#[cfg(test)]
+mod mz_offset_tests;
 mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
 mod validate;

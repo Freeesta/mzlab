@@ -57,7 +57,7 @@
     },
     "evidence": {
       "type": "object",
-      "description": "Where the points come from: source or route, channel, tolerance (tolerance_da, tolerance_ppm), scans_in_section, points_in_source, rt_window_min, smooth (3 or 5, XIC only) and, for an XIC with no signal, empty: true with empty_reason (no_scans_in_section, no_signal or outside_window)."
+      "description": "Where the points come from: source or route, channel, tolerance (tolerance_da, tolerance_ppm), scans_in_section, points_in_source, rt_window_min, smooth (3 or 5, XIC only) and, for an XIC with no signal, empty: true with empty_reason (no_scans_in_section, no_signal or outside_window). With --mz-offset: mz_offset_da and mz_offset. Convention: mz_offset_da = observed - true, in Da (|DA| <= 0.6). A trace asked for the true m/z M integrates [M + offset - tol, M + offset + tol] and reports M; a corrected m/z is observed - offset. Written only when an offset is in force (default 0 writes nothing). mz_offset is {mode:'fixed'} for a given number, or {mode:'auto',ion_mz,rt_min,status ok|wide|not_found,n_scans,apex_rt_min,apex_intensity,spread_da,snr} for one measured on a known ion (not_found: offset 0)."
     }
   }
 }

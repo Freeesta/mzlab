@@ -98,6 +98,7 @@ pub(super) fn align() -> Step {
             .tip("Unit resolution only: removes the m/z drift of each file, measured on shared rows, so rows stay whole.")
             .advanced(),
     );
+    params.push(super::table_algo::mz_offset_param());
     params.extend(family_link_params());
     Step {
         ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],

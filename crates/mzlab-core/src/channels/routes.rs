@@ -128,14 +128,18 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(trace(&rt, &y)))
     }
 
-    /// `/api/xic?mz&tol&level[&filt][&smooth=3|5]`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`), then smoothed
+    /// `/api/xic?mz&tol&level[&filt][&smooth=3|5][&mzoff=DA|auto:MZ[@RT]]`: the XIC inside the scans that pass `filt` (a scan key, `msn:<id>` or `channel:<id>`), then smoothed
     /// by `smooth` points (`peak1d::smooth`); with neither it is not this route's.
-    pub(crate) fn xic_route(&mut self, q: &Query) -> Result<Option<String>> {
+    pub(crate) fn xic_route_in(
+        &mut self,
+        q: &Query,
+        off: Option<&crate::mzcal::Offset>,
+    ) -> Result<Option<String>> {
         if let Some(sp) = q.some("sweep") {
             return if q.some("filt").is_some() {
                 Ok(None)
             } else {
-                self.sweep_route(sp, q)
+                self.sweep_route(sp, q, off)
             };
         }
         let Some(mz) = q.num("mz")? else {
@@ -148,7 +152,7 @@ impl<R: ReadAt> Routes<R> {
             Some(_) => return Ok(None),
         };
         let filt = q.some("filt");
-        if filt.is_none() && smooth.is_none() {
+        if filt.is_none() && smooth.is_none() && off.is_none() {
             return Ok(None);
         }
         let (tol, level) = (q.num("tol")?.unwrap_or(0.35), q.level());
@@ -174,7 +178,13 @@ impl<R: ReadAt> Routes<R> {
         if let Some(k) = smooth {
             y = crate::peak1d::smooth(&y, k);
         }
-        Ok(Some(trace(&rt, &y)))
+        let t = trace(&rt, &y);
+        // the offset in force rides on the trace, which keeps the m/z asked
+        let m = off.map(|f| f.members()).unwrap_or_default();
+        Ok(Some(match t.strip_suffix('}') {
+            Some(head) if !m.is_empty() => format!("{head},{m}}}"),
+            _ => t,
+        }))
     }
 
     /// `/api/channels` and the routes that take `channel=`; `None` = not a channel request.

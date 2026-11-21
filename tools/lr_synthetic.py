@@ -6,7 +6,7 @@
 
 Writes `LR_bench-s<N>.mzML` (60 compounds + 12 decoy pairs + background), `LR_bench-blank-s<N>.mzML` (same background, no compounds, other noise draw)
 `LR_bench-noise-s<N>.mzML` (no compounds and no background: only the Poisson counts and the single-scan spikes) and the truth. `--drift-series` writes instead
-the 8-sample series of the screening across samples (`make_drift_series`: the same 24 ions in every sample, the m/z axis of each moved by -0.2..+0.2 Da, as profile and as centroid mzML). Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
+the 8-sample series of the screening across samples (`make_drift_series`: the same 24 ions in every sample, the m/z axis of each moved by -0.2..+0.2 Da, as profile and as centroid mzML); `--offset-series` the 5 samples `offs-s<k>.mzML` shifted by +0.24 +- 0.05 Da (the offset of the 3200 QTRAP). Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
 Intensity = ion counts x GAIN (counts per second at a 50 ms dwell); heights in the truth are in counts.
 """
 from __future__ import annotations
@@ -126,17 +126,18 @@ def make(out: Path, seed: int = 1, jitter: float = 0.05) -> list[Path]:
 DRIFTS = (-0.2, -0.15, -0.1, -0.05, 0.05, 0.1, 0.15, 0.2)   # Da, the m/z axis of each sample of the drift series
 DRIFT_IONS = tuple(130.2 + 9.7 * k for k in range(24))        # nominal m/z with the mass defect 0.2, 9.7 Da apart (no two within 1 Da)
 DRIFT_SCANS = 60                                              # 1 s each
+OFFSETS = (0.19, 0.22, 0.24, 0.26, 0.29)                      # Da, the instrument offset of each sample of the offset series: +0.24 +- 0.05
 
 
-def make_drift_series(out: Path, profile: bool, seed: int = 1) -> list[Path]:
-    """`DRIFTS` samples `drift-s<k>.mzML` of the same ions (apex in RT from the seed, height 2e4 counts), each with its m/z axis moved by its drift: profile
+def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = DRIFTS, prefix: str = "drift") -> list[Path]:
+    """`drifts` (`DRIFTS`) samples `<prefix>-s<k>.mzML` of the same ions (apex in RT from the seed, height 2e4 counts), each with its m/z axis moved by its drift: profile
     scans on the 0.1 Da grid (Gaussian of FWHM 0.7 Da, Poisson counts) or one centroid per ion. The same seed gives the same bytes."""
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
     apex = rng.uniform(8.0, DRIFT_SCANS - 8.0, len(DRIFT_IONS))
     height = np.exp(rng.uniform(np.log(5000.0), np.log(20000.0), len(DRIFT_IONS)))
     paths = []
-    for k, drift in enumerate(DRIFTS):
+    for k, drift in enumerate(drifts):
         noise = np.random.default_rng(seed * 100 + k)
         specs = []
         for s in range(DRIFT_SCANS):
@@ -156,7 +157,7 @@ def make_drift_series(out: Path, profile: bool, seed: int = 1) -> list[Path]:
             else:
                 keep = amp > 0.2
                 specs.append(_spec(s, t / 60.0, np.round(m[keep], 4), np.round(amp[keep] * GAIN, 1), profile=False, filt="+ c ESI Q1MS [100.000-400.000]"))
-        path = out / f"drift-s{k}.mzML"
+        path = out / f"{prefix}-s{k}.mzML"
         _write(path, specs, [])
         paths.append(path)
     return paths
@@ -168,6 +169,11 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--jitter", type=float, default=0.05, help="sigma of the per-scan mass jitter, Da")
     ap.add_argument("--drift-series", choices=("profile", "centroid"), help="write the 8-sample drift series in this mode instead of the benchmark")
+    ap.add_argument("--offset-series", choices=("profile", "centroid"), help="write the 5-sample series with the instrument offsets `OFFSETS` (+0.24 +- 0.05 Da) in this mode")
     n = ap.parse_args()
-    for f in (make_drift_series(n.out, n.drift_series == "profile", n.seed) if n.drift_series else make(n.out, n.seed, n.jitter)):
+    if n.offset_series:
+        files = make_drift_series(n.out, n.offset_series == "profile", n.seed, OFFSETS, "offs")
+    else:
+        files = make_drift_series(n.out, n.drift_series == "profile", n.seed) if n.drift_series else make(n.out, n.seed, n.jitter)
+    for f in files:
         print(f)

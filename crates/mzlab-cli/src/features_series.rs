@@ -37,9 +37,7 @@ pub fn features_plan_of(
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
     let recipe = crate::par::index_only(files, labels, &idxs, params)?;
-    Ok(crate::par::features_report::plan_text(
-        &recipe, &idxs, files, labels,
-    ))
+    crate::par::features_report::plan_text(&recipe, &idxs, files, labels)
 }
 
 /// `features_of` and the `features-report/1` of the run (`--report`).

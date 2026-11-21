@@ -22,7 +22,7 @@ impl<R: ReadAt> Routes<R> {
         if out.len() < 2 * n {
             return Ok(0);
         }
-        let (lo, hi) = (mz - tol, mz + tol);
+        let (lo, hi) = (mz + self.mz_off - tol, mz + self.mz_off + tol);
         let a = self.idx.search(si, lo, false)?;
         let b = self.idx.search(si, hi, true)?;
         let y = if b <= a {

@@ -100,9 +100,11 @@ pub(crate) fn peak_finder<R: ReadAt>(
         let rows: Vec<usize> = (0..table.mz.len())
             .filter(|&row| table.state[row * nf + k] == CELL_ABSENT)
             .collect();
+        // the rows hold corrected m/z; this file's raw scans are read at m/z + its offset
+        let d = r.screen.offsets.get(k);
         let gaps: Vec<(f64, f64)> = rows
             .iter()
-            .map(|&row| (table.mz[row], table.rt[row]))
+            .map(|&row| (table.mz[row] + d, table.rt[row]))
             .collect();
         for (&row, found) in rows.iter().zip(fill_file(&mut open(k)?, &gaps, &p)?) {
             let Some(c) = found else { continue };

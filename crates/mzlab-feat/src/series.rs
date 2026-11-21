@@ -9,7 +9,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::detect_route::detect;
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
-use crate::gapfill::{fill_apply, fill_find};
+use crate::gapfill::{fill_apply, fill_find, FillParams};
 use crate::lrscreen::centroids_of;
 use crate::pipeline::analyse_with;
 use crate::prog::Prog;
@@ -58,10 +58,15 @@ fn find_screened<R: ReadAt>(
     map: Option<&RtMap>,
     r: &Recipe,
 ) -> Result<Vec<(usize, f64)>> {
+    // the table holds corrected m/z; the raw scans are read at m/z + the file's offset
+    let fill = FillParams {
+        mz_shift: r.screen.offsets.get(k),
+        ..r.fill
+    };
     if let Some(mut c) = centroids_of(index, r)? {
-        return fill_find(&mut c.index, al, k, map, &r.detect, &r.fill);
+        return fill_find(&mut c.index, al, k, map, &r.detect, &fill);
     }
-    fill_find(index, al, k, map, &r.detect, &r.fill)
+    fill_find(index, al, k, map, &r.detect, &fill)
 }
 
 /// The SHA-256 of the file an index was built from (empty when the index does not carry it).
@@ -148,8 +153,24 @@ pub type FillOpen<'a, R> = dyn Fn(usize) -> Result<Index<R>> + 'a;
 pub fn align_and_fill<R: ReadAt>(
     files: &[FileFeatures],
     r: &Recipe,
-    open: impl FnMut(usize) -> Result<Index<R>>,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<(Aligned, usize)> {
+    let offsets = crate::lrscreen_offset::resolve(files.len(), r, &mut open)?;
+    let moved;
+    let files = if offsets.is_empty() {
+        files
+    } else {
+        moved = files
+            .iter()
+            .zip(&offsets)
+            .map(|(f, d)| {
+                let mut f = f.clone();
+                crate::lrscreen_offset::correct(&mut f.mz, *d);
+                f
+            })
+            .collect::<Vec<_>>();
+        &moved[..]
+    };
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let table = align_rows(&refs, r)?;
     let pos = |k: usize| -> Result<FileFeatures> {
@@ -364,10 +385,12 @@ pub(crate) fn finish<R: ReadAt>(
                 Some(b) => weakfile::from_bytes(b, &key)?,
                 None => None,
             };
-            let candidates = match stored {
+            let mut candidates = match stored {
                 Some(c) => c,
                 None => weak_candidates(&mut open(k)?, r)?,
             };
+            // raw m/z against the corrected m/z of the strong table
+            crate::lrscreen_offset::correct(&mut candidates.mz, r.screen.offsets.get(k));
             weak.add(unheld(&candidates, &s.table, r), budget)?;
             prog.tick(1);
         }

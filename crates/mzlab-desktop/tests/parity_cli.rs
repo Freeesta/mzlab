@@ -116,6 +116,7 @@ fn the_cli_extraction_commands_hold_the_bytes_of_the_app_routes() {
     assert!(halves || inter, "the XIC of the app and of the CLI differ");
     smoothed_and_listed_xic(&run, &route, &file);
     swept_xic(&run, &route, &file);
+    offset_xic(&run, &route, &file);
 }
 
 /// The smoothed XIC holds the bytes of the app's route with `smooth`, and a list of ions the documents of each ion alone.
@@ -181,4 +182,31 @@ fn swept_xic(run: &dyn Fn(&[&str]) -> String, route: &dyn Fn(&str, &str) -> Stri
             &m[..m.len().min(80)]
         );
     }
+}
+
+/// `--mz-offset`: the trace of the CLI is the app's route with `mzoff` (the one the site asks through the wasm `route`), for a number, for `auto:` and in a
+/// sweep, and the evidence of the offset is the same text.
+fn offset_xic(run: &dyn Fn(&[&str]) -> String, route: &dyn Fn(&str, &str) -> String, file: &str) {
+    for spec in ["0.24", "-0.31", "auto:300", "auto:300@0.3"] {
+        let doc = run(&[
+            "trace", "xic", file, "--mz", "300", "--da", "0.5", "--mz-offset", spec,
+        ]);
+        let routed = route("/api/xic", &format!("?mz=300&tol=0.5&level=1&mzoff={spec}"));
+        assert!(doc.contains(&route_points(&routed, "rt")), "{spec}");
+        let evidence = |t: &str| t[t.find("\"mz_offset_da\":").unwrap()..].split("},").next().unwrap().to_string();
+        assert_eq!(evidence(&doc), evidence(&routed), "{spec}");
+    }
+    let sweep = run(&[
+        "trace", "xic", file, "--sweep", "299:302:1", "--da", "0.5", "--mz-offset", "0.24",
+    ]);
+    let routed = route("/api/xic", "?sweep=299:302:1&tol=0.5&level=1&mzoff=0.24");
+    for m in routed.split("{\"id\":").skip(1) {
+        assert!(sweep.contains(&route_points(m, "rt")), "{}", &m[..m.len().min(80)]);
+    }
+    // the evidence of an estimate is `api/mzcal`
+    let plan = run(&[
+        "trace", "xic", file, "--mz", "300", "--da", "0.5", "--mz-offset", "auto:300", "--dry-run",
+    ]);
+    let mzcal = route("/api/mzcal", "?mz=300");
+    assert!(plan.contains(mzcal.trim_start_matches('{').trim_end_matches('}')), "{mzcal}");
 }

@@ -285,6 +285,8 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
                      not read; an id the file does not have: exit 5); without it the first sample of such a file
   --centroid MODE    unit resolution: auto (default) centroids a file that is mostly profile scans before detecting, on does it for every such file, off
                      detects the profile points as they are; high-resolution files are never centroided here
+  --mz-offset SPEC   the instrument's m/z offset (observed - true, |DA| <= 0.6) or auto:MZ[@RT], measured per file on that known ion: m/z is corrected before the
+                     grouping (the report names each file's offset); default 0, nothing changes
   --report PATH      features-report/1: per file the profile share, the centroiding, the m/z shift and the rows, the merged duplicate rows and every
                      automatic choice with its reason; the CSV is the same with or without it
   --dry-run          print features-plan/1 (members, unit/profile/centroid decision of each, recipe) and write nothing
