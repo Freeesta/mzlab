@@ -12,7 +12,7 @@ use mzlab_feat::chem::graph::analyse_json;
 use mzlab_feat::hypo::HypoParams;
 use mzlab_ops::run::feat::run_tp;
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_3.json");
 
 fn param<'a>(job: &'a Job, name: &str) -> Option<&'a Value> {
     job.resolved

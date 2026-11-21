@@ -391,9 +391,9 @@ try:
         def recipe_logged():
             ops = pg.evaluate("NB.ops.filter(o => o.op === 'feature_pipeline')"); assert len(ops) >= 1, ops
             o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
-            assert isinstance(o.get("regole"), dict) and isinstance(o.get("genitore"), dict), {k: (v if k in ("regole", "genitore") else "...") for k, v in o.items()}      # name the missing block instead of a TypeError
-            assert o["crate_version"] and len(o["table_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
-            assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
+            assert isinstance(o.get("rules"), dict) and isinstance(o.get("parent"), dict), {k: (v if k in ("rules", "parent") else "...") for k, v in o.items()}      # name the missing block instead of a TypeError
+            assert o["crate_version"] and len(o["table_sha256"]) == 64 and o["rules"]["version"] and o["runs"] == 1 and len(o["inputs"]) == len(names), o
+            assert o["parent"]["formula"] == "C21H32N2O2" and o["parent"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["params"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operations"])
             c = [x for x in wf["operations"] if x["op"] == "samples"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().table_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")

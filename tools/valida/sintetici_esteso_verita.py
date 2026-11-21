@@ -118,7 +118,7 @@ def document(c, seme: int, profilo: str, budget_mb: float) -> dict:
     return {"schema": "verita_tp/1", "dataset": "D-V1X", "stato": "verita", "polarita": "+", "adotto_ref": "[M+H]+",
             "parent": {"id": main.id, "nome": None, "smiles": None, "ion": main.ion, "mz": round(main.mz, 6), "rt_obs": round(main.rt, 4),
                        "formula_neutra": E.fmt(c.formule[0]), "alogeni": [], "regioni": []},
-            "progenitori_alogenati": alog, "tps": tps, "righe_isomeri": rows_iso, "ereditati": inherited(c), "esche": decoys, "regole_ref": "regole_tp/2@fotocatalisi",
+            "progenitori_alogenati": alog, "tps": tps, "righe_isomeri": rows_iso, "ereditati": inherited(c), "esche": decoys, "regole_ref": "regole_tp/3@photocatalysis",
             "metriche_attese": contatori(c), "meta": {"seme": seme, "profilo": profilo, "budget_mb": budget_mb, "parametri": c.vx.P},
             "note": "Synthetic: invented molecules and numbers. `tps` has one entry per product and one per isomer group (id = nominal number); `isf_di` = the product coelutes with the ISF of that compound; "
                     "`raggiungibile_2_passi` = the total change from the parent is one or two rules of the table (false: the observed network is needed); no rate measurement."}

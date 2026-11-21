@@ -22,7 +22,7 @@ fn step(
         product: Some(product.core_hash_hex()),
         delta: delta.into(),
         rule: "hydroxylation".into(),
-        rule_set: "regole_tp/2:fotocatalisi".into(),
+        rule_set: "regole_tp/3:photocatalysis".into(),
         rule_version: String::new(),
         map: pairs.to_vec(),
         added: added.to_vec(),

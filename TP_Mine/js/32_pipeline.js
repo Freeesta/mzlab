@@ -77,7 +77,7 @@
   const sync = () => { if (pform) pform.sync(); };
   const msg = (key, params) => /** @type {any} */ (window).TE(key, params);
 
-  /** puts the parameters of a recipe (the `parametri` of a record) into the form; a floor that is not in the recipe stays the estimated one */
+  /** puts the parameters of a recipe (the `params` of a record) into the form; a floor that is not in the recipe stays the estimated one */
   function apply(p) {
     const set = (id, v) => { if (v != null) $(id).value = v; };
     set("#pipe-ppm", p.ppm); set("#pipe-hmin", p.min_height); set("#pipe-npts", p.min_points); set("#pipe-rt", p.rt_tol); set("#pipe-pol", p.polarity); set("#pipe-mode", p.mode);

@@ -36,4 +36,4 @@ The student acquires an MS2 on an ion because they saw it in the full scan: if t
 ```
 MZLAB_DATI=<percorso> cargo run --release -p mzlab-finder-lr-wasm --example finder_lr -- OUT FILES.json PARENT.json RULES.json --diag --ms2 N MZML...
 ```
-(`FILES.json` and `PARENT.json`: the example's input files; `RULES.json` = `TP_Mine/data/regole_tp_2.json`). `--diag` prints, for every trace peak without a row BEFORE the targets, the table rows within 0.5 Da and 0.5 min of the apex (m/z, RT, score, cells, criteria) and the Dig step that loses them: nearby hypothesis (isomers), criteria, absence from the table (detection). Write the outcome in `scratchpad/consegne/TABUI_MS2_LR_DATI.md` of the private repository.
+(`FILES.json` and `PARENT.json`: the example's input files; `RULES.json` = `TP_Mine/data/regole_tp_3.json`). `--diag` prints, for every trace peak without a row BEFORE the targets, the table rows within 0.5 Da and 0.5 min of the apex (m/z, RT, score, cells, criteria) and the Dig step that loses them: nearby hypothesis (isomers), criteria, absence from the table (detection). Write the outcome in `scratchpad/consegne/TABUI_MS2_LR_DATI.md` of the private repository.

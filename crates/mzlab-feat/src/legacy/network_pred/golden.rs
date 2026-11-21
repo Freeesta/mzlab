@@ -4,7 +4,7 @@ use super::*;
 
 fn rules() -> Rules {
     Rules::parse(include_bytes!(
-        "../../../../../TP_Mine/data/regole_tp_2.json"
+        "../../../../../TP_Mine/data/regole_tp_3.json"
     ))
     .unwrap()
 }

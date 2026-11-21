@@ -1,4 +1,4 @@
-//! `regole_tp/2`: profiles, rules with preconditions on the functional groups of the parent (from its SMILES) and the rules for when the structure is not known.
+//! `regole_tp/3`: profiles, rules with preconditions on the functional groups of the parent (from its SMILES) and the rules for when the structure is not known.
 //! The parent is the progenitor C13H24N4O3S, written only by its SMILES.
 
 use std::path::{Path, PathBuf};
@@ -14,11 +14,12 @@ fn root() -> PathBuf {
 }
 
 fn file() -> Vec<u8> {
-    std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()
+    std::fs::read(root().join("TP_Mine/data/regole_tp_3.json")).unwrap()
 }
 
-/// The flat `regole_tp/1` layout that files of earlier versions still have (the shipped file is `/2`).
-const V1: &str = r#"{"format":"regole_tp","version":1,"regole":[{"id":"hydroxylation","delta_formula":"+O","passi_max":2,"livello_previsione":4,"fonte":"transformation_table","direzione_rt":"libera"}]}"#;
+/// The flat `regole_tp/1` layout and the Italian-key `/2` layout of earlier versions: both refused now.
+const V1: &str = r#"{"format":"regole_tp","version":1,"regole":[]}"#;
+const V2: &str = r#"{"format":"regole_tp","version":2,"predefinito":"p","profili":{}}"#;
 
 fn run(rules: &Rules, groups: Option<&[String]>) -> Registry {
     let frags: Vec<String> = Vec::new();
@@ -52,10 +53,10 @@ fn find<'a>(r: &'a Registry, formula: &str) -> &'a Hypothesis {
 #[test]
 fn the_file_has_three_profiles_and_the_default_is_photocatalysis() {
     let r = Rules::parse(&file()).unwrap();
-    assert_eq!((r.version, r.profile.as_str()), (2, "fotocatalisi"));
+    assert_eq!((r.version, r.profile.as_str()), (3, "photocatalysis"));
     assert!(r.rules.len() > 40);
     assert!(r.rules.iter().all(|x| !x.class.is_empty()));
-    let met = Rules::parse_profile(&file(), Some("metabolismo_I_II")).unwrap();
+    let met = Rules::parse_profile(&file(), Some("metabolism_I_II")).unwrap();
     assert_eq!(
         met.rules.len(),
         r.rules.len() + 5,
@@ -66,7 +67,7 @@ fn the_file_has_three_profiles_and_the_default_is_photocatalysis() {
         .iter()
         .any(|x| x.id == "glucuronidation" && x.delta_text == "+C6H8O6"));
     assert_eq!(
-        Rules::parse_profile(&file(), Some("ozono_cloro"))
+        Rules::parse_profile(&file(), Some("ozone_chlorine"))
             .err()
             .unwrap()
             .key,
@@ -82,22 +83,14 @@ fn the_file_has_three_profiles_and_the_default_is_photocatalysis() {
 }
 
 #[test]
-fn a_v1_file_is_still_read_and_says_so() {
-    let v1 = V1.as_bytes();
-    let r = Rules::parse(v1).unwrap();
-    assert_eq!((r.version, r.profile.as_str()), (1, ""));
-    assert!(r
-        .rules
-        .iter()
-        .all(|x| x.groups_all.is_empty() && x.groups_any.is_empty() && !x.fallback));
-    assert_eq!(run(&r, None).rules_version, 1);
-    assert_eq!(
-        Rules::parse_profile(v1, Some("fotocatalisi"))
-            .err()
-            .unwrap()
-            .key,
-        "error.hypo.rulesVersion"
-    );
+fn a_v1_or_v2_file_is_refused_with_the_versions() {
+    for (doc, found) in [(V1, "1"), (V2, "2")] {
+        let e = Rules::parse(doc.as_bytes()).err().unwrap();
+        assert_eq!(e.key, "error.hypo.rulesVersion");
+        let p = Rules::parse_profile(doc.as_bytes(), Some("photocatalysis"));
+        assert_eq!(p.err().unwrap().key, "error.hypo.rulesVersion");
+        assert!(format!("{e:?}").contains(found));
+    }
 }
 
 #[test]
@@ -105,7 +98,7 @@ fn with_the_structure_the_groups_decide() {
     let rules = Rules::parse(&file()).unwrap();
     let g = groups();
     let with = run(&rules, Some(&g));
-    assert_eq!(with.rules_version, 2);
+    assert_eq!(with.rules_version, 3);
     // the tert-butyl on N: literature level, by the specific rule; the generic fallback is not used
     let c4 = find(&with, "C9H16N4O3S");
     assert_eq!((c4.label.as_str(), c4.level), ("n_detertbutylation", 2));
@@ -169,10 +162,10 @@ fn the_structure_json_of_the_page() {
         Structure::parse("{").err().unwrap().key,
         "error.hypo.structure"
     );
-    let p = Structure::parse(r#"{"profile":"metabolismo_I_II"}"#).unwrap();
+    let p = Structure::parse(r#"{"profile":"metabolism_I_II"}"#).unwrap();
     assert_eq!(
         (p.profile.as_deref(), p.groups),
-        (Some("metabolismo_I_II"), None)
+        (Some("metabolism_I_II"), None)
     );
     // the cleavage formulas go to the hypotheses as they are
     let frags = s.fragments.clone();

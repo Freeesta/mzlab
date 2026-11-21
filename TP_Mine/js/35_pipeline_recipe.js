@@ -1,5 +1,5 @@
 // @ts-strict
-// TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json; the reader and the check of
+// TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-2.json; the reader and the check of
 // the record are in mzlab/web/workflow.js) and the comparison of a re-application with the table that was recorded. Pure but for UNT.sha256Hex (a global of the page, injected by the node tests).
 (() => {
   "use strict";
@@ -8,20 +8,20 @@
   const bytesOf = d => (typeof d === "string" ? new TextEncoder().encode(d) : d);
   const verOf = (text, re) => { const m = re.exec(String(text || "")); return m ? +m[1] : null; };
 
-  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes, smiles?} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({versione, sha256}|null) } */
+  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes, smiles?} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({version, sha256}|null) } */
   async function record(a) {
     const rulesText = a.rules == null ? null : typeof a.rules === "string" ? a.rules : new TextDecoder().decode(a.rules);
     const reg = a.out.registry == null ? null : typeof a.out.registry === "string" ? a.out.registry : new TextDecoder().decode(a.out.registry);
     return {
-      op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/1", crate_version: a.crate, recipe: a.recipe, parametri: JSON.parse(a.recipe), prove: a.proofs || null,
-      genitore: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minuti: a.parent.minutes.map(m => (Number.isFinite(m) ? m : null)), ...(a.parent.smiles ? { smiles: a.parent.smiles } : {}) } : null,
-      ingressi: (a.data.meta.inputs || []).map(i => ({ nome: i.name, sha256: i.sha256 })),
+      op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/2", crate_version: a.crate, recipe: a.recipe, params: JSON.parse(a.recipe), proofs: a.proofs || null,
+      parent: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minutes: a.parent.minutes.map(m => (Number.isFinite(m) ? m : null)), ...(a.parent.smiles ? { smiles: a.parent.smiles } : {}) } : null,
+      inputs: (a.data.meta.inputs || []).map(i => ({ name: i.name, sha256: i.sha256 })),
       table_sha256: await sha(a.out.evid || a.out.table),
-      regole: rulesText == null ? null : { nome: "regole_tp/1", versione: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },
-      livelli: a.levels == null ? null : { nome: "livelli/1", versione: verOf(a.levels, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
-      sospetti: a.suspects || null,
-      ipotesi: { cercate: a.out.tried || 0, trovate: a.out.found || 0, registro_sha256: reg == null ? null : await sha(bytesOf(reg)) },
-      giri: 1,
+      rules: rulesText == null ? null : { name: "regole_tp/3", version: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },
+      levels: a.levels == null ? null : { name: "livelli/1", version: verOf(a.levels, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
+      suspects: a.suspects || null,
+      hypotheses: { tried: a.out.tried || 0, found: a.out.found || 0, registry_sha256: reg == null ? null : await sha(bytesOf(reg)) },
+      runs: 1,
     };
   }
 
@@ -36,7 +36,7 @@
 
   /** what a re-application gave against the record: same table (SHA-256), same files, same engine; `lines` in words */
   function compare(op, now) {
-    const cur = new Map(now.ingressi.map(i => [i.nome, i.sha256])), missing = op.ingressi.filter(i => cur.get(i.nome) !== i.sha256).map(i => i.nome);
+    const cur = new Map(now.inputs.map(i => [i.name, i.sha256])), missing = op.inputs.filter(i => cur.get(i.name) !== i.sha256).map(i => i.name);
     // a record of another version of the format has no such field: not comparable, never a crash
     const old = typeof op.table_sha256 !== "string" || typeof now.table_sha256 !== "string", same = !old && now.table_sha256 === op.table_sha256, lines = [];
     if (missing.length) lines.push(`the files are not the ones of the recipe: ${missing.join(", ")}`);

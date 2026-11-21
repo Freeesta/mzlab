@@ -1,5 +1,5 @@
 //! Structure checks for the rules of `fragrules/1` (`docs/agenti/msn-interpret.md`, «Controlli di sottostruttura»): the groups added to `Mol::groups()` and the
-//! named `site` functions, with no SMARTS. Used by `rules::attese`; `Mol::groups()` itself (so `regole_tp/2`) is not changed.
+//! named `site` functions, with no SMARTS. Used by `rules::attese`; `Mol::groups()` itself (so `regole_tp/3`) is not changed.
 
 use std::collections::BTreeSet;
 

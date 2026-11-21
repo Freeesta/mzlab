@@ -1,6 +1,6 @@
 //! Roles and times of the files of a series, `samples/1` (`docs/schemi/samples-1.json`): the one model of the Data view and of mzFinder, with the physical
 //! sample, polarity, matrix, batch, date, group and the free typed columns. `propose` reads the names (one parser, times never confirmed), `validate` gives stable
-//! codes (the pages put the words), `per_tp` gives the indices by role and the minutes of `feature_pipeline/1`; `json3` is the canonical form (`table_to_json`),
+//! codes (the pages put the words), `per_tp` gives the indices by role and the minutes of `feature_pipeline/2`; `json3` is the canonical form (`table_to_json`),
 //! `csv`, `model` (name models, `regex`) and `from_file` (what the file says about itself) read and fill it.
 
 mod blank_words;

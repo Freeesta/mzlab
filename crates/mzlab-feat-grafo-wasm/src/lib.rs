@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of the structure graph of `mzlab-feat` (`chem::graph`): the SMILES of the parent gives its formula, its functional groups (the
-//! preconditions of `regole_tp/2`) and the formulas of the products of its cleavages (the `fragments` of the hypotheses). A `.wasm` of its own, so the engine of
+//! preconditions of `regole_tp/3`) and the formulas of the products of its cleavages (the `fragments` of the hypotheses). A `.wasm` of its own, so the engine of
 //! the proofs (`mzlab-feat-wasm`) does not carry it: the page loads it when the user gives a SMILES. Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;

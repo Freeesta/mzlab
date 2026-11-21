@@ -204,7 +204,7 @@ I18N.add("en", {
   "error.hypo.profileFrozen": "The profile {profile} is frozen and cannot be changed: make a copy.",
   "error.hypo.rule": "The rule {id} has a formula change that cannot be read.",
   "error.hypo.rulesFormat": "The rules file is not valid ({what}).",
-  "error.hypo.rulesVersion": "The rules file has version {found} and this program needs version {need}.",
+  "error.hypo.rulesVersion": "The rules file has version {found} and this program reads only version {need}: old rules files are not converted, so write the rules again in the new format.",
   "error.hypo.structure": "The structure of the parent compound is not valid: check the SMILES.",
   "error.hypo.structureMismatch": "The structure {structure} does not match the parent compound formula {parent}.",
   "error.interp.failed": "The interpretation could not run ({detail}).",

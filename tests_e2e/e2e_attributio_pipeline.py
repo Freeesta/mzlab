@@ -110,7 +110,7 @@ try:
 
         def recorded():
             rec = pg.evaluate("PIPER.state.last || null")
-            assert rec and json.loads(rec["recipe"])["engine"] == "untargeted" and rec["parametri"]["engine"] == "untargeted", rec and rec.get("recipe")
+            assert rec and json.loads(rec["recipe"])["engine"] == "untargeted" and rec["params"]["engine"] == "untargeted", rec and rec.get("recipe")
         step("the recipe of the run is recorded with its engine", recorded)
         b.close()
 finally:
