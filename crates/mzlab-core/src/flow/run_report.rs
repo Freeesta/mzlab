@@ -1,4 +1,4 @@
-//! The `run-report/1` record: one run of a workflow plan as a report that can be printed and checked. It is built from the `prov/1` record of the run (read, never
+//! The `run-report/2` record: one run of a workflow plan as a report that can be printed and checked. It is built from the `prov/1` record of the run (read, never
 //! changed) and the named output files of the run folder (`annot/1` for the level counts, `report/2` of the table, included as it is). Every number of the report
 //! is made here; the page only lays them out. No verdicts: levels from `annot.level` are counted as `auto`, apart from the others.
 
@@ -240,6 +240,10 @@ pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
             continue;
         };
         regulatory.read(&v);
+        // a table report of the old key set is refused, never read as "no table report"
+        if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
+            return Err(Error::new("err.flow.format.reportOld"));
+        }
         if v.get("schema").and_then(|s| s.str()) == Some("report/2") {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
         }
@@ -373,10 +377,10 @@ fn step(o: &mut Out, s: &Step) {
 }
 
 impl RunReport {
-    /// The `run-report/1` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
+    /// The `run-report/2` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
     pub fn json(&self) -> String {
         let mut o = Out::default();
-        o.raw("{\"schema\":\"run-report/1\",\"engine\":{");
+        o.raw("{\"schema\":\"run-report/2\",\"engine\":{");
         for (k, (name, v)) in self.engine.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" })
                 .str(name)

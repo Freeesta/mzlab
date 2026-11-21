@@ -1,5 +1,5 @@
-"""Flow «This browser» prov/1 and run-report/1 (flow-web-prov.js, `record_prov` and `record_run_report` of the engine, `flow_job_meta`): over the five demo full-scan files the browser writes the record of the run of the base chain (index, detection, alignment, gap filling)
-that `mzlab-cli flow run` writes of the same plan, apart from the declared fields (times, memory peak, who ran it, reused or not); the files are kept in OPFS and the Report view opens the run-report/1. Builds the site and the .wasm of mzFinder (needs cargo,
+"""Flow «This browser» prov/1 and run-report/2 (flow-web-prov.js, `record_prov` and `record_run_report` of the engine, `flow_job_meta`): over the five demo full-scan files the browser writes the record of the run of the base chain (index, detection, alignment, gap filling)
+that `mzlab-cli flow run` writes of the same plan, apart from the declared fields (times, memory peak, who ran it, reused or not); the files are kept in OPFS and the Report view opens the run-report/2. Builds the site and the .wasm of mzFinder (needs cargo,
 wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_prov.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -93,7 +93,7 @@ def diff(a, b, path=""):
         return [d for i, (x, y) in enumerate(zip(a, b)) for d in diff(x, y, path + "/" + str(i))][:12]
     return [] if a == b else [(path, a, b)]
 BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused", "platform", "version", "commit"}
-# who ran it (prov/1 `agent`, run-report/1 `engine`): the platform (x86_64-linux / wasm32), the executables hashed (the native binary only) and the build identity
+# who ran it (prov/1 `agent`, run-report/2 `engine`): the platform (x86_64-linux / wasm32), the executables hashed (the native binary only) and the build identity
 # (`rustc`, `cargo_lock_sha256`: the site's .wasm is built with it, tools/prepara_sito.py `build_env`; the `cargo run` below shares a cached target folder with the other tests, so it is not)
 AGENT_BLANK = {"target", "modules", "rustc", "cargo_lock_sha256"}
 def blank(v):
@@ -134,7 +134,7 @@ try:
                 nat = native(run / "out" / nat_name); web = json.loads(kept[name])
                 assert blank(nat) == blank(web), (name, diff(blank(nat), blank(web)))
             assert kept["report"] == kept["report.json"] and r["record"]["run_report"] == kept["report.json"]
-        step("the prov/1 and the run-report/1 of the browser are the records of the native flow run apart from the declared fields", first)
+        step("the prov/1 and the run-report/2 of the browser are the records of the native flow run apart from the declared fields", first)
 
         def again():
             r = pg.evaluate(RUN, PLAN); assert not r.get("err"), r["err"]

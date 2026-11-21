@@ -1,4 +1,4 @@
-//! The report of a table (`report/1`, JSON, numbers only): what the series is, what the view kept and the quality control. It is the text of the
+//! The report of a table (`report/2`, JSON, numbers only): what the series is, what the view kept and the quality control. It is the text of the
 //! header of the exports and what the page shows; it holds no verdict. The SHA-256 of the table is given by the caller (the one of the `.mzfeat`).
 
 use mzlab_core::json::Out;
@@ -10,7 +10,7 @@ use crate::view::View;
 
 pub const SCHEMA: &str = "report/2";
 
-/// The `report/1` document of a table under a view (None = the whole table, areas as measured).
+/// The `report/2` document of a table under a view (None = the whole table, areas as measured).
 pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>, table_sha256: &str) -> String {
     let mut j = Out::default();
     j.raw("{\"schema\":").str(SCHEMA).raw(",\"crate\":").str(env!("CARGO_PKG_VERSION"));

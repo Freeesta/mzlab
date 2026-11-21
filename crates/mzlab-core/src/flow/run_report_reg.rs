@@ -1,4 +1,4 @@
-//! The "Regulatory lists" section of `run-report/1`: the lists a run screened against (header, coverage line, disclaimer) and one row per candidate that a list
+//! The "Regulatory lists" section of `run-report/2`: the lists a run screened against (header, coverage line, disclaimer) and one row per candidate that a list
 //! names, from the `screen/1` (mass path) and `annot/1` (structure path) files of the run folder. The words are those of `docs/agenti/normative.md` («Parole»),
 //! made here once so the CLI and the page give the same text. A match is a candidate with its evidence: no word here says a sample contains or breaks anything.
 
@@ -267,7 +267,7 @@ fn read_into(reg: &mut Regulatory, v: &Value) {
     }
 }
 
-/// The section as `run-report/1` writes it; nothing when the run used no regulatory list.
+/// The section as `run-report/2` writes it; nothing when the run used no regulatory list.
 fn write_into(reg: &Regulatory, o: &mut Out) {
     if reg.lists.is_empty() {
         return;
@@ -298,7 +298,7 @@ impl Regulatory {
         read_into(self, v);
     }
 
-    /// The section as `run-report/1` writes it; nothing when the run used no regulatory list.
+    /// The section as `run-report/2` writes it; nothing when the run used no regulatory list.
     pub fn write(&self, o: &mut Out) {
         write_into(self, o);
     }

@@ -174,7 +174,7 @@ I18N.add("en", {
   "error.stats.param": "A parameter of the statistics is not valid (the floor must be zero or more).",
   "error.tpNoBlock": "The table has no block of transformation products for this parent compound.",
   "error.tpNoControls": "The table has no control files to compare with the treated ones: mark them.",
-  "error.viewSpecOld": "This view was saved with the old older key names and cannot be read: set the filters and the normalisation again.",
+  "error.viewSpecOld": "This view was saved with the old key names and cannot be read: set the filters and the normalisation again.",
   "warn.wiff.unindexed": "The .wiff index is older than its .wiff.scan (the files were copied while the acquisition was running). Sections of data the index does not list: {n}; recovered as samples, with a name and method inferred from the previous sample: {recovered}; left out because their blocks cannot be checked: {skipped}. Copy the files again after the acquisition ends.",
   "warn.wiff.emptySample": "Empty acquisition: no scans.",
   "warn.wiff.inferredSample": "Recovered from data the .wiff index does not list: the name and the method are inferred from the previous sample, not read from the file.",

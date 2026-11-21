@@ -1,4 +1,4 @@
-//! `run-report/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
+//! `run-report/2` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
 
 use super::*;
 use crate::json::parse;
@@ -61,7 +61,7 @@ fn json_is_stable_and_valid() {
     let a = run().json();
     assert_eq!(a, run().json());
     let v = parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/1"));
+    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/2"));
     assert_eq!(v.get("total_ms").unwrap().f64(), Some(15.5));
     assert_eq!(
         v.get("report").unwrap().get("rows").unwrap().f64(),
@@ -171,4 +171,15 @@ fn cites_each_imported_list_file_once_with_its_sha256() {
     let j = c.json();
     assert!(j.contains("Lists you imported: imp.mzsus (SHA-256 abcdef01…)."));
     assert!(j.contains(r#""imported":[{"name":"imp.mzsus","sha256":"abcdef0123456789"}]"#));
+}
+
+#[test]
+fn a_table_report_of_the_old_key_set_is_refused() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let u = [Output {
+        name: "report.json",
+        bytes: br#"{"schema":"report/1","righe":4}"#,
+    }];
+    let e = build(&prov, &u).err().expect("report/1 must be refused");
+    assert_eq!(e.key, "err.flow.format.reportOld");
 }

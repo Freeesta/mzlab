@@ -13,7 +13,7 @@ fn number(job: &[(String, Value)], name: &str) -> Option<f64> {
     param(job, name).and_then(|v| v.f64())
 }
 
-/// The options of the blank rule that differ from the defaults, as the fields that follow `valore`.
+/// The options of the blank rule that differ from the defaults, as the fields that follow `value`.
 fn blank_extra(job: &[(String, Value)]) -> String {
     let text = |k: &str| param(job, k).and_then(|v| v.str());
     let mut o = String::new();

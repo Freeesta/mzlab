@@ -142,7 +142,7 @@ pub fn passes(
 }
 
 /// Per-file labels of the series (batch, matrix, series, group) that the matched blank rule and the replicate rule read; empty when no rule needs them. They travel in
-/// the spec of the view (`etichette`), so the digest covers them.
+/// the spec of the view (`labels`), so the digest covers them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Labels {
     pub batch: Vec<String>,
@@ -193,7 +193,7 @@ impl Labels {
         j.0
     }
 
-    /// The `etichette` object; every list is empty or has one entry per file.
+    /// The `labels` object; every list is empty or has one entry per file.
     pub fn from_json(v: &Value, n_files: usize) -> Result<Labels> {
         let list = |k: &str| -> Result<Vec<String>> {
             let Some(a) = v.get(k) else {
@@ -397,7 +397,7 @@ fn pick<T: Copy>(table: &[(&str, T)], v: &Value, key: &str, default: T) -> Resul
     }
 }
 
-/// The fields of the options after `valore`, all of them.
+/// The fields of the options after `value`, all of them.
 pub fn write_json(j: &mut Out, o: &BlankOpts) {
     j.raw(",\"quantity\":")
         .str(name(&QUANTITY, o.quantity))

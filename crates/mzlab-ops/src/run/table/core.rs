@@ -118,7 +118,7 @@ pub fn view_json_origin<R: ReadAt>(
 
 pub use mzlab_feat::view_table::{is_view, table_of_view, view_origin};
 
-/// The `report/1` of a table under the view `spec` (empty = the whole table).
+/// The `report/2` of a table under the view `spec` (empty = the whole table).
 pub fn report_json<R: ReadAt>(
     r: &mut R,
     size: u64,
@@ -208,7 +208,7 @@ pub fn samples_json(files_json: &str) -> Result<String> {
     Ok(samples::to_json(&samples::propose(&files)))
 }
 
-/// The `qc/1` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
+/// The `qc/2` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
 pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
