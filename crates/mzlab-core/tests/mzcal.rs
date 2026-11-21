@@ -66,7 +66,7 @@ fn y_of(json: &str) -> &str {
 fn number(json: &str, key: &str) -> f64 {
     let at = json.find(&format!("\"{key}\":")).unwrap() + key.len() + 3;
     json[at..]
-        .split(|c| c == ',' || c == '}')
+        .split([',', '}'])
         .next()
         .unwrap()
         .parse()
