@@ -654,7 +654,7 @@ mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic ring
 
 usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {"molfile": V2000 text, "part": true|false}: the structure as drawn (open valences filled with H), part = a selection;
+  REQUEST.json  {"molfile": V2000 or V3000 text, "part": true|false}: the structure as drawn (open valences filled with H), part = a selection;
                 - reads the standard input
   --out PATH    write there instead of the standard output
 
@@ -702,7 +702,7 @@ mzlab-cli mol cut: the pieces of a cut across bonds of a structure, as JSON (cut
 
 usage: mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...] [--out PATH]
 
-  MOLFILE         a V2000 molfile (- reads the standard input); atoms are numbered from 0 in file order
+  MOLFILE         a V2000 or V3000 molfile (- reads the standard input); atoms are numbered from 0 in file order
   --set bonds     the cut bonds as atom pairs, e.g. 0-1,4-5 (several bonds of a ring give two pieces)
   --set mode      homolytic (default: each side keeps one electron, radical marks), heterolytic (+ on one side, - on the other,
                   single bonds only) or hydrogen (each side closes with one H per bond order)
@@ -723,7 +723,7 @@ which mechanism is right.
 
 usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {"molfile": V2000 text, "arrows": [{"kind": "pair"|"single", "from": {"lone"|"radical": ATOM} or {"bond": [A, B]},
+  REQUEST.json  {"molfile": V2000 or V3000 text, "arrows": [{"kind": "pair"|"single", "from": {"lone"|"radical": ATOM} or {"bond": [A, B]},
                 "to": {"atom": ATOM} or {"bond": [A, B]}}, ...], "lone": [[ATOM, PAIRS], ...]}: atoms are 0-based positions of the
                 molfile; pair = full head (two electrons), single = half head (one); - reads the standard input
   --out PATH    write there instead of the standard output

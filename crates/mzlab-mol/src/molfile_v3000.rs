@@ -67,8 +67,15 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
     let mut collections = Vec::new();
     let mut raw_groups: Vec<Vec<String>> = Vec::new();
     let mut block = "";
+    let mut counts = None;
     for l in logical_lines(lines) {
         let t = tokens(&l);
+        if t.first().map(String::as_str) == Some("COUNTS") {
+            counts = Some((
+                number::<usize>(t.get(1).map_or("", String::as_str))?,
+                number::<usize>(t.get(2).map_or("", String::as_str))?,
+            ));
+        }
         match (t.first().map(String::as_str), t.get(1).map(String::as_str)) {
             (Some("BEGIN"), Some(b)) => {
                 block = match b {
@@ -101,6 +108,14 @@ pub(crate) fn read_v3000(lines: &[&str]) -> Result<Draft, MolError> {
         .iter()
         .map(|t| bond(t, &ids))
         .collect::<Result<_, _>>()?;
+    // a file cut short must not read as a smaller molecule
+    if let Some((na, nb)) = counts.filter(|c| *c != (atoms.len(), raw_bonds.len())) {
+        return Err(fail(format!(
+            "the V3000 counts line says {na} atoms and {nb} bonds, the blocks hold {} and {}",
+            atoms.len(),
+            raw_bonds.len()
+        )));
+    }
     let mut stated_h = Vec::new();
     for t in &raw_groups {
         let p = props(t);

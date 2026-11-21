@@ -11,7 +11,7 @@ pub const HELP: &str = "mzlab-cli mol cut: the pieces of a cut across bonds of a
 
 usage: mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...] [--out PATH]
 
-  MOLFILE         a V2000 molfile (- reads the standard input); atoms are numbered from 0 in file order
+  MOLFILE         a V2000 or V3000 molfile (- reads the standard input); atoms are numbered from 0 in file order
   --set bonds     the cut bonds as atom pairs, e.g. 0-1,4-5 (several bonds of a ring give two pieces)
   --set mode      homolytic (default: each side keeps one electron, radical marks), heterolytic (+ on one side, - on the other,
                   single bonds only) or hydrogen (each side closes with one H per bond order)

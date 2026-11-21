@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli
+from cargo_util import build, cli, cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -151,6 +151,40 @@ def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
     r = json.loads(site)
     assert (r["schema"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("selection/1", part, "C8H8FNO", 11, 1, 1, 6)
     assert round(r["label"]["mass"], 4) == 153.0590
+
+
+def v3000_of(v2000):
+    """The V3000 text of a plain V2000 molfile (atoms, bonds, no property lines): the same molecule in the other format."""
+    lines = v2000.split("\n")
+    na, nb = int(lines[3][0:3]), int(lines[3][3:6])
+    atoms = [f"M  V30 {i + 1} {l[31:34].strip()} {l[0:10].strip()} {l[10:20].strip()} {l[20:30].strip()} 0" for i, l in enumerate(lines[4:4 + na])]
+    bonds = [f"M  V30 {i + 1} {l[6:9].strip()} {l[0:3].strip()} {l[3:6].strip()}" for i, l in enumerate(lines[4 + na:4 + na + nb])]
+    return "\n".join(["", "  qqq", "", "  0  0  0  0  0  0  0  0  0  0999 V3000", "M  V30 BEGIN CTAB", f"M  V30 COUNTS {na} {nb} 0 0 0", "M  V30 BEGIN ATOM", *atoms, "M  V30 END ATOM", "M  V30 BEGIN BOND", *bonds, "M  V30 END BOND", "M  V30 END CTAB", "M  END", ""])
+
+
+def sel_site(pkg, tmp_path, molfile):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({"molfile": molfile, "part": False}), encoding="utf-8")
+    return req, run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
+
+
+def test_sel_of_a_v3000_file_equals_the_v2000_one_and_the_cli_byte_for_byte(pkg, tmp_path):
+    req, site = sel_site(pkg, tmp_path, v3000_of(ANILIDE))
+    assert site == cli("mol", "sel", str(req), runner=run)
+    # the same molecule in V2000: the same bytes (not an empty molecule)
+    assert site == sel_site(pkg, tmp_path, ANILIDE)[1]
+    assert json.loads(site)["label"]["formula"] == "C8H8FNO"
+
+
+def test_a_damaged_or_too_big_v3000_file_is_an_error_on_the_site_and_in_the_cli(pkg, tmp_path):
+    whole = v3000_of(ANILIDE)
+    # a file cut short (the counts line says 11 bonds, the block holds 10), and one above the graph limit of 200 atoms
+    chain = "\n".join(["", "  qqq", "", "  0  0  0  0  0  0  0  0  0  0999 V3000", "M  V30 BEGIN CTAB", "M  V30 COUNTS 1200 0 0 0 0", "M  V30 BEGIN ATOM", *[f"M  V30 {i} C 0 0 0 0" for i in range(1, 1201)], "M  V30 END ATOM", "M  V30 END CTAB", "M  END", ""])
+    for molfile, key, code in ((whole.replace("M  V30 11 1 11 5\n", ""), "error.grafo.molfile", 4), (chain, "error.grafo.tooBig", 1)):
+        req, site = sel_site(pkg, tmp_path, molfile)
+        assert json.loads(site)["error_key"] == key
+        out = subprocess.run(cli_argv("mol", "sel", str(req), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert out.returncode == code and f'"error_key":"{key}"' in out.stdout.replace(" ", "")
 
 
 @pytest.mark.parametrize("el", ["O", "S"])

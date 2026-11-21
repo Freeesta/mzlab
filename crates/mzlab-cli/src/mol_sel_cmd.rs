@@ -9,7 +9,7 @@ pub const HELP: &str = "mzlab-cli mol sel: formula, charge, masses, heavy atoms,
 
 usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {\"molfile\": V2000 text, \"part\": true|false}: the structure as drawn (open valences filled with H), part = a selection;
+  REQUEST.json  {\"molfile\": V2000 or V3000 text, \"part\": true|false}: the structure as drawn (open valences filled with H), part = a selection;
                 - reads the standard input
   --out PATH    write there instead of the standard output
 

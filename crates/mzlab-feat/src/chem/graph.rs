@@ -13,6 +13,7 @@ use mzlab_core::json::Out;
 
 use super::aromatic_h;
 use super::atom_block::{atom_block, has};
+use super::molfile_read;
 use super::smiles::{self, normal_valence, RawAtom, RawBond};
 
 /// Atoms the graph accepts (the localisation of the Python version stopped at 64).
@@ -34,9 +35,10 @@ impl Mol {
         Ok(Mol::assemble(raw, written, false))
     }
 
-    /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
+    /// One molecule from a molfile (V2000 as the drawing page writes it, `pieceMolfile`; V3000 is read as its V2000 form, `molfile_read`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
     /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic with the hydrogens `mzlab-mol` reads (`aromatic_h`). Disconnected pieces are accepted (the page cuts bonds).
     pub fn from_molfile(mf: &str) -> Result<Mol> {
+        let mf = &*molfile_read::v2000(mf)?;
         let bad = || Error::new("error.grafo.molfile");
         let lines: Vec<&str> = mf.lines().collect();
         let counts = lines.get(3).ok_or_else(bad)?;
