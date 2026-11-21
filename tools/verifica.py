@@ -433,7 +433,7 @@ def main() -> None:
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--site-ready", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --part mode too")
     ap.add_argument("--changed", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
-    ap.add_argument("--show-ok", "--tutto", dest="show_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
+    ap.add_argument("--show-ok", dest="show_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
     a = ap.parse_args()
     if a.browser:
         os.environ["MZLAB_BROWSER"] = a.browser

@@ -5,16 +5,16 @@ Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per 
 Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-fast.md).
 
     python3 tools/ci_metrics.py registra-run --event E.json --new N.jsonl   # workflow_run completed: run + failed jobs
-    python3 tools/ci_metrics.py registra-pr-recenti --data-dir D.jsonl --new N.jsonl   # polled: PRs opened/closed/merged and pushed heads, read from the API
-    python3 tools/ci_metrics.py registra-conflitti --event E.json --data-dir D.jsonl --new N.jsonl   # push to main: new `dirty` PRs
-    python3 tools/ci_metrics.py registra-recenti --data-dir D.jsonl --new N.jsonl --cursor C.json   # scheduled: runs completed after the cursor + runner load
+    python3 tools/ci_metrics.py registra-pr-recenti --data-file D.jsonl --new N.jsonl   # polled: PRs opened/closed/merged and pushed heads, read from the API
+    python3 tools/ci_metrics.py registra-conflitti --event E.json --data-file D.jsonl --new N.jsonl   # push to main: new `dirty` PRs
+    python3 tools/ci_metrics.py registra-recenti --data-file D.jsonl --new N.jsonl --cursor C.json   # scheduled: runs completed after the cursor + runner load
     python3 tools/ci_metrics.py registra-coda --new N.jsonl                  # snapshot of the open PRs (behind, dirty, green and waiting, oldest)
-    python3 tools/ci_metrics.py accoda N.jsonl --data-dir D.jsonl [--cursor C.json]   # append without duplicates (every line gets `v`)
-    python3 tools/ci_metrics.py riempi-verde --data-dir D.jsonl [--maximum 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
-    python3 tools/ci_metrics.py compatta --data-dir D.jsonl [--days 14]          # drop the heavy fields of old rows
-    python3 tools/ci_metrics.py esporta [--data-dir D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
-    python3 tools/ci_metrics.py percorso [--data-dir D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
-    python3 tools/ci_metrics.py riepilogo [--data-dir D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
+    python3 tools/ci_metrics.py accoda N.jsonl --data-file D.jsonl [--cursor C.json]   # append without duplicates (every line gets `v`)
+    python3 tools/ci_metrics.py riempi-verde --data-file D.jsonl [--maximum 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
+    python3 tools/ci_metrics.py compatta --data-file D.jsonl [--days 14]          # drop the heavy fields of old rows
+    python3 tools/ci_metrics.py esporta [--data-file D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
+    python3 tools/ci_metrics.py percorso [--data-file D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
+    python3 tools/ci_metrics.py riepilogo [--data-file D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
 """
 from __future__ import annotations
 
@@ -408,16 +408,16 @@ def main() -> int:
     ap.add_argument("comando", choices=["registra-run", "registra-pr-recenti", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--event", default=os.environ.get("GITHUB_EVENT_PATH"))
-    ap.add_argument("--data-dir", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
-    ap.add_argument("--new", help="write the new lines here instead of appending to --data-dir")
-    ap.add_argument("--cursor", help="registra-recenti: write the new cursor here; accoda: copy this cursor next to --data-dir")
+    ap.add_argument("--data-file", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
+    ap.add_argument("--new", help="write the new lines here instead of appending to --data-file")
+    ap.add_argument("--cursor", help="registra-recenti: write the new cursor here; accoda: copy this cursor next to --data-file")
     ap.add_argument("--out", default="stat-ci-csv", help="esporta: folder of the CSV files")
     ap.add_argument("--days", type=int, default=14, help="compatta: rows older than this lose their heavy fields")
     ap.add_argument("--da")
     ap.add_argument("--maximum", type=int, default=30, help="riempi-verde: rows tried per call")
     a = ap.parse_args()
     if a.comando in ("riepilogo", "esporta", "percorso"):
-        ev = read_all(a.data_dir) if a.data_dir else branch_events()
+        ev = read_all(a.data_file) if a.data_file else branch_events()
         if a.comando == "esporta":
             print("\n".join(dati_ci.export(ev, a.out)))
         elif a.comando == "percorso":
@@ -426,7 +426,7 @@ def main() -> int:
         else:
             riepilogo(ev, a.da)
         return 0
-    data = a.data_dir or "eventi.jsonl"
+    data = a.data_file or "eventi.jsonl"
     if a.comando == "accoda":
         print(f"{enqueue(leggi(a.file), data)} new lines")
         if a.cursor and os.path.exists(a.cursor):

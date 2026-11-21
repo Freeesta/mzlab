@@ -1,4 +1,4 @@
-"""Old and new names of the golden/guard variables both trigger the rewrite path; `--tutto` is an alias of `--show-ok`."""
+"""Old and new names of the golden/guard variables both trigger the rewrite path."""
 import importlib
 import subprocess
 import sys
@@ -40,4 +40,4 @@ def test_rust_readers_check_new_then_old(f, new, old):
 
 def test_show_ok_alias():
     out = subprocess.run([sys.executable, str(ROOT / "tools" / "verifica.py"), "--help"], capture_output=True, text=True, cwd=ROOT).stdout
-    assert "--show-ok, --tutto" in out
+    assert "--show-ok" in out and "--show-ok," not in out   # one name, no alias
