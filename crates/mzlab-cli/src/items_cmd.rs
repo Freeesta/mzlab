@@ -62,7 +62,7 @@ fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<String
         let size = f.metadata().map_err(io)?.len();
         mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(f, size), &name, &sample)?
     } else {
-        let mut l = mzlab_lettori::apri(
+        let mut l = mzlab_lettori::open(
             crate::flow_set::file_set(file)?,
             &mzlab_core::readers::Limits::desktop(),
         )?;

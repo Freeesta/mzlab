@@ -274,7 +274,7 @@ fn index_reader(
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut fs = flow_set::file_set(path)?;
     without_sha1(&mut fs);
-    let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
+    let l = mzlab_lettori::open(fs, &Limits::desktop())?;
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
     let mut l = Scans::new(l, sample, pace).stopping(stop);

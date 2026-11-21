@@ -19,7 +19,7 @@ fn file(rel: &str) -> Option<PathBuf> {
     p
 }
 
-fn apri(p: &Path) -> Box<dyn mzlab_core::readers::Reader> {
+fn open(p: &Path) -> Box<dyn mzlab_core::readers::Reader> {
     let bytes = std::fs::read(p).unwrap();
     let fs = FileSet {
         membri: vec![Member {
@@ -37,7 +37,7 @@ fn a_tsq_file_gives_srm_chromatograms_with_q1_q3_and_ce() {
     let Some(p) = file("thermo/raw/PXD057351_WT_R1.raw") else {
         return;
     };
-    let mut l = apri(&p);
+    let mut l = open(&p);
     let v = l.chromatograms(0).unwrap();
     let srm: Vec<_> = v.iter().filter(|c| c.tipo == ChromKind::Srm).collect();
     assert!(srm.len() >= 20, "{} SRM traces", srm.len());
@@ -57,7 +57,7 @@ fn polarity_comes_from_the_method_table() {
     let Some(p) = file("thermo/raw/MTBLS7889_Fermentation_3_Media_test_001.raw") else {
         return;
     };
-    let mut l = apri(&p);
+    let mut l = open(&p);
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()
@@ -77,7 +77,7 @@ fn uv_channels_are_pda_traces_and_the_3d_field_is_a_warning() {
     let Some(p) = file("thermo/pda/MTBLS9839_MET-2021-P17-YG_neg_MS2dd30k_1121_EB_076.raw") else {
         return;
     };
-    let mut l = apri(&p);
+    let mut l = open(&p);
     let v = l.chromatograms(0).unwrap();
     let uv: Vec<_> = v.iter().filter(|c| c.tipo == ChromKind::Pda).collect();
     assert_eq!(uv.len(), 4);
@@ -101,7 +101,7 @@ fn lock_mass_is_in_the_method() {
     let Some(p) = file("thermo/pda/MTBLS775_StandardsMix-b-carbolin_4-CTC_10ng-ml_1.raw") else {
         return;
     };
-    let m = apri(&p).method(0).unwrap();
+    let m = open(&p).method(0).unwrap();
     assert!(
         m.contains("lock_mass") && m.contains("214.08943") && m.contains("correction_ppm"),
         "{m:.200}"
@@ -145,7 +145,7 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
             }
         })
         .unwrap();
-        let mut l = apri(&raw);
+        let mut l = open(&raw);
         let mine: Vec<_> = l
             .chromatograms(0)
             .unwrap()

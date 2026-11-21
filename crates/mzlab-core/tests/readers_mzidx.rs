@@ -1,5 +1,5 @@
 //! The `.mzidx` built straight from a vendor file set (`upload::prepare_lettore` + `mzidx::build_lettore`, version 2) equals the one built from the
-//! mzML `readers_mzml::scrivi` writes for the same sample: the same sections byte for byte, the same rows but for their first two columns, the same
+//! mzML `readers_mzml::write` writes for the same sample: the same sections byte for byte, the same rows but for their first two columns, the same
 //! metadata but for `source` and `version`; and the same index whatever the budget (one pass or many). The two sources of `source` (the mzML by
 //! offset and the reader) give the same peaks and traces. Synthetic `.D` always, synthetic `.wiff` with
 //! python3, the real `.wiff`, `.D` and `.raw` with the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without them.
@@ -70,10 +70,10 @@ fn on_disk(dir: &Path, rel: &str) -> Member {
 fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     let mut fs = make();
     let members = upload::impronte(&mut fs).unwrap();
-    let mut l = readers::apri(fs, &Limits::desktop()).unwrap();
+    let mut l = readers::open(fs, &Limits::desktop()).unwrap();
     let name = format!("{label}.mzML");
     // A: through the mzML
-    let mzml = readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
     let (a, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
     same_sources(label, mzml, &a, &mut *l, c);
@@ -230,7 +230,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn readers::Reade
 
 /// Every sample of a set.
 fn same_all(label: &str, make: &dyn Fn() -> FileSet) -> usize {
-    let n = readers::apri(make(), &Limits::desktop())
+    let n = readers::open(make(), &Limits::desktop())
         .unwrap()
         .samples()
         .len();
@@ -297,8 +297,8 @@ fn a_sections_mismatch_names_its_array() {
             file("x.D/AcqData/MSPeak.bin", peak),
         ],
     };
-    let mut l = readers::apri(fs, &Limits::desktop()).unwrap();
-    let mzml = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::open(fs, &Limits::desktop()).unwrap();
+    let mzml = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let p = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "x.mzML").unwrap();
     let (a, _) = mzidx::build_mzml_to_vec(&p.table, &mzml, BIG).unwrap();
     let scans_off = u64_at(&a, 32) as usize;
@@ -397,7 +397,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
     let ext = |p: &Path, e: &str| p.extension().is_some_and(|x| x.eq_ignore_ascii_case(e));
     let (mut samples, mut scans) = (0usize, 0usize);
     let mut count = |label: &str, make: &dyn Fn() -> FileSet| {
-        let n = readers::apri(make(), &Limits::desktop())
+        let n = readers::open(make(), &Limits::desktop())
             .unwrap()
             .samples()
             .len();
@@ -457,7 +457,7 @@ fn a_synthetic_sim_wiff_gives_its_ions_the_kind_of_the_reader() {
     }
     // no scans to count: the check that ran is the one of the SIM traces
     same_all("dadsim", &|| wiff_set(&out, "dadsim"));
-    let mut l = readers::apri(wiff_set(&out, "dadsim"), &Limits::desktop()).unwrap();
+    let mut l = readers::open(wiff_set(&out, "dadsim"), &Limits::desktop()).unwrap();
     let sic = l
         .chromatograms(0)
         .unwrap()

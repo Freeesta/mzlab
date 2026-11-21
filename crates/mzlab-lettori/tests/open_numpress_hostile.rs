@@ -92,7 +92,7 @@ fn rows_over_the_limit_are_an_error() {
         entries: 2,
         ..Limits::sito()
     };
-    let r = mzlab_lettori::apri(
+    let r = mzlab_lettori::open(
         file_set(
             "campione.mzML",
             mzml_di(

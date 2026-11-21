@@ -79,21 +79,21 @@ const REGISTRY: &[ReaderEntry] = &[
         contratto: CONTRATTO,
         estensioni: &[".dat", ".x"],
         riconosci: recognize_maybe,
-        apri: open_empty,
+        open: open_empty,
     },
     ReaderEntry {
         id: "a",
         contratto: CONTRATTO,
         estensioni: &[".x", ".a"],
         riconosci: recognize_aa,
-        apri: open_empty,
+        open: open_empty,
     },
     ReaderEntry {
         id: "vecchio",
         contratto: 0,
         estensioni: &[".old"],
         riconosci: |_| Fiducia::Si,
-        apri: open_empty,
+        open: open_empty,
     },
 ];
 
@@ -120,7 +120,7 @@ fn the_extensions_for_the_pickers_come_from_the_registry_without_repeats() {
 
 #[test]
 fn an_unknown_set_is_an_error_with_a_key_and_the_head_is_read_at_most_to_the_end() {
-    let e = apri(file_set("x.bin", b"zz"), &Limits::default())
+    let e = open(file_set("x.bin", b"zz"), &Limits::default())
         .err()
         .unwrap();
     assert_eq!(e.key, "err.file.notAccepted");

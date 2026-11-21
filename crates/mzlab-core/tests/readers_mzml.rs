@@ -36,9 +36,9 @@ fn agilent_through_the_reader_gives_the_spectra_of_the_run() {
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+    let mut l = readers::open(fs, &Limits::sito()).unwrap();
     let mut steps = 0;
-    let via = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| steps += 1).unwrap();
+    let via = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| steps += 1).unwrap();
     assert!(steps >= 2);
     let back = mzlab_core::mzml::read(&via[..]).unwrap();
     assert_eq!(back.spectra.len(), want.spectra.len());
@@ -49,10 +49,10 @@ fn agilent_through_the_reader_gives_the_spectra_of_the_run() {
         );
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
     }
-    assert!(readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());
+    assert!(readers_mzml::write(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());
 }
 
-/// The `convert.mzml` form: same spectra as `scrivi`, `indexedmzML` with working offsets, CV 4.2.6, one `processingMethod` per step.
+/// The `convert.mzml` form: same spectra as `write`, `indexedmzML` with working offsets, CV 4.2.6, one `processingMethod` per step.
 #[test]
 fn indexed_form_has_the_same_scans_and_a_working_index() {
     use mzlab_core::mzmlwrite::{Options, ProcStep};
@@ -69,8 +69,8 @@ fn indexed_form_has_the_same_scans_and_a_working_index() {
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     };
-    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
-    let plain = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::open(fs, &Limits::sito()).unwrap();
+    let plain = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let step = ProcStep {
         accession: "MS:1000035".into(),
         name: "peak picking".into(),

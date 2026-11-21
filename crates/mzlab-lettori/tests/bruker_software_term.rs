@@ -26,9 +26,9 @@ fn the_acquisition_program_is_a_valid_software_term() {
     let fs = FileSet {
         membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open(fs, &Limits::desktop()).unwrap();
     let mut out = Vec::new();
-    mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
     mzlab_core::mzml_validate::check_written(&out[..]).unwrap();
     let text = String::from_utf8(out).unwrap();
     assert!(

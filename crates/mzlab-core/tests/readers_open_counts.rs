@@ -98,7 +98,7 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
     };
     let c = Rc::new(Conti::default());
     // the list of samples (`native_samples`)
-    let l = readers::apri(set(&dati, &c), &Limits::sito()).unwrap();
+    let l = readers::open(set(&dati, &c), &Limits::sito()).unwrap();
     assert_eq!(l.samples().len(), SAMPLES);
     drop(l);
     let list = (c.reads.get(), c.bytes.get());

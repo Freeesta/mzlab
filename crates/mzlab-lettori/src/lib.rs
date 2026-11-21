@@ -149,7 +149,7 @@ fn open_as(mut fs: FileSet, limits: &Limits, listing: bool) -> Result<Box<dyn Re
         #[cfg(not(any(feature = "sciex", feature = "tutte")))]
         unreachable!()
     } else {
-        (v.apri)(fs, limits)?
+        (v.open)(fs, limits)?
     };
     if l.format() == readers::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
         l = Box::new(srm::SrmFromScans::new(l));
@@ -207,13 +207,13 @@ fn refusal(fs: &FileSet, name: String) -> Error {
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmFromScans`).
-pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     Ok(Box::new(srm::SrmFromScans::new(open_bare(fs, limits)?)))
 }
 
-/// `apri` for a listing (`readers::list_samples`): the dataset is read as far as its index and no further where the reader can (a `.wiff.scan` is not read).
+/// `open` for a listing (`readers::list_samples`): the dataset is read as far as its index and no further where the reader can (a `.wiff.scan` is not read).
 /// Not wrapped in `SrmFromScans`: it probes the scans of every sample, which a listing must not do (a refused sample would fail the whole file).
-pub fn apri_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     open_as(fs, limits, true)
 }
 

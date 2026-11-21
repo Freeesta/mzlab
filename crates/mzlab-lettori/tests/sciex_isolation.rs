@@ -50,7 +50,7 @@ fn set(dir: &Path, name: &str) -> FileSet {
 }
 
 fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
-    mzlab_lettori::apri(set(dir, name), &Limits::desktop()).unwrap()
+    mzlab_lettori::open(set(dir, name), &Limits::desktop()).unwrap()
 }
 
 /// The scans (id, rt, points), chromatograms (id, finite values) and losses of a sample.
@@ -126,7 +126,7 @@ fn a_wiff_with_a_damaged_start_is_the_file_named() {
     let mut b = std::fs::read(d.join("sano.wiff")).unwrap();
     b[0] = 0;
     fs.membri[0].dati = Box::new(b);
-    let e = mzlab_lettori::apri(fs, &Limits::desktop()).err().unwrap();
+    let e = mzlab_lettori::open(fs, &Limits::desktop()).err().unwrap();
     let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.clone());
     assert_eq!(
         (e.key, param("name").as_deref(), param("ext").as_deref()),

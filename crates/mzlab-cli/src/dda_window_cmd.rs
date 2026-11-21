@@ -83,7 +83,7 @@ fn read(c: &Ask, tmp: &std::path::Path) -> Result<String> {
                 .map_err(|e| Error::new("err.flow.io").with("detail", e))?,
         )?
     } else {
-        let mut l = mzlab_lettori::apri(crate::flow_set::file_set(&c.file)?, &Limits::desktop())?;
+        let mut l = mzlab_lettori::open(crate::flow_set::file_set(&c.file)?, &Limits::desktop())?;
         r.mzml_route(
             "/api/dda_window",
             &q,

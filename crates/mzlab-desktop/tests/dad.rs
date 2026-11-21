@@ -90,7 +90,7 @@ fn reference_wiff(wiff: &Path) -> Mzml<Shell> {
             member(&format!("{n}.scan"), scan.into()),
         ],
     };
-    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open(set, &Limits::desktop()).unwrap();
     let g = readers_mzml::guscio(&mut *l, 0).unwrap();
     let size = g.len() as u64;
     Mzml::new(Shell { g, l }, size)

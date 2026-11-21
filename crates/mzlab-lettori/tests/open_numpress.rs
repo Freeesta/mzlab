@@ -264,9 +264,9 @@ fn a_truncated_numpress_declares_the_missing_spectra() {
         zlib: false,
     };
     let b = mzml_di(&scan, cod, None);
-    let mut whole = mzlab_lettori::apri(file_set("a.mzML", b.clone()), &Limits::sito()).unwrap();
+    let mut whole = mzlab_lettori::open(file_set("a.mzML", b.clone()), &Limits::sito()).unwrap();
     assert_eq!(whole.missing(0), 0);
-    let mut l = mzlab_lettori::apri(
+    let mut l = mzlab_lettori::open(
         file_set("a.mzML", b[..b.len() * 3 / 4].to_vec()),
         &Limits::sito(),
     )

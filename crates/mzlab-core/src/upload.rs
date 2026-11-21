@@ -205,7 +205,7 @@ pub struct Fingerprint {
     pub probe: String,
 }
 
-/// The fingerprints of every member of `fs`, in its order: taken before `readers::apri`, which consumes the set. The SHA-1 goes to the member too,
+/// The fingerprints of every member of `fs`, in its order: taken before `readers::open`, which consumes the set. The SHA-1 goes to the member too,
 /// so the reader does not read the file again for the header of the mzML.
 pub fn impronte(fs: &mut FileSet) -> Result<Vec<Fingerprint>> {
     fs.membri

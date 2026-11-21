@@ -34,7 +34,7 @@ fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
         _ => return,
     };
     let _ = mzlab_lettori::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open(insieme(membri), &Limits::sito()) else {
         return;
     };
     let _ = l.method(0);

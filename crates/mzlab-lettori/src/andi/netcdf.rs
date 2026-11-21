@@ -173,7 +173,7 @@ impl Cur<'_> {
 
 impl Cdf {
     /// Parses the header of the file `dati` of `dim` bytes.
-    pub fn apri(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Cdf> {
+    pub fn open(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Cdf> {
         let mut c = Cur {
             dati: data,
             dim,

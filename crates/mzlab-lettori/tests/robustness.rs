@@ -13,7 +13,7 @@ fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
 }
 
 fn key(fs: FileSet) -> &'static str {
-    match mzlab_lettori::apri(fs, &Limits::sito()) {
+    match mzlab_lettori::open(fs, &Limits::sito()) {
         Ok(_) => "ok",
         Err(e) => e.key,
     }

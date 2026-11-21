@@ -12,7 +12,7 @@ use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 const MSTS: &[u8] =
     b"<?xml version=\"1.0\"?><TimeSegments><TimeSegment><StartTime>3</StartTime><EndTime>3.1</EndTime><NumOfScans>4</NumOfScans></TimeSegment></TimeSegments>";
 
-fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn Reader>> {
+fn open(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn Reader>> {
     let mut members = vec![
         ("x.D/AcqData/MSScan.bin", scan.to_vec()),
         ("x.D/AcqData/MSPeak.bin", peak.to_vec()),
@@ -20,7 +20,7 @@ fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn
     if ts {
         members.push(("x.D/AcqData/MSTS.xml", MSTS.to_vec()));
     }
-    readers::apri(
+    readers::open(
         FileSet {
             membri: members
                 .into_iter()
@@ -57,7 +57,7 @@ const KEYS: [&str; 3] = [
 
 /// Opens the cut folder and checks it against the whole one; returns whether it opened.
 fn check(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], at: &str) -> bool {
-    match apri(scan, peak, true) {
+    match open(scan, peak, true) {
         Ok(mut l) => {
             let s = scansioni(&mut l);
             assert!(
@@ -86,7 +86,7 @@ fn check(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], at: 
 #[test]
 fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
     let (idx, peak) = encode(&sample());
-    let mut l = apri(&idx, &peak, true).expect("the whole folder opens");
+    let mut l = open(&idx, &peak, true).expect("the whole folder opens");
     assert_eq!(l.missing(0), 0);
     let intere = scansioni(&mut l);
     assert_eq!(intere.len(), 3);
@@ -109,13 +109,13 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
     }
     assert!(opened > idx.len() / 2, "only {opened} cuts opened");
     // A record cut in half: three whole records, one announced scan left out.
-    let mut l = apri(&idx[..idx.len() - 7], &peak, true).expect("opens");
+    let mut l = open(&idx[..idx.len() - 7], &peak, true).expect("opens");
     assert_eq!((scansioni(&mut l).len(), l.missing(0)), (2, 1));
     // The points of the last scan cut away.
-    let mut l = apri(&idx, &peak[..peak.len() - 1], true).expect("opens");
+    let mut l = open(&idx, &peak[..peak.len() - 1], true).expect("opens");
     assert_eq!((scansioni(&mut l).len(), l.missing(0)), (2, 1));
     // Nothing whole is left: one keyed notice.
-    let e = apri(&idx, &peak[..1], true).err().expect("refused");
+    let e = open(&idx, &peak[..1], true).err().expect("refused");
     assert_eq!(e.key, "err.file.agilentCut");
     assert!(
         e.params.iter().any(|(k, v)| *k == "name" && v == "x.D"),
@@ -123,14 +123,14 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
         e.params
     );
     // A whole index with an empty spectrum file names that file, not a cut.
-    let e = apri(&idx, &[], true).err().expect("refused");
+    let e = open(&idx, &[], true).err().expect("refused");
     assert_eq!(e.key, "err.file.agilentNoPeaks");
 }
 
 #[test]
 fn without_an_announced_count_a_part_of_a_record_stays_an_error() {
     let (idx, peak) = encode(&sample());
-    let e = apri(&idx[..idx.len() - 7], &peak, false)
+    let e = open(&idx[..idx.len() - 7], &peak, false)
         .err()
         .expect("refused");
     assert_eq!(e.key, "err.file.agilent");

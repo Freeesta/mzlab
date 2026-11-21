@@ -17,12 +17,12 @@ fn open() -> Box<dyn Reader> {
     let fs = FileSet {
         membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
-    mzlab_lettori::apri(fs, &Limits::desktop()).unwrap()
+    mzlab_lettori::open(fs, &Limits::desktop()).unwrap()
 }
 
 fn mzml(l: &mut dyn Reader) -> Vec<u8> {
     let mut out = Vec::new();
-    mzlab_core::readers_mzml::scrivi(l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::write(l, 0, &mut out, &mut |_, _| {}).unwrap();
     out
 }
 

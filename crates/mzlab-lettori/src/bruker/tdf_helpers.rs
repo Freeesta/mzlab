@@ -94,14 +94,14 @@ pub(super) fn legacy_key(fs: &FileSet) -> Option<&'static str> {
 pub(super) fn recognize(fs: &mut FileSet, base: &str) -> Fiducia {
     let bin = fs.find(&format!("{base}_bin")).is_some();
     let Some(i) = fs.find(base) else {
-        // a `*_bin` without its database is this reader's folder, refused by `apri` with the file it lacks
+        // a `*_bin` without its database is this reader's folder, refused by `open` with the file it lacks
         return if bin || legacy_key(fs).is_some() {
             Fiducia::Forse
         } else {
             Fiducia::No
         };
     };
-    // a database without its `*_bin`, or one that is not SQLite (an empty or cut copy): `apri` says which
+    // a database without its `*_bin`, or one that is not SQLite (an empty or cut copy): `open` says which
     if fs.testa(i, 16) != MAGIC || !bin {
         return Fiducia::Forse;
     }

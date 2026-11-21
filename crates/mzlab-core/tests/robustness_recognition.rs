@@ -28,7 +28,7 @@ fn reads(name: String, b: Vec<u8>, dim: u64) -> Vec<String> {
         }],
     };
     let _ = readers::riconosci(&mut set());
-    if let Some(mut l) = note(readers::apri(set(), &Limits::sito()), &mut k) {
+    if let Some(mut l) = note(readers::open(set(), &Limits::sito()), &mut k) {
         if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {
             (0..ix.len().min(4)).for_each(|j| drop(note(l.scan(0, j), &mut k)));
         }

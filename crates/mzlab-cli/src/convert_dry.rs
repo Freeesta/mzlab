@@ -50,7 +50,7 @@ fn planned(list: &[Entry], out: &Path) -> Vec<Planned> {
                 };
                 let bytes = fs.membri.iter().map(|m| m.dim).sum();
                 let reader =
-                    mzlab_lettori::apri_listing(fs, &mzlab_core::readers::Limits::desktop())
+                    mzlab_lettori::open_listing(fs, &mzlab_core::readers::Limits::desktop())
                         .ok()
                         .map(|l| l.format().id());
                 (reader, bytes)

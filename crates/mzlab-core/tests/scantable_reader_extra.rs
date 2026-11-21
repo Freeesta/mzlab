@@ -1,6 +1,6 @@
 //! The row of a reader's scan whose extras carry the maker's TIC (every `.wiff` scan) and, with `precursori`, a base peak: built straight from the
 //! scan (`mzidx_reader::righe`) it equals, field by field and bit for bit, the row read back from the header text `mzmlwrite::spectrum_head` writes
-//! (the same scans with a userParam that sends them to the text) and the row of the mzML `readers_mzml::scrivi` writes (finite totals: it refuses
+//! (the same scans with a userParam that sends them to the text) and the row of the mzML `readers_mzml::write` writes (finite totals: it refuses
 //! the others). Totals that no short decimal holds, 0 and -0, subnormals, huge, negative, infinite and NaN with any payload (written `NaN`).
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
@@ -250,7 +250,7 @@ fn reader_tic_as_from_mzml() {
     for (n, seed) in CASI {
         let mut l = reader(n, seed, true, false);
         let direct = mzidx_reader::righe(&mut l, 0).unwrap();
-        let mut mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mut mzml = readers_mzml::write(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let size = mzml.len() as u64;
         let text = scantable::read(&mut mzml, size).unwrap();
         compare(&format!("{n} scans, mzML"), &direct, &text);

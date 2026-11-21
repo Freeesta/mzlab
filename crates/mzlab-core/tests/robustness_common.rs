@@ -31,7 +31,7 @@ const MZIDX: &[u8] = include_bytes!("../../../tests/golden/ref/msntree_rotta/msn
 fn run_registry(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
     let _ = readers::riconosci(&mut fileset(m));
-    let Some(mut l) = note(readers::apri(fileset(m), &Limits::sito()), &mut k) else {
+    let Some(mut l) = note(readers::open(fileset(m), &Limits::sito()), &mut k) else {
         return k;
     };
     let _ = l.format();
@@ -51,7 +51,7 @@ fn run_registry(m: &[(String, Vec<u8>)]) -> Vec<String> {
         }
         note(l.method(c), &mut k);
         note(
-            readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
+            readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}),
             &mut k,
         );
     }

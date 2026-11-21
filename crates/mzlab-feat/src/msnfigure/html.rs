@@ -32,12 +32,12 @@ pub fn html(graph: &str, view: View) -> Result<String> {
         mzlab_core::msngraph::completa(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
     let (tree, radial) = (svg(&done, View::Tree)?, svg(&done, View::Radial)?);
     let root = molecule_svg(&done)?.unwrap_or_default();
-    let apri = if view == View::Radial {
+    let open = if view == View::Radial {
         "radial"
     } else {
         "tree"
     };
-    let page = format!("{PAGE_JS}\nsetMode(\"{apri}\");");
+    let page = format!("{PAGE_JS}\nsetMode(\"{open}\");");
     // the pieces go in one by one with the bytes of the template between them: a marker inside a piece is not looked for again
     let mut out = String::new();
     let mut rest = MODEL;

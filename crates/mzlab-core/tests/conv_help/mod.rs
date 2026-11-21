@@ -1,4 +1,4 @@
-//! The mzML of a file or folder through the registry (`readers::apri` and `Conversione`): what the tests that used the converters of each format call.
+//! The mzML of a file or folder through the registry (`readers::open` and `Conversione`): what the tests that used the converters of each format call.
 #![allow(dead_code)]
 
 use std::path::Path;
@@ -17,7 +17,7 @@ pub fn member(name: &str, data: &[u8]) -> Member {
 
 /// The mzML of the first sample of `fs`.
 pub fn mzml(fs: FileSet) -> Vec<u8> {
-    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+    let mut l = readers::open(fs, &Limits::sito()).unwrap();
     Conversion::default()
         .write(&mut *l, 0, Vec::new(), &mut |_, _| {})
         .unwrap()
@@ -76,7 +76,7 @@ pub fn mzml_wiff(dir: &Path, name: &str, c: usize, centroid: bool) -> Vec<u8> {
             }
         })
         .collect();
-    let l = readers::apri(FileSet { membri: members }, &Limits::desktop()).unwrap();
+    let l = readers::open(FileSet { membri: members }, &Limits::desktop()).unwrap();
     let mut l = if centroid {
         mzlab_core::readers_centroids::centroidato(l)
     } else {

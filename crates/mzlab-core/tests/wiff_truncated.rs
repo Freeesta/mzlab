@@ -44,7 +44,7 @@ fn pair(wiff: &[u8], scan: &[u8]) -> FileSet {
 
 /// The scans of every sample (`Err` = the key of the error at open) and how many blocks each sample misses.
 fn read(wiff: &[u8], scan: &[u8]) -> Result<Vec<(Vec<Spectrum>, usize)>, &'static str> {
-    let mut l = readers::apri(pair(wiff, scan), &Limits::sito()).map_err(|e| e.key)?;
+    let mut l = readers::open(pair(wiff, scan), &Limits::sito()).map_err(|e| e.key)?;
     let mut out = Vec::new();
     for c in 0..l.samples().len() {
         let n = l.index(c).map_err(|e| e.key)?.len();

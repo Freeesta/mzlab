@@ -40,7 +40,7 @@ fn ok<T>(r: Result<T, mzlab_core::error::Error>, at: &str, step: &str) -> T {
 
 /// `Err`: the key of the error at open, the one notice a cut file may give; once open, every scan, chromatogram and the mzML must read (`panic` names the step).
 fn read(m: &Members, at: &str) -> Result<ReadOne, &'static str> {
-    let mut l = mzlab_lettori::apri(fs(m), &Limits::sito()).map_err(|e| e.key)?;
+    let mut l = mzlab_lettori::open(fs(m), &Limits::sito()).map_err(|e| e.key)?;
     let n = ok(l.index(0).map(|v| v.len()), at, "the index");
     let scans: Vec<Spectrum> = (0..n).map(|k| ok(l.scan(0, k), at, "a scan")).collect();
     let mut chroms = Vec::new();
@@ -56,7 +56,7 @@ fn read(m: &Members, at: &str) -> Result<ReadOne, &'static str> {
         ));
     }
     ok(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}),
         at,
         "the mzML",
     );

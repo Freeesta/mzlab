@@ -43,7 +43,7 @@ fn generate(a: &[String]) {
     let (mzml, idx) = (dir.join("visore.mzML"), dir.join("visore.mzidx"));
     let mut l = finto::Finto::vario(n, peaks, 12345);
     let t = Instant::now();
-    readers_mzml::scrivi(
+    readers_mzml::write(
         &mut l,
         0,
         BufWriter::new(File::create(&mzml).expect("create")),

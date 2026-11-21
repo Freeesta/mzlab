@@ -22,7 +22,7 @@ pub(crate) struct Entry {
 /// The ids of the samples of a dataset with more than one (each with whether it has no scans), else none (a dataset the reader cannot open is converted as one and fails there).
 /// With `sel`, only those samples are looked at (the others are never read) and one the dataset does not have is `err.sample.unknown`.
 fn sample_ids(p: &Path, sel: Option<&[u32]>) -> Result<Vec<(u32, bool, bool)>> {
-    let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()));
+    let opened = file_set(p).and_then(|fs| mzlab_lettori::open(fs, &Limits::desktop()));
     let found: Vec<u32> = opened
         .as_ref()
         .map_or(Vec::new(), |l| l.samples().iter().map(|s| s.id).collect());

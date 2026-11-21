@@ -33,7 +33,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
     );
     let want: Vec<_> = (0..scan.len()).map(|k| full.scan(0, k).unwrap()).collect();
     for cut in 0..ok.len() {
-        let Ok(mut l) = mzlab_lettori::apri(
+        let Ok(mut l) = mzlab_lettori::open(
             file_set("campione.mzML", ok[..cut].to_vec()),
             &Limits::sito(),
         ) else {
@@ -78,7 +78,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
         // the writer goes over every scan again: a sample of the cuts is enough for it
         assert!(
             cut % 16 != 0
-                || mzlab_core::readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {})
+                || mzlab_core::readers_mzml::write(l.as_mut(), 0, Vec::new(), &mut |_, _| {})
                     .is_ok(),
             "cut at {cut}: the mzML is not written"
         );

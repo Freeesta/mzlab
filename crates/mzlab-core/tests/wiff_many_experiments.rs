@@ -59,9 +59,9 @@ fn experiments_past_the_sixteenth_keep_their_collision_energy() {
     let got: Vec<Option<f64>> = w.experiments.iter().map(|e| e.ce).collect();
     assert_eq!(got, ces);
 
-    let mut l = readers::apri(set(&dir), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&dir), &Limits::sito()).unwrap();
     let mzml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     for ce in ["21", "32.5", "44"] {

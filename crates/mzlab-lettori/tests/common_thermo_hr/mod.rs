@@ -51,5 +51,5 @@ pub fn reader_of(b: Vec<u8>) -> Box<dyn mzlab_core::readers::Reader> {
             sha1: None,
         }],
     };
-    mzlab_lettori::apri(set, &Limits::sito()).expect("open")
+    mzlab_lettori::open(set, &Limits::sito()).expect("open")
 }

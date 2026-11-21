@@ -68,15 +68,15 @@ fn folder_id(cal: Option<Vec<u8>>, cal_id: i32) -> FileSet {
 }
 
 fn mzml(fs: FileSet) -> mzlab_core::error::Result<String> {
-    let mut l = readers::apri(fs, &Limits::desktop())?;
+    let mut l = readers::open(fs, &Limits::desktop())?;
     let mut out = Vec::new();
-    mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {})?;
+    mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {})?;
     Ok(String::from_utf8(out).unwrap())
 }
 
 #[test]
 fn the_masses_come_from_the_record_of_the_scan() {
-    let mut l = readers::apri(
+    let mut l = readers::open(
         folder(Some(mass_cal(&[Some(0.1), Some(0.2)]))),
         &Limits::desktop(),
     )
@@ -115,9 +115,9 @@ fn a_scan_with_a_missing_cut_or_emptied_record_is_left_out_and_counted() {
         ),
         ("an emptied record", mass_cal(&[Some(0.1), None])),
     ] {
-        let mut l = readers::apri(folder(Some(cal)), &Limits::desktop()).unwrap();
+        let mut l = readers::open(folder(Some(cal)), &Limits::desktop()).unwrap();
         let mut out = Vec::new();
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {})
+        mzlab_core::readers_mzml::write(&mut *l, 0, &mut out, &mut |_, _| {})
             .unwrap_or_else(|e| panic!("{what}: {e}"));
         let x = String::from_utf8(out).unwrap();
         // scan 1 keeps its masses, scan 2 is in the list with no points

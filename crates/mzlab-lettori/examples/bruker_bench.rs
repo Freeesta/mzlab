@@ -1,8 +1,8 @@
 //! Speed bench of the Bruker timsTOF reader (docs/agenti/measurements-formats.md) on a synthetic DDA-PASEF folder of realistic size (invented numbers, no lab data):
-//! `scrivi` writes `analysis.tdf` + `analysis.tdf_bin` (zstd, codec 2), `misura` times open, index, TIC, BPC, first spectrum, all spectra and the mzML conversion.
+//! `write` writes `analysis.tdf` + `analysis.tdf_bin` (zstd, codec 2), `measure` times open, index, TIC, BPC, first spectrum, all spectra and the mzML conversion.
 //! A tool of the bench: it never enters a .wasm.
-//!   bruker_bench scrivi DIR.d [--cycles 100] [--ms1 60000] [--ms2 15000]
-//!   bruker_bench misura DIR.d [--rounds 3]
+//!   bruker_bench write DIR.d [--cycles 100] [--ms1 60000] [--ms2 15000]
+//!   bruker_bench measure DIR.d [--rounds 3]
 use std::path::Path;
 use std::time::Instant;
 
@@ -12,7 +12,7 @@ use mzlab_core::readers::{FileSet, Limits, Member};
 mod common_sqlite;
 use common_sqlite::pasef;
 
-fn scrivi(dir: &Path, cycles: usize, n1: usize, n2: usize) {
+fn write(dir: &Path, cycles: usize, n1: usize, n2: usize) {
     std::fs::create_dir_all(dir).unwrap();
     let (tdf, bin) = pasef::folder(cycles, n1, n2);
     std::fs::write(dir.join("analysis.tdf"), tdf).unwrap();
@@ -45,7 +45,7 @@ fn ms(t: Instant) -> f64 {
 fn measure(dir: &Path, rounds: usize) {
     for g in 0..rounds {
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
+        let mut l = mzlab_lettori::open(file_set(dir), &Limits::desktop()).unwrap();
         let open = ms(t);
         let t = Instant::now();
         let n = l.index(0).unwrap().len();
@@ -73,8 +73,8 @@ fn measure(dir: &Path, rounds: usize) {
         }
         let all = ms(t);
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
+        let mut l = mzlab_lettori::open(file_set(dir), &Limits::desktop()).unwrap();
+        mzlab_core::readers_mzml::write(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(
             "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{signature:016x}\",\"apri_ms\":{open:.1},\"indice_ms\":{index:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{all:.1},\"mzml_ms\":{mzml:.1}}}"
@@ -92,8 +92,8 @@ fn main() {
             .unwrap_or(d)
     };
     match (a.first().map(String::as_str), a.get(1)) {
-        (Some("scrivi"), Some(d)) => scrivi(Path::new(d), opz("--cycles", 100), opz("--ms1", 60_000), opz("--ms2", 15_000)),
-        (Some("misura"), Some(d)) => measure(Path::new(d), opz("--rounds", 3)),
-        _ => eprintln!("usage: bruker_bench scrivi DIR.d [--cycles N] [--ms1 N] [--ms2 N] | misura DIR.d [--rounds N]"),
+        (Some("write"), Some(d)) => write(Path::new(d), opz("--cycles", 100), opz("--ms1", 60_000), opz("--ms2", 15_000)),
+        (Some("measure"), Some(d)) => measure(Path::new(d), opz("--rounds", 3)),
+        _ => eprintln!("usage: bruker_bench write DIR.d [--cycles N] [--ms1 N] [--ms2 N] | measure DIR.d [--rounds N]"),
     }
 }

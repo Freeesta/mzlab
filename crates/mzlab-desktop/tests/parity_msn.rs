@@ -239,7 +239,7 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
             })
             .collect(),
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::readers::Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open(set, &mzlab_core::readers::Limits::desktop()).unwrap();
     let mut t = mzlab_core::source::ReaderSource { l: &mut *l, c: 0 };
     let want = mzlab_core::srm::leggi(&mut t).map(|v| mzlab_core::srm::impacchetta(&v));
     match (r("natsrm", json!({"name": "x"})), want) {

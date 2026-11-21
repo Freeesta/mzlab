@@ -1,5 +1,5 @@
-//! Parity of the non-finite guard on a synthetic SCIEX pair: the site's engine (`readers::apri`, and `readers_finite::wiff_sample` of its index
-//! worker), the readers module and the desktop app / CLI (`mzlab_lettori::apri`) give the same key for the same file: `"ok"` for a finite pair,
+//! Parity of the non-finite guard on a synthetic SCIEX pair: the site's engine (`readers::open`, and `readers_finite::wiff_sample` of its index
+//! worker), the readers module and the desktop app / CLI (`mzlab_lettori::open`) give the same key for the same file: `"ok"` for a finite pair,
 //! `err.file.nonFinite` when the start, step or scale of the m/z axis is NaN or infinite. Needs python3 (`tools/wiff_riferimento.py`), skips without.
 #![cfg(feature = "sciex")]
 
@@ -76,8 +76,8 @@ fn site_and_app_give_the_same_key_for_a_non_finite_wiff() {
     let cases = [None, Some(100.02), Some(0.06), Some(16666.667)];
     for v in cases {
         for with in [f64::NAN, f64::INFINITY] {
-            let app = key(mzlab_lettori::apri(pair(&dir, v, with), &Limits::sito()));
-            let engine = key(readers::apri(pair(&dir, v, with), &Limits::sito()));
+            let app = key(mzlab_lettori::open(pair(&dir, v, with), &Limits::sito()));
+            let engine = key(readers::open(pair(&dir, v, with), &Limits::sito()));
             let worker = key(mzlab_lettori::finite::wiff_sample(
                 pair(&dir, v, with),
                 &Limits::sito(),

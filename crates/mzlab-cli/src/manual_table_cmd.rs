@@ -227,7 +227,7 @@ fn samples_of(
         taken.push(name.clone());
         return Ok(vec![(name, mrm_transitions(&mut m, &chroms)?)]);
     }
-    let mut l = mzlab_lettori::apri(crate::flow_set::file_set(p)?, &Limits::desktop())?;
+    let mut l = mzlab_lettori::open(crate::flow_set::file_set(p)?, &Limits::desktop())?;
     let stem = name
         .rsplit_once('.')
         .map_or(name.as_str(), |s| s.0)

@@ -183,7 +183,7 @@ fn generate(a: &[String]) {
     let mut l = finto::Finto::vario(n, peaks, 12345);
     let t = Instant::now();
     let w = BufWriter::new(File::create(out).expect("create"));
-    readers_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).expect("write");
+    readers_mzml::write(&mut l, 0, w, &mut |_, _| {}).expect("write");
     let size = std::fs::metadata(out).map(|m| m.len()).unwrap_or(0);
     println!(
         "write {n} scans: {:.2} s, {:.1} MB",

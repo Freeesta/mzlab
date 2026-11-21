@@ -213,7 +213,7 @@ fn open(dir: &Path, name: &str, cards: Vec<Card>) -> (Routes<File>, File, Vec<Sc
         })
         .collect();
     let mzml = dir.join(format!("{name}.mzML"));
-    readers_mzml::scrivi(
+    readers_mzml::write(
         &mut l,
         0,
         BufWriter::new(File::create(&mzml).unwrap()),

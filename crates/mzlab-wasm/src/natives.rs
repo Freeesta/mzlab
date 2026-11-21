@@ -1,5 +1,5 @@
 //! The files of a maker read as they are (`.wiff` + `.wiff.scan`, the members of a `.raw` or of a `.D` folder): no mzML is written. A dataset is a
-//! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`readers::apri`),
+//! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`readers::open`),
 //! builds the `.mzidx` of one sample straight from the reader, and answers the routes that read the file besides its index from the reader and the
 //! `guscio` of the sample (the mzML without its spectra: header, chromatograms, polarities). «Scarica .mzML» writes the whole mzML on request.
 use std::collections::{HashMap, VecDeque};
@@ -113,9 +113,9 @@ impl Members {
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();
         let opened = if listing {
-            readers::apri_listing(fs, &Limits::sito())
+            readers::open_listing(fs, &Limits::sito())
         } else {
-            readers::apri(fs, &Limits::sito())
+            readers::open(fs, &Limits::sito())
         };
         match opened {
             Err(e) if e.key == "err.file.notAccepted" => self.external(&sha1).unwrap_or(Err(e)),
@@ -148,7 +148,7 @@ impl Members {
         self.open_as(centroid, false)
     }
 
-    /// `open`; with `listing` a `.wiff` is read from its container and index alone (`readers::apri_listing`).
+    /// `open`; with `listing` a `.wiff` is read from its container and index alone (`readers::open_listing`).
     pub(crate) fn open_as(
         &self,
         centroid: bool,

@@ -69,7 +69,7 @@ fn open_with(dir: &Path, name: &str, limits: &Limits) -> Box<dyn Reader> {
             member(format!("{name}.wiff.scan")),
         ],
     };
-    readers::apri(set, limits).unwrap()
+    readers::open(set, limits).unwrap()
 }
 
 fn trace(l: &mut Box<dyn Reader>, c: usize, tail: &str) -> (Vec<f64>, Vec<f64>) {

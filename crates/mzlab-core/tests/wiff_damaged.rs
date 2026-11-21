@@ -42,7 +42,7 @@ fn pair(wiff: &[u8], scan: &[u8]) -> FileSet {
 
 /// The scans of every sample and its losses (`Err` = the key of the first error).
 fn read(wiff: &[u8], scan: &[u8]) -> Result<Vec<(Vec<Spectrum>, Losses)>, &'static str> {
-    let mut l = readers::apri(pair(wiff, scan), &Limits::sito()).map_err(|e| e.key)?;
+    let mut l = readers::open(pair(wiff, scan), &Limits::sito()).map_err(|e| e.key)?;
     let mut out = Vec::new();
     for c in 0..l.samples().len() {
         let n = l.index(c).map_err(|e| e.key)?.len();

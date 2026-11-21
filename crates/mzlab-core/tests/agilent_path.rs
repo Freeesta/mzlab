@@ -9,7 +9,7 @@ mod agilent_synth;
 use agilent_synth::{encode, sample};
 use mzlab_core::readers::{self, FileSet, Limits, Member};
 
-fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn readers::Reader>> {
+fn open(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn readers::Reader>> {
     open_with(scan, "MSPeak.bin", peak)
 }
 
@@ -31,7 +31,7 @@ fn open_with(
         sha1: None,
     })
     .collect();
-    readers::apri(FileSet { membri: members }, &Limits::sito())
+    readers::open(FileSet { membri: members }, &Limits::sito())
 }
 
 /// A GC/MS run whose scans after the first are MRM visits.
@@ -48,7 +48,7 @@ fn mrm() -> (Vec<u8>, Vec<u8>) {
 #[test]
 fn the_engine_hands_mrm_visits_to_the_module() {
     let (scan, peak) = mrm();
-    let e = apri(scan, peak).err().expect("refused");
+    let e = open(scan, peak).err().expect("refused");
     assert_eq!(e.key, "err.file.agilent");
     assert!(
         e.params
@@ -59,14 +59,14 @@ fn the_engine_hands_mrm_visits_to_the_module() {
     );
     // A run of plain scans still opens on the engine.
     let (scan, peak) = encode(&sample());
-    assert!(apri(scan, peak).is_ok());
+    assert!(open(scan, peak).is_ok());
 }
 
 #[cfg(feature = "estesi")]
 #[test]
 fn the_module_reads_mrm_visits_as_srm_chromatograms() {
     let (scan, peak) = mrm();
-    let mut l = apri(scan, peak).expect("opens");
+    let mut l = open(scan, peak).expect("opens");
     assert_eq!(l.samples()[0].scansioni, 1);
     let srm = l
         .chromatograms(0)
@@ -93,7 +93,7 @@ fn reading(l: &mut Box<dyn readers::Reader>) -> String {
 #[test]
 fn a_plain_run_reads_the_same_on_both_builds() {
     let (scan, peak) = encode(&sample());
-    let mut l = apri(scan, peak).expect("opens");
+    let mut l = open(scan, peak).expect("opens");
     let got = reading(&mut l);
     eprintln!("LETTURA\n{got}");
     assert_eq!(got, include_str!("agilent_percorso.txt").trim_end());

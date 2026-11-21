@@ -12,7 +12,7 @@ use mzlab_core::readers::Limits;
 
 /// The key of the first error met reading index, every scan and every trace; `"ok"` when none.
 fn key(fs: mzlab_core::readers::FileSet) -> String {
-    let mut l = match mzlab_lettori::apri(fs, &Limits::sito()) {
+    let mut l = match mzlab_lettori::open(fs, &Limits::sito()) {
         Ok(l) => l,
         Err(e) => return e.key.to_string(),
     };

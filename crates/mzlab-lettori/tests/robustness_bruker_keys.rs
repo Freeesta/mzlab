@@ -38,7 +38,7 @@ fn keep<T>(r: Result<T>, keys: &mut Vec<String>) -> Option<T> {
 /// Open, index, three spectra and their headers, the first trace, the mzML writer.
 fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
-    let Some(mut l) = keep(mzlab_lettori::apri(fileset(m), &Limits::sito()), &mut k) else {
+    let Some(mut l) = keep(mzlab_lettori::open(fileset(m), &Limits::sito()), &mut k) else {
         return k;
     };
     if let Some(ix) = keep(l.index(0), &mut k).map(<[_]>::to_vec) {
@@ -55,7 +55,7 @@ fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
         keep(l.chromatogram(0, &v.id), &mut k);
     }
     keep(
-        mzlab_core::readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}),
+        mzlab_core::readers_mzml::write(l.as_mut(), 0, Vec::new(), &mut |_, _| {}),
         &mut k,
     );
     k
@@ -163,7 +163,7 @@ fn the_seeds_read_whole() {
             "{name}: {:?}",
             MET.lock().unwrap()
         );
-        let mut l = mzlab_lettori::apri(fileset(&seed), &Limits::sito()).unwrap();
+        let mut l = mzlab_lettori::open(fileset(&seed), &Limits::sito()).unwrap();
         assert!(!l.scan(0, 0).unwrap().mz.is_empty(), "{name}");
     }
 }

@@ -1,4 +1,4 @@
-//! `readers::list_samples` (`samples_list/1`) of a `.wiff` pair read from its container and index alone (`readers::apri_listing`): the `.wiff.scan` is
+//! `readers::list_samples` (`samples_list/1`) of a `.wiff` pair read from its container and index alone (`readers::open_listing`): the `.wiff.scan` is
 //! never read, the numbers are the ones the full open finds on a clean pair, and a copy cut short shows as index rows past its end (`missing`).
 //! Synthetic pairs of tools/wiff_riferimento.py and tools/wiff_grande.py; python3 is required (the test fails without it, it never skips).
 #![allow(clippy::disallowed_methods)] // the test sorts file names with the standard sort
@@ -89,9 +89,9 @@ fn json(dir: &Path, name: &str, listing: bool) -> (Result<String, &'static str>,
     let reads = Arc::new(AtomicUsize::new(0));
     let fs = set(dir, name, None, &reads);
     let l = if listing {
-        readers::apri_listing(fs, &Limits::sito())
+        readers::open_listing(fs, &Limits::sito())
     } else {
-        readers::apri(fs, &Limits::sito())
+        readers::open(fs, &Limits::sito())
     };
     let out = l
         .map(|mut l| readers::list_samples(&mut *l))
@@ -179,7 +179,7 @@ fn the_listing_never_reads_the_scan_file_and_says_what_the_full_open_says() {
 fn a_cut_scan_file_shows_as_missing_rows_and_a_short_data_file() {
     let dir = pairs();
     let reads = Arc::new(AtomicUsize::new(0));
-    let mut l = readers::apri_listing(
+    let mut l = readers::open_listing(
         set(&dir.join("big"), "grande", Some(500), &reads),
         &Limits::sito(),
     )

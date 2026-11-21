@@ -40,7 +40,7 @@ struct Lap {
 fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
     let t0 = Instant::now();
     let mut l =
-        (rawreader::ENTRY.apri)(fileset(name, bytes.to_vec()), &Limits::desktop()).expect("open");
+        (rawreader::ENTRY.open)(fileset(name, bytes.to_vec()), &Limits::desktop()).expect("open");
     let n = l.index(0).expect("index").len();
     let open = ms(t0);
 

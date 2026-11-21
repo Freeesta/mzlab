@@ -46,7 +46,7 @@ fn open(dir: &Path, stem: &str) -> Box<dyn Reader> {
             member(format!("{stem}.wiff.scan")),
         ],
     };
-    mzlab_lettori::apri(fs, &Limits::sito()).unwrap()
+    mzlab_lettori::open(fs, &Limits::sito()).unwrap()
 }
 
 #[test]

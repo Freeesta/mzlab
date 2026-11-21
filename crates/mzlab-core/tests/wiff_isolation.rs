@@ -50,7 +50,7 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
             member(format!("{name}.wiff.scan")),
         ],
     };
-    readers::apri(fs, &Limits::sito()).unwrap()
+    readers::open(fs, &Limits::sito()).unwrap()
 }
 
 /// The scans and chromatograms of sample `c`.

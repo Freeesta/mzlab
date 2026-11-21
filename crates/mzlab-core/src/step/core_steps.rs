@@ -1,4 +1,4 @@
-//! Descriptors of the steps whose code lives in this crate: `import.raw` (`readers::apri`), `convert.mzml` (`readers_mzml::scrivi`) and
+//! Descriptors of the steps whose code lives in this crate: `import.raw` (`readers::open`), `convert.mzml` (`readers_mzml::write`) and
 //! `index.mzidx` (`upload::index_reader`, or `mzidx::build_mzml_spill` from an mzML). The defaults are literals; a test compares them with the code.
 
 use super::{DataType, Param, Port, RunsIn, Step};

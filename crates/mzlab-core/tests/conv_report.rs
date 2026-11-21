@@ -154,7 +154,7 @@ fn a_reader_without_profile_refuses_the_profile_route_with_a_key() {
     use mzlab_core::readers::{self, Limits};
     use mzlab_core::readers_mzml::{Conversion, Peaks};
     let (idx, peak) = encode(&sample());
-    let mut l = readers::apri(
+    let mut l = readers::open(
         FileSet {
             membri: vec![
                 conv_help::member("x.D/AcqData/MSScan.bin", &idx),

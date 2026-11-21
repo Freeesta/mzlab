@@ -35,7 +35,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".d"],
     riconosci: recognize_tdf,
-    apri: open_tdf,
+    open: open_tdf,
 };
 
 pub const ENTRY_TSF: ReaderEntry = ReaderEntry {
@@ -43,11 +43,11 @@ pub const ENTRY_TSF: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".d"],
     riconosci: recognize_tsf,
-    apri: open_tsf,
+    open: open_tsf,
 };
 
 impl BrukerReader {
-    fn apri(mut fs: FileSet, limits: &Limits, tsf: bool) -> Result<BrukerReader> {
+    fn open(mut fs: FileSet, limits: &Limits, tsf: bool) -> Result<BrukerReader> {
         let base = if tsf { "analysis.tsf" } else { "analysis.tdf" };
         let bin = format!("{base}_bin");
         let first_one = fs
@@ -455,11 +455,11 @@ fn recognize_tsf(fs: &mut FileSet) -> Fiducia {
 }
 
 fn open_tdf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    BrukerReader::apri(fs, limits, false).map(|l| Box::new(l) as Box<dyn Reader>)
+    BrukerReader::open(fs, limits, false).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
 fn open_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    BrukerReader::apri(fs, limits, true).map(|l| Box::new(l) as Box<dyn Reader>)
+    BrukerReader::open(fs, limits, true).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
 pub struct BrukerReader {

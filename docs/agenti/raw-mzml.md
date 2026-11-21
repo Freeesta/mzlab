@@ -31,7 +31,7 @@ The 8 GB case takes 8 GB of disk plus the output: it deletes itself with `--canc
 
 ## Parallel encoding: `convert_times`
 
-`convert_times` (`crates/mzlab-core/examples/`) converts an mzML already in memory with `Conversione::scrivi` and prints time, heap peak, process peak, bytes and SHA-256; the SHA-256 runs on a separate thread as a file write would. 4-core container, synthetic mzML from `tools/mzml_huge.py` (0.29 GB: 5271 scans, `--peaks1 20000 --peaks2 2000`; 0.4 GB: small scans, defaults), same SHA-256 with 1, 2 and 4 threads:
+`convert_times` (`crates/mzlab-core/examples/`) converts an mzML already in memory with `Conversione::write` and prints time, heap peak, process peak, bytes and SHA-256; the SHA-256 runs on a separate thread as a file write would. 4-core container, synthetic mzML from `tools/mzml_huge.py` (0.29 GB: 5271 scans, `--peaks1 20000 --peaks2 2000`; 0.4 GB: small scans, defaults), same SHA-256 with 1, 2 and 4 threads:
 
 - large spectra: 1 thread 4.09 s, 2 threads 2.83 s, 4 threads 1.75 s (2.3×); heap peak 5.5 MB → 18 MB (largely the tail of the example's SHA);
 - small spectra: 1 thread 6.66 s, 2 threads 3.95 s, 4 threads 3.18 s (2.1×); process peak unchanged (237 → 239 MB, the file read).
@@ -62,6 +62,6 @@ The thresholds change only with a Coordinator decision written here, never to ma
 - **D7** third-party readers with non-standard arrays, different `arrayLength` in the same spectrum, zlib with stored blocks: fallback = per-peak columns in the columnar block of the `.mzidx` and standard-only mzML. **D9** `.raw` SHA-1 on the critical path only if the file is not already read in full; if T_min is dominated by the SHA-1 on multi-GB files, the limit is declared. **D10** activation from the filter (`@cid`, `@hcd`, `@etd`, `@ethcd`, `@uvpd`, `@sa`) and from the trailer to CV terms like msconvert, F5 check on the whole corpus.
 
 ## Coordinator decisions
-- Zeros: by default only the points of the file (nothing invented). Indexed mzML also from `scrivi`, in the same pass with offsets and SHA-1. The per-peak columns in the reader (`vendor/opentfraw`, `scan_data.rs`) are done one PR at a time. Switching to zlib-rs changes the compressed bytes: new `conversion/1` version and before/after in the PR (F10).
+- Zeros: by default only the points of the file (nothing invented). Indexed mzML also from `write`, in the same pass with offsets and SHA-1. The per-peak columns in the reader (`vendor/opentfraw`, `scan_data.rs`) are done one PR at a time. Switching to zlib-rs changes the compressed bytes: new `conversion/1` version and before/after in the PR (F10).
 - Not available: `--peaks tutto` (profile as a standard array, centroid list as a non-standard array, per-peak columns with standard CV terms and `arrayLength`); the default value `file` stays until third-party readers pass (D7).
 - Not available: `--set conv.zeri=rfr` for zero parity with msconvert and RFR (F3).

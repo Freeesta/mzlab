@@ -74,9 +74,9 @@ fn the_collision_energy_of_each_experiment_is_read_and_written() {
         .all(|e| e.iso_half.is_some() == (e.level == 2)));
 
     // the mzML: one activation per product-ion spectrum, with its energy and the offsets of the isolation window
-    let mut l = readers::apri(pair(&dir, "energia"), &Limits::sito()).unwrap();
+    let mut l = readers::open(pair(&dir, "energia"), &Limits::sito()).unwrap();
     let mzml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     assert_eq!(mzml.matches("<activation>").count(), 6);

@@ -60,7 +60,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
             Some("agilent-d"),
             "{label}"
         );
-        let mut l = readers::apri(set_of(&f), &Limits::sito()).unwrap();
+        let mut l = readers::open(set_of(&f), &Limits::sito()).unwrap();
         assert_eq!(l.format(), Format::AgilentD);
         assert_eq!(l.samples().len(), 1);
         assert_eq!(l.samples()[0].scansioni, run.spectra.len(), "{label}");
@@ -150,7 +150,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         .collect(),
     };
     // the good set opens and reads
-    let mut l = readers::apri(set(&idx, true), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(&idx, true), &Limits::sito()).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 3);
     assert_eq!(l.scan(0, 1).unwrap().mz.len(), 3);
     // without MSPeak.bin the folder is only possible, not sure
@@ -164,7 +164,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     assert!(readers::riconosci(&mut set(&bad, true)).is_none());
     assert!(readers::riconosci(&mut set(b"not an index", true)).is_none());
     assert_eq!(
-        readers::apri(set(b"not an index", true), &Limits::sito())
+        readers::open(set(b"not an index", true), &Limits::sito())
             .err()
             .unwrap()
             .key,
@@ -176,7 +176,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         entries: 5_000_000,
         byte: 100,
     };
-    let e = readers::apri(set(&idx, true), &tiny).err().unwrap();
+    let e = readers::open(set(&idx, true), &tiny).err().unwrap();
     assert_eq!(e.key, "error.memoryBudget");
     assert!(
         e.params.iter().any(|(k, v)| *k == "fase" && v == "whole"),
@@ -188,7 +188,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         entries: 2,
         byte: 1 << 20,
     };
-    assert!(readers::apri(set(&idx, true), &few).is_err());
+    assert!(readers::open(set(&idx, true), &few).is_err());
 }
 
 /// The GC/MS runs are not a variant: the engine's reader opens and reads them, so the probe of the module does not send them away.

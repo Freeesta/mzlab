@@ -112,7 +112,7 @@ Scans numbered 1…N, increasing times, blocks covering `MSPeak.bin` from 68 to 
 
 ## As `Lettore` (`src/agilent/reader.rs`, `tests/agilent_reader.rs`)
 - Registered in `LETTORI` as `agilent-d` (extension `.d`). The members of the `FileSet` have the folder's names (`AcqData/MSScan.bin`, `acqmeth.txt`, …; a prefix `x.D/` gives the run name). `riconosci`: `Si` with an `MSScan.bin` whose head has a plausible record offset (byte 88) and an `MSPeak.bin`, `Forse` without `MSPeak.bin`; a `data.ms` with the bytes `01 32` is `Si`. Nothing else counts, the extension alone does not.
-- `apri` reads whole only the index and the small files (counted against `Limiti::byte`, the entries against `Limiti::voci`); `MSPeak.bin` stays a `ReadAt`: `scansione(0, k)` reads only the bytes of scan `k` (same `Spectrum` as `AgilentD::run`, tested on all runs). A run with only `data.ms` is served from the text read at opening.
+- `open` reads whole only the index and the small files (counted against `Limiti::byte`, the entries against `Limiti::voci`); `MSPeak.bin` stays a `ReadAt`: `scansione(0, k)` reads only the bytes of scan `k` (same `Spectrum` as `AgilentD::run`, tested on all runs). A run with only `data.ms` is served from the text read at opening.
 - `indice`: the scans with points, with `Posizione` in `MSPeak.bin`; the SIM filter has no ions (they are in the spectrum). `intestazione`: every field of the record (also the extra ones of the xsd) with the CV where there is one. `cromatogrammi`: TIC, BPC and a SIC for each ion of the SIM groups of the method; the SIC is computed by reading the SIM scans on request. `metodo`: the `method/1` document without the SHA-1 of `MSPeak.bin` (not everything is read to compute it).
 
 ## How it becomes `Run`/mzML

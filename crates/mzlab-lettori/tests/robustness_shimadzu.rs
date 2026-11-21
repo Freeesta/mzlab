@@ -63,7 +63,7 @@ fn seeds() -> Vec<Vec<u8>> {
 }
 
 fn everything(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open(file_set(byte), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
@@ -120,7 +120,7 @@ fn every_refusal_has_a_key() {
     for s in seeds() {
         for cut in [0, 7, 511, 512, 1024, s.len() / 3] {
             if let Err(e) =
-                mzlab_lettori::apri(file_set(s[..cut.min(s.len())].to_vec()), &Limits::sito())
+                mzlab_lettori::open(file_set(s[..cut.min(s.len())].to_vec()), &Limits::sito())
             {
                 assert!(e.key.starts_with("err."), "{}", e.key);
             }
@@ -149,7 +149,7 @@ fn a_table_over_the_limit_is_refused_with_a_key() {
 #[test]
 fn a_cut_empty_or_foreign_container_says_what_it_is() {
     let key = |b: Vec<u8>| {
-        mzlab_lettori::apri(file_set(b), &Limits::sito())
+        mzlab_lettori::open(file_set(b), &Limits::sito())
             .err()
             .map(|e| (e.key, e.params))
     };

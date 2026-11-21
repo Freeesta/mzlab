@@ -52,7 +52,7 @@ fn convert(dir: &Path, stem: &str) -> Vec<u8> {
             member(dir, &format!("{stem}.wiff.scan")),
         ],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open(fs, &Limits::sito()).unwrap();
     let conv = Conversion {
         steps: Some(&[]),
         opz: Options {

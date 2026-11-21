@@ -56,7 +56,7 @@ fn routes(dir: &Path, name: &str) -> Routes<Vec<u8>> {
             member(format!("{name}.wiff.scan")),
         ],
     };
-    let mut l = readers::apri(set, &Limits::sito()).unwrap();
+    let mut l = readers::open(set, &Limits::sito()).unwrap();
     let p = upload::prepare_reader(&mut *l, 0, &[], &format!("{name}.wiff")).unwrap();
     let mut out = Cursor::new(Vec::new());
     mzidx::build_reader(&p.table, &mut *l, 0, &mut out, 64 << 20).unwrap();

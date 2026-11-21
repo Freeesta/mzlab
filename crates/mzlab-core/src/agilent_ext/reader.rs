@@ -313,7 +313,7 @@ fn trace(l: &mut AgilentReader, id: &str) -> Result<Chromatogram> {
     Ok(super::run::sic_chromatogram(index, key, time, intensity))
 }
 
-fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = folder_name(&fs);
     limits.ok_entries(fs.membri.len() as u64)?;
     let mut left = limits.byte;
@@ -384,7 +384,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     contratto: CONTRATTO,
     estensioni: &[".d"],
     riconosci,
-    apri,
+    open,
 };
 
 /// The time and intensity of the SIC of each ion (key: m/z x 100).

@@ -34,7 +34,7 @@ fn reads(members: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
     let fs = FileSet {
         membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
-    if let Some(mut l) = note(readers::apri(fs, &Limits::sito()), &mut k) {
+    if let Some(mut l) = note(readers::open(fs, &Limits::sito()), &mut k) {
         if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {
             (0..ix.len()).for_each(|j| drop(note(l.scan(0, j), &mut k)));
         }

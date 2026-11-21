@@ -1,4 +1,4 @@
-//! The engine's own vendor readers (`readers::apri`, the registry the site's engine opens with) answer through the guard of the readers module and
+//! The engine's own vendor readers (`readers::open`, the registry the site's engine opens with) answer through the guard of the readers module and
 //! the desktop app (`readers_finite::Finished`): a NaN in the scan header of a synthetic `.wiff` pair (start, step or scale of the m/z axis) is
 //! `err.file.nonFinite`, never a number passed on to the index or the charts. A finite pair and a finite `.D` read as before.
 //! The pairs need python3 (`tools/wiff_riferimento.py`) and skip when it is missing.
@@ -80,14 +80,14 @@ const HEADER: [f64; 3] = [100.02, 0.06, 16666.667];
 fn a_non_finite_wiff_header_is_an_error_of_the_engine() {
     let Some(dir) = pairs() else { return };
     assert_eq!(
-        key(readers::apri(pair(&dir, None, 0.0), &Limits::sito())),
+        key(readers::open(pair(&dir, None, 0.0), &Limits::sito())),
         "ok"
     );
     for v in HEADER {
         for with in [f64::NAN, f64::INFINITY] {
             let fs = pair(&dir, Some(v), with);
             assert_eq!(
-                key(readers::apri(fs, &Limits::sito())),
+                key(readers::open(fs, &Limits::sito())),
                 "err.file.nonFinite",
                 "{v} -> {with}"
             );
@@ -104,5 +104,5 @@ fn a_finite_d_reads_through_the_guard() {
             member("x.D/AcqData/MSPeak.bin", peak),
         ],
     };
-    assert_eq!(key(readers::apri(fs, &Limits::sito())), "ok");
+    assert_eq!(key(readers::open(fs, &Limits::sito())), "ok");
 }

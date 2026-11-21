@@ -233,7 +233,7 @@ fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
         .tmp
         .join(format!("raw_mzml_banco_{}.mzML", std::process::id()));
     let (writing, _) = measure::repeat(a.giri, || {
-        let mut l = src.apri();
+        let mut l = src.open();
         let f = std::fs::File::create(&out).expect("create");
         let sink = std::io::BufWriter::new(f);
         let conv = Conversion {
@@ -261,8 +261,8 @@ fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
         let _ = std::fs::remove_file(&work);
         std::fs::copy(&out, &work).expect("copy");
     });
-    let apri = time_it(a.giri, || {
-        let _ = src.apri();
+    let open = time_it(a.giri, || {
+        let _ = src.open();
     });
     let _ = std::fs::remove_file(&out);
     let _ = std::fs::remove_file(&work);
@@ -270,7 +270,7 @@ fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
     let sum = sha_in + sc + 2.0 * sha_out + place;
     json!({
         "sha256_ingresso_s": round_to(sha_in), "apertura_e_scrittura_indicizzata_s": round_to(sc), "sha256_uscita_s": round_to(sha_out),
-        "hard_link_o_copia_s": round_to(place), "copia_dei_byte_s": round_to(copia), "apertura_sola_s": round_to(apri),
+        "hard_link_o_copia_s": round_to(place), "copia_dei_byte_s": round_to(copia), "apertura_sola_s": round_to(open),
         "testata_sha1_ingresso_e_metodo_s": round_to(header_s), "byte_uscita": byte_out,
         "somma_ipotesi_s": round_to(sum),
         "ipotesi": "SHA-256 of the input (fill_inputs) + open and indexed write (SHA-1 of the input and of the output inside) + SHA-256 of the output in keep() + link + SHA-256 of the output in item()",

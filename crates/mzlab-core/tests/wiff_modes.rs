@@ -165,9 +165,9 @@ fn check(dir: &Path, tag: &str, sample: &Value) {
 
 /// The CV type of the spectra in the mzML: only precursor-ion and neutral-loss scans have one today.
 fn check_cv(dir: &Path, tag: &str, cv: Option<&str>) {
-    let mut l = readers::apri(set(dir, tag), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(dir, tag), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     for term in ["MS:1000341", "MS:1000326"] {
@@ -217,7 +217,7 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
     for (tag, m) in modi.as_object().unwrap() {
         let today = &m["campioni"][0]["oggi"];
         if today["esito"] == "rifiuto" {
-            let err = readers::apri(set(&dir, tag), &Limits::sito())
+            let err = readers::open(set(&dir, tag), &Limits::sito())
                 .err()
                 .unwrap_or_else(|| panic!("{tag}: opened"));
             assert_eq!(detail(&err), today["detail"].as_str().unwrap(), "{tag}");
@@ -227,9 +227,9 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
 
 /// The mzML of sample `c` (0-based) of the pair `name`, with the file name replaced so two pairs compare.
 fn mzml(dir: &Path, name: &str, c: usize) -> String {
-    let mut l = readers::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut l = readers::open(set(dir, name), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
-        mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap()
     .replace(name, "X");
@@ -297,7 +297,7 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
     };
     for tag in ["Q1MI", "Q3MI"] {
         let ions = modi[tag]["futuro"]["ioni"].as_array().unwrap().len();
-        let mut l = readers::apri(set(&dir, tag), &Limits::sito()).unwrap();
+        let mut l = readers::open(set(&dir, tag), &Limits::sito()).unwrap();
         let list = l.chromatograms(0).unwrap();
         let sim: Vec<_> = list
             .iter()
@@ -325,8 +325,8 @@ fn pi_and_epi_are_both_ms2_and_only_their_experiment_tells_them_apart() {
         return;
     };
     for (name, level) in [("PI", 2), ("EPI", 2), ("EMS", 1), ("Q1", 1)] {
-        let mut l = readers::apri(set(&dir, name), &Limits::sito()).unwrap();
-        let xml = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mut l = readers::open(set(&dir, name), &Limits::sito()).unwrap();
+        let xml = mzlab_core::readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let tag = format!(
             "<userParam name=\"{}\" value=\"{name}\"/>",
             mzlab_core::wiff::modes::SCAN_TYPE_PARAM

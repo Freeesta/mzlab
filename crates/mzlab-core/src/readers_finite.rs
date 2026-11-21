@@ -1,4 +1,4 @@
-//! The guard every reader is opened through (`readers::apri` of the engine, `open_bare` of mzlab-lettori, the single-sample `.wiff` opens of both
+//! The guard every reader is opened through (`readers::open` of the engine, `open_bare` of mzlab-lettori, the single-sample `.wiff` opens of both
 //! modules): a retention time, TIC, m/z, intensity or chromatogram point that is NaN or infinite is a damaged file
 //! (`err.file.nonFinite`, `err.file.nonFiniteTrace`, with the scan or trace and what is wrong), never a number passed on to the index, the charts or the mzML. A finite but odd value (negative RT, RT out
 //! of order) is the file's own and goes through. A scan whose data do not decode is noted and counted in `losses` (`readers::Skips` leaves it out).
@@ -36,7 +36,7 @@ impl Finished {
 }
 
 /// A SCIEX pair opened for sample `c` only (`wiff::reader::open_only`), behind the guard: the index worker of the site's engine and of the readers
-/// module open a `.wiff` this way, the registry (`readers::apri`, `open_bare`) for every sample.
+/// module open a `.wiff` this way, the registry (`readers::open`, `open_bare`) for every sample.
 pub fn wiff_sample(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reader>> {
     let l = crate::wiff::reader::open_only(fs, limits, Some(c))?;
     Ok(Box::new(Finished::new(l)))
