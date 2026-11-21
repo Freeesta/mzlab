@@ -124,8 +124,14 @@ impl<R: ReadAt> Routes<R> {
         let mut order: Vec<usize> = (0..centres.len()).collect();
         crate::sortc::slice_by(&mut order, |&a, &b| centres[a].total_cmp(&centres[b]));
         let off = self.mz_off;
-        let lo: Vec<f64> = order.iter().map(|&i| cut(centres[i] + off - tols[i])).collect();
-        let hi: Vec<f64> = order.iter().map(|&i| cut(centres[i] + off + tols[i])).collect();
+        let lo: Vec<f64> = order
+            .iter()
+            .map(|&i| cut(centres[i] + off - tols[i]))
+            .collect();
+        let hi: Vec<f64> = order
+            .iter()
+            .map(|&i| cut(centres[i] + off + tols[i]))
+            .collect();
         // a column is made (zeroed) when its window opens, just before its first sum: a whole matrix zeroed first is cold in the cache when the sums come
         // (it was checked against the budget above)
         let mut sorted: Vec<Vec<f64>> = vec![Vec::new(); centres.len()];

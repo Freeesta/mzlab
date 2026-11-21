@@ -30,7 +30,12 @@ pub(crate) fn resolve<R: ReadAt>(
             Spec::Zero => Offset::default(),
         });
         if let Some(e) = &all[k].auto {
-            choose(r, "mz_offset", all[k].da.to_string(), format!("file {}: {}", k + 1, e.status));
+            choose(
+                r,
+                "mz_offset",
+                all[k].da.to_string(),
+                format!("file {}: {}", k + 1, e.status),
+            );
         }
     }
     if let Some(e) = &r.screen.evidence {
@@ -52,7 +57,14 @@ pub(crate) fn apply<R: ReadAt, T>(
     if offsets.is_empty() {
         return run(src, r, open);
     }
-    run(&mut Shifted { inner: src, offsets }, r, open)
+    run(
+        &mut Shifted {
+            inner: src,
+            offsets,
+        },
+        r,
+        open,
+    )
 }
 
 /// The window `want` asks for in corrected m/z, as the raw stored rows hold it (offset `d`).

@@ -257,7 +257,10 @@ pub fn fill_find<R: ReadAt>(
     let dt = median(rt.windows(2).map(|w| w[1] - w[0]).collect()) * 60.0;
     let mut na = Vec::new();
     let list = todo(al, file, &rt, map, p, &mut na);
-    let ranges = ppm_ranges(&list.iter().map(|t| t.mz + p.mz_shift).collect::<Vec<_>>(), p.ppm);
+    let ranges = ppm_ranges(
+        &list.iter().map(|t| t.mz + p.mz_shift).collect::<Vec<_>>(),
+        p.ppm,
+    );
     let pad = p.long_trace + p.max_gap + 2;
     let max_peaks = (params.budget / 24).clamp(1024, SLAB_PEAKS);
     let mut found: Vec<(usize, f64)> = na.into_iter().map(|r| (r, NOT_MEASURED)).collect();

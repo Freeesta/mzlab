@@ -176,6 +176,9 @@ mod msn_lib;
 pub mod msn_outputs;
 mod msn_png;
 mod msn_rules;
+mod mz_offset;
+#[cfg(test)]
+mod mz_offset_tests;
 #[cfg(test)]
 mod mzml_variants_tests;
 #[cfg(test)]
@@ -200,9 +203,6 @@ mod table_compare_cmd;
 #[cfg(test)]
 mod table_compare_cmd_tests;
 mod trace_cmd;
-mod mz_offset;
-#[cfg(test)]
-mod mz_offset_tests;
 mod trace_xic;
 #[cfg(not(target_family = "wasm"))]
 mod validate;

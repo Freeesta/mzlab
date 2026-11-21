@@ -113,7 +113,11 @@ fn mzoff_moves_the_window_keeps_the_mz_and_does_not_outlive_the_request() {
     assert!(fixed.contains("\"mz_offset_da\":0.24"), "{fixed}");
     assert!(!plain.contains("mz_offset"), "{plain}");
     // auto is the number it measured
-    let auto = get(&mut r, "/api/xic", "mz=200.2&tol=0.1&smooth=3&mzoff=auto:200.2");
+    let auto = get(
+        &mut r,
+        "/api/xic",
+        "mz=200.2&tol=0.1&smooth=3&mzoff=auto:200.2",
+    );
     assert_eq!(y_of(&auto), y_of(&fixed));
     assert!(auto.contains("\"mode\":\"auto\""), "{auto}");
     // the offset was only for those requests
@@ -129,7 +133,10 @@ fn a_bad_spec_is_err_mz_offset_spec_and_a_big_offset_is_err_mz_offset_range() {
         ("0.7", "err.mz.offset.range"),
     ] {
         let e = r
-            .handle("/api/xic", &Query::parse(&format!("mz=200.2&tol=0.3&mzoff={spec}")))
+            .handle(
+                "/api/xic",
+                &Query::parse(&format!("mz=200.2&tol=0.3&mzoff={spec}")),
+            )
             .unwrap_err();
         assert_eq!(e.key, key, "{spec}");
     }

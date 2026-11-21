@@ -23,7 +23,10 @@ pub enum Spec {
     #[default]
     Zero,
     Fixed(f64),
-    Auto { mz: f64, rt: Option<f64> },
+    Auto {
+        mz: f64,
+        rt: Option<f64>,
+    },
 }
 
 impl std::fmt::Display for Spec {

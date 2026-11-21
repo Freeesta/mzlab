@@ -110,7 +110,10 @@ pub(crate) fn plan_text(
         ));
         let spec = recipe.screen.mz_offset;
         if !spec.is_zero() {
-            let f = spec.resolve(&mut crate::idx_open::open(&idxs[k])?, recipe.detect.polarity)?;
+            let f = spec.resolve(
+                &mut crate::idx_open::open(&idxs[k])?,
+                recipe.detect.polarity,
+            )?;
             eprint!("{}", crate::mz_offset::lines(&x.name, &f));
             o.raw(",").raw(&f.members());
         }
