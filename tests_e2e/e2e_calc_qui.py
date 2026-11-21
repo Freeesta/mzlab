@@ -49,7 +49,7 @@ try:
             type_("30"); assert "CH2O" in txt() or "CH\u2082O" in txt(), txt()[:300]
         step("30 lists CH2O among the neutral losses", lr_30)
         def lr_18():
-            type_("18"); assert "perdite" in str(groups()), groups(); assert "H2O" in txt() or "H\u2082O" in txt()
+            type_("18"); assert "losses" in str(groups()), groups(); assert "H2O" in txt() or "H\u2082O" in txt()
         step("18 lists water", lr_18)
         def sum_():
             type_("100+114"); assert pg.inner_text("#calcsum") is not None
@@ -140,7 +140,7 @@ try:
             pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc"); frames(pg, 25)
             assert not asked, "the contaminant list (447 KB) was fetched before an m/z was typed: " + str(asked)
             type_("149.0233"); wait_for_js(pg, "/ftal|phthal/i.test(document.querySelector('#calcout').innerText)")
-            assert asked and "liste" in str(groups()), (asked, groups())
+            assert asked and "lists" in str(groups()), (asked, groups())
         step("the contaminant list is fetched once an m/z is typed, not at boot; 149.0233 finds the phthalate fragment", lists_on_demand)
 finally:
     r.close()

@@ -27,7 +27,7 @@ const CALCQUIHTML = (() => {
     return `<ul class="cq-l">${shown.join("")}</ul>${lis.length > lim ? `<button type="button" class="cadd-more cq-all" data-g="${gid}" title="${EH(T("cq.all.tip"))}" aria-expanded="${all}">${T(all ? "cq.less" : "cq.all", { n: lis.length })}</button>` : ""}`;
   };
   /** @param {CqGroup} g @param {Bag} o */
-  function listeRows(g, o) {
+  function listsRows(g, o) {
     return g.items.map(x => `<li><b>${EH(x.name)}</b> <span class="muted">${x.adduct ? fmtAdduct(x.adduct) + " · " : ""}${x.mz.toFixed(o.dec)} · ${EH(x.listName)} · ${o.unit === "ppm" ? err(x.err, 1) + " ppm" : err(x.diffDa, o.hr ? 4 : 1) + " Da"}</span></li>`);
   }
   /** One candidate: the name is a button that opens the detail of its losses (as in the Neutral losses table). @param {Bag} x @param {number} i @param {number} dec */
@@ -49,8 +49,8 @@ const CALCQUIHTML = (() => {
     const st = { pol: o.pol, more: !!view.more, lr: !o.hr, unit: o.unit, tol: o.tol };
     return AH.mainHtml(g.tab, !!g.formula, !g.catalogue && (!!g.obs || !g.formula), st);
   }
-  const TITLE = { liste: "cq.g.liste", perdite: "cq.g.perdite", addotti: "cq.g.addotti", diff: "cq.g.diff" };
-  const TIP = { liste: "cq.g.liste.tip", perdite: "cq.g.perdite.tip", addotti: "al.t.adducts.tip", diff: "cq.g.diff.tip" };
+  const TITLE = { lists: "cq.g.lists", losses: "cq.g.losses", adducts: "cq.g.adducts", diff: "cq.g.diff" };
+  const TIP = { lists: "cq.g.lists.tip", losses: "cq.g.losses.tip", adducts: "al.t.adducts.tip", diff: "cq.g.diff.tip" };
   /** The groups, each a `details` (open while it has a close match, or the adduct table of a formula).
    * flat (a tab of the Adducts & losses page, which already names the group): the body of each group without its fold, the catalogue of differences still folded.
    * @param {CqGroup[]} gs @param {Bag} o @param {{ open: Set<string>, all: Set<string>, more?: boolean }} view @param {{ formula: boolean, flat?: boolean }} ctx */
@@ -59,11 +59,11 @@ const CALCQUIHTML = (() => {
     if (!gs.length) return `<p class="muted cq-none">${T("cq.none", { tol: o.tol + " " + (o.unit === "ppm" ? "ppm" : "Da") })}</p>`;
     return gs.map(g => {
       if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("catdiff"), delta: "" });
-      const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "addotti" && (ctx.formula || /** @type {Bag} */ (g).catalogue))));
+      const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "adducts" && (ctx.formula || /** @type {Bag} */ (g).catalogue))));
       const all = view.all.has(g.id);
-      const body = g.id === "addotti" ? addHtml(g, o, view) : rowsOf(g.id, g.id === "liste" ? listeRows(g, o) : g.id === "perdite" ? lossRows(g, o) : diffRows(g), all);
-      if (ctx.flat && g.id !== "diff") return `<div class="cq-flat" data-g="${g.id}">${g.id === "perdite" ? `<p class="cq-sub">${T("cq.g.combos")} <span class="cq-n">${g.n}</span></p>` : ""}${body}</div>`;
-      const n = g.id === "addotti" ? "" : ` <span class="cq-n">${g.n}</span>`;
+      const body = g.id === "adducts" ? addHtml(g, o, view) : rowsOf(g.id, g.id === "lists" ? listsRows(g, o) : g.id === "losses" ? lossRows(g, o) : diffRows(g), all);
+      if (ctx.flat && g.id !== "diff") return `<div class="cq-flat" data-g="${g.id}">${g.id === "losses" ? `<p class="cq-sub">${T("cq.g.combos")} <span class="cq-n">${g.n}</span></p>` : ""}${body}</div>`;
+      const n = g.id === "adducts" ? "" : ` <span class="cq-n">${g.n}</span>`;
       return `<details class="cq-g" data-g="${g.id}"${open ? " open" : ""}><summary title="${EH(T(/** @type {Bag} */ (TIP)[g.id]))}">${T(/** @type {Bag} */ (TITLE)[g.id])}${n}</summary>${body}</details>`;
     }).join("");
   }

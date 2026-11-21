@@ -43,40 +43,40 @@ def test_the_argument_is_the_number_the_result_or_the_formula():
 
 
 def test_214_in_low_resolution_finds_the_known_contaminant():
-    r = run("const g=await CQ.gruppi(CQ.arg('214',0),LR,dep);console.log(JSON.stringify(g.filter(x=>x.id==='liste').map(x=>[x.n,x.items[0].name,x.items[0].diffDa])))")
+    r = run("const g=await CQ.groups(CQ.arg('214',0),LR,dep);console.log(JSON.stringify(g.filter(x=>x.id==='lists').map(x=>[x.n,x.items[0].name,x.items[0].diffDa])))")
     assert r[0][0] >= 1 and r[0][1] == "N-butylbenzenesulfonamide" and abs(r[0][2] + 0.0896) < 1e-3
 
 
 def test_214_in_high_resolution_uses_ppm_not_nominal():
-    r = run("const g=await CQ.gruppi(CQ.arg('214.0896',0),HR,dep);const l=g.find(x=>x.id==='liste');const g2=await CQ.gruppi(CQ.arg('214.2',0),HR,dep);console.log(JSON.stringify([l.n,Math.abs(l.items[0].err)<0.1,!!g2.find(x=>x.id==='liste')]))")
+    r = run("const g=await CQ.groups(CQ.arg('214.0896',0),HR,dep);const l=g.find(x=>x.id==='lists');const g2=await CQ.groups(CQ.arg('214.2',0),HR,dep);console.log(JSON.stringify([l.n,Math.abs(l.items[0].err)<0.1,!!g2.find(x=>x.id==='lists')]))")
     assert r == [1, True, False]            # 214.2 is 0.11 Da away: a match in low resolution, none within 5 ppm
 
 
 def test_30_in_low_resolution_explains_it_as_ch2o_and_other_losses():
-    r = run("const g=await CQ.gruppi(CQ.arg('30',0),LR,dep);const p=g.find(x=>x.id==='perdite');console.log(JSON.stringify(p.items.map(x=>x.ls.map(l=>l.f).join('+')+(x.kind==='rep'?'x'+x.n:''))))")
+    r = run("const g=await CQ.groups(CQ.arg('30',0),LR,dep);const p=g.find(x=>x.id==='losses');console.log(JSON.stringify(p.items.map(x=>x.ls.map(l=>l.f).join('+')+(x.kind==='rep'?'x'+x.n:''))))")
     assert "CH2O" in r and "H2O+H2O" not in r
-    r = run("const g=await CQ.gruppi(CQ.arg('18',0),LR,dep);console.log(JSON.stringify(g.find(x=>x.id==='perdite').items[0].ls[0].f))")
+    r = run("const g=await CQ.groups(CQ.arg('18',0),LR,dep);console.log(JSON.stringify(g.find(x=>x.id==='losses').items[0].ls[0].f))")
     assert r == "H2O"
 
 
 def test_the_difference_21_98_is_na_minus_h_in_high_resolution():
-    r = run("asked.length=0;const g=await CQ.gruppi(CQ.arg('21.98',0),HR,dep);const d=g.find(x=>x.id==='diff');console.log(JSON.stringify([d.items[0].a,d.items[0].b,asked.find(a=>a.delta).tol]))")
+    r = run("asked.length=0;const g=await CQ.groups(CQ.arg('21.98',0),HR,dep);const d=g.find(x=>x.id==='diff');console.log(JSON.stringify([d.items[0].a,d.items[0].b,asked.find(a=>a.delta).tol]))")
     assert r[:2] == ["[M+Na]+", "[M+H]+"] and float(r[2]) == pytest.approx(7.5)        # 0.003 Da at m/z 400: the narrowest window of a difference
 
 
 def test_a_sum_is_the_argument_of_the_groups():
-    r = run("const g=await CQ.gruppi(CQ.arg('15.9949+2.0157',0),HR,dep);console.log(JSON.stringify(g.map(x=>x.id)))")
-    assert "perdite" in r                     # 18.0106 = H2O
+    r = run("const g=await CQ.groups(CQ.arg('15.9949+2.0157',0),HR,dep);console.log(JSON.stringify(g.map(x=>x.id)))")
+    assert "losses" in r                     # 18.0106 = H2O
 
 
 def test_low_resolution_gives_the_tolerance_in_da_to_the_adduct_engine():
-    r = run("asked.length=0;await CQ.gruppi(CQ.arg('21.98',0),LR,dep);console.log(JSON.stringify(asked.find(a=>a.delta).tol))")
+    r = run("asked.length=0;await CQ.groups(CQ.arg('21.98',0),LR,dep);console.log(JSON.stringify(asked.find(a=>a.delta).tol))")
     assert float(r) == pytest.approx(1250)     # 0.5 Da at m/z 400
 
 
 def test_no_match_drops_the_group():
-    r = run("const g=await CQ.gruppi(CQ.arg('9999',0),LR,dep);console.log(JSON.stringify(g.map(x=>x.id)))")
-    assert "liste" not in r and "perdite" not in r
+    r = run("const g=await CQ.groups(CQ.arg('9999',0),LR,dep);console.log(JSON.stringify(g.map(x=>x.id)))")
+    assert "lists" not in r and "losses" not in r
 
 
 def test_the_adduct_table_has_ppm_in_high_resolution_only():
@@ -88,8 +88,8 @@ def test_the_adduct_table_has_ppm_in_high_resolution_only():
 
 
 def test_the_nearest_group_comes_first():
-    r = run("const g=await CQ.gruppi(CQ.arg('18.0106',0),HR,dep);console.log(JSON.stringify(g[0].id))")
-    assert r == "perdite"
+    r = run("const g=await CQ.groups(CQ.arg('18.0106',0),HR,dep);console.log(JSON.stringify(g[0].id))")
+    assert r == "losses"
 
 
 def test_the_resolution_comes_from_what_is_typed_when_no_file_is_open():
@@ -108,7 +108,7 @@ def test_there_is_no_resolution_switch_and_no_observed_value_in_the_choices():
 
 
 def test_the_typed_number_is_the_observed_value_of_the_adduct_table():
-    r = run("asked.length=0;await CQ.gruppi(CQ.arg('177.1023',0),HR,dep);console.log(JSON.stringify(asked.find(a=>!a.delta)))")
+    r = run("asked.length=0;await CQ.groups(CQ.arg('177.1023',0),HR,dep);console.log(JSON.stringify(asked.find(a=>!a.delta)))")
     assert float(r["obs"]) == pytest.approx(177.1023) and r["f"] == ""
 
 
@@ -121,7 +121,7 @@ def test_tolerance_unit_presets_follow_the_resolution_and_the_choice_is_remember
 
 
 def test_the_same_unit_gives_the_same_results_in_both_modes():
-    r = run("""const k=async o=>{const g=await CQ.gruppi(CQ.arg('214.0896',0),o,dep);return [g.map(x=>x.id+x.n).join(),asked.length&&asked[asked.length-1].tol]};
+    r = run("""const k=async o=>{const g=await CQ.groups(CQ.arg('214.0896',0),o,dep);return [g.map(x=>x.id+x.n).join(),asked.length&&asked[asked.length-1].tol]};
       const da={tol:0.5,unit:'da',pol:1},ppm={tol:5,unit:'ppm',pol:1};
       console.log(JSON.stringify([await k({...da,hr:true,dec:4}),await k({...da,hr:false,dec:1}),await k({...ppm,hr:true,dec:4}),await k({...ppm,hr:false,dec:1})]))""")
     assert r[0] == r[1] and r[2] == r[3]          # the unit decides, not the mode
@@ -137,7 +137,7 @@ def test_esi_plus_and_minus_toggle_on_their_own_and_one_always_stays_on():
 
 
 def test_both_polarities_list_the_adducts_and_losses_of_both_signs():
-    r = run("const one=p=>({...LR,pol:p});const f=async p=>(await CQ.gruppi(CQ.arg('30',0),one(p),dep)).find(g=>g.id==='perdite');"
+    r = run("const one=p=>({...LR,pol:p});const f=async p=>(await CQ.groups(CQ.arg('30',0),one(p),dep)).find(g=>g.id==='losses');"
             "const n=async p=>{const g=await f(p);return g?g.items.length:0};console.log(JSON.stringify([await n(1),await n(-1),await n(0)]))")
     assert r[2] >= max(r[0], r[1])
 
@@ -148,8 +148,8 @@ def test_contaminant_lists_survive_a_failed_first_read():
 global.J=()=>++n===1?Promise.reject(new Error('engine lost')):Promise.resolve(real);
 await LISTE.ready();const failed=LISTE.failed();
 await LISTE.ready();
-const g=await CQ.gruppi(CQ.arg('279',0),LR,{...dep,idx:LISTE.ensure()});
-console.log(JSON.stringify([failed,LISTE.failed(),n,g.filter(x=>x.id==='liste').map(x=>x.n)]))""" % str(WEB / "contaminanti.json"))
+const g=await CQ.groups(CQ.arg('279',0),LR,{...dep,idx:LISTE.ensure()});
+console.log(JSON.stringify([failed,LISTE.failed(),n,g.filter(x=>x.id==='lists').map(x=>x.n)]))""" % str(WEB / "contaminanti.json"))
     assert r == [True, False, 2, [5]]                         # four Keller ions at nominal 279 and fenthion [M+H]+ of the pesticide list
 
 
@@ -157,6 +157,6 @@ def test_contaminants_esi_negative_and_positive_lists_are_not_empty():
     # the shipped list has ions of both polarities; a number of the negative list is found with ESI- and not with ESI+
     r = run("""const real=JSON.parse(fs.readFileSync(%r,'utf8'));const ix=LISTE.buildIndex(real.lists,null);
 const neg=ix.neg.find(x=>x.pol===-1&&x.mz>100);const d={...dep,idx:ix};
-const f=async(v,pol)=>(await CQ.gruppi(CQ.arg(String(Math.round(v)),0),{...LR,pol},d)).filter(x=>x.id==='liste').map(x=>x.n);
+const f=async(v,pol)=>(await CQ.groups(CQ.arg(String(Math.round(v)),0),{...LR,pol},d)).filter(x=>x.id==='lists').map(x=>x.n);
 console.log(JSON.stringify([ix.pos.length>0,ix.neg.length>0,(await f(neg.mz,-1))[0]>0]))""" % str(WEB / "contaminanti.json"))
     assert r == [True, True, True]
