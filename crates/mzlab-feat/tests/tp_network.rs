@@ -184,5 +184,5 @@ fn the_next_round_starts_from_the_accepted_products_and_stops_at_the_third_step(
     assert_eq!(reg2.hyps[0], reg.hyps[0]);
     // the same list again adds nothing
     assert_eq!(reg2.append(next), 0);
-    assert!(reg2.to_json().contains("\"rete\""));
+    assert!(reg2.to_json().contains("\"network\""));
 }
