@@ -15,7 +15,7 @@ Measure it with `python3 tools/check_english.py` (counts per area; `--elenco` on
 
 ## Families left, smallest risk first (each one is a PR with a guard test, no aliases, no converters)
 1. Tool flags and docs prose: `tools/html_safe.py --aggiorna`, `misura`/`peggiori`, the «HTML sicuro» heading of `data.md`.
-2. Panel action registry (`azioni/1`, `AZIONI`): the fields unique to the registry files are done (`group`, `views`, `visible`, `available`, `shortcut`, `doubleClick`, `download`). Still open: the contested names (`nome`, `esegui`, `vista`, `voci`, `ordine`, `icona`, `sotto`, `attiva`) and the API (`registra`, `voce`, `per`, `elenco`, `TASTI`). The calculator API is done.
+2. Panel action registry (`actions/1`, `AZIONI`): all registry fields and the API are English (`group`, `views`, `name`, `run`, `order`, `iconKey`, `submenu`, `checked`, `rows`, `menuLabel`, `AZIONI.register/get/list/forContext/run`, `KEYS`). Left for other families: the file names (`azioni*.js`, `menu-sotto.js`), `fila`/`soloIcona`/`barra`, the layout engine `voci`, `ESC.registra`, `SUGG.mostra`, local names in `azioni-tasti.js`.
 3. Language area names under `mzlab/web/lang/en/` (file names such as `errori-flow.js`).
 4. Schema ids and their keys: `livelli/1`, `ipotesi/1`, `riga/1`, `riga_tracce/1`, and the hypothesis source labels `famiglia` / `importata`.
 5. Rust identifiers (`crates/`: `mzlab-feat`, `-ops`, `-cli`, `-core`): by crate, rename-only, parity tests unchanged.

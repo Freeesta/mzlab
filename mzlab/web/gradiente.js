@@ -176,11 +176,11 @@ function hover(/** @type {Bag} */ p, /** @type {number} */ t, /** @type {number}
 const cursorText = (/** @type {Bag} */ p) => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0), u: pressUnit([c]) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: /** @type {number} */ (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
 
 
-// the overlays of the chromatogram menu (registry azioni/1): the pressure trace and the gradient over the graph
+// the overlays of the chromatogram menu (registry actions/1): the pressure trace and the gradient over the graph
 if (typeof AZIONI !== "undefined") {
-  /** @param {string} id @param {string} nome @param {string} aria @param {(c: any) => boolean} have */
-  const over = (id, nome, aria, have) => AZIONI.registra({ id: "chrom." + id, group: "view", views: ["chrom", "xic", "mrm"], visible: have, attiva: (/** @type {Bag} */ c) => c.p.overlay === id,
-    nome: () => T(nome), aria: () => T(aria), esegui: (/** @type {Bag} */ c) => { COMMANDS.run("spec.display", c.p, () => { c.p.overlay = c.p.overlay === id ? null : id; }); drawSoon(c.p); uiSave(); } });
+  /** @param {string} id @param {string} name @param {string} aria @param {(c: any) => boolean} have */
+  const over = (id, name, aria, have) => AZIONI.register({ id: "chrom." + id, group: "view", views: ["chrom", "xic", "mrm"], visible: have, checked: (/** @type {Bag} */ c) => c.p.overlay === id,
+    name: () => T(name), aria: () => T(aria), run: (/** @type {Bag} */ c) => { COMMANDS.run("spec.display", c.p, () => { c.p.overlay = c.p.overlay === id ? null : id; }); drawSoon(c.p); uiSave(); } });
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
 }

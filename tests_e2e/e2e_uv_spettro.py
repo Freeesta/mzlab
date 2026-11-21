@@ -127,7 +127,7 @@ try:
             assert (got["nm0"], got["nm1"]) == (255, 265) and abs(got["max"] - want) < 0.01 * want, (got, want)
         step("DAD trace: the button is XWC; it opens the proposed band, with an nm range that can be edited", wl_panel)
         def wl_menu():
-            ids = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return AZIONI.per({vista:'chrom', p:c, k:0, x:0.5}).map(a=>a.id)})()")
+            ids = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return AZIONI.forContext({view:'chrom', p:c, k:0, x:0.5}).map(a=>a.id)})()")
             assert "chrom.wl" in ids and "chrom.xic" not in ids, ids
         step("the right-click menu of a PDA trace offers λ and not XIC", wl_menu)
         def n_wl(): return pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")

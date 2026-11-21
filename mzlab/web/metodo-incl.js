@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // The inclusion list of a Thermo method (method/1: ms.periods[].experiments[].inclusion) in the Method window, read only, at the head of "Method recorded in the file" (metodo-doc.js).
-// Each row has two short buttons, «XIC» and «MS2», that run the actions "metodo.xic" and "metodo.ms2" of the registry azioni/1 (so the right-click menu and Shift+F10 have them too);
+// Each row has two short buttons, «XIC» and «MS2», that run the actions "metodo.xic" and "metodo.ms2" of the registry actions/1 (so the right-click menu and Shift+F10 have them too);
 // the XIC is the usual one (openXic with `diretto`, pannelli.js), the MS2 is the one DDA.ms2For finds for the precursor inside the RT window of the entry (dda.js). Nothing here is turned into expected products.
 
 const METODO_INCL = (() => {
@@ -33,14 +33,14 @@ const METODO_INCL = (() => {
       + `<div style="margin:4px 0 8px"><button type="button" class="bt" style="min-height:26px" data-ia="tab">${EH(T("tdati.title"))}</button></div>`;
   }
   /** The context of the actions of an entry. */
-  const ctxOf = (/** @type {number} */ i) => ({ vista: "metodo", f: cur.f, v: cur.items[i], i, ms2: cur.ms2.get(i) || null });
+  const ctxOf = (/** @type {number} */ i) => ({ view: "metodo", f: cur.f, v: cur.items[i], i, ms2: cur.ms2.get(i) || null });
   const closeDlg = () => { const d = /** @type {HTMLDialogElement | null} */ (document.getElementById("bigdlg")); if (d && d.open) d.close(); };
   if (typeof AZIONI !== "undefined") {
-    AZIONI.registra({ id: "metodo.xic", group: "xic", views: ["metodo"], nome: (/** @type {any} */ c) => T("method.doc.btn.xic.tip", { mz: n(c.v.mz) }),
-      esegui: (/** @type {any} */ c) => { closeDlg(); return openXic(null, { mz: c.v.mz, diretto: true }); } });
-    AZIONI.registra({ id: "metodo.ms2", group: "ms2", views: ["metodo"], available: (/** @type {any} */ c) => !!c.ms2,
-      nome: (/** @type {any} */ c) => (c.ms2 ? T("method.doc.btn.ms2.tip", { mz: n(c.v.mz), rt: n(c.ms2.rt) }) : noMs2()),
-      esegui: (/** @type {any} */ c) => { closeDlg(); return DDA.openEntry(c.f, c.v.mz, win(c.v)); } });
+    AZIONI.register({ id: "metodo.xic", group: "xic", views: ["metodo"], name: (/** @type {any} */ c) => T("method.doc.btn.xic.tip", { mz: n(c.v.mz) }),
+      run: (/** @type {any} */ c) => { closeDlg(); return openXic(null, { mz: c.v.mz, diretto: true }); } });
+    AZIONI.register({ id: "metodo.ms2", group: "ms2", views: ["metodo"], available: (/** @type {any} */ c) => !!c.ms2,
+      name: (/** @type {any} */ c) => (c.ms2 ? T("method.doc.btn.ms2.tip", { mz: n(c.v.mz), rt: n(c.ms2.rt) }) : noMs2()),
+      run: (/** @type {any} */ c) => { closeDlg(); return DDA.openEntry(c.f, c.v.mz, win(c.v)); } });
   }
   /** Wires the buttons, the right-click menu and Shift+F10 of the list once the dialog is on the page; the MS2 buttons wake up when the file says an MS2 scan fits the entry. */
   function bind(/** @type {any} */ f) {
@@ -56,13 +56,13 @@ const METODO_INCL = (() => {
           rows: cur.items.map(v => [n(v.mz), rtText(v), polText(v), (v.nce || []).map(n).join(", "), v.formula || "", v.species || "", v.name || ""]) });
         return;
       }
-      const i = at(b); if (i >= 0) AZIONI.esegui("metodo." + b.dataset.ia, ctxOf(i));
+      const i = at(b); if (i >= 0) AZIONI.run("metodo." + b.dataset.ia, ctxOf(i));
     });
     const open = (/** @type {number} */ i, /** @type {any} */ ev) => {
       const dlg = document.getElementById("bigdlg"), ctx = document.getElementById("ctx");
       // a modal dialog leaves nothing else above it
       if (dlg && ctx && ctx.parentElement !== dlg) { dlg.appendChild(ctx); dlg.addEventListener("close", () => document.body.appendChild(ctx), { once: true }); }
-      menu(ev, [{ label: "m/z " + n(cur.items[i].mz), dim: true }, "-", ...AZIONI.per(ctxOf(i))]);
+      menu(ev, [{ label: "m/z " + n(cur.items[i].mz), dim: true }, "-", ...AZIONI.forContext(ctxOf(i))]);
     };
     sec.addEventListener("contextmenu", ev => { const i = at(/** @type {Element} */ (ev.target)); if (i >= 0) open(i, ev); });
     sec.addEventListener("keydown", ev => {

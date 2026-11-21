@@ -48,7 +48,7 @@ try:
         load(pg, "dadmrm.wiff")
         T = pg.evaluate("({ uv: I18N.t('ctx.uv.atRt'), twc: I18N.t('ctx.mrm.twc'), al: I18N.t('disp.pdaAlign'), col: I18N.t('tdati.col.twc') })")
         def entries():
-            wait_for_js(pg, "!!AZIONI.voce('mrm.twc')", timeout=30000)
+            wait_for_js(pg, "!!AZIONI.get('mrm.twc')", timeout=30000)
             labs = menu(pg); pg.keyboard.press("Escape")
             assert any(l[1] == T["uv"] for l in labs), labs
             assert ["menuitemcheckbox", T["twc"], "false"] in labs and any(l[0] == "menuitemcheckbox" and l[1] == T["al"] for l in labs), labs

@@ -754,7 +754,7 @@ window.MAPPA = (() => {
     const s = st(p), a = () => p._a, mid = () => ({ rt: (a().x0 + a().x1) / 2, mz: (a().y0 + a().y1) / 2 });
     const pt = () => { const q = s.lock || at || point(p); return q ? { ...q, v: valueAt(p, q.rt, q.mz) } : null; };
     return {
-      vista: "map", kind: "2d", p, pt, locked: () => !!s.lock,
+      view: "map", kind: "2d", p, pt, locked: () => !!s.lock,
       toggleLock: () => { if (s.lock) unlock(p); else { s.lock = { ...(at || point(p) || mid()) }; s.kp = null; overlay(p); margins(p); } navSync(p); },
       marked: () => { const q = pt(); return !!q && markedAt(p, q) >= 0; },
       toggleMark: () => { const q = pt(); if (!q) return; const i = markedAt(p, q); if (i >= 0) delPoint(p, i); else addPointAt(p, q.rt, q.mz, p._a.dmz); },
@@ -771,32 +771,32 @@ window.MAPPA = (() => {
     if (what !== "xic") { const p = ad.p; if (ad.kind === "2d" && p.sel && p.sel[1] > p.sel[0]) newSpec(p, p.sel[0], p.sel[1], p._a.f.k); else spectrumAt(p, q.rt, ad.k); }
     if (ad.after) ad.after();
   }
-  // the commands are actions of the registry azioni/1 (azioni.js), views "map" (2D) and "map3d" (the 3D viewer); the context of an action is the adapter
+  // the commands are actions of the registry actions/1 (azioni.js), views "map" (2D) and "map3d" (the 3D viewer); the context of an action is the adapter
   const V2 = ["map", "map3d"];
   const nameOf = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
-  const cmd = (/** @type {string} */ id, /** @type {string} */ group, /** @type {string} */ ic, /** @type {string[]} */ views, /** @type {Record<string, any>} */ o) => AZIONI.registra({ id, group, ic, views, nome: (/** @type {Record<string, any>} */ ad) => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: (/** @type {Record<string, any>} */ ad) => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
+  const cmd = (/** @type {string} */ id, /** @type {string} */ group, /** @type {string} */ ic, /** @type {string[]} */ views, /** @type {Record<string, any>} */ o) => AZIONI.register({ id, group, ic, views, name: (/** @type {Record<string, any>} */ ad) => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: (/** @type {Record<string, any>} */ ad) => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
   // with an RT stretch selected (Alt + drag) the spectrum is the average over it
-  const short = (/** @type {string} */ id) => ({ voce: (/** @type {Record<string, any>} */ ad) => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : id === "mapxic" && ad.p._a?.pda ? T("cmd.mapxic.menuWl") : T(`cmd.${id}.menu`) });
+  const short = (/** @type {string} */ id) => ({ menuLabel: (/** @type {Record<string, any>} */ ad) => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : id === "mapxic" && ad.p._a?.pda ? T("cmd.mapxic.menuWl") : T(`cmd.${id}.menu`) });
   const hasPt = (/** @type {Record<string, any>} */ ad) => !!ad.pt();
   const CMDS = [
-    cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), available: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "xic") }),
-    cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), available: hasPt, esegui: (/** @type {Record<string, any>} */ ad) => extract(ad, "spec") }),
-    cmd("maplock", "lock", "lock", V2, { attiva: (/** @type {Record<string, any>} */ ad) => ad.locked(), esegui: (/** @type {Record<string, any>} */ ad) => ad.toggleLock() }),
-    cmd("mapmark", "lock", "mark", ["map"], { available: hasPt, attiva: (/** @type {Record<string, any>} */ ad) => ad.marked(), esegui: (/** @type {Record<string, any>} */ ad) => ad.toggleMark() }),
-    cmd("mapreset", "view", "home", V2, { esegui: (/** @type {Record<string, any>} */ ad) => ad.resetAll() }),
-    cmd("map3top", "view", "top", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(1) }),
-    cmd("map3rt", "view", "side", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(2) }),
-    cmd("map3mz", "view", "spec", ["map3d"], { esegui: (/** @type {Record<string, any>} */ ad) => ad.view(3) }),
-    cmd("mapzin", "zoom", "plus", V2, { menu: false, esegui: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(0.7) }),
-    cmd("mapzout", "zoom", "minus", V2, { menu: false, esegui: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(1 / 0.7) }),
-    cmd("mapcopy", "copy", "copy", V2, { available: hasPt, esegui: async (/** @type {Record<string, any>} */ ad) => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
-    cmd("maphelp", "help", "help", V2, { esegui: (/** @type {Record<string, any>} */ ad) => help(ad.kind) })
+    cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), available: hasPt, run: (/** @type {Record<string, any>} */ ad) => extract(ad, "xic") }),
+    cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), available: hasPt, run: (/** @type {Record<string, any>} */ ad) => extract(ad, "spec") }),
+    cmd("maplock", "lock", "lock", V2, { checked: (/** @type {Record<string, any>} */ ad) => ad.locked(), run: (/** @type {Record<string, any>} */ ad) => ad.toggleLock() }),
+    cmd("mapmark", "lock", "mark", ["map"], { available: hasPt, checked: (/** @type {Record<string, any>} */ ad) => ad.marked(), run: (/** @type {Record<string, any>} */ ad) => ad.toggleMark() }),
+    cmd("mapreset", "view", "home", V2, { run: (/** @type {Record<string, any>} */ ad) => ad.resetAll() }),
+    cmd("map3top", "view", "top", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(1) }),
+    cmd("map3rt", "view", "side", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(2) }),
+    cmd("map3mz", "view", "spec", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(3) }),
+    cmd("mapzin", "zoom", "plus", V2, { menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(0.7) }),
+    cmd("mapzout", "zoom", "minus", V2, { menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(1 / 0.7) }),
+    cmd("mapcopy", "copy", "copy", V2, { available: hasPt, run: async (/** @type {Record<string, any>} */ ad) => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
+    cmd("maphelp", "help", "help", V2, { run: (/** @type {Record<string, any>} */ ad) => help(ad.kind) })
   ];
-  const runCmd = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => AZIONI.esegui(id, /** @type {{ vista: string, [k: string]: any }} */ (ad));
+  const runCmd = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => AZIONI.run(id, /** @type {{ view: string, [k: string]: any }} */ (ad));
   // the items of the right-click menu (shared component: menu() in explore.js): where the commands act, then the actions of the view
   function itemsFor(/** @type {Record<string, any>} */ ad) {
     const q = ad.pt(), hdr = ad.locked() ? T("mapnav.where.locked", { at: ptText(q) }) : q ? T("mapnav.where", { at: ptText(q) }) : T("mapnav.where.none");
-    return [{ label: hdr, dim: true }, "-", ...AZIONI.per(/** @type {{ vista: string, [k: string]: any }} */ (ad))];
+    return [{ label: hdr, dim: true }, "-", ...AZIONI.forContext(/** @type {{ view: string, [k: string]: any }} */ (ad))];
   }
   // while the menu is open the sight (spectrum, XIC) is held on the point of the click; it is let go when the menu closes (a choice such as Lock has already set s.lock)
   function holdSight(/** @type {Record<string, any>} */ ad) {
@@ -833,7 +833,7 @@ window.MAPPA = (() => {
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(/** @type {() => Record<string, any>} */ getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav hdkeep"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));  // hdkeep: zoom and gestures stay in sight, fitHd moves the other groups first
-    b.innerHTML = BAR[kind].map((/** @type {string} */ id) => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" ? ' aria-pressed="false"' : ""}>${SV(ICO[/** @type {any} */ (AZIONI.voce(id)).ic])}</button>`).join("");
+    b.innerHTML = BAR[kind].map((/** @type {string} */ id) => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" ? ' aria-pressed="false"' : ""}>${SV(ICO[/** @type {any} */ (AZIONI.get(id)).ic])}</button>`).join("");
     b.addEventListener("click", e => { const x = /** @type {any} */ (e.target).closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;

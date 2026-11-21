@@ -1,5 +1,5 @@
 """e2e_menu_coerenti: the same graph offers the same actions from the right click, from the keyboard (Shift+F10 / Menu key) and from its bar.
-Map: the ids of the menu (data-azione) are the actions of the registry azioni/1 for the view, the buttons of the bar are registered actions.
+Map: the ids of the menu (data-azione) are the actions of the registry actions/1 for the view, the buttons of the bar are registered actions.
 Spectrum, chromatogram and MRM: Shift+F10 on the focused graph opens the menu of the right click at the same point, with the focus inside; Esc gives it back."""
 # covers: mzlab/web/arrange.js, mzlab/web/azioni-icone.js, mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js
 # covers: mzlab/web/mappa.js, mzlab/web/mappa3d.js, mzlab/web/eventi.js
@@ -29,7 +29,7 @@ try:
             pg.mouse.click(b[0] + x, b[1] + y, button="right"); wait_for_js(pg, OPEN)
         def map2d():
             open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, MAP + "&&" + MAP + "._a")
-            want = pg.evaluate(f"AZIONI.per(MAPPA.ad2({MAP},null)).filter(i=>i!=='-').map(i=>i.id)")
+            want = pg.evaluate(f"AZIONI.forContext(MAPPA.ad2({MAP},null)).filter(i=>i!=='-').map(i=>i.id)")
             assert "mapxic" in want and "maphelp" in want and "map3top" not in want, want
             keyboard(MAP); kb = pg.evaluate(IDS)
             noic = pg.evaluate("[...document.querySelectorAll('#ctx [data-azione]')].filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione)"); close()
@@ -39,7 +39,7 @@ try:
             right_at(MAP, w[0] * 0.5, w[1] * 0.5); ms = pg.evaluate(IDS); close()
             assert kb == ms == want, (kb, ms, want)
             bar = pg.evaluate(f"[...{MAP}.el.querySelectorAll('.mznav [data-nav]')].map(b=>b.dataset.nav)")
-            assert bar and all(pg.evaluate(f"(AZIONI.voce('{i}')||{{views:[]}}).views.includes('map')") for i in bar), bar
+            assert bar and all(pg.evaluate(f"(AZIONI.get('{i}')||{{views:[]}}).views.includes('map')") for i in bar), bar
             pal = pg.evaluate("MAPPA.CMDS.filter(c=>MAPPA.paletteOk(c)).map(c=>c.id)")
             assert set(want) <= set(pal), (want, pal)
         step("map 2D: right click = Shift+F10 = the registry; the bar and the palette use registered actions", map2d)
@@ -59,19 +59,19 @@ try:
             keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
               return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                 noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{views:[]}).views.some(x=>x==='spec'||x==='*'))}})()"""); close()
+                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.get(i)||{views:[]}).views.some(x=>x==='spec'||x==='*'))}})()"""); close()
             assert r["n"] >= 5 and not r["free"] and not r["bad"] and not r["noic"], r
             assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
         step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
         step("MRM: Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='mrm')", "mrm"))
         def trace_ids():
-            for sel, vista in (("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')", "chrom"), ("E.panels.find(q=>q.type==='mrm')", "mrm")):
+            for sel, view in (("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')", "chrom"), ("E.panels.find(q=>q.type==='mrm')", "mrm")):
                 pg.evaluate(f"(()=>{{const p={sel};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
                 keyboard(sel); r = pg.evaluate("""(v=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
                   return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                     noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
-                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{views:[]}).views.some(x=>x===v||x==='*'))}})""" + f"('{vista}')"); close()
-                assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
+                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.get(i)||{views:[]}).views.some(x=>x===v||x==='*'))}})""" + f"('{view}')"); close()
+                assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (view, r)
                 assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"], r["ids"]
                 assert "ann.edit" not in r["ids"], r["ids"]      # the annotation entries need an annotation under the pointer (none here: p.anns is empty)
                 assert "chrom.specAtRt" not in r["ids"] and "chrom.avgSel" not in r["ids"], r["ids"]      # the spectrum comes from a click, a drag, the double click and Enter
@@ -89,9 +89,9 @@ try:
             assert auto in labels(XP), "an XIC keeps «Integrate the peak»"
         step("TIC: no «Integrate the peak», no spectrum entries; XIC keeps the integration", tic_vs_xic)
         def every_action():
-            r = pg.evaluate("""(()=>{const none=AZIONI.voci.filter(a=>!a.svg&&!(a.icona&&AZIONI_ICONE.DISEGNI[a.icona])).map(a=>a.id);
-              const bad=AZIONI.voci.filter(a=>a.icona&&!AZIONI_ICONE.DISEGNI[a.icona]).map(a=>a.id);
-              const col=getComputedStyle(document.querySelector('#ctx')).color;return {n:AZIONI.voci.length,none,bad,col}})()""")
+            r = pg.evaluate("""(()=>{const none=AZIONI.actions.filter(a=>!a.svg&&!(a.iconKey&&AZIONI_ICONE.DISEGNI[a.iconKey])).map(a=>a.id);
+              const bad=AZIONI.actions.filter(a=>a.iconKey&&!AZIONI_ICONE.DISEGNI[a.iconKey]).map(a=>a.id);
+              const col=getComputedStyle(document.querySelector('#ctx')).color;return {n:AZIONI.actions.length,none,bad,col}})()""")
             assert r["n"] >= 40 and not r["none"] and not r["bad"], r
         step("every action of the registry has an existing icon", every_action)
     r.close()

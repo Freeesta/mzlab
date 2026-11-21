@@ -110,7 +110,7 @@ try:
         step("a click elsewhere does not copy", elsewhere)
         def menu_copies():
             l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
-            names = pg.evaluate(f"(()=>{{const p={XP};return AZIONI.per({{vista:p.type,p,x:14.2,k:0,near:null,px:{l['x']}-p.cv.getBoundingClientRect().left,py:{l['y']}-p.cv.getBoundingClientRect().top}}).map(i=>i.label||i.nome)}})()")
+            names = pg.evaluate(f"(()=>{{const p={XP};return AZIONI.forContext({{view:p.type,p,x:14.2,k:0,near:null,px:{l['x']}-p.cv.getBoundingClientRect().left,py:{l['y']}-p.cv.getBoundingClientRect().top}}).map(i=>i.label||i.nome)}})()")
             assert "Copy value" in [str(x) for x in names], names
             pg.mouse.click(l["x"], l["y"], button="right"); wait_for_js(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copy value')")
             pg.get_by_text("Copy value", exact=True).click(); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")

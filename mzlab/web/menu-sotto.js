@@ -12,11 +12,11 @@ window.MENUSUB = {
     const fill = () => {
       sm.innerHTML = "";
       it.sub().forEach((/** @type {Bag} */ r) => {
-        const e = document.createElement("div"); e.tabIndex = -1; e.setAttribute("role", "menuitemcheckbox"); e.setAttribute("aria-checked", String(!!r.check)); e.setAttribute("aria-label", r.aria || r.nome);
+        const e = document.createElement("div"); e.tabIndex = -1; e.setAttribute("role", "menuitemcheckbox"); e.setAttribute("aria-checked", String(!!r.check)); e.setAttribute("aria-label", r.aria || r.name);
         if (r.color) { const sw = document.createElement("span"); sw.className = "sw"; sw.setAttribute("aria-hidden", "true"); sw.style.background = r.color; e.appendChild(sw); }
-        e.appendChild(document.createTextNode(r.nome));
+        e.appendChild(document.createTextNode(r.name));
         if (r.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; e.appendChild(ck); }
-        e.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); const keep = r.keep && r.keep(ev); r.esegui(ev); if (keep) { fill(); const i = rowsOf().findIndex(x => x.getAttribute("aria-label") === (r.aria || r.nome)); if (i >= 0) /** @type {HTMLElement} */ (rowsOf()[i]).focus(); } else m.hidden = true; };
+        e.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); const keep = r.keep && r.keep(ev); r.run(ev); if (keep) { fill(); const i = rowsOf().findIndex(x => x.getAttribute("aria-label") === (r.aria || r.name)); if (i >= 0) /** @type {HTMLElement} */ (rowsOf()[i]).focus(); } else m.hidden = true; };
         sm.appendChild(e);
       });
     };

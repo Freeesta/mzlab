@@ -805,15 +805,15 @@ const LISTE = (() => {
     QQQRef.open("lists", opt);
   }
 
-  // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
+  // the actions of the spectrum menu (registry actions/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
   if (typeof AZIONI !== "undefined") {
     const S = ["spec"], T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.contLists", group: "cont", views: S, menu: false, available: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a?.hrp }) });
-    AZIONI.registra({ id: "spec.known", group: "cont", views: S, voci: (/** @type {Bag} */ c) => {
+    AZIONI.register({ id: "spec.contLists", group: "cont", views: S, menu: false, available: (/** @type {Bag} */ c) => c.has, name: () => T("ctx.spec.contLists"), run: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a?.hrp }) });
+    AZIONI.register({ id: "spec.known", group: "cont", views: S, rows: (/** @type {Bag} */ c) => {
       const kn = c.a?.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
-      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, info: true, esegui: () => {} }] : [];
+      return kn.length ? [{ name: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, info: true, run: () => {} }] : [];
     } });
-    AZIONI.registra({ id: "spec.addLab", group: "cont", views: S, menu: false, visible: (/** @type {Bag} */ c) => !!c.a?.hrp, available: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
+    AZIONI.register({ id: "spec.addLab", group: "cont", views: S, menu: false, visible: (/** @type {Bag} */ c) => !!c.a?.hrp, available: (/** @type {Bag} */ c) => c.has, name: () => T("ctx.spec.addLab"), run: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
   }
   return {
     tolDa,

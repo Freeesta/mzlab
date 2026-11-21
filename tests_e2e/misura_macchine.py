@@ -141,7 +141,7 @@ class Gestures(Bench):
             for m in ms:
                 n = pg.evaluate("E.panels.filter(p => p.type === 'xic').length")
                 rows.append(s.run("""m => { const p = E.panels.find(q => q.type === 'spec' && q.tab === E.tab), a = p._a;
-                    AZIONI.esegui("spec.xic", { vista: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: { preventDefault() {}, clientX: 0, clientY: 0 }, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }); }""",
+                    AZIONI.run("spec.xic", { view: "spec", p, a, m, has: true, lab: m.toFixed(mzd(p, p.level)), e: { preventDefault() {}, clientX: 0, clientY: 0 }, px: 0, py: 0, pol: a.data[0].f && a.data[0].f.polarity }); }""",
                                   f"() => ({NEWPANEL})('xic', {n})", m))
                 pg.evaluate("E.panels.filter(p => p.type === 'xic').forEach(closePanel)"); frames(pg, 3)
         s.put("xic_click", rows)

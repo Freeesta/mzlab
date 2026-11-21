@@ -930,7 +930,7 @@ function info(/** @type {string} */ html) {
   const d = Q("#bigdlg"); Q("#bigx").onclick = () => d.close(); d.showModal(); if (onopen) onopen();
 }
 function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
-  ev.preventDefault(); items = AZIONI.pulisci(items);
+  ev.preventDefault(); items = AZIONI.clean(items);
   const m = Q("#ctx");
   m.innerHTML = "";
   // one entry; `fila` groups two or more entries in a single row (icons only, split in equal columns)
@@ -952,7 +952,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
     if (it.aria) d.setAttribute("aria-label", it.aria);
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
     if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
-    // an action of the registry azioni/1: the same id in every menu that offers it
+    // an action of the registry actions/1: the same id in every menu that offers it
     if (it.id) d.dataset.azione = it.id; if (it.sub && !it.dim && window.MENUSUB) { MENUSUB.wire(d, it, m); return d; }   // an entry with a submenu (menu-sotto.js)
     // an action not available now: grey, still reachable from the keyboard
     if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }

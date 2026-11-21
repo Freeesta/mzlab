@@ -112,15 +112,15 @@ const DISP = (() => {
     if (window.BARRA) BARRA.setTab("disp");
     if (window.BANCO) BANCO.renderInfo();
   }
-  // the actions of the spectrum menu (registry azioni/1, the high-resolution bench): peak marks, contaminants hidden, the display options
+  // the actions of the spectrum menu (registry actions/1, the high-resolution bench): peak marks, contaminants hidden, the display options
   if (typeof AZIONI !== "undefined") {
     const bench = () => !!window.BANCO && BANCO.on(), T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.marker", group: "gen", ordine: 3, views: ["spec"], menu: false, visible: c => !!c.a?.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
-      esegui: c => { COMMANDS.run("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
-    AZIONI.registra({ id: "spec.noCont", group: "gen", ordine: 4, views: ["spec"], menu: false, visible: c => !!c.a?.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
-      esegui: c => { COMMANDS.run("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
-    AZIONI.registra({ id: "spec.disp", group: "gen", ordine: 5, views: ["spec"], visible: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
-    AZIONI.registra({ id: "chrom.disp", group: "gen", ordine: 5, views: ["chrom", "xic"], visible: bench, nome: () => T("disp.menu"), esegui: c => open(c.p) });
+    AZIONI.register({ id: "spec.marker", group: "gen", order: 3, views: ["spec"], menu: false, visible: c => !!c.a?.hrp && bench(), checked: c => markOn(c.p), name: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
+      run: c => { COMMANDS.run("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
+    AZIONI.register({ id: "spec.noCont", group: "gen", order: 4, views: ["spec"], menu: false, visible: c => !!c.a?.hrp && bench(), checked: c => !!c.p.noCont, name: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
+      run: c => { COMMANDS.run("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
+    AZIONI.register({ id: "spec.disp", group: "gen", order: 5, views: ["spec"], visible: bench, name: () => T("disp.menu"), aria: () => T("disp.menu.aria"), run: c => open(c.p) });
+    AZIONI.register({ id: "chrom.disp", group: "gen", order: 5, views: ["chrom", "xic"], visible: bench, name: () => T("disp.menu"), run: c => open(c.p) });
   }
   return { register, panel, open, items, typeOf, pdaShift, pdaHere: p => !!dfile(p), pdaDelayValue: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; } };
 })();

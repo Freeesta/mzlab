@@ -402,15 +402,15 @@ const DDA = (() => {
   st.textContent = ".pnl.jt{border-bottom-left-radius:0;border-bottom-right-radius:0}.pnl.jb{border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent}";
   document.head.appendChild(st);
 
-  // the actions of the spectrum menu (registry azioni/1): the MS2 of a peak (high resolution), the DDA trio, the MS2 beside the Full Scan
+  // the actions of the spectrum menu (registry actions/1): the MS2 of a peak (high resolution), the DDA trio, the MS2 beside the Full Scan
   if (typeof AZIONI !== "undefined") {
     /** @param {any} c */
     const ms2Of = c => c.a?.hrp && c.has ? ms2For(c.p, c.m)[0] : null;
-    AZIONI.registra({ id: "spec.ms2", group: "ms2", views: ["spec"], visible: (/** @type {Bag} */ c) => !!c.a?.hrp, available: (/** @type {Bag} */ c) => !!ms2Of(c), nome: (/** @type {Bag} */ c) => I18N.t("ctx.spec.openMs2", { mz: ms2Of(c) ? ms2Of(c).prec.toFixed(mzd(c.p, 2)) : "…" }),
-      aria: (/** @type {Bag} */ c) => I18N.t("ctx.spec.openMs2.aria", { mz: c.lab }), esegui: (/** @type {Bag} */ c) => { const q = ms2Of(c); if (q) openMs2(c.p, q.j); } });
-    AZIONI.registra({ id: "spec.dda", group: "dda", views: ["spec"], voci: (/** @type {Bag} */ c) => menu(c.p, c.px, c.py, c.m).map(/** @param {any} o */ o => ({ nome: o.label, tip: o.tip, esegui: o.fn })) });
-    AZIONI.registra({ id: "chrom.ddaShow", group: "link", ordine: 1, views: ["chrom"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
-    AZIONI.registra({ id: "spec.ddaShow", group: "link", ordine: 1, views: ["spec"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
+    AZIONI.register({ id: "spec.ms2", group: "ms2", views: ["spec"], visible: (/** @type {Bag} */ c) => !!c.a?.hrp, available: (/** @type {Bag} */ c) => !!ms2Of(c), name: (/** @type {Bag} */ c) => I18N.t("ctx.spec.openMs2", { mz: ms2Of(c) ? ms2Of(c).prec.toFixed(mzd(c.p, 2)) : "…" }),
+      aria: (/** @type {Bag} */ c) => I18N.t("ctx.spec.openMs2.aria", { mz: c.lab }), run: (/** @type {Bag} */ c) => { const q = ms2Of(c); if (q) openMs2(c.p, q.j); } });
+    AZIONI.register({ id: "spec.dda", group: "dda", views: ["spec"], rows: (/** @type {Bag} */ c) => menu(c.p, c.px, c.py, c.m).map(/** @param {any} o */ o => ({ name: o.label, tip: o.tip, run: o.fn })) });
+    AZIONI.register({ id: "chrom.ddaShow", group: "link", order: 1, views: ["chrom"], rows: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ name: q.label, tip: q.tip, run: q.fn }] : []; } });
+    AZIONI.register({ id: "spec.ddaShow", group: "link", order: 1, views: ["spec"], rows: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ name: q.label, tip: q.tip, run: q.fn }] : []; } });
   }
   // the MS2 started from the survey scans of [r0, r1] min, grouped by precursor (Rust: /api/dda_window)
   const win = (/** @type {number} */ k, /** @type {number} */ r0, /** @type {number} */ r1) => memo(`ddw|${keyOf(k)}|${r0}|${r1}|${HR.q()}`, () => J(`api/dda_window?k=${k}&r0=${r0}&r1=${r1}` + HR.q()));

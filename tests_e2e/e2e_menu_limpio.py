@@ -16,8 +16,8 @@ try:
         pg.evaluate("(async()=>{const D=await DDA.get(E.panels.find(p=>p.level===1&&p.type==='spec').k);await DDA.selectMs2(E.panels.find(p=>p.level===2),D.sid[0]);})(); 0")
         wait_for_js(pg, f"!!({MS2})")
         def rows(has=True):
-            pg.evaluate(f"""(()=>{{const p={MS2},a=p._a;window.__c={{vista:'spec',p,a,m:a.data[0].d.mz[0],has:{str(has).lower()},pol:1,lab:'',e:{{clientX:50,clientY:50,preventDefault(){{}}}},px:50,py:50}};
-              menu({{preventDefault(){{}},clientX:50,clientY:50}},[{{label:'m/z',dim:true}},'-',...AZIONI.per(__c)])}})()""")
+            pg.evaluate(f"""(()=>{{const p={MS2},a=p._a;window.__c={{view:'spec',p,a,m:a.data[0].d.mz[0],has:{str(has).lower()},pol:1,lab:'',e:{{clientX:50,clientY:50,preventDefault(){{}}}},px:50,py:50}};
+              menu({{preventDefault(){{}},clientX:50,clientY:50}},[{{label:'m/z',dim:true}},'-',...AZIONI.forContext(__c)])}})()""")
             out = pg.evaluate("[...document.querySelectorAll('#ctx > *')].map(d=>d.tagName==='HR'?'-':(d.dataset.azione||d.textContent))")
             pg.evaluate("document.querySelector('#ctx').hidden=true"); return out
         def no_downloads():
@@ -27,7 +27,7 @@ try:
         step("no download, no «Add to the laboratory contaminants», no view toggles in the menu", no_downloads)
         def known_cont():
             assert "spec.cont" in rows(), "«Is it a known contaminant?» in the peak menu"
-            pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.esegui('spec.cont', __c)")
+            pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.run('spec.cont', __c)")
             wait_for_js(pg, "BARRA.curTab === 'lists'")
             assert abs(float(pg.input_value("#lst-q")) - pg.evaluate("__c.m")) < 1e-9, pg.input_value("#lst-q")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
@@ -35,7 +35,7 @@ try:
         step("«Is it a known contaminant?» opens the Lists panel on the peak m/z", known_cont)
         def options():
             assert "spec.disp" in rows()
-            pg.evaluate(f"menu({{preventDefault(){{}},clientX:50,clientY:50}},AZIONI.per(__c))")
+            pg.evaluate(f"menu({{preventDefault(){{}},clientX:50,clientY:50}},AZIONI.forContext(__c))")
             t = pg.evaluate("document.querySelector('#ctx [data-azione=\"spec.disp\"]').textContent.trim()"); assert t == "Options…", t
             assert pg.evaluate("!!document.querySelector('#ctx [data-azione=\"spec.disp\"] .ic svg circle')"), "gear icon"
             pg.evaluate("document.querySelector('#ctx').hidden=true")
