@@ -261,7 +261,7 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
             "feat/table",
             json!({"kind": "view", "samples": samples, "spec": ""})
         )
-        .contains("\"righe\""));
+        .contains("\"rows\""));
     let tp = e.r(
         "feat/table",
         json!({"kind": "tp_table", "samples": samples, "spec": "[0]"}),
