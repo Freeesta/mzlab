@@ -88,7 +88,7 @@ const HISTORY = typeof document === "undefined" ? null : (() => {
   function command(id, p, before, merge) {
     const l = stack.v[stack.v.length - 1], t = Date.now();
     if (merge && l && l.kind === "cmd" && l.cmd === id && l.p === p && l.merge === merge && t - l.t < 800) { l.t = t; stack.r.length = 0; sync(); return; }
-    stack.push({ p, kind: "cmd", cmd: id, w: COMMANDS.row(id)?.nome, merge: merge || "", t, before, after: null }); sync();
+    stack.push({ p, kind: "cmd", cmd: id, w: COMMANDS.row(id)?.name, merge: merge || "", t, before, after: null }); sync();
   }
   /** @param {(e: any) => boolean} [only] */
   function undo(only) {

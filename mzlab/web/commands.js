@@ -3,12 +3,12 @@
 // Registry of the actions of the Dati view that change state (one row per action) and the way to make them undoable: an action runs through
 // COMMANDS.run / COMMANDS.begin, which takes a small snapshot before and after and records ONE step in the stack of history.js (HISTORY).
 // The table is the only source of docs/actions.md (python3 tools/doc_commands.py) and of the guards of tests/test_comandi.py. Classic script, loaded before history.js.
-//   id        = module.action          nome = i18n key of the label shown in «Undone: …»      modulo = file that owns the action
-//   dove      = every file that changes the fields (the test refuses an assignment to a registered field in another file)
-//   campi     = the state fields it changes     parametri = what the user chooses       tasto = shortcut      merge = how drags / bursts become one step
+//   id        = module.action          name = i18n key of the label shown in «Undone: …»      module = file that owns the action
+//   where     = every file that changes the fields (the test refuses an assignment to a registered field in another file)
+//   fields    = the state fields it changes     params = what the user chooses       key = shortcut      merge = how drags / bursts become one step
 //   p of a command = the panel it acts on, or COMMANDS.GLOBAL for the actions of no panel
-//   annulla   = "snapshot" (zoom, integrations, fields: snapshots of history.js) | "command" (handler registered with COMMANDS.handler)
-//             | "removed" (a removal with its own undo/redo closures, HISTORY.removed) | "layout" (arrange.js) | "to-port" (not undoable yet: the ratchet of the test) | "none" (+ motivo)
+//   undo      = "snapshot" (zoom, integrations, fields: snapshots of history.js) | "command" (handler registered with COMMANDS.handler)
+//             | "removed" (a removal with its own undo/redo closures, HISTORY.removed) | "layout" (arrange.js) | "to-port" (not undoable yet: the ratchet of the test) | "none" (+ reason)
 
 // TAB-BEGIN
 const COMMANDS_TAB = [
@@ -74,7 +74,7 @@ const COMMANDS = (() => {
   }
   /** The owner module says how to read the state of its action and how to put a snapshot back (the «undo» of the command). @param {string} id @param {{ read: (p: any) => string, apply: (p: any, snap: string) => void }} g */
   function handler(id, g) {
-    if (entry(id).annulla !== "command") throw new Error("COMMANDS: " + id + " is not a command");
+    if (entry(id).undo !== "command") throw new Error("COMMANDS: " + id + " is not a command");
     handlers[id] = g;
   }
   /** @param {string} id */
@@ -104,6 +104,6 @@ const COMMANDS = (() => {
   /** The `p` of the actions that belong to no panel (tables, settings, the file list): always visible to the undo of the Dati view. */
   const GLOBAL = { global: true };
   /** Ids of the registered commands without a handler (the e2e wants it empty). */
-  const withoutHandler = () => COMMANDS_TAB.filter(r => r.annulla === "command" && !handlers[r.id]).map(r => r.id);
+  const withoutHandler = () => COMMANDS_TAB.filter(r => r.undo === "command" && !handlers[r.id]).map(r => r.id);
   return { tab: COMMANDS_TAB, GLOBAL, row, handler, handlerOf, run, begin, restore, withoutHandler };
 })();

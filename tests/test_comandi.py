@@ -1,7 +1,9 @@
 """Registry of the actions that change state (mzlab/web/commands.js): well-formed table, handlers and call sites with registered ids, no assignment to a
 registered field outside the files the action lists, the ratchet of the actions not undoable yet, and docs/actions.md up to date."""
+import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -78,3 +80,13 @@ def test_to_port_count_never_grows():
 
 def test_page_up_to_date():
     assert doc_commands.OUT.exists() and doc_commands.OUT.read_text(encoding="utf-8") == doc_commands.pagina(), "run python3 tools/doc_commands.py"
+
+
+def test_runtime_reads_the_english_table_fields():
+    """The IIFE of commands.js reads `undo`/`name` of the table: a handler registers only for a `command` row and withoutHandler lists the rest."""
+    src = (WEB / "commands.js").read_text(encoding="utf-8")
+    r = subprocess.run(["node", "-e", "globalThis.HISTORY = null;\n" + src + "\nCOMMANDS.handler('spec.ruler', { read: () => '', apply: () => {} });"
+                        "\nconsole.log(JSON.stringify([COMMANDS.row('spec.ruler').name, COMMANDS.withoutHandler().includes('spec.ruler'), (() => { try { COMMANDS.handler('files.remove', {}); return 'no'; } catch (e) { return 'throws'; } })()]))"],
+                       capture_output=True, text=True, encoding="utf-8", check=True)
+    name, left, files_remove = json.loads(r.stdout)
+    assert name and left is False and files_remove == "throws"
