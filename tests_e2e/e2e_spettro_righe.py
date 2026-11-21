@@ -1,4 +1,5 @@
-"""MS² spectrum card rows (spettro-righe.js): fragments (header controls), notes, retention times, CE ± spread from the file, sample; no horizontal scroll at phone width."""
+"""MS² spectrum card rows (spettro-righe.js): fragments (header controls), notes, retention times, CE ± spread from the file, sample; no horizontal scroll at phone width.
+An MS¹ card keeps ONE header row and none of these rows (regression of #3435, which scoped them to every spectrum card)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import re
@@ -43,6 +44,24 @@ def flat(pg):
 def narrow(pg):
     assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal page scroll"
     assert pg.evaluate(f"[...{SP}.el.querySelectorAll('.srows > .sr')].every(r => r.getBoundingClientRect().right <= {SP}.el.getBoundingClientRect().right + 1)")
+MS1 = "E.panels.find(p => p.tab === 'full' && p.type === 'spec')"
+def ms1_card(pg):
+    """An MS¹ card on the Full-scan tab: single header row, no .srows (notes, retention times), no .ms2c class."""
+    assert pg.evaluate(f"!!{MS1}"), "no MS1 spectrum card"
+    assert pg.evaluate(f"!{MS1}.el.querySelector('.srows') && !{MS1}.el.classList.contains('ms2c')"), "rows on an MS1 card"
+    assert pg.evaluate(f"!{MS1}.el.querySelector('.sr-notes, .sr-rt')"), "notes / retention-time row on an MS1 card"
+    assert pg.evaluate(f"getComputedStyle({MS1}.el.querySelector('.hd')).flexWrap") == "nowrap", "MS1 header wraps onto a second line"
+    hh = pg.evaluate(f"{MS1}.el.querySelector('.hd').getBoundingClientRect().height"); assert hh < 60, f"MS1 header is {hh}px tall: more than one row"
+def run_ms1(port, wd, f):
+    r = Run(port=port, wd=wd)
+    try:
+        with sync_playwright() as p:
+            pg = r.page(p)
+            stage(pg, [str(f)]); pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+            wait_for_js(pg, f"!!{MS1}"); ready(pg); ms1_card(pg)
+    finally: r.close()
+FULL = D / "Full_t0.mzML"; ds.full_scan(FULL, 0, np.random.default_rng(6))
+step("MS1 card: one header row, no notes / retention-time rows", lambda: run_ms1(8914, "/tmp/wd_row4", FULL))
 step("stepped CE: rows, CE 25 ± 15, sample, notes, aria, tooltips", lambda: run(8911, "/tmp/wd_row1", STEP, stepped))
 step("single CE: CE only, no spread", lambda: run(8912, "/tmp/wd_row2", FLAT, flat))
 step("phone width: rows wrap, no page scroll", lambda: run(8913, "/tmp/wd_row3", STEP, narrow, {"width": 390, "height": 800}))

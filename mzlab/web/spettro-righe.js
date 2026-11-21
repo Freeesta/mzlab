@@ -1,5 +1,5 @@
 // @ts-check
-// Rows of the MS² spectrum card under its header, one topic each: notes, retention times, collision energy (CE ± spread), sample.
+// Rows of the MS² spectrum card (never an MS¹ card) under its header, one topic each: notes, retention times, collision energy (CE ± spread), sample.
 // The fragments row is the header's own controls (`.ctl`, wrapped onto its own line by CSS). CE, spread and sample come from the engine (`ms2_exps`, label).
 (() => {
   const T = (/** @type {string} */ k, /** @type {any} */ a) => I18N.t(k, a);
@@ -26,6 +26,9 @@
   function update(p) {
     if (p.type !== "spec" || !p.el) return;
     const hd = p.el.querySelector(".hd"); if (!hd) return;
+    // MS² cards only: an MS¹ card keeps its single header row, with no extra rows (the CSS is scoped to .ms2c)
+    const on = p.level > 1; p.el.classList.toggle("ms2c", on);
+    if (!on) { p.el.querySelector(".srows")?.remove(); return; }
     let box = p.el.querySelector(".srows");
     if (!box) { box = document.createElement("div"); box.className = "srows"; hd.after(box); }
     const ctl = p.el.querySelector(".ctl"); if (ctl) { ctl.setAttribute("role", "group"); ctl.setAttribute("aria-label", T("srow.frag")); }
