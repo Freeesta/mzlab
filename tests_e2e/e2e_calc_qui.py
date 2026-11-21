@@ -97,11 +97,11 @@ try:
             assert max(t) <= 30, t
         step("search time per keystroke <= 30 ms", timing)
         def open_calc():
-            pg.evaluate("CALCQUI.apri(214)"); wait_for_js(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent")
+            pg.evaluate("CALCQUI.open(214)"); wait_for_js(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent")
             assert pg.input_value("#calcin") == "214" and pg.evaluate("BARRA.curSub") == "losses"
             pg.evaluate("BARRA.close(false); setView('draw')"); wait_for_js(pg, "!!document.querySelector('#np-calc2').offsetParent")
             if not pg.is_visible("#calcdlg"): pg.click("#np-calc2")
-        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Data view)", open_calc)
+        step("CALCQUI.open(214) puts the number in the field of Adducts & losses (Data view)", open_calc)
         def shot(name, w):
             if not SHOTS: return
             pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 25)

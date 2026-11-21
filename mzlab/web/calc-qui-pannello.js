@@ -26,7 +26,7 @@
     });
     const upd = () => { loss.hidden = !numberOf(q.value); CALCQUI.later(view); };
     q.addEventListener("input", upd);
-    loss.onclick = () => { const n = numberOf(q.value); if (n) CALCQUI.apriPerdite(n); };
+    loss.onclick = () => { const n = numberOf(q.value); if (n) CALCQUI.openLosses(n); };
     root.dataset.cqField = q.id;
     upd();
     if (opt.q != null) setTimeout(() => { q.focus(); q.select(); }, 50);
@@ -84,7 +84,7 @@
     }
   }
   /** «Cerca»: a number, a difference or a formula into the field (null: the field as it is), on the tab given (null: the one shown). @param {string | number | null} q @param {string | null} [sub] @param {{ open?: string }} [opt] */
-  function cerca(q, sub = null, opt = {}) {
+  function search(q, sub = null, opt = {}) {
     if (!window.BARRA) return;
     const s = sub && SUBS.includes(sub) ? sub : BARRA.curSub;
     BARRA.setTab(s, { q: q == null ? undefined : String(q), open: opt.open });
@@ -93,7 +93,7 @@
   const ensureAdducts = (opt = {}) => showSub("adducts", opt);
 
   /** The Adducts tab of the page (the side panel only: from another view it goes back to Dati). The window is kept for a page without the drawer. @param {string | number | null} [q] */
-  function apriAddotti(q = null) {
+  function openAdducts(q = null) {
     const opt = q == null ? {} : { q: String(q) };
     if (window.BARRA) { BARRA.setTab("adducts", opt); return; }
     const d = /** @type {HTMLDialogElement | null} */ (Q1("#refdlg")), body = Q1("#refbody"), ttl = Q1("#reftitle"), x = Q1("#refx");
@@ -103,8 +103,8 @@
     if (!d.open) d.showModal();
   }
   /** The Neutral losses with the number typed in the search. @param {string | number} q */
-  function apriPerdite(q) {
+  function openLosses(q) {
     if (window.BARRA) BARRA.setTab("losses", { q: String(q) }); else if (window.QQQRef) QQQRef.open("ls", { q: String(q) });
   }
-  Object.assign(CALCQUI, { ensureAdducts, mountAdducts, showSub, refreshPage, cerca, setCalc, calcOpen, apriAddotti, apriPerdite, numberOf, SUBS });
+  Object.assign(CALCQUI, { ensureAdducts, mountAdducts, showSub, refreshPage, search, setCalc, calcOpen, openAdducts, openLosses, numberOf, SUBS });
 })();

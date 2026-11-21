@@ -3,7 +3,7 @@
 "use strict";
 // The page side of «What can this number be?»: ONE view component (choices row + groups of candidates) mounted in the three places that show it
 // (under the m/z calculator, the Adducts panel, the Neutral losses panel), all fed by calc-qui.js and drawn by calc-qui-html.js.
-// Public: CALCQUI.apri(n) opens the calculator on a number (the spectrum ruler uses it). Classic script, after calc-addotti.js and liste.js.
+// Public: CALCQUI.open(n) opens the calculator on a number (the spectrum ruler uses it). Classic script, after calc-addotti.js and liste.js.
 
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
@@ -151,17 +151,17 @@
   CALCQUI.onChange(() => { prune(); views.slice().forEach(v => { sync(v); if (v.cfg.controls) { if (v.cfg.change) v.cfg.change(); } else later(v); }); });
 
   const docked = () => { const d = Q1("#calcdlg"); return !!d && d.classList.contains("sb-docked"); };
-  /** Opens «what can this number be?» on a number: in the drawer the Adducts & losses page (gruppo «diff»: the Adducts tab with the differences open, otherwise
-   * the Neutral losses), elsewhere the floating calculator. @param {number | string} n @param {{ gruppo?: string }} [opt] */
-  function apri(n, opt = {}) {
+  /** Opens «what can this number be?» on a number: in the drawer the Adducts & losses page (group «diff»: the Adducts tab with the differences open, otherwise
+   * the Neutral losses), elsewhere the floating calculator. @param {number | string} n @param {{ group?: string }} [opt] */
+  function open(n, opt = {}) {
     const dlg = Q1("#calcdlg");
-    if (window.BARRA && CALCQUI.cerca) { CALCQUI.cerca(n, opt.gruppo === "diff" ? "adducts" : "losses", { open: opt.gruppo }); return; }
+    if (window.BARRA && CALCQUI.search) { CALCQUI.search(n, opt.group === "diff" ? "adducts" : "losses", { open: opt.group }); return; }
     if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else if (dlg && dlg.hidden && window.calcToggleFloat) window.calcToggleFloat();
     const inp = /** @type {HTMLInputElement | null} */ (Q1("#calcin"));
     if (!inp) return;
     inp.value = String(n); CALC.fresh = true;
     const v = views.find(x => x.cfg.idp === "calc");
-    if (v && opt.gruppo) { v.open.add(opt.gruppo); v.open.delete("-" + opt.gruppo); }
+    if (v && opt.group) { v.open.add(opt.group); v.open.delete("-" + opt.group); }
     calcRun();
   }
 
@@ -175,5 +175,5 @@
       if (sum) sum.innerHTML = f && a.text.replace(/\s+/g, "") !== f ? I18N.t("calc.interpreted", { formula: fmtFormula(f) }) : "";
     },
   });
-  Object.assign(CALCQUI, { mount, apri, views, sync, render, later, calc });
+  Object.assign(CALCQUI, { mount, open, views, sync, render, later, calc });
 })();
