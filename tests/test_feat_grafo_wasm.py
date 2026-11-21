@@ -154,10 +154,17 @@ def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
 
 
 def v3000_of(v2000):
-    """The V3000 text of a plain V2000 molfile (atoms, bonds, no property lines): the same molecule in the other format."""
+    """The V3000 text of a V2000 molfile (atoms, bonds, charge, isotope and radical lines): the same molecule in the other format."""
     lines = v2000.split("\n")
     na, nb = int(lines[3][0:3]), int(lines[3][3:6])
-    atoms = [f"M  V30 {i + 1} {l[31:34].strip()} {l[0:10].strip()} {l[10:20].strip()} {l[20:30].strip()} 0" for i, l in enumerate(lines[4:4 + na])]
+    props = [""] * na
+    for l in lines[4 + na + nb:]:
+        key = {"M  CHG": "CHG", "M  ISO": "MASS", "M  RAD": "RAD"}.get(l[:6])
+        if key:
+            v = [int(t) for t in l[6:].split()]
+            for atom, val in zip(v[1::2], v[2::2]):
+                props[atom - 1] += f" {key}={val}"
+    atoms = [f"M  V30 {i + 1} {l[31:34].strip()} {l[0:10].strip()} {l[10:20].strip()} {l[20:30].strip()} 0{props[i]}" for i, l in enumerate(lines[4:4 + na])]
     bonds = [f"M  V30 {i + 1} {l[6:9].strip()} {l[0:3].strip()} {l[3:6].strip()}" for i, l in enumerate(lines[4 + na:4 + na + nb])]
     return "\n".join(["", "  qqq", "", "  0  0  0  0  0  0  0  0  0  0999 V3000", "M  V30 BEGIN CTAB", f"M  V30 COUNTS {na} {nb} 0 0 0", "M  V30 BEGIN ATOM", *atoms, "M  V30 END ATOM", "M  V30 BEGIN BOND", *bonds, "M  V30 END BOND", "M  V30 END CTAB", "M  END", ""])
 
@@ -174,6 +181,33 @@ def test_sel_of_a_v3000_file_equals_the_v2000_one_and_the_cli_byte_for_byte(pkg,
     # the same molecule in V2000: the same bytes (not an empty molecule)
     assert site == sel_site(pkg, tmp_path, ANILIDE)[1]
     assert json.loads(site)["label"]["formula"] == "C8H8FNO"
+
+
+def test_cut_and_mech_of_a_v3000_file_equal_the_v2000_one_and_the_cli_byte_for_byte(pkg, tmp_path):
+    # cut: the same molecule in both formats, the site and the app give the same bytes
+    mf = tmp_path / "a.mol"
+    mf.write_text(v3000_of(ANILIDE), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps({"molfile": v3000_of(ANILIDE), "bonds": [[3, 4]]}), "cut")
+    assert site == run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps({"molfile": ANILIDE, "bonds": [[3, 4]]}), "cut")
+    assert site == cli("mol", "cut", str(mf), "--set", "bonds=3-4", runner=run)
+    assert len(json.loads(site)["pieces"]) == 2
+    # mech: the McLafferty fixture with its drawing in V3000 gives the V2000 answer
+    fx = json.loads((Path(__file__).parent / "dati" / "mechanism_mclafferty.json").read_text(encoding="utf-8"))
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({**fx["request"], "molfile": v3000_of(fx["request"]["molfile"])}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
+    assert site.strip() == fx["mechanism"]
+    assert site == cli("mol", "mech", str(req), runner=run)
+
+
+def test_a_bare_v3000_file_above_the_graph_limit_is_refused_by_cut_on_the_site_and_in_the_cli(pkg, tmp_path):
+    chain = "\n".join(["", "  qqq", "", "  0  0  0  0  0  0  0  0  0  0999 V3000", "M  V30 BEGIN CTAB", "M  V30 COUNTS 1200 0 0 0 0", "M  V30 BEGIN ATOM", *[f"M  V30 {i} C 0 0 0 0" for i in range(1, 1201)], "M  V30 END ATOM", "M  V30 END CTAB", "M  END", ""])
+    mf = tmp_path / "big.mol"
+    mf.write_text(chain, encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps({"molfile": chain, "bonds": [[0, 1]]}), "cut")
+    assert json.loads(site)["error_key"] == "error.grafo.tooBig"
+    out = subprocess.run(cli_argv("mol", "cut", str(mf), "--set", "bonds=0-1", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert out.returncode == 1 and '"error_key":"error.grafo.tooBig"' in out.stdout.replace(" ", "")
 
 
 def test_a_damaged_or_too_big_v3000_file_is_an_error_on_the_site_and_in_the_cli(pkg, tmp_path):

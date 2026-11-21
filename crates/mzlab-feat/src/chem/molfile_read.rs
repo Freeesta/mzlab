@@ -10,10 +10,16 @@ use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 
 use super::graph::MAX_ATOMS;
-use super::smiles::normal_valence;
 
-fn bad(message: &str) -> Error {
-    Error::new("error.grafo.molfile").with("message", format!("molfile: {message}"))
+fn bad(parts: &[&str]) -> Error {
+    Error::new("error.grafo.molfile").with(
+        "message",
+        ["molfile: "]
+            .iter()
+            .chain(parts)
+            .copied()
+            .collect::<String>(),
+    )
 }
 
 /// Whitespace-separated tokens of a V3000 line, a `( ... )` list or a quoted text kept whole.
@@ -36,17 +42,32 @@ fn tokens(s: &str) -> Vec<&str> {
     out
 }
 
-/// The `V30` lines with their `-` continuations joined, without the prefix.
-fn logical_lines(record: &str) -> Vec<String> {
+/// What the graph cannot hold, refused with its name (a V3000 file never loses data without a word).
+fn unsupported(what: &[&str]) -> Error {
+    let tail = " is not supported (the structure graph takes atoms, bonds, charges, isotopes, radicals, valences, stereo marks and implicit hydrogens)";
+    bad(&[what, &[tail]].concat())
+}
+
+/// The `V30` lines of the record with their `-` continuations joined, without the prefix; any other line before `M  END` is refused.
+fn logical_lines(record: &str) -> Result<Vec<String>> {
     let (mut out, mut open) = (Vec::new(), String::new());
-    for l in record.lines().filter(|l| l.starts_with("M  V30")) {
-        let body = l[6..].trim();
-        match body.strip_suffix('-') {
+    for l in record
+        .lines()
+        .skip(4)
+        .take_while(|l| !l.starts_with("M  END"))
+    {
+        let Some(body) = l.strip_prefix("M  V30") else {
+            return Err(unsupported(&["the line \"", l, "\""]));
+        };
+        match body.trim().strip_suffix('-') {
             Some(head) => open = open + head + " ",
-            None => out.push(std::mem::take(&mut open) + body),
+            None => out.push(std::mem::take(&mut open) + body.trim()),
         }
     }
-    out
+    if !open.is_empty() {
+        return Err(bad(&["a continuation line is never ended"]));
+    }
+    Ok(out)
 }
 
 fn value<'a>(toks: &[&'a str], key: &str) -> Option<&'a str> {
@@ -55,15 +76,31 @@ fn value<'a>(toks: &[&'a str], key: &str) -> Option<&'a str> {
 }
 
 fn num<T: std::str::FromStr>(t: &str) -> Result<T> {
-    t.parse().map_err(|_| bad(&format!("{t} is not a number")))
+    t.parse().map_err(|_| bad(&[t, " is not a number"]))
 }
 
 type Props = Vec<(&'static str, usize, i64)>;
 
+/// The `KEY=value` keywords of an atom or bond line, each one in `known` or refused by name.
+fn keywords<'a>(toks: &[&'a str], known: &[&str], what: &str) -> Result<Vec<(&'a str, &'a str)>> {
+    toks.iter()
+        .map(|t| match t.split_once('=') {
+            Some((k, v)) if known.contains(&k) => Ok((k, v)),
+            _ => Err(unsupported(&[
+                "the ",
+                what,
+                " keyword \"",
+                t.split('=').next().unwrap_or(""),
+                "\"",
+            ])),
+        })
+        .collect()
+}
+
 /// The id and the V2000 atom line of the `i`-th atom line `t`; its charge, isotope and radical go to `props` (key, atom, value).
 fn atom_line(t: &[&str], l: &str, i: usize, props: &mut Props) -> Result<(usize, String)> {
     if t.len() < 5 {
-        return Err(bad(&format!("the atom line {l:?} is too short")));
+        return Err(bad(&["the atom line \"", l, "\" is too short"]));
     }
     if i >= MAX_ATOMS {
         return Err(Error::new("error.grafo.tooBig").with("max", MAX_ATOMS));
@@ -73,51 +110,79 @@ fn atom_line(t: &[&str], l: &str, i: usize, props: &mut Props) -> Result<(usize,
         "T" => ("H", 3),
         e => (e, 0),
     };
-    if elements::mass_of(el).is_none() || normal_valence(el).is_none() {
+    // a symbol that is no element; the readers of the V2000 text apply their own rules to the elements (mech takes explicit H)
+    if elements::mass_of(el).is_none() {
         return Err(Error::new("error.grafo.element").with("element", el));
     }
-    let mass =
-        value(&t[5..], "MASS").map_or(Ok(mass), |m| num::<f64>(m).map(|m| m.round() as i64))?;
-    let valence = match value(&t[5..], "VAL").map(num::<i64>).transpose()? {
-        Some(-1) => 15,
-        Some(v @ 1..=14) => v,
-        _ => 0,
-    };
-    for (key, v) in [
-        ("M  CHG", value(&t[5..], "CHG")),
-        ("M  RAD", value(&t[5..], "RAD")),
-    ] {
-        if let Some(v) = v.map(num::<i64>).transpose()?.filter(|v| *v != 0) {
-            props.push((key, i, v));
+    // the sixth field is the atom-atom mapping number: 0 or absent
+    let rest = t.get(5..).unwrap_or(&[]);
+    let rest = match rest.split_first() {
+        Some((m, tail)) if !m.contains('=') => {
+            if *m != "0" {
+                return Err(unsupported(&["an atom-atom mapping number"]));
+            }
+            tail
         }
+        _ => rest,
+    };
+    let kw = keywords(rest, &["CHG", "RAD", "MASS", "VAL", "CFG"], "atom")?;
+    let get = |key: &str| kw.iter().find(|k| k.0 == key).map(|k| k.1);
+    let mass = get("MASS").map_or(Ok(mass), |m| num::<f64>(m).map(|m| m.round() as i64))?;
+    let valence = match get("VAL").map(num::<i64>).transpose()? {
+        Some(-1) => 15,
+        Some(v @ 0..=14) => v,
+        Some(v) => {
+            return Err(bad(&[
+                "the valence ",
+                &v.to_string(),
+                " of an atom is not -1 to 14",
+            ]))
+        }
+        None => 0,
+    };
+    let parity = get("CFG").map(num::<u8>).transpose()?.unwrap_or(0);
+    for key in ["CHG", "RAD"] {
+        let v = get(key).map(num::<i64>).transpose()?.filter(|v| *v != 0);
+        props.extend(v.map(|v| (if key == "CHG" { "M  CHG" } else { "M  RAD" }, i, v)));
     }
     if mass != 0 {
         props.push(("M  ISO", i, mass));
     }
     let xyz = [num::<f64>(t[2])?, num::<f64>(t[3])?, num::<f64>(t[4])?];
     let line = format!(
-        "{:>10.4}{:>10.4}{:>10.4} {el:<3} 0  0  0  0  0  0{valence:>3}  0  0  0  0\n",
+        "{:>10.4}{:>10.4}{:>10.4} {el:<3} 0  0{parity:>3}  0  0{valence:>3}  0  0  0  0  0  0\n",
         xyz[0], xyz[1], xyz[2]
     );
     Ok((num(t[0])?, line))
 }
 
-/// The V2000 bond line of the bond line `t`, its atoms looked up in `ids`.
+/// The V2000 bond line of the bond line `t`, its atoms looked up in `ids`. Only the types 1 to 4 and the stereo mark (`CFG`) are
+/// carried; any other type (a query, coordination or hydrogen bond) or keyword is refused.
 fn bond_line(t: &[&str], l: &str, ids: &[usize]) -> Result<String> {
     if t.len() < 4 {
-        return Err(bad(&format!("the bond line {l:?} is too short")));
+        return Err(bad(&["the bond line \"", l, "\" is too short"]));
     }
     let at = |s: &str| -> Result<usize> {
         let id: usize = num(s)?;
         ids.iter()
             .position(|x| *x == id)
-            .ok_or_else(|| bad(&format!("a bond names the unknown atom {s}")))
+            .ok_or_else(|| bad(&["a bond names the unknown atom ", s]))
     };
-    // 1 to 4 as written, any other type (a query bond) is read as single, as `mzlab-mol` reads it
     let ty = num::<u32>(t[1])?;
-    let ty = if (1..=4).contains(&ty) { ty } else { 8 };
+    if !(1..=4).contains(&ty) {
+        return Err(unsupported(&["the bond type ", &ty.to_string()]));
+    }
+    let kw = keywords(&t[4..], &["CFG"], "bond")?;
+    // wedge up/down as V2000 writes them (1, 6); "either" is 4 on a single bond and 3 on a double one
+    let stereo = match (kw.first().map(|k| num::<u8>(k.1)).transpose()?, ty) {
+        (Some(1), _) => 1,
+        (Some(3), _) => 6,
+        (Some(2), 2) => 3,
+        (Some(2), _) => 4,
+        _ => 0,
+    };
     Ok(format!(
-        "{:>3}{:>3}{ty:>3}  0  0  0  0\n",
+        "{:>3}{:>3}{ty:>3}{stereo:>3}  0  0  0\n",
         at(t[2])? + 1,
         at(t[3])? + 1
     ))
@@ -179,7 +244,7 @@ pub(super) fn v2000(mf: &str) -> Result<Cow<'_, str>> {
     );
     let mut groups: Vec<Vec<&str>> = Vec::new();
     let mut props = Props::new();
-    let lines = logical_lines(record);
+    let lines = logical_lines(record)?;
     for l in &lines {
         let t = tokens(l);
         match (t.first().copied(), t.get(1).copied()) {
@@ -193,7 +258,10 @@ pub(super) fn v2000(mf: &str) -> Result<Cow<'_, str>> {
                 }
                 counts = Some(c);
             }
-            (Some("BEGIN"), b) => block = b.unwrap_or(""),
+            (Some("BEGIN"), Some(b @ ("CTAB" | "ATOM" | "BOND" | "SGROUP"))) => block = b,
+            (Some("BEGIN"), b) => {
+                return Err(unsupported(&["the ", b.unwrap_or(""), " block"]));
+            }
             (Some("END"), _) => block = "",
             _ if block == "ATOM" => {
                 let (id, line) = atom_line(&t, l, atoms.len(), &mut props)?;
@@ -201,22 +269,32 @@ pub(super) fn v2000(mf: &str) -> Result<Cow<'_, str>> {
                 atoms.push(line);
             }
             _ if block == "BOND" => bonds.push(bond_line(&t, l, &ids)?),
-            _ if block == "SGROUP" => groups.push(t),
-            _ => {}
+            _ if block == "SGROUP" => {
+                // only the data group that says which aromatic atom carries a hydrogen
+                if t.get(1) != Some(&"DAT") || value(&t, "FIELDNAME") != Some("MRV_IMPLICIT_H") {
+                    return Err(unsupported(&["the SGROUP line \"", l, "\""]));
+                }
+                groups.push(t);
+            }
+            _ => return Err(unsupported(&["the line \"", l, "\""])),
         }
     }
     if atoms.is_empty() {
-        return Err(bad("the V3000 file has no atoms"));
+        return Err(bad(&["the V3000 file has no atoms"]));
     }
     // a file cut short must not read as a smaller molecule
     if let Some(c) = counts.filter(|c| *c != (atoms.len(), bonds.len())) {
-        return Err(bad(&format!(
-            "the V3000 counts line says {} atoms and {} bonds, the blocks hold {} and {}",
-            c.0,
-            c.1,
-            atoms.len(),
-            bonds.len()
-        )));
+        let n = |x: usize| x.to_string();
+        return Err(bad(&[
+            "the V3000 counts line says ",
+            &n(c.0),
+            " atoms and ",
+            &n(c.1),
+            " bonds, the blocks hold ",
+            &n(atoms.len()),
+            " and ",
+            &n(bonds.len()),
+        ]));
     }
     let mut out = format!(
         "{}\n  mzLab\n\n{:>3}{:>3}  0  0  0  0  0  0  0  0999 V2000\n",

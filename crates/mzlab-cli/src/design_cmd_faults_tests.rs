@@ -212,7 +212,8 @@ fn every_proposal_validates_against_its_schema_even_with_an_edited_reference() {
         .iter()
         .map(|w| w.as_str().unwrap())
         .collect();
-    let d = dir("schema");
+    // its own tag: `verdict("schema", ..)` shares the other name and deletes that directory when it ends
+    let d = dir("proposal_schema");
     let (s, _) = propose(&d);
     let design = std::fs::read_to_string(d.join("design.json"))
         .unwrap()

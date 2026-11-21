@@ -31,8 +31,17 @@ fn to_v3000(v2000: &str) -> String {
     s += &format!("M  V30 COUNTS {na} {nb} 0 0 0\nM  V30 BEGIN ATOM\n");
     for (i, l) in lines[4..4 + na].iter().enumerate() {
         let x: Vec<&str> = [&l[0..10], &l[10..20], &l[20..30]].map(str::trim).into();
+        let col = |a: usize, b: usize| l.get(a..b).and_then(|t| t.trim().parse::<i32>().ok());
+        let valence = match col(48, 51) {
+            Some(15) => " VAL=-1".to_string(),
+            Some(v) if v > 0 => format!(" VAL={v}"),
+            _ => String::new(),
+        };
+        let parity = col(39, 42)
+            .filter(|p| *p > 0)
+            .map_or(String::new(), |p| format!(" CFG={p}"));
         s += &format!(
-            "M  V30 {} {} {} {} {} 0{}\n",
+            "M  V30 {} {} {} {} {} 0{}{valence}{parity}\n",
             i + 1,
             l[31..34].trim(),
             x[0],
@@ -44,7 +53,19 @@ fn to_v3000(v2000: &str) -> String {
     s += "M  V30 END ATOM\nM  V30 BEGIN BOND\n";
     for (i, l) in lines[4 + na..4 + na + nb].iter().enumerate() {
         let n = |a: usize, b: usize| l[a..b].trim().to_string();
-        s += &format!("M  V30 {} {} {} {}\n", i + 1, n(6, 9), n(0, 3), n(3, 6));
+        let cfg = match n(9, 12).as_str() {
+            "1" => " CFG=1",
+            "4" | "3" => " CFG=2",
+            "6" => " CFG=3",
+            _ => "",
+        };
+        s += &format!(
+            "M  V30 {} {} {} {}{cfg}\n",
+            i + 1,
+            n(6, 9),
+            n(0, 3),
+            n(3, 6)
+        );
     }
     s + "M  V30 END BOND\nM  V30 END CTAB\nM  END\n"
 }
@@ -186,5 +207,100 @@ fn a_damaged_v3000_file_is_refused_with_its_reason() {
             key,
             "{text}"
         );
+    }
+}
+
+/// `two` (a V2000 molfile of `mf`) with `text` written over the columns `a..b` of the line `row` (0-based).
+fn set(two: &str, row: usize, a: usize, text: &str) -> String {
+    let mut lines: Vec<String> = two.lines().map(String::from).collect();
+    lines[row].replace_range(a..a + text.len(), text);
+    lines.join("\n") + "\n"
+}
+
+fn assert_same_sel(two: &str) {
+    let req = |m: &str| serde_json::json!({ "molfile": m }).to_string();
+    assert_eq!(
+        sel_json(&req(&to_v3000(two))).unwrap(),
+        sel_json(&req(two)).unwrap(),
+        "{two}"
+    );
+}
+
+#[test]
+fn the_stated_valence_and_the_stereo_marks_are_carried() {
+    let ethanol = mf(&["C", "C", "O"], &[(1, 2, 1), (2, 3, 1)], &[]);
+    // a stated valence on an atom (V2000 column 49-51, V3000 `VAL=`): 15 is "no hydrogen", 3 is a valence of three
+    let n = mf(&["C", "N", "C"], &[(1, 2, 1), (2, 3, 1)], &[]);
+    for v in ["  3", " 15", "  2"] {
+        let two = set(&n, 5, 48, v);
+        assert_same_sel(&two);
+        assert!(to_v3000(&two).contains(" VAL="), "{v}");
+    }
+    // on an aromatic atom the stated valence decides its hydrogens: benzene with a carbon of valence 3 loses one
+    let arom: Vec<_> = KEKULE.iter().map(|&(a, b, _)| (a, b, 4)).collect();
+    let benzene = mf(&["C"; 6], &arom, &[]);
+    let stated = set(&benzene, 4, 48, "  3");
+    assert_same_sel(&stated);
+    assert_ne!(
+        sel(&to_v3000(&stated), false)["label"]["formula"],
+        sel(&to_v3000(&benzene), false)["label"]["formula"]
+    );
+    // wedges (up, down, either) and an atom parity
+    for st in ["  1", "  6", "  4"] {
+        let two = set(&ethanol, 7, 6, &format!("  1{st}"));
+        assert!(to_v3000(&two).contains(" CFG="), "{two}");
+        assert_same_sel(&two);
+    }
+    assert_same_sel(&set(&ethanol, 4, 39, "  1"));
+}
+
+#[test]
+fn what_the_graph_cannot_hold_is_refused_by_name_never_dropped() {
+    let ok = to_v3000(&mf(&["C", "C", "O"], &[(1, 2, 1), (2, 3, 1)], &[]));
+    let atom = |extra: &str| {
+        ok.replace(
+            "M  V30 1 C 0.0000 0.0000 0.0000 0",
+            &format!("M  V30 1 C 0.0000 0.0000 0.0000 0{extra}"),
+        )
+    };
+    let bond = |extra: &str| ok.replace("M  V30 1 1 1 2", &format!("M  V30 1 1 1 2{extra}"));
+    let after_bonds =
+        |lines: &str| ok.replace("M  V30 END BOND\n", &format!("M  V30 END BOND\n{lines}"));
+    let cases: Vec<(String, &str)> = vec![
+        // bond types 5 to 9 (a query, coordination or hydrogen bond), and 0
+        (ok.replace("M  V30 1 1 1 2", "M  V30 1 5 1 2"), "bond type 5"),
+        (ok.replace("M  V30 1 1 1 2", "M  V30 1 9 1 2"), "bond type 9"),
+        (ok.replace("M  V30 1 1 1 2", "M  V30 1 0 1 2"), "bond type 0"),
+        // enhanced stereo, R-groups, link nodes, other blocks and keywords
+        (after_bonds("M  V30 BEGIN COLLECTION\nM  V30 MDLV30/STEABS ATOMS=(1 1)\nM  V30 END COLLECTION\n"), "COLLECTION"),
+        (after_bonds("M  V30 BEGIN RGROUP\nM  V30 END RGROUP\n"), "RGROUP"),
+        (after_bonds("M  V30 LINKNODE 1 3 2 1 2 1 3\n"), "LINKNODE"),
+        (after_bonds("M  V30 BEGIN OBJ3D\nM  V30 END OBJ3D\n"), "OBJ3D"),
+        // every SGROUP that is not the implicit-hydrogen data group
+        (after_bonds("M  V30 BEGIN SGROUP\nM  V30 1 SRU 0 ATOMS=(2 1 2) LABEL=n\nM  V30 END SGROUP\n"), "SGROUP"),
+        (after_bonds("M  V30 BEGIN SGROUP\nM  V30 1 DAT 0 ATOMS=(1 1) FIELDNAME=NOTE FIELDDATA=x\nM  V30 END SGROUP\n"), "SGROUP"),
+        (after_bonds("M  V30 BEGIN SGROUP\nM  V30 1 MUL 0 ATOMS=(2 1 2) MULT=2\nM  V30 END SGROUP\n"), "SGROUP"),
+        // atom and bond keywords and the mapping number that cannot be carried
+        (atom(" HCOUNT=2"), "HCOUNT"),
+        (atom(" RGROUPS=(1 1)"), "RGROUPS"),
+        (atom(" AAMAP=1"), "AAMAP"),
+        (ok.replace("M  V30 1 C 0.0000 0.0000 0.0000 0", "M  V30 1 C 0.0000 0.0000 0.0000 7"), "atom-atom mapping"),
+        (bond(" ENDPTS=(2 1 2)"), "ENDPTS"),
+        (bond(" TOPO=1"), "TOPO"),
+        // a line that is not a V3000 line, before `M  END`
+        (ok.replace("M  V30 END CTAB\n", "M  V30 END CTAB\nM  CHG  1   1   1\n"), "M  CHG"),
+        // a continuation that never ends
+        (ok.replace("M  V30 END CTAB\n", "M  V30 END CTAB\nM  V30 FOO -\n"), "continuation"),
+    ];
+    for (text, what) in cases {
+        let req = serde_json::json!({ "molfile": text }).to_string();
+        for e in [
+            sel_json(&req).unwrap_err(),
+            fragments_json(&text, -1, -1).unwrap_err(),
+        ] {
+            let msg = e.to_string();
+            assert_eq!(e.key, "error.grafo.molfile", "{what}: {text}");
+            assert!(msg.contains(what), "{what} is not named in {msg}");
+        }
     }
 }

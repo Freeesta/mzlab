@@ -111,4 +111,10 @@ fn a_file_above_999_atoms_is_read_or_refused_with_its_code_never_empty() {
             "mol {c}: {text}"
         );
     }
+    // the cut reads the bare file: the same refusal, exit 1 with the key in the answer
+    let bare = tmp("big.mol", &big);
+    let o = run(&["mol", "cut", &bare, "--set", "bonds=0-1", "--json"]);
+    assert_eq!(o.code, 1, "mol cut: {}", o.stderr);
+    let text = String::from_utf8(o.stdout).unwrap();
+    assert!(text.contains("tooBig"), "mol cut: {text}");
 }
