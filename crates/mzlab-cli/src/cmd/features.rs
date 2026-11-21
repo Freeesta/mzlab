@@ -186,17 +186,8 @@ fn run(args: Vec<String>) -> Outcome {
     if let Err(e) = notes {
         return Outcome::fail(&e);
     }
-    if let Some(p) = &a.report {
-        let to = if p.is_dir() {
-            p.join("features-report.json")
-        } else {
-            p.clone()
-        };
-        if let Err(e) = std::fs::write(&to, report) {
-            return Outcome::fail(&format!("{}: {e}", to.display()));
-        }
-    }
-    match &a.out {
+    // the CSV first, then the report: a report that cannot be written (exit 6) leaves the CSV where `--out` or the standard output put it
+    let mut done = match &a.out {
         None => Outcome::ok(csv.into_bytes()),
         Some(p) => {
             let to = if p.is_dir() {
@@ -204,12 +195,33 @@ fn run(args: Vec<String>) -> Outcome {
             } else {
                 p.clone()
             };
-            std::fs::write(to, csv).map_or_else(
-                |e| Outcome::fail(&e.to_string()),
-                |_| Outcome::ok(Vec::new()),
-            )
+            if let Err(e) = std::fs::write(&to, csv) {
+                return out_failure(&to, &e);
+            }
+            Outcome::ok(Vec::new())
+        }
+    };
+    if let Some(p) = &a.report {
+        let to = if p.is_dir() {
+            p.join("features-report.json")
+        } else {
+            p.clone()
+        };
+        if let Err(e) = std::fs::write(&to, report) {
+            let mut failed = out_failure(&to, &e);
+            failed.stdout = std::mem::take(&mut done.stdout);
+            return failed;
         }
     }
+    done
+}
+
+/// A file that cannot be written: `err.cli.out`, exit 6.
+fn out_failure(to: &std::path::Path, e: &std::io::Error) -> Outcome {
+    Outcome::fail_error(
+        &mzlab_core::error::Error::new("err.cli.out")
+            .with("path", format!("{}: {e}", to.display())),
+    )
 }
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(

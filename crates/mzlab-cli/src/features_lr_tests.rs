@@ -393,3 +393,41 @@ fn a_wiff_of_profile_scans_is_centroided_per_sample_and_the_dry_run_checks_the_s
     assert_eq!(run(&[w], &["--sample", "7"]).code, 5);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_report_or_a_csv_that_cannot_be_written_is_exit_6_and_the_csv_is_written_first() {
+    let (dir, w) = wiff("wiff_exit6");
+    let bad = dir.join("no_folder").join("x.json").display().to_string();
+    let out = dir.join("out.csv");
+    let o = run(
+        std::slice::from_ref(&w),
+        &[
+            "--sample",
+            "1,2,3",
+            "--out",
+            &out.display().to_string(),
+            "--report",
+            &bad,
+        ],
+    );
+    assert_eq!(o.code, 6, "{}", o.stderr);
+    assert!(o.stderr.contains("no_folder"), "{}", o.stderr);
+    assert!(
+        std::fs::metadata(&out).is_ok_and(|m| m.len() > 0),
+        "the CSV is written before the report"
+    );
+    // on the standard output the CSV is kept next to the failure
+    let o = run(
+        std::slice::from_ref(&w),
+        &["--sample", "1,2,3", "--report", &bad],
+    );
+    assert_eq!(o.code, 6, "{}", o.stderr);
+    assert!(!o.stdout.is_empty());
+    // an unwritable --out is the same code, with no report written
+    let o = run(
+        std::slice::from_ref(&w),
+        &["--sample", "1,2,3", "--out", &bad],
+    );
+    assert_eq!(o.code, 6, "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
