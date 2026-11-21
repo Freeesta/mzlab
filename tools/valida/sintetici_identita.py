@@ -215,7 +215,7 @@ class Derivati:
 class Builder(Derivati):
     def __init__(self, seme: int, profilo: str):
         self.rng = np.random.default_rng(seme)
-        self.seed = seme
+        self.seme = seme
         self.vx = None                                    # state of the V1X extension (valida/sintetici_esteso.py)
         self.P = PROFILES[profilo]
         self.file = self.P["file"]
