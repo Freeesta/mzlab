@@ -59,6 +59,7 @@ fn centroid_param() -> Param {
     Param::choice("centroid", "Centroid profile scans", &["auto", "on", "off"])
         .default_str("auto")
         .doc("Unit resolution only: auto centroids a file whose MS1 scans are mostly profile mode (the engine of spectra.centroid) before detecting; on does it for every unit-resolution file, off detects the profile points as they are. High-resolution files are never centroided here")
+        .tip("Unit resolution only: auto centroids mostly-profile files before detecting; on forces it, off keeps profile points.")
         .advanced()
 }
 

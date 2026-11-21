@@ -95,6 +95,7 @@ pub(super) fn align() -> Step {
         Param::choice("recenter", "Recentre m/z", &["auto", "off"])
             .default_str("auto")
             .doc("Unit resolution only: subtracts from each file the m/z drift measured on the rows most files share (median of at least 5 anchors, applied from 0.05 Da), so a drifting file does not split a row")
+            .tip("Unit resolution only: removes the m/z drift of each file, measured on shared rows, so rows stay whole.")
             .advanced(),
     );
     params.extend(family_link_params());
@@ -184,6 +185,7 @@ pub(super) fn gapfill() -> Step {
         Param::choice("dedup", "Merge duplicate rows", &["auto", "off"])
             .default_str("auto")
             .doc("Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed")
+            .tip("Unit resolution only: merges rows within 0.6 Da whose areas correlate, keeping the taller one; areas are never summed.")
             .advanced(),
     ];
     Step {
