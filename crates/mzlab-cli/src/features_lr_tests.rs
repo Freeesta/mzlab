@@ -113,14 +113,6 @@ fn run(files: &[String], extra: &[&str]) -> Outcome {
     execute(&a)
 }
 
-fn first_lines(o: &Outcome, n: usize) -> String {
-    String::from_utf8_lossy(&o.stdout)
-        .lines()
-        .take(n)
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 /// The rows of a features CSV: m/z, RT and the state of each sample.
 fn table(o: &Outcome) -> Vec<(f64, f64, Vec<String>)> {
     assert_eq!(o.code, 0, "{}", o.stderr);
@@ -366,7 +358,10 @@ fn wiff(tag: &str) -> (PathBuf, String) {
 fn a_wiff_of_profile_scans_is_centroided_per_sample_and_the_dry_run_checks_the_selection() {
     let (dir, w) = wiff("wiff");
     let report = dir.join("report.json").display().to_string();
-    let o = run(&[w.clone()], &["--sample", "1,2,3", "--report", &report]);
+    let o = run(
+        std::slice::from_ref(&w),
+        &["--sample", "1,2,3", "--report", &report],
+    );
     assert_eq!(o.code, 0, "{}", o.stderr);
     let doc = mzlab_core::json::parse(&std::fs::read(&report).unwrap()).unwrap();
     let list = doc.get("files").unwrap().arr();
@@ -386,9 +381,15 @@ fn a_wiff_of_profile_scans_is_centroided_per_sample_and_the_dry_run_checks_the_s
         );
     }
     // the plan says the same without detecting; an unknown sample is exit 5 in both
-    let plan = run(&[w.clone()], &["--sample", "1,2,3", "--dry-run"]);
+    let plan = run(
+        std::slice::from_ref(&w),
+        &["--sample", "1,2,3", "--dry-run"],
+    );
     assert_eq!(plan.code, 0, "{}", plan.stderr);
-    assert_eq!(run(&[w.clone()], &["--sample", "7", "--dry-run"]).code, 5);
+    assert_eq!(
+        run(std::slice::from_ref(&w), &["--sample", "7", "--dry-run"]).code,
+        5
+    );
     assert_eq!(run(&[w], &["--sample", "7"]).code, 5);
     let _ = std::fs::remove_dir_all(&dir);
 }
