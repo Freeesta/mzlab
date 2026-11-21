@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OLD = ["altre-a11y-fair", "altre-feat-lst", "altre-lv-predef", "altre-press-xic", "altre-xicbtn-zoom", "errori-a-m", "errori-file", "errori-flow", "errori-llm", "errori-n-w", "errori-*"]
 OLD_PATH = re.compile(r"lang/(?:en|<L>|\*)/(?:grafo-msn|librerie|canali|comandi|mappe|tabpicchi|valida|disegno(?:-cip|-evidenza|-sottostruttura|-verifica)?)\.js")
+BARE = re.compile(r"errori-|altre-(?:a11y|feat|lv|press|xicbtn|\*)|grafo-msn|lang/(?:en|<L>|\*)/errori")
 SKIP = {"tests/test_no_old_lang_area_names.py", "docs/agenti/english-remaining.md"}
 
 
@@ -20,7 +21,7 @@ def test_old_area_names_are_gone():
         except (OSError, UnicodeDecodeError):
             continue
         for n, line in enumerate(text.splitlines(), 1):
-            if OLD_PATH.search(line) or any(o in line for o in OLD):
+            if OLD_PATH.search(line) or BARE.search(line) or any(o in line for o in OLD):
                 hits.append(f"{f}:{n}")
     assert not hits, hits[:20]
 
