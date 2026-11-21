@@ -11,7 +11,7 @@ What is checked:
     (motivated exceptions are in tools/i18n_eccezioni.txt);
  5. the glossary (lang/glossario.json): no text uses a form the glossary says to avoid (`evita_en`, e.g. "parent ion");
  6. lang/contesto/<area>.json (same stem as lang/en/<area>.js) describes every key that has parameters, each in the file of its key's area;
- 7. every `err.*` / `error.*` / `warn.*` key a web crate can send (literals in crates/, see CRATE_*) has a text
+ 7. every `err.*` / `error.*` / `warn.*` / `note.*` key a web crate can send (literals in crates/, see CRATE_*) has a text
     (the allow list CRATES_WITHOUT_TEXT says why a key never reaches a student);
  8. names of other programs, vendors and people stay out of the texts.
 The catalog is plain JSON inside `I18N.add("en", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
@@ -75,7 +75,7 @@ CRATES_WITHOUT_TEXT = {
     "err.test.interned": "string used by a unit test of the interner",
     "error.x": "key of a unit test of the JSON escaping",
 }
-CRATE_KEY = re.compile(r"""\"((?:err|error|warn)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\"""")
+CRATE_KEY = re.compile(r"""\"((?:err|error|warn|note)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\"""")
 
 
 def crate_keys(cli: bool = False) -> dict[str, str]:

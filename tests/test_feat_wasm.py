@@ -324,7 +324,7 @@ def lr_drift(built):
         d = root / f"lr_{mode}"
         run("python3", "tools/lr_synthetic.py", str(d), "--drift-series", mode)
         files = sorted(str(p) for p in d.glob("drift-s*.mzML"))
-        listed = json.loads(cli("--cache", str(cache), "file", "index", *files).stdout)["files"]
+        listed = json.loads(cli("file", "index", "--cache", str(cache), *files).stdout)["files"]
         out[mode] = [str(cache / f["key"]) for f in listed]
         assert len(out[mode]) == 8
     return out

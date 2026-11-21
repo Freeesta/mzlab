@@ -81,7 +81,10 @@ fn budgeted(
     let budget = MemBudget::mb(mb);
     for p in files {
         let mut s = sink(out, &format!("{}.mzfeatf", base(p)));
-        run::detect_to(&mut open(p), &base(p), &r, &mut s).expect("detect");
+        // each file takes the recipe its own index gives, as `detect_file_to` of the `.wasm` does (the unit-resolution defect and floors are its own)
+        let mut ix = open(p);
+        let rf = run::recipe_for(recipe, &mut ix).expect("recipe");
+        run::detect_to(&mut ix, &base(p), &rf, &mut s).expect("detect");
         println!("{}.mzfeatf {}", base(p), s.finish().2);
     }
     let mut stored: Vec<Vec<u8>> = files
@@ -154,7 +157,10 @@ fn main() {
     let t0 = Instant::now();
     let mut stored = Vec::new();
     for p in &files {
-        let b = run::detect(&mut open(p), &base(p), &r).expect("detect");
+        // each file takes the recipe its own index gives, as `detect_file` of the `.wasm` does
+        let mut ix = open(p);
+        let rf = run::recipe_for(&recipe, &mut ix).expect("recipe");
+        let b = run::detect(&mut ix, &base(p), &rf).expect("detect");
         println!("{}.mzfeatf {}", base(p), sha(&b));
         std::fs::write(Path::new(&out).join(format!("{}.mzfeatf", base(p))), &b).expect("write");
         stored.push(b);

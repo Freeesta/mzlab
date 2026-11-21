@@ -10,7 +10,6 @@ use crate::detect_route::detect;
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
 use crate::lrscreen::centroids_of;
-#[cfg(not(target_family = "wasm"))]
 use crate::gapfill::{fill_apply, fill_find};
 use crate::pipeline::analyse_with;
 use crate::prog::Prog;

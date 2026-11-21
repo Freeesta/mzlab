@@ -6,7 +6,7 @@ use crate::json::{self, Value};
 use crate::readers::Position;
 
 pub const BLOCK: u64 = 16384;
-const HEADER: usize = 64;
+pub(crate) const HEADER: usize = 64;
 /// Bit 0 of `flags` (version 3): the rows locate the scans in the members of a vendor file set, not in an mzML.
 pub const READER_FLAG: u32 = 1;
 
@@ -267,7 +267,7 @@ pub struct Head {
     h: [u8; HEADER],
     size: u64,
     meta: Vec<u8>,
-    rows: Option<Vec<u8>>,
+    pub(crate) rows: Option<Vec<u8>>,
 }
 
 impl Head {
@@ -321,7 +321,7 @@ impl Head {
     }
 }
 
-fn u64_at(b: &[u8], at: usize) -> u64 {
+pub(crate) fn u64_at(b: &[u8], at: usize) -> u64 {
     u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
 }
 
@@ -399,34 +399,6 @@ impl<R: ReadAt> Index<R> {
             crcs,
             layout,
         })
-    }
-
-    /// The scan table of this index as the compact JSON rows the file holds (`SCAN_COLUMNS`), read again from the file: for a copy of the index
-    /// whose rows change in a few columns (`centroids::index`).
-    pub fn rows_bytes(&mut self) -> Result<Vec<u8>> {
-        let mut h = [0u8; HEADER];
-        index_bytes(&mut self.r, 0, &mut h)?;
-        let size = u64_at(&h, 48);
-        let head = Head::read(&mut self.r, size)?;
-        Ok(head.rows.unwrap_or_default())
-    }
-
-    /// The same index read through another reader of the same kind of bytes: `f` turns the reader (`Index::over` keeps the tables, this one the caches too).
-    pub fn map_reader<S: ReadAt>(self, f: impl FnOnce(R) -> S) -> Index<S> {
-        Index {
-            r: f(self.r),
-            scans: self.scans,
-            keys: self.keys,
-            sections: self.sections,
-            source: self.source,
-            run: self.run,
-            cache: Vec::new(),
-            arrays: self.arrays.iter().map(|_| None).collect(),
-            arrays_tick: self.arrays_tick,
-            fences: self.fences.iter().map(|_| None).collect(),
-            crcs: self.crcs,
-            layout: self.layout,
-        }
     }
 
     /// This index over `r`, another reader of the same bytes: the tables `open` read, with empty caches, so it is what `open` would give on

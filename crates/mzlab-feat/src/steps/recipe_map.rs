@@ -232,6 +232,25 @@ fn switch(step: &str, k: &str, v: &Value, allow_on: bool) -> Result<crate::lrscr
         .ok_or_else(|| bad(step, k, v))
 }
 
+/// The parameters of the retention-time warp of `features.align`.
+fn set_warp(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let num = || v.f64().ok_or_else(|| bad(step, k, v));
+    let w = &mut r.align.warp;
+    match k {
+        "rt_warp" => {
+            w.method = v
+                .str()
+                .and_then(crate::rtwarp::Method::parse)
+                .ok_or_else(|| bad(step, k, v))?
+        }
+        "rt_coarse_gap" => w.coarse_gap = num()?,
+        "rt_span" => w.span = num()?,
+        "rt_inlier" => w.inlier = num()?,
+        _ => w.seed = num()? as u64,
+    }
+    Ok(())
+}
+
 fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     let num = || v.f64().ok_or_else(|| bad(step, k, v));
     axis_gate(r, step, k)?;
@@ -280,16 +299,9 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k, v))?
         }
         ("features.align", "split_gap") => r.align.ion.split_gap = Some(num()?),
-        ("features.align", "rt_warp") => {
-            r.align.warp.method = v
-                .str()
-                .and_then(crate::rtwarp::Method::parse)
-                .ok_or_else(|| bad(step, k, v))?
+        ("features.align", "rt_warp" | "rt_coarse_gap" | "rt_span" | "rt_inlier" | "rt_seed") => {
+            set_warp(r, step, k, v)?
         }
-        ("features.align", "rt_coarse_gap") => r.align.warp.coarse_gap = num()?,
-        ("features.align", "rt_span") => r.align.warp.span = num()?,
-        ("features.align", "rt_inlier") => r.align.warp.inlier = num()?,
-        ("features.align", "rt_seed") => r.align.warp.seed = int()? as u64,
         ("features.align", "link_rt") => r.align.link_rt = num()?,
         ("features.align", "max_span") => r.align.max_span = num()?,
         ("features.align", "min_dependent") => r.align.min_dependent = int()? as u32,

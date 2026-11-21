@@ -33,7 +33,7 @@ mod tests_model;
 mod tests_pin;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
-pub use index::{centroid_index, profile_share, Centroided, View};
+pub use index::{centroid_index, profile_share, Centroided};
 pub use params::{estimate, Estimate};
 
 /// How the intensities of the file are made: whole multiples of one unit (detector counts) or continuous values.

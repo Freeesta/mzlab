@@ -51,6 +51,16 @@ pub struct Screen {
     pub evidence: Option<Evidence>,
 }
 
+impl Screen {
+    /// The switches `get` names (`centroid`, `recenter`, `dedup`) as texts; an unknown text or a missing key keeps the switch. Only `centroid` has `on`.
+    pub fn read<'a>(&mut self, get: impl Fn(&str) -> Option<&'a str>) {
+        let pick = |k: &str, on: bool, now: Switch| get(k).and_then(|s| Switch::parse(s, on)).unwrap_or(now);
+        self.centroid = pick("centroid", true, self.centroid);
+        self.recenter = pick("recenter", false, self.recenter);
+        self.dedup = pick("dedup", false, self.dedup);
+    }
+}
+
 /// A file counts as profile from half of its MS1 scans, the share at which the recipe takes a per-point floor and the warning of `features` speaks.
 pub fn is_profile(profile: usize, scans: usize) -> bool {
     scans > 0 && 2 * profile >= scans
@@ -157,9 +167,10 @@ pub fn centroid_wanted<R: ReadAt>(index: &Index<R>, r: &Recipe) -> bool {
     }
 }
 
-/// The centroids of a file with profile scans, read like any index (`None`: the recipe does not centroid it, or it has no profile scan).
+/// The centroids of a file with profile scans, read like any index (`None`: the recipe does not centroid it, or it has no profile scan). The reader is
+/// the boxed one the `.wasm` opens every index with, so the detection of a file and of its centroids is one compiled copy there.
 pub struct Centroids {
-    pub index: Index<Vec<u8>>,
+    pub index: Index<Box<dyn ReadAt>>,
     pub fwhm: f64,
 }
 
@@ -172,7 +183,7 @@ pub fn centroids_of<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Optio
     };
     let size = c.bytes.len() as u64;
     Ok(Some(Centroids {
-        index: Index::open(c.bytes, size)?,
+        index: Index::open(Box::new(c.bytes) as Box<dyn ReadAt>, size)?,
         fwhm: c.estimate.params.w,
     }))
 }

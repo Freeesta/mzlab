@@ -19,27 +19,6 @@ pub struct Centroided {
     pub flagged: (usize, usize),
 }
 
-/// Reader of an index that is either the source or its centroids in memory (the same type for both, so one detection code serves them).
-pub enum View<R> {
-    Source(R),
-    Memory(Vec<u8>),
-}
-
-impl<R: ReadAt> ReadAt for View<R> {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        match self {
-            View::Source(r) => r.read_at(off, buf),
-            View::Memory(v) => v.read_at(off, buf),
-        }
-    }
-    fn reader(&mut self) -> Option<(&mut dyn crate::readers::Reader, usize)> {
-        match self {
-            View::Source(r) => r.reader(),
-            View::Memory(_) => None,
-        }
-    }
-}
-
 /// How many scans of `level` are profile, of the first `probe` ones (`(scans, profile)`).
 pub fn profile_share<R: ReadAt>(index: &Index<R>, level: u8, probe: usize) -> (usize, usize) {
     index
@@ -109,15 +88,11 @@ fn rows_without_profile<R: ReadAt>(index: &mut Index<R>) -> Result<Vec<u8>> {
     Ok(out.0.into_bytes())
 }
 
-/// The profile scans of `index` reduced to their centroids (`None` when it has no profile scan). `over` replaces the width and the threshold the
-/// estimate finds, as in the `spectra.centroid` step. The scans that are centroids already, and every other scan, keep their points.
-pub fn centroid_index<R: ReadAt>(index: &mut Index<R>, over: Over) -> Result<Option<Centroided>> {
-    if !index.scans.iter().any(|s| s.profile) {
-        return Ok(None);
-    }
-    let places = places(index)?;
-    // every section holds its peaks by position; the stream below gives them back scan by scan
-    let mut by_section: Vec<Vec<(Vec<f64>, Vec<f64>)>> = vec![Vec::new(); index.sections.len()];
+/// The peaks of every section by position: `(m/z, intensity)` of each scan, the stream of `each_peak` gathered scan by scan.
+type Peaks = Vec<Vec<(Vec<f64>, Vec<f64>)>>;
+
+fn peaks_by_section<R: ReadAt>(index: &mut Index<R>) -> Result<Peaks> {
+    let mut by_section: Peaks = vec![Vec::new(); index.sections.len()];
     let keyed: Vec<usize> = index
         .keys
         .iter()
@@ -135,6 +110,44 @@ pub fn centroid_index<R: ReadAt>(index: &mut Index<R>, over: Over) -> Result<Opt
         })?;
         by_section[si] = scans;
     }
+    Ok(by_section)
+}
+
+/// Every scan as a spectrum, the profile ones reduced to their centroids with the estimate `e`; with the counts of centroids flagged merged and saturated.
+fn reduced<R: ReadAt>(index: &Index<R>, places: &[(usize, usize)], by_section: &Peaks, e: &Estimate) -> (Vec<Spectrum>, (usize, usize)) {
+    let mut flagged = (0, 0);
+    let mut buf = Buf::default();
+    let mut spectra: Vec<Spectrum> = Vec::with_capacity(index.scans.len());
+    for (k, s) in index.scans.iter().enumerate() {
+        let (si, pos) = places[k];
+        let (mz, y) = by_section[si].get(pos).cloned().unwrap_or_default();
+        let mut sp = Spectrum {
+            index: k,
+            level: s.level,
+            rt: s.rt,
+            polarity: s.polarity,
+            profile: s.profile,
+            intensity: y.iter().map(|&v| v as f32).collect(),
+            wide: Some(y),
+            mz,
+            ..Spectrum::default()
+        };
+        if s.profile {
+            super::convert::reduce(&mut sp, &e.params, &mut buf, &mut flagged);
+        }
+        spectra.push(sp);
+    }
+    (spectra, flagged)
+}
+
+/// The profile scans of `index` reduced to their centroids (`None` when it has no profile scan). `over` replaces the width and the threshold the
+/// estimate finds, as in the `spectra.centroid` step. The scans that are centroids already, and every other scan, keep their points.
+pub fn centroid_index<R: ReadAt>(index: &mut Index<R>, over: Over) -> Result<Option<Centroided>> {
+    if !index.scans.iter().any(|s| s.profile) {
+        return Ok(None);
+    }
+    let places = places(index)?;
+    let by_section = peaks_by_section(index)?;
     // the estimate is made on at most 64 profile scans spread over the run, the way the conversion of an mzML does it
     let profile: Vec<usize> = (0..index.scans.len())
         .filter(|&k| index.scans[k].profile)
@@ -159,28 +172,7 @@ pub fn centroid_index<R: ReadAt>(index: &mut Index<R>, over: Over) -> Result<Opt
         e.params.wm = None;
     }
     e.params.k = over.threshold.unwrap_or(e.params.k);
-    let mut flagged = (0, 0);
-    let mut buf = Buf::default();
-    let mut spectra: Vec<Spectrum> = Vec::with_capacity(index.scans.len());
-    for (k, s) in index.scans.iter().enumerate() {
-        let (si, pos) = places[k];
-        let (mz, y) = by_section[si].get(pos).cloned().unwrap_or_default();
-        let mut sp = Spectrum {
-            index: k,
-            level: s.level,
-            rt: s.rt,
-            polarity: s.polarity,
-            profile: s.profile,
-            intensity: y.iter().map(|&v| v as f32).collect(),
-            wide: Some(y),
-            mz,
-            ..Spectrum::default()
-        };
-        if s.profile {
-            super::convert::reduce(&mut sp, &e.params, &mut buf, &mut flagged);
-        }
-        spectra.push(sp);
-    }
+    let (spectra, flagged) = reduced(index, &places, &by_section, &e);
     let table = ScanTable {
         level: index.scans.iter().map(|s| s.level).collect(),
         polarity: index.scans.iter().map(|s| s.polarity).collect(),

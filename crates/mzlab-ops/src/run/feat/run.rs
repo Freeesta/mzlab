@@ -12,7 +12,7 @@ use mzlab_core::json::{self, Value};
 use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
-use mzlab_feat::lrscreen::{self, Switch};
+use mzlab_feat::lrscreen;
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file_with, source_sha256, weak_candidates};
 use mzlab_feat::slabs::{align_and_fill_progress, Stored};
@@ -30,13 +30,10 @@ pub fn recipe_from_json(text: &str) -> Result<Recipe> {
     recipe_on(text, Recipe::default())
 }
 
-/// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise.
-///
-/// A `"layers"` key (`layers_from_json`) switches to the recipe of a Flow run: the estimated one of `recipe_of_layers`, then the layers on top of the other keys.
+/// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise. A `"layers"` key (`layers_from_json`) switches to the recipe of a Flow run: the estimated one of `recipe_of_layers`, then the layers on top of the other keys.
 pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
     let Some(layers) = layers_in(text)? else {
-        let r = recipe_on(text, Recipe::for_index(index)?)?;
-        return lrscreen::adjusted(index, r);
+        return recipe_on(text, Recipe::for_index(index)?).and_then(|r| lrscreen::adjusted(index, r));
     };
     let mut r = recipe_on(text, Recipe::for_index_estimated(index)?)?;
     apply_layers(&mut r, &layers)?;
@@ -121,8 +118,8 @@ fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
     Ok(r)
 }
 
-/// The numbers of the panel "Pipeline" (`floor`, `min_height`, `min_points`, `ppm`, `rt_tol`, `fill`) and the choices of the MS2 spectrum of a row
-/// (`ms2_spectrum`: `best` or `consensus`; `ms2_background`) and the unit-resolution switches `centroid`, `recenter`, `dedup` (`auto`, `off`, and `on` for `centroid`); a missing key keeps the default.
+/// The numbers of the panel "Pipeline" (`floor`, `min_height`, `min_points`, `ppm`, `rt_tol`, `fill`), the choices of the MS2 spectrum of a row
+/// (`ms2_spectrum`, `ms2_background`) and the unit-resolution switches (`centroid`, `recenter`, `dedup`); a missing key keeps the default.
 fn apply_params(r: &mut Recipe, v: &Value) {
     let num = |k: &str| {
         v.get(k)
@@ -151,15 +148,7 @@ fn apply_params(r: &mut Recipe, v: &Value) {
     if let Some(b) = v.get("fill").and_then(Value::bool) {
         r.fill_gaps = b;
     }
-    for (k, on) in [("centroid", true), ("recenter", false), ("dedup", false)] {
-        if let Some(sw) = v.get(k).and_then(Value::str).and_then(|s| Switch::parse(s, on)) {
-            match k {
-                "centroid" => r.screen.centroid = sw,
-                "recenter" => r.screen.recenter = sw,
-                _ => r.screen.dedup = sw,
-            }
-        }
-    }
+    r.screen.read(|k| v.get(k).and_then(Value::str));
     r.ms2.consensus = v.get("ms2_spectrum").and_then(Value::str) == Some("consensus");
     r.ms2.background = v.get("ms2_background").and_then(Value::bool) == Some(true);
 }

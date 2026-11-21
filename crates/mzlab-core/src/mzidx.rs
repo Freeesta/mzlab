@@ -749,11 +749,10 @@ pub(crate) fn build_after(
     let keep = before.keep;
     let mut passes = 1usize;
     // -- the groups of scans (level x polarity), those with the same members share a section
-    let mut levels: Vec<u8> = table.level.clone();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-caps.md, «Ordinamenti std nei percorsi caldi»)
-    #[allow(clippy::disallowed_methods)]
-    levels.sort_unstable();
-    levels.dedup();
+    // the levels present, ascending: a presence table instead of sorting a copy of the level of every scan (no sort routine for bytes in the module)
+    let mut seen = [false; 256];
+    table.level.iter().for_each(|&l| seen[usize::from(l)] = true);
+    let levels: Vec<u8> = (0..=u8::MAX).filter(|&l| seen[usize::from(l)]).collect();
     let mut infos: Vec<Info> = Vec::new();
     let mut keys: Vec<(String, usize)> = Vec::new();
     for &level in &levels {
