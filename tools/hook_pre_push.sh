@@ -5,4 +5,4 @@ root=$(git rev-parse --show-toplevel) || exit 0
 while read -r _ local_sha _ _; do
   [ "$local_sha" = "0000000000000000000000000000000000000000" ] && exit 0
 done
-cd "$root" && exec python3 tools/pre_pr.py --veloce
+cd "$root" && exec python3 tools/pre_pr.py --fast

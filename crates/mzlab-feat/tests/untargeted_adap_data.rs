@@ -1,6 +1,6 @@
 //! ADAP builder against the ADAP lists of mzmine 3.9.0 on real files of the private series (HR, `dati/HRMS/Timolol/`). Skipped without the data repository
 //! (`MZLAB_DATI`) or without the lists `coordinamento/mzmine39/adap_<file>.csv` (columns of `tests/data/untargeted/mzmine39/adap.csv`, written by
-//! `python3 tools/bench/oro_mzmine.py --reale HRMS_DIR DEST`). Threshold: >= 0.97 of the rows of mzmine matched within 1e-4 m/z.
+//! `python3 tools/bench/oro_mzmine.py --real HRMS_DIR DEST`). Threshold: >= 0.97 of the rows of mzmine matched within 1e-4 m/z.
 #![cfg(feature = "untargeted")]
 
 mod untargeted_common;

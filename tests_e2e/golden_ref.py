@@ -1,6 +1,6 @@
 """The reference answers of the e2e tests, from committed golden data (tests/golden/e2e/<test>.json.gz): same interface as `pyref.PyRef`, no Python engine in the process.
 Every call is keyed by the chain of the calls made before it on the same object (method, URL, body, SHA-256 of the uploaded bytes), so the files may live anywhere.
-To rewrite the data (a deliberate change of the reference): `MZLAB_UPDATE_GOLDEN=1 python3 tools/verifica.py --solo <test>`; that is the only case that loads pyref.py."""
+To rewrite the data (a deliberate change of the reference): `MZLAB_UPDATE_GOLDEN=1 python3 tools/verifica.py --only <test>`; that is the only case that loads pyref.py."""
 import atexit
 import base64
 import gzip

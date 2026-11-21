@@ -1,6 +1,6 @@
 //! `run::align_to_spilling` handed the facts of the files (as `series_js::series_recipe` reads them, from the indexes it already parsed) writes the same
 //! bytes as `run::align_to`, which opens every index again for them; so does a gap filling that opens the files without their scan table
-//! (`Index::open_lean`, as `align_series_to` does). The synthetic series is the one of `tools/bench/oro_mzmine.py --genera` (python3
+//! (`Index::open_lean`, as `align_series_to` does). The synthetic series is the one of `tools/bench/oro_mzmine.py --generate` (python3
 //! with numpy; skipped without).
 #![cfg(feature = "detect")]
 
@@ -26,7 +26,7 @@ fn series() -> Option<Vec<Vec<u8>>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .current_dir(&root)
         .output()

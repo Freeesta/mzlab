@@ -3,7 +3,7 @@
     python3 tools/versione.py                  # all the files say the same version
     python3 tools/versione.py --tag v0.2.0     # ... and it is the one of the tag
     python3 tools/versione.py --tag v0.2.0 also runs the release gate (tools/gate_release.py); there is no way to skip it
-    python3 tools/versione.py --nota v0.2.0    # prints the notes of that version from CHANGELOG.md (fails if missing or empty)
+    python3 tools/versione.py --note v0.2.0    # prints the notes of that version from CHANGELOG.md (fails if missing or empty)
 Stdlib only. Used by tests/test_versione.py (required pytest job) and by .github/workflows/release.yml."""
 from __future__ import annotations
 
@@ -65,10 +65,10 @@ def nota(versione: str, root: Path = ROOT) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--tag", help="tag of the release (vX.Y.Z): every file must say that version")
-    ap.add_argument("--nota", metavar="VERSIONE", help="print the notes of that version from CHANGELOG.md")
+    ap.add_argument("--note", metavar="VERSIONE", help="print the notes of that version from CHANGELOG.md")
     a = ap.parse_args(argv)
-    if a.nota:
-        sys.stdout.write(nota(a.nota))
+    if a.note:
+        sys.stdout.write(nota(a.note))
         return 0
     errors = controlla(tag=a.tag)
     for e in errors:

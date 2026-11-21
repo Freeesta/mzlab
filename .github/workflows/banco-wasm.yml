@@ -34,6 +34,6 @@ jobs:
           VARIANTI: ${{ inputs.varianti }}
           GIRI: ${{ inputs.giri }}
         run: |
-          python3 tools/banco_wasm.py --varianti "$VARIANTI" --giri "$GIRI" 2> banco.err | tee banco.out
+          python3 tools/banco_wasm.py --variants "$VARIANTI" --rounds "$GIRI" 2> banco.err | tee banco.out
           { echo '### banco-wasm'; grep -v '^{' banco.out; } >> "$GITHUB_STEP_SUMMARY"
           cat banco.err

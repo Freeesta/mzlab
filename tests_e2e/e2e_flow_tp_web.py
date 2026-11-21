@@ -35,7 +35,7 @@ def native(parent):
 # the scheduler of the live session needs one file open (an index in OPFS), though tp.generate reads only the parent
 data = site / "static" / "dati_flow_tp"; data.mkdir()
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 shutil.copy2(sorted(ser.glob("*.mzidx"))[0], data / "s.mzidx")
 PUT = """async () => {
   let d = await navigator.storage.getDirectory();

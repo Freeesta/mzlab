@@ -5,11 +5,11 @@
 writes in OUT/ five Orbitrap-like MS1 files of `tools/dati_sintetici.py` (invented ions: weak, intense, wobbling in m/z, side lobes, continuous
 background, none) and their `.mzidx`: `<name>.mzidx` for `trace_parity.rs` (answers: `detect.json`).
 
-    python3 tools/feat_synthetic.py OUT --solo identita
+    python3 tools/feat_synthetic.py OUT --only identita
 
 writes the small synthetic identity series (seed 7, `tools/valida/sintetici_identita.py`) in OUT/identita/ and the `.mzidx` of every file
 (`OUT/ri_<name>.mzidx`); `OUT/identita.mzidx` is the one of SIN_t10min (answers: `iso_ms2_identita.json`, `famiglie_*.json`, `riempimento.json`).
-    python3 tools/feat_synthetic.py OUT --solo degdma
+    python3 tools/feat_synthetic.py OUT --only degdma
 
 writes the hard family of `tools/valida/sintetici_degdma.py` (weak [M+H]+, strong Na/K/NH4 adducts, a base-peak in-source fragment, the same m/z from a later product):
 OUT/degdma.mzidx and OUT/degdma/verita.json.
@@ -71,10 +71,10 @@ def degdma(out: Path) -> int:
 def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
-    if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
+    if "--only" in argv and argv[argv.index("--only") + 1] == "identita":
         print("identita", identity(out))
         return 0
-    if "--solo" in argv and argv[argv.index("--solo") + 1] == "degdma":
+    if "--only" in argv and argv[argv.index("--only") + 1] == "degdma":
         print("degdma", degdma(out))
         return 0
     for name, (seed, ions, fine) in plans().items():

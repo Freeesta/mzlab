@@ -5,7 +5,7 @@ commands: every number is computed in Rust.
 
     python3 tools/validate_rules.py                          # downloads the release into .verifica/massbank_regole/, runs, prints the summary
     python3 tools/validate_rules.py --zip MassBank.zip       # an already downloaded copy
-    python3 tools/validate_rules.py --registri DIR           # records already on disk (the tests use a handful of public ones); no download
+    python3 tools/validate_rules.py --logs DIR           # records already on disk (the tests use a handful of public ones); no download
 """
 import argparse
 import subprocess
@@ -45,8 +45,8 @@ def extract(zpath: Path, dest: Path) -> int:
 
 
 def registries(args) -> Path:
-    if args.registri:
-        return Path(args.registri)
+    if args.logs:
+        return Path(args.logs)
     marca = CACHE / "registri" / ".pronto"
     if not marca.exists():
         zpath = Path(args.zip) if args.zip else CACHE / "MassBank.zip"
@@ -68,8 +68,8 @@ def cli(args) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--zip", help="an already downloaded MassBank-data zip")
-    ap.add_argument("--registri", help="a folder of MassBank records instead of the release")
-    ap.add_argument("--seme", default="1", help="seed of the decoys (1)")
+    ap.add_argument("--logs", help="a folder of MassBank records instead of the release")
+    ap.add_argument("--seed", default="1", help="seed of the decoys (1)")
     ap.add_argument("--cli", help="the mzlab-cli binary (default: cargo run --release)")
     ap.add_argument("--out", help="write the summary there instead of the standard output")
     args = ap.parse_args()
@@ -79,7 +79,7 @@ def main() -> int:
         entries.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
         base = cli(args)
         for command in (
-            [*base, "msn", "rules", "--list", str(entries), "--rules", "--decoy", args.seme, "--out", str(rows)],
+            [*base, "msn", "rules", "--list", str(entries), "--rules", "--decoy", args.seed, "--out", str(rows)],
         ):
             subprocess.run(command, cwd=ROOT, check=True)
         total = subprocess.run([*base, "msn", "rules", "sum", str(rows)], cwd=ROOT, check=True, capture_output=True, text=True).stdout

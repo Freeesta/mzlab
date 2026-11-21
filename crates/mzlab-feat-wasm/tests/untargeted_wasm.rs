@@ -1,6 +1,6 @@
 //! The steps behind `detect_untargeted_to` and `align_untargeted_to` (`untargeted::{detect_to, align_to}`) over the readers and sinks that the `.wasm` and the
 //! native example use: the bytes do not depend on where they go (a `Vec`, a file written at offsets, the hashing sink), the series equals the table of the
-//! stages run by hand, and a budget that holds nothing is refused in order. The synthetic series is the one of `tools/bench/oro_mzmine.py --genera` (python3 with
+//! stages run by hand, and a budget that holds nothing is refused in order. The synthetic series is the one of `tools/bench/oro_mzmine.py --generate` (python3 with
 //! numpy; skipped without). The byte-for-byte comparison of the `.wasm` with the example runs in node: `tests/test_feat_wasm_untargeted.py`.
 #![cfg(feature = "untargeted")]
 
@@ -52,7 +52,7 @@ fn make() -> Option<Vec<Vec<u8>>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .current_dir(&root)
         .output()

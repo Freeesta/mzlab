@@ -3,7 +3,7 @@
 
     python3 tools/psims_tabella.py                 # fetch the pinned obo (cached in the temp folder), rewrite the table
     python3 tools/psims_tabella.py --obo FILE      # use a local copy of the obo (it must have the pinned SHA-256)
-    python3 tools/psims_tabella.py --controlla     # exit 1 if the committed table is not the one generated from the pinned obo
+    python3 tools/psims_tabella.py --verify     # exit 1 if the committed table is not the one generated from the pinned obo
 
 The table: `terms` (accession, name, obsolete 0/1), `units` (term -> the units its `has_units` allows), `unit_names` (names of the `UO:` units that
 `has_units` cites) and `classes` (the accessions below each of the roots the validator asks "is this term a ...?" about).
@@ -124,10 +124,10 @@ def render(table: dict) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--obo", type=Path, help="local copy of the pinned psi-ms.obo")
-    ap.add_argument("--controlla", action="store_true", help="check the committed table instead of writing it")
+    ap.add_argument("--verify", action="store_true", help="check the committed table instead of writing it")
     args = ap.parse_args()
     text = render(build(fetch(args.obo)))
-    if args.controlla:
+    if args.verify:
         if not TABLE.exists() or TABLE.read_text(encoding="utf-8") != text:
             print(f"FAIL {TABLE.relative_to(ROOT)} is not the table generated from the pinned obo: run python3 tools/psims_tabella.py", file=sys.stderr)
             return 1

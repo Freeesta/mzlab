@@ -1,9 +1,9 @@
 """Independent reference of `link/1` (the outside lookups of the Draw right-click menu): the rows (the preferred PubChem search first) and the URLs,
 percent-encoded with `urllib.parse.quote(safe="")` (RFC 3986 unreserved kept, every other UTF-8 byte as %XX).
 
-    python3 tools/link_reference.py [--scrivi]
+    python3 tools/link_reference.py [--write]
 
-Writes tests/dati/link_golden.json with --scrivi, otherwise checks that the file holds what this script computes. The Rust test
+Writes tests/dati/link_golden.json with --write, otherwise checks that the file holds what this script computes. The Rust test
 crates/mzlab-feat/tests/link.rs compares the engine with the file; the cases cover charges, brackets, stereo, isotopes, #, + and /.
 """
 from __future__ import annotations
@@ -46,11 +46,11 @@ def golden() -> str:
 
 def main() -> int:
     text = golden()
-    if "--scrivi" in sys.argv[1:]:
+    if "--write" in sys.argv[1:]:
         GOLDEN.write_text(text, encoding="utf-8")
         return 0
     if not GOLDEN.exists() or GOLDEN.read_text(encoding="utf-8") != text:
-        print(f"{GOLDEN} differs from the reference: python3 tools/link_reference.py --scrivi", file=sys.stderr)
+        print(f"{GOLDEN} differs from the reference: python3 tools/link_reference.py --write", file=sys.stderr)
         return 1
     return 0
 

@@ -2,7 +2,7 @@
 ones when the private data are there. Aggregated numbers only (no names of compounds, no data); the document is `cancello_lr/1`, written in the work folder and
 never committed by this tool.
 
-Real data are read from the data repository (`dati/3200 qtrap/mzML`) or from `--serie-lr` and the criteria that need them stay `ok` null (skipped, never passed) without it.
+Real data are read from the data repository (`dati/3200 qtrap/mzML`) or from `--series-lr` and the criteria that need them stay `ok` null (skipped, never passed) without it.
 The full scan is judged against reference ions: on the synthetic series the frozen ions of the former Python engine (`tests/golden/finder_lr_riferimento.json`);
 the real series has no public reference, so its full scan criteria stay unmeasured (only the determinism of the run is measured)."""
 from __future__ import annotations
@@ -73,7 +73,7 @@ def sintetici(work: Path, seme: int = 5) -> tuple[list[dict], dict]:
 
 
 def find_real(folder: str | None) -> Path | None:
-    """The folder of the real mzML: `--serie-lr`, else `dati/3200 qtrap/mzML` of the data repository; None when it does not exist."""
+    """The folder of the real mzML: `--series-lr`, else `dati/3200 qtrap/mzML` of the data repository; None when it does not exist."""
     base = Path(folder) if folder else percorso("dati/3200 qtrap/mzML")
     return base if base and base.is_dir() else None
 
@@ -112,7 +112,7 @@ def misura(real_folder: str | None, parent: tuple | None, work: Path, data: str,
     cs, ds = sintetici(work / "sintetici", seme)
     base = find_real(real_folder)
     cr, dr = real(base, parent, work / "reale")
-    det = {"sintetici": ds, "reale": dr, "dati_reali": "read" if base else "skipped: no folder (MZLAB_DATI or --serie-lr)"}
+    det = {"sintetici": ds, "reale": dr, "dati_reali": "read" if base else "skipped: no folder (MZLAB_DATI or --series-lr)"}
     return document(cr + cs, data, cancello.crate_version()), det
 
 

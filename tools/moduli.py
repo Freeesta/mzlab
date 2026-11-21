@@ -1,7 +1,7 @@
 """Data of the site's .wasm modules: one tools/moduli/<name>.toml each (output, cargo package, features, wasm-opt set, build part, cap, note, last measure).
-The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
+The only reader of those files: `--list <part>` (names, for the shell scripts), `--row <name>` (how to build one), `--cap <name>`,
 `--manifest <wasm-feat dir>` (writes its manifest.json from a build),
-`--misura <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--controlla [--base <git ref>]`.
+`--measure <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--verify [--base <git ref>]`.
 Cap rule (docs/agenti/wasm-caps.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails,
 unless the module's toml carries an `[exception]` (cap, date, reason) naming exactly that cap: one owner-approved jump, recorded in the file."""
 import argparse
@@ -126,28 +126,28 @@ def misure(mod: dict[str, dict], static: Path) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--elenco", choices=PARTI, metavar="PART")
-    g.add_argument("--tetto", metavar="NAME")
-    g.add_argument("--riga", metavar="NAME")
+    g.add_argument("--list", choices=PARTI, metavar="PART")
+    g.add_argument("--cap", metavar="NAME")
+    g.add_argument("--row", metavar="NAME")
     g.add_argument("--manifest", metavar="DIR")
-    g.add_argument("--misura", metavar="DIR")
-    g.add_argument("--controlla", action="store_true")
+    g.add_argument("--measure", metavar="DIR")
+    g.add_argument("--verify", action="store_true")
     ap.add_argument("--base", metavar="REF")
     a = ap.parse_args()
     sys.stdout.reconfigure(newline="\n")      # the shell scripts read the output: no CR from a Windows stdout
     mod = load_manifests()
-    if a.elenco:
-        print("\n".join(n for n, r in mod.items() if r["parte"] == a.elenco))
-    elif a.tetto or a.riga:
-        n = a.tetto or a.riga
+    if a.list:
+        print("\n".join(n for n, r in mod.items() if r["parte"] == a.list))
+    elif a.cap or a.row:
+        n = a.cap or a.row
         if n not in mod:
             print(f"unknown module {n}", file=sys.stderr)
             return 2
-        print(mod[n]["tetto"] if a.tetto else riga(mod[n]))
+        print(mod[n]["tetto"] if a.cap else riga(mod[n]))
     elif a.manifest:
         manifesto(mod, Path(a.manifest))
-    elif a.misura:
-        err = misure(mod, Path(a.misura))
+    elif a.measure:
+        err = misure(mod, Path(a.measure))
         print("\n".join(err) if err else f"{len(mod)} measures written")
         return 1 if err else 0
     else:

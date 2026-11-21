@@ -5,7 +5,7 @@ each row without a partner under the common floor of height, in which stage it w
 `below` (under the floor in one of the two), `family` (absorbed in a family: a member of a row of ours is the row of mzmine), `background` (a trace of mzmine longer than
 `fondo_min` minutes, which we discard), `split` (mzmine cuts at a zero or at 1 min and we do not: our feature of the file is one and wider), `align` (we have the feature
 in the file, the alignment put it elsewhere), `other`. The pairs with the areas more than twice apart are counted apart as `area`.
-    python3 tools/bench/motivi_mzmine.py MZML_DIR WORK_DIR [--rapporto FILE.md] [--altezza-min H] [--solo STEM ...]"""
+    python3 tools/bench/motivi_mzmine.py MZML_DIR WORK_DIR [--report FILE.md] [--min-height H] [--only STEM ...]"""
 from __future__ import annotations
 
 import argparse
@@ -260,18 +260,18 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("mzml_dir")
     ap.add_argument("lavoro")
-    ap.add_argument("--rapporto")
-    ap.add_argument("--altezza-min", type=float, default=10 * M.FLOOR, help="common floor of height in counts (default 10 x the noise floor of the engine)")
-    ap.add_argument("--ciclo", type=float, help="spacing of the MS1 scans in minutes (default: read from the first file)")
-    ap.add_argument("--solo", nargs="*")
+    ap.add_argument("--report")
+    ap.add_argument("--min-height", type=float, default=10 * M.FLOOR, help="common floor of height in counts (default 10 x the noise floor of the engine)")
+    ap.add_argument("--cycle", type=float, help="spacing of the MS1 scans in minutes (default: read from the first file)")
+    ap.add_argument("--only", nargs="*")
     a = ap.parse_args()
     work = Path(a.lavoro)
     work.mkdir(parents=True, exist_ok=True)
-    o = misura(Path(a.mzml_dir), work, a.altezza_min, a.solo, a.ciclo)
+    o = misura(Path(a.mzml_dir), work, a.min_height, a.only, a.cycle)
     (work / "motivi.json").write_text(json.dumps(o, indent=1), encoding="utf-8")
     text = rapporto(o)
-    if a.rapporto:
-        Path(a.rapporto).write_text(text, encoding="utf-8")
+    if a.report:
+        Path(a.report).write_text(text, encoding="utf-8")
     print(text)
 
 

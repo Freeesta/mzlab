@@ -1,4 +1,4 @@
-"""`replace_section` of tools/md_sezione.py: `--librerie --scrivi` rewrites only its own section of docs/agenti/measurements.md and keeps the sections after it."""
+"""`replace_section` of tools/md_sezione.py: `--libraries --write` rewrites only its own section of docs/agenti/measurements.md and keeps the sections after it."""
 import sys
 from pathlib import Path
 

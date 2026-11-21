@@ -21,7 +21,7 @@ Memory: WASM heap = sum of the worker's `WebAssembly.Memory`; IndexedDB = bytes 
 ### Clicks of the product network: from the node to the row (`python3 tests_e2e/e2e_rete.py`, line "MISURA clic_rete_riga")
 - One click on a node of the network selects the table row (`onSelect(rowId)`); with the keyboard Enter or Space on the node. The test fails above 1 click. `selectRow(rowId)` selects the node from the table without calling `onSelect`.
 
-## Spectral libraries (`python3 tools/bench.py --librerie --gb --scrivi`, Chromium Linux with persistent profile)
+## Spectral libraries (`python3 tools/bench.py --libraries --gb --write`, Chromium Linux with persistent profile)
 "js" = JavaScript path (`?libjs=1`, up to 10^5 spectra), "wasm" = Rust/WASM engine. Times measured from the page (they include the message passing to the worker); identity and analogs = median of 30 and 10 warm requests, "cold" = the first; "identify_all" = 5000 MS2 (400 for MassBank, which has fewer). Memory = peak RSS of the whole browser minus the base before the import. Synthetic spectra (8-40 uniform peaks: they compress little: unfavorable case for the size).
 Targets: identity < 5 ms warm, analogs < 100 ms on 10^6, 1 GB MGF < 90 s with ≤ 200 MB. Browser: identity 8-12 ms (message round trip and JSON; <1 ms native), analogs 136 ms on 10^6, 1 GB MGF 130 s and 331 MB (74 s native with 110 MB). MassBank on disk: 8.0 MB against 15.7 MB MSP. `.mzlib` v1 library management: Flash indexes (fragments and neutral losses), warm search 8-12 ms, analogs ~136 ms on 10^6 spectra, decoy support and FDR estimate.
 

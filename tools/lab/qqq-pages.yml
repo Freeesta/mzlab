@@ -75,10 +75,10 @@ jobs:
           mkdir -p site/static
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --cap motore)" engine @motore
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --cap librerie)" libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       - name: Record the tree of the cache
@@ -326,10 +326,10 @@ jobs:
         with:
           path: .sospetti-fonti
           key: sospetti-fonti-${{ steps.pin.outputs.fonti }}
-      # genera_sospetti.py checks every file of --fonte against its pinned SHA-256 and downloads only the missing ones
+      # genera_sospetti.py checks every file of --source against its pinned SHA-256 and downloads only the missing ones
       - name: Build the suspect index of mzFinder (pinned CC BY sources, never committed; a network failure only warns)
         if: steps.suscache.outputs.cache-hit != 'true'
-        run: python tools/genera_sospetti.py --fonte .sospetti-fonti --pacchetto site/static/mzfinder/sospetti
+        run: python tools/genera_sospetti.py --source .sospetti-fonti --package site/static/mzfinder/sospetti
       - name: Save the suspect sources
         if: steps.suscache.outputs.cache-hit != 'true' && steps.fonticache.outputs.cache-hit != 'true' && hashFiles('site/static/mzfinder/sospetti/catalogo.json') != ''
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -378,7 +378,7 @@ jobs:
         if: steps.inscache.outputs.cache-hit != 'true'
         run: |
           cargo build --locked --release -p mzlab-cli
-          python tools/pubchemlite_pacchetto.py --fonte .insilico-fonti --cli target/release/mzlab-cli --out site/static/insilico
+          python tools/pubchemlite_pacchetto.py --source .insilico-fonti --cli target/release/mzlab-cli --out site/static/insilico
       - name: Save the PubChemLite CSV
         if: steps.inscache.outputs.cache-hit != 'true' && steps.inscsv.outputs.cache-hit != 'true' && hashFiles('site/static/insilico/catalogo.json') != ''
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

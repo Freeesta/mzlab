@@ -125,7 +125,7 @@ def check_readme(root: Path) -> Result:
 def check_map(root: Path) -> Result:
     bad = []
     if root == ROOT:
-        r = subprocess.run([sys.executable, "tools/indice.py", "--controlla"], cwd=root, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, "tools/indice.py", "--verify"], cwd=root, capture_output=True, text=True)
         if r.returncode != 0:
             bad.append("tools/indice.py:1: the code map misses files -> python3 tools/indice.py")
         gx = root / "graphify-out"

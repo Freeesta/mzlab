@@ -3,9 +3,9 @@ Report only (exit 0): it measures the English migration, it does not gate it. Wo
 (whole words, no stemming, so English words such as `controller` or `integrate` never match).
 
     python3 tools/check_english.py                 # counts per area
-    python3 tools/check_english.py --elenco        # also one line per file (comments / identifiers / keys / name)
+    python3 tools/check_english.py --list        # also one line per file (comments / identifiers / keys / name)
     python3 tools/check_english.py --file PATH     # every hit of one file, with line numbers
-    python3 tools/check_english.py --rinomine      # proposed rename map (tools/english_rename_map.py; TSV: kind, old, new, note)
+    python3 tools/check_english.py --renames      # proposed rename map (tools/english_rename_map.py; TSV: kind, old, new, note)
 """
 from __future__ import annotations
 
@@ -320,12 +320,12 @@ def summary(res: dict[str, dict]) -> dict[str, Counter]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--elenco", action="store_true", help="one line per file with hits")
+    ap.add_argument("--list", action="store_true", help="one line per file with hits")
     ap.add_argument("--file", help="every hit of one tracked file")
-    ap.add_argument("--rinomine", action="store_true", help="print the proposed rename map (TSV)")
+    ap.add_argument("--renames", action="store_true", help="print the proposed rename map (TSV)")
     a = ap.parse_args(argv)
     files = tracked()
-    if a.rinomine:
+    if a.renames:
         import english_rename_map               # here: it imports this module
         for row in english_rename_map.rename_map(files):
             print("\t".join(row))
@@ -345,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
     print("area\t" + "\t".join(cols))
     for label in [x for x, _ in AREAS] + ["other"]:
         print(label + "\t" + "\t".join(str(per[label][c]) for c in cols))
-    if a.elenco:
+    if a.list:
         for rel, r in res.items():
             if r["comments"] or r["idents"] or r["keys"] or r["name"] or r["prose"]:
                 print(f"{rel}\tc={len(r['comments'])}\tid={len(r['idents'])}\tk={len(r['keys'])}\tp={len(r['prose'])}\tname={','.join(r['name'])}")

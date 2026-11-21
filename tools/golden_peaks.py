@@ -2,7 +2,7 @@
 """Golden data for the peak finders (tests/golden/picchi_qualita.json): synthetic traces (single peak, partly resolved doubles, shoulder,
 tail, noise) with the limits and areas of the CWT detector of the Python engine (the reference of the Rust port).
 The "prominence + local minimum" mode has no Python twin: its expectations (peaks, limits at the valley) are asserted in
-crates/mzlab-core/tests/peaks_golden.rs. No compound names. Usage: python3 tools/golden_peaks.py [--scrivi]"""
+crates/mzlab-core/tests/peaks_golden.rs. No compound names. Usage: python3 tools/golden_peaks.py [--write]"""
 import json, sys
 from pathlib import Path
 import numpy as np
@@ -45,5 +45,5 @@ def build():
 if __name__ == "__main__":
     d = build()
     for k, v in d.items(): print(k, [(p["apex_i"], p["lo"], p["hi"]) for p in v["cwt"]])
-    if "--scrivi" in sys.argv:
+    if "--write" in sys.argv:
         OUT.write_text(json.dumps(d, separators=(",", ":")) + "\n"); print("scritto", OUT, OUT.stat().st_size)

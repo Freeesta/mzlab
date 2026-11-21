@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Permanent bench of the mzlab-core jobs compiled to wasm in several build variants (docs/agenti/wasm-potential.md §9).
 
-    python3 tools/banco_wasm.py --varianti base,o3 [--chromium] [--firefox] [--webkit] [--giri 5] [--raw] [--lavoro CARTELLA]
+    python3 tools/banco_wasm.py --variants base,o3 [--chromium] [--firefox] [--webkit] [--rounds 5] [--raw] [--workdir CARTELLA]
 
 Builds the crate `tools/banco_wasm/` once per variant (own CARGO_TARGET_DIR, wasm-bindgen --target web, wasm-opt through
 tools/wasm_opt.sh, so the binary and the flags are the site's), runs `js/suite.js` in Node and with --chromium/--firefox/--webkit in that browser,
 prints one JSON line per variant and the table base -> variant. Every job returns a check value: the run fails when two
 variants (or Node and Chromium) differ. Python only orchestrates; the numbers come from the wasm. All the work files live in
-a temporary folder (or --lavoro), never in the repository.
+a temporary folder (or --workdir), never in the repository.
 """
 import argparse
 import gzip
@@ -214,15 +214,15 @@ def tabella(righe: list[dict], motore: str):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--varianti", default="base,o3", help="comma list among: " + ", ".join(VARIANTS) + " (the first is the base of the table)")
+    ap.add_argument("--variants", default="base,o3", help="comma list among: " + ", ".join(VARIANTS) + " (the first is the base of the table)")
     ap.add_argument("--chromium", action="store_true", help="also run the suite in Chromium (Playwright)")
     ap.add_argument("--firefox", action="store_true", help="also run the suite in Firefox (Playwright)")
     ap.add_argument("--webkit", action="store_true", help="also run the suite in WebKit (Playwright)")
-    ap.add_argument("--giri", type=int, default=5, help="repetitions per job, median kept")
+    ap.add_argument("--rounds", type=int, default=5, help="repetitions per job, median kept")
     ap.add_argument("--raw", action="store_true", help="also the .raw jobs, with a file of the private data repository (skipped without it)")
-    ap.add_argument("--lavoro", help="work folder kept between runs (default: a temporary one, removed at the end)")
+    ap.add_argument("--workdir", help="work folder kept between runs (default: a temporary one, removed at the end)")
     a = ap.parse_args()
-    names = a.varianti.split(",")
+    names = a.variants.split(",")
     for n in names:
         if n not in VARIANTS:
             sys.exit(f"unknown variant {n}")
@@ -230,18 +230,18 @@ def main():
     raw = find_raw() if a.raw else None
     if a.raw and raw is None:
         print("no .raw in the private data repository: the .raw jobs are skipped", file=sys.stderr)
-    lav = Path(a.lavoro) if a.lavoro else Path(tempfile.mkdtemp(prefix="banco_wasm_"))
+    lav = Path(a.workdir) if a.workdir else Path(tempfile.mkdtemp(prefix="banco_wasm_"))
     lav.mkdir(parents=True, exist_ok=True)
     try:
         prepare_data(lav, raw)
         righe = []
         for n in names:
             r = build(n, lav, raw is not None)
-            r["node"] = in_node(n, lav, a.giri)
+            r["node"] = in_node(n, lav, a.rounds)
             righe.append(r)
         motori = [m for m in ("chromium", "firefox", "webkit") if getattr(a, m)]
         for m in motori:
-            br = in_browser(m, names, lav, a.giri)
+            br = in_browser(m, names, lav, a.rounds)
             for r in righe:
                 r[m] = br[r["variant"]]
                 if "error" in r[m]:
@@ -262,7 +262,7 @@ def main():
             sys.exit("CHECK VALUES DIFFER:\n" + "\n".join(errors))
         print(f"\ncheck values identical in {len(righe)} variants")
     finally:
-        if not a.lavoro:
+        if not a.workdir:
             shutil.rmtree(lav, ignore_errors=True)
 
 

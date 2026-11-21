@@ -1,4 +1,4 @@
-"""The e2e that need `sito` run only when named (--solo) or when notte.yml says the full site is in place (--sito-pronto)."""
+"""The e2e that need `sito` run only when named (--only) or when notte.yml says the full site is in place (--site-ready)."""
 import sys
 from pathlib import Path
 

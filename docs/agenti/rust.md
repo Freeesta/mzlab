@@ -27,7 +27,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-desktop`: the Tauri v2 app, the page behind `mzlab://` with a native engine (`rust-desktop.md`).
 
 ## Rules enforced by CI and tests
-- **Lint** (`python3 tools/controlla_rust.py`, job `rust-lint` of `rust.yml`): clippy on the whole workspace (`--all-targets`) and `cargo fmt --check` against `tools/clippy_base.json`, which can only shrink. A new lint in a file, or a file fmt no longer accepts, is red. `--aggiorna` rewrites the base and refuses if anything got worse; `--solo-fmt` is the fmt half (pre-push hook via `pre_pr.py`).
+- **Lint** (`python3 tools/controlla_rust.py`, job `rust-lint` of `rust.yml`): clippy on the whole workspace (`--all-targets`) and `cargo fmt --check` against `tools/clippy_base.json`, which can only shrink. A new lint in a file, or a file fmt no longer accepts, is red. `--update` rewrites the base and refuses if anything got worse; `--only-fmt` is the fmt half (pre-push hook via `pre_pr.py`).
 - Parsing modules carry `#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]` on their `mod` line in `mzlab-core/src/lib.rs`; a new parsing module gets the same line.
 - `cargo machete` (same job): a dependency no source names is removed from its `Cargo.toml`.
 - **No std sorts in `mzlab-core`** (`crates/mzlab-core/clippy.toml` disallows `slice::sort*`: ~2.5 KB of `.wasm` per call site). Use `sortc::slice_by`, `slice_by_key`, `slice_ord`; floats with `sortc::asc_nan_last` / `desc_nan_last` (NaN last), not `partial_cmp(..).unwrap_or(Equal)`. `mzlab-feat` and `mzlab-chem` use the `sortc::SortC` trait methods (`sortc_by`, `sortc_by_key`, `sortc`); `mzlab-lib` and `mzlab-feat-wasm` use `mzlab_picchi::sortc` (`by`, `any_by`, `SortC`).
@@ -52,7 +52,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Parity with the Python reference
 - Pattern: `crates/<crate>/tests/<name>_parity.rs` compares the Rust output with `tools/<name>_reference.py` (JSON compared leaf by leaf, tolerance stated in the test). Without python3 and numpy the test is skipped; `MZLAB_GOLDEN_STRICT=1` turns the skip into a failure.
 - Small references are committed in `tests/golden/ref/` (`componenti`, `composizione`, `composizione_rotta`, `msntree`, `msntree_rotta`, `statistica`, `statmat`, `stats`) and need no python3; rewrite them with `python3 tools/create_golden_ref.py [name]` only after a deliberate change of the reference. The big ones (maps, origin, example indexes) are written by the test into a temporary folder.
-- Golden reader data: `crates/mzlab-core/tests/golden.rs` against `tests/golden/` (edge indices identical, then areas 1e-4, m/z 1e-6, entropy 1e-9). `python3 tools/golden.py --controlla` checks, `--sintetici DIR` writes the synthetic mzML the Rust tests read, `--crea` only when the reference changes on purpose (it also rewrites `esempio_*` with format-only differences: commit only the file you meant).
+- Golden reader data: `crates/mzlab-core/tests/golden.rs` against `tests/golden/` (edge indices identical, then areas 1e-4, m/z 1e-6, entropy 1e-9). `python3 tools/golden.py --verify` checks, `--synthetic DIR` writes the synthetic mzML the Rust tests read, `--create` only when the reference changes on purpose (it also rewrites `esempio_*` with format-only differences: commit only the file you meant).
 - A value out of tolerance is different logic: fix the logic, never widen the tolerance.
 - Traps for bit-identical results: Python ≥ 3.12 `sum()` on floats is Neumaier-compensated, so where Python uses `sum()` Rust uses `pysum`; `ndarray.sum()` is pairwise (`stats.rs`); numpy's `default_rng(seed)` is reproduced bit for bit by `rng.rs` (`Pcg64`, SeedSequence, Lemire bounded ints); `jsonb.rs` writes NaN as `null`; rounding is `elements::round_half_up`; `statmat::svd`/`eigh` match numpy up to the sign of eigenvectors, which the caller fixes.
 - Tests without a Python reference (e.g. `peakq.rs`) prove themselves on synthetic traces in their `tests` module.
@@ -66,7 +66,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Build and test
 - Native: `cargo test --release -p mzlab-core` (or `-p <crate>`); CI splits the workspace into `rust` (mzlab-feat), `rust-core` (core, lettori, lib, mol, target), `rust-misc-a` (Attributio, chem, llm), `rust-misc-b` (the rest).
 - WASM: `cargo build --release --target wasm32-unknown-unknown -p mzlab-wasm`; check the graph with `cargo tree -e no-dev --target wasm32-unknown-unknown -p mzlab-wasm`.
-- Before pushing: `python3 tools/pre_pr.py`; full: `python3 tools/verifica.py` (`--senza-e2e` without the browser).
+- Before pushing: `python3 tools/pre_pr.py`; full: `python3 tools/verifica.py` (`--no-e2e` without the browser).
 - The site with the real `.wasm`: `sito-rust.yml` (PRs touching `crates/`, the page or the build; by hand with `workflow_dispatch` and `solo=e2e_lr,e2e13,…`). It is not required, and it is the engine's test bench when the container cannot build the `.wasm`.
 - Page-side debugging: `MZLAB_TRACE` (an array defined on `window` before loading) records rpc and fetch with timings; every route served by `lr.js` gives the same JSON as Python (`e2e_lr.py`).
 

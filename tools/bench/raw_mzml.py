@@ -1,8 +1,8 @@
 """Launcher of the `.raw` -> mzML bench (`crates/mzlab-core/examples/raw_mzml_bench`): builds it, measures the disk with `dd`, runs it on one input and
 leaves the JSON of MISURE §4 in `.verifica/raw-mzml/`. No calculation here: every number comes from the Rust bench.
   python3 tools/bench/raw_mzml.py --file X.raw            a real file
-  python3 tools/bench/raw_mzml.py --denso 2               the dense synthetic case, 2 GB
-Options after `--` go to the bench as they are (`-- --solo scala --thread 1,4`). `--zlib-rs` also runs the build on the zlib-rs backend."""
+  python3 tools/bench/raw_mzml.py --dense 2               the dense synthetic case, 2 GB
+Options after `--` go to the bench as they are (`-- --only scala --thread 1,4`). `--zlib-rs` also runs the build on the zlib-rs backend."""
 import argparse
 import json
 import platform
@@ -47,18 +47,18 @@ def disco(tmp, mb=1024):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--file")
-    ap.add_argument("--denso", type=float, help="GB of the dense synthetic case")
-    ap.add_argument("--etichetta", default="")
-    ap.add_argument("--giri", type=int, default=5)
+    ap.add_argument("--dense", type=float, help="GB of the dense synthetic case")
+    ap.add_argument("--label", default="")
+    ap.add_argument("--rounds", type=int, default=5)
     ap.add_argument("--tmp", default="/tmp")
     ap.add_argument("--zlib-rs", action="store_true")
-    ap.add_argument("--senza-disco", action="store_true", help="skip the dd measurement")
+    ap.add_argument("--no-disk", action="store_true", help="skip the dd measurement")
     ap.add_argument("resto", nargs="*", help="options for the bench (after --)")
     a = ap.parse_args()
-    if bool(a.file) == bool(a.denso):
-        ap.error("exactly one of --file / --denso")
+    if bool(a.file) == bool(a.dense):
+        ap.error("exactly one of --file / --dense")
     OUT.mkdir(parents=True, exist_ok=True)
-    bw = {} if a.senza_disco else disco(a.tmp)
+    bw = {} if a.no_disk else disco(a.tmp)
     meta = {
         "git": sh(["git", "rev-parse", "HEAD"]).stdout.strip(),
         "rustc": sh(["rustc", "--version"]).stdout.strip(),
@@ -68,10 +68,10 @@ def main():
     }
     for backend, feat in (("miniz_oxide", ""),) + ((("zlib-rs", "banco-zlib-rs"),) if a.zlib_rs else ()):
         build(feat)
-        label = a.etichetta or (Path(a.file).stem if a.file else f"denso-{a.denso}gb")
+        label = a.label or (Path(a.file).stem if a.file else f"denso-{a.dense}gb")
         dest = OUT / f"{label}.{backend}.json"
-        cmd = [str(EXE), "--giri", str(a.giri), "--etichetta", label, "--json", str(dest), "--tmp", a.tmp, "--meta", f"backend={backend}"]
-        cmd += ["--file", a.file] if a.file else ["--denso", str(Path(a.tmp) / "raw_mzml_denso"), "--gb", str(a.denso), "--cancella"]
+        cmd = [str(EXE), "--rounds", str(a.rounds), "--label", label, "--json", str(dest), "--tmp", a.tmp, "--meta", f"backend={backend}"]
+        cmd += ["--file", a.file] if a.file else ["--dense", str(Path(a.tmp) / "raw_mzml_denso"), "--gb", str(a.dense), "--cancella"]
         for k, v in {**meta, "bw_lettura_mb_s": bw.get("lettura"), "bw_scrittura_mb_s": bw.get("scrittura")}.items():
             cmd += ["--meta", f"{k}={v}"]
         if bw.get("lettura"):

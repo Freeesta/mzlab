@@ -14,8 +14,8 @@ R=target/wasm32-unknown-unknown/release
 # one cargo build per module of the part; mzlab-feat-wasm is built several times with different features into the same cargo output, wasm_pack copies it at once
 build_parte() {
   local n riga uscita pacchetto flags tetto opt
-  for n in $(python3 tools/moduli.py --elenco "$1"); do
-    riga=$(python3 tools/moduli.py --riga "$n")
+  for n in $(python3 tools/moduli.py --list "$1"); do
+    riga=$(python3 tools/moduli.py --row "$n")
     IFS='|' read -r uscita pacchetto flags tetto opt <<<"$riga"
     # shellcheck disable=SC2086
     tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p "$pacchetto" $flags </dev/null

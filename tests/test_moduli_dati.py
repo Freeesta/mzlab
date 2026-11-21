@@ -1,4 +1,4 @@
-"""tools/moduli/*.toml: complete, no cap literals in scripts or workflows, cap rule against a base, `--misura` writer."""
+"""tools/moduli/*.toml: complete, no cap literals in scripts or workflows, cap rule against a base, `--measure` writer."""
 import re
 import subprocess
 import sys
@@ -13,7 +13,7 @@ WORKFLOWS = ("sito-rust", "pages", "release", "notte")
 
 def test_data_complete():
     assert moduli.errori(moduli.load_manifests()) == []
-    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--verify"], capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
 
 
@@ -42,7 +42,7 @@ def test_workflow_caps_come_from_the_data():
         testo = (ROOT / wf).read_text(encoding="utf-8")
         for nome, etichetta in (("motore", "engine"), ("librerie", "libraries")):
             assert nome in mod
-            assert len(re.findall(rf'tools/wasm_opt\.sh \S+ "\$\(python3 tools/moduli\.py --tetto {nome}\)" {etichetta} @motore', testo)) == 1, (wf, nome)
+            assert len(re.findall(rf'tools/wasm_opt\.sh \S+ "\$\(python3 tools/moduli\.py --cap {nome}\)" {etichetta} @motore', testo)) == 1, (wf, nome)
         assert not re.search(r"tools/wasm_opt\.sh site/static\S+ \d+ ", testo), wf
 
 
@@ -73,12 +73,12 @@ def test_measure_equal_to_the_cap_fails():
 
 
 def test_base_sconosciuta_fallisce():
-    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "no-such-ref-0000"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--verify", "--base", "no-such-ref-0000"], capture_output=True, text=True)
     assert r.returncode != 0
 
 
 def test_base_head_no_change():
-    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "HEAD"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--verify", "--base", "HEAD"], capture_output=True, text=True)
     assert r.returncode == 0 and "0 caps changed" in r.stdout, r.stdout + r.stderr
 
 

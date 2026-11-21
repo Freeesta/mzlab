@@ -1,7 +1,7 @@
 """Gate of the engine `untargeted` (mzmine-like, `crates/mzlab-feat/src/untargeted/pipeline.rs`): the example `untargeted` is run on the mzML of a series, its table is compared with the
 final table of mzmine 3.9.0 (the same series) and the section `untargeted` of `TP_Mine/data/cancello.json` is written. The data of the laboratory are never in the repository: Federico runs
 
-    python3 tools/valida/cancello_untargeted.py --mzml-dir <folder of the mzML> --mzmine <final CSV of mzmine> [--altezza-min 1e5] [--json TP_Mine/data/cancello.json]
+    python3 tools/valida/cancello_untargeted.py --mzml-dir <folder of the mzML> --mzmine <final CSV of mzmine> [--min-height 1e5] [--json TP_Mine/data/cancello.json]
 
 (the CSV is the export of the batch `tools/bench/corri_mzmine.py`, columns `datafile:<name>:area|height`). The section is
 `{ok, crate_version, recall, precision, spearman, log2, protocol: "ion/height-floor/counts-s", old_protocol: {...}, files: N, rows_mzmine, rows_native, floor}`; `ok` is true only if the new protocol
@@ -78,10 +78,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--mzml-dir", default="")
     ap.add_argument("--mzmine", default="")
-    ap.add_argument("--solo", nargs="*", default=None)
-    ap.add_argument("--altezza-min", type=float, default=1e5)
+    ap.add_argument("--only", nargs="*", default=None)
+    ap.add_argument("--min-height", type=float, default=1e5)
     ap.add_argument("--params", default="", help="recipe JSON of the engine (default: the batch of mzmine)")
-    ap.add_argument("--lavoro", default=str(ROOT / ".verifica" / "cancello_untargeted"))
+    ap.add_argument("--workdir", default=str(ROOT / ".verifica" / "cancello_untargeted"))
     ap.add_argument("--json", default=str(ROOT / "TP_Mine" / "data" / "cancello.json"))
     a = ap.parse_args(argv)
     if not (a.mzml_dir and a.mzmine):
@@ -90,14 +90,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     from bench import corri
     from valida.tabelle import read_mzmine
-    fs = corri.file_mzml(Path(a.mzml_dir), a.solo)
-    work = Path(a.lavoro)
+    fs = corri.file_mzml(Path(a.mzml_dir), a.only)
+    work = Path(a.workdir)
     idx = nativo.indexes(fs, work / "indici")
     nomi = [Path(x).stem for x in idx]
     esegui(idx, work / "uscita", a.params)
     native, crate = tabella(work / "uscita", nomi)
     mm = read_mzmine(a.mzmine, [{"nome": f.stem} for f in fs])      # mzmine names the columns after the mzML; the indexes may carry `min` after the time
-    sez = section(native, mm, list(range(len(nomi))), a.altezza_min, crate)
+    sez = section(native, mm, list(range(len(nomi))), a.min_height, crate)
     scrivi(sez, Path(a.json))
     print(json.dumps(sez, indent=1))
     return 0

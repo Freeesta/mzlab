@@ -1,5 +1,5 @@
 //! `gapfill::fill_file` against the frozen answers of the former Python `fill_gaps` (`tests/golden/feat/riempimento.json`, on the identity series of
-//! `tools/feat_synthetic.py --solo identita`): the same cells are filled, with and without the RT map, and the areas agree within 1e-4 (relative). Filled cells have `CELL_FILLED` and never `CELL_DETECTED`. Skipped without python3 and numpy
+//! `tools/feat_synthetic.py --only identita`): the same cells are filled, with and without the RT map, and the areas agree within 1e-4 (relative). Filled cells have `CELL_FILLED` and never `CELL_DETECTED`. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -99,7 +99,7 @@ fn fill_like_the_golden_file() {
     let ok = Command::new("python3")
         .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", "identita"])
+        .args(["--only", "identita"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

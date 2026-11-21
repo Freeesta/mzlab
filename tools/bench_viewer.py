@@ -102,7 +102,7 @@ def files_of(wd, kind, nscan, npk, nfiles):
 
 def engine_cap():
     """Engine .wasm cap: the `tetto` of tools/moduli/motore.toml, the value the pages.yml step this bench mimics passes (single source of truth)."""
-    return subprocess.run([sys.executable, str(ROOT / "tools" / "moduli.py"), "--tetto", "motore"], capture_output=True, text=True, check=True).stdout.strip()
+    return subprocess.run([sys.executable, str(ROOT / "tools" / "moduli.py"), "--cap", "motore"], capture_output=True, text=True, check=True).stdout.strip()
 
 
 def build_site(out):

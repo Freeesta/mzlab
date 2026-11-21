@@ -38,7 +38,7 @@ man = json.loads((site / "static" / "wasm-feat" / "manifest.json").read_text())
 assert "untargeted" in man and (site / "static" / "wasm-feat" / man["untargeted"]["wasm"]).stat().st_size < 585728, man.get("untargeted")
 data = site / "static" / "dati_pipeline"; data.mkdir(exist_ok=True)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 for f in sorted(ser.glob("*.mzidx")): shutil.copy2(f, data / f.name)
 names = sorted(p.name for p in data.glob("*.mzidx"))
 

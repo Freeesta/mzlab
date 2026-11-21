@@ -1,8 +1,8 @@
 """Builds the offline suspect index `.mzsus` for mzFinder (never committed): the CI of Pages runs this after build_site.py.
 
     python tools/genera_sospetti.py --out sospetti.mzsus                         # downloads the pinned sources (Zenodo)
-    python tools/genera_sospetti.py --fonte DIR --out sospetti.mzsus             # already downloaded copies (a missing file is downloaded into DIR)
-    python tools/genera_sospetti.py --fonte DIR --pacchetto site/static/mzfinder/sospetti    # also the zlib-compressed pieces + catalogo.json
+    python tools/genera_sospetti.py --source DIR --out sospetti.mzsus             # already downloaded copies (a missing file is downloaded into DIR)
+    python tools/genera_sospetti.py --source DIR --package site/static/mzfinder/sospetti    # also the zlib-compressed pieces + catalogo.json
 
 Sources (all CC BY 4.0): NORMAN SusDat, PubChemLite for Exposomics, Transformations in PubChem. Versions and SHA-256 are pinned below: a different file stops
 the build. The index is a list of suspects by monoisotopic mass (never a name for a feature); the format is specified in docs/agenti/suspects.md.
@@ -321,27 +321,27 @@ def package_cas(raw: bytes, out_dir: Path) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--fonte", type=Path, help="folder with the source files (downloaded there if missing); default: a temporary folder")
+    ap.add_argument("--source", type=Path, help="folder with the source files (downloaded there if missing); default: a temporary folder")
     ap.add_argument("--out", type=Path, help="raw .mzsus file")
-    ap.add_argument("--pacchetto", type=Path, help="folder for the compressed pieces and catalogo.json")
+    ap.add_argument("--package", type=Path, help="folder for the compressed pieces and catalogo.json")
     a = ap.parse_args()
-    if not a.out and not a.pacchetto:
-        ap.error("give --out and/or --pacchetto")
+    if not a.out and not a.package:
+        ap.error("give --out and/or --package")
     with tempfile.TemporaryDirectory(prefix="mzlab-sus-") as tmp:
         try:
-            folder = a.fonte or Path(tmp)
+            folder = a.source or Path(tmp)
             raw = genera(SOURCES, folder)
-            cas_raw = cas_sidecar(prepare_sources(SOURCES, folder, False)["susdat"][0]) if a.pacchetto else b""
+            cas_raw = cas_sidecar(prepare_sources(SOURCES, folder, False)["susdat"][0]) if a.package else b""
         except ConnectionError as e:
             print(f"::warning::suspect index not built: the download failed ({e})")
             return
     if a.out:
         a.out.write_bytes(raw)
     print(f".mzsus: {len(raw) / 1e6:.1f} MB raw, {read_suspects(raw).n} rows")
-    if a.pacchetto:
-        cat = pacchetto(raw, a.pacchetto)
+    if a.package:
+        cat = pacchetto(raw, a.package)
         print(f"package: {cat['compressed_size'] / 1e6:.1f} MB compressed in {len(cat['pieces'])} pieces")
-        cas = package_cas(cas_raw, a.pacchetto / "cas")
+        cas = package_cas(cas_raw, a.package / "cas")
         print(f"CAS sidecar: {cas['rows']} rows, {cas['size_compressed'] / 1e6:.1f} MB compressed")
 
 

@@ -1,7 +1,7 @@
 """Copilot against our own chat PRs, for tools/metriche.py (docs/agenti/metrics.md). One row per closed PR from the GitHub API
 (injected `api(path)`, so tests use a fake), stored in `copilot-YYYY-MM.jsonl`; `summary` compares Copilot with our chat PRs of similar
 size (<= 5 files) and prints an honest verdict (needs MIN_PRS Copilot PRs; PRs that touch sensitive paths are judged separately).
-Standard library only. Judgement calls the API cannot answer (was a flagged bug real?) are added by hand with `--aggiungi`."""
+Standard library only. Judgement calls the API cannot answer (was a flagged bug real?) are added by hand with `--add`."""
 from __future__ import annotations
 
 import re

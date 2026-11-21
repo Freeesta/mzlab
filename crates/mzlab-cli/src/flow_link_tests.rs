@@ -1,4 +1,4 @@
-//! `tp.link@2` in a plan over the synthetic identity series (invented molecules, `tools/feat_synthetic.py --solo identita`: blank, dark, t0 and three
+//! `tp.link@2` in a plan over the synthetic identity series (invented molecules, `tools/feat_synthetic.py --only identita`: blank, dark, t0 and three
 //! treated files with a parent and its products): the base chain makes the table, `tp.link` gives the `.mzfeat` with `tp/1` and `interp/1`. The same
 //! files put through the calls of the page by hand (hypotheses searched, proofs, interpretation) give the same bytes; a second run gives them again.
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
@@ -37,7 +37,7 @@ pub(crate) fn series(tag: &str) -> Option<PathBuf> {
     let ok = Command::new("python3")
         .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", "identita"])
+        .args(["--only", "identita"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

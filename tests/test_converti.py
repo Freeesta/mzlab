@@ -14,7 +14,7 @@ def test_dry_run_prints_the_commands(tmp_path):
     assert "-f 2" in t and "-z" in t and "a.raw" in t
     assert "docker run" in t and "b.wiff" in t and "c.d" in t and converti.PWIZ in t and "peakPicking vendor msLevel=1-" in t
     assert len(r["da_fare"]) == 3 and not r["errori"]
-    assert not (tmp_path / "mzML").exists()                      # --prova writes nothing
+    assert not (tmp_path / "mzML").exists()                      # --trial writes nothing
 
 
 def test_converts_with_a_fake_program(tmp_path, monkeypatch):

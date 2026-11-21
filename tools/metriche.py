@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Metrics of every main commit, to see whether the project improves over time (docs/agenti/metrics.md). Standard library only.
 
-    python3 tools/metriche.py --registra --sito SITE --dati DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
-    python3 tools/metriche.py --aggiungi nome=valore ... --dati DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
-    python3 tools/metriche.py --bench FILE.json ...                                    # synthetic bench numbers {name: number} with --registra/--aggiungi
-    python3 tools/metriche.py --copilot [--giorni N] --dati DIR                          # Copilot and chat PR rows (tools/metrics_copilot.py)
-    python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metrics_trend.py)
+    python3 tools/metriche.py --record --site SITE --data-dir DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
+    python3 tools/metriche.py --add nome=valore ... --data-dir DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
+    python3 tools/metriche.py --bench FILE.json ...                                    # synthetic bench numbers {name: number} with --record/--add
+    python3 tools/metriche.py --copilot [--days N] --data-dir DIR                          # Copilot and chat PR rows (tools/metrics_copilot.py)
+    python3 tools/metriche.py --report [--data-dir DIR] [--html FILE]                    # trend table and HTML page (tools/metrics_trend.py)
 
 A line is `{v, sha, ts, part, ...}`; a commit may have several lines (parts `site`, `ci`, `manual`) and readers merge them by sha
 (`read_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metrics_trend.py."""
@@ -88,7 +88,7 @@ def load_bench(path: str | None, extra: list[str]) -> dict:
     for par in extra:
         k, _, v = par.partition("=")
         if not k or not _:
-            raise SystemExit(f"--aggiungi wants name=value, got {par!r}")
+            raise SystemExit(f"--add wants name=value, got {par!r}")
         out[k] = float(v)
     return out
 
@@ -156,39 +156,39 @@ def read_commit(data: str) -> list[dict]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--registra", action="store_true", help="measure the commit and append the lines")
-    ap.add_argument("--aggiungi", nargs="+", metavar="NAME=VALUE", help="hand-measured numbers (e.g. bench_map on hrc) for the commit")
+    ap.add_argument("--record", action="store_true", help="measure the commit and append the lines")
+    ap.add_argument("--add", nargs="+", metavar="NAME=VALUE", help="hand-measured numbers (e.g. bench_map on hrc) for the commit")
     ap.add_argument("--bench", metavar="FILE", help="JSON {name: number} of synthetic bench results")
-    ap.add_argument("--sito", help="built site directory (static/ with the .wasm files)")
+    ap.add_argument("--site", help="built site directory (static/ with the .wasm files)")
     ap.add_argument("--ci", action="store_true", help="also read the CI facts of the commit from the GitHub API")
-    ap.add_argument("--copilot", action="store_true", help="record the PRs closed in the last --giorni days (Copilot and our chat PRs) from the GitHub API")
-    ap.add_argument("--giorni", type=int, default=14, help="with --copilot: how far back to look")
-    ap.add_argument("--rapporto", action="store_true", help="print the trend table (better/worse than 7 and 30 days ago)")
-    ap.add_argument("--html", metavar="FILE", help="with --rapporto: also write a self-contained HTML page with sparklines")
+    ap.add_argument("--copilot", action="store_true", help="record the PRs closed in the last --days days (Copilot and our chat PRs) from the GitHub API")
+    ap.add_argument("--days", type=int, default=14, help="with --copilot: how far back to look")
+    ap.add_argument("--report", action="store_true", help="print the trend table (better/worse than 7 and 30 days ago)")
+    ap.add_argument("--html", metavar="FILE", help="with --report: also write a self-contained HTML page with sparklines")
     ap.add_argument("--sha", help="commit (default HEAD)")
-    ap.add_argument("--dati", default="metriche", help="directory with the monthly files (the worktree of stat-ci)")
+    ap.add_argument("--data-dir", default="metriche", help="directory with the monthly files (the worktree of stat-ci)")
     a = ap.parse_args(argv)
-    if a.rapporto:
+    if a.report:
         import metrics_trend as t
-        rows = t.analyse(read_commit(a.dati))
+        rows = t.analyse(read_commit(a.data_dir))
         print(t.text_report(rows))
         import metrics_copilot as mcp
-        print("\n" + mcp.summary(copilot_rows(a.dati)))
+        print("\n" + mcp.summary(copilot_rows(a.data_dir)))
         if a.html:
             Path(a.html).write_text(t.html_report(rows, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")), encoding="utf-8")
         return 0
     if a.copilot:
         from ci_metrics import api_get
-        print(f"{record_copilot(a.dati, api_get, a.giorni)} PR row(s) appended")
+        print(f"{record_copilot(a.data_dir, api_get, a.days)} PR row(s) appended")
         return 0
     sha = git("rev-parse", a.sha or "HEAD")
     # commit time in UTC, so lines sort correctly whatever the committer's offset
     ts = datetime.fromisoformat(git("show", "-s", "--format=%cI", sha)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     righe = []
-    if a.registra:
+    if a.record:
         sections = {"startup": measure_startup(), "tests": count_tests()}
-        if a.sito:
-            sections["wasm"] = measure_wasm(Path(a.sito))
+        if a.site:
+            sections["wasm"] = measure_wasm(Path(a.site))
         if a.bench:
             sections["bench"] = load_bench(a.bench, [])
         righe.append(riga("site", sha, ts, **sections))
@@ -196,11 +196,11 @@ def main(argv: list[str] | None = None) -> int:
             import metrics_ci
             from ci_metrics import api_get
             righe.append(riga("ci", sha, ts, ci=metrics_ci.facts(sha, git("show", "-s", "--format=%s", sha), api_get)))
-    if a.aggiungi:
-        righe.append(riga("manual", sha, ts, manual=load_bench(None, a.aggiungi)))
+    if a.add:
+        righe.append(riga("manual", sha, ts, manual=load_bench(None, a.add)))
     if not righe:
-        ap.error("nothing to do: use --registra or --aggiungi")
-    print(f"{enqueue(righe, a.dati)} line(s) appended for {sha[:10]}")
+        ap.error("nothing to do: use --record or --add")
+    print(f"{enqueue(righe, a.data_dir)} line(s) appended for {sha[:10]}")
     return 0
 
 

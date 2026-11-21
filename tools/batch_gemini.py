@@ -2,11 +2,11 @@
 """Joins several project files into ONE document to hand to an assistant that takes a single upload.
 
     python3 tools/batch_gemini.py LISTA.txt -o lotto.txt            # every file of the list
-    python3 tools/batch_gemini.py docs/agenti/map-loading.md --lotto 2 -o lotto2.txt
-    python3 tools/batch_gemini.py LISTA.txt --max-kb 200 --controlla  # sizes only, writes nothing
+    python3 tools/batch_gemini.py docs/agenti/map-loading.md --batch 2 -o lotto2.txt
+    python3 tools/batch_gemini.py LISTA.txt --max-kb 200 --verify  # sizes only, writes nothing
 
 The list has one path per line (relative to the repository root); empty lines and lines starting with `#` are ignored.
-A line `@lotto N` starts the batch N: with `--lotto N` only the paths after it (up to the next `@lotto`) are joined, so a Markdown file
+A line `@lotto N` starts the batch N: with `--batch N` only the paths after it (up to the next `@lotto`) are joined, so a Markdown file
 that holds the lists (docs/agenti/map-loading.md) can be passed as it is: only lines that are paths of existing files, or `@lotto`, count.
 Each file is written between `=== FILE: path (n of N) — ... ===` and `=== END OF FILE ===`. A warning on stderr (exit code 0, or 1 with `--strict`)
 says when the document is over the limit (`--max-kb`, 200 by default); a listed path that does not exist is an error. Standard library only.
@@ -65,12 +65,12 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("elenco", help="file with the list of paths (or a Markdown file with `@lotto N` sections)")
     ap.add_argument("-o", "--out", help="output file (default: stdout)")
-    ap.add_argument("--lotto", type=int, help="only the batch N of the list")
+    ap.add_argument("--batch", type=int, help="only the batch N of the list")
     ap.add_argument("--max-kb", type=int, default=MAX_KB, help=f"warn above this size (default {MAX_KB})")
     ap.add_argument("--strict", action="store_true", help="exit code 1 when over the limit")
-    ap.add_argument("--controlla", action="store_true", help="only print the sizes, write nothing")
+    ap.add_argument("--verify", action="store_true", help="only print the sizes, write nothing")
     a = ap.parse_args(argv)
-    paths = read_list(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
+    paths = read_list(Path(a.elenco).read_text(encoding="utf-8"), a.batch)
     if not paths:
         print("no files in the list", file=sys.stderr)
         return 1
@@ -80,14 +80,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"missing file: {e}", file=sys.stderr)
         return 1
     kb = n / 1024
-    if a.controlla:
+    if a.verify:
         for p in paths:
             print(f"{(ROOT / p).stat().st_size / 1024:7.1f} KB  {p}")
     print(f"{len(paths)} files, {kb:.1f} KB", file=sys.stderr)
     over = kb > a.max_kb
     if over:
         print(f"WARNING: {kb:.1f} KB is over the limit of {a.max_kb} KB", file=sys.stderr)
-    if not a.controlla:
+    if not a.verify:
         if a.out:
             Path(a.out).write_text(doc, encoding="utf-8")
         else:

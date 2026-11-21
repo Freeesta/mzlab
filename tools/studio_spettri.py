@@ -4,7 +4,7 @@ set is `base` (the baselines), `null` (arm A: the decoy kinds and the +1-correct
 coincidence p-value and information weights, `MISURA studio_idf_<scenario>`), `subf` (arm C: sub-formula filter and NNLS, `studio_subf_*`) or
 `shift` (arm D: analogues with two modifications, `studio_shift_*`).
 
-    python3 tools/studio_spettri.py [--bracci base|null|idf|subf|shift] [--scenari e0,e1,...] [--n-lib 20000] [--n-query 2000] [--semi 1,2,3] [--json OUT]
+    python3 tools/studio_spettri.py [--arms base|null|idf|subf|shift] [--scenarios e0,e1,...] [--n-lib 20000] [--n-query 2000] [--seeds 1,2,3] [--json OUT]
 """
 import argparse
 import json
@@ -48,23 +48,23 @@ def riga(nome, arm, righe):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--bracci", default="base", choices=["base", "null", "idf", "subf", "shift"])
-    p.add_argument("--scenari", default=None, help="default: all for base, e6,e1,e3 for null, e1,e2,e0 for idf, e3,e0 for subf, e5,e0 for shift")
+    p.add_argument("--arms", default="base", choices=["base", "null", "idf", "subf", "shift"])
+    p.add_argument("--scenarios", default=None, help="default: all for base, e6,e1,e3 for null, e1,e2,e0 for idf, e3,e0 for subf, e5,e0 for shift")
     p.add_argument("--n-lib", type=int, default=20000)
     p.add_argument("--n-query", type=int, default=2000)
-    p.add_argument("--semi", default="1,2,3")
+    p.add_argument("--seeds", default="1,2,3")
     p.add_argument("--json", help="also writes every JSON line of the example to this file")
     a = p.parse_args()
     tutte = []
-    scenari = a.scenari or {"base": ",".join(SCENARI), "null": "e6,e1,e3", "idf": "e1,e2,e0", "subf": "e3,e0", "shift": "e5,e0"}[a.bracci]
+    scenari = a.scenarios or {"base": ",".join(SCENARI), "null": "e6,e1,e3", "idf": "e1,e2,e0", "subf": "e3,e0", "shift": "e5,e0"}[a.arms]
     for sc in scenari.split(","):
         per_arm = {}
-        for seme in [int(s) for s in a.semi.split(",")]:
-            for r in esegui(sc, a.n_lib, a.n_query, seme, a.bracci):
+        for seme in [int(s) for s in a.seeds.split(",")]:
+            for r in esegui(sc, a.n_lib, a.n_query, seme, a.arms):
                 per_arm.setdefault(r["arm"], []).append(r)
                 tutte.append(r)
         for arm, righe in per_arm.items():
-            print(riga(sc if a.bracci == "base" else f"{a.bracci}_{sc}", arm, righe), flush=True)
+            print(riga(sc if a.arms == "base" else f"{a.arms}_{sc}", arm, righe), flush=True)
     if a.json:
         Path(a.json).write_text("".join(json.dumps(r) + "\n" for r in tutte))
     return 0

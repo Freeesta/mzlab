@@ -64,11 +64,11 @@ jobs:
           args=""
           if [ -d wasm ]; then
             command -v brotli >/dev/null || sudo apt-get install -y -qq brotli
-            args="--sito wasm"
+            args="--site wasm"
           fi
           for i in 1 2 3 4 5; do
-            python3 tools/metriche.py --registra --ci $args --sha "$SHA" --dati dati
-            python3 tools/metriche.py --copilot --dati dati || true
+            python3 tools/metriche.py --record --ci $args --sha "$SHA" --data-dir dati
+            python3 tools/metriche.py --copilot --data-dir dati || true
             cd dati
             git add -A
             git diff --cached --quiet && exit 0
@@ -82,7 +82,7 @@ jobs:
       - name: Trend report
         continue-on-error: true
         run: |
-          { echo '```'; python3 tools/metriche.py --rapporto --dati dati --html metriche.html; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          { echo '```'; python3 tools/metriche.py --report --data-dir dati --html metriche.html; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Trend report (artifact)
         if: ${{ !cancelled() && hashFiles('metriche.html') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

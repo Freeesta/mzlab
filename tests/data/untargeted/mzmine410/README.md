@@ -1,9 +1,9 @@
 # Gold data of mzmine 4.10.90 per stage (synthetic files)
 
 Output of mzmine 4.10.90 on the four synthetic mzML files of the 3.9.0 set (`tests/data/untargeted/mzmine39/`, same numbers and same hashes), one CSV per stage, same formats. Reference of the parity tests `crates/mzlab-feat/tests/untargeted_*_410.rs`.
-The mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DIR` writes them again, byte for byte.
+The mzML files are not in the repository: `tools/bench/oro_mzmine.py --generate DIR` writes them again, byte for byte.
 
-- **Written on**: 2026-10-19 by `python3 tools/bench/oro_mzmine410.py --oro` (it checks first that every parameter name of the batch exists in the parameter classes of `mzmine-community-4.10.90.jar`: mzmine ignores the others without a word).
+- **Written on**: 2026-10-19 by `python3 tools/bench/oro_mzmine410.py --gold` (it checks first that every parameter name of the batch exists in the parameter classes of `mzmine-community-4.10.90.jar`: mzmine ignores the others without a word).
 - **mzmine**: 4.10.90, `https://github.com/mzmine/mzmine/releases/download/v4.10.90/mzmine_Linux_portable-4.10.90.zip`, sha256 `15b616c9ce60edaa8c7b8ae8be10c44d49a784542efe68838bfab721b6e8c7ca`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`, branch master checked).
 - **JDK**: the one inside the package (`lib/runtime`): openjdk version "26.0.1" 2026-04-21 / OpenJDK Runtime Environment Temurin-26.0.1+8 (build 26.0.1+8).
 - **Platform**: generated on macOS arm64 with mzmine.app 4.10.90 and the Temurin JDK of the app, NOT by the CI (mzmine 4.x in batch needs a logged-in user). `adap_asse.csv` and `adap_scansioni.csv` come from `python3 tools/bench/oro_scansioni.py --dest tests/data/untargeted/mzmine410` (points per scan read from the mzML, no mzmine involved). In the batch the mass detector is chosen with `selected_item` (4.10 ignores `selected` and takes the AUTO detector).

@@ -1,5 +1,5 @@
 """patRoon (R, GPL-3) run as an external program inside a Docker image pinned by digest (`versioni.PATROON`): `corri_patroon.R` on the mzML (the folder mounted
-read-only) -> CSV -> `bench/1`. Optional `--analisi` (analysis,group,blank) and `--sospetti` (name,mz,rt) for blanks and suspect screening. Without Docker it SKIPS
+read-only) -> CSV -> `bench/1`. Optional `--analysis` (analysis,group,blank) and `--suspects` (name,mz,rt) for blanks and suspect screening. Without Docker it SKIPS
 (exit 0, clear message). See `corri.py`. Config = `parametri/patroon/<config>.json` (`openms`, `xcms`)."""
 from __future__ import annotations
 
@@ -33,8 +33,8 @@ def comando(img: str, mzml_dir: Path, nat: Path, config: Path, analysis: Path | 
 
 def main() -> None:
     def extra(ap):
-        ap.add_argument("--analisi", help="CSV analysis,group,blank (blank groups are subtracted, x5)")
-        ap.add_argument("--sospetti", help="CSV name,mz,rt[,SMILES]: the same list given to mzLab screen.suspects")
+        ap.add_argument("--analysis", help="CSV analysis,group,blank (blank groups are subtracted, x5)")
+        ap.add_argument("--suspects", help="CSV name,mz,rt[,SMILES]: the same list given to mzLab screen.suspects")
         ap.add_argument("--pull", action="store_true", help="pull the pinned image first")
     a = corri.argomenti(__doc__, extra)
     if not shutil.which("docker"):
@@ -49,7 +49,7 @@ def main() -> None:
         (nat / n).unlink(missing_ok=True)
     if a.pull:
         subprocess.run(["docker", "pull", img], check=True)
-    an, so = (Path(x) if x else None for x in (a.analisi, a.sospetti))
+    an, so = (Path(x) if x else None for x in (a.analysis, a.suspects))
     r = subprocess.run(comando(img, Path(a.mzml_dir), nat, corri.PARAMETERS / "patroon" / f"{a.config}.json", an, so, [f.stem for f in fs]), capture_output=True, text=True)
     (nat / "patroon.log").write_text(r.stdout + r.stderr, encoding="utf-8")
     fg = nat / "featureGroups.csv"

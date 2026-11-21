@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic HR series with an identity truth: ion families, in-source fragments, isomers, chimeric MS2, kinetics, decoys (every molecule and number is invented).
 
-    python3 tools/valida/sintetici_identita.py --seme N --profilo piccolo|completo --out DIR
+    python3 tools/valida/sintetici_identita.py --seed N --profile piccolo|completo --out DIR
 
 Writes in DIR one Orbitrap-like DDA mzML per sample (SIN_blank, SIN_dark, SIN_t0, SIN_tNNmin; tools/valida/sintetici_mzml.py) and the truth, `verita.csv` and
 `verita.json`. The same seed gives the same bytes. The JSON is the format of the real truth files (`parent`, `tps`: read as they are by tools/validate_feat.py)
@@ -438,12 +438,12 @@ def genera(seme: int, profilo: str, out) -> Path:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--seme", type=int, default=7)
-    ap.add_argument("--profilo", choices=sorted(PROFILES), default="piccolo")
-    ap.add_argument("--esteso", action="store_true", help="V1X: second and third generations, in-source fragments of the products, halogens, close isomers (+ verita_tp.json)")
+    ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--profile", choices=sorted(PROFILES), default="piccolo")
+    ap.add_argument("--extended", action="store_true", help="V1X: second and third generations, in-source fragments of the products, halogens, close isomers (+ verita_tp.json)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
-    print(genera(a.seme, {"completo": "V1X", "piccolo": "V1X-piccolo"}.get(a.profilo, a.profilo) if a.esteso else a.profilo, a.out))
+    print(genera(a.seed, {"completo": "V1X", "piccolo": "V1X-piccolo"}.get(a.profile, a.profile) if a.extended else a.profile, a.out))
     return 0
 
 

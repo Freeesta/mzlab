@@ -2,7 +2,7 @@
 """Writes crates/mzlab-feat/data/livelli-1.json from mzlab/web/livelli-1.js (the only source of the thresholds and of the points of the proofs).
 
 The JavaScript data file is evaluated by node (it is plain JSON inside an assignment); the output is the same dictionary, written in a fixed way.
-`--controlla` writes nothing: it fails (exit code 1) when the JSON committed in the crate is not what the data file gives now.
+`--verify` writes nothing: it fails (exit code 1) when the JSON committed in the crate is not what the data file gives now.
 """
 import json
 import subprocess
@@ -22,7 +22,7 @@ def generated() -> str:
 
 def main(argv: list[str]) -> int:
     text = generated()
-    if "--controlla" in argv:
+    if "--verify" in argv:
         if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != text:
             print(f"{TARGET.relative_to(ROOT)} does not match {SOURCE.relative_to(ROOT)}: run python3 tools/export_levels.py", file=sys.stderr)
             return 1

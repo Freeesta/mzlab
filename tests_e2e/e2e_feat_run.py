@@ -23,7 +23,7 @@ if real:
     for p in sorted(Path(real).glob("*.mzidx")): (data / p.name).symlink_to(p.resolve())
     fm, mz, rt = (os.environ.get("MZLAB_FEAT_PARENT") or "::").split(":")
 else:
-    sh(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(data))
+    sh(sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(data))
     fm, mz, rt = "C21H32N2O2", "345.253655", "1.0"
 idx = sorted(p.name for p in data.glob("*.mzidx"))
 shutil.copy(ROOT / "TP_Mine/data/regole_tp_3.json", data / "regole_tp_3.json")

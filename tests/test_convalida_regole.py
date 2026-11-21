@@ -19,7 +19,7 @@ def sommario(tmp_path_factory):
     out = tmp_path_factory.mktemp("convalida") / "somma.json"
     argv = cli_argv()      # prebuilt binary if installed, else the cargo fallback (the script builds)
     binary = ["--cli", argv[0]] if argv[0] != "cargo" else []
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--registri", str(REGISTRIES), *binary, "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--logs", str(REGISTRIES), *binary, "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads(out.read_text())
 

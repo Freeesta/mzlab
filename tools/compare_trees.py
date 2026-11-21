@@ -4,7 +4,7 @@
 Used to prove that a change of pages.yml leaves the published site byte for byte the same. The commit named in
 static/build.json of each tree is replaced by a placeholder in every file that carries it (build.json, version.js),
 so two builds of different commits compare equal when only the commit differs. Exit 0 = identical, 1 = differences.
-Standard library only: python3 tools/compare_trees.py A B [--lista]"""
+Standard library only: python3 tools/compare_trees.py A B [--list]"""
 import argparse
 import hashlib
 import json
@@ -60,10 +60,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("a")
     ap.add_argument("b")
-    ap.add_argument("--lista", action="store_true", help="print path and SHA-256 of every file of the first tree")
+    ap.add_argument("--list", action="store_true", help="print path and SHA-256 of every file of the first tree")
     args = ap.parse_args()
     a, b = digests(read_tree(Path(args.a))), digests(read_tree(Path(args.b)))
-    if args.lista:
+    if args.list:
         for k in sorted(a):
             print(f"{a[k]}  {k}")
     only_a, only_b, differ = compare(a, b)

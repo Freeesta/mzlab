@@ -1,6 +1,6 @@
 """Ground truth `verita/1` of a Thermo `.raw` from ThermoRawFileParser: its metadata JSON (`-m 0`) and its mzML (`-f 2`), run on the Mac or on Windows.
 A tool of the test bench (docs/studi/ROSINA.md F.1). The JSON is flattened to `name -> value` without assuming its layout, so a new TRFP version does not break it:
-    python3 tools/rosina/verita_trfp.py FILE.mzML FILE-metadata.json [--trfp-versione V] [--nativo FILE.raw] > FILE.verita.json"""
+    python3 tools/rosina/verita_trfp.py FILE.mzML FILE-metadata.json [--trfp-version V] [--native FILE.raw] > FILE.verita.json"""
 import argparse
 import json
 import sys
@@ -45,10 +45,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("mzml", type=Path)
     ap.add_argument("metadati", type=Path, help="the JSON of `-m 0`")
-    ap.add_argument("--trfp-versione", default="?")
-    ap.add_argument("--nativo", type=Path)
+    ap.add_argument("--trfp-version", default="?")
+    ap.add_argument("--native", type=Path)
     a = ap.parse_args(argv)
-    json.dump(da_trfp(a.mzml, a.metadati, a.trfp_versione, a.nativo), sys.stdout, indent=1, ensure_ascii=False)
+    json.dump(da_trfp(a.mzml, a.metadati, a.trfp_version, a.native), sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")
     return 0
 

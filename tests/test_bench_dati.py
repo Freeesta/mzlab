@@ -48,7 +48,7 @@ def test_entries_and_filters(tmp_path):
 
 def test_main_delete(tmp_path):
     (tmp_path / "x.raw").write_bytes(b"1")
-    assert D.main(["m.json", str(tmp_path), "--elimina", "x.raw", "nonexistent.raw"]) == 0 and not (tmp_path / "x.raw").exists()
+    assert D.main(["m.json", str(tmp_path), "--delete", "x.raw", "nonexistent.raw"]) == 0 and not (tmp_path / "x.raw").exists()
 
 
 def _parser(tmp_path, body: str):
@@ -76,7 +76,7 @@ def test_conversion_record(tmp_path):
     (raw / "S1.raw").write_bytes(b"raw1")
     (raw / "S2.raw").write_bytes(b"raw2")
     out = tmp_path / "mz"
-    assert C.main([str(raw), str(out), "--parser", str(fake), "--elimina-raw"]) == 0
+    assert C.main([str(raw), str(out), "--parser", str(fake), "--delete-raw"]) == 0
     rec = json.loads((out / "converti.json").read_text())
     assert rec["convertitore"]["versione"] == "9.9.9" and sorted(rec["file"]) == ["S1.raw", "S2.raw"]
     assert rec["file"]["S1.raw"]["raw_sha256"] == hashlib.sha256(b"raw1").hexdigest()

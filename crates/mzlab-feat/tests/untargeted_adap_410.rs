@@ -1,5 +1,5 @@
 //! ADAP chromatogram builder (`untargeted::adap`) against mzmine 4.10: parity per chromatogram on the four synthetic files, hand-made cases, and the
-//! independence from the slabs. The mzML files are written again by `tools/bench/oro_mzmine.py --genera` (skipped without python3 and numpy).
+//! independence from the slabs. The mzML files are written again by `tools/bench/oro_mzmine.py --generate` (skipped without python3 and numpy).
 //! The reference CSV keeps 5 decimals of m/z and 4 significant digits of height, so those are compared at the precision they have.
 #![cfg(feature = "untargeted")]
 
@@ -23,7 +23,7 @@ fn generate() -> Option<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .output()
         .map(|o| o.status.success())

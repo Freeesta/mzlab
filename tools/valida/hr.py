@@ -62,7 +62,7 @@ def agreement_d5(native: Table, csv: str | None, columns: list[int]) -> tuple[li
 
 
 def find_hr(folder: str | None) -> Path | None:
-    """The folder of the DDA files: `--robustezza`, else the first of `dati/HRMS` and `dati/HRMS/Esempio raw e mzML` of the data repository that holds the files; None when there is none."""
+    """The folder of the DDA files: `--robustness`, else the first of `dati/HRMS` and `dati/HRMS/Esempio raw e mzML` of the data repository that holds the files; None when there is none."""
     if folder:
         return Path(folder) if Path(folder).is_dir() else None
     root = percorso("dati/HRMS")
@@ -110,8 +110,8 @@ def misura(folder_dda: str | None, series: str | None, csv: str | None, work: Pa
     base = find_hr(folder_dda)
     misure, dr = robustness(base, work / "robustezza")
     cz, dz = d5(series, csv, work / "d5")
-    det = {"robustezza": dr, "mzmine": dz, "dati_dda": "read" if misure else "skipped: no file (MZLAB_DATI or --robustezza)",
-           "csv": "given" if csv and series else "skipped: needs --serie and --mzmine"}
+    det = {"robustezza": dr, "mzmine": dz, "dati_dda": "read" if misure else "skipped: no file (MZLAB_DATI or --robustness)",
+           "csv": "given" if csv and series else "skipped: needs --series and --mzmine"}
     return document(criteria_robustness(misure) + cz, data, cancello.crate_version()), det
 
 

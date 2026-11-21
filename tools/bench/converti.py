@@ -4,7 +4,7 @@ All tools receive the SAME mzML (peak picking by the vendor library, indexed mzM
 (`converti.json` in the output directory) that the private repository keeps next to the manifest. The converter is found with `--parser`, the environment
 variable `THERMORAWFILEPARSER` or `ThermoRawFileParser` on PATH; its version is read from `--version` and written in the record.
 
-    python3 tools/bench/converti.py RAW_DIR MZML_DIR [--parser PATH] [--solo SA1.raw ...] [--elimina-raw]
+    python3 tools/bench/converti.py RAW_DIR MZML_DIR [--parser PATH] [--only SA1.raw ...] [--delete-raw]
 """
 from __future__ import annotations
 
@@ -59,11 +59,11 @@ def main(argv=None) -> int:
     ap.add_argument("raw_dir")
     ap.add_argument("mzml_dir")
     ap.add_argument("--parser")
-    ap.add_argument("--solo", nargs="*", help="only these .raw names")
-    ap.add_argument("--elimina-raw", action="store_true", help="delete each .raw after its mzML is written (disk)")
+    ap.add_argument("--only", nargs="*", help="only these .raw names")
+    ap.add_argument("--delete-raw", action="store_true", help="delete each .raw after its mzML is written (disk)")
     a = ap.parse_args(argv)
     parser = find_parser(a.parser)
-    raws = sorted(p for p in Path(a.raw_dir).glob("*.raw") if not a.solo or p.name in a.solo)
+    raws = sorted(p for p in Path(a.raw_dir).glob("*.raw") if not a.only or p.name in a.only)
     if not raws:
         raise SystemExit("no .raw files to convert")
     out = Path(a.mzml_dir)
@@ -78,7 +78,7 @@ def main(argv=None) -> int:
         rec["file"][raw.name] = {"raw_sha256": sha_raw, "raw_byte": raw.stat().st_size, "mzml": mz.name, "mzml_sha256": sha256_file(mz), "mzml_byte": mz.stat().st_size}
         rec_path.write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
         print(f"  ok {mz.stat().st_size} B", flush=True)
-        if a.elimina_raw:
+        if a.delete_raw:
             raw.unlink()
     return 0
 

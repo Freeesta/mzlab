@@ -43,7 +43,7 @@ else:                                                      # fresh sources of mz
     d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 data = site / "static" / "dati_pipeline"; data.mkdir(exist_ok=True)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 for f in sorted(ser.glob("*.mzidx")): shutil.copy2(f, data / f.name)
 real = os.environ.get("MZLAB_PIPE_MZIDX")
 if real: shutil.copy2(real, data / "real.mzidx")

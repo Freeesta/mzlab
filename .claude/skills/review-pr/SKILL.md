@@ -5,7 +5,7 @@ description: Review checklist for an mzLab PR from the CLAUDE.md rules, wrapping
 # Reviewing an mzLab PR
 
 1. Run the built-in `code-review` skill on the PR or diff for correctness bugs.
-2. Run `python3 tools/controlla.py` (limits) and `python3 tools/controlla_i18n.py`; also `python3 tools/check_english.py --elenco` for Italian left in touched files.
+2. Run `python3 tools/controlla.py` (limits) and `python3 tools/controlla_i18n.py`; also `python3 tools/check_english.py --list` for Italian left in touched files.
 3. Check against `CLAUDE.md`:
    - **Parity**: every function in the site (`.wasm` + OPFS) and in the app (native + CLI) with a byte-for-byte parity test; a missing half needs a real technical limit stated in the PR body.
    - **CLI for agents**: a CLI route exists, `--json` has stable keys, distinct exit codes, data on stdout and progress/errors on stderr, `--dry-run` or check where sensible, listed in the agent catalogs; the step has its row in `docs/agenti/cli.md`.

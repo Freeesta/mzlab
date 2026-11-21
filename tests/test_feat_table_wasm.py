@@ -29,7 +29,7 @@ def built(tmp_path_factory):
     pytest.importorskip("numpy")
     root = tmp_path_factory.mktemp("table")
     ser = root / "ser"
-    run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
+    run("python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser))
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
     build("-p", "mzlab-feat-wasm", "--example", "native", runner=run)
     build("-p", "mzlab-feat-table-wasm", "--example", "table", runner=run)

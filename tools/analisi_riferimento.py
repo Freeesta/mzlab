@@ -1,8 +1,8 @@
 """Independent reference of `analysis/1` (Draw analysis card): average mass, mass % of every element and the isotope pattern grouped by nominal mass.
 
-    python3 tools/analisi_riferimento.py [--scrivi]
+    python3 tools/analisi_riferimento.py [--write]
 
-Own tables (AME2020 masses, IUPAC abundances), exact convolution without pruning, `math.fsum` sums (the same bytes on every Python); writes tests/dati/anal_golden.json with --scrivi, otherwise
+Own tables (AME2020 masses, IUPAC abundances), exact convolution without pruning, `math.fsum` sums (the same bytes on every Python); writes tests/dati/anal_golden.json with --write, otherwise
 checks that the file holds what this script computes. The Rust test crates/mzlab-feat/tests/analysis.rs compares the engine with the file.
 """
 from __future__ import annotations
@@ -112,11 +112,11 @@ def build() -> list[dict]:
 def main() -> int:
     cases = build()
     text = json.dumps(cases, indent=1) + "\n"
-    if "--scrivi" in sys.argv:
+    if "--write" in sys.argv:
         GOLDEN.write_text(text, encoding="utf-8")
         return 0
     if GOLDEN.read_text(encoding="utf-8") != text:
-        print(f"{GOLDEN} differs from the reference: run with --scrivi")
+        print(f"{GOLDEN} differs from the reference: run with --write")
         return 1
     return 0
 

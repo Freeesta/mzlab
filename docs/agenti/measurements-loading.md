@@ -29,9 +29,9 @@ Tool: `tests_e2e/misura_avvio_sw.py` (measures, never asserts; reuses the mirror
 Site = the live site copied into a local mirror with GitHub-Pages headers; the latency is a delay the mirror adds to **every** answer (HTTP/1.1, 6 connections per host, so a queue is worse than on the HTTP/2 Pages; a file the HTTP cache keeps pays nothing). CDP latency is not used because it does not reach the service worker's own fetches (the manifest was answered in 34 ms at RTT 150). CPU ×4 = CDP throttling of the page, workers and service worker. Site-only: the desktop app has no service worker.
 
 ```
-python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenari warm,warm-restarted,cold,trace-warm,trace-restarted --out run.json   # DIR is filled from --url on the first run
-python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --cpu 1 --scenari trace-warm,trace-restarted --trace-reloads 6                                                 # 6th reload
-python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --runs 5 --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold                                  # live rows
+python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenarios warm,warm-restarted,cold,trace-warm,trace-restarted --out run.json   # DIR is filled from --url on the first run
+python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --cpu 1 --scenarios trace-warm,trace-restarted --trace-reloads 6                                                 # 6th reload
+python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --runs 5 --rtt 0 --cpu 1 --scenarios warm,warm-restarted,cold                                  # live rows
 ```
 
 Scenarios. `warm`: first visit, wait for `.fill-done` in the app cache, 6 s for the idle work of the page (prefetch at +3 s, mzFinder package; with 1.5 s the page is still busy and `warm` looks 200 ms slower than it is), then reload, SW running. `warm-restarted`: the same, but

@@ -66,7 +66,7 @@ def combine(repo: Path, sha: str) -> tuple[bool, str]:
         if m.returncode:
             files = git(wt, "diff", "--name-only", "--diff-filter=U", check=False).stdout.split()
             return False, "conflict: " + ", ".join(files[:5])
-        for cmd in (["tools/controlla.py"], ["tools/indice.py", "--controlla"]):
+        for cmd in (["tools/controlla.py"], ["tools/indice.py", "--verify"]):
             p = subprocess.run([sys.executable, *cmd], cwd=wt, capture_output=True, text=True)
             if p.returncode:
                 return False, f"{cmd[0]} failed: " + (p.stdout + p.stderr).strip().splitlines()[-1][:200]

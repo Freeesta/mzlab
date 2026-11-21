@@ -3,7 +3,7 @@
 Measures how much mzLab and MZmine lose on broad chromatographic peaks (FWHM 60-240 s) compared with narrow peaks. Tools in `tools/` only: no product changes. The metrics and the `bench/1` format are in `mzfinder-benchmark.md`; here the batch, the configurations and how to read the table.
 
 ## Synthetic batch
-- **Generate**: `python3 tools/valida/sintetici_mzml.py FOLDER --seme 11` writes `blank_01.mzML`, `camp_01..03.mzML` and `verita.json` (37 rows, 4 files, ~70 MB; deterministic at a fixed seed, same bytes on every machine).
+- **Generate**: `python3 tools/valida/sintetici_mzml.py FOLDER --seed 11` writes `blank_01.mzML`, `camp_01..03.mzML` and `verita.json` (37 rows, 4 files, ~70 MB; deterministic at a fixed seed, same bytes on every machine).
 - **Compounds**: broad (a: Gaussian or EMG; b: double plateau with a saddle at 60 %; c: 150 s band with 1-2 narrow 8 s peaks within 3 ppm) on a gradient background over ~200 m/z channels; the files are ordered blank, then the samples.
 - **Truth** (`verita.json`): per compound `ruolo` (broad/narrow), `rt`, `fwhm_s`, `rt_min`/`rt_max` (the central 99 % of the area) and `area_attesa` (list per file in intensity·min, 0 on the blank).
 - The batch contains no laboratory data.
@@ -34,7 +34,7 @@ done
 They write `OUTPUT/mzmine_SPAL_mzmine_default.json` and `..._mzmine_wide.json` (`bench/1`).
 
 ## Reading the table
-`python3 tools/bench/confronto_larghi.py --verita BATCH_FOLDER/verita.json --tabelle "MZmine default=OUTPUT/mzmine_SPAL_mzmine_default.json" "MZmine wide=OUTPUT/mzmine_SPAL_mzmine_wide.json" "mzLab default=OUTPUT/mzlab_SPAL_predefinita.json"` prints one column per tool:
+`python3 tools/bench/confronto_larghi.py --truth BATCH_FOLDER/verita.json --tables "MZmine default=OUTPUT/mzmine_SPAL_mzmine_default.json" "MZmine wide=OUTPUT/mzmine_SPAL_mzmine_wide.json" "mzLab default=OUTPUT/mzlab_SPAL_predefinita.json"` prints one column per tool:
 - **P1_narrow / P1_broad**: recall of the narrow and broad compounds (a broad band is found if |ΔRT| ≤ max(tolerance, 0.35·FWHM) or if the IoU of the intervals is ≥ 0.40). The gap between the two rows is the loss on smeared peaks.
 - **P2_broad**: median relative area error on the broad compounds found (0 = exact; 1 = double or zero; above 1 = strong overestimate).
 - **P3_split**: rows per band (mean) and bands split into more than one row: a narrow resolver cuts the band into fragments.

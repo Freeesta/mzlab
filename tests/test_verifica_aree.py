@@ -1,4 +1,4 @@
-"""The `# covers:` header lines of tests_e2e/e2e*.py (read by tools/verifica.py for --cambiati): the reader finds them, every prefix matches a tracked file."""
+"""The `# covers:` header lines of tests_e2e/e2e*.py (read by tools/verifica.py for --changed): the reader finds them, every prefix matches a tracked file."""
 import subprocess
 import sys
 from pathlib import Path

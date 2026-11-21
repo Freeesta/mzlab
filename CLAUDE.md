@@ -11,7 +11,7 @@ Professional free LC-MS analysis program: in the browser only (https://freeesta.
 `crates/` Rust engine (all logic: `mzlab-core`, `mzlab-feat`, `mzlab-cli`, `mzlab-desktop`, `*-wasm`) · `mzlab/web/` plain HTML/JS interface · `mzlab/*.py`, `tools/golden.py`, `tools/*_reference.py` Python reference for parity tests only · `tools/` dev tools · `tests/` pytest · `tests_e2e/` Playwright · `docs/agenti/` current-state docs.
 
 ## Commands
-- Before pushing: `python3 tools/pre_pr.py` (fast; in cloud skips browser tests; `--completo` forces all). Changed e2e only: `python3 tools/verifica.py --cambiati`; full round once: `python3 tools/verifica.py`. Levels and known reds: `docs/agenti/test.md`.
+- Before pushing: `python3 tools/pre_pr.py` (fast; in cloud skips browser tests; `--full` forces all). Changed e2e only: `python3 tools/verifica.py --changed`; full round once: `python3 tools/verifica.py`. Levels and known reds: `docs/agenti/test.md`.
 - Tests needing the site: `python3 tools/build_site.py` first, delete `site/` afterwards.
 - Limits: `python3 tools/controlla.py`; i18n: `python3 tools/controlla_i18n.py`.
 - Generated files (schemas, `mappa.md`, `tools-1.json`, ...): regenerate with their tool, never by hand.

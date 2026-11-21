@@ -230,7 +230,7 @@ pub fn check_coverage(ctx: &Context) -> Vec<Finding> {
                 &m.campaign,
                 &m.name,
                 b,
-                "structure not yet in the registry: attributio registro --aggiorna".into(),
+                "structure not yet in the registry: attributio registro --update".into(),
                 Value::Text(m.ik_basis.clone()),
             )),
             _ => {}

@@ -28,7 +28,7 @@ except ImportError:
 
 tmp = Path(tempfile.mkdtemp(prefix="shim_finder_"))
 ser, nat = tmp / "ser", tmp / "nat"
-subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 idx = sorted(ser.glob("*.mzidx"))
 files = [f.with_suffix(".mzML") for f in idx]
 nat.mkdir()

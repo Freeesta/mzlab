@@ -281,7 +281,7 @@ jobs:
           echo "pytest-shard: $ESITO"
           [ "$ESITO" = success ]
 
-  # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
+  # The e2e smoke tests (tools/verifica.py --smoke: SMOKE) against the local Python server.
   # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/).
   # Two shards: one job did install (up to 5.5 min of apt) + cold site build + the whole round in 20 min, and the round alone took 15-19 min (main run 44482519858 was cut at the cap).
   browser-shard:
@@ -375,7 +375,7 @@ jobs:
           key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
-        run: python tools/verifica.py --browser chromium --fumo --parte ${{ matrix.parte }}/2
+        run: python tools/verifica.py --browser chromium --smoke --part ${{ matrix.parte }}/2
       # the site above has no feature modules (tools/prepara_sito.py does not build them): build molkit and flowcompare with wasm-opt (tools/build_misura_ci.sh) so the size step below measures them; strict: no wasm-opt, no unoptimised figure
       - name: Build molkit and flowcompare with wasm-opt (for the size step)
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
@@ -482,7 +482,7 @@ jobs:
         if: steps.scelta.outputs.e2e != ''
         env:
           E2E: ${{ steps.scelta.outputs.e2e }}
-        run: python tools/verifica.py --browser chromium --timeout 150 --solo "$E2E"
+        run: python tools/verifica.py --browser chromium --timeout 150 --only "$E2E"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
@@ -522,7 +522,7 @@ jobs:
           python-version: "3.12"
       - name: Map of the code and size limits
         run: |
-          python3 tools/indice.py --controlla
+          python3 tools/indice.py --verify
           python3 tools/controlla.py
 
   # Types without a build step: tsc on the projects of tools/tipi/ (pagina, moduli, worker); the errors per file may only go down (tools/tipi/base_errori.json).
@@ -539,6 +539,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Globals
-        run: python3 tools/tipi/genera_globali.py --controlla
+        run: python3 tools/tipi/genera_globali.py --verify
       - name: tsc
         run: python3 tools/tipi/controlla_tsc.py

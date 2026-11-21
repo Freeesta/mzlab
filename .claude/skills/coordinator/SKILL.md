@@ -15,7 +15,7 @@ The Coordinator is the only one who merges. DEV chats never do (`steward` skill)
 
 **Merge** (`docs/agenti/ci-fast.md` for what the checks mean)
 1. Get the PR's head SHA from `github-status` (40 characters; the DEV's one-line report carries it).
-2. `python3 tools/coo_merge.py PR SHA` (needs `git fetch` access to `origin`; stat-ci branch events). It refuses when the PR head differs from SHA, when `test` or `rust` is not green on that SHA, when a local merge with `origin/main` conflicts or fails `tools/controlla.py` / `tools/indice.py --controlla`, or when the PR touches a risky path (`Cargo.toml`, `Cargo.lock`, `.github/workflows/*`, `*.wasm`, `crates/mzlab-desktop/*`, the CSP in `mzlab/web/index.html`). Last stdout line is JSON `{pr, sha, verde, combine, rischi, unire, motivo}`; exit 0 only when `unire` is true.
+2. `python3 tools/coo_merge.py PR SHA` (needs `git fetch` access to `origin`; stat-ci branch events). It refuses when the PR head differs from SHA, when `test` or `rust` is not green on that SHA, when a local merge with `origin/main` conflicts or fails `tools/controlla.py` / `tools/indice.py --verify`, or when the PR touches a risky path (`Cargo.toml`, `Cargo.lock`, `.github/workflows/*`, `*.wasm`, `crates/mzlab-desktop/*`, the CSP in `mzlab/web/index.html`). Last stdout line is JSON `{pr, sha, verde, combine, rischi, unire, motivo}`; exit 0 only when `unire` is true.
 3. Merge only on exit 0, with the same SHA. A risky path needs your explicit go: say what and why, then decide.
 4. A clean PR is not updated with main. A real conflict goes back to the DEV chat: `python3 tools/fondi_main.py` (merge, never rebase or force-push).
 5. After the merge: stop; no scheduled check-ins, no polling.

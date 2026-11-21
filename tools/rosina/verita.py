@@ -1,6 +1,6 @@
 """Ground truth `verita/1` (docs/studi/ROSINA.md F.1) from an mzML written by an oracle (msconvert, the authors' converter), run on Windows, Mac or Linux.
 A tool of the test bench, never part of the site: no calculation of the program lives here.
-    python3 tools/rosina/verita.py FILE.mzML [--oracolo NOME VERSIONE OPZIONI] [--nativo FILE] [--campione N] > FILE.verita.json
+    python3 tools/rosina/verita.py FILE.mzML [--oracle NOME VERSIONE OPZIONI] [--native FILE] [--sample N] > FILE.verita.json
 Standard library only. Binary arrays: 32/64-bit floats, zlib, no numpress (the oracle is asked for plain arrays)."""
 import argparse
 import base64
@@ -345,11 +345,11 @@ def validate(doc, schema=None, here="verita") -> list:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("mzml", type=Path)
-    ap.add_argument("--oracolo", nargs=3, metavar=("NOME", "VERSIONE", "OPZIONI"), default=["mzML", "?", ""])
-    ap.add_argument("--nativo", type=Path, help="the native file the mzML comes from (name and SHA-256 go in the truth)")
-    ap.add_argument("--campione", type=int)
+    ap.add_argument("--oracle", nargs=3, metavar=("NOME", "VERSIONE", "OPZIONI"), default=["mzML", "?", ""])
+    ap.add_argument("--native", type=Path, help="the native file the mzML comes from (name and SHA-256 go in the truth)")
+    ap.add_argument("--sample", type=int)
     a = ap.parse_args(argv)
-    d = da_mzml(a.mzml, tuple(a.oracolo), a.nativo, a.campione)
+    d = da_mzml(a.mzml, tuple(a.oracle), a.native, a.sample)
     for problema in validate(d):
         print(problema, file=sys.stderr)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)

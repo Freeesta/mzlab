@@ -4,17 +4,17 @@
 Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per call) and by hand (`riepilogo`).
 Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-fast.md).
 
-    python3 tools/ci_metrics.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
-    python3 tools/ci_metrics.py registra-pr-recenti --dati D.jsonl --nuovi N.jsonl   # polled: PRs opened/closed/merged and pushed heads, read from the API
-    python3 tools/ci_metrics.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
-    python3 tools/ci_metrics.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
-    python3 tools/ci_metrics.py registra-coda --nuovi N.jsonl                  # snapshot of the open PRs (behind, dirty, green and waiting, oldest)
-    python3 tools/ci_metrics.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
-    python3 tools/ci_metrics.py riempi-verde --dati D.jsonl [--massimo 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
-    python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
-    python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
-    python3 tools/ci_metrics.py percorso [--dati D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
-    python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
+    python3 tools/ci_metrics.py registra-run --event E.json --new N.jsonl   # workflow_run completed: run + failed jobs
+    python3 tools/ci_metrics.py registra-pr-recenti --data-file D.jsonl --new N.jsonl   # polled: PRs opened/closed/merged and pushed heads, read from the API
+    python3 tools/ci_metrics.py registra-conflitti --event E.json --data-file D.jsonl --new N.jsonl   # push to main: new `dirty` PRs
+    python3 tools/ci_metrics.py registra-recenti --data-file D.jsonl --new N.jsonl --cursor C.json   # scheduled: runs completed after the cursor + runner load
+    python3 tools/ci_metrics.py registra-coda --new N.jsonl                  # snapshot of the open PRs (behind, dirty, green and waiting, oldest)
+    python3 tools/ci_metrics.py accoda N.jsonl --data-file D.jsonl [--cursor C.json]   # append without duplicates (every line gets `v`)
+    python3 tools/ci_metrics.py riempi-verde --data-file D.jsonl [--maximum 30]    # best-effort backfill of verde_a_unione_s (rewrites D in place)
+    python3 tools/ci_metrics.py compatta --data-file D.jsonl [--days 14]          # drop the heavy fields of old rows
+    python3 tools/ci_metrics.py esporta [--data-file D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
+    python3 tools/ci_metrics.py percorso [--data-file D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
+    python3 tools/ci_metrics.py riepilogo [--data-file D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
 """
 from __future__ import annotations
 
@@ -407,17 +407,17 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("comando", choices=["registra-run", "registra-pr-recenti", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
-    ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
-    ap.add_argument("--dati", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
-    ap.add_argument("--nuovi", help="write the new lines here instead of appending to --dati")
-    ap.add_argument("--cursore", help="registra-recenti: write the new cursor here; accoda: copy this cursor next to --dati")
+    ap.add_argument("--event", default=os.environ.get("GITHUB_EVENT_PATH"))
+    ap.add_argument("--data-file", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
+    ap.add_argument("--new", help="write the new lines here instead of appending to --data-file")
+    ap.add_argument("--cursor", help="registra-recenti: write the new cursor here; accoda: copy this cursor next to --data-file")
     ap.add_argument("--out", default="stat-ci-csv", help="esporta: folder of the CSV files")
-    ap.add_argument("--giorni", type=int, default=14, help="compatta: rows older than this lose their heavy fields")
+    ap.add_argument("--days", type=int, default=14, help="compatta: rows older than this lose their heavy fields")
     ap.add_argument("--da")
-    ap.add_argument("--massimo", type=int, default=30, help="riempi-verde: rows tried per call")
+    ap.add_argument("--maximum", type=int, default=30, help="riempi-verde: rows tried per call")
     a = ap.parse_args()
     if a.comando in ("riepilogo", "esporta", "percorso"):
-        ev = read_all(a.dati) if a.dati else branch_events()
+        ev = read_all(a.data_file) if a.data_file else branch_events()
         if a.comando == "esporta":
             print("\n".join(dati_ci.export(ev, a.out)))
         elif a.comando == "percorso":
@@ -426,39 +426,39 @@ def main() -> int:
         else:
             riepilogo(ev, a.da)
         return 0
-    data = a.dati or "eventi.jsonl"
+    data = a.data_file or "eventi.jsonl"
     if a.comando == "accoda":
         print(f"{enqueue(leggi(a.file), data)} new lines")
-        if a.cursore and os.path.exists(a.cursore):
-            advance_cursor(a.cursore, os.path.join(os.path.dirname(data) or ".", "cursore.json"))
+        if a.cursor and os.path.exists(a.cursor):
+            advance_cursor(a.cursor, os.path.join(os.path.dirname(data) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
         for p in segmenti(data):
             if os.path.getsize(p) < file_ci.LIMIT_B:
-                write_rows(p, dati_ci.compact(leggi(p), dati_ci.adesso_dt(), a.giorni))
+                write_rows(p, dati_ci.compact(leggi(p), dati_ci.adesso_dt(), a.days))
         return 0
     if a.comando == "riempi-verde":
-        remain = a.massimo
+        remain = a.maximum
         for p in reversed(segmenti(data)):
             if remain <= 0 or os.path.getsize(p) >= file_ci.LIMIT_B:
                 continue
             righe = leggi(p)
             remain -= fill_green(righe, massimo=remain)
             write_rows(p, righe)
-        print(f"{a.massimo - remain} rows tried")
+        print(f"{a.maximum - remain} rows tried")
         return 0
     try:
         if a.comando == "registra-recenti":
             righe, cursor = recent_rows(data)
-            if a.cursore:
-                with open(a.cursore, "w", encoding="utf-8") as f:
+            if a.cursor:
+                with open(a.cursor, "w", encoding="utf-8") as f:
                     json.dump({"ultimo": cursor}, f)
         elif a.comando == "registra-coda":
             righe = giorno_ci.queue_rows(api_get, adesso())
         elif a.comando == "registra-pr-recenti":
             righe = pr_recent_rows(data)
         else:
-            with open(a.evento, encoding="utf-8") as f:
+            with open(a.event, encoding="utf-8") as f:
                 event = json.load(f)
             righe = {"registra-run": lambda: run_rows(event),
                      "registra-conflitti": lambda: conflict_rows(event, data, provare=True)}[a.comando]()
@@ -466,8 +466,8 @@ def main() -> int:
         # a metrics collector never turns main red: no rows this time, the cursor does not advance, the next poll retries
         warn(f"{a.comando}: no rows recorded ({e})")
         righe = []
-    if a.nuovi:
-        write_rows(a.nuovi, righe)
+    if a.new:
+        write_rows(a.new, righe)
     else:
         enqueue(righe, data)
     print(f"{len(righe)} events")

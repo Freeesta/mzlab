@@ -1,6 +1,6 @@
 """Adds the mobility table of `timsdata` (Bruker's library, Linux or Windows) to the truth `verita/1` made from the mzML of msconvert.
 A tool of the test bench (docs/studi/ROSINA.md F.1). The table is a TSV with a header `scan<TAB>one_over_k0`: one row per mobility scan index, 1/K0 in V s/cm2.
-    python3 tools/rosina/verita_timsdata.py FILE.mzML TABELLA.tsv [--timsdata-versione V] [--nativo FILE.d] > FILE.verita.json"""
+    python3 tools/rosina/verita_timsdata.py FILE.mzML TABELLA.tsv [--timsdata-version V] [--native FILE.d] > FILE.verita.json"""
 import argparse
 import json
 import sys
@@ -31,10 +31,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("mzml", type=Path)
     ap.add_argument("tabella", type=Path)
-    ap.add_argument("--timsdata-versione", default="?")
-    ap.add_argument("--nativo", type=Path)
+    ap.add_argument("--timsdata-version", default="?")
+    ap.add_argument("--native", type=Path)
     a = ap.parse_args(argv)
-    d = truth.da_mzml(a.mzml, ("msconvert+timsdata", a.timsdata_versione, "mzML from msconvert; 1/K0 from timsdata"), a.nativo, None)
+    d = truth.da_mzml(a.mzml, ("msconvert+timsdata", a.timsdata_version, "mzML from msconvert; 1/K0 from timsdata"), a.native, None)
     d["mobilita"] = read_table(a.tabella)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")

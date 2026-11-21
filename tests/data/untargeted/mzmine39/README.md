@@ -1,9 +1,9 @@
 # Gold data of mzmine 3.9.0 per stage (synthetic files)
 
 Output of mzmine 3.9.0 on four small synthetic mzML files of ours (all numbers invented, fixed seed), one CSV per stage. They are the reference of the parity tests of the stages
-rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not in the repository: `tools/bench/oro_mzmine.py --genera DIR` writes them again, byte for byte.
+rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not in the repository: `tools/bench/oro_mzmine.py --generate DIR` writes them again, byte for byte.
 
-- **Written on**: 2026-10-15 by `python3 tools/bench/oro_mzmine.py --oro` (it checks first that every parameter name of the batch exists in the parameter classes of the module: mzmine ignores the others without a word).
+- **Written on**: 2026-10-15 by `python3 tools/bench/oro_mzmine.py --gold` (it checks first that every parameter name of the batch exists in the parameter classes of the module: mzmine ignores the others without a word).
 - **mzmine**: 3.9.0, bioconda package `mzmine-3.9.0-hdfd78af_0.tar.bz2`, sha256 `d596078684c7e23af7c7e350dded437ecbf6b2851aadc856c318c3cac2645504`; license MIT, (c) 2004-2022 The mzmine Development Team (`https://github.com/mzmine/mzmine/blob/master/LICENSE.txt`).
 - **JDK**: openjdk version "20.0.2" 2023-07-18 / OpenJDK Runtime Environment Temurin-20.0.2+9 (build 20.0.2+9) (Adoptium OpenJDK 20, `https://api.adoptium.net/v3/binary/latest/20/ga/linux/x64/jdk/hotspot/normal/eclipse`).
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.

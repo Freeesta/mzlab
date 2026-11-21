@@ -1,6 +1,6 @@
 # English migration: what is still Italian
 
-Measure it with `python3 tools/check_english.py` (counts per area; `--elenco` one line per file; `--file PATH` every hit). Counts at `main` 7f973633:
+Measure it with `python3 tools/check_english.py` (counts per area; `--list` one line per file; `--file PATH` every hit). Counts at `main` 7f973633:
 
 | area | files | with hits | comment lines | identifiers | keys | file names |
 |---|---|---|---|---|---|---|
@@ -14,7 +14,7 @@ Measure it with `python3 tools/check_english.py` (counts per area; `--elenco` on
 | `docs/` | 348 | 346 | 0 | 0 | 53 | 346 |
 
 ## Families left, smallest risk first (each one is a PR with a guard test, no aliases, no converters)
-1. Tool flags and docs prose: `tools/html_safe.py --aggiorna`, `misura`/`peggiori`, the «HTML sicuro» heading of `data.md`.
+1. Tool flags are English (`--update`, `--only`, `--write`, `--list`, `--full`, `--changed`, ...; guard `tests/test_no_old_flag_names.py`); the `cancello` flags follow `cancello/2`. Docs prose: the «HTML sicuro» heading of `data.md` is still open.
 2. Panel action registry (`actions/1`, `AZIONI`): all registry fields and the API are English (`group`, `views`, `name`, `run`, `order`, `iconKey`, `submenu`, `checked`, `rows`, `menuLabel`, `AZIONI.register/get/list/forContext/run`, `KEYS`). Left for other families: the file names (`azioni*.js`, `menu-sotto.js`), `fila`/`soloIcona`/`barra`, the layout engine `voci`, `ESC.registra`, `SUGG.mostra`, local names in `azioni-tasti.js`.
 3. Language area names under `mzlab/web/lang/en/` (file names such as `errori-flow.js`).
 4. Schema ids and their keys: `livelli/1`, `ipotesi/1`, `riga/1`, `riga_tracce/1`, and the hypothesis source labels `famiglia` / `importata`.

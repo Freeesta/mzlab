@@ -76,7 +76,7 @@ python3 tests_e2e/e2e_a11y_hr.py
 ### 5. Global application check (without long e2e)
 Runs the code mapping, the size limit check, the i18n check, TypeScript types and imports:
 ```bash
-python3 tools/pre_pr.py --senza-e2e
+python3 tools/pre_pr.py --no-e2e
 ```
 
 ### 6. Python unit test suite
@@ -89,7 +89,7 @@ PYTHONPATH=. pytest tests/
 
 ## 4. Known gaps of the Data view
 
-WCAG 2.2 AA target. The `e2e_a11y_dati` test (`--fumo` round) fails on every `serious`/`critical` axe violation in the states it covers; a tolerated rule id goes in `KNOWN` inside the test and is listed here.
+WCAG 2.2 AA target. The `e2e_a11y_dati` test (`--smoke` round) fails on every `serious`/`critical` axe violation in the states it covers; a tolerated rule id goes in `KNOWN` inside the test and is listed here.
 - **Tolerated rules**: none.
 - **States not covered by axe in e2e_a11y_dati**: guided tour (covered instead by `e2e_axe_release.py`) and desktop app. Covered: startup, loaded file, MRM, map, settings, search, calculator, integration window and MSn tree (synthetic file).
 - **Covered by their own tests**: the HR Bench, the formula panel and the information bar by `e2e_a11y_hr.py` (axe, names, Tab with visible focus, targets ≥24 px, live areas); Drawing outside the Ketcher iframe by `e2e_a11y_disegno.py` (axe in light and dark themes, names, Tab without trap, targets, load announcement). The Practice pages do not yet have an a11y test of their own.

@@ -20,7 +20,7 @@ How to read the columns: the seconds per step are the sum over the 12 instances 
 - Align and gapfill do not depend on the format.
 
 ## Bruker timsTOF `.d` (synthetic DDA-PASEF)
-`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- scrivi X.d --cicli 100` writes 1100 frames (100 MS1 of 60 000 points, 1000 PASEF of 15 000 points with 12 precursors), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` gives the ms per phase and the FNV signature of all points (equal before and after every change). 4 CPUs, files in the system cache, noise ±5 %.
+`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- scrivi X.d --cycles 100` writes 1100 frames (100 MS1 of 60 000 points, 1000 PASEF of 15 000 points with 12 precursors), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` gives the ms per phase and the FNV signature of all points (equal before and after every change). 4 CPUs, files in the system cache, noise ±5 %.
 
 | phase (12 100 spectra, 16 M points) | native ms | `.wasm` in Node (mzML) |
 |---|---|---|

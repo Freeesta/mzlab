@@ -16,7 +16,7 @@ def tabella():
 
 
 def test_the_families_have_their_data():
-    # the caps live in tools/moduli/lettori-*.toml (`moduli.py --controlla --base` stops a rise of more than 10 %)
+    # the caps live in tools/moduli/lettori-*.toml (`moduli.py --verify --base` stops a rise of more than 10 %)
     assert set(tabella()) == set(FAMIGLIE)
 
 

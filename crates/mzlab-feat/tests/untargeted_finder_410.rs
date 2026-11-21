@@ -1,6 +1,6 @@
 //! Isotope finder (`untargeted::isofinder`) against the «Isotopic peaks finder» of mzmine 4.10.90 on the four synthetic files: for each resolved feature of
 //! `isotopes_finder.csv` the spectrum of its most intense scan (centroids above the noise of the batch) goes through `select::detect`; the charge and the
-//! number of peaks of the pattern are compared. The mzML files are written again by `tools/bench/oro_mzmine.py --genera` (skipped without python3 and numpy).
+//! number of peaks of the pattern are compared. The mzML files are written again by `tools/bench/oro_mzmine.py --generate` (skipped without python3 and numpy).
 #![cfg(feature = "untargeted")]
 
 use std::path::{Path, PathBuf};
@@ -49,7 +49,7 @@ fn generate() -> Option<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
         .arg(root.join("tools/bench/oro_mzmine.py"))
-        .arg("--genera")
+        .arg("--generate")
         .arg(&dir)
         .output()
         .map(|o| o.status.success())

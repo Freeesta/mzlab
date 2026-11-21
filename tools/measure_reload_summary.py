@@ -1,5 +1,5 @@
 """Summary of the JSON written by tests_e2e/misura_ricarica.py: one table row per step (cold, warm, file, reset, warm-after-reset) and, with
---dettaglio STEP, the waterfall of that step (what was fetched before the first paint and before the page was usable, by kind, the slowest files,
+--detail STEP, the waterfall of that step (what was fetched before the first paint and before the page was usable, by kind, the slowest files,
 the long tasks, what the service worker asked the network).
 """
 from __future__ import annotations
@@ -74,7 +74,7 @@ def detail(st: dict) -> None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="+")
-    ap.add_argument("--dettaglio", default="")
+    ap.add_argument("--detail", default="")
     a = ap.parse_args()
     for f in a.files:
         d = json.load(open(f))
@@ -88,7 +88,7 @@ def main():
                 print(f"- click {k}: {c}"); continue
             ev = max((e[2] for e in c["ev"] if e[1] in ("click", "pointerup", "pointerdown", "keydown")), default=0)
             print(f"- click {k}: worst event {ev} ms; long tasks {[d for _, d in c['lt']]}; fetched {len(c['res'])} files {sum(r[2] for r in c['res']) / 1e3:.0f} KB")
-        for k in filter(None, a.dettaglio.split(",")):
+        for k in filter(None, a.detail.split(",")):
             if k in d["steps"]:
                 print(f"\n## detail: {k}")
                 detail(d["steps"][k])

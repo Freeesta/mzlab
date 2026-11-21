@@ -1,6 +1,6 @@
 """Ground truth `verita/1` (docs/studi/ROSINA.md F.1) from a `scandump/1` written by an oracle (RFR) or by our reader (docs/agenti/scandump.md).
 A tool of the test bench, never part of the site: no calculation of the program lives here.
-    python3 tools/rosina/verita_scandump.py DUMP.scandump.jsonl.gz [--oracolo NOME VERSIONE OPZIONI] > FILE.verita.json
+    python3 tools/rosina/verita_scandump.py DUMP.scandump.jsonl.gz [--oracle NOME VERSIONE OPZIONI] > FILE.verita.json
 Standard library only. The peaks come from the `peaks` rows of the dump; the metadata of the header go in `metadati` as the oracle wrote them."""
 import argparse
 import datetime
@@ -129,9 +129,9 @@ def da_scandump(path: Path, oracle: tuple) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("dump", type=Path)
-    ap.add_argument("--oracolo", nargs=3, metavar=("NOME", "VERSIONE", "OPZIONI"), default=["", "", "scandump/1"])
+    ap.add_argument("--oracle", nargs=3, metavar=("NOME", "VERSIONE", "OPZIONI"), default=["", "", "scandump/1"])
     a = ap.parse_args(argv)
-    d = da_scandump(a.dump, tuple(a.oracolo))
+    d = da_scandump(a.dump, tuple(a.oracle))
     for problema in _truth().validate(d):
         print(problema, file=sys.stderr)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)

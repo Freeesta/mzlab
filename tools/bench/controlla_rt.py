@@ -5,7 +5,7 @@ For every true compound the XIC at m/z +- PPM is cut in the window truth RT +- F
 of the XIC in the same window. The report gives, over the seen compounds, the distribution of apex - truth RT (so a RT tolerance can be chosen and written down)
 and how many compounds are not seen; it reads the data, never changes the truth.
 
-    python3 tools/bench/controlla_rt.py MAF.tsv MZML_DIR [--atteso "Compound concentration ratio"] [--out report.json]
+    python3 tools/bench/controlla_rt.py MAF.tsv MZML_DIR [--expected "Compound concentration ratio"] [--out report.json]
 """
 from __future__ import annotations
 
@@ -66,11 +66,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("maf")
     ap.add_argument("mzml_dir")
-    ap.add_argument("--atteso", default="Compound concentration ratio")
+    ap.add_argument("--expected", default="Compound concentration ratio")
     ap.add_argument("--out")
     a = ap.parse_args(argv)
     from mzlab.reader.mzml import Run                    # noqa: E402  (after bench put `mzlab` on the path)
-    truth = V.da_maf(a.maf, atteso=a.atteso)
+    truth = V.da_maf(a.maf, atteso=a.expected)
     tabelle = []
     for p in sorted(Path(a.mzml_dir).glob("*.mzML")):
         print(p.name, flush=True)

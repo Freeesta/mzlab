@@ -27,7 +27,7 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 data = site / "static" / "dati_flow_live"; data.mkdir()
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
 for f in sorted(ser.glob("*.mzidx"))[:3]: shutil.copy2(f, data / f.name)
 names = sorted(p.name for p in data.glob("*.mzidx"))
 

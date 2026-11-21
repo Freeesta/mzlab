@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds a SYNTHETIC folder of spectral libraries for the «Load folder…» benchmark (no real data).
 One big NIST-format MSP (default 110 000 short spectra), four small mixes (21-51 spectra), a few empty/unsupported library files and many files of other
-types, like a real MassBank download folder. Usage: python3 tools/librerie_cartella_sintetica.py OUT_DIR [--n 110000] [--altri 730]"""
+types, like a real MassBank download folder. Usage: python3 tools/librerie_cartella_sintetica.py OUT_DIR [--n 110000] [--others 730]"""
 import argparse, random
 from pathlib import Path
 
@@ -18,7 +18,7 @@ def msp_block(i: int, rng: random.Random) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("out"); ap.add_argument("--n", type=int, default=110_000); ap.add_argument("--altri", type=int, default=730)
+    ap.add_argument("out"); ap.add_argument("--n", type=int, default=110_000); ap.add_argument("--others", type=int, default=730)
     a = ap.parse_args()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     rng = random.Random(7)
@@ -30,9 +30,9 @@ def main() -> None:
     (out / "vuota.msp").write_text("")
     (out / "senza_picchi.msp").write_text("Name: x\nPrecursorMZ: 300.1\nNum Peaks: 0\n\n")
     (out / "rotta.json").write_text("{not json")
-    for i in range(a.altri):
+    for i in range(a.others):
         (out / f"nota_{i:04d}.txt").write_text(f"synthetic note {i}\n")
-    print(f"{out}: {a.n} + 149 spectra, {a.altri + 3} other files")
+    print(f"{out}: {a.n} + 149 spectra, {a.others + 3} other files")
 
 
 if __name__ == "__main__":

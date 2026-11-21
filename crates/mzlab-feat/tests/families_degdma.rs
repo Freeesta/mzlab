@@ -26,7 +26,7 @@ fn the_fragment_of_a_later_product_is_not_joined_to_the_molecule() {
     let ok = std::process::Command::new("python3")
         .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", "degdma"])
+        .args(["--only", "degdma"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
@@ -95,7 +95,7 @@ fn series(only: &str) -> Option<std::path::PathBuf> {
     let ok = std::process::Command::new("python3")
         .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", only])
+        .args(["--only", only])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

@@ -190,7 +190,7 @@ fn synthetic_files_match_the_python_engine() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("sintetici");
     let ok = Command::new("python3")
         .arg(root().join("tools/golden.py"))
-        .arg("--sintetici")
+        .arg("--synthetic")
         .arg(&dir)
         .output();
     match ok {

@@ -15,7 +15,7 @@ description: How an mzLab DEV chat starts and finishes one task, from reading CL
 - English only, no real data (use `tools/dati_sintetici.py`), user-facing text through `lang/` keys, generated files regenerated with their tool, never skip a test.
 
 **Finish**
-1. `python3 tools/pre_pr.py` (`--completo` forces the browser tests). Changed e2e only: `python3 tools/verifica.py --cambiati`.
+1. `python3 tools/pre_pr.py` (`--full` forces the browser tests). Changed e2e only: `python3 tools/verifica.py --changed`.
 2. Merge `origin/main` only on a real conflict: `python3 tools/fondi_main.py`. Never rebase or force-push.
 3. Push `claude/<topic>`, open the PR ready for review (not draft) filling `.github/pull_request_template.md`. Never merge it yourself; after opening it follow the `steward` skill.
 4. Report in one line: PR number, head SHA, CI status, what remains.

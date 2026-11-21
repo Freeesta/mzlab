@@ -15,7 +15,7 @@ fn make() -> Option<Vec<u8>> {
     let ok = std::process::Command::new("python3")
         .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
-        .args(["--solo", "degdma"])
+        .args(["--only", "degdma"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

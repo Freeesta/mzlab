@@ -3,8 +3,8 @@
 compounds, exact McNemar, Holm over the primary endpoints x competitors, pre-registered non-inferiority margins), as a deterministic JSON (sorted keys, rounded
 numbers, no date, no time) and a Markdown summary. It writes numbers, not sentences of §3.5: those are decided by people on the numbers.
 
-    python3 tools/bench/rapporto.py --d2 --seme 7 --profilo piccolo --out DIR      # mzFinder on a synthetic series: DIR/bench1.json + rapporto.json/.md
-    python3 tools/bench/rapporto.py --verita D1.json --tipo d1 --rt-tol 0.2 --gruppi A=SA1,SA2 B=SB1,SB2 --tabelle mzlab.json openms.json --out DIR
+    python3 tools/bench/rapporto.py --d2 --seed 7 --profile piccolo --out DIR      # mzFinder on a synthetic series: DIR/bench1.json + rapporto.json/.md
+    python3 tools/bench/rapporto.py --truth D1.json --kind d1 --rt-tol 0.2 --groups A=SA1,SA2 B=SB1,SB2 --tables mzlab.json openms.json --out DIR
                                                                                     # tables already written by the runners; the first one is the tool under test
 """
 from __future__ import annotations
@@ -154,28 +154,28 @@ def measure_tol(truth: list[dict], t: dict, groups: dict | None, rt_tol: float) 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--verita", help="truth file (with --tabelle)")
-    ap.add_argument("--tipo", choices=("d1", "d2", "d3"), default="d1")
+    ap.add_argument("--truth", help="truth file (with --tables)")
+    ap.add_argument("--kind", choices=("d1", "d2", "d3"), default="d1")
     ap.add_argument("--rt-tol", type=float, default=0.15)
-    ap.add_argument("--gruppi", nargs="*", default=[], help="NAME=COL1,COL2 (D1: A=SA1,SA2.. B=SB1,SB2..)")
-    ap.add_argument("--tabelle", nargs="*", default=[], help="bench/1 tables; the first is the tool under test")
+    ap.add_argument("--groups", nargs="*", default=[], help="NAME=COL1,COL2 (D1: A=SA1,SA2.. B=SB1,SB2..)")
+    ap.add_argument("--tables", nargs="*", default=[], help="bench/1 tables; the first is the tool under test")
     ap.add_argument("--d2", action="store_true", help="run mzFinder on a synthetic series")
-    ap.add_argument("--seme", type=int, default=7)
-    ap.add_argument("--profilo", default="piccolo")
+    ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--profile", default="piccolo")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    if a.tabelle:
-        g = {k: v.split(",") for k, v in (x.split("=", 1) for x in a.gruppi)} or None
-        r = from_tables(truth_of(a.verita, a.tipo), a.tabelle, g, a.rt_tol, a.tipo.upper())
+    if a.tables:
+        g = {k: v.split(",") for k, v in (x.split("=", 1) for x in a.groups)} or None
+        r = from_tables(truth_of(a.truth, a.kind), a.tables, g, a.rt_tol, a.kind.upper())
         (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
         (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
         print(a_markdown(r))
         return 0
-    t, truth = run_mzfinder_synthetic(a.seme, a.profilo, out / "lavoro")
+    t, truth = run_mzfinder_synthetic(a.seed, a.profile, out / "lavoro")
     (out / "bench1.json").write_text(table_to_json(t), encoding="utf-8")
-    r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(truth, t))
+    r = rapporto(f"D2/{a.profile}/{a.seed}", misura(truth, t))
     (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
     (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
     print(a_markdown(r))

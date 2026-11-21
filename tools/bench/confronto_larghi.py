@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comparison table of the smeared-peak lot: the endpoints of `metriche.larghi` for each tool/configuration, one column per table.
 
-    python3 tools/bench/confronto_larghi.py --verita OUT/verita.json --tabelle "MZmine default=mzmine_default.json" "MZmine wide=mzmine_wide.json" "mzLab default=mzlab_default.json"
+    python3 tools/bench/confronto_larghi.py --truth OUT/verita.json --tables "MZmine default=mzmine_default.json" "MZmine wide=mzmine_wide.json" "mzLab default=mzlab_default.json"
 The tables are `bench/1` (written by `corri_<tool>.py`); the column order is the order given. It writes numbers only."""
 from __future__ import annotations
 
@@ -38,11 +38,11 @@ def a_markdown(misure: dict[str, dict]) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--verita", required=True)
-    ap.add_argument("--tabelle", nargs="+", required=True, metavar="NOME=FILE")
+    ap.add_argument("--truth", required=True)
+    ap.add_argument("--tables", nargs="+", required=True, metavar="NOME=FILE")
     a = ap.parse_args()
-    tab = {n: leggi(p) for n, p in (x.split("=", 1) for x in a.tabelle)}
-    print(a_markdown(comparison(da_json(a.verita), tab)), end="")
+    tab = {n: leggi(p) for n, p in (x.split("=", 1) for x in a.tables)}
+    print(a_markdown(comparison(da_json(a.truth), tab)), end="")
 
 
 if __name__ == "__main__":

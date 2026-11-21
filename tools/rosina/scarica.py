@@ -1,6 +1,6 @@
 """Downloads the big native files listed in `GRANDI.tsv` (docs/studi/ROSINA.md D) into DEST: resumes a partial file, checks the bytes and the SHA-256, refuses to pass the ceiling.
 A tool for the local chat (the big files never go to git or to the cloud). No data inside.
-    python3 tools/rosina/scarica.py GRANDI.tsv DEST [--tetto-gb 20] [--solo SOTTOSTRINGA] [--prova]
+    python3 tools/rosina/scarica.py GRANDI.tsv DEST [--cap-gb 20] [--only SOTTOSTRINGA] [--trial]
 Columns used: url, destinazione (relative path under DEST), byte, sha256 (a manifest of several files is not checked here: leave it empty)."""
 import argparse
 import csv
@@ -70,14 +70,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("tsv", type=Path)
     ap.add_argument("dest", type=Path)
-    ap.add_argument("--tetto-gb", type=float, default=CAP_GB)
-    ap.add_argument("--solo", help="only the rows whose `destinazione` contains this text")
-    ap.add_argument("--prova", action="store_true", help="list what would be downloaded")
+    ap.add_argument("--cap-gb", type=float, default=CAP_GB)
+    ap.add_argument("--only", help="only the rows whose `destinazione` contains this text")
+    ap.add_argument("--trial", action="store_true", help="list what would be downloaded")
     a = ap.parse_args(argv)
-    righe = [r for r in read(a.tsv) if not a.solo or a.solo in (r.get("destinazione") or "")]
+    righe = [r for r in read(a.tsv) if not a.only or a.only in (r.get("destinazione") or "")]
     weight = total(righe)
-    if weight > a.tetto_gb * 1e9:
-        print(f"refused: {weight / 1e9:.1f} GB asked, the ceiling is {a.tetto_gb} GB", file=sys.stderr)
+    if weight > a.cap_gb * 1e9:
+        print(f"refused: {weight / 1e9:.1f} GB asked, the ceiling is {a.cap_gb} GB", file=sys.stderr)
         return 2
     errors = 0
     for r in righe:
@@ -92,7 +92,7 @@ def main(argv=None) -> int:
             print(e, file=sys.stderr)
             errors += 1
             continue
-        if a.prova:
+        if a.trial:
             print(f"{rel}\t{byte}")
             continue
         if not (p.exists() and (not byte or p.stat().st_size == byte)):

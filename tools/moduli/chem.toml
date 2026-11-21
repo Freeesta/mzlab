@@ -7,7 +7,7 @@ tetto = 655360
 misura = 652561
 nota = "ETKDG geometry and GFN2-xTB of the parent; sci-form 2.0.0 (D4 data for Z 1-118): 565577 -> 652561, cap raised by the owner above 5 %"
 
-# the 1.10 x rule of `tools/moduli.py --controlla --base` waived for exactly this cap and nothing else
+# the 1.10 x rule of `tools/moduli.py --verify --base` waived for exactly this cap and nothing else
 [exception]
 cap = 655360
 date = "2026-11-20"
