@@ -79,7 +79,7 @@ struct CondCx {
 
 /// `table_json` with the metadata `samples/1` of the files and what the caller knows of the best hypothesis of each row. With two or more conditions
 /// `times` stays the time axis of all the treated files; a row's `series`, `in_t0` and `in_blank` are the ones of the condition where the row is strongest
-/// (the files of the others count 0 in `series`, ties go to the first condition), and `gruppi` (`gruppi/1`) holds the detail of every condition together
+/// (the files of the others count 0 in `series`, ties go to the first condition), and `groups` (`groups/1`) holds the detail of every condition together
 /// with `network` (the times of each condition and whether the network read it). With fewer than two conditions the text is the one of `table_json`.
 pub fn table_json_cond(
     t: &Aligned,
@@ -150,7 +150,7 @@ pub fn table_json_cond(
     o.raw("]");
     if let Some((cs, infos)) = cond.filter(|_| !conds.is_empty()) {
         let g = super::groups_json(t, cs, list, infos)?;
-        o.raw(",\"gruppi\":").raw(g.as_deref().unwrap_or("null"));
+        o.raw(",\"groups\":").raw(g.as_deref().unwrap_or("null"));
         network_json(&mut o, &conds, &treated);
     }
     o.raw("}");

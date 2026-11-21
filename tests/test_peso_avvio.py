@@ -1,5 +1,5 @@
 """Weight of the start-up scripts: the list `L` of mzlab/web/carica.js is fetched whole on every first visit, so no file in it
-may grow past a cap and the total is capped too. A bigger tool that is used rarely goes behind `carica(name)` (lazy) instead."""
+may grow past a cap and the total is capped too. A bigger tool that is used rarely goes behind `loadScript(name)` (lazy) instead."""
 import re
 from pathlib import Path
 
@@ -20,7 +20,7 @@ def test_every_listed_script_exists():
 
 def test_no_startup_script_is_too_big():
     big = {n: (WEB / n).stat().st_size for n in startup_files() if (WEB / n).stat().st_size > MAX_FILE}
-    assert not big, f"start-up scripts over {MAX_FILE} bytes (make them lazy with carica()): {big}"
+    assert not big, f"start-up scripts over {MAX_FILE} bytes (make them lazy with loadScript()): {big}"
 
 
 def test_startup_total_is_capped():

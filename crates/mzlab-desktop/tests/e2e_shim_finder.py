@@ -203,8 +203,8 @@ try:
             r = pg.evaluate("""async ([eth]) => {
                 const F = await import('/static/disegno-frammenti.js'), pool = (await import('/static/mzfinder/feat-desktop-pool.js')).createDesktopPool();
                 const cuts = await F.cutsOf(eth), g = JSON.parse(await pool.analyse('CCO'));
-                const part = await (await F.carica()).partial(eth, '+O');
-                let bad = ''; try { await (await F.carica()).partial(eth, '-C9H99'); } catch (e) { bad = typeof e === 'string' ? JSON.parse(e).error_key : String(e); }
+                const part = await (await F.loadWasm()).partial(eth, '+O');
+                let bad = ''; try { await (await F.loadWasm()).partial(eth, '-C9H99'); } catch (e) { bad = typeof e === 'string' ? JSON.parse(e).error_key : String(e); }
                 return { n: cuts.length, f: cuts[0].sides[0].formula, formula: g.formula, groups: Array.isArray(g.groups), part: JSON.parse(part).formula, bad };
             }""", [eth])
             assert r["n"] == 2 and r["formula"] == "C2H6O" and r["groups"] and r["part"], r

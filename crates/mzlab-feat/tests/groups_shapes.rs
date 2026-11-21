@@ -1,4 +1,4 @@
-//! `gruppi/1`: shapes over time (rising, bell, decay, flat, single), the interpolated half-rise time, the relative rate and the decay of the
+//! `groups/1`: shapes over time (rising, bell, decay, flat, single), the interpolated half-rise time, the relative rate and the decay of the
 //! parent per condition, on three conditions x five times x two replicates (synthetic).
 
 mod groups_common;

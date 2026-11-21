@@ -1,10 +1,10 @@
 // @ts-strict
 "use strict";
-// Names of contaminants/compounds in the ion field of «Extract ions» (lazy, carica("xic-nomi.js")): suggestions under the field and the reading of a name (with its shift)
+// Names of contaminants/compounds in the ion field of «Extract ions» (lazy, loadScript("xic-nomi.js")): suggestions under the field and the reading of a name (with its shift)
 // through the lists (liste-nomi.js). A name only fills the formula: a candidate input, never an identification. If the lists do not load, formulas and m/z work as before.
 const XICNOMI = (() => {
   let /** @type {any} */ sug = null, /** @type {HTMLInputElement | null} */ on = null;
-  const load = () => Promise.all([carica("ask-suggerisci.js"), carica("liste-nomi.js")]).then(() => LISTE.ready());
+  const load = () => Promise.all([loadScript("ask-suggerisci.js"), loadScript("liste-nomi.js")]).then(() => LISTE.ready());
   const CALM = new Set(["err.formula.offset", "err.formula.mzLow"]);   // errors of the engine shown as they are (not a name to look up, not «invalid formula»)
   const SHIFT = /\s*([+-]\s*[\d.,]*)\s*$/;   // the signed number closing the field (the engine reads it; here it is only kept or cut)
   /** The text the engine could not read as a formula (e = its error): {text: formula + shift, adduct} when its head is exactly one name of the lists, else null.

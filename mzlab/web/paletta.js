@@ -151,7 +151,7 @@ const PALETTE = (() => {
   }
 
   function open() {
-    carica("ricerca.js").catch(e => console.error(e));      // the results part: not in the start-up list, there before the first key is typed
+    loadScript("ricerca.js").catch(e => console.error(e));      // the results part: not in the start-up list, there before the first key is typed
     if (!box) build();
     if (!box.hidden) { input.focus(); return; }
     prev = document.activeElement;

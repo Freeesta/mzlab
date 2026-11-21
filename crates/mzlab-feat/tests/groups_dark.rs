@@ -1,4 +1,4 @@
-//! `gruppi/1`: the dark controls of a condition become a dark course (`dark`) only when they have known times; without them the key is absent.
+//! `groups/1`: the dark controls of a condition become a dark course (`dark`) only when they have known times; without them the key is absent.
 
 mod groups_common;
 

@@ -45,7 +45,7 @@ try:
         pg.goto(URL, wait_until="commit")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("crossOriginIsolated === true", timeout=60000); pg.wait_for_selector("#drop", timeout=120000)
         wait_for_js(pg, "typeof setView === 'function' && typeof CMD !== 'undefined'", 120000)
-        pg.evaluate("carica('paletta.js')"); wait_for_js(pg, "typeof PALETTE !== 'undefined'")      # the palette loads on first use
+        pg.evaluate("loadScript('paletta.js')"); wait_for_js(pg, "typeof PALETTE !== 'undefined'")      # the palette loads on first use
         def check(what):
             eb = pg.evaluate(GONE)
             if eb: bad.append(f"{what}: error box {eb[:200]}")

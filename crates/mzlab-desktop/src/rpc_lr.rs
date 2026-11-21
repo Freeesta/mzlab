@@ -54,6 +54,22 @@ impl State {
         Ok(Answer::Text(mzlab_core::itemroutes::pda_subtract(&mut m, &db, &o, v)?))
     }
 
+    /// `lr_pda_peaks`: `Routes::pda_peaks_item` of the file `name`; a missing `nm0`, `nm1` or `offset` is the total trace / the delay the engine estimates.
+    fn pda_peaks(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let g = |k: &str| p[k].as_f64().unwrap_or(f64::NAN);
+        let name = s("name").split('#').next().unwrap_or("");
+        let slot = self.open_lr(eng, name)?;
+        let end = eng.idx[&slot].idx.scans.last().map_or(0, |s| s.end);
+        let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
+        let mut m = Mzml::new(rd, size);
+        let chroms = m.chromatograms(end)?;
+        let po = mzlab_core::wiff::dad_peaks::PeakOpts::from_args(g("nm0"), g("nm1"));
+        let mo = mzlab_core::pdapeaks::MsOpts::from_args(p["top"].as_u64().unwrap_or(0) as u32, p["level"].as_u64().unwrap_or(0) as u32, g("offset"));
+        let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
+        Ok(Answer::Text(r.pda_peaks_item(&mut m, &chroms, s("name"), &po, &mo)?))
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_files(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -302,6 +318,7 @@ impl State {
                 text(if op == "lr_pda_propose" { mzlab_core::itemroutes::pda_propose(&mut m, a, b) } else { mzlab_core::itemroutes::pda_spectrum(&mut m, a, b) }?)
             }
             "lr_pda_sub" => self.pda_sub(eng, p),
+            "lr_pda_peaks" => self.pda_peaks(eng, p),
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let slot = self.open_lr(eng, name)?;

@@ -59,7 +59,7 @@ try:
             pg.evaluate("E.files.filter(f => f.file.startsWith('HR_DDA')).forEach(f => { f.vis = true; }); groupFiles()"); pg.wait_for_function("E.files.some(f => f.ugrp)")
             g = pg.evaluate(GROUPS); assert any(re.match(r"(Group|Gruppo) 1\|", x) for x in g) and not any(x.startswith("DDA") for x in g), g
             assert pg.evaluate("E.files.filter(f => f.ugrp).every(f => f.vis)")
-            pg.evaluate("GRUPPI.ungroup(E.files.find(f => f.ugrp).ugrp)"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
+            pg.evaluate("GROUPS.ungroup(E.files.find(f => f.ugrp).ugrp)"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
             assert not any(re.match(r"(Group|Gruppo) 1", x) for x in pg.evaluate(GROUPS))
         step("the user groups the shown files and dissolves the group", own_group)
 finally:

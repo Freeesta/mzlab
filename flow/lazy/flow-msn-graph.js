@@ -54,7 +54,7 @@
   const openInData = async G0 => {
     const to = target(); if (!to) throw new Error("The plan has no fragmentation graph.");
     const p = to.inst.params || {}, text = (/** @type {string} */ n) => (typeof p[n] === "string" ? p[n].trim() : "");
-    await G.carica("m:infusione-grafo.js");
+    await G.loadScript("m:infusione-grafo.js");
     const k = F.webMsn.infusion(to.S);
     Object.assign(G0, { mol: null, text: text("formula"), adduct: text("adduct"), smiles: text("smiles"), j: null, sel: null, k: -1, ro: null });
     // the step parameters (spectra.msn_graph@2) under the names of the tab's state

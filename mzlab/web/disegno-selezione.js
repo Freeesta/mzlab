@@ -4,7 +4,7 @@
 // chem::sel, through the `.wasm` `grafo` or the app's `feat/grafo`), fed with the V2000 molfile of the piece: open valences are filled with H. InChI and
 // InChIKey come from Indigo (Ketcher). Loaded on the first «Info…» click; the page only lays the values out.
 
-import { carica } from "./disegno-frammenti.js";
+import { loadWasm } from "./disegno-frammenti.js";
 import { copyText } from "./disegno-menu.js";
 
 /** @typedef {{ formula: string, text: string, charge: number, mass: number, mz?: number, unpaired: number }} Label */
@@ -13,7 +13,7 @@ import { copyText } from "./disegno-menu.js";
 
 /** `selection/1` of a molfile, or null when the engine cannot answer */
 export async function selOf(/** @type {string} */ molfile, /** @type {boolean} */ part) {
-  try { return /** @type {Sel} */ (JSON.parse(await (await carica()).sel(JSON.stringify({ molfile, part })))); } catch (_) { return null; }
+  try { return /** @type {Sel} */ (JSON.parse(await (await loadWasm()).sel(JSON.stringify({ molfile, part })))); } catch (_) { return null; }
 }
 
 const t = (/** @type {string} */ k, /** @type {Record<string, unknown>} */ p = {}) => I18N.t(k, p);

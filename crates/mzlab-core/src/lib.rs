@@ -67,6 +67,8 @@ pub mod isoscore;
 pub mod isotable;
 pub mod nuclides;
 pub mod itemroutes;
+#[cfg(feature = "mappa-dad")]
+pub mod pdapeaks;
 pub mod infusion;
 pub mod iteminfo;
 pub mod chromlist;
@@ -205,6 +207,7 @@ pub mod mzrun;
 pub mod step;
 pub mod scantable;
 pub mod spechead;
+pub mod scanpick;
 pub mod specdiff;
 pub mod specpeaks;
 pub mod spectrum;

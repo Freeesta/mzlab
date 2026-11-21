@@ -45,7 +45,7 @@ pub struct Settings {
     pub dead_factor: f64,
     /// Products are proposed only when the parent is a chromatographic peak whose area falls over time (`parent_check`).
     pub parent_decay: bool,
-    /// Options of the comparison of conditions (`gruppi/1`) from the settings key `gruppi`; the defaults of the module when absent.
+    /// Options of the comparison of conditions (`groups/1`) from the settings key `groups`; the defaults of the module when absent.
     pub groups: crate::groups::GroupOpts,
 }
 
@@ -257,7 +257,7 @@ pub fn settings(settings_json: &str) -> Settings {
     s.dead_factor = num("dead_factor").map_or(s.dead_factor, |x| x.max(0.0));
     s.parent_decay = flag("parent_decay").unwrap_or(s.parent_decay);
     if let Some(o) = v
-        .get("gruppi")
+        .get("groups")
         .and_then(|g| crate::groups::opts_from_value(g).ok())
     {
         s.groups = o;

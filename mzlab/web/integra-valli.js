@@ -25,14 +25,14 @@ function baseAtT(s, it, t) {
 
 /** Opens the proposal on the record `it` of `p`: its own drop lines, or the engine's at the depth last used. @param {Bag} p @param {Bag} it */
 async function start(p, it) {
-  if (!G.MANINT) await carica("m:integrazioni-manuali.js");
+  if (!G.MANINT) await loadScript("m:integrazioni-manuali.js");
   p._split = { it, ts: it.splits ? [...it.splits] : [], depth: depthOf(), tok: 0, none: false, focus: true };
   p.isel = it.id; setActive(p);
   if (!it.splits) await ask(p); else draw(p);
 }
 /** «Split by hand»: the record's own drop lines are its markers; a click in the window adds one, a drag moves it, Delete removes it, Esc leaves the mode. @param {Bag} p @param {Bag} it */
 async function startManual(p, it) {
-  if (!G.MANINT) await carica("m:integrazioni-manuali.js");
+  if (!G.MANINT) await loadScript("m:integrazioni-manuali.js");
   p._split = { it, ts: it.splits ? [...it.splits] : [], depth: 0, tok: 0, none: false, focus: false, manual: true };
   p.isel = it.id; setActive(p); draw(p);
 }

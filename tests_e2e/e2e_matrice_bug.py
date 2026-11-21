@@ -55,7 +55,7 @@ def stat_ok(pg):
     ids = pg.evaluate("[...document.querySelectorAll('#sb-panel-stat details.stat-sec')].map(d => d.dataset.s + ':' + (d.querySelector('div').textContent.trim().length > 0))")
     assert all(x.endswith("true") for x in ids), ids
 def mol_ok(pg):
-    pg.evaluate("carica('m:molecules-ui.js').then(() => window.MOLDB.open())"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+    pg.evaluate("loadScript('m:molecules-ui.js').then(() => window.MOLDB.open())"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
     pg.wait_for_function("document.activeElement && document.activeElement.closest('#mol-q')", timeout=15000)
     pg.fill("#mol-q input", "caf"); pg.wait_for_function("document.querySelector('#mol-body').dataset.q === 'caf'", timeout=10000)
     pg.keyboard.press("Escape"); pg.wait_for_selector("#moldlg", state="hidden")
@@ -190,7 +190,7 @@ try:
             assert first
         cell(pg, "many files: keyboard only through the statistics panel", keyboard)
         def mol_keys():
-            pg.evaluate("carica('m:molecules-ui.js').then(() => window.MOLDB.open())"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+            pg.evaluate("loadScript('m:molecules-ui.js').then(() => window.MOLDB.open())"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
             for _ in range(20):
                 pg.keyboard.press("Tab"); frames(pg, 1)
                 assert pg.evaluate("!!document.activeElement.closest('#moldlg')"), "focus left the molecules window"

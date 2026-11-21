@@ -27,12 +27,30 @@ export async function nameToSmiles(text, note, t) {
   return r[0].smiles;
 }
 
-/** Watches the paste events of the editor document: a single line that is neither a SMILES, an InChI nor a molfile/KET is a name (or junk) and is not handed to Ketcher, which would draw query atoms; `note` says so.
+/** True for one line that is a structure as written: a SMILES or InChI, a reaction SMILES ("CC=O.OCC>>CC(=O)OCC"), either one followed by a title (a .smi line, "CCO ethanol") or by a CXSMILES block ("|...|").
+ * Before a title, a word with an aromatic atom and no ring digit, or with a ring that never closes, is not a SMILES: "Co nitrate", "In vitro" and "CO2 emissions" are names. */
+const isStructureLine = (/** @type {string} */ t) => {
+  const first = t.split(/\s+/)[0], parts = first.split(">"), alone = first === t;
+  const ok = (/** @type {string} */ w) => {
+    if (!looksLikeSmiles(w)) return false;
+    if (alone) return true;
+    const bare = w.replace(/Cl|Br|\[[^\]]*\]|%\d\d/g, ""), digits = bare.replace(/\D/g, "");
+    return [...new Set(digits)].every(d => digits.split(d).length % 2 === 1) && (!!digits || !/[cnops]/.test(bare));
+  };
+  return isStructureText(t) || /^InChI=/i.test(first) || ok(first) || (parts.length === 3 && parts.some(Boolean) && parts.every(x => !x || ok(x)));
+};
+
+/** True for one line that Ketcher's reader would turn into query atoms: not a structure line, not the start of a KET ("{") or of a base64 CDX ("VmpDRD"), not a CDXML (`isCdxml`). A compound name, or junk. */
+export const isNameLine = (/** @type {string} */ t) => { t = t.trim(); return !!t && !/[\r\n]/.test(t) && !/^(?:\{|VmpDRD)/.test(t) && !isCdxml(t) && !isStructureLine(t); };
+
+/** Watches the paste events of the editor document: a single line on the canvas that is a name (`isNameLine`) is not handed to Ketcher, which would draw query atoms; `note` says so.
+ * A paste inside one of Ketcher's own fields (text tool, Open dialog, atom label) is that field's business.
  * @param {Document} doc @param {() => void} note shows the «not found» note */
 export function guardPaste(doc, note) {
   doc.addEventListener("paste", e => {
-    const t = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").trim();
-    if (!t || /[\r\n]/.test(t) || t.startsWith("{") || isCdxml(t) || isStructureText(t)) return;
+    const el = /** @type {any} */ (e.target);                              // the iframe has its own Element: no instanceof
+    if (el && el.matches && !el.matches(".cliparea,[data-cliparea]") && (["INPUT", "TEXTAREA", "SELECT"].includes(el.nodeName) || el.isContentEditable)) return;
+    if (!isNameLine((e.clipboardData && e.clipboardData.getData("text/plain")) || "")) return;
     e.preventDefault(); e.stopImmediatePropagation(); note();
   }, true);
 }

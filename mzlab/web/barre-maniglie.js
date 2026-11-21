@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Bar handles of the integration windows (see below). Classic script, loaded on demand (carica) by scroll.js; cursorLine() calls BARRE.sync(p).
+// Bar handles of the integration windows (see below). Classic script, loaded on demand (loadScript) by scroll.js; cursorLine() calls BARRE.sync(p).
 const BARRE = (() => {
 // the two bars of every integration window: a 44 px target over the bar's top handle for finger, pen and keyboard (mouse keeps dragging the bar itself);
 // ← → move the border one sample (Shift: five). The handle drawn on the canvas stays the visible dot. SIM/MRM panels have no bars: their two anchors are integra-estremi.js.
@@ -30,7 +30,7 @@ function sync(/** @type {Bag} */ p) {
     if (a.full) { b.setAttribute("aria-valuemin", a.full[0].toFixed(2)); b.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
   }));
   old.forEach(n => n.remove()); if (typeof INTBASE !== "undefined") INTBASE.sync(p);          // the points of a custom baseline (integra-base.js)
-  const W = /** @type {any} */ (window); if (W.INTEND) W.INTEND.sync(p); else if (p.ints.length) carica("m:integra-estremi.js").then(() => W.INTEND && W.INTEND.sync(p));   // the ends on the baseline (integra-estremi.js)
+  const W = /** @type {any} */ (window); if (W.INTEND) W.INTEND.sync(p); else if (p.ints.length) loadScript("m:integra-estremi.js").then(() => W.INTEND && W.INTEND.sync(p));   // the ends on the baseline (integra-estremi.js)
 }
   return { sync };
 })();

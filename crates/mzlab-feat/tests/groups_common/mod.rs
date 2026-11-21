@@ -1,4 +1,4 @@
-//! Shared builders of the proofs of `gruppi`: files of `samples/1`, cells and the synthetic scenario of the fixture. Synthetic data only.
+//! Shared builders of the proofs of `groups`: files of `samples/1`, cells and the synthetic scenario of the fixture. Synthetic data only.
 #![allow(dead_code)]
 
 use mzlab_core::json::Out;

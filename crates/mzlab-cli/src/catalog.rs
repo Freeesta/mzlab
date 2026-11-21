@@ -23,6 +23,7 @@ const GLOBAL: &[(&str, &str)] = &[
 /// What a flag means, by name; the usage line says only its value.
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
+    ("--notes", "features-notes/1 file"),
     ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),
@@ -77,6 +78,9 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--smooth", "3 or 5 points"),
     ("--n", "points per extreme"),
     ("--scan", "scan number"),
+    ("--minus", "blank file to subtract"),
+    ("--minus-sample", "sample of the blank"),
+    ("--minus-rt", "blank window, min"),
     ("--format", "output format (values in the usage line)"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
