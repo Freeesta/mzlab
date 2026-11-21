@@ -54,6 +54,14 @@ try:
             pg2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000); pg2.wait_for_timeout(1500)
             assert count(pg2) == 1, count(pg2)
         step("two quick requests for the same file read it once", fast)
+        def opening():
+            # the file is in the table but the engine has not opened it yet (read, queued): choosing it again is still a duplicate, not a tick of a set-aside file
+            pg2.evaluate("document.querySelector('#flist [data-rm]').click()"); pg2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===0", timeout=30000)
+            pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===1", timeout=90000)
+            pg2.evaluate("CartCarica.note('')")
+            pg2.set_input_files("#pick", [str(D / "a.mzML")]); pg2.wait_for_function("document.querySelector('#cartinfo') && /already loaded/.test(document.querySelector('#cartinfo').textContent)", timeout=30000)
+            pg2.evaluate("OPENNOW.idle()"); assert count(pg2) == 1, count(pg2)      # nothing is left queued to open: a duplicate row would be there by now
+        step("picked again right after its row appears, before the engine has opened it: same notice, no duplicate", opening)
         r.b.close()
 finally:
     pass

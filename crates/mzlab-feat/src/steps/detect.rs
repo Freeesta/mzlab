@@ -54,6 +54,15 @@ pub(super) fn estimate() -> Step {
     }
 }
 
+/// The switch of the unit-resolution screening (`lrscreen`).
+fn centroid_param() -> Param {
+    Param::choice("centroid", "Centroid profile scans", &["auto", "on", "off"])
+        .default_str("auto")
+        .doc("Unit resolution only: auto centroids a file whose MS1 scans are mostly profile mode (the engine of spectra.centroid) before detecting; on does it for every unit-resolution file, off detects the profile points as they are. High-resolution files are never centroided here")
+        .tip("Unit resolution only: auto centroids mostly-profile files before detecting; on forces it, off keeps profile points.")
+        .advanced()
+}
+
 pub(super) fn detect() -> Step {
     let mut params = vec![
         polarity(),
@@ -107,6 +116,7 @@ pub(super) fn detect() -> Step {
     ];
     params.extend(trace_choices());
     params.extend(noise_gates());
+    params.push(centroid_param());
     params.extend(isotope_params());
     Step {
         // 2: `max_gap` counts the missed scans (1 counted the scan distance); `flow::migrate` converts a saved @1

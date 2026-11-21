@@ -17,6 +17,8 @@ const OPENNOW = /** @type {any} */ ((() => {
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
   const openOf = (/** @type {string} */ name) => E.files.filter((/** @type {FileAperto} */ x) => !x.gone && src(x.file) === name);
   const isOpen = (/** @type {string} */ name) => openOf(name).length > 0;
+  /** the file is queued or being opened right now: not open yet, but not set aside either */
+  const coming = (/** @type {string} */ name) => q.includes(name) || cur === name;
   const rowOf = (/** @type {string} */ name) => ST.files.find((/** @type {FileRiga} */ f) => f.name === name);
   /** the world of the open files: true = high resolution, null = no file open */
   const world = () => { const r = ST.files.find((/** @type {FileRiga} */ f) => f.kind in GORD && isOpen(f.name)); return r ? !!r.hr : null; };
@@ -117,7 +119,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
   return { add, hold, held: (/** @type {string} */ n) => held.has(n), release: (/** @type {string} */ n) => { held.delete(n); return n === cur || q.includes(n); },      // true: still on its way in, nothing to add
-    idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
+    idle, tick, edit, sync, toWorld, note, many, isOpen, coming, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
     /** what the queue waits on (the message of a test that timed out) */
     state: () => ({ busy, q: q.slice(), cur, ms: cur ? Date.now() - t0 : 0, ahead: q.filter(ahead) }) };
 })());

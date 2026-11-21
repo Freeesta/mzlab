@@ -24,8 +24,13 @@ pub(crate) fn lines(name: &str, n: &Note) -> Vec<String> {
             key: e.key,
             params: e.params.iter().map(|(k, v)| (*k, v.to_string())).collect(),
         };
+        let kind = if e.key.starts_with("note.") {
+            "note"
+        } else {
+            "warning"
+        };
         out.push(format!(
-            "warning: {name}: {}",
+            "{kind}: {name}: {}",
             crate::error_text::warning(&notice)
         ));
     }

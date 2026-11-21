@@ -50,6 +50,9 @@ pub struct Recipe {
     pub join: Option<crate::align_mzmine::JoinAlign>,
     /// Algorithm `peak_finder` of `features.gapfill` (`None` = the integration of `gapfill`).
     pub peak_finder: Option<crate::align_mzmine::PeakFinder>,
+    /// Unit-resolution screening switches (`centroid`, `recenter`, `dedup`) and the collector of what they did; they add to the text only on the unit
+    /// axis and only when not `off`.
+    pub screen: crate::lrscreen::Screen,
 }
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
@@ -95,6 +98,7 @@ impl Default for Recipe {
             min_height_basis: None,
             join: None,
             peak_finder: None,
+            screen: crate::lrscreen::Screen::default(),
         }
     }
 }
@@ -132,7 +136,7 @@ impl Recipe {
             detect,
             self.steps,
             self.fam
-        )
+        ) + &self.screen_file_text()
     }
 
     /// Text of what the aligned table depends on: the text of the files and the alignment, the RT map and the filling; the algorithms `join` and
@@ -187,7 +191,7 @@ impl Recipe {
                 format!("\nfinder={:?}", self.steps.finder)
             } else {
                 String::new()
-            }),
+            } + &self.screen_file_text()),
         )
     }
 

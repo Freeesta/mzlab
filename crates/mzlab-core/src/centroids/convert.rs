@@ -172,7 +172,12 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
 }
 
 /// Profile scan `s` as its centroids, adding to `flagged` its centroids flagged (merged, saturated).
-fn reduce(s: &mut mzml::Spectrum, p: &super::Params, buf: &mut Buf, flagged: &mut (usize, usize)) {
+pub(super) fn reduce(
+    s: &mut mzml::Spectrum,
+    p: &super::Params,
+    buf: &mut Buf,
+    flagged: &mut (usize, usize),
+) {
     let y: Vec<f64> = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
     let c = centroids(&s.mz, &y, p, buf);
     flagged.0 += c.iter().filter(|c| c.flags & MERGED != 0).count();

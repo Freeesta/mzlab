@@ -6,7 +6,7 @@ use crate::json::{self, Value};
 use crate::readers::Position;
 
 pub const BLOCK: u64 = 16384;
-const HEADER: usize = 64;
+pub(crate) const HEADER: usize = 64;
 /// Bit 0 of `flags` (version 3): the rows locate the scans in the members of a vendor file set, not in an mzML.
 pub const READER_FLAG: u32 = 1;
 
@@ -267,7 +267,7 @@ pub struct Head {
     h: [u8; HEADER],
     size: u64,
     meta: Vec<u8>,
-    rows: Option<Vec<u8>>,
+    pub(crate) rows: Option<Vec<u8>>,
 }
 
 impl Head {
@@ -321,7 +321,7 @@ impl Head {
     }
 }
 
-fn u64_at(b: &[u8], at: usize) -> u64 {
+pub(crate) fn u64_at(b: &[u8], at: usize) -> u64 {
     u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
 }
 

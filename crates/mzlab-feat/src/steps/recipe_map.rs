@@ -225,6 +225,32 @@ fn unknown(step: &str, k: &str) -> Error {
         .with("param", k)
 }
 
+/// `auto`, `off` and, for `centroid`, `on`.
+fn switch(step: &str, k: &str, v: &Value, allow_on: bool) -> Result<crate::lrscreen::Switch> {
+    v.str()
+        .and_then(|s| crate::lrscreen::Switch::parse(s, allow_on))
+        .ok_or_else(|| bad(step, k, v))
+}
+
+/// The parameters of the retention-time warp of `features.align`.
+fn set_warp(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let num = || v.f64().ok_or_else(|| bad(step, k, v));
+    let w = &mut r.align.warp;
+    match k {
+        "rt_warp" => {
+            w.method = v
+                .str()
+                .and_then(crate::rtwarp::Method::parse)
+                .ok_or_else(|| bad(step, k, v))?
+        }
+        "rt_coarse_gap" => w.coarse_gap = num()?,
+        "rt_span" => w.span = num()?,
+        "rt_inlier" => w.inlier = num()?,
+        _ => w.seed = num()? as u64,
+    }
+    Ok(())
+}
+
 fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     let num = || v.f64().ok_or_else(|| bad(step, k, v));
     axis_gate(r, step, k)?;
@@ -273,20 +299,16 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k, v))?
         }
         ("features.align", "split_gap") => r.align.ion.split_gap = Some(num()?),
-        ("features.align", "rt_warp") => {
-            r.align.warp.method = v
-                .str()
-                .and_then(crate::rtwarp::Method::parse)
-                .ok_or_else(|| bad(step, k, v))?
+        ("features.align", "rt_warp" | "rt_coarse_gap" | "rt_span" | "rt_inlier" | "rt_seed") => {
+            set_warp(r, step, k, v)?
         }
-        ("features.align", "rt_coarse_gap") => r.align.warp.coarse_gap = num()?,
-        ("features.align", "rt_span") => r.align.warp.span = num()?,
-        ("features.align", "rt_inlier") => r.align.warp.inlier = num()?,
-        ("features.align", "rt_seed") => r.align.warp.seed = int()? as u64,
         ("features.align", "link_rt") => r.align.link_rt = num()?,
         ("features.align", "max_span") => r.align.max_span = num()?,
         ("features.align", "min_dependent") => r.align.min_dependent = int()? as u32,
         ("features.align", "weak_files") => r.weak_files = int()?,
+        ("features.detect", "centroid") => r.screen.centroid = switch(step, k, v, true)?,
+        ("features.align", "recenter") => r.screen.recenter = switch(step, k, v, false)?,
+        ("features.gapfill", "dedup") => r.screen.dedup = switch(step, k, v, false)?,
         ("features.gapfill", "floor") => r.fill.floor = num()?,
         ("features.gapfill", "ppm") => r.fill.ppm = num()?,
         ("features.gapfill", "rt_tol") => r.fill.rt_tol = num()?,
@@ -363,6 +385,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("stitch", choice(r.detect.stitch_wide, "wide", "strict")),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
+                ("centroid", Value::Str(r.screen.centroid.name().into())),
             ];
             push_peak(&r.detect.peak, &mut v);
             recipe_iso::values(r, &mut v);
@@ -395,6 +418,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
             ("max_span", n(r.align.max_span)),
             ("min_dependent", n(f64::from(r.align.min_dependent))),
             ("weak_files", n(r.weak_files as f64)),
+            ("recenter", Value::Str(r.screen.recenter.name().into())),
         ],
         "features.gapfill" => vec![
             ("floor", n(r.fill.floor)),
@@ -402,6 +426,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
             ("min_points", n(r.fill.min_points as f64)),
             ("max_gap", n(r.fill.max_gap as f64)),
             ("long_trace", n(r.fill.long_trace as f64)),
+            ("dedup", Value::Str(r.screen.dedup.name().into())),
         ],
         "features.ms2_link" => vec![
             ("default_half_window", n(r.steps.ms2.default_half_window)),

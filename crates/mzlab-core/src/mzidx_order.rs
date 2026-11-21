@@ -110,7 +110,8 @@ pub(crate) fn sort<T: Num>(
         }
     };
     if s.len() < MIN {
-        s.sort_by(cmp);
+        // through the same `&dyn` comparison as the runs of equal keys below: one compiled comparison sort per peak type instead of two
+        s.sort_by(&cmp as Tie<Peak<T>>);
         return Ok(());
     }
     if T::F32 {

@@ -133,28 +133,28 @@ impl ReadAt for JsReader {
 
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 /// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
-fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<blocks_js::Blocks>> {
+fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<Box<dyn ReadAt>>> {
     Index::open(blocks_of(read, k, size, together), size as u64)
 }
 
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
-/// The reader of index `k` that `open_in` opens.
-fn blocks_of(read: &Function, k: usize, size: f64, together: usize) -> blocks_js::Blocks {
+/// The reader of index `k` that `open_in` opens: boxed, the one reader type of every index of this module (`lrscreen::Centroids` is boxed too).
+fn blocks_of(read: &Function, k: usize, size: f64, together: usize) -> Box<dyn ReadAt> {
     let r = JsReader {
         read: read.clone(),
         k: k as u32,
     };
-    blocks_js::Blocks::over(r, size as u64, together)
+    Box::new(blocks_js::Blocks::over(r, size as u64, together))
 }
 
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
-fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<blocks_js::Blocks>> {
+fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<Box<dyn ReadAt>>> {
     open_in(read, k, size, 1)
 }
 
 #[cfg(any(feature = "detect", feature = "proofs"))]
 /// Every index of the series, all open together.
-fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<blocks_js::Blocks>>> {
+fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<Box<dyn ReadAt>>>> {
     (0..sizes.len())
         .map(|k| open_in(read, k, sizes[k], sizes.len()))
         .collect()

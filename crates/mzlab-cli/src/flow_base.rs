@@ -113,6 +113,8 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let gate = r.gate(job);
     let mut index = open_gated(&path, &gate)?;
     let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut index)?)?;
+    // unit resolution: a profile file is centroided first, so its defect and floors come from the centroids (`lrscreen`)
+    let recipe = mzlab_feat::lrscreen::adjusted(&mut index, recipe)?;
     let name = r.source_name(input);
     // refused with its numbers before it grows past the working memory of this job, as the page refuses it (`estimate::detect_fits`)
     mzlab_ops::run::feat::estimate::detect_fits(

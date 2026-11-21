@@ -570,6 +570,7 @@
                   "rt_inlier",
                   "rt_seed",
                   "weak_files",
+                  "recenter",
                   "link_rt",
                   "max_span",
                   "min_dependent",
@@ -650,6 +651,11 @@
                     "description":"Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier"
                   },
                   {
+                    "enum":["auto","off"],
+                    "default":"auto",
+                    "description":"Unit resolution only: subtracts from each file the m/z drift measured on the rows most files share (median of at least 5 anchors, applied from 0.05 Da), so a drifting file does not split a row"
+                  },
+                  {
                     "type":"number",
                     "minimum":0,
                     "default":0.2,
@@ -703,6 +709,7 @@
                   "stitch",
                   "min_width",
                   "min_snr",
+                  "centroid",
                   "isotopes",
                   "iso_ppm",
                   "iso_abs_da",
@@ -796,6 +803,11 @@
                     "minimum":0,
                     "default":0,
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
+                  {
+                    "enum":["auto","on","off"],
+                    "default":"auto",
+                    "description":"Unit resolution only: auto centroids a file whose MS1 scans are mostly profile mode (the engine of spectra.centroid) before detecting; on does it for every unit-resolution file, off detects the profile points as they are. High-resolution files are never centroided here"
                   },
                   {
                     "enum":["averagine","grouper","finder"],
@@ -939,6 +951,7 @@
                   "min_points",
                   "max_gap",
                   "long_trace",
+                  "dedup",
                   "intensity_tol",
                   "abs_da"
                 ]
@@ -972,6 +985,11 @@
                     "minimum":1,
                     "default":400,
                     "description":"A trace longer than this is background and is not taken"
+                  },
+                  {
+                    "enum":["auto","off"],
+                    "default":"auto",
+                    "description":"Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed"
                   },
                   {
                     "type":"number",

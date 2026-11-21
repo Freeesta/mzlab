@@ -1,7 +1,7 @@
 //! `features`: the feature table of LC-MS files as CSV; the arguments are parsed here.
 
 use super::Entry;
-use crate::{features_of, Outcome};
+use crate::{features_full, features_plan_of, Outcome};
 use std::path::PathBuf;
 
 struct Args {
@@ -12,6 +12,12 @@ struct Args {
     params: String,
     /// `--sample`: the ids to take of every file with several samples
     sample: Option<Vec<u32>>,
+    /// `--centroid auto|on|off`: whether profile scans at unit resolution are centroided before detection
+    centroid: Option<String>,
+    /// `--report`: where `features-report/1` goes
+    report: Option<PathBuf>,
+    /// `--dry-run`: print `features-plan/1`, detect nothing, write nothing
+    dry_run: bool,
 }
 
 fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args>, String> {
@@ -21,6 +27,9 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
         notes: None,
         params: String::new(),
         sample: None,
+        centroid: None,
+        report: None,
+        dry_run: false,
     };
     let mut set = false;
     while let Some(x) = a.next() {
@@ -29,6 +38,14 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
             "--help" | "-h" => return Ok(None),
             "--out" => r.out = Some(value("a path")?.into()),
             "--notes" => r.notes = Some(value("a path")?.into()),
+            "--report" => r.report = Some(value("a path")?.into()),
+            "--dry-run" => r.dry_run = true,
+            "--centroid" => {
+                r.centroid = match value("auto, on or off")?.as_str() {
+                    m @ ("auto" | "on" | "off") => Some(m.to_string()),
+                    m => return Err(format!("unknown --centroid mode {m}: use auto, on or off")),
+                }
+            }
             "--preset" | "--params" if set => {
                 return Err("use --preset or --params, not both".into())
             }
@@ -91,6 +108,21 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
     Ok((files, labels))
 }
 
+/// `params` (the JSON text of the recipe, empty for the defaults) with the `centroid` key of `--centroid`.
+fn with_centroid(params: &str, mode: Option<&str>) -> String {
+    use mzlab_core::json::{parse, Value};
+    let Some(mode) = mode else {
+        return params.to_string();
+    };
+    let mut fields = match parse(params.as_bytes()) {
+        Ok(Value::Obj(f)) => f,
+        _ => Vec::new(),
+    };
+    fields.retain(|(k, _)| k != "centroid");
+    fields.push(("centroid".into(), Value::Str(mode.into())));
+    mzlab_core::flow::value_text(&Value::Obj(fields))
+}
+
 /// Where `features-notes/1` goes: the `--notes` path, else beside `--out`: `features-notes.json` in a folder, `NAME.notes.json` beside `NAME.csv`.
 fn notes_target(a: &Args) -> Option<PathBuf> {
     if let Some(n) = &a.notes {
@@ -131,19 +163,31 @@ fn run(args: Vec<String>) -> Outcome {
     let r = std::fs::create_dir_all(&tmp)
         .map_err(crate::io)
         .and_then(|_| expand(&a))
-        .and_then(|(files, labels)| features_of(&files, &labels, &a.params, &tmp));
+        .and_then(|(files, labels)| {
+            let params = with_centroid(&a.params, a.centroid.as_deref());
+            if a.dry_run {
+                return features_plan_of(&files, &labels, &params, &tmp)
+                    .map(|p| (p, String::new()));
+            }
+            features_full(&files, &labels, &params, &tmp)
+        });
     let notes = keep_notes(&a, &tmp);
     let _ = std::fs::remove_dir_all(&tmp);
-    let csv = match r {
+    let (csv, report) = match r {
         Ok(c) => c,
         Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e),
         // a file that cannot be listed is a data error (1) with its own message, not a usage error
         Err(e) => return Outcome::fail_error(&e),
     };
+    if a.dry_run {
+        // the plan is the only output: nothing is written, not even the notes of the indexes
+        return Outcome::ok(csv.into_bytes());
+    }
     if let Err(e) = notes {
         return Outcome::fail(&e);
     }
-    match &a.out {
+    // the CSV first, then the report: a report that cannot be written (exit 6) leaves the CSV where `--out` or the standard output put it
+    let mut done = match &a.out {
         None => Outcome::ok(csv.into_bytes()),
         Some(p) => {
             let to = if p.is_dir() {
@@ -151,17 +195,38 @@ fn run(args: Vec<String>) -> Outcome {
             } else {
                 p.clone()
             };
-            std::fs::write(to, csv).map_or_else(
-                |e| Outcome::fail(&e.to_string()),
-                |_| Outcome::ok(Vec::new()),
-            )
+            if let Err(e) = std::fs::write(&to, csv) {
+                return out_failure(&to, &e);
+            }
+            Outcome::ok(Vec::new())
+        }
+    };
+    if let Some(p) = &a.report {
+        let to = if p.is_dir() {
+            p.join("features-report.json")
+        } else {
+            p.clone()
+        };
+        if let Err(e) = std::fs::write(&to, report) {
+            let mut failed = out_failure(&to, &e);
+            failed.stdout = std::mem::take(&mut done.stdout);
+            return failed;
         }
     }
+    done
+}
+
+/// A file that cannot be written: `err.cli.out`, exit 6.
+fn out_failure(to: &std::path::Path, e: &std::io::Error) -> Outcome {
+    Outcome::fail_error(
+        &mzlab_core::error::Error::new("err.cli.out")
+            .with("path", format!("{}: {e}", to.display())),
+    )
 }
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
+    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
 ), Entry::new(
     "table compare",

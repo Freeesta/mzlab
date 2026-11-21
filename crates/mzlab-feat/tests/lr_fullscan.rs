@@ -259,3 +259,203 @@ fn detection_progress_is_monotone_ends_at_the_total_and_leaves_the_traces_alone(
     assert!(!seen.is_empty() && seen.windows(2).all(|w| w[0].0 <= w[1].0));
     assert!(seen.last().is_some_and(|&(d, t)| d == t));
 }
+
+// ---- screening of a series at unit resolution: profile scans, m/z drift between files, duplicate rows (`lrscreen`) ----
+
+/// Drift of each of the 8 samples (t0, t1..t5, two blanks), Da; the median is 0.
+const DRIFT: [f64; 8] = [-0.2, -0.1, 0.0, 0.1, 0.2, -0.1, 0.1, 0.0];
+/// (m/z, RT, amplitude): 4 ions apart, and a pair 1.0 Da apart at one RT whose areas move together (only the distance keeps them two rows).
+const TRUE_IONS: [(f64, f64, f64); 5] = [
+    (181.2, 3.0, 6.0e5),
+    (223.3, 4.2, 9.0e5),
+    (307.4, 6.8, 7.0e5),
+    (265.1, 5.5, 8.0e5),
+    (266.1, 5.5, 8.0e5),
+];
+
+/// Known noise rows: chemical background ions that every sample holds (they are also the anchors the drift of a file is measured on).
+const BACKGROUND: [(f64, f64, f64); 8] = [
+    (121.4, 1.5, 3.0e5),
+    (139.7, 2.4, 2.5e5),
+    (158.3, 3.6, 2.0e5),
+    (203.6, 4.9, 3.5e5),
+    (244.8, 6.1, 2.2e5),
+    (287.2, 7.5, 2.8e5),
+    (329.5, 8.4, 3.2e5),
+    (371.9, 9.3, 2.4e5),
+];
+
+/// The `.mzidx` of sample `k` of the screening series: the same peak list as profile scans (0.1 Da grid, FWHM 0.7 Da) or as centroids.
+fn screen_index(k: usize, profile: bool) -> Vec<u8> {
+    let mut rng = Lcg(500 + k as u64);
+    let name = format!("scr{k}{}", u8::from(profile));
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: name.clone(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let n = 240;
+    w.open_spectra(n).unwrap();
+    for i in 0..n {
+        let rt = 0.5 + 0.05 * i as f64;
+        let mut peaks: Vec<(f64, f64)> = (0..30)
+            .map(|_| {
+                (
+                    100.0 + 300.0 * rng.next(),
+                    1.5e3 * (0.5 * rng.normal()).exp(),
+                )
+            })
+            .collect();
+        for &(m, c, a) in TRUE_IONS.iter().chain(&BACKGROUND) {
+            let v = a * (1.0 + 0.1 * k as f64) * (-0.5 * ((rt - c) / 0.07).powi(2)).exp();
+            if v > 100.0 {
+                peaks.push((m + DRIFT[k] + 0.02 * rng.normal(), v));
+            }
+        }
+        peaks.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let (mz, y): (Vec<f64>, Vec<f32>) = if profile {
+            profile_points(&peaks)
+        } else {
+            peaks.iter().map(|p| (p.0, p.1 as f32)).unzip()
+        };
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("scan={}", i + 1),
+            level: 1,
+            rt,
+            polarity: 1,
+            profile,
+            filter: "+ p ESI Q1MS [100.000-400.000]".into(),
+            precursor: None,
+            mz,
+            intensity: y,
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let mzml = w.finish().unwrap();
+    let size = mzml.len() as u64;
+    let mut src = mzml.clone();
+    let p = prepare(&mut src, size, &format!("{name}.mzML")).unwrap();
+    build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0
+}
+
+/// The peaks rendered on a 0.1 Da grid as Gaussians of FWHM 0.7 Da (points within 1.5 Da of a peak; overlapping peaks add).
+fn profile_points(peaks: &[(f64, f64)]) -> (Vec<f64>, Vec<f32>) {
+    let sigma = 0.7 / 2.3548;
+    let mut grid = std::collections::BTreeMap::<i64, f64>::new();
+    for &(m, a) in peaks {
+        let c = (m * 10.0).round() as i64;
+        for g in c - 15..=c + 15 {
+            let x = g as f64 / 10.0 - m;
+            *grid.entry(g).or_default() += a * (-0.5 * (x / sigma).powi(2)).exp();
+        }
+    }
+    grid.into_iter()
+        .map(|(g, v)| (g as f64 / 10.0, v as f32))
+        .unzip()
+}
+
+fn screen_series(profile: bool) -> Vec<Vec<u8>> {
+    (0..DRIFT.len()).map(|k| screen_index(k, profile)).collect()
+}
+
+/// The table of the screening series, through the recipe the engine builds for the first file (`adjusted` centroids it when asked).
+fn screen_run(idxs: &[Vec<u8>], tweak: impl Fn(&mut Recipe)) -> (Recipe, Aligned) {
+    let mut r = Recipe::for_index(&mut open(&idxs[1])).unwrap();
+    tweak(&mut r);
+    let r = mzlab_feat::lrscreen::adjusted(&mut open(&idxs[1]), r).unwrap();
+    let files: Vec<FileFeatures> = idxs
+        .iter()
+        .map(|b| analyse_file(&mut open(b), &r).unwrap())
+        .collect();
+    let (t, _) = align_and_fill(&files, &r, |k| Ok(open(&idxs[k]))).unwrap();
+    (r, t)
+}
+
+fn near(t: &Aligned, mz: f64, rt: f64) -> Vec<usize> {
+    (0..t.len())
+        .filter(|&r| (t.mz[r] - mz).abs() <= 0.35 && (t.rt[r] - rt).abs() <= 0.25)
+        .collect()
+}
+
+#[test]
+fn profile_scans_with_auto_give_the_rows_of_the_centroid_input_and_no_duplicates() {
+    let (_, from_profile) = screen_run(&screen_series(true), |_| {});
+    let (_, from_centroids) = screen_run(&screen_series(false), |_| {});
+    assert_eq!(
+        from_centroids.len(),
+        TRUE_IONS.len() + BACKGROUND.len(),
+        "the true ions and the known noise rows"
+    );
+    assert_eq!(
+        from_profile.len(),
+        from_centroids.len(),
+        "rows of the profile and of the centroid series"
+    );
+    for t in [&from_profile, &from_centroids] {
+        for a in 0..t.len() {
+            for b in a + 1..t.len() {
+                let close = (t.mz[a] - t.mz[b]).abs() <= 0.6 && (t.rt[a] - t.rt[b]).abs() <= 0.1;
+                assert!(
+                    !close,
+                    "rows {a} and {b} are one ion: {} {} / {} {}",
+                    t.mz[a], t.rt[a], t.mz[b], t.rt[b]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn with_drift_every_true_ion_is_one_row_present_in_all_samples() {
+    let (_, t) = screen_run(&screen_series(true), |_| {});
+    for &(mz, rt, _) in &TRUE_IONS {
+        let rows = near(&t, mz, rt);
+        assert_eq!(rows.len(), 1, "{mz} at {rt} min is {} rows", rows.len());
+        assert!(
+            (0..DRIFT.len()).all(|k| !mzlab_feat::table::no_peak(t.state[t.cell(rows[0], k)])
+                && t.area[t.cell(rows[0], k)] > 0.0)
+        );
+    }
+}
+
+#[test]
+fn recenter_recovers_the_drift_of_each_file_within_three_hundredths_of_a_dalton() {
+    let idxs = screen_series(false);
+    let r = Recipe::for_index(&mut open(&idxs[1])).unwrap();
+    let files: Vec<FileFeatures> = idxs
+        .iter()
+        .map(|b| analyse_file(&mut open(b), &r).unwrap())
+        .collect();
+    let refs: Vec<&FileFeatures> = files.iter().collect();
+    let found = mzlab_feat::lrscreen_recenter::shifts(&refs, &r).unwrap();
+    for (k, s) in found.iter().enumerate() {
+        assert!(
+            (s.mz_da - DRIFT[k]).abs() <= 0.03,
+            "file {k}: found {} for a drift of {}",
+            s.mz_da,
+            DRIFT[k]
+        );
+        assert_eq!(s.applied, DRIFT[k].abs() >= 0.05);
+    }
+}
+
+#[test]
+fn dedup_keeps_true_neighbours_one_dalton_apart_and_recenter_off_reproduces_the_split() {
+    let (_, on) = screen_run(&screen_series(false), |_| {});
+    assert_eq!(near(&on, 265.1, 5.5).len(), 1);
+    assert_eq!(near(&on, 266.1, 5.5).len(), 1);
+    // with every switch off, the profile points are detected as they are: today's path, thousands of rows
+    use mzlab_feat::lrscreen::Switch::Off;
+    let (_, today) = screen_run(&screen_series(true), |r| {
+        r.screen.centroid = Off;
+        r.screen.recenter = Off;
+        r.screen.dedup = Off;
+    });
+    assert!(today.len() > 100 * on.len(), "{} rows", today.len());
+}

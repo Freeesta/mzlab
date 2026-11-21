@@ -13,8 +13,8 @@ function namesCut(/** @type {string[]} */ a,/** @type {number} */ max){return a.
 function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
 function openConvHelp(/** @type {boolean} */ focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
 function dropDups(/** @type {FileCarica[]} */ files){
-  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
-  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
+  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would; one still on its way in (queued or opening) is a duplicate
+  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)&&!OPENNOW.coming(g.name)});
   if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
   const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);

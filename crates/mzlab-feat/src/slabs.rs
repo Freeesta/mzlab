@@ -247,8 +247,10 @@ pub fn align_and_fill_progress<R: ReadAt>(
         prog.tick(1);
         t
     } else if r.mode == Mode::Family {
+        skip_recenter(r);
         family_slabs(src, &mut s, budget, r, widest * 3 / 2, &mut prog)?
     } else {
+        skip_recenter(r);
         let cuts = cuts(&mut s.all, slab_rows(budget.left() / 4), r.align.ion.ppm);
         prog.add_total(cuts.len().saturating_sub(1) + stages_after(r, n));
         prog.announce();
@@ -298,6 +300,19 @@ pub fn align_and_fill_progress<R: ReadAt>(
 /// Units of progress `finish` reports after the alignment: a file of the weak tier and a file whose gaps are filled.
 fn stages_after(r: &Recipe, n: usize) -> usize {
     n * (usize::from(r.weak_files > 0) + usize::from(r.fill_gaps))
+}
+
+/// A series aligned in slabs never holds the rows of all its files at once, so the anchors of `recenter` are not there: said in the evidence, with the
+/// reason, where the unit recipe would have looked for a shift.
+fn skip_recenter(r: &Recipe) {
+    if r.is_lr() && r.screen.recenter != crate::lrscreen::Switch::Off {
+        crate::lrscreen::choose(
+            r,
+            "recenter",
+            "skipped",
+            "the series is aligned in slabs: the anchors need the rows of every file at once",
+        );
+    }
 }
 
 fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
