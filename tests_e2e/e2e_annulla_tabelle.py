@@ -1,4 +1,4 @@
-"""Undo of the tables, the lists and the settings of the Data view (comandi.js): metadata of the samples, file list, preferences, peak settings, XIC traces,
+"""Undo of the tables, the lists and the settings of the Data view (commands.js): metadata of the samples, file list, preferences, peak settings, XIC traces,
 series of the legend, title of a panel, marks of the map, opening of a panel, isotopes and the background of the spectrum. Each case does the action and
 takes it back with Ctrl/Cmd+Z, then does it again with the redo."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,7 +63,7 @@ try:
         def peaks_settings():
             fresh()
             before = ev("JSON.stringify([PK,INTOPT])")
-            ev("COMANDI.fai('peaks.settings',COMANDI.GLOBALE,()=>{PK.win=PK.win+1;INTOPT.sn=!INTOPT.sn})")
+            ev("COMMANDS.run('peaks.settings',COMMANDS.GLOBAL,()=>{PK.win=PK.win+1;INTOPT.sn=!INTOPT.sn})")
             assert ev("JSON.stringify([PK,INTOPT])") != before
             undo(); assert ev("JSON.stringify([PK,INTOPT])") == before, "Ctrl+Z gives the settings back"
         step("peak settings: change, undo", peaks_settings)
@@ -76,9 +76,9 @@ try:
             assert ev("HISTORY.stack.v.length") == n + 1
             undo(); assert ev(f"{xp}.traces.length") == 1, "Ctrl+Z takes the trace out"
             redo(); assert ev(f"{xp}.traces.length") == 2, "redo"
-            ev(f"COMANDI.fai('series.visibility',{xp},()=>{{{xp}.hid['x|0|364.4']=true}})")
+            ev(f"COMMANDS.run('series.visibility',{xp},()=>{{{xp}.hid['x|0|364.4']=true}})")
             undo(); assert not ev(f"!!{xp}.hid['x|0|364.4']"), "Ctrl+Z shows the series"
-            ev(f"COMANDI.fai('panel.rename',{xp},()=>{{{xp}.title='mine'}})")
+            ev(f"COMMANDS.run('panel.rename',{xp},()=>{{{xp}.title='mine'}})")
             undo(); assert ev(f"{xp}.title") != "mine", "Ctrl+Z gives the title back"
         step("XIC: traces, series and title", xic_traces)
         def open_close():
@@ -93,9 +93,9 @@ try:
         def isotopes_and_background():
             fresh()
             sp = SPEC
-            ev(f"COMANDI.fai('spec.isotopes',{sp},()=>{{{sp}.iso={{formula:'C10H14N',ad:'[M]+'}};{sp}.zoom=[100,200]}})")
+            ev(f"COMMANDS.run('spec.isotopes',{sp},()=>{{{sp}.iso={{formula:'C10H14N',ad:'[M]+'}};{sp}.zoom=[100,200]}})")
             undo(); assert ev(f"{sp}.iso") is None and ev(f"{sp}.zoom") is None, "Ctrl+Z takes the pattern and its zoom back"
-            ev(f"COMANDI.fai('spec.background',{sp},()=>{{{sp}.bg='w';{sp}.bw0=2;{sp}.bw1=3}})")
+            ev(f"COMMANDS.run('spec.background',{sp},()=>{{{sp}.bg='w';{sp}.bw0=2;{sp}.bw1=3}})")
             undo(); assert ev(f"{sp}.bw0") is None and ev(f"{sp}.bg") in ("", None), "Ctrl+Z gives the background back"
         step("spectrum: isotopes and background", isotopes_and_background)
 finally:

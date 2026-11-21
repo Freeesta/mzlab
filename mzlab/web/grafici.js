@@ -232,14 +232,14 @@ function ibkChip(p) {
   (p.corrbar || p.leg).appendChild(chip); if (flat) FONDOP.wire(p, chip);
   if (ib && !p._exp) ibkLegend(p, ib, l0);
 }
-// hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
-COMANDI.gestore("series.visibility", { leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]), applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
+// hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (commands.js)
+COMMANDS.handler("series.visibility", { read: p => JSON.stringify([p.hid || {}, !!p.showHid]), apply: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
   const ib = ibOf(p); if (!ib) return;
   const sp = E.panels.filter(q => q.type === "spec" && (q.link === p.id || q.src === p.id));
   if (!sp.length) return info(I18N.t("ibk.noSpectra"));
-  sp.forEach(q => { COMANDI.fai("spec.background", q, () => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; }); ctl(q); draw(q); }); uiSave();
+  sp.forEach(q => { COMMANDS.run("spec.background", q, () => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; }); ctl(q); draw(q); }); uiSave();
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
@@ -269,15 +269,15 @@ function legend(p, all, note = "") {
     const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
-    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
+    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMMANDS.run("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}">${raw(dsw(s.color, s.dash))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
-  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
-  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { COMANDI.fai("xic.traces", p, () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); }); ctl(p); draw(p); });
-  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; COMANDI.fai("series.visibility", p, () => { if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; }); draw(p); });
+  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMMANDS.run("xic.traces", p, () => { t.label = v; }); draw(p); } });
+  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { COMMANDS.run("xic.traces", p, () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); }); ctl(p); draw(p); });
+  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; COMMANDS.run("series.visibility", p, () => { if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; }); draw(p); });
   legCollapse(p);
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);

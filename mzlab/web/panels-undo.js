@@ -1,7 +1,7 @@
 // @ts-strict
-// Opening a panel as one undoable step (comandi.js / history.js); used by the buttons and dialogs that add panels. Classic script, loaded after pannelli.js.
+// Opening a panel as one undoable step (commands.js / history.js); used by the buttons and dialogs that add panels. Classic script, loaded after pannelli.js.
 /** A panel the student opened (a button, a double click, the XIC window): one undo step that closes it again and a redo that opens it as it was then. @param {any} p */
-function apriAnnullabile(p) {
+function openWithUndo(p) {
   if (!HISTORY || !p) return p;
   let cur = p, snapshot = "", rel = /** @type {any} */ ({});
   const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
@@ -14,19 +14,19 @@ function apriAnnullabile(p) {
     },
     redo: () => {
       if (!snapshot) return;
-      const q = riapriPannello(JSON.parse(snapshot));
+      const q = reopenPanel(JSON.parse(snapshot));
       for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some(x => x.id === rel[k]) ? rel[k] : null;
       HISTORY.follow(cur, q); cur = q; after(); ctl(q); redrawAll();
     } });
   return p;
 }
 
-// the title of a panel is one undoable action (comandi.js)
-COMANDI.gestore("panel.rename", { leggi: p => JSON.stringify(p.title ?? null), applica: (p, snap) => { p.title = JSON.parse(snap); ctl(p); } });
-// the traces of an XIC panel (add, remove, label, window, unit) are one undoable action (comandi.js); the split into panels is not (it creates panels)
-COMANDI.gestore("xic.traces", {
-  leggi: p => JSON.stringify([p.traces, p._xu ?? null, p.ints]),
-  applica: (p, snap) => { const [t, u, i] = JSON.parse(snap); p.traces = t; p._xu = u; p.ints = i; p.isel = null; ctl(p); },
+// the title of a panel is one undoable action (commands.js)
+COMMANDS.handler("panel.rename", { read: p => JSON.stringify(p.title ?? null), apply: (p, snap) => { p.title = JSON.parse(snap); ctl(p); } });
+// the traces of an XIC panel (add, remove, label, window, unit) are one undoable action (commands.js); the split into panels is not (it creates panels)
+COMMANDS.handler("xic.traces", {
+  read: p => JSON.stringify([p.traces, p._xu ?? null, p.ints]),
+  apply: (p, snap) => { const [t, u, i] = JSON.parse(snap); p.traces = t; p._xu = u; p.ints = i; p.isel = null; ctl(p); },
 });
 // keyboard of the double-click actions: F2 or Enter on a panel title or a legend trace renames it, Enter on a row of the map table opens its spectrum (as a double click).
 // The map table is one tab stop: the arrows, Home and End move between its rows (roving tabindex).

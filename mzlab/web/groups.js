@@ -28,7 +28,7 @@ window.GROUPS_LABELS = (() => {
   return { clip, labelsOf };
 })();
 window.GROUPS = (() => {
-  /** The label of an undo step (comandi.js shows it in «Undone: …») per group action. */
+  /** The label of an undo step (commands.js shows it in «Undone: …») per group action. */
   const UNDO = /** @type {Record<string, string>} */ ({ by: "groups.undo.by", then: "groups.undo.then", token: "groups.undo.token", contains: "groups.undo.contains", none: "groups.undo.none", move: "groups.undo.move",
     join: "groups.undo.join", new: "groups.undo.new", rename: "groups.undo.rename", ungroup: "groups.undo.ungroup" });
   // the files of the side list and the rows of the loading table (ST.files: a row keeps its label until the file opens, adopt() hands it over)

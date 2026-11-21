@@ -13,12 +13,12 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 STUBS = """
 globalThis.window = globalThis; globalThis.MZLAB_BROWSER = true;
-globalThis.COMANDI = { gestore() {}, fai: (_a, _b, fn) => fn(), GLOBALE: 0 };
+globalThis.COMMANDS = { handler() {}, run: (_a, _b, fn) => fn(), GLOBAL: 0 };
 globalThis.I18N = { t: k => k };
 globalThis.N = { renderFiles: 0, renderFileList: 0, renderNav: 0, paintFiles: 0, redrawAll: 0, posts: [] };
 for (const k of ["renderFiles", "renderFileList", "renderNav", "paintFiles", "redrawAll"]) globalThis[k] = () => { N[k]++; };
 globalThis.toolbar = () => {}; globalThis.ctl = () => {}; globalThis.uiSave = () => {}; globalThis.cleanupOrphanPanels = () => {}; globalThis.relayout = () => {}; globalThis.fitHost = () => {};
-globalThis.panelRec = q => q; globalThis.riapriPannello = () => {}; globalThis.mergeFiles = () => {}; globalThis.J = async () => ({ session: E.files.map(f => ({ file: f.file })) });
+globalThis.panelRec = q => q; globalThis.reopenPanel = () => {}; globalThis.mergeFiles = () => {}; globalThis.J = async () => ({ session: E.files.map(f => ({ file: f.file })) });
 globalThis.STATO = { file(k) { E.cur = k; } }; globalThis.BARRA = null;
 globalThis.tabFiles = () => E.files.filter(f => !f.gone);
 globalThis.post = async (_u, b) => { N.posts.push(b.name); return { files: [] }; };

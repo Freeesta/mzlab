@@ -1,12 +1,12 @@
 // @ts-strict
 // The file list is the only control of what is shown: the box = the file is drawn, a click on the row = the active file (spectrum, scans, arrows),
 // Ctrl / Cmd + click = adds or removes the file, a double click on the name = only this file, Shift + click on a box = a range of boxes. (renderFileList in explore.js calls bindListaFile)
-// name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files
-COMANDI.gestore("files.view", {
+// name, colour, group, visibility and order of the files are one undoable action (commands.js): the snapshot is the list of all the files
+COMMANDS.handler("files.view", {
   // the panels are part of the snapshot: hiding a file closes the panels that only showed it, and the undo opens them again
-  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null, window.GROUPS?.stg() ?? null, E.ugNone ?? null],
+  read: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]), u: [E.ugBy ?? null, E.ugOrder ?? null, window.GROUPS?.stg() ?? null, E.ugNone ?? null],
     p: E.panels.map((/** @type {any} */ q) => [q.id, panelRec(q), { link: q.link, src: q.src, dda: q.dda, dock: q.dock, duo: q.duo }]) }),
-  applica: (_p, snap) => {
+  apply: (_p, snap) => {
     const { f: rows, p: panels, u } = JSON.parse(snap); [E.ugBy, E.ugOrder] = u || []; E.ugNone = u?.[3] ?? undefined; window.GROUPS?.stg(u?.[2] ?? null);
     rows.forEach((/** @type {any[]} */ [file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
     rows.map((/** @type {any[]} */ r) => r[0]).filter((/** @type {string} */ n) => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((/** @type {string} */ n, /** @type {number} */ i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
@@ -16,7 +16,7 @@ COMANDI.gestore("files.view", {
     const made = /** @type {Map<number, any>} */ (new Map());
     panels.forEach((/** @type {any[]} */ [id, rec]) => {
       const live = E.panels.find((/** @type {any} */ q) => q.id === id);
-      if (!live) { made.set(id, riapriPannello(rec)); return; }
+      if (!live) { made.set(id, reopenPanel(rec)); return; }
       const k = E.files.findIndex((/** @type {any} */ f) => f.file === rec.k); if (rec.k && k >= 0 && live.k !== k) live.k = k;      // a spectrum that moved to another file comes back
     });
     const now = (/** @type {number | null} */ id) => id == null ? null : made.has(id) ? made.get(id).id : E.panels.some((/** @type {any} */ q) => q.id === id) ? id : null;
@@ -25,7 +25,7 @@ COMANDI.gestore("files.view", {
   },
 });
 /** @param {() => void} fn */
-const fileViewDo = fn => COMANDI.fai("files.view", COMANDI.GLOBALE, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); cleanupOrphanPanels(); });   // the panels follow the ticks in the same undo step; two files of a never-overlaid type (MS2) are never ticked together
+const fileViewDo = fn => COMMANDS.run("files.view", COMMANDS.GLOBAL, () => { const had = new Set(E.files.filter(f => f.vis).map(f => f.k)); fn(); ESP.unici(had); cleanupOrphanPanels(); });   // the panels follow the ticks in the same undo step; two files of a never-overlaid type (MS2) are never ticked together
 const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
   fileViewDo(() => fs.forEach(f => sibsOf(f).forEach(g => { g.vis = on; })));
   if (!on) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
@@ -72,7 +72,7 @@ function fileRemoval(/** @type {any} */ f) {
     f.gone = false; f.vis = was.vis; was.ps.forEach(q => { if (E.panels.includes(q)) q.k = f.k; });
     syncRow(quiet);
     if (was.cur) STATO.file(f.k, "file-restored");
-    closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
+    closed.forEach(rec => reopenPanel(rec)); if (closed.length) { relayout(); fitHost(); }
     closed = [];
     if (!quiet) show();
   };

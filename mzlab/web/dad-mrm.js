@@ -1,7 +1,7 @@
 // @ts-strict
 // The DAD on the MRM panel, loaded by sim-ui.js (mark) when a file of transitions has a DAD matrix: the UV spectrum at a time (menu, double click), the TWC on
 // the right axis (`p.overlay = "twc"`, one of the right-axis overlays of gradiente.js, whose hooks it wraps) with its column in the data table, and «Allinea».
-// Interface only: the TWC is api/chrom?kind=pda, the spectrum uv-spettro.js. Classic globals by name: E, I18N, AZIONI, COMANDI, ESP, DISP, GRADIENTE, TDATI_P.
+// Interface only: the TWC is api/chrom?kind=pda, the spectrum uv-spettro.js. Classic globals by name: E, I18N, AZIONI, COMMANDS, ESP, DISP, GRADIENTE, TDATI_P.
 const g = /** @type {any} */ (window), T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 /** the DAD files an MRM panel shows @param {any} p @returns {any[]} */
 const dadOf = p => (typeof shownFor === "function" ? shownFor(p) : []).filter((/** @type {any} */ f) => f && f.pda && !f.gone);
@@ -85,7 +85,7 @@ AZIONI.registra({ id: "mrm.uvAtRt", gruppo: "extract", viste: ["mrm"], visibile:
   } });
 /** a check of the view group, undoable like the other display options @param {string} id @param {string} nome @param {string} aria @param {(p: any) => boolean} on @param {(p: any) => void} flip */
 const check = (id, nome, aria, on, flip) => AZIONI.registra({ id, gruppo: "view", viste: ["mrm"], visibile: here, attiva: (/** @type {any} */ c) => on(c.p), nome: () => T(nome), aria: () => T(aria),
-  esegui: (/** @type {any} */ c) => { COMANDI.fai("spec.display", c.p, () => flip(c.p)); drawSoon(c.p); uiSave(); } });
+  esegui: (/** @type {any} */ c) => { COMMANDS.run("spec.display", c.p, () => flip(c.p)); drawSoon(c.p); uiSave(); } });
 check("mrm.twc", "ctx.mrm.twc", "ctx.mrm.twc.aria", p => p.overlay === "twc", p => { p.overlay = p.overlay === "twc" ? null : "twc"; });
 check("mrm.pdaAlign", "disp.pdaAlign", "disp.pdaAlign.title", p => !!p.pdaAlign, p => { p.pdaAlign = !p.pdaAlign; });
 /** @param {any} p */

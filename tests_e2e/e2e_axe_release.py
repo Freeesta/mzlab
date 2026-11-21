@@ -41,9 +41,9 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         step("axe: the HR bench (panels, toolbar, status bar)", lambda: axe(pg, "'#dpanels'"))
         def grips():
-            small = pg.evaluate("[...document.querySelectorAll('.aff-grip')].map(e => e.getBoundingClientRect()).filter(r => r.width < 24 || r.height < 24).length")
-            assert pg.locator(".aff-grip").count() and not small, small
-        step("WCAG 2.5.8: the panel grips (.aff-grip) are at least 24 x 24 px", grips)
+            small = pg.evaluate("[...document.querySelectorAll('.arrange-grip')].map(e => e.getBoundingClientRect()).filter(r => r.width < 24 || r.height < 24).length")
+            assert pg.locator(".arrange-grip").count() and not small, small
+        step("WCAG 2.5.8: the panel grips (.arrange-grip) are at least 24 x 24 px", grips)
         def hrinfo():
             pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe(pg, "'#hrinfo'")
         step("axe: the information panel of the HR bench", hrinfo)

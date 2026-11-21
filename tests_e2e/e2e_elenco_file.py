@@ -36,7 +36,7 @@ try:
             n = pg.evaluate(LIVE); assert n >= 2
             pg.evaluate("removeAllFiles()"); wait_for_js(pg, f"{LIVE} === 0")
             assert pg.evaluate("document.querySelectorAll('dialog[open]').length") == 0, "no question"
-            assert pg.evaluate("document.getElementById('tolto-box')") is None
+            assert pg.evaluate("document.getElementById('removed-box')") is None
             pg.keyboard.press("Control+z"); wait_for_js(pg, f"{LIVE} === {n}")      # the bar is hidden with no files: the key undoes
         step("remove all: no notice, no question, Ctrl+Z puts every file back", remove_all)
         def drop_lr():

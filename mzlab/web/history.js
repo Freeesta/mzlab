@@ -3,7 +3,7 @@
 // One undo / redo stack for the Data view: Ctrl/Cmd+Z undoes the last action of the visible tab, Shift+Ctrl/Cmd+Z or Ctrl+Y does it again.
 // Classic script, loaded after picchi.js. An entry = { n, p, kind, label, before, after }: a small snapshot of the touched part only
 // (zoom, the JSON of p.ints, the correction fields), never traces, spectra or p._a. No persistence: reload empties it.
-// order of the undoable actions (also used by affianca.js)
+// order of the undoable actions (also used by arrange.js)
 let HSEQ = 0;
 
 /** The stack itself (no DOM, tested in Node): at most maxN entries / maxB characters of snapshots, the oldest are dropped. */
@@ -48,7 +48,7 @@ const HISTORY = typeof document === "undefined" ? null : (() => {
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
   // a removed file or closed panel belongs to a tab (remove-all to none), not to a live panel
   const visible = e => { if (e.kind === "removed" && e.p === undefined) return !fullscreen() && (e.tab === undefined || e.tab === E.tab);
-    if (e.p && e.p.globale) return !fullscreen();
+    if (e.p && e.p.global) return !fullscreen();
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} kind @param {any} [snap] */
   const capture = (p, kind, snap) => kind === "int" ? (snap ?? intSnap(p))
@@ -61,14 +61,14 @@ const HISTORY = typeof document === "undefined" ? null : (() => {
     const p = e.p, cur = e.kind === "cmd" ? "" : capture(p, e.kind), o = e.kind === "cmd" ? null : JSON.parse(st);
     if (e.kind === "int") { p.ints = Array.isArray(o) ? o : o.i; p.noise = Array.isArray(o) ? p.noise : o.n; p.isel = null; }
     else if (e.kind === "fields") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
-    else if (e.kind === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); COMANDI.ripristina(e.cmd, p, st); if (!p.globale) draw(p); uiSave(); return prev; }
+    else if (e.kind === "cmd") { const g = COMMANDS.handlerOf(e.cmd); const prev = g.read(p); COMMANDS.restore(e.cmd, p, st); if (!p.global) draw(p); uiSave(); return prev; }
     else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;
   };
   const label = (/** @type {any} */ e) => e.kind === "removed" ? e.what : e.kind === "cmd" ? T(e.w) : T(e.w || (e.kind === "int" ? "history.int" : e.kind === "fields" ? "history.fields" : "history.zoom"));
   function sync() {
     const u = document.getElementById("np-undo"), r = document.getElementById("np-redo");
-    if (u) /** @type {HTMLButtonElement} */ (u).disabled = HistoryStack.last(stack.v, visible) < 0 && !(window.AFFIANCA && AFFIANCA.ultimo() > 0);
+    if (u) /** @type {HTMLButtonElement} */ (u).disabled = HistoryStack.last(stack.v, visible) < 0 && !(window.ARRANGE && ARRANGE.last() > 0);
     if (r) /** @type {HTMLButtonElement} */ (r).disabled = HistoryStack.last(stack.r, visible) < 0;
   }
   /** Records the state of p BEFORE a change. @param {any} p @param {string} kind @param {string} [w] i18n key of the label @param {any} [snap] */
@@ -84,17 +84,17 @@ const HISTORY = typeof document === "undefined" ? null : (() => {
     batch = { id: ++HSEQ, ps: new Set() };
     try { fn(); } finally { batch = null; }
   }
-  /** Records the step of a registered command (comandi.js) whose state BEFORE the change is `before`; steps with the same `merge` on the same panel less than 0.8 s apart are one (a drag). @param {string} id @param {any} p @param {string} before @param {string} [merge] */
+  /** Records the step of a registered command (commands.js) whose state BEFORE the change is `before`; steps with the same `merge` on the same panel less than 0.8 s apart are one (a drag). @param {string} id @param {any} p @param {string} before @param {string} [merge] */
   function command(id, p, before, merge) {
     const l = stack.v[stack.v.length - 1], t = Date.now();
     if (merge && l && l.kind === "cmd" && l.cmd === id && l.p === p && l.merge === merge && t - l.t < 800) { l.t = t; stack.r.length = 0; sync(); return; }
-    stack.push({ p, kind: "cmd", cmd: id, w: COMANDI.riga(id)?.nome, merge: merge || "", t, before, after: null }); sync();
+    stack.push({ p, kind: "cmd", cmd: id, w: COMMANDS.row(id)?.name, merge: merge || "", t, before, after: null }); sync();
   }
   /** @param {(e: any) => boolean} [only] */
   function undo(only) {
     const ok = only ? (/** @type {any} */ e) => visible(e) && only(e) : visible, i = HistoryStack.last(stack.v, ok), top = i < 0 ? 0 : stack.v[i].n;
     // the last thing done was a change of the arrangement
-    if (!only && window.AFFIANCA && AFFIANCA.ultimo() > top) { AFFIANCA.annulla(); sync(); return true; }
+    if (!only && window.ARRANGE && ARRANGE.last() > top) { ARRANGE.undo(); sync(); return true; }
     const e = stack.undo(ok, restore);
     if (!e) { if (!only) say(T("history.nothingToUndo")); return false; }
     if (e.g) while (stack.undo(x => x.g === e.g, restore));

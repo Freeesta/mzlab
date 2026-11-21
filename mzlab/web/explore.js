@@ -513,7 +513,7 @@ function fitWidth() {
   if (rows || window.DDA && E.panels.some((/** @type {Bag} */ q) => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }
 }
 /** Opens a panel from its notebook record (restoreUi, and the Undo of a closed panel); the links to other panels are set by the caller. @param {any} sp */
-function riapriPannello(sp) {
+function reopenPanel(sp) {
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   return addPanel(sp.type, {
     ...sp, ks: sp.ks ? sp.ks.map(kof) : undefined, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" || sp.bg === "x" ? sp.bg : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map((/** @type {any} */ t) => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
@@ -535,7 +535,7 @@ function restoreUi() {
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
-  const made = u.panels.map((/** @type {Bag} */ sp) => riapriPannello(sp));
+  const made = u.panels.map((/** @type {Bag} */ sp) => reopenPanel(sp));
   u.panels.forEach((/** @type {Bag} */ sp, /** @type {number} */ i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
   // DDA trio: Full Scan / MS2 side by side (dda.js)
   u.panels.forEach((/** @type {Bag} */ sp, /** @type {number} */ i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });

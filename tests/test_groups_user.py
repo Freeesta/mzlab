@@ -13,7 +13,7 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 STUBS = """
 globalThis.window = globalThis;
-globalThis.COMANDI = { gestore() {}, fai: (_a, _b, fn) => fn(), GLOBALE: 0 };
+globalThis.COMMANDS = { handler() {}, run: (_a, _b, fn) => fn(), GLOBAL: 0 };
 globalThis.I18N = { t: (k, p) => k === "files.ugrp.name" ? "Group " + p.n : k };
 globalThis.EH = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 globalThis.KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" }; globalThis.GRP_HR = { hr: () => "HR" }; globalThis.directNote = () => {};

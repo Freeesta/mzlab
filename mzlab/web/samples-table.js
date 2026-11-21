@@ -2,13 +2,13 @@
 "use strict";
 // The «Sample metadata» section of the «Statistica» panel (first section): the table of SAMPLES (samples.js), one row per file, with the TSV export and import.
 // Every edit goes through SAMPLES.apply, the only writer of roles, subtypes, times and their confirmation.
-// the metadata of the files (type, time, concentration, replicate) are one undoable action (comandi.js): the snapshot is the table of all the open files
-COMANDI.gestore("samples.meta", {
-  leggi: () => JSON.stringify(SAMPLES.files().map(f => [f.file, SAMPLES.kindOf(f), f.time ?? null, f.tconf !== false, f.conc ?? null, f.cunit ?? null, f.rep ?? null])),
-  applica: (_p, snap) => { SAMPLES.apply(JSON.parse(snap).map(([file, role, time, tconf, conc, cunit, rep]) => ({ file, role, time, tconf, conc, cunit, rep }))); },
+// the metadata of the files (type, time, concentration, replicate) are one undoable action (commands.js): the snapshot is the table of all the open files
+COMMANDS.handler("samples.meta", {
+  read: () => JSON.stringify(SAMPLES.files().map(f => [f.file, SAMPLES.kindOf(f), f.time ?? null, f.tconf !== false, f.conc ?? null, f.cunit ?? null, f.rep ?? null])),
+  apply: (_p, snap) => { SAMPLES.apply(JSON.parse(snap).map(([file, role, time, tconf, conc, cunit, rep]) => ({ file, role, time, tconf, conc, cunit, rep }))); },
 });
 /** Edits the metadata of the files (SAMPLES.apply) as one undo step. @param {any[]} entries */
-function samplesEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => SAMPLES.apply(entries)); }
+function samplesEdit(entries) { return COMMANDS.run("samples.meta", COMMANDS.GLOBAL, () => SAMPLES.apply(entries)); }
 (() => {
   const { files, apply, selVal, kindOf, shownRep, importTsv, gradientLegend, toTsv, rows } = SAMPLES;
   const t = (k, p) => I18N.t(k, p);
@@ -51,7 +51,7 @@ function samplesEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOBA
       if (el.id === "cmp-imp") {
         const file = el.files && el.files[0]; if (!file) return;
         FILESICURI.readText(file).then(tx => {
-          const r = COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => importTsv(tx));
+          const r = COMMANDS.run("samples.meta", COMMANDS.GLOBAL, () => importTsv(tx));
           paint(box);
           msg(box, r.changed ? t("meta.imported", { n: r.changed }) + (r.unknown.length ? " " + t("meta.unknown", { list: r.unknown.join(", ") }) : "") : t("meta.imported.none"), !r.changed);
         }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat", x.params), true));

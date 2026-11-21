@@ -6,7 +6,7 @@ function CANALIUV(p, v) {
   if (!/^(pda|press|an:)/.test(v)) return back();      // the «MS2» row of the MS2 chromatogram: nothing to open
   let q = E.panels.find(x => x.type === "chrom" && x.tab === p.tab && x.kind === v && x.mz0 == null);
   if (!q) {
-    q = apriAnnullabile(addPanel("chrom", { kind: v, tab: p.tab }));
+    q = openWithUndo(addPanel("chrom", { kind: v, tab: p.tab }));
     q.el.classList.add("drag"); q.y = p.y + p.h; q.el.style.top = q.y + "px"; void q.el.offsetHeight; q.el.classList.remove("drag");
     stackAfter(q, p); relayout(); fitHost(); uiSave();
   }

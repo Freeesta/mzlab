@@ -136,7 +136,7 @@
     let xp = old;
     if (!xp) { xp = s.xp = xicDirect(sel.m, p, null, tr); await xp.ready; }
     else {
-      COMANDI.fai("xic.traces", xp, () => { if (!add) { xp.ints = []; xp.traces = []; } xp.traces.push(tr); });
+      COMMANDS.run("xic.traces", xp, () => { if (!add) { xp.ints = []; xp.traces = []; } xp.traces.push(tr); });
       ctl(xp); reveal(xp); await draw(xp);
     }
     if (tok !== s.xtok) return;

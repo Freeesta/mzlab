@@ -46,7 +46,7 @@ try:
             n0 = pg.locator("#flst .fl").count()
             pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Remove from the session").click(); wait_for_js(pg, "!!E.files[0].gone")
             # no confirmation and no notice: the removal is done at once and Undo / Ctrl+Z take it back
-            assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('tolto-box')") is None
+            assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('removed-box')") is None
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
             pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+z"); wait_for_js(pg, "!E.files[0].gone")      # Undo brings the file back for the next steps
         step("right click on a file: rename, colour, remove (no confirmation, no notice)", files)

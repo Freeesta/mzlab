@@ -18,18 +18,18 @@ const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
 // a measure belongs to one view of one spectrum: a new zoom of the m/z axis, another scan or another file/level cancels it
 const measKey = p => JSON.stringify([p.zoom, p.r0, p.r1, p.k, p.level, p.si, p.prec, p.all]);
-// the ruler is one undoable action (comandi.js): the snapshot is p.meas and the state of the ruler button
-COMANDI.gestore("spec.ruler", {
-  leggi: p => JSON.stringify([p.meas || null, !!p.rul]),
-  applica: (p, snap) => { const [m, r] = JSON.parse(snap); p.meas = m; p.rul = r; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", r); },
+// the ruler is one undoable action (commands.js): the snapshot is p.meas and the state of the ruler button
+COMMANDS.handler("spec.ruler", {
+  read: p => JSON.stringify([p.meas || null, !!p.rul]),
+  apply: (p, snap) => { const [m, r] = JSON.parse(snap); p.meas = m; p.rul = r; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", r); },
 });
 // the isotope simulation with the zoom it sets is one undoable action
-COMANDI.gestore("spec.isotopes", {
-  leggi: p => JSON.stringify([p.iso || null, p.zoom || null, p._isoKey || null]),
-  applica: (p, snap) => { const [i, z, k] = JSON.parse(snap); p.iso = i; p.zoom = z; p._isoKey = k; },
+COMMANDS.handler("spec.isotopes", {
+  read: p => JSON.stringify([p.iso || null, p.zoom || null, p._isoKey || null]),
+  apply: (p, snap) => { const [i, z, k] = JSON.parse(snap); p.iso = i; p.zoom = z; p._isoKey = k; },
 });
 function measClick(p, m) {
-  COMANDI.fai("spec.ruler", p, () => {
+  COMMANDS.run("spec.ruler", p, () => {
     p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
     if (p.meas.ref == null) p.meas.ref = m;
     // one more measure from the same reference
@@ -37,9 +37,9 @@ function measClick(p, m) {
   });
   draw(p); uiSave();
 }
-function measSet(p, m) { COMANDI.fai("spec.ruler", p, () => { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; }); draw(p); uiSave(); }
+function measSet(p, m) { COMMANDS.run("spec.ruler", p, () => { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; }); draw(p); uiSave(); }
 const measAperta = p => !!p && p.type === "spec" && !!(p.meas || p.rul);
-function measClear(p) { COMANDI.fai("spec.ruler", p, () => { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); }); draw(p); uiSave(); }
+function measClear(p) { COMMANDS.run("spec.ruler", p, () => { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); }); draw(p); uiSave(); }
 // Adduct exchanges between two peaks: the short symbol on the chart, the full form in the tooltip. One list for the spectrum ruler and the map (mappa.js).
 const AD_PAIRS = /** @type {Record<string, [number, string, string][]>} */ ({
   positive: [[21.9819, "Na⁺/H⁺", "[M+Na]⁺ / [M+H]⁺"], [17.0265, "NH₄⁺/H⁺", "[M+NH₄]⁺ / [M+H]⁺"], [37.9559, "K⁺/H⁺", "[M+K]⁺ / [M+H]⁺"]],
@@ -162,9 +162,9 @@ function specParams(p, btn) {
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { COMANDI.fai("spec.display", p, () => { p.sticks = false; p.dots = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; }); pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { COMMANDS.run("spec.display", p, () => { p.sticks = false; p.dots = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; }); pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
-      COMANDI.fai("spec.display", p, () => {
+      COMMANDS.run("spec.display", p, () => {
         if (k === "sticks") p.sticks = x.value === "1";
         else if (k === "dots") p.dots = x.checked;
         else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(numIt(x.value) || 0)));
@@ -230,10 +230,10 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.cont", gruppo: "cont", ordine: 0, visibile: () => !!window.BARRA, disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.cont"), aria: /** @param {any} c */ c => T("ctx.spec.cont.aria", { mz: c.lab }),
     esegui: /** @param {any} c */ c => { if (window.LISTE) LISTE.open({ mz: c.m, polarity: c.pol, hr: !!c.a?.hrp }); } });
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMMANDS.run("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
   reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a?.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
-  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.isotopes", c.p, () => { c.p.iso = null; }); draw(c.p); } });
+  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { COMMANDS.run("spec.isotopes", c.p, () => { c.p.iso = null; }); draw(c.p); } });
   // a spectrum that follows its chromatogram can be frozen; a frozen one can follow it again
   /** @param {any} p */
   const srcOf = p => p.src && E.panels.find(q => q.id === p.src && q.el);
@@ -262,7 +262,7 @@ async function isoAsk(p) {
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
   try { const r = await getFormula(ftxt, ""), ad = (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim();
     const pat = (await QQQRef.unitIon(r.formula, ad)).peaks.map((/** @type {Bag} */ q) => ({ ...q, rel: q.abundance_pct }));
-    COMANDI.fai("spec.isotopes", p, () => {
+    COMMANDS.run("spec.isotopes", p, () => {
       p.iso = { formula: r.formula, ad };
       // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
       p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom);
@@ -275,7 +275,7 @@ async function isoAsk(p) {
 async function isoRes(p) {
   const v = await ask(I18N.t("ctx.spec.isoRes.prompt"), p.iso.R != null ? String(p.iso.R) : "auto");
   if (v == null) return; const t = String(v).trim().replace(",", ".");
-  if (t === "auto") COMANDI.fai("spec.isotopes", p, () => { delete p.iso.R; });
-  else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } COMANDI.fai("spec.isotopes", p, () => { p.iso.R = r; }); }
+  if (t === "auto") COMMANDS.run("spec.isotopes", p, () => { delete p.iso.R; });
+  else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } COMMANDS.run("spec.isotopes", p, () => { p.iso.R = r; }); }
   draw(p);
 }

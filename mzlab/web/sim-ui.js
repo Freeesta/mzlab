@@ -2,7 +2,7 @@
 "use strict";
 // SIM files in the interface (engine side: data-channels.md). A SIM file opens as an MRM-kind file whose transitions have a Q1 and no Q3; this module tells the two apart
 // (f.sim = number of ions, 0 for MRM), colours overlaid traces by sample and builds the entries of the ion menu of the chromatogram. Only glue: every number comes from the engine.
-// Classic helpers used by name: E, J, I18N, PAL, DASHES, fdash, getMrm, shownFor, ctl, draw, uiSave, COMANDI, addPanel, reveal, apriAnnullabile, renderFiles, renderFileList, toolbar.
+// Classic helpers used by name: E, J, I18N, PAL, DASHES, fdash, getMrm, shownFor, ctl, draw, uiSave, COMMANDS, addPanel, reveal, openWithUndo, renderFiles, renderFileList, toolbar.
 (() => {
   /** @typedef {{ key: string, name: string, sim: boolean }} Ione */
   /** transitions of a file, read once: k|file -> list @type {Map<string, Ione[]>} */
@@ -77,8 +77,8 @@
   function rows(c) {
     const p = c.p, all = ions(p), cur = new Set(picked(p, all)), T = (/** @type {string} */ k) => I18N.t(k);
     const set = (/** @type {string[]} */ keys) => {
-      if (panelTr(p)) { COMANDI.fai("panel.source", p, () => { p.tr = keys.length === all.length || !keys.length ? "" : keys; }); ctl(p); draw(p); uiSave(); }
-      else { reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true, tr: keys.length === all.length ? "" : keys, title: all.every(x => x.sim) ? "@sim" : undefined }))); }
+      if (panelTr(p)) { COMMANDS.run("panel.source", p, () => { p.tr = keys.length === all.length || !keys.length ? "" : keys; }); ctl(p); draw(p); uiSave(); }
+      else { reveal(openWithUndo(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true, tr: keys.length === all.length ? "" : keys, title: all.every(x => x.sim) ? "@sim" : undefined }))); }
     };
     const out = [{ nome: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, esegui: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({

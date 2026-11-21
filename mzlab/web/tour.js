@@ -127,7 +127,7 @@ const TOUR = (() => {
     },
     {
       id: "side_by_side",
-      target: () => [...document.querySelectorAll(".aff-grip")].find(el => !el.hidden && el.offsetParent) || document.querySelector(".pnl.chrom .hd")
+      target: () => [...document.querySelectorAll(".arrange-grip")].find(el => !el.hidden && el.offsetParent) || document.querySelector(".pnl.chrom .hd")
     },
     {
       id: "panel",
