@@ -174,12 +174,11 @@ fn cites_each_imported_list_file_once_with_its_sha256() {
 }
 
 #[test]
-fn a_table_report_of_the_old_key_set_is_refused() {
+fn a_table_report_of_the_old_key_set_is_not_embedded() {
     let prov = parse(PROV.as_bytes()).unwrap();
     let u = [Output {
         name: "report.json",
         bytes: br#"{"schema":"report/1","righe":4}"#,
     }];
-    let e = build(&prov, &u).unwrap_err();
-    assert_eq!(e.key, "err.flow.format.reportOld");
+    assert!(build(&prov, &u).unwrap().report.is_none());
 }

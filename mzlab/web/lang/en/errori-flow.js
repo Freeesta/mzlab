@@ -34,7 +34,6 @@ I18N.add("en", {
   "err.flow.empty": "The flow has no steps: there is nothing to run.",
   "err.flow.facet": "The data connected here do not fit this step (resolution, polarity or MS level).",
   "err.flow.format": "The flow file has an unknown format: {format}.",
-  "err.flow.format.reportOld": "This run folder holds a table report in the old format report/1; this version reads report/2. Run the flow again to write a new report.",
   "err.flow.formula.file": "A file of the table has no MS1 scan to read the formula from.",
   "err.flow.formula.table": "The table has no column “{column}”.",
   "err.flow.group.ion": "The ion species {ion} is not one the grouping knows for this polarity.",
