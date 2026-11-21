@@ -223,7 +223,7 @@ fn lost(l: &Loaded, d: &AgilentD) -> Vec<String> {
 
 #[test]
 fn nothing_of_the_real_folders_is_lost() {
-    let Some(gc) = dati_percorsi::percorso("dati/GC-MS") else {
+    let Some(gc) = dati_percorsi::path("dati/GC-MS") else {
         eprintln!("SKIP agilent_audit: no data repository (MZLAB_DATI)");
         return;
     };

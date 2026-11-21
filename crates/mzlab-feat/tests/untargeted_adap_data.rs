@@ -26,11 +26,11 @@ fn peak_mb() -> f64 {
 
 #[test]
 fn parity_with_mzmine39_on_real_files() {
-    let Some(lists) = dati_percorsi::percorso("coordinamento/mzmine39") else {
+    let Some(lists) = dati_percorsi::path("coordinamento/mzmine39") else {
         eprintln!("SKIP untargeted_adap_dati: no data repository (MZLAB_DATI) or no ADAP list of mzmine in coordinamento/mzmine39");
         return;
     };
-    let mut files: Vec<PathBuf> = dati_percorsi::percorso("dati/HRMS/Timolol")
+    let mut files: Vec<PathBuf> = dati_percorsi::path("dati/HRMS/Timolol")
         .into_iter()
         .flat_map(|t| std::fs::read_dir(t).into_iter().flatten().flatten())
         .map(|e| e.path())

@@ -484,7 +484,7 @@ fn blocks(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
             position: Some(Position {
                 membro: member,
                 offset: r.at,
-                lunghezza: u32::try_from(r.end.saturating_sub(r.at)).unwrap_or(u32::MAX),
+                length: u32::try_from(r.end.saturating_sub(r.at)).unwrap_or(u32::MAX),
             }),
         });
         scans.push(i);

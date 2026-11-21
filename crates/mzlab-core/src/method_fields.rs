@@ -30,7 +30,7 @@ impl Ident {
 
 pub struct Field {
     pub origine: String,
-    pub chiave: String,
+    pub key: String,
     pub valore: String,
     pub unita: Option<String>,
     pub mappato: Option<&'static str>,
@@ -41,7 +41,7 @@ impl Field {
     pub fn new(origin: &str, key: &str, value: impl ToString) -> Field {
         Field {
             origine: origin.into(),
-            chiave: key.into(),
+            key: key.into(),
             valore: value.to_string(),
             unita: None,
             mappato: None,
@@ -68,7 +68,7 @@ impl Field {
     pub fn json(&self) -> Option<V> {
         obj(vec![
             ("origin", text(&self.origine)),
-            ("key", text(&self.chiave)),
+            ("key", text(&self.key)),
             ("value", Some(V::s(self.valore.as_str()))),
             ("unit", self.unita.as_deref().and_then(text)),
             ("mapped", self.mappato.map(V::s)),

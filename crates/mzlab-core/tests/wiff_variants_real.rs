@@ -61,7 +61,7 @@ fn pairs(dir: &Path, out: &mut Vec<PathBuf>) {
 /// Real SCIEX files of other instruments (private data repository): every sample opens and its scans add up to the TIC of the index, or is refused with a cause.
 #[test]
 fn real_qtrap_files_open_with_the_tic_of_the_index_or_are_refused() {
-    let Some(d) = dati_percorsi::percorso("dati/formati") else {
+    let Some(d) = dati_percorsi::path("dati/formati") else {
         eprintln!("SKIP wiff_variants: no data repository (MZLAB_DATI)");
         return;
     };
@@ -164,7 +164,7 @@ fn mzml_files() -> Vec<PathBuf> {
         "dati/formati/sciex/wiff",
         "dati/formati/aperti/scansioni_speciali",
     ] {
-        if let Some(p) = dati_percorsi::percorso(dir) {
+        if let Some(p) = dati_percorsi::path(dir) {
             walk(&p, &mut mzmls);
         }
     }
@@ -317,7 +317,7 @@ fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
 /// The chromatograms and spectra of the real files with a ProteoWizard mzML next to them (private data repository): the mzML of msconvert is the reference.
 #[test]
 fn real_files_match_proteowizard_mzml() {
-    if dati_percorsi::percorso("dati/formati").is_none() {
+    if dati_percorsi::path("dati/formati").is_none() {
         eprintln!("SKIP wiff_variants_real: no data repository (MZLAB_DATI)");
         return;
     }
@@ -363,7 +363,7 @@ fn real_files_match_proteowizard_mzml() {
 /// `method/1` of the real file `file` in `sub` of the data repository, sample `sample`.
 fn method(sub: &str, file: &str, sample: u32) -> Value {
     use mzlab_core::method::Source;
-    let path = dati_percorsi::percorso(&format!("{sub}/{file}")).unwrap();
+    let path = dati_percorsi::path(&format!("{sub}/{file}")).unwrap();
     let ole = container(std::fs::read(path).unwrap(), file).unwrap();
     let src = Source {
         format: "sciex-wiff",
@@ -384,7 +384,7 @@ fn experiments(m: &Value) -> Vec<Value> {
 /// method states (the file named «6minWindow» has 360 s), the transitions of a scheduled experiment carry their target time, the version of Analyst is in the GLP tables.
 #[test]
 fn real_methods_say_what_the_files_say() {
-    if dati_percorsi::percorso("dati/formati").is_none() {
+    if dati_percorsi::path("dati/formati").is_none() {
         eprintln!("SKIP wiff_variants_real: no data repository (MZLAB_DATI)");
         return;
     }

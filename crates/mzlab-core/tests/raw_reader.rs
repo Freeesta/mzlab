@@ -13,7 +13,7 @@ use mzlab_core::{method, raw, readers_mzml};
 mod dati_percorsi;
 
 fn raw_files() -> Vec<PathBuf> {
-    let Some(hrms) = dati_percorsi::percorso("dati/HRMS") else {
+    let Some(hrms) = dati_percorsi::path("dati/HRMS") else {
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -72,7 +72,7 @@ fn a_real_raw_reads_the_same_through_the_registry() {
                 w.id
             );
             assert_eq!(index[k].filtro, w.filter);
-            assert!(index[k].position.is_some_and(|p| p.lunghezza > 0));
+            assert!(index[k].position.is_some_and(|p| p.length > 0));
             if checked % 7 == 0 {
                 let got = l.scan(0, k).unwrap();
                 assert_eq!(

@@ -72,11 +72,11 @@ fn our(raw: &Path, out: &Path) -> bool {
 
 #[test]
 fn scandump_thermo() {
-    let Some(dir) = dati_percorsi::percorso("scratchpad/rfr") else {
+    let Some(dir) = dati_percorsi::path("scratchpad/rfr") else {
         eprintln!("SKIP scandump_thermo: no data repository or no dumps of RFR");
         return;
     };
-    let Some(data) = dati_percorsi::percorso("dati") else {
+    let Some(data) = dati_percorsi::path("dati") else {
         return;
     };
     let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/rosina/scandump_compare.py");

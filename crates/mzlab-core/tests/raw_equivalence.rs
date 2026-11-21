@@ -100,19 +100,18 @@ const PINNED: &[(&str, [&str; 4])] = &[
 fn file(case: &str) -> Option<PathBuf> {
     let p = match case {
         "LAB-A" => {
-            let t = std::fs::read_to_string(dati_percorsi::percorso(
-                "dati/formati/raw_veloce_alias.tsv",
-            )?)
-            .ok()?;
+            let t =
+                std::fs::read_to_string(dati_percorsi::path("dati/formati/raw_veloce_alias.tsv")?)
+                    .ok()?;
             let r = t
                 .lines()
                 .find(|l| l.starts_with("LAB-A\t"))?
                 .split('\t')
                 .nth(1)?
                 .to_string();
-            dati_percorsi::percorso(&format!("dati/{r}"))?
+            dati_percorsi::path(&format!("dati/{r}"))?
         }
-        "PXD077492" => std::fs::read_dir(dati_percorsi::percorso("dati/formati/thermo/raw")?)
+        "PXD077492" => std::fs::read_dir(dati_percorsi::path("dati/formati/thermo/raw")?)
             .ok()?
             .flatten()
             .map(|e| e.path())
@@ -126,7 +125,7 @@ fn file(case: &str) -> Option<PathBuf> {
             Some(v) => PathBuf::from(v),
             // the name of the file is the one its download row (accession PXD070375) gives, in the list of big files of the data repository
             None => {
-                let list = std::fs::read_to_string(dati_percorsi::percorso(
+                let list = std::fs::read_to_string(dati_percorsi::path(
                     "dati/formati/_grandi_thermo_aperti.tsv",
                 )?)
                 .ok()?;
@@ -136,7 +135,7 @@ fn file(case: &str) -> Option<PathBuf> {
                     .split('\t')
                     .find(|c| c.starts_with("http"))?;
                 let name = url.rsplit('/').next()?;
-                dati_percorsi::percorso(&format!("dati/formati/thermo/raw/{name}"))?
+                dati_percorsi::path(&format!("dati/formati/thermo/raw/{name}"))?
             }
         },
     };
@@ -247,7 +246,7 @@ fn scan_data_and_transport_give_the_same_scan() {
 /// table is the same, for every `.raw` of the data repository.
 #[test]
 fn the_table_header_has_the_fields_of_the_full_header() {
-    let Some(dir) = dati_percorsi::percorso("dati/formati/thermo/raw") else {
+    let Some(dir) = dati_percorsi::path("dati/formati/thermo/raw") else {
         eprintln!("SKIP raw_equivalence: no data repository (MZLAB_DATI)");
         return;
     };

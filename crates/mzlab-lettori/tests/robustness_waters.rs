@@ -30,10 +30,9 @@ fn everything(file: Vec<(String, Vec<u8>)>) {
 }
 
 fn real() -> Option<Vec<(String, Vec<u8>)>> {
-    let d = dati_percorsi::percorso(
-        "dati/formati/waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
-    )
-    .filter(|p| p.is_dir())?;
+    let d =
+        dati_percorsi::path("dati/formati/waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw")
+            .filter(|p| p.is_dir())?;
     let mut out = Vec::new();
     for e in std::fs::read_dir(d).ok()? {
         let p = e.ok()?.path();

@@ -16,7 +16,7 @@ fn file() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os("MZLAB_RAW_MSN").map(PathBuf::from) {
         return p.is_file().then_some(p);
     }
-    let dir = dati_percorsi::percorso("dati/infusioni")?;
+    let dir = dati_percorsi::path("dati/infusioni")?;
     let p = dir.join("Infusione_Timololo_19_3_2024.raw");
     p.is_file().then_some(p)
 }

@@ -48,7 +48,7 @@ fn the_row_without_signal_gets_no_ms2_scans() {
             time(name).unwrap()
         ));
         idxs.push(index_of_file(
-            &dati_percorsi::percorso(&format!("dati/3200 qtrap/mzML/{name}")).unwrap(),
+            &dati_percorsi::path(&format!("dati/3200 qtrap/mzML/{name}")).unwrap(),
         ));
     }
     let files = format!("[{}]", files.join(","));

@@ -157,7 +157,7 @@ fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<ScanEntry
                 position: d.inline.is_none().then_some(Position {
                     membro: peak_member,
                     offset: r.offset,
-                    lunghezza: r.bytes,
+                    length: r.bytes,
                 }),
             }
         })

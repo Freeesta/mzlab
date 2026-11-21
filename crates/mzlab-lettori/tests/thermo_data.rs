@@ -12,7 +12,7 @@ use mzlab_core::readers::{FileSet, Limits, Member};
 mod dati_percorsi;
 
 fn file(rel: &str) -> Option<PathBuf> {
-    let p = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_file());
+    let p = dati_percorsi::path(&format!("dati/formati/{rel}")).filter(|p| p.is_file());
     if p.is_none() {
         eprintln!("SKIP thermo_dati: {rel} not found");
     }
@@ -110,7 +110,7 @@ fn lock_mass_is_in_the_method() {
 
 #[test]
 fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
-    let Some(d) = dati_percorsi::percorso("dati/formati") else {
+    let Some(d) = dati_percorsi::path("dati/formati") else {
         eprintln!("SKIP thermo_dati: no data repository (MZLAB_DATI)");
         return;
     };

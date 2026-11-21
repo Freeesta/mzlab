@@ -100,7 +100,7 @@ pub(super) fn pol_label(pol: i8) -> &'static str {
 }
 
 /// The group a first scan opens.
-pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
+pub(super) fn new_group(id: String, s: &Scan, path: Vec<i64>) -> Group {
     let (act, ce) = activation_of(s);
     let ce_int = ce.map(|c| c.round() as i64);
     let sigla = code_of(s);
@@ -111,23 +111,22 @@ pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
             n: 0,
             rt: (f64::INFINITY, f64::NEG_INFINITY),
             pol: s.polarity,
-            path: percorso,
+            path,
             tag: sigla,
             etichetta: format!("{} IDA", apex(s.level)),
             group: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
         };
     }
-    let masse = percorso
+    let masse = path
         .iter()
         .map(i64::to_string)
         .collect::<Vec<_>>()
         .join(">");
     let mut label = apex(s.level.max(1));
-    if s.level >= 2 && !percorso.is_empty() {
+    if s.level >= 2 && !path.is_empty() {
         label += &format!(
             " {}",
-            percorso
-                .iter()
+            path.iter()
                 .map(i64::to_string)
                 .collect::<Vec<_>>()
                 .join("→")
@@ -153,7 +152,7 @@ pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
         n: 0,
         rt: (f64::INFINITY, f64::NEG_INFINITY),
         pol: s.polarity,
-        path: percorso,
+        path,
         tag: sigla,
         etichetta: label,
         group,

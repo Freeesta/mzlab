@@ -132,9 +132,9 @@ pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
     for s in &g.spettri {
         let Some(pr) = s.precursore else { continue };
         let (mut sp, mut tot) = (0.0, 0.0);
-        for &(_, rel, nodo) in &s.picchi {
+        for &(_, rel, node) in &s.picchi {
             tot += rel;
-            if nodo.is_some_and(|n| {
+            if node.is_some_and(|n| {
                 out.edges
                     .iter()
                     .any(|a| a.from == pr && a.a == n && a.spiegato)

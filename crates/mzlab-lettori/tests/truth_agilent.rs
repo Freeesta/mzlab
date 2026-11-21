@@ -12,6 +12,6 @@ fn truth_agilent() {
         "agilent",
         |r| r.starts_with("agilent/") && !r.to_lowercase().ends_with(".cdf"),
         truth::Tol::LR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

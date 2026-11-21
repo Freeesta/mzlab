@@ -133,7 +133,7 @@ fn the_index_bytes_round_trip() {
             position: Some(Position {
                 membro: 3,
                 offset: 1 << 40,
-                lunghezza: 77,
+                length: 77,
             }),
         },
         ScanEntry {

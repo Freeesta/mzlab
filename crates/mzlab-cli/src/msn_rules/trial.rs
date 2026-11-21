@@ -120,7 +120,7 @@ fn peak_ids(g: &Graph, v: &Evaluation, prec: usize, node: usize) -> Vec<String> 
     ids.extend(
         v.ions
             .iter()
-            .filter(|x| x.nodo == node)
+            .filter(|x| x.node == node)
             .map(|x| x.regola.to_string()),
     );
     ids.sort();

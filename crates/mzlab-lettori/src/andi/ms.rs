@@ -99,7 +99,7 @@ impl AndiReader {
                 position: Some(Position {
                     membro: 0,
                     offset: self.inizi[k],
-                    lunghezza: u32::try_from(self.counts[k]).unwrap_or(u32::MAX),
+                    length: u32::try_from(self.counts[k]).unwrap_or(u32::MAX),
                 }),
             });
         }

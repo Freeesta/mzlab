@@ -12,6 +12,6 @@ fn truth_thermo() {
         "thermo",
         |r| r.starts_with("thermo/"),
         truth::Tol::HR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

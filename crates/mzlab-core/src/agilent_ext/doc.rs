@@ -235,7 +235,7 @@ fn fields(d: &AgilentD, ident: &Ident) -> Vec<V> {
         .collect();
     all.retain(|c| !c.valore.is_empty());
     crate::sortc::slice_by(&mut all, |a, b| {
-        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+        (&a.origine, &a.key).cmp(&(&b.origine, &b.key))
     });
     all.iter().filter_map(Field::json).collect()
 }

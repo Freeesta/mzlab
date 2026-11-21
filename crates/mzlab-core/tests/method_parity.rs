@@ -92,7 +92,7 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
     let mut checked = 0;
     // the .dam named by the sample, when the repository has it: every parameter of the method the same
     if let (Some(name), true) = (text("sample", "method_file"), v.get("ms").is_some())
-        && let Some(dam) = dati_percorsi::percorso(&format!("dati/3200 qtrap/dam/{name}"))
+        && let Some(dam) = dati_percorsi::path(&format!("dati/3200 qtrap/dam/{name}"))
             .and_then(|p| std::fs::read(p).ok())
     {
         let m = read_methods(dam, &name).unwrap().remove(0);
@@ -120,8 +120,8 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
         eprintln!("SKIP method_parity: no data repository (MZLAB_DATI)");
         return;
     }
-    let dir = dati_percorsi::percorso("dati/3200 qtrap/wiff")
-        .expect("the .wiff folder of the repository");
+    let dir =
+        dati_percorsi::path("dati/3200 qtrap/wiff").expect("the .wiff folder of the repository");
     let mut checked = 0;
     for wiff in ["MRM.wiff", "FullMass.wiff", "MS2.wiff"] {
         let bytes = std::fs::read(dir.join(wiff)).unwrap();
@@ -134,7 +134,7 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
     }
     assert!(checked >= 1, "no .dam of the repository matched a .wiff");
     // the mzML of ProteoWizard says the SHA-1 of the .wiff it was made from (its name differs: B_MRM.wiff)
-    if let Some(t) = dati_percorsi::percorso("dati/3200 qtrap/mzML/B_MRM-STD_0_6ppm.mzML")
+    if let Some(t) = dati_percorsi::path("dati/3200 qtrap/mzML/B_MRM-STD_0_6ppm.mzML")
         .and_then(|p| std::fs::read(p).ok())
     {
         let head = String::from_utf8_lossy(&t[..t.len().min(8000)]).to_string();

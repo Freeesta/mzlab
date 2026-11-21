@@ -8,7 +8,7 @@ const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
 fn node(mz: f64, peaks: Vec<(f64, f64)>) -> StructuresInput {
     StructuresInput {
-        nodo: 3,
+        node: 3,
         mz,
         polarita: 1,
         picchi: peaks,

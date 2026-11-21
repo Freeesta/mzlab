@@ -10,7 +10,7 @@ mod dati_percorsi;
 
 fn open(rel: &str) -> Option<Box<dyn Reader>> {
     let Some(p) =
-        dati_percorsi::percorso(&format!("dati/formati/shimadzu/{rel}")).filter(|p| p.is_file())
+        dati_percorsi::path(&format!("dati/formati/shimadzu/{rel}")).filter(|p| p.is_file())
     else {
         eprintln!("SKIP shimadzu_dati: {rel} not found");
         return None;

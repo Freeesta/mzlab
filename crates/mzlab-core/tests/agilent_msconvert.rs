@@ -81,7 +81,7 @@ fn compare(got: &Run, want: &Run, label: &str) -> f64 {
 
 #[test]
 fn real_runs_match_msconvert() {
-    let Some(gc) = dati_percorsi::percorso("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
+    let Some(gc) = dati_percorsi::path("dati/GC-MS").filter(|g| g.join("mzML").is_dir()) else {
         eprintln!("SKIP agilent_msconvert: no data repository (MZLAB_DATI)");
         return;
     };
@@ -108,7 +108,7 @@ fn real_runs_match_msconvert() {
 }
 
 fn lc_dir() -> Option<PathBuf> {
-    dati_percorsi::percorso("dati/formati/agilent/D")
+    dati_percorsi::path("dati/formati/agilent/D")
 }
 
 /// The profile spectra of a Q-TOF run (`MSProfile.bin`: flight times, and the mass calibration of each scan) against the profile mzML of msconvert. The two are not

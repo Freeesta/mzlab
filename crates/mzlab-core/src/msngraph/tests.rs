@@ -313,11 +313,7 @@ fn a_precursor_missing_from_its_parent_is_noted() {
         },
         &Options::default(),
     );
-    let keys: Vec<(&str, &str)> = g
-        .avvisi
-        .iter()
-        .map(|a| (a.chiave, a.tree.as_str()))
-        .collect();
+    let keys: Vec<(&str, &str)> = g.avvisi.iter().map(|a| (a.key, a.tree.as_str())).collect();
     assert_eq!(
         keys,
         vec![

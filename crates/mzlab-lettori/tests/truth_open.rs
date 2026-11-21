@@ -15,6 +15,6 @@ fn open_truth() {
             r.ends_with(".mzxml") || r.ends_with(".mzml")
         },
         truth::Tol::HR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

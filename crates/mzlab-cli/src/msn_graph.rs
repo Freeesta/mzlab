@@ -378,9 +378,9 @@ pub fn structures_text(
     g: &Graph,
     j: &str,
     o: &Options,
-    (nodo, ppm): (&str, f64),
+    (node, ppm): (&str, f64),
 ) -> Result<String> {
-    mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
+    mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (node, ppm))
 }
 
 /// `msn graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
@@ -416,11 +416,11 @@ pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
 pub fn execute(a: &Args, tmp: &Path) -> Result<String> {
     let (g, j) = graph(&a.file, &a.o, tmp)?;
     let j = with_keys(a, &g, j)?;
-    if let Some((f, pulito, nodo)) = &a.export {
-        return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
+    if let Some((f, pulito, node)) = &a.export {
+        return Ok(esporta(&g, *f, *pulito, node.as_deref()));
     }
-    if let Some((nodo, ppm)) = &a.structures {
-        return Ok(structures_text(&g, &j, &a.o, (nodo, *ppm))? + "\n");
+    if let Some((node, ppm)) = &a.structures {
+        return Ok(structures_text(&g, &j, &a.o, (node, *ppm))? + "\n");
     }
     if !a.summary {
         return Ok(j + "\n");

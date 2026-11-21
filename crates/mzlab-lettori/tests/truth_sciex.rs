@@ -12,6 +12,6 @@ fn truth_sciex() {
         "sciex",
         |r| r.starts_with("sciex/"),
         truth::Tol::LR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

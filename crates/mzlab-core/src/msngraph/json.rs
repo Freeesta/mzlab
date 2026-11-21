@@ -143,11 +143,11 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
     for (i, a) in g.avvisi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"key\":")
-            .str(a.chiave)
+            .str(a.key)
             .raw(",\"tree\":")
             .str(&a.tree)
             .raw(",\"node\":");
-        id(o, a.nodo);
+        id(o, a.node);
         o.raw("}");
     }
     o.raw("]");

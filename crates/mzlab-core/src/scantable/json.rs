@@ -55,7 +55,7 @@ const SLACK: usize = 1 << 16;
 
 impl Table {
     /// The rows of `SCAN_COLUMNS` as compact JSON (`json.dumps(rows, separators=(",", ":"))`); a row of a vendor file (`k` set) starts with
-    /// `[membro,offset,lunghezza]` or `null`, and `k` (version 2, `docs/agenti/mzidx.md`).
+    /// `[membro,offset,length]` or `null`, and `k` (version 2, `docs/agenti/mzidx.md`).
     pub fn rows_json(&self) -> String {
         let mut o = Out::default();
         o.raw("[");
@@ -233,7 +233,7 @@ fn write_where(o: &mut Out, r: &Row) {
         None => o.int(r.start as i64).raw(",").int(r.end as i64),
         Some((k, None)) => o.raw("null,").int(k as i64),
         Some((k, Some(p))) => {
-            let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
+            let (m, n) = (i64::from(p.membro), i64::from(p.length));
             o.raw("[")
                 .int(m)
                 .raw(",")

@@ -72,7 +72,7 @@ fn synthetic_tune_infusion_is_recognised() {
 
 #[test]
 fn real_files_like_the_truth() {
-    let Some(truth_file) = dati_percorsi::percorso("scratchpad/verita_infusione_msn.json") else {
+    let Some(truth_file) = dati_percorsi::path("scratchpad/verita_infusione_msn.json") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -82,7 +82,7 @@ fn real_files_like_the_truth() {
     let mut seen = 0;
     for (group, positive) in [("positivi", true), ("negativi", false)] {
         for f in truth[group].as_array().unwrap() {
-            let Some(p) = dati_percorsi::percorso(&format!("dati/{}", f["file"].as_str().unwrap()))
+            let Some(p) = dati_percorsi::path(&format!("dati/{}", f["file"].as_str().unwrap()))
             else {
                 continue;
             };

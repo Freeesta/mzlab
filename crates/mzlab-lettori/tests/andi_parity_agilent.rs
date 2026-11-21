@@ -34,7 +34,7 @@ fn members(root: &Path, dir: &Path, out: &mut Vec<Member>) {
 
 #[test]
 fn the_exported_cdf_says_what_its_d_folder_says() {
-    let Some(folder) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
+    let Some(folder) = dati_percorsi::path("dati/formati/aperti/netcdf_cdf") else {
         eprintln!("SKIP andi parita: no data repository (MZLAB_DATI)");
         return;
     };

@@ -71,7 +71,7 @@ fn compare(s: &Spectrum, reference: &Spectrum, ppm: f64, label: &str) {
 }
 
 fn compare_folder(folder: &str, reference_mzml: &str) {
-    let Some(base) = dati_percorsi::percorso("dati/formati/aperti/lettori_open_test/pwiz/Bruker")
+    let Some(base) = dati_percorsi::path("dati/formati/aperti/lettori_open_test/pwiz/Bruker")
     else {
         eprintln!("SKIP bruker {folder}: no data repository (MZLAB_DATI)");
         return;
@@ -111,7 +111,7 @@ fn mrm_come_msconvert() {
 /// Opens the folder `rel` (under `dati/formati/`) and reads every spectrum (at most `max`): no error, m/z increasing and finite, the TIC of the index equal to the sum of the points
 /// for a survey scan. Returns (spectra, levels seen).
 fn walk(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
-    let Some(dir) = dati_percorsi::percorso(&format!("dati/formati/{rel}")) else {
+    let Some(dir) = dati_percorsi::path(&format!("dati/formati/{rel}")) else {
         eprintln!("SKIP bruker {rel}: not in the data repository");
         return None;
     };
@@ -159,8 +159,7 @@ fn clean_diapasef() {
 #[test]
 fn synthetic_timsrust_folders() {
     // the files of timsrust's tests have no MzCalibration: the run is refused when it opens, with the key of a missing calibration
-    let Some(d) = dati_percorsi::percorso("dati/formati/bruker/timstof_lettori/timsrust_tests")
-    else {
+    let Some(d) = dati_percorsi::path("dati/formati/bruker/timstof_lettori/timsrust_tests") else {
         return;
     };
     for f in ["test.d", "dia_test.d"] {

@@ -82,7 +82,7 @@ fn blocks(g: &Graph, sel: &[&SpettroG], clean: bool, mgf: bool) -> String {
     t
 }
 
-/// Whether a spectrum is kept by `nodo`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
+/// Whether a spectrum is kept by `node`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
 /// the spectra of that node of the tree (`SpettroG::tree`); `all`, empty or absent = all.
 fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
     let Some(n) = node.filter(|n| !n.is_empty() && *n != "all") else {
@@ -94,7 +94,7 @@ fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
     s.tree == n.strip_prefix("msn:").unwrap_or(n)
 }
 
-/// The text of the export; `nodo` as in `voluto`.
+/// The text of the export; `node` as in `voluto`.
 pub fn esporta(g: &Graph, format: Format, clean: bool, node: Option<&str>) -> String {
     let sel: Vec<&SpettroG> = g.spettri.iter().filter(|s| wanted(s, node)).collect();
     match format {

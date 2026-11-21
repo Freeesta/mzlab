@@ -146,7 +146,7 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
         position: at.map(|(offset, length)| Position {
             membro: 0,
             offset,
-            lunghezza: length,
+            length,
         }),
     }
 }

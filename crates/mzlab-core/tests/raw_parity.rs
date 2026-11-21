@@ -24,7 +24,7 @@ fn scan_of(id: &str) -> Option<u32> {
 
 #[test]
 fn raw_matches_msconvert_mzml() {
-    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
+    let Some(d) = dati_percorsi::path("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
@@ -108,7 +108,7 @@ fn an_unknown_thermo_version_has_its_own_key() {
 
 #[test]
 fn the_instrument_method_text_of_a_raw_is_text() {
-    let Some(d) = dati_percorsi::percorso("dati/HRMS") else {
+    let Some(d) = dati_percorsi::path("dati/HRMS") else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };

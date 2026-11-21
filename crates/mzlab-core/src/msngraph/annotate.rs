@@ -402,14 +402,14 @@ fn togli(g: &mut Graph, keep: &[bool]) {
         }
     }
     for a in g.avvisi.iter_mut() {
-        a.nodo = a.nodo.and_then(|x| new[x]);
+        a.node = a.node.and_then(|x| new[x]);
     }
     muchi_non_spiegati(g);
     crate::sortc::slice_ord(&mut removed);
     g.avvisi.extend(removed.into_iter().map(|tree| Warning {
-        chiave: "warn.msngrafo.isolatedUnexplained",
+        key: "warn.msngrafo.isolatedUnexplained",
         tree,
-        nodo: None,
+        node: None,
     }));
 }
 
@@ -435,7 +435,7 @@ pub(super) fn annotate(g: &mut Graph, e: &Elementi, r: usize, rc: Vec<u32>, o: &
         let gia = g
             .avvisi
             .iter()
-            .any(|a| a.chiave == "warn.msngrafo.userConflict" && a.nodo == Some(j));
+            .any(|a| a.key == "warn.msngrafo.userConflict" && a.node == Some(j));
         if st.user[j] && outside && !gia {
             warning(g, "warn.msngrafo.userConflict", Some(j));
         }

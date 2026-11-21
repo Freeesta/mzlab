@@ -34,7 +34,7 @@ fn entry(k: usize, c: &[u8]) -> ScanEntry {
         position: Some(Position {
             membro: 0,
             offset,
-            lunghezza: length,
+            length,
         }),
     }
 }
@@ -72,7 +72,7 @@ impl Denso {
             .get(k)
             .and_then(|v| v.position)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        self.buf.resize(p.lunghezza as usize, 0);
+        self.buf.resize(p.length as usize, 0);
         self.file
             .read_exact_at(&mut self.buf, p.offset)
             .map_err(|_| Error::new("err.file.raw").with("detail", "read"))

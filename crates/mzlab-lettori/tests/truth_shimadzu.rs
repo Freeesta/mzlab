@@ -12,6 +12,6 @@ fn truth_shimadzu() {
         "shimadzu",
         |r| r.starts_with("shimadzu/"),
         truth::Tol::LR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

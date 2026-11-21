@@ -76,7 +76,7 @@ fn the_index_gives_level_precursor_tic_without_reading_peaks() {
         assert_eq!(v.polarita, 1);
         assert!((v.tic - x.intensities.iter().sum::<f64>()).abs() < 1e-6);
         assert!(v.id.starts_with("controllerType=0"));
-        assert!(v.position.is_some_and(|p| p.lunghezza > 0));
+        assert!(v.position.is_some_and(|p| p.length > 0));
     }
 }
 

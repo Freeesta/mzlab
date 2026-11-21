@@ -58,7 +58,7 @@ fn the_experiments_of_the_real_series_are_found_and_matched_as_the_truth_says() 
             r#"{{"name": "{name}", "time": {t}, "type": "sample", "kind": "{kind}"}}"#
         ));
         idxs.push(index_of_file(
-            &dati_percorsi::percorso(&format!("dati/3200 qtrap/mzML/{name}")).unwrap(),
+            &dati_percorsi::path(&format!("dati/3200 qtrap/mzML/{name}")).unwrap(),
         ));
     }
     let files = format!("[{}]", files.join(","));

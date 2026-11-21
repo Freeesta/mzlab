@@ -15,7 +15,7 @@ use mzlab_ops::run::feat::run;
 mod dati_percorsi;
 
 fn series() -> Option<(PathBuf, Vec<PathBuf>)> {
-    let dir = dati_percorsi::percorso("dati/HRMS/Timolol")?;
+    let dir = dati_percorsi::path("dati/HRMS/Timolol")?;
     let mut v: Vec<PathBuf> = std::fs::read_dir(&dir)
         .ok()?
         .flatten()

@@ -260,7 +260,7 @@ pub fn linked(mut d: lr::LrDig, idxs: &[Vec<u8>], ms2: &[&Vec<u8>]) -> lr::LrDig
 
 /// The private data repository (with the truth of the MS2 tests), if there is one: see `tools/dati_percorsi.rs`.
 pub fn root() -> Option<PathBuf> {
-    dati_percorsi::percorso("scratchpad/tabui_ms2_lr_truth.json").and(dati_percorsi::radice())
+    dati_percorsi::path("scratchpad/tabui_ms2_lr_truth.json").and(dati_percorsi::radice())
 }
 
 pub fn index_of_file(path: &std::path::Path) -> Vec<u8> {

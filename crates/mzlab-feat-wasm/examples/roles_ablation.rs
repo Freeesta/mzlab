@@ -88,7 +88,7 @@ fn files_of(spec: &Value) -> Vec<FileSpec> {
         .collect()
 }
 
-/// Treatment time of the run as the percorso TP reads it: the t0 at 0, the treated at their minutes, every other file NaN (a control).
+/// Treatment time of the run as the TP course reads it: the t0 at 0, the treated at their minutes, every other file NaN (a control).
 fn minutes_of(f: &FileSpec) -> f64 {
     match f.role.as_str() {
         "t0" => 0.0,

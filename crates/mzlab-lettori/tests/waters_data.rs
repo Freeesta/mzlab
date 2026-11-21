@@ -14,8 +14,7 @@ mod dati_percorsi;
 
 /// The folder `rel` (under `dati/formati/`) as a set of members named `X.raw/<file>`, read from disk by position.
 pub fn folder(rel: &str) -> Option<FileSet> {
-    let Some(d) = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_dir())
-    else {
+    let Some(d) = dati_percorsi::path(&format!("dati/formati/{rel}")).filter(|p| p.is_dir()) else {
         eprintln!("SKIP waters_dati: {rel} not found");
         return None;
     };
@@ -144,7 +143,7 @@ fn chromatograms_match_the_msconvert_mzml() {
     let Some(mut l) = open(&format!("{rel}.raw")) else {
         return;
     };
-    let Some(mz) = dati_percorsi::percorso(&format!("dati/formati/{rel}.mzML")) else {
+    let Some(mz) = dati_percorsi::path(&format!("dati/formati/{rel}.mzML")) else {
         eprintln!("SKIP waters_dati: no mzML for {rel}");
         return;
     };

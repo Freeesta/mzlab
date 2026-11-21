@@ -256,7 +256,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
     let mut fields = header_fields(head);
     let ms = scan_part(scans, &mut fields);
     crate::sortc::slice_by(&mut fields, |a, b| {
-        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+        (&a.origine, &a.key).cmp(&(&b.origine, &b.key))
     });
     let doc = obj(vec![
         ("schema", Some(V::s(SCHEMA))),

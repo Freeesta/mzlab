@@ -12,6 +12,6 @@ fn truth_andi() {
         "andi",
         |r| r.to_lowercase().ends_with(".cdf"),
         truth::Tol::LR,
-        dati_percorsi::percorso,
+        dati_percorsi::path,
     );
 }

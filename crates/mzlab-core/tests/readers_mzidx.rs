@@ -390,7 +390,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
     }
     let mut files = Vec::new();
     for dir in ["dati/3200 qtrap/wiff", "dati/GC-MS", "dati/HRMS"] {
-        if let Some(d) = dati_percorsi::percorso(dir) {
+        if let Some(d) = dati_percorsi::path(dir) {
             walk(&d, &mut files);
         }
     }

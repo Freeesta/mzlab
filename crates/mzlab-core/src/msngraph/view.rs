@@ -303,7 +303,7 @@ pub fn completa(json: &str) -> Result<String> {
     Ok(format!("{testa},\"view\":{}}}", view(&read(&v)?)))
 }
 
-/// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `view`, which stays the last.
+/// `grafo` with the key `key` (its value is `valore`) added after the keys that are there, and before `view`, which stays the last.
 pub(super) fn with_key(graph: &str, key: &str, value: &str) -> String {
     let (testa, tail) = match graph.rfind(",\"view\":{") {
         Some(p) => graph.split_at(p),

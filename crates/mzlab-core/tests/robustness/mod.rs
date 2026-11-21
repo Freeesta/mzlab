@@ -172,12 +172,12 @@ pub fn apply(m: &Mutazione, s: &[u8]) -> Vec<u8> {
         Mutazione::Repeat => s.repeat(3),
         Mutazione::TestaPoiCaso {
             testa,
-            length: lunghezza,
+            length,
             seme,
         } => {
             let mut v = s[..(*testa).min(s.len())].to_vec();
             let mut r = Rng(*seme);
-            while v.len() < *lunghezza {
+            while v.len() < *length {
                 v.push(r.next() as u8);
             }
             v
@@ -258,10 +258,10 @@ pub fn mutazioni(s: &[u8], text: bool) -> Vec<Mutazione> {
         out.push(Mutazione::Cambia(changes));
     }
     // a valid head and a random body
-    for (testa, lunghezza) in [(64, n), (512, n), (512, 4 * n), (n / 4, n)] {
+    for (testa, length) in [(64, n), (512, n), (512, 4 * n), (n / 4, n)] {
         out.push(Mutazione::TestaPoiCaso {
             testa,
-            length: lunghezza,
+            length,
             seme: r.next(),
         });
     }
