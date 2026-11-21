@@ -19,7 +19,9 @@
           "member": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
           "unit": { "type": "boolean" },
           "profile_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
-          "centroid": { "type": "boolean", "description": "its profile scans would be centroided before detection" }
+          "centroid": { "type": "boolean", "description": "its profile scans would be centroided before detection" },
+          "mz_offset_da": { "type": "number", "description": "the m/z offset of the member (--mz-offset), Da; auto is measured on the index; present only with --mz-offset" },
+          "mz_offset": { "type": "object", "description": "mode fixed, or auto with the evidence of trace/1" }
         }
       }
     }

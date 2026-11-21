@@ -251,6 +251,14 @@ fn set_warp(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     Ok(())
 }
 
+/// `mz_offset` of `features.align`: `0`, a number of Da or `auto:MZ[@RT]`.
+#[inline(never)]
+fn set_mz_offset(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    let spec = v.str().and_then(|t| mzlab_core::mzcal::Spec::parse(t).ok());
+    r.screen.mz_offset = spec.ok_or_else(|| bad(step, k, v))?;
+    Ok(())
+}
+
 fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     let num = || v.f64().ok_or_else(|| bad(step, k, v));
     axis_gate(r, step, k)?;
@@ -308,6 +316,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.align", "weak_files") => r.weak_files = int()?,
         ("features.detect", "centroid") => r.screen.centroid = switch(step, k, v, true)?,
         ("features.align", "recenter") => r.screen.recenter = switch(step, k, v, false)?,
+        ("features.align", "mz_offset") => set_mz_offset(r, step, k, v)?,
         ("features.gapfill", "dedup") => r.screen.dedup = switch(step, k, v, false)?,
         ("features.gapfill", "floor") => r.fill.floor = num()?,
         ("features.gapfill", "ppm") => r.fill.ppm = num()?,
@@ -419,6 +428,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
             ("min_dependent", n(f64::from(r.align.min_dependent))),
             ("weak_files", n(r.weak_files as f64)),
             ("recenter", Value::Str(r.screen.recenter.name().into())),
+            ("mz_offset", Value::Str(r.screen.mz_offset.to_string())),
         ],
         "features.gapfill" => vec![
             ("floor", n(r.fill.floor)),

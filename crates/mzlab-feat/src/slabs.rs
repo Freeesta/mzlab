@@ -8,7 +8,6 @@
 //! - The weak tier goes to a `Spill` when the weak tables of all the files do not fit in half of what is free (`spill`).
 //! - Refusal `error.memoryBudget` (phase `align`, estimate, budget) when not even one slab fits.
 
-use crate::axis::half;
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -19,7 +18,7 @@ use crate::prog::Prog;
 use crate::recipe::{Mode, Recipe};
 use crate::rtmap::{RtMap, RtParams};
 use crate::series::{finish, StrongFile};
-use crate::sortc;
+pub(crate) use crate::slab_cuts::cuts;
 use crate::spill::Spill;
 use crate::store::{read_file_from, read_meta_mz, Slice, Want};
 use crate::table::{Aligned, FileFeatures};
@@ -45,6 +44,10 @@ pub trait Stored {
     fn part(&mut self, _k: usize) -> Result<Option<(Box<dyn ReadAt + '_>, u64)>> {
         Ok(None)
     }
+    /// The m/z offset of file `k`, Da (`mz_offset`): its features are read with it subtracted. 0 for a source that has none.
+    fn shift(&self, _k: usize) -> f64 {
+        0.0
+    }
 }
 
 impl Stored for Vec<Vec<u8>> {
@@ -61,11 +64,16 @@ impl Stored for Vec<Vec<u8>> {
 
 /// The rows of file `k` that `want` asks for, through `Stored::part` when the source has it.
 pub(crate) fn read_want(src: &mut dyn Stored, k: usize, want: Want) -> Result<FileFeatures> {
-    if let Some((mut r, size)) = src.part(k)? {
-        return Ok(read_file_from(&mut r, size, want)?.0);
-    }
-    let b = src.bytes(k)?;
-    Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
+    let d = src.shift(k);
+    let want = crate::lrscreen_offset::raw_want(want, d);
+    let mut f = if let Some((mut r, size)) = src.part(k)? {
+        read_file_from(&mut r, size, want)?.0
+    } else {
+        let b = src.bytes(k)?;
+        read_file_from(&mut Slice(&b), b.len() as u64, want)?.0
+    };
+    crate::lrscreen_offset::correct(&mut f.mz, d);
+    Ok(f)
 }
 
 /// The lean table of file `k`, only the rows with m/z in `range`.
@@ -91,7 +99,8 @@ fn survey(src: &mut dyn Stored, budget: &MemBudget) -> Result<Survey> {
         sorted: true,
     };
     for k in 0..src.count() {
-        let (_, mz) = read_meta_mz(&src.bytes(k)?)?;
+        let (_, mut mz) = read_meta_mz(&src.bytes(k)?)?;
+        crate::lrscreen_offset::correct(&mut mz, src.shift(k));
         s.sorted &= mz.windows(2).all(|w| w[0] <= w[1]);
         s.all
             .try_reserve(mz.len())
@@ -100,21 +109,6 @@ fn survey(src: &mut dyn Stored, budget: &MemBudget) -> Result<Survey> {
         s.all.extend_from_slice(&mz);
     }
     Ok(s)
-}
-
-/// Cuts of m/z, from `-inf` to `inf`: a slab holds about `slab_rows` features and ends in a gap wider than the ppm of the alignment.
-pub(crate) fn cuts(all: &mut [f64], slab_rows: usize, ppm: f64) -> Vec<f64> {
-    sortc::by(all, |a, b| a.total_cmp(b));
-    let (mut cuts, mut since) = (vec![f64::NEG_INFINITY], 0usize);
-    for i in 1..all.len() {
-        since += 1;
-        if since >= slab_rows && all[i] - all[i - 1] > half(all[i], ppm) {
-            cuts.push(all[i]);
-            since = 0;
-        }
-    }
-    cuts.push(f64::INFINITY);
-    cuts
 }
 
 /// The way a series is aligned (the three ways of the module).
@@ -222,6 +216,21 @@ pub fn align_and_fill_with<R: ReadAt>(
 /// `align_and_fill_with` telling `progress(done, total)` after every slab (one unit for an alignment in memory), every file of the weak tier and every
 /// file whose gaps are filled; the total is announced (done = 0) before the first slab. The table is the same with any `progress`.
 pub fn align_and_fill_progress<R: ReadAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
+    spill: Option<&mut dyn Spill>,
+    par_open: Option<&crate::series::FillOpen<R>>,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<(Aligned, usize)> {
+    // the table holds corrected m/z (`mz_offset`): the offsets are resolved first and the fill windows add them back
+    crate::lrscreen_offset::apply(src, r, &mut open, |src, r, open| {
+        align_inner(src, budget, r, open, spill, par_open, progress)
+    })
+}
+
+fn align_inner<R: ReadAt>(
     src: &mut dyn Stored,
     budget: &MemBudget,
     r: &Recipe,

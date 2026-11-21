@@ -18,7 +18,7 @@ pub struct Sweep {
 }
 
 /// What a sweep was asked: centres and half-windows (bits), level, polarity, smoothing.
-type Key = (Vec<u64>, Vec<u64>, u8, Option<i8>, usize);
+type Key = (Vec<u64>, Vec<u64>, u8, Option<i8>, usize, u64);
 
 pub(crate) struct Memo(Key, Arc<Sweep>, pub(crate) u64);
 
@@ -93,6 +93,7 @@ impl<R: ReadAt> Routes<R> {
             level,
             self.pol,
             smooth.unwrap_or(0),
+            self.mz_off.to_bits(),
         );
         if let Some(m) = self.sweep.as_mut().filter(|m| m.0 == key) {
             m.2 = next_tick();
@@ -122,8 +123,15 @@ impl<R: ReadAt> Routes<R> {
         let cut = |v: f64| if f4 { v as f32 as f64 } else { v };
         let mut order: Vec<usize> = (0..centres.len()).collect();
         crate::sortc::slice_by(&mut order, |&a, &b| centres[a].total_cmp(&centres[b]));
-        let lo: Vec<f64> = order.iter().map(|&i| cut(centres[i] - tols[i])).collect();
-        let hi: Vec<f64> = order.iter().map(|&i| cut(centres[i] + tols[i])).collect();
+        let off = self.mz_off;
+        let lo: Vec<f64> = order
+            .iter()
+            .map(|&i| cut(centres[i] + off - tols[i]))
+            .collect();
+        let hi: Vec<f64> = order
+            .iter()
+            .map(|&i| cut(centres[i] + off + tols[i]))
+            .collect();
         // a column is made (zeroed) when its window opens, just before its first sum: a whole matrix zeroed first is cold in the cache when the sums come
         // (it was checked against the budget above)
         let mut sorted: Vec<Vec<f64>> = vec![Vec::new(); centres.len()];
@@ -175,7 +183,12 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/xic?sweep=LO:HI:STEP[&tol][&level][&smooth]`: `trace-set/1` of the engine, one `{"id","mz","tolerance_da","rt","y"}` per centre (`tol` defaults to STEP/2).
-    pub(crate) fn sweep_route(&mut self, spec: &str, q: &Query) -> Result<Option<String>> {
+    pub(crate) fn sweep_route(
+        &mut self,
+        spec: &str,
+        q: &Query,
+        off: Option<&crate::mzcal::Offset>,
+    ) -> Result<Option<String>> {
         if q.some("mz").is_some() {
             return Err(Error::new("err.xic.sweep.mz"));
         }
@@ -199,8 +212,9 @@ impl<R: ReadAt> Routes<R> {
         let tols = vec![tol; centres.len()];
         let texts = self.sweep_traces(&centres, &tols, q.level(), smooth)?;
         let mut o = format!(
-            "{{\"schema\":\"trace-set/1\",\"n_traces\":{},\"traces\":[",
-            texts.len()
+            "{{\"schema\":\"trace-set/1\",\"n_traces\":{}{},\"traces\":[",
+            texts.len(),
+            off.map_or(String::new(), |f| f.members().replacen('"', ",\"", 1))
         );
         for (i, (c, t)) in centres.iter().zip(&texts).enumerate() {
             let mut num = crate::json::Out::default();

@@ -646,6 +646,7 @@
                   "rt_seed",
                   "weak_files",
                   "recenter",
+                  "mz_offset",
                   "link_rt",
                   "max_span",
                   "min_dependent",
@@ -729,6 +730,11 @@
                     "enum":["auto","off"],
                     "default":"auto",
                     "description":"Unit resolution only: subtracts from each file the m/z drift measured on the rows most files share (median of at least 5 anchors, applied from 0.05 Da), so a drifting file does not split a row"
+                  },
+                  {
+                    "type":"string",
+                    "default":"0",
+                    "description":"The instrument's m/z offset, observed minus true, in Da (|DA| up to 0.6): a number, or auto:MZ[@RT] to measure it per file on the known ion at m/z MZ (near RT min). It is subtracted from each file's m/z before the grouping, so rows hold corrected m/z; the gap filling reads the raw scans at m/z plus the offset; recenter then works on the corrected m/z"
                   },
                   {
                     "type":"number",

@@ -26,6 +26,8 @@ pub struct FillParams {
     pub long_trace: usize,
     /// The area of a filled cell is the trapezoid on the real retention times (`area_from` = `xic` of `features.detect`), not sum x median interval.
     pub xic: bool,
+    /// The m/z offset of this file, Da (`mzcal`): the windows of the rows (corrected m/z) are looked for at m/z + `mz_shift` in the raw scans. Not in the text.
+    pub mz_shift: f64,
 }
 
 // written by hand so that `xic` appears only when on: the fingerprints of the tables without it stay the same
@@ -55,6 +57,7 @@ impl Default for FillParams {
             max_gap: 2,
             long_trace: 400,
             xic: false,
+            mz_shift: 0.0,
         }
     }
 }
@@ -254,7 +257,10 @@ pub fn fill_find<R: ReadAt>(
     let dt = median(rt.windows(2).map(|w| w[1] - w[0]).collect()) * 60.0;
     let mut na = Vec::new();
     let list = todo(al, file, &rt, map, p, &mut na);
-    let ranges = ppm_ranges(&list.iter().map(|t| t.mz).collect::<Vec<_>>(), p.ppm);
+    let ranges = ppm_ranges(
+        &list.iter().map(|t| t.mz + p.mz_shift).collect::<Vec<_>>(),
+        p.ppm,
+    );
     let pad = p.long_trace + p.max_gap + 2;
     let max_peaks = (params.budget / 24).clamp(1024, SLAB_PEAKS);
     let mut found: Vec<(usize, f64)> = na.into_iter().map(|r| (r, NOT_MEASURED)).collect();

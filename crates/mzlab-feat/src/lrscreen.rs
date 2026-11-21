@@ -48,6 +48,11 @@ pub struct Screen {
     /// Set by `adjusted` when `centroid` acts on the file or the series the recipe was made for (profile scans centroided). Only then does `auto` enter the
     /// text: a file that is centroided already keeps the recipe text, and so the bytes, it had before the switch existed.
     pub centroided: bool,
+    /// `mz_offset` of `features.align`: 0, a number of Da, or the known ion to measure it on, per file (`lrscreen_offset`).
+    pub mz_offset: mzlab_core::mzcal::Spec,
+    /// The offset of each file as resolved for the run in hand (empty: none), subtracted from the features' m/z and added to the fill windows. Set by
+    /// `lrscreen_offset::resolve` at the start of a run; never part of the text.
+    pub offsets: Offsets,
     pub evidence: Option<Evidence>,
 }
 
@@ -60,6 +65,9 @@ impl Screen {
         self.centroid = pick("centroid", true, self.centroid);
         self.recenter = pick("recenter", false, self.recenter);
         self.dedup = pick("dedup", false, self.dedup);
+        if let Some(s) = get("mz_offset").and_then(|t| mzlab_core::mzcal::Spec::parse(t).ok()) {
+            self.mz_offset = s;
+        }
     }
 }
 
@@ -105,8 +113,26 @@ pub struct Merge {
 pub struct Log {
     pub centroided: Vec<Centroided>,
     pub shifts: Vec<Shift>,
+    /// The m/z offset of each file (`mz_offset` of `features.align`), in the order of the files.
+    pub offsets: Vec<mzlab_core::mzcal::Offset>,
     pub merged: Vec<Merge>,
     pub choices: Vec<Choice>,
+}
+
+/// The per-file m/z offsets of the run in hand, shared by the clones of a recipe (a cell, so the run sets them without copying the recipe).
+#[derive(Debug, Clone, Default)]
+pub struct Offsets(Arc<Mutex<Vec<f64>>>);
+
+impl Offsets {
+    pub(crate) fn set(&self, v: Vec<f64>) {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = v;
+    }
+
+    /// The offset of file `k` (0 when there is none).
+    pub(crate) fn get(&self, k: usize) -> f64 {
+        let g = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        g.get(k).copied().unwrap_or(0.0)
+    }
 }
 
 /// What the steps did, shared by the threads of one run. Not part of the recipe text: it never changes a byte of a table.

@@ -176,6 +176,9 @@ mod msn_lib;
 pub mod msn_outputs;
 mod msn_png;
 mod msn_rules;
+mod mz_offset;
+#[cfg(test)]
+mod mz_offset_tests;
 #[cfg(test)]
 mod mzml_variants_tests;
 #[cfg(test)]

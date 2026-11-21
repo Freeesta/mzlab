@@ -192,6 +192,8 @@ pub mod channels;
 pub mod channels_uv;
 pub mod routes;
 pub mod routes_open;
+pub mod mzcal;
+mod mzcal_routes;
 pub mod routes_sweep;
 pub mod routes_xicbin;
 pub mod scaninfo;
