@@ -1,4 +1,4 @@
-//! `selection/1`: what the right-click «Info» of the drawing page shows for the selection or the whole drawing. The page sends the V2000 molfile of the
+//! `selection/1`: what the right-click «Info» of the drawing page shows for the selection or the whole drawing. The page sends the V2000 molfile (V3000 is read too) of the
 //! piece as drawn, read by the molfile reader of the cuts (`graph::Mol::from_molfile`: open valences filled with H); formula, charge, monoisotopic
 //! mass and m/z are the ones of `label/1` (same code), the average weight is `mzlab_mol::Mol::molecular_weight`, rings are the cycle count of the
 //! graph, aromatic bonds are the ones written aromatic (type 4) plus the Hückel perception of `mzlab-mol` on the Kekulé ones (our rule). Only the
@@ -10,6 +10,7 @@ use mzlab_mol::{Atom, Bond, Mol};
 
 use super::graph;
 use super::labels::{shape, shape_json, AtomIn};
+use super::molfile_read;
 
 /// The `M  RAD` code of every atom (0 = none), as `label/1` reads it.
 fn rad_codes(mf: &str, n: usize) -> Vec<i64> {
@@ -100,6 +101,7 @@ pub fn sel_json(request: &str) -> Result<String> {
         .and_then(Value::str)
         .ok_or_else(|| Error::new("error.sel.request"))?;
     let part = v.get("part").and_then(Value::bool).unwrap_or(false);
+    let mf = &*molfile_read::v2000(mf)?;
     let g = graph::Mol::from_molfile(mf)?;
     let rad = rad_codes(mf, g.atoms.len());
     let atoms: Vec<AtomIn> = g
@@ -151,3 +153,7 @@ mod tests;
 #[cfg(test)]
 #[path = "reader_bounds_tests.rs"]
 mod reader_bounds_tests;
+
+#[cfg(test)]
+#[path = "sel_v3000_tests.rs"]
+mod v3000_tests;

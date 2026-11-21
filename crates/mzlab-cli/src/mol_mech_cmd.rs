@@ -10,7 +10,7 @@ which mechanism is right.
 
 usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {\"molfile\": V2000 text, \"arrows\": [{\"kind\": \"pair\"|\"single\", \"from\": {\"lone\"|\"radical\": ATOM} or {\"bond\": [A, B]},
+  REQUEST.json  {\"molfile\": V2000 or V3000 text, \"arrows\": [{\"kind\": \"pair\"|\"single\", \"from\": {\"lone\"|\"radical\": ATOM} or {\"bond\": [A, B]},
                 \"to\": {\"atom\": ATOM} or {\"bond\": [A, B]}}, ...], \"lone\": [[ATOM, PAIRS], ...]}: atoms are 0-based positions of the
                 molfile; pair = full head (two electrons), single = half head (one); - reads the standard input
   --out PATH    write there instead of the standard output

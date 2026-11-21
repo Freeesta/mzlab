@@ -55,6 +55,7 @@ pub mod link;
 pub mod mech;
 #[cfg(feature = "sub")]
 pub mod moiety;
+mod molfile_read;
 pub mod positions;
 pub mod rules;
 mod rules_site;

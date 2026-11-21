@@ -57,6 +57,28 @@ def test_a_bad_molfile_is_a_keyed_error(pkg):
     assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.check.molfile"
 
 
+V2000_ETHANOL = "\n  t\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.2500    0.7000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.5000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\n  2  3  1  0\nM  END\n"
+V3000_ETHANOL = "\n  t\n\n  0  0  0  0  0  0  0  0  0  0999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 3 2 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0 0 0 0\nM  V30 2 C 1.25 0.7 0 0\nM  V30 3 O 2.5 0 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 1 1 2\nM  V30 2 1 2 3\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n"
+
+
+def test_check_of_a_v3000_file_equals_the_v2000_one_and_the_cli_and_a_cut_short_one_is_refused(pkg, tmp_path):
+    answers = []
+    for name, molfile in (("v2000", V2000_ETHANOL), ("v3000", V3000_ETHANOL)):
+        req = tmp_path / f"{name}.json"
+        req.write_text(json.dumps({"molfile": molfile}), encoding="utf-8")
+        site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"))
+        assert site == cli("mol", "check", str(req), runner=run)
+        answers.append(site)
+    assert answers[0] == answers[1]
+    # the counts line says two bonds, the block holds one: a file cut short is a keyed error on the site and exit 4 in the CLI, never a smaller molecule
+    short = json.dumps({"molfile": V3000_ETHANOL.replace("M  V30 2 1 2 3\n", "")})
+    r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), short], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.check.molfile"
+    req = tmp_path / "short.json"
+    req.write_text(short, encoding="utf-8")
+    assert subprocess.run(cli_argv("mol", "check", str(req)), cwd=ROOT, capture_output=True).returncode == 4
+
+
 def test_cip_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     fx = json.loads((ROOT / "tests" / "dati" / "cip_disegno.json").read_text(encoding="utf-8"))
     req = tmp_path / "req.json"

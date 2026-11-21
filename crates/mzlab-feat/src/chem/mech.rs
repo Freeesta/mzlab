@@ -7,6 +7,7 @@ use mzlab_core::json::{self, Out, Value};
 
 use super::graph::{props, Mol};
 use super::labels::{unpaired_of, z_of};
+use super::molfile_read;
 
 /// Where an arrow starts or ends: atoms are 0-based positions of the molfile.
 #[derive(Clone, Copy, PartialEq)]
@@ -256,7 +257,7 @@ fn problem(d: &Drawn, a: &Arrow) -> Option<&'static str> {
 /// lone pairs the atom can hold, absent for an element that is not checked. Form only: no arrow is said to be the right one.
 pub fn mech_json(text: &str) -> Result<String> {
     let r = request(text)?;
-    let d = drawn(&r.mf)?;
+    let d = drawn(&molfile_read::v2000(&r.mf)?)?;
     let n = d.unp.len();
     let atoms = |e: End| match e {
         End::Bond(x, y) => vec![x, y],

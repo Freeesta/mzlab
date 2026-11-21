@@ -8,6 +8,7 @@ use mzlab_core::json::{self, round, Out, Value};
 
 use super::graph::{props, Mol};
 use super::labels::{shape, shape_json, unpaired_of, AtomIn};
+use super::molfile_read;
 use crate::sortc::SortC;
 
 /// How the electrons of a cut bond go.
@@ -310,7 +311,8 @@ fn shifts(
 /// mass, nominal, mz, unpaired, electrons, odd, kind}]}`. `atoms` lists the atoms the cut changes (the page sets them on its drawing; `pin`: the valence rule would give another H count, so `h` is written on the atom); `shift` is in
 /// the units and axes of the molfile (y up). Pieces are candidates: no cut is preferred to another.
 pub fn cut_json(text: &str) -> Result<String> {
-    let r = request(text)?;
+    let mut r = request(text)?;
+    r.mf = molfile_read::v2000(&r.mf)?.into_owned();
     let m = Mol::from_molfile(&r.mf)?;
     let n = m.atoms.len();
     let (xy, rad) = (coords(&r.mf, n), radicals(&r.mf, n));
