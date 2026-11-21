@@ -4,7 +4,12 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OLD = re.compile(r"(?<![\w-])(livelli/1|ipotesi/1|riga/1|riga_tracce/1|feature_pipeline-2\.json)(?![\w])")
+OLD = re.compile(
+    r"(?<![\w-])(livelli/1|ipotesi/1|riga/1|feature_pipeline-2\.json)(?![\w])"
+    r"|riga_tracce|(?<![\w-])riga\.json"  # bare names too: output file names, ids, prose
+    r"|\"sources\"\s*:\s*\[[^\]]*\"(regola|sospetti|rottura|rete|famiglia|importata)\""  # old hypothesis source labels in fixtures
+    r"|\"rottura\+"  # the old label of a cleavage product
+)
 # The refusal code and its tests name the superseded feature_pipeline versions on purpose.
 OLD_PIPELINE = re.compile(r"feature_pipeline/[12](?!\d)")
 PIPELINE_OK = {"mzlab/web/workflow.js", "tests/test_pipeline_recipe.py", "tests/test_no_old_tp_names.py"}

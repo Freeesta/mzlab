@@ -75,11 +75,11 @@ fn main() {
         );
     }
     put(
-        "riga.json",
+        "row.json",
         core::row_json(&mut r(), size, &samples, 3).expect("row"),
     );
     put(
-        "riga_tracce.json",
+        "row_traces.json",
         core::row_traces_json(&mut r(), size, &samples, 3, 5.0, open).expect("traces"),
     );
 }

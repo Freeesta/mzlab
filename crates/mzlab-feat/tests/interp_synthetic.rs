@@ -23,7 +23,7 @@ use mzlab_feat::trace::Params;
 
 const PARENT: &str = r#"{"neutral":"C22H31N3O4S"}"#;
 // the product +3C of the parent of the synthetic series, as the registry of hypotheses would hold it
-const REGISTRY: &str = r#"{"format":"hypotheses/2","hypotheses":[{"id":1,"label":"x","formula":"C25H31N3O4S","mz":470.210804,"level":3,"sources":["regola"]}]}"#;
+const REGISTRY: &str = r#"{"format":"hypotheses/2","hypotheses":[{"id":1,"label":"x","formula":"C25H31N3O4S","mz":470.210804,"level":3,"sources":["rule"]}]}"#;
 
 fn series() -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_feat_interp_{}", std::process::id()));

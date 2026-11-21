@@ -45,7 +45,7 @@ def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
 
 
 def test_the_keys_of_the_row_are_in_the_row_and_its_traces(outs):
-    c, row, tr = contract(), outs["riga.json"], outs["riga_tracce.json"]
+    c, row, tr = contract(), outs["row.json"], outs["row_traces.json"]
     assert row["schema"] == "row/2" and set(c["row"]) <= set(row) and row["id"] == 3
     assert row["quality"] is None or set(c["rowQuality"]) <= set(row["quality"])
     assert row["ms2"] is None or set(c["rowMs2"]) <= set(row["ms2"])
