@@ -105,3 +105,13 @@ fn a_report_ends_with_exactly_one_newline() {
     assert_eq!(bad.code, 6, "{}", bad.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_run_folder_with_a_table_report_of_the_old_format_is_refused() {
+    let dir = crate::flow_ident_tests::fixture("corsa_old");
+    report(&dir);
+    let work = dir.join("work");
+    std::fs::write(work.join("t.json"), br#"{"schema":"report/1","righe":4}"#).unwrap();
+    let e = crate::flow_report::report(&work).unwrap_err();
+    assert_eq!(e.key, "err.flow.format.reportOld");
+}

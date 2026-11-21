@@ -32,6 +32,13 @@ pub fn report(dir: &Path) -> Result<String> {
             bytes,
         ));
     }
+    // the old `report/1` of a table is refused here (the CLI reads run folders; the site passes no output files), never read as "no table report"
+    if kept
+        .iter()
+        .any(|(_, b)| b.starts_with(b"{\"schema\":\"report/1\""))
+    {
+        return Err(Error::new("err.flow.format.reportOld"));
+    }
     let outputs: Vec<Output> = kept
         .iter()
         .map(|(n, b)| Output { name: n, bytes: b })

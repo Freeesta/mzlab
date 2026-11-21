@@ -172,13 +172,3 @@ fn cites_each_imported_list_file_once_with_its_sha256() {
     assert!(j.contains("Lists you imported: imp.mzsus (SHA-256 abcdef01…)."));
     assert!(j.contains(r#""imported":[{"name":"imp.mzsus","sha256":"abcdef0123456789"}]"#));
 }
-
-#[test]
-fn a_table_report_of_the_old_key_set_is_not_embedded() {
-    let prov = parse(PROV.as_bytes()).unwrap();
-    let u = [Output {
-        name: "report.json",
-        bytes: br#"{"schema":"report/1","righe":4}"#,
-    }];
-    assert!(build(&prov, &u).unwrap().report.is_none());
-}
