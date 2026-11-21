@@ -25,3 +25,22 @@ def test_old_names_are_gone():
             if OLD.search(line):
                 hits.append(f"{f}:{n}")
     assert not hits, hits[:20]
+
+
+# the old record keys are also common words elsewhere, so they are checked only where the pipeline record is read or written
+RECORD_FILES = ["tests_e2e/e2e_attributio_pipeline.py", "tests_e2e/e2e_pipeline.py", "tests_e2e/e2e_tabui_rapporto.py", "tests/test_pipeline_recipe.py"]
+RECORD_FILES_GLOB = "TP_Mine/js/3[2-5]*.js"
+OLD_RECORD = re.compile(r'(\.|\[")(parametri|prove|padre|ingressi|sospetti|esecuzioni)\b')
+
+
+def test_old_record_keys_are_gone_where_the_record_is_used():
+    files = RECORD_FILES + [str(f.relative_to(ROOT)) for f in ROOT.glob(RECORD_FILES_GLOB)]
+    hits = []
+    for f in files:
+        p = ROOT / f
+        if f == "tests/test_pipeline_recipe.py" or not p.is_file():
+            continue
+        for n, line in enumerate(p.read_text(encoding="utf8").splitlines(), 1):
+            if OLD_RECORD.search(line):
+                hits.append(f"{f}:{n}")
+    assert not hits, hits

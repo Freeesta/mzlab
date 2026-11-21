@@ -83,6 +83,10 @@ pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     let rows = crate::lists::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
+    // an old base file is refused with the stable key of the rules reader, never merged into
+    if file.get("version").and_then(Value::f64) != Some(f64::from(crate::hypo::RULES_VERSION)) {
+        return Err("error.hypo.rulesVersion".to_string());
+    }
     let default = file
         .get("default_profile")
         .and_then(Value::str)
