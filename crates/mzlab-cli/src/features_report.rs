@@ -107,6 +107,27 @@ fn row(o: &mut Out, r: (f64, f64)) {
     o.raw(&format!("{{\"mz\":{},\"rt\":{}}}", num(r.0), num(r.1)));
 }
 
+/// The `files` array of the report: one entry per file with what the screening did to it.
+fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usize]) {
+    o.raw(",\"files\":[");
+    for (k, x) in m.iter().enumerate() {
+        let s = log.shifts.get(k);
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"member\":")
+            .str(&x.name);
+        o.raw(&format!(
+            ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}}}",
+            x.note.unit,
+            num(share(&x.note)),
+            x.centroid,
+            num(defect_of(recipe)),
+            num(s.map_or(0.0, |s| s.mz_da)),
+            s.is_some_and(|s| s.applied),
+            rows.get(k).copied().unwrap_or(0)
+        ));
+    }
+}
+
 /// `features-report/1`: `rows` = features detected in each member; the evidence of the recipe holds the shifts, the merged rows and the choices.
 pub(crate) fn report_text(
     recipe: &Recipe,
@@ -125,23 +146,7 @@ pub(crate) fn report_text(
     let mut o = Out::default();
     o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
         .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
-    o.raw(",\"files\":[");
-    for (k, x) in m.iter().enumerate() {
-        let s = log.shifts.get(k);
-        o.raw(if k > 0 { "," } else { "" })
-            .raw("{\"member\":")
-            .str(&x.name);
-        o.raw(&format!(
-            ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}}}",
-            x.note.unit,
-            num(share(&x.note)),
-            x.centroid,
-            num(defect_of(recipe)),
-            num(s.map_or(0.0, |s| s.mz_da)),
-            s.is_some_and(|s| s.applied),
-            rows.get(k).copied().unwrap_or(0)
-        ));
-    }
+    files_json(&mut o, recipe, &m, &log, rows);
     o.raw("],\"merged\":[");
     for (k, g) in log.merged.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw("{\"kept\":");
