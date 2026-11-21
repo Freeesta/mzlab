@@ -187,7 +187,7 @@ fn progress(names: Vec<String>, ended: Arc<Mutex<Vec<Option<Ended>>>>) -> DoneFn
     })
 }
 
-/// A calm notice: its catalogue key and parameters (`lang/*/errori-*.js`).
+/// A calm notice: its catalogue key and parameters (`lang/*/errors-*.js`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notice {
     pub key: &'static str,

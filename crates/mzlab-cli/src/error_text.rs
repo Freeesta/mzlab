@@ -1,17 +1,17 @@
-//! The English text of an engine error for the terminal: the catalogue the page shows (`mzlab/web/lang/en/errori-*.js`) with its `{param}` filled in,
+//! The English text of an engine error for the terminal: the catalogue the page shows (`mzlab/web/lang/en/errors-*.js`) with its `{param}` filled in,
 //! and the key kept in brackets so the message can still be searched or matched by scripts. A message that does not start with a known key passes
 //! unchanged (usage errors, file-system errors).
 
 const CATALOG: &str = concat!(
-    include_str!("../../../mzlab/web/lang/en/errori-a-m.js"),
-    include_str!("../../../mzlab/web/lang/en/errori-file.js"),
-    include_str!("../../../mzlab/web/lang/en/errori-flow.js"),
-    include_str!("../../../mzlab/web/lang/en/errori-llm.js"),
-    include_str!("../../../mzlab/web/lang/en/errori-n-w.js"),
+    include_str!("../../../mzlab/web/lang/en/errors-a-m.js"),
+    include_str!("../../../mzlab/web/lang/en/errors-file.js"),
+    include_str!("../../../mzlab/web/lang/en/errors-flow.js"),
+    include_str!("../../../mzlab/web/lang/en/errors-llm.js"),
+    include_str!("../../../mzlab/web/lang/en/errors-n-w.js"),
 );
 
 /// The people's names of the memory phases (`memory.phase.<id>`), the ones the page puts in the same sentence.
-const PHASES: &str = include_str!("../../../mzlab/web/lang/en/altre-lv-predef.js");
+const PHASES: &str = include_str!("../../../mzlab/web/lang/en/more-lv-defaults.js");
 
 /// The text of `key` in a catalogue of one `"key": "text",` per line, without escapes.
 fn text_in(catalog: &'static str, key: &str) -> Option<&'static str> {

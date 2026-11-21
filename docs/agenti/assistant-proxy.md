@@ -22,7 +22,7 @@ Cloudflare Worker that forwards the site assistant's requests to the provider wi
 - Non-2xx provider response: settled with zero usage, body passed through as is (replaced if it looks like a key), of the headers only `retry-after` and `request-id` remain.
 - 2xx response: the SSE bytes pass unchanged; `usageSniffer` decodes only the lines with `data:` and `"message_` in the first 48 bytes; at end of stream, error or cancellation (`waitUntil`) `settle` charges the true cost, or the whole reservation if usage did not fully arrive (truncated stream).
 - The true cost exceeds the reservation only if the input exceeds the `byte/3` estimate: the ledger records the true cost, so a cap can be exceeded by that estimation error.
-- Exposed headers: `x-mzlab-spend` `spent/cap` of the session in micro-dollars, `x-mzlab-soft: 1` from 80 %, `x-mzlab-limit`, `retry-after`, `request-id`; errors as `{error, error_key, params}`; the `err.llm.proxy.*` keys have their texts in `mzlab/web/lang/en/errori-llm.js`.
+- Exposed headers: `x-mzlab-spend` `spent/cap` of the session in micro-dollars, `x-mzlab-soft: 1` from 80 %, `x-mzlab-limit`, `retry-after`, `request-id`; errors as `{error, error_key, params}`; the `err.llm.proxy.*` keys have their texts in `mzlab/web/lang/en/errors-llm.js`.
 - No logs: in `wrangler.toml` `observability` and `logs` are off, `logpush = false`; the code writes only `console.error("err.llm.proxy.settle")` if settlement fails, with no request data.
 
 ## Measurements and tests

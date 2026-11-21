@@ -34,7 +34,7 @@ try:
             h = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) .can-hd span')].map(e => e.textContent)")
             assert h[:4] == ["Channel", "Experiment", "Points", "Time (min)"], h
             ms1 = pg.evaluate("(document.querySelector('.can-pop:not([hidden]) [data-group^=\"ms|1\"]') || {}).title || ''")
-            assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/en/canali.js canali.tip.ms1
+            assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/en/channels.js canali.tip.ms1
         step("groups, column names and the hover text of MS¹", groups)
         def label():
             pg.click(".can-pop:not([hidden]) [data-group^='ms|1']"); ready(pg)

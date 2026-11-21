@@ -74,7 +74,7 @@ fn catalogue_text(key: &str) -> Option<String> {
             .map(|e| e.path())
             .filter(|p| {
                 p.file_name()
-                    .is_some_and(|n| n.to_string_lossy().starts_with("errori-"))
+                    .is_some_and(|n| n.to_string_lossy().starts_with("errors-"))
             })
             .collect();
         names.sort();
