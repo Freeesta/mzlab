@@ -45,8 +45,8 @@ try:
             pg.evaluate("setActive(E.panels.find(p => p.type === 'spec'))")
             t = pg.inner_text(".pnl.spec .leg").strip()
             import re
-            # the scan (or the average), then, for unit-resolution centroids only, the note that the engine merges per nominal mass (#3394); never TIC, base peak or RT
-            assert re.fullmatch(r"(scan \d+/\d+|average of \d+ scans)( · merge by nominal mass: auto)?", t), t
+            # the scan (or the average) and nothing else (the automatic merge is not stated here); never TIC, base peak or RT
+            assert re.fullmatch(r"scan \d+/\d+|average of \d+ scans", t), t
             assert not re.search(r"TIC|base peak|RT", t), t
         step("A4.3: caption without TIC, base peak, RT", caption)
         def rtl():

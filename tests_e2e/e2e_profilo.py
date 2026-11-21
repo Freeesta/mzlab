@@ -65,7 +65,7 @@ try:
             off = pg.evaluate("async u => (await (await fetch(u + '&merge=0')).json()).mz.length", u)
             print("centroids merged (auto) / opted out (merge=0)", on, off); assert on <= off
             nom = pg.evaluate(f"{SPEC}._a.data[0].d.mz.map(m=>Math.floor(m+0.2))"); assert len(nom) == len(set(nom)), "merged: one per nominal mass"
-            assert "merge by nominal mass: auto" in pg.evaluate(f"{SPEC}.leg.textContent"), "the page states the automatic merge"
+            assert "merge by nominal mass" not in pg.evaluate(f"{SPEC}.leg.textContent"), "the caption carries no merge label"
             assert pg.evaluate("async u => (await (await fetch(u)).json()).auto_merge", u) is True, "the route states it too"
         step("centroid file: merged by the engine (auto), stated, merge=0 opts out", centroid)
         pg.screenshot(path=SH + "profilo.png")

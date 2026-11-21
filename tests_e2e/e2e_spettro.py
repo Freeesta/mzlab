@@ -103,9 +103,9 @@ try:
         def caption():
             pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})")
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()"); pg.mouse.click(c["x"], c["y"]); ready(pg)
-            pg.keyboard.press("ArrowRight"); wait_for_js(pg, "/^scan \\d+\\/\\d+ · merge by nominal mass: auto$/.test(document.querySelector('.pnl.spec .leg').textContent.trim())")
+            pg.keyboard.press("ArrowRight"); wait_for_js(pg, "/^scan \\d+\\/\\d+$/.test(document.querySelector('.pnl.spec .leg').textContent.trim())")
             t = pg.inner_text(".pnl.spec .leg"); print(t)
-            import re; assert re.fullmatch(r"scan \d+/\d+ · merge by nominal mass: auto", t.strip()), t
+            import re; assert re.fullmatch(r"scan \d+/\d+", t.strip()), t
             for w in ["TIC", "base peak", "RT"]: assert w not in t, (w, t)         # A4.3: the time is already next to the title
         step("G6: caption = scan i/N and the automatic merge note", caption)
         def ms2():
