@@ -180,6 +180,6 @@ fn a_table_report_of_the_old_key_set_is_refused() {
         name: "report.json",
         bytes: br#"{"schema":"report/1","righe":4}"#,
     }];
-    let e = build(&prov, &u).err().expect("report/1 must be refused");
+    let e = build(&prov, &u).unwrap_err();
     assert_eq!(e.key, "err.flow.format.reportOld");
 }

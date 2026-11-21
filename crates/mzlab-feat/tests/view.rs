@@ -208,7 +208,7 @@ fn cv_ddof_round_trips_changes_the_digest_is_written_in_qc_and_rejects_other_val
 fn a_spec_with_the_old_italian_keys_is_refused() {
     let (t, s) = (table(), samples());
     for old in [r#"{"filtra":[]}"#, r#"{"normalizza":{"metodo":"nessuna"}}"#, r#"{"etichette":{}}"#] {
-        let e = view::from_spec(&t, &s, old.as_bytes()).err().expect(old);
+        let e = view::from_spec(&t, &s, old.as_bytes()).unwrap_err();
         assert_eq!(e.key, "error.viewSpecOld", "{old}");
     }
 }
