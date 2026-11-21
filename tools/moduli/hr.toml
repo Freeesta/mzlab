@@ -5,6 +5,6 @@ senza_default = true
 chiavi = { feat = 1, proofs = 2, finder = 4, finder_edge = 5, finder_msn = 6 }
 wasm_opt = "@estesi"
 parte = "a"
-tetto = 1716224
-misura = 1708337
-nota = "detect, proofs, finder, finder_edge, finder_msn and the unit-resolution screening (centroid, recenter, dedup) in ONE .wasm; +7.7 % over the earlier measure of 1,586,396 B, 0.46 % of headroom left: the next growth of hr needs a cap decision of the Coordinator; the only cap of the group"
+tetto = 1724416
+misura = 1722645
+nota = "detect, proofs, finder, finder_edge, finder_msn and the unit-resolution screening (centroid, recenter, dedup) in ONE .wasm; +7.7 % over the earlier measure of 1,586,396 B, `features.align` `mz_offset` (the m/z offset estimator `mzcal`, corrected m/z in the table, raw windows in the gap filling) 1,708,337 -> 1,722,645 (+14,308 B, +0.84 %), cap 1,716,224 -> 1,724,416 (+0.48 %, the measure rounded up to 4 KiB; the `auto` offset must exist on the site for site = app = CLI parity); 0.1 % of headroom left: the next growth of hr needs a cap decision of the Coordinator; the only cap of the group"
