@@ -9,8 +9,8 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::detect_route::detect;
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
-use crate::lrscreen::centroids_of;
 use crate::gapfill::{fill_apply, fill_find};
+use crate::lrscreen::centroids_of;
 use crate::pipeline::analyse_with;
 use crate::prog::Prog;
 use crate::quality::assess;
@@ -301,9 +301,7 @@ fn fill_threads<R: ReadAt>(
     let mut found: Vec<Option<Result<Cells>>> = (0..n).map(|_| None).collect();
     {
         let al: &Aligned = table;
-        let find = |k: usize| {
-            open(k).and_then(|mut ix| find_screened(&mut ix, al, k, map, r))
-        };
+        let find = |k: usize| open(k).and_then(|mut ix| find_screened(&mut ix, al, k, map, r));
         if workers > 1 && n > 1 {
             let next = std::sync::atomic::AtomicUsize::new(0);
             let slots = std::sync::Mutex::new(&mut found);

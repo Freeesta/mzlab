@@ -18,13 +18,13 @@ mod smooth;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_index;
-#[cfg(test)]
 mod tests_fast;
 #[cfg(test)]
 mod tests_grid_sat;
 #[cfg(test)]
 mod tests_hr;
+#[cfg(test)]
+mod tests_index;
 #[cfg(test)]
 mod tests_merged;
 #[cfg(test)]

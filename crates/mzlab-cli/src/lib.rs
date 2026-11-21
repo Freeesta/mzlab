@@ -31,12 +31,12 @@ pub mod error_text;
 pub(crate) use emit::emit;
 pub mod exit;
 mod extract;
+#[cfg(test)]
+mod features_lr_tests;
+mod features_series;
 mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
-mod features_series;
-#[cfg(test)]
-mod features_lr_tests;
 #[cfg(test)]
 mod flow_align_join_tests;
 mod flow_apply;

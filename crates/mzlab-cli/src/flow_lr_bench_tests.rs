@@ -335,9 +335,13 @@ fn bench(tag: &str, jitter: f64) -> Option<Bench> {
         .map(|&m| score(&t, &rows(&d, f, m, &name(m, "s"))))
         .collect();
     println!("jitter {jitter}: blank rows {ba:?}; noise-only blank {na:?}");
-    for (k, label) in ["A (centroid step)", "B (profile as is)", "C (profile, defaults)"]
-        .iter()
-        .enumerate()
+    for (k, label) in [
+        "A (centroid step)",
+        "B (profile as is)",
+        "C (profile, defaults)",
+    ]
+    .iter()
+    .enumerate()
     {
         println!("jitter {jitter}  {label}: {:?}", s[k]);
         println!("jitter {jitter}  {label} aligned: {:?}", table[k]);

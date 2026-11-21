@@ -289,13 +289,25 @@ const BACKGROUND: [(f64, f64, f64); 8] = [
 fn screen_index(k: usize, profile: bool) -> Vec<u8> {
     let mut rng = Lcg(500 + k as u64);
     let name = format!("scr{k}{}", u8::from(profile));
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: name.clone(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: name.clone(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     let n = 240;
     w.open_spectra(n).unwrap();
     for i in 0..n {
         let rt = 0.5 + 0.05 * i as f64;
         let mut peaks: Vec<(f64, f64)> = (0..30)
-            .map(|_| (100.0 + 300.0 * rng.next(), 1.5e3 * (0.5 * rng.normal()).exp()))
+            .map(|_| {
+                (
+                    100.0 + 300.0 * rng.next(),
+                    1.5e3 * (0.5 * rng.normal()).exp(),
+                )
+            })
             .collect();
         for &(m, c, a) in TRUE_IONS.iter().chain(&BACKGROUND) {
             let v = a * (1.0 + 0.1 * k as f64) * (-0.5 * ((rt - c) / 0.07).powi(2)).exp();
@@ -343,7 +355,9 @@ fn profile_points(peaks: &[(f64, f64)]) -> (Vec<f64>, Vec<f32>) {
             *grid.entry(g).or_default() += a * (-0.5 * (x / sigma).powi(2)).exp();
         }
     }
-    grid.into_iter().map(|(g, v)| (g as f64 / 10.0, v as f32)).unzip()
+    grid.into_iter()
+        .map(|(g, v)| (g as f64 / 10.0, v as f32))
+        .unzip()
 }
 
 fn screen_series(profile: bool) -> Vec<Vec<u8>> {
@@ -355,26 +369,43 @@ fn screen_run(idxs: &[Vec<u8>], tweak: impl Fn(&mut Recipe)) -> (Recipe, Aligned
     let mut r = Recipe::for_index(&mut open(&idxs[1])).unwrap();
     tweak(&mut r);
     let r = mzlab_feat::lrscreen::adjusted(&mut open(&idxs[1]), r).unwrap();
-    let files: Vec<FileFeatures> = idxs.iter().map(|b| analyse_file(&mut open(b), &r).unwrap()).collect();
+    let files: Vec<FileFeatures> = idxs
+        .iter()
+        .map(|b| analyse_file(&mut open(b), &r).unwrap())
+        .collect();
     let (t, _) = align_and_fill(&files, &r, |k| Ok(open(&idxs[k]))).unwrap();
     (r, t)
 }
 
 fn near(t: &Aligned, mz: f64, rt: f64) -> Vec<usize> {
-    (0..t.len()).filter(|&r| (t.mz[r] - mz).abs() <= 0.35 && (t.rt[r] - rt).abs() <= 0.25).collect()
+    (0..t.len())
+        .filter(|&r| (t.mz[r] - mz).abs() <= 0.35 && (t.rt[r] - rt).abs() <= 0.25)
+        .collect()
 }
 
 #[test]
 fn profile_scans_with_auto_give_the_rows_of_the_centroid_input_and_no_duplicates() {
     let (_, from_profile) = screen_run(&screen_series(true), |_| {});
     let (_, from_centroids) = screen_run(&screen_series(false), |_| {});
-    assert_eq!(from_centroids.len(), TRUE_IONS.len() + BACKGROUND.len(), "the true ions and the known noise rows");
-    assert_eq!(from_profile.len(), from_centroids.len(), "rows of the profile and of the centroid series");
+    assert_eq!(
+        from_centroids.len(),
+        TRUE_IONS.len() + BACKGROUND.len(),
+        "the true ions and the known noise rows"
+    );
+    assert_eq!(
+        from_profile.len(),
+        from_centroids.len(),
+        "rows of the profile and of the centroid series"
+    );
     for t in [&from_profile, &from_centroids] {
         for a in 0..t.len() {
             for b in a + 1..t.len() {
                 let close = (t.mz[a] - t.mz[b]).abs() <= 0.6 && (t.rt[a] - t.rt[b]).abs() <= 0.1;
-                assert!(!close, "rows {a} and {b} are one ion: {} {} / {} {}", t.mz[a], t.rt[a], t.mz[b], t.rt[b]);
+                assert!(
+                    !close,
+                    "rows {a} and {b} are one ion: {} {} / {} {}",
+                    t.mz[a], t.rt[a], t.mz[b], t.rt[b]
+                );
             }
         }
     }
@@ -386,7 +417,10 @@ fn with_drift_every_true_ion_is_one_row_present_in_all_samples() {
     for &(mz, rt, _) in &TRUE_IONS {
         let rows = near(&t, mz, rt);
         assert_eq!(rows.len(), 1, "{mz} at {rt} min is {} rows", rows.len());
-        assert!((0..DRIFT.len()).all(|k| !mzlab_feat::table::no_peak(t.state[t.cell(rows[0], k)]) && t.area[t.cell(rows[0], k)] > 0.0));
+        assert!(
+            (0..DRIFT.len()).all(|k| !mzlab_feat::table::no_peak(t.state[t.cell(rows[0], k)])
+                && t.area[t.cell(rows[0], k)] > 0.0)
+        );
     }
 }
 
@@ -394,11 +428,19 @@ fn with_drift_every_true_ion_is_one_row_present_in_all_samples() {
 fn recenter_recovers_the_drift_of_each_file_within_three_hundredths_of_a_dalton() {
     let idxs = screen_series(false);
     let r = Recipe::for_index(&mut open(&idxs[1])).unwrap();
-    let files: Vec<FileFeatures> = idxs.iter().map(|b| analyse_file(&mut open(b), &r).unwrap()).collect();
+    let files: Vec<FileFeatures> = idxs
+        .iter()
+        .map(|b| analyse_file(&mut open(b), &r).unwrap())
+        .collect();
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let found = mzlab_feat::lrscreen_recenter::shifts(&refs, &r).unwrap();
     for (k, s) in found.iter().enumerate() {
-        assert!((s.mz_da - DRIFT[k]).abs() <= 0.03, "file {k}: found {} for a drift of {}", s.mz_da, DRIFT[k]);
+        assert!(
+            (s.mz_da - DRIFT[k]).abs() <= 0.03,
+            "file {k}: found {} for a drift of {}",
+            s.mz_da,
+            DRIFT[k]
+        );
         assert_eq!(s.applied, DRIFT[k].abs() >= 0.05);
     }
 }

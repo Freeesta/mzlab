@@ -37,7 +37,9 @@ pub fn features_plan_of(
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
     let recipe = crate::par::index_only(files, labels, &idxs, params)?;
-    Ok(crate::par::features_report::plan_text(&recipe, &idxs, files, labels))
+    Ok(crate::par::features_report::plan_text(
+        &recipe, &idxs, files, labels,
+    ))
 }
 
 /// `features_of` and the `features-report/1` of the run (`--report`).
@@ -51,7 +53,11 @@ pub fn features_full(
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
     let (recipe, detected, weak) = crate::par::index_and_detect(files, labels, &idxs, params)?;
-    let rows: Vec<usize> = run::read_files(&detected)?.0.iter().map(|f| f.len()).collect();
+    let rows: Vec<usize> = run::read_files(&detected)?
+        .0
+        .iter()
+        .map(|f| f.len())
+        .collect();
     let mut series = crate::par::Series(detected, weak);
     let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());

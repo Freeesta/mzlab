@@ -54,7 +54,9 @@ pub struct Screen {
 impl Screen {
     /// The switches `get` names (`centroid`, `recenter`, `dedup`) as texts; an unknown text or a missing key keeps the switch. Only `centroid` has `on`.
     pub fn read<'a>(&mut self, get: impl Fn(&str) -> Option<&'a str>) {
-        let pick = |k: &str, on: bool, now: Switch| get(k).and_then(|s| Switch::parse(s, on)).unwrap_or(now);
+        let pick = |k: &str, on: bool, now: Switch| {
+            get(k).and_then(|s| Switch::parse(s, on)).unwrap_or(now)
+        };
         self.centroid = pick("centroid", true, self.centroid);
         self.recenter = pick("recenter", false, self.recenter);
         self.dedup = pick("dedup", false, self.dedup);
@@ -197,7 +199,10 @@ pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe
     r.screen.centroided = true;
     let mut c = c.index;
     let pol = r.detect.polarity;
-    let (was, now) = (Recipe::for_index_in(index, pol)?, Recipe::for_index_in(&mut c, pol)?);
+    let (was, now) = (
+        Recipe::for_index_in(index, pol)?,
+        Recipe::for_index_in(&mut c, pol)?,
+    );
     if r.detect.axis == was.detect.axis {
         r.detect.axis = now.detect.axis;
     }

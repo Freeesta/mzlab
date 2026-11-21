@@ -44,7 +44,10 @@ fn anchors(files: &[&FileFeatures], r: &Recipe) -> Result<Vec<Vec<(usize, usize)
             seen.len() == m.len() && 2 * m.len() >= n
         })
         .map(|m| {
-            let mut h: Vec<f64> = m.iter().map(|&(k, i)| f64::from(files[k].height[i])).collect();
+            let mut h: Vec<f64> = m
+                .iter()
+                .map(|&(k, i)| f64::from(files[k].height[i]))
+                .collect();
             (median(&mut h), m)
         })
         .collect();
@@ -58,7 +61,14 @@ fn anchors(files: &[&FileFeatures], r: &Recipe) -> Result<Vec<Vec<(usize, usize)
 pub fn shifts(files: &[&FileFeatures], r: &Recipe) -> Result<Vec<Shift>> {
     let none = |why: &str| {
         choose(r, "recenter", "off", why);
-        vec![Shift { mz_da: 0.0, anchors: 0, applied: false }; files.len()]
+        vec![
+            Shift {
+                mz_da: 0.0,
+                anchors: 0,
+                applied: false
+            };
+            files.len()
+        ]
     };
     if files.len() < 2 {
         return Ok(none("fewer than 2 files"));
@@ -81,7 +91,11 @@ pub fn shifts(files: &[&FileFeatures], r: &Recipe) -> Result<Vec<Shift>> {
         .map(|mut d| {
             let anchors = d.len();
             let mz_da = if anchors == 0 { 0.0 } else { median(&mut d) };
-            Shift { mz_da, anchors, applied: mz_da.abs() >= MIN_SHIFT_DA }
+            Shift {
+                mz_da,
+                anchors,
+                applied: mz_da.abs() >= MIN_SHIFT_DA,
+            }
         })
         .collect())
 }
@@ -99,7 +113,10 @@ pub(crate) fn recentred(files: &[&FileFeatures], r: &Recipe) -> Result<Option<Ve
             r,
             "recenter",
             if n > 0 { "on" } else { "off" },
-            format!("{n} of {} files shifted by at least {MIN_SHIFT_DA} Da", found.len()),
+            format!(
+                "{n} of {} files shifted by at least {MIN_SHIFT_DA} Da",
+                found.len()
+            ),
         );
     }
     if let Some(e) = &r.screen.evidence {

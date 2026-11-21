@@ -144,8 +144,16 @@ fn table(o: &Outcome) -> Vec<(f64, f64, Vec<String>)> {
 
 /// A params file that sets the three switches of the screen off (`recenter`, `dedup`, and `centroid` unless the flag gives it).
 fn off(dir: &Path, with_centroid: bool) -> String {
-    let f = dir.join(if with_centroid { "off-all.json" } else { "off.json" });
-    let c = if with_centroid { r#","centroid":"off""# } else { "" };
+    let f = dir.join(if with_centroid {
+        "off-all.json"
+    } else {
+        "off.json"
+    });
+    let c = if with_centroid {
+        r#","centroid":"off""#
+    } else {
+        ""
+    };
     std::fs::write(&f, format!(r#"{{"recenter":"off","dedup":"off"{c}}}"#)).unwrap();
     f.display().to_string()
 }
@@ -181,7 +189,10 @@ fn the_defaults_leave_a_high_resolution_series_and_a_centroid_series_as_they_wer
     for (tag, kind) in [("hr", Kind::HighRes), ("lrc", Kind::Centroid)] {
         let (dir, files) = series(tag, kind, false);
         let default = run(&files, &[]);
-        let before = run(&files, &["--centroid", "off", "--params", &off(&dir, false)]);
+        let before = run(
+            &files,
+            &["--centroid", "off", "--params", &off(&dir, false)],
+        );
         assert_eq!(default.code, 0, "{}", default.stderr);
         assert_eq!(default.stdout, before.stdout, "{tag}");
         let _ = std::fs::remove_dir_all(&dir);
@@ -194,8 +205,14 @@ fn the_switches_off_reproduce_the_profile_csv_of_before_and_the_flag_is_the_key(
     let all_off = off(&dir, true);
     let notes = dir.join("notes.json").display().to_string();
     let before = run(&files, &["--params", &all_off, "--notes", &notes]);
-    let flag = run(&files, &["--centroid", "off", "--params", &off(&dir, false)]);
-    assert_eq!(before.stdout, flag.stdout, "--centroid off is the key centroid=off");
+    let flag = run(
+        &files,
+        &["--centroid", "off", "--params", &off(&dir, false)],
+    );
+    assert_eq!(
+        before.stdout, flag.stdout,
+        "--centroid off is the key centroid=off"
+    );
     // with the screen off the profile warning stays, as before
     let said = std::fs::read_to_string(&notes).unwrap();
     assert!(said.contains("warn.features.profileUnit"), "{said}");
@@ -216,7 +233,10 @@ fn the_report_says_what_each_file_went_through_and_the_table_is_the_one_without_
     let with = run(&files, &["--report", &path.display().to_string()]);
     assert_eq!(with.stdout, run(&files, &[]).stdout);
     let doc = mzlab_core::json::parse(&std::fs::read(&path).unwrap()).unwrap();
-    assert_eq!(doc.get("schema").and_then(|v| v.str()), Some("features-report/1"));
+    assert_eq!(
+        doc.get("schema").and_then(|v| v.str()),
+        Some("features-report/1")
+    );
     let list = doc.get("files").unwrap().arr();
     assert_eq!(list.len(), DRIFT.len());
     for (k, f) in list.iter().enumerate() {
@@ -233,7 +253,9 @@ fn the_report_says_what_each_file_went_through_and_the_table_is_the_one_without_
     }
     let choices = doc.get("choices").unwrap().arr();
     assert!(
-        choices.iter().any(|c| c.get("key").and_then(|v| v.str()) == Some("centroid")),
+        choices
+            .iter()
+            .any(|c| c.get("key").and_then(|v| v.str()) == Some("centroid")),
         "{choices:?}"
     );
     assert!(doc.get("merged").is_some());
@@ -248,17 +270,26 @@ fn the_report_says_what_each_file_went_through_and_the_table_is_the_one_without_
 fn a_dry_run_prints_the_plan_detects_nothing_and_writes_nothing() {
     let (dir, files) = series("dry", Kind::Profile, true);
     let path = dir.join("never.json");
-    let o = run(&files, &["--dry-run", "--report", &path.display().to_string()]);
+    let o = run(
+        &files,
+        &["--dry-run", "--report", &path.display().to_string()],
+    );
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(!path.exists());
     if let Some(to) = std::env::var_os("MZLAB_JSON_SAMPLES") {
         std::fs::write(Path::new(&to).join("features-plan.json"), &o.stdout).unwrap();
     }
     let doc = mzlab_core::json::parse(&o.stdout).unwrap();
-    assert_eq!(doc.get("schema").and_then(|v| v.str()), Some("features-plan/1"));
+    assert_eq!(
+        doc.get("schema").and_then(|v| v.str()),
+        Some("features-plan/1")
+    );
     let members = doc.get("members").unwrap().arr();
     assert_eq!(members.len(), DRIFT.len());
-    assert_eq!(members[0].get("centroid").and_then(|v| v.bool()), Some(true));
+    assert_eq!(
+        members[0].get("centroid").and_then(|v| v.bool()),
+        Some(true)
+    );
     // exit codes: 4 a missing file, 2 a usage error
     assert_eq!(run(&["/nonexistent/x.mzML".into()], &["--dry-run"]).code, 4);
     assert_eq!(run(&files, &["--dry-run", "--centroid", "maybe"]).code, 2);
@@ -296,7 +327,10 @@ fn the_table_of_the_command_is_the_table_of_the_flow() {
     let w = dir.join("work");
     std::fs::create_dir_all(&w).unwrap();
     let (done, prov) = crate::flow::run_plan(plan.as_bytes(), &dir, &w, 2, None).unwrap();
-    assert!(done.skipped.is_empty() && !prov.contains("\"error\""), "{prov}");
+    assert!(
+        done.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
     let flow = std::fs::read_to_string(w.join("csv.csv")).unwrap();
     let cli = run(&files, &[]);
     assert_eq!(cli.code, 0, "{}", cli.stderr);
@@ -317,8 +351,15 @@ fn wiff(tag: &str) -> (PathBuf, String) {
         .args(["--samples", "3", "--scans", "40", "--points", "3333"])
         .output()
         .expect("python3 is needed by this test");
-    assert!(made.status.success(), "{}", String::from_utf8_lossy(&made.stderr));
-    (dir.clone(), dir.join("in/grande.wiff").display().to_string())
+    assert!(
+        made.status.success(),
+        "{}",
+        String::from_utf8_lossy(&made.stderr)
+    );
+    (
+        dir.clone(),
+        dir.join("in/grande.wiff").display().to_string(),
+    )
 }
 
 #[test]
@@ -333,8 +374,16 @@ fn a_wiff_of_profile_scans_is_centroided_per_sample_and_the_dry_run_checks_the_s
     for (k, f) in list.iter().enumerate() {
         let m = f.get("member").and_then(|v| v.str()).unwrap();
         assert!(m.ends_with(&format!("grande.wiff@{}", k + 1)), "{m}");
-        assert_eq!(f.get("profile_fraction").and_then(|v| v.f64()), Some(1.0), "{f:?}");
-        assert_eq!(f.get("centroided").and_then(|v| v.bool()), Some(true), "{f:?}");
+        assert_eq!(
+            f.get("profile_fraction").and_then(|v| v.f64()),
+            Some(1.0),
+            "{f:?}"
+        );
+        assert_eq!(
+            f.get("centroided").and_then(|v| v.bool()),
+            Some(true),
+            "{f:?}"
+        );
     }
     // the plan says the same without detecting; an unknown sample is exit 5 in both
     let plan = run(&[w.clone()], &["--sample", "1,2,3", "--dry-run"]);

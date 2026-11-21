@@ -49,7 +49,9 @@ fn share(n: &Note) -> f64 {
 
 /// The recipe of the series in one line: the axis with the numbers of the first file and, on the unit axis, the three switches.
 fn recipe_line(recipe: &Recipe, first: Option<&Note>) -> String {
-    let (floor, min_height) = first.map_or((recipe.detect.floor, recipe.detect.min_height), |n| (n.floor, n.min_height));
+    let (floor, min_height) = first.map_or((recipe.detect.floor, recipe.detect.min_height), |n| {
+        (n.floor, n.min_height)
+    });
     match recipe.detect.axis {
         MassAxis::Da { defect } => format!(
             "unit resolution (1 Da channels centred on n{defect:+.3}), floor {} counts, minimum height {} counts, centroid={}, recenter={}, dedup={}",
@@ -75,13 +77,21 @@ fn defect_of(recipe: &Recipe) -> f64 {
 }
 
 /// `features-plan/1`: the decision of each member from its index; nothing is detected.
-pub(crate) fn plan_text(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[String]) -> String {
+pub(crate) fn plan_text(
+    recipe: &Recipe,
+    idxs: &[PathBuf],
+    files: &[PathBuf],
+    labels: &[String],
+) -> String {
     let m = members(recipe, idxs, files, labels);
     let mut o = Out::default();
-    o.raw("{\"schema\":\"features-plan/1\",\"recipe\":").str(&recipe_line(recipe, m.first().map(|x| &x.note)));
+    o.raw("{\"schema\":\"features-plan/1\",\"recipe\":")
+        .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
     o.raw(",\"members\":[");
     for (k, x) in m.iter().enumerate() {
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"member\":").str(&x.name);
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"member\":")
+            .str(&x.name);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroid\":{}}}",
             x.note.unit,
@@ -106,13 +116,21 @@ pub(crate) fn report_text(
     rows: &[usize],
 ) -> String {
     let m = members(recipe, idxs, files, labels);
-    let log: Log = recipe.screen.evidence.as_ref().map(|e| e.take()).unwrap_or_default();
+    let log: Log = recipe
+        .screen
+        .evidence
+        .as_ref()
+        .map(|e| e.take())
+        .unwrap_or_default();
     let mut o = Out::default();
-    o.raw("{\"schema\":\"features-report/1\",\"recipe\":").str(&recipe_line(recipe, m.first().map(|x| &x.note)));
+    o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
+        .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
     o.raw(",\"files\":[");
     for (k, x) in m.iter().enumerate() {
         let s = log.shifts.get(k);
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"member\":").str(&x.name);
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"member\":")
+            .str(&x.name);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}}}",
             x.note.unit,
@@ -130,26 +148,47 @@ pub(crate) fn report_text(
         row(&mut o, g.kept);
         o.raw(",\"dropped\":");
         row(&mut o, g.dropped);
-        o.raw(&format!(",\"dmz_da\":{},\"drt_min\":{},\"r\":{}}}", num(g.dmz_da), num(g.drt_min), num(g.r)));
+        o.raw(&format!(
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{}}}",
+            num(g.dmz_da),
+            num(g.drt_min),
+            num(g.r)
+        ));
     }
     o.raw("],\"choices\":[");
     let mut first = true;
     let mut choice = |o: &mut Out, key: &str, value: &str, reason: &str| {
-        o.raw(if first { "" } else { "," }).raw("{\"key\":").str(key).raw(",\"value\":").str(value);
+        o.raw(if first { "" } else { "," })
+            .raw("{\"key\":")
+            .str(key)
+            .raw(",\"value\":")
+            .str(value);
         o.raw(",\"reason\":").str(reason).raw("}");
         first = false;
     };
     if let Some(x) = m.first() {
         let why = if x.note.unit {
-            format!("{} is unit resolution: 1 Da channels centred on n{:+.3}", x.name, defect_of(recipe))
+            format!(
+                "{} is unit resolution: 1 Da channels centred on n{:+.3}",
+                x.name,
+                defect_of(recipe)
+            )
         } else {
             format!("{} is high resolution", x.name)
         };
         choice(&mut o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
     }
     for x in m.iter().filter(|x| x.note.unit) {
-        let why = format!("{}: {} of {} MS1 scans in profile mode", x.name, x.note.profile, x.note.scans);
-        choice(&mut o, "centroid", if x.centroid { "on" } else { "off" }, &why);
+        let why = format!(
+            "{}: {} of {} MS1 scans in profile mode",
+            x.name, x.note.profile, x.note.scans
+        );
+        choice(
+            &mut o,
+            "centroid",
+            if x.centroid { "on" } else { "off" },
+            &why,
+        );
     }
     for c in &log.choices {
         choice(&mut o, &c.key, &c.value, &c.reason);

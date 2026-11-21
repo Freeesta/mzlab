@@ -33,7 +33,8 @@ pub fn recipe_from_json(text: &str) -> Result<Recipe> {
 /// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise. A `"layers"` key (`layers_from_json`) switches to the recipe of a Flow run: the estimated one of `recipe_of_layers`, then the layers on top of the other keys.
 pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
     let Some(layers) = layers_in(text)? else {
-        return recipe_on(text, Recipe::for_index(index)?).and_then(|r| lrscreen::adjusted(index, r));
+        return recipe_on(text, Recipe::for_index(index)?)
+            .and_then(|r| lrscreen::adjusted(index, r));
     };
     let mut r = recipe_on(text, Recipe::for_index_estimated(index)?)?;
     apply_layers(&mut r, &layers)?;

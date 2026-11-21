@@ -53,7 +53,13 @@ fn places(index: &Index<impl ReadAt>) -> Result<Vec<(usize, usize)>> {
         .iter()
         .zip(index.sections.iter())
         .enumerate()
-        .any(|(i, (&c, s))| s.n_scans != c && index.keys.iter().any(|(n, k)| *k == i && !n.ends_with("/all")))
+        .any(|(i, (&c, s))| {
+            s.n_scans != c
+                && index
+                    .keys
+                    .iter()
+                    .any(|(n, k)| *k == i && !n.ends_with("/all"))
+        })
     {
         return Err(Error::new("err.file.index").with("detail", "section"));
     }
@@ -114,7 +120,12 @@ fn peaks_by_section<R: ReadAt>(index: &mut Index<R>) -> Result<Peaks> {
 }
 
 /// Every scan as a spectrum, the profile ones reduced to their centroids with the estimate `e`; with the counts of centroids flagged merged and saturated.
-fn reduced<R: ReadAt>(index: &Index<R>, places: &[(usize, usize)], by_section: &Peaks, e: &Estimate) -> (Vec<Spectrum>, (usize, usize)) {
+fn reduced<R: ReadAt>(
+    index: &Index<R>,
+    places: &[(usize, usize)],
+    by_section: &Peaks,
+    e: &Estimate,
+) -> (Vec<Spectrum>, (usize, usize)) {
     let mut flagged = (0, 0);
     let mut buf = Buf::default();
     let mut spectra: Vec<Spectrum> = Vec::with_capacity(index.scans.len());

@@ -751,7 +751,10 @@ pub(crate) fn build_after(
     // -- the groups of scans (level x polarity), those with the same members share a section
     // the levels present, ascending: a presence table instead of sorting a copy of the level of every scan (no sort routine for bytes in the module)
     let mut seen = [false; 256];
-    table.level.iter().for_each(|&l| seen[usize::from(l)] = true);
+    table
+        .level
+        .iter()
+        .for_each(|&l| seen[usize::from(l)] = true);
     let levels: Vec<u8> = (0..=u8::MAX).filter(|&l| seen[usize::from(l)]).collect();
     let mut infos: Vec<Info> = Vec::new();
     let mut keys: Vec<(String, usize)> = Vec::new();

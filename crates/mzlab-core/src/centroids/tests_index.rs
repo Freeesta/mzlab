@@ -17,7 +17,8 @@ fn peaks(ix: &mut Index<Vec<u8>>) -> Vec<(usize, f64, f64)> {
     let si = ix.section_of(1, Some(1)).unwrap();
     let n = ix.sections[si].n_peaks;
     let mut out = Vec::new();
-    ix.each_peak(si, 0, n, |p, mz, y| out.push((p, mz, y))).unwrap();
+    ix.each_peak(si, 0, n, |p, mz, y| out.push((p, mz, y)))
+        .unwrap();
     out
 }
 
@@ -31,13 +32,18 @@ fn the_centroids_of_an_index_are_those_of_the_centroid_mzml() {
     let mut mine = Index::open(made.bytes, n).unwrap();
     assert!(mine.scans.iter().all(|s| !s.profile));
     let mut out = Vec::new();
-    assert!(mzml_to_centroids(|| Ok(src.as_slice()), &mut out, "demo.mzML", &mut |_, _| {}).unwrap());
+    assert!(
+        mzml_to_centroids(|| Ok(src.as_slice()), &mut out, "demo.mzML", &mut |_, _| {}).unwrap()
+    );
     let mut theirs = index_of(&out);
     let (a, b) = (peaks(&mut mine), peaks(&mut theirs));
     assert!(a.len() >= 40 * 3, "{}", a.len());
     assert_eq!(a.len(), b.len());
     for (x, y) in a.iter().zip(&b) {
-        assert!(x.0 == y.0 && (x.1 - y.1).abs() < 1e-9 && (x.2 - y.2).abs() < 1e-6, "{x:?} {y:?}");
+        assert!(
+            x.0 == y.0 && (x.1 - y.1).abs() < 1e-9 && (x.2 - y.2).abs() < 1e-6,
+            "{x:?} {y:?}"
+        );
     }
 }
 

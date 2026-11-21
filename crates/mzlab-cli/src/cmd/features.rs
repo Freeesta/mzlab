@@ -166,7 +166,8 @@ fn run(args: Vec<String>) -> Outcome {
         .and_then(|(files, labels)| {
             let params = with_centroid(&a.params, a.centroid.as_deref());
             if a.dry_run {
-                return features_plan_of(&files, &labels, &params, &tmp).map(|p| (p, String::new()));
+                return features_plan_of(&files, &labels, &params, &tmp)
+                    .map(|p| (p, String::new()));
             }
             features_full(&files, &labels, &params, &tmp)
         });
@@ -186,7 +187,11 @@ fn run(args: Vec<String>) -> Outcome {
         return Outcome::fail(&e);
     }
     if let Some(p) = &a.report {
-        let to = if p.is_dir() { p.join("features-report.json") } else { p.clone() };
+        let to = if p.is_dir() {
+            p.join("features-report.json")
+        } else {
+            p.clone()
+        };
         if let Err(e) = std::fs::write(&to, report) {
             return Outcome::fail(&format!("{}: {e}", to.display()));
         }
