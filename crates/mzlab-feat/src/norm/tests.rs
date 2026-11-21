@@ -109,12 +109,12 @@ fn the_sum_streams_in_row_order_and_keeps_nan_for_a_file_without_cells() {
 fn an_istd_id_must_be_a_whole_row_number() {
     let parse = |s: &str| Method::from_json(&mzlab_core::json::parse(s.as_bytes()).unwrap());
     assert_eq!(
-        parse(r#"{"metodo":"istd","istd":{"id":3}}"#).unwrap(),
+        parse(r#"{"method":"istd","istd":{"id":3}}"#).unwrap(),
         Method::Istd(Reference::Id(3))
     );
     for bad_id in ["-1", "2.5", "4294967296", "1e30"] {
         assert!(
-            parse(&format!(r#"{{"metodo":"istd","istd":{{"id":{bad_id}}}}}"#)).is_err(),
+            parse(&format!(r#"{{"method":"istd","istd":{{"id":{bad_id}}}}}"#)).is_err(),
             "{bad_id}"
         );
     }

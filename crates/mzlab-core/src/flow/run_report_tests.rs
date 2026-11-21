@@ -9,7 +9,7 @@ const PROV: &str = r#"{"schema":"prov/1","agent":{"name":"mzLab","version":"1.2.
 "m":{"step":"spectra.match@1","params":{},"params_sha256":"p2","used":[],"generated":[],"ms":3,"error":{"error_key":"err.x","params":{}}}}}"#;
 
 const ANNOT: &str = r#"{"format":"annot/1","rows":[{"id":"q0","level":"2a"},{"id":"q1","level":"3a"},{"id":"q2","level":"2a"},{"id":"q3","level":"1","auto":false}]}"#;
-const REPORT: &str = r#"{"schema":"report/1","rows":4}"#;
+const REPORT: &str = r#"{"schema":"report/2","rows":4}"#;
 
 fn run() -> RunReport {
     let prov = parse(PROV.as_bytes()).unwrap();

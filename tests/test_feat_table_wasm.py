@@ -11,7 +11,7 @@ from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
-SPEC = {"normalizza": {"metodo": "somma"}, "filtra": [{"regola": "min_rilevati", "valore": 2}]}
+SPEC = {"normalize": {"method": "sum"}, "filter": [{"rule": "min_detected", "value": 2}]}
 
 
 def run(*a):
@@ -63,12 +63,12 @@ def test_wasm_and_native_write_the_same_files(built, spec):
     assert (nat / "quant.csv").read_text().splitlines()[0].startswith("row ID,row m/z,row retention time")
     view = json.loads((nat / "view.json").read_text()) if spec != "-" else None
     if view:
-        assert view["conteggi"]["tenute"] == len(view["righe"]) == len(full) - 1
-    assert json.loads((nat / "qc.json").read_text())["schema"] == "qc/1"
+        assert view["counts"]["kept"] == len(view["rows"]) == len(full) - 1
+    assert json.loads((nat / "qc.json").read_text())["schema"] == "qc/2"
     check = json.loads((nat / "check.json").read_text())
     assert check["schema"] == "tabcheck/1" and [c["id"] for c in check["checks"]][:3] == ["size", "blank", "contaminants"]
     plaus = json.loads((nat / "plausible.json").read_text())
     assert plaus["schema"] == "plausible/1" and [c["id"] for c in plaus["checks"]][0] == "non_finite"
     assert (nat / "features.csv").read_text().splitlines()[0].startswith("id;mz;rt;")
     assert len(json.loads((nat / "features.rows.json").read_text())["hojas"][0]["filas"]) == len(full)
-    assert json.loads((nat / "report.json").read_text())["schema"] == "report/1"
+    assert json.loads((nat / "report.json").read_text())["schema"] == "report/2"

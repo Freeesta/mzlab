@@ -8,21 +8,21 @@ use crate::qc;
 use crate::samples::{self, Sample};
 use crate::view::View;
 
-pub const SCHEMA: &str = "report/1";
+pub const SCHEMA: &str = "report/2";
 
 /// The `report/1` document of a table under a view (None = the whole table, areas as measured).
 pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>, table_sha256: &str) -> String {
     let mut j = Out::default();
     j.raw("{\"schema\":").str(SCHEMA).raw(",\"crate\":").str(env!("CARGO_PKG_VERSION"));
     j.raw(",\"table_sha256\":").str(table_sha256).raw(",\"samples_sha256\":").str(&samples::digest(samples));
-    j.raw(",\"righe\":").int(t.len() as i64).raw(",\"file\":").int(t.n_files as i64);
+    j.raw(",\"rows\":").int(t.len() as i64).raw(",\"file\":").int(t.n_files as i64);
     let all = qc::per_file(t);
     let sum = |f: fn(&qc::FileQc) -> usize| all.iter().map(f).sum::<usize>() as i64;
-    j.raw(",\"celle\":{\"rilevate\":").int(sum(|q| q.detected)).raw(",\"mirate\":").int(sum(|q| q.targeted));
-    j.raw(",\"riempite\":").int(sum(|q| q.filled)).raw(",\"assenti\":").int(sum(|q| q.absent)).raw("}");
-    j.raw(",\"vista\":");
+    j.raw(",\"cells\":{\"detected\":").int(sum(|q| q.detected)).raw(",\"targeted\":").int(sum(|q| q.targeted));
+    j.raw(",\"filled\":").int(sum(|q| q.filled)).raw(",\"absent\":").int(sum(|q| q.absent)).raw("}");
+    j.raw(",\"view\":");
     match view {
-        Some(v) => j.raw("{\"parametri\":").raw(&v.spec_json()).raw(",\"conteggi\":").raw(&v.counts_json()).raw("}"),
+        Some(v) => j.raw("{\"params\":").raw(&v.spec_json()).raw(",\"counts\":").raw(&v.counts_json()).raw("}"),
         None => j.raw("null"),
     };
     j.raw(",\"qc\":").raw(&qc::to_json(t, samples, view)).raw("}");

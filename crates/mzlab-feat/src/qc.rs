@@ -122,39 +122,39 @@ pub fn isotope_ratio(t: &Aligned, view: Option<&View>) -> Option<(usize, f64, f6
     Some((v.len(), lo, median(v), hi))
 }
 
-/// The `qc/1` document: per file the counts and the total, per condition the agreement of the replicates, and the stability of the standard.
+/// The `qc/2` document: per file the counts and the total, per condition the agreement of the replicates, and the stability of the standard.
 pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
     let mut j = Out::default();
-    j.raw("{\"schema\":\"qc/1\",\"file\":[");
+    j.raw("{\"schema\":\"qc/2\",\"file\":[");
     for (k, q) in per_file(t).iter().enumerate() {
         j.raw(if k > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&samples[k].file);
-        j.raw(",\"rilevati\":").int(q.detected as i64).raw(",\"mirati\":").int(q.targeted as i64);
-        j.raw(",\"riempiti\":").int(q.filled as i64).raw(",\"assenti\":").int(q.absent as i64);
-        j.raw(",\"area_totale\":").num(q.total).raw("}");
+        j.raw(",\"detected\":").int(q.detected as i64).raw(",\"targeted\":").int(q.targeted as i64);
+        j.raw(",\"filled\":").int(q.filled as i64).raw(",\"absent\":").int(q.absent as i64);
+        j.raw(",\"total_area\":").num(q.total).raw("}");
     }
-    j.raw("],\"gruppi\":[");
+    j.raw("],\"groups\":[");
     for (i, g) in groups(t, samples, view).iter().enumerate() {
-        j.raw(if i > 0 { ",{\"tipo\":" } else { "{\"tipo\":" }).str(&g.kind);
-        j.raw(",\"gruppo\":").str(&g.group).raw(",\"tempo_min\":").opt(g.time_min);
-        j.raw(",\"file\":").int(g.files.len() as i64).raw(",\"righe\":").int(g.rows as i64);
-        j.raw(",\"cv_mediano\":").opt(Some(g.cv_median).filter(|x| x.is_finite())).raw("}");
+        j.raw(if i > 0 { ",{\"kind\":" } else { "{\"kind\":" }).str(&g.kind);
+        j.raw(",\"group\":").str(&g.group).raw(",\"time_min\":").opt(g.time_min);
+        j.raw(",\"file\":").int(g.files.len() as i64).raw(",\"rows\":").int(g.rows as i64);
+        j.raw(",\"median_cv\":").opt(Some(g.cv_median).filter(|x| x.is_finite())).raw("}");
     }
     // which divisor the CVs used (1 = n - 1, the default since the sample SD; 0 = n, the earlier population SD)
     j.raw("],\"cv_ddof\":").int(view.map_or(1, |v| v.cv_ddof) as i64).raw(",\"standard_cv\":");
     let method = view.map(|v| v.method.clone());
     j.opt(method.and_then(|m| standard_cv(t, samples, &m, view.map_or(1, |v| v.cv_ddof))));
     let (nb, n, hit) = blank_share(t, samples, view);
-    j.raw(",\"bianchi\":{\"file\":").int(nb as i64).raw(",\"righe\":").int(n as i64).raw(",\"righe_con_picco\":").int(hit as i64).raw("}");
-    j.raw(",\"m1_su_m\":");
+    j.raw(",\"blanks\":{\"file\":").int(nb as i64).raw(",\"rows\":").int(n as i64).raw(",\"rows_with_peak\":").int(hit as i64).raw("}");
+    j.raw(",\"m1_over_m\":");
     match isotope_ratio(t, view) {
-        Some((n, lo, med, hi)) => j.raw("{\"righe\":").int(n as i64).raw(",\"min\":").num(lo).raw(",\"mediana\":").num(med).raw(",\"max\":").num(hi).raw("}"),
+        Some((n, lo, med, hi)) => j.raw("{\"rows\":").int(n as i64).raw(",\"min\":").num(lo).raw(",\"median\":").num(med).raw(",\"max\":").num(hi).raw("}"),
         None => j.raw("null"),
     };
-    j.raw(",\"scartate\":[");
+    j.raw(",\"discarded\":[");
     if let Some(v) = view {
         for (i, r) in v.rules.iter().enumerate() {
             let n = v.why.iter().filter(|&&w| w as usize == i + 1).count();
-            j.raw(if i > 0 { ",{\"regola\":" } else { "{\"regola\":" }).str(r.name()).raw(",\"righe\":").int(n as i64).raw("}");
+            j.raw(if i > 0 { ",{\"rule\":" } else { "{\"rule\":" }).str(r.name()).raw(",\"rows\":").int(n as i64).raw("}");
         }
     }
     j.raw("]}");

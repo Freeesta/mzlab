@@ -70,7 +70,7 @@
     "other": {"$ref": "#/$defs/counts"}
    }
   },
-  "report": {"type": "object", "required": ["schema"], "properties": {"schema": {"const": "report/1"}}}
+  "report": {"type": "object", "required": ["schema"], "properties": {"schema": {"const": "report/2"}}}
  },
  "$defs": {
   "file": {

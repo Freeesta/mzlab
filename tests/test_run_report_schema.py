@@ -1,5 +1,5 @@
 """`mzlab-cli flow report` on a real run of a synthetic plan (files of tools/dati_sintetici.py, never lab data): the `run-report/1` text validates against
-docs/schemi/run-report-1.json, comes out with the same bytes twice, carries the `report/1` of the table, and the SHA-256 of an input follows its bytes."""
+docs/schemi/run-report-1.json, comes out with the same bytes twice, carries the `report/2` of the table, and the SHA-256 of an input follows its bytes."""
 import json
 import subprocess
 import sys
@@ -36,8 +36,8 @@ def run(folder, tmp, seed):
     work.mkdir()
     r = subprocess.run([str(ROOT / "target/release/examples/flow"), str(folder / "plan.json"), str(work), "1"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
-    # the CSV step does not write the table report: a report/1 left beside prov.json is included as it is
-    (work / "report.json").write_text('{"schema":"report/1","rows":3}\n')
+    # the CSV step does not write the table report: a report/2 left beside prov.json is included as it is
+    (work / "report.json").write_text('{"schema":"report/2","rows":3}\n')
     cli = [str(ROOT / "target/release/mzlab-cli"), "flow", "report", str(work)]
     a = subprocess.run(cli, capture_output=True, text=True)
     assert a.returncode == 0, a.stderr[-2000:]
@@ -60,7 +60,7 @@ def test_validates_and_is_stable(corsa):
 
 
 def test_includes_the_table_report(corsa):
-    assert json.loads(corsa[0][0])["report"] == {"schema": "report/1", "rows": 3}
+    assert json.loads(corsa[0][0])["report"] == {"schema": "report/2", "rows": 3}
 
 
 def test_an_input_that_changes_changes_its_sha256(corsa):

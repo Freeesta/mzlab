@@ -24,7 +24,7 @@ for _ in range(100):
 errs = []
 STUB = """(extra) => {
   const session = {
-    view: async () => ({ conteggi: { tenute: 2, righe: 2 } }), qc: async () => ({ scartate: [] }),
+    view: async () => ({ counts: { kept: 2, rows: 2 } }), qc: async () => ({ discarded: [] }),
     rows: async () => [["id"], [1, 301.1, 5.0, 4.9, 5.1, 1, 1000, "DETECTED"], [2, 302.1, 6.0, 5.9, 6.1, 1, 500, "DETECTED"]],
     row: async () => ({ rt: 5.0, rt_lo: 4.9, rt_hi: 5.1, cells: [{ type: "sample", state: "detected", area: 1000, time: 0, apex_rt: 5.0 }], quality: null, ms2: null }),
     traces: async () => ({ xic: [], ms1: null, ms2: null }),

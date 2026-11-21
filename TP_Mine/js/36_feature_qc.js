@@ -1,6 +1,6 @@
 // @ts-check
 // TPMINE-PRIVATE  Table engine and step «Quality control» of the Feature table (window.PIPEQC). The third .wasm of mzFinder (crates/mzlab-feat-table-wasm, loaded here the first time a table is shown)
-// gives every number: qc/1, the view (counts of the rows kept) and the rows of the sheet; this file only loads it, draws and formats. CONTRACT lists the keys of those JSON that the page reads
+// gives every number: qc/2, the view (counts of the rows kept) and the rows of the sheet; this file only loads it, draws and formats. CONTRACT lists the keys of those JSON that the page reads
 // (tests/test_pipeline_contract.py checks them against the real output of the engine). Every chart has its table (TDATI). Texts in English (mzFinder convention).
 (() => {
   "use strict";
@@ -8,12 +8,12 @@
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   /** keys of the JSON of the engine that the page shows or uses */
   const CONTRACT = {
-    qc: ["schema", "file", "gruppi", "standard_cv", "bianchi", "m1_su_m", "scartate"], blank: ["file", "righe", "righe_con_picco"], m1: ["righe", "min", "mediana", "max"], rejected: ["regola", "righe"], qcFile: ["file", "rilevati", "mirati", "riempiti", "assenti", "area_totale"], qcGroup: ["tipo", "gruppo", "tempo_min", "file", "righe", "cv_mediano"],
-    view: ["digest", "righe", "fattori", "conteggi"],
+    qc: ["schema", "file", "groups", "standard_cv", "blanks", "m1_over_m", "discarded"], blank: ["file", "rows", "rows_with_peak"], m1: ["rows", "min", "median", "max"], rejected: ["rule", "rows"], qcFile: ["file", "detected", "targeted", "filled", "absent", "total_area"], qcGroup: ["kind", "group", "time_min", "file", "rows", "median_cv"],
+    view: ["digest", "rows", "factors", "counts"],
     row: ["schema", "id", "mz", "rt", "rt_lo", "rt_hi", "charge", "quality", "iso_m1", "ms2", "ident", "cells"], rowQuality: ["shape", "snr", "fwhm", "flags"], rowMs2: ["file", "purity"], rowIdent: ["neutral", "adduct", "sources"], rowCell: ["file", "type", "time", "area", "height", "apex_rt", "width", "state"],
-    traces: ["schema", "id", "mz", "ppm", "xic", "ms1", "ms2"], traceXic: ["file", "rt", "y"], traceMs1: ["file", "rt", "mz", "y"], traceMs2: ["file", "prec", "mz", "y"], counts: ["righe", "tenute", "scartate"],
+    traces: ["schema", "id", "mz", "ppm", "xic", "ms1", "ms2"], traceXic: ["file", "rt", "y"], traceMs1: ["file", "rt", "mz", "y"], traceMs2: ["file", "prec", "mz", "y"], counts: ["rows", "kept", "discarded"],
     plausible: ["schema", "rows", "summary", "checks"], plausibleCheck: ["id", "flag", "count", "limit", "rows", "missing"],
-    report: ["crate", "table_sha256", "samples_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
+    report: ["crate", "table_sha256", "samples_sha256", "rows", "file", "cells", "view", "qc"], cells: ["detected", "targeted", "filled", "absent"], reportView: ["params", "counts"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
   /** @type {any} */ let mod = null;
@@ -129,10 +129,10 @@
   }
 
   // ------------------------------------------------------------ step 5: quality control
-  const KINDS = [["rilevati", "D", "detected"], ["mirati", "T", "targeted"], ["riempiti", "F", "filled"], ["assenti", "A", "absent"]];
+  const KINDS = [["detected", "D", "detected"], ["targeted", "T", "targeted"], ["filled", "F", "filled"], ["absent", "A", "absent"]];
   const fmt = (/** @type {any} */ v) => (v == null ? "" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : String(+Number(v).toPrecision(4)));
   /** the reason of each rule of the filters, in words (the number of rows is the engine's) */
-  const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2", qc_cv_max: "QC CV above the maximum" });
+  const WHY = /** @type {Record<string, string>} */ ({ min_detected: "detected in too few files", min_area: "area below the minimum", min_height: "height below the minimum", blank: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2", qc_cv_max: "QC CV above the maximum" });
   /** the options text of the plausibility check: empty keeps the limits of the engine, which reads the resolution from the recipe stored in the table (unit resolution: no ppm error); `a.plausibleLimits` and `a.mzTolDa` (0.1 Da or more is unit resolution) override it */
   const plausibleOptions = (/** @type {any} */ a) => JSON.stringify({ ...(a.plausibleLimits || {}), ...(a.mzTolDa > 0 ? { mz_tol_da: a.mzTolDa } : {}) });
   /** the sentence of each check of `plausible/1` for the rows it flags (the count and the rows are the engine's; `lim` = its limits) */
@@ -175,11 +175,11 @@
       <div class="charts"><div class="ch" id="qc-m"></div></div>
       <p class="mut" aria-hidden="true">${KINDS.map((k, j) => `<svg class="qcl" width="12" height="12"><rect class="qcb qcb${j}" width="12" height="12"/></svg> ${k[1]} ${k[2]}`).join(" &nbsp; ")}</p>
       <table><caption class="mut">Cells and area per file</caption><tr><th>File</th>${KINDS.map(k => `<th class="n" title="${k[2]}">${k[1]}</th>`).join("")}<th class="n">Total area</th></tr>
-      ${files.map((/** @type {any} */ f) => `<tr><td>${esc(f.file)}</td>${KINDS.map(k => `<td class="n">${f[k[0]]}</td>`).join("")}<td class="n">${fmt(f.area_totale)}</td></tr>`).join("")}</table>
-      ${q.gruppi.length ? `<table><caption class="mut">Agreement of the replicates: median CV (fraction) of the rows with a peak in every replicate</caption><tr><th>Type</th><th>Group</th><th class="n">Time (min)</th><th class="n">Files</th><th class="n">Rows</th><th class="n">CV</th></tr>
-      ${q.gruppi.map((/** @type {any} */ g) => `<tr><td>${esc(g.tipo)}</td><td>${esc(g.gruppo)}</td><td class="n">${fmt(g.tempo_min)}</td><td class="n">${g.file}</td><td class="n">${g.righe}</td><td class="n">${fmt(g.cv_mediano)}</td></tr>`).join("")}</table>` : `<p class="mut">No condition has two or more replicates: no agreement to report.</p>`}
-      ${q.bianchi.file ? `<p class="mut">Rows with a peak in a blank: ${q.bianchi.righe_con_picco.toLocaleString("en")} of ${q.bianchi.righe.toLocaleString("en")} (${q.bianchi.file} blank file${q.bianchi.file > 1 ? "s" : ""}).</p>` : `<p class="mut">No blank file in the series.</p>`}
-      ${q.m1_su_m ? `<p class="mut">M+1/M of ${q.m1_su_m.righe.toLocaleString("en")} rows: median ${fmt(q.m1_su_m.mediana)} (from ${fmt(q.m1_su_m.min)} to ${fmt(q.m1_su_m.max)}).</p>` : ""}
+      ${files.map((/** @type {any} */ f) => `<tr><td>${esc(f.file)}</td>${KINDS.map(k => `<td class="n">${f[k[0]]}</td>`).join("")}<td class="n">${fmt(f.total_area)}</td></tr>`).join("")}</table>
+      ${q.groups.length ? `<table><caption class="mut">Agreement of the replicates: median CV (fraction) of the rows with a peak in every replicate</caption><tr><th>Type</th><th>Group</th><th class="n">Time (min)</th><th class="n">Files</th><th class="n">Rows</th><th class="n">CV</th></tr>
+      ${q.groups.map((/** @type {any} */ g) => `<tr><td>${esc(g.kind)}</td><td>${esc(g.group)}</td><td class="n">${fmt(g.time_min)}</td><td class="n">${g.file}</td><td class="n">${g.rows}</td><td class="n">${fmt(g.median_cv)}</td></tr>`).join("")}</table>` : `<p class="mut">No condition has two or more replicates: no agreement to report.</p>`}
+      ${q.blanks.file ? `<p class="mut">Rows with a peak in a blank: ${q.blanks.rows_with_peak.toLocaleString("en")} of ${q.blanks.rows.toLocaleString("en")} (${q.blanks.file} blank file${q.blanks.file > 1 ? "s" : ""}).</p>` : `<p class="mut">No blank file in the series.</p>`}
+      ${q.m1_over_m ? `<p class="mut">M+1/M of ${q.m1_over_m.rows.toLocaleString("en")} rows: median ${fmt(q.m1_over_m.median)} (from ${fmt(q.m1_over_m.min)} to ${fmt(q.m1_over_m.max)}).</p>` : ""}
       <p class="mut">Stability of the internal standard (CV of its area): ${q.standard_cv == null ? "no standard chosen" : fmt(q.standard_cv)}</p>
       <div id="qc-plausible"></div></details>`;
     try { box.querySelector("#qc-plausible").innerHTML = plausibleHtml(await o.session.plausible()); } catch (_) { /* the other numbers stay */ }

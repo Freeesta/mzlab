@@ -169,15 +169,14 @@ fn subtraction_reaches_zero_and_leaves_the_blanks() {
 
 #[test]
 fn defaults_are_the_plain_rules_in_json() {
-    let v = parse(
-        br#"[{"regola":"bianco","valore":3},{"regola":"qc_cv_max","valore":20,"qc_min_files":3}]"#,
-    )
-    .unwrap();
+    let v =
+        parse(br#"[{"rule":"blank","value":3},{"rule":"qc_cv_max","value":20,"qc_min_files":3}]"#)
+            .unwrap();
     let rules = filters::from_json(&v).unwrap();
     assert_eq!(rules, vec![Rule::Blank(3.0), Rule::QcCv(20.0, 3)]);
     let again = parse(filters::to_json(&rules).as_bytes()).unwrap();
     assert_eq!(filters::from_json(&again).unwrap(), rules);
-    let v = parse(br#"[{"regola":"bianco","valore":0.5,"statistica":"massimo","sottrai":true},{"regola":"qc_cv_max","valore":20,"qc_zero":true}]"#).unwrap();
+    let v = parse(br#"[{"rule":"blank","value":0.5,"statistic":"max","subtract":true},{"rule":"qc_cv_max","value":20,"qc_zero":true}]"#).unwrap();
     let rules = filters::from_json(&v).unwrap();
     assert_eq!(
         rules[0],

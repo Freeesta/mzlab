@@ -2,7 +2,7 @@
 //! `.mzfeat` is never changed; the same table, samples and parameters give the same view and the same `digest`.
 
 use mzlab_core::budget::sha256_hex;
-use mzlab_core::error::Result;
+use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
 use crate::aligned::Aligned;
@@ -74,12 +74,12 @@ impl View {
         }
     }
 
-    /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).
+    /// The parameters of both operations: `{"normalize": ..., "filter": [...]}` (what the `.mzflow` records).
     pub fn spec_json(&self) -> String {
-        let labels = if self.labels.is_empty() { String::new() } else { format!(",\"etichette\":{}", self.labels.to_json()) };
+        let labels = if self.labels.is_empty() { String::new() } else { format!(",\"labels\":{}", self.labels.to_json()) };
         // written only when it is not the default, so the digest of every existing view stays the same
         let ddof = if self.cv_ddof == 1 { String::new() } else { format!(",\"cv_ddof\":{}", self.cv_ddof) };
-        format!("{{\"normalizza\":{},\"filtra\":{}{labels}{ddof}}}", self.method.to_json(), filters::to_json(&self.rules))
+        format!("{{\"normalize\":{},\"filter\":{}{labels}{ddof}}}", self.method.to_json(), filters::to_json(&self.rules))
     }
 
     /// SHA-256 of the parameters and of the ids of the rows kept: two equal views have the same digest.
@@ -94,14 +94,14 @@ impl View {
     /// Counts for the report: rows in, rows kept and, for every rule, the rows it rejected first.
     pub fn counts_json(&self) -> String {
         let mut j = Out::default();
-        j.raw("{\"righe\":").int(self.why.len() as i64).raw(",\"tenute\":").int(self.rows.len() as i64).raw(",\"scartate\":[");
+        j.raw("{\"rows\":").int(self.why.len() as i64).raw(",\"kept\":").int(self.rows.len() as i64).raw(",\"discarded\":[");
         for i in 0..self.rules.len() {
             let n = self.why.iter().filter(|&&w| w as usize == i + 1).count();
             j.raw(if i > 0 { "," } else { "" }).int(n as i64);
         }
         j.raw("]");
         if let Some(f) = &self.fallback {
-            j.raw(",\"bianco_ripiego\":[");
+            j.raw(",\"blank_fallback\":[");
             for (i, &b) in f.iter().enumerate() {
                 j.raw(if i > 0 { "," } else { "" }).raw(if b { "true" } else { "false" });
             }
@@ -115,12 +115,16 @@ impl View {
 /// A view from the JSON of `spec_json` (both keys optional: no normalisation, no filters).
 pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
     let v = parse(spec)?;
-    let method = match v.get("normalizza") {
+    // a spec saved before the English keys: refuse it with a clear note instead of silently dropping its filters
+    if ["normalizza", "filtra", "etichette"].iter().any(|k| v.get(k).is_some()) {
+        return Err(Error::new("error.viewSpecOld"));
+    }
+    let method = match v.get("normalize") {
         Some(m) => Method::from_json(m)?,
         None => Method::None,
     };
-    let rules = v.get("filtra").map_or(Ok(Vec::new()), |f: &Value| filters::from_json(f))?;
-    let labels = match v.get("etichette") {
+    let rules = v.get("filter").map_or(Ok(Vec::new()), |f: &Value| filters::from_json(f))?;
+    let labels = match v.get("labels") {
         Some(l) => Labels::from_json(l, t.n_files)?,
         None => Labels::default(),
     };

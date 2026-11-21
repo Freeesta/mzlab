@@ -60,7 +60,7 @@ fn table_reader(read: Function) -> JsReader {
     JsReader { read, k: 0 }
 }
 
-/// The view of a table: `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
+/// The view of a table: `{"digest", "rows":[id of every row kept], "factors":[per file], "counts":{...}}`.
 #[wasm_bindgen]
 pub fn table_view(
     table_read: Function,
@@ -77,7 +77,7 @@ pub fn table_view(
     .map_err(js_err)
 }
 
-/// The `report/1` of a table under the view `spec` (empty = the whole table).
+/// The `report/2` of a table under the view `spec` (empty = the whole table).
 #[wasm_bindgen]
 pub fn table_report(
     table_read: Function,
@@ -148,7 +148,7 @@ pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
     core::samples_json(files_json).map_err(js_err)
 }
 
-/// The `qc/1` of a table under the view `spec` (empty = the whole table).
+/// The `qc/2` of a table under the view `spec` (empty = the whole table).
 #[wasm_bindgen]
 pub fn table_qc(
     table_read: Function,

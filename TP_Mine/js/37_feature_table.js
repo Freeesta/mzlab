@@ -15,23 +15,23 @@
 #pipe .ft-bar .tpt-chip:disabled{opacity:.55;cursor:not-allowed}#pipe #ft-host .tpt-n{display:none}#pipe .ft-n{text-align:right}`;
 
   const num = (/** @type {HTMLInputElement} */ el) => (el.value.trim() === "" ? null : +el.value);
-  /** the parameters of the view from the form and the chips (the text `normalizza`/`filtra` is the language of the engine) */
+  /** the parameters of the view from the form and the chips (the text `normalize`/`filter` is the language of the engine) */
   function specOf(/** @type {(s: string) => HTMLInputElement} */ q, /** @type {Set<string>} */ chips = new Set()) {
-    const filtra = [], rule = (/** @type {any} */ o) => filtra.push(o);
+    const filter = [], rule = (/** @type {any} */ o) => filter.push(o);
     const det = Math.max(num(q("#ft-det")) || 0, chips.has("det") ? DETECTED_CHIP : 0), area = num(q("#ft-area")), blank = num(q("#ft-blank")) || (chips.has("blank") ? BLANK_CHIP : null);
     const mz = [num(q("#ft-mz0")), num(q("#ft-mz1"))], rt = [num(q("#ft-rt0")), num(q("#ft-rt1"))];
-    if (det) rule({ regola: "min_rilevati", valore: det });
-    if (area) rule({ regola: "min_area", valore: area });
-    if (blank) rule({ regola: "bianco", valore: blank });
-    if (mz[0] != null || mz[1] != null) rule({ regola: "mz", da: mz[0] ?? 0, a: mz[1] ?? 1e9 });
-    if (rt[0] != null || rt[1] != null) rule({ regola: "rt", da: rt[0] ?? 0, a: rt[1] ?? 1e9 });
-    if (chips.has("ms2")) rule({ regola: "ms2" });
-    return JSON.stringify({ normalizza: { metodo: q("#ft-norm").value }, filtra });
+    if (det) rule({ rule: "min_detected", value: det });
+    if (area) rule({ rule: "min_area", value: area });
+    if (blank) rule({ rule: "blank", value: blank });
+    if (mz[0] != null || mz[1] != null) rule({ rule: "mz", from: mz[0] ?? 0, to: mz[1] ?? 1e9 });
+    if (rt[0] != null || rt[1] != null) rule({ rule: "rt", from: rt[0] ?? 0, to: rt[1] ?? 1e9 });
+    if (chips.has("ms2")) rule({ rule: "ms2" });
+    return JSON.stringify({ normalize: { method: q("#ft-norm").value }, filter });
   }
   const html = () => `<details open><summary>Table</summary><div class="tp"><div class="ft-bar">
     <button type="button" class="tpt-chip" data-fc="blank" aria-pressed="false" data-tt="ft.chip.noblank">Not in blank</button><button type="button" class="tpt-chip" data-fc="det" aria-pressed="false" data-tt="ft.chip.det2">Detected in ≥ ${DETECTED_CHIP} files</button>
     <button type="button" class="tpt-chip" data-fc="ms2" aria-pressed="false" data-tt="ft.chip.ms2">With MS2</button><button type="button" class="tpt-chip" id="ft-moreb" aria-expanded="false" aria-controls="ft-more" data-tt="ft.more.filters">More filters</button>
-    <label data-tt="ft.norm">Normalisation<select id="ft-norm"><option value="nessuna">none</option><option value="somma">sum of the areas</option><option value="mediana">median of the areas</option></select></label></div>
+    <label data-tt="ft.norm">Normalisation<select id="ft-norm"><option value="none">none</option><option value="sum">sum of the areas</option><option value="median">median of the areas</option></select></label></div>
     <div class="ft-more" id="ft-more" hidden><label>Detected in at least (files)<input id="ft-det" type="number" min="0" step="1"></label><label>Area at least<input id="ft-area" type="number" min="0" step="any"></label>
     <label>Blank ratio (area over blank)<input id="ft-blank" type="number" min="0" step="any"></label><label><i>m/z</i> from<input id="ft-mz0" type="number" step="any"></label><label>to<input id="ft-mz1" type="number" step="any"></label>
     <label>RT from (min)<input id="ft-rt0" type="number" step="any"></label><label>to<input id="ft-rt1" type="number" step="any"></label></div>
@@ -220,12 +220,12 @@
     const update = async () => {
       const mine = ++seq;
       try {
-        const s = spec(), v = await o.session.view(s), c = v.conteggi, rej = (await o.session.qc(s)).scartate, rows = (await o.session.rows(s)).slice(1);
+        const s = spec(), v = await o.session.view(s), c = v.counts, rej = (await o.session.qc(s)).discarded, rows = (await o.session.rows(s)).slice(1);
         if (mine !== seq) return;
         last = rows.map((/** @type {any[]} */ r) => rowOf(r, n));
         T.setRows(last);
-        q("#ft-n").textContent = `${c.tenute.toLocaleString("en")} of ${c.righe.toLocaleString("en")} rows`;
-        q("#ft-why").textContent = rej.length ? "Rejected by each filter, in order: " + rej.map((/** @type {any} */ r) => `${G.PIPEQC.WHY[r.regola] || r.regola} (${r.righe.toLocaleString("en")})`).join(", ") : "";
+        q("#ft-n").textContent = `${c.kept.toLocaleString("en")} of ${c.rows.toLocaleString("en")} rows`;
+        q("#ft-why").textContent = rej.length ? "Rejected by each filter, in order: " + rej.map((/** @type {any} */ r) => `${G.PIPEQC.WHY[r.rule] || r.rule} (${r.rows.toLocaleString("en")})`).join(", ") : "";
       } catch (/** @type {any} */ e) { if (mine !== seq) return; q("#ft-n").textContent = ""; q("#ft-why").textContent = o.say ? o.say(e) : String(e.message || e); }
     };
     box.addEventListener("input", e => { if (!(/** @type {HTMLElement} */ (e.target)).closest("#ft-host")) { clearTimeout(timer); timer = window.setTimeout(update, 250); } });

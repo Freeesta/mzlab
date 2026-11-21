@@ -79,16 +79,16 @@ fn the_plan_gives_the_view_of_the_page() {
     )
     .unwrap();
     // the spec the page builds from the same fields (`37_feature_table.js`: detected, area, blank, then the normalisation)
-    let spec = r#"{"normalizza":{"metodo":"somma"},"filtra":[{"regola":"min_rilevati","valore":2},{"regola":"min_area","valore":100000},{"regola":"bianco","valore":3}]}"#;
+    let spec = r#"{"normalize":{"method":"sum"},"filter":[{"rule":"min_detected","value":2},{"rule":"min_area","value":100000},{"rule":"blank","value":3}]}"#;
     assert_eq!(got, page(&t, &s, spec));
-    assert!(got.contains("\"tenute\":2"), "{got}");
+    assert!(got.contains("\"kept\":2"), "{got}");
     // no rule and no normalisation keeps every row, as an empty spec does (the spec the plan writes is the explicit one)
     let all = run(&d, "{}").unwrap();
     assert_eq!(
         all,
-        page(&t, &s, r#"{"normalizza":{"metodo":"nessuna"},"filtra":[]}"#)
+        page(&t, &s, r#"{"normalize":{"method":"none"},"filter":[]}"#)
     );
-    assert!(all.contains("\"tenute\":4"), "{all}");
+    assert!(all.contains("\"kept\":4"), "{all}");
     // the second run reads the same bytes
     assert_eq!(
         got,
@@ -122,7 +122,7 @@ fn the_view_of_a_samples_document_is_the_pages_and_a_rule_that_cannot_be_read_fa
         page(
             &t,
             &s1,
-            r#"{"normalizza":{"metodo":"nessuna"},"filtra":[{"regola":"bianco","valore":3}]}"#
+            r#"{"normalize":{"method":"none"},"filter":[{"rule":"blank","value":3}]}"#
         )
     );
     // a series with no blank cannot evaluate the blank rule: the run ends in error, no silent pass
@@ -141,12 +141,12 @@ fn the_duplicate_window_keeps_the_strongest_row_and_matches_the_page() {
     std::fs::write(d.join("samples.json"), &s).unwrap();
     // a window wide enough to hold the four rows leaves the row with the largest area
     let got = run(&d, r#"{"dup_ppm":1000000,"dup_rt":10}"#).unwrap();
-    let spec = r#"{"normalizza":{"metodo":"nessuna"},"filtra":[{"regola":"duplicati","ppm":1000000,"rt_min":10}]}"#;
+    let spec = r#"{"normalize":{"method":"none"},"filter":[{"rule":"duplicates","ppm":1000000,"rt_min":10}]}"#;
     assert_eq!(got, page(&t, &s, spec));
-    assert!(got.contains("\"tenute\":1"), "{got}");
+    assert!(got.contains("\"kept\":1"), "{got}");
     // the window alone, with the default RT distance of 0.1 min, drops nothing here
     let few = run(&d, r#"{"dup_ppm":5}"#).unwrap();
-    assert!(few.contains("\"tenute\":4"), "{few}");
+    assert!(few.contains("\"kept\":4"), "{few}");
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -172,10 +172,10 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
     let params = r#"{"blank_ratio":3,"blank_stat":"max","blank_match":"batch","min_replicate_fraction":0.5,"normalize":"istd","istd_id":1,"blank_keep_istd":true}"#;
     let got = run(&d, params).unwrap();
     // the spec the page builds: the rules in the order of the descriptor, the labels of the files read from the same document
-    let spec = r#"{"normalizza":{"metodo":"istd","istd":{"id":1}},"filtra":[{"regola":"repliche_min","valore":0.5},{"regola":"bianco","valore":3,"statistica":"massimo","abbinamento":"lotto","istd_esente":true}],"etichette":{"lotto":["B1","B1","B2","B2"],"matrice":["","","",""],"serie":["","","",""],"gruppo":["","","",""]}}"#;
+    let spec = r#"{"normalize":{"method":"istd","istd":{"id":1}},"filter":[{"rule":"min_replicates","value":0.5},{"rule":"blank","value":3,"statistic":"max","matching":"batch","istd_exempt":true}],"labels":{"batch":["B1","B1","B2","B2"],"matrix":["","","",""],"series":["","","",""],"group":["","","",""]}}"#;
     let want = page(&t, &samples_text_v1(&samples), spec);
     assert_eq!(got, want);
-    assert!(got.contains("\"bianco_ripiego\":["), "{got}");
+    assert!(got.contains("\"blank_fallback\":["), "{got}");
     // the same through the entry the page calls
     let via =
         mzlab_ops::run::table::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
@@ -187,7 +187,7 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
         page(
             &t,
             &samples_text_v1(&samples),
-            r#"{"normalizza":{"metodo":"nessuna"},"filtra":[{"regola":"bianco","valore":3}]}"#
+            r#"{"normalize":{"method":"none"},"filter":[{"rule":"blank","value":3}]}"#
         )
     );
     let _ = std::fs::remove_dir_all(&d);
@@ -258,7 +258,7 @@ fn a_gap_filled_blank_cell_does_not_remove_the_row_but_a_detected_one_does() {
     std::fs::write(d.join("table.mzfeat"), blank_table()).unwrap();
     std::fs::write(d.join("samples.json"), samples::to_json(&propose(&files()))).unwrap();
     let rows = |v: &str| {
-        v.split("\"righe\":[")
+        v.split("\"rows\":[")
             .nth(1)
             .unwrap()
             .split(']')

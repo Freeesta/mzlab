@@ -190,14 +190,14 @@ fn the_table_of_a_view_keeps_the_rows_and_the_areas_of_the_view() {
     let (orig, orig_meta) = read_table(&std::fs::read(d.join("table.mzfeat")).unwrap()).unwrap();
     let v = mzlab_core::json::parse(view.as_bytes()).unwrap();
     let ids: Vec<usize> = v
-        .get("righe")
+        .get("rows")
         .unwrap()
         .arr()
         .iter()
         .map(|x| x.f64().unwrap() as usize)
         .collect();
     let factors: Vec<f64> = v
-        .get("fattori")
+        .get("factors")
         .unwrap()
         .arr()
         .iter()

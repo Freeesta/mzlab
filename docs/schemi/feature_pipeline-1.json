@@ -190,18 +190,18 @@
   }
  },
  "$defs": {
-  "normalizza": {
+  "normalize": {
    "type": "object",
-   "description": "parameters of the `normalizza` operation (mzlab-feat norm.rs, Method::to_json): the normalisation is a view over the table, the .mzfeat keeps the measured areas",
+   "description": "parameters of the `normalize` operation (mzlab-feat norm.rs, Method::to_json): the normalisation is a view over the table, the .mzfeat keeps the measured areas",
    "required": [
-    "metodo"
+    "method"
    ],
    "properties": {
-    "metodo": {
+    "method": {
      "enum": [
-      "nessuna",
-      "somma",
-      "mediana",
+      "none",
+      "sum",
+      "median",
       "istd"
      ]
     },
@@ -229,37 +229,37 @@
     }
    }
   },
-  "filtra": {
+  "filter": {
    "type": "array",
-   "description": "parameters of the `filtra` operation (filters.rs): an ordered list of rules; a row is rejected by the first rule it fails",
+   "description": "parameters of the `filter` operation (filters.rs): an ordered list of rules; a row is rejected by the first rule it fails",
    "items": {
     "type": "object",
     "required": [
-     "regola"
+     "rule"
     ],
     "properties": {
-     "regola": {
+     "rule": {
       "enum": [
-       "min_rilevati",
+       "min_detected",
        "min_area",
-       "min_altezza",
-       "bianco",
+       "min_height",
+       "blank",
        "mz",
        "rt",
        "ms2",
        "qc_cv_max"
       ]
      },
-     "valore": {
+     "value": {
       "type": "number"
      },
      "qc_min_files": {
       "type": "integer"
      },
-     "da": {
+     "from": {
       "type": "number"
      },
-     "a": {
+     "to": {
       "type": "number"
      }
     }

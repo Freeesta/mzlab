@@ -102,16 +102,16 @@ window.RAPPORTO_FLOW = (() => {
   /** @param {any} r */
   function qc(r) {
     if (!r || !r.qc) return "<p>This run has no table report.</p>";
-    const q = r.qc, cells = r.celle || {};
-    let h = table(["Item", "Value"], [["Rows", String(r.righe ?? "–")], ["Files", String(r.file ?? "–")], ["Detected cells", num(cells.rilevate)], ["Targeted cells", num(cells.mirate)],
-      ["Filled cells", num(cells.riempite)], ["Absent cells", num(cells.assenti)]], "Table report");
+    const q = r.qc, cells = r.cells || {};
+    let h = table(["Item", "Value"], [["Rows", String(r.rows ?? "–")], ["Files", String(r.file ?? "–")], ["Detected cells", num(cells.detected)], ["Targeted cells", num(cells.targeted)],
+      ["Filled cells", num(cells.filled)], ["Absent cells", num(cells.absent)]], "Table report");
     const f = q.file || [];
-    if (f.length) h += table(["File", "Detected", "Targeted", "Filled", "Absent", "Total area"], f.map((/** @type {any} */ x) => [esc(x.file), num(x.rilevati), num(x.mirati), num(x.riempiti), num(x.assenti), num(x.area_totale)]), "Cells per file", [1, 2, 3, 4, 5]);
-    const g = q.gruppi || [];
-    if (g.length) h += table(["Type", "Group", "Time (min)", "Files", "Rows", "Median CV"], g.map((/** @type {any} */ x) => [esc(x.tipo), esc(x.gruppo), num(x.tempo_min), num(x.file), num(x.righe), num(x.cv_mediano)]), "Replicate variation per condition", [2, 3, 4, 5]);
+    if (f.length) h += table(["File", "Detected", "Targeted", "Filled", "Absent", "Total area"], f.map((/** @type {any} */ x) => [esc(x.file), num(x.detected), num(x.targeted), num(x.filled), num(x.absent), num(x.total_area)]), "Cells per file", [1, 2, 3, 4, 5]);
+    const g = q.groups || [];
+    if (g.length) h += table(["Type", "Group", "Time (min)", "Files", "Rows", "Median CV"], g.map((/** @type {any} */ x) => [esc(x.kind), esc(x.group), num(x.time_min), num(x.file), num(x.rows), num(x.median_cv)]), "Replicate variation per condition", [2, 3, 4, 5]);
     if (q.standard_cv != null) h += `<p>Standard CV: ${num(q.standard_cv)}</p>`;
-    const sc = q.scartate || [];
-    if (sc.length) h += table(["Rule", "Rows"], sc.map((/** @type {any} */ x) => [esc(x.regola), num(x.righe)]), "Rows dropped by each rule", [1]);
+    const sc = q.discarded || [];
+    if (sc.length) h += table(["Rule", "Rows"], sc.map((/** @type {any} */ x) => [esc(x.rule), num(x.rows)]), "Rows dropped by each rule", [1]);
     return h;
   }
 

@@ -184,7 +184,7 @@ fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
         let view = mzlab_core::json::parse(&std::fs::read(w.join("flt.json")).unwrap()).unwrap();
         // the view names the rows by their ids
         let ids: Vec<u32> = view
-            .get("righe")
+            .get("rows")
             .unwrap()
             .arr()
             .iter()

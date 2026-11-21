@@ -133,7 +133,7 @@ fn a_view_without_its_origin_is_refused_with_its_key() {
     let d = dir("view");
     std::fs::write(
         d.join("table.mzfeat"),
-        r#"{"digest":"x","righe":[],"fattori":[],"conteggi":{}}"#,
+        r#"{"digest":"x","rows":[],"factors":[],"counts":{}}"#,
     )
     .unwrap();
     let err = run(&d, "export.mztab@1", "{}", "e.mzTab").unwrap_err();

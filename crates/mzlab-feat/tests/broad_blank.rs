@@ -73,7 +73,7 @@ fn without_blank_or_summaries_nothing_changes() {
 fn the_rule_round_trips_in_the_filtra_json() {
     let rules = vec![Rule::BroadBlank(3.0)];
     let text = filters::to_json(&rules);
-    assert_eq!(text, "[{\"regola\":\"bianco_larga\",\"valore\":3}]");
+    assert_eq!(text, "[{\"rule\":\"broad_blank\",\"value\":3}]");
     assert_eq!(
         filters::from_json(&mzlab_core::json::parse(text.as_bytes()).unwrap()).unwrap(),
         rules

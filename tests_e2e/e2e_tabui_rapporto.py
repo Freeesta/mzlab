@@ -40,8 +40,8 @@ BUILD = """([tp, times]) => {
   const session = { rows: async () => rows, tpTable: async () => tp, report: async () => ({}),
     interp: async id => ({ change: { neutral_formula: "C10H12N2O" + id, ion_formula: "C10H13N2O" + id } }) };
   return window.TPREPORT.collect({ session, spec: () => "", names: ["a", "b", "c", "d", "e"], tpInfo: id => ({ level: id === 2 ? "3" : null, pred: id === 2 ? 2 : null }) }).then(d => {
-    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
-      qc: { file: [], gruppi: [], standard_cv: null } };
+    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), rows: 5, file: 5, cells: { detected: 1, targeted: 0, filled: 0, absent: 0 }, view: null,
+      qc: { file: [], groups: [], standard_cv: null } };
     return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
   });
 }"""
@@ -50,8 +50,8 @@ BUILD_NO_PRED_ION = """([tp, times]) => {
   const session = { rows: async () => rows, tpTable: async () => tp, report: async () => ({}),
     interp: async id => ({ change: { neutral_formula: "C10H12N2O" + id } }) };
   return window.TPREPORT.collect({ session, spec: () => "", names: ["a", "b", "c", "d", "e"], tpInfo: id => ({ level: id === 2 ? "3" : null, pred: null }) }).then(d => {
-    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
-      qc: { file: [], gruppi: [], standard_cv: null } };
+    const r = { crate: "9.9.9", table_sha256: "a".repeat(64), samples_sha256: "b".repeat(64), rows: 5, file: 5, cells: { detected: 1, targeted: 0, filled: 0, absent: 0 }, view: null,
+      qc: { file: [], groups: [], standard_cv: null } };
     return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
   });
 }"""
