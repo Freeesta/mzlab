@@ -64,7 +64,7 @@ window.GROUPS = (() => {
   }
   /** Runs `go` as one files.view step and names the step after the group action (`groups.undo.<action>`) in the undo notice. @param {() => void} go @param {string} action */
   function step(go, action) {
-    const top = () => STORIA?.pila.v[STORIA.pila.v.length - 1], was = top(); fileViewDo(go);
+    const top = () => HISTORY?.stack.v[HISTORY.stack.v.length - 1], was = top(); fileViewDo(go);
     const l = top(); if (l && l !== was && l.cmd === "files.view") l.w = UNDO[action];
   }
   /** Spelling-blind key of a group name: «Full_scan», «full scan» and «FULL SCAN» are the same name. @param {string} x */
@@ -96,7 +96,7 @@ window.GROUPS = (() => {
     const n = document.getElementById("fl-note"); if (!n) return;
     n.textContent = I18N.t(key) + " · "; n.hidden = false;
     const b = document.createElement("button"); b.type = "button"; b.className = "sec sm"; b.textContent = I18N.t("groups.undo");
-    b.onclick = () => { if (STORIA) STORIA.annulla(); n.hidden = true; };
+    b.onclick = () => { if (HISTORY) HISTORY.undo(); n.hidden = true; };
     n.append(b); setTimeout(() => { n.hidden = true; }, 9000);
   };
   /** Every file name of the list and the table with the label `fn(its label)` gives. @param {(l: string) => string} fn */
@@ -153,7 +153,7 @@ window.GROUPS = (() => {
   }
   /** Names the undo step that a start-up file (lista-file.js) has just recorded. @param {string} action */
   function lab(action) {
-    const l = STORIA?.pila.v[STORIA.pila.v.length - 1];
+    const l = HISTORY?.stack.v[HISTORY.stack.v.length - 1];
     if (l && l.cmd === "files.view" && Date.now() - l.t < 2000) l.w = UNDO[action];
   }
   const api = {

@@ -334,7 +334,7 @@ def leak(s, p):
                 pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
             s.wait_ready(); s.quiet(20)
             # the undo history keeps a closed panel by design (100 entries at most, so it levels off after the few cycles measured here): empty it, so what is counted can only be a real leak
-            pg.evaluate("typeof STORIA !== 'undefined' && STORIA && STORIA.svuota()")
+            pg.evaluate("typeof HISTORY !== 'undefined' && HISTORY && HISTORY.clear()")
             rows.append(s.counters())
         return rows
     finally:

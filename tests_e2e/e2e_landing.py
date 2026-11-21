@@ -106,7 +106,7 @@ def remove_all(pg):
         landing: v('#start'), table: v('#flist') || v('#sample-table') || v('#cmp-tab'), panels_visible: v('#dpanels .pnl'), data_view: v('#v-data')}; }"""
     pg.evaluate("removeAllFiles()"); frames(pg, 4)
     after = pg.evaluate(state)
-    undone = pg.evaluate("() => { try { return !!STORIA.annulla(); } catch (_) { return false; } }")
+    undone = pg.evaluate("() => { try { return !!HISTORY.undo(); } catch (_) { return false; } }")
     frames(pg, 4)
     return {"after_remove": after, "undo_called": undone, "after_undo": pg.evaluate(state)}
 

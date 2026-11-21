@@ -103,11 +103,11 @@ function reindexAfterFree() {
   };
   return (_reindex = _reindex.then(one, one));
 }
-/** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of storia.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
+/** Removes a file from the session; no question: «Removed · Undo» takes it back (the stack of history.js). In the browser the copy in OPFS and its derived indexes are freed when the notice has closed without an undo (a shared source, like a .wiff with several samples, stays while another sample uses it). */
 function removeFile(/** @type {any} */ f) {
   const r = fileRemoval(f); r.take();
   // no `tab`: the list holds the files of every tab, so the removal is undone from whichever tab is on screen
-  if (STORIA) STORIA.tolto({ what: f.label, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? () => r.free().then(reindexAfterFree) : null });
+  if (HISTORY) HISTORY.removed({ what: f.label, data: f.label, undo: r.back, redo: r.take, expires: window.MZLAB_BROWSER ? () => r.free().then(reindexAfterFree) : null });
   else r.free();
 }
 /** The rows of the loading table that are read but not open: waiting in the queue of OPENNOW, set aside («Choose», ×) or of the other world. */
@@ -142,7 +142,7 @@ function removeSourceRow(/** @type {FileRiga} */ r) {
   if (open.length === 1) return removeFile(open[0]);
   if (open.length > 1) return removeAllFiles(open, r.name);
   const x = rowRemoval(r); x.take();
-  if (STORIA) STORIA.tolto({ what: r.name, dati: r.name, undo: x.back, redo: x.take, scade: window.MZLAB_BROWSER ? () => x.free().then(reindexAfterFree) : null });
+  if (HISTORY) HISTORY.removed({ what: r.name, data: r.name, undo: x.back, redo: x.take, expires: window.MZLAB_BROWSER ? () => x.free().then(reindexAfterFree) : null });
   else x.free();
   renderFiles();
 }
@@ -156,7 +156,7 @@ function removeAllFiles(/** @type {any[] | null} */ fs = null, /** @type {string
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
   const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach((r, i) => r[k](i < rs.length - 1));      // only the last step repaints
-  if (STORIA) STORIA.tolto({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), dati: String(rs.length), undo: all("back"), redo: all("take"), scade: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free(true))).then(() => { renderFiles(); return reindexAfterFree(); }) : null });
+  if (HISTORY) HISTORY.removed({ what: what ?? I18N.t("files.removeAll.what", { n: rs.length }), data: String(rs.length), undo: all("back"), redo: all("take"), expires: window.MZLAB_BROWSER ? () => Promise.all(rs.map(r => r.free(true))).then(() => { renderFiles(); return reindexAfterFree(); }) : null });
   else rs.forEach(r => r.free());
 }
 let _lastBox = /** @type {number | null} */ (null);

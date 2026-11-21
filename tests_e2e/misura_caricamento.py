@@ -95,7 +95,7 @@ def run(a):
             if pg.evaluate("E.files.filter(f => !f.gone).length") > 1:
                 mark("remove-hidden"); pg.evaluate("removeFile(E.files.find(f => !f.gone && !f.vis) || E.files.filter(f => !f.gone).pop())"); quiet(pg, a.settle)
             mark("remove-shown"); pg.evaluate("removeFile(E.files.find(f => !f.gone && f.vis) || E.files.find(f => !f.gone))"); quiet(pg, a.settle)
-            mark("undo"); pg.evaluate("typeof STORIA !== 'undefined' && STORIA.annulla ? STORIA.annulla() : null"); quiet(pg, a.settle)
+            mark("undo"); pg.evaluate("typeof HISTORY !== 'undefined' && HISTORY.undo ? HISTORY.undo() : null"); quiet(pg, a.settle)
             if pg.locator("#addf").count() and pg.is_visible("#addf"):
                 mark("addf-click"); pg.click("#addf"); quiet(pg, a.settle)
                 if pg.is_visible("#backwork"): mark("backwork-click"); pg.click("#backwork"); quiet(pg, a.settle)

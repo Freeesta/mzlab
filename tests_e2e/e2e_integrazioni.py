@@ -60,7 +60,7 @@ try:
         step("Ctrl+Z undoes the last action, integration or zoom", order)
         def gesture():
             n0 = n()
-            pg.evaluate(f"(()=>{{const p={XP};STORIA.gruppo(()=>{{pushIh(p);p.ints.pop();pushIh(p);p.ints.pop()}});draw(p)}})()")
+            pg.evaluate(f"(()=>{{const p={XP};HISTORY.group(()=>{{pushIh(p);p.ints.pop();pushIh(p);p.ints.pop()}});draw(p)}})()")
             assert n() == n0 - 2, n()
             pg.keyboard.press("Control+z"); wait_for_js(pg, f"{XP}.ints.length==={n0}"); assert n() == n0, "one Ctrl+Z undoes the whole grouped gesture"
             pg.keyboard.press("Control+Shift+z"); wait_for_js(pg, f"{XP}.ints.length==={n0 - 2}")

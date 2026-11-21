@@ -63,7 +63,7 @@ def act(pg, rnd, name):
         if rnd.random() < 0.5: b = rnd.choice(["#fprev", "#fnext"]); pg.click(b); return "nav " + b
         o = pg.evaluate("[...document.querySelectorAll('#fsel option')].map(o => o.value)"); v = rnd.choice(o); pg.select_option("#fsel", v); return "chooser " + v
     if name == "remove" and len(ks) > 1:
-        # the Undo button takes back the removals of the tab on screen (storia.js): a file of that tab
+        # the Undo button takes back the removals of the tab on screen (history.js): a file of that tab
         k = rnd.choice(pg.evaluate("E.files.filter(f => !f.gone && f.kind === E.tab).map(f => f.k)") or [None])
         if k is None: return None
         pg.locator(f"#flst .fl[data-k='{k}'] .fl-x").click(); pg.wait_for_function(f"E.files[{k}].gone === true"); ready(pg)

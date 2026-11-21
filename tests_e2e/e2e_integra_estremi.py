@@ -88,7 +88,7 @@ try:
             except Exception: raise AssertionError((live, pg.evaluate(f"(()=>{{const p={PN},i={IT};return [document.querySelector('.iep-live').textContent,i.area,INTBASE.area(p,p._a.sr[0],i),p._iepSay?1:0,document.querySelectorAll('.iep-live').length]}})()")))
             assert pg.evaluate("document.querySelector('.iep-live').getAttribute('aria-live')") == "polite"
             assert f"{w['a']:.3f}" in loc.get_attribute("aria-label") and pg.evaluate("document.activeElement.classList.contains('iep')")
-            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"Math.min({IT}.a,{IT}.b)==={v['x'][v['ia'] - 1]!r}")   # one undo per key press
+            pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"Math.min({IT}.a,{IT}.b)==={v['x'][v['ia'] - 1]!r}")   # one undo per key press
         step("keyboard: one point, Shift five, the area and the live text follow, the same bytes as mzlab-cli, undo", keys)
         def mouse():
             v = rec(pg); x, y, _ = handle(pg, "1")

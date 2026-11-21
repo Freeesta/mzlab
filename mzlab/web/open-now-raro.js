@@ -20,7 +20,7 @@ async function toWorld(/** @type {boolean} */ hr, /** @type {{ sent: Set<string>
   };
   const n = E.files.filter((/** @type {FileAperto} */ g) => !g.gone).length;
   await go(hr);
-  if (typeof STORIA !== "undefined" && STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n }), dati: String(n), undo: () => go(!hr), redo: () => go(hr) });
+  if (typeof HISTORY !== "undefined" && HISTORY) HISTORY.removed({ what: I18N.t("files.removeAll.what", { n }), data: String(n), undo: () => go(!hr), redo: () => go(hr) });
 }
 /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
 function many(/** @type {number} */ n) {

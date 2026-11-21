@@ -1,4 +1,4 @@
-"""«Removed · Undo» (storia.js): taking a file out of the session, closing a panel and clearing the marked points of the map ask no question, show a notice with an
+"""«Removed · Undo» (history.js): taking a file out of the session, closing a panel and clearing the marked points of the map ask no question, show a notice with an
 Undo button for 6 s (role=status) and are entries of the undo stack (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z); a reload empties the stack. Alt+Shift+arrows keep their meaning
 inside a text field (the side of the drawer does not move)."""
 import sys, os, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,7 +19,7 @@ try:
         pg.click("#opbtn"); ready(pg)
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
         notice = lambda: pg.evaluate("document.getElementById('tolto-box') ? 1 : 0")
-        pending = "STORIA.pila.v.some(e => e.tipo === 'tolto' && e.scade)"
+        pending = "HISTORY.stack.v.some(e => e.kind === 'removed' && e.expires)"
         dialogs = lambda: pg.evaluate("document.querySelectorAll('dialog[open]').length")
         FK = "E.files.find(f => f.kind === 'full' && !f.gone).k"
         def file_undo():
@@ -27,7 +27,7 @@ try:
             pg.evaluate(f"removeFile(E.files[{k}])"); wait_for_js(pg, f"E.files[{k}].gone === true && {pending}")
             assert dialogs() == 0, "no question"
             assert notice() == 0, "no visible notice"
-            # the live region is cleared and filled again 30 ms later (storia.js say) so that the same text is announced twice: wait for it
+            # the live region is cleared and filled again 30 ms later (history.js say) so that the same text is announced twice: wait for it
             wait_for_js(pg, "/Removed|Tolto/.test(document.getElementById('sb-live').textContent)", 3000)
             pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.files[{k}].gone === false")
             assert pg.evaluate(f"E.files[{k}].vis") is True, "Ctrl+Z puts the file back"
@@ -79,9 +79,9 @@ try:
             pg.evaluate("document.getElementById('tmpin').remove()")
         step("Alt+Shift+arrows in a text field are left alone", keys_in_field)
         def reload():
-            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); wait_for_js(pg, "STORIA.pila.v.length > 0")
-            pg.reload(); wait_for_js(pg, "typeof STORIA !== 'undefined' && STORIA !== null")
-            assert pg.evaluate("STORIA.pila.v.length") == 0 and pg.evaluate("STORIA.pila.r.length") == 0, "a reload empties the stack"
+            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); wait_for_js(pg, "HISTORY.stack.v.length > 0")
+            pg.reload(); wait_for_js(pg, "typeof HISTORY !== 'undefined' && HISTORY !== null")
+            assert pg.evaluate("HISTORY.stack.v.length") == 0 and pg.evaluate("HISTORY.stack.r.length") == 0, "a reload empties the stack"
         step("a reload empties the stack", reload)
 finally:
     r.close(); r.report()

@@ -16,7 +16,7 @@ import doc_commands  # noqa: E402
 TO_PORT_MAX = 0      # only goes down: porting an action lowers it
 UNDO = {"istantanea", "comando", "tolto", "layout", "flow", "draw", "da-portare", "nessuna"}
 STANDALONE_FIELDS = {"istantanea", "comando"}
-SOURCES = [f for f in WEB.glob("*.js") if f.name not in ("comandi.js", "storia.js")]
+SOURCES = [f for f in WEB.glob("*.js") if f.name not in ("comandi.js", "history.js")]
 
 
 def rows():

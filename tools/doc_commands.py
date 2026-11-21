@@ -16,7 +16,7 @@ import lang_catalog  # noqa: E402
 JS = ROOT / "mzlab" / "web" / "comandi.js"
 OUT = ROOT / "docs" / "actions.md"
 UNDO = {
-    "istantanea": "undo with a snapshot (storia.js)", "comando": "command: do / undo handler (comandi.js)", "tolto": "removal with its own undo / redo (STORIA.tolto)",
+    "istantanea": "undo with a snapshot (history.js)", "comando": "command: do / undo handler (comandi.js)", "tolto": "removal with its own undo / redo (HISTORY.removed)",
     "layout": "arrangement of the panels (affianca.js)", "flow": "own stack of the Flow (S.undo)", "draw": "own stack of the editor (Ketcher)",
     "da-portare": "NOT undoable yet", "nessuna": "not undone",
 }

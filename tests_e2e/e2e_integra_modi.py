@@ -122,7 +122,7 @@ try:
             v = pg.evaluate(f"(()=>{{const i={IT};return {{a:i.area,b:i.below,bl:i.bl}}}})()"); e = engine(pg, 2, v["bl"])
             assert v["a"] == e["area"] and v["b"] == e["below"] > 0, (v, e)
             assert pg.locator(".ibp[data-k='1']").get_attribute("aria-label"), "no accessible name"
-            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{IT}.bl[2]=={t0}")         # one undo per key press
+            pg.evaluate("HISTORY.undo()"); wait_for_js(pg, f"{IT}.bl[2]=={t0}")         # one undo per key press
         step("keyboard: arrows move point 2 (time and intensity), the part under the line is reported, undo", keys)
         def note():
             wait_for_js(pg, "document.querySelector('#manint-x') && document.querySelector('#manint-x').innerText.includes('Below the line')", timeout=30000)

@@ -1,6 +1,6 @@
 """A file taken out from the list while the tab on screen is another one (synthetic pairs of tools/wiff_mixed.py and tools/wiff_modes.py EPI: Full Scan and MS2
 files; no laboratory data): the list shows the files of every tab, so Ctrl/Cmd+Z and the Undo button take that file back at once, from the tab on screen,
-and Ctrl+Y takes it out again (storia.js: a removed file is an entry of no tab).
+and Ctrl+Y takes it out again (history.js: a removed file is an entry of no tab).
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_annulla_file_scheda.py"""
 import subprocess, sys, os, tempfile
 from pathlib import Path
