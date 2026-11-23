@@ -44,11 +44,11 @@ The recipe is tested only on the high-resolution TiO2 series: on the flufenacet 
 3. `mzlab-cli flow check plan.json --json`: exit 3 names every problem with its `path`, e.g. `det.params.min_hight` (unknown parameter), `det.params.min_height` (wrong type), `det.in.index` (missing port), `steps[1].param` (a key the format does not have). `flow run plan.json --in DIR --dry-run` repeats the check with the inputs and prints what WOULD run; it never writes.
 
 ## Several ions from a full-scan file, then a report
-`trace xic` answers one m/z per call (the page's `api/xic`), or every m/z of a range in one call with `--sweep LO:HI:STEP --format csv` (the same bytes as the list; one call and one index load, not faster per ion than a loop in one process); loop it for a few ions, integrate each trace, and keep the calls as the record:
+`trace xic --mz M1,M2,..` answers every ion of the list in one call (one index load, the scans shared): `--format csv` is `rt_min` and one `xic:<mz>` column per ion, `--json` a `trace-set/1` (the same bytes per ion as one call each; `--sweep LO:HI:STEP` is the same for a regular grid). `peak auto-lr` reads two columns (RT, intensity), so cut one ion at a time, integrate it, and keep the calls as the record (tested on the synthetic `B_FullMass-t0.mzML`):
 ```sh
-for mz in 364.4 194.2 152.2; do
-  mzlab-cli trace xic sample.mzML --mz $mz --ppm 500 --rt 12,16.5 --format csv --out xic_$mz.csv   # rt_min,intensity
-  mzlab-cli peak auto-lr xic_$mz.csv > peaks_$mz.json                                              # {"params","peaks":[rt, area, ...]}
+mzlab-cli trace xic sample.mzML --mz 364.4,194.2,152.2 --ppm 500 --rt 12,16.5 --format csv --out xic.csv   # rt_min,xic:364.4,xic:194.2,xic:152.2
+for c in 2 3 4; do
+  cut -d, -f1,$c xic.csv | mzlab-cli peak auto-lr - > peaks_$c.json                                       # {"params","peaks":[rt, area, ...]}
 done
 ```
 At unit resolution give the window in Da (`--da 0.3`), in ppm for high resolution. There is no Flow step that extracts XICs yet, so a plan cannot do it: the plan examples above start from the index. After a plan run, `mzlab-cli flow report RUN` writes the `run-report/2` of the run.
