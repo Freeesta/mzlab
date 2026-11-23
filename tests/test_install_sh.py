@@ -70,11 +70,16 @@ def server():
     s.httpd.shutdown()
 
 
-def sandbox(tmp: Path, system: str, machine: str, downloader: str | None, sysctl: str | None = None) -> Path:
+def sandbox(tmp: Path, system: str, machine: str, downloader: str | None, sysctl: str | None = None,
+            drop: tuple[str, ...] = (), fakes: dict[str, str] | None = None) -> Path:
+    """A bin folder with TOOLS minus `drop`, the downloader, a fake uname (and sysctl) and `fakes` (name -> script body)."""
     b = tmp / "bin"
     b.mkdir()
-    for t in TOOLS + ([downloader] if downloader else []):
+    for t in [t for t in TOOLS if t not in drop] + ([downloader] if downloader else []):
         os.symlink(tool(t), b / t)
+    for name, body in (fakes or {}).items():
+        (b / name).write_text(f"#!{SHELL}\n{body}\n")
+        (b / name).chmod(0o755)
     (b / "uname").write_text(f'#!{SHELL}\ncase "$1" in -s) echo {system};; -m) echo {machine};; esac\n')
     (b / "uname").chmod(0o755)
     if sysctl is not None:
@@ -83,8 +88,9 @@ def sandbox(tmp: Path, system: str, machine: str, downloader: str | None, sysctl
     return b
 
 
-def run(tmp: Path, server: Server, *args: str, system="Linux", machine="x86_64", downloader="curl", sysctl=None, env=None):
-    b = sandbox(tmp, system, machine, downloader, sysctl)
+def run(tmp: Path, server: Server, *args: str, system="Linux", machine="x86_64", downloader="curl", sysctl=None, env=None,
+        drop: tuple[str, ...] = (), fakes: dict[str, str] | None = None):
+    b = sandbox(tmp, system, machine, downloader, sysctl, drop, fakes)
     e = {"PATH": str(b), "HOME": str(tmp / "home"), "MZLAB_BASE_URL": server.url, "NO_PROXY": "*", "no_proxy": "*"}
     e.update(env or {})
     server.requests.clear()
@@ -102,8 +108,7 @@ def run(tmp: Path, server: Server, *args: str, system="Linux", machine="x86_64",
     ],
 )
 def test_installs_the_verified_binary_of_the_platform(tmp_path, server, downloader, system, machine, sysctl, asset):
-    if not tool(downloader):
-        pytest.skip(f"{downloader} is not installed on this machine")
+    assert tool(downloader), f"{downloader} is needed by this test: install it (the CI runners have curl and wget)"
     assert asset in CLI
     server.release()
     r = run(tmp_path, server, system=system, machine=machine, downloader=downloader, sysctl=sysctl)
@@ -168,6 +173,37 @@ def test_no_downloader_exits_4(tmp_path, server):
     server.release()
     r = run(tmp_path, server, downloader=None)
     assert r.returncode == 4 and "neither curl nor wget" in r.stderr
+
+
+def test_macos_without_sha256sum_verifies_with_shasum(tmp_path, server):
+    server.release()
+    log = tmp_path / "shasum.log"
+    shasum = f'echo "$@" >> {log}\n[ "$1 $2" = "-a 256" ] || exit 9\nexec {tool("sha256sum")} "$3"'
+    r = run(tmp_path, server, system="Darwin", machine="arm64", drop=("sha256sum",), fakes={"shasum": shasum})
+    assert r.returncode == 0, r.stderr
+    assert "matches SHA256SUMS" in r.stderr and log.read_text().startswith("-a 256 ")
+    assert (tmp_path / "home" / ".local" / "bin" / "mzlab-cli").read_bytes() == fake_binary("mzlab-cli-macos-aarch64")
+
+
+def test_no_sha256_tool_exits_4_without_any_request(tmp_path, server):
+    server.release()
+    r = run(tmp_path, server, drop=("sha256sum",))
+    assert r.returncode == 4 and "neither sha256sum nor shasum" in r.stderr
+    assert server.requests == [] and not (tmp_path / "home" / ".local").exists()
+
+
+@pytest.mark.parametrize("mirror", [False, True])
+def test_curl_is_https_only_toward_github(tmp_path, server, mirror):
+    log = tmp_path / "curl.log"
+    curl = f"printf '%s\\n' \"$@\" > {log}\nprintf 404"
+    r = run(tmp_path, server, downloader=None, fakes={"curl": curl}, env=None if mirror else {"MZLAB_BASE_URL": ""})
+    assert r.returncode == 5, r.stderr
+    args = log.read_text().splitlines()
+    if mirror:
+        assert "--proto" not in args and args[-1].startswith("http://127.0.0.1:")
+    else:
+        assert args[args.index("--proto") + 1] == "=https" and args[args.index("--proto-redir") + 1] == "=https"
+        assert args[-1] == "https://github.com/Freeesta/mzlab/releases/latest/download/mzlab-cli-linux-x86_64"
 
 
 def test_dry_run_downloads_nothing_and_names_the_urls(tmp_path, server):
