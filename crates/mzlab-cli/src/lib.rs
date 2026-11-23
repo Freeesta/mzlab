@@ -185,6 +185,10 @@ mod mzml_variants_tests;
 mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
+#[cfg(not(target_family = "wasm"))]
+mod pack_cmd;
+#[cfg(all(test, not(target_family = "wasm")))]
+mod pack_cmd_tests;
 mod pair_cmd;
 mod par;
 #[cfg(test)]

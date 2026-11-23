@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-pack-wasm"
+description = "wasm-bindgen bridge of file pack / unpack / check-pack (mzlab_core::pack, pack_read): split archives and their manifest through JS callbacks (OPFS); a .wasm of its own, loaded by the page on the first use"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+# no format reader or chemistry: the pack code needs only the core's hashing and JSON
+mzlab-core = { path = "../mzlab-core", default-features = false }
+wasm-bindgen = "0.2"

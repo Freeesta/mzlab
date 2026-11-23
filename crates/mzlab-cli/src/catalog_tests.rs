@@ -46,9 +46,7 @@ fn the_flags_of_help_and_catalog_are_the_same() {
             .filter(|w| w.starts_with("--"))
             .map(String::from)
             .collect();
-        let in_catalog: BTreeSet<String> = c["flags"]
-            .as_array()
-            .unwrap()
+        let in_catalog: BTreeSet<String> = members(c, "flags")
             .iter()
             .map(|f| f["name"].as_str().unwrap().to_string())
             .collect();
@@ -60,9 +58,7 @@ fn the_flags_of_help_and_catalog_are_the_same() {
 fn flags_have_type_unit_and_default() {
     let doc = json(&out(&["commands", "--json", "peak", "auto"]));
     let c = &doc["commands"][0];
-    let from = c["flags"]
-        .as_array()
-        .unwrap()
+    let from = members(c, "flags")
         .iter()
         .find(|f| f["name"] == "--from")
         .unwrap();
@@ -140,7 +136,7 @@ fn flag_objects_never_carry_null_or_false_members() {
     let mut flags: Vec<&serde_json::Value> =
         doc["global_flags"].as_array().unwrap().iter().collect();
     for c in doc["commands"].as_array().unwrap() {
-        flags.extend(c["flags"].as_array().unwrap());
+        flags.extend(members(c, "flags"));
     }
     assert!(flags.len() > 20);
     for f in flags {
@@ -205,7 +201,7 @@ fn flags_are_described_and_typed_like_the_usage_line() {
     for e in entries() {
         let c = &full(e);
         let usage = e.help.split("   ").next().unwrap();
-        for f in c["flags"].as_array().unwrap() {
+        for f in members(c, "flags") {
             let name = f["name"].as_str().unwrap();
             assert!(
                 !f["help"].as_str().unwrap().is_empty(),
@@ -270,12 +266,10 @@ fn the_documents_have_schema_first_and_a_newline() {
 
 /// The exit codes `exit_codes_note` states, from the compact listing of command `c` alone (written out again here, not taken from `exits_of`).
 fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -> Vec<u8> {
-    let flags = c["flags"].as_array().unwrap();
+    let flags = members(c, "flags");
     let has = |f: &str| flags.iter().any(|x| x["name"] == f);
     // an arg with no kind is a path (or `...`, a rest): both read a file; a flag with no type takes its `flag_type`
-    let reads = c["args"]
-        .as_array()
-        .unwrap()
+    let reads = members(c, "args")
         .iter()
         .any(|a| a.get("kind").is_none_or(|k| k == "path" || k == "rest"))
         || flags.iter().any(|f| {
@@ -303,6 +297,12 @@ fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -
         v.push(6);
     }
     v
+}
+
+/// The `args` or `flags` of a command of the listing: the whole listing leaves out an empty list.
+fn members<'a>(c: &'a serde_json::Value, key: &str) -> &'a Vec<serde_json::Value> {
+    static NONE: Vec<serde_json::Value> = Vec::new();
+    c[key].as_array().unwrap_or(&NONE)
 }
 
 /// The words of a usage line outside its `[...]` groups, without the `...` tokens: what `examples_note` says an example is made of.
@@ -333,9 +333,7 @@ fn defaults_give_the_full_types(
     whole: &serde_json::Value,
     name: &str,
 ) {
-    for (a, g) in c["args"]
-        .as_array()
-        .unwrap()
+    for (a, g) in members(c, "args")
         .iter()
         .zip(whole["args"].as_array().unwrap())
     {
@@ -346,9 +344,7 @@ fn defaults_give_the_full_types(
         };
         assert_eq!(kind, g["kind"], "{name}: {}", a["name"]);
     }
-    for (f, g) in c["flags"]
-        .as_array()
-        .unwrap()
+    for (f, g) in members(c, "flags")
         .iter()
         .zip(whole["flags"].as_array().unwrap())
     {
@@ -374,9 +370,7 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
         let whole = full(e);
         assert!(whole.get("compact").is_none());
         defaults_give_the_full_types(&doc, c, &whole, e.name);
-        for (f, g) in c["flags"]
-            .as_array()
-            .unwrap()
+        for (f, g) in members(c, "flags")
             .iter()
             .zip(whole["flags"].as_array().unwrap())
         {

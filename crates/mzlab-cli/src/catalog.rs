@@ -104,6 +104,9 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--quantity", "area or height"),
     ("--factor", "ratio threshold"),
     ("--pseudocount", "auto or a number"),
+    ("--force", "replace existing"),
+    ("--parts", "parts folder"),
+    ("--part-size", "e.g. 25MB, 4MiB"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

@@ -30,11 +30,34 @@ const fn crc_table() -> [u32; 256] {
 }
 static CRC_TABLE: [u32; 256] = crc_table();
 
+/// CRC-32 (IEEE, the one of ZIP and PNG) taken piece by piece, for a stream that is never held whole (`zipstream`).
+pub struct Crc32(u32);
+
+impl Crc32 {
+    pub const fn new() -> Self {
+        Crc32(!0)
+    }
+    pub fn update(&mut self, data: &[u8]) {
+        self.0 = data.iter().fold(self.0, |c, &b| {
+            CRC_TABLE[((c ^ b as u32) & 0xFF) as usize] ^ (c >> 8)
+        });
+    }
+    pub const fn value(&self) -> u32 {
+        !self.0
+    }
+}
+
+impl Default for Crc32 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// CRC-32 (IEEE, the one of ZIP and PNG).
 pub fn crc32(data: &[u8]) -> u32 {
-    !data.iter().fold(!0u32, |c, &b| {
-        CRC_TABLE[((c ^ b as u32) & 0xFF) as usize] ^ (c >> 8)
-    })
+    let mut c = Crc32::new();
+    c.update(data);
+    c.value()
 }
 
 fn u16le(o: &mut Vec<u8>, v: u16) {

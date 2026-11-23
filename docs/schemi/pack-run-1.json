@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack-run/1",
+  "title": "pack-run/1: the result of `mzlab-cli file pack`",
+  "description": "The files and parts of a pack. With `dry_run` the hashes are null (nothing was read). The manifest on disk is pack/1 (same members plus `tool` and each file's `offset`). Code: crates/mzlab-core/src/pack.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "dry_run",
+    "name",
+    "manifest",
+    "part_size",
+    "stream_bytes",
+    "files",
+    "parts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "pack-run/1"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "manifest": {
+      "type": "string"
+    },
+    "part_size": {
+      "type": "integer",
+      "minimum": 1024
+    },
+    "stream_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "size",
+          "sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "size",
+          "sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}
