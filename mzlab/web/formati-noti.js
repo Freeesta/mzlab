@@ -10,7 +10,7 @@ export const FORMATI = [
   { re: /\.raw$/i, ext: ".raw", vendors: ["Thermo", "Waters"], fmt: ".raw", st: "read" },
   { re: /\.wiff\.scan$/i, ext: ".wiff.scan", vendors: ["SCIEX"], fmt: ".wiff.scan", st: "read" },
   { re: /\.wiff$/i, ext: ".wiff", vendors: ["SCIEX"], fmt: ".wiff", st: "read" },
-  // encrypted, no public specification (docs/studi/ROSINA.md)
+  // encrypted, no public specification (docs/studies/ROSINA.md)
   { re: /\.wiff2$/i, ext: ".wiff2", vendors: ["SCIEX"], fmt: ".wiff2", st: "unsupported" },
   { re: /\.d$/i, ext: ".d", vendors: ["Agilent", "Bruker"], fmt: ".d", st: "read" },
   { re: /\.(tdf|tsf)$/i, ext: ".tdf", vendors: ["Bruker"], fmt: ".tdf / .tsf", st: "read" },

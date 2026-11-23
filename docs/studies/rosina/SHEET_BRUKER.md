@@ -1,6 +1,6 @@
 # Rosina C: Bruker timsTOF (TDF/TSF) and BAF
 
-Legend and index: `SCHEDE.md`. Reader: module `bruker` (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, LZF); details in `docs/agenti/bruker.md`.
+Legend and index: `SHEETS.md`. Reader: module `bruker` (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, LZF); details in `docs/agenti/bruker.md`.
 
 ## Status
 - TDF (timsTOF Pro/HT/SCP/flex, DDA-PASEF, diaPASEF, PRM, MRM): m/z L with V1 on compression 1 (0.07 ppm against msconvert `combineIonMobilitySpectra`), compression 2 only V7 (`LargestPeakMz` and error-free reading). WAL read.

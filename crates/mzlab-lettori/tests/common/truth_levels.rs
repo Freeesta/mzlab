@@ -1,4 +1,4 @@
-//! The comparison levels F1-F5 of the Rosina bench (docs/studi/ROSINA.md F.2): one function per level, called by `confronta` in `truth.rs`.
+//! The comparison levels F1-F5 of the Rosina bench (docs/studies/ROSINA.md F.2): one function per level, called by `confronta` in `truth.rs`.
 #![allow(dead_code)]
 
 use super::{Outcome, Tol};

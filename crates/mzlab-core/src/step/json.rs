@@ -1,4 +1,4 @@
-//! The JSON of `step/1`: the keys and their order follow `docs/studi/workflow/step.features.detect.json`; `registry_json` writes one step per line.
+//! The JSON of `step/1`: the keys and their order follow `docs/studies/workflow/step.features.detect.json`; `registry_json` writes one step per line.
 
 use super::{
     Algorithm, Applicability, Facets, Kind, Param, Port, Preset, Reference, RunsIn, Status, Step,

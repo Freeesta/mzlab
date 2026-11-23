@@ -1,5 +1,5 @@
 """Adds the mobility table of `timsdata` (Bruker's library, Linux or Windows) to the truth `verita/1` made from the mzML of msconvert.
-A tool of the test bench (docs/studi/ROSINA.md F.1). The table is a TSV with a header `scan<TAB>one_over_k0`: one row per mobility scan index, 1/K0 in V s/cm2.
+A tool of the test bench (docs/studies/ROSINA.md F.1). The table is a TSV with a header `scan<TAB>one_over_k0`: one row per mobility scan index, 1/K0 in V s/cm2.
     python3 tools/rosina/verita_timsdata.py FILE.mzML TABELLA.tsv [--timsdata-version V] [--native FILE.d] > FILE.verita.json"""
 import argparse
 import json

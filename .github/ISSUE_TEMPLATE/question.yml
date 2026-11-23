@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         **Do not attach laboratory or personal data.**
-        First read the [guides](https://github.com/Freeesta/mzlab/tree/main/docs/utenti). Best-effort support.
+        First read the [guides](https://github.com/Freeesta/mzlab/tree/main/docs/users). Best-effort support.
   - type: textarea
     id: testo
     attributes:

@@ -21,7 +21,7 @@ REFUSAL_TESTS = {"crates/mzlab-feat/tests/hypo_registry_format.rs"}
 def _files():
     out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
     for f in out:
-        if not f or f in SKIP or "/vendor/" in f or f.startswith(("mzlab/web/esempi/", "docs/studi/")):
+        if not f or f in SKIP or "/vendor/" in f or f.startswith(("mzlab/web/esempi/", "docs/studies/")):
             continue
         if f.endswith((".py", ".rs", ".md", ".yml", ".json", ".sh", ".js", ".toml")):
             yield f
