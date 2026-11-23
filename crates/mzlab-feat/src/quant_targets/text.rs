@@ -189,7 +189,8 @@ pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str
     let mut o = Out::default();
     o.raw("{\"schema\":\"quant-targets/1\",\"rows\":[");
     for (i, r) in rows.iter().enumerate() {
-        o.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&names[r.file]);
+        o.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" })
+            .str(&names[r.file]);
         o.raw(",\"id\":").str(&targets[r.target].id);
         let h = r.hit.as_ref();
         let nums: [(&str, Option<String>); 4] = [
@@ -199,10 +200,20 @@ pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str
             ("rt", h.map(|h| format!("{}", h.rt))),
         ];
         for (k, v) in &nums {
-            o.raw(",").str(k).raw(":").raw(v.as_deref().unwrap_or("null"));
+            o.raw(",")
+                .str(k)
+                .raw(":")
+                .raw(v.as_deref().unwrap_or("null"));
         }
-        let flag = if r.flags.is_empty() { "ok".to_string() } else { r.flags.join(";") };
-        o.raw(",\"flag\":").str(&flag).raw(",\"state\":").str(r.state());
+        let flag = if r.flags.is_empty() {
+            "ok".to_string()
+        } else {
+            r.flags.join(";")
+        };
+        o.raw(",\"flag\":")
+            .str(&flag)
+            .raw(",\"state\":")
+            .str(r.state());
         let rest: [(&str, Option<String>); 4] = [
             ("points", h.map(|h| h.points.to_string())),
             ("shape", h.map(|h| format!("{}", h.shape))),
@@ -210,12 +221,19 @@ pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str
             ("end_rt", h.map(|h| format!("{}", h.end_rt))),
         ];
         for (k, v) in &rest {
-            o.raw(",").str(k).raw(":").raw(v.as_deref().unwrap_or("null"));
+            o.raw(",")
+                .str(k)
+                .raw(":")
+                .raw(v.as_deref().unwrap_or("null"));
         }
         o.raw(",\"peaks_in_window\":").raw(&r.peaks.to_string());
         o.raw(",\"smooth_half\":").raw(&r.half.to_string());
-        o.raw(",\"mz_offset_da\":").raw(&format!("{}", r.offset)).raw("}");
+        o.raw(",\"mz_offset_da\":")
+            .raw(&format!("{}", r.offset))
+            .raw("}");
     }
-    o.raw("],\"log\":").raw(if log.is_empty() { "null" } else { log }).raw("}");
+    o.raw("],\"log\":")
+        .raw(if log.is_empty() { "null" } else { log })
+        .raw("}");
     o.0
 }

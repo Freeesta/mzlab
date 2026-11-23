@@ -102,7 +102,9 @@ fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
             v.parse::<usize>()
                 .ok()
                 .filter(|n| (1..=MAX_WORKERS).contains(n))
-                .ok_or(format!("--workers {v}: expected a whole number from 1 to {MAX_WORKERS}"))?,
+                .ok_or(format!(
+                    "--workers {v}: expected a whole number from 1 to {MAX_WORKERS}"
+                ))?,
         ),
     };
     Ok(Some(Job {
@@ -148,7 +150,11 @@ fn files(inputs: &[PathBuf]) -> Result<Vec<PathBuf>> {
         }
     });
     let stem = |p: &Path| p.with_extension("");
-    let sources: Vec<PathBuf> = out.iter().filter(|p| !is_index(p)).map(|p| stem(p)).collect();
+    let sources: Vec<PathBuf> = out
+        .iter()
+        .filter(|p| !is_index(p))
+        .map(|p| stem(p))
+        .collect();
     out.retain(|p| {
         let beside = is_index(p) && sources.contains(&stem(p));
         if beside {
@@ -206,7 +212,8 @@ fn run_job(j: &Job) -> Result<(String, String)> {
     // parameters and table are checked before any index is built
     let n = paths.len();
     let workers = j.workers.unwrap_or_else(|| default_workers(n));
-    let job = mzlab_feat::quant_targets::prepare(&names, &targets, &j.params)?.with_workers(workers);
+    let job =
+        mzlab_feat::quant_targets::prepare(&names, &targets, &j.params)?.with_workers(workers);
     // the bytes do not depend on the workers, so the count is said on stderr and not in the log
     eprintln!("note: {n} files on {workers} workers");
     let budget =
