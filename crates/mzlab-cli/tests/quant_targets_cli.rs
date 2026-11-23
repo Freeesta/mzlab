@@ -33,23 +33,25 @@ fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
 }
 
+/// The run on the folder `runs` with `offset auto` and the blank pattern, plus `extra`.
+fn folder(d: &Path, extra: &[&str]) -> Output {
+    let mut a = vec![
+        "--targets",
+        "targets.csv",
+        "runs",
+        "--offset",
+        "auto",
+        "--blank-pattern",
+        "blank*",
+    ];
+    a.extend_from_slice(extra);
+    cli(&a, d)
+}
+
 #[test]
 fn a_folder_gives_one_row_per_file_and_target_with_its_flags() {
     let d = dir("csv");
-    let o = cli(
-        &[
-            "--targets",
-            "targets.csv",
-            "runs",
-            "--offset",
-            "auto",
-            "--blank-pattern",
-            "blank*",
-            "--log",
-            "log.json",
-        ],
-        &d,
-    );
+    let o = folder(&d, &["--log", "log.json"]);
     assert_eq!(o.status.code(), Some(0), "{}", text(&o.stderr));
     let csv = text(&o.stdout);
     let lines: Vec<&str> = csv.lines().collect();
@@ -77,19 +79,7 @@ fn a_folder_gives_one_row_per_file_and_target_with_its_flags() {
     assert!(log.contains("\"reference\":\"std\""), "{log}");
 
     // the same rows as JSON, the CSV unchanged by --out
-    let j = cli(
-        &[
-            "--targets",
-            "targets.csv",
-            "runs",
-            "--offset",
-            "auto",
-            "--blank-pattern",
-            "blank*",
-            "--json",
-        ],
-        &d,
-    );
+    let j = folder(&d, &["--json"]);
     assert_eq!(j.status.code(), Some(0));
     let json = text(&j.stdout);
     assert_eq!(
@@ -99,20 +89,7 @@ fn a_folder_gives_one_row_per_file_and_target_with_its_flags() {
     assert!(
         json.starts_with("{\"schema\":\"quant-targets/1\",\"rows\":[{\"file\":\"Blank_01.mzML\"")
     );
-    let w = cli(
-        &[
-            "--targets",
-            "targets.csv",
-            "runs",
-            "--offset",
-            "auto",
-            "--blank-pattern",
-            "blank*",
-            "--out",
-            "t.csv",
-        ],
-        &d,
-    );
+    let w = folder(&d, &["--out", "t.csv"]);
     assert_eq!(w.status.code(), Some(0));
     assert_eq!(std::fs::read_to_string(d.join("t.csv")).unwrap(), csv);
     schema_lists_the_keys(&json);
