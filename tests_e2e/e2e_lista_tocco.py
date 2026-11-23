@@ -29,9 +29,16 @@ CONTROLS = """() => {
     // a point is the control's own when the element on top is the control, one of its children or (for a hit area) the control itself
     const own = (x, y) => { const t = document.elementFromPoint(x, y); return !!t && (t === e || e.contains(t)) ? true : (t ? (t.id || t.className || t.tagName).toString().slice(0, 25) : 'null'); };
     const rad = Math.max(...['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'].map(q => parseFloat(getComputedStyle(e)[q]) || 0));
-    const k = 1.5 + 0.3 * Math.min(rad, hit.h / 2), pts = [[hit.l + k, hit.t + k], [hit.l + hit.w - k, hit.t + k], [hit.l + k, hit.t + hit.h - k], [hit.l + hit.w - k, hit.t + hit.h - k]];
-    out.push({ n: (e.id || e.className || e.tagName).toString().slice(0, 30), w: Math.round(hit.w * 10) / 10, h: Math.round(hit.h * 10) / 10, l: hit.l, t: hit.t,
-      onscreen: hit.t >= 0 && hit.t + hit.h <= innerHeight && hit.l >= 0 && hit.l + hit.w <= innerWidth + 0.5, corners: pts.map(p => own(p[0], p[1])) });
+    const k = 1.5 + 0.3 * Math.min(rad, hit.h / 2), pts = h => [[h.l + k, h.t + k], [h.l + h.w - k, h.t + k], [h.l + k, h.t + h.h - k], [h.l + h.w - k, h.t + h.h - k]];
+    const geo = { n: (e.id || e.className || e.tagName).toString().slice(0, 30), w: Math.round(hit.w * 10) / 10, h: Math.round(hit.h * 10) / 10, l: hit.l, t: hit.t,
+      onscreen: hit.t >= 0 && hit.t + hit.h <= innerHeight && hit.l >= 0 && hit.l + hit.w <= innerWidth + 0.5 };
+    // a control inside a sideways-scrolling strip (the add buttons of the toolbar) may sit partly under the strip's edge at the font of this machine: it is reached by
+    // scrolling, so its corners are checked after the strip brings it into view (the strip is put back afterwards); the size and overlap above stay as laid out
+    const strip = (() => { for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) if (/(auto|scroll)/.test(getComputedStyle(a).overflowX) && a.scrollWidth > a.clientWidth + 1) return a; return null; })();
+    const sr = strip && strip.getBoundingClientRect(), cut = strip && (hit.l < sr.left - 0.5 || hit.l + hit.w > sr.right + 0.5), was = strip && strip.scrollLeft;
+    if (cut) { e.scrollIntoView({ block: 'nearest', inline: 'nearest' }); const b2 = e.getBoundingClientRect(); geo.corners = pts({ l: b2.left, t: b2.top, w: hit.w, h: hit.h }).map(p => own(p[0], p[1])); strip.scrollLeft = was; }
+    else geo.corners = pts(hit).map(p => own(p[0], p[1]));
+    out.push(geo);
   }
   return out; }"""
 PITCH = """() => { const rows = [...document.querySelectorAll('#flst .fl:not(.pr):not(.pend)')].filter(e => e.getBoundingClientRect().height);
