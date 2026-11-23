@@ -7,6 +7,19 @@ use mzlab_core::json::parse;
 
 use crate::execute;
 
+/// The commands of this file with an input that does not exist (`contract_tests` runs them under the missing-input contract: exit 4, one `error/1`).
+pub(crate) const MISSING: &[&[&str]] = &[
+    &["file", "pack", "/nonexistent/x", "--out", "/nonexistent/o"],
+    &[
+        "file",
+        "unpack",
+        "/no/x.pack.json",
+        "--out",
+        "/nonexistent/o",
+    ],
+    &["file", "check-pack", "/nonexistent/x.pack.json"],
+];
+
 fn cli(a: &[&str]) -> crate::Outcome {
     execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>())
 }
