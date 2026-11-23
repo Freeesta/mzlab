@@ -7,7 +7,9 @@ use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{fileroutes, itemroutes, lr, readers_mzml};
 
 pub fn mzml_of(l: &mut dyn readers::Reader, c: usize) -> Vec<u8> {
-    readers_mzml::write(l, c, Vec::new(), &mut |_, _| {}).unwrap()
+    crate::conv_help::keep_flags()
+        .write(l, c, Vec::new(), &mut |_, _| {})
+        .unwrap()
 }
 
 /// A vendor file as the engine reads it: the mzML without its spectra (`readers_mzml::guscio`) and the reader for the scans.

@@ -220,7 +220,8 @@ fn probe(l: &mut dyn Reader, c: usize) -> Result<Probe> {
         } else {
             0
         };
-        let s = l.scan(c, k)?;
+        // a scan that does not read is not the probe's to report: the writer reads it again and drops, counts or refuses it as it always did
+        let Ok(s) = l.scan(c, k) else { continue };
         if s.mz.is_empty() {
             continue;
         }
