@@ -41,6 +41,7 @@ I18N.add("en", {
   "canali.tip.tic": "Total ion current of all scans",
   "canali.tip.ms1": "TIC of the MS¹ scans only",
   "canali.tip.dd": "TIC of the data-dependent MS² scans",
+  "canali.row.desc": "{n} points, time {a}–{b} min",
   "canali.row": "{et}, {n} points, time {a}–{b} min",
   "canali.btn": "Channels",
   "canali.btn.title": "Choose the channels to plot for each file",

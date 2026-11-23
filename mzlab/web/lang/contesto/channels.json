@@ -11,6 +11,7 @@
   "canali.sim.cell": "\"Experiment\" cell of the file table for a SIM file; {n} = number of monitored ions.",
   "canali.btn.aria": "Accessible name of the channels button; {v} = its visible text (the name must contain it, WCAG 2.5.3), {n} = number of traced channels.",
   "canali.pick.ck": "Tooltip on hovering the checkbox of a row of the transition / SIM ion picker; {et} = channel label (m/z).",
+  "canali.row.desc": "Description (aria-description) of a row of the channel tree, read after its name; {n} = number of points (scans), {a} and {b} = start and end time in minutes.",
   "canali.row": "Description read by a screen reader of a row of the channel tree; {et} = channel label, {n} = number of points (scans), {a} and {b} = start and end time in minutes.",
   "canali.kind.aria": "Accessible name of the button that chooses what the chromatogram traces; {v} = button text (for example TIC or TIC + 1).",
   "canali.manint.applied": "Announcement (aria-live) after a drawn integration has been applied to other samples; {n} = number of samples that have an applied row.",

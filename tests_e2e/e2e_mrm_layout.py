@@ -24,7 +24,7 @@ try:
             assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('MRM transitions') === false : true"), "old panel title"
             pg.evaluate(f"{q}.querySelector('.canb').click()"); frames(pg, 2)
             n = pg.evaluate(f"[...{q}.querySelectorAll('.can-row .can-n,.can-row')].length"); assert n > 1, n
-            lab = pg.evaluate(f"[...{q}.querySelectorAll('.can-row')].map(x => x.getAttribute('aria-label') || '')")
+            lab = pg.evaluate(f"[...{q}.querySelectorAll('.can-row')].map(x => x.getAttribute('aria-label') || x.querySelector('.can-et').textContent)")
             assert not any("\u2192" in l or "@" in l for l in lab), lab                          # one notation: q1>q3 role
             assert len(set(lab)) == len(lab), lab
             ov = pg.evaluate(f"(() => {{ const hd = {q}.querySelector('.can-hd'); const c = [...hd.children].map(e => e.getBoundingClientRect()); return c.slice(1).some((r, i) => r.left < c[i].right - 1); }})()")
