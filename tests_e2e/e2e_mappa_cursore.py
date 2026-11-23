@@ -39,7 +39,7 @@ try:
                 hover(14.38, mz)
                 L = pg.evaluate(f"({M}._mz.lbls||[]).map(l=>({{...l}}))"); W = pg.evaluate(f"{M}._mz.sp.getBoundingClientRect().width"); gd = pg.evaluate(f"{M}._mz.gd")
                 cur = [l for l in L if l.get("cur")]; assert len(cur) == 1, (mz, L)
-                c = cur[0]; assert abs(float(c["t"]) - mz) < 0.06, (c["t"], mz)
+                c = cur[0]; assert abs(float(c["t"]) - mz) < 1.0, (c["t"], mz)             # one pixel is about a dalton: the sight takes the nearest peak of its XIC window
                 assert c["x"] >= 0 and c["x"] + c["w"] <= W, ("clipped at the edge", c, W)
                 if gd: assert not (c["x"] < gd["end"] + 1 and c["y"] - 2 < gd["y"] < c["y"] + c["h"] + 2), ("under the guide", c, gd)
                 for o in L:
@@ -79,11 +79,10 @@ try:
         def keys():
             pg.mouse.move(5, 5); wait_for_js(pg, f"{chip}.hidden")                  # the pointer is away: nothing shown
             pg.evaluate(M + ".cv.focus()"); t0 = None
-            for k in ("ArrowRight", "ArrowRight", "ArrowUp"):
-                pg.keyboard.press(k)
-            wait_for_js(pg, f"!{chip}.hidden && /RT [0-9.]+ min/.test({chip}.textContent)")
-            t0 = pg.evaluate(f"{chip}.textContent"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight")
-            wait_for_js(pg, f"{chip}.textContent !== {t0!r}")
+            seen = ""
+            for k in ("ArrowRight", "ArrowRight", "ArrowUp", "ArrowRight"):
+                pg.keyboard.press(k); wait_for_js(pg, f"!{chip}.hidden && {chip}.textContent !== {seen!r}"); seen = pg.evaluate(f"{chip}.textContent")
+            assert seen.startswith("RT ") and " min · m/z " in seen, seen
         step("the arrow keys move the chip and the dot too", keys)
         def leaves():
             hover(14.38, 200.0); pg.mouse.move(5, 5)

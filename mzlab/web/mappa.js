@@ -979,7 +979,7 @@ window.MAPPA = (() => {
       `<select data-mz="dens" title="${T("mappa.dens.title")}" aria-label="${T("mappa.dens.title")}">${["few", "mid", "many"].map(k => opt(k, DENS[PREF.dens] ? PREF.dens : "mid", T(DENS[k].lab))).join("")}</select>`;
     if (dif) dif.outerHTML = !hasRef ? `<label class="muted" title="${T("mappa.fix.title")}"><input type="checkbox" data-mz="fix"${PREF.fix ? " checked" : ""}> ${T("mappa.fix")}</label>` : hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg === false ? "" : " checked"}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" aria-pressed="${!!st(p).mark}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = (/** @type {string} */ k) => /** @type {Record<string, any>} */ (c.querySelector(`[data-mz="${k}"]`)), num = (/** @type {HTMLInputElement} */ el) => numIt(el.value);
@@ -995,7 +995,7 @@ window.MAPPA = (() => {
     Q("mir").onclick = () => { const s = st(p); s.mir = !mirOn(p); layout(p); draw(p); };
   }
 
-  function markBtn(/** @type {Pannello} */ p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
+  function markBtn(/** @type {Pannello} */ p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) { b.classList.toggle("on", !!st(p).mark); b.setAttribute("aria-pressed", String(!!st(p).mark)); } p.cv.style.cursor = st(p).mark ? "copy" : ""; }
 
     // «Open in 3D»: the viewer is loaded the first time it is asked for
   // what the student sees when the 3D viewer cannot open: the real cause in a sentence, what to try, and the technical lines (copyable); the 2D map is untouched

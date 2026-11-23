@@ -714,3 +714,8 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .mzlive-l{left:0;top:0;width:0;border-left:1px solid var(--muted);opacity:.7}.mzlive-l[hidden]{display:none}
 .mzlive-d{left:-4.5px;width:9px;height:9px;margin-top:-4.5px;box-sizing:border-box;border-radius:50%;background:var(--accent);border:2px solid var(--ink)}
 @media (forced-colors:active){.mzchip{border-color:CanvasText;background:Canvas;color:CanvasText;opacity:1}.mzlive-d{background:Highlight;border-color:CanvasText}}
+/* mark | snap | sight: one segmented control as tall as the 3D button beside it; two active neighbours are one continuous fill (the divider takes the fill colour) */
+.pnl .mzg{align-items:stretch}.pnl .mzg .seg{box-sizing:border-box;align-items:stretch}
+.pnl .mzg .seg button{box-sizing:border-box;margin:0;line-height:1.2;padding-top:0;padding-bottom:0}
+.pnl .mzg .seg button.on,.pnl .mzg .seg button.on+button{border-left-color:var(--accent)}
+@media (forced-colors:active){.pnl .mzg .seg button.on{forced-color-adjust:none;background:Highlight;color:HighlightText;border-left-color:Highlight}}
