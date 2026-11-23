@@ -50,7 +50,7 @@ class Series:
     sha: dict = field(default_factory=dict)
     versione_crate: str = ""
     feat_version: int = 0
-    tp: dict | None = None                 # the block tp/1 (status and kinship of every row) when the run had a parent and controls
+    tp: dict | None = None                 # the block tp/2 (status and kinship of every row) when the run had a parent and controls
     membri: tuple | None = None            # (member_start, member_mz, member_rt) of the rows in "per family" mode; empty starts in "per ion" mode
 
 

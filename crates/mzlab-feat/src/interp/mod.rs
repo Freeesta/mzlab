@@ -1,4 +1,4 @@
-//! The interpretation of a row of the feature table (`interp/1`): for each row that passes the filters of `tp/1`, the modification it carries, every
+//! The interpretation of a row of the feature table (`interp/1`): for each row that passes the filters of `tp/2`, the modification it carries, every
 //! DDA MS2 of the series linked to it (with the purity of the isolation), the comparison with the MS2 and the MSn tree of the parent, and the registry of
 //! the filters (`filtri/1`). It is written in the `.mzfeat` as the block `interp` (`store`) and read back by row. It also says where the
 //! modification sits (`site`, `site.rs`) and how to draw it (`drawing`, `drawing.rs`), never as an identity. Behind the feature `interp`.

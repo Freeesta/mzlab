@@ -1,4 +1,4 @@
-//! The native executor of `tp.network@1`: the network of the products (`rete/1`) of a `.mzfeat` with the blocks `tp/1` and `interp/1`. The rules are the
+//! The native executor of `tp.network@1`: the network of the products (`rete/1`) of a `.mzfeat` with the blocks `tp/2` and `interp/1`. The rules are the
 //! transformation table of mzFinder; the engine is `mzlab_feat::network::network_text`, the one the `.wasm` `table` runs (`rete_build`).
 
 use crate::flow::{read_one, write_made, FileRunner};

@@ -1,5 +1,5 @@
 """Flow «This browser» with the steps of the transformation products (flow/lazy/flow-web-tp.js, flow-parent.js): tp.generate over a parent written in the plan (a formula, then a SMILES) gives the registry
-`hypotheses/2` of the native `flow run` of the same plan, byte for byte, and a second run takes it from OPFS (cached). Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without).
+`hypotheses/3` of the native `flow run` of the same plan, byte for byte, and a second run takes it from OPFS (cached). Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_tp_web.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path

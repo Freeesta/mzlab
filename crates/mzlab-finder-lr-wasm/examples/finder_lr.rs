@@ -129,7 +129,7 @@ fn main() {
     let shown = d
         .entries
         .iter()
-        .filter(|e| matches!(e.label, "progenitore" | "forte" | "possibile"));
+        .filter(|e| matches!(e.label, "parent" | "strong" | "possible"));
     let det: Vec<String> = shown
         .map(|e| detail(&d, e.id, |k| Ok(open(&idxs[k]))).unwrap())
         .collect();

@@ -131,7 +131,7 @@ pub fn report_json<R: ReadAt>(
     Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
 }
 
-/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`, with their numbers and the controls.
+/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/2`, with their numbers and the controls.
 pub fn tp_table_json<R: ReadAt>(
     r: &mut R,
     size: u64,

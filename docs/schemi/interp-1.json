@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "interp/1",
  "title": "interp/1: the interpretation of one row of the feature table of the products",
- "description": "One JSON per row, in the block `interp` of the `.mzfeat` (crates/mzlab-feat/src/interp/, route `table_interp(id)` of the .wasm `interp`). Only rows that pass the filters F1-F4 of `filtri/1` and have a status of product in `tp/1` are interpreted. All text is English; no intensity is ever compared with the infusion.",
+ "description": "One JSON per row, in the block `interp` of the `.mzfeat` (crates/mzlab-feat/src/interp/, route `table_interp(id)` of the .wasm `interp`). Only rows that pass the filters F1-F4 of `filtri/1` and have a status of product in `tp/2` are interpreted. All text is English; no intensity is ever compared with the infusion.",
  "type": "object",
  "required": ["schema", "id", "parent", "change", "ms1", "ms2", "vs_parent", "tree", "site", "drawing", "hidden"],
  "properties": {
@@ -15,7 +15,7 @@
   },
   "change": {
    "type": ["object", "null"],
-   "description": "the modification of the neutral formula given by the closest hypothesis of `hypotheses/2` within 5 ppm (the others are `alternatives`); null when no hypothesis matches",
+   "description": "the modification of the neutral formula given by the closest hypothesis of `hypotheses/3` within 5 ppm (the others are `alternatives`); null when no hypothesis matches",
    "required": ["delta", "neutral_formula", "ion_formula", "ppm", "source", "alternatives"],
    "properties": {
     "delta": {"type": "string", "description": "signed change with the true minus U+2212, gains first: '+O', '−2H', '+O−2H'"},
