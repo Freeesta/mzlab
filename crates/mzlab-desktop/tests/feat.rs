@@ -375,3 +375,40 @@ fn polpair_route_pairs_the_held_run_with_the_kept_one_and_holds_the_kept_one_aga
     );
     assert_eq!(held, sha(&table));
 }
+
+/// `finder/lr_dig` on a table of every full-scan file of a plan with a standard (as the Flow aligns it) opens the file of each column as `lr::dig`
+/// reads them: the same summary as the steps run directly.
+#[test]
+fn lr_dig_route_opens_the_columns_of_a_table_with_a_standard() {
+    let e = setup();
+    let (_, table) = detect_and_align(&e);
+    let files: Vec<Value> = NAMES
+        .iter()
+        .enumerate()
+        .map(|(k, n)| {
+            let g = legacy::sample::guess(n);
+            if k == 1 {
+                json!({"name": n, "type": "standard", "time": null, "kind": "full"})
+            } else {
+                json!({"name": n, "type": g.kind, "time": g.time, "kind": "full"})
+            }
+        })
+        .collect();
+    let files_json = Value::Array(files).to_string();
+    let parent_json = json!({"name": "parent", "neutral": PARENT, "adduct": "[M+H]+"}).to_string();
+    let got = e.r(
+        "finder/lr_dig",
+        json!({"files": files_json, "parent": parent_json, "registry": ""}),
+    );
+    // the table holds the four files in the order of the plan, the standard included
+    let at = |n: &str| open(&e.paths[NAMES.iter().position(|x| *x == n).unwrap()]);
+    let mut d = legacy::lr::dig(&files_json, &parent_json, "{}", &table, "", &mut |k| {
+        Ok(open(&e.paths[k]))
+    })
+    .unwrap();
+    assert_eq!(d.lc.len(), NAMES.len());
+    let names: Vec<String> = d.lc.iter().map(|f| f.name.clone()).collect();
+    d.isf = legacy::lr::isf::evaluate(&d, &mut |k| Ok(at(&names[k]))).unwrap();
+    legacy::lr::ms2link::ms2_link(&mut d, &[], &mut |k| Ok(at(&names[k]))).unwrap();
+    assert_eq!(got, legacy::lr::summary::summary(&d, "{}"));
+}
