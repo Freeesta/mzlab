@@ -93,6 +93,7 @@ WCAG 2.2 AA target. The `e2e_a11y_dati` test (`--smoke` round) fails on every `s
 - **Tolerated rules**: none.
 - **Label in Name (WCAG 2.5.3, axe `label-content-name-mismatch`)**: a control with an `aria-label` must contain its visible text.
   - axe-core 4.14 (bundled in `axe-playwright-python` 0.1.9, 2026-11-23) drops text in (parentheses) from both sides, then wants the visible words in the name as whole words, in order: "Show" is not in "Shows this bond", "xlsx" is not in "Download Excel (xlsx)".
+  - SVG `<text>` siblings join with no space: end a line with a space when the next one is a new word (`rete-vista.js` nodes).
   - Prefer no `aria-label` (the name is the content) and put the extra description in `title`; when an `aria-label` is needed it starts with the visible text. `e2e_a11y_dati` checks this by hand in every state where it runs axe.
   - The workflows pin `axe-playwright-python` (a floating version broke every PR on 2026-11-23): bump it on purpose.
 - **States not covered by axe in e2e_a11y_dati**: guided tour (covered instead by `e2e_axe_release.py`) and desktop app. Covered: startup, loaded file, MRM, map, settings, search, calculator, integration window and MSn tree (synthetic file).
