@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 
+use mzlab_feat::quant_targets::MAX_WORKERS;
+
 use crate::extract;
 use crate::Outcome;
 
@@ -17,8 +19,9 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
 
   --targets FILE   CSV (id,mz,rt_min,rt_max[,polarity][,role]) or JSON ([{...}] or {\"targets\":[...]}); polarity + or - (empty: every scan),
                    role target, standard or parent (where --offset auto measures the offset)
-  INPUT            mzML files, maker's files or folders (.d, .raw, .wiff), folders holding them, or .mzidx indexes
-  --da D           half-window of every XIC, Da (default 0.5)
+  INPUT            mzML files, maker's files or folders (.d, .raw, .wiff), folders holding them, or .mzidx indexes; every file
+                   name must be new (two files of one name are refused), and a .mzidx beside its source file is skipped
+  --da D           half-window of every XIC, Da, 0.001 to 5 (default 0.5)
   --min-sn N       lowest S/N of a detected peak (default 3)
   --offset         m/z offset (observed - true): 0 (default), a number of Da (|D| <= 0.6), auto (measured per file and polarity on the first
                    standard/parent row; none: 0, logged) or auto:MZ[@RT] (measured on that ion)
@@ -30,7 +33,7 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
                    (quant-targets/1: the same rows as objects and the log); --json is --format json
   --dry-run        print quant-targets-plan/1 (files, blanks, targets, rows) and read no data
   --out PATH       write the table there instead of the standard output
-  --workers N      files read at once (default: one per core, at most 8); the bytes written do not depend on it
+  --workers N      files read at once, 1 to 8 (default: one per core, at most 8); the bytes written do not depend on it
 
 Every row is written: area counts x s, height counts, rt min. State: detected (S/N >= --min-sn and an acceptable shape),
 forced (a peak under a threshold, numbers kept and flagged) or absent (no peak, no scan). Flags (;-joined, ok when none): no_scans (no scan of that level and polarity),
@@ -98,8 +101,8 @@ fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
         Some(v) => Some(
             v.parse::<usize>()
                 .ok()
-                .filter(|n| *n >= 1)
-                .ok_or(format!("--workers {v}: expected a whole number from 1"))?,
+                .filter(|n| (1..=MAX_WORKERS).contains(n))
+                .ok_or(format!("--workers {v}: expected a whole number from 1 to {MAX_WORKERS}"))?,
         ),
     };
     Ok(Some(Job {
@@ -118,7 +121,9 @@ fn input_error(path: &Path, e: impl std::fmt::Display) -> Error {
     Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
 }
 
-/// The files the inputs name, each once, in the order given (a folder: its files in name order).
+/// The files the inputs name, each once, in the order given (a folder: its files in name order). The rows name a file by its file name, so two
+/// files of one name (in two subfolders, say) are refused; a `.mzidx` beside the file it was built from (same folder and stem) is skipped,
+/// so that file is not integrated twice.
 fn files(inputs: &[PathBuf]) -> Result<Vec<PathBuf>> {
     let mut known = mzlab_lettori::estensioni();
     known.extend([".mzml", ".mzidx"]);
@@ -142,6 +147,23 @@ fn files(inputs: &[PathBuf]) -> Result<Vec<PathBuf>> {
             true
         }
     });
+    let stem = |p: &Path| p.with_extension("");
+    let sources: Vec<PathBuf> = out.iter().filter(|p| !is_index(p)).map(|p| stem(p)).collect();
+    out.retain(|p| {
+        let beside = is_index(p) && sources.contains(&stem(p));
+        if beside {
+            eprintln!("note: {} skipped: its source file is an input", p.display());
+        }
+        !beside
+    });
+    let mut names: Vec<String> = Vec::new();
+    for p in &out {
+        let n = name_of(p);
+        if names.contains(&n) {
+            return Err(Error::new("err.cli.input.twice").with("input", n));
+        }
+        names.push(n);
+    }
     if out.is_empty() {
         return Err(Error::new("err.quant.targets.noFiles"));
     }
@@ -171,8 +193,6 @@ fn default_workers(files: usize) -> usize {
         .max(1)
 }
 
-const MAX_WORKERS: usize = 8;
-
 fn run_job(j: &Job) -> Result<(String, String)> {
     let targets = read(&j.targets)?;
     let paths = files(&j.inputs)?;
@@ -184,9 +204,9 @@ fn run_job(j: &Job) -> Result<(String, String)> {
         ));
     }
     // parameters and table are checked before any index is built
-    let job = mzlab_feat::quant_targets::prepare(&names, &targets, &j.params)?;
     let n = paths.len();
     let workers = j.workers.unwrap_or_else(|| default_workers(n));
+    let job = mzlab_feat::quant_targets::prepare(&names, &targets, &j.params)?.with_workers(workers);
     // the bytes do not depend on the workers, so the count is said on stderr and not in the log
     eprintln!("note: {n} files on {workers} workers");
     let budget =
@@ -212,7 +232,7 @@ fn run_job(j: &Job) -> Result<(String, String)> {
                 crate::error_text::catalog_text(w).unwrap_or_default()
             );
         }
-        Ok((out.csv, out.log))
+        Ok((if j.json { out.json() } else { out.csv }, out.log))
     })
 }
 
@@ -233,10 +253,5 @@ pub fn run(args: Vec<String>) -> Outcome {
             &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
         );
     }
-    let text = if j.json && !j.dry {
-        mzlab_feat::quant_targets::to_json(&table, &log)
-    } else {
-        table
-    };
-    crate::emit(text, &j.out)
+    crate::emit(table, &j.out)
 }

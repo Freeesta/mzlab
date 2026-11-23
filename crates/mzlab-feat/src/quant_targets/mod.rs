@@ -9,9 +9,9 @@ mod targets;
 mod text;
 
 pub use params::{OffsetMode, Params};
-pub use run::{plan, prepare, run, FilePass, Job, Outcome};
+pub use run::{plan, prepare, run, FilePass, Job, Outcome, MAX_WORKERS};
 pub use targets::{parse, Role, Target};
-pub use text::{to_json, HEADER};
+pub use text::HEADER;
 
 #[cfg(test)]
 mod tests;

@@ -1463,7 +1463,7 @@
                 "anyOf":[
                   {
                     "type":"number",
-                    "minimum":0,
+                    "minimum":0.001,
                     "maximum":5,
                     "default":0.5,
                     "description":"Every trace sums the signal within this of the target m/z (after the offset)"

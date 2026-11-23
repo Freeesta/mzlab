@@ -13,6 +13,9 @@ use super::params::{OffsetMode, Params};
 use super::targets::{parse, Role, Target};
 use super::text;
 
+/// The most files a caller reads at once: past a few, one disk only seeks between the files, and the memory budget is shared by them.
+pub const MAX_WORKERS: usize = 8;
+
 /// Seconds per minute: the engine integrates counts x min, the table writes counts x s (`area_unit`).
 const SECONDS: f64 = 60.0;
 
@@ -84,12 +87,23 @@ pub(crate) struct Choice {
     pub reason: String,
 }
 
-/// What a run made: the long table (CSV), the log (`quant-targets-log/1`) and the warning keys.
+/// What a run made: the long table (CSV), the log (`quant-targets-log/1`) and the warning keys; `json` writes the same rows as
+/// `quant-targets/1` from the rows themselves.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Outcome {
     pub csv: String,
     pub log: String,
     pub warnings: Vec<String>,
+    rows: Vec<Row>,
+    names: Vec<String>,
+    targets: Vec<Target>,
+}
+
+impl Outcome {
+    /// The rows and the log as `quant-targets/1`.
+    pub fn json(&self) -> String {
+        text::json(&self.rows, &self.names, &self.targets, &self.log)
+    }
 }
 
 /// The polarity groups of the targets in first-seen order.
@@ -207,6 +221,7 @@ fn one_file<R: ReadAt>(
     targets: &[Target],
     p: &Params,
     offs: &[GroupOffset],
+    workers: usize,
 ) -> Result<Vec<Row>> {
     let mut routes = Routes::new(idx);
     let mut rows: Vec<Option<Row>> = vec![None; targets.len()];
@@ -217,10 +232,13 @@ fn one_file<R: ReadAt>(
             .filter(|&i| targets[i].polarity == g.polarity)
             .collect();
         let n = routes.xic_len(p.ms_level);
-        // the columns a sweep may hold within half the budget (`sweep_matrix` refuses more): the chunks change nothing in a column
-        let per = (mzlab_core::budget::TARGET_BYTES / 2 / (8 * n.max(1))).max(1);
+        // the columns a sweep may hold within half the budget shared by the files read at once (`sweep_matrix` refuses more than half of
+        // it): the chunks change nothing in a column
+        let per = (mzlab_core::budget::TARGET_BYTES / 2 / workers.max(1) / (8 * n.max(1))).max(1);
         for chunk in members.chunks(per) {
             let centres: Vec<f64> = chunk.iter().map(|&i| targets[i].mz).collect();
+            // the memo of the previous chunk is dropped first, so one matrix at a time is held
+            routes.forget_sweep();
             let m = routes.sweep_matrix(&centres, &vec![p.da; centres.len()], p.ms_level, None)?;
             let rt: Vec<f64> = m.rt.iter().map(|&x| round(x, 4)).collect();
             for (c, &i) in chunk.iter().enumerate() {
@@ -250,6 +268,8 @@ fn one_file<R: ReadAt>(
                 };
                 rows[i] = Some(row);
             }
+            drop(m);
+            routes.forget_sweep();
         }
     }
     Ok(rows.into_iter().flatten().collect())
@@ -265,6 +285,7 @@ pub struct Job {
     blank: Vec<bool>,
     choices: Vec<Choice>,
     warnings: Vec<String>,
+    workers: usize,
 }
 
 /// The rows, the log entry and the warning keys of one file.
@@ -329,10 +350,17 @@ pub fn prepare(names: &[String], targets: &[u8], params: &[(String, Value)]) -> 
         blank,
         choices,
         warnings,
+        workers: 1,
     })
 }
 
 impl Job {
+    /// The files the caller reads at once: each pass then takes that share of the memory budget for its sweeps (the bytes do not change).
+    pub fn with_workers(mut self, workers: usize) -> Self {
+        self.workers = workers.max(1);
+        self
+    }
+
     /// How many files the run has.
     pub fn files(&self) -> usize {
         self.names.len()
@@ -343,7 +371,7 @@ impl Job {
         let offs = offsets(&mut idx, &self.targets, &self.p)?;
         let mut warnings: Vec<&'static str> =
             offs.iter().filter_map(|g| g.offset.warning()).collect();
-        let rows = one_file(idx, k, &self.targets, &self.p, &offs)?;
+        let rows = one_file(idx, k, &self.targets, &self.p, &offs, self.workers)?;
         if rows.iter().any(|x| x.flags.contains(&"no_scans")) {
             warnings.push("warn.quant.targets.noScans");
         }
@@ -373,13 +401,13 @@ impl Job {
             files.push(f.log);
         }
         let blank = &self.blank;
-        // a target detected in a blank flags it in every other file
-        let in_blank: Vec<bool> = (0..self.targets.len())
-            .map(|i| {
-                rows.iter()
-                    .any(|r| r.target == i && blank[r.file] && r.detected())
-            })
-            .collect();
+        // a target detected in a blank flags it in every other file: one pass over the rows
+        let mut in_blank = vec![false; self.targets.len()];
+        for r in &rows {
+            if blank[r.file] && r.detected() {
+                in_blank[r.target] = true;
+            }
+        }
         for r in rows.iter_mut() {
             if in_blank[r.target] && !blank[r.file] && r.hit.is_some() {
                 r.flags.push("in_blank");
@@ -389,6 +417,9 @@ impl Job {
             csv: text::table(&rows, &self.names, &self.targets),
             log: text::log(&self.p, &files, &self.choices, &warnings),
             warnings,
+            rows,
+            names: self.names.clone(),
+            targets: self.targets.clone(),
         }
     }
 }

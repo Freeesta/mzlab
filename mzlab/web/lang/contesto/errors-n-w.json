@@ -94,6 +94,6 @@
   "err.reflist.formula": "Row error of a CSV list: the formula column cannot be read; {value} = the text read.",
   "err.reflist.mz": "Row error of a CSV list: the m/z column is not a number above 0; {value} = the text read.",
   "err.reflist.polarity": "Row error of a CSV list: the polarity column holds an unknown word; {value} = the text read.",
-  "err.quant.targets.table": "quant targets error; {row} = the row number of the target table (1 = first data row), {detail} = the field and why it is refused.",
+  "err.quant.targets.table": "quant targets error; {row} = where the row is: its line in the CSV file (1 = the first line, the header) or its 1-based item in a JSON list (0 = the whole table), {detail} = the field and why it is refused.",
   "err.quant.targets.param": "quant targets parameter error; {name} = the parameter (da, min_sn, offset...), {value} = the text given."
 }

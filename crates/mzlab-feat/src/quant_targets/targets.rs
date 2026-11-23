@@ -1,6 +1,7 @@
 //! The targets table of `quant.targets`: a CSV (`,`, `;` or tab, header first, `#` and empty lines skipped) or JSON (an array of objects, or
 //! `{"targets": [...]}`) with `id`, `mz`, `rt_min`, `rt_max` and optional `polarity` (+, -, empty = every scan) and `role` (`target`, `standard`,
-//! `parent`: the last two are where `offset = auto` measures the m/z offset). A wrong row refuses the table with its line and reason.
+//! `parent`: the last two are where `offset = auto` measures the m/z offset). A wrong row refuses the table with its source line (the line of
+//! the CSV file, header included, or the 1-based item of the JSON list) and the reason.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
@@ -24,6 +25,8 @@ pub struct Target {
     pub rt_max: f64,
     pub polarity: Option<i8>,
     pub role: Role,
+    /// Where the row is in the table: its line in the CSV file (1 = the first line), or its 1-based item in the JSON list.
+    pub line: usize,
 }
 
 fn bad(line: usize, detail: &str) -> Error {
@@ -49,12 +52,16 @@ fn role(t: &str, line: usize) -> Result<Role> {
     }
 }
 
-/// One row from its cells (text), checked: a name, a positive m/z, 0 <= rt_min < rt_max.
+/// One row from its cells (text), checked: a name without control characters (a line break would split a row of the table), a positive
+/// m/z, 0 <= rt_min < rt_max.
 fn row(cells: [&str; 6], line: usize) -> Result<Target> {
     let [id, mz, lo, hi, pol, r] = cells;
     let id = id.trim();
     if id.is_empty() {
         return Err(bad(line, "no_id"));
+    }
+    if id.chars().any(char::is_control) {
+        return Err(bad(line, "bad_id"));
     }
     let num = |t: &str| t.trim().parse::<f64>().ok().filter(|v| v.is_finite());
     let mz = num(mz)
@@ -72,6 +79,7 @@ fn row(cells: [&str; 6], line: usize) -> Result<Target> {
         rt_max: hi,
         polarity: polarity(pol, line)?,
         role: role(r, line)?,
+        line,
     })
 }
 
@@ -155,11 +163,10 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Target>> {
     if rows.is_empty() {
         return Err(Error::new("err.quant.targets.empty"));
     }
-    for (k, r) in rows.iter().enumerate() {
-        if rows[..k].iter().any(|o| o.id == r.id) {
-            return Err(Error::new("err.quant.targets.table")
-                .with("row", (k + 1).to_string())
-                .with("detail", format!("duplicate_id {}", r.id)));
+    let mut seen = std::collections::HashSet::new();
+    for r in &rows {
+        if !seen.insert(r.id.as_str()) {
+            return Err(bad(r.line, &format!("duplicate_id {}", r.id)));
         }
     }
     Ok(rows)

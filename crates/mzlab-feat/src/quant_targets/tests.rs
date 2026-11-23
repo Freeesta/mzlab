@@ -9,7 +9,15 @@ fn csv_and_json_tables_give_the_same_targets() {
     let csv = "\u{feff}# list\nName;m/z;rt_max;rt_min;Polarity;Role\na;200.5;6;4;neg;\nb;300;2;1;;standard\n";
     let json = r#"{"targets":[{"id":"a","mz":200.5,"rt_min":4,"rt_max":6,"polarity":"-"},{"name":"b","mz":300,"rt_min":1,"rt_max":2,"role":"parent"}]}"#;
     let a = parse(csv.as_bytes()).unwrap();
-    assert_eq!(a, parse(json.as_bytes()).unwrap());
+    let b = parse(json.as_bytes()).unwrap();
+    // the same targets; each keeps where it came from: its file line (the comment is line 1, the header line 2) or its JSON item
+    assert_eq!((a[0].line, a[1].line, b[0].line, b[1].line), (3, 4, 1, 2));
+    let unlined = |v: Vec<super::targets::Target>| {
+        v.into_iter()
+            .map(|t| super::targets::Target { line: 0, ..t })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(unlined(a.clone()), unlined(b));
     assert_eq!(
         (a[0].polarity, a[1].polarity, a[1].role),
         (Some(-1), None, Role::Reference)
@@ -41,6 +49,34 @@ fn wrong_rows_are_refused_with_line_and_reason() {
             e.params
         );
     }
+    // the row of a refusal is the file line (header = 1, a comment line counts) or the 1-based JSON item, as the lang context says
+    let row_of = |text: &str| {
+        let e = parse(text.as_bytes()).unwrap_err();
+        let get = |k: &str| {
+            e.params
+                .iter()
+                .find(|(n, _)| *n == k)
+                .map(|x| x.1.clone())
+                .unwrap()
+        };
+        (get("row"), get("detail"))
+    };
+    assert_eq!(
+        row_of("# c\nid,mz,rt_min,rt_max\na,100,1,2\nb,x,1,2\n"),
+        ("4".into(), "bad_mz".into())
+    );
+    assert_eq!(
+        row_of("id,mz,rt_min,rt_max\na,100,1,2\nb,101,1,2\na,102,1,2\n"),
+        ("4".into(), "duplicate_id a".into())
+    );
+    let json =
+        r#"[{"id":"a","mz":1,"rt_min":1,"rt_max":2},{"id":"b","mz":1,"rt_min":2,"rt_max":2}]"#;
+    assert_eq!(row_of(json), ("2".into(), "rt_order".into()));
+    // a control character in an id (a line break would split a row of the table) is refused; a comma or a quote is kept and quoted
+    let json = r#"[{"id":"a\nb","mz":100,"rt_min":1,"rt_max":2}]"#;
+    assert_eq!(row_of(json), ("1".into(), "bad_id".into()));
+    let ok = parse(br#"[{"id":"a, \"b\"","mz":100,"rt_min":1,"rt_max":2}]"#).unwrap();
+    assert_eq!(ok[0].id, "a, \"b\"");
     assert_eq!(parse(b"  ").unwrap_err().key, "err.quant.targets.empty");
     assert_eq!(
         parse(b"id,mz,rt_min,rt_max\n").unwrap_err().key,

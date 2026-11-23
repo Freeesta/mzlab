@@ -92,7 +92,7 @@ impl Params {
             match k.as_str() {
                 "da" => {
                     p.da = num()
-                        .filter(|x| *x > 0.0 && *x <= 5.0)
+                        .filter(|x| (0.001..=5.0).contains(x))
                         .ok_or_else(|| bad(k, &t))?
                 }
                 "min_sn" => p.min_sn = num().filter(|x| *x >= 0.0).ok_or_else(|| bad(k, &t))?,

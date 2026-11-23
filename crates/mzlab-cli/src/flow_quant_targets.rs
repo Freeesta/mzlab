@@ -25,7 +25,7 @@ pub fn quant_targets_step() -> Step {
                 .format("quant-targets-log/1"),
         ],
         params: vec![
-            Param::number("da", "XIC half window").min(0.0).max(5.0).default_num(0.5).unit("Da").doc("Every trace sums the signal within this of the target m/z (after the offset)"),
+            Param::number("da", "XIC half window").min(0.001).max(5.0).default_num(0.5).unit("Da").doc("Every trace sums the signal within this of the target m/z (after the offset)"),
             Param::number("min_sn", "Min. S/N").min(0.0).default_num(3.0)
                 .doc("A peak under this is reported with its numbers and flagged below_threshold; it does not count as detected"),
             Param::integer("min_points", "Min. points per peak").min(1.0).default_num(5.0)
@@ -75,9 +75,13 @@ fn targets_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let names: Vec<String> = raw.iter().map(|a| r.source_name(a)).collect();
     let targets = read_one(r, job, "targets")?.1;
     let params: Vec<(String, Value)> = job.resolved.params.clone();
-    let q = mzlab_feat::quant_targets::prepare(&names, &targets, &params)?;
-    // one pass per file on the pool, joined in file order: the bytes of one worker and of many are the same
-    let passes = crate::par::par_map(q.files(), |k| match paths.get(k) {
+    // one pass per file on the pool (at most MAX_WORKERS at once, each with its share of the memory budget), joined in file order: the
+    // bytes of one worker and of many are the same
+    let workers = std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .clamp(1, mzlab_feat::quant_targets::MAX_WORKERS);
+    let q = mzlab_feat::quant_targets::prepare(&names, &targets, &params)?.with_workers(workers);
+    let passes = crate::par::par_map_with(workers, q.files(), |k| match paths.get(k) {
         Some(path) => q.file(k, crate::flow_base::open(path)?),
         None => Err(Error::new("err.flow.port.missing").with("port", "raw")),
     });

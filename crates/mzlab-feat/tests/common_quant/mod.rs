@@ -43,8 +43,13 @@ fn noise(state: &mut u64) -> f64 {
     ((*state >> 11) as f64 / (1u64 << 53) as f64) * 2.0 - 1.0
 }
 
-/// An mzML file of MS1 centroid scans, one `(m/z, intensities)` pair per scan at RT 0, 0.05, ... min (a scan may hold no peak).
+/// An mzML file of MS1 centroid scans, one `(m/z, intensities)` pair per scan at RT 0, 0.05, ... min (a scan may hold no peak), all positive.
 pub fn mzml_of(scans: &[(Vec<f64>, Vec<f64>)]) -> Vec<u8> {
+    mzml_pol(scans, &vec![1; scans.len()])
+}
+
+/// As `mzml_of`, with the polarity of every scan (1 positive, -1 negative): a polarity-switching run.
+pub fn mzml_pol(scans: &[(Vec<f64>, Vec<f64>)], pols: &[i8]) -> Vec<u8> {
     let mut x = String::from(
         r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count=""#,
     );
@@ -52,9 +57,14 @@ pub fn mzml_of(scans: &[(Vec<f64>, Vec<f64>)]) -> Vec<u8> {
     for (i, (mz, y)) in scans.iter().enumerate() {
         let rt = i as f64 * STEP;
         x += &format!(
-            r#"<spectrum index="{i}" id="scan={}" defaultArrayLength="{}"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="1"/><cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum"/><cvParam cvRef="MS" accession="MS:1000130" name="positive scan"/><scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt}" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList><binaryDataArrayList count="2">{}{}</binaryDataArrayList></spectrum>"#,
+            r#"<spectrum index="{i}" id="scan={}" defaultArrayLength="{}"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="1"/><cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum"/>{}<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt}" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList><binaryDataArrayList count="2">{}{}</binaryDataArrayList></spectrum>"#,
             i + 1,
             mz.len(),
+            if pols[i] < 0 {
+                r#"<cvParam cvRef="MS" accession="MS:1000129" name="negative scan"/>"#
+            } else {
+                r#"<cvParam cvRef="MS" accession="MS:1000130" name="positive scan"/>"#
+            },
             array("MS:1000514", mz),
             array("MS:1000515", y)
         );

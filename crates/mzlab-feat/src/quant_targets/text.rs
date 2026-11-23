@@ -183,31 +183,39 @@ pub(crate) fn plan(p: &Params, names: &[String], targets: &[Target]) -> String {
     o.0
 }
 
-/// The table and the log of a run as `quant-targets/1`: one object per row, the header names as keys, numbers as numbers, empty cells `null`.
-pub fn to_json(csv: &str, log: &str) -> String {
-    let mut lines = csv.lines();
-    let keys: Vec<&str> = lines.next().unwrap_or("").split(',').collect();
+/// The rows and the log of a run as `quant-targets/1`: one object per row with the header names as keys, built from the rows themselves (not
+/// from the CSV, so a file name or an id is written as it is), numbers written as in the table, empty cells `null`.
+pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"quant-targets/1\",\"rows\":[");
-    for (i, l) in lines.enumerate() {
-        let cells = crate::lists::csv::split(l, ',');
-        o.raw(if i > 0 { ",{" } else { "{" });
-        for (j, k) in keys.iter().enumerate() {
-            let c = cells.get(j).map_or("", |s| s.as_str());
-            o.raw(if j > 0 { "," } else { "" }).str(k).raw(":");
-            let number = c.parse::<f64>().is_ok_and(f64::is_finite);
-            if matches!(*k, "file" | "id" | "flag" | "state") || !(number || c.is_empty()) {
-                o.str(c);
-            } else if number {
-                o.raw(c);
-            } else {
-                o.raw("null");
-            }
+    for (i, r) in rows.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&names[r.file]);
+        o.raw(",\"id\":").str(&targets[r.target].id);
+        let h = r.hit.as_ref();
+        let nums: [(&str, Option<String>); 4] = [
+            ("area", h.map(|h| format!("{}", h.area))),
+            ("height", h.map(|h| format!("{}", h.height))),
+            ("sn", h.map(|h| format!("{}", h.sn))),
+            ("rt", h.map(|h| format!("{}", h.rt))),
+        ];
+        for (k, v) in &nums {
+            o.raw(",").str(k).raw(":").raw(v.as_deref().unwrap_or("null"));
         }
-        o.raw("}");
+        let flag = if r.flags.is_empty() { "ok".to_string() } else { r.flags.join(";") };
+        o.raw(",\"flag\":").str(&flag).raw(",\"state\":").str(r.state());
+        let rest: [(&str, Option<String>); 4] = [
+            ("points", h.map(|h| h.points.to_string())),
+            ("shape", h.map(|h| format!("{}", h.shape))),
+            ("start_rt", h.map(|h| format!("{}", h.start_rt))),
+            ("end_rt", h.map(|h| format!("{}", h.end_rt))),
+        ];
+        for (k, v) in &rest {
+            o.raw(",").str(k).raw(":").raw(v.as_deref().unwrap_or("null"));
+        }
+        o.raw(",\"peaks_in_window\":").raw(&r.peaks.to_string());
+        o.raw(",\"smooth_half\":").raw(&r.half.to_string());
+        o.raw(",\"mz_offset_da\":").raw(&format!("{}", r.offset)).raw("}");
     }
-    o.raw("],\"log\":")
-        .raw(if log.is_empty() { "null" } else { log })
-        .raw("}");
+    o.raw("],\"log\":").raw(if log.is_empty() { "null" } else { log }).raw("}");
     o.0
 }

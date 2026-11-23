@@ -194,7 +194,7 @@ I18N.add("en", {
   "warn.qc.runorder.order_missing": "Some files have no injection order.",
   "warn.qc.runorder.qc_gap": "There is a long gap between two QC injections.",
   "warn.qc.runorder.std_levels": "The standards do not cover enough concentration levels.",
-  "err.quant.targets.table": "Row {row} of the target table cannot be used: {detail}. Each row needs id, mz, rt_min and rt_max (rt_min not above rt_max) and a new id.",
+  "err.quant.targets.table": "Row {row} of the target table cannot be used: {detail}. Each row needs id, mz, rt_min and rt_max (rt_min below rt_max) and a new id.",
   "err.quant.targets.empty": "The target table has no row.",
   "err.quant.targets.param": "The value «{value}» of {name} cannot be used: see the range in the help of quant targets.",
   "err.quant.targets.noFiles": "No data file was found among the inputs: give mzML files, maker's files or folders, or .mzidx indexes.",
