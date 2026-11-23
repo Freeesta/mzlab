@@ -76,7 +76,7 @@ Generated list (`python3 tools/cli_doc.py`):
 - **Copyable command** ("Run on CLI"): Rust text from the canonical plan with the real names of the Data files, never built in JS. POSIX: `command -v mzlab-cli || cargo install --path crates/mzlab-cli --profile cli`, `MZLAB_IN='…'` (placeholder `FOLDER_PLACEHOLDER`, filled by `F.cliFill`, quoted once), folder `mzlab-run-<date-time>`, plan in a here-doc `<<'MZFLOW'`, `flow run`. Also from `mzlab-cli flow command PLAN` and the route `api/flow/command`.
 - **Short line and `--set`** (`mzlab_core::flow::line`): `mzlab-cli flow run plan.json --in <folder> --out mzlab-out --set INSTANCE.NAME=VALUE …`, one `--set` per algorithm, preset and parameter different from the default, in plan order. `apply_sets` (algorithms and presets first) is the code of the CLI (`flow_apply.rs` refers there), of the site and of the app; error `err.cli.set` with `set` and `message`.
 - Route `api/flow/line` (app: `flow/line`): without `line` it gives the line, with `line` the plan with the `--set`s applied; `err.cli.line` if it is not a `flow run`.
-- **Binary**: releases carry static Linux builds of `mzlab-cli` (`cli-agenti.md`); any other system builds it with `cargo install --path crates/mzlab-cli --profile cli`; the copyable command assumes `mzlab-cli` in the PATH.
+- **Binary**: `tools/install.sh` installs a release build (Linux x86_64/aarch64, macOS arm64; `cli-agenti.md`); else `cargo install --path crates/mzlab-cli --profile cli`; the copyable command assumes it in the PATH.
 
 ## Names (grammar of command, option, step and parameter names)
 1. **Language**: English for every name the engine and the CLI read or print.

@@ -25,7 +25,8 @@ def test_table_links_every_installer_and_keeps_the_changelog():
 def test_table_links_the_linux_cli_binaries():
     n = note_release.nomi("1.0.0")
     t = note_release.testo("v1.0.0", "Freeesta/mzlab", "x\n")
-    assert n["cli_x86_64"] == "mzLab-1.0.0-cli-Linux-x86_64" and n["cli_aarch64"] == "mzLab-1.0.0-cli-Linux-aarch64"
-    assert n["cli_mac"] == "mzLab-1.0.0-cli-Mac-aarch64"
+    # Fixed names: tools/install.sh fetches them from releases/latest/download/.
+    assert n["cli_x86_64"] == "mzlab-cli-linux-x86_64" and n["cli_aarch64"] == "mzlab-cli-linux-aarch64"
+    assert n["cli_mac"] == "mzlab-cli-macos-aarch64"
     for k in ("cli_x86_64", "cli_aarch64", "cli_mac"):
         assert f"/releases/download/v1.0.0/{n[k]})" in t
