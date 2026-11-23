@@ -8,10 +8,9 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::Error;
 use mzlab_core::pack::{self, Manifest, Options, PartSink};
-use mzlab_core::pack_read::{self, FileSink, PartSource, PartState};
 
 use crate::extract;
-use crate::{exit, Outcome};
+use crate::Outcome;
 
 pub const PACK_HELP: &str = "mzlab-cli file pack: files and folders into parts of a fixed size plus a pack/1 manifest (SHA-256 of every file and part).
 
@@ -167,7 +166,7 @@ fn gather(inputs: &[String], skip: Option<&Path>, log: &mut String) -> Result<Ve
     Ok(items)
 }
 
-fn out_err(e: impl ToString) -> Error {
+pub(crate) fn out_err(e: impl ToString) -> Error {
     Error::new("err.run.output").with("detail", e)
 }
 
@@ -204,11 +203,11 @@ impl PartSink for DirSink {
     }
 }
 
-fn done_json_or_text(json: bool, doc: String, text: String) -> Vec<u8> {
+pub(crate) fn done_json_or_text(json: bool, doc: String, text: String) -> Vec<u8> {
     if json { doc } else { text }.into_bytes()
 }
 
-fn flags(args: &[String]) -> bool {
+pub(crate) fn flags(args: &[String]) -> bool {
     args.iter().any(|a| a == "--json")
 }
 
@@ -232,7 +231,20 @@ fn old_outputs(dir: &Path, name: &str) -> Vec<PathBuf> {
     v
 }
 
-pub fn pack_run(args: Vec<String>) -> Outcome {
+/// What the command line asked for, and the log of the choices made while reading it.
+struct Job {
+    json: bool,
+    dry: bool,
+    force: bool,
+    out: PathBuf,
+    name: String,
+    part_size: u64,
+    inputs: Vec<String>,
+    log: String,
+}
+
+/// The arguments of `file pack`; `Err` is the answer to give at once (help or a usage error).
+fn job_of(args: Vec<String>) -> Result<Job, Outcome> {
     let json = flags(&args);
     let p = match extract::parse(
         args,
@@ -240,24 +252,20 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
         &["--dry-run", "--force"],
     ) {
         Ok(Some(p)) => p,
-        Ok(None) => return Outcome::ok(format!("{PACK_HELP}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
+        Ok(None) => return Err(Outcome::ok(format!("{PACK_HELP}\n").into_bytes())),
+        Err(e) => return Err(Outcome::fail(&e)),
     };
-    let dry = p.flag("--dry-run");
     let Some(out) = p.get("--out").map(PathBuf::from) else {
-        return Outcome::fail("file pack needs --out DIR");
+        return Err(Outcome::fail("file pack needs --out DIR"));
     };
     if p.pos.is_empty() {
-        return Outcome::fail("file pack needs at least one file or folder");
+        return Err(Outcome::fail("file pack needs at least one file or folder"));
     }
     let part_text = p.get("--part-size").unwrap_or("25MB");
-    let part_size = match size_of(part_text) {
-        Ok(n) => n,
-        Err(e) => return Outcome::fail(&e),
-    };
+    let part_size = size_of(part_text).map_err(|e| Outcome::fail(&e))?;
     let name = p.get("--name").unwrap_or("pack").to_string();
     if !pack::safe_path(&name) || name.contains('/') {
-        return Outcome::fail("--name must be a plain file name");
+        return Err(Outcome::fail("--name must be a plain file name"));
     }
     let mut log = String::new();
     if p.get("--part-size").is_none() {
@@ -267,52 +275,67 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
     if p.get("--name").is_none() {
         log.push_str("name: pack by default\n");
     }
-    let skip = out.canonicalize().ok();
-    let items = match gather(&p.pos, skip.as_deref(), &mut log) {
+    Ok(Job {
+        json,
+        dry: p.flag("--dry-run"),
+        force: p.flag("--force"),
+        out,
+        name,
+        part_size,
+        inputs: p.pos.clone(),
+        log,
+    })
+}
+
+pub fn pack_run(args: Vec<String>) -> Outcome {
+    let mut job = match job_of(args) {
+        Ok(j) => j,
+        Err(o) => return o,
+    };
+    let skip = job.out.canonicalize().ok();
+    let items = match gather(&job.inputs, skip.as_deref(), &mut job.log) {
         Ok(i) => i,
-        Err(e) => return with_log(Outcome::fail(&e), log),
+        Err(e) => return with_log(Outcome::fail(&e), job.log),
     };
     let list: Vec<(String, u64)> = items.iter().map(|i| (i.rel.clone(), i.size)).collect();
     let o = Options {
-        name: name.clone(),
-        part_size,
+        name: job.name.clone(),
+        part_size: job.part_size,
         zip64_at: mzlab_core::zipstream::ZIP64_AT,
     };
-    log.push_str(&format!(
+    job.log.push_str(&format!(
         "{} files in path order, {} bytes\n",
         items.len(),
         list.iter().map(|x| x.1).sum::<u64>()
     ));
-    if dry {
+    if job.dry {
         let m = pack::plan(&list, &o);
-        log.push_str(&format!(
+        job.log.push_str(&format!(
             "dry run: {} parts planned, nothing written\n",
             m.parts.len()
         ));
-        return with_log(
-            Outcome::ok(done_json_or_text(
-                json,
-                pack::run_json(&m, true),
-                text_of(&m, true),
-            )),
-            log,
-        );
+        let doc = done_json_or_text(job.json, pack::run_json(&m, true), text_of(&m, true));
+        return with_log(Outcome::ok(doc), job.log);
     }
+    write_pack(job, &items, &list, &o)
+}
+
+/// Writes the parts and the manifest; a failed run removes the parts it had written.
+fn write_pack(mut job: Job, items: &[Item], list: &[(String, u64)], o: &Options) -> Outcome {
+    let (out, name) = (job.out.clone(), job.name.clone());
     let old = old_outputs(&out, &name);
-    if !old.is_empty() && !p.flag("--force") {
+    if !old.is_empty() && !job.force {
         let e = Error::new("err.pack.exists")
             .with("path", old[0].display())
             .with("count", old.len());
-        return with_log(Outcome::fail_error(&e), log);
+        return with_log(Outcome::fail_error(&e), job.log);
     }
     if let Err(e) = fs::create_dir_all(&out) {
-        return with_log(
-            Outcome::fail_error(&out_err(format!("{}: {e}", out.display()))),
-            log,
-        );
+        let e = out_err(format!("{}: {e}", out.display()));
+        return with_log(Outcome::fail_error(&e), job.log);
     }
     if !old.is_empty() {
-        log.push_str(&format!(
+        job.log.push_str(&format!(
             "--force: {} existing output(s) of {name} are replaced\n",
             old.len()
         ));
@@ -329,19 +352,18 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
             .map(|f| Box::new(f) as Box<dyn Read>)
             .map_err(|_| Error::new("err.cli.file").with("path", path.display()))
     };
-    let result =
-        pack::pack(&list, &mut open, &mut sink, &o).and_then(|m| sink.finish().map(|()| m));
+    let result = pack::pack(list, &mut open, &mut sink, o).and_then(|m| sink.finish().map(|()| m));
     let m = match result {
         Ok(m) => m,
         Err(e) => {
             for f in &sink.made {
                 let _ = fs::remove_file(f);
             }
-            log.push_str(&format!(
+            job.log.push_str(&format!(
                 "removed the {} part(s) this run had written\n",
                 sink.made.len()
             ));
-            return with_log(Outcome::fail_error(&e), log);
+            return with_log(Outcome::fail_error(&e), job.log);
         }
     };
     let manifest = out.join(format!("{name}.pack.json"));
@@ -349,35 +371,27 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
     if let Err(e) =
         fs::write(&tmp, pack::manifest_json(&m)).and_then(|()| fs::rename(&tmp, &manifest))
     {
-        return with_log(
-            Outcome::fail_error(&out_err(format!("{}: {e}", manifest.display()))),
-            log,
-        );
+        let e = out_err(format!("{}: {e}", manifest.display()));
+        return with_log(Outcome::fail_error(&e), job.log);
     }
     for stale in old
         .iter()
         .filter(|f| !sink.made.contains(f) && **f != manifest)
     {
         if fs::remove_file(stale).is_ok() {
-            log.push_str(&format!(
+            job.log.push_str(&format!(
                 "removed {}: a part of an older pack of the same name\n",
                 stale.display()
             ));
         }
     }
-    log.push_str(&format!(
+    job.log.push_str(&format!(
         "wrote {} parts and {}\n",
         m.parts.len(),
         manifest.display()
     ));
-    with_log(
-        Outcome::ok(done_json_or_text(
-            json,
-            pack::run_json(&m, false),
-            text_of(&m, false),
-        )),
-        log,
-    )
+    let doc = done_json_or_text(job.json, pack::run_json(&m, false), text_of(&m, false));
+    with_log(Outcome::ok(doc), job.log)
 }
 
 fn text_of(m: &Manifest, dry: bool) -> String {
@@ -391,226 +405,7 @@ fn text_of(m: &Manifest, dry: bool) -> String {
     )
 }
 
-fn with_log(mut o: Outcome, log: String) -> Outcome {
+pub(crate) fn with_log(mut o: Outcome, log: String) -> Outcome {
     o.stderr = format!("{log}{}", o.stderr);
     o
-}
-
-/// The parts in a folder, by the names the manifest lists.
-struct DirParts {
-    dir: PathBuf,
-    names: Vec<String>,
-}
-
-impl PartSource for DirParts {
-    fn size(&mut self, i: usize) -> Result<Option<u64>, Error> {
-        let p = self.dir.join(self.names.get(i).map_or("", String::as_str));
-        match fs::metadata(&p) {
-            Ok(m) if m.is_file() => Ok(Some(m.len())),
-            Ok(_) => Ok(None),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => {
-                Err(Error::new("err.run.input").with("detail", format!("{}: {e}", p.display())))
-            }
-        }
-    }
-    fn open(&mut self, i: usize, from: u64) -> Result<Box<dyn Read>, Error> {
-        use std::io::{Seek, SeekFrom};
-        let p = self.dir.join(self.names.get(i).map_or("", String::as_str));
-        let mut f = File::open(&p).map_err(|e| {
-            Error::new("err.run.input").with("detail", format!("{}: {e}", p.display()))
-        })?;
-        f.seek(SeekFrom::Start(from))
-            .map_err(|e| Error::new("err.run.input").with("detail", e))?;
-        Ok(Box::new(f))
-    }
-}
-
-/// Files written under a folder through a temporary name, renamed only when the SHA-256 matched.
-struct DirFiles {
-    root: PathBuf,
-    cur: Option<(PathBuf, PathBuf, BufWriter<File>)>,
-}
-
-impl FileSink for DirFiles {
-    fn exists(&mut self, path: &str) -> Result<bool, Error> {
-        Ok(fs::symlink_metadata(self.root.join(path)).is_ok())
-    }
-    fn begin(&mut self, path: &str) -> Result<(), Error> {
-        let to = self.root.join(path);
-        if let Some(d) = to.parent() {
-            fs::create_dir_all(d).map_err(|e| out_err(format!("{}: {e}", d.display())))?;
-        }
-        let tmp = to.with_file_name(format!(
-            ".{}.mzpack-tmp",
-            to.file_name().and_then(|n| n.to_str()).unwrap_or("f")
-        ));
-        let f = File::create(&tmp).map_err(|e| out_err(format!("{}: {e}", tmp.display())))?;
-        self.cur = Some((tmp, to, BufWriter::with_capacity(1 << 20, f)));
-        Ok(())
-    }
-    fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        match self.cur.as_mut() {
-            Some((_, _, w)) => w.write_all(bytes).map_err(out_err),
-            None => Ok(()),
-        }
-    }
-    fn end(&mut self, keep: bool) -> Result<(), Error> {
-        let Some((tmp, to, mut w)) = self.cur.take() else {
-            return Ok(());
-        };
-        let flushed = w.flush();
-        drop(w);
-        if keep && flushed.is_ok() {
-            // `--force` replaces on purpose; rename over a file is the replacement
-            fs::rename(&tmp, &to).map_err(|e| out_err(format!("{}: {e}", to.display())))
-        } else {
-            let _ = fs::remove_file(&tmp);
-            flushed.map_err(out_err)
-        }
-    }
-}
-
-fn load(manifest: &str) -> Result<(Manifest, PathBuf), Outcome> {
-    let bytes = fs::read(manifest)
-        .map_err(|_| Outcome::fail_error(&Error::new("err.cli.file").with("path", manifest)))?;
-    let m = pack::parse_manifest(&bytes).map_err(|e| Outcome::fail_error(&e))?;
-    Ok((
-        m,
-        Path::new(manifest)
-            .parent()
-            .map_or_else(|| PathBuf::from("."), Path::to_path_buf),
-    ))
-}
-
-fn code_of(parts: &[PartState], files: &[pack_read::FileState]) -> u8 {
-    match pack_read::damage(parts, files) {
-        (true, _) => exit::INTEGRITY,
-        (false, true) => exit::DATA,
-        _ => exit::OK,
-    }
-}
-
-fn counts(parts: &[PartState]) -> String {
-    let n = |s: PartState| parts.iter().filter(|p| p.key() == s.key()).count();
-    format!(
-        "{} parts: {} ok, {} missing, {} corrupt",
-        parts.len(),
-        n(PartState::Ok),
-        n(PartState::Missing),
-        n(PartState::Corrupt(""))
-    )
-}
-
-pub fn verify_run(args: Vec<String>) -> Outcome {
-    let json = flags(&args);
-    let p = match extract::parse(args, &["--parts"], &[]) {
-        Ok(Some(p)) => p,
-        Ok(None) => return Outcome::ok(format!("{VERIFY_HELP}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    let [manifest] = p.pos.as_slice() else {
-        return Outcome::fail("file check-pack needs one manifest (NAME.pack.json)");
-    };
-    let (m, here) = match load(manifest) {
-        Ok(x) => x,
-        Err(o) => return o,
-    };
-    let dir = p.get("--parts").map_or(here, PathBuf::from);
-    let mut log = format!("parts looked for in {}\n", dir.display());
-    let mut src = DirParts {
-        dir,
-        names: m.parts.iter().map(|x| x.name.clone()).collect(),
-    };
-    let total = m.parts.len();
-    let mut seen =
-        |i: usize, s: PartState| log.push_str(&format!("part {}/{total} {}\n", i + 1, s.key()));
-    let parts = match pack_read::verify_parts(&m, &mut src, &mut seen) {
-        Ok(v) => v,
-        Err(e) => return with_log(Outcome::fail_error(&e), log),
-    };
-    log.push_str(&format!("{}\n", counts(&parts)));
-    let mut o = Outcome::ok(done_json_or_text(
-        json,
-        pack_read::verify_json(&m, &parts),
-        format!("{}\n", counts(&parts)),
-    ));
-    o.code = code_of(&parts, &[]);
-    with_log(o, log)
-}
-
-pub fn unpack_run(args: Vec<String>) -> Outcome {
-    let json = flags(&args);
-    let p = match extract::parse(args, &["--out", "--parts"], &["--dry-run", "--force"]) {
-        Ok(Some(p)) => p,
-        Ok(None) => return Outcome::ok(format!("{UNPACK_HELP}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    let [manifest] = p.pos.as_slice() else {
-        return Outcome::fail("file unpack needs one manifest (NAME.pack.json)");
-    };
-    let Some(out) = p.get("--out").map(PathBuf::from) else {
-        return Outcome::fail("file unpack needs --out DIR");
-    };
-    let (m, here) = match load(manifest) {
-        Ok(x) => x,
-        Err(o) => return o,
-    };
-    let dry = p.flag("--dry-run");
-    let dir = p.get("--parts").map_or(here, PathBuf::from);
-    let mut log = format!("parts looked for in {}\n", dir.display());
-    if p.get("--parts").is_none() {
-        log.push_str("--parts: the folder of the manifest by default\n");
-    }
-    if !dry && let Err(e) = fs::create_dir_all(&out) {
-        return with_log(
-            Outcome::fail_error(&out_err(format!("{}: {e}", out.display()))),
-            log,
-        );
-    }
-    let mut src = DirParts {
-        dir,
-        names: m.parts.iter().map(|x| x.name.clone()).collect(),
-    };
-    let mut sink = DirFiles {
-        root: out,
-        cur: None,
-    };
-    let total = m.parts.len();
-    let mut seen =
-        |i: usize, s: PartState| log.push_str(&format!("part {}/{total} {}\n", i + 1, s.key()));
-    let r = pack_read::unpack(&m, &mut src, &mut sink, p.flag("--force"), !dry, &mut seen);
-    let (parts, files) = match r {
-        Ok(x) => x,
-        Err(e) => return with_log(Outcome::fail_error(&e), log),
-    };
-    let lost = files
-        .iter()
-        .filter(|f| {
-            matches!(
-                f,
-                pack_read::FileState::Lost | pack_read::FileState::Mismatch
-            )
-        })
-        .count();
-    log.push_str(&format!(
-        "{}; {} of {} files {}, {lost} lost\n",
-        counts(&parts),
-        files.len() - lost,
-        files.len(),
-        if dry { "ready" } else { "written" }
-    ));
-    let text = format!(
-        "{} of {} files {}\n",
-        files.len() - lost,
-        files.len(),
-        if dry { "ready" } else { "written" }
-    );
-    let mut o = Outcome::ok(done_json_or_text(
-        json,
-        pack_read::unpack_json(&m, &parts, &files, dry),
-        text,
-    ));
-    o.code = code_of(&parts, &files);
-    with_log(o, log)
 }

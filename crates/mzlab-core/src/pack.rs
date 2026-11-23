@@ -151,6 +151,56 @@ impl Parts<'_> {
     }
 }
 
+/// One file of the stream: header, bytes (hashed as they pass) and descriptor. More or fewer bytes than the size listed is `err.pack.growing`.
+fn add_file(
+    parts: &mut Parts<'_>,
+    (index, name, size): (usize, &str, u64),
+    open: &mut dyn FnMut(usize) -> Result<Box<dyn Read>>,
+    buf: &mut [u8],
+    zip64_at: u64,
+) -> Result<(Member, FileRec)> {
+    let at = parts.total;
+    parts.write(&zipstream::local_header(name, size, zip64_at))?;
+    let offset = parts.total;
+    let (mut sha, mut crc, mut seen) = (Sha256::new(), Crc32::new(), 0u64);
+    let mut r = open(index)?;
+    loop {
+        let n = r
+            .read(buf)
+            .map_err(|e| Error::new("err.run.input").with("detail", e))?;
+        if n == 0 {
+            break;
+        }
+        let piece = buf.get(..n).unwrap_or_default();
+        sha.update(piece);
+        crc.update(piece);
+        seen += n as u64;
+        if seen > size {
+            return Err(Error::new("err.pack.growing").with("path", name));
+        }
+        parts.write(piece)?;
+    }
+    if seen != size {
+        return Err(Error::new("err.pack.growing").with("path", name));
+    }
+    parts.write(&zipstream::descriptor(crc.value(), seen, zip64_at))?;
+    let member = Member {
+        name: name.to_string(),
+        size: seen,
+        crc: crc.value(),
+        at,
+    };
+    Ok((
+        member,
+        FileRec {
+            path: name.to_string(),
+            size: seen,
+            sha256: hex(&sha.finalize()),
+            offset,
+        },
+    ))
+}
+
 /// Writes the stream of `files` (relative path, size at the time of listing) into parts, reading each through `open`. A file whose bytes are not the
 /// size listed is still being written (or was changed): `err.pack.growing`, nothing is trusted.
 pub fn pack(
@@ -176,43 +226,9 @@ pub fn pack(
     };
     let (mut members, mut recs, mut buf) = (Vec::new(), Vec::new(), vec![0u8; BLOCK]);
     for (i, (name, size)) in files.iter().enumerate() {
-        let at = parts.total;
-        parts.write(&zipstream::local_header(name, *size, o.zip64_at))?;
-        let offset = parts.total;
-        let (mut sha, mut crc, mut seen) = (Sha256::new(), Crc32::new(), 0u64);
-        let mut r = open(i)?;
-        loop {
-            let n = r
-                .read(&mut buf)
-                .map_err(|e| Error::new("err.run.input").with("detail", e))?;
-            if n == 0 {
-                break;
-            }
-            let piece = buf.get(..n).unwrap_or_default();
-            sha.update(piece);
-            crc.update(piece);
-            seen += n as u64;
-            if seen > *size {
-                return Err(Error::new("err.pack.growing").with("path", name));
-            }
-            parts.write(piece)?;
-        }
-        if seen != *size {
-            return Err(Error::new("err.pack.growing").with("path", name));
-        }
-        parts.write(&zipstream::descriptor(crc.value(), seen, o.zip64_at))?;
-        members.push(Member {
-            name: name.clone(),
-            size: seen,
-            crc: crc.value(),
-            at,
-        });
-        recs.push(FileRec {
-            path: name.clone(),
-            size: seen,
-            sha256: hex(&sha.finalize()),
-            offset,
-        });
+        let (m, rec) = add_file(&mut parts, (i, name, *size), open, &mut buf, o.zip64_at)?;
+        members.push(m);
+        recs.push(rec);
     }
     let dir_at = parts.total;
     parts.write(&zipstream::central_directory(&members, dir_at, o.zip64_at))?;

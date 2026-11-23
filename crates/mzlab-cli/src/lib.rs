@@ -189,6 +189,8 @@ pub mod normative;
 mod pack_cmd;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod pack_cmd_tests;
+#[cfg(not(target_family = "wasm"))]
+mod pack_read_cmd;
 mod pair_cmd;
 mod par;
 #[cfg(test)]

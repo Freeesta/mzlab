@@ -7,7 +7,7 @@ use sha2::{Digest as _, Sha256};
 
 use crate::error::{Error, Result};
 use crate::json::Out;
-use crate::pack::{hex, Manifest};
+use crate::pack::{hex, FileRec, Manifest};
 
 /// Where the parts are read from. `size` is `None` for a part that is not there; `open` starts reading at an offset of the part.
 pub trait PartSource {
@@ -152,6 +152,44 @@ impl Read for Span<'_> {
     }
 }
 
+/// `err.pack.exists` naming the first file of the pack that is already there (and how many are), before anything is written.
+fn refuse_existing(m: &Manifest, sink: &mut dyn FileSink) -> Result<()> {
+    let mut taken = Vec::new();
+    for f in &m.files {
+        if sink.exists(&f.path)? {
+            taken.push(f.path.as_str());
+        }
+    }
+    match taken.first() {
+        Some(first) => Err(Error::new("err.pack.exists")
+            .with("path", first)
+            .with("count", taken.len())),
+        None => Ok(()),
+    }
+}
+
+/// Writes one file from its span and keeps it only when its SHA-256 is the manifest's; a write failure drops it and is the error.
+fn copy_file(span: &mut Span<'_>, sink: &mut dyn FileSink, f: &FileRec) -> Result<bool> {
+    sink.begin(&f.path)?;
+    let (mut sha, mut buf) = (Sha256::new(), vec![0u8; 1 << 20]);
+    let ok = loop {
+        match span.read(&mut buf) {
+            Ok(0) => break true,
+            Ok(n) => {
+                let piece = buf.get(..n).unwrap_or_default();
+                sha.update(piece);
+                if let Err(e) = sink.write(piece) {
+                    sink.end(false)?;
+                    return Err(e);
+                }
+            }
+            Err(_) => break false,
+        }
+    } && hex(&sha.finalize()) == f.sha256;
+    sink.end(ok)?;
+    Ok(ok)
+}
+
 /// Writes every file whose parts are intact (`write` false: only says which would be), and returns the state of each part and each file.
 /// Without `force` an existing target file is `err.pack.exists` before anything is written or read.
 pub fn unpack(
@@ -163,17 +201,7 @@ pub fn unpack(
     seen: &mut dyn FnMut(usize, PartState),
 ) -> Result<(Vec<PartState>, Vec<FileState>)> {
     if !force {
-        let mut taken = Vec::new();
-        for f in &m.files {
-            if sink.exists(&f.path)? {
-                taken.push(f.path.as_str());
-            }
-        }
-        if let Some(first) = taken.first() {
-            return Err(Error::new("err.pack.exists")
-                .with("path", first)
-                .with("count", taken.len()));
-        }
+        refuse_existing(m, sink)?;
     }
     let parts = verify_parts(m, src, seen)?;
     let (mut starts, mut at) = (Vec::new(), 0u64);
@@ -209,23 +237,7 @@ pub fn unpack(
             end: f.offset + f.size,
             cur: None,
         };
-        sink.begin(&f.path)?;
-        let (mut sha, mut buf) = (Sha256::new(), vec![0u8; 1 << 20]);
-        let ok = loop {
-            match span.read(&mut buf) {
-                Ok(0) => break true,
-                Ok(n) => {
-                    let piece = buf.get(..n).unwrap_or_default();
-                    sha.update(piece);
-                    if let Err(e) = sink.write(piece) {
-                        sink.end(false)?;
-                        return Err(e);
-                    }
-                }
-                Err(_) => break false,
-            }
-        } && hex(&sha.finalize()) == f.sha256;
-        sink.end(ok)?;
+        let ok = copy_file(&mut span, sink, f)?;
         files.push(if ok {
             FileState::Written
         } else {

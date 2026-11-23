@@ -90,6 +90,24 @@ pub fn framing(name: &str, size: u64, zip64_at: u64) -> (u64, u64) {
     (head, if big { 24 } else { 16 })
 }
 
+/// The ZIP64 end record and its locator, written after the central directory of `dir_len` bytes that starts at `dir_at`.
+fn zip64_end(o: &mut Vec<u8>, entries: u64, dir_len: u64, dir_at: u64) {
+    u32le(o, 0x0606_4B50);
+    u64le(o, 44);
+    u16le(o, 45);
+    u16le(o, 45);
+    u32le(o, 0);
+    u32le(o, 0);
+    u64le(o, entries);
+    u64le(o, entries);
+    u64le(o, dir_len);
+    u64le(o, dir_at);
+    u32le(o, 0x0706_4B50);
+    u32le(o, 0);
+    u64le(o, dir_at + dir_len);
+    u32le(o, 1);
+}
+
 /// The central directory and the end record(s) for `members`, which the stream wrote from offset 0 to `dir_at`.
 pub fn central_directory(members: &[Member], dir_at: u64, zip64_at: u64) -> Vec<u8> {
     let mut o = Vec::new();
@@ -131,21 +149,7 @@ pub fn central_directory(members: &[Member], dir_at: u64, zip64_at: u64) -> Vec<
     let many = members.len() >= usize::from(u16::MAX);
     let wide = many || dir_at >= zip64_at || dir_len >= zip64_at;
     if wide {
-        let end64 = dir_at + dir_len;
-        u32le(&mut o, 0x0606_4B50);
-        u64le(&mut o, 44);
-        u16le(&mut o, 45);
-        u16le(&mut o, 45);
-        u32le(&mut o, 0);
-        u32le(&mut o, 0);
-        u64le(&mut o, members.len() as u64);
-        u64le(&mut o, members.len() as u64);
-        u64le(&mut o, dir_len);
-        u64le(&mut o, dir_at);
-        u32le(&mut o, 0x0706_4B50);
-        u32le(&mut o, 0);
-        u64le(&mut o, end64);
-        u32le(&mut o, 1);
+        zip64_end(&mut o, members.len() as u64, dir_len, dir_at);
     }
     let count = u16::try_from(members.len()).unwrap_or(u16::MAX);
     u32le(&mut o, 0x0605_4B50);

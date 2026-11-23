@@ -14,7 +14,8 @@ fn validate(_: Vec<String>) -> Outcome {
 }
 
 #[cfg(not(target_family = "wasm"))]
-use crate::pack_cmd::{pack_run, unpack_run, verify_run};
+use crate::pack_cmd::pack_run;
+use crate::pack_read_cmd::{unpack_run, verify_run};
 #[cfg(target_family = "wasm")]
 fn pack_run(_: Vec<String>) -> Outcome {
     Outcome::fail("unknown command file pack")
