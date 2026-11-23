@@ -176,7 +176,7 @@ header .hq:focus-visible{outline-offset:1px}header .hq[data-help=header]{border-
 #sb-header{display:flex;align-items:center;gap:6px;padding:var(--sp-2) 8px;border-bottom:1px solid var(--line);flex:none;margin:0}
 #sb-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-dock-btn{background:transparent;border:0;padding:2px 4px;min-width:24px;min-height:24px;cursor:pointer;color:var(--muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
-.sb-dock-btn:hover{color:var(--ink);background:var(--soft)}
+.sb-dock-btn:hover{color:var(--ink);background:var(--soft)}#sb-by:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 #sb-panels{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 6px}
 #sb-panels [role="tabpanel"][hidden]{display:none!important}
 #sidebar-resize-handle{position:absolute;right:-3px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:60;touch-action:none}
@@ -629,7 +629,37 @@ html.in-draw #sb-toggle{display:none}
 
 /* × of a file row: shown on hover and focus, always on touch; the row keeps its height */
 .fl-x{margin-left:auto;flex:none;min-width:24px;min-height:24px;padding:0 4px;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;opacity:0}
-.fl:hover>.fl-x,.fl:focus-within>.fl-x,.fl-x:focus-visible{opacity:1}.fl-x:hover{background:var(--sel);color:var(--ink)}
+.fl:hover>.fl-x,.fl:focus-within>.fl-x,.fl-x:focus-visible{opacity:1}.fl-x:hover{background:var(--sel);color:var(--ink)}.fl-x:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* Touch (coarse pointer): every control of the Files tab is a 44x44 target and the rows are as short as that allows. The row is 44 px (no extra padding, the old 63 px pitch is gone); the tick box is a 44x44 input whose drawn box stays 14 px; the x fills the row height; adjacent targets touch but never overlap. Fine pointers keep the compact desktop rows. */
+@media (pointer:coarse){
+ body #flst .fl:not(.pr):not(.pend):not(.up){min-height:44px;padding-top:0;padding-bottom:0;padding-left:10px;padding-right:14px;gap:6px}
+ body #flst .fl:not(.pr):not(.pend):not(.up)>.fl-x{min-width:44px;width:44px;min-height:44px;height:44px;padding:0;margin-left:0;display:inline-flex;align-items:center;justify-content:center}
+ body #flst .pr-container .fl.pr{min-height:44px!important;padding-left:0}
+ body #flst .fl.pr .pn{display:inline-flex;align-items:center;min-height:44px;padding:0 10px}
+ body #flst .fl .pr-tog{width:44px;height:44px}
+ body #flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],.gall,[data-pr]){width:44px;height:44px;margin:0 -6px 0 -10px}
+ body #flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],.gall,[data-pr])::before{inset:15px}
+ body #flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],.gall,[data-pr]):checked::after{left:19.5px;top:16px}
+ body #flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],.gall):indeterminate::after{left:17px;top:21px}
+ body #flst .fgh{min-height:44px;margin:0;gap:0;padding:0 14px 0 10px}
+ body #flst .fgh>input.gall[type=checkbox]{margin:0 0 0 -10px}
+ body #flst .fgh .chv{width:44px;height:44px;margin:0}
+ body #flst .fgh>span:not(.chv){padding-left:4px}
+ #sb-header{padding-right:14px}   /* clear of the 24 px resize handle on the panel edge */
+ #sb-header button,#sb-by{min-width:44px;min-height:44px}
+ #tools button,#tools select{min-height:44px}
+ #tools button{min-width:44px;flex-shrink:0}   /* min-width would lift the automatic minimum: the text buttons must not shrink, #g-add scrolls */
+ #navfile button,#navfile select{height:44px}
+ #navfile button{min-width:44px}
+ html #tools>#g-file{min-width:calc(9ch + 98px)}   /* room for the two 44 px arrows: the file box (min-width 0) gives way, not the arrows */
+ #navfile select{min-width:0}
+ :root{--pnl-hd-gap:7px}   /* the cursor handle of a chromatogram (18 px + 11 px hit area) must not reach the 44 px header buttons above it */
+ .sb-dock-btn,#v-data.sb-sheet #sb-x{min-width:44px;min-height:44px}
+ /* the card headers (chromatogram, spectrum, map) beside the list: same 44 px floor; the 1/2 link chip stays a small pill with an invisible 44 px hit area */
+ .pnl .hd :is(select,input:not([type=checkbox]),.bt,.corrb,.fcount,.x,.ci,.ovb){min-width:44px;min-height:44px}
+ .pnl .hd button.ppair{position:relative;overflow:visible}
+ .pnl .hd button.ppair::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+}
 @media (pointer:coarse){.fl-x{opacity:1;min-width:40px;min-height:40px}}
 /* drop anywhere on the work area while files are open */
 #v-workspace{position:relative}#v-workspace.ws-drop::after{content:attr(data-dz);position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;border:3px dashed var(--accent);border-radius:8px;background:color-mix(in srgb,var(--sel) 88%,transparent);color:var(--ink);font-weight:600;pointer-events:none}
