@@ -248,6 +248,6 @@ fn a_block_of_the_first_version_is_refused() {
         .position(|w| w == b"\"schema\":\"tp/2\"")
         .expect("the meta names the block");
     bytes[at + "\"schema\":\"tp/".len()] = b'1';
-    let err = read_table(&bytes).err().expect("the old block is refused");
+    let err = read_table(&bytes).expect_err("the old block is refused");
     assert_eq!(err.key, "error.mzfeat.tpFormat");
 }
