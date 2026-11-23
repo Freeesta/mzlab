@@ -537,13 +537,18 @@
           {
             "properties":{
               "step":{"const":"convert.mzml@1"},
-              "name":{"enum":["peaks","zlib_level","numpress","dad"]},
+              "name":{"enum":["peaks","spectrum","zlib_level","numpress","dad"]},
               "value":{
                 "anyOf":[
                   {
                     "enum":["file","profile","mzlab"],
                     "default":"file",
                     "description":"file: the points the file holds (the centroids of the maker where it has them, else the profile, which the next step reduces to peaks and the run reports); profile: the profile points of the file, an error where it has none; mzlab: our own centroids, with parameters estimated on the sample and written in the mzML (MS:1000035)"
+                  },
+                  {
+                    "enum":["auto","centroid","profile"],
+                    "default":"auto",
+                    "description":"The spectrum-type term of the mzML (MS:1000127 centroid, MS:1000128 profile); the points are not changed. auto: what the reader says, except that sparse data (isolated ion counts, no continuous trace) are written as centroid; centroid / profile: every spectrum as asked. The decision is logged and written in the run of the mzML"
                   },
                   {
                     "type":"integer",

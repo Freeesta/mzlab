@@ -17,12 +17,12 @@ usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compressi
                        points of the profile) or mzlab (centroids of mzLab)
   --spectrum TYPE      the spectrum-type term of the mzML, the points do not change: auto (default: what the reader says, but sparse data, isolated
                        ion counts with no continuous trace, are written as centroid MS:1000127), centroid or profile (every spectrum as asked).
-                       The decision is told on stderr (`spectrum type: ...`) and, when you asked or auto changed the reader's flag, written in the
-                       run of the mzML (userParam `mzLab spectrum type`) and the `spectrum_type` of the file note of the provenance
+                       The decision is told on stderr (`spectrum type: INPUT: ...`) and kept as `spectrum_type` in the provenance and in the --report;
+                       when you asked or auto changed the reader's flag it is also in the run of the mzML (userParam `mzLab spectrum type`)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
   --report FILE.json   the convert/1 document in a file: {schema, dry_run, out, items}, one item per input: input, output, sha256, spectra, seconds, skipped,
-                       conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+                       conversion, warnings, spectrum_type (centroids with --peaks mzlab); or input, error, cause
   --json               the same convert/1 document on stdout instead of the list of mzML files; a non-zero exit gives one error/1 that carries it as `report`
   --dry-run            checks the inputs, the samples and the settings and says what would be converted (input, output, sample_id, reader, input_bytes)
                        without writing anything

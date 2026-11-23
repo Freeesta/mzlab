@@ -94,11 +94,11 @@ fn auto_writes_sparse_counts_as_centroid_and_a_continuous_trace_as_profile() {
     assert!(bt.len() == 6 && bt.iter().all(|x| x.profile && x.mz.len() == 200));
     // the decision is told on stderr, and recorded in the file only where it changed what the reader says
     assert!(
-        o.stderr.contains("spectrum type: spectrum=auto; written=centroid; basis=sparse"),
+        o.stderr.contains("sparse.mzXML: spectrum=auto; written=centroid; basis=sparse"),
         "{}",
         o.stderr
     );
-    assert!(o.stderr.contains("written=profile; basis=continuous points"), "{}", o.stderr);
+    assert!(o.stderr.contains("trace.mzXML: spectrum=auto; written=profile; basis=continuous points"), "{}", o.stderr);
     assert!(s.contains("mzLab spectrum type") && !t.contains("mzLab spectrum type"));
     let _ = std::fs::remove_dir_all(&dir);
 }
