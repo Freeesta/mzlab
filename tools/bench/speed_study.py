@@ -98,6 +98,48 @@ def sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
 
 
+def data(w: Path, a) -> tuple[Path, Path]:
+    """The LR series and the HR set under WORK, generated only when missing or of another size."""
+    lr, hr = w / "lr", w / "hr"
+    if not (lr / "targets.csv").exists() or len(list(lr.glob("*.mzML"))) != a.files:
+        shutil.rmtree(lr, ignore_errors=True)
+        t0 = time.perf_counter()
+        speed_synthetic.make(lr, files=a.files, targets=a.targets)
+        print(f"LR data {time.perf_counter() - t0:.1f} s", file=sys.stderr)
+    if not hr.exists() or len(list(hr.glob("*.mzML"))) != a.hr_files:
+        shutil.rmtree(hr, ignore_errors=True)
+        subprocess.run([sys.executable, str(ROOT / "tools" / "synthetic_data_large.py"), str(hr), "--files", str(a.hr_files), "--scans", "2000",
+                        "--compounds", "1500", "--noise", "800"], check=True)
+    return lr, hr
+
+
+def inprocess(w: Path, files, tpath: Path, threads: int, res: dict) -> None:
+    """In-process rows (speed_targets example) and their byte-for-byte comparison with the per-call bytes."""
+    # in-process: the per-call route on a few files (whole target list), then the list and the one pass on every file
+    few = files[:4]
+    outs = {}
+    rows = {}
+    for mode, fs, th in [("calls", few, 1), ("list", files, 1), ("list", files, threads), ("onepass", files, 1),
+                         ("onepass", files, threads)]:
+        out = w / f"out-{mode}-{th}-{len(fs)}.tsv"
+        r = run([str(EX), mode, str(tpath), str(out), str(th), *map(str, fs)], capture=True)
+        j = json.loads(r["out"].strip().splitlines()[-1])
+        j["outside_wall_s"] = r["wall_s"]
+        j["outside_cpu_s"] = r["cpu_s"]
+        if mode == "calls":
+            j["extrapolated_s"] = j["wall_s"] * len(files) / len(fs)
+        rows[f"{mode}-{th}"] = j
+        outs[f"{mode}-{th}"] = out
+    # byte-for-byte: the lines of the few files in every output
+    keep = {f.name for f in few}
+    def lines(p):
+        return [l for l in p.read_text().splitlines() if l.split("\t", 1)[0] in keep]
+    ref = lines(outs["calls-1"])
+    res["identical_to_calls"] = {k: lines(p) == ref for k, p in outs.items()}
+    res["identical_all_files"] = {k: sha(p) for k, p in outs.items() if k != "calls-1"}
+    res["inprocess"] = rows
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("work", type=Path)
@@ -113,16 +155,7 @@ def main() -> None:
         subprocess.run(["cargo", "build", "--profile", "cli", "-p", "mzlab-cli", "--bin", "mzlab-cli", "--example", "speed_targets"],
                        cwd=ROOT, check=True)
     w = a.work
-    lr, hr = w / "lr", w / "hr"
-    if not (lr / "targets.csv").exists() or len(list(lr.glob("*.mzML"))) != a.files:
-        shutil.rmtree(lr, ignore_errors=True)
-        t0 = time.perf_counter()
-        speed_synthetic.make(lr, files=a.files, targets=a.targets)
-        print(f"LR data {time.perf_counter() - t0:.1f} s", file=sys.stderr)
-    if not hr.exists() or len(list(hr.glob("*.mzML"))) != a.hr_files:
-        shutil.rmtree(hr, ignore_errors=True)
-        subprocess.run([sys.executable, str(ROOT / "tools" / "synthetic_data_large.py"), str(hr), "--files", str(a.hr_files), "--scans", "2000",
-                        "--compounds", "1500", "--noise", "800"], check=True)
+    lr, hr = data(w, a)
     files = sorted(lr.glob("QQQ_*.mzML"))
     hrs = sorted(hr.glob("G_*.mzML"))
     tpath = lr / "targets.csv"
@@ -153,29 +186,7 @@ def main() -> None:
     pcc = per_call(files, ts, a.calls, cache)
     pcc["extrapolated_s"] = pcc["per_call_ms"] * nm / 1e3
     res["per_call_cache"] = pcc
-    # in-process: the per-call route on a few files (whole target list), then the list and the one pass on every file
-    few = files[:4]
-    outs = {}
-    rows = {}
-    for mode, fs, th in [("calls", few, 1), ("list", files, 1), ("list", files, a.threads), ("onepass", files, 1),
-                         ("onepass", files, a.threads)]:
-        out = w / f"out-{mode}-{th}-{len(fs)}.tsv"
-        r = run([str(EX), mode, str(tpath), str(out), str(th), *map(str, fs)], capture=True)
-        j = json.loads(r["out"].strip().splitlines()[-1])
-        j["outside_wall_s"] = r["wall_s"]
-        j["outside_cpu_s"] = r["cpu_s"]
-        if mode == "calls":
-            j["extrapolated_s"] = j["wall_s"] * len(files) / len(fs)
-        rows[f"{mode}-{th}"] = j
-        outs[f"{mode}-{th}"] = out
-    # byte-for-byte: the lines of the few files in every output
-    keep = {f.name for f in few}
-    def lines(p):
-        return [l for l in p.read_text().splitlines() if l.split("\t", 1)[0] in keep]
-    ref = lines(outs["calls-1"])
-    res["identical_to_calls"] = {k: lines(p) == ref for k, p in outs.items()}
-    res["identical_all_files"] = {k: sha(p) for k, p in outs.items() if k != "calls-1"}
-    res["inprocess"] = rows
+    inprocess(w, files, tpath, a.threads, res)
     save(w, res)
     # conversion (a synthetic Waters .raw folder of 2400 centroid scans: an mzML is not converted) and Dig/align
     import waters_sintetico

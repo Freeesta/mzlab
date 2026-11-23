@@ -193,15 +193,9 @@ fn usage() -> (f64, f64, u64) {
 }
 
 /// The cost of each step behind one `trace xic` call on `file` (first target), in ms.
-fn phases(file: &str, ts: &[Target]) {
-    let t = &ts[0];
+/// Times the three stages of building an index: full decode, scan table + hash, index build (ms each), plus the peak count and index bytes.
+fn build_phases(file: &str, size: u64) -> ([f64; 3], usize, Vec<u8>) {
     let ms = |t0: Instant| t0.elapsed().as_secs_f64() * 1e3;
-    let size = std::fs::metadata(file).expect("file").len();
-    let tmp = std::env::temp_dir().join(format!("speed-phases-{}", std::process::id()));
-    std::fs::create_dir_all(&tmp).expect("tmp");
-    let t0 = Instant::now();
-    let whole = by_calls(file, t, &tmp);
-    let call = ms(t0);
     let t0 = Instant::now();
     let mut n = 0usize;
     mzml::parse(BufReader::new(File::open(file).expect("open")), |it| {
@@ -226,7 +220,44 @@ fn phases(file: &str, ts: &[Target]) {
     )
     .expect("index");
     let build = ms(t0);
-    let bytes = out.into_inner();
+    ([decode, prepare, build], n, out.into_inner())
+}
+
+/// One `trace xic` call with every target in the list (ms), the route an agent uses for many ions on one file.
+fn list_call(file: &str, ts: &[Target], tmp: &std::path::Path) -> f64 {
+    let t0 = Instant::now();
+    let list = ts.iter().map(|u| num(u.mz)).collect::<Vec<_>>().join(",");
+    let csv = tmp.join("all.csv");
+    let a: Vec<String> = [
+        "trace",
+        "xic",
+        file,
+        "--mz",
+        &list,
+        "--da",
+        &num(DA),
+        "--format",
+        "csv",
+        "--out",
+        &csv.to_string_lossy(),
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    assert_eq!(mzlab_cli::execute(&a).code, 0);
+    t0.elapsed().as_secs_f64() * 1e3
+}
+
+fn phases(file: &str, ts: &[Target]) {
+    let t = &ts[0];
+    let ms = |t0: Instant| t0.elapsed().as_secs_f64() * 1e3;
+    let size = std::fs::metadata(file).expect("file").len();
+    let tmp = std::env::temp_dir().join(format!("speed-phases-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).expect("tmp");
+    let t0 = Instant::now();
+    let whole = by_calls(file, t, &tmp);
+    let call = ms(t0);
+    let ([decode, prepare, build], n, bytes) = build_phases(file, size);
     let isize = bytes.len();
     let t0 = Instant::now();
     let ix = Index::open(bytes, isize as u64).expect("open index");
@@ -246,40 +277,11 @@ fn phases(file: &str, ts: &[Target]) {
     let text = o.0;
     assert_eq!(text, r.xic(t.mz, DA, 1).expect("xic"), "the route's text");
     let t0 = Instant::now();
-    let mut n_all = 0usize;
     for u in ts {
-        n_all += r.xic(u.mz, DA, 1).expect("xic").len();
+        std::hint::black_box(r.xic(u.mz, DA, 1).expect("xic"));
     }
     let xic_each = ms(t0) / ts.len() as f64;
-    let t0 = Instant::now();
-    let list = format!(
-        "{},{}",
-        num(t.mz),
-        ts.iter()
-            .skip(1)
-            .map(|u| num(u.mz))
-            .collect::<Vec<_>>()
-            .join(",")
-    );
-    let csv = tmp.join("all.csv");
-    let a: Vec<String> = [
-        "trace",
-        "xic",
-        file,
-        "--mz",
-        &list,
-        "--da",
-        &num(DA),
-        "--format",
-        "csv",
-        "--out",
-        &csv.to_string_lossy(),
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect();
-    assert_eq!(mzlab_cli::execute(&a).code, 0);
-    let list_call = ms(t0);
+    let list_call = list_call(file, ts, &tmp);
     let x: Vec<f64> = x.iter().map(|&v| json::round(v, 4)).collect();
     let y: Vec<f64> = y.iter().map(|&v| json::round(v, 1)).collect();
     let t0 = Instant::now();
@@ -287,7 +289,6 @@ fn phases(file: &str, ts: &[Target]) {
     let lr = ms(t0);
     assert_eq!(j, whole, "the steps give the bytes of the call");
     let _ = std::fs::remove_dir_all(&tmp);
-    let _ = n_all;
     println!(
         "{{\"mode\":\"phases\",\"xic_text_each_ms\":{xic_each:.4},\"list_call_ms\":{list_call:.2},\"n_targets\":{},\"file_mb\":{:.3},\"peaks\":{n},\"index_mb\":{:.3},\"call_ms\":{call:.3},\"decode_ms\":{decode:.3},\"prepare_ms\":{prepare:.3},\"build_ms\":{build:.3},\"open_ms\":{open:.3},\"xic_ms\":{xic:.4},\"render_ms\":{render:.4},\"json_bytes\":{},\"lr_auto_ms\":{lr:.4}}}",
         ts.len(),
