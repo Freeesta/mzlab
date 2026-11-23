@@ -113,6 +113,13 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
     })
 }
 
+/// The columns of the `.mzfeat` `table` for the plan `files_json` (`columns_for` with its number of files): the files `dig` opens, column by column,
+/// for the callers that open them by name (the app).
+pub fn table_columns(files_json: &str, table: &[u8]) -> Res<Vec<FileIn>> {
+    let n = crate::store::table_n_files(table).map_err(|e| e.to_string())?;
+    columns_for(&files(files_json)?, n)
+}
+
 /// The columns of a table of `n` files: `columns` when it has their number (the page runs the pipeline on those), else every full-scan file of the
 /// plan when the table holds them all (a Flow plan aligns every file: standards, QCs and the like are then columns the kinetics never read).
 pub fn columns_for(files: &[FileLr], n: usize) -> Res<Vec<FileIn>> {
