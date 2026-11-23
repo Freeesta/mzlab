@@ -45,6 +45,9 @@ pub struct Settings {
     pub dead_factor: f64,
     /// Products are proposed only when the parent is a chromatographic peak whose area falls over time (`parent_check`).
     pub parent_decay: bool,
+    /// Rows of one ion split by the alignment are merged before the kinetics (`merge`): m/z within `merge_da` Da and RT within `merge_rt_min` min; 0 = off.
+    pub merge_da: f64,
+    pub merge_rt_min: f64,
     /// Options of the comparison of conditions (`groups/1`) from the settings key `groups`; the defaults of the module when absent.
     pub groups: crate::groups::GroupOpts,
 }
@@ -75,6 +78,8 @@ impl Default for Settings {
             min_points: 5,
             dead_factor: 1.5,
             parent_decay: true,
+            merge_da: 0.3,
+            merge_rt_min: 0.3,
             groups: crate::groups::GroupOpts::default(),
         }
     }
@@ -102,13 +107,56 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
             .iter()
             .map(|f| (f.kind_type.as_str(), f.cond.as_str())),
     ) > 1;
+    pick(files, |f| {
+        matches!(f.kind_type.as_str(), "sample" | "blank" | "control")
+            || (multi && f.kind_type == "standard")
+    })
+}
+
+/// The columns of the `.mzfeat` `table` for the plan `files_json` (`columns_for` with its number of files): the files `dig` opens, column by column,
+/// for the callers that open them by name (the app).
+pub fn table_columns(files_json: &str, table: &[u8]) -> Res<Vec<FileIn>> {
+    let n = crate::store::table_n_files(table).map_err(|e| e.to_string())?;
+    columns_for(&files(files_json)?, n)
+}
+
+/// The columns of a table of `n` files: `columns` when it has their number (the page runs the pipeline on those), else every full-scan file of the
+/// plan when the table holds them all (a Flow plan aligns every file: standards, QCs and the like are then columns the kinetics never read).
+pub fn columns_for(files: &[FileLr], n: usize) -> Res<Vec<FileIn>> {
+    let lc = columns(files);
+    if lc.len() == n {
+        return Ok(lc);
+    }
+    let all = pick(files, |_| true);
+    if all.len() == n {
+        return Ok(all);
+    }
+    let roles: Vec<String> = ["sample", "blank", "control", "standard", "other"]
+        .iter()
+        .map(|r| {
+            (
+                r,
+                files
+                    .iter()
+                    .filter(|f| f.kind == "full" && f.kind_type == *r)
+                    .count(),
+            )
+        })
+        .filter(|x| x.1 > 0)
+        .map(|(r, c)| format!("{c} {r}"))
+        .collect();
+    Err(format!(
+        "the feature table has {n} file columns, but the plan lists {} full-scan files ({}), of which the Dig reads {} as samples, blanks and controls: give the Dig the files the table was aligned on, in the same order",
+        all.len(),
+        roles.join(", "),
+        lc.len()
+    ))
+}
+
+fn pick(files: &[FileLr], keep: impl Fn(&FileLr) -> bool) -> Vec<FileIn> {
     files
         .iter()
-        .filter(|f| {
-            f.kind == "full"
-                && (matches!(f.kind_type.as_str(), "sample" | "blank" | "control")
-                    || (multi && f.kind_type == "standard"))
-        })
+        .filter(|f| f.kind == "full" && keep(f))
         .map(|f| {
             let mut x = FileIn {
                 name: f.name.clone(),
@@ -181,7 +229,9 @@ fn apply_sample(x: &mut FileLr, c: &mzlab_core::samples::Sample) {
         "sample" | "t0" => x.kind_type = "sample".into(),
         "blank" => x.kind_type = "blank".into(),
         "dark" => x.kind_type = "control".into(),
-        "std" => x.kind_type = "standard".into(),
+        "std" | "calibration" => x.kind_type = "standard".into(),
+        // a QC, pool or infusion is neither a kinetic point nor a control: a column only when the table carries it (`columns_for`)
+        "qc" | "pool" | "infusion" => x.kind_type = "other".into(),
         _ => {}
     }
     x.time = c.time_min;
@@ -256,6 +306,8 @@ pub fn settings(settings_json: &str) -> Settings {
     s.min_points = num("min_points").map_or(s.min_points, |x| x.max(1.0) as usize);
     s.dead_factor = num("dead_factor").map_or(s.dead_factor, |x| x.max(0.0));
     s.parent_decay = flag("parent_decay").unwrap_or(s.parent_decay);
+    s.merge_da = num("merge_da").map_or(s.merge_da, |x| x.max(0.0));
+    s.merge_rt_min = num("merge_rt_min").map_or(s.merge_rt_min, |x| x.max(0.0));
     if let Some(o) = v
         .get("groups")
         .and_then(|g| crate::groups::opts_from_value(g).ok())
@@ -290,6 +342,10 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
         .num(s.dead_factor);
     o.raw(",\"parent_decay\":")
         .raw(if s.parent_decay { "true" } else { "false" });
+    o.raw(",\"merge_da\":")
+        .num(s.merge_da)
+        .raw(",\"merge_rt_min\":")
+        .num(s.merge_rt_min);
     o.raw("}");
 }
 

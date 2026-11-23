@@ -85,11 +85,12 @@ impl State {
         } else {
             s("settings")
         };
-        let lc: Vec<String> =
-            legacy::lr::plan::columns(&legacy::lr::plan::files(s("files")).map_err(user)?)
-                .into_iter()
-                .map(|f| f.name)
-                .collect();
+        // the columns as `dig` reads them (a Flow table holds every full-scan file, standards included)
+        let lc: Vec<String> = legacy::lr::plan::table_columns(s("files"), table)
+            .map_err(user)?
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
         let mut d = legacy::lr::dig(
             s("files"),
             s("parent"),

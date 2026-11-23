@@ -90,7 +90,8 @@
       });
       nodes.forEach((n, i) => {
         const { x, y } = xy(n), parent = n.id === g.parent, sel = st.node === n.id;
-        s += `<g class="nd" data-node="${n.id}" role="button" tabindex="${(st.node == null ? i === 0 : sel) ? 0 : -1}" aria-pressed="${sel}" aria-label="${esc(nodeLabel(n, parent))}" transform="translate(${x} ${y})"><rect class="hit" x="${-HIT / 2}" y="${-HIT / 2}" width="${HIT}" height="${HIT}"/>${glyph(n, parent, sel)}<text y="${R + 16}" text-anchor="middle">${mzText(n)}</text><text class="mut" y="${R + 28}" text-anchor="middle">RT ${n.rt.toFixed(2)}</text></g>`;
+        // the space after the m/z keeps the two text lines two words for Label in Name ("317.1642 RT 5.00", not "317.1642RT")
+        s += `<g class="nd" data-node="${n.id}" role="button" tabindex="${(st.node == null ? i === 0 : sel) ? 0 : -1}" aria-pressed="${sel}" aria-label="${esc(nodeLabel(n, parent))}" transform="translate(${x} ${y})"><rect class="hit" x="${-HIT / 2}" y="${-HIT / 2}" width="${HIT}" height="${HIT}"/>${glyph(n, parent, sel)}<text y="${R + 16}" text-anchor="middle">${mzText(n)} </text><text class="mut" y="${R + 28}" text-anchor="middle">RT ${n.rt.toFixed(2)}</text></g>`;
       });
       return s + "</svg>";
     }
