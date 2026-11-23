@@ -63,16 +63,16 @@ try:
                 x = q.evaluate(ROW)
                 assert x["text"] == "1/8 ▾", x
                 assert x["spread"] <= x["hh"] * 0.5 and not x["chipWrapped"] and x["chipInside"], x      # one row, the caret inside the chip
-                assert x["hh"] <= (40.5 if touch else 28), x                                         # the wrapped header was 50 px high on a 810 px iPad
+                assert x["hh"] <= (48 if touch else 28), x                                             # 44 px controls on touch; the wrapped header was 50 px high on a 810 px iPad plus a second row
             step(f"{tag}: the header is one row, the caret stays inside the chip", one_row)
 
             if touch:
                 def hit_area():
-                    # the chip is as tall as the 40 px header and the pseudo-element adds 4 px below (the panel grip sits just above the header): 44 px high, at least 44 px wide
+                    # the 44 px floor of the panel header controls (app.css, coarse pointer) makes the chip itself 44×44
                     r_ = q.evaluate(f"(() => {{ const c = {CHIP}; c.scrollIntoView({{block: 'center'}}); const r = c.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }})()")
-                    assert r_[2] - r_[0] >= 43.5 and r_[3] - r_[1] >= 39.5, ("the chip is too small", r_)
+                    assert r_[2] - r_[0] >= 43.5 and r_[3] - r_[1] >= 43.5, ("the chip is too small", r_)
                     cx, cy = (r_[0] + r_[2]) / 2, (r_[1] + r_[3]) / 2
-                    for x, y in ((cx, r_[1] + 1), (cx, r_[3] + 3), (r_[0] + 1, cy), (r_[2] - 1, cy), (r_[0] + 1, r_[3] + 3), (r_[2] - 1, r_[1] + 1)):
+                    for x, y in ((cx, r_[1] + 1), (cx, r_[3] - 1), (r_[0] + 1, cy), (r_[2] - 1, cy), (r_[0] + 1, r_[3] - 1), (r_[2] - 1, r_[1] + 1)):
                         assert q.evaluate(f"(() => {{ const e = document.elementFromPoint({x}, {y}); return !!e && {CHIP}.contains(e); }})()"), ("the 44×44 hit area of the chip does not reach", x, y, r_)
                 step(f"{tag}: the chip has a 44×44 px hit area", hit_area)
 

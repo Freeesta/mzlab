@@ -751,7 +751,7 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .pnl .mzg .seg button{box-sizing:border-box;margin:0;line-height:1.2;padding-top:0;padding-bottom:0}
 .pnl .mzg .seg button.on,.pnl .mzg .seg button.on+button{border-left-color:var(--accent)}
 @media (forced-colors:active){.pnl .mzg .seg button.on{forced-color-adjust:none;background:Highlight;color:HighlightText;border-left-color:Highlight}}
-/* file chooser of a panel header: the chip never wraps (its caret stays inside), is as tall as the 40 px header on touch with a 44 px hit area (the grip above the header leaves no room upward); the list scrolls inside and fits the viewport */
-.fcount{white-space:nowrap;flex:0 0 auto;position:relative}
+/* file chooser of a panel header: the chip never wraps (its caret stays inside; its 44 px touch size comes from the header rule above); the list scrolls inside and fits the viewport */
+.fcount{white-space:nowrap;flex:0 0 auto}
 #fpop{box-sizing:border-box;max-width:calc(100vw - 16px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-@media (pointer:coarse){.fcount{min-width:44px;height:40px}.fcount::after{content:"";position:absolute;inset:-1px -1px -5px}#fpop label,#fpop .fpb button{min-height:44px;box-sizing:border-box}#fpop .fn{flex:1;align-self:stretch;display:flex;align-items:center}}
+@media (pointer:coarse){#fpop label,#fpop .fpb button{min-height:44px;box-sizing:border-box}#fpop .fn{flex:1;align-self:stretch;display:flex;align-items:center}}
