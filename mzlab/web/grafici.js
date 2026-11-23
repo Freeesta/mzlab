@@ -465,17 +465,6 @@ function showHover(p, px, py) {
   const a = p._a; if (!a || !a.hov || a.cas || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
   const h = a.hov(px, py); if (!h) return hideHover(p); putHover(p, h, px, py);
 }
-// Where the hover box goes (panel coordinates): above the point, else below it, else beside it; always clear of the point (a finger covers 44 px of it, so it sits higher), inside the panel,
-// and never over the x axis, its numbers and its title (the plot area ends where they start). Left of the box = its x, top = its y.
-function tipSpot(p, px, py, tw, th) {
-  const a = p._a, cv = p.cv, W = p.el.clientWidth, gap = document.documentElement.classList.contains("ptr-touch") ? 44 : 14;
-  const x = cv.offsetLeft + px, y = cv.offsetTop + py, top = cv.offsetTop + 2, bot = cv.offsetTop + a.H - M.b - 2;      // bot: the lowest the box may reach
-  const mid = Math.max(2, Math.min(W - tw - 2, x - tw / 2));
-  if (y - gap - th >= top) return [mid, y - gap - th];
-  if (y + gap + th <= bot) return [mid, y + gap];
-  const right = x + gap + tw <= W - 4;
-  return [Math.max(2, right ? x + gap : x - gap - tw), Math.max(top, Math.min(bot - th, y - th / 2))];
-}
 function putHover(p, h, px, py) {
   const a = p._a, cv = p.cv, el = p.el;
   if (window.PEAKINFO) PEAKINFO.stick(p, h.stick ? { px: h.px, ...h.stick } : null);
