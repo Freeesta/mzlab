@@ -3,8 +3,8 @@
 //! the Poisson term keeps it at one ion near zero and at the counting error above. One function for `mzlab-cli peak noise` and mzlab-wasm
 //! `noise_floor` (the same JSON bytes); every term, the one that won and the check are in the output, nothing is hidden.
 
-use crate::jsonb::{num, opt, text, write, Obj};
 use crate::json::Value;
+use crate::jsonb::{num, opt, text, write, Obj};
 
 /// Scale of the MAD to a normal SD.
 pub const MAD_K: f64 = 1.4826;
@@ -76,7 +76,11 @@ pub struct Quantum {
 
 /// The quantum of `y` (`None` without positive values); accepted with at least `QUANTUM_MIN_N` positive values and `QUANTUM_SUPPORT`.
 pub fn quantum(y: &[f64]) -> Option<Quantum> {
-    let pos: Vec<f64> = y.iter().copied().filter(|v| v.is_finite() && *v > 0.0).collect();
+    let pos: Vec<f64> = y
+        .iter()
+        .copied()
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .collect();
     if pos.is_empty() {
         return None;
     }
@@ -84,7 +88,10 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
     let mut d = pos.clone();
     d.sort_by(f64::total_cmp);
     d.dedup();
-    let step = d.windows(2).map(|w| w[1] - w[0]).fold(f64::INFINITY, f64::min);
+    let step = d
+        .windows(2)
+        .map(|w| w[1] - w[0])
+        .fold(f64::INFINITY, f64::min);
     let q = d[0].min(step);
     let on = pos
         .iter()
@@ -224,7 +231,13 @@ pub struct Check {
 /// Rounded for the text of a rule.
 fn rd(v: f64) -> String {
     let a = v.abs();
-    let d = if a >= 100.0 { 0 } else if a >= 1.0 { 1 } else { 3 };
+    let d = if a >= 100.0 {
+        0
+    } else if a >= 1.0 {
+        1
+    } else {
+        3
+    };
     format!("{v:.d$}")
 }
 
@@ -256,7 +269,11 @@ fn check(f: &Floor, pk: &PeakSn, sd_weight: f64, min_sn: f64) -> Check {
     };
     Check {
         status,
-        rule: format!("{terms}; S/N {} {cmp} {} -> {status}{tail}", rd(sn), rd(min_sn)),
+        rule: format!(
+            "{terms}; S/N {} {cmp} {} -> {status}{tail}",
+            rd(sn),
+            rd(min_sn)
+        ),
     }
 }
 
@@ -271,13 +288,21 @@ pub struct FloorResult {
 }
 
 /// The noise floor of the trace (rt in min, y in cps) and, with a peak window, its S/N and check. Err: no background point.
-pub fn measure(rt: &[f64], y: &[f64], ask: FloorAsk, p: FloorParams) -> Result<FloorResult, String> {
+pub fn measure(
+    rt: &[f64],
+    y: &[f64],
+    ask: FloorAsk,
+    p: FloorParams,
+) -> Result<FloorResult, String> {
     let n = rt.len().min(y.len());
     let lo = ask.from.unwrap_or(f64::NEG_INFINITY);
     let hi = ask.to.unwrap_or(f64::INFINITY);
     let inside = |i: usize| rt[i] >= lo && rt[i] <= hi && y[i].is_finite();
     let in_peak = |i: usize| ask.peak.is_some_and(|(a, b)| rt[i] >= a && rt[i] <= b);
-    let bg: Vec<f64> = (0..n).filter(|&i| inside(i) && !in_peak(i)).map(|i| y[i]).collect();
+    let bg: Vec<f64> = (0..n)
+        .filter(|&i| inside(i) && !in_peak(i))
+        .map(|i| y[i])
+        .collect();
     if bg.is_empty() {
         return Err("err.noise.noBackground".into());
     }

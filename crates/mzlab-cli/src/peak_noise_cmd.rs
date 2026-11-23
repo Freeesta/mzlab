@@ -26,7 +26,11 @@ usage: mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]
 fn set(p: &mut FloorParams, ask: &mut FloorAsk, name: &str, v: &str) -> Result<(), String> {
     if name == "from" || name == "to" {
         let t = num(Some(v.into()), name)?;
-        *(if name == "from" { &mut ask.from } else { &mut ask.to }) = Some(t);
+        *(if name == "from" {
+            &mut ask.from
+        } else {
+            &mut ask.to
+        }) = Some(t);
         return Ok(());
     }
     if name == "one_ion" && v == "auto" {

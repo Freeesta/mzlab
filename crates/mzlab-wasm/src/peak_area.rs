@@ -54,7 +54,12 @@ pub fn lr_auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, params: &[f64]
 #[wasm_bindgen]
 pub fn noise_floor(rt: &[f64], y: &[f64], ask: &[f64], params: &[f64]) -> String {
     let n = rt.len().min(y.len());
-    match measure(&rt[..n], &y[..n], FloorAsk::from_slice(ask), FloorParams::from_slice(params)) {
+    match measure(
+        &rt[..n],
+        &y[..n],
+        FloorAsk::from_slice(ask),
+        FloorParams::from_slice(params),
+    ) {
         Ok(r) => floor_json(&r),
         Err(key) => format!("E{{\"key\":\"{key}\"}}"),
     }

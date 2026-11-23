@@ -8,7 +8,9 @@ fn args(v: &[&str]) -> Vec<String> {
 // 200 points every 0.02 min, all zero but one ion every 40 points and a peak of 2, 3, 2 ions at 2.0 min (2222 cps per ion)
 fn trace() -> (Vec<f64>, Vec<f64>) {
     let rt: Vec<f64> = (0..200).map(|i| f64::from(i) * 0.02).collect();
-    let mut y: Vec<f64> = (0..200).map(|i| if i % 40 == 7 { 2222.0 } else { 0.0 }).collect();
+    let mut y: Vec<f64> = (0..200)
+        .map(|i| if i % 40 == 7 { 2222.0 } else { 0.0 })
+        .collect();
     y[99] = 4444.0;
     y[100] = 6666.0;
     y[101] = 4444.0;
@@ -38,12 +40,31 @@ fn the_output_is_the_core_json_byte_for_byte_and_the_log_goes_to_stderr() {
     let text = String::from_utf8(o.stdout).unwrap();
     assert_eq!(text, format!("{}\n", floor_json(&core)));
     assert!(text.contains("\"estimator\":\"one_ion\""), "{text}");
-    assert!(text.contains("\"status\":\"fail\""), "three ions over one: S/N 3 < 5: {text}");
-    assert!(o.stderr.starts_with("note: noise floor: 2222 cps from one_ion"), "{}", o.stderr);
+    assert!(
+        text.contains("\"status\":\"fail\""),
+        "three ions over one: S/N 3 < 5: {text}"
+    );
+    assert!(
+        o.stderr
+            .starts_with("note: noise floor: 2222 cps from one_ion"),
+        "{}",
+        o.stderr
+    );
     // the names of --set, the same numbers as the core parameters
     let o = run(args(&[
-        p, "--rt", "1.95,2.05", "--set", "from=0.5", "--set", "to=3.5", "--set", "one_ion=1000", "--set", "min_sn=3",
-        "--set", "sd_weight=0",
+        p,
+        "--rt",
+        "1.95,2.05",
+        "--set",
+        "from=0.5",
+        "--set",
+        "to=3.5",
+        "--set",
+        "one_ion=1000",
+        "--set",
+        "min_sn=3",
+        "--set",
+        "sd_weight=0",
     ]));
     let ask = FloorAsk {
         from: Some(0.5),
@@ -57,7 +78,10 @@ fn the_output_is_the_core_json_byte_for_byte_and_the_log_goes_to_stderr() {
     };
     let core = measure(&rt, &y, ask, p2).unwrap();
     assert_eq!(o.code, 0, "{}", o.stderr);
-    assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{}\n", floor_json(&core)));
+    assert_eq!(
+        String::from_utf8(o.stdout).unwrap(),
+        format!("{}\n", floor_json(&core))
+    );
     let _ = std::fs::remove_file(f);
 }
 
@@ -77,6 +101,9 @@ fn usage_data_and_input_errors_have_their_codes() {
     assert_eq!(run(args(&["/nonexistent/t.csv"])).code, 4);
     let off = run(args(&[p, "--rt", "1.95,2.05", "--set", "one_ion=0"]));
     let text = String::from_utf8(off.stdout).unwrap();
-    assert!(text.contains("\"one_ion_source\":\"off\"") && text.contains("\"status\":\"warn\""), "{text}");
+    assert!(
+        text.contains("\"one_ion_source\":\"off\"") && text.contains("\"status\":\"warn\""),
+        "{text}"
+    );
     let _ = std::fs::remove_file(f);
 }

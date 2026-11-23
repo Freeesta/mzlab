@@ -7,7 +7,9 @@ use super::*;
 fn poisson(n: usize, lam: f64, seed: u64) -> Vec<f64> {
     let mut s = seed;
     let mut u = || {
-        s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((s >> 11) as f64) / ((1u64 << 53) as f64)
     };
     (0..n)
@@ -147,7 +149,10 @@ fn the_slice_of_the_wasm_interface() {
     assert_eq!(FloorParams::from_slice(&[-1.0]).one_ion, OneIon::Auto);
     assert_eq!(FloorParams::from_slice(&[0.0]).one_ion, OneIon::Off);
     let p = FloorParams::from_slice(&[2222.0, 0.0, 3.0]);
-    assert_eq!((p.one_ion, p.sd_weight, p.min_sn), (OneIon::Cps(2222.0), 0.0, 3.0));
+    assert_eq!(
+        (p.one_ion, p.sd_weight, p.min_sn),
+        (OneIon::Cps(2222.0), 0.0, 3.0)
+    );
 }
 
 #[test]
