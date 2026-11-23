@@ -96,7 +96,7 @@ pub fn table_report(
     .map_err(js_err)
 }
 
-/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`; areas, t0 and blank.
+/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/2`; areas, t0 and blank.
 #[wasm_bindgen]
 pub fn tp_table(
     table_read: Function,
@@ -113,7 +113,7 @@ pub fn tp_table(
     .map_err(js_err)
 }
 
-/// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/1` (`size` bytes), `interp_read` the one with the block `interp/1`
+/// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/2` (`size` bytes), `interp_read` the one with the block `interp/1`
 /// (`interp_size` bytes; the same file when it carries both), `samples_json` the `samples/1` of the series ("" = no time course) and `rules` the table
 /// of transformations (`regole_tp`).
 #[wasm_bindgen]

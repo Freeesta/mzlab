@@ -148,7 +148,7 @@ fn delta(f: &Formula, parent: &Formula) -> String {
     format!("{sign}{}", fmt(&abs))
 }
 
-/// The parent row: the row nearest in RT to the one the user gave, else the one of the TP view when the table has one (an empty `tp/1` block says
+/// The parent row: the row nearest in RT to the one the user gave, else the one of the TP view when the table has one (an empty `tp/2` block says
 /// nothing: its `parent_row` is the default 0), else the one with the largest area within `PARENT_PPM` of the ion in the files at time 0 (the
 /// standard), or in all of them when none is at time 0.
 pub(super) fn parent_row(t: &Aligned, p: &Parent, files: &[FileIn]) -> Option<usize> {

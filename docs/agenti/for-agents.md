@@ -1,6 +1,6 @@
 # mzLab for external agents (`mzlab-cli` from the shell)
 
-For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
+For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. **Build `mzlab-cli` with `--profile cli`, not `release`** (`release` is size-optimised for the `.wasm`; `cli` is the speed profile, same output bytes, binary in `target/cli/`). Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
 
 ## Installation
 - Linux (x86_64, aarch64; static, any distro) and macOS on Apple silicon (arm64, unsigned): every published release carries a prebuilt `mzlab-cli` and `SHA256SUMS`. Install in one line, no sudo, checked against `SHA256SUMS` before it is copied: `curl -fsSL https://raw.githubusercontent.com/Freeesta/mzlab/main/tools/install.sh | sh` (writes `~/.local/bin/mzlab-cli`, prints its `--version`; `sh -s -- --dir DIR`, `--version X.Y.Z`, `--dry-run`; exit codes and manual fetch: `cli-agenti.md`, "Prebuilt binaries").

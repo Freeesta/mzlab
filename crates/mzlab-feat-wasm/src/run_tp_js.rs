@@ -80,7 +80,7 @@ pub fn series_estimates(
     run().map_err(crate::js_err)
 }
 
-/// What `tp_link_evidence` gives the page: the table with `tp/1` and what `tp_link_interp` (the .wasm `interp`) needs next.
+/// What `tp_link_evidence` gives the page: the table with `tp/2` and what `tp_link_interp` (the .wasm `interp`) needs next.
 #[cfg(feature = "proofs")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub struct LinkEvidence {
@@ -90,11 +90,11 @@ pub struct LinkEvidence {
 #[cfg(feature = "proofs")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 impl LinkEvidence {
-    /// The `.mzfeat` bytes with the block `tp/1`.
+    /// The `.mzfeat` bytes with the block `tp/2`.
     pub fn table(&self) -> Vec<u8> {
         self.inner.with_tp.clone()
     }
-    /// The registry `hypotheses/2` the search annotated.
+    /// The registry `hypotheses/3` the search annotated.
     pub fn registry(&self) -> String {
         self.inner.registry.clone()
     }
@@ -111,7 +111,7 @@ impl LinkEvidence {
     }
 }
 
-/// `tp.link@2` up to the proofs, in the browser: the parent file text and the structure text of its SMILES, the `hypotheses/2` of `tp.generate`, the `.mzfeat` of
+/// `tp.link@2` up to the proofs, in the browser: the parent file text and the structure text of its SMILES, the `hypotheses/3` of `tp.generate`, the `.mzfeat` of
 /// the series (`table`), the `samples/1` `samples`, the recipe text of the run, the polarity the plan sets (NaN = not set), the memory budget (MB; 0/NaN = the default),
 /// the stored peaks of each file (Uint8Arrays in the order of the indexes) and the `.mzidx` read as `index_read(k, offset, length)` with `index_sizes[k]` bytes.
 #[cfg(feature = "proofs")]

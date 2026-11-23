@@ -21,7 +21,7 @@
   const kv = (/** @type {string} */ k, /** @type {any} */ v) => `<tr><th scope="row">${esc(k)}</th><td>${esc(v)}</td></tr>`;
 
   /**
-   * the data of the section: rows of the products in the view, with the formulas of the hypothesis and the levels; null when the table has no block `tp/1` or the session cannot give it
+   * the data of the section: rows of the products in the view, with the formulas of the hypothesis and the levels; null when the table has no block `tp/2` or the session cannot give it
    * @param {{ session: any, spec: () => string, names: string[], tpInfo?: (id: number) => { level?: string | null, pred?: number | null } }} o
    */
   async function collect(o) {

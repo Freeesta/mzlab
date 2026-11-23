@@ -19,13 +19,13 @@ pub struct Coel {
 /// The strong or possible candidate heavier than `e` by at least `MIN_LOSS` whose RT is within half the RT tolerance of the row, the closest in RT.
 /// `e` is an unexpected ion or itself a strong or possible candidate (never the parent or a weak row).
 pub fn of(d: &LrDig, e: &Entry) -> Option<Coel> {
-    if e.id == 0 || !(e.unexpected || matches!(e.label, "forte" | "possibile")) {
+    if e.id == 0 || !(e.unexpected || matches!(e.label, "strong" | "possible")) {
         return None;
     }
     let cands = d
         .entries
         .iter()
-        .filter(|c| c.id != 0 && !c.unexpected && matches!(c.label, "forte" | "possibile"))
+        .filter(|c| c.id != 0 && !c.unexpected && matches!(c.label, "strong" | "possible"))
         .filter_map(|c| Some((c.id, c.mz, c.ref_rt?)));
     pick(e.mz, e.ref_rt?, 0.5 * d.settings.rt_tol_min, cands)
 }

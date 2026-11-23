@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the steps of the transformation products that run in this browser. `tp.generate` calls the `hr` .wasm of the site in the page (the registry `hypotheses/2` of a parent
+// Flow (administrator mode): the steps of the transformation products that run in this browser. `tp.generate` calls the `hr` .wasm of the site in the page (the registry `hypotheses/3` of a parent
 // is a few milliseconds of work) with the rules of the campaign (regole_tp_3.json) and, for a SMILES, the structure the `grafo` .wasm gives: the same text as the native `flow run`. English only.
 (() => {
   "use strict";

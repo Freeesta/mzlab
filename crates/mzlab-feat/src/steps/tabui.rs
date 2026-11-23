@@ -81,7 +81,7 @@ pub(super) fn algorithm(
     }
 }
 
-/// `tp.generate`: the ions that the chemistry says could be there (`hypo::generate`, registry `hypotheses/2`). A place to look, never a verdict.
+/// `tp.generate`: the ions that the chemistry says could be there (`hypo::generate`, registry `hypotheses/3`). A place to look, never a verdict.
 fn generate() -> Step {
     let d = HypoParams::default();
     Step {

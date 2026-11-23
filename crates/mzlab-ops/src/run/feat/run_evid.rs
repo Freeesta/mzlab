@@ -347,7 +347,7 @@ fn emit<W: WriteAt>(
     }
 }
 
-/// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
+/// The view of the products of the table (`tp/2`): empty without a parent in the table or without controls to read the gates against.
 #[allow(clippy::too_many_arguments)]
 fn tp_block(
     inp: &Inputs,
