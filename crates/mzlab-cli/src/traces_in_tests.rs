@@ -1,0 +1,115 @@
+//! `peak table --traces`: the `trace xic` answers of two demo full-scan files give the same table as the page's list built from the same
+//! points, the page's list passes unchanged, and a JSON of another shape is refused instead of giving an empty table.
+
+use std::path::{Path, PathBuf};
+
+use crate::execute;
+
+fn run(args: &[&str]) -> crate::Outcome {
+    execute(&args.iter().map(|s| s.to_string()).collect::<Vec<_>>())
+}
+
+fn demo(name: &str) -> String {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../mzlab/web/esempi")
+        .join(name);
+    p.display().to_string()
+}
+
+fn dir() -> PathBuf {
+    let d = std::env::temp_dir().join(format!("mzlab_cli_traces_in_{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    d
+}
+
+#[test]
+fn xic_answers_of_many_files_are_integrated_in_one_call() {
+    let d = dir();
+    let mut sets = Vec::new();
+    for f in ["FullScan_t0.mzML", "FullScan_t5.mzML"] {
+        let out = d.join(format!("{f}.json"));
+        let o = run(&[
+            "trace",
+            "xic",
+            &demo(f),
+            "--mz",
+            "364.4,194.2",
+            "--da",
+            "0.3",
+            "--out",
+            &out.display().to_string(),
+        ]);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        sets.push(out.display().to_string());
+    }
+    let auto = run(&[
+        "peak", "table", "--traces", &sets[0], "--traces", &sets[1], "--auto",
+    ]);
+    assert_eq!(auto.code, 0, "{}", auto.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&auto.stdout).unwrap();
+    let windows = v["windows"].as_array().unwrap();
+    assert!(
+        windows.iter().any(|w| w["file"] == 1),
+        "peaks of the second file: {v}"
+    );
+    // the page's own list with the same points gives the same bytes
+    let mut page = Vec::new();
+    for s in &sets {
+        let t: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(s).unwrap()).unwrap();
+        let tr: Vec<serde_json::Value> = t["traces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| {
+                let pts = x["points"].as_array().unwrap();
+                serde_json::json!({"rt": pts.iter().map(|p| p[0].clone()).collect::<Vec<_>>(),
+                    "y": pts.iter().map(|p| p[1].clone()).collect::<Vec<_>>(),
+                    "name": x["id"], "q1": x["evidence"]["mz"]})
+            })
+            .collect();
+        page.push(serde_json::json!({"name": t["file"], "transitions": tr}));
+    }
+    let list = d.join("page.json");
+    std::fs::write(&list, serde_json::to_string(&page).unwrap()).unwrap();
+    let same = run(&[
+        "peak",
+        "table",
+        "--traces",
+        &list.display().to_string(),
+        "--auto",
+    ]);
+    assert_eq!(same.code, 0, "{}", same.stderr);
+    assert_eq!(same.stdout, auto.stdout);
+    // a list of samples passes unchanged: the bytes of the engine on that text
+    let text = std::fs::read_to_string(&list).unwrap();
+    assert_eq!(
+        crate::traces_in::read(std::slice::from_ref(&list)).unwrap(),
+        text
+    );
+}
+
+#[test]
+fn another_shape_is_refused_with_its_code() {
+    let d = dir();
+    let bad = d.join("bad.json");
+    std::fs::write(&bad, "{\"schema\":\"peak-auto/1\",\"peaks\":[]}").unwrap();
+    let o = run(&[
+        "peak",
+        "table",
+        "--traces",
+        &bad.display().to_string(),
+        "--auto",
+        "--json",
+    ]);
+    assert_eq!(o.code, crate::exit::USAGE, "{}", o.stderr);
+    assert!(o.stderr.contains("trace-set/1"), "{}", o.stderr);
+    let o = run(&[
+        "peak",
+        "table",
+        "--traces",
+        &d.join("none.json").display().to_string(),
+        "--auto",
+    ]);
+    assert_eq!(o.code, crate::exit::INPUT, "{}", o.stderr);
+}

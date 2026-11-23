@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commands-find/1",
+  "title": "commands-find/1: the commands and Flow steps that do a task",
+  "description": "The answer of `mzlab-cli commands --find WORDS... --json`: the task words kept (lower case, plural to singular, stop words dropped, s/n = snr, m/z = mz) and at most five matches, best first. A match is ranked by the words of its name, the task words of crates/mzlab-cli/src/catalog/related.rs, its summary (a step's title) and a step's doc, a word that many items carry counting less; a step that only the page runs counts half. Deterministic: the same words give the same bytes. No match: exit 5, `err.cli.find.none`. Code: crates/mzlab-cli/src/catalog/find.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "query",
+    "matches"
+  ],
+  "properties": {
+    "schema": {
+      "const": "commands-find/1"
+    },
+    "query": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "matches": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "summary",
+          "example",
+          "score",
+          "matched",
+          "see_also"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "command",
+              "step"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "A command path (`peak table`) or a Flow step id (`chrom.transitions`)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "The summary of the command, the title of the step."
+          },
+          "example": {
+            "type": "string",
+            "description": "One command line; for a step the line that writes a one-step plan to edit."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0
+          },
+          "matched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The query words this match carries."
+          },
+          "see_also": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bulk": {
+            "type": "string",
+            "description": "The one call that replaces a loop of calls of this one."
+          },
+          "executable_native": {
+            "type": "boolean",
+            "description": "Steps only: whether `flow run` executes it (else only the Flow page does)."
+          }
+        }
+      }
+    }
+  }
+}

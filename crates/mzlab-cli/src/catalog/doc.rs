@@ -158,7 +158,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
 }
 
 /// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
-fn skeleton(u: &Usage) -> String {
+pub(super) fn skeleton(u: &Usage) -> String {
     let toks = tokens(&u.synopsis);
     let kept: Vec<&str> = toks
         .iter()
@@ -234,6 +234,9 @@ fn command_json(
         let v = exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
         o = o.put("exit_codes", Value::Arr(v));
     }
+    if !compact {
+        o = related(o, e.name);
+    }
     if !compact || examples != [skeleton(&u)] {
         o = o.put(
             "examples",
@@ -241,6 +244,20 @@ fn command_json(
         );
     }
     o.done()
+}
+
+/// The full form names the related commands and steps and the one call that replaces a loop of this one (`related.rs`).
+fn related(mut o: Obj, name: &str) -> Obj {
+    if let Some(r) = super::related::of(name) {
+        o = o.put(
+            "see_also",
+            Value::Arr(r.also.iter().map(|a| text(a)).collect()),
+        );
+        if !r.bulk.is_empty() {
+            o = o.put("bulk", text(r.bulk));
+        }
+    }
+    o
 }
 
 /// Whether the words `path` are the start of the name of `e`.

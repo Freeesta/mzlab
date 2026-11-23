@@ -25,7 +25,10 @@ usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | 
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
   --out PATH  write there instead of the standard output
-  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4";
+  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4
+
+One call per file answers every ion of a list (--mz M1,M2,... or --sweep), never one call per ion; their peaks in every file in one call:
+`peak table --traces A.json --traces B.json --auto` on the --out of each file. A target list of SIM ions / SRM transitions: the Flow step chrom.transitions.";
 
 /// Most ions one call extracts (each one reads the section once).
 const MAX_IONS: usize = 500;

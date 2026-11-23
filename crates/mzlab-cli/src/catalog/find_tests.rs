@@ -1,0 +1,222 @@
+//! `commands --find`: the tasks of the agent audit (a low-resolution LC-MS campaign) find the command or step that does them among the
+//! first three, every command and step has a summary the search matches, and every row of `related.rs` names something that exists.
+
+use super::{items, search, words};
+use crate::catalog::related::RELATED;
+
+/// (task as an agent would say it, the command or step that does it): the audit of the PR that added the search.
+pub(crate) const TASKS: &[(&str, &str)] = &[
+    ("inventory of a folder of raw files", "file list"),
+    (
+        "convert wiff files to mzML with their sample names",
+        "file convert",
+    ),
+    (
+        "assign roles blank qc standard to the samples",
+        "sample table",
+    ),
+    ("non-targeted feature table of all files", "features"),
+    (
+        "integrate a target list of SIM ions in many files",
+        "chrom.transitions",
+    ),
+    (
+        "S/N of every SIM channel of every file",
+        "chrom.transitions",
+    ),
+    (
+        "integrate all peaks of all traces of many files at once",
+        "peak table",
+    ),
+    ("extract ion chromatograms of a list of m/z", "trace xic"),
+    (
+        "blank subtraction threshold on the feature table",
+        "table.filter",
+    ),
+    (
+        "group correlated ions and isotopes of one compound",
+        "features.group",
+    ),
+    (
+        "kinetics dig of the transformation products at unit resolution",
+        "tp.dig_lr",
+    ),
+    (
+        "generate hypotheses of the transformation products",
+        "tp.generate",
+    ),
+    (
+        "draw a structure from SMILES as SVG PNG or CDXML",
+        "mol draw",
+    ),
+    ("draw the pathway network of the products", "tp.network"),
+    ("centroid profile spectra", "spectra.centroid"),
+    ("export the feature table as CSV", "export.table_csv"),
+    ("record the provenance of a run", "flow record"),
+    ("calibration curve with LOD and LOQ", "quant.curve"),
+];
+
+fn top(q: &str, n: usize) -> Vec<String> {
+    search(&words(q))
+        .into_iter()
+        .take(n)
+        .map(|(it, _, _)| it.name)
+        .collect()
+}
+
+#[test]
+fn every_audit_task_finds_its_command_or_step_among_the_first_three() {
+    for (task, want) in TASKS {
+        let got = top(task, 3);
+        assert!(
+            got.iter().any(|g| g == want),
+            "{task:?}: {want} not in {got:?}"
+        );
+    }
+}
+
+/// The guard of new functions: a command or step without a summary (title) the search matches is not discoverable.
+#[test]
+fn every_command_and_step_has_a_summary_that_finds_it() {
+    let all = items();
+    assert!(all.iter().any(|i| i.kind == "step") && all.iter().any(|i| i.kind == "command"));
+    for it in &all {
+        assert!(
+            !it.summary.trim().is_empty(),
+            "{} {} has no one-line summary",
+            it.kind,
+            it.name
+        );
+        let q = format!("{} {}", it.name, it.summary);
+        let got = top(&q, 5);
+        assert!(
+            got.contains(&it.name),
+            "{} {}: its name and summary find {got:?}",
+            it.kind,
+            it.name
+        );
+        assert!(
+            !it.example.is_empty() && it.example.starts_with("mzlab-cli "),
+            "{}: example {:?}",
+            it.name,
+            it.example
+        );
+    }
+}
+
+#[test]
+fn every_related_row_names_a_command_or_step_that_exists() {
+    let names: Vec<String> = items().into_iter().map(|i| i.name).collect();
+    for r in RELATED {
+        assert!(names.iter().any(|n| n == r.name), "related row {}", r.name);
+        assert!(!r.words.is_empty(), "{}: no task words", r.name);
+        for a in r.also {
+            assert!(
+                names.iter().any(|n| n == a) && *a != r.name,
+                "{}: see also {a}",
+                r.name
+            );
+        }
+        assert!(
+            r.example.is_empty() || r.example.starts_with("mzlab-cli "),
+            "{}",
+            r.name
+        );
+    }
+}
+
+#[test]
+fn the_answer_is_commands_find_1_with_examples_and_bulk_and_stable_codes() {
+    let run = |a: &[&str]| crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    let o = run(&[
+        "commands",
+        "--find",
+        "integrate",
+        "peaks",
+        "of",
+        "one",
+        "SIM",
+        "trace",
+        "--json",
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.is_empty(), "{}", o.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["schema"], "commands-find/1");
+    assert_eq!(
+        v["query"],
+        serde_json::json!(["integrate", "peak", "sim", "trace"])
+    );
+    let m = v["matches"].as_array().unwrap();
+    assert!(!m.is_empty() && m.len() <= 5);
+    for x in m {
+        for k in [
+            "kind", "name", "summary", "example", "score", "matched", "see_also",
+        ] {
+            assert!(x.get(k).is_some(), "{k} in {x}");
+        }
+    }
+    let lr = m
+        .iter()
+        .find(|x| x["name"] == "peak auto-lr")
+        .expect("peak auto-lr");
+    assert!(lr["bulk"]
+        .as_str()
+        .unwrap()
+        .contains("peak table FILE... --auto"));
+    // the same bytes on every run
+    assert_eq!(
+        run(&[
+            "commands",
+            "--find",
+            "integrate",
+            "peaks",
+            "of",
+            "one",
+            "SIM",
+            "trace",
+            "--json"
+        ])
+        .stdout,
+        o.stdout
+    );
+    // the text form: one line per match and its example
+    let t = String::from_utf8(run(&["commands", "--find", "draw", "structure"]).stdout).unwrap();
+    assert!(t.starts_with("mol draw (command)"), "{t}");
+    assert_eq!(
+        run(&["commands", "--find", "zzqqxx", "--json"]).code,
+        crate::exit::SELECTOR
+    );
+    let none = run(&["commands", "--find", "zzqqxx", "--json"]);
+    let e: serde_json::Value = serde_json::from_slice(&none.stdout).unwrap();
+    assert_eq!(e["error_key"], "err.cli.find.none");
+    assert_eq!(
+        run(&["commands", "--find", "--json"]).code,
+        crate::exit::USAGE
+    );
+    assert_eq!(
+        run(&["commands", "flow", "--find", "plan"]).code,
+        crate::exit::USAGE
+    );
+}
+
+#[test]
+fn the_full_listing_of_a_command_names_its_see_also_and_bulk() {
+    let o = crate::execute(&[
+        "commands".into(),
+        "--json".into(),
+        "peak".into(),
+        "auto-lr".into(),
+    ]);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    let c = &v["commands"][0];
+    assert!(
+        c["see_also"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|x| x == "peak table"),
+        "{c}"
+    );
+    assert!(c["bulk"].as_str().is_some(), "{c}");
+}

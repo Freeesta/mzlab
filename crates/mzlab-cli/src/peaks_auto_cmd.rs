@@ -23,7 +23,10 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|
   output       {\"schema\":\"peak-auto/1\",\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":MODE}...],\"choices\":[...]}; with edges b0/b1 are the detection baseline
                ends, with line the line at t0 and t1; with zero or line each peak also has \"below\" (COUNTS_S, the part under the line) and its area is the
                signed one against that line. With zero (the default) b0/b1 are not written (the area is measured from 0) and \"choices\" says so; base_*
-               numbers with a baseline other than line are an error (exit 2)";
+               numbers with a baseline other than line are an error (exit 2)
+
+Many traces or files: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
+(the trace xic answers of many files) or the Flow step chrom.transitions (a target list of SIM ions / SRM transitions with S/N); never one call per trace.";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;

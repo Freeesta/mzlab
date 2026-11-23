@@ -209,6 +209,17 @@
             "items": {
               "type": "string"
             }
+          },
+          "see_also": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only in `commands --json PATH...`: related commands and Flow step ids (crates/mzlab-cli/src/catalog/related.rs)."
+          },
+          "bulk": {
+            "type": "string",
+            "description": "Only in `commands --json PATH...`: the one call to use instead of many calls of this command."
           }
         }
       }

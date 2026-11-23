@@ -204,6 +204,7 @@ mod table_compare_cmd;
 mod table_compare_cmd_tests;
 mod trace_cmd;
 mod trace_xic;
+mod traces_in;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
