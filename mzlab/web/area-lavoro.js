@@ -6,13 +6,13 @@
 "use strict";
 
 // Below 900 px the toggle of the side panel (#sb-toggle, barra.js) is the way to the file list: it says «Files (N)», N = rows of the sample table.
-// paint() returns true when it wrote that label; false leaves barra.js to write the usual one (and gives back the usual accessible name).
+// paint() returns true when it wrote that label; false leaves barra.js to write the usual one. The button has no aria-label: its name is whichever of these texts shows (WCAG 2.5.3 Label in Name).
 const SHEETLBL = {
   paint(/** @type {HTMLElement} */ tg, /** @type {HTMLElement} */ tl, /** @type {boolean} */ narrow) {
     tg.dataset.lbl = "1";      // from now on .tl holds the label (app.css shows .tln before)
-    if (!narrow || S.view !== "data") { if (tg.dataset.sheet) { delete tg.dataset.sheet; tg.setAttribute("aria-label", I18N.t("cmd.panel.name")); } return false; }
+    if (!narrow || S.view !== "data") { delete tg.dataset.sheet; return false; }
     const txt = I18N.t("cmd.panel.files", { n: ST.files.length });
-    delete tl.dataset.i18n; tl.textContent = txt; tg.dataset.sheet = "1"; tg.setAttribute("aria-label", txt);
+    delete tl.dataset.i18n; tl.textContent = txt; tg.dataset.sheet = "1";
     return true;
   },
   refresh() { const tg = document.getElementById("sb-toggle"), tl = tg && tg.querySelector(".tl"); if (tg && tl) this.paint(tg, /** @type {HTMLElement} */ (tl), window.innerWidth < 900); }

@@ -35,7 +35,7 @@ try:
             b.click(); wait_for_js(pg, f"{XP}.smooth === true")
         step("Smoothing: right-hand button, aria-pressed, effect on the trace, per panel", smooth)
         def log():
-            b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
+            b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Log scale" and b.get_attribute("title") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
             assert pg.locator(f'{X} [data-o=log]').count() == 0, "no checkbox any more"
             b.click(); wait_for_js(pg, f"{XP}.log === true")
             assert b.get_attribute("aria-pressed") == "true" and pg.evaluate("E.panels.find(p=>p.type==='xic').log") is True

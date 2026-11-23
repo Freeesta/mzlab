@@ -14,6 +14,7 @@
   "ctl.ms2tr.grp": "Group heading in the MS2 fragments menu; {q1} = precursor m/z.",
   "ctl.ms2tr.more": "Disabled last entry of the MS2 fragments menu; {n} = fragments found but not listed.",
   "ctl.prec.one": "Entry of the precursors menu; {v} = precursor m/z.",
+  "ctl.log.aria": "Accessible name of the log-scale button; it must start with its visible text (\"log\") so voice control and screen readers agree (WCAG 2.5.3).",
   "ctl.files.aria": "Accessible name of the shown-files button; {n} = visible files, {tot} = files in the tab.",
   "ctl.files": "Button in the header of a chart: files shown out of total files; {n} and {tot} = numbers.",
   "dda.nav.group": "Name of the ‹ i/N › group in the header of the MS2 panel of the DDA trio.",

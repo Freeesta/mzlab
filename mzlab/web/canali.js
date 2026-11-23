@@ -131,7 +131,6 @@
   /** the hover text of a row: what the channel is (time range and points have their own columns) @param {Nodo} n */
   const tip = n => n.family === "dd" ? T("canali.tip.dd") : n.family === "ms" && n.level === 1 ? T("canali.tip.ms1") : n.group === "tic" ? T("canali.tip.tic") : n.group === "bpc" ? T("ctl.kind.bpc.title") : "";
   /** the label of the row for screen readers @param {Nodo} n */
-  const rowLabel = n => rowLabelOf(n, label(n));
   /** @param {Nodo} n @param {string} et */
   const rowLabelOf = (n, et) => n.n ? T("canali.row", { et, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : et;
   /** the rows of the tree (a collapsed parent hides its descendants); a SIM picker (sim) shows the m/z alone, the rest in the hover text
@@ -147,7 +146,7 @@
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.group), et = sim && n.family === "sim" ? simShort(n, mixed) : label(n);
       const t = sim ? (n.n ? T("canali.row", { et: n.label, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : n.label) : tip(n);
       const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"></span></span>` : `<span class="can-ck" aria-hidden="true"></span>`;
-      const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-group="${EH(n.group)}" aria-label="${EH(sim ? rowLabelOf(n, et) : rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
+      const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-group="${EH(n.group)}" ${sim ? ` aria-label="${EH(rowLabelOf(n, et))}"` : n.n ? ` aria-description="${EH(T("canali.row.desc", { n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }))}"` : ""}${t ? ` title="${EH(t)}"` : ""}>` +
         `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}<span class="can-et">${EH(et)}</span></span>`;
       if (sim) return head + `</div>`;
       return head + `<span class="can-sg" aria-hidden="true"${sgTitle(n.code)}>${EH(sgShort(n.code))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt_start_min.toFixed(1)}–${+n.rt_end_min.toFixed(1)}` : ""}</span>` +
@@ -187,7 +186,7 @@
     const [uv, det, log] = cx ? others(cx) : [[], [], []], c0 = ms2 ? "ms2" : p.kind, kinds = grp(T("canali.grp.uv"), kindRows(p, uv, c0)) + grp(T("canali.grp.det"), kindRows(p, det, c0));
     const ms = ms2 ? kindRows(p, [["ms2", T("ctl.ms2scans"), T("ctl.noMs2")]], c0) : rows(p, tree, sel, only, files.length, only && sim);
     const body = only && !kinds ? ms : grp(T("canali.grp.ms"), ms) + kinds + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size, v: txt }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
       `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"` : ""} class="can-tree">${body}</div></div></span>`;
   }

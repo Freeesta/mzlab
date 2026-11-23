@@ -104,7 +104,7 @@
   "cartp.where": "Header of the remembered folder; {name} = folder name.",
   "cartp.denied": "Access denied by the browser; {name} = folder name.",
   "cartp.count": "Number of files of a group in the list; {n} = how many.",
-  "cartp.row.label": "Screen reader label of a row of the list; {name} = file, {state} = not loaded/loaded.",
+  "cartp.row.tip": "Hint of a row of the list (its name is the visible text: file, state, size).",
   "cartp.error": "Error while reading a file of the folder; {name} = file, {message} = reason.",
   "diag.details": "Diagnosis of a file reading error (\"Details\" block of the notice).",
   "diag.copy": "Diagnosis of a file reading error (\"Details\" block of the notice).",
