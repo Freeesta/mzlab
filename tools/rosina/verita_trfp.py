@@ -1,5 +1,5 @@
 """Ground truth `verita/1` of a Thermo `.raw` from ThermoRawFileParser: its metadata JSON (`-m 0`) and its mzML (`-f 2`), run on the Mac or on Windows.
-A tool of the test bench (docs/studi/ROSINA.md F.1). The JSON is flattened to `name -> value` without assuming its layout, so a new TRFP version does not break it:
+A tool of the test bench (docs/studies/ROSINA.md F.1). The JSON is flattened to `name -> value` without assuming its layout, so a new TRFP version does not break it:
     python3 tools/rosina/verita_trfp.py FILE.mzML FILE-metadata.json [--trfp-version V] [--native FILE.raw] > FILE.verita.json"""
 import argparse
 import json

@@ -1,6 +1,6 @@
 # Rosina C: Waters MassLynx `.raw` (folder)
 
-Legend and index: `SCHEDE.md`. Reader: module `waters` (`crates/mzlab-lettori/src/waters/`); details in `docs/agenti/waters.md`.
+Legend and index: `SHEETS.md`. Reader: module `waters` (`crates/mzlab-lettori/src/waters/`); details in `docs/agenti/waters.md`.
 
 ## Status
 - Targeted functions (MRM/SIR) P: chromatograms with the msconvert ids; V2 possible with Workbench ST004453 (TQ-XS), ST003942, ST003984 (ELENCO-1).

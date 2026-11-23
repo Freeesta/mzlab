@@ -1,6 +1,6 @@
 # Rosina C: Shimadzu `.lcd` (LabSolutions LC/MS) and `.qgd` (GCMSsolution)
 
-Legend and index: `SCHEDE.md`. Reader: module `shimadzu` (`crates/mzlab-lettori/src/shimadzu/`: OLE container, zlib); details in `docs/agenti/shimadzu.md`.
+Legend and index: `SHEETS.md`. Reader: module `shimadzu` (`crates/mzlab-lettori/src/shimadzu/`: OLE container, zlib); details in `docs/agenti/shimadzu.md`.
 
 ## Status
 - `.qgd` GC/MS (QP2010/QP2020): scan and SIM P; `.lcd` LC/MS QqQ (8040/8050/8060) MRM P, LCMS-2020 (single quadrupole) P. No real file with a reference.

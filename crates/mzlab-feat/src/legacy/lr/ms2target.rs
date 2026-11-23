@@ -1,4 +1,4 @@
-//! MS2 targets (`docs/studi/TABUI_MS2_LR.md` §6): a student acquires an MS2 on an ion because the full scan showed it, so a peak of the trace of an
+//! MS2 targets (`docs/studies/TABUI_MS2_LR.md` §6): a student acquires an MS2 on an ion because the full scan showed it, so a peak of the trace of an
 //! experiment that no row of the Dig got (`no_row`, `no_row_at_rt`) is looked for in the aligned table; the strongest feature there at its precursor
 //! and time becomes a row (an unexpected ion, `ms2_target`) with the criteria and the score of the other rows but without the filters of the Dig
 //! (`max_unexpected`, criteria), and the matches are made again. A peak with no feature in the table is `no_feature`.

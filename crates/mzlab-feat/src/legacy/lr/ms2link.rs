@@ -1,5 +1,5 @@
 //! The MS2 matches of the low-resolution Dig (`ms2_links/1`): every product-ion experiment of the series (file, polarity, precursor, collision
-//! energy) is matched once, after the Dig, to the rows it belongs to by the rules of `docs/studi/TABUI_MS2_LR.md` §4. A row takes the scans of
+//! energy) is matched once, after the Dig, to the rows it belongs to by the rules of `docs/studies/TABUI_MS2_LR.md` §4. A row takes the scans of
 //! the peaks of the TRACES of its experiments (never a window of its own cells); the user can correct a match (`relink`).
 //! `exp` builds the experiments and their traces, `rules` matches them, `json` writes the contract.
 

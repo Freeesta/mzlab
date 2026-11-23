@@ -12,7 +12,7 @@ use mzlab_feat::steps::registry;
 
 /// The four `mzflow/2` blocks of the paper test, in the order of the file (A to D).
 fn paper_blocks() -> Vec<String> {
-    let text = include_str!("../../../docs/studi/workflow/PROVE_SU_CARTA.md");
+    let text = include_str!("../../../docs/studies/workflow/PAPER_TESTS.md");
     text.split("```json\n")
         .skip(1)
         .filter_map(|b| b.split("```").next())

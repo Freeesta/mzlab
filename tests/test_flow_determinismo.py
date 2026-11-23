@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici  # noqa: E402
 
-CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
+CONTRACT = json.loads((ROOT / "docs/studies/workflow/contract.schema.json").read_text())
 PLAN = {
     "format": "mzflow/2",
     "program": {"name": "mzLab", "version": "test"},

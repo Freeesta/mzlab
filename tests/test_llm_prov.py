@@ -5,7 +5,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-CONTRACT = json.loads((Path(__file__).resolve().parents[1] / "docs/studi/workflow/contract.schema.json").read_text())
+CONTRACT = json.loads((Path(__file__).resolve().parents[1] / "docs/studies/workflow/contract.schema.json").read_text())
 VALIDATOR = Draft202012Validator({**CONTRACT, "$ref": "#/$defs/prov1"})
 PROV = {"schema": "prov/1", "agent": {"name": "mzLab", "version": "x", "platform": "native"}, "plan_sha256": "cd" * 32, "entity": {}, "activity": {}}
 LLM = {"log_sha256": "ab" * 32, "turn": 2, "provider": "anthropic", "model": "m", "level": "L1"}

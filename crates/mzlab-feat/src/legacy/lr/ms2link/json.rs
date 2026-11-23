@@ -1,4 +1,4 @@
-//! `ms2_links/1`, as `docs/studi/TABUI_MS2_LR.md` §5 writes it.
+//! `ms2_links/1`, as `docs/studies/TABUI_MS2_LR.md` §5 writes it.
 
 use mzlab_core::json::{round, Out};
 

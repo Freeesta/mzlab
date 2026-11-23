@@ -1,4 +1,4 @@
-"""Downloads the big native files listed in `GRANDI.tsv` (docs/studi/ROSINA.md D) into DEST: resumes a partial file, checks the bytes and the SHA-256, refuses to pass the ceiling.
+"""Downloads the big native files listed in `GRANDI.tsv` (docs/studies/ROSINA.md D) into DEST: resumes a partial file, checks the bytes and the SHA-256, refuses to pass the ceiling.
 A tool for the local chat (the big files never go to git or to the cloud). No data inside.
     python3 tools/rosina/scarica.py GRANDI.tsv DEST [--cap-gb 20] [--only SOTTOSTRINGA] [--trial]
 Columns used: url, destinazione (relative path under DEST), byte, sha256 (a manifest of several files is not checked here: leave it empty)."""

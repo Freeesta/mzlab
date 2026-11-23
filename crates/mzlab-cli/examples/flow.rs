@@ -1,4 +1,4 @@
-//! Runs a workflow file (`mzflow/2`, `docs/studi/workflow/contract.schema.json`) with `mzlab_cli::flow` and writes `prov.json` next to the outputs: SHA-256 of
+//! Runs a workflow file (`mzflow/2`, `docs/studies/workflow/contract.schema.json`) with `mzlab_cli::flow` and writes `prov.json` next to the outputs: SHA-256 of
 //! every file, time and heap peak of every instance. The files of the plan are read from the folder of the plan file.
 //! Native: `cargo run --release -p mzlab-cli --example flow -- FLOW.json WORKDIR [WORKERS]`; the same source builds for `wasm32-wasip1`.
 use std::alloc::{GlobalAlloc, Layout, System};

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes docs/schemi/mzflow-2.json and prov-1.json from the workflow contract (docs/studi/workflow/contract.schema.json): each file is the contract
+"""Writes docs/schemi/mzflow-2.json and prov-1.json from the workflow contract (docs/studies/workflow/contract.schema.json): each file is the contract
 with its `$id` and a root `$ref` to one definition, so `mzlab-cli schema mzflow/2|prov/1` serves a schema that validates by itself.
 
     python3 tools/schemi_contratto.py           # rewrite the two files
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT = ROOT / "docs/studi/workflow/contract.schema.json"
+CONTRACT = ROOT / "docs/studies/workflow/contract.schema.json"
 OUT = {
     "mzflow-2.json": ("mzflow/2", "mzflow2", "mzflow/2: a Flow plan, the file `flow run` and `flow check` read"),
     "prov-1.json": ("prov/1", "prov1", "prov/1: the record of a run, the `prov.json` `flow run` writes"),
