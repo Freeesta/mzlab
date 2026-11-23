@@ -95,13 +95,13 @@ fn auto_writes_sparse_counts_as_centroid_and_a_continuous_trace_as_profile() {
     // the decision is told on stderr, and recorded in the file only where it changed what the reader says
     assert!(
         o.stderr
-            .contains("sparse.mzXML: spectrum=auto; written=centroid; basis=sparse"),
+            .contains("sparse.mzXML: spectrum=auto; written=centroid for ms_level 1, as the reader elsewhere; basis=sparse"),
         "{}",
         o.stderr
     );
     assert!(
         o.stderr
-            .contains("trace.mzXML: spectrum=auto; written=profile; basis=continuous points"),
+            .contains("trace.mzXML: spectrum=auto; written=as the reader; basis=continuous points"),
         "{}",
         o.stderr
     );
@@ -165,7 +165,7 @@ fn the_report_carries_the_decision_of_every_file() {
             .map(str::to_string)
     };
     assert!(kind("sparse").is_some_and(|t| t.contains("written=centroid")));
-    assert!(kind("trace").is_some_and(|t| t.contains("written=profile")));
+    assert!(kind("trace").is_some_and(|t| t.contains("written=as the reader")));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -192,5 +192,21 @@ fn the_file_is_the_one_the_site_writes() {
         .unwrap();
         assert!(site == out_of(&dir, name, "o"), "{name}");
     }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn our_own_peaks_are_told_as_centroids_of_mzlab_not_as_the_flag_of_the_reader() {
+    let dir = folder("spectrum_peaks");
+    let src = inputs(&dir);
+    let o = convert(&[p(&src), "--out", p(&dir.join("o")), "--peaks", "mzlab"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(
+        o.stderr
+            .contains("trace.mzXML: spectrum=auto; written=centroid; basis=peaks mzlab"),
+        "{}",
+        o.stderr
+    );
+    assert!(!o.stderr.contains("written=profile"), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }

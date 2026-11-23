@@ -1,9 +1,11 @@
 //! The spectrum-type term of a converted mzML (MS:1000127 centroid / MS:1000128 profile). A reader says "profile" for a whole instrument family, but sparse
 //! data (isolated ion counts, no continuous trace, as a unit-resolution triple quad gives) are centroids: a downstream tool that trusts the profile term
-//! smooths them and loses counts. `auto` looks at the points; `centroid` and `profile` are the user's word. One decision per sample, same on every route.
+//! smooths them and loses counts. `auto` looks at the points of each MS level and acts only on unit-resolution data (a fine grid is never touched);
+//! `centroid` and `profile` are the user's word. One decision per sample, same on every route.
 use crate::error::Result;
 use crate::mzml::Spectrum;
 use crate::readers::Reader;
+use crate::readers_mzml::Peaks;
 
 /// Scans looked at to decide (equally spaced over the sample, as the estimate of the centroider does).
 const PROBE: usize = 64;
@@ -11,11 +13,17 @@ const PROBE: usize = 64;
 const RUN_POINTS: usize = 4;
 /// Spacing of a point against the previous one inside a run: within this share of it.
 const RUN_TOL: f64 = 0.25;
-/// A run is a profile only when its points are closer than this (Da): a unit-resolution peak is about 0.7 Da wide, so a trace sampled every 1 Da or more is
-/// a stick spectrum (nominal masses, isolated counts), however regular.
-const MAX_STEP: f64 = 0.35;
-/// Below this share of the points in runs the data are sparse.
+/// A run is a profile only when its points are closer than this (Da): a unit-resolution peak is about 0.7 Da wide, so a Q1 trace sampled every 0.5 Da is
+/// still a profile, but one sampled every 1 Da or more is a stick spectrum (nominal masses, isolated counts), however regular.
+const MAX_STEP: f64 = 0.6;
+/// Below this share of the points in runs a level is sparse.
 const SPARSE_BELOW: f64 = 0.5;
+/// A neighbour spacing under this (Da) is a fine grid: peaks of two or three points of a high-resolution profile have no run but are never ion counts.
+const FINE_STEP: f64 = 0.05;
+/// A level where this share of the neighbour spacings is fine is a high-resolution profile: `auto` never touches it.
+const FINE_SHARE: f64 = 0.25;
+/// MS levels told apart (the higher ones count as the last).
+const LEVELS: usize = 32;
 
 /// What the user asks for (`--spectrum`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -50,12 +58,14 @@ impl SpectrumType {
 pub enum Basis {
     /// Asked for by the user.
     Asked,
-    /// The reader reports centroids (or the peaks written are ours): nothing to decide.
+    /// The reader reports centroids, or the points are the profile points of the file: nothing to decide.
     Reader,
     /// The points are on a continuous grid: the reader's profile stays.
     Continuous,
-    /// Isolated counts: written as centroid although the reader says profile.
+    /// Isolated counts: the scans of the sparse MS levels are written as centroid although the reader says profile.
     Sparse,
+    /// The points written are the peaks of mzLab (centroids): nothing to decide.
+    Peaks,
     /// Nothing to look at (no scan with points).
     Empty,
 }
@@ -64,10 +74,12 @@ pub enum Basis {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TypeChoice {
     pub asked: SpectrumType,
-    /// `Some(p)`: every scan is written as profile (`p`) or centroid; `None`: each scan keeps the flag of its reader.
+    /// `Some(p)`: every scan is written as profile (`p`) or centroid; `None`: each scan keeps the flag of its reader, except the sparse levels.
     pub force: Option<bool>,
+    /// Bit `l` set: the profile scans of MS level `l` (the last bit for any higher) are isolated counts and are written as centroid.
+    pub sparse: u32,
     pub basis: Basis,
-    /// Scans looked at and the share of their points that sit in continuous runs (`None` when not measured).
+    /// Scans looked at and the share of their profile points that sit in continuous runs (`None` when not measured).
     pub scans: usize,
     pub share: Option<f64>,
 }
@@ -78,17 +90,24 @@ impl TypeChoice {
         Self {
             asked,
             force: None,
+            sparse: 0,
             basis,
             scans: 0,
             share: None,
         }
     }
 
+    /// The flag written for a scan of MS level `level` that the reader flagged `profile`.
+    pub fn keeps(&self, profile: bool, level: u8) -> bool {
+        match self.force {
+            Some(p) => p,
+            None => profile && self.sparse & level_bit(level) == 0,
+        }
+    }
+
     /// Sets the flag of `s` as decided.
     pub fn apply(&self, s: &mut Spectrum) {
-        if let Some(p) = self.force {
-            s.profile = p;
-        }
+        s.profile = self.keeps(s.profile, s.level);
     }
 
     /// The decision changes what the reader alone would have written, or the user asked for it: it is recorded in the file and the run.
@@ -96,28 +115,38 @@ impl TypeChoice {
         self.asked != SpectrumType::Auto || self.basis == Basis::Sparse
     }
 
-    /// The type written for a scan the reader flagged `reader_profile`.
-    pub fn written(&self, reader_profile: bool) -> &'static str {
-        if self.force.unwrap_or(reader_profile) {
-            "profile"
-        } else {
-            "centroid"
-        }
+    /// The MS levels written as centroid by the decision of the points, in order ("1,2").
+    fn sparse_levels(&self) -> String {
+        let v: Vec<String> = (0..LEVELS)
+            .filter(|l| self.sparse & (1 << l) != 0)
+            .map(|l| l.to_string())
+            .collect();
+        v.join(",")
     }
 
-    /// One line for stderr, the `<run>` of the mzML and the provenance; `reader_profile`: the flag of the first scan.
-    pub fn text(&self, reader_profile: bool) -> String {
+    /// One line for stderr, the `<run>` of the mzML and the provenance.
+    pub fn text(&self) -> String {
+        let written = match (self.force, self.basis) {
+            (Some(true), _) => "profile".to_string(),
+            (Some(false), _) => "centroid".to_string(),
+            (None, Basis::Peaks) => "centroid".to_string(),
+            (None, Basis::Sparse) => format!(
+                "centroid for ms_level {}, as the reader elsewhere",
+                self.sparse_levels()
+            ),
+            (None, _) => "as the reader".to_string(),
+        };
         let basis = match self.basis {
-            Basis::Asked => "asked".to_string(),
-            Basis::Reader => "reader reports centroids".to_string(),
-            Basis::Continuous => "continuous points".to_string(),
-            Basis::Sparse => "sparse points, no continuous profile".to_string(),
-            Basis::Empty => "no points".to_string(),
+            Basis::Asked => "asked",
+            Basis::Reader => "points as the reader gives them",
+            Basis::Continuous => "continuous points",
+            Basis::Sparse => "sparse points, no continuous profile",
+            Basis::Peaks => "peaks mzlab",
+            Basis::Empty => "no points",
         };
         let mut s = format!(
-            "spectrum={}; written={}; basis={basis}",
-            self.asked.name(),
-            self.written(reader_profile)
+            "spectrum={}; written={written}; basis={basis}",
+            self.asked.name()
         );
         if let Some(v) = self.share {
             s += &format!("; continuous_points={v:.3}; scans_probed={}", self.scans);
@@ -155,10 +184,10 @@ pub fn run_points(mz: &[f64]) -> (usize, usize) {
 }
 
 /// Decides the term of sample `c`: from the user's word or, for `auto`, from at most 64 scans of the sample (read and dropped).
-/// `file_peaks`: the points written are the reader's own (`Peaks::File`); with other peaks `auto` leaves the scans as they are.
+/// `peaks`: which points are written; only the reader's own (`Peaks::File`) are looked at, with other peaks `auto` leaves the scans as they are.
 pub fn choose(
     asked: SpectrumType,
-    file_peaks: bool,
+    peaks: Peaks,
     l: &mut dyn Reader,
     c: usize,
 ) -> Result<TypeChoice> {
@@ -167,7 +196,8 @@ pub fn choose(
             force: Some(asked == SpectrumType::Profile),
             ..TypeChoice::keep(asked, Basis::Asked)
         }),
-        SpectrumType::Auto if !file_peaks => Ok(TypeChoice::keep(asked, Basis::Reader)),
+        SpectrumType::Auto if peaks == Peaks::Mzlab => Ok(TypeChoice::keep(asked, Basis::Peaks)),
+        SpectrumType::Auto if peaks != Peaks::File => Ok(TypeChoice::keep(asked, Basis::Reader)),
         SpectrumType::Auto => {
             let seen = probe(l, c)?;
             if seen.scans == 0 {
@@ -179,29 +209,58 @@ pub fn choose(
                     ..TypeChoice::keep(asked, Basis::Reader)
                 });
             }
-            let share = seen.inside as f64 / seen.total.max(1) as f64;
-            let sparse = share < SPARSE_BELOW;
+            // each level on its own: a few profile scans among many sparse product scans stay profile; a fine grid is never sparse
+            let sparse = (0..LEVELS)
+                .filter(|&l| seen.of[l].is_sparse())
+                .fold(0u32, |m, l| m | 1 << l);
+            let (inside, total) = seen
+                .of
+                .iter()
+                .fold((0, 0), |(i, t), s| (i + s.inside, t + s.total));
             Ok(TypeChoice {
-                asked,
-                force: sparse.then_some(false),
-                basis: if sparse {
+                sparse,
+                basis: if sparse != 0 {
                     Basis::Sparse
                 } else {
                     Basis::Continuous
                 },
                 scans: seen.scans,
-                share: Some(share),
+                share: Some(inside as f64 / total.max(1) as f64),
+                ..TypeChoice::keep(asked, Basis::Continuous)
             })
         }
     }
 }
 
-/// What the scans looked at show: how many hold points, how many of those the reader flags profile, and their points in runs and in all.
+/// The profile scans looked at of one MS level: their points in runs and in all, and their neighbour spacings in all and on a fine grid.
+#[derive(Clone, Copy, Default)]
+struct Level {
+    scans: usize,
+    inside: usize,
+    total: usize,
+    gaps: usize,
+    fine: usize,
+}
+
+impl Level {
+    /// Profile scans were seen, few of their points are in runs and the spacings are not those of a fine grid.
+    fn is_sparse(&self) -> bool {
+        self.scans > 0
+            && (self.inside as f64) < SPARSE_BELOW * self.total as f64
+            && (self.fine as f64) < FINE_SHARE * self.gaps as f64
+    }
+}
+
+/// What the scans looked at show: how many hold points, how many of those the reader flags profile, and the profile ones per MS level.
 struct Probe {
     scans: usize,
     flagged: usize,
-    inside: usize,
-    total: usize,
+    of: [Level; LEVELS],
+}
+
+/// The bit of MS level `level` in `TypeChoice::sparse`.
+fn level_bit(level: u8) -> u32 {
+    1 << (usize::from(level)).min(LEVELS - 1)
 }
 
 /// At most `PROBE` scans of sample `c`, equally spaced, read and dropped.
@@ -211,8 +270,7 @@ fn probe(l: &mut dyn Reader, c: usize) -> Result<Probe> {
     let mut seen = Probe {
         scans: 0,
         flagged: 0,
-        inside: 0,
-        total: 0,
+        of: [Level::default(); LEVELS],
     };
     for j in 0..count {
         let k = if count > 1 {
@@ -228,9 +286,18 @@ fn probe(l: &mut dyn Reader, c: usize) -> Result<Probe> {
         seen.scans += 1;
         if s.profile {
             let (inside, total) = run_points(&s.mz);
+            let lv = &mut seen.of[usize::from(s.level).min(LEVELS - 1)];
             seen.flagged += 1;
-            seen.inside += inside;
-            seen.total += total;
+            lv.scans += 1;
+            lv.inside += inside;
+            lv.total += total;
+            for w in s.mz.windows(2) {
+                let d = w[1] - w[0];
+                if d > 0.0 {
+                    lv.gaps += 1;
+                    lv.fine += usize::from(d < FINE_STEP);
+                }
+            }
         }
     }
     Ok(seen)

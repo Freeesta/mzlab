@@ -226,7 +226,7 @@ pub struct Conversion<'a> {
 impl Conversion<'_> {
     /// The decision of the spectrum-type term for sample `c`: the one `write_counted` takes (same inputs, same answer).
     pub fn type_choice(&self, l: &mut dyn Reader, c: usize) -> Result<TypeChoice> {
-        spectrum_type::choose(self.spectrum, self.peaks == Peaks::File, l, c)
+        spectrum_type::choose(self.spectrum, self.peaks, l, c)
     }
 
     /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
@@ -259,9 +259,8 @@ impl Conversion<'_> {
             None => self.type_choice(l, c)?,
         };
         if choice.recorded() {
-            let first = l.index_without_tic(c)?.is_empty() || l.scan(c, 0)?.profile;
             h.run_params
-                .push(("mzLab spectrum type".into(), choice.text(first)));
+                .push(("mzLab spectrum type".into(), choice.text()));
         }
         h.run_params
             .push(("mzLab conversion/1".into(), crate::conv::resoconto(l, c)?));

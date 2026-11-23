@@ -8,15 +8,33 @@ use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, Scan
 use mzlab_core::readers_mzml::Conversion;
 use mzlab_core::spectrum_type::{Basis, SpectrumType};
 
+/// What the scans of a fake sample hold (the reader flags the profile ones as `flag` says).
+#[derive(Clone, Copy)]
+enum Shape {
+    /// Isolated counts at irregular masses.
+    Counts,
+    /// A gaussian trace every 0.1 Da.
+    Trace,
+    /// `n` points per peak every 0.003 Da, the peaks 7.3 Da apart (zero-suppressed high-resolution profile).
+    Peaks(usize),
+    /// A Q1 trace every 0.5 Da.
+    Q1,
+    /// Three points on a fine grid.
+    Few,
+    /// No points.
+    Empty,
+}
+
 struct Fake {
     samples: Vec<Sample>,
     index: Vec<ScanEntry>,
-    sparse: bool,
+    /// Shape and MS level of each scan.
+    shapes: Vec<(Shape, u8)>,
     flag: bool,
 }
 
-fn fake(sparse: bool, flag: bool) -> Fake {
-    let n = 6;
+fn many(shapes: Vec<(Shape, u8)>, flag: bool) -> Fake {
+    let n = shapes.len();
     Fake {
         samples: vec![Sample {
             id: 0,
@@ -28,7 +46,7 @@ fn fake(sparse: bool, flag: bool) -> Fake {
             .map(|k| ScanEntry {
                 id: k.to_string(),
                 rt: k as f64,
-                livello: 1,
+                livello: shapes[k].1,
                 polarita: 1,
                 tic: 0.0,
                 base_peak: None,
@@ -37,8 +55,34 @@ fn fake(sparse: bool, flag: bool) -> Fake {
                 position: None,
             })
             .collect(),
-        sparse,
+        shapes,
         flag,
+    }
+}
+
+/// Six MS1 scans of one shape.
+fn fake_of(shape: Shape, flag: bool) -> Fake {
+    many(vec![(shape, 1); 6], flag)
+}
+
+fn fake(sparse: bool, flag: bool) -> Fake {
+    fake_of(if sparse { Shape::Counts } else { Shape::Trace }, flag)
+}
+
+fn points(shape: Shape, k: usize) -> Vec<f64> {
+    match shape {
+        Shape::Counts => (0..9)
+            .map(|i| {
+                100.0 + f64::from(i) * 7.31 + (f64::from(i) * 1.7).sin() * 2.0 + k as f64 * 0.01
+            })
+            .collect(),
+        Shape::Trace => (0..300).map(|i| 100.0 + f64::from(i) * 0.1).collect(),
+        Shape::Peaks(n) => (0..10)
+            .flat_map(|p| (0..n).map(move |i| 500.0 + f64::from(p) * 7.3 + i as f64 * 0.003))
+            .collect(),
+        Shape::Q1 => (0..200).map(|i| 100.0 + f64::from(i) * 0.5).collect(),
+        Shape::Few => vec![300.0, 300.004, 300.008],
+        Shape::Empty => Vec::new(),
     }
 }
 
@@ -53,35 +97,23 @@ impl Reader for Fake {
         Ok(&self.index)
     }
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
-        // isolated counts at irregular masses, or a gaussian trace every 0.1 Da
-        let (mz, y): (Vec<f64>, Vec<f64>) = if self.sparse {
-            (0..9)
-                .map(|i| {
-                    (
-                        100.0
-                            + f64::from(i) * 7.31
-                            + (f64::from(i) * 1.7).sin() * 2.0
-                            + k as f64 * 0.01,
-                        1.0 + f64::from(i % 3),
-                    )
-                })
-                .unzip()
-        } else {
-            (0..300)
-                .map(|i| {
-                    let m = 100.0 + f64::from(i) * 0.1;
-                    (m, 1000.0 * (-((m - 115.0) / 0.35).powi(2)).exp())
-                })
-                .unzip()
-        };
+        let (shape, level) = self.shapes[k];
+        let mz = points(shape, k);
+        let y: Vec<f32> = mz
+            .iter()
+            .map(|&m| match shape {
+                Shape::Trace => (1000.0 * (-((m - 115.0) / 0.35).powi(2)).exp()) as f32,
+                _ => 1.0 + (m * 10.0) as usize as f32 % 3.0,
+            })
+            .collect();
         Ok(Spectrum {
             index: k,
-            level: 1,
+            level,
             rt: k as f64,
             polarity: 1,
             profile: self.flag,
             mz,
-            intensity: y.iter().map(|&v| v as f32).collect(),
+            intensity: y,
             ..Spectrum::default()
         })
     }
@@ -160,14 +192,98 @@ fn the_choice_is_taken_once_and_told() {
     let mut l = fake(true, true);
     let conv = Conversion::default();
     let c = conv.type_choice(&mut l, 0).unwrap();
-    assert_eq!((c.basis, c.force), (Basis::Sparse, Some(false)));
+    assert_eq!((c.basis, c.force), (Basis::Sparse, None));
+    // only the level that was probed and found sparse changes; a level never seen keeps what its reader says
+    assert!(!c.keeps(true, 1) && c.keeps(true, 2));
     assert!(c.share.unwrap() < 0.5 && c.scans == 6);
     assert!(c
-        .text(true)
-        .starts_with("spectrum=auto; written=centroid; basis=sparse"));
+        .text()
+        .starts_with("spectrum=auto; written=centroid for ms_level 1"));
     let c = conv.type_choice(&mut fake(false, true), 0).unwrap();
     assert_eq!(
         (c.basis, c.force, c.recorded()),
         (Basis::Continuous, None, false)
     );
+}
+
+/// The decision of `auto` on a sample of the shapes, all flagged profile.
+fn auto(shapes: Vec<(Shape, u8)>) -> mzlab_core::spectrum_type::TypeChoice {
+    Conversion::default()
+        .type_choice(&mut many(shapes, true), 0)
+        .unwrap()
+}
+
+#[test]
+fn zero_suppressed_high_resolution_peaks_stay_profile_at_any_width() {
+    // two to five points per peak on a fine grid: no run of four, but never ion counts
+    for n in 2..=5 {
+        let c = auto(vec![(Shape::Peaks(n), 1); 6]);
+        assert_eq!((c.basis, c.sparse), (Basis::Continuous, 0), "{n} points");
+        let (doc, back) = convert(&mut fake_of(Shape::Peaks(n), true), SpectrumType::Auto);
+        assert!(
+            doc.contains("MS:1000128") && all_profile(&back, true),
+            "{n}"
+        );
+    }
+}
+
+#[test]
+fn a_profile_scan_with_few_points_stays_profile() {
+    let c = auto(vec![(Shape::Few, 1); 6]);
+    assert_eq!((c.basis, c.sparse), (Basis::Continuous, 0));
+}
+
+#[test]
+fn a_q1_trace_every_half_dalton_stays_profile() {
+    let c = auto(vec![(Shape::Q1, 1); 6]);
+    assert_eq!((c.basis, c.sparse), (Basis::Continuous, 0));
+}
+
+#[test]
+fn a_profile_ms1_among_sparse_product_scans_stays_profile() {
+    // MS1 trace, MS2 isolated counts: the MS2 scans become centroid, the MS1 scans keep their profile, the note names the level
+    let mut shapes = Vec::new();
+    for _ in 0..3 {
+        shapes.push((Shape::Trace, 1));
+        shapes.push((Shape::Counts, 2));
+        shapes.push((Shape::Counts, 2));
+    }
+    let c = auto(shapes.clone());
+    assert_eq!(c.basis, Basis::Sparse);
+    assert!(c.keeps(true, 1) && !c.keeps(true, 2));
+    assert!(c.text().contains("centroid for ms_level 2"));
+    let (_, back) = convert(&mut many(shapes, true), SpectrumType::Auto);
+    let flags: Vec<bool> = back.iter().map(|s| s.profile).collect();
+    assert_eq!(
+        flags,
+        [true, false, false, true, false, false, true, false, false]
+    );
+}
+
+#[test]
+fn nothing_to_look_at_decides_nothing() {
+    let c = auto(Vec::new());
+    assert_eq!((c.basis, c.sparse, c.recorded()), (Basis::Empty, 0, false));
+    let c = auto(vec![(Shape::Empty, 1); 4]);
+    assert_eq!((c.basis, c.sparse), (Basis::Empty, 0));
+}
+
+#[test]
+fn other_peaks_are_ours_and_the_note_says_so() {
+    let conv = Conversion {
+        peaks: mzlab_core::readers_mzml::Peaks::Mzlab,
+        ..Conversion::default()
+    };
+    let c = conv.type_choice(&mut fake(false, true), 0).unwrap();
+    assert_eq!((c.basis, c.recorded()), (Basis::Peaks, false));
+    assert_eq!(
+        c.text(),
+        "spectrum=auto; written=centroid; basis=peaks mzlab"
+    );
+}
+
+#[test]
+fn a_mixed_file_is_not_said_to_be_all_profile() {
+    let c = auto(vec![(Shape::Trace, 1); 3]);
+    assert!(c.text().contains("written=as the reader"));
 }

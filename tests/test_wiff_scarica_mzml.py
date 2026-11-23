@@ -36,6 +36,19 @@ def test_the_download_is_the_file_of_the_cli(work, stem, comp):
     assert cli and site.read_bytes() == cli[0].read_bytes(), cli
 
 
+@pytest.mark.parametrize("stem", ["one", "totale", "prodotto"])
+def test_sparse_counts_download_as_centroids_on_the_site_and_in_the_cli(work, stem):
+    """The `.wiff` reader calls every scan profile, but these synthetic samples hold isolated counts: the site's `.wasm` route and the CLI both write them as centroids
+    (MS:1000127, never the profile term), say so in the run, and are the same bytes (`--spectrum auto`, the default of both)."""
+    pair = [work / "ref" / f"{stem}.wiff", work / "ref" / f"{stem}.wiff.scan"]
+    site, out = work / f"{stem}.auto.mzML", work / f"{stem}.auto"
+    run("node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "0", "standard", *map(str, pair))
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1")
+    cli = sorted(out.glob("*.mzML"))[0].read_bytes()
+    assert site.read_bytes() == cli
+    assert b"MS:1000127" in cli and b"MS:1000128" not in cli and b"mzLab spectrum type" in cli
+
+
 @pytest.mark.parametrize("comp", ["standard", "smallest", "none"])
 def test_a_sample_of_the_readers_module_downloads_as_the_cli_writes_it(work, comp):
     """The second sample of `mistopi` only the readers module reads (converted at the loading, shell.js `moduloToMzml`): «Download .mzML» writes it again with

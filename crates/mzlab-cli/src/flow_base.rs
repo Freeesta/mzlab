@@ -430,12 +430,17 @@ pub(crate) fn write_mzml_with(
     };
     let choice = conv.type_choice(&mut *reader, sample)?;
     conv.decided = Some(choice);
-    let first = !reader.index(sample)?.is_empty() && reader.scan(sample, 0)?.profile;
+    // the flag of the first scan as the reader gives it (a scan that does not read counts as centroid: the writer reports it)
+    let first = if peaks == Peaks::File && !reader.index(sample)?.is_empty() {
+        reader.scan(sample, 0).ok().map(|s| (s.profile, s.level))
+    } else {
+        None
+    };
     // The note of the file always carries the decision (`--report`, stderr of `convert`, prov.json); the mzML itself only when it is the user's or it
     // changed what the reader says, so the other files keep their bytes.
-    let note = choice.text(first);
+    let note = choice.text();
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
-    let profile = peaks == Peaks::File && first && choice.written(first) == "profile";
+    let profile = first.is_some_and(|(p, l)| p && choice.keeps(p, l));
     let written = File::create(out).map_err(io).and_then(|f| {
         let sink = BufWriter::new(HashWrite::new(Stopping::new(f, stop.clone())));
         let (mut w, flagged) =
