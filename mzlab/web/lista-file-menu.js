@@ -52,7 +52,8 @@ function fileCtx(e, f) {
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {
-  Q("#fpop")?.remove();
+  const old = /** @type {any} */ (Q("#fpop")), pnl = btn.closest(".pnl");
+  if (old) { old._close(false); if (old._pnl === pnl) return; }      // the chip again closes its own list
   const d = document.createElement("div"); d.id = "fpop";
   const paint = () => {
     const gs = []; tabFiles().forEach(f => { const g = grpOf(f); let G = gs.find(x => x.g === g); if (!G) gs.push(G = { g, fs: [] }); G.fs.push(f); });
@@ -62,8 +63,31 @@ function fileMenu(btn) {
     d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { fileViewDo(() => tabFiles().forEach(f => f.vis = b.dataset.all === "1")); if (b.dataset.all === "0") cleanupOrphanPanels(); paint(); done(); });
     d.querySelectorAll("input").forEach(i => i.onchange = () => { fileViewDo(() => { E.files[+i.dataset.k].vis = i.checked; }); if (!i.checked) cleanupOrphanPanels(); done(); });
     d.querySelectorAll(".fn").forEach(n => n.onclick = e => { e.preventDefault(); fileViewDo(() => tabFiles().forEach(f => f.vis = f.k === +n.dataset.k)); cleanupOrphanPanels(); paint(); done(); });
+    if (d.isConnected) place();      // the list changed height (a group opened, a name went): keep it inside the viewport
   };
-  paint(); document.body.appendChild(d);
-  const r = btn.getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 240) + "px"; d.style.top = r.bottom + 4 + "px";
-  closeOutside(d);
+  // The list lives on <body> above every panel (panels stack at E.z, which only grows): it opens under the chip, or above it when there is more room there,
+  // stays inside the viewport and scrolls inside when long; Esc or a tap outside closes it and the focus goes back to the chip of the same panel.
+  const M = 8;
+  let ar = btn.getBoundingClientRect();
+  const place = () => {
+    if (btn.isConnected) ar = btn.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth, vh = innerHeight, below = vh - ar.bottom - M, above = ar.top - M;
+    d.style.maxHeight = ""; d.style.top = "0"; d.style.left = "0";
+    const w = d.offsetWidth, h = d.offsetHeight, up = h > below && above > below, room = Math.max(120, up ? above : below);
+    d.style.maxHeight = Math.min(h, room) + "px";
+    const hh = Math.min(h, room);
+    d.style.left = Math.max(M, Math.min(ar.left, vw - M - w)) + "px";
+    d.style.top = Math.max(M, up ? ar.top - 4 - hh : Math.min(ar.bottom + 4, vh - M - hh)) + "px";
+  };
+  const close = (/** @type {boolean} */ back = false) => {
+    d.remove(); removeEventListener("resize", onResize); document.removeEventListener("keydown", esc, true);
+    const b = back && pnl?.isConnected ? /** @type {HTMLButtonElement | null} */ (pnl.querySelector('[data-o="fpop"]')) : null; if (b && !b.disabled) b.focus();
+  };
+  const onResize = () => close(false), esc = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); close(true); } };
+  Object.assign(d, { _close: close, _pnl: pnl });
+  d.setAttribute("role", "dialog"); d.setAttribute("aria-label", I18N.t("ctl.files.title"));
+  paint(); document.body.appendChild(d); place();
+  addEventListener("resize", onResize); document.addEventListener("keydown", esc, true);
+  (d.querySelector("input") || d.querySelector("button"))?.focus({ preventScroll: true });
+  closeOutside(d, e => !!/** @type {Element} */ (e.target).closest?.('[data-o="fpop"]'), () => close(false));      // a tap on a chip is its own toggle (the click that follows)
 }
