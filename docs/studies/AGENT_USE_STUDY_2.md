@@ -124,6 +124,24 @@ Plan, owner-only steps marked:
 
 Risks: the fixed URL serves whatever the latest publish is (the script prints the version, and `--version X.Y.Z` pins it); an unsigned macOS binary may be blocked when downloaded by a browser (the docs say to use `curl`). Parity: not applicable (distribution). Acceptance tests: the smoke test above in CI; after publishing, the command in `cli-agenti.md` and the script both verify the checksum on Linux and macOS.
 
+## Roadmap, continued: raw data access (AU-12..AU-19)
+From `RAW_ACCESS_STUDY.md` (problem, evidence, gap table, ion statistics, cache, owner decisions D1-D7) and `RAW_ACCESS_STUDY_2.md` (command specification, regression plan). Same columns as the table of part 1; rank continues it, but AU-12 and AU-13 weigh like AU-3: they replace the reader an agent rewrites every session.
+
+| rank | id | what | why | size | depends on | owner-only? |
+|---|---|---|---|---|---|---|
+| 12 | AU-12 | `raw info` (polarity, scan types, grid, ion quantum, label against data, offset on request) and `raw cache` (= `file index --cache`, `raw-cache/1`); lazy `mzlab-raw-wasm` scaffold | one call says whether ions can be counted and whether the centroid/profile label is wrong | S-M | MZML-SPECTRUM-TYPE (#3678), CONTRACT-ENGLISH | D2 (wasm module), D7 (name) |
+| 13 | AU-13 | `ionstat` (quantum, Poisson counts, one-ion S/N floor, L_C/L_D, upper limits) and `raw xic` (verdict peak/trace/nothing with its rule, series summaries, `exclusive`, bounded output, provenance); golden campaign and Python reference | "is there a peak here" without a throw-away reader; two ions on zero background give S/N 17 today | M | AU-12, QUANT-TARGETS (#3681), AU-2 | D1 (S/N model), D6 (thresholds) |
+| 14 | AU-14 | `raw batch` (JSONL in and out, one process, files hashed once, cache entries opened in place) with its speed measurement | < 1 s per xic over a campaign from the cache | S-M | AU-13, SPEED-STUDY (#3682: SP2, SP6, SP15) | D5 |
+| 15 | AU-15 | `raw ms2` list, spectrum, xic (precursors, mean product spectra per precursor channel, neutral losses, product XIC per precursor) | `trace xic` at level 2 sums every precursor | M | AU-13 | no |
+| 16 | AU-16 | binned view (sum per nominal or 0.1 Da bin from the `.mzidx`), `raw scan` (side background, ratio, net S/N), `raw companions` (shape correlation + mass-difference table shared with AU-10) | adducts, in-source fragments and dimers checked at the raw level | M | AU-13; coordinate with AU-10 | D3 (no `.mzbin` yet) |
+| 17 | AU-17 | `raw profile` (time course per series, shape class absent/sporadic/rise/decay/rise_fall/flat with its rule) | carryover in washes and formation curves read in one call | S | AU-13, AU-2 | no |
+| 18 | AU-18 | `raw isotopes` (M+1/M, M+2/M from counts, expected from `ion pattern`, Poisson z, carbon range) | formula proposals checked with counting error | S-M | AU-16 | no |
+| 19 | AU-19 | `--figure` small SVG grid (series x time) for `raw xic` and `raw profile` | the grid of PNGs the agent drew by hand | S | AU-13 | D4 (SVG only or PNG) |
+
+Already covered by running chats (not duplicated): the integration engine and per-file S/N of a target list (QUANT-TARGETS, #3681, reused by AU-13); the from-index path, cache-hit speed and one hash per file (SPEED-STUDY, #3682, SP2/SP6/SP15, used by AU-14); the centroid/profile decision from the points (MZML-SPECTRUM-TYPE, #3678, used by AU-12); sample roles from names (SAMPLE-NAMES-ROLES, #3674) and the task -> command table with near-miss hints (AGENT-DISCOVERY), where the `raw` rows go.
+
+Order: AU-12, AU-13; then AU-14 and AU-15 in parallel; AU-16; AU-17, AU-18, AU-19 in parallel. Every chat ships CLI, app and site with its parity test (§R).
+
 ## Not copied from MZmine
 - Defaults hidden in code: mzLab's descriptors stay the single source (AU-5 only prints them).
 - An isotope filter in ppm for unit-mass data: AU-10 uses Da and correlation.
