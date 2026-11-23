@@ -1,6 +1,6 @@
 # Rosina C: Thermo `.raw`
 
-Legend and index: `SCHEDE.md`. Reader: module `thermo` (`opentfraw` adapted), `metodo_raw.rs` and submodules; details in `docs/agenti/metodo.md` and `docs/agenti/lettura-nativa.md`.
+Legend and index: `SHEETS.md`. Reader: module `thermo` (`opentfraw` adapted), `metodo_raw.rs` and submodules; details in `docs/agenti/metodo.md` and `docs/agenti/lettura-nativa.md`.
 
 ## Status
 - Spectra and chromatograms L on Orbitrap/Q Exactive/Exploris (parity with the msconvert mzML on the corpus files that have it); method L (serial and version equal to msconvert, gradient equal to the script).

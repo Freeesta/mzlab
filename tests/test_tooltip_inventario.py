@@ -1,4 +1,4 @@
-"""Tooltips must add information (docs/inventari/TOOLTIP.md): none may repeat the visible text of its own element,
+"""Tooltips must add information (docs/inventories/TOOLTIP.md): none may repeat the visible text of its own element,
 and none may be only the «Right-click: actions» hint. The two lists below only shrink."""
 import re
 import sys

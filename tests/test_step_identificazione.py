@@ -8,7 +8,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
+CONTRACT = json.loads((ROOT / "docs/studies/workflow/contract.schema.json").read_text())
 STEPS = json.loads((ROOT / "docs/schemi/steps-attributio-1.json").read_text())
 RECORDS = json.loads((ROOT / "docs/schemi/records-1.json").read_text())
 IDS = ["spectra.chimeric", "formula.ms1", "formula.ms2", "spectra.match", "spectra.insilico", "rt.predict",

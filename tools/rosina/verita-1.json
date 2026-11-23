@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "verita/1",
-  "description": "Ground truth of one native file, as an external oracle (msconvert, ThermoRawFileParser, timsdata, the authors' mzML) gives it. docs/studi/ROSINA.md F.1.",
+  "description": "Ground truth of one native file, as an external oracle (msconvert, ThermoRawFileParser, timsdata, the authors' mzML) gives it. docs/studies/ROSINA.md F.1.",
   "type": "object",
   "required": [
     "schema",

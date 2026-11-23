@@ -40,7 +40,7 @@
    "doi": "10.1021/es050794n",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "diclofenac-OH-02",
@@ -55,7 +55,7 @@
    "doi": "10.1021/es050794n",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "diclofenac-OH-03",
@@ -71,7 +71,7 @@
    "doi": "10.1021/es050794n",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "diclofenac-metabolism-04",
@@ -86,7 +86,7 @@
    "doi": "10.1021/tx9802365",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "diclofenac-metabolism-05",
@@ -101,7 +101,7 @@
    "doi": "10.1021/tx9802365",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "sulfamethoxazole-OH-06",
@@ -117,7 +117,7 @@
    "doi": "10.1016/j.watres.2009.04.006",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "sulfamethoxazole-OH-07",
@@ -132,7 +132,7 @@
    "doi": "10.1016/j.watres.2009.04.006",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "sulfamethoxazole-OH-08",
@@ -148,7 +148,7 @@
    "doi": "10.1016/j.watres.2009.04.006",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "sulfamethoxazole-OH-09",
@@ -163,7 +163,7 @@
    "doi": "10.1016/j.watres.2009.04.006",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "atrazine-OH-10",
@@ -178,7 +178,7 @@
    "doi": "10.1021/es001271c",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "atrazine-OH-11",
@@ -193,7 +193,7 @@
    "doi": "10.1021/es001271c",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "atrazine-OH-12",
@@ -208,7 +208,7 @@
    "doi": "10.1021/es001271c",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "bisphenol_a-OH-13",
@@ -226,7 +226,7 @@
    "doi": "10.1016/j.apcatb.2014.05.007",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "bisphenol_a-OH-14",
@@ -241,7 +241,7 @@
    "doi": "10.1016/j.apcatb.2014.05.007",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "caffeine-OH-15",
@@ -256,7 +256,7 @@
    "doi": "10.1021/es047985v",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "caffeine-OH-16",
@@ -271,7 +271,7 @@
    "doi": "10.1021/es047985v",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "caffeine-OH-17",
@@ -286,7 +286,7 @@
    "doi": "10.1021/es047985v",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "caffeine-OH-18",
@@ -301,7 +301,7 @@
    "doi": "10.1021/es047985v",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "caffeine-metabolism-19",
@@ -316,7 +316,7 @@
    "doi": "10.1155/2018/2085059",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "caffeine-metabolism-20",
@@ -331,7 +331,7 @@
    "doi": "10.1155/2018/2085059",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "caffeine-metabolism-21",
@@ -346,7 +346,7 @@
    "doi": "10.1155/2018/2085059",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "triclosan-OH-22",
@@ -361,7 +361,7 @@
    "doi": "10.1897/04-243r.1",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "ibuprofen-OH-23",
@@ -376,7 +376,7 @@
    "doi": "10.1016/j.chemosphere.2018.10.053",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "ibuprofen-OH-24",
@@ -391,7 +391,7 @@
    "doi": "10.1016/j.chemosphere.2018.10.053",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "ibuprofen-OH-25",
@@ -407,7 +407,7 @@
    "doi": "10.3390/jox15010005",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "ibuprofen-OH-26",
@@ -422,7 +422,7 @@
    "doi": "10.1016/j.chemosphere.2018.10.053",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "metoprolol-O3-27",
@@ -437,7 +437,7 @@
    "doi": "10.1021/es900280e",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "metoprolol-O3-28",
@@ -453,7 +453,7 @@
    "doi": "10.1021/es900280e",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "metoprolol-O3-29",
@@ -468,7 +468,7 @@
    "doi": "10.1021/es900280e",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "metoprolol-OH-30",
@@ -483,7 +483,7 @@
    "doi": "10.1016/j.jhazmat.2010.03.013",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "benzophenone_3-OH-31",
@@ -498,7 +498,7 @@
    "doi": "10.1016/j.jenvman.2015.11.047",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "benzophenone_3-OH-32",
@@ -514,7 +514,7 @@
    "doi": "10.1016/j.jenvman.2015.11.047",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "benzophenone_3-OH-33",
@@ -529,7 +529,7 @@
    "doi": "10.1016/j.jhazmat.2020.123591",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "benzophenone_3-OH-34",
@@ -544,7 +544,7 @@
    "doi": "10.1016/j.jenvman.2015.11.047",
    "tier": "literature",
    "confidence": "medium",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "imidacloprid-OH-35",
@@ -559,7 +559,7 @@
    "doi": "10.1016/j.apcatb.2008.07.018",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "imidacloprid-OH-36",
@@ -574,7 +574,7 @@
    "doi": "10.1016/j.apcatb.2008.07.018",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "imidacloprid-OH-37",
@@ -589,7 +589,7 @@
    "doi": "10.1016/j.apcatb.2008.07.018",
    "tier": "literature",
    "confidence": "high",
-   "source": "siti_sperimentali.csv"
+   "source": "experimental_sites.csv"
   },
   {
    "id": "bentazone-OH-38",
@@ -604,7 +604,7 @@
    "doi": "10.1016/j.apcatb.2016.06.068",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "bentazone-OH-39",
@@ -619,7 +619,7 @@
    "doi": "10.1016/j.apcatb.2016.06.068",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "carbamazepine-OH-40",
@@ -635,7 +635,7 @@
    "doi": "10.1016/s0045-6535(03)00757-4",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "carbamazepine-OH-41",
@@ -650,7 +650,7 @@
    "doi": "10.3390/catal10020169",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "carbamazepine-OH-42",
@@ -665,7 +665,7 @@
    "doi": "10.3390/catal10020169",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "propranolol-OH-43",
@@ -680,7 +680,7 @@
    "doi": "10.1016/j.apcatb.2012.10.003",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "propranolol-OH-44",
@@ -695,7 +695,7 @@
    "doi": "10.1016/j.apcatb.2012.10.003",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "diuron-O3-45",
@@ -710,7 +710,7 @@
    "doi": "10.1016/j.cej.2016.02.005",
    "tier": "literature",
    "confidence": "high",
-   "source": "tp_noti/tp_noti.csv"
+   "source": "tp_known/tp_known.csv"
   },
   {
    "id": "phenol-OH-46",
@@ -727,7 +727,7 @@
    "doi": "10.1016/j.arabjc.2021.103635",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "benzoic_acid-OH-47",
@@ -744,7 +744,7 @@
    "doi": "10.55730/1300-0144.6374",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "nitrobenzene-OH-48",
@@ -761,7 +761,7 @@
    "doi": "10.1021/es050824m",
    "tier": "literature",
    "confidence": "high",
-   "source": "coppie_isomeri_rt.csv"
+   "source": "isomer_pairs_rt.csv"
   },
   {
    "id": "phenol-OH-49",

@@ -1,6 +1,6 @@
 # Rosina C: SCIEX `.wiff`, `.wiff` TOF, `.wiff2`
 
-Legend and index: `SCHEDE.md`. Reader: `crates/mzlab-core/src/wiff/` (engine and module `sciex`), `metodo_wiff.rs`; details in `docs/agenti/wiff.md`, `wiff-varianti.md`, `wiff_specifica_completa.md`.
+Legend and index: `SHEETS.md`. Reader: `crates/mzlab-core/src/wiff/` (engine and module `sciex`), `metodo_wiff.rs`; details in `docs/agenti/wiff.md`, `wiff-varianti.md`, `wiff_specifica_completa.md`.
 
 ## Status
 - Analyst `.wiff` + `.wiff.scan` (the laboratory's 3200 QTRAP, QTRAP 4000/5500/6500): L for full scan, MRM, sMRM, EPI, PIS, NL; 32 real files, 388 samples read, 6 rejected (TOF and `.wiff2`). Multiple samples per container L. Truncated file: loads with the scans it has (`mancanti`).
