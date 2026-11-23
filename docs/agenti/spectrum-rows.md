@@ -1,8 +1,6 @@
-# Rows of the MS² spectrum card
-`mzlab/web/spettro-righe.js` (`SPECROWS.update`, called by `afterDraw` in `pannelli.js`) puts one row per topic under the card header; CSS `order` in `app.css` fixes the sequence:
-1. Fragments and intensities: the header controls (`.ctl`, wrapped onto its own line, `aria-label` «Fragments and intensities»).
-2. Notes: `p.note`, saved with the panel (`explore.js`).
-3. Retention times: the scan window plus the limits of the integrated peaks of the linked chromatogram that touch it.
-4. CE: `ce_mid ± ce_spread` eV for a stepped CE, else `ce`; read from `ms2_exps` of the engine (`crates/mzlab-core/src/cespread.rs`), never typed; no CE, no row.
-5. Sample: the file label (MS², no overlay).
-Same data in site, app and CLI: `mzlab-cli file items FILE` prints the `Item.info()` JSON (`ms2_exps` has `prec`, `ce`, `ce_mid`, `ce_spread`, `n`; the Python reference is `Item._ms2_exps` in `mzlab/explore.py`, checked by `iteminfo_parity`). Tests: `e2e_spettro_righe`, `items_cmd` and `cespread` unit tests, `iteminfo_parity`.
+# MS² spectrum card: header and the removed info rows
+`mzlab/web/spettro-righe.js` (`SPECROWS.update`, called by `afterDraw` in `pannelli.js`) only marks an MS² card with the class `ms2c` (CSS in `app.css`: the header wraps, the fragments controls `.ctl` take their own line, `aria-label` «Fragments and intensities»). An MS¹ card keeps its single header row.
+The card has NO info rows between the header and the chart (Notes, Retention times, Collision energy, Sample were removed on the owner's request; the chart took their room). The facts are still where they were: RT in the title (`titoli.js`), sample in the header selector and the legend, CE in the peak table (`tabella-picchi.js`) and the CE label of the spectrum (`spettro.js`).
+Saved notes: the old Notes input fed `p.note`, written by `panelRec` (`explore.js`, field `note` of each panel record in the notebook, `api/notebook` / OPFS) and restored by `reopenPanel` (`...sp`). Nothing else reads it (no report, export, Rust code or schema). The record field is kept so a session saved earlier loads without error and keeps its note; there is no UI to see or edit it now. Later cleanup: drop `note: p.note` from `panelRec` and bump the notebook version.
+Engine data stays: `mzlab-cli file items FILE` prints the `Item.info()` JSON (`ms2_exps` has `prec`, `ce`, `ce_mid`, `ce_spread`, `n`; `crates/mzlab-core/src/cespread.rs`; Python reference `Item._ms2_exps` in `mzlab/explore.py`, `iteminfo_parity`).
+Tests: `e2e_spettro_righe` (rows absent on MS¹, MS², chromatogram; chart under the header), `e2e_intestazioni` (header rows), `tests/test_spectrum_rows_scope.py`, `items_cmd` and `cespread` unit tests, `iteminfo_parity`.
