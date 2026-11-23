@@ -1,8 +1,7 @@
-//! Speed study of a targeted extraction (`docs/studies/SPEED_STUDY.md`): N (m/z, RT window) targets x M files, each trace integrated with `peak auto-lr`.
-//! Modes: `calls` = the per-call CLI route in-process (`trace xic` then `peak auto-lr` through `mzlab_cli::execute`, no process start), `list` = one
-//! `trace xic --mz LIST` per file, `onepass` = one decode per file for every target (prototype of the bulk design, threads over files), `phases` = the
-//! cost of each step of one call. Every mode writes the `peak auto-lr` JSON of each (file, target) to OUT, so the harness compares them byte for byte.
-//! `cargo run --profile cli -p mzlab-cli --example speed_targets -- MODE TARGETS.csv OUT THREADS FILE...` (`tools/bench/speed_study.py` drives it).
+//! Speed study of a targeted extraction (`docs/studies/SPEED_STUDY.md`, driven by `tools/bench/speed_study.py`): N targets x M files, `peak auto-lr` each.
+//! Modes: `calls` (per-call route in-process), `list` (one `trace xic --mz LIST` per file), `onepass` (one decode per file, threads over files), `phases`.
+//! Each writes the `peak auto-lr` JSON of every (file, target) to OUT so the harness compares them byte for byte.
+//! `cargo run --profile cli -p mzlab-cli --example speed_targets -- MODE TARGETS.csv OUT THREADS FILE...`
 use std::fs::File;
 use std::io::{BufReader, Cursor, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};

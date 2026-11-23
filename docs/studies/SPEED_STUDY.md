@@ -72,7 +72,7 @@ Another agent's study of a field run (2 cores, real files, not in this repo) fou
 | where the profile label comes from | mzML from `file convert` of the field files | the WIFF reader labels every scan profile (`wiff/run.rs`, `profile: true`); the synthetic Waters conversion writes centroid | explained for WIFF; not checked on other vendors |
 | ~68 000 `peak auto-lr` processes, 0.5-0.6 s per file | yes | per call 85.9 ms with the XIC (above) | confirmed; SP1 removes them |
 | `peak table --auto` does every trace in one call | 33 082 traces in 9.6 s; their 527 MB JSON took 48 s to build | `--traces` JSON of 275 / 2 200 traces (8.6 / 68.8 MB): 0.14 / 1.13 s, 0.51 ms per trace, one core; peak RSS 89 / 482 MB | confirmed for time; **memory grows about 7x the JSON** (about 56 MB per file of 275 traces, so about 14 GB for 245 files): stream it or avoid the JSON |
-| XIC of 278 m/z: 220-270 ms per file, much of it the 344 KB CSV | yes | 357 ms before, 238 ms after this PR's quick win (275 ions) | confirmed and partly fixed here |
+| XIC of 278 m/z: 220-270 ms per file, much of it the 344 KB CSV | yes | best 330 ms before, 229 ms after this PR's quick win (275 ions, about 31 % faster) | confirmed and partly fixed here |
 | each `trace xic` re-reads the file (~70 ms); process start 2 ms | yes | 82 ms per call, 4.4 passes; start 2 ms | confirmed |
 | 23 Dig runs, 1.4 GB intermediates, index 8.7 MB per file against a 3.3 MB mzML | yes | the index of a synthetic centroid file is 2.8 MB for 3.8 MB of mzML | not reproduced: likely the profile/WIFF case (dense grids stored); to check on the owner's files |
 | partial parallelism: `features` 1.7 of 2 cores, `flow run` 43 s CPU in 36 s wall | yes | `features` 3.4-3.5 of 4 cores (8 files) | `features` scales; the Flow run's serial share stays to be measured |
@@ -117,9 +117,9 @@ Another agent's study of a field run (2 cores, real files, not in this repo) fou
 
 | measure | before | after | % |
 |---|---|---|---|
-| `trace xic FILE --mz <275 ions> --da 0.5 --format csv`, synthetic LR file, 15 alternated runs, median (min) | 357 ms (330) | 238 ms (229) | -33 % |
+| `trace xic FILE --mz <275 ions> --da 0.5 --format csv`, synthetic LR file, 15 alternated runs, best (median); before = `main` ca98df616d458d88cbdd252ba7c832c0bd7c3d97 | 330 ms (357) | 229 ms (238) | -31 % (-33 %) |
 
-Bytes identical by SHA-256 on the CSV, the CSV with `--rt 3,12` and the JSON `trace-set/1` of the same call; `trace_xic` unit tests unchanged.
+About 31 % faster (best of 15), the bytes unchanged: identical by SHA-256 on the CSV, the CSV with `--rt 3,12` and the JSON `trace-set/1` of the same call; `trace_xic` unit tests unchanged. A rerun through `speed_study.py --before` (output to stdout instead of a file) gave best 345 -> 195 ms, median 380 -> 246 ms: the spread between runs is this machine's noise.
 
 ## Roadmap (ranked)
 
@@ -155,5 +155,7 @@ Bytes identical by SHA-256 on the CSV, the CSV with `--rt 3,12` and the JSON `tr
 cargo build --profile cli -p mzlab-cli --bin mzlab-cli --example speed_targets
 python3 tools/bench/speed_study.py /tmp/speed --no-build --keep    # about 8 minutes on 4 vCPU; WORK/speed_study.json + the table
 ```
+
+The quick win: build `mzlab-cli` at the base in a worktree (`git worktree add /tmp/base ca98df616d458d88cbdd252ba7c832c0bd7c3d97`, then `cargo build --profile cli -p mzlab-cli --bin mzlab-cli` there) and add `--before /tmp/base/target/cli/mzlab-cli`: the list route on file 0 alternates the two builds 15 times and reports best, median and whether the bytes agree (`before_after` in the JSON).
 
 The profile-label check: `python3 tools/speed_synthetic.py /tmp/v/cen --files 8`, a copy of each file with `sed 's/accession="MS:1000127" name="centroid spectrum"/accession="MS:1000128" name="profile spectrum"/g'`, then `mzlab-cli features` on each folder (and `valgrind --tool=callgrind` on one file). The `peak table --auto` check: the 275 XICs of each file (`trace xic --mz LIST --format csv`) written as a `--traces` JSON list, then `peak table --traces T --auto`.

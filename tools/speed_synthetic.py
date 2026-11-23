@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Synthetic unit-resolution triple-quad series for the speed study (bench only, numpy): many full-scan Q1 centroid files with sparse ion counts
-and a target list, the shape of a field targeted extraction (hundreds of files x hundreds of (m/z, RT window) targets). Every number is invented.
-
+"""Synthetic unit-resolution triple-quad series for the speed study (bench only, numpy, every number invented): OUT_DIR/QQQ_###.mzML + targets.csv.
     python3 tools/speed_synthetic.py OUT_DIR [--files 245] [--targets 275] [--scans 2400] [--seed 7] [--jobs 4]
-
-Writes OUT_DIR/QQQ_000.mzML ... and OUT_DIR/targets.csv (`mz,rt_lo,rt_hi` in min). Each file: m/z 50-1000 on a 1 Da grid (+0.1 Da offset),
-one scan every 0.5 s over 20 min, Poisson background (about 50 non-zero channels per scan), the target compounds with [M+H]+ and M+1 at a 6 s FWHM,
-abundance varying per file (10 % absent). Intensity = counts x 20 (counts per second at a 50 ms dwell). Same arguments = same bytes.
-"""
+Q1 centroids on a 1 Da grid (m/z 50-1000 +0.1), a scan every 0.5 s over 20 min, Poisson background (~50 channels per scan), [M+H]+ and M+1 at 6 s FWHM,
+10 % absent per file, intensity = counts x 20. targets.csv is `mz,rt_lo,rt_hi` (min). Same arguments = same bytes."""
 from __future__ import annotations
 
 import argparse

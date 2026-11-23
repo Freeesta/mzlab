@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Speed study harness (docs/studies/SPEED_STUDY.md): times a targeted extraction of N (m/z, RT window) targets x M files the way an agent runs it
-today (one `trace xic | peak auto-lr` pipe per target and file) against one in-process pass, plus file open/index, conversion and Dig/align.
-Synthetic data only (tools/speed_synthetic.py, tools/synthetic_data_large.py). Not run in CI.
-
-    python3 tools/bench/speed_study.py WORK [--files 245] [--targets 275] [--calls 300] [--threads 4] [--hr-files 12] [--no-build] [--keep]
-
-Every row reports wall time, CPU time (user + system of the process and its children), peak RSS, bytes read through syscalls (`rchar`) and passes
-over each file (= rchar / bytes of the inputs). The per-call route is sampled (`--calls` pipes spread over files and targets) and extrapolated
-linearly to N x M; the in-process modes run the whole N x M and their outputs are compared byte for byte with the per-call bytes on the files
-both covered. Results: WORK/speed_study.json and a Markdown table on stdout.
-"""
+"""Speed study harness (docs/studies/SPEED_STUDY.md, synthetic data, not run in CI): N targets x M files through the per-call CLI route against one
+in-process pass, plus open/index, conversion and Dig; wall, CPU, peak RSS, bytes read and passes per file, outputs compared byte for byte.
+    python3 tools/bench/speed_study.py WORK [--files 245] [--targets 275] [--calls 300] [--threads 4] [--hr-files 12] [--no-build] [--keep] [--before BIN]
+Per-call rows are sampled (`--calls`) and extrapolated to N x M. Results: WORK/speed_study.json and a Markdown table on stdout."""
 from __future__ import annotations
 
 import argparse
@@ -98,6 +91,21 @@ def sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
 
 
+def before_after(before: Path, f0: Path, ts, runs: int = 15) -> dict:
+    """`trace xic --mz <every target> --format csv` on one file, BEFORE binary and this one alternated: best and median ms, and whether the bytes agree."""
+    cmd = ["trace", "xic", str(f0), "--mz", ",".join(t[0] for t in ts), "--da", "0.5", "--format", "csv"]
+    ms: dict[str, list[float]] = {"before": [], "after": []}
+    outs = {}
+    for _ in range(runs):
+        for k, b in (("before", before), ("after", CLI)):
+            r = run([str(b), *cmd], capture=True)
+            ms[k].append(r["wall_s"] * 1e3)
+            outs[k] = hashlib.sha256(r["out"].encode()).hexdigest()
+    res = {k: {"best_ms": min(v), "median_ms": statistics.median(v)} for k, v in ms.items()}
+    res["runs"], res["identical"] = runs, outs["before"] == outs["after"]
+    return res
+
+
 def data(w: Path, a) -> tuple[Path, Path]:
     """The LR series and the HR set under WORK, generated only when missing or of another size."""
     lr, hr = w / "lr", w / "hr"
@@ -150,6 +158,7 @@ def main() -> None:
     ap.add_argument("--hr-files", type=int, default=12)
     ap.add_argument("--no-build", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep WORK/lr and WORK/hr for the next run")
+    ap.add_argument("--before", type=Path, help="an mzlab-cli built at the base: the list-route row alternated against this build (best and median of 15)")
     a = ap.parse_args()
     if not a.no_build:
         subprocess.run(["cargo", "build", "--profile", "cli", "-p", "mzlab-cli", "--bin", "mzlab-cli", "--example", "speed_targets"],
@@ -176,6 +185,8 @@ def main() -> None:
     res["one_xic"] = repeat([str(CLI), "trace", "xic", str(f0), "--mz", t0[0], "--da", "0.5", "--format", "csv"], 5)
     res["one_pipe"] = repeat(pipe(f0, t0, None), 5, shell=True)
     res["one_xic_list"] = repeat([str(CLI), "trace", "xic", str(f0), "--mz", ",".join(t[0] for t in ts), "--da", "0.5", "--format", "csv"], 3)
+    if a.before:
+        res["before_after"] = before_after(a.before, f0, ts)
     res["phases"] = json.loads(subprocess.run([str(EX), "phases", str(tpath), "-", "1", str(f0)], capture_output=True, text=True,
                                               check=True).stdout)
     nm = len(files) * len(ts)
@@ -237,6 +248,8 @@ def table(res: dict, lr_bytes: int) -> None:
               f"{r['rchar'] / 1e6:.0f} | {r['passes_per_file']:.2f} |")
     for k in ("convert_waters", "features_hr", "features_lr_all"):
         row(k, res[k])
+    if "before_after" in res:
+        print(f"\nlist route, --before against this build: {json.dumps(res['before_after'])}")
     print(f"\nphases of one call (ms): {json.dumps(res['phases'])}")
     print(f"identical to the per-call bytes (first 4 files): {res['identical_to_calls']}; sha of whole outputs: {res['identical_all_files']}")
 
