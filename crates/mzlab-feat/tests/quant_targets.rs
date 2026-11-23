@@ -77,9 +77,7 @@ fn flags_tell_detected_small_edge_and_empty_targets_apart() {
     // a small peak keeps its numbers, flagged
     let small = get(&r, "s1.mzML|small");
     assert!(
-        small[6].contains("below_threshold")
-            && !small[2].is_empty()
-            && small[7] == "forced",
+        small[6].contains("below_threshold") && !small[2].is_empty() && small[7] == "forced",
         "{:?}",
         small
     );
