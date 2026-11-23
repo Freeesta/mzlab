@@ -46,9 +46,7 @@ window.MAPPA = (() => {
     const ov = document.createElement("canvas"); ov.className = "mzov"; ov.setAttribute("aria-hidden", "true"); grid.appendChild(ov);
     const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; sp.setAttribute("role", "img"); grid.appendChild(sp);
     const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
-    // live cursor: a small chip with the coordinates that follows the pointer and a dot on the XIC at the cursor RT (decorative, pointer-events none)
-    const chip = document.createElement("div"); chip.className = "mzchip"; chip.hidden = true; chip.setAttribute("aria-hidden", "true"); grid.appendChild(chip);
-    const live = document.createElement("div"); live.className = "mzlive"; live.hidden = true; live.setAttribute("aria-hidden", "true"); live.innerHTML = '<i class="mzlive-l"></i><i class="mzlive-d"></i>'; grid.appendChild(live);
+    const { chip, live } = MAPCURSORE.dom(grid);
     Object.assign(st(p), { ov, sp, xc, grid, chip, live });
     cv.addEventListener("focus", () => liveSync(p)); cv.addEventListener("blur", () => liveSync(p));
     // the tooltip of a label: its m/z and its S/N (intensity over the noise around it)
@@ -232,29 +230,7 @@ window.MAPPA = (() => {
     // Map 2D has no header readout text (it would wrap to two rows): the coordinates travel with the cursor instead
     liveSync(p);
   }
-  // Live cursor indicator. The cursor is the pointer, or the key-moved point; the locked point only while the map has the keyboard focus. A chip beside it reads
-  // RT and m/z (and the peak under the sight), flipping to the other side near the edges; on the XIC a dot rides the trace at the cursor RT (and a thin line when the
-  // sight is held elsewhere). Both are DOM, pointer-events none, so they cost no redraw of the canvases and never take a click.
-  function liveSync(/** @type {Pannello} */ p) {
-    const s = st(p), a = p._a, chip = s.chip, live = s.live; if (!chip || !live) return;
-    const q = a && is2d(p) && !s.frz ? s.hov || s.kp || (s.lock && document.activeElement === p.cv ? s.lock : null) : null;
-    const inside = !!q && q.rt >= a.x0 && q.rt <= a.x1 && q.mz >= a.y0 && q.mz <= a.y1;
-    chip.hidden = !inside; if (!inside) { live.hidden = true; return; }
-    const cv = p.cv, ox = cv.offsetLeft + cv.clientLeft, oy = cv.offsetTop + cv.clientTop, x = ox + a.X(q.rt), y = oy + a.Y(q.mz);
-    const pk = point(p) === q && s.curPk ? s.curPk : null;
-    chip.textContent = T("mappa.live.chip", { rt: q.rt.toFixed(2), mz: q.mz.toFixed(mzd(p)) }) + (pk ? " · " + T("mappa.live.peak", { mz: pk }) : "");
-    const w = chip.offsetWidth, h = chip.offsetHeight, xr = ox + a.W - 2, yb = oy + a.H - 2;
-    chip.style.left = Math.round(Math.max(ox + 2, x + 14 + w > xr ? x - 14 - w : x + 14)) + "px"; chip.style.top = Math.round(Math.max(oy + 2, y + 16 + h > yb ? y - 14 - h : y + 16)) + "px";
-    // the XIC under the map: the trace value at the cursor RT, linearly between its two nearest points
-    const g = s.xg, xc = s.xc;
-    if (!g || !g.tr || xc.hidden || q.rt < a.x0 || q.rt > a.x1 || !g.tr.rt.length) { live.hidden = true; return; }
-    const r = g.tr.rt, i = MIRINO.nearest(r, q.rt), j = Math.min(r.length - 1, Math.max(0, q.rt > r[i] ? i + 1 : i - 1)), d = r[j] - r[i];
-    const v = d ? g.tr.y[i] + (g.tr.y[j] - g.tr.y[i]) * Math.min(1, Math.max(0, (q.rt - r[i]) / d)) : g.tr.y[i];
-    const bx = xc.offsetLeft + xc.clientLeft, by = xc.offsetTop + xc.clientTop, pt = point(p), apart = !pt || Math.abs(g.X(pt.rt) - g.X(q.rt)) > 1.5;
-    live.hidden = false; live.style.left = (bx + g.X(q.rt)).toFixed(1) + "px"; live.style.top = (by + g.mt).toFixed(1) + "px";
-    const l = /** @type {HTMLElement} */ (live.firstElementChild), dot = /** @type {HTMLElement} */ (live.lastElementChild);
-    l.style.height = (g.H - g.mb - g.mt) + "px"; l.hidden = !apart; dot.style.top = (g.Y(v) - g.mt).toFixed(1) + "px";
-  }
+  const liveSync = (/** @type {Pannello} */ p) => MAPCURSORE.sync(p, { st, is2d, point, mzd, T, MIRINO });   // chip and XIC dot of the cursor (mappa-cursore.js)
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
   // Asked only for what the point needs and the page does not hold: the scan is found in the page on the RT axis of the file (/api/scan_axis, once), the
@@ -406,12 +382,7 @@ window.MAPPA = (() => {
   function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8, /** @type {{y: number, end: number} | null} */ guide = null, /** @type {number} */ cur = -1) {
     /** @type {Record<string, any>[]} */ const out = []; s.lbls = out; g.font = fpx(12.5); g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3.5; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
     const px = parseFloat(g.font) || 12.5, asc = Math.round(px * .8), hh = Math.round(px * 1.05);
-    // the peak under the cursor comes first and is never dropped: bold, beyond the tip when it fits, otherwise above the bar and the guide, always inside the panel
-    if (cur >= 0) {
-      const q = get(cur); g.font = fpx(12.5, "bold "); const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2;
-      const top = guide ? Math.min(q.y, guide.y) : q.y, by = right ? q.y + Math.round(px * .35) : top - 7, x = right ? q.tip + 5 : Math.min(W - 2 - w, Math.max(x0 + 2, q.tip - 3 - w)), bx = { x, y: by - asc, w, h: hh };
-      g.strokeText(q.t, x, by); g.fillText(q.t, x, by); g.font = fpx(12.5); out.push({ t: q.t, ...bx, ly: q.y, tip: q.tip, right, i: q.i, cur: true });
-    }
+    if (cur >= 0) out.push(MAPCURSORE.label(g, W, get(cur), x0, guide, px, asc, hh, fpx));   // the peak under the cursor first, never dropped
     for (const i of order) {
       if (out.length >= limit) break; if (i === cur) continue; const q = get(i);
       const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + Math.round(px * .35) : q.y - 4, bx = { x, y: by - asc, w, h: hh };
@@ -452,8 +423,7 @@ window.MAPPA = (() => {
     const mapTop = o.y + M.t, mapBot = o.y + p.cv.clientHeight - M.b, mapH = mapBot - mapTop;
     const Y = (/** @type {number} */ v) => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
-    s.curPk = null;
-    if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
+    s.curPk = null; if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     // difference A − B: bars right (more in A) and left (more in B) of a zero line
     const sg = !!sp.signed, ab = (/** @type {number} */ v) => sg ? Math.abs(v) : v;
     let ymax = 0; const vis = /** @type {number[]} */ ([]); for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
