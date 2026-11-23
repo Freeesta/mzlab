@@ -1,6 +1,6 @@
 # Speed study: targeted extraction over hundreds of files
 
-Why one targeted extraction (N (m/z, RT window) targets x M files, each trace integrated) took about 15 minutes with mzLab and 15-25 s per polarity with MZmine 4 in a field comparison, measured on synthetic data, and how to make mzLab clearly faster. Harness: `tools/bench/speed_study.py` (data `tools/speed_synthetic.py`, in-process modes `crates/mzlab-cli/examples/speed_targets.rs`). Not run in CI.
+Why one targeted extraction (N (m/z, RT window) targets x M files, each trace integrated) took about 15 minutes with mzLab and 15-25 s per polarity with MZmine 4 in a field comparison, measured on synthetic data, and how to make mzLab clearly faster. Harness: `tools/bench/speed_study.py` (data `tools/speed_synthetic.py`, in-process modes `crates/mzlab-cli/examples/speed_targets.rs`). Field measurements of the non-targeted table (MZmine on par once files are labelled centroid) are checked in "Field measurements checked here". Not run in CI.
 
 ## Setup
 
@@ -60,6 +60,23 @@ The field run (67 000 calls in about 15 min, 13 ms per call) matches the cached 
 5. **Decoding is the floor of a one-pass design.** One pass is 85 ms per file on one thread, of which 35-52 ms are the mzML decode (75-110 MB/s per core); the rest (2 x 660 000 window searches, 660 000 rounded values, 275 integrations) is not split further. Allocation and cache misses are not visible at this scale: peak RSS stays at 55-82 MB.
 6. **Memory mapping would not help.** Re-reading a file already in the page cache costs almost nothing (`measurements-one-pass.md`: 9 ms for 53 MB); the cost is CPU in decoding, so `mmap` (and its `unsafe`) buys nothing here.
 
+## Field measurements checked here
+
+Another agent's study of a field run (2 cores, real files, not in this repo) found MZmine **not** intrinsically faster for the non-targeted table: negative mode mzLab 12.4 s against MZmine 12 s, positive 47 s against 40 s, once the mzML files are labelled centroid. Each claim below was checked again on the synthetic series (8 files, 4 cores, warm cache; the same files with the label `MS:1000127` centroid rewritten to `MS:1000128` profile, peaks unchanged).
+
+| claim (field) | field | here (synthetic) | verdict |
+|---|---|---|---|
+| a profile label on sparse unit-resolution scans makes `features` centroid every scan | per file 400 vs 65 ms (neg), 571 vs 174 ms (pos); align + gap fill 47 vs 13.6 s | per file 412 vs 93 ms (4.4x); 8 files 0.92 vs 0.20 s wall, 3.24 vs 0.69 s CPU; 172 vs 176 rows | confirmed. The rows differ too, so the label changes the result, not only the time |
+| where the profile path spends it (callgrind) | background 23.6 % + its sort 12.2 %, smooth 9.9 %, centroids + `grid::fill` 13.5 %, detect 5.5 %, SHA-256 3.3 %, zlib 2.1 % | `smooth::background` 34.8 % + its sort 6.6 %, `smooth` 14.2 %, `centroids` 7.3 %, `grid::fill` 6.0 %, detect candidates 4.3 %, SHA-256 3.3 % (6.2 G instructions, one file) | confirmed: centroiding is about 69 % of the work. `background` already keeps its window sorted and merges only the new stretch (no full sort per window); the cost is that a scan of about 50 points becomes a dense grid of zeros that every stage walks |
+| `--centroid off` as a workaround | - | 0.21 s for 8 profile-labelled files (the centroid speed), but different bytes from the centroid-labelled run (profile detection parameters) | a workaround for time, not for the result |
+| where the profile label comes from | mzML from `file convert` of the field files | the WIFF reader labels every scan profile (`wiff/run.rs`, `profile: true`); the synthetic Waters conversion writes centroid | explained for WIFF; not checked on other vendors |
+| ~68 000 `peak auto-lr` processes, 0.5-0.6 s per file | yes | per call 85.9 ms with the XIC (above) | confirmed; SP1 removes them |
+| `peak table --auto` does every trace in one call | 33 082 traces in 9.6 s; their 527 MB JSON took 48 s to build | `--traces` JSON of 275 / 2 200 traces (8.6 / 68.8 MB): 0.14 / 1.13 s, 0.51 ms per trace, one core; peak RSS 89 / 482 MB | confirmed for time; **memory grows about 7x the JSON** (about 56 MB per file of 275 traces, so about 14 GB for 245 files): stream it or avoid the JSON |
+| XIC of 278 m/z: 220-270 ms per file, much of it the 344 KB CSV | yes | 357 ms before, 238 ms after this PR's quick win (275 ions) | confirmed and partly fixed here |
+| each `trace xic` re-reads the file (~70 ms); process start 2 ms | yes | 82 ms per call, 4.4 passes; start 2 ms | confirmed |
+| 23 Dig runs, 1.4 GB intermediates, index 8.7 MB per file against a 3.3 MB mzML | yes | the index of a synthetic centroid file is 2.8 MB for 3.8 MB of mzML | not reproduced: likely the profile/WIFF case (dense grids stored); to check on the owner's files |
+| partial parallelism: `features` 1.7 of 2 cores, `flow run` 43 s CPU in 36 s wall | yes | `features` 3.4-3.5 of 4 cores (8 files) | `features` scales; the Flow run's serial share stays to be measured |
+
 ## What MZmine does (public documentation only, not run)
 
 - Raw data: "Keep in Memory" defaults to none, i.e. spectra are memory-mapped to a temporary folder; mass lists can be kept in RAM; an advanced import applies mass detection while reading so "only loading those filtered mass spectra" ([performance](https://mzmine.github.io/mzmine_documentation/latest/performance.html)).
@@ -118,6 +135,12 @@ Bytes identical by SHA-256 on the CSV, the CSV with `--rt 3,12` and the JSON `tr
 | SP8 | merge-walk window cut in SP1 (sorted targets against the sorted scan) | expected a few ms per file (about -10 % of SP1) | S | low | SP1 |
 | SP9 | one large HR file across several workers (scan ranges) | only for files much larger than the pool's share | L | medium | SP1 |
 | SP10 | `mmap` of the input | none measurable | S | `unsafe` | discarded |
+| SP11 | unit-resolution scans labelled profile but stepped on a nominal grid (a Q1 scan of about 50 points 1 Da apart): detected and taken as centroids (or summed per nominal mass), the choice logged in `features-report/1` and overridable with `--centroid` | `features` 412 -> about 93 ms per file (4.4x here; 3.3-6x in the field; align + gap fill 47 -> 13.6 s in the field) | M | medium: changes the rows (172 vs 176 here); to validate against the known truth of the synthetic series before it becomes the default | - |
+| SP12 | exact shortcuts in `centroids::smooth::background` for empty stretches: a window whose lowest 75 % are zeros has a background of zero without the merge (values are clamped at 0) | up to -40 % of the profile path (background + its sort = 41 % of its instructions) | S | low if byte-identical (golden tests); touches the `.wasm` that centroid, check the caps | - |
+| SP13 | `peak table --auto` streams its traces (or SP1 feeds it arrays): no whole JSON in memory | memory 7x the JSON -> one file at a time (about 14 GB -> under 100 MB for 245 files); 48 s of JSON building gone in the field | M | low: same bytes | SP1 |
+| SP14 | compact output for large trace sets and tables (a documented little-endian column file, no heavy dependency) and an option to keep no intermediates | the 527 MB JSON and 1.4 GB of intermediates of the field run | M | medium: a new saved format needs a schema and parity on the three sides | SP1 |
+| SP15 | one SHA-256 per file per process, handed down (provenance, cache key, index) | 3.3 % of `features` on a profile file; one pass per file per call on the cached route | S | low | - |
+| SP16 | bounded worker pool in every multi-file step (`flow run`, Dig, gap fill), results in input order | up to the core count where a step is serial (field `flow run` 43 s CPU in 36 s wall) | M | low: same bytes | - |
 
 ### Note for QUANT-TARGETS (the bulk step)
 
@@ -132,3 +155,5 @@ Bytes identical by SHA-256 on the CSV, the CSV with `--rt 3,12` and the JSON `tr
 cargo build --profile cli -p mzlab-cli --bin mzlab-cli --example speed_targets
 python3 tools/bench/speed_study.py /tmp/speed --no-build --keep    # about 8 minutes on 4 vCPU; WORK/speed_study.json + the table
 ```
+
+The profile-label check: `python3 tools/speed_synthetic.py /tmp/v/cen --files 8`, a copy of each file with `sed 's/accession="MS:1000127" name="centroid spectrum"/accession="MS:1000128" name="profile spectrum"/g'`, then `mzlab-cli features` on each folder (and `valgrind --tool=callgrind` on one file). The `peak table --auto` check: the 275 XICs of each file (`trace xic --mz LIST --format csv`) written as a `--traces` JSON list, then `peak table --traces T --auto`.
