@@ -40,36 +40,41 @@ const CAL_WORDS: [&str; 6] = [
     "taratura",
     "curva",
 ];
-const DARK_WORDS: [&str; 5] = ["dark", "buio", "adsorption", "control", "ctrl"];
+/// The dark words, with the conditions fused with the dark mark (`H2O2D`, `PMSD`, `BLKD`: the dark matrix blank).
+pub(super) const DARK_WORDS: [&str; 11] = [
+    "dark",
+    "buio",
+    "adsorption",
+    "control",
+    "ctrl",
+    "h2o2d",
+    "pmsd",
+    "blkd",
+    "n2d",
+    "o2d",
+    "aird",
+];
 const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
 
-/// The dark mark of a name as a span of `low` (characters): a token `d` after the condition (`MQ_H2O2_D_T30`, never after a number: `3 d` is days) or a
-/// condition fused with it (`H2O2D`, `PMSD`, `BLKD`: the dark matrix blank). A dark control is not a time zero, whatever its time says.
-pub(super) fn dark_span(low: &[char]) -> Option<(usize, usize)> {
-    let (mut i, mut prev) = (0, None::<String>);
-    while i < low.len() {
-        if !low[i].is_ascii_alphanumeric() {
+/// A token `d` after the condition (`MQ_H2O2_D_T30`, never after a number: `3 d` is days): the dark mark written apart. A dark control is not a time zero.
+#[inline(never)]
+fn lone_d(low: &str) -> bool {
+    let (b, mut named, mut i) = (low.as_bytes(), false, 0);
+    while i < b.len() {
+        if !b[i].is_ascii_alphanumeric() {
             i += 1;
             continue;
         }
-        let e = (i..low.len())
-            .find(|&k| !low[k].is_ascii_alphanumeric())
-            .unwrap_or(low.len());
-        let w: String = low[i..e].iter().collect();
-        let after_name = prev
-            .as_ref()
-            .is_some_and(|p| !p.chars().all(|c| c.is_ascii_digit()));
-        let fused = w.len() >= 3
-            && super::sample_id::DARK
-                .iter()
-                .any(|d| d.eq_ignore_ascii_case(&w));
-        if fused || (w == "d" && after_name) {
-            return Some((i, e));
+        let start = i;
+        while i < b.len() && b[i].is_ascii_alphanumeric() {
+            i += 1;
         }
-        prev = Some(w);
-        i = e;
+        if named && &b[start..i] == b"d" {
+            return true;
+        }
+        named = b[start..i].iter().any(u8::is_ascii_alphabetic);
     }
-    None
+    false
 }
 
 /// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
@@ -77,7 +82,7 @@ fn has_any(low: &str, words: &[&str]) -> bool {
     low.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| {
         words.iter().any(|word| {
             w == *word
-                || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit()))
+                || (w.starts_with(word) && w[word.len()..].bytes().all(|c| c.is_ascii_digit()))
         })
     })
 }
@@ -88,9 +93,7 @@ fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
         "blank" => "blank",
         "standard" if has_any(low, &CAL_WORDS) => "calibration",
         "standard" => "std",
-        _ if has_any(low, &DARK_WORDS) || dark_span(&low.chars().collect::<Vec<_>>()).is_some() => {
-            "dark"
-        }
+        _ if has_any(low, &DARK_WORDS) || lone_d(low) => "dark",
         _ if has_any(low, &["qc"]) => "qc",
         _ if time_min == Some(0.0) => "t0",
         _ => "sample",
@@ -130,7 +133,7 @@ fn blank_kind(low: &str) -> Option<String> {
 fn written_replicate(stem: &str) -> Option<u32> {
     let s = stem.trim_end().strip_suffix(')')?;
     let (_, n) = s.rsplit_once('(')?;
-    (!n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
+    (!n.is_empty() && n.bytes().all(|c| c.is_ascii_digit()))
         .then(|| n.parse().ok())
         .flatten()
         .filter(|&n| n >= 1)
@@ -185,7 +188,7 @@ fn assign_series(out: &mut [Sample], prefixes: &[Option<String>]) {
 /// The first word of a stem when it can be a matrix: 2-4 letters followed by more name (`TW` in `TW_PMS_T05`).
 fn matrix_word(stem: &str) -> Option<&str> {
     let (w, rest) = stem.split_once(is_sep)?;
-    let ok = (2..=4).contains(&w.len()) && w.chars().all(|c| c.is_ascii_alphabetic());
+    let ok = (2..=4).contains(&w.len()) && w.bytes().all(|c| c.is_ascii_alphabetic());
     (ok && !rest.is_empty()).then_some(w)
 }
 

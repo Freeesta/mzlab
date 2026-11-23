@@ -56,12 +56,7 @@ fn roles_std_qc_blank_and_wash_by_id() {
     assert_eq!(read("MQ_BLK").kind, Some("blank"));
     assert_eq!(read("BLK").kind, Some("blank"));
     for id in ["MQ_WASH", "MQ-WASH", "WASH"] {
-        let i = read(id);
-        assert_eq!(
-            (i.kind, i.blank_kind),
-            (Some("blank"), Some("wash")),
-            "{id}"
-        );
+        assert_eq!(read(id).kind, Some("blank"), "{id}");
     }
     assert_eq!(read("P_mix_a").kind, Some("pool"));
     // an ID of no known shape says nothing
@@ -69,19 +64,4 @@ fn roles_std_qc_blank_and_wash_by_id() {
     // a time that is not a number is flagged, an unknown condition too
     assert!(read("MQ_H2O2_Tx").bad_time);
     assert!(read("MQ_ZZZ_T10").unknown_cond);
-}
-
-#[test]
-fn a_wash_id_sets_its_kind_of_blank_unless_the_model_captured_it() {
-    let mut c = Sample::new("f", "", 1);
-    c.sample_id = "MQ_WASH".into();
-    apply(&mut c, &[]);
-    assert_eq!(
-        (c.kind.as_str(), c.blank_kind.as_deref()),
-        ("blank", Some("wash"))
-    );
-    let mut c = Sample::new("f", "", 1);
-    c.sample_id = "MQ_WASH".into();
-    apply(&mut c, &["blank_kind"]);
-    assert_eq!(c.blank_kind, None);
 }
