@@ -1,16 +1,16 @@
 # English migration: what is still Italian
 
-Measure it with `python3 tools/check_english.py` (counts per area; `--list` one line per file; `--file PATH` every hit). Counts at `main` 37836263 plus the docs names PR (the table also counts `mzlab/*.py` and the root files in `other`, not listed):
+Measure it with `python3 tools/check_english.py` (counts per area; `--list` one line per file; `--file PATH` every hit). Counts at `main` 4b843e80 plus the docs names PR (the table also counts `mzlab/*.py` and the root files in `other`, not listed):
 
 | area | files | with hits | comment lines | identifiers | keys | file names |
 |---|---|---|---|---|---|---|
-| `crates/` | 2849 | 947 | 3 | 2525 | 1445 | 258 |
-| `mzlab/web/` | 511 | 410 | 3 | 955 | 1676 | 332 |
+| `crates/` | 2849 | 933 | 3 | 2080 | 1446 | 258 |
+| `mzlab/web/` | 512 | 411 | 3 | 956 | 1683 | 333 |
 | `flow/` | 82 | 29 | 0 | 50 | 48 | 1 |
 | `TP_Mine/` | 52 | 35 | 1 | 40 | 39 | 15 |
-| `tools/` | 410 | 343 | 4 | 1075 | 2164 | 236 |
-| `tests_e2e/` | 694 | 623 | 0 | 299 | 1155 | 501 |
-| `tests/` | 978 | 756 | 1 | 395 | 1416 | 649 |
+| `tools/` | 410 | 343 | 4 | 1072 | 2164 | 236 |
+| `tests_e2e/` | 695 | 624 | 0 | 299 | 1156 | 502 |
+| `tests/` | 978 | 756 | 1 | 395 | 1419 | 649 |
 | `docs/` | 350 | 313 | 0 | 0 | 53 | 313 |
 
 ## Families left, smallest risk first (each one is a PR with a guard test, no aliases, no converters)
