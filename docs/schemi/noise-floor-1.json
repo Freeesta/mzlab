@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "noise-floor/1",
+  "title": "noise-floor/1: the noise of an ion-counting trace with a floor of one ion",
+  "description": "noise = max(mad_k x MAD, sd_weight x SD, one_ion x sqrt(max(lambda, 1))) over the background points (the stretch from..to without the peak window), lambda = mean background counts per point. With a peak window: its apex above the background median, its S/N on that noise and on the MAD alone, and the check of rule R1 (docs/studies/TP_SCREENING_RULES.md). Intensities in cps, times in minutes. The same bytes from mzlab-cli peak noise and mzlab-wasm noise_floor. Code: crates/mzlab-core/src/ionstat.rs, crates/mzlab-cli/src/peak_noise_cmd.rs.",
+  "type": "object",
+  "required": ["schema", "params", "background", "quantum", "terms", "noise", "estimator", "peak", "check"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "noise-floor/1" },
+    "params": {
+      "type": "object",
+      "required": ["one_ion", "sd_weight", "min_sn", "mad_k", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "one_ion": { "description": "\"auto\" (the quantum of the trace), 0 (off) or the cps of one ion that was set.", "oneOf": [{ "const": "auto" }, { "type": "number", "minimum": 0 }] },
+        "sd_weight": { "type": "number", "minimum": 0 },
+        "min_sn": { "type": "number", "minimum": 0, "description": "Smallest S/N of the check." },
+        "mad_k": { "const": 1.4826 },
+        "from": { "type": ["number", "null"], "description": "Start of the stretch, min; null = the start of the trace." },
+        "to": { "type": ["number", "null"], "description": "End of the stretch, min; null = the end of the trace." }
+      }
+    },
+    "background": {
+      "type": "object",
+      "required": ["n", "median", "mean"],
+      "additionalProperties": false,
+      "properties": {
+        "n": { "type": "integer", "minimum": 1, "description": "Background points." },
+        "median": { "type": "number" },
+        "mean": { "type": "number" }
+      }
+    },
+    "quantum": {
+      "description": "The smallest positive background value or step between distinct values, and the share of positive values within 0.02 of an integer multiple of it; accepted with at least 3 positive values and a support of 0.9. Null without positive values.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["q", "support", "n_positive", "accepted"],
+          "additionalProperties": false,
+          "properties": {
+            "q": { "type": "number", "exclusiveMinimum": 0 },
+            "support": { "type": "number", "minimum": 0, "maximum": 1 },
+            "n_positive": { "type": "integer", "minimum": 1 },
+            "accepted": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "terms": {
+      "type": "object",
+      "required": ["mad", "sd", "sd_term", "one_ion", "one_ion_source", "lambda", "ion_term"],
+      "additionalProperties": false,
+      "properties": {
+        "mad": { "type": "number", "minimum": 0, "description": "mad_k x the median absolute deviation from the median." },
+        "sd": { "type": "number", "minimum": 0 },
+        "sd_term": { "type": "number", "minimum": 0, "description": "sd_weight x sd." },
+        "one_ion": { "type": ["number", "null"], "description": "cps of one ion used; null when off or no quantum was accepted." },
+        "one_ion_source": { "enum": ["set", "auto", "off", "auto_rejected"] },
+        "lambda": { "type": ["number", "null"], "description": "Mean background counts per point (mean / one_ion)." },
+        "ion_term": { "type": ["number", "null"], "description": "one_ion x sqrt(max(lambda, 1))." }
+      }
+    },
+    "noise": { "type": "number", "minimum": 0, "description": "The largest term, cps." },
+    "estimator": { "enum": ["mad", "sd", "one_ion", "poisson"], "description": "The term that gave the noise (one_ion: lambda <= 1; poisson: lambda > 1); ties go to the first of mad, sd, ion term." },
+    "peak": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["from", "to", "apex_rt", "height", "sn", "sn_mad", "ions"],
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "number" },
+            "to": { "type": "number" },
+            "apex_rt": { "type": "number" },
+            "height": { "type": "number", "description": "Apex minus the background median, cps." },
+            "sn": { "type": ["number", "null"], "description": "height / noise; null when the noise is 0." },
+            "sn_mad": { "type": ["number", "null"], "description": "height / mad, the S/N a pure MAD gives; null when the MAD is 0." },
+            "ions": { "type": ["number", "null"], "description": "height / one_ion." }
+          }
+        }
+      ]
+    },
+    "check": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["id", "status", "value", "threshold", "rule"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "const": "noise_floor" },
+            "status": { "enum": ["pass", "warn", "fail"], "description": "pass: sn >= min_sn with an ion term; fail: below; warn: no ion term (off or no accepted quantum) or noise 0." },
+            "value": { "type": ["number", "null"] },
+            "threshold": { "type": "number" },
+            "rule": { "type": "string", "description": "The numbers behind the status, in words." }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -87,7 +87,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--minus", "blank file to subtract"),
     ("--minus-sample", "sample of the blank"),
     ("--minus-rt", "blank window, min"),
-    ("--format", "output format (values in the usage line)"),
+    ("--format", "output format; values: usage line"),
     ("--formula", "start ion formula"),
     ("--decoy", "decoy spectra seed"),
     ("--conv", "conversation"),

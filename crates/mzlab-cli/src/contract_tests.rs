@@ -84,6 +84,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["peak", "edges", "/nonexistent/t.csv", "--at", "1"],
     &["peak", "auto", "/nonexistent/t.csv"],
     &["peak", "auto-lr", "/nonexistent/t.csv"],
+    &["peak", "noise", "/nonexistent/t.csv"],
     &[
         "peak",
         "area",

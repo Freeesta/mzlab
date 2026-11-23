@@ -82,6 +82,7 @@
   "error.rowNotFound": "Engine error message; {id} = identifier.",
   "error.stats.condition": "Engine error message; {name} = name.",
   "err.msnlib.badIon": "CLI error of msn lib build; {ion} = the neutral formula and adduct of a manifest row that the graph cannot use.",
+  "err.noise.noBackground": "Data error of peak noise (mzlab-cli) and noise_floor (engine): every point of the trace stretch is inside the peak window, so there is nothing to measure the noise on.",
   "err.normative.usage": "CLI error of normative; {message} = what is wrong with the command line.",
   "err.normative.sources": "CLI error of normative; {message} = what is wrong with sources.json.",
   "err.normative.pin": "CLI error of normative; {message} = the sources whose SHA-256 changed.",

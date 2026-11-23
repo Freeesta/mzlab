@@ -90,6 +90,7 @@ const DATA_KEYS: &[&str] = &[
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
     "err.spectrum.minus",
+    "err.noise.noBackground",
 ];
 
 /// The chemistry keys that are not usage, one rule: content that cannot be read (a request, a molfile, a structure list) is input (4); a valid
