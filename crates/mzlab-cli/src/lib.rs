@@ -30,6 +30,8 @@ mod design_cmd;
 mod emit;
 pub mod error_text;
 pub(crate) use emit::emit;
+#[cfg(test)]
+mod convert_name_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]
@@ -196,6 +198,7 @@ mod plain;
 mod renamed;
 mod sample_select;
 mod samples_cmd;
+mod samples_table;
 mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;

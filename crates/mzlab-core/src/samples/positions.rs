@@ -160,7 +160,10 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
 fn kind_span(low: &[char], c: &Sample, by_time: Option<(usize, usize)>) -> Option<(usize, usize)> {
     let words: &[&str] = match c.kind.as_str() {
         "infusion" => &["infusion", "infusione", "fia"],
-        "dark" => &["dark", "buio", "adsorption"],
+        "dark" => {
+            return word_span(low, &["dark", "buio", "adsorption", "control", "ctrl"])
+                .or_else(|| super::names::dark_span(low))
+        }
         "qc" => &["qc"],
         "blank" => &BLANK_WORDS,
         "calibration" => &[

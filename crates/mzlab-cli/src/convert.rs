@@ -35,6 +35,8 @@ pub(crate) struct Args {
     json: bool,
     /// `--dry-run`: say what would be converted, write nothing
     dry_run: bool,
+    /// `--name sample`: the mzML is called after the sample, not after its file
+    name_by_sample: bool,
 }
 
 fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, String> {
@@ -65,6 +67,11 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
             "--fresh" => a.fresh = true,
             "--json" => a.json = true,
             "--dry-run" => a.dry_run = true,
+            "--name" => match value(&mut it, &x)?.as_str() {
+                "sample" => a.name_by_sample = true,
+                "file" => a.name_by_sample = false,
+                v => return Err(format!("--name {v}: expected file or sample")),
+            },
             "--sample" => {
                 a.sample = Some(
                     crate::sample_select::parse(&value(&mut it, &x)?)
@@ -363,6 +370,16 @@ fn make_work(work: &Path, out: &Path) -> Result<(), Outcome> {
 }
 
 /// `mzlab-cli file convert ARGS...` (the arguments after `convert`).
+/// The mzML files to make from the `units`, or the outcome that refuses them (an mzML named as input, a sample selection the datasets do not satisfy).
+fn listed(a: &Args, units: &[PathBuf]) -> Result<Vec<Entry>, Outcome> {
+    // only a file named on the command line: an mzML met inside a folder is still handled (re-picked with `--peaks`)
+    if let Some(o) = crate::convert_dry::refuse_mzml(&a.inputs) {
+        return Err(o);
+    }
+    entries(units, a.sample.as_deref(), a.name_by_sample)
+        .map_err(|e| crate::sample_select::fail(&e))
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
@@ -394,14 +411,11 @@ pub fn run(args: Vec<String>) -> Outcome {
             )
         }
     };
-    // only a file named on the command line: an mzML met inside a folder is still handled (re-picked with `--peaks`)
-    if let Some(o) = crate::convert_dry::refuse_mzml(&a.inputs) {
-        return o;
-    }
-    let list = match entries(&units, a.sample.as_deref()) {
+    let list = match listed(&a, &units) {
         Ok(l) => l,
-        Err(e) => return crate::sample_select::fail(&e),
+        Err(o) => return o,
     };
+    let naming = crate::convert_entries::notes(&list);
     if let Some(to) = overwrites(&list, &out) {
         return fail(
             2,
@@ -414,7 +428,10 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(o) => return o,
     };
     if a.dry_run {
-        return crate::convert_dry::outcome(&list, &out, a.json);
+        return crate::convert_entries::lead(
+            &naming,
+            crate::convert_dry::outcome(&list, &out, a.json),
+        );
     }
     let ended = Arc::new(Mutex::new(vec![None; list.len()]));
     let names = list.iter().map(Entry::shown).collect();
@@ -441,5 +458,5 @@ pub fn run(args: Vec<String>) -> Outcome {
     if let Some(o) = write_report(a.report.as_deref(), &items, &out) {
         return o;
     }
-    summary(&items, &out, a.json)
+    crate::convert_entries::lead(&naming, summary(&items, &out, a.json))
 }

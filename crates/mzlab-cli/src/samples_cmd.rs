@@ -15,7 +15,7 @@ pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split 
 
 usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli sample group NAME...
-       mzlab-cli sample table [--names FILE|- | FILE...]
+       mzlab-cli sample table [--names FILE|- | FILE...] [--text]
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
        mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
@@ -26,7 +26,11 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
   FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
-  table           the sample table the names propose (samples/1): role, time point (`time`, `time_unit`, `time_min`), series, replicate, concentration";
+  table           the sample table the names propose (samples/1): role (`kind`, and `blank_kind` for a wash), time point (`time`, `time_unit`, `time_min`), series, replicate, concentration
+  --text          with table: a plain table (file, role, time_min, series, replicate) in place of the JSON
+  Every role and time the names decide is logged on stderr (`auto: NAME kind=dark \"BLKD\" ...`: the field, its value and the part of the name that decided it);
+  the user overrides one by editing `kind` (or `time`) of the samples/1 before the next step. A dark control (`COND-D`, `H2O2D`) and a dark matrix blank
+  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -465,7 +469,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let sub = first.as_deref();
     let (op, body) = match sub {
         Some("vars") => ("variables", variables_args(it.collect())),
-        Some("table") => ("propose", table(it.collect())),
+        Some("table") => return crate::samples_table::run(it.collect()),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {

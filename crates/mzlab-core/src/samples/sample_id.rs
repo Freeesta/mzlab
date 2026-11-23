@@ -1,17 +1,20 @@
-//! The sample-ID convention of the lab series (`MAT-COND-Ttt`, `MAT-STD<cc>`, `QC-MAT`, `P-<name>`, blanks), read from a `sample_id`.
+//! The sample-ID convention of the lab series (`MAT-COND-Ttt`, `MAT-STD<cc>`, `QC-MAT`, `P-<name>`, blanks), read from a `sample_id`; the parts
+//! are split at `-` or `_` alike (`MQ_H2O2_T30` is `MQ-H2O2-T30`), a dark control is `COND` + `D` (`H2O2D`, `H2O2-D`) and a wash is `MAT-WASH`.
 //! Used by `model` to fill the fields the name model did not capture and by `validate3` to warn about an unknown condition or a bad time.
 
 use super::Sample;
 
 pub(super) const MATRICES: [&str; 2] = ["TW", "MQ"];
 pub(super) const IRRADIATED: [&str; 6] = ["C", "N2", "O2", "AIR", "H2O2", "PMS"];
-pub(super) const DARK: [&str; 3] = ["H2O2D", "PMSD", "BLKD"];
+pub(super) const DARK: [&str; 7] = ["H2O2D", "PMSD", "BLKD", "N2D", "O2D", "AIRD", "CD"];
 const BLANK: [&str; 3] = ["BLK", "BLKP", "SB"];
 
 /// What an ID says: the role, the matrix, the condition, the time in minutes and the standard concentration.
 #[derive(Debug, Default, PartialEq)]
 pub struct IdInfo {
     pub kind: Option<&'static str>,
+    /// `wash` for a wash injection (`MQ_WASH`, `MQ-WASH`).
+    pub blank_kind: Option<&'static str>,
     pub matrix: Option<&'static str>,
     pub cond: Option<String>,
     pub time_min: Option<f64>,
@@ -40,16 +43,22 @@ fn matrix_of(s: &str) -> Option<&'static str> {
     MATRICES.iter().copied().find(|m| m.eq_ignore_ascii_case(s))
 }
 
-/// Reads an ID; an ID of no known shape gives the default (nothing said). A trailing `-R` (re-injection) is ignored.
+/// Reads an ID; an ID of no known shape gives the default (nothing said). A trailing `-R` or `_R` (re-injection) is ignored.
 pub fn read(id: &str) -> IdInfo {
     let id = id.trim();
-    let base = id
-        .strip_suffix("-R")
-        .or_else(|| id.strip_suffix("-r"))
+    let base = ["-R", "-r", "_R", "_r"]
+        .iter()
+        .find_map(|s| id.strip_suffix(s))
         .unwrap_or(id);
     let up = base.to_uppercase();
     let reinjection = base.len() != id.len();
-    let parts: Vec<&str> = up.split('-').collect();
+    let mut parts: Vec<String> = up.split(['-', '_']).map(String::from).collect();
+    // `MQ_H2O2_D_T30`: the dark mark written apart from its condition
+    if parts.len() == 4 && parts[2] == "D" {
+        parts[1].push('D');
+        parts.remove(2);
+    }
+    let parts: Vec<&str> = parts.iter().map(String::as_str).collect();
     let mut r = IdInfo {
         reinjection,
         ..IdInfo::default()
@@ -78,12 +87,21 @@ pub fn read(id: &str) -> IdInfo {
             r.matrix = matrix_of(m);
             r.kind = Some("qc");
         }
-        ["P", _] => r.kind = Some("pool"),
+        ["P", _, ..] => r.kind = Some("pool"),
+        [m, "WASH"] if matrix_of(m).is_some() => {
+            r.matrix = matrix_of(m);
+            r.kind = Some("blank");
+            r.blank_kind = Some("wash");
+        }
         [m, b] if matrix_of(m).is_some() && BLANK.contains(b) => {
             r.matrix = matrix_of(m);
             r.kind = Some("blank");
         }
-        [b] if BLANK.contains(b) || *b == "MQ_WASH" => r.kind = Some("blank"),
+        [b] if BLANK.contains(b) => r.kind = Some("blank"),
+        [b] if *b == "WASH" => {
+            r.kind = Some("blank");
+            r.blank_kind = Some("wash");
+        }
         _ => {}
     }
     r
@@ -100,6 +118,9 @@ pub fn apply(c: &mut Sample, skip: &[&str]) {
     }
     if let (true, Some(k)) = (free("kind"), i.kind) {
         c.kind = k.into();
+    }
+    if let (true, Some(b), true) = (free("blank_kind"), i.blank_kind, c.blank_kind.is_none()) {
+        c.blank_kind = Some(b.into());
     }
     if let (true, Some(cond)) = (free("series"), &i.cond) {
         c.series = cond.clone();
@@ -119,3 +140,7 @@ pub fn apply(c: &mut Sample, skip: &[&str]) {
         c.unit = Some("mg/L".into());
     }
 }
+
+#[cfg(test)]
+#[path = "sample_id_tests.rs"]
+mod tests;

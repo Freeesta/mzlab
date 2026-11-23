@@ -43,6 +43,35 @@ const CAL_WORDS: [&str; 6] = [
 const DARK_WORDS: [&str; 5] = ["dark", "buio", "adsorption", "control", "ctrl"];
 const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
 
+/// The dark mark of a name as a span of `low` (characters): a token `d` after the condition (`MQ_H2O2_D_T30`, never after a number: `3 d` is days) or a
+/// condition fused with it (`H2O2D`, `PMSD`, `BLKD`: the dark matrix blank). A dark control is not a time zero, whatever its time says.
+pub(super) fn dark_span(low: &[char]) -> Option<(usize, usize)> {
+    let (mut i, mut prev) = (0, None::<String>);
+    while i < low.len() {
+        if !low[i].is_ascii_alphanumeric() {
+            i += 1;
+            continue;
+        }
+        let e = (i..low.len())
+            .find(|&k| !low[k].is_ascii_alphanumeric())
+            .unwrap_or(low.len());
+        let w: String = low[i..e].iter().collect();
+        let after_name = prev
+            .as_ref()
+            .is_some_and(|p| !p.chars().all(|c| c.is_ascii_digit()));
+        let fused = w.len() >= 3
+            && super::sample_id::DARK
+                .iter()
+                .any(|d| d.eq_ignore_ascii_case(&w));
+        if fused || (w == "d" && after_name) {
+            return Some((i, e));
+        }
+        prev = Some(w);
+        i = e;
+    }
+    None
+}
+
 /// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
 fn has_any(low: &str, words: &[&str]) -> bool {
     low.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| {
@@ -59,7 +88,9 @@ fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
         "blank" => "blank",
         "standard" if has_any(low, &CAL_WORDS) => "calibration",
         "standard" => "std",
-        _ if has_any(low, &DARK_WORDS) => "dark",
+        _ if has_any(low, &DARK_WORDS) || dark_span(&low.chars().collect::<Vec<_>>()).is_some() => {
+            "dark"
+        }
         _ if has_any(low, &["qc"]) => "qc",
         _ if time_min == Some(0.0) => "t0",
         _ => "sample",
