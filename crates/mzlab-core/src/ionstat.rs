@@ -54,9 +54,9 @@ impl FloorParams {
         let d = FloorParams::default();
         let g = |i: usize| p.get(i).copied().filter(|v| v.is_finite() && *v >= 0.0);
         FloorParams {
-            one_ion: match p.get(0).copied() {
+            one_ion: match p.first().copied() {
                 Some(v) if v.is_finite() && v > 0.0 => OneIon::Cps(v),
-                Some(v) if v == 0.0 => OneIon::Off,
+                Some(0.0) => OneIon::Off,
                 _ => OneIon::Auto,
             },
             sd_weight: g(1).unwrap_or(d.sd_weight),
@@ -86,7 +86,7 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
     }
     // with a high background no point may hold a single ion: the smallest step between distinct values is one too
     let mut d = pos.clone();
-    d.sort_by(f64::total_cmp);
+    crate::sortc::slice_by(&mut d, f64::total_cmp);
     d.dedup();
     let step = d
         .windows(2)
@@ -107,7 +107,7 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::slice_by(v, f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
