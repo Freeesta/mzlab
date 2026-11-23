@@ -38,6 +38,17 @@ fn dark_controls_and_dark_blanks_are_dark_not_time_zero() {
         assert_eq!(i.kind, Some("dark"), "{id}");
         assert!(!i.unknown_cond, "{id}");
     }
+    // the `D` of an unknown condition is not read: the condition stays as written and is reported, the role is not dark (as in the name model)
+    let i = read("MQ_COND_D_T30");
+    assert_eq!(
+        (i.kind, i.cond.as_deref(), i.unknown_cond),
+        (Some("sample"), Some("COND"), true)
+    );
+    let i = read("MQ_COND_T30");
+    assert_eq!(
+        (i.kind, i.cond.as_deref(), i.unknown_cond),
+        (Some("sample"), Some("COND"), true)
+    );
     // the apart `D` joins its condition
     assert_eq!(read("MQ_H2O2_D_T30").cond.as_deref(), Some("H2O2D"));
     // a dark control keeps its time (a time zero it is not): the role of the sample is `dark`

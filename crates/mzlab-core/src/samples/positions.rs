@@ -160,12 +160,18 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
 }
 
 /// The span that decided the role: its word, or the time for a time zero.
-fn kind_span(low: &[char], c: &Sample, by_time: Option<(usize, usize)>) -> Option<(usize, usize)> {
+fn kind_span(
+    low: &[char],
+    stem: (&[char], usize),
+    c: &Sample,
+    by_time: Option<(usize, usize)>,
+) -> Option<(usize, usize)> {
     let words: &[&str] = match c.kind.as_str() {
         "infusion" => &["infusion", "infusione", "fia"],
-        // a dark word, else the lone `d` (`3 d` is days, so it comes last)
+        // a dark word, else the lone `d` the role was read from (in the stem, after a condition)
         "dark" => {
-            return word_span(low, &super::names::DARK_WORDS).or_else(|| word_span(low, &["d"]))
+            return word_span(low, &super::names::DARK_WORDS)
+                .or_else(|| super::names::lone_d(stem.0).map(|(a, b)| (a + stem.1, b + stem.1)))
         }
         "qc" => &["qc"],
         "blank" => &BLANK_WORDS,
@@ -234,7 +240,7 @@ pub fn of_file(name: &str, c: &Sample, stem: &str, time: Option<(usize, usize)>)
         };
     }
     let by_time = time.map(|(a, b)| (a + off, b + off));
-    if let Some((a, b)) = kind_span(&low, c, by_time) {
+    if let Some((a, b)) = kind_span(&low, (&stem_low, off), c, by_time) {
         push(&mut items, "kind", a, b);
     }
     if let Some((a, b)) = blank_span(&low, c) {

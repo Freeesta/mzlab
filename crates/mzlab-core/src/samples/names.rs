@@ -56,25 +56,34 @@ pub(super) const DARK_WORDS: [&str; 11] = [
 ];
 const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
 
-/// A token `d` after the condition (`MQ_H2O2_D_T30`, never after a number: `3 d` is days): the dark mark written apart. A dark control is not a time zero.
+/// The conditions a dark mark can follow, lower case: the irradiated ones and the matrix blank (`sample_id::IRRADIATED`, `BLK`).
+const KNOWN_COND: [&str; 7] = ["c", "n2", "o2", "air", "h2o2", "pms", "blk"];
+
+/// The span of a token `d` that follows a known condition in the stem of a name (`MQ_H2O2_D_T30`): the dark mark written apart. Only the stem is read (no
+/// folders, no extension: `x.d` is an Agilent dataset) and only after a known condition, so `3 d` (days) and `COND_D` are not dark. A dark control is not a time zero.
 #[inline(never)]
-fn lone_d(low: &str) -> bool {
-    let (b, mut named, mut i) = (low.as_bytes(), false, 0);
-    while i < b.len() {
-        if !b[i].is_ascii_alphanumeric() {
+pub(super) fn lone_d(stem: &[char]) -> Option<(usize, usize)> {
+    let (mut prev, mut i) = (&stem[..0], 0);
+    while i < stem.len() {
+        if !stem[i].is_ascii_alphanumeric() {
             i += 1;
             continue;
         }
-        let start = i;
-        while i < b.len() && b[i].is_ascii_alphanumeric() {
-            i += 1;
+        let e = i + stem[i..]
+            .iter()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .count();
+        let tok = &stem[i..e];
+        if tok == ['d']
+            && KNOWN_COND
+                .iter()
+                .any(|k| k.chars().eq(prev.iter().copied()))
+        {
+            return Some((i, e));
         }
-        if named && &b[start..i] == b"d" {
-            return true;
-        }
-        named = b[start..i].iter().any(u8::is_ascii_alphabetic);
+        (prev, i) = (tok, e);
     }
-    false
+    None
 }
 
 /// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
@@ -88,12 +97,12 @@ fn has_any(low: &str, words: &[&str]) -> bool {
 }
 
 /// The role without the infusion, as `samples/1` gives it: blank, standard or calibration, dark, QC, time zero, sample.
-fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
+fn base_kind(low: &str, stem: &[char], guess: &str, time_min: Option<f64>) -> &'static str {
     match guess {
         "blank" => "blank",
         "standard" if has_any(low, &CAL_WORDS) => "calibration",
         "standard" => "std",
-        _ if has_any(low, &DARK_WORDS) || lone_d(low) => "dark",
+        _ if has_any(low, &DARK_WORDS) || lone_d(stem).is_some() => "dark",
         _ if has_any(low, &["qc"]) => "qc",
         _ if time_min == Some(0.0) => "t0",
         _ => "sample",
@@ -102,15 +111,22 @@ fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
 
 /// The role a name gets in the table model of mzlab-feat, which has no infusion role: the one `propose` would give without the infusion words.
 pub fn table_kind_of_name(name: &str) -> &'static str {
-    let (_, time, guess) = guess_sample(name);
-    base_kind(&name.to_lowercase(), guess, time)
+    let (stem, time, guess) = guess_sample(name);
+    let stem: Vec<char> = stem.to_lowercase().chars().collect();
+    base_kind(&name.to_lowercase(), &stem, guess, time)
 }
 
-fn kind_of(low: &str, guess: &str, time_min: Option<f64>, msn: bool) -> &'static str {
+fn kind_of(
+    low: &str,
+    stem: &[char],
+    guess: &str,
+    time_min: Option<f64>,
+    msn: bool,
+) -> &'static str {
     if guess != "blank" && (msn || has_any(low, &INFUSION_WORDS)) {
         return "infusion";
     }
-    base_kind(low, guess, time_min)
+    base_kind(low, stem, guess, time_min)
 }
 
 fn blank_kind(low: &str) -> Option<String> {
@@ -235,7 +251,7 @@ pub(crate) fn role_and_time(name: &str) -> (&'static str, Option<(f64, usize, us
     let lowc: Vec<char> = stem.to_lowercase().chars().collect();
     let time = (guess == "sample").then(|| time_of(&lowc)).flatten();
     let minutes = time.as_ref().map(|t| t.value * minutes_per(t.unit));
-    let kind = kind_of(&name.to_lowercase(), guess, minutes, false);
+    let kind = kind_of(&name.to_lowercase(), &lowc, guess, minutes, false);
     let keep = kind != "infusion" && kind != "qc";
     let span = time.filter(|_| keep).zip(minutes);
     (kind, span.map(|(t, m)| (m, t.start, t.end)))
@@ -274,7 +290,7 @@ pub fn propose_explained(files: &[(String, String, String)]) -> Vec<Proposal> {
         if let Some(t) = &time {
             c.set_time(Some(t.value), t.unit);
         }
-        c.kind = kind_of(&low, guess, c.time_min, file_kind == "msn").to_string();
+        c.kind = kind_of(&low, &lowc, guess, c.time_min, file_kind == "msn").to_string();
         if c.kind == "infusion" || c.kind == "qc" {
             c.set_time(None, "min");
             time = None;

@@ -9,6 +9,7 @@ mod csv;
 mod csv_fields;
 #[cfg(test)]
 mod csv_tests;
+mod file_names;
 mod from_file;
 mod json;
 mod json3;
@@ -30,6 +31,7 @@ mod variables;
 
 pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
+pub use file_names::{clean_sample_name, mzml_names, Item as NameItem, Named};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{digest, from_json, from_value, to_json};
 pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};
@@ -295,6 +297,7 @@ pub fn route_all(op: &str, input: &str) -> Result<String> {
         "model" => apply_model(input),
         "csv_read" => csv_read(input),
         "csv_write" => csv_write(input),
+        "mzml_names" => file_names::route(input),
         "variables" => variables::route_variables(input),
         "group_name" => variables::route_group_name(input),
         // the experimental design (`design/1`) rides the same route: `design_propose`, `design_validate`, `design_canonical`, `design_digest`

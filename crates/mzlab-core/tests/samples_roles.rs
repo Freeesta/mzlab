@@ -50,3 +50,63 @@ fn a_d_after_a_number_is_days_not_a_dark_mark() {
         assert!(c.time_min.is_some(), "{name}");
     }
 }
+
+#[test]
+fn the_lone_d_is_read_from_the_stem_after_a_known_condition_only() {
+    // an Agilent dataset folder, a folder called d, a d that follows a time or an unknown condition: none is a dark control, the t0 stays
+    for name in [
+        "MQ_H2O2_T00.d",
+        "MQ_H2O2_T00.D",
+        "data/d/MQ_H2O2_T00",
+        "d/MQ_H2O2_T00.mzML",
+    ] {
+        let c = table(&[name]).remove(0);
+        assert_eq!((c.kind.as_str(), c.time_min), ("t0", Some(0.0)), "{name}");
+    }
+    for name in ["mq_h2o2_t30_d", "x_d", "MQ_COND_D_T30", "S 2 d"] {
+        let c = table(&[name]).remove(0);
+        assert_ne!(c.kind, "dark", "{name}");
+    }
+    // the same rule for the role alone (the table roles of mzlab-feat and the finder) as for the table
+    for (name, kind) in [
+        ("MQ_H2O2_T00.d", "t0"),
+        ("MQ_H2O2_D_T00", "dark"),
+        ("MQ_COND_D_T00", "t0"),
+    ] {
+        assert_eq!(
+            mzlab_core::samples::role_and_minutes(name).0,
+            kind,
+            "{name}"
+        );
+        assert_eq!(
+            mzlab_core::samples::table_kind_of_name(name),
+            kind,
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn the_evidence_of_a_lone_d_is_the_d_that_decided() {
+    // a folder and a leading token `d1` hold a d too: the span is the d after the condition, in characters of the whole name
+    let name = "D1_MQ_H2O2_D_T30";
+    let files = [(name.to_string(), String::new(), String::new())];
+    let p = &mzlab_core::samples::propose_explained(&files)[0];
+    assert_eq!(p.sample.kind, "dark");
+    let kind = p
+        .positions
+        .iter()
+        .find(|x| x.field == "kind")
+        .expect("kind position");
+    assert_eq!(&name[kind.start..kind.end], "D");
+    assert_eq!((kind.start, kind.end), (11, 12));
+    let name = "d/MQ_H2O2_D_T30";
+    let files = [(name.to_string(), String::new(), String::new())];
+    let p = &mzlab_core::samples::propose_explained(&files)[0];
+    let kind = p
+        .positions
+        .iter()
+        .find(|x| x.field == "kind")
+        .expect("kind position");
+    assert_eq!((kind.start, kind.end), (10, 11));
+}

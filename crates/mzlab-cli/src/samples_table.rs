@@ -4,7 +4,7 @@ use mzlab_core::json::{parse, Value};
 
 use crate::Outcome;
 
-/// The `auto:` lines of the roles and times the names decided: field, value and the part of the name (`propose_explained`), one line per file.
+/// The `auto:` lines of the roles and times the names decided: field, value, the part of the name and the rule (`word`, `lone-d`, `time`) from `propose_explained`, one line per file.
 fn decisions(body: &str) -> String {
     let Ok(doc) = mzlab_core::samples::route_all("propose_explained", body)
         .map_err(|e| e.key)
@@ -48,7 +48,13 @@ fn decisions(body: &str) -> String {
                     .unwrap_or("")
                     .to_string(),
             };
-            line += &format!(" {field}={value} \"{part}\"");
+            // the rule that read it: a time (also the t0 of a time zero), the lone `d` after a condition, or a word of the name
+            let rule = match (field, value.as_str(), part.to_lowercase().as_str()) {
+                ("time", ..) | ("kind", "t0", _) => "time",
+                ("kind", "dark", "d") => "lone-d",
+                _ => "word",
+            };
+            line += &format!(" {field}={value} \"{part}\" rule={rule}");
         }
         out += &line;
         out.push('\n');

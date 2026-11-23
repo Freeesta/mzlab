@@ -289,6 +289,7 @@ fn item(
                 notes,
                 flagged: crate::convert_report::flagged_of(run, &e.label),
                 lost: crate::convert_report::lost_of(run, &e.label),
+                rename: e.note.clone(),
             }
         }
         Err(cause) => Item::Failed { input, cause },
@@ -345,9 +346,9 @@ fn prepared(
     }
 }
 
-/// An output that would be written over its own input is a mistake of `--out`.
-fn overwrites(entries: &[Entry], out: &Path) -> Option<String> {
-    entries.iter().find_map(|e| {
+/// The usage failure of an output that would be written over its own input, or (`--name sample`, no `--fresh`) over the mzML of another input.
+fn overwrites(a: &Args, entries: &[Entry], (out, work): (&Path, &Path)) -> Option<Outcome> {
+    let over_input = entries.iter().find_map(|e| {
         let to = out.join(&e.out);
         let same = to
             .canonicalize()
@@ -355,7 +356,24 @@ fn overwrites(entries: &[Entry], out: &Path) -> Option<String> {
             .zip(e.input.canonicalize().ok())
             .is_some_and(|(a, b)| a == b);
         same.then(|| to.display().to_string())
-    })
+    });
+    if let Some(to) = over_input {
+        return Some(fail(
+            2,
+            &format!("{to} would be written over its input"),
+            "choose another --out folder",
+        ));
+    }
+    let other = crate::convert_names::taken_by_other(entries, out, work);
+    other
+        .filter(|_| a.name_by_sample && !a.fresh && !a.dry_run)
+        .map(|to| {
+            fail(
+                2,
+                &format!("{to} already exists and is not the mzML of this input"),
+                "choose another --out folder, or pass --fresh to replace it",
+            )
+        })
 }
 
 /// The work folder `work` (inside `out`), or the usage failure that says `out` cannot be written.
@@ -416,12 +434,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(o) => return o,
     };
     let naming = crate::convert_entries::notes(&list);
-    if let Some(to) = overwrites(&list, &out) {
-        return fail(
-            2,
-            &format!("{to} would be written over its input"),
-            "choose another --out folder",
-        );
+    if let Some(o) = overwrites(&a, &list, (&out, &work)) {
+        return o;
     }
     let (plan, ready, found) = match prepared(&list, &a.sets) {
         Ok(p) => p,
@@ -455,6 +469,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         .enumerate()
         .map(|(k, e)| item(&roots[k], e, (ended[k].as_ref(), &run), (&work, &out)))
         .collect();
+    crate::convert_names::record(&list, &items, &work);
     if let Some(o) = write_report(a.report.as_deref(), &items, &out) {
         return o;
     }

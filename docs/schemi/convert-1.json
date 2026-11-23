@@ -103,6 +103,10 @@
           },
           "empty": {
             "type": "boolean"
+          },
+          "rename": {
+            "type": "string",
+            "description": "With `--name sample`: why the file is not called after its sample plainly (a clash, an unsafe or empty name); absent otherwise."
           }
         }
       }

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::readers::{selection, Format, Limits};
+use mzlab_core::samples::{mzml_names, NameItem};
 
 use crate::flow_set::file_set;
 
@@ -88,34 +89,6 @@ fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
     id.map_or(format!("{base}.mzML"), |i| format!("{base}-{i}.mzML"))
 }
 
-/// A sample name as a safe file name: letters, digits and `. _ - + ( )` stay, anything else (spaces, path separators, `:`, quotes) becomes `_`, runs of `_` collapse,
-/// the edges lose `. _ -` (no hidden file), a Windows device name gets a `_`, and the length is capped. None when nothing is left.
-pub(crate) fn clean_sample_name(name: &str) -> Option<String> {
-    let mut out = String::new();
-    for c in name.trim().chars() {
-        let keep = c.is_alphanumeric() || matches!(c, '.' | '-' | '+' | '(' | ')');
-        let c = if keep || c == '_' { c } else { '_' };
-        if c == '_' && out.ends_with('_') {
-            continue;
-        }
-        out.push(c);
-    }
-    let out: String = out
-        .trim_matches(|c| matches!(c, '.' | '_' | '-'))
-        .chars()
-        .take(120)
-        .collect();
-    if out.is_empty() {
-        return None;
-    }
-    let stem = out.split('.').next().unwrap_or("").to_ascii_uppercase();
-    let device = ["CON", "PRN", "AUX", "NUL"].contains(&stem.as_str())
-        || (stem.len() == 4
-            && (stem.starts_with("COM") || stem.starts_with("LPT"))
-            && stem.ends_with(|c: char| c.is_ascii_digit()));
-    Some(if device { format!("{out}_") } else { out })
-}
-
 /// The mzML files of the datasets: one per sample of a dataset with several; two that would get the same name keep the extension of their input.
 /// With `by_sample` (`--name sample`) each file is `SAMPLE.mzML`: the cleaned sample name; two equal names (case aside, as on Windows and macOS) become
 /// `SAMPLE-ID.mzML` (a dataset with one sample: `SAMPLE-N.mzML`, N the order of the clash), a name that cleans to nothing keeps the default name, each with its `note`.
@@ -170,7 +143,11 @@ pub(crate) fn entries(
             .count()
             == 1;
         // two inputs of one name (two folders) keep their position in it, or the second file would replace the first
-        let taken = outs.iter().filter(|o| **o == outs[k]).count() > 1;
+        let taken = outs
+            .iter()
+            .filter(|o| o.to_lowercase() == outs[k].to_lowercase())
+            .count()
+            > 1;
         let (lead, mark) = (format!("{k}/"), format!("{k}-"));
         made.push(Entry {
             input: input.clone(),
@@ -178,7 +155,14 @@ pub(crate) fn entries(
             out: format!("{}{}", if taken { &mark } else { "" }, outs[k]),
             empty: empty[k],
             wiff: wiff[k],
-            note: notes[k].take(),
+            note: notes[k].take().or_else(|| {
+                taken.then(|| {
+                    format!(
+                        "note: {plain}: another input has the same file name: written as {}{}",
+                        mark, outs[k]
+                    )
+                })
+            }),
         });
     }
     Ok(made)
@@ -196,49 +180,28 @@ pub(crate) fn lead(naming: &str, mut o: crate::Outcome) -> crate::Outcome {
     o
 }
 
-/// `--name sample`: puts `SAMPLE.mzML` in `outs` for every entry whose sample name cleans to something, settling the clashes deterministically (by the
-/// order of the entries): the later ones get `-ID` or `-N`; the notes say what was done.
+/// `--name sample`: the names of `mzlab_core::samples::mzml_names` (the one function of the CLI, the app and the site) in `outs`, each with its note.
 fn rename_by_sample(
     all: &[(PathBuf, String, Option<u32>, Option<String>)],
     outs: &mut [String],
     notes: &mut [Option<String>],
 ) {
-    let base: Vec<Option<String>> = all
+    let who: Vec<String> = all
         .iter()
-        .map(|(_, _, _, s)| s.as_deref().and_then(clean_sample_name))
+        .map(|(_, n, id, _)| id.map_or(n.clone(), |i| format!("{n}@{i}")))
         .collect();
-    let mut seen: Vec<String> = Vec::new();
-    for (k, b) in base.iter().enumerate() {
-        let who = all[k]
-            .2
-            .map_or(all[k].1.clone(), |i| format!("{}@{i}", all[k].1));
-        let Some(b) = b else {
-            notes[k] = Some(format!(
-                "note: {who}: the sample name is empty or has no usable characters: written as {}",
-                outs[k]
-            ));
-            continue;
-        };
-        let key = b.to_lowercase();
-        let n = seen.iter().filter(|s| **s == key).count();
-        seen.push(key);
-        let mut name = b.clone();
-        if n > 0 {
-            name = all[k]
-                .2
-                .map_or(format!("{b}-{}", n + 1), |i| format!("{b}-{i}"));
-            notes[k] = Some(format!(
-                "note: {who}: the sample name {b} is already taken: written as {name}.mzML"
-            ));
-        }
-        if let Some(raw) = all[k]
-            .3
-            .as_deref()
-            .filter(|r| *r != b && notes[k].is_none())
-        {
-            notes[k] = Some(format!("note: {who}: the sample name \"{raw}\" is written as {name}.mzML (a safe file name)"));
-        }
-        outs[k] = format!("{name}.mzML");
+    let items: Vec<NameItem> = (0..all.len())
+        .map(|k| NameItem {
+            who: &who[k],
+            plain: &outs[k],
+            sample: all[k].3.as_deref(),
+            id: all[k].2,
+        })
+        .collect();
+    let named = mzml_names(&items);
+    for (k, n) in named.into_iter().enumerate() {
+        outs[k] = n.out;
+        notes[k] = n.note;
     }
 }
 

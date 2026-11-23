@@ -22,6 +22,7 @@ pub mod convert;
 mod convert_dry;
 mod convert_entries;
 mod convert_help;
+mod convert_names;
 mod convert_report;
 mod dad_cmd;
 mod dad_ms;

@@ -3,32 +3,12 @@
 
 use std::path::PathBuf;
 
-use crate::convert_entries::clean_sample_name;
 use crate::convert_fixtures::{folder, wiff};
 use crate::convert_tests::{convert, mzmls};
 use crate::flow_run_tests::p;
 
 fn names(dir: &std::path::Path) -> Vec<String> {
     mzmls(dir).into_iter().map(|f| f.0).collect()
-}
-
-#[test]
-fn a_sample_name_becomes_a_safe_file_name() {
-    for (raw, want) in [
-        ("MQ_H2O2_T30", Some("MQ_H2O2_T30")),
-        ("TW-PMS-D-T05", Some("TW-PMS-D-T05")),
-        ("MQ H2O2 / T30", Some("MQ_H2O2_T30")),
-        ("a:b*c?d\"e", Some("a_b_c_d_e")),
-        ("..\\..\\evil", Some("evil")),
-        ("  __x__  ", Some("x")),
-        ("CON", Some("CON_")),
-        ("sample (2)", Some("sample_(2)")),
-        ("///", None),
-        ("", None),
-    ] {
-        assert_eq!(clean_sample_name(raw).as_deref(), want, "{raw:?}");
-    }
-    assert_eq!(clean_sample_name(&"x".repeat(300)).unwrap().len(), 120);
 }
 
 #[test]
@@ -100,6 +80,22 @@ fn equal_sample_names_get_their_id_and_a_note() {
     let o = convert(&[p(&src), "--out", p(&again), "--name", "sample"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert_eq!(mzmls(&again), mzmls(&out));
+    // the report carries the same notes under `rename`, for a dry run too
+    let report = dir.join("report");
+    let json = convert(&[p(&src), "--out", p(&report), "--name", "sample", "--json"]);
+    let text = String::from_utf8(json.stdout).unwrap();
+    assert_eq!(text.matches("\"rename\":").count(), 2, "{text}");
+    let dry = convert(&[
+        p(&src),
+        "--out",
+        p(&report),
+        "--name",
+        "sample",
+        "--dry-run",
+        "--json",
+    ]);
+    let text = String::from_utf8(dry.stdout).unwrap();
+    assert_eq!(text.matches("\"rename\":").count(), 2, "{text}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -138,4 +134,44 @@ fn a_name_that_is_not_file_or_sample_is_a_usage_error() {
     assert!(o.stderr.contains("expected file or sample"), "{}", o.stderr);
     let o = convert(&["x.wiff", "--out", "o", "--name"]);
     assert_eq!(o.code, 2, "{}", o.stderr);
+}
+
+#[test]
+fn another_input_never_replaces_a_named_mzml_without_fresh() {
+    let dir = folder("name_overwrite");
+    let src = dir.join("in");
+    let (one, two) = (src.join("a"), src.join("b"));
+    std::fs::create_dir_all(&one).unwrap();
+    std::fs::create_dir_all(&two).unwrap();
+    if !wiff(&one, "c", 2) || !wiff(&two, "c", 2) {
+        return;
+    }
+    let out = dir.join("out");
+    let run = |from: &std::path::Path, extra: &[&str]| {
+        let wiff = from.join("c.wiff");
+        let mut args = vec![p(&wiff), "--out", p(&out), "--name", "sample"];
+        args.extend(extra);
+        convert(&args)
+    };
+    assert_eq!(run(&one, &[]).code, 0);
+    // the same input again is the same file: allowed (and cached)
+    assert_eq!(run(&one, &[]).code, 0);
+    let before = mzmls(&out);
+    // another input would take the name of the first: refused, nothing changes, a dry run only looks
+    let o = run(&two, &[]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("not the mzML of this input"),
+        "{}",
+        o.stderr
+    );
+    assert_eq!(mzmls(&out), before);
+    assert_eq!(run(&two, &["--dry-run"]).code, 0);
+    // `--fresh` is the explicit replacement
+    assert_eq!(run(&two, &["--fresh"]).code, 0);
+    // a file the table does not know (made by hand) is refused too
+    std::fs::write(out.join("c_s1.mzML"), b"mine").unwrap();
+    let o = run(&one, &[]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
 }

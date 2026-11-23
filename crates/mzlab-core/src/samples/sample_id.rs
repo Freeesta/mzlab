@@ -59,22 +59,23 @@ pub fn read(id: &str) -> IdInfo {
     match parts.as_slice() {
         // `MQ-H2O2-D-T30`: the dark mark written apart from its condition, as `MQ-H2O2D-T30`
         [m, cond, t] | [m, cond, "D", t] if matrix_of(m).is_some() && t.starts_with('T') => {
-            let mut cond = cond.to_string();
-            if parts.len() == 4 {
-                cond.push('D');
-            }
             r.matrix = matrix_of(m);
             match time_of(&t[1..]) {
                 Some(x) => r.time_min = Some(x),
                 None => r.bad_time = true,
             }
-            // a known condition (or the matrix blank) followed by `D` is a dark control (`N2D`, `BLKD`)
-            let (stem, d) = cond
-                .strip_suffix('D')
-                .map_or((&*cond, false), |s| (s, true));
-            let known = IRRADIATED.contains(&stem) || (d && stem == "BLK");
-            r.kind = Some(if d && known { "dark" } else { "sample" });
+            // a dark control is a known condition (or the matrix blank) followed by `D`, fused or apart (`N2D`, `BLK-D`); the `D` of an unknown condition is
+            // not read: the condition stays as written and is reported unknown
+            let apart = parts.len() == 4;
+            let (stem, fused) = cond.strip_suffix('D').map_or((*cond, false), |s| (s, true));
+            let known = IRRADIATED.contains(&stem) || ((apart || fused) && stem == "BLK");
+            let dark = known && (apart || fused);
+            r.kind = Some(if dark { "dark" } else { "sample" });
             r.unknown_cond = !known;
+            let mut cond = cond.to_string();
+            if apart && known {
+                cond.push('D');
+            }
             r.cond = Some(cond);
         }
         [m, s] if matrix_of(m).is_some() && s.starts_with("STD") => {
