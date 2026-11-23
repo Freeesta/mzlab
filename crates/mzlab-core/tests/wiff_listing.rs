@@ -67,17 +67,17 @@ fn set(dir: &Path, name: &str, cut: Option<usize>, reads: &Arc<AtomicUsize>) -> 
     }
     let (w, s) = (wiff.len() as u64, scan.len() as u64);
     FileSet {
-        membri: vec![
+        members: vec![
             Member {
-                nome: format!("{name}.wiff"),
+                name: format!("{name}.wiff"),
                 dim: w,
-                dati: Box::new(wiff),
+                data: Box::new(wiff),
                 sha1: None,
             },
             Member {
-                nome: format!("{name}.wiff.scan"),
+                name: format!("{name}.wiff.scan"),
                 dim: s,
-                dati: Box::new(Counted(scan, reads.clone())),
+                data: Box::new(Counted(scan, reads.clone())),
                 sha1: None,
             },
         ],

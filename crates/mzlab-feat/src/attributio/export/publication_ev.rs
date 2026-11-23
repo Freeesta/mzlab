@@ -444,7 +444,7 @@ pub(super) fn class_label(it: &Dd) -> String {
 pub(super) fn head_cells(it: &Dd, lv: i32, lv_sub: &str) -> Vec<Cell> {
     vec![
         Cell::Int(0),
-        text(it.nome.clone()),
+        text(it.name.clone()),
         text(if lv_sub == "b" {
             "2b"
         } else {

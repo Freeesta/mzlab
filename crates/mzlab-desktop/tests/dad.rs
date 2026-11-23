@@ -75,9 +75,9 @@ fn reference_wiff(wiff: &Path) -> Mzml<Shell> {
     let member = |name: &str, p: PathBuf| {
         let bytes = std::fs::read(p).unwrap();
         Member {
-            nome: name.to_string(),
+            name: name.to_string(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
@@ -85,7 +85,7 @@ fn reference_wiff(wiff: &Path) -> Mzml<Shell> {
     let mut scan = wiff.as_os_str().to_owned();
     scan.push(".scan");
     let set = FileSet {
-        membri: vec![
+        members: vec![
             member(n, wiff.to_path_buf()),
             member(&format!("{n}.scan"), scan.into()),
         ],

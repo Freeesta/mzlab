@@ -151,7 +151,7 @@ impl Sqlite {
                 };
                 let (columns, alias_rowid, order) = columns_of(sql);
                 self.tables.push(Table {
-                    nome: name.to_string(),
+                    name: name.to_string(),
                     radice: u32::try_from(root).unwrap_or(0),
                     colonne: columns,
                     alias_rowid,
@@ -170,7 +170,7 @@ impl Sqlite {
     pub fn table(&self, name: &str) -> Option<&Table> {
         self.tables
             .iter()
-            .find(|t| t.nome.eq_ignore_ascii_case(name))
+            .find(|t| t.name.eq_ignore_ascii_case(name))
     }
 
     /// Whether the database came with a log whose frames were applied.
@@ -333,7 +333,7 @@ pub enum Val {
 /// A table of the file: its root page, the names of its columns (from the `CREATE TABLE` text) and which column is the alias of the rowid.
 #[derive(Debug, Clone)]
 pub struct Table {
-    pub nome: String,
+    pub name: String,
     pub radice: u32,
     pub colonne: Vec<String>,
     /// Index of the `INTEGER PRIMARY KEY` column, whose record value is NULL (the rowid stands for it).

@@ -140,7 +140,7 @@ fn gradient(c: &Campaign, io: &Io, o: &Options) -> Result<Vec<ExportFile>> {
     let ids: Vec<GradIdentity> = dd
         .iter()
         .map(|d| GradIdentity {
-            name: d.nome.clone(),
+            name: d.name.clone(),
             present: Some((d.in_site[0], d.in_site[1])),
         })
         .collect();
@@ -150,7 +150,7 @@ fn gradient(c: &Campaign, io: &Io, o: &Options) -> Result<Vec<ExportFile>> {
             pol: p.f().pol.clone(),
             id: p.f().id,
             rt: p.f().rt,
-            name: p.nome.clone(),
+            name: p.name.clone(),
         })
         .collect();
     let (table, s) = identity_gradient(c, &l.src, &ids, &fi, [us, ds], 3.0, None)?;

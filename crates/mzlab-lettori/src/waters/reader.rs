@@ -111,7 +111,7 @@ impl Reader for WatersReader {
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         let (f, r, v) = self.entry(c, k)?;
         let field = |name: &str, value: String, units: Option<&str>| Field {
-            nome: name.into(),
+            name: name.into(),
             valore: value,
             unita: units.map(Into::into),
             cv: None,
@@ -217,11 +217,11 @@ impl WatersReader {
 
 /// A folder with `_FUNC001.DAT` is a MassLynx folder; it is surer when `_FUNCTNS.INF` is there and has whole records.
 fn recognize(fs: &mut FileSet) -> Fiducia {
-    let base = |m: &mzlab_core::readers::Member| super::folder::base(&m.nome).to_ascii_lowercase();
-    if !fs.membri.iter().any(|m| base(m) == "_func001.dat") {
+    let base = |m: &mzlab_core::readers::Member| super::folder::base(&m.name).to_ascii_lowercase();
+    if !fs.members.iter().any(|m| base(m) == "_func001.dat") {
         return Fiducia::No;
     }
-    match fs.membri.iter().find(|m| base(m) == "_functns.inf") {
+    match fs.members.iter().find(|m| base(m) == "_functns.inf") {
         Some(m) if m.dim > 0 && m.dim % 416 == 0 => Fiducia::Si,
         _ => Fiducia::Forse,
     }
@@ -348,7 +348,7 @@ impl WatersReader {
             .map_or_else(|| self.c.name.clone(), str::to_string);
         self.samples = vec![Sample {
             id: 0,
-            nome: name,
+            name,
             scansioni: self.indice.len(),
             size: None,
         }];

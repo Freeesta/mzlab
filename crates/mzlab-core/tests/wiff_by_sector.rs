@@ -33,19 +33,19 @@ fn set(dir: &Path, name: &str, sha1: Option<String>) -> (FileSet, Rc<Cell<u64>>,
         if k == 0 {
             size = bytes.len() as u64;
         }
-        let dati: Box<dyn ReadAt> = if k == 0 {
+        let data: Box<dyn ReadAt> = if k == 0 {
             Box::new(Counting(bytes.clone(), read.clone()))
         } else {
             Box::new(bytes.clone())
         };
         members.push(Member {
-            nome: file,
+            name: file,
             dim: bytes.len() as u64,
-            dati,
+            data,
             sha1: sha1.clone(),
         });
     }
-    (FileSet { membri: members }, read, size)
+    (FileSet { members }, read, size)
 }
 
 fn digest(r: &mut Box<dyn Reader>, c: usize) -> String {

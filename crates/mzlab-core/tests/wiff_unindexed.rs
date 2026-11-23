@@ -57,14 +57,14 @@ fn open_with(dir: &Path, name: &str, limits: &Limits) -> Box<dyn Reader> {
     let member = |file: String| {
         let b = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }
     };
     let set = FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],
@@ -96,7 +96,7 @@ fn unlisted_sections_are_samples_with_inferred_name_and_method() {
     assert_eq!((whole.declared, whole.read), (whole.read, whole.read));
     assert_eq!((cut.declared, cut.read), (cut.read + 1, cut.read));
     assert_eq!(cut.cause, "warn.wiff.damaged");
-    let names: Vec<String> = l.samples().iter().map(|s| s.nome.clone()).collect();
+    let names: Vec<String> = l.samples().iter().map(|s| s.name.clone()).collect();
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     assert_eq!(ids, [1, 2, 3, 4]);
     assert_eq!(&names[2..], ["unindexed_s3", "unindexed_s4"]);

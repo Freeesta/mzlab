@@ -9,10 +9,10 @@ use serde_json::{json, Value};
 
 fn fileset(name: &str, bytes: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: name.to_string(),
+        members: vec![Member {
+            name: name.to_string(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     }

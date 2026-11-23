@@ -10,6 +10,8 @@ fn the_test_build_serves_every_family() {
 
 #[test]
 fn a_dataset_with_no_agilent_run_has_no_reason() {
-    let mut fs = FileSet { membri: Vec::new() };
+    let mut fs = FileSet {
+        members: Vec::new(),
+    };
     assert!(mzlab_lettori::reasons_together(&mut fs).is_empty());
 }

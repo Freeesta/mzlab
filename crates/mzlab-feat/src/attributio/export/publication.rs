@@ -45,11 +45,11 @@ impl Build<'_> {
     }
 
     fn identity_row(&self, it: &Dd, fr: &[PFeat]) -> Result<(Vec<Cell>, Meta)> {
-        let sub: Vec<&PFeat> = fr.iter().filter(|p| p.nome == it.nome).collect();
+        let sub: Vec<&PFeat> = fr.iter().filter(|p| p.name == it.name).collect();
         if sub.is_empty() {
             return Err(CampaignError::campaign(format!(
                 "'{}': no Level 1-3 feature found (identity table out of sync)",
-                it.nome
+                it.name
             )));
         }
         let rep = representative(&sub);
@@ -63,7 +63,7 @@ impl Build<'_> {
                 sub: &sub,
                 rep,
                 best_feats: &best_feats,
-                name: &it.nome,
+                name: &it.name,
                 lv,
                 lv_sub,
                 watch: &self.c.rt_logp_watchlist,
@@ -73,7 +73,7 @@ impl Build<'_> {
         let (ik, smi, basis) = structure(rep);
         let f = rep.f();
         let mut row = head_cells(it, lv, lv_sub);
-        row.extend(hazard_cells(&it.nome, lv));
+        row.extend(hazard_cells(&it.name, lv));
         row.extend([
             text(formula.unwrap_or("")),
             rounded(ion.mono, 4),
@@ -107,7 +107,7 @@ impl Build<'_> {
             n_mz: count_mzlib_only(&sub),
             core: it.in_site.iter().all(|b| *b),
             flags: fl.join("; "),
-            key: it.nome.to_lowercase(),
+            key: it.name.to_lowercase(),
         };
         Ok((row, meta))
     }
@@ -197,7 +197,7 @@ fn excluded_row(x: &Build, e: &IdentityRow, fr: &[PFeat]) -> (String, Vec<Cell>)
         .map(|p| p.f().decision.feature_decision.as_str())
         .find(|m| !m.trim().is_empty())
         .unwrap_or("");
-    let compound = sub.first().map_or(e.identity.clone(), |p| p.nome.clone());
+    let compound = sub.first().map_or(e.identity.clone(), |p| p.name.clone());
     let group = if analyst {
         "Excluded by the analyst".to_string()
     } else {

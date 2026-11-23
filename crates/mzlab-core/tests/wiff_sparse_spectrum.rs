@@ -44,14 +44,14 @@ fn routes(dir: &Path, name: &str) -> Routes<Vec<u8>> {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     let set = FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],

@@ -47,7 +47,7 @@ fn the_polynomial_goes_to_0x18_scans_only() {
         let h = l.scan_header(0, k).unwrap();
         let cal = &h
             .iter()
-            .find(|f| f.nome == "m/z calibration")
+            .find(|f| f.name == "m/z calibration")
             .unwrap()
             .valore;
         assert_eq!(cal.contains("0x4C"), !f1, "{}: {cal}", v.id);

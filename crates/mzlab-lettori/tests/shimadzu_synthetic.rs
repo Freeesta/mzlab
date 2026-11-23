@@ -9,10 +9,10 @@ use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 fn open(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
     mzlab_lettori::open_bare(
         FileSet {
-            membri: vec![Member {
-                nome: name.into(),
+            members: vec![Member {
+                name: name.into(),
                 dim: b.len() as u64,
-                dati: Box::new(b),
+                data: Box::new(b),
                 sha1: None,
             }],
         },
@@ -111,7 +111,7 @@ fn the_extension_alone_is_not_enough() {
 fn the_sample_name_has_no_folder() {
     for p in ["dir/sub/a.qgd", "dir\\sub\\a.qgd"] {
         let l = open(p, qgd(6)).unwrap();
-        assert_eq!(l.samples()[0].nome, "a.qgd", "{p}");
+        assert_eq!(l.samples()[0].name, "a.qgd", "{p}");
     }
 }
 

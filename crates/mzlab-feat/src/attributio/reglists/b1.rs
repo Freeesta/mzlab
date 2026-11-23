@@ -15,7 +15,7 @@ pub const MATCH_BLOCK: &str = "first block";
 /// One identity of the campaign (one row per common name) with its presence at each screened site.
 #[derive(Clone, Debug, Default)]
 pub struct IdentityIn {
-    pub nome_comune: String,
+    pub common_name: String,
     pub group: String,
     pub best_level: i64,
     pub in_site: Vec<bool>,
@@ -24,7 +24,7 @@ pub struct IdentityIn {
 /// One structure of an identity (the registry rules give `first_block`, the full key and its origin).
 #[derive(Clone, Debug, Default)]
 pub struct StructRow {
-    pub nome_comune: String,
+    pub common_name: String,
     pub identity: String,
     pub first_block: Option<String>,
     pub inchikey: Option<String>,
@@ -43,7 +43,7 @@ pub struct B1Config {
 /// An identity with the columns B1 adds.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct IdentityOut {
-    pub nome_comune: String,
+    pub common_name: String,
     pub group: String,
     pub best_level: i64,
     pub first_blocks: Vec<String>,
@@ -64,7 +64,7 @@ pub struct IdentityOut {
 /// An identity × structure × list-entry join row.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LongRow {
-    pub nome_comune: String,
+    pub common_name: String,
     pub identity: String,
     pub first_block: String,
     pub list_id: String,
@@ -131,7 +131,7 @@ fn join_long(structs: &[&StructRow], mem: &[&MembershipRow]) -> Vec<LongRow> {
         for m in mem.iter().filter(|m| m.first_block == fb) {
             let full = s.inchikey.as_deref().unwrap_or("") == m.inchikey;
             long.push(LongRow {
-                nome_comune: s.nome_comune.clone(),
+                common_name: s.common_name.clone(),
                 identity: s.identity.clone(),
                 first_block: fb.to_string(),
                 list_id: m.list_id.clone(),
@@ -152,7 +152,7 @@ fn block_owners<'a>(with_block: &[&&'a StructRow]) -> Owners<'a> {
         owners
             .entry(s.first_block.as_deref().unwrap_or(""))
             .or_default()
-            .insert(s.nome_comune.as_str());
+            .insert(s.common_name.as_str());
     }
     owners
 }
@@ -186,7 +186,7 @@ fn identity_out(
     };
     let present = |k: usize| i.in_site.get(k).copied().unwrap_or(false);
     let mut out = IdentityOut {
-        nome_comune: i.nome_comune.clone(),
+        common_name: i.common_name.clone(),
         group: i.group.clone(),
         best_level: i.best_level,
         split: blocks.len() > 1,
@@ -227,7 +227,7 @@ fn list_label(long: &[LongRow], lid: &str, name: &str) -> String {
     let mut parts: Vec<String> = Vec::new();
     for r in long
         .iter()
-        .filter(|r| r.list_id == lid && r.nome_comune == name)
+        .filter(|r| r.list_id == lid && r.common_name == name)
     {
         let flag = if r.matched == MATCH_BLOCK {
             " {first block}"
@@ -246,7 +246,7 @@ fn fill_labels(ident: &mut [IdentityOut], lists: &[String], long: &[LongRow]) {
     for i in ident {
         i.labels = lists
             .iter()
-            .map(|lid| list_label(long, lid, &i.nome_comune))
+            .map(|lid| list_label(long, lid, &i.common_name))
             .collect();
         i.n_lists = i.labels.iter().filter(|l| !l.is_empty()).count();
         i.lists = lists
@@ -272,13 +272,13 @@ fn summary_row(
     let full: BTreeSet<&str> = long
         .iter()
         .filter(|r| r.list_id == lid && r.matched == MATCH_FULL)
-        .map(|r| r.nome_comune.as_str())
+        .map(|r| r.common_name.as_str())
         .collect();
     let in_win = |m: &&&MembershipRow| in_window(&m.mono_mass, cfg.window);
     let amenable = |m: &&&MembershipRow, doubtful: bool| {
         (m.lc_esi_amenable == "true" || (doubtful && m.lc_esi_amenable == "doubtful")) && in_win(m)
     };
-    let by_key = |i: &&&IdentityOut| full.contains(i.nome_comune.as_str());
+    let by_key = |i: &&&IdentityOut| full.contains(i.common_name.as_str());
     SummaryRow {
         list_id: lid.to_string(),
         group: catalog::group_of(lid).to_string(),
@@ -302,7 +302,7 @@ fn summary_row(
         all_sites: hit.iter().filter(|i| i.all_sites).count(),
         matched: hit
             .iter()
-            .map(|i| i.nome_comune.as_str())
+            .map(|i| i.common_name.as_str())
             .collect::<Vec<_>>()
             .join(", "),
     }
@@ -337,10 +337,10 @@ pub fn match_campaign(
     cfg: &B1Config,
     lists: Option<&[&str]>,
 ) -> B1 {
-    let names: BTreeSet<&str> = idents.iter().map(|i| i.nome_comune.as_str()).collect();
+    let names: BTreeSet<&str> = idents.iter().map(|i| i.common_name.as_str()).collect();
     let structs: Vec<&StructRow> = structs
         .iter()
-        .filter(|s| names.contains(s.nome_comune.as_str()))
+        .filter(|s| names.contains(s.common_name.as_str()))
         .collect();
     let all_lists: Vec<&str> = match lists {
         Some(l) => l.to_vec(),
@@ -361,7 +361,7 @@ pub fn match_campaign(
         .map(|i| {
             let mine: Vec<&&&StructRow> = with_block
                 .iter()
-                .filter(|s| s.nome_comune == i.nome_comune)
+                .filter(|s| s.common_name == i.common_name)
                 .collect();
             identity_out(i, &mine, &owners, cfg)
         })
@@ -371,7 +371,7 @@ pub fn match_campaign(
         b.n_lists
             .cmp(&a.n_lists)
             .then_with(|| a.group.cmp(&b.group))
-            .then_with(|| a.nome_comune.cmp(&b.nome_comune))
+            .then_with(|| a.common_name.cmp(&b.common_name))
     });
     let summary = lists
         .iter()

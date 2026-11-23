@@ -37,7 +37,7 @@ fn open_empty(_: FileSet, _: &Limits) -> Result<Box<dyn Reader>> {
     Ok(Box::new(Empty {
         campioni: vec![Sample {
             id: 1,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: 0,
             size: None,
         }],
@@ -47,10 +47,10 @@ fn open_empty(_: FileSet, _: &Limits) -> Result<Box<dyn Reader>> {
 
 fn file_set(name: &str, byte: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: name.into(),
+        members: vec![Member {
+            name: name.into(),
             dim: byte.len() as u64,
-            dati: Box::new(byte.to_vec()),
+            data: Box::new(byte.to_vec()),
             sha1: None,
         }],
     }

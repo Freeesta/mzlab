@@ -12,12 +12,12 @@ type Members = Vec<(String, Vec<u8>)>;
 
 fn fs(m: &Members) -> FileSet {
     FileSet {
-        membri: m
+        members: m
             .iter()
             .map(|(n, b)| Member {
-                nome: n.clone(),
+                name: n.clone(),
                 dim: b.len() as u64,
-                dati: Box::new(b.clone()),
+                data: Box::new(b.clone()),
                 sha1: None,
             })
             .collect(),

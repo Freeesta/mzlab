@@ -70,17 +70,17 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .find(".raw")
         .ok_or_else(|| Error::new("err.file.raw").with("detail", "no .raw member"))?;
     let m = fs
-        .membri
+        .members
         .get_mut(i)
         .ok_or_else(|| Error::new("err.file.raw").with("detail", "member"))?;
-    let nome = m
-        .nome
+    let name = m
+        .name
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or("x.raw")
         .to_string();
     let mut src = Stream::new(
-        std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
+        std::mem::replace(&mut m.data, Box::new(Vec::<u8>::new())),
         m.dim,
     );
     let sha1 = m.sha1.take().map(Some);
@@ -95,20 +95,20 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         })
         .collect();
     let damaged = raw.damaged.iter().map(|&k| k as usize).collect();
-    let stem = nome
+    let stem = name
         .rsplit_once('.')
-        .map_or(&nome[..], |(s, _)| s)
+        .map_or(&name[..], |(s, _)| s)
         .to_string();
     let samples = vec![Sample {
         id: 1,
-        nome: stem,
+        name: stem,
         scansioni: index.len(),
         size: None,
     }];
     Ok(Box::new(RawReader {
         raw,
         src,
-        name: nome,
+        name,
         campioni: samples,
         indice: index,
         sha1,
@@ -289,7 +289,7 @@ impl RawReader {
 
 fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value.to_string(),
         unita: unita.map(str::to_string),
         cv: cv.map(str::to_string),

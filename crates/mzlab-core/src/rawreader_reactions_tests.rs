@@ -17,7 +17,7 @@ fn step(mz: f64, activation: Activation, energy: f64) -> ReactionInfo {
 fn values(p: &PrecursorInfo) -> Vec<(String, String)> {
     reaction_fields(p)
         .into_iter()
-        .map(|c| (c.nome, c.valore))
+        .map(|c| (c.name, c.valore))
         .collect()
 }
 

@@ -28,10 +28,10 @@ fn data(rel: &str) -> Option<PathBuf> {
 fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::readers::Reader> {
     let bytes = std::fs::read(raw).unwrap();
     let set = FileSet {
-        membri: vec![Member {
-            nome: "201208_15.raw".into(),
+        members: vec![Member {
+            name: "201208_15.raw".into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     };

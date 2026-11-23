@@ -304,7 +304,7 @@ impl Reader for AndiReader {
                 .read(&mut self.data, &self.limits, v, k as u64, 1)?;
             scale(&mut x, v);
             out.push(Field {
-                nome: v.nome.clone(),
+                name: v.name.clone(),
                 valore: x.first().map(|x| x.to_string()).unwrap_or_default(),
                 unita: v
                     .text("units")
@@ -418,21 +418,21 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .or_else(|| fs.find(".nc"))
         .ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
-    let m = fs.membri.get_mut(i).ok_or(refused)?;
-    let nome = m
-        .nome
+    let m = fs.members.get_mut(i).ok_or(refused)?;
+    let name = m
+        .name
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or("x.cdf")
         .to_string();
     let dim = m.dim;
-    let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let cdf = Cdf::open(&mut dati, dim, limits)?;
-    let testata = AndiHeader::read(&cdf, &mut dati, limits)?;
+    let mut data: Box<dyn ReadAt> = std::mem::replace(&mut m.data, Box::new(Vec::<u8>::new()));
+    let cdf = Cdf::open(&mut data, dim, limits)?;
+    let testata = AndiHeader::read(&cdf, &mut data, limits)?;
     let mut l = AndiReader {
-        data: dati,
+        data,
         dim,
-        name: nome,
+        name,
         limits: *limits,
         cdf,
         header: testata,
@@ -463,7 +463,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     l.samples = vec![Sample {
         id: 1,
-        nome: l.header.title.clone().unwrap_or(stem),
+        name: l.header.title.clone().unwrap_or(stem),
         scansioni: scans,
         size: None,
     }];

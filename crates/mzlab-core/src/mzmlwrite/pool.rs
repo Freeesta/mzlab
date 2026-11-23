@@ -59,7 +59,7 @@ impl<W: Write> MzmlWriter<W> {
                 });
             }
             drop(tx_ready);
-            // `dati` spectra sent in `lotti` blocks, `scritti` blocks written; `read_error` is the reader's error, kept until the spectra before it are written
+            // `data` spectra sent in `lotti` blocks, `scritti` blocks written; `read_error` is the reader's error, kept until the spectra before it are written
             let (mut data, mut lotti, mut scritti, mut read_error, mut finished) =
                 (0usize, 0usize, 0usize, None, false);
             let mut expectation: BTreeMap<usize, Ready> = BTreeMap::new();

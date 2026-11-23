@@ -22,7 +22,7 @@ fn finto(profilo_ok: bool) -> Finto {
     Finto {
         campioni: vec![Sample {
             id: 0,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: n,
             size: None,
         }],

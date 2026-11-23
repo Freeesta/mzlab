@@ -21,10 +21,10 @@ fn text(a: Answer) -> String {
 fn module_answer(path: &std::path::Path, id: &str) -> Result<String, &'static str> {
     let b = std::fs::read(path).unwrap();
     let set = FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };

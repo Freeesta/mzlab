@@ -274,7 +274,7 @@ impl Finto {
             formato: Format::Altro("finto"),
             campioni: vec![Sample {
                 id: 7,
-                nome: "finto".into(),
+                name: "finto".into(),
                 scansioni: cards.len(),
                 size: None,
             }],

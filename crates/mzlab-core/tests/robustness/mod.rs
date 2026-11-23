@@ -87,12 +87,12 @@ impl ReadAt for Letture {
 /// The members of a case as the `FileSet` a reader receives.
 pub fn fileset(members: &[(String, Vec<u8>)]) -> FileSet {
     FileSet {
-        membri: members
+        members: members
             .iter()
             .map(|(name, b)| Member {
-                nome: name.clone(),
+                name: name.clone(),
                 dim: b.len() as u64,
-                dati: Box::new(Letture(b.clone())),
+                data: Box::new(Letture(b.clone())),
                 sha1: None,
             })
             .collect(),
@@ -330,12 +330,12 @@ pub fn cap(total: usize) -> usize {
 pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], execute: Execute) -> (usize, Vec<String>) {
     let (mut cases, mut guasti) = (0, Vec::new());
     let tracciato = std::env::var_os("ROBUSTEZZA_TRACCIA").is_some();
-    for (i, (nome, base)) in seme.iter().enumerate() {
+    for (i, (name, base)) in seme.iter().enumerate() {
         for m in mutazioni(base, text[i]) {
             let mut members = seme.to_vec();
             members[i].1 = apply(&m, base);
             let total: usize = members.iter().map(|x| x.1.len()).sum();
-            let label = format!("{nome} {m:?}");
+            let label = format!("{name} {m:?}");
             if tracciato {
                 eprintln!("caso {label}");
             }

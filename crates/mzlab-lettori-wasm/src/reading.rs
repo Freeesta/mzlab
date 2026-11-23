@@ -192,13 +192,13 @@ impl Members {
             .zip(&self.sizes)
             .enumerate()
             .map(|(i, (n, &s))| Member {
-                nome: n.clone(),
+                name: n.clone(),
                 dim: s as u64,
-                dati: Box::new(member_js(self.read.clone(), i as u32, s as u64)),
+                data: Box::new(member_js(self.read.clone(), i as u32, s as u64)),
                 sha1: None,
             })
             .collect();
-        FileSet { membri: members }
+        FileSet { members }
     }
 }
 
@@ -396,7 +396,7 @@ pub fn open_with_sha1(
     sha1: js_sys::Array,
 ) -> Result<u32, JsValue> {
     let mut fs = Members::new(names, sizes, read)?.fileset();
-    for (x, v) in fs.membri.iter_mut().zip(sha1.iter()) {
+    for (x, v) in fs.members.iter_mut().zip(sha1.iter()) {
         x.sha1 = v.as_string().filter(|t| !t.is_empty());
     }
     open_members(fs)

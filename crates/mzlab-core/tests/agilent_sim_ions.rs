@@ -45,9 +45,9 @@ fn set(reads: &Rc<Cell<usize>>) -> FileSet {
     let (idx, peak) = encode(&[sim(1.0, 1.0), sim(1.1, 2.0), sim(1.2, 3.0)]);
     let m = |name: &str, b: &[u8]| conv_help::member(name, b);
     let mut peak_m = m("x.D/AcqData/MSPeak.bin", &peak);
-    peak_m.dati = Box::new(Counting(peak, reads.clone()));
+    peak_m.data = Box::new(Counting(peak, reads.clone()));
     FileSet {
-        membri: vec![
+        members: vec![
             m("x.D/AcqData/MSScan.bin", &idx),
             peak_m,
             m("x.D/AcqData/acqmeth.txt", &utf16(METHOD)),

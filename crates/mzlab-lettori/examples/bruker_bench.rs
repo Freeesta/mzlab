@@ -28,14 +28,14 @@ fn file_set(dir: &Path) -> FileSet {
             let f = std::fs::File::open(dir.join(m)).unwrap();
             let dim = f.metadata().unwrap().len();
             Member {
-                nome: format!("{name}/{m}"),
+                name: format!("{name}/{m}"),
                 dim,
-                dati: Box::new(f),
+                data: Box::new(f),
                 sha1: None,
             }
         })
         .collect();
-    FileSet { membri: members }
+    FileSet { members }
 }
 
 fn ms(t: Instant) -> f64 {

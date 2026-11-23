@@ -24,7 +24,7 @@ impl<R: ReadAt> Routes<R> {
     /// The headers of the chromatograms of the mzML (SRM, SIC) and its facts; the channels are built again at the next request.
     pub fn pon_cromatogrammi(&mut self, name: &str, chroms: &[Chrom], facts: &Facts) {
         self.msn.channels = State {
-            nome: name.into(),
+            name: name.into(),
             chroms: chroms.to_vec(),
             facts: facts.clone(),
             cache: None,
@@ -37,7 +37,7 @@ impl<R: ReadAt> Routes<R> {
             return c.clone();
         }
         let s = &self.msn.channels;
-        let c = Arc::new(Channels::da(&self.idx.scans, &s.chroms, &s.facts, &s.nome));
+        let c = Arc::new(Channels::da(&self.idx.scans, &s.chroms, &s.facts, &s.name));
         self.msn.channels.cache = Some(c.clone());
         c
     }
@@ -204,7 +204,7 @@ impl<R: ReadAt> Routes<R> {
 /// What a file keeps for its channels: the chromatogram headers the page read from the mzML, and the channels built from them (once).
 #[derive(Default)]
 pub(crate) struct State {
-    nome: String,
+    name: String,
     chroms: Vec<Chrom>,
     facts: Facts,
     cache: Option<Arc<Channels>>,

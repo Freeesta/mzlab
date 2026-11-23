@@ -39,10 +39,10 @@ fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
     let name = path.file_name().unwrap().to_string_lossy().to_string();
     FileSet {
-        membri: vec![Member {
-            nome: name,
+        members: vec![Member {
+            name,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     }

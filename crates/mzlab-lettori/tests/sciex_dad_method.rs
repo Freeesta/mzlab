@@ -42,9 +42,9 @@ fn fixture() -> Option<(PathBuf, Value)> {
 fn member(p: &Path, name: &str) -> Member {
     let b = std::fs::read(p.join(name)).unwrap();
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     }
 }
@@ -52,7 +52,7 @@ fn member(p: &Path, name: &str) -> Member {
 /// The mzML of the pair as `to_mzml` of the module writes it (indexed, no steps, the matrix on).
 fn convert(dir: &Path, dad: bool) -> Vec<u8> {
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member(dir, "dadmetodo.wiff"),
             member(dir, "dadmetodo.wiff.scan"),
         ],

@@ -45,7 +45,7 @@ fn synthetic_folder_reads_back() {
     assert_eq!(tic.intensity[1], 1661.0);
     // mzML written and read back
     let out = conv_help::mzml(FileSet {
-        membri: vec![
+        members: vec![
             conv_help::member("x.D/AcqData/MSScan.bin", &idx),
             conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
@@ -363,7 +363,7 @@ fn a_run_with_only_data_ms_opens() {
         "the bytes after the records are declared"
     );
     let mzml = conv_help::mzml(FileSet {
-        membri: vec![conv_help::member("old.D/data.ms", &bytes)],
+        members: vec![conv_help::member("old.D/data.ms", &bytes)],
     });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
     // another length of the first record (nothing can be read) is an error that names the numbers
@@ -409,7 +409,7 @@ fn single_precision_centroids_read_like_the_double_ones() {
         let mut p = peak.clone();
         let run = d.run(&mut p).unwrap();
         let out = conv_help::mzml(FileSet {
-            membri: vec![
+            members: vec![
                 conv_help::member("x.D/AcqData/MSScan.bin", &idx),
                 conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
             ],

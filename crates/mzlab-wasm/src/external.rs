@@ -154,7 +154,7 @@ impl Replies {
             .iter()
             .map(|c| Sample {
                 id: number(c.get("id")) as u32,
-                nome: text(c.get("name")),
+                name: text(c.get("name")),
                 scansioni: number(c.get("scans")) as usize,
                 size: c.get("size").and_then(Value::f64).map(|d| d as u64),
             })
@@ -191,7 +191,7 @@ impl ScanReplies {
             .arr()
             .iter()
             .map(|f| Field {
-                nome: text(f.get("name")),
+                name: text(f.get("name")),
                 valore: text(f.get("value")),
                 unita: opt(f.get("unit")),
                 cv: opt(f.get("cv")),

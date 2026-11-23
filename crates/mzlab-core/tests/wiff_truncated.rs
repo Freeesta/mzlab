@@ -32,13 +32,13 @@ fn reference(tag: &str) -> Option<PathBuf> {
 
 fn pair(wiff: &[u8], scan: &[u8]) -> FileSet {
     let member = |name: &str, b: &[u8]| Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b.to_vec()),
+        data: Box::new(b.to_vec()),
         sha1: None,
     };
     FileSet {
-        membri: vec![member("x.wiff", wiff), member("x.wiff.scan", scan)],
+        members: vec![member("x.wiff", wiff), member("x.wiff.scan", scan)],
     }
 }
 

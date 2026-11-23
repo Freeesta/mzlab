@@ -198,7 +198,7 @@ fn prepared(
 /// The fingerprints of one member of a vendor file set (`fingerprint`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fingerprint {
-    pub nome: String,
+    pub name: String,
     pub dim: u64,
     pub sha256: String,
     pub sha1: String,
@@ -208,13 +208,13 @@ pub struct Fingerprint {
 /// The fingerprints of every member of `fs`, in its order: taken before `readers::open`, which consumes the set. The SHA-1 goes to the member too,
 /// so the reader does not read the file again for the header of the mzML.
 pub fn impronte(fs: &mut FileSet) -> Result<Vec<Fingerprint>> {
-    fs.membri
+    fs.members
         .iter_mut()
         .map(|m| {
-            let (sha256, sha1, probe) = fingerprint3(&mut m.dati, m.dim)?;
+            let (sha256, sha1, probe) = fingerprint3(&mut m.data, m.dim)?;
             m.sha1 = Some(sha1.clone());
             Ok(Fingerprint {
-                nome: m.nome.clone(),
+                name: m.name.clone(),
                 dim: m.dim,
                 sha256,
                 sha1,
@@ -230,17 +230,17 @@ pub fn known_fingerprints(
     fs: &mut FileSet,
     values: &[(String, String, String)],
 ) -> Option<Vec<Fingerprint>> {
-    if values.len() != fs.membri.len() {
+    if values.len() != fs.members.len() {
         return None;
     }
     Some(
-        fs.membri
+        fs.members
             .iter_mut()
             .zip(values)
             .map(|(m, (sha256, sha1, probe))| {
                 m.sha1 = Some(sha1.clone());
                 Fingerprint {
-                    nome: m.nome.clone(),
+                    name: m.name.clone(),
                     dim: m.dim,
                     sha256: sha256.clone(),
                     sha1: sha1.clone(),
@@ -267,7 +267,7 @@ fn set_print(members: &[Fingerprint], sample: u32) -> (String, String) {
     (hex(&sha.finalize()), hex(&p.finalize()))
 }
 
-/// The same for sample `c` of a vendor file set (`.mzidx` version 2, `mzidx_lettore`): `membri` are the fingerprints of the set (`impronte`),
+/// The same for sample `c` of a vendor file set (`.mzidx` version 2, `mzidx_lettore`): `members` are the fingerprints of the set (`impronte`),
 /// `name` the name the index goes by. `source` gains `members` and `sample`; `size` is the sum of the members.
 pub fn prepare_reader(
     l: &mut dyn Reader,
@@ -304,7 +304,7 @@ pub fn index_reader(
 }
 
 /// `index_reader` for a caller that gives the fingerprints late and a scratch file:
-/// - `membri` is called once, when the table is done: a desktop build hashes the members in another thread while the scans are decoded (`with_parallel_prints`);
+/// - `members` is called once, when the table is done: a desktop build hashes the members in another thread while the scans are decoded (`with_parallel_prints`);
 /// - `spill`: where the peaks go when they do not fit in `budget` (`mzidx_spill`), so the scans are decoded ONCE whatever the size of the file; without it the later rounds decode again.
 #[allow(clippy::too_many_arguments)]
 pub fn index_reader_with(
@@ -381,7 +381,7 @@ pub fn with_parallel_prints<R>(
 /// Marks the members as having a SHA-1 already (empty), so the reader does not read the whole file for the header of an mzML nobody asked for: the
 /// index never uses it.
 pub fn without_sha1(fs: &mut FileSet) {
-    for m in &mut fs.membri {
+    for m in &mut fs.members {
         m.sha1 = Some(String::new());
     }
 }
@@ -391,7 +391,7 @@ pub fn without_sha1(fs: &mut FileSet) {
 pub fn set_name(members: &[Fingerprint]) -> Option<&str> {
     members
         .iter()
-        .filter_map(|m| m.nome.split('/').next().filter(|s| !s.is_empty()))
+        .filter_map(|m| m.name.split('/').next().filter(|s| !s.is_empty()))
         .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
 }
 
@@ -459,7 +459,7 @@ fn sorgente(
     for (i, m) in members.iter().enumerate() {
         source
             .raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
-            .str(&m.nome)
+            .str(&m.name)
             .raw(",\"size\":")
             .int(m.dim as i64)
             .raw(",\"sha256\":")
@@ -474,7 +474,7 @@ fn sorgente(
         .raw(",\"sample\":{\"id\":")
         .int(i64::from(sample.id))
         .raw(",\"nome\":")
-        .str(&sample.nome)
+        .str(&sample.name)
         .raw("}}");
     (source.0, sha256, probe)
 }
