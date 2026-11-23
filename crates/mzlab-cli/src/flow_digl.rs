@@ -65,6 +65,8 @@ pub fn dig_lr_step() -> Step {
             Param::integer("min_points", "Min. scans of a peak").min(1.0).default_num(d.min_points as f64),
             Param::number("dead_factor", "Dead-volume factor").min(0.0).default_num(d.dead_factor),
             Param::boolean("parent_decay", "Parent must fall over time").default_bool(d.parent_decay),
+            Param::number("merge_da", "Merge split rows within").min(0.0).default_num(d.merge_da).unit("Da"),
+            Param::number("merge_rt_min", "Merge split rows within RT").min(0.0).default_num(d.merge_rt_min).unit("min"),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),

@@ -10,6 +10,7 @@ pub mod groups_out;
 pub mod isf;
 pub mod kin;
 pub mod labels;
+pub mod merge;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2assoc;
@@ -23,6 +24,7 @@ mod parent;
 pub mod peak1d;
 pub mod peakchk;
 pub mod plan;
+pub mod points;
 pub mod rows;
 pub mod spec;
 pub mod summary;
@@ -110,6 +112,10 @@ pub struct LrDig {
     pub chance: Vec<chance::Chance>,
     /// Unexpected ions the Dig does not list: (over `max_unexpected`, isotope peaks or not growing).
     pub unexpected_left: (usize, usize),
+    /// The rows of one ion split by the alignment and merged before the kinetics (`merge::merge_split`), with both rows as they were.
+    pub merged: Vec<merge::Merge>,
+    /// The peak checks of the cells (`peakchk`): S/N per point and whether it is a detected peak.
+    pub checks: std::sync::Arc<peakchk::Checks>,
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -320,17 +326,11 @@ pub fn dig<R: ReadAt>(
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
 ) -> Res<LrDig> {
     let files = plan::files(files_json)?;
-    let lc = plan::columns(&files);
     let parent = plan::parent(parent_json)?;
     let s = plan::settings(settings_json);
     let (mut t, _) = crate::store_read::read_table(table).map_err(|e| e.to_string())?;
-    if t.n_files != lc.len() {
-        return Err(format!(
-            "the series has {} files, the Dig {}",
-            t.n_files,
-            lc.len()
-        ));
-    }
+    let lc = plan::columns_for(&files, t.n_files)?;
+    let merged = merge::merge_split(&mut t, s.merge_da, s.merge_rt_min);
     if lc.is_empty() {
         return Err("full-scan (MS1) files of the sample are required: none found".into());
     }
@@ -371,6 +371,8 @@ pub fn dig<R: ReadAt>(
         }
     }
     let (entries, unexpected_left) = keep_unexpected(entries, s.max_unexpected);
+    let shown: Vec<usize> = entries.iter().filter_map(|e| e.row).collect();
+    peakchk::forced_snr(&t, &mut chk, &shown, &s, open)?;
     Ok(LrDig {
         files,
         lc,
@@ -385,5 +387,7 @@ pub fn dig<R: ReadAt>(
         parent_ok,
         chance: odds,
         unexpected_left,
+        merged,
+        checks: std::sync::Arc::new(chk),
     })
 }

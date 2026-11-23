@@ -19,6 +19,22 @@ pub fn no_peak(state: u8) -> bool {
     state == CELL_ABSENT || state == CELL_NA
 }
 
+/// The evidence words of a value, one vocabulary for every output that reports a cell per file (Dig points, targeted integration):
+/// `detected` (a peak that passed the checks), `forced` (an area integrated where the checks found no peak: the targeted pass, or a detected
+/// peak the Dig rejected), `filled` (the gap filling of the alignment) and `absent` (no area; a file that does not cover the RT included).
+pub const EVIDENCE: [&str; 4] = ["detected", "forced", "filled", "absent"];
+
+/// The evidence word of a cell in `state`; `rejected` = a detected peak that a later check turned into `CELL_FILLED`.
+pub fn evidence_word(state: u8, rejected: bool) -> &'static str {
+    match state {
+        CELL_DETECTED => EVIDENCE[0],
+        s if no_peak(s) => EVIDENCE[3],
+        CELL_TARGETED => EVIDENCE[1],
+        _ if rejected => EVIDENCE[1],
+        _ => EVIDENCE[2],
+    }
+}
+
 /// Features of a series aligned across files: one row per group, cells are `row * n_files + file`.
 /// `apex_rt`/`width` are NaN where the file has no detected peak; `width` = right - left (minutes).
 #[derive(Debug, Clone, Default, PartialEq)]
