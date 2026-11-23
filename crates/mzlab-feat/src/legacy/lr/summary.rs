@@ -124,8 +124,8 @@ struct Row<'a> {
     sim: Option<f64>,
 }
 
-fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str, status: &str) {
-    let e = r.e;
+fn row_json(o: &mut Out, d: &LrDig, r: &Row, tp_name: &str, parent_formula: &str, status: &str) {
+    let (e, p_mz) = (r.e, d.parent.mz);
     o.raw("{\"id\":")
         .int(e.id)
         .raw(",\"kind\":")
@@ -201,6 +201,7 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
     if e.ms2_target {
         o.raw(",\"ms2_target\":true");
     }
+    super::points::json(o, d, e);
     o.raw("}");
 }
 
@@ -364,8 +365,8 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
             .unwrap_or(0);
         row_json(
             &mut o,
+            d,
             r,
-            d.parent.mz,
             &names[at],
             &d.parent.formula,
             if r.e.id == 0 && !d.parent_ok {
@@ -383,6 +384,8 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         .raw(if d.parent_ok { "true" } else { "false" })
         .raw(",\"chance\":");
     super::chance::json(&mut o, &d.chance);
+    o.raw(",\"merged\":");
+    super::merge::json(&mut o, &d.merged, &d.lc);
     o.raw(",\"unexpected_left\":{\"over_limit\":")
         .int(d.unexpected_left.0 as i64)
         .raw(",\"isotope_or_flat\":")

@@ -282,6 +282,12 @@ pub fn read_meta_mz_rt(bytes: &[u8]) -> Result<(Value, Vec<f64>, Vec<f64>)> {
     Ok((o.meta, mz, rt))
 }
 
+/// The number of file columns of a `.mzfeat`, from its meta only.
+pub fn table_n_files(bytes: &[u8]) -> Result<usize> {
+    let o = open(&mut Slice(bytes), bytes.len() as u64, "table")?;
+    usize::try_from(whole(&o.meta, "files")?).map_err(|_| bad())
+}
+
 /// Reads a `.mzfeatf`: the table and its meta.
 pub fn read_file(bytes: &[u8]) -> Result<(FileFeatures, Value)> {
     read_file_from(&mut Slice(bytes), bytes.len() as u64, Want::ALL)

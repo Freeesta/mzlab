@@ -262,14 +262,16 @@ fn case(tag: &str, pol: i8, hr: bool) {
             "the Dig reads the parent in the other polarity: {}",
             &dig[..dig.len().min(300)]
         );
-        // the +O product is a candidate of the Dig at the nominal mass of its ion, detected and scored
-        let at = dig.find(&format!("\"mz\":{}", (ion(ION[1].0) * 10.0).floor() / 10.0));
-        let row = &dig[at.expect("no candidate at the m/z of the +O ion")..];
-        assert!(
-            row[..row.len().min(900)].contains("\"status\":\"Detected\""),
-            "{}",
-            &row[..300]
-        );
+        // the +O product is a candidate of the Dig at the nominal mass of its ion, detected and scored (its own status, read from the row)
+        let v: serde_json::Value = serde_json::from_str(&dig).unwrap();
+        let row = v["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| (r["mz"].as_f64().unwrap() - ion(ION[1].0)).abs() < 0.5)
+            .expect("no candidate at the m/z of the +O ion");
+        assert_eq!(row["status"], "Detected", "{row}");
+        assert!(row["score"].is_number(), "{row}");
     }
     let net = std::fs::read_to_string(d.join("work/net.json")).unwrap();
     assert!(net.starts_with("{\"schema\":\"rete/1\""), "{net}");

@@ -118,6 +118,18 @@ function drawSoon(p) {
 // one pace for the held arrow and for Space: STEP_MS between scans on a fixed timetable (not "at least that long since the last frame"), a late frame does not make a burst
 const STEP_MS = 66;
 const paceDue = (o, now) => { if (now - o.t < STEP_MS) return false; o.t = now - o.t > 4 * STEP_MS ? now : o.t + STEP_MS; return true; };
+// Where the hover box goes (panel coordinates): above the point, else below it, else beside it; always clear of the point (a finger covers 44 px of it, so it sits higher), inside the panel,
+// and never over the x axis, its numbers and its title (the plot area ends where they start). Left of the box = its x, top = its y.
+/** @param {any} p @param {number} px @param {number} py @param {number} tw @param {number} th @returns {[number, number]} */
+function tipSpot(p, px, py, tw, th) {
+  const a = p._a, cv = p.cv, W = p.el.clientWidth, gap = document.documentElement.classList.contains("ptr-touch") ? 44 : 14;
+  const x = cv.offsetLeft + px, y = cv.offsetTop + py, top = cv.offsetTop + 2, bot = cv.offsetTop + a.H - M.b - 2;      // bot: the lowest the box may reach
+  const mid = Math.max(2, Math.min(W - tw - 2, x - tw / 2));
+  if (y - gap - th >= top) return [mid, y - gap - th];
+  if (y + gap + th <= bot) return [mid, y + gap];
+  const right = x + gap + tw <= W - 4;
+  return [Math.max(2, right ? x + gap : x - gap - tw), Math.max(top, Math.min(bot - th, y - th / 2))];
+}
 // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
 function cursorLine(p) {
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;

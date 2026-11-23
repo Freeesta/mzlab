@@ -155,7 +155,23 @@ fn the_right_parent_keeps_its_products() {
         has(362.06, 13.02) && has(378.05, 13.57) && has(396.06, 13.41),
         "{pf:?}"
     );
-    assert!(pf.len() <= 6, "{pf:?}");
+    // with the merge of split rows off, the documented products and their isomers (at most 6); on (the default) it joins the 378 rows at 12.95
+    // and 13.16 min (apexes 13.04 min in t5, 13.25 min in t10: the consecutive-files rule of persistence) and that isomer alone becomes strong
+    let off = proposed(&dig_set("C14H13F4N3O2S", r#"{"merge_da": 0}"#));
+    assert!(off.len() <= 6, "{off:?}");
+    let new: Vec<_> = pf.iter().filter(|x| !off.contains(x)).collect();
+    assert!(
+        new.len() == 1
+            && (new[0].0 - 378.05).abs() < 0.1
+            && new[0].1.is_some_and(|t| (t - 13.16).abs() < 0.05),
+        "{new:?}"
+    );
+    assert!(
+        d.merged
+            .iter()
+            .any(|m| (m.kept.rt - 13.16).abs() < 0.05 && (m.kept.mz - 378.3).abs() < 0.5),
+        "the merge that makes it is logged"
+    );
     // the strong candidates that co-elute with a heavier one are marked to verify; the three documented products and the isomer at another RT are not
     let marked: Vec<(i64, f64)> = candidates(&d, "strong")
         .iter()
