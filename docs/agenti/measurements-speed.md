@@ -2,6 +2,8 @@
 
 One row per speed change (readers, Flow, engine), in the order they were made. Rule of 22/10: even gains of a few percent count (a new dependency from ≥ 3 % on its target). A gain counts only if it exceeds the measured noise (`noise` of the bench, `thermo-speed.md`); before and after with the same bench binary, the same machine, the fastest run (`best`) over ≥ 15 runs and the 40-character SHA of `main` for the "before" measurement.
 
+Targeted extraction over many files (per-call CLI route against one pass per file, baseline, roadmap SP1-SP10): `docs/studies/SPEED_STUDY.md` (`tools/bench/speed_study.py`).
+
 Abandoned or postponed routes (without gain) are in `optimizations-tried.md`: read it (and `measurements-one-pass.md`) before optimizing.
 
 Site loading (page, first paint, batches of files, first file of a batch) has its own table: `measurements-speed-site.md`; the page measurements (FCP, LCP, engine ready per scenario) are in `measurements-loading.md`.
@@ -60,3 +62,4 @@ Site loading (page, first paint, batches of files, first file of a batch) has it
 | `flow run`, inputs (SHA-256 + facets) on several threads (`flow_inputs.rs`; 12 synthetic HR mzML, 1.1 GB, 4 vCPU, best of 15; identical files) | `--dry-run` 2.89 s; plan 4 workers 9.97 | 0.98; 8.08 | −66 %; −19 % |
 | site Flow in blocks (`blocks_js.rs`; 4 synthetic `.mzidx`, Chromium, best of 15; identical OPFS) | align 21.6 s; Flow 37.1 | 3.1; 6.7 | −86 %; −82 % |
 | site `qc.mass_accuracy` in blocks (12 synthetic `.mzidx`, Chromium; identical outputs) | 6.3 s; 1 file 0.64 | 1.4; 0.16 | −78 % |
+| `trace xic --mz LIST --format csv`, wide CSV from the route's tokens without a `String` per token or a `format!` per cell (`trace_xic.rs`; 275 ions, synthetic unit-resolution file of `speed_synthetic.py`, 2400 scans, 4 vCPU, `cli`, 15 alternated runs, median; CSV, `--rt` CSV and JSON identical by SHA-256) | 357 ms | 238 ms | −33 % |
