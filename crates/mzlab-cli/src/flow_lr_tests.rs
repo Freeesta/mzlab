@@ -22,6 +22,11 @@ const NAMES: [&str; 5] = [
 const FORMULA: &str = "C14H13F4N3O2S";
 
 fn fixture(tag: &str) -> PathBuf {
+    fixture_with(tag, None)
+}
+
+/// `fixture` with the file `std` marked as the standard of the parent in `samples.json` (no time).
+fn fixture_with(tag: &str, std: Option<&str>) -> PathBuf {
     let d = std::env::temp_dir().join(format!("mzlab_cli_lr_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
@@ -33,7 +38,12 @@ fn fixture(tag: &str) -> PathBuf {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    let samples = mzlab_core::samples::to_json(&mzlab_core::samples::propose(&files));
+    let mut cs = mzlab_core::samples::propose(&files);
+    for c in cs.iter_mut().filter(|c| Some(c.file.as_str()) == std) {
+        c.kind = "std".into();
+        c.set_time(None, "min");
+    }
+    let samples = mzlab_core::samples::to_json(&cs);
     std::fs::write(d.join("samples.json"), samples).unwrap();
     std::fs::write(
         d.join("parent.json"),
@@ -142,6 +152,28 @@ fn the_base_chain_and_the_lr_dig_give_what_the_page_gives_on_the_demo_files() {
         got.len(),
         dig.len()
     );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// A plan with a standard: the Flow table aligns all five files, the Dig reads the standard as a control column (it used to stop on "the series has
+/// 5 files, the Dig 4") and gives what the page gives on the same files and roles.
+#[test]
+fn a_plan_with_a_standard_digs_as_the_page_does() {
+    let d = fixture_with("dig_std", Some("FullScan_t30.mzML"));
+    let tail = r#",{"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}}"#;
+    run_flow(&d, tail);
+    let (_, dig) = page(&d);
+    let got = std::fs::read_to_string(d.join("work/dig.json")).unwrap();
+    assert!(got == dig, "dig JSON differs: flow {} bytes, page {}", got.len(), dig.len());
+    let v: serde_json::Value = serde_json::from_str(&got).unwrap();
+    let roles: Vec<&str> = v["rows"][0]["points"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["role"].as_str().unwrap())
+        .collect();
+    assert_eq!(roles, ["t0", "sample", "sample", "sample", "std"]);
+    assert!(v["rows"][0]["controls"]["standard"].is_number());
     let _ = std::fs::remove_dir_all(&d);
 }
 

@@ -109,6 +109,8 @@ fn noise(rt: &[f64], ys: &[f64], apex: f64, far: f64) -> f64 {
 #[derive(Debug, Clone, Default)]
 pub struct Checks {
     pub q: Vec<Option<PeakQ>>,
+    /// S/N of the XIC at the row's RT for the cells with an area but no detected peak (`forced_snr`), only for reporting.
+    pub forced: Vec<Option<f64>>,
     done: Vec<bool>,
 }
 
@@ -116,6 +118,7 @@ impl Checks {
     pub fn new(t: &Aligned) -> Checks {
         Checks {
             q: vec![None; t.len() * t.n_files],
+            forced: vec![None; t.len() * t.n_files],
             done: vec![false; t.len()],
         }
     }
@@ -157,6 +160,44 @@ pub fn gate<R: ReadAt>(
         }
     }
     Ok(())
+}
+
+/// The S/N of the forced cells (an area without a detected peak) of `rows`, at the row's RT: what a reader needs to weigh a point the pipeline
+/// integrated without finding a peak there. It changes no state.
+pub fn forced_snr<R: ReadAt>(
+    t: &Aligned,
+    c: &mut Checks,
+    rows: &[usize],
+    s: &Settings,
+    open: &mut dyn FnMut(usize) -> Res<Index<R>>,
+) -> Res<()> {
+    let mut ix: Vec<Option<Index<R>>> = (0..t.n_files).map(|_| None).collect();
+    for &r in rows {
+        for (k, slot) in ix.iter_mut().enumerate() {
+            let cell = t.cell(r, k);
+            if t.state[cell] == CELL_DETECTED
+                || c.q[cell].is_some()
+                || c.forced[cell].is_some()
+                || !t.area[cell].is_finite()
+                || t.area[cell] <= 0.0
+            {
+                continue;
+            }
+            if slot.is_none() {
+                *slot = Some(open(k)?);
+            }
+            let Some(i) = slot.as_mut() else { continue };
+            let (rt, y) = xic(i, t.mz[r] - s.tol_da, t.mz[r] + s.tol_da, 0.0)?;
+            c.forced[cell] = Some(judge(&rt, &y, t.rt[r], s).snr);
+        }
+    }
+    Ok(())
+}
+
+/// The S/N of a cell: its peak check when detected (or rejected), else the forced one.
+pub fn snr(t: &Aligned, c: &Checks, r: usize, k: usize) -> Option<f64> {
+    let i = t.cell(r, k);
+    c.q.get(i).copied().flatten().map(|q| q.snr).or_else(|| c.forced.get(i).copied().flatten())
 }
 
 /// The limits in words.
