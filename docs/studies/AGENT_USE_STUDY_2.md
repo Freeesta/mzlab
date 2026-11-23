@@ -87,7 +87,7 @@ Recommendation: a section "Kinetic LR campaign" in `for-agents.md` (or its own a
 2. `sample table MZML/*.mzML > samples.json`; `sample import meta.csv --in MZML --out samples.json` (AU-2).
 3. `estimate MZML/*.mzML --axis da --json`; `flow defaults table.filter` (AU-5, AU-6).
 4. `flow check PLAN.json --json`; `flow run PLAN.json --in MZML --out RUN --dry-run --json`, then run: detection, alignment, gap filling, `table.filter` with `blank_ratio`, per series.
-5. Targets: `features.union` over the series, then `quant.targets` over all files (AU-4, QUANT-TARGETS); until they exist, the interim route: one `trace xic --mz LIST` per file then one `peak table --traces --windows` (246 calls, not 67,000).
+5. Targets: `features.union` over the series, then `quant.targets` over all files (AU-4, QUANT-TARGETS); until they exist, the interim route: one `trace xic --mz LIST` per file then one `peak table --traces T.json --auto` (246 calls, not 67,000); on SIM/SRM files one `chrom.transitions` plan instead. The first lines of the recipe send the agent to the AGENT-DISCOVERY task → command table, `commands --json` and `flow steps --compact` before it writes any script.
 6. `tp.dig_lr` for transformation-product hypotheses (DIG-ROBUST); `quant.curve` with the standards' responses.
 7. `flow record RUN --roles samples.json`; `flow verify`.
 Each step names the states and S/N columns the agent must check before reporting a number.

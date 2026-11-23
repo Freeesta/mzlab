@@ -13,6 +13,8 @@ Inputs: two field reports from an agent that ran a 245-file kinetic campaign wit
 | CONTRACT-ENGLISH | English JSON labels, parameter names equal between output and `--set` | `flow defaults` (AU-5) prints the same names |
 | MZML-SPECTRUM-TYPE | spectrum type in mzML | none |
 | mzDraw pathways | pathway drawing | none |
+| AGENT-DISCOVERY | task → command table in `for-agents.md`, agent-facing command search, near-miss hints | the biggest win of the field reports: most friction came from not finding commands that exist (`peak table --traces --auto`, `chrom.transitions`, `table.filter` blank rule, `features.group`, `spectra.centroid`, `mol draw`); AU-8 links its recipe into that table |
+| SPEED-STUDY | campaign speed: sparse data labelled profile is centroided scan by scan (60-70 % of features and Dig time), 23 separate Dig runs, ~68,000 processes, 527 MB of JSON, uncompressed or binary outputs | AU-1 gives it the macOS arm64 binary so the agent computes where the data are |
 
 ## 0. Field report against the code
 | claim of the report | verdict | where it stands | consequence |
@@ -22,7 +24,8 @@ Inputs: two field reports from an agent that ran a 245-file kinetic campaign wit
 | sample roles | partly true | roles are proposed from names (`sample table`, `samples/names.rs`; types sample, t0, blank, dark, infusion, std, calibration, qc, pool); a CSV reader exists in the engine (`samples/csv.rs`, wasm op `csv_read`) but there is no CLI route, so an agent writes `samples/1` JSON by hand | AU-2 |
 | `tp.dig_lr` with standards | true | standards become a column only when the series compares conditions (`legacy/lr/plan.rs`); in MRM they are the ion-ratio reference, no calibration | DIG-ROBUST |
 | Dig rows split by close RT | true | an unexpected ion near a larger kept one is dropped, isomers of one hypothesis stay separate (≥ 10 % of the strongest, at most 4; `legacy/lr/rows.rs`) | DIG-ROBUST |
-| no bulk targeted integration (~67,000 `trace xic` and `peak auto-lr` calls) | true, with a shorter route the agent missed | `trace xic` takes many m/z per file (up to 500 ions, one index load); `peak table --traces --windows` integrates supplied XICs over all samples in one call; `chrom.transitions@2` integrates a target table but only on stored SRM/SIM chromatograms; no single call integrates a full-scan m/z + RT list over many files | QUANT-TARGETS; interim recipe in §1.1 |
+| no bulk targeted integration (~67,000 `trace xic` and `peak auto-lr` calls) | false as stated: bulk routes exist, the agent did not find them | `chrom.transitions@2` integrates a target table on every sample in one call, with S/N, on stored SIM/SRM chromatograms; `peak table --traces PATH --auto` finds and groups every peak of every supplied trace in one call; `trace xic` takes up to 500 m/z per file; missing: one call from full-scan files and an m/z + RT list to a table | AGENT-DISCOVERY (finding them), QUANT-TARGETS (the full-scan call); interim recipe in §1.1 |
+| no centroiding or drawing command | false | `spectra.centroid` is a Flow step with a native executor (`flow.rs`, `flow_centroid_tests.rs`); `mol draw SPEC --format molfile|scene|ket|cdxml|svg|png` exists (`cmd/ion.rs`) | AGENT-DISCOVERY |
 | parameter names differ between output and `--set` | mostly false | `prov/1` and `flowdry/1` use the canonical `--set` names (tested); the exception is `features.table`, which takes the panel keys `ppm`, `rt_tol` and splits them | CONTRACT-ENGLISH |
 | Italian labels in JSON | partly true | no Italian keys found in `crates/mzlab-cli/src`; legacy Italian keys remain in engine crates and summaries (`english-remaining.md`) | CONTRACT-ENGLISH |
 | MZmine: one aligned table per polarity | mzLab: per series | `features FILE...` aligns one series into one CSV (slabs for large series); nothing joins series | AU-4 |
@@ -30,7 +33,7 @@ Inputs: two field reports from an agent that ran a 245-file kinetic campaign wit
 | MZmine: blank subtraction with fold change | mzLab has the filter | `table.filter` `blank_ratio` (off when empty), `blank_quantity`, `blank_stat`, `blank_scope`, `blank_match`; subtraction (`blank_subtract`) refuses `height` and batch/matrix matching (`filters_blank.rs`), and LR tables use height | AU-7 |
 | MZmine: defaults only in the Java classes | mzLab is better, not perfect | `flow steps --json --id ID` gives every default as JSON Schema; `--template` writes a plan at defaults but omits parameters without a default (`blank_ratio`) | AU-5 |
 | MZmine assistant: parameter estimation from data | mzLab has a step | `features.estimate@1` (noise floor, FWHM, `rt_tol`, dead time, Da half-window at unit axis; `estimates/1`), `llm params` rules (`param-proposal/1`); `features.detect` does not read the estimate | AU-6 |
-| MZmine 13C filter in ppm, unusable at unit mass | mzLab partly | `features.group` is HR-only (`resolution: ["hr"]`); LR has per-file +1/+2 Da isotopes (`isotopes.rs`), per-file co-elution families (r ≥ 0.9), table dedup within 0.6 Da | AU-10 |
+| MZmine 13C filter in ppm, unusable at unit mass | mzLab partly | `features.group` groups correlated ions (`ionnet/1`) but its table port requires `resolution: ["hr"]` (`steps/group.rs`); LR has per-file +1/+2 Da isotopes (`isotopes.rs`), per-file co-elution families (r ≥ 0.9), table dedup within 0.6 Da | AU-10 |
 | MZmine: no S/N export | mzLab advantage, not exported everywhere | S/N in `chrom.transitions`, `peak table`, `peak auto-lr`, Dig `api.detail`; the aligned CSV writes only area, height, state; the Dig summary rows have no S/N | AU-3 |
 | MZmine assistant as a desktop connector | absent in mzLab, by choice | `mzlab-cli mcp --root FOLDER` is a "proposal not implemented, only with the go" (`llm-choices.md`); external agents call the CLI from the shell | AU-11 |
 | split archives with checksums | absent | no `file pack`/`unpack`; SHA-256 appears only as a side output (`file index`, `flowdry/1`, `file convert --report`, `prov/1`) | AU-9 |
@@ -40,23 +43,25 @@ Rank = agent time saved per campaign × how often it blocks, divided by cost. Si
 
 | rank | id | what | why | size | depends on | owner-only? |
 |---|---|---|---|---|---|---|
-| 1 | AU-1 | publish the release; fixed-name assets at `releases/latest/download/`; `install.sh` that checks `SHA256SUMS`; `for-agents.md` install text fixed | every agent on a fresh machine pays a 7.5 min build or cannot build at all; binaries are already built | S | none | publishing and the Apple signing choice: yes; `release.yml` asset names: Opus review; script and doc: no |
-| 2 | AU-2 | `sample import CSV` → `samples/1` (engine `csv_read` already exists) and `sample export` | an agent writes roles by hand today; MZmine reads a metadata CSV | S | SAMPLE-NAMES-ROLES | no |
-| 3 | AU-3 | value states and S/N in every table output: ABSENT and NA distinct, `snr` per cell in the aligned CSV, states and S/N in the targeted and Dig outputs | the agent must know which numbers were measured; S/N is mzLab's advantage over MZmine | M | DIG-ROBUST, QUANT-TARGETS | no |
-| 4 | AU-4 | one alignment over many series: union target list from per-series tables, then one targeted pass over all files (`features.union` + QUANT-TARGETS step) | one table per polarity for a whole campaign, as MZmine gives | M | QUANT-TARGETS | no |
+| 1 | AU-1 | publish the release; fixed-name assets at `releases/latest/download/`; `install.sh` that checks `SHA256SUMS`; `for-agents.md` install text fixed (it lists Linux only, the Mac arm64 binary is built) | every agent on a fresh machine pays a 7.5 min build or cannot build at all; with the macOS arm64 binary the agent computes where the data are (SPEED-STUDY) | S | none | publishing and the Apple signing choice: yes; `release.yml` asset names: Opus review; script and doc: no |
+| 2 | AU-8 | recipe "kinetic LR campaign" as a sixth tested chain in `workflow_tests.rs`, linked from the AGENT-DISCOVERY task → command table | a tested chain with its call count stops the 67,000-call loop; it ships with today's routes and is updated when QUANT-TARGETS lands | S-M | AGENT-DISCOVERY | no |
+| 3 | AU-2 | `sample import CSV` → `samples/1` (engine `csv_read` already exists) and `sample export` | an agent writes roles by hand today; MZmine reads a metadata CSV | S | SAMPLE-NAMES-ROLES | no |
+| 4 | AU-3 | value states and S/N in every table output: ABSENT and NA distinct, `snr` per cell in the aligned CSV, states and S/N in the targeted and Dig outputs | the agent must know which numbers were measured; S/N is mzLab's advantage over MZmine | M | DIG-ROBUST, QUANT-TARGETS | no |
 | 5 | AU-5 | `flow defaults STEP` printing `step-params/1` (every parameter with default or "off when empty", type, limits, unit, `--set` key) | one call answers "what can I change" with the real names | S | CONTRACT-ENGLISH | no |
-| 6 | AU-6 | `estimate` route: `mzlab-cli estimate FILE... --axis da --json` and `--emit-set` (the `--set` lines), plus blank level and RT drift for LR | parameters from the data, shown and logged, the user decides | M | AU-5 | no |
-| 7 | AU-7 | blank subtraction at unit mass: allow `height` and `batch`/`matrix` matching in `blank_subtract`; blank recipe in the docs | LR tables use height; the agent did not find the existing fold-change filter | M | AU-2 | no |
-| 8 | AU-8 | recipe page "kinetic LR campaign" and a sixth tested chain in `workflow_tests.rs` | the agent found the shortest route only by trial; a tested recipe stops the 67,000-call loop | S-M | AU-2, QUANT-TARGETS | no |
+| 6 | AU-4 | one alignment over many series: union target list from per-series tables, then one targeted pass over all files (`features.union` + QUANT-TARGETS step) | one table per polarity for a whole campaign, as MZmine gives | M | QUANT-TARGETS | no |
+| 7 | AU-6 | `estimate` route: `mzlab-cli estimate FILE... --axis da --json` and `--emit-set` (the `--set` lines), plus blank level and RT drift for LR | parameters from the data, shown and logged, the user decides | M | AU-5 | no |
+| 8 | AU-7 | blank subtraction at unit mass: allow `height` and `batch`/`matrix` matching in `blank_subtract` | LR tables use height; the fold-change filter already exists | M | AU-2 | no |
 | 9 | AU-9 | `file pack` / `file unpack` / `file verify-pack`: split parts plus a `pack/1` manifest with SHA-256 per file and per part | moving 245 vendor files between a lab PC and a VM without loss, verified | M | none | no |
-| 10 | AU-10 | `features.companions@1` at nominal mass: M+1/M+2 evidence, co-eluting correlated pairs, in-source fragment candidates, as edges, never merged rows | fewer false "new compounds" in an LR table; MZmine's ppm filter is useless at unit mass | M-L | AU-3 | no |
+| 10 | AU-10 | `features.companions@1` at nominal mass: M+1/M+2 evidence, co-eluting correlated pairs, in-source fragment candidates, as edges, never merged rows | `features.group` covers HR only; MZmine's ppm filter is useless at unit mass | M-L | AU-3 | no |
 | 11 | AU-11 | `mzlab-cli mcp --root FOLDER`: stdio MCP server over the CLI with propose → review → execute and a sharing level fixed by the user | desktop assistants (Claude Desktop, Cowork) can drive mzLab without a shell | L | AU-5, AU-6, AU-8 | the owner's "go" (`llm-choices.md`) |
 
-Order of the worker chats: AU-1 (owner) and AU-2, AU-5 in parallel; AU-3 and AU-4 after QUANT-TARGETS and DIG-ROBUST merge; AU-6, AU-7, AU-8; then AU-9, AU-10; AU-11 last, after the go.
+Not ranked here because other chats own them: the task → command table, command search and near-miss hints (AGENT-DISCOVERY, the largest single win), and every speed item (SPEED-STUDY).
+
+Order of the worker chats: AU-1 (owner) and AU-8, AU-2, AU-5 in parallel; AU-3 and AU-4 after QUANT-TARGETS and DIG-ROBUST merge; AU-6, AU-7; then AU-9, AU-10; AU-11 last, after the go.
 
 ## 1. One-step bulk targeted integration and a single alignment over many series
 ### 1.1 Bulk targeted integration (scope of QUANT-TARGETS)
-Today on full-scan LR files: `trace xic FILE --mz LIST` (one call per file, up to 500 ions) then `peak auto-lr` per ion, or `peak table --traces T.json --windows W.json` after the 245 `trace xic` calls (246 calls instead of ~67,000; the interim recipe for AU-8).
+Today: on SIM/SRM files `chrom.transitions@2` integrates a target table over every sample in one call, with S/N. On full-scan LR files: `trace xic FILE --mz LIST` (one call per file, up to 500 ions), then one `peak table --traces T.json --auto` (every peak of every trace, grouped by time) or `--windows W.json` (given windows): 246 calls instead of ~67,000, the interim recipe for AU-8.
 
 Options:
 - A. Keep the shell loop and document it: no code, 67,000 processes, ~15 min, no states.
