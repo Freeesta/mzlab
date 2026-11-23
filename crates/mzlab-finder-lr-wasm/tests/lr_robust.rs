@@ -36,7 +36,10 @@ fn a_plan_with_a_standard_is_dug_and_the_standard_is_a_control() {
     let std = parent["controls"]["standard"].as_f64().unwrap();
     assert!(std > 0.3, "the parent is in its standard: {std}");
     assert!(parent["controls"]["blank"].is_number());
-    assert!(parent["controls"]["dark"].is_null(), "no dark control in the plan");
+    assert!(
+        parent["controls"]["dark"].is_null(),
+        "no dark control in the plan"
+    );
     let roles: Vec<&str> = parent["points"]
         .as_array()
         .unwrap()
@@ -62,7 +65,10 @@ fn a_table_that_matches_no_files_of_the_plan_gives_a_clear_error() {
         .collect();
     let (feats, origin) = run::read_files(&stored).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();
-    let e = lr::dig(&short, PARENT, "{}", &table, "", &mut |k| Ok(open(&idxs[k]))).unwrap_err();
+    let e = lr::dig(&short, PARENT, "{}", &table, "", &mut |k| {
+        Ok(open(&idxs[k]))
+    })
+    .unwrap_err();
     assert!(
         e.starts_with("the feature table has 9 file columns, but the plan lists 8 full-scan files (6 sample, 1 blank, 1 standard)"),
         "{e}"
@@ -82,7 +88,9 @@ fn rows_near(s: &Value, mz: f64) -> Vec<Value> {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|r| (r["mz"].as_f64().unwrap() - mz).abs() < 0.5 && r["max_area"].as_f64().unwrap() > 0.0)
+        .filter(|r| {
+            (r["mz"].as_f64().unwrap() - mz).abs() < 0.5 && r["max_area"].as_f64().unwrap() > 0.0
+        })
         .cloned()
         .collect()
 }
@@ -93,14 +101,24 @@ fn one_ion_split_by_the_alignment_is_merged_before_the_kinetics() {
     let off = dig_with(&files, PARENT, r#"{"merge_da": 0}"#, &idxs);
     let split = rows_near(&sum(&off), 270.1);
     assert!(off.merged.is_empty());
-    assert!(split.len() >= 2, "the alignment splits the product: {split:#?}");
-    let most = split.iter().map(|r| r["k_points"].as_u64().unwrap()).max().unwrap();
+    assert!(
+        split.len() >= 2,
+        "the alignment splits the product: {split:#?}"
+    );
+    let most = split
+        .iter()
+        .map(|r| r["k_points"].as_u64().unwrap())
+        .max()
+        .unwrap();
     assert!(most < 6, "each piece holds part of the kinetic: {most}");
     let on = dig(&files, &idxs);
     let s = sum(&on);
     let joined = rows_near(&s, 270.1);
     assert_eq!(joined.len(), 1, "{joined:#?}");
-    assert_eq!(joined[0]["k_points"], 6, "the six treated times, t0 has no peak");
+    assert_eq!(
+        joined[0]["k_points"], 6,
+        "the six treated times, t0 has no peak"
+    );
     // the merge is logged with both rows as they were
     let m = s["merged"].as_array().unwrap();
     let mine: Vec<&Value> = m
@@ -108,8 +126,14 @@ fn one_ion_split_by_the_alignment_is_merged_before_the_kinetics() {
         .filter(|x| (x["kept"]["mz"].as_f64().unwrap() - 270.4).abs() < 0.5)
         .collect();
     assert_eq!(mine.len(), 1, "{m:#?}");
-    assert!(mine[0]["reason"].as_str().unwrap().starts_with("same ion split by the alignment"));
-    assert_eq!(mine[0]["absorbed"]["areas"].as_array().unwrap().len(), on.lc.len());
+    assert!(mine[0]["reason"]
+        .as_str()
+        .unwrap()
+        .starts_with("same ion split by the alignment"));
+    assert_eq!(
+        mine[0]["absorbed"]["areas"].as_array().unwrap().len(),
+        on.lc.len()
+    );
     assert_eq!(joined[0]["table_row"], mine[0]["kept"]["row"]);
     assert_eq!(s["settings"]["merge_rt_min"], 0.3);
 }
@@ -121,7 +145,10 @@ fn every_point_carries_its_snr_and_whether_it_is_a_detected_peak() {
     let parent = &s["rows"][0];
     let pts = parent["points"].as_array().unwrap();
     assert_eq!(pts.len(), TIMES.len() + 1);
-    for p in pts.iter().filter(|p| p["role"] == "sample" || p["role"] == "t0") {
+    for p in pts
+        .iter()
+        .filter(|p| p["role"] == "sample" || p["role"] == "t0")
+    {
         assert_eq!(p["state"], "detected", "{p}");
         assert!(p["snr"].as_f64().unwrap() >= 5.0, "{p}");
     }

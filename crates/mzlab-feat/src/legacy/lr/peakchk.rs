@@ -197,7 +197,11 @@ pub fn forced_snr<R: ReadAt>(
 /// The S/N of a cell: its peak check when detected (or rejected), else the forced one.
 pub fn snr(t: &Aligned, c: &Checks, r: usize, k: usize) -> Option<f64> {
     let i = t.cell(r, k);
-    c.q.get(i).copied().flatten().map(|q| q.snr).or_else(|| c.forced.get(i).copied().flatten())
+    c.q.get(i)
+        .copied()
+        .flatten()
+        .map(|q| q.snr)
+        .or_else(|| c.forced.get(i).copied().flatten())
 }
 
 /// The limits in words.

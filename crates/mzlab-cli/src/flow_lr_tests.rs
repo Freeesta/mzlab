@@ -164,7 +164,12 @@ fn a_plan_with_a_standard_digs_as_the_page_does() {
     run_flow(&d, tail);
     let (_, dig) = page(&d);
     let got = std::fs::read_to_string(d.join("work/dig.json")).unwrap();
-    assert!(got == dig, "dig JSON differs: flow {} bytes, page {}", got.len(), dig.len());
+    assert!(
+        got == dig,
+        "dig JSON differs: flow {} bytes, page {}",
+        got.len(),
+        dig.len()
+    );
     let v: serde_json::Value = serde_json::from_str(&got).unwrap();
     let roles: Vec<&str> = v["rows"][0]["points"]
         .as_array()

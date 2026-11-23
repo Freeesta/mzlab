@@ -126,7 +126,15 @@ pub fn columns_for(files: &[FileLr], n: usize) -> Res<Vec<FileIn>> {
     }
     let roles: Vec<String> = ["sample", "blank", "control", "standard", "other"]
         .iter()
-        .map(|r| (r, files.iter().filter(|f| f.kind == "full" && f.kind_type == *r).count()))
+        .map(|r| {
+            (
+                r,
+                files
+                    .iter()
+                    .filter(|f| f.kind == "full" && f.kind_type == *r)
+                    .count(),
+            )
+        })
         .filter(|x| x.1 > 0)
         .map(|(r, c)| format!("{c} {r}"))
         .collect();

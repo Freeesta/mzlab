@@ -3,8 +3,11 @@
 use super::*;
 use crate::aligned::CELL_FILLED;
 
-/// A table of `rows` = (m/z, RT, per file Some((area, apex)) for a detected peak or None for a forced cell of area 10).
-fn table(rows: &[(f64, f64, Vec<Option<(f64, f32)>>)]) -> Aligned {
+/// m/z, RT and per file Some((area, apex)) for a detected peak or None for a forced cell of area 10.
+type RowIn = (f64, f64, Vec<Option<(f64, f32)>>);
+
+/// A table of `rows`.
+fn table(rows: &[RowIn]) -> Aligned {
     let n = rows[0].2.len();
     let mut t = Aligned {
         n_files: n,
@@ -34,7 +37,13 @@ fn a_kinetic_split_in_two_rows_is_joined() {
         (
             250.1,
             5.00,
-            vec![Some((100.0, 5.0)), Some((900.0, 5.0)), Some((800.0, 5.0)), None, None],
+            vec![
+                Some((100.0, 5.0)),
+                Some((900.0, 5.0)),
+                Some((800.0, 5.0)),
+                None,
+                None,
+            ],
         ),
         (
             250.3,
@@ -65,7 +74,10 @@ fn the_same_peak_in_two_rows_keeps_the_larger_cell() {
     assert_eq!(m.len(), 1);
     assert_eq!(m[0].both, 2);
     assert_eq!(m[0].taken, vec![1]);
-    assert_eq!((t.area[t.cell(0, 0)], t.area[t.cell(0, 1)]), (1000.0, 800.0));
+    assert_eq!(
+        (t.area[t.cell(0, 0)], t.area[t.cell(0, 1)]),
+        (1000.0, 800.0)
+    );
 }
 
 #[test]

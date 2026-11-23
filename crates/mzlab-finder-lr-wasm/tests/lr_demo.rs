@@ -161,11 +161,15 @@ fn the_right_parent_keeps_its_products() {
     assert!(off.len() <= 6, "{off:?}");
     let new: Vec<_> = pf.iter().filter(|x| !off.contains(x)).collect();
     assert!(
-        new.len() == 1 && (new[0].0 - 378.05).abs() < 0.1 && new[0].1.is_some_and(|t| (t - 13.16).abs() < 0.05),
+        new.len() == 1
+            && (new[0].0 - 378.05).abs() < 0.1
+            && new[0].1.is_some_and(|t| (t - 13.16).abs() < 0.05),
         "{new:?}"
     );
     assert!(
-        d.merged.iter().any(|m| (m.kept.rt - 13.16).abs() < 0.05 && (m.kept.mz - 378.3).abs() < 0.5),
+        d.merged
+            .iter()
+            .any(|m| (m.kept.rt - 13.16).abs() < 0.05 && (m.kept.mz - 378.3).abs() < 0.5),
         "the merge that makes it is logged"
     );
     // the strong candidates that co-elute with a heavier one are marked to verify; the three documented products and the isomer at another RT are not
@@ -373,4 +377,3 @@ fn report() {
             .unwrap_or("VmHWM n/a")
     );
 }
-
