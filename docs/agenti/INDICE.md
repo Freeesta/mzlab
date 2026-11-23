@@ -89,7 +89,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Rust and module measurements (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-rust.md` |
 | vendor readers, `.raw`, `.wiff`, `.D` (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/measurements-speed-raw.md` |
 | cumulative table of site load speed gains (page, first paint, file batches, side list, "Remove all", first file of a batch) | `docs/agenti/measurements-speed-site.md` |
-| cumulative speed-gain table (date · PR · step · before · after · %) | `docs/agenti/measurements-speed.md` |
+| cumulative speed-gain table (date · PR · step · before · after · %); targeted extraction speed study (`docs/studies/SPEED_STUDY.md`, `tools/bench/speed_study.py`) | `docs/agenti/measurements-speed.md` |
 | engine measurements, export validation (mzTab-M), Tabui flow and network clicks | `docs/agenti/measurements.md` |
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
