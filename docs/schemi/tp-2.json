@@ -1,29 +1,29 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "tp/1",
- "title": "tp/1: the view of the transformation products in the .mzfeat of a series",
+ "$id": "tp/2",
+ "title": "tp/2: the view of the transformation products in the .mzfeat of a series",
  "description": "Object `tp` of the meta of the .mzfeat plus four u8 arrays of one value per row (`tp_status`, `tp_notes`, `tp_via`, `tp_kinship`), written by the proofs step when the parent is in the table and the series has controls. Row i of the arrays is row i of the table (id = i + 1). Code: crates/mzlab-feat/src/tp/.",
  "type": "object",
  "required": [
   "schema",
-  "progenitore",
-  "parametri",
-  "conteggi"
+  "parent",
+  "params",
+  "counts"
  ],
  "properties": {
   "schema": {
-   "const": "tp/1"
+   "const": "tp/2"
   },
-  "progenitore": {
+  "parent": {
    "type": "integer",
    "minimum": 1,
    "description": "id of the row of the parent"
   },
-  "parametri": {
+  "params": {
    "type": "object",
    "description": "the thresholds that were used",
    "properties": {
-    "rapporto": {
+    "ratio": {
      "type": "number",
      "description": "treated samples over the controls (blank, dark, t0), NORMAN 3:1"
     },
@@ -35,51 +35,51 @@
      "type": "number",
      "description": "largest distance in RT from the parent, minutes"
     },
-    "isf_punti": {
+    "isf_points": {
      "type": "integer",
      "description": "fewest times with both ions measured"
     },
     "ppm": {
      "type": "number"
     },
-    "purezza_min": {
+    "purity_min": {
      "type": "number",
      "description": "an MS2 with a purity of isolation below this is noted as chimeric"
     },
-    "saturo": {
+    "saturated": {
      "type": "boolean",
      "description": "the parent is saturated: the kinetic coupling with its decay is not used for kinship"
     }
    }
   },
-  "conteggi": {
+  "counts": {
    "type": "object",
    "properties": {
     "tp": {
      "type": "integer"
     },
-    "controllo": {
+    "control": {
      "type": "integer"
     },
     "isf": {
      "type": "integer"
     },
-    "non_spiegate": {
+    "unexplained": {
      "type": "integer"
     }
    }
   },
-  "candidati_formula": {
+  "fit_candidates": {
    "description": "formula candidates of the rows formed and not explained (high resolution only): at most 3 per row, sorted by total, a lead and never a verdict",
    "type": "array",
    "items": {
     "type": "object",
     "required": [
-     "riga",
+     "row",
      "c"
     ],
     "properties": {
-     "riga": {
+     "row": {
       "type": "integer",
       "minimum": 1,
       "description": "row of the table, from 1"

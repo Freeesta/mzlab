@@ -29,9 +29,9 @@ pub const SRC_IMPORTED: u8 = 8;
 pub const SRC_CLEAVAGE: u8 = 16;
 pub const SRC_NETWORK: u8 = 32;
 
-pub const REGISTRY_FORMAT: &str = "hypotheses/2";
+pub const REGISTRY_FORMAT: &str = "hypotheses/3";
 
-/// Refuses a registry of another format or version (`hypotheses/2` and its Italian source names are not converted): `error.hypo.registryFormat`.
+/// Refuses a registry of another format or version (`hypotheses/3`, with its Italian outcome names, is not converted): `error.hypo.registryFormat`.
 pub fn check_registry_format(v: &mzlab_core::json::Value) -> std::result::Result<(), String> {
     match v.get("format").and_then(mzlab_core::json::Value::str) {
         Some(REGISTRY_FORMAT) => Ok(()),
@@ -212,12 +212,10 @@ fn merge(mut raw: Vec<Hypothesis>, nominal: bool) -> Vec<Hypothesis> {
         match out.last_mut() {
             Some(l) if same_ion(l, &h, nominal) => {
                 l.sources |= h.sources;
-                let other = if l.formula == h.formula {
-                    h.label
-                } else {
-                    format!("{} ({})", h.formula, h.label)
-                };
-                if other != l.label && !l.alternatives.contains(&other) {
+                // one format for every alternative, `FORMULA (PATH)`, also when the formula is the leader's
+                let other = format!("{} ({})", h.formula, h.label);
+                let leader = l.formula == h.formula && l.label == h.label;
+                if !leader && !l.alternatives.contains(&other) {
                     l.alternatives.push(other);
                 }
                 l.level = if l.level == 0 {
@@ -304,7 +302,7 @@ impl Registry {
             .count()
     }
 
-    /// The registry as JSON (`hypotheses/2`): the base of the SHA-256 that compares two runs.
+    /// The registry as JSON (`hypotheses/3`): the base of the SHA-256 that compares two runs.
     pub fn to_json(&self) -> String {
         let mut o = Out::default();
         o.raw("{\"format\":")
@@ -364,8 +362,8 @@ fn hypothesis_json(o: &mut Out, h: &Hypothesis, out: Outcome) {
     }
     o.raw("],\"outcome\":");
     match out {
-        Outcome::NotSearched => o.str("non_cercata"),
-        Outcome::NotFound => o.str("non_trovata"),
+        Outcome::NotSearched => o.str("not_searched"),
+        Outcome::NotFound => o.str("not_found"),
         Outcome::Found(n) => o.raw("{\"rows\":").int(n as i64).raw("}"),
     };
     o.raw("}");

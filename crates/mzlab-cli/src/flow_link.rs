@@ -1,7 +1,7 @@
 //! The native executor of `tp.link@2`: the chain the page runs for a parent in a series, on files. The hypotheses are searched in the series
-//! (`run::hypotheses_stored`), the proofs and the view of the products (`tp/1`) are built on the table (`run::evidence_sources_to`) and each row is
+//! (`run::hypotheses_stored`), the proofs and the view of the products (`tp/2`) are built on the table (`run::evidence_sources_to`) and each row is
 //! interpreted (`interp::run::run_to_with`: modification, linked MS2, comparison with the parent). The `.mzfeat` that comes out holds the blocks
-//! `tp/1` and `interp/1` that `tp.network` reads. The table has to be one this plan made: its lineage gives the `.mzfeatf` of the files and the recipe.
+//! `tp/2` and `interp/1` that `tp.network` reads. The table has to be one this plan made: its lineage gives the `.mzfeatf` of the files and the recipe.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -71,8 +71,8 @@ fn report_phases(hypo: Duration, evidence: Duration, total: Duration) {
     }
 }
 
-/// The `.mzfeat` with `tp/1` and `interp/1` of the table `table` of the series `series` (the files of `lin`), for the parent file `parent` and the
-/// `samples/1` `samples`; `hypotheses` is the `hypotheses/2` of `tp.generate`, which has to be the one of this parent.
+/// The `.mzfeat` with `tp/2` and `interp/1` of the table `table` of the series `series` (the files of `lin`), for the parent file `parent` and the
+/// `samples/1` `samples`; `hypotheses` is the `hypotheses/3` of `tp.generate`, which has to be the one of this parent.
 pub fn link_bytes(
     r: &FileRunner,
     job: &Job,
@@ -137,7 +137,7 @@ pub fn link_bytes(
     Ok(out)
 }
 
-/// `tp.link`: the `.mzfeat` with `tp/1` and `interp/1` of the series; no t0 among the samples adds `warn.flow.link.noT0` to the run.
+/// `tp.link`: the `.mzfeat` with `tp/2` and `interp/1` of the series; no t0 among the samples adds `warn.flow.link.noT0` to the run.
 pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let table_in = job
         .inputs

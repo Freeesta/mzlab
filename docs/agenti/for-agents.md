@@ -1,6 +1,6 @@
 # mzLab for external agents (`mzlab-cli` from the shell)
 
-For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
+For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. **Build `mzlab-cli` with `--profile cli`, not `release`** (`release` is size-optimised for the `.wasm`; `cli` is the speed profile, same output bytes, binary in `target/cli/`). Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
 
 ## Installation
 - Linux: every release carries static builds of `mzlab-cli` (x86_64 and aarch64) with a `SHA256SUMS` file: fetch and verify with the command in `cli-agenti.md`.

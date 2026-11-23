@@ -219,7 +219,7 @@
       "integer",
       "null"
      ],
-     "description": "id of the hypothesis (hypotheses/2) the row confirms"
+     "description": "id of the hypothesis (hypotheses/3) the row confirms"
     },
     "livello_max": {
      "enum": [

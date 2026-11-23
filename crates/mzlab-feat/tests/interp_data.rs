@@ -58,7 +58,7 @@ fn registry() -> (String, Vec<f64>) {
     }).collect();
     (
         format!(
-            r#"{{"format":"hypotheses/2","hypotheses":[{}]}}"#,
+            r#"{{"format":"hypotheses/3","hypotheses":[{}]}}"#,
             items.join(",")
         ),
         mz,

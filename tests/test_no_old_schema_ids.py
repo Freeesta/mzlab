@@ -9,6 +9,8 @@ OLD = re.compile(
     r"|riga_tracce|(?<![\w-])riga\.json"  # bare names too: output file names, ids, prose
     r"|\"sources\"\s*:\s*\[[^\]]*\"(regola|sospetti|rottura|rete|famiglia|importata)\""  # old hypothesis source labels in fixtures
     r"|\"rottura\+"  # the old label of a cleavage product
+    r"|(?<![\w-])hypotheses/2(?![\w])|(?<![\w-])(non_cercata|non_trovata)(?![\w])"  # the registry with Italian outcomes
+    r"|Q3_osservato|Q3_suggerito"  # the Italian keys of the Dig transitions
 )
 # The refusal code and its tests name the superseded feature_pipeline versions on purpose.
 OLD_PIPELINE = re.compile(r"feature_pipeline/[12](?!\d)")

@@ -1,4 +1,4 @@
-//! The view of the transformation products (`tp/1`): the gates in order with their status, kinship from the signs of the proofs, the block in the `.mzfeat`
+//! The view of the transformation products (`tp/2`): the gates in order with their status, kinship from the signs of the proofs, the block in the `.mzfeat`
 //! and back, and that the controls are read (a view with no controls is an error, not a pass).
 
 use mzlab_feat::evid::rowproofs::{Signs, AGAINST, FOR, NONE};
@@ -219,12 +219,12 @@ fn the_block_survives_the_file() {
     assert_eq!(back.tp, t.tp);
     assert_eq!(
         meta.get("tp").unwrap().get("schema").and_then(|v| v.str()),
-        Some("tp/1")
+        Some("tp/2")
     );
     assert_eq!(
         meta.get("tp")
             .unwrap()
-            .get("conteggi")
+            .get("counts")
             .unwrap()
             .get("tp")
             .and_then(|v| v.f64()),

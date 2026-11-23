@@ -434,11 +434,15 @@ impl Opened {
         Ok(())
     }
 
-    /// The block `tp/1` when the meta has it.
+    /// The block `tp/2` when the meta has it.
     fn tp<R: ReadAt>(&self, r: &mut R, size: u64) -> Result<TpBlock> {
         let Some(m) = self.meta.get("tp") else {
             return Ok(TpBlock::default());
         };
+        // the block of the first version had Italian keys: it is refused, never converted (`tp/2` names are English)
+        if m.get("schema").and_then(|v| v.str()) != Some(crate::tp_block::TP_SCHEMA) {
+            return Err(mzlab_core::error::Error::new("error.mzfeat.tpFormat"));
+        }
         let mut col = |name: &str| self.col(r, size, name, "u8", None, |b: [u8; 1]| b[0]);
         Ok(TpBlock {
             status: col("tp_status")?,

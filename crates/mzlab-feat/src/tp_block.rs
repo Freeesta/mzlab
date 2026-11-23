@@ -1,4 +1,4 @@
-//! The block `tp/1` of the aligned table (`TpBlock`) with its codes, thresholds and formula candidates: plain data with no dependency, so the
+//! The block `tp/2` of the aligned table (`TpBlock`) with its codes, thresholds and formula candidates: plain data with no dependency, so the
 //! table can carry it without reaching the gates of `tp`. The old paths `mzlab_feat::tp::…` stay as re-exports.
 
 /// `NO_PARENT` in `TpBlock::parent_row`.
@@ -86,7 +86,10 @@ pub struct RoleCounts {
     pub blank_kinds: Vec<String>,
 }
 
-/// The block `tp/1`: one byte per row and column.
+/// The schema of the meta of the block (version 2: English keys; version 1 had Italian ones and is refused).
+pub const TP_SCHEMA: &str = "tp/2";
+
+/// The block `tp/2`: one byte per row and column.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TpBlock {
     pub status: Vec<u8>,

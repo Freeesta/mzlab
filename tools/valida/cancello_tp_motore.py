@@ -5,7 +5,7 @@ real series) leaves them not measured (`ok` null). Aggregated numbers only.
 - `generazione`: share of the detectable products whose kinetic generation (code 0 first, 1 later, 2 undecidable) is the true one or undecidable.
 - `livelli`: share of the detectable products whose reported level is not better than the true one (the engine never claims more than the data allow).
 - `regione`: share of the products with a localization test whose region the engine gives right; the engine does not write regions yet, so it is not measured.
-- `determinismo_tp`: two runs give the same containers, tp/1 arrays included."""
+- `determinismo_tp`: two runs give the same containers, tp/2 arrays included."""
 from __future__ import annotations
 
 import re

@@ -147,7 +147,7 @@ fn found(d: &lr::LrDig, mz: f64) -> bool {
         e.id != 0
             && !e.unexpected
             && (e.mz - mz).abs() < 0.02
-            && matches!(e.label, "forte" | "possibile")
+            && matches!(e.label, "strong" | "possible")
     })
 }
 

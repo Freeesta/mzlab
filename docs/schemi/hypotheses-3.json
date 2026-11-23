@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hypotheses/3",
+  "title": "hypotheses/3: the registry of hypotheses of `tp.generate`",
+  "description": "The candidate transformation products of a parent, with what the later steps found: written by `tp.generate`, read by `tp.link`/`tp.interpret` and the Dig, and the base of the SHA-256 that compares two runs. Every key and value is English and stable. A hypothesis of several routes to the same ion keeps one leader and lists the others in `alternatives`, always as `FORMULA (PATH)` (the leader's own formula included when only the path differs). `hypotheses/1` (Italian sources) and `/2` (Italian outcomes) are refused with `error.hypo.registryFormat`, never converted. Code: crates/mzlab-feat/src/hypo.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "rules_version",
+    "polarity",
+    "tried",
+    "found",
+    "suspects_cut",
+    "hypotheses"
+  ],
+  "properties": {
+    "format": {
+      "const": "hypotheses/3"
+    },
+    "rules_version": {
+      "type": "integer",
+      "description": "Version of the rule file that made the registry (`regole_tp/3` gives 3)."
+    },
+    "polarity": {
+      "type": "integer",
+      "description": "+1 positive, -1 negative."
+    },
+    "tried": {
+      "type": "integer",
+      "description": "Number of hypotheses searched (the length of `hypotheses`)."
+    },
+    "found": {
+      "type": "integer",
+      "description": "Number of hypotheses whose outcome is `{rows}`."
+    },
+    "suspects_cut": {
+      "type": "integer",
+      "description": "Suspect hits left out by the `max_suspects` cap."
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sources",
+          "label",
+          "formula",
+          "mass",
+          "mz",
+          "adduct",
+          "steps",
+          "level",
+          "rt_ref",
+          "alternatives",
+          "outcome"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Position in m/z order."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "rule",
+                "suspects",
+                "family",
+                "imported",
+                "cleavage",
+                "network"
+              ]
+            },
+            "description": "Where the hypothesis comes from (several when the sources agree)."
+          },
+          "label": {
+            "type": "string",
+            "description": "The path of the leader, e.g. `loss_of_c2h4+loss_of_c4h8` (rule steps joined by `+`) or the name in a list."
+          },
+          "formula": {
+            "type": "string",
+            "description": "Neutral molecular formula."
+          },
+          "mass": {
+            "type": "number",
+            "description": "Monoisotopic neutral mass, Da."
+          },
+          "mz": {
+            "type": "number",
+            "description": "m/z of the ion of `adduct`."
+          },
+          "adduct": {
+            "type": "string",
+            "description": "The adduct of the polarity, e.g. `[M+H]+`."
+          },
+          "steps": {
+            "type": "integer",
+            "description": "Reactions from the parent (0 for a list entry)."
+          },
+          "level": {
+            "type": "integer",
+            "description": "Prediction level of the weakest step (2 literature, 3 class, 4 generic); 0 without a rule."
+          },
+          "rt_ref": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Reference retention time, min, or null."
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The other routes to the same ion, sorted, each `FORMULA (PATH)`."
+          },
+          "outcome": {
+            "oneOf": [
+              {
+                "enum": [
+                  "not_searched",
+                  "not_found"
+                ],
+                "description": "Not searched in the table, or searched and no row matched."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rows"
+                ],
+                "properties": {
+                  "rows": {
+                    "type": "integer",
+                    "description": "Rows of the table it matched."
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "format": "hypotheses/3",
+      "rules_version": 3,
+      "polarity": 1,
+      "tried": 2,
+      "found": 1,
+      "suspects_cut": 0,
+      "hypotheses": [
+        {
+          "id": 0,
+          "sources": [
+            "cleavage"
+          ],
+          "label": "cleavage+loss_of_c4h8",
+          "formula": "C2HN2O",
+          "mass": 69.008888,
+          "mz": 70.016164,
+          "adduct": "[M+H]+",
+          "steps": 2,
+          "level": 4,
+          "rt_ref": null,
+          "alternatives": [],
+          "outcome": "not_searched"
+        },
+        {
+          "id": 28,
+          "sources": [
+            "rule"
+          ],
+          "label": "loss_of_c2h4+loss_of_c4h8",
+          "formula": "C6H5ClN2O3S",
+          "mass": 219.970941,
+          "mz": 220.978217,
+          "adduct": "[M+H]+",
+          "steps": 2,
+          "level": 4,
+          "rt_ref": null,
+          "alternatives": [
+            "C6H5ClN2O3S (loss_of_propene_n_deisopropylation+loss_of_propene_n_deisopropylation)"
+          ],
+          "outcome": {
+            "rows": 3
+          }
+        }
+      ]
+    }
+  ]
+}

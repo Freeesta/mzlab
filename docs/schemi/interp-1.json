@@ -15,7 +15,7 @@
   },
   "change": {
    "type": ["object", "null"],
-   "description": "the modification of the neutral formula given by the closest hypothesis of `hypotheses/2` within 5 ppm (the others are `alternatives`); null when no hypothesis matches",
+   "description": "the modification of the neutral formula given by the closest hypothesis of `hypotheses/3` within 5 ppm (the others are `alternatives`); null when no hypothesis matches",
    "required": ["delta", "neutral_formula", "ion_formula", "ppm", "source", "alternatives"],
    "properties": {
     "delta": {"type": "string", "description": "signed change with the true minus U+2212, gains first: '+O', '−2H', '+O−2H'"},
