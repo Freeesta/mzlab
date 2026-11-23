@@ -59,7 +59,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mapping to mzmine steps (area: graphical Flow (tab: step palette `step/1`, chain, modules…) | `docs/agenti/flow-mzmine.md` |
 | Flow: names, groups and view cards of the MSn infusion model | `docs/agenti/flow-ux.md` |
 | web runner of the Flow ("This browser": `flow/lazy/flow-web-{run,ui,worker}.js`, `flow:web-step` events, `estimate_series` estimate, phone/tablet warning, Run off above the high level) | `docs/agenti/flow-web.md` |
-| external agents (Claude Code, Cowork) using `mzlab-cli` from the shell: task → command table, `commands --find` (`catalog/find.rs`, `related.rs`), `cli` build profile, sequence, the five tested chains, plan examples | `docs/agenti/for-agents.md` |
+| external agents (Claude Code, Cowork) using `mzlab-cli`: task → command table, `commands --find` (`catalog/find.rs`, `related.rs`), `cli` profile, sequence, tested chains, plans; LR campaign study and roadmap: `docs/studies/AGENT_USE_STUDY.md` | `docs/agenti/for-agents.md` |
 | "Group by" of the file list (`#sb-by`, `groups.js`, `groups-for.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
 | experiment groups in Tabui: conditions, `groups/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/groups-view.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
