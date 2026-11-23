@@ -55,6 +55,8 @@ Rank = agent time saved per campaign × how often it blocks, divided by cost. Si
 | 10 | AU-10 | `features.companions@1` at nominal mass: M+1/M+2 evidence, co-eluting correlated pairs, in-source fragment candidates, as edges, never merged rows | `features.group` covers HR only; MZmine's ppm filter is useless at unit mass | M-L | AU-3 | no |
 | 11 | AU-11 | `mzlab-cli mcp --root FOLDER`: stdio MCP server over the CLI with propose → review → execute and a sharing level fixed by the user | desktop assistants (Claude Desktop, Cowork) can drive mzLab without a shell | L | AU-5, AU-6, AU-8 | the owner's "go" (`llm-choices.md`) |
 
+Raw data access (`mzlab-cli raw`: info, cache, xic with verdicts, scan, companions, profile, isotopes, ms2, batch) continues the roadmap as AU-12..AU-19 in `AGENT_USE_STUDY_2.md` ("Roadmap, continued"); evidence and specification in `RAW_ACCESS_STUDY.md` and `RAW_ACCESS_STUDY_2.md`.
+
 Not ranked here because other chats own them: the task → command table, command search and near-miss hints (AGENT-DISCOVERY, the largest single win), and every speed item (SPEED-STUDY).
 
 Order of the worker chats: AU-1 (owner) and AU-8, AU-2, AU-5 in parallel; AU-3 and AU-4 after QUANT-TARGETS and DIG-ROBUST merge; AU-6, AU-7; then AU-9, AU-10; AU-11 last, after the go.
