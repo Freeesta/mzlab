@@ -25,7 +25,7 @@ fn dumps(dir: &Path) -> Vec<PathBuf> {
     v
 }
 
-/// The `.raw` named `nome` anywhere under `dir` (the corpus has a few folders deep).
+/// The `.raw` named `name` anywhere under `dir` (the corpus has a few folders deep).
 fn find(dir: &Path, name: &str, bottom: usize) -> Option<PathBuf> {
     for e in std::fs::read_dir(dir).ok()?.flatten() {
         let p = e.path();

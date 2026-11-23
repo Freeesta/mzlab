@@ -189,7 +189,7 @@ impl crate::readers::Reader for Ottico {
         C.get_or_init(|| {
             vec![crate::readers::Sample {
                 id: 1,
-                nome: "uv".into(),
+                name: "uv".into(),
                 scansioni: 0,
                 size: None,
             }]

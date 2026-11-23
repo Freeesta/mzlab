@@ -35,14 +35,14 @@ fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let b = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }
     };
     FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],
@@ -125,7 +125,7 @@ fn a_wiff_with_a_damaged_start_is_the_file_named() {
     let mut fs = set(&d, "sano");
     let mut b = std::fs::read(d.join("sano.wiff")).unwrap();
     b[0] = 0;
-    fs.membri[0].dati = Box::new(b);
+    fs.members[0].data = Box::new(b);
     let e = mzlab_lettori::open(fs, &Limits::desktop()).err().unwrap();
     let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.clone());
     assert_eq!(

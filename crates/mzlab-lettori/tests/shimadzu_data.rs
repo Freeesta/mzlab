@@ -17,10 +17,10 @@ fn open(rel: &str) -> Option<Box<dyn Reader>> {
     };
     let bytes = std::fs::read(&p).unwrap();
     let fs = FileSet {
-        membri: vec![Member {
-            nome: p.file_name().unwrap().to_string_lossy().into(),
+        members: vec![Member {
+            name: p.file_name().unwrap().to_string_lossy().into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     };

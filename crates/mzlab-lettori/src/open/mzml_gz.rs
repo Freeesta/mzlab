@@ -101,13 +101,13 @@ fn open_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 /// The set with its gzip member inflated into memory, named without `.gz`.
 fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
     let i = fs.find(suffix).ok_or_else(|| fs.not_accepted())?;
-    let m = fs.membri.swap_remove(i);
-    let name = m.nome[..m.nome.len() - ".gz".len()].to_string();
+    let m = fs.members.swap_remove(i);
+    let name = m.name[..m.name.len() - ".gz".len()].to_string();
     let mut outside = Vec::new();
     let read_one = Members::new(std::io::BufReader::with_capacity(
         1 << 16,
         Stream {
-            data: m.dati,
+            data: m.data,
             pos: 0,
             dim: m.dim,
         },
@@ -131,10 +131,10 @@ fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
     }
     let dim = outside.len() as u64;
     Ok(FileSet {
-        membri: vec![Member {
-            nome: name,
+        members: vec![Member {
+            name,
             dim,
-            dati: Box::new(outside),
+            data: Box::new(outside),
             sha1: None,
         }],
     })

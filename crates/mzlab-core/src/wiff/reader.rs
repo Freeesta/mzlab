@@ -82,7 +82,7 @@ impl Part {
 
 pub struct WiffReader {
     pub(super) ole: Ole,
-    nome: String,
+    name: String,
     scan: Box<dyn ReadAt>,
     pub(super) scan_len: u64,
     scan_member: u16,
@@ -189,8 +189,8 @@ fn source(l: &WiffReader, sample: u32) -> Source {
     Source {
         format: "sciex-wiff",
         files: vec![
-            file(l.nome.clone(), Some(l.ole.sha1_hex()), 0),
-            file(format!("{}.scan", l.nome), None, l.scan_len),
+            file(l.name.clone(), Some(l.ole.sha1_hex()), 0),
+            file(format!("{}.scan", l.name), None, l.scan_len),
         ],
         sample: Some(sample),
     }
@@ -276,7 +276,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
 
 fn field(name: &str, value: impl ToString) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value.to_string(),
         unita: None,
         cv: None,
@@ -311,9 +311,9 @@ fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     let sha = l.scan_sha1.clone().flatten();
     let w = &l.part(c)?.w;
     #[cfg(feature = "estesi")]
-    let mut h = w.header_estesi(&l.nome, sha);
+    let mut h = w.header_estesi(&l.name, sha);
     #[cfg(not(feature = "estesi"))]
-    let mut h = w.header(&l.nome, sha, false);
+    let mut h = w.header(&l.name, sha, false);
     // a section the index does not list: the run says that its name, method and times were inferred from an indexed sample
     if let Some(d) = w.inferred_from {
         h.run_params.push((
@@ -325,7 +325,7 @@ fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
 }
 
 pub(super) fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
-    fs.membri
+    fs.members
         .get_mut(i)
         .ok_or_else(|| Error::new("err.file.wiff").with("detail", "member"))
 }
@@ -357,7 +357,7 @@ fn open_with(
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `known_fingerprints`): the header does not read the whole file again
     let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
-    let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
+    let mut scan = std::mem::replace(&mut sm.data, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     let mut raw_names = Vec::new();
@@ -378,7 +378,7 @@ fn open_with(
         ));
         campioni.push(Sample {
             id: s,
-            nome: String::new(),
+            name: String::new(),
             scansioni: scans,
             size,
         });
@@ -403,11 +403,11 @@ fn open_with(
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))
     {
-        c.nome = n;
+        c.name = n;
     }
     Ok(Box::new(WiffReader {
         ole,
-        nome: name,
+        name,
         scan,
         scan_len,
         scan_member: membro,

@@ -4,14 +4,14 @@
 
 use mzlab_core::readers::{FileSet, Limits, Member};
 
-fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
+fn insieme(members: Vec<(&str, Vec<u8>)>) -> FileSet {
     FileSet {
-        membri: membri
+        members: members
             .into_iter()
-            .map(|(nome, b)| Member {
-                nome: nome.into(),
+            .map(|(name, b)| Member {
+                name: name.into(),
                 dim: b.len() as u64,
-                dati: Box::new(b),
+                data: Box::new(b),
                 sha1: None,
             })
             .collect(),
@@ -21,7 +21,7 @@ fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
 /// Opens `data` as the members `nomi` of one dataset through the registry of the readers module and reads what a page reads first: `method/1`, index, a few scans and their
 /// headers, the chromatograms. With two names the input is a u32 LE length, that many bytes for the first member and the rest for the second (as `ingressi::wiff`).
 fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
-    let membri: Vec<(&str, Vec<u8>)> = match nomi {
+    let members: Vec<(&str, Vec<u8>)> = match nomi {
         [uno] => vec![(*uno, data.to_vec())],
         [a, b] => {
             let (Some(n), Some(corpo)) = (data.get(..4), data.get(4..)) else {
@@ -33,8 +33,8 @@ fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
         }
         _ => return,
     };
-    let _ = mzlab_lettori::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = mzlab_lettori::open(insieme(membri), &Limits::sito()) else {
+    let _ = mzlab_lettori::riconosci(&mut insieme(members.clone()));
+    let Ok(mut l) = mzlab_lettori::open(insieme(members), &Limits::sito()) else {
         return;
     };
     let _ = l.method(0);

@@ -36,14 +36,14 @@ const LISTING: &str = r#"{"format":"SciexWiff","samples":[{"id":1,"name":"rifiut
 #[test]
 fn a_refused_sample_carries_its_reason_and_an_empty_one_stays_empty() {
     let Some((wiff, scan)) = pair() else { return };
-    let member = |nome: &str, b: Vec<u8>| Member {
-        nome: nome.into(),
+    let member = |name: &str, b: Vec<u8>| Member {
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member("rifiutato.wiff", wiff),
             member("rifiutato.wiff.scan", scan),
         ],

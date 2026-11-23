@@ -11,10 +11,10 @@ fn main() {
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().to_string());
     let fs = FileSet {
-        membri: vec![Member {
-            nome: name,
+        members: vec![Member {
+            name,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     };

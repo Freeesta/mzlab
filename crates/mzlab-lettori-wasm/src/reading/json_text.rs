@@ -10,7 +10,7 @@ pub fn samples_json(o: &mut Out, samples: &[Sample]) {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(c.id))
             .raw(",\"name\":")
-            .str(&c.nome)
+            .str(&c.name)
             .raw(",\"scans\":")
             .int(c.scansioni as i64)
             .raw("}");
@@ -50,7 +50,7 @@ pub fn fields_json(fields: &[Field]) -> String {
     o.raw("[");
     for (i, f) in fields.iter().enumerate() {
         o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
-            .str(&f.nome)
+            .str(&f.name)
             .raw(",\"value\":")
             .str(&f.valore)
             .raw(",\"unit\":");

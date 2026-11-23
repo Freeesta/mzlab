@@ -366,7 +366,7 @@ fn side(damaged: &mut Vec<&'static str>, name: &'static str, r: Result<()>) -> R
     }
 }
 
-/// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.
+/// The rows of `name` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.
 fn rows<F>(db: &mut Sqlite, limits: &Limits, name: &str, columns: &[&str], mut f: F) -> Result<()>
 where
     F: FnMut(&[Val]),

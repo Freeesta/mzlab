@@ -322,7 +322,7 @@ fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, group: String) -> Ch
 }
 
 impl Channels {
-    /// The channels of a file from its scan table and the headers of its chromatograms (`chroms` may be empty); `nome` is the file name (the infusion hint).
+    /// The channels of a file from its scan table and the headers of its chromatograms (`chroms` may be empty); `name` is the file name (the infusion hint).
     pub fn da(scans: &[Scan], chroms: &[Chrom], facts: &Facts, name: &str) -> Channels {
         let (mut groups, di) = group(scans);
         split_by_polarity(&mut groups);

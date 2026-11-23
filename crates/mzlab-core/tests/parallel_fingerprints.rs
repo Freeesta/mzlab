@@ -6,17 +6,17 @@ use mzlab_core::upload;
 fn file_set(n: usize) -> FileSet {
     let data: Vec<u8> = (0..n).map(|i| (i * 31 % 251) as u8).collect();
     FileSet {
-        membri: vec![
+        members: vec![
             Member {
-                nome: "a.raw".into(),
+                name: "a.raw".into(),
                 dim: data.len() as u64,
-                dati: Box::new(data.clone()),
+                data: Box::new(data.clone()),
                 sha1: None,
             },
             Member {
-                nome: "b.raw".into(),
+                name: "b.raw".into(),
                 dim: 7,
-                dati: Box::new(vec![1u8, 2, 3, 4, 5, 6, 7]),
+                data: Box::new(vec![1u8, 2, 3, 4, 5, 6, 7]),
                 sha1: None,
             },
         ],
@@ -29,7 +29,7 @@ fn same_prints_in_another_thread() {
         let expected = upload::impronte(&mut file_set(n)).unwrap();
         let mut job = file_set(n);
         upload::without_sha1(&mut job);
-        assert!(job.membri.iter().all(|m| m.sha1.as_deref() == Some("")));
+        assert!(job.members.iter().all(|m| m.sha1.as_deref() == Some("")));
         let avute = upload::with_parallel_prints(
             move || Ok(file_set(n)),
             |wait| {

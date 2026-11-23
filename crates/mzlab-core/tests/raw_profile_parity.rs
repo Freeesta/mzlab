@@ -289,10 +289,10 @@ fn compare() -> Option<Report> {
     {
         let out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
         let set = FileSet {
-            membri: vec![Member {
-                nome: "profile.raw".into(),
+            members: vec![Member {
+                name: "profile.raw".into(),
                 dim: std::fs::metadata(&rawp).unwrap().len(),
-                dati: Box::new(File::open(&rawp).unwrap()),
+                data: Box::new(File::open(&rawp).unwrap()),
                 sha1: None,
             }],
         };

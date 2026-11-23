@@ -174,7 +174,7 @@ fn the_header_carries_every_scan_attribute() {
     let value = |n: &str| {
         fields
             .iter()
-            .find(|c| c.nome == n)
+            .find(|c| c.name == n)
             .map(|c| c.valore.clone())
     };
     assert_eq!(value("msLevel").as_deref(), Some("2"));

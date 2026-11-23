@@ -40,10 +40,10 @@ impl Source {
                     .file_name()
                     .map_or(String::new(), |s| s.to_string_lossy().into_owned());
                 let fs = FileSet {
-                    membri: vec![Member {
-                        nome: name,
+                    members: vec![Member {
+                        name,
                         dim: self.byte,
-                        dati: Box::new(File::open(p).expect("open input")),
+                        data: Box::new(File::open(p).expect("open input")),
                         sha1: None,
                     }],
                 };
@@ -249,8 +249,8 @@ fn per_scan(a: &Alloc, n: usize) -> Value {
 
 /// The phases of the single-thread loop in the variants that isolate each stage; the stage costs are in `stadi`.
 pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> Value {
-    let v = |nome, livello, vuoto, indicizzato, su_file| Variant {
-        name: nome,
+    let v = |name, livello, vuoto, indicizzato, su_file| Variant {
+        name,
         level: livello,
         empty: vuoto,
         indexed: indicizzato,
@@ -275,10 +275,10 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
     }
     let _ = std::fs::remove_file(tmp);
     // the cost of each stage: a variant minus the one that lacks it
-    let get = |nome: &str| {
+    let get = |name: &str| {
         mediane
             .iter()
-            .find(|m| m.0 == nome)
+            .find(|m| m.0 == name)
             .map_or(f64::NAN, |m| m.3)
     };
     let (xml, l0, l1, l6, idx) = (

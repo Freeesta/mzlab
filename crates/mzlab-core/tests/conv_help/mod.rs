@@ -8,9 +8,9 @@ use mzlab_core::readers_mzml::Conversion;
 
 pub fn member(name: &str, data: &[u8]) -> Member {
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: data.len() as u64,
-        dati: Box::new(data.to_vec()),
+        data: Box::new(data.to_vec()),
         sha1: None,
     }
 }
@@ -23,14 +23,14 @@ pub fn mzml(fs: FileSet) -> Vec<u8> {
         .unwrap()
 }
 
-/// The mzML of one file on disk, named `nome` for the reader.
+/// The mzML of one file on disk, named `name` for the reader.
 pub fn mzml_file(path: &Path, name: &str) -> Vec<u8> {
     let dim = std::fs::metadata(path).unwrap().len();
     mzml(FileSet {
-        membri: vec![Member {
-            nome: name.into(),
+        members: vec![Member {
+            name: name.into(),
             dim,
-            dati: Box::new(std::fs::File::open(path).unwrap()),
+            data: Box::new(std::fs::File::open(path).unwrap()),
             sha1: None,
         }],
     })
@@ -59,7 +59,7 @@ pub fn mzml_folder(folder: &Path) -> Vec<u8> {
             ));
         }
     }
-    mzml(FileSet { membri: members })
+    mzml(FileSet { members })
 }
 
 /// The mzML of sample `c` of a `.wiff` pair (`name.wiff`, `name.wiff.scan`) in `dir`; with `centroid` the reader reduces the profile to centroids.
@@ -69,14 +69,14 @@ pub fn mzml_wiff(dir: &Path, name: &str, c: usize, centroid: bool) -> Vec<u8> {
         .map(|n| {
             let p = dir.join(n);
             Member {
-                nome: n.clone(),
+                name: n.clone(),
                 dim: std::fs::metadata(&p).unwrap().len(),
-                dati: Box::new(std::fs::File::open(&p).unwrap()),
+                data: Box::new(std::fs::File::open(&p).unwrap()),
                 sha1: None,
             }
         })
         .collect();
-    let l = readers::open(FileSet { membri: members }, &Limits::desktop()).unwrap();
+    let l = readers::open(FileSet { members }, &Limits::desktop()).unwrap();
     let mut l = if centroid {
         mzlab_core::readers_centroids::centroidato(l)
     } else {

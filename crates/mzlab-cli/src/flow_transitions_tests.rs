@@ -37,14 +37,14 @@ fn fixture(tag: &str) -> Option<PathBuf> {
     let member = |file: &str| {
         let bytes = std::fs::read(d.join(file)).unwrap();
         Member {
-            nome: file.into(),
+            name: file.into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     let set = FileSet {
-        membri: vec![member("sim.wiff"), member("sim.wiff.scan")],
+        members: vec![member("sim.wiff"), member("sim.wiff.scan")],
     };
     let mut l = readers::open(set, &Limits::sito()).unwrap();
     for c in 0..2 {

@@ -59,7 +59,7 @@ impl Mol {
         g.into_iter().collect()
     }
 
-    /// The products of the site `nome`; `None` for a name that is not one of `SITES`.
+    /// The products of the site `name`; `None` for a name that is not one of `SITES`.
     pub(super) fn site(&self, name: &str) -> Option<Products> {
         let si = |b: bool| if b { vec![(None, false)] } else { vec![] };
         Some(match name {

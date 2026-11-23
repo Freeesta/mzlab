@@ -185,9 +185,9 @@ fn an_unreadable_analog_trace_leaves_out_that_trace_only() {
     // the second trace's member says it holds more bytes than the small members may: it cannot be read
     let mut fs = file_set(f);
     let m: &mut Member = fs
-        .membri
+        .members
         .iter_mut()
-        .find(|m| m.nome.ends_with("_CHRO002.DAT"))
+        .find(|m| m.name.ends_with("_CHRO002.DAT"))
         .unwrap();
     m.dim = 9 << 20;
     let r = read_set(fs);

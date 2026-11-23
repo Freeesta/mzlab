@@ -37,14 +37,14 @@ fn ms3_mzml() -> Option<Vec<u8>> {
     let member = |file: &str| {
         let bytes = std::fs::read(out.join(file)).unwrap();
         Member {
-            nome: file.into(),
+            name: file.into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     let set = FileSet {
-        membri: vec![member("ms3.wiff"), member("ms3.wiff.scan")],
+        members: vec![member("ms3.wiff"), member("ms3.wiff.scan")],
     };
     let mut l = readers::open(set, &Limits::sito()).unwrap();
     let xml = mzlab_core::readers_mzml::write(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap();

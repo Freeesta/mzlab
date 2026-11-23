@@ -39,8 +39,8 @@ fn the_index_of_many_scans_takes_few_reads_and_the_same_rows() {
         let byte = mzxml(&scan, Opz { attributes, ..FLAT });
         let calls = Rc::new(Cell::new(0));
         let mut fs = common::file_set("campione.mzXML", Vec::new());
-        fs.membri[0].dim = byte.len() as u64;
-        fs.membri[0].dati = Box::new(Counted(byte.clone(), calls.clone()));
+        fs.members[0].dim = byte.len() as u64;
+        fs.members[0].data = Box::new(Counted(byte.clone(), calls.clone()));
         let mut l = mzlab_lettori::open(fs, &mzlab_core::readers::Limits::sito()).unwrap();
         // opening: the header, the pass over the file for the starts of the scans, the windows of the index
         assert!(calls.get() < scan.len() / 10, "{} reads", calls.get());

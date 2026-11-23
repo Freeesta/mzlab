@@ -36,10 +36,10 @@ fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
     let name = path.file_name().unwrap().to_string_lossy().to_string();
     FileSet {
-        membri: vec![Member {
-            nome: name,
+        members: vec![Member {
+            name,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     }
@@ -123,10 +123,10 @@ fn the_profile_scan_is_the_same_scan_with_the_points_of_the_file() {
 #[test]
 fn not_a_raw_is_refused() {
     let mut fs = FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: 20,
-            dati: Box::new(vec![7u8; 20]),
+            data: Box::new(vec![7u8; 20]),
             sha1: None,
         }],
     };
@@ -154,7 +154,7 @@ fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks
             let head = l.scan_header(0, k).unwrap();
             let get = |name: &str| {
                 head.iter()
-                    .find(|c| c.nome == name)
+                    .find(|c| c.name == name)
                     .map(|c| c.valore.clone())
             };
             let nodes = direct
@@ -302,7 +302,7 @@ fn the_sha1_given_with_the_member_gives_the_same_header_as_the_one_the_reader_re
     let read = header(set(f));
     let mut fs = set(f);
     let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
-    assert_eq!(fs.membri[0].sha1.as_deref(), Some(imp[0].sha1.as_str()));
+    assert_eq!(fs.members[0].sha1.as_deref(), Some(imp[0].sha1.as_str()));
     assert_eq!(header(fs), read, "SHA-1 given or read: the same header");
     assert!(read.contains(&imp[0].sha1));
 }

@@ -185,13 +185,13 @@ fn the_log_wins_if_confirmed() {
 
 fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
     let m = |n: &str, b: Vec<u8>| Member {
-        nome: format!("x.d/{n}"),
+        name: format!("x.d/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     FileSet {
-        membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
+        members: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     }
 }
 
@@ -360,10 +360,10 @@ fn no_truncation_of_a_folder_database_panics() {
 fn baf_only_says_how_to_export() {
     let b = vec![1u8, 2, 3];
     let fs = FileSet {
-        membri: vec![Member {
-            nome: "x.d/analysis.baf".into(),
+        members: vec![Member {
+            name: "x.d/analysis.baf".into(),
             dim: 3,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };
@@ -375,9 +375,9 @@ fn baf_only_says_how_to_export() {
 #[test]
 fn legacy_bruker_folders_have_named_keys() {
     let m = |n: &str| Member {
-        nome: n.into(),
+        name: n.into(),
         dim: 3,
-        dati: Box::new(vec![1u8, 2, 3]),
+        data: Box::new(vec![1u8, 2, 3]),
         sha1: None,
     };
     for (names, key) in [
@@ -400,14 +400,14 @@ fn legacy_bruker_folders_have_named_keys() {
         ),
     ] {
         let fs = FileSet {
-            membri: names.iter().map(|n| m(n)).collect(),
+            members: names.iter().map(|n| m(n)).collect(),
         };
         let e = mzlab_lettori::open(fs, &limits()).err().unwrap();
         assert_eq!(e.key, key, "{names:?}");
     }
     // a lone `fid` outside a `.d` folder, without its `acqu`, is nobody's: not accepted
     let fs = FileSet {
-        membri: vec![m("run/fid")],
+        members: vec![m("run/fid")],
     };
     let e = mzlab_lettori::open(fs, &limits()).err().unwrap();
     assert_eq!(e.key, "err.file.notAccepted");
@@ -417,9 +417,9 @@ fn legacy_bruker_folders_have_named_keys() {
 #[test]
 fn a_folder_missing_one_of_its_files_says_which() {
     let m = |n: &str, b: Vec<u8>| Member {
-        nome: format!("x.d/{n}"),
+        name: format!("x.d/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     for (names, absent) in [
@@ -429,7 +429,7 @@ fn a_folder_missing_one_of_its_files_says_which() {
         (vec!["analysis.tdf"], "analysis.tdf_bin"),
     ] {
         let members = names.iter().map(|n| m(n, minimal_tdf(1))).collect();
-        let e = mzlab_lettori::open(FileSet { membri: members }, &limits())
+        let e = mzlab_lettori::open(FileSet { members }, &limits())
             .err()
             .unwrap();
         assert_eq!(e.key, "err.file.brukerNoBin", "{names:?}");
@@ -457,13 +457,13 @@ fn a_folder_missing_one_of_its_files_says_which() {
 #[test]
 fn an_agilent_folder_is_not_bruker() {
     let m = |n: &str| Member {
-        nome: n.into(),
+        name: n.into(),
         dim: 16,
-        dati: Box::new(vec![0u8; 16]),
+        data: Box::new(vec![0u8; 16]),
         sha1: None,
     };
     let mut fs = FileSet {
-        membri: vec![
+        members: vec![
             m("x.D/AcqData/MSScan.bin"),
             m("x.D/AcqData/MSPeriodicActuals.bin"),
         ],

@@ -136,10 +136,10 @@ fn a_folder_without_functions_is_refused_with_a_key() {
     assert!(e.key.starts_with("err.file."), "{}", e.key);
     let e = mzlab_lettori::open_bare(
         mzlab_core::readers::FileSet {
-            membri: vec![Member {
-                nome: "X.raw/_FUNC001.DAT".into(),
+            members: vec![Member {
+                name: "X.raw/_FUNC001.DAT".into(),
                 dim: 0,
-                dati: Box::new(Vec::<u8>::new()),
+                data: Box::new(Vec::<u8>::new()),
                 sha1: None,
             }],
         },

@@ -71,11 +71,11 @@ fn find(rows: &[Value], s: &Suspects, pk: &Package, window: Option<(f64, f64)>) 
         let Some((block, full)) = key else { continue };
         let id = format!("{k}");
         idents.push(IdentityIn {
-            nome_comune: id.clone(),
+            common_name: id.clone(),
             ..IdentityIn::default()
         });
         structs.push(StructRow {
-            nome_comune: id,
+            common_name: id,
             identity: row
                 .get("name")
                 .and_then(Value::str)
@@ -114,7 +114,7 @@ fn find(rows: &[Value], s: &Suspects, pk: &Package, window: Option<(f64, f64)>) 
     let mut out: Found = vec![Vec::new(); rows.len()];
     for r in &b1.long {
         let (Ok(k), Ok(m)) = (
-            r.nome_comune.parse::<usize>(),
+            r.common_name.parse::<usize>(),
             r.list_attribute.parse::<usize>(),
         ) else {
             continue;

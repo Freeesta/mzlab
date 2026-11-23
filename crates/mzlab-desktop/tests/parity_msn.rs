@@ -226,14 +226,14 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
 
     // natsrm: the bytes of srm::impacchetta over the reader (an error stays an error with its key)
     let set = mzlab_core::readers::FileSet {
-        membri: paths
+        members: paths
             .iter()
             .map(|(n, p)| {
                 let bytes = std::fs::read(p).unwrap();
                 mzlab_core::readers::Member {
-                    nome: n.clone(),
+                    name: n.clone(),
                     dim: bytes.len() as u64,
-                    dati: Box::new(bytes),
+                    data: Box::new(bytes),
                     sha1: None,
                 }
             })

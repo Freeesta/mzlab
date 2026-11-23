@@ -26,14 +26,14 @@ fn fileset(wiff: &str) -> FileSet {
     let m = |p: &str| {
         let dim = std::fs::metadata(p).unwrap().len();
         Member {
-            nome: p.rsplit('/').next().unwrap().to_string(),
+            name: p.rsplit('/').next().unwrap().to_string(),
             dim,
-            dati: Box::new(File::open(p).unwrap()),
+            data: Box::new(File::open(p).unwrap()),
             sha1: None,
         }
     };
     FileSet {
-        membri: vec![m(wiff), m(&format!("{wiff}.scan"))],
+        members: vec![m(wiff), m(&format!("{wiff}.scan"))],
     }
 }
 

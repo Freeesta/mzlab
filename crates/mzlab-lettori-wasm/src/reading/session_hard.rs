@@ -15,13 +15,13 @@ impl Reader for Hard {
             vec![
                 Sample {
                     id: 0,
-                    nome: ODD_CHARS.into(),
+                    name: ODD_CHARS.into(),
                     scansioni: 0,
                     size: None,
                 },
                 Sample {
                     id: u32::MAX,
-                    nome: String::new(),
+                    name: String::new(),
                     scansioni: usize::MAX >> 12,
                     size: Some(1),
                 },
@@ -37,13 +37,13 @@ impl Reader for Hard {
     fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![
             Field {
-                nome: ODD_CHARS.into(),
+                name: ODD_CHARS.into(),
                 valore: ODD_CHARS.into(),
                 unita: Some(ODD_CHARS.into()),
                 cv: None,
             },
             Field {
-                nome: String::new(),
+                name: String::new(),
                 valore: String::new(),
                 unita: None,
                 cv: Some(String::new()),

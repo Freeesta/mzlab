@@ -65,14 +65,14 @@ fn sets(names: &[String], sizes: &[f64], read: &Function) -> Vec<FileSet> {
         .zip(sizes.chunks(2))
         .enumerate()
         .map(|(k, (n, d))| FileSet {
-            membri: n
+            members: n
                 .iter()
                 .zip(d)
                 .enumerate()
-                .map(|(j, (nome, dim))| Member {
-                    nome: nome.clone(),
+                .map(|(j, (name, dim))| Member {
+                    name: name.clone(),
                     dim: *dim as u64,
-                    dati: Box::new(JsMember {
+                    data: Box::new(JsMember {
                         read: read.clone(),
                         i: (2 * k + j) as u32,
                         dim: *dim as u64,

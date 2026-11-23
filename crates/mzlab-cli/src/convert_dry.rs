@@ -48,7 +48,7 @@ fn planned(list: &[Entry], out: &Path) -> Vec<Planned> {
                 let Ok(fs) = crate::flow_set::file_set(&e.input) else {
                     return (None, 0);
                 };
-                let bytes = fs.membri.iter().map(|m| m.dim).sum();
+                let bytes = fs.members.iter().map(|m| m.dim).sum();
                 let reader =
                     mzlab_lettori::open_listing(fs, &mzlab_core::readers::Limits::desktop())
                         .ok()

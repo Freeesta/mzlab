@@ -103,7 +103,7 @@ fn tic_and_bpc_come_from_the_scans() {
 fn the_header_carries_the_scan_variables() {
     let mut l = open_andi(andi_ms(&FLAT_RUN));
     let c = l.scan_header(0, 2).unwrap();
-    let v = |n: &str| c.iter().find(|x| x.nome == n).map(|x| x.valore.clone());
+    let v = |n: &str| c.iter().find(|x| x.name == n).map(|x| x.valore.clone());
     assert_eq!(v("scan_acquisition_time").as_deref(), Some("63"));
     assert_eq!(v("mass_range_max").as_deref(), Some("400"));
     assert_eq!(
@@ -206,7 +206,7 @@ fn the_header_applies_scale_factor_and_add_offset() {
         let fields = l.scan_header(0, k).unwrap();
         let t = fields
             .iter()
-            .find(|c| c.nome == "scan_acquisition_time")
+            .find(|c| c.name == "scan_acquisition_time")
             .unwrap();
         let expected = 60.0 + 1.5 * k as f64;
         assert_eq!(t.valore.parse::<f64>().unwrap(), expected, "scan {k}");

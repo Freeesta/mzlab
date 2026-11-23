@@ -38,14 +38,14 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
     let member = |file: String| {
         let b = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }
     };
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],

@@ -82,10 +82,10 @@ fn shimadzu_carries_conv() {
     use mzlab_core::readers::{FileSet, Limits, Member};
     let b = qgd(6);
     let fs = FileSet {
-        membri: vec![Member {
-            nome: "a.qgd".into(),
+        members: vec![Member {
+            name: "a.qgd".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };

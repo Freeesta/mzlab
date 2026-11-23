@@ -9,10 +9,10 @@ use mzlab_core::readers::{FileSet, Limits, Member};
 
 fn fs(name: &str, b: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: name.into(),
+        members: vec![Member {
+            name: name.into(),
             dim: b.len() as u64,
-            dati: Box::new(b.to_vec()),
+            data: Box::new(b.to_vec()),
             sha1: None,
         }],
     }

@@ -12,10 +12,10 @@ const SCANS: u32 = 12;
 
 fn reader(b: Vec<u8>) -> Box<dyn Reader> {
     let set = FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };

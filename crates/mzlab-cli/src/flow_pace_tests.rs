@@ -64,7 +64,7 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
     let (len, sha256) = crate::flow_set::digest(&src).unwrap();
     assert_eq!(len, std::fs::metadata(&src).unwrap().len());
     assert_eq!(sha256, crate::flow_hash::file_sha256(&src).unwrap().1);
-    let given = crate::flow_set::file_set(&src).unwrap().membri[0]
+    let given = crate::flow_set::file_set(&src).unwrap().members[0]
         .sha1
         .clone();
     let mut f = std::fs::File::open(&src).unwrap();

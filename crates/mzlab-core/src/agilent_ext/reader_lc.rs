@@ -29,11 +29,11 @@ fn lc_extras(fs: &FileSet) -> Vec<(usize, String)> {
         "AcqData/sample_info.xml",
         "AcqData/sequence.xml",
     ];
-    fs.membri
+    fs.members
         .iter()
         .enumerate()
         .filter_map(|(i, m)| {
-            let path = m.nome.replace('\\', "/");
+            let path = m.name.replace('\\', "/");
             let parts: Vec<&str> = path.split('/').collect();
             let at = parts
                 .iter()
@@ -62,8 +62,8 @@ pub fn variant(fs: &mut FileSet) -> bool {
         return false;
     };
     let layout = match find(fs, XSD) {
-        Some(x) if fs.membri[x].dim <= (1 << 20) => {
-            let xsd = fs.testa(x, fs.membri[x].dim as usize);
+        Some(x) if fs.members[x].dim <= (1 << 20) => {
+            let xsd = fs.testa(x, fs.members[x].dim as usize);
             match crate::agilent::scan::Layout::from_xsd(&String::from_utf8_lossy(&xsd)) {
                 Ok(l) => l,
                 Err(_) => return true,
@@ -110,11 +110,11 @@ pub(super) fn read_all(
     left: &mut u64,
     limits: &Limits,
 ) -> Result<Vec<u8>> {
-    let m = &mut fs.membri[i];
+    let m = &mut fs.members[i];
     limits.fits_in(m.dim, *left)?;
     *left -= m.dim;
     let mut b = vec![0u8; m.dim as usize];
-    m.dati.read_at(0, &mut b)?;
+    m.data.read_at(0, &mut b)?;
     Ok(b)
 }
 
@@ -143,7 +143,7 @@ pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64, limits: &Limits) -> LcRe
     let mut files = Vec::new();
     let mut sizes = Vec::new();
     for (i, rel) in lc_extras(fs) {
-        let dim = fs.membri[i].dim;
+        let dim = fs.members[i].dim;
         if dim > UNDECODED_MAX || dim > *left {
             sizes.push((rel, dim));
         } else {

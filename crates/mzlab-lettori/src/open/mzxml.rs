@@ -416,7 +416,7 @@ fn extra_di(t: &Head, index: &[ScanEntry]) -> SpectrumExtra {
 
 fn field(name: &str, value: &str) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value.into(),
         unita: None,
         cv: None,
@@ -426,27 +426,27 @@ fn field(name: &str, value: &str) -> Field {
 fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs.find(".mzxml").ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
-    let m = fs.membri.get_mut(i).ok_or(refused)?;
-    let nome = m
-        .nome
+    let m = fs.members.get_mut(i).ok_or(refused)?;
+    let name = m
+        .name
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or("x.mzXML")
         .to_string();
     let dim = m.dim;
-    let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
+    let mut data: Box<dyn ReadAt> = std::mem::replace(&mut m.data, Box::new(Vec::<u8>::new()));
     let mzxml_index::Pass {
         rows: righe,
         discarded,
         indexed: indicizzate,
-    } = mzxml_index::rows(&mut dati, dim, limits)?;
+    } = mzxml_index::rows(&mut data, dim, limits)?;
     if righe.is_empty() {
         return Err(Error::new("err.file.xml").with("detail", "no scans"));
     }
     let mut l = MzxmlReader {
-        data: dati,
+        data,
         dim,
-        name: nome,
+        name,
         limits: *limits,
         samples: Vec::new(),
         rows: righe,
@@ -468,7 +468,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     l.samples = vec![Sample {
         id: 1,
-        nome: stem,
+        name: stem,
         scansioni: l.indice.len(),
         size: None,
     }];

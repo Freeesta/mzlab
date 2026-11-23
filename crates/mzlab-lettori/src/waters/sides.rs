@@ -38,9 +38,9 @@ impl Table {
         let canali: Vec<Channel> = (0..n)
             .map(|i| {
                 let d = &b[PREAMBLE + i * DESCR..PREAMBLE + (i + 1) * DESCR];
-                let nome: Vec<u8> = d[6..].iter().copied().take_while(|&c| c != 0).collect();
+                let name: Vec<u8> = d[6..].iter().copied().take_while(|&c| c != 0).collect();
                 Channel {
-                    name: super::folder::text(&nome).trim().to_string(),
+                    name: super::folder::text(&name).trim().to_string(),
                     kind: u16_at(d, 2),
                     offset: u16_at(d, 4) as usize,
                 }
@@ -75,7 +75,7 @@ impl Table {
         })
     }
 
-    /// The value of channel `nome` in record `k`.
+    /// The value of channel `name` in record `k`.
     pub(super) fn value(&self, name: &str, k: usize) -> Option<f64> {
         let c = self.channels.iter().find(|c| c.name == name)?;
         self.value_of(c, k)

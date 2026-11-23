@@ -183,7 +183,7 @@ pub(super) fn add(
         raw_names.push((s, None));
         campioni.push(Sample {
             id: s,
-            nome: String::new(),
+            name: String::new(),
             scansioni: part.scans.len(),
             size: None,
         });

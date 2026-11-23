@@ -46,12 +46,12 @@ fn listed(c: &mut Folder) -> Result<Vec<Analog>> {
         .map(|i| {
             let r = &b[HEADER + i * RECORD_INF..HEADER + (i + 1) * RECORD_INF];
             let mut fields = r[4..].split(|&x| x == 0);
-            let nome = text(fields.next().unwrap_or(&[])).trim().to_string();
+            let name = text(fields.next().unwrap_or(&[])).trim().to_string();
             let raw_value = text(fields.next().unwrap_or(&[])).trim().to_string();
             let p: Vec<&str> = raw_value.split(',').collect();
             Analog {
                 n: i as u32 + 1,
-                name: nome,
+                name,
                 units: p.get(5).map_or(String::new(), |u| u.trim().to_string()),
                 scale: p
                     .get(1)

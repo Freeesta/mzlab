@@ -4,7 +4,7 @@ use crate::readers::Field;
 
 fn field(name: &str, value: String) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value,
         unita: None,
         cv: None,

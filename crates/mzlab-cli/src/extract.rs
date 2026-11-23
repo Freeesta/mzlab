@@ -108,7 +108,7 @@ pub(crate) fn open_sample(file: &Path, sample: Option<u32>, tmp: &Path) -> Resul
         .flat_map(|l| {
             l.samples()
                 .iter()
-                .map(|s| (s.id, s.nome.clone(), s.scansioni))
+                .map(|s| (s.id, s.name.clone(), s.scansioni))
         })
         .collect();
     if let Some(id) = sample {

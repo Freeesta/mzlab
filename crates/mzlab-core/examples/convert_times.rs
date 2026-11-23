@@ -114,7 +114,7 @@ impl DaMzml {
             .collect();
         let samples = vec![Sample {
             id: 1,
-            nome: "sintetico".into(),
+            name: "sintetico".into(),
             scansioni: run.spectra.len(),
             size: None,
         }];

@@ -126,13 +126,13 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     for (name, p) in found {
         let f = File::open(&p).map_err(io)?;
         list.push(Member {
-            nome: name,
+            name,
             dim: f.metadata().map_err(io)?.len(),
-            dati: Box::new(f),
+            data: Box::new(f),
             sha1: known_sha1(&p),
         });
     }
-    Ok(FileSet { membri: list })
+    Ok(FileSet { members: list })
 }
 
 /// Size and SHA-256 of the file `p`; with `sha1` its SHA-1 comes with them in the same read. Both are kept for `file_set` and `known_prints`, so
@@ -175,8 +175,8 @@ pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Fingerprint>>> {
     };
     let mut fs = file_set(path)?;
     let mut values = Vec::with_capacity(pairs.len());
-    for (m, (sha256, sha1)) in fs.membri.iter_mut().zip(pairs) {
-        values.push((sha256, sha1.unwrap_or_default(), probe(&mut m.dati, m.dim)?));
+    for (m, (sha256, sha1)) in fs.members.iter_mut().zip(pairs) {
+        values.push((sha256, sha1.unwrap_or_default(), probe(&mut m.data, m.dim)?));
     }
     Ok(known_fingerprints(&mut fs, &values))
 }

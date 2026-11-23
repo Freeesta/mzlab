@@ -17,6 +17,8 @@ I18N.add("en", {
   "mappa.bot.title": "XIC of the m/z under the sight",
   "mappa.side.diff": "difference spectrum A − B of the scan",
   "mappa.bot.tic": "TIC A − B (own scale)",
+  "mappa.live.chip": "RT {rt} min · m/z {mz}",
+  "mappa.live.peak": "peak {mz}",
   "mappa.btn.mir": "sight",
   "mappa.btn.mir.title": "Sight (M): spectrum and XIC under the cursor next to the map",
   "mapex.err": "Could not load the «How it is extracted» view.",

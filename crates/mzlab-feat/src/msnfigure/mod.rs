@@ -28,7 +28,7 @@ pub enum View {
 
 impl View {
     /// `tree` and `radial`.
-    pub fn da_nome(n: &str) -> Option<View> {
+    pub fn from_name(n: &str) -> Option<View> {
         match n {
             "tree" => Some(View::Tree),
             "radial" => Some(View::Radial),
@@ -347,7 +347,7 @@ pub fn figure_text(graph: &[u8], format: &str, view: &str) -> Result<String> {
     if !["svg", "html", "png"].contains(&format) {
         return Err(bad_param("format", format));
     }
-    let vista = View::da_nome(view).ok_or_else(|| bad_param("view", view))?;
+    let vista = View::from_name(view).ok_or_else(|| bad_param("view", view))?;
     match format {
         "svg" => svg(graph, vista),
         "html" => html::html(graph, vista),

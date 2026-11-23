@@ -38,16 +38,16 @@ fn fixture() -> Option<(PathBuf, Value)> {
 fn member(p: &Path, name: &str) -> Member {
     let b = std::fs::read(p.join(name)).unwrap();
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     }
 }
 
 fn convert(dir: &Path, stem: &str) -> Vec<u8> {
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member(dir, &format!("{stem}.wiff")),
             member(dir, &format!("{stem}.wiff.scan")),
         ],

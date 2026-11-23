@@ -40,10 +40,10 @@ fn counted(
     let read_items = Rc::new(Cell::new(0));
     let da = (b.len() - 8 * total) as u64;
     let fs = FileSet {
-        membri: vec![Member {
-            nome: "campione.cdf".into(),
+        members: vec![Member {
+            name: "campione.cdf".into(),
             dim: b.len() as u64,
-            dati: Box::new(Counter {
+            data: Box::new(Counter {
                 b,
                 da,
                 read_items: read_items.clone(),

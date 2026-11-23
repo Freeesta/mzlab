@@ -127,12 +127,12 @@ pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabin> {
     error.map_or(Ok(c), Err)
 }
 
-/// The `method/1` document of the file `nome` (`dim` bytes, `sha1` when read).
-pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) -> String {
+/// The `method/1` document of the file `name` (`dim` bytes, `sha1` when read).
+pub(super) fn document(c: &Cabin, name: &str, dim: u64, sha1: Option<String>) -> String {
     let src = Source {
         format: "mzxml",
         files: vec![SrcFile {
-            name: nome.to_string(),
+            name: name.to_string(),
             sha1,
             bytes: dim,
         }],

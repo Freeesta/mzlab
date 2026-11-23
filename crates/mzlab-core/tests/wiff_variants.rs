@@ -56,14 +56,14 @@ fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],
@@ -343,11 +343,11 @@ fn wiff_sample_names_date() {
     let l = readers::open(set(&dir, "nomi"), &Limits::sito()).unwrap();
     let samples = l.samples();
     assert_eq!(samples.len(), 5);
-    assert_eq!(samples[0].nome, "Sample_A");
-    assert_eq!(samples[1].nome, "Sample_B");
-    assert_eq!(samples[2].nome, "nomi_s3");
-    assert_eq!(samples[3].nome, "nomi_s4");
-    assert_eq!(samples[4].nome, "Sample_A");
+    assert_eq!(samples[0].name, "Sample_A");
+    assert_eq!(samples[1].name, "Sample_B");
+    assert_eq!(samples[2].name, "nomi_s3");
+    assert_eq!(samples[3].name, "nomi_s4");
+    assert_eq!(samples[4].name, "Sample_A");
     for c in samples {
         assert_eq!(c.size, None);
     }
@@ -422,7 +422,7 @@ fn an_ms3_sample_is_read_and_a_refused_sample_does_not_fail_the_pair() {
     };
     let r = &want["ms3"];
     let mut l = readers::open(set(&dir, "ms3"), &Limits::sito()).unwrap();
-    let names: Vec<_> = l.samples().iter().map(|s| s.nome.clone()).collect();
+    let names: Vec<_> = l.samples().iter().map(|s| s.name.clone()).collect();
     let wanted: Vec<_> = r["names"]
         .as_array()
         .unwrap()

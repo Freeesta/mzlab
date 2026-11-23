@@ -40,8 +40,9 @@ pub struct Config {
     #[serde(default)]
     pub esterne: bool,
     /// the folder of the data pointed at by the user (`folder.rs`)
-    #[serde(default)]
-    pub dati: Option<String>,
+    // the saved key is unchanged: an existing `config.json` keeps its meaning (keys are a later family)
+    #[serde(default, rename = "dati")]
+    pub data: Option<String>,
     /// the notice «make mzLab the default app?» (`opening.rs`): files opened from outside so far, and the answer that ends the notice
     #[serde(default)]
     pub aperture: u32,
