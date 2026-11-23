@@ -3,7 +3,7 @@
 reaches the right edge, and its bar is the thick one; (2) a live indicator follows the cursor: a low-contrast chip with RT (min) and m/z that never takes a pointer
 event, stays inside the map and flips near the edges, and a dot on the XIC at the cursor RT; the arrow keys move both; (3) the segmented buttons mark | snap | sight
 sit on one baseline, with no seam between two active neighbours and the height of the 3D button, in the light and the dark theme."""
-# covers: mzlab/web/mappa.js
+# covers: mzlab/web/mappa.js, mzlab/web/mappa-cursore.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
