@@ -97,10 +97,10 @@ fn read_from_header(byte: Vec<u8>) -> (u64, u64) {
     let dim = byte.len() as u64;
     let read_items = Rc::new(Cell::new(0));
     let fs = FileSet {
-        membri: vec![Member {
-            nome: "campione.mzML".into(),
+        members: vec![Member {
+            name: "campione.mzML".into(),
             dim,
-            dati: Box::new(Counter(byte, read_items.clone())),
+            data: Box::new(Counter(byte, read_items.clone())),
             sha1: None,
         }],
     };

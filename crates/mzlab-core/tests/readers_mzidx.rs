@@ -49,9 +49,9 @@ fn json_at(b: &[u8], off: usize, len: usize) -> Value {
 
 fn file(name: &str, bytes: Vec<u8>) -> Member {
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: bytes.len() as u64,
-        dati: Box::new(bytes),
+        data: Box::new(bytes),
         sha1: None,
     }
 }
@@ -59,9 +59,9 @@ fn file(name: &str, bytes: Vec<u8>) -> Member {
 fn on_disk(dir: &Path, rel: &str) -> Member {
     let f = std::fs::File::open(dir.join(rel)).unwrap();
     Member {
-        nome: rel.into(),
+        name: rel.into(),
         dim: f.metadata().unwrap().len(),
-        dati: Box::new(f),
+        data: Box::new(f),
         sha1: None,
     }
 }
@@ -260,7 +260,7 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn wiff_set(dir: &Path, name: &str) -> FileSet {
     FileSet {
-        membri: vec![
+        members: vec![
             on_disk(dir, &format!("{name}.wiff")),
             on_disk(dir, &format!("{name}.wiff.scan")),
         ],
@@ -273,7 +273,7 @@ fn d_set(dir: &Path) -> FileSet {
     let mut files = Vec::new();
     walk(dir, &mut files);
     FileSet {
-        membri: files
+        members: files
             .iter()
             .map(|f| {
                 let rel = f
@@ -292,7 +292,7 @@ fn d_set(dir: &Path) -> FileSet {
 fn a_sections_mismatch_names_its_array() {
     let (idx, peak) = encode(&sample());
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             file("x.D/AcqData/MSScan.bin", idx),
             file("x.D/AcqData/MSPeak.bin", peak),
         ],
@@ -321,7 +321,7 @@ fn a_sections_mismatch_names_its_array() {
 fn a_synthetic_d_gives_the_index_of_its_mzml() {
     let (idx, peak) = encode(&sample());
     let make = || FileSet {
-        membri: vec![
+        members: vec![
             file("x.D/AcqData/MSScan.bin", idx.clone()),
             file("x.D/AcqData/MSPeak.bin", peak.clone()),
         ],
@@ -429,7 +429,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
             f.file_name().unwrap().to_string_lossy(),
         );
         count(&name, &|| FileSet {
-            membri: vec![on_disk(dir, &name)],
+            members: vec![on_disk(dir, &name)],
         });
     }
     eprintln!("read_mzidx.rs: {samples} real samples equal ({scans} scans)");

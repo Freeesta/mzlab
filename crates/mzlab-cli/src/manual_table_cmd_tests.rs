@@ -256,14 +256,14 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let member = |file: &str| {
         let bytes = std::fs::read(d.join(file)).unwrap();
         Member {
-            nome: file.into(),
+            name: file.into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     let set = FileSet {
-        membri: vec![member("sim3.wiff"), member("sim3.wiff.scan")],
+        members: vec![member("sim3.wiff"), member("sim3.wiff.scan")],
     };
     let mut l = readers::open(set, &Limits::sito()).unwrap();
     let mut files = Vec::new();

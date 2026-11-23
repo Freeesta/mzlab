@@ -60,9 +60,9 @@ pub const RT: [f32; 3] = [0.5, 1.0, 1.5];
 
 fn member(folder: &str, name: &str, byte: Vec<u8>) -> Member {
     Member {
-        nome: format!("{folder}/{name}"),
+        name: format!("{folder}/{name}"),
         dim: byte.len() as u64,
-        dati: Box::new(byte),
+        data: Box::new(byte),
         sha1: None,
     }
 }
@@ -112,7 +112,7 @@ $$ Cal Function 1: 0,1,T1\r\n"
 /// The folder `SYN_001.raw` as a `FileSet`.
 pub fn synthetic_set() -> FileSet {
     FileSet {
-        membri: folder_file()
+        members: folder_file()
             .into_iter()
             .map(|(n, b)| member("SYN_001.raw", &n, b))
             .collect(),
@@ -122,7 +122,7 @@ pub fn synthetic_set() -> FileSet {
 /// A `FileSet` from `(name, bytes)` files.
 pub fn file_set(file: Vec<(String, Vec<u8>)>) -> FileSet {
     FileSet {
-        membri: file
+        members: file
             .into_iter()
             .map(|(n, b)| member("X.raw", &n, b))
             .collect(),

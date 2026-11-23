@@ -59,7 +59,7 @@ pub(super) fn open_member(
     let known = m.sha1.take().filter(|h| !h.is_empty());
     let (len, src) = (
         m.dim,
-        std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
+        std::mem::replace(&mut m.data, Box::new(Vec::<u8>::new())),
     );
     Ok(container_at(src, len, name, limits)?.with_sha1(known))
 }

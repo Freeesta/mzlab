@@ -27,13 +27,13 @@ pub fn folder(rel: &str) -> Option<FileSet> {
         }
         let f = std::fs::File::open(&p).ok()?;
         members.push(Member {
-            nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
+            name: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
-            dati: Box::new(f),
+            data: Box::new(f),
             sha1: None,
         });
     }
-    Some(FileSet { membri: members })
+    Some(FileSet { members })
 }
 
 pub fn open(rel: &str) -> Option<Box<dyn Reader>> {
@@ -88,7 +88,7 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
             let h = l.scan_header(0, k).unwrap();
             let reference = h
                 .iter()
-                .any(|f| f.nome == "role" && f.valore == "lock mass reference");
+                .any(|f| f.name == "role" && f.valore == "lock mass reference");
             let tol = if reference { 0.10 } else { 2e-3 };
             if idx[k].tic > 0.0 {
                 assert!(

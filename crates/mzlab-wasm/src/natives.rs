@@ -81,19 +81,19 @@ impl Members {
     }
 
     pub(crate) fn fileset(&self) -> FileSet {
-        let membri = self
+        let members = self
             .names
             .iter()
             .zip(&self.sizes)
             .enumerate()
             .map(|(i, (n, &s))| Member {
-                nome: n.clone(),
+                name: n.clone(),
                 dim: s as u64,
-                dati: member::member(&self.read, i as u32, s as u64),
+                data: member::member(&self.read, i as u32, s as u64),
                 sha1: None,
             })
             .collect();
-        FileSet { membri }
+        FileSet { members }
     }
 }
 
@@ -108,7 +108,7 @@ impl Members {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
     fn open_fs(&self, fs: FileSet, listing: bool) -> mzlab_core::Result<Box<dyn Reader>> {
         let sha1: Vec<String> = fs
-            .membri
+            .members
             .iter()
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();

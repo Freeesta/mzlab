@@ -244,10 +244,10 @@ use mzlab_core::readers::{FileSet, Limits, Member};
 /// Everything the module does with a file, on whatever opens: the index, some scans, their headers, the chromatograms and the method. None of it may panic.
 fn through_the_module(bytes: Vec<u8>) {
     let set = FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     };
@@ -450,10 +450,10 @@ fn an_srm_run_without_events_has_no_polarity() {
     assert_eq!((m.ms_level, m.polarity), (Some(2), None));
     let mut l = mzlab_lettori::open(
         mzlab_core::readers::FileSet {
-            membri: vec![mzlab_core::readers::Member {
-                nome: "x.raw".into(),
+            members: vec![mzlab_core::readers::Member {
+                name: "x.raw".into(),
                 dim: b.len() as u64,
-                dati: Box::new(b),
+                data: Box::new(b),
                 sha1: None,
             }],
         },

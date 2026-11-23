@@ -18,13 +18,13 @@ fn the_acquisition_program_is_a_valid_software_term() {
         ],
     );
     let m = |n: &str, b: Vec<u8>| Member {
-        nome: format!("x.d/{n}"),
+        name: format!("x.d/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
+        members: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
     let mut l = mzlab_lettori::open(fs, &Limits::desktop()).unwrap();
     let mut out = Vec::new();

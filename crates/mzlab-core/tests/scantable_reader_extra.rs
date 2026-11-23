@@ -165,7 +165,7 @@ fn reader(n: usize, seed: u64, finished: bool, to_text: bool) -> One {
     One {
         campioni: vec![Sample {
             id: 1,
-            nome: "uno".into(),
+            name: "uno".into(),
             scansioni: tabs.len(),
             size: None,
         }],

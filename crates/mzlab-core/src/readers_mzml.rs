@@ -15,7 +15,7 @@ fn simple(l: &dyn Reader, c: usize) -> Header {
     let name = l
         .samples()
         .get(c)
-        .map(|s| s.nome.clone())
+        .map(|s| s.name.clone())
         .unwrap_or_default();
     Header {
         run: name.clone(),

@@ -9,13 +9,13 @@ mod common_sqlite;
 fn open() -> Box<dyn Reader> {
     let (tdf, bin) = common_sqlite::pasef::folder(3, 3000, 800);
     let m = |n: &str, b: Vec<u8>| Member {
-        nome: format!("x.d/{n}"),
+        name: format!("x.d/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
+        members: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
     mzlab_lettori::open(fs, &Limits::desktop()).unwrap()
 }

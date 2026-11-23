@@ -37,12 +37,12 @@ fn rounds() -> usize {
 
 fn set_of(members: &[(String, Vec<u8>)]) -> FileSet {
     FileSet {
-        membri: members
+        members: members
             .iter()
             .map(|(name, b)| Member {
-                nome: name.clone(),
+                name: name.clone(),
                 dim: b.len() as u64,
-                dati: Box::new(b.clone()),
+                data: Box::new(b.clone()),
                 sha1: None,
             })
             .collect(),

@@ -33,14 +33,14 @@ fn set(dir: &Path, stem: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{stem}.wiff")),
             member(format!("{stem}.wiff.scan")),
         ],

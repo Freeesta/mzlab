@@ -134,7 +134,7 @@ fn molfile(p: Option<String>) -> std::result::Result<String, String> {
 
 /// The view named after `--view`.
 fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View, String> {
-    mzlab_feat::msnfigure::View::da_nome(&n.unwrap_or_default())
+    mzlab_feat::msnfigure::View::from_name(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
 }
 

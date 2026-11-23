@@ -108,10 +108,10 @@ fn a_numpress_mzml_opens_in_the_app_and_answers_as_its_plain_twin() {
     let map = Mapped::open(&np).unwrap();
     let dim = map.bytes().len() as u64;
     let set = FileSet {
-        membri: vec![Member {
-            nome: "np.mzML".into(),
+        members: vec![Member {
+            name: "np.mzML".into(),
             dim,
-            dati: Box::new(MapAt(Arc::new(map))),
+            data: Box::new(MapAt(Arc::new(map))),
             sha1: None,
         }],
     };

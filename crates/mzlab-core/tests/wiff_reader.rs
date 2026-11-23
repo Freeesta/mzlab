@@ -16,14 +16,14 @@ fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
         Member {
-            nome: file,
+            name: file,
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }
     };
     FileSet {
-        membri: vec![
+        members: vec![
             member(format!("{name}.wiff")),
             member(format!("{name}.wiff.scan")),
         ],
@@ -187,11 +187,11 @@ fn no_idx(dir: &Path, name: &str) {
 fn truncated(dir: &Path, name: &str) {
     let mut whole = readers::open(set(dir, name), &Limits::sito()).unwrap();
     let mut fs = set(dir, name);
-    let scan = &mut fs.membri[1];
+    let scan = &mut fs.members[1];
     let mut bytes = vec![0u8; scan.dim as usize / 2];
-    scan.dati.read_at(0, &mut bytes).unwrap();
+    scan.data.read_at(0, &mut bytes).unwrap();
     scan.dim = bytes.len() as u64;
-    scan.dati = Box::new(bytes);
+    scan.data = Box::new(bytes);
     let mut cut = mzlab_core::wiff::reader::open_only(fs, &Limits::sito(), Some(0)).unwrap();
     let (n, k) = (whole.index(0).unwrap().len(), cut.index(0).unwrap().len());
     assert_eq!(whole.missing(0), 0, "{name}: the whole pair lacks nothing");
@@ -283,10 +283,13 @@ fn mzml_of_one_sample(dir: &Path, name: &str) {
 fn mzml_with_known_sha1(dir: &Path, name: &str) {
     let mut known = set(dir, name);
     mzlab_core::upload::impronte(&mut known).unwrap();
-    assert!(known.membri[1].sha1.as_ref().is_some_and(|s| s.len() == 40));
+    assert!(known.members[1]
+        .sha1
+        .as_ref()
+        .is_some_and(|s| s.len() == 40));
     let mut empty = set(dir, name);
     empty
-        .membri
+        .members
         .iter_mut()
         .for_each(|m| m.sha1 = Some(String::new()));
     let want = mzml_of(readers::open(set(dir, name), &Limits::sito()).unwrap(), 0);
@@ -313,10 +316,10 @@ fn the_real_files_read_the_same_through_the_registry() {
 #[test]
 fn a_wiff_alone_is_not_sure_and_not_a_wiff_is_refused() {
     let wiff = |bytes: Vec<u8>, name: &str| FileSet {
-        membri: vec![Member {
-            nome: name.into(),
+        members: vec![Member {
+            name: name.into(),
             dim: bytes.len() as u64,
-            dati: Box::new(bytes),
+            data: Box::new(bytes),
             sha1: None,
         }],
     };

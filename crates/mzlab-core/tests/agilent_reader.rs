@@ -23,13 +23,13 @@ fn set_of(dir: &std::path::Path) -> FileSet {
             .replace('\\', "/");
         let file = std::fs::File::open(&entry).unwrap();
         members.push(Member {
-            nome: format!("{name}/{rel}"),
+            name: format!("{name}/{rel}"),
             dim: file.metadata().unwrap().len(),
-            dati: Box::new(file),
+            data: Box::new(file),
             sha1: None,
         });
     }
-    FileSet { membri: members }
+    FileSet { members }
 }
 
 fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
@@ -103,7 +103,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
         );
         assert!(
             h.iter()
-                .any(|c| c.nome == "TIC" && c.valore == r0.tic.to_string()),
+                .any(|c| c.name == "TIC" && c.valore == r0.tic.to_string()),
             "{label}"
         );
         chromatograms_and_method(l.as_mut(), &run, &label);
@@ -135,13 +135,13 @@ fn chromatograms_and_method(l: &mut dyn Reader, run: &Run, label: &str) {
 fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     let (idx, peak) = encode(&sample());
     let member = |name: &str, b: &[u8]| Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b.to_vec()),
+        data: Box::new(b.to_vec()),
         sha1: None,
     };
     let set = |scan: &[u8], with_peak: bool| FileSet {
-        membri: [
+        members: [
             Some(member("x.D/AcqData/MSScan.bin", scan)),
             with_peak.then(|| member("x.D/AcqData/MSPeak.bin", &peak)),
         ]

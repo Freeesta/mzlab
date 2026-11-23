@@ -78,7 +78,7 @@ impl Reader for ShimadzuReader {
             .zip(self.d.pos.get(k))
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         let field = |name: &str, value: String| Field {
-            nome: name.into(),
+            name: name.into(),
             valore: value,
             unita: None,
             cv: None,

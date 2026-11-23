@@ -348,12 +348,12 @@ struct Halting {
 impl Halting {
     fn file_set(self, path: &Path) -> Result<FileSet> {
         let mut fs = flow_set::file_set(path)?;
-        fs.membri = fs
-            .membri
+        fs.members = fs
+            .members
             .into_iter()
             .map(|m| Member {
-                dati: Box::new(HaltingAt {
-                    r: m.dati,
+                data: Box::new(HaltingAt {
+                    r: m.data,
                     stop: self.stop.clone(),
                     halt: self.halt.clone(),
                 }),

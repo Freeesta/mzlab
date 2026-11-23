@@ -31,10 +31,10 @@ pub(super) struct Folder {
 impl Folder {
     pub(super) fn new(fs: FileSet, limits: Limits) -> Folder {
         let name = fs
-            .membri
+            .members
             .iter()
             .find_map(|m| {
-                let n = m.nome.replace('\\', "/");
+                let n = m.name.replace('\\', "/");
                 let dir = n.rsplit_once('/')?.0.to_string();
                 Some(base(&dir).to_string())
             })
@@ -46,9 +46,9 @@ impl Folder {
     /// Index of the member called `file` (case ignored).
     pub(super) fn search(&self, file: &str) -> Option<usize> {
         self.fs
-            .membri
+            .members
             .iter()
-            .position(|m| base(&m.nome).eq_ignore_ascii_case(file))
+            .position(|m| base(&m.name).eq_ignore_ascii_case(file))
     }
 
     /// The whole member `file`, or `None` when the folder has none; a member that is there and over the limit, or unreadable, is an error, never
@@ -66,7 +66,7 @@ impl Folder {
         let Some(i) = self.search(file) else {
             return Ok(None);
         };
-        let m = &mut self.fs.membri[i];
+        let m = &mut self.fs.members[i];
         // past the small cap of a fixed member: a damaged size; past the byte limit: a run too big to hold here
         if m.dim > cap && cap < self.limits.byte {
             return Err(Error::memory_budget());
@@ -74,7 +74,7 @@ impl Folder {
         self.limits.fits(m.dim)?;
         let n = usize::try_from(m.dim).map_err(|_| Error::memory_budget())?;
         let mut b = vec![0u8; n];
-        m.dati.read_at(0, &mut b)?;
+        m.data.read_at(0, &mut b)?;
         Ok(Some(b))
     }
 
@@ -82,7 +82,7 @@ impl Folder {
     pub(super) fn read_from(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
         let m = self
             .fs
-            .membri
+            .members
             .get_mut(i)
             .ok_or_else(|| read_error("member"))?;
         let fine = off.checked_add(len).ok_or_else(|| damage("range"))?;
@@ -91,7 +91,7 @@ impl Folder {
         }
         self.limits.fits(len)?;
         let mut b = vec![0u8; usize::try_from(len).map_err(|_| Error::memory_budget())?];
-        m.dati.read_at(off, &mut b)?;
+        m.data.read_at(off, &mut b)?;
         Ok(b)
     }
 }
@@ -127,10 +127,10 @@ mod tests {
     #[test]
     fn windows_member_path_names_the_folder() {
         let fs = FileSet {
-            membri: vec![Member {
-                nome: "campione.raw\\_FUNC001.DAT".into(),
+            members: vec![Member {
+                name: "campione.raw\\_FUNC001.DAT".into(),
                 dim: 0,
-                dati: Box::new(Vec::<u8>::new()),
+                data: Box::new(Vec::<u8>::new()),
                 sha1: None,
             }],
         };

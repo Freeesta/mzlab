@@ -61,11 +61,11 @@ pub struct KnownLoss {
 /// The table of the known neutral losses, in the order of the source (Hill formulas).
 pub fn known_losses() -> Vec<KnownLoss> {
     NOTE.iter()
-        .filter_map(|(f, nome)| {
+        .filter_map(|(f, name)| {
             let p = parse_formula(f).ok()?;
             Some(KnownLoss {
                 formula: fmt(&p),
-                name: nome,
+                name,
                 massa: mass(&p),
             })
         })

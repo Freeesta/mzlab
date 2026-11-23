@@ -110,7 +110,7 @@ impl NumpressReader {
 
 fn field(name: &str, value: impl ToString, units: Option<&str>, cv: Option<&str>) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value.to_string(),
         unita: units.map(str::to_string),
         cv: cv.map(str::to_string),
@@ -266,7 +266,7 @@ fn recognize(fs: &mut FileSet) -> Fiducia {
     let Some(i) = fs.find(".mzml") else {
         return Fiducia::No;
     };
-    let dim = fs.membri.get(i).map_or(0, |m| m.dim);
+    let dim = fs.members.get(i).map_or(0, |m| m.dim);
     let mut n = HEAD;
     loop {
         let head = fs.testa(i, n);
@@ -368,16 +368,16 @@ impl Reader for NumpressReader {
 pub(super) fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs.find(".mzml").ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
-    let m = fs.membri.get_mut(i).ok_or(refused)?;
-    let nome = m
-        .nome
+    let m = fs.members.get_mut(i).ok_or(refused)?;
+    let name = m
+        .name
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or("x.mzML")
         .to_string();
     let dim = m.dim;
-    let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let table = scantable::read(&mut dati, dim)?;
+    let mut data: Box<dyn ReadAt> = std::mem::replace(&mut m.data, Box::new(Vec::<u8>::new()));
+    let table = scantable::read(&mut data, dim)?;
     limits.ok_entries(table.rows.len() as u64)?;
     let mut index = Vec::with_capacity(table.rows.len());
     for (k, r) in table.rows.iter().enumerate() {
@@ -405,21 +405,21 @@ pub(super) fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> 
             }),
         });
     }
-    let stem = nome
+    let stem = name
         .rsplit_once('.')
-        .map_or(nome.as_str(), |(s, _)| s)
+        .map_or(name.as_str(), |(s, _)| s)
         .to_string();
-    let cut = !closed(&mut *dati, dim);
+    let cut = !closed(&mut *data, dim);
     Ok(Box::new(NumpressReader {
-        data: dati,
+        data,
         dim,
         campioni: vec![Sample {
             id: 1,
-            nome: stem,
+            name: stem,
             scansioni: index.len(),
             size: None,
         }],
-        name: nome,
+        name,
         limits: *limits,
         declared: table.declared,
         cut,

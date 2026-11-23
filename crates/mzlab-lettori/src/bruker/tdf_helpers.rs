@@ -62,7 +62,7 @@ pub(super) fn legacy_key(fs: &FileSet) -> Option<&'static str> {
     if fs.find("analysis.tdf").is_some() || fs.find("analysis.tsf").is_some() {
         return None;
     }
-    let names: Vec<String> = fs.membri.iter().map(|m| m.nome.to_lowercase()).collect();
+    let names: Vec<String> = fs.members.iter().map(|m| m.name.to_lowercase()).collect();
     let base = |n: &str| n.rsplit('/').next().unwrap_or(n).to_string();
     // directly inside the `.d` folder, as the page groups the members of a `.d` (agilent-d.js `BrukerD`)
     let in_d = |n: &str| {
@@ -108,7 +108,7 @@ pub(super) fn recognize(fs: &mut FileSet, base: &str) -> Fiducia {
     Fiducia::Si
 }
 
-/// The error of a folder that lacks `file` (`analysis.tsf`, `analysis.tdf_bin`, ...); `nome`: a member of the folder.
+/// The error of a folder that lacks `file` (`analysis.tsf`, `analysis.tdf_bin`, ...); `name`: a member of the folder.
 pub(super) fn absent(name: &str, file: &str) -> Error {
     Error::new("err.file.brukerNoBin")
         .with("name", cartella(name).unwrap_or(name))
@@ -146,7 +146,7 @@ pub(super) fn no_calibration(frame: i64) -> Error {
 
 pub(super) fn take(fs: &mut FileSet, suffix: &str) -> Option<Member> {
     let i = fs.find(suffix)?;
-    Some(fs.membri.remove(i))
+    Some(fs.members.remove(i))
 }
 
 #[cfg(test)]

@@ -73,7 +73,7 @@ fn centroids_of_the_reader_are_not_touched() {
     let l = Alternato {
         campioni: vec![Sample {
             id: 0,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: n,
             size: None,
         }],
@@ -96,7 +96,7 @@ fn alternato(n: usize) -> Alternato {
     Alternato {
         campioni: vec![Sample {
             id: 0,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: n,
             size: None,
         }],

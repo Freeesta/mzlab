@@ -48,7 +48,7 @@ impl Denso {
         let mut t = vec![0u8; n * 12];
         file.read_exact_at(&mut t, 8)?;
         let voci = (0..n).map(|k| entry(k, &t[k * 12..k * 12 + 12])).collect();
-        let nome = path
+        let name = path
             .file_name()
             .map_or(String::new(), |s| s.to_string_lossy().into_owned());
         Ok(Denso {
@@ -56,11 +56,11 @@ impl Denso {
             entries: voci,
             campioni: vec![Sample {
                 id: 1,
-                nome: "denso".into(),
+                name: "denso".into(),
                 scansioni: n,
                 size: None,
             }],
-            name: nome,
+            name,
             buf: Vec::new(),
             campi_trailer: 130,
         })

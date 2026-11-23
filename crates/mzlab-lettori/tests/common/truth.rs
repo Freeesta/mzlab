@@ -198,9 +198,9 @@ fn set_of(native: &Path) -> Option<mzlab_core::readers::FileSet> {
     fn member(p: &Path, name: String) -> Option<Member> {
         let f = std::fs::File::open(p).ok()?;
         Some(Member {
-            nome: name,
+            name,
             dim: f.metadata().ok()?.len(),
-            dati: Box::new(f),
+            data: Box::new(f),
             sha1: None,
         })
     }
@@ -235,7 +235,7 @@ fn set_of(native: &Path) -> Option<mzlab_core::readers::FileSet> {
             }
         }
     }
-    Some(FileSet { membri: members })
+    Some(FileSet { members })
 }
 
 /// The tolerances a truth asks for: `"hr"`, `"lr"`, or an object that overrides single fields of the family default (`mz_ppm` null = by Da, `mz_da`, `rt_min`, `intensita_rel`, `cromatogramma_rel`),

@@ -18,9 +18,9 @@ static ALLOCATORE: Counter = Counter;
 /// A member whose declared size (`dim`) can differ from its bytes.
 fn member(name: &str, b: &[u8], dim: Option<u64>) -> Member {
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: dim.unwrap_or(b.len() as u64),
-        dati: Box::new(Letture(b.to_vec())),
+        data: Box::new(Letture(b.to_vec())),
         sha1: None,
     }
 }
@@ -28,11 +28,11 @@ fn member(name: &str, b: &[u8], dim: Option<u64>) -> Member {
 fn reads(members: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
     let mut k = Vec::new();
     let mut fs = FileSet {
-        membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
+        members: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
     let _ = readers::riconosci(&mut fs);
     let fs = FileSet {
-        membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
+        members: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
     if let Some(mut l) = note(readers::open(fs, &Limits::sito()), &mut k) {
         if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {

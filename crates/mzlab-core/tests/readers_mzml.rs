@@ -25,13 +25,13 @@ fn agilent_through_the_reader_gives_the_spectra_of_the_run() {
         d.run(&mut peak.clone()).unwrap()
     };
     let member = |name: &str, b: &[u8]| Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b.to_vec()),
+        data: Box::new(b.to_vec()),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member("x.D/AcqData/MSScan.bin", &idx),
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],
@@ -57,14 +57,14 @@ fn agilent_through_the_reader_gives_the_spectra_of_the_run() {
 fn indexed_form_has_the_same_scans_and_a_working_index() {
     use mzlab_core::mzmlwrite::{Options, ProcStep};
     let (idx, peak) = encode(&sample());
-    let member = |nome: &str, b: &[u8]| Member {
-        nome: nome.into(),
+    let member = |name: &str, b: &[u8]| Member {
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b.to_vec()),
+        data: Box::new(b.to_vec()),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member("x.D/AcqData/MSScan.bin", &idx),
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],

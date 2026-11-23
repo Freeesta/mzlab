@@ -20,9 +20,9 @@ fn prints(l: &mut WatersReader) -> &[Option<String>] {
     if l.sha1.is_none() {
         let v =
             l.c.fs
-                .membri
+                .members
                 .iter_mut()
-                .map(|m| sha1_hex(&mut m.dati, m.dim).ok())
+                .map(|m| sha1_hex(&mut m.data, m.dim).ok())
                 .collect();
         l.sha1 = Some(v);
     }
@@ -275,11 +275,11 @@ fn origin(l: &mut WatersReader) -> Source {
     let sha = prints(l).to_vec();
     let mut files: Vec<SrcFile> =
         l.c.fs
-            .membri
+            .members
             .iter()
             .zip(sha)
             .map(|(m, s)| SrcFile {
-                name: base(&m.nome).to_string(),
+                name: base(&m.name).to_string(),
                 sha1: s,
                 bytes: m.dim,
             })
@@ -361,8 +361,8 @@ pub(super) fn file_header(l: &mut WatersReader) -> Result<Header> {
         ],
         ..Header::default()
     };
-    for (m, s) in l.c.fs.membri.iter().zip(sha) {
-        let n = base(&m.nome);
+    for (m, s) in l.c.fs.members.iter().zip(sha) {
+        let n = base(&m.name);
         if n.len() == 12
             && n.to_ascii_uppercase().starts_with("_FUNC")
             && n.to_ascii_uppercase().ends_with(".DAT")

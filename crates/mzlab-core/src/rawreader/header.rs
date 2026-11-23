@@ -17,7 +17,7 @@ fn file_header(l: &mut RawReader) -> Header {
     let run = l
         .campioni
         .first()
-        .map(|c| c.nome.clone())
+        .map(|c| c.name.clone())
         .unwrap_or_default();
     let document = crate::raw::method_sha1(&l.raw, &mut l.src, &l.name, sha1.clone(), &l.notes);
     let acquired = t

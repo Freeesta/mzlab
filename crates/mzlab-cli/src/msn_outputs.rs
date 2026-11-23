@@ -91,7 +91,7 @@ pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<St
             "--out" => out = a.next().map(PathBuf::from),
             "--figure" => fs = formats(&a.next().unwrap_or_default())?,
             "--view" => {
-                view = View::da_nome(&a.next().unwrap_or_default())
+                view = View::from_name(&a.next().unwrap_or_default())
                     .ok_or("--view needs tree or radial")?
             }
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),

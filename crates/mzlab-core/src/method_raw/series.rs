@@ -95,7 +95,7 @@ pub type Rows<'a> = &'a mut dyn FnMut(Row<'_>);
 fn spec(
     id: String,
     gruppo: String,
-    nome: String,
+    name: String,
     unita: String,
     s: &Statistics,
     campo: usize,
@@ -105,7 +105,7 @@ fn spec(
         entry: Entry {
             id,
             group: gruppo,
-            name: nome,
+            name,
             unita,
             n: s.n,
             min: s.min,

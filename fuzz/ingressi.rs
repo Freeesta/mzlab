@@ -10,14 +10,14 @@ use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::{methodinfo, raw, wiff, xmltree};
 use mzlab_lib::parse::{parse_all, Format};
 
-fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
+fn insieme(members: Vec<(&str, Vec<u8>)>) -> FileSet {
     FileSet {
-        membri: membri
+        members: members
             .into_iter()
-            .map(|(nome, b)| Member {
-                nome: nome.into(),
+            .map(|(name, b)| Member {
+                name: name.into(),
                 dim: b.len() as u64,
-                dati: Box::new(b),
+                data: Box::new(b),
                 sha1: None,
             })
             .collect(),
@@ -91,9 +91,9 @@ pub fn wiff(data: &[u8]) {
             let _ = wiff::Wiff::open(&o, "x.wiff", Some(scan.len() as u64), s);
         }
     }
-    let membri = vec![("x.wiff", w.to_vec()), ("x.wiff.scan", scan.to_vec())];
-    let _ = readers::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = readers::open(insieme(membri), &Limits::sito()) else {
+    let members = vec![("x.wiff", w.to_vec()), ("x.wiff.scan", scan.to_vec())];
+    let _ = readers::riconosci(&mut insieme(members.clone()));
+    let Ok(mut l) = readers::open(insieme(members), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {

@@ -98,10 +98,10 @@ fn file(
 fn open(byte: Vec<u8>) -> (Box<dyn Reader>, Rc<Cell<usize>>) {
     let reads = Rc::new(Cell::new(0));
     let fs = FileSet {
-        membri: vec![Member {
-            nome: "campione.cdf".into(),
+        members: vec![Member {
+            name: "campione.cdf".into(),
             dim: byte.len() as u64,
-            dati: Box::new(Counter(byte, reads.clone())),
+            data: Box::new(Counter(byte, reads.clone())),
             sha1: None,
         }],
     };

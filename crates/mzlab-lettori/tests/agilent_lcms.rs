@@ -53,7 +53,7 @@ fn set_of(dir: &Path) -> FileSet {
     walk(dir, &mut files);
     files.sort();
     FileSet {
-        membri: files
+        members: files
             .into_iter()
             .map(|f| {
                 let rel = f
@@ -63,9 +63,9 @@ fn set_of(dir: &Path) -> FileSet {
                     .replace('\\', "/");
                 let file = std::fs::File::open(&f).unwrap();
                 Member {
-                    nome: format!("{name}/{rel}"),
+                    name: format!("{name}/{rel}"),
                     dim: file.metadata().unwrap().len(),
-                    dati: Box::new(file),
+                    data: Box::new(file),
                     sha1: None,
                 }
             })
@@ -229,7 +229,7 @@ fn srm_traces_match_msconvert() {
 
 fn field(h: &[mzlab_core::readers::Field], name: &str) -> f64 {
     h.iter()
-        .find(|c| c.nome == name)
+        .find(|c| c.name == name)
         .unwrap()
         .valore
         .parse()

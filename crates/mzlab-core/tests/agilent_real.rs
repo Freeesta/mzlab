@@ -275,7 +275,7 @@ fn data_ms_agrees_with_acqdata_and_opens_alone() {
             );
         }
         let out = conv_help::mzml(mzlab_core::readers::FileSet {
-            membri: vec![conv_help::member("x.D/data.ms", &bytes)],
+            members: vec![conv_help::member("x.D/data.ms", &bytes)],
         });
         assert_eq!(
             mzml::read(&out[..]).unwrap().spectra.len(),

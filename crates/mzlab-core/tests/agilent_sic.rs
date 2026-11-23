@@ -43,7 +43,7 @@ fn sim_scans_give_one_sic_per_ion_and_it_is_written() {
         (vec![10.0, 20.0, 30.0], 3)
     );
     let out = conv_help::mzml(FileSet {
-        membri: vec![
+        members: vec![
             conv_help::member("x.D/AcqData/MSScan.bin", &idx),
             conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
         ],

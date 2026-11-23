@@ -438,7 +438,7 @@ pub fn screen_campaign(
     let mut by_name: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for s in structures.iter().filter(|s| s.first_block.is_some()) {
         by_name
-            .entry(&s.nome_comune)
+            .entry(&s.common_name)
             .or_default()
             .insert(s.first_block.as_deref().unwrap_or(""));
     }

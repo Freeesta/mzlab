@@ -34,7 +34,7 @@ impl AgilentReader {
             .map_or_else(|| d.name.clone(), str::to_string);
         let samples = vec![Sample {
             id: 1,
-            nome: name,
+            name,
             scansioni: scans.len(),
             size: None,
         }];
@@ -128,17 +128,17 @@ const OTHERS: [&str; 8] = [
 /// The index of the member named `name` (a path inside the folder, any case, with or without a folder in front).
 fn find(fs: &FileSet, name: &str) -> Option<usize> {
     let low = name.to_lowercase();
-    fs.membri.iter().position(|m| {
-        let n = m.nome.to_lowercase().replace('\\', "/");
+    fs.members.iter().position(|m| {
+        let n = m.name.to_lowercase().replace('\\', "/");
         n == low || n.ends_with(&format!("/{low}"))
     })
 }
 
 /// The name of the `.D` folder as the members say it (`run.D/AcqData/…`), else a neutral one.
 fn folder_name(fs: &FileSet) -> String {
-    fs.membri
+    fs.members
         .iter()
-        .flat_map(|m| m.nome.split(['/', '\\']))
+        .flat_map(|m| m.name.split(['/', '\\']))
         .find(|p| p.to_lowercase().ends_with(".d") && p.len() > 2)
         .unwrap_or("run.D")
         .to_string()
@@ -150,7 +150,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
         let start = head
             .get(88..92)
             .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64);
-        let dim = fs.membri[i].dim as i64;
+        let dim = fs.members[i].dim as i64;
         let fits =
             head.len() == super::scan::HEADER_LEN && start.is_some_and(|s| (92..=dim).contains(&s));
         return match (fits, find(fs, PEAK).is_some()) {
@@ -167,7 +167,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 
 fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Field {
     Field {
-        nome: name.into(),
+        name: name.into(),
         valore: value.to_string(),
         unita: unit.map(str::to_string),
         cv: cv.map(str::to_string),
@@ -204,7 +204,7 @@ fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Field> {
     ];
     if r.collision_energy.is_none() {
         // a layout without the field: no energy was decoded, none is shown
-        v.retain(|f| f.nome != "CollisionEnergy");
+        v.retain(|f| f.name != "CollisionEnergy");
     }
     if let Some(u) = r.uncompressed {
         v.push(field("UncompressedByteCount", u, None, None));
@@ -315,7 +315,7 @@ fn trace(l: &mut AgilentReader, id: &str) -> Result<Chromatogram> {
 
 fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = folder_name(&fs);
-    limits.ok_entries(fs.membri.len() as u64)?;
+    limits.ok_entries(fs.members.len() as u64)?;
     let mut left = limits.byte;
     let mut small: Vec<(&str, Vec<u8>)> = Vec::new();
     let mut unread = Vec::new();
@@ -338,7 +338,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     };
     let peak_at = find(&fs, PEAK);
     let peak_at = peak_at
-        .filter(|&i| fs.membri[i].dim > 0)
+        .filter(|&i| fs.members[i].dim > 0)
         .or_else(|| find(&fs, PROFILE))
         .or(peak_at);
     let mut lc = lc::read_lc(&mut fs, &mut left, limits);
@@ -347,7 +347,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         Some(i) if find(&fs, PROFILE) == Some(i) => PROFILE,
         _ => PEAK,
     };
-    let peak_len = peak_at.map_or(0, |i| fs.membri[i].dim);
+    let peak_len = peak_at.map_or(0, |i| fs.members[i].dim);
     let others: Vec<(&str, &[u8])> = small
         .iter()
         .filter(|(k, _)| OTHERS.contains(k))
@@ -370,7 +370,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let d = lc.apply(d, get(DEVICES), data_file);
     limits.ok_entries(d.records.len() as u64)?;
     let peak =
-        peak_at.map(|i| std::mem::replace(&mut fs.membri[i].dati, Box::new(Vec::<u8>::new())));
+        peak_at.map(|i| std::mem::replace(&mut fs.members[i].data, Box::new(Vec::<u8>::new())));
     Ok(Box::new(AgilentReader::new(
         d,
         peak,

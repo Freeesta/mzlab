@@ -59,7 +59,7 @@ fn figure_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     // png is rasterised here (resvg, feature `png`); svg and html are the text the `.wasm` `msnfigura` writes too
     let bytes = if format == "png" {
         let text = String::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
-        let view = View::da_nome(view).ok_or_else(|| bad_param("view", view))?;
+        let view = View::from_name(view).ok_or_else(|| bad_param("view", view))?;
         bytes(&text, Format::Png, view)?
     } else {
         figure_text(&graph, format, view)?.into_bytes()

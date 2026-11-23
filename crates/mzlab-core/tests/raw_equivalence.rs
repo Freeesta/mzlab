@@ -24,10 +24,10 @@ fn hashes(path: &Path) -> (String, String, String, String) {
     let name = path.file_name().unwrap().to_string_lossy().into_owned();
     let dim = std::fs::metadata(path).unwrap().len();
     let set = || FileSet {
-        membri: vec![Member {
-            nome: name.clone(),
+        members: vec![Member {
+            name: name.clone(),
             dim,
-            dati: Box::new(std::fs::File::open(path).unwrap()),
+            data: Box::new(std::fs::File::open(path).unwrap()),
             sha1: None,
         }],
     };
@@ -47,7 +47,7 @@ fn hashes(path: &Path) -> (String, String, String, String) {
         for c in l.scan_header(0, k).expect("header") {
             h.update(format!(
                 "{}={}|{:?}|{:?}\n",
-                c.nome, c.valore, c.unita, c.cv
+                c.name, c.valore, c.unita, c.cv
             ));
         }
     }
@@ -183,10 +183,10 @@ fn scan_data_and_transport_give_the_same_scan() {
         let name = p.file_name().unwrap().to_string_lossy().into_owned();
         let dim = std::fs::metadata(&p).unwrap().len();
         let fs = FileSet {
-            membri: vec![Member {
-                nome: name,
+            members: vec![Member {
+                name,
                 dim,
-                dati: Box::new(std::fs::File::open(&p).unwrap()),
+                data: Box::new(std::fs::File::open(&p).unwrap()),
                 sha1: None,
             }],
         };
@@ -258,10 +258,10 @@ fn the_table_header_has_the_fields_of_the_full_header() {
         }
         let name = p.file_name().unwrap().to_string_lossy().into_owned();
         let fs = FileSet {
-            membri: vec![Member {
-                nome: name.clone(),
+            members: vec![Member {
+                name: name.clone(),
                 dim: std::fs::metadata(&p).unwrap().len(),
-                dati: Box::new(std::fs::File::open(&p).unwrap()),
+                data: Box::new(std::fs::File::open(&p).unwrap()),
                 sha1: None,
             }],
         };

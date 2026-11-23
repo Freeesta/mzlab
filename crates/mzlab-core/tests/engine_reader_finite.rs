@@ -12,9 +12,9 @@ use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 
 fn member(name: &str, b: Vec<u8>) -> Member {
     Member {
-        nome: name.into(),
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     }
 }
@@ -49,7 +49,7 @@ fn pair(dir: &Path, value: Option<f64>, with: f64) -> FileSet {
         scan.splice(i..i + 8, with.to_le_bytes());
     }
     FileSet {
-        membri: vec![member("one.wiff", wiff), member("one.wiff.scan", scan)],
+        members: vec![member("one.wiff", wiff), member("one.wiff.scan", scan)],
     }
 }
 
@@ -99,7 +99,7 @@ fn a_non_finite_wiff_header_is_an_error_of_the_engine() {
 fn a_finite_d_reads_through_the_guard() {
     let (scan, peak) = agilent_synth::encode(&agilent_synth::sample());
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             member("x.D/AcqData/MSScan.bin", scan),
             member("x.D/AcqData/MSPeak.bin", peak),
         ],

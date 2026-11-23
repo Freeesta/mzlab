@@ -306,7 +306,7 @@ fn instrument(fam: Fam, m: &Meta) -> Option<V> {
 
 /// The `method/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
 pub(super) fn document(
-    (nome, dim, sha1): (&str, u64, &str),
+    (name, dim, sha1): (&str, u64, &str),
     fam: Fam,
     d: &Data,
     m: &Meta,
@@ -315,7 +315,7 @@ pub(super) fn document(
     let src = Source {
         format: "shimadzu",
         files: vec![SrcFile {
-            name: nome.to_string(),
+            name: name.to_string(),
             sha1: Some(sha1.to_string()),
             bytes: dim,
         }],

@@ -20,14 +20,14 @@ fn pair(samples: u32) -> FileSet {
     let mut streams = vec![("SampleSubtree/SampleIdxTable", table)];
     streams.extend(names.iter().map(|n| (n.as_str(), vec![0u8; 32 + 54])));
     let wiff = common::ole::ole(&streams);
-    let member = |nome: &str, b: Vec<u8>| Member {
-        nome: nome.into(),
+    let member = |name: &str, b: Vec<u8>| Member {
+        name: name.into(),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
     FileSet {
-        membri: vec![member("x.wiff", wiff), member("x.wiff.scan", vec![0u8; 64])],
+        members: vec![member("x.wiff", wiff), member("x.wiff.scan", vec![0u8; 64])],
     }
 }
 

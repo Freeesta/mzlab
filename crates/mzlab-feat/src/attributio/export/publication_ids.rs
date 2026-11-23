@@ -29,7 +29,7 @@ pub struct Gt {
 /// A row of the paper: all the identities that share a canonical name.
 #[derive(Clone, Debug)]
 pub struct Dd {
-    pub nome: String,
+    pub name: String,
     pub best_level: i32,
     pub best_sub: String,
     pub group: String,
@@ -65,7 +65,7 @@ fn formula_by_identity(l: &Loaded) -> HashMap<String, String> {
         .collect()
 }
 
-/// `identity_table_enriched`: the identities of Levels 1-3 with `formula` and `nome_comune`.
+/// `identity_table_enriched`: the identities of Levels 1-3 with `formula` and `common_name`.
 pub fn enriched_identities(l: &Loaded) -> Vec<Gt> {
     let fmap = formula_by_identity(l);
     identity_table(l.features(), &l.sites, &l.cur, &DROP_GROUPS)
@@ -76,7 +76,7 @@ pub fn enriched_identities(l: &Loaded) -> Vec<Gt> {
                 .cur
                 .formula_override(&r.identity.trim().to_lowercase())
                 .unwrap_or(base);
-            let nome = l.cur.canonical_name(&r.identity, Some(&formula));
+            let name = l.cur.canonical_name(&r.identity, Some(&formula));
             Gt {
                 best_sub: r.best_level_sub,
                 cec_category: r.cec_category,
@@ -85,7 +85,7 @@ pub fn enriched_identities(l: &Loaded) -> Vec<Gt> {
                 best_level: r.best_level,
                 group: r.group,
                 formula,
-                name: nome,
+                name,
             }
         })
         .collect()
@@ -115,7 +115,7 @@ pub fn dedup_by_canonical(gt: &[Gt], n_sites: usize) -> Vec<Dd> {
                 "a"
             };
             Dd {
-                nome: name.to_string(),
+                name: name.to_string(),
                 best_level: best,
                 best_sub: sub.to_string(),
                 group: if contaminant {
@@ -153,7 +153,7 @@ pub fn canonical_identities(l: &Loaded) -> (Vec<Gt>, Vec<Dd>) {
 pub struct PFeat<'a> {
     pub fr: &'a FRow<'a>,
     pub ev: FeatureEvidence,
-    pub nome: String,
+    pub name: String,
     /// `maxarea_<site>`: the larger of the sorbents, gap-filled areas count 0 (NaN where the feature is in no table).
     pub max_area: Vec<f64>,
 }
@@ -228,7 +228,7 @@ pub fn feature_frame<'a>(
         out.push(PFeat {
             fr,
             ev: e,
-            nome: name,
+            name,
             max_area,
         });
     }
