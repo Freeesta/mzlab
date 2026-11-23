@@ -54,7 +54,12 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    ("sim snr", "peak table"),
+    ("integrate peaks", "peak table"),
 ];
+
+/// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.
+const BULK_FIRST: &[&str] = &["sim snr", "integrate peaks"];
 
 fn top(q: &str, n: usize) -> Vec<String> {
     search(&words(q))
@@ -73,6 +78,36 @@ fn every_audit_task_finds_its_command_or_step_among_the_first_three() {
             "{task:?}: {want} not in {got:?}"
         );
     }
+}
+
+#[test]
+fn on_equal_scores_the_one_call_for_many_comes_first() {
+    for q in BULK_FIRST {
+        let got = top(q, 5);
+        assert_eq!(
+            got.first().map(String::as_str),
+            Some("peak table"),
+            "{q:?}: {got:?}"
+        );
+        let lr = got.iter().position(|g| g == "peak auto-lr");
+        assert!(lr.is_some_and(|i| i > 0), "{q:?}: {got:?}");
+    }
+}
+
+#[test]
+fn a_repeated_word_counts_once() {
+    let once = search(&words("sim"));
+    let thrice = search(&words("sim sim sim"));
+    let scores = |h: &[(super::Item, f64, Vec<String>)]| -> Vec<(String, f64)> {
+        h.iter().map(|(i, s, _)| (i.name.clone(), *s)).collect()
+    };
+    assert_eq!(scores(&once), scores(&thrice));
+    let thrice_apart = search(&["sim".to_string(), "snr".to_string(), "sim".to_string()]);
+    assert_eq!(scores(&thrice_apart), scores(&search(&words("sim snr"))));
+    let o =
+        crate::execute(&["commands", "--find", "sim", "snr", "sim", "--json"].map(String::from));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["query"], serde_json::json!(["sim", "snr"]));
 }
 
 /// The guard of new functions: a command or step without a summary (title) the search matches is not discoverable.

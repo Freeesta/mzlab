@@ -52,7 +52,17 @@ pub(crate) fn words(s: &str) -> Vec<String> {
         .filter(|w| w.len() > 1 && !STOP.contains(w))
         .map(stem)
         .collect();
-    out.dedup();
+    unique(out)
+}
+
+/// The words in their first-seen order, each once: a repeated word must not count again.
+fn unique(v: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(v.len());
+    for w in v {
+        if !out.contains(&w) {
+            out.push(w);
+        }
+    }
     out
 }
 
@@ -128,7 +138,13 @@ pub(crate) fn search(query: &[String]) -> Vec<(Item, f64, Vec<String>)> {
             .max(1) as f64;
         (1.0 + n / df).ln()
     };
-    let weights: Vec<(String, f64)> = query.iter().map(|w| (w.clone(), idf(w))).collect();
+    let weights: Vec<(String, f64)> = unique(query.to_vec())
+        .into_iter()
+        .map(|w| {
+            let f = idf(&w);
+            (w, f)
+        })
+        .collect();
     let mut hits: Vec<(Item, f64, Vec<String>)> = all
         .into_iter()
         .filter_map(|it| {
@@ -153,7 +169,12 @@ pub(crate) fn search(query: &[String]) -> Vec<(Item, f64, Vec<String>)> {
             (score > 0.0).then(|| (it, (score * 100.0).round() / 100.0, matched))
         })
         .collect();
-    hits.sort_by(|a, b| b.1.total_cmp(&a.1));
+    // on equal scores the one call for many goes before a one-at-a-time command (a `related` row with `bulk`)
+    let one_at_a_time = |it: &Item| related::of(&it.name).is_some_and(|r| !r.bulk.is_empty());
+    hits.sort_by(|a, b| {
+        b.1.total_cmp(&a.1)
+            .then_with(|| one_at_a_time(&a.0).cmp(&one_at_a_time(&b.0)))
+    });
     hits.truncate(TOP);
     hits
 }
@@ -164,7 +185,7 @@ fn strings(v: &[&str]) -> Value {
 
 /// The answer of `commands --find WORDS...`: `commands-find/1` with `json`, else one line per match and its example under it.
 pub(crate) fn run(query: &[String], json: bool) -> Outcome {
-    let q: Vec<String> = query.iter().flat_map(|w| words(w)).collect();
+    let q = unique(query.iter().flat_map(|w| words(w)).collect());
     if q.is_empty() {
         let err =
             mzlab_core::Error::new("err.cli.usage").with("message", "--find needs task words");

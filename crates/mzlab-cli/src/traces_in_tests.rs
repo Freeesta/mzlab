@@ -113,3 +113,28 @@ fn another_shape_is_refused_with_its_code() {
     ]);
     assert_eq!(o.code, crate::exit::INPUT, "{}", o.stderr);
 }
+
+/// A file that is not JSON at all (a trace CSV) is the same refusal, alone or after a good file, never a parse error of exit 4.
+#[test]
+fn a_csv_is_refused_as_a_shape_not_read_as_json() {
+    let d = dir();
+    let csv = d.join("trace.csv");
+    std::fs::write(&csv, "rt;y\n1.0;10\n1.1;20\n").unwrap();
+    let good = d.join("good.json");
+    std::fs::write(
+        &good,
+        "{\"schema\":\"trace/1\",\"id\":\"a\",\"points\":[[1.0,1.0]]}",
+    )
+    .unwrap();
+    for files in [vec![&csv], vec![&good, &csv]] {
+        let mut args = vec!["peak".to_string(), "table".to_string()];
+        for f in files {
+            args.push("--traces".into());
+            args.push(f.display().to_string());
+        }
+        args.push("--auto".into());
+        let o = crate::execute(&args);
+        assert_eq!(o.code, crate::exit::USAGE, "{}", o.stderr);
+        assert!(o.stderr.contains("trace-set/1"), "{}", o.stderr);
+    }
+}

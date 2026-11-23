@@ -1,4 +1,4 @@
-# mzLab for external agents (`mzlab-cli`): build `cargo build --profile cli -p mzlab-cli` (`target/cli/`), never `--release` (size-optimised, for the `.wasm`)
+# mzLab for external agents (`mzlab-cli`): install `tools/install.sh` (prebuilt) or build `cargo build --profile cli -p mzlab-cli` (`target/cli/`), never `--release` (size-optimised, for the `.wasm`)
 
 Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --json` (`commands-find/1`: the top five commands and Flow steps, each with a one-line `example`, `see_also` and, where a loop of calls has a one-call equivalent, `bulk`). If you are about to call one command once per file, ion or trace, or to write Python for a table, a filter or a figure, look here first:
 
@@ -10,7 +10,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
 | every peak of every channel of every file | `peak table FILE... --auto` (one call, all files); hand windows: `--windows` |
-| XICs of many ions, then their peaks | `trace xic FILE --mz M1,M2,... --out F.json` per file, then `peak table --traces A.json --traces B.json --auto` |
+| XICs of many ions, then their peaks | `trace xic FILE --mz M1,M2,... --da 0.3 --out F.json` per file, then `peak table --traces A.json --traces B.json --auto` |
 | blank threshold, replicates, QC CV | Flow step `table.filter` (`blank_ratio`, `blank_subtract`, ...); by ratio: `table compare` |
 | correlated ions, isotopes, adducts of one compound | Flow step `features.group`; one ion: `ion pattern`, `ion match` |
 | centroid profile spectra | Flow step `spectra.centroid` |

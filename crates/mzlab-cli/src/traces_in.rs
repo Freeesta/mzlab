@@ -88,7 +88,7 @@ pub(crate) fn read(paths: &[std::path::PathBuf]) -> Result<String> {
         texts.push((p.display().to_string(), t));
     }
     if let [(path, t)] = texts.as_slice() {
-        let v = parse(t.as_bytes())?;
+        let v = parse(t.as_bytes()).map_err(|_| shape(path))?;
         // the page's own list, unchanged: the same bytes as before
         if list(&v).is_some_and(|a| a.iter().all(|s| s.get("schema").is_none())) {
             return Ok(t.clone());
@@ -101,7 +101,7 @@ pub(crate) fn read(paths: &[std::path::PathBuf]) -> Result<String> {
     o.raw("[");
     let mut first = true;
     for (path, t) in &texts {
-        let v = parse(t.as_bytes())?;
+        let v = parse(t.as_bytes()).map_err(|_| shape(path))?;
         let docs: Vec<&Value> = match list(&v) {
             Some(a) => a.iter().collect(),
             None => vec![&v],
