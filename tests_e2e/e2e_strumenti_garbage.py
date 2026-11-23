@@ -32,10 +32,10 @@ try:
             typed(pg, "[data-pk=edgeFrac]", "2,5"); pg.click("#pk-ok"); wait_for_js(pg, "PK.edgeFrac === 2.5", 5000)
         step("peak parameters: every number refuses garbage; «2,5» is taken", peaks)
         def lab():
-            pg.evaluate("localStorage.setItem(NOMI.KEY('contaminanti'), JSON.stringify([{mz: 100, name: 'x'}])); document.querySelectorAll('dialog[open]').forEach(d => d.close()); LISTE.openLab()")
+            pg.evaluate("localStorage.setItem(NOMI.KEY('contaminants'), JSON.stringify([{mz: 100, name: 'x'}])); document.querySelectorAll('dialog[open]').forEach(d => d.close()); LISTE.openLab()")
             pg.wait_for_selector("#bigdlg[open] [data-c=mz]", timeout=5000)
-            sweep(pg, "#bigbody", "localStorage.getItem(NOMI.KEY('contaminanti'))")
-            typed(pg, "#bigbody [data-c=mz]", "150,25"); wait_for_js(pg, "JSON.parse(localStorage.getItem(NOMI.KEY('contaminanti')))[0].mz === 150.25", 5000)
+            sweep(pg, "#bigbody", "localStorage.getItem(NOMI.KEY('contaminants'))")
+            typed(pg, "#bigbody [data-c=mz]", "150,25"); wait_for_js(pg, "JSON.parse(localStorage.getItem(NOMI.KEY('contaminants')))[0].mz === 150.25", 5000)
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("lab contaminants: the m/z of a row refuses garbage; «150,25» is taken", lab)
         def lists():

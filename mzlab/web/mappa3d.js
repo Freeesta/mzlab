@@ -164,7 +164,7 @@ function dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt }) {
 <div class="m3d-mini"><canvas class="m3d-xic" aria-label="${T("m3d.xic.aria")}"></canvas><canvas class="m3d-spc" aria-label="${T("m3d.spc.aria")}"></canvas></div>
 <div class="m3d-time"><button data-m="play" aria-label="${T("m3d.play")}" title="${T("m3d.play")}">&#9654;</button><input type="range" data-m="ti" min="0" max="0" value="0" aria-label="${T("m3d.time.aria")}"><span data-m="tt"></span></div>
 <button class="m3d-tog" data-m="tog" aria-label="${T("m3d.side.toggle")}" title="${T("m3d.side.toggle")}">&#9776;</button></div>
-<aside class="m3d-side" aria-label="${T("m3d.side.aria")}"><div class="m3d-top"><b>${T("m3d.title")}</b><button data-m="close" aria-label="${T("m3d.close")}">${T("m3d.close")} (Esc)</button></div>
+<aside class="m3d-side" aria-label="${T("m3d.side.aria")}"><div class="m3d-top"><b>${T("m3d.title")}</b><button data-m="close">${T("m3d.close")} (Esc)</button></div>
 <details open><summary>${T("m3d.g.data")}</summary>
 <div class="rw"><label>${T("m3d.file")} <select data-m="file" aria-label="${T("m3d.file")}">${files.map((/** @type {MzFile} */ x) => opt(x.k, f.k, x.label)).join("")}</select></label><span class="muted">${V.pda ? "DAD" : `MS<sup>${lv}</sup>`}</span></div>
 <div class="rw"><label>${T("m3d.diff")} <select data-m="ref" aria-label="${T("m3d.diff")}"><option value="">${T("ctl.map.diff.none")}</option>${others.map((/** @type {MzFile} */ x) => opt(x.k, V.ref, x.label)).join("")}</select></label>
