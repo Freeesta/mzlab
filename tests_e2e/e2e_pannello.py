@@ -30,7 +30,7 @@ try:
             r, ctx, pg, errs = cold(p, 1440, 900)
             try:
                 assert pg.is_visible("#sb-toggle") and pg.is_visible("#dfiles"), "first start on a wide screen: File panel open"
-                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "true" and pg.get_attribute("#sb-toggle", "aria-label") == "Side panel" and pg.get_attribute("#sb-toggle", "title")
+                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "true" and pg.get_attribute("#sb-toggle", "aria-label") is None and pg.get_attribute("#sb-toggle", "title")
                 b1 = pg.evaluate(BOX)
                 assert pg.evaluate("BARRA.curTab") == "file" and not overlap(b1), b1
                 assert b1["side"]["x"] < 20 and b1["side"]["h"] > 400, b1["side"]
