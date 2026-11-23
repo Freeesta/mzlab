@@ -1,6 +1,6 @@
 //! `quant.targets@1`: a table of (m/z, RT window) targets integrated in the scan index of every file, one pass per file
 //! (`mzlab_feat::quant_targets::Job`, as `mzlab-cli quant targets` runs it, files on a pool of threads), the long table as CSV and the log of every choice as JSON.
-//! Called by `flow.rs`; native only until the owner chooses the browser module (the measured sizes are in `docs/agenti/quant-targets.md`).
+//! Called by `flow.rs`; in the browser the same engine runs in the `.wasm` `quanttargets` (`flow-web-quanttargets.js`, parity: `tests/test_quant_targets_wasm.py`).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -20,7 +20,7 @@ pub fn quant_targets_step() -> Step {
                 .formats(&["csv", "json"]),
         ],
         outs: vec![
-            Port::new("table", DataType::Report, "One row per file and target: area, height, S/N, apex RT, flag, state (detected, force_integrated or absent) and the evidence of the peak (CSV)").format("csv"),
+            Port::new("table", DataType::Report, "One row per file and target: area, height, S/N, apex RT, flag, state (detected, forced or absent) and the evidence of the peak (CSV)").format("csv"),
             Port::new("log", DataType::Report, "Parameters, the m/z offset of every file with its evidence, automatic choices and warnings (quant-targets-log/1)")
                 .format("quant-targets-log/1"),
         ],
@@ -33,7 +33,8 @@ pub fn quant_targets_step() -> Step {
             Param::number("min_shape", "Min. Gaussian shape").min(0.0).max(1.0).default_num(0.5)
                 .doc("A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"),
             Param::text("offset", "m/z offset").default_str("0")
-                .doc("Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]"),
+                .doc("Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]")
+                .tip("Observed minus true m/z: 0, a number of Da, or auto to measure it on a standard."),
             Param::text("blank_pattern", "Blank files").default_str("")
                 .doc("Comma list of case-insensitive globs over the file names; a target detected in a blank flags the samples in_blank"),
             Param::integer("ms_level", "MS level").min(1.0).max(10.0).default_num(1.0).advanced(),
@@ -46,6 +47,7 @@ pub fn quant_targets_step() -> Step {
         ],
         runs_in: RunsIn {
             native: true,
+            wasm: Some("quanttargets"),
             ..RunsIn::default()
         },
         errors: vec![
@@ -57,7 +59,7 @@ pub fn quant_targets_step() -> Step {
         ..Step::core(
             "quant.targets",
             "Target list",
-            "Integrates every (m/z, RT window) target of a table in every file with the peak engine of peak auto-lr, one pass over each file: area, height, S/N, apex RT, flags (no_peak, below_threshold, bad_shape, edge, in_blank, no_scans) and a state (detected, force_integrated, absent). Every row is written; a peak under the thresholds keeps its numbers and its flag.",
+            "Integrates every (m/z, RT window) target of a table in every file with the peak engine of peak auto-lr, one pass over each file: area, height, S/N, apex RT, flags (no_peak, below_threshold, bad_shape, edge, in_blank, no_scans) and a state (detected, forced, absent). Every row is written; a peak under the thresholds keeps its numbers and its flag.",
         )
     }
 }

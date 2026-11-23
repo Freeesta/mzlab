@@ -33,7 +33,7 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
   --workers N      files read at once (default: one per core, at most 8); the bytes written do not depend on it
 
 Every row is written: area counts x s, height counts, rt min. State: detected (S/N >= --min-sn and an acceptable shape),
-force_integrated (a peak under a threshold, numbers kept and flagged) or absent (no peak, no scan). Flags (;-joined, ok when none): no_scans (no scan of that level and polarity),
+forced (a peak under a threshold, numbers kept and flagged) or absent (no peak, no scan). Flags (;-joined, ok when none): no_scans (no scan of that level and polarity),
 no_peak, below_threshold (S/N under --min-sn, numbers kept), bad_shape, edge (apex on the first or last scan of the window), in_blank.
 Exit codes: 0 ok; 2 usage (bad option or parameter); 4 targets table or a file missing or unreadable; 6 --out or --log cannot be written.";
 
@@ -226,12 +226,12 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(t) => t,
         Err(e) => return crate::sample_select::fail(&e),
     };
-    if let Some(p) = j.log.as_ref().filter(|_| !j.dry) {
-        if let Err(e) = std::fs::write(p, &log) {
-            return Outcome::fail_error(
-                &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
-            );
-        }
+    if let Some(p) = j.log.as_ref().filter(|_| !j.dry)
+        && let Err(e) = std::fs::write(p, &log)
+    {
+        return Outcome::fail_error(
+            &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
+        );
     }
     let text = if j.json && !j.dry {
         mzlab_feat::quant_targets::to_json(&table, &log)

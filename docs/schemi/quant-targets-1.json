@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "quant-targets/1",
   "title": "quant-targets/1: every target of a table integrated in every file",
-  "description": "The answer of `mzlab-cli quant targets --json`: the rows of the long table (the CSV of the command and of the Flow step `quant.targets@1`, one row per file and target, in input order, never hidden) and the log. Peaks are found by the peak auto-lr engine inside each target's RT window; every row has a state: detected (no flag among no_scans, no_peak, below_threshold, bad_shape), force_integrated or absent. Code: crates/mzlab-feat/src/quant_targets/.",
+  "description": "The answer of `mzlab-cli quant targets --json`: the rows of the long table (the CSV of the command and of the Flow step `quant.targets@1`, one row per file and target, in input order, never hidden) and the log. Peaks are found by the peak auto-lr engine inside each target's RT window; every row has a state: detected (no flag among no_scans, no_peak, below_threshold, bad_shape), forced or absent. Code: crates/mzlab-feat/src/quant_targets/.",
   "type": "object",
   "required": [
     "schema",
@@ -82,10 +82,10 @@
             "type": "string",
             "enum": [
               "detected",
-              "force_integrated",
+              "forced",
               "absent"
             ],
-            "description": "detected: a peak with S/N >= min_sn and an acceptable shape; force_integrated: a peak under min_sn or the shape minimum, its numbers kept and flagged; absent: no peak in the window or no scan (numbers null). No value is gap-filled."
+            "description": "detected: a peak with S/N >= min_sn and an acceptable shape; forced: a peak under min_sn or the shape minimum, its numbers kept and flagged; absent: no peak in the window or no scan (numbers null). No value is gap-filled."
           },
           "points": {
             "type": [

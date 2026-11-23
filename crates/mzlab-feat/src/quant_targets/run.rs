@@ -51,13 +51,13 @@ impl Row {
                 .any(|f| matches!(*f, "no_scans" | "no_peak" | "below_threshold" | "bad_shape"))
     }
 
-    /// The state of the value: `detected`, `force_integrated` (a peak under `min_sn` or the shape minimum, its numbers kept and flagged) or
+    /// The state of the value: `detected`, `forced` (a peak under `min_sn` or the shape minimum, its numbers kept and flagged) or
     /// `absent` (no peak in the window, or no scan). No value is gap-filled, so there is no `filled` state.
     pub fn state(&self) -> &'static str {
         match (&self.hit, self.detected()) {
             (None, _) => "absent",
             (Some(_), true) => "detected",
-            (Some(_), false) => "force_integrated",
+            (Some(_), false) => "forced",
         }
     }
 }

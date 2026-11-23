@@ -79,7 +79,7 @@ fn flags_tell_detected_small_edge_and_empty_targets_apart() {
     assert!(
         small[6].contains("below_threshold")
             && !small[2].is_empty()
-            && small[7] == "force_integrated",
+            && small[7] == "forced",
         "{:?}",
         small
     );
@@ -91,7 +91,7 @@ fn flags_tell_detected_small_edge_and_empty_targets_apart() {
     // every row has one of the three states
     for (_, c) in &r {
         assert!(
-            matches!(c[7].as_str(), "detected" | "force_integrated" | "absent"),
+            matches!(c[7].as_str(), "detected" | "forced" | "absent"),
             "{c:?}"
         );
         assert_eq!(c[7] == "absent", c[2].is_empty(), "{c:?}");
