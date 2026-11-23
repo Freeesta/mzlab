@@ -118,6 +118,7 @@ pub mod transport;
 pub mod readers_centroids;
 pub mod readers_finite;
 pub mod readers_mzml;
+pub mod spectrum_type;
 pub mod readers_session;
 pub mod conv;
 pub mod method;

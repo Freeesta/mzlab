@@ -7,6 +7,7 @@ use crate::error::{Error, Result};
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep};
 use crate::readers::{Reader, Skips};
+use crate::spectrum_type::{self, SpectrumType, TypeChoice};
 #[cfg(not(target_family = "wasm"))]
 use crate::readers_centroids::{picchi, stima};
 
@@ -216,9 +217,18 @@ pub struct Conversion<'a> {
     pub opz: Options,
     /// `Some`: the `indexedmzML` form with one `processingMethod` per step after the conversion.
     pub steps: Option<&'a [ProcStep]>,
+    /// The spectrum-type term (MS:1000127 / MS:1000128): `auto` keeps the reader's flag unless the points are sparse counts (`spectrum_type.rs`).
+    pub spectrum: SpectrumType,
+    /// The decision already taken for the sample (`type_choice`), so a caller that logs it does not make it twice; `None`: taken in `write_counted`.
+    pub decided: Option<TypeChoice>,
 }
 
 impl Conversion<'_> {
+    /// The decision of the spectrum-type term for sample `c`: the one `write_counted` takes (same inputs, same answer).
+    pub fn type_choice(&self, l: &mut dyn Reader, c: usize) -> Result<TypeChoice> {
+        spectrum_type::choose(self.spectrum, self.peaks == Peaks::File, l, c)
+    }
+
     /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
     pub fn write<W: Write>(
         &self,
@@ -244,6 +254,15 @@ impl Conversion<'_> {
         }
         let mut h = file_header(l, c)?;
         let mut pick = pick_di(self.peaks, l, c, &mut h)?;
+        let choice = match self.decided {
+            Some(d) => d,
+            None => self.type_choice(l, c)?,
+        };
+        if choice.recorded() {
+            let first = l.index_without_tic(c)?.is_empty() || l.scan(c, 0)?.profile;
+            h.run_params
+                .push(("mzLab spectrum type".into(), choice.text(first)));
+        }
         h.run_params
             .push(("mzLab conversion/1".into(), crate::conv::resoconto(l, c)?));
         let mut w = match self.steps {
@@ -260,7 +279,7 @@ impl Conversion<'_> {
             w.open_spectra(n + uv)?;
         }
         progress(0, n);
-        spettri(&mut w, l, (c, n), (self.peaks, &mut pick), progress)?;
+        spettri(&mut w, l, (c, n), (self.peaks, &mut pick, choice), progress)?;
         progress(n, n);
         uv_spettri(&mut w, dad.as_ref())?;
         if n + uv > 0 {
@@ -278,7 +297,7 @@ fn spettri<W: Write>(
     w: &mut MzmlWriter<W>,
     l: &mut dyn Reader,
     (c, n): (usize, usize),
-    (peaks, pick): (Peaks, &mut Pick),
+    (peaks, pick, choice): (Peaks, &mut Pick, TypeChoice),
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<()> {
     #[cfg(not(target_family = "wasm"))]
@@ -286,7 +305,8 @@ fn spettri<W: Write>(
         let mut skips = Skips::default();
         w.spettri((0..n).map(|k| {
             let s = scansione_di(peaks, l, (c, k), pick);
-            let s = skips.take(l, (c, k), s)?;
+            let mut s = skips.take(l, (c, k), s)?;
+            choice.apply(&mut s);
             let extra = l.scan_extra(c, k, &s);
             if (k + 1) % 32 == 0 {
                 progress(k + 1, n);
@@ -298,7 +318,8 @@ fn spettri<W: Write>(
     let mut skips = Skips::default();
     for k in 0..n {
         let s = scansione_di(peaks, l, (c, k), pick);
-        let s = skips.take(l, (c, k), s)?;
+        let mut s = skips.take(l, (c, k), s)?;
+        choice.apply(&mut s);
         let extra = l.scan_extra(c, k, &s);
         w.spectrum_with(&s, &extra)?;
         if (k + 1) % 32 == 0 {

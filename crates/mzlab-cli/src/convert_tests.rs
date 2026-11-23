@@ -11,6 +11,8 @@ use crate::Outcome;
 
 #[path = "convert_tests_wiff.rs"]
 mod wiff_notes;
+#[path = "convert_tests_spectrum.rs"]
+mod spectrum_type;
 
 fn convert(args: &[&str]) -> Outcome {
     let mut a = vec!["file".to_string(), "convert".to_string()];

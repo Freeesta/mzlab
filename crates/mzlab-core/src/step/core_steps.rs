@@ -32,6 +32,10 @@ fn convert_mzml() -> Step {
         Param::choice("peaks", "Peaks", &["file", "profile", "mzlab"])
             .default_str("file")
             .doc("file: the points the file holds (the centroids of the maker where it has them, else the profile, which the next step reduces to peaks and the run reports); profile: the profile points of the file, an error where it has none; mzlab: our own centroids, with parameters estimated on the sample and written in the mzML (MS:1000035)"),
+        Param::choice("spectrum", "Spectrum type", &["auto", "centroid", "profile"])
+            .default_str("auto")
+            .doc("The spectrum-type term of the mzML (MS:1000127 centroid, MS:1000128 profile); the points are not changed. auto: what the reader says, except that sparse data (isolated ion counts, no continuous trace) are written as centroid; centroid / profile: every spectrum as asked. The decision is logged and written in the run of the mzML")
+            .advanced(),
         Param::integer("zlib_level", "Compression level")
             .min(0.0)
             .max(9.0)
