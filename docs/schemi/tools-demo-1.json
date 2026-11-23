@@ -2787,7 +2787,9 @@
                   "max_fwhm_s",
                   "min_points",
                   "dead_factor",
-                  "parent_decay"
+                  "parent_decay",
+                  "merge_da",
+                  "merge_rt_min"
                 ]
               },
               "value":{
@@ -2805,7 +2807,9 @@
                   {"type":"number","minimum":0,"default":60,"description":"Max. FWHM of a peak"},
                   {"type":"integer","minimum":1,"default":5,"description":"Min. scans of a peak"},
                   {"type":"number","minimum":0,"default":1.5,"description":"Dead-volume factor"},
-                  {"type":"boolean","default":true,"description":"Parent must fall over time"}
+                  {"type":"boolean","default":true,"description":"Parent must fall over time"},
+                  {"type":"number","minimum":0,"default":0.3,"description":"Merge split rows within"},
+                  {"type":"number","minimum":0,"default":0.3,"description":"Merge split rows within RT"}
                 ]
               }
             },

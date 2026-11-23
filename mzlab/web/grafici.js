@@ -470,10 +470,7 @@ function putHover(p, h, px, py) {
   if (window.PEAKINFO) PEAKINFO.stick(p, h.stick ? { px: h.px, ...h.stick } : null);
   p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
   p.tip.hidden = false; p.tip.innerHTML = h.html;
-  const tw = p.tip.offsetWidth, th = p.tip.offsetHeight;
-  let l = cv.offsetLeft + px + 14; if (l + tw > el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14;
-  let t = cv.offsetTop + py + 12; if (t + th > el.clientHeight - 4) t = Math.max(4, el.clientHeight - th - 4);
-  p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = t + "px";
+  const [tl, tt] = tipSpot(p, px, py, p.tip.offsetWidth, p.tip.offsetHeight); p.tip.style.left = tl + "px"; p.tip.style.top = tt + "px";
   if (h.rt != null) E.panels.forEach(q => {
     if (q === p || q.type === "spec" || !q._a || !q.vl) return;
     const b = q._a;
