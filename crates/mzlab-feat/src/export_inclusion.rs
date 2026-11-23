@@ -1,4 +1,4 @@
-//! The inclusion list written from the expected products of a plan (`tp/1` rows or hypotheses) and the adducts chosen: one row per product and adduct,
+//! The inclusion list written from the expected products of a plan (`tp/2` rows or hypotheses) and the adducts chosen: one row per product and adduct,
 //! with an RT window around the expected RT, in the columns of the list of mzFinder (`finder_base::inclusion::inclusion_row`), sorted by RT. Used by the
 //! `export.inclusion` step; it never raises a level and adds no verdict.
 

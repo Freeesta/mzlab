@@ -21,7 +21,7 @@ fn user(e: String) -> Error {
 }
 
 /// Interprets the rows of the `.mzfeat` (`size` bytes) and writes it again, with the block, to `sink`. `open(k)` gives the index of file `k` of the
-/// series, `infusion` the one of the infusion file when there is one; `registry` is the `hypotheses/2` JSON (may be empty).
+/// series, `infusion` the one of the infusion file when there is one; `registry` is the `hypotheses/3` JSON (may be empty).
 #[allow(clippy::too_many_arguments)]
 pub fn run_to<R: ReadAt, I: ReadAt, W: WriteAt>(
     table: &mut R,

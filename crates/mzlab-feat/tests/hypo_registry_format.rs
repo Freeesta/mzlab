@@ -7,6 +7,8 @@ use mzlab_feat::hypo::check_registry_format;
 fn the_old_registry_format_is_refused() {
     for text in [
         r#"{"format":"ipotesi/1","hypotheses":[]}"#,
+        // the registry with the Italian outcomes (`non_cercata`, `non_trovata`)
+        r#"{"format":"hypotheses/2","hypotheses":[]}"#,
         r#"{"hypotheses":[]}"#,
     ] {
         let v = parse(text.as_bytes()).unwrap();
@@ -19,7 +21,7 @@ fn the_old_registry_format_is_refused() {
 
 #[test]
 fn the_current_registry_format_is_accepted() {
-    let v = parse(br#"{"format":"hypotheses/2","hypotheses":[]}"#).unwrap();
+    let v = parse(br#"{"format":"hypotheses/3","hypotheses":[]}"#).unwrap();
     assert!(check_registry_format(&v).is_ok());
 }
 

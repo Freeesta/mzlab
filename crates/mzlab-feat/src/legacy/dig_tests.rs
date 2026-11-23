@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// A table without TP view: the parent is the row at its m/z, not row 0 (the default `parent_row` of an empty `tp/1` block).
+/// A table without TP view: the parent is the row at its m/z, not row 0 (the default `parent_row` of an empty `tp/2` block).
 #[test]
 fn parent_row_without_tp_view() {
     let p = super::super::series::parent(r#"{"name": "p", "neutral": "C21H32N2O2"}"#).unwrap();

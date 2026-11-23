@@ -1,5 +1,5 @@
 //! Sensitivity of the low-resolution Dig: products of the synthetic parent at low intensity (down to the level of the noise ions) and near the dead
-//! volume, added to the series of `comune`. A true product never disappears: at worst it is `debole` (the «Weak evidence» band of the table).
+//! volume, added to the series of `comune`. A true product never disappears: at worst it is `weak` (the «Weak evidence» band of the table).
 //! `cargo test --release -p mzlab-finder-lr-wasm --test lr_recall -- --ignored --nocapture` prints the table threshold -> recall.
 
 use mzlab_feat::legacy::lr;
@@ -59,7 +59,7 @@ fn tally(d: &lr::LrDig) -> Tally {
             .iter()
             .find(|e| (e.mz - m).abs() <= 0.35 && e.ref_rt.is_some_and(|x| (x - rt).abs() <= 0.25));
         match e.map(|e| e.label) {
-            Some("forte" | "possibile") => t.shown += 1,
+            Some("strong" | "possible") => t.shown += 1,
             Some(_) => t.weak += 1,
             None => t.missing += 1,
         }
@@ -239,7 +239,7 @@ fn bench_recall_false_positives() {
             shown_unexpected += d
                 .entries
                 .iter()
-                .filter(|e| e.unexpected && matches!(e.label, "forte" | "possibile"))
+                .filter(|e| e.unexpected && matches!(e.label, "strong" | "possible"))
                 .count();
         }
         println!(

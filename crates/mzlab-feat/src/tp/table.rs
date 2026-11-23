@@ -1,4 +1,4 @@
-//! The table of the products (`tptab/1`): for every row the view `tp/1` keeps (formed products, formed and not explained, the parent) the numbers a feature
+//! The table of the products (`tptab/1`): for every row the view `tp/2` keeps (formed products, formed and not explained, the parent) the numbers a feature
 //! table shows next to the status: m/z, RT, the largest area and height, the time of the maximum, the kinetics as areas along the treatment, and whether the
 //! ion is in the t0 and in the blank. It reads the `.mzfeat` and the metadata of the samples and nothing else; it computes no identity.
 //!
@@ -54,7 +54,7 @@ fn largest(t: &Aligned, row: usize, files: &[usize]) -> f64 {
     files.iter().fold(0.0, |m, &k| m.max(measured(t, row, k)))
 }
 
-/// `tptab/1` of a table under the samples `s` (one per file). With `rows` (indices of the table) those rows, with the status of the block `tp/1` when the table
+/// `tptab/1` of a table under the samples `s` (one per file). With `rows` (indices of the table) those rows, with the status of the block `tp/2` when the table
 /// has one (`null` otherwise); without, the rows of status product, formed and not explained, or parent, in the order of the table, and a table with no
 /// block is `error.tpNoBlock`. A row out of the table is `error.badView`.
 pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<String> {

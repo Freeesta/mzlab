@@ -334,7 +334,7 @@ pub struct Hypotheses {
 #[cfg(feature = "proofs")]
 #[wasm_bindgen]
 impl Hypotheses {
-    /// The registry `hypotheses/2` as JSON (hypotheses with sources, formula, m/z and outcome).
+    /// The registry `hypotheses/3` as JSON (hypotheses with sources, formula, m/z and outcome).
     pub fn registry_json(&self) -> String {
         self.inner.registry.to_json()
     }

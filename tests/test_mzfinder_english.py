@@ -1,5 +1,5 @@
 """mzFinder is English only: no Italian in the strings of its interface (TP_Mine/js, TP_Mine/lazy, TP_Mine/files), in its data shown to the user (rule profiles, the column
-names of composti.csv), in the `lang/` catalogs (Tabui has no key there) and no bare «formula» column. Internal values of the engine ('forte', 'progenitore'...) are not text."""
+names of composti.csv), in the `lang/` catalogs (Tabui has no key there) and no bare «formula» column. Internal values of the engine ('strong', 'parent'...) are not text."""
 import csv, json, re
 from pathlib import Path
 

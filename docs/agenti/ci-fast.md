@@ -77,6 +77,11 @@ CI statistics: `stat-ci.yml` (cron every 10 minutes, which GitHub however launch
 jobs with every step, caches, times per test file (`junit-*`), cancellations, PR and push shape, real conflicts (`git merge-tree`), runner load; never log texts.
 After 14 days `compatta` removes the heavy fields. `riempi-verde` (at every poll and push, 30 rows at a time, a single attempt per row) fills `verde_a_unione_s` of the merged PRs that lack it.
 A file of 50 MB or more is frozen (never rewritten, only read; `eventi.jsonl` is the old single file); the reading tools (`tools/ci_metrics_file.py`) merge them all; publishing to `stat-ci` never makes a PR fail.
+
+API reads (`tools/ci_metrics_api.py`):
+- A 403/429 waits as `Retry-After`/`X-RateLimit-Reset` asks (at most 120 s, 3 retries); a missing-permission 403 or a longer wait gives up at once, and after the first give-up the process fails fast.
+- The poll stops when 200 requests of the hourly quota are left (1000 per repository, shared by every job using `GITHUB_TOKEN`), keeps the runs already read and moves the cursor only to the last complete run.
+- A denial prints the response message and rate-limit headers, writes an `api_denied` row and a `::warning::`; three denied polls within an hour turn the step `Persistent API denial` (`ci_metrics.py denials`, exit 3) red.
 Test phases (setup/call/teardown, xdist worker: plugin `tools/ci_pytest_tempi.py`, `tempi-test.json` in the artifact `junit-<python>-<shard>`) and .wasm sizes against the caps (`tools/ci_wasm_dimensioni.py`, artifact `wasm-dimensioni`) are `test_durate` and `wasm` rows.
 Summary: `python3 tools/ci_metrics.py riepilogo [--da AAAA-MM-GG]` (after `git fetch origin stat-ci`) prints tables of PRs, jobs, caches, slow files, test phases, .wasm, conflicts, cancellations, load and queue; reds are only real ones (without `annullato` and `aggregato`), with the share of PRs with a real red.
 Measured workflows: `WORKFLOW_MISURATI` in `ci_metrics_data.py` (`test`, `rust`, `sito-rust`, `desktop`, `pages`); of the critical path: `WORKFLOW_CRITICI` (without `pages`). `registra-coda` writes a `coda` row (open non-draft PRs, behind, in conflict, green waiting, age of the oldest open and green).

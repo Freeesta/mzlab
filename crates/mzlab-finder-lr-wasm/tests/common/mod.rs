@@ -270,3 +270,81 @@ pub fn index_of_file(path: &std::path::Path) -> Vec<u8> {
     let p = prepare(&mut src, mzml.len() as u64, &name).unwrap();
     build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0
 }
+
+const WORDS: &str = include_str!("../../../../tools/italian_words.tsv");
+/// Italian words that are also English words (or too short to mean anything), as in `tools/check_english.py`.
+const AMBIGUOUS: &[&str] = &[
+    "come", "dove", "male", "fine", "solo", "coda", "piano", "lotto", "prima", "zone", "vie",
+    "unite", "verso", "porta", "legge", "pari", "specie", "genere", "marca", "pila", "seme",
+    "parte", "posa", "velo", "cosa", "nota", "conti", "vista", "tempo", "area", "linea", "idea",
+    "vario", "banda", "fila", "tasso", "ramo", "corso", "esca", "ancora", "gira", "largo", "lente",
+    "modo", "stato", "tema", "tocca", "canale",
+];
+
+pub fn italian() -> std::collections::HashSet<String> {
+    WORDS
+        .lines()
+        .filter(|l| !l.starts_with('#'))
+        .filter_map(|l| l.split('\t').next())
+        .filter(|w| w.len() >= 4 && !AMBIGUOUS.contains(w))
+        .map(str::to_string)
+        .collect()
+}
+
+/// Every key and string value of `v` that holds an Italian word (split at anything that is not a letter, so `rt_attesa` gives `attesa`).
+pub fn hits(v: &Value, path: &str, it: &std::collections::HashSet<String>, out: &mut Vec<String>) {
+    let bad = |s: &str| {
+        s.split(|c: char| !c.is_alphabetic())
+            .any(|w| it.contains(&w.to_lowercase()))
+    };
+    match v {
+        Value::String(s) if bad(s) => out.push(format!("{path} = {s:?}")),
+        Value::Array(a) => a
+            .iter()
+            .enumerate()
+            .for_each(|(i, x)| hits(x, &format!("{path}[{i}]"), it, out)),
+        Value::Object(m) => {
+            for (k, x) in m {
+                if bad(k) {
+                    out.push(format!("{path}.{k} (key)"));
+                }
+                hits(x, &format!("{path}.{k}"), it, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// `a[12].b` -> `a[].b`.
+pub fn index_free(s: &str) -> String {
+    let mut o = String::new();
+    let mut skip = false;
+    for c in s.chars() {
+        match c {
+            '[' => {
+                o.push(c);
+                skip = true;
+            }
+            ']' => {
+                o.push(c);
+                skip = false;
+            }
+            _ if skip => {}
+            _ => o.push(c),
+        }
+    }
+    o
+}
+
+/// The Italian words found in `v` (appended to `out`).
+pub fn english(v: &Value, path: &str, out: &mut Vec<String>) {
+    hits(v, path, &italian(), out);
+}
+
+/// One line per kind of finding (the row numbers say nothing), sorted.
+pub fn kinds(out: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = out.iter().map(|l| index_free(l)).collect();
+    out.sort();
+    out.dedup();
+    out
+}

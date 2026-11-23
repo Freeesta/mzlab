@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 
 /// The `.mzfeat` of `table_read` (`size` bytes) with the block `interp`, written to `write(offset, bytes)`: `{"bytes", "sha256"}`. The `.mzidx` of the
 /// series come as `index_read(k, offset, length)` with `index_sizes[k]` bytes; `infusion` is the position of the infusion file in the series (-1 when there
-/// is none). `parent_json` is the parent of the series and `registry` the `hypotheses/2` JSON (may be empty).
+/// is none). `parent_json` is the parent of the series and `registry` the `hypotheses/3` JSON (may be empty).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn interp_build(

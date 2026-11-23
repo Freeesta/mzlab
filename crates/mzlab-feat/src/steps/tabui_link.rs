@@ -9,7 +9,7 @@ use super::tabui::{
     algorithm, any_resolution, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM,
 };
 
-/// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/1`) and the interpretation of each row (`interp/1`):
+/// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/2`) and the interpretation of each row (`interp/1`):
 /// every DDA MS2 of the series linked to a row, with the purity of the isolation, and the comparison with the parent. Version 1 took the MS2 as an MGF
 /// and could not run: the engine reads the `.mzidx` of the series, the roles of the files and the parent.
 pub(super) fn link() -> Step {
@@ -208,7 +208,7 @@ pub(super) fn network() -> Step {
     Step {
         ins: vec![
             Port::new("tp", DataType::Tp, "Rows with their modification and the MS2 compared with the parent (interp/1)").requires(any_resolution()),
-            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(any_resolution()).accepts(&[DataType::Tp]),
+            Port::new("table", DataType::Table, "Feature table with the view of the products (tp/2)").requires(any_resolution()).accepts(&[DataType::Tp]),
             Port {
                 optional: true,
                 ..Port::new("samples", DataType::Samples, "Roles and times of the files (samples/1), for the time course")
