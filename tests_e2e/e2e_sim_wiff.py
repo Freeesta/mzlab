@@ -150,7 +150,7 @@ try:
             need = lambda c, m: c or throw(m)
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)      # the notice of «Copy table» has gone
             csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
-            head = csv[0]; row = [x for x in csv[1:] if x[-1] == "manual"][0]
+            head = csv[0]; row = [x for x in csv[1:] if x[head.index("origin")] == "manual"][0]
             cells = pg.evaluate("[..." + OWN_ROW0 + ".querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
             need([c[0] for c in cells] == [row[head.index(k)] for k in ("apex_rt_min", "area", "height")], (cells, row))   # the apex sits right after the name, then the area
             need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
@@ -342,7 +342,11 @@ try:
             area = sum(float(x[5]) for x in parts)
             need(abs(area - float(whole[5])) <= 1e-4 * float(whole[5]), ("the parts add up to the window", area, whole))
             cut = table(one | {"splits": [t3]})
-            need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak split", cut))
+            # sample_id is the place of the sample in the order of the files given: the route gets this one file (0), the CLI the whole .wiff (the sample's own index)
+            want = peak_split(f"split={t3}"); cells = lambda t: [l.split(",") for l in t.strip().split("\n")]
+            i = cells(want)[0].index("sample_id"); sb = str(TRUE["campioni"].index("Sample_B"))
+            need([r[i] for r in cells(cut)[1:]] == ["0"] * 2 and [r[i] for r in cells(want)[1:]] == [sb] * 2, ("sample_id", cut, want))
+            need([r[:i] + r[i + 1:] for r in cells(cut)] == [r[:i] + r[i + 1:] for r in cells(want)], ("api/manint of the split window = peak split", cut, want))
             th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
             need([pg.evaluate("I18N.t('canali.manint.h.overlap')"), pg.evaluate("I18N.t('canali.manint.h.overlap.tip')")] in th and any(x[0] == "p/v" and x[1] for x in th), th)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 2, "two rows say «yes»")
