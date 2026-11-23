@@ -6,12 +6,12 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::mzml::{self, Item};
+use mzlab_core::mzmlwrite::Options;
 use mzlab_core::readers::Limits;
 use mzlab_core::readers_mzml::Conversion;
-use mzlab_core::mzmlwrite::Options;
 
-use super::{convert, mzmls};
 use crate::convert_fixtures::{file_set, folder, mzxml};
+use crate::convert_tests::{convert, mzmls};
 use crate::flow_run_tests::p;
 
 /// `in/sparse.mzXML` (nine isolated counts per scan at irregular masses) and `in/trace.mzXML` (a gaussian every 0.1 Da), both flagged `centroided="0"`
@@ -94,11 +94,17 @@ fn auto_writes_sparse_counts_as_centroid_and_a_continuous_trace_as_profile() {
     assert!(bt.len() == 6 && bt.iter().all(|x| x.profile && x.mz.len() == 200));
     // the decision is told on stderr, and recorded in the file only where it changed what the reader says
     assert!(
-        o.stderr.contains("sparse.mzXML: spectrum=auto; written=centroid; basis=sparse"),
+        o.stderr
+            .contains("sparse.mzXML: spectrum=auto; written=centroid; basis=sparse"),
         "{}",
         o.stderr
     );
-    assert!(o.stderr.contains("trace.mzXML: spectrum=auto; written=profile; basis=continuous points"), "{}", o.stderr);
+    assert!(
+        o.stderr
+            .contains("trace.mzXML: spectrum=auto; written=profile; basis=continuous points"),
+        "{}",
+        o.stderr
+    );
     assert!(s.contains("mzLab spectrum type") && !t.contains("mzLab spectrum type"));
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -126,7 +132,9 @@ fn the_users_word_wins_and_the_short_form_is_the_parameter() {
     let c = run(&["--spectrum", "centroid"], "c");
     assert_eq!(c.code, 0, "{}", c.stderr);
     let t = out_of(&dir, "trace", "c");
-    assert!(read_back(&t).iter().all(|x| !x.profile && x.mz.len() == 200));
+    assert!(read_back(&t)
+        .iter()
+        .all(|x| !x.profile && x.mz.len() == 200));
     // the cache key holds the choice: a second run into the same folder with another type converts again
     let again = run(&["--spectrum", "centroid"], "a");
     assert_eq!(again.code, 0, "{}", again.stderr);
@@ -146,9 +154,15 @@ fn the_report_carries_the_decision_of_every_file() {
     let kind = |name: &str| {
         let it = items
             .iter()
-            .find(|i| i.get("input").and_then(Value::str).is_some_and(|n| n.contains(name)))
+            .find(|i| {
+                i.get("input")
+                    .and_then(Value::str)
+                    .is_some_and(|n| n.contains(name))
+            })
             .unwrap();
-        it.get("spectrum_type").and_then(Value::str).map(str::to_string)
+        it.get("spectrum_type")
+            .and_then(Value::str)
+            .map(str::to_string)
     };
     assert!(kind("sparse").is_some_and(|t| t.contains("written=centroid")));
     assert!(kind("trace").is_some_and(|t| t.contains("written=profile")));
@@ -164,7 +178,11 @@ fn the_file_is_the_one_the_site_writes() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     for name in ["sparse", "trace"] {
         let bytes = std::fs::read(src.join(format!("{name}.mzXML"))).unwrap();
-        let mut l = mzlab_lettori::open(file_set(&format!("{name}.mzXML"), bytes), &Limits::desktop()).unwrap();
+        let mut l = mzlab_lettori::open(
+            file_set(&format!("{name}.mzXML"), bytes),
+            &Limits::desktop(),
+        )
+        .unwrap();
         let site = Conversion {
             steps: Some(&[]),
             opz: Options::default(),

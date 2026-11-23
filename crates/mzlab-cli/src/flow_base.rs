@@ -91,7 +91,7 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         },
     );
     let mut made = Made::new("index", a);
-    note_losses(&mut made, &lost);
+    crate::flow_convert_notes::note_losses(&mut made, &lost);
     Ok(made)
 }
 
@@ -377,45 +377,12 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     if profile {
         made.warnings.push("warn.flow.profile".into());
     }
-    note_losses(&mut made, &lost);
+    crate::flow_convert_notes::note_losses(&mut made, &lost);
     if peaks == Peaks::Mzlab {
-        note_flagged(&mut made, flagged);
+        crate::flow_convert_notes::note_flagged(&mut made, flagged);
     }
-    note_spectrum(&mut made, chosen);
+    crate::flow_convert_notes::note_spectrum(&mut made, chosen);
     Ok(made)
-}
-
-/// The centroids of our own peak picking flagged merged and saturated in the note of the file (`--report` of `convert`); a merged one raises
-/// `warn.centroid.merged`, a notice and not an answer.
-fn note_flagged(made: &mut Made, (merged, saturated): (usize, usize)) {
-    let counts = [
-        ("merged".to_string(), Value::Num(merged as f64)),
-        ("saturated".to_string(), Value::Num(saturated as f64)),
-    ];
-    match &mut made.file {
-        Some(Value::Obj(o)) => o.extend(counts),
-        _ => made.file = Some(Value::Obj(counts.to_vec())),
-    }
-    if merged > 0 {
-        made.warnings.push("warn.centroid.merged".into());
-    }
-}
-
-/// The spectrum-type decision in the note of the file, so `prov.json` and `--report` carry it.
-fn note_spectrum(made: &mut Made, text: String) {
-    let item = ("spectrum_type".to_string(), Value::Str(text));
-    match &mut made.file {
-        Some(Value::Obj(o)) => o.push(item),
-        _ => made.file = Some(Value::Obj(vec![item])),
-    }
-}
-
-/// A partial read in the record of the run (prov.json, report.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
-fn note_losses(made: &mut Made, lost: &Losses) {
-    if lost.partial() {
-        made.warnings.push(lost.cause.into());
-        made.file = Some(lost.note());
-    }
 }
 
 /// Writes the sample `label` (`ID` of a `NAME@ID` input; the first when empty) of the dataset at `path` to `out` as indexed mzML; true when the file keeps
@@ -427,15 +394,8 @@ pub(crate) fn write_mzml(
     peaks: Peaks,
     opz: Options,
 ) -> Result<bool> {
-    write_mzml_with(
-        path,
-        label,
-        out,
-        (peaks, opz, SpectrumType::Auto),
-        &mut |_, _| {},
-        &None,
-    )
-    .map(|w| w.0)
+    let how = (peaks, opz, SpectrumType::Auto);
+    write_mzml_with(path, label, out, how, &mut |_, _| {}, &None).map(|w| w.0)
 }
 
 /// What `write_mzml_with` gives: profile kept, size, SHA-256, losses of the read, centroids flagged (merged, saturated), the spectrum-type decision when

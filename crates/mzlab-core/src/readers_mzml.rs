@@ -7,9 +7,9 @@ use crate::error::{Error, Result};
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep};
 use crate::readers::{Reader, Skips};
-use crate::spectrum_type::{self, SpectrumType, TypeChoice};
 #[cfg(not(target_family = "wasm"))]
 use crate::readers_centroids::{picchi, stima};
+use crate::spectrum_type::{self, SpectrumType, TypeChoice};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
 fn simple(l: &dyn Reader, c: usize) -> Header {

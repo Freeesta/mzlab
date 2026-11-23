@@ -11,17 +11,15 @@ use crate::Outcome;
 
 #[path = "convert_tests_wiff.rs"]
 mod wiff_notes;
-#[path = "convert_tests_spectrum.rs"]
-mod spectrum_type;
 
-fn convert(args: &[&str]) -> Outcome {
+pub(crate) fn convert(args: &[&str]) -> Outcome {
     let mut a = vec!["file".to_string(), "convert".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
     crate::execute(&a)
 }
 
 /// The mzML files of `dir`, by name.
-fn mzmls(dir: &Path) -> Vec<(String, Vec<u8>)> {
+pub(crate) fn mzmls(dir: &Path) -> Vec<(String, Vec<u8>)> {
     let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().path())

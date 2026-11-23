@@ -64,7 +64,9 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
             "--spectrum" => {
                 let v = value(&mut it, &x)?;
                 if mzlab_core::spectrum_type::SpectrumType::parse(&v).is_none() {
-                    return Err(format!("--spectrum {v}: expected auto, centroid or profile"));
+                    return Err(format!(
+                        "--spectrum {v}: expected auto, centroid or profile"
+                    ));
                 }
                 a.sets.push(format!("conv.spectrum={v}"));
             }

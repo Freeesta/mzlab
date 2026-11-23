@@ -132,7 +132,8 @@ pub fn run_points(mz: &[f64]) -> (usize, usize) {
     let n = mz.len();
     // the points `from..to` as a run: long enough and on a fine grid
     let run = |from: usize, to: usize| -> usize {
-        if to - from >= RUN_POINTS && (mz[to - 1] - mz[from]) / ((to - from - 1) as f64) <= MAX_STEP {
+        if to - from >= RUN_POINTS && (mz[to - 1] - mz[from]) / ((to - from - 1) as f64) <= MAX_STEP
+        {
             to - from
         } else {
             0
@@ -168,44 +169,70 @@ pub fn choose(
         }),
         SpectrumType::Auto if !file_peaks => Ok(TypeChoice::keep(asked, Basis::Reader)),
         SpectrumType::Auto => {
-            let n = l.index_without_tic(c)?.len();
-            let probe = n.min(PROBE);
-            let (mut flagged, mut inside, mut total, mut scans) = (0usize, 0usize, 0usize, 0);
-            for j in 0..probe {
-                let k = if probe > 1 { j * (n - 1) / (probe - 1) } else { 0 };
-                let s = l.scan(c, k)?;
-                if s.mz.is_empty() {
-                    continue;
-                }
-                scans += 1;
-                if !s.profile {
-                    continue;
-                }
-                flagged += 1;
-                let (i, t) = run_points(&s.mz);
-                inside += i;
-                total += t;
-            }
-            if scans == 0 {
+            let seen = probe(l, c)?;
+            if seen.scans == 0 {
                 return Ok(TypeChoice::keep(asked, Basis::Empty));
             }
-            if flagged == 0 {
+            if seen.flagged == 0 {
                 return Ok(TypeChoice {
-                    scans,
+                    scans: seen.scans,
                     ..TypeChoice::keep(asked, Basis::Reader)
                 });
             }
-            let share = inside as f64 / total.max(1) as f64;
+            let share = seen.inside as f64 / seen.total.max(1) as f64;
             let sparse = share < SPARSE_BELOW;
             Ok(TypeChoice {
                 asked,
                 force: sparse.then_some(false),
-                basis: if sparse { Basis::Sparse } else { Basis::Continuous },
-                scans,
+                basis: if sparse {
+                    Basis::Sparse
+                } else {
+                    Basis::Continuous
+                },
+                scans: seen.scans,
                 share: Some(share),
             })
         }
     }
+}
+
+/// What the scans looked at show: how many hold points, how many of those the reader flags profile, and their points in runs and in all.
+struct Probe {
+    scans: usize,
+    flagged: usize,
+    inside: usize,
+    total: usize,
+}
+
+/// At most `PROBE` scans of sample `c`, equally spaced, read and dropped.
+fn probe(l: &mut dyn Reader, c: usize) -> Result<Probe> {
+    let n = l.index_without_tic(c)?.len();
+    let count = n.min(PROBE);
+    let mut seen = Probe {
+        scans: 0,
+        flagged: 0,
+        inside: 0,
+        total: 0,
+    };
+    for j in 0..count {
+        let k = if count > 1 {
+            j * (n - 1) / (count - 1)
+        } else {
+            0
+        };
+        let s = l.scan(c, k)?;
+        if s.mz.is_empty() {
+            continue;
+        }
+        seen.scans += 1;
+        if s.profile {
+            let (inside, total) = run_points(&s.mz);
+            seen.flagged += 1;
+            seen.inside += inside;
+            seen.total += total;
+        }
+    }
+    Ok(seen)
 }
 
 #[cfg(test)]

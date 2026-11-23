@@ -42,6 +42,10 @@ pub mod flow;
 mod flow_align_join_tests;
 mod flow_apply;
 mod flow_base;
+mod flow_convert_notes;
+#[cfg(test)]
+#[path = "convert_tests_spectrum.rs"]
+mod convert_tests_spectrum;
 #[cfg(test)]
 mod flow_bentazone_export_tests;
 #[cfg(test)]
