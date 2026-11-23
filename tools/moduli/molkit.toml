@@ -3,6 +3,6 @@ pacchetto = "mzlab-mol-wasm"
 chiavi = { molkit = 13 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 512000
+tetto = 560000
 misura = 452652
-nota = "molecule kit of Draw (mol/1 check/1); standard cap"
+nota = "molecule kit of Draw (mol/1 check/1); cap raised 512000 to 560000 (+9.4 %) on 23 Nov 2026, owner-approved (Federico) and decided by the Coordinator"

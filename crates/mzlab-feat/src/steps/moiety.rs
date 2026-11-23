@@ -1,8 +1,10 @@
 //! The `step/1` descriptor of `structure.moiety@1`: the candidates of a table whose structure contains a moiety, or lacks it (`chem/moiety.rs`). In `molkit`
 //! in the browser (`wasm-feat/molkit/`, `flow_moiety`) and native in `flow run`; exported with the steps of `mzlab-cli` (`docs/schemi/steps-cli-1.json`).
 
-use super::FEAT_CEILING;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
+
+/// The size ceiling of `molkit` in bytes: the `tetto` of `tools/moduli/molkit.toml` (owner-approved raise, 23 Nov 2026).
+const MOLKIT_CEILING: u64 = 560_000;
 
 /// `structure.moiety`: a candidate table filtered by a substructure.
 pub fn moiety() -> Step {
@@ -36,7 +38,7 @@ pub fn moiety() -> Step {
         ],
         runs_in: RunsIn {
             wasm: Some("molkit"),
-            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            wasm_ceiling_bytes: Some(MOLKIT_CEILING),
             native: true,
         },
         errors: vec!["error.sub.query", "error.sub.column", "error.sub.db", "error.sub.dbSize", "error.sub.request"],
