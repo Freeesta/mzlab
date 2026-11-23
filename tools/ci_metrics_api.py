@@ -1,10 +1,6 @@
-"""GitHub API reads of the stat-ci poll: rate-limit aware, bounded, and loud about what it could not read.
-
-The workflow token (GITHUB_TOKEN) has a primary quota of 1000 requests per hour shared by every job of the repository, so the poll keeps a
-reserve for the other jobs, waits as GitHub asks on a 403/429 only when the wait is short, and gives up (ApiDenied) after that. Once it
-gave up, the rest of the process fails fast instead of waiting again for every call. `quota_line()` and the body of each denial are
-printed, so a failure says whether it was the quota, a secondary limit or a missing permission.
-"""
+"""GitHub API reads of the stat-ci poll: rate-limit aware, bounded, loud about what it could not read.
+GITHUB_TOKEN has 1000 requests per hour for the whole repository: the poll keeps a reserve, waits as asked on a short 403/429, then gives up
+(ApiDenied) and fails fast; each denial prints the response message and headers (quota, secondary limit or missing permission)."""
 from __future__ import annotations
 
 import json
@@ -19,11 +15,15 @@ MAX_WAIT_S = 120.0     # a longer wait than this is not worth a runner minute: g
 RESERVE = 200          # requests of the hourly quota left for the other jobs; the poll stops reading below it
 DENIED_RETRIES = 3
 
-_state: dict = {"calls": 0, "remaining": None, "denied": None}
+_state: dict = {"calls": 0, "remaining": None, "denied": None, "reserve": None}
 
 
 class ApiDenied(Exception):
-    """The API kept answering 403/429 (rate limit or forbidden), or the quota reserve was reached; the caller keeps what it already read."""
+    """The API kept answering 403/429 (rate limit or forbidden); the caller keeps what it already read."""
+
+
+class QuotaReserve(ApiDenied):
+    """Our own stop at the quota reserve: GitHub denied nothing, so it is a warning and never counts as a denial."""
 
 
 def warn(msg: str) -> None:
@@ -32,7 +32,7 @@ def warn(msg: str) -> None:
 
 
 def reset() -> None:
-    _state.update(calls=0, remaining=None, denied=None)
+    _state.update(calls=0, remaining=None, denied=None, reserve=None)
 
 
 def denied() -> str | None:
@@ -102,12 +102,14 @@ def handle_denied(err, path: str, attempt: int) -> None:
 
 
 def check_reserve(path: str) -> None:
-    """Fail fast once the API denied this process, or when only the reserve of the hourly quota is left."""
+    """Fail fast once the API denied this process or the reserve of the hourly quota was reached."""
     if _state["denied"]:
         raise ApiDenied(f"{path}: not tried, the API already denied this run ({_state['denied']})")
-    if _state["remaining"] is not None and _state["remaining"] < RESERVE:
-        _state["denied"] = f"hourly quota down to {_state['remaining']} requests, reserve {RESERVE} left for the other jobs"
-        raise ApiDenied(_state["denied"])
+    if _state["reserve"] is None and _state["remaining"] is not None and _state["remaining"] < RESERVE:
+        _state["reserve"] = f"hourly quota down to {_state['remaining']} requests, reserve {RESERVE} left for the other jobs"
+        warn(_state["reserve"])
+    if _state["reserve"]:
+        raise QuotaReserve(_state["reserve"])
 
 
 DENIAL_POLLS = 3       # denied polls within DENIAL_WINDOW_S that make a denial persistent
@@ -118,19 +120,31 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def denial_row(command: str, reason: str) -> dict:
-    """The API stopped a poll: kept as data (key = 10-minute bucket + command) so a repeated denial can be counted and seen."""
-    now = _now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    return {"ts_utc": now, "tipo": "api_denied", "k": f"{now[:15]}-{command}", "command": command, "reason": reason[:300]}
+def poll_id() -> str:
+    """One poll = one workflow run (it runs several commands, each its own process)."""
+    run = os.environ.get("GITHUB_RUN_ID")
+    return f"{run}.{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}" if run else "local"
 
 
-def denials_exit(ev: list[dict], now: datetime | None = None) -> int:
-    """3 when at least DENIAL_POLLS denied polls were recorded in the last hour: one transient denial is a warning, a persistent one is a red run."""
+def second_before(iso: str) -> str:
+    return (datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ") - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def finish(command: str) -> list[dict]:
+    """End of a command: print the quota line; the `api_denied` row of this poll (key = poll id, so the commands of one poll count once)."""
+    print(quota_line(), file=sys.stderr)
+    if not _state["denied"]:
+        return []
+    return [{"ts_utc": _now().strftime("%Y-%m-%dT%H:%M:%SZ"), "tipo": "api_denied", "k": poll_id(), "command": command, "reason": _state["denied"][:300]}]
+
+
+def denials_exit(ev: list[dict], now: datetime | None = None, poll: str | None = None) -> int:
+    """3 when this poll was denied too and at least DENIAL_POLLS polls were denied in the last hour: one transient denial is a warning, a persistent one a red run."""
     since = ((now or _now()) - timedelta(seconds=DENIAL_WINDOW_S)).strftime("%Y-%m-%dT%H:%M:%SZ")
     recent = [r for r in ev if r.get("tipo") == "api_denied" and r["ts_utc"] >= since]
-    if len({r["k"] for r in recent}) < DENIAL_POLLS:
+    if len({r["k"] for r in recent}) < DENIAL_POLLS or (poll or poll_id()) not in {r["k"] for r in recent}:
         return 0
-    print(f"::error::stat-ci: the GitHub API denied {len(recent)} polls in the last hour; last reason: {recent[-1]['reason']}", file=sys.stderr)
+    print(f"::error::stat-ci: the GitHub API denied {len({r['k'] for r in recent})} polls in the last hour; last reason: {recent[-1]['reason']}", file=sys.stderr)
     return 3
 
 

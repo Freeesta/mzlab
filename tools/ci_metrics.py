@@ -135,8 +135,8 @@ def recent_rows(data: str, api=api_get, fetch=dati_ci.download, ora: datetime | 
         try:
             out += run_obj_rows(run, api, fetch)
         except ApiDenied as e:
-            warn(f"registra-recenti: stopped before run {run['id']}, cursor kept at the last complete run: {e}")
-            return out, done
+            warn(f"registra-recenti: stopped before run {run['id']}: {e}")
+            return out, min(done, ghapi.second_before(run["updated_at"]))      # strictly older: a tie must not lose the denied run
         done = run["updated_at"]
     stamp = ora.strftime("%Y-%m-%dT%H:%M:%SZ")  # one `carico` row per 10-minute bucket: skip the ~100 job reads when it is already recorded
     if not any(r.get("tipo") == "carico" and r.get("k") == stamp[:15] for r in read_all(data)):
@@ -211,7 +211,8 @@ def fill_green(righe: list[dict], api=api_get, massimo: int = 30) -> int:
             r["verde_a_unione_s"] = secs(green_at(r["sha"], api), r["ts_utc"])
         except ApiDenied as e:
             del r["verde_provato"]      # a denied read says nothing about the row: untried for the next poll
-            warn(f"riempi-verde: stopped after {fatte - 1} rows: {e}")
+            fatte -= 1
+            warn(f"riempi-verde: stopped after {fatte} rows: {e}")
             break
         except Exception:
             pass
@@ -464,6 +465,7 @@ def main() -> int:
             remain -= fill_green(righe, massimo=remain)
             write_rows(p, righe)
         print(f"{a.maximum - remain} rows tried")
+        enqueue(ghapi.finish(a.comando), data)
         return 0
     try:
         if a.comando == "registra-recenti":
@@ -484,8 +486,7 @@ def main() -> int:
         # a metrics collector never turns main red: no rows this time, the cursor does not advance, the next poll retries
         warn(f"{a.comando}: no rows recorded ({e})")
         righe = []
-    print(ghapi.quota_line(), file=sys.stderr)
-    righe += [ghapi.denial_row(a.comando, ghapi.denied())] if ghapi.denied() else []
+    righe += ghapi.finish(a.comando)
     if a.new:
         write_rows(a.new, righe)
     else:

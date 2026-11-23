@@ -94,8 +94,9 @@ def test_poll_stops_at_the_quota_reserve(monkeypatch):
         def read(self, *a): return b"{}"
     monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=0: Resp())
     assert s.api_get("/a") == {}
-    with pytest.raises(s.ApiDenied, match="reserve"):
+    with pytest.raises(s.ghapi.QuotaReserve, match="reserve"):
         s.api_get("/b")
+    assert s.ghapi.denied() is None and s.ghapi.finish("registra-recenti") == []      # our own stop is not a denial
 
 
 def test_recent_rows_keep_the_runs_read_before_a_denial(tmp_path):
@@ -134,17 +135,53 @@ def test_fill_green_leaves_a_denied_row_untried():
 
     def api(p):
         raise s.ApiDenied("quota")
-    assert s.fill_green(rows, api=api) == 1
+    assert s.fill_green(rows, api=api) == 0
     assert not any(r.get("verde_provato") for r in rows)
 
 
-def test_denials_exit_only_when_persistent():
-    def row(minute):
-        return {"tipo": "api_denied", "ts_utc": f"2026-11-23T10:{minute:02d}:00Z", "k": f"2026-11-23T10:{minute // 10}-registra-recenti", "reason": "x"}
+def _denied_poll(monkeypatch, run_id, commands=("registra-conflitti",)):
+    monkeypatch.setenv("GITHUB_RUN_ID", run_id)
+    rows = []
+    for c in commands:
+        s.ghapi.reset()
+        s.ghapi._state["denied"] = "HTTP 403 on /x: still denied after the retries"
+        rows += s.ghapi.finish(c)
+    return rows
+
+
+def test_denials_exit_only_when_persistent_and_current(monkeypatch):
     now = datetime(2026, 11, 23, 10, 55, tzinfo=timezone.utc)
-    assert s.ghapi.denials_exit([row(5), row(15)], now) == 0
-    assert s.ghapi.denials_exit([row(5), row(15), row(25)], now) == 3
-    assert s.ghapi.denials_exit([row(5), row(15), row(25)], datetime(2026, 11, 23, 12, 0, tzinfo=timezone.utc)) == 0
+    rows = []
+    for i, minute in enumerate((5, 15, 25)):
+        rows += [dict(r, ts_utc=f"2026-11-23T10:{minute:02d}:00Z") for r in _denied_poll(monkeypatch, str(100 + i))]
+    monkeypatch.setenv("GITHUB_RUN_ID", "102")
+    assert s.ghapi.denials_exit(rows[:2], now) == 0                       # two polls: a warning only
+    assert s.ghapi.denials_exit(rows, now) == 3                           # three polls and this one is among them
+    monkeypatch.setenv("GITHUB_RUN_ID", "200")
+    assert s.ghapi.denials_exit(rows, now) == 0                           # the API recovered: this poll was not denied
+    assert s.ghapi.denials_exit(rows, datetime(2026, 11, 23, 12, 0, tzinfo=timezone.utc)) == 0      # older than an hour
+
+
+def test_four_commands_of_one_poll_count_once(monkeypatch):
+    rows = _denied_poll(monkeypatch, "7", ("registra-conflitti", "registra-recenti", "registra-coda", "registra-pr-recenti"))
+    assert len(rows) == 4 and len({r["k"] for r in rows}) == 1
+    assert s.ghapi.denials_exit(rows) == 0
+
+
+def test_denied_run_is_not_lost_when_timestamps_tie(tmp_path):
+    runs = [{"id": i, "name": "test", "updated_at": "2026-11-23T10:02:00Z"} for i in (1, 2)]
+
+    def rows(run, api, fetch):
+        if run["id"] == 2:
+            raise s.ApiDenied("HTTP 403 on jobs")
+        return [{"tipo": "run", "run_id": run["id"]}]
+    api = lambda p: {"workflow_runs": runs}  # noqa: E731
+    keep, s.run_obj_rows = s.run_obj_rows, rows
+    try:
+        out, cursor = s.recent_rows(str(tmp_path / "e.jsonl"), api=api, ora=datetime(2026, 11, 23, 11, 0, tzinfo=timezone.utc))
+    finally:
+        s.run_obj_rows = keep
+    assert [r["run_id"] for r in out] == [1] and cursor < "2026-11-23T10:02:00Z"      # run 2 is read again by the next poll
 
 
 def test_download_denial_is_retried_then_raised_not_swallowed(monkeypatch):
