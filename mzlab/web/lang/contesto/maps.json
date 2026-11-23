@@ -3,6 +3,8 @@
   "mappa.grp.fold": "Button that collapses the row of a group of marked points; {g} = group number.",
   "mappa.grp.unfold": "Button that expands the row of a group of marked points; {g} = group number.",
   "mappa.tab.ref.pick": "Button of the table of marked points in the map; {n} = point number.",
+  "mappa.live.chip": "Small chip that follows the cursor over the 2D map; {rt} = retention time in minutes, {mz} = m/z under the cursor.",
+  "mappa.live.peak": "Second part of that chip: the m/z of the peak under the sight; {mz} = its m/z.",
   "mappa.lbl.tip": "Tooltip of an m/z label of the map's side spectrum; {mz} = m/z of the peak, {snr} = local signal-to-noise ratio.",
   "mappa.read.scan": "Readout of the map crosshair; {n} = sequence number of the scan in the file.",
   "mappa.tab.title": "Title of the table of marked points under the map; {n} = how many points.",
