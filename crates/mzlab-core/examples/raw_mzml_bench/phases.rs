@@ -337,6 +337,7 @@ pub fn scale(
                 peaks: src.picchi(),
                 opz,
                 steps: indexed.then_some(&[][..]),
+                ..Conversion::default()
             };
             let mut byte = 0;
             // the timed runs do not hash: SHA-256 of the output is serial and would hide the scaling
