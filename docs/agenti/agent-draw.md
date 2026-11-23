@@ -11,7 +11,7 @@ Question: can agents build and render structures from the CLI (SMILES, molfile, 
 | route | size | licence | parity site=app=CLI | notes |
 |---|---|---|---|---|
 | (a) own Rust layout + SVG in `mzlab-mol` | target ≤150 KB raw wasm (not measured; basis in Method) | ours | same Rust code, byte for byte | reuses the reader, rings, stereo, molfile writer |
-| (b) RDKit MinimalLib 2026.09.2 (site) + C++ RDKit (app/CLI) | 7,394,153 B wasm, 2,415,496 B gz (14x the 512,000 B `molkit` cap); wheel 74 MB on disk | BSD-3 | two builds of C++, CMake + Boost + Emscripten in CI | breaks "light", all logic in Rust, no C++ toolchain |
+| (b) RDKit MinimalLib 2026.09.2 (site) + C++ RDKit (app/CLI) | 7,394,153 B wasm, 2,415,496 B gz (13x the 560,000 B `molkit` cap); wheel 74 MB on disk | BSD-3 | two builds of C++, CMake + Boost + Emscripten in CI | breaks "light", all logic in Rust, no C++ toolchain |
 | (c1) `chematic-depict` 1.2.1 (pure Rust) | probe 923,239 B (292,446 gz); layout alone +510,880 B raw | MIT/Apache-2.0 | yes | one owner, born May 2026, 150 releases in 6 months; E/Z wrong 57/100 |
 | (c2) `omgkit-depict` 0.0.8 | not probed | BSD-3 | yes | one owner, 0.0.x; E/Z wrong 46/100 |
 | (c3) `cosmolkit` 0.6.2 (RDKit port to Rust) | probe 2,240,764 B (711,988 gz); depict 37,703 lines | MIT | yes | one owner, born Sep 2026; RDKit quality, RDKit size |
@@ -39,7 +39,7 @@ Eyeballing: an angular OMe on a steroid sits on a ring bond in 4 of 6 engines; R
 - Crate facts: the crates.io API (`/api/v1/crates/NAME`: licence, owners, creation date, number of versions); line counts by `wc -l` on the published sources (`cosmolkit-depict` 0.6.2 `src/`).
 - Quality: an ad hoc Python 3.13 script (not committed) on RDKit 2026.09.2 (`rdDepictor.Compute2DCoords`, `SetPreferCoordGen(False/True)`), Indigo 1.49.0 (`layout()`) and a scratch Rust bench (release) calling `chematic-depict` 1.2.1 `compute_layout`, `omgkit-depict` 0.0.8 `generate` with the default `Style`, `cosmolkit` 0.6.2 `with_2d_coordinates`. Times are the layout call alone, wall clock, one cloud container; Python timings include the binding overhead. E/Z read back with RDKit (`DetectBondStereochemistry` on the engine's coordinates).
 - Sets A and B: built by that script from the scaffolds and seed above (synthetic, no real data). The generator and the metrics are rebuilt as `draw_quality.py` under `tools/` by the first build PR, which commits the sets as fixtures and re-measures RDKit's reference counts.
-- `molkit` cap: `tools/moduli/molkit.toml` (`tetto` 512000, `misura` 352069; rules in `wasm-caps.md`). The 150 KB budget is a target: the room under the cap (512,000 − 352,069 = 159,931 B) rounded down, so the drawing code fits with no cap raise; it is split per build PR in the prompts.
+- `molkit` cap: `tools/moduli/molkit.toml` (`tetto` 560000, `misura` 352069; rules in `wasm-caps.md`). The 150 KB budget is a target: the room under the former cap (512,000 − 352,069 = 159,931 B) rounded down; the cap was then raised to 560,000 (owner-approved, 23 Nov 2026), leaving 207,931 B; it is split per build PR in the prompts.
 
 ## Recommendation: (a), own Rust
 - Quality is a solved, measurable target: every engine sits at 90-93 % clean on set A; the gaps are bridged systems and E/Z, both testable against the RDKit oracle in `tools/`.
