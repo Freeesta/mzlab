@@ -1,8 +1,9 @@
 //! The two failures of a long kinetic campaign on synthetic series: a plan with a standard (the Flow table aligns every file, the Dig used to read
 //! one column less and stop with "the series has 16 files, the Dig 15") and one ion split into two rows by the alignment (the kinetic of each piece
-//! has zeros where the other holds the peak). Also the evidence of each row: controls, S/N per point, detected or forced, points used for k.
+//! has zeros where the other holds the peak). Also the evidence of each row: controls, S/N per point, its state (detected, forced, filled, absent), points used for k.
 
 use mzlab_feat::legacy::lr::{self, summary::summary};
+use mzlab_feat::EVIDENCE;
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 
@@ -155,4 +156,58 @@ fn every_point_carries_its_snr_and_whether_it_is_a_detected_peak() {
     let blank = pts.iter().find(|p| p["role"] == "blank").unwrap();
     assert_ne!(blank["state"], "detected");
     assert_eq!(parent["k_points"], TIMES.len());
+}
+
+/// A product at m/z 270.1 that forms in the treated samples; the blank holds only a weak, broad trace of it (`weak` = its amplitude).
+fn weak_in_blank(weak: f64) -> impl Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)> {
+    move |t| match t {
+        Some(k) => vec![(270.1, 6.0, 0.05, 1.0e6 * (1.0 - (-0.08 * k).exp()))],
+        None => vec![(270.1, 6.0, 0.5, weak)],
+    }
+}
+
+#[test]
+fn a_weak_trace_found_only_by_forced_integration_is_never_detected() {
+    // amplitudes that give the S/N 3-5 of forced noise integration in a blank
+    for (w, lo, hi) in [(1.2e4, 3.0, 4.0), (2.0e4, 4.0, 5.0)] {
+        let (files, idxs) = series_with(&weak_in_blank(w));
+        let s = sum(&dig(&files, &idxs));
+        let rows = rows_near(&s, 270.1);
+        assert_eq!(rows.len(), 1, "{rows:#?}");
+        let r = &rows[0];
+        let pts = r["points"].as_array().unwrap();
+        assert!(pts
+            .iter()
+            .all(|p| EVIDENCE.contains(&p["state"].as_str().unwrap())));
+        let b = pts.iter().find(|p| p["role"] == "blank").unwrap();
+        let snr = b["snr"].as_f64().unwrap();
+        assert_eq!(b["state"], "forced", "{b}");
+        assert!((lo..hi).contains(&snr), "{b}");
+        assert!(
+            b["area"].as_f64().unwrap() > 0.0,
+            "the area stays readable: {b}"
+        );
+        assert_eq!(
+            r["controls"]["blank"], 0.0,
+            "a forced area is no peak in the blank"
+        );
+        assert_eq!(r["k_points"], 6);
+    }
+    // the limits are the user's: at S/N 3 and a FWHM up to 2 min the same broad blank peak is detected and counts as a control
+    let (files, idxs) = series_with(&weak_in_blank(1.2e4));
+    let s = sum(&dig_with(
+        &files,
+        PARENT,
+        r#"{"min_snr": 3, "max_fwhm_s": 120}"#,
+        &idxs,
+    ));
+    let r = &rows_near(&s, 270.1)[0];
+    let b = r["points"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["role"] == "blank")
+        .unwrap();
+    assert_eq!(b["state"], "detected", "{b}");
+    assert!(r["controls"]["blank"].as_f64().unwrap() > 0.0, "{r}");
 }

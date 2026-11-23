@@ -6,7 +6,7 @@
 use mzlab_core::json::{round, Out};
 
 use super::super::series::FileIn;
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{evidence_word, Aligned, CELL_ABSENT, CELL_DETECTED};
 
 /// The cells of one row before the merge: (area, state) per column.
 #[derive(Debug, Clone, PartialEq)]
@@ -160,18 +160,10 @@ fn row_json(o: &mut Out, r: &RowWas) {
     }
     o.raw("],\"states\":[");
     for (i, c) in r.cells.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(state_name(c.1));
+        o.raw(if i > 0 { "," } else { "" })
+            .str(evidence_word(c.1, false));
     }
     o.raw("]}");
-}
-
-/// The state of a cell in words: `detected`, `forced` (area integrated where no peak was detected) or `absent`.
-pub fn state_name(s: u8) -> &'static str {
-    match s {
-        CELL_DETECTED => "detected",
-        x if crate::aligned::no_peak(x) => "absent",
-        _ => "forced",
-    }
 }
 
 /// The `merged` block: one object per merge, with both rows as they were.

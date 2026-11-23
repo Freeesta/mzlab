@@ -103,3 +103,14 @@ fn zero_switches_the_merge_off_and_far_rows_never_merge() {
     assert!(merge_split(&mut t, 0.3, 0.1).is_empty());
     assert_eq!(merge_split(&mut t, 0.3, 0.3).len(), 1);
 }
+
+#[test]
+fn the_evidence_words_separate_a_rejected_peak_from_the_gap_filling() {
+    use crate::aligned::{CELL_NA, CELL_TARGETED};
+    assert_eq!(evidence_word(CELL_DETECTED, false), "detected");
+    assert_eq!(evidence_word(CELL_FILLED, true), "forced");
+    assert_eq!(evidence_word(CELL_TARGETED, false), "forced");
+    assert_eq!(evidence_word(CELL_FILLED, false), "filled");
+    assert_eq!(evidence_word(CELL_ABSENT, false), "absent");
+    assert_eq!(evidence_word(CELL_NA, true), "absent");
+}
