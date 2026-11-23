@@ -70,6 +70,7 @@ embed!(
     "llmlog-1.json",
     "llmreg-1.json",
     "massacc-1.json",
+    "quant-targets-1.json",
     "mechanism-1.json",
     "molecules-1.json",
     "msn-figures-1.json",

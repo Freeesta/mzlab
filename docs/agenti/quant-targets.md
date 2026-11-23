@@ -1,0 +1,28 @@
+# Target list over many files (`quant.targets@1`, `mzlab-cli quant targets`)
+Files: `crates/mzlab-feat/src/quant_targets/` (`targets.rs` table, `params.rs`, `run.rs` engine, `text.rs` table/log/plan/JSON), `crates/mzlab-cli/src/quant_targets_cmd.rs` (CLI), `flow_quant_targets.rs` (descriptor + executor). Tests: `crates/mzlab-feat/tests/quant_targets.rs`, `crates/mzlab-cli/tests/quant_targets_cli.rs`, `src/flow_quant_targets_tests.rs`; synthetic mzML in `crates/mzlab-feat/tests/common_quant/`.
+
+## What it does
+- One pass per file: the targets are grouped by polarity and each group is one `Routes::sweep_matrix` over the index (every XIC at once, cut in chunks of half `budget::TARGET_BYTES`; a chunk changes no column), the trace rounded like `trace xic` (rt 4, y 1 decimals), then `peakq_lrauto::lr_auto_integrate` (the engine of `peak auto-lr`) between `rt_min` and `rt_max` and `peakq::quality` for the shape. It replaces one `trace xic | peak auto-lr` process per target and file; the areas are the same numbers (test `areas_are_those_of_trace_xic_into_peak_auto_lr`).
+- The tallest peak whose apex is inside the window is the row; `peaks_in_window` says how many there were. Area counts x s (engine counts x min x 60), height counts, rt min.
+- Speed: the `.mzidx` is sorted by m/z, so a sweep reads only the peaks inside the target windows (never every scan). `prepare` checks the run, `Job::file` is the pass over one file (its index, then every target) and `Job::finish` joins the passes in file order: the CLI runs files on `--workers` threads (default one per core, at most 8; `par::par_map_with`), the Flow executor on `par::par_map`, and the bytes are the same for any count (test `the_bytes_are_the_same_whatever_the_workers`).
+- Benchmark: `tools/bench_quant_targets.py` (245 synthetic files x 250 targets on 4 vCPU: 9.4 s from mzML, 4.1 s from `--cache`; `measurements-speed.md`).
+- No new cache: the CLI builds each index once per run in a temporary folder (or takes it from `--cache DIR` through `idx_cache`); `.mzidx` inputs are opened as they are. Same inputs give the same bytes.
+
+## Inputs
+- Targets: CSV (`,`, `;` or tab) or JSON (`[{...}]` or `{"targets":[...]}`): `id`, `mz`, `rt_min`, `rt_max`, optional `polarity` (`+`/`-`, empty = every scan) and `role` (`target`, `standard`/`parent` = reference). Duplicate ids, `rt_min > rt_max`, bad numbers: `err.quant.targets.table` (row, detail); no row: `err.quant.targets.empty`.
+- Files: mzML, maker's files and folders the readers take, folders holding them (name order, a set folder is one file), `.mzidx`. None: `err.quant.targets.noFiles`.
+
+## Parameters (CLI flag = step parameter)
+- `da` 0.5 (XIC half window, Da), `min_sn` 3, `min_points` 5, `min_shape` 0.5 (Gaussian correlation), `offset` `0`, `blank_pattern` empty, `ms_level` 1, `smooth_half` 0 (= automatic per trace, column `smooth_half`), `valley` 10 %. A value out of range is `err.quant.targets.param` (exit 2), never clamped.
+- `offset`: a number of Da (|D| <= 0.6), `auto:MZ[@RT]` (the `mzcal` spec of `trace xic --mz-offset`), or `auto`: measured per file and polarity on the first reference row of that polarity (else of none), at the centre of its window. No reference: 0, `warn.quant.targets.noReference` and a choice in the log. The evidence of every measure (`mzcal::Offset::evidence_json`) is in the log; a failed measure keeps 0 with its mzcal warning.
+
+## Output
+- CSV header `file,id,area,height,sn,rt,flag,state,points,shape,start_rt,end_rt,peaks_in_window,smooth_half,mz_offset_da`, one row per file and target in input order, never hidden. `--json`: `quant-targets/1` (`rows` as objects with the same keys, numbers or `null`, and `log`). `--dry-run`: `quant-targets-plan/1` (parameters, files with their blank flag, targets, rows), no data read.
+- Flags (`;`-joined, `ok` when none): `no_scans` (no scan of that level and polarity: `warn.quant.targets.noScans`), `no_peak`, `below_threshold` (S/N < `min_sn`, numbers kept), `bad_shape` (points or shape under the minimum), `edge` (apex on the first or last scan inside the window), `in_blank` (a file matching `blank_pattern` has the target detected; set on the other files' rows with a peak; a pattern matching no file: `warn.quant.targets.noBlank`). Detected = a peak without `no_scans`, `no_peak`, `below_threshold`, `bad_shape`.
+- State (one per row): `detected`; `force_integrated` (a peak under `min_sn` or the shape minimum, its numbers kept and flagged, never hidden); `absent` (no peak in the window or no scan, numbers empty). No value is gap-filled, so there is no `filled` state.
+- Sparse data: unit-resolution files of whole ion counts where most scans hold no peak at the target are read as they are (an empty scan is a 0 in the trace); a weak peak gets its own S/N (test `sparse_ion_counts_give_a_peak_with_its_s_n_and_stray_counts_none`).
+- Log `quant-targets-log/1`: `params`, `files` (`file`, `blank`, `offsets` per polarity with `mz_offset_da`, `reference`, `evidence`, `detected`), `choices` (`offset_reference.+|-|any`, `smooth_half`), `warnings`.
+
+## Coverage and limits
+- SIM: SIM spectra are MS1 scans and are swept like any scan. SIM/SRM files stored only as chromatograms have no scans in the index: every row is `no_scans` (follow-up: read chromatograms, as `chrom.transitions` does).
+- Browser: not built yet. The engine adds ~61-90 KB optimised to any existing module (flowtab 465,660 -> 555,445 B, +19.3 %, over its 512,000 cap; finder-lr 801,575 -> 862,579, +7.6 %; untargeted +18.8 %; interp +14.7 %); a module of its own is 177,524 B. Growth over 5 % needs the owner, so `runs_in.wasm` is empty until the choice is made.

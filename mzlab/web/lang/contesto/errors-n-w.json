@@ -93,5 +93,7 @@
   "err.reflist.adduct": "Row error of a CSV list: the adduct column holds a name the program does not know; {value} = the text read.",
   "err.reflist.formula": "Row error of a CSV list: the formula column cannot be read; {value} = the text read.",
   "err.reflist.mz": "Row error of a CSV list: the m/z column is not a number above 0; {value} = the text read.",
-  "err.reflist.polarity": "Row error of a CSV list: the polarity column holds an unknown word; {value} = the text read."
+  "err.reflist.polarity": "Row error of a CSV list: the polarity column holds an unknown word; {value} = the text read.",
+  "err.quant.targets.table": "quant targets error; {row} = the row number of the target table (1 = first data row), {detail} = the field and why it is refused.",
+  "err.quant.targets.param": "quant targets parameter error; {name} = the parameter (da, min_sn, offset...), {value} = the text given."
 }

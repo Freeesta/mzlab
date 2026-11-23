@@ -1,6 +1,7 @@
 //! The plan of `table compare`: which columns are the reference, the blank and the treated, the time of each column and the parameters taken. Used by
 //! `compare/1` (`statcmp::compare`) and by `compare-plan/1` (`plan`, which computes nothing).
 
+use crate::glob::glob;
 use crate::json::Value;
 use crate::jsonb::{num, opt, text, Obj};
 use crate::statcmp::{CmpIn, CmpOpts, RULES};
@@ -31,28 +32,6 @@ pub(crate) fn choice(key: &str, value: Value, reason: &str) -> Value {
         .put("value", value)
         .put("reason", text(reason))
         .done()
-}
-
-/// `*` and `?` over characters, case-insensitive.
-fn glob(pat: &[char], s: &[char]) -> bool {
-    let (mut p, mut i, mut star, mut mark) = (0, 0, None, 0);
-    while i < s.len() {
-        if p < pat.len() && (pat[p] == '?' || pat[p] == s[i]) {
-            p += 1;
-            i += 1;
-        } else if p < pat.len() && pat[p] == '*' {
-            star = Some(p);
-            mark = i;
-            p += 1;
-        } else if let Some(sp) = star {
-            p = sp + 1;
-            mark += 1;
-            i = mark;
-        } else {
-            return false;
-        }
-    }
-    pat[p..].iter().all(|&c| c == '*')
 }
 
 fn lower(s: &str) -> Vec<char> {

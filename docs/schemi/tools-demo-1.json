@@ -38,6 +38,7 @@
           "qc.run_order",
           "quant.calibrate",
           "quant.curve",
+          "quant.targets",
           "report.methods",
           "rt.predict",
           "screen.suspects",
@@ -108,6 +109,7 @@
               "qc.run_order@1",
               "quant.calibrate@1",
               "quant.curve@1",
+              "quant.targets@1",
               "report.methods@1",
               "rt.predict@1",
               "screen.suspects@1",
@@ -1445,6 +1447,70 @@
                     "type":"string",
                     "default":"",
                     "description":"analyte|sample|reason separated by semicolons; * as analyte = every analyte; each one is logged."
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"quant.targets@1"},
+              "name":{
+                "enum":["da","min_sn","min_points","min_shape","offset","blank_pattern","ms_level","smooth_half","valley"]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":5,
+                    "default":0.5,
+                    "description":"Every trace sums the signal within this of the target m/z (after the offset)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"A peak under this is reported with its numbers and flagged below_threshold; it does not count as detected"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":5,
+                    "description":"A peak with fewer points between its edges is flagged bad_shape"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"
+                  },
+                  {
+                    "type":"string",
+                    "default":"0",
+                    "description":"Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]"
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Comma list of case-insensitive globs over the file names; a target detected in a blank flags the samples in_blank"
+                  },
+                  {"type":"integer","minimum":1,"maximum":10,"default":1,"description":"MS level"},
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "maximum":30,
+                    "default":0,
+                    "description":"Savitzky-Golay half window of the detection copy (peak auto-lr); 0 = automatic per trace, written in the smooth_half column"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":100,
+                    "default":10,
+                    "description":"Two peaks are split when the valley between them is under this % of the lower apex (peak auto-lr)"
                   }
                 ]
               }
@@ -3007,6 +3073,7 @@
                 "qc.run_order@1",
                 "quant.calibrate@1",
                 "quant.curve@1",
+                "quant.targets@1",
                 "report.methods@1",
                 "rt.predict@1",
                 "screen.suspects@1",

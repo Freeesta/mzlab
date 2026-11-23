@@ -159,6 +159,14 @@ impl Parsed {
             .find(|(n, _)| n == k)
             .map(|(_, v)| v.as_str())
     }
+    /// Every value of a repeated option, in the order given.
+    pub fn all(&self, k: &str) -> Vec<&str> {
+        self.vals
+            .iter()
+            .filter(|(n, _)| n == k)
+            .map(|(_, v)| v.as_str())
+            .collect()
+    }
     pub fn flag(&self, k: &str) -> bool {
         self.flags.iter().any(|f| f == k)
     }
