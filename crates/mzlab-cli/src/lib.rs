@@ -30,6 +30,9 @@ mod design_cmd;
 mod emit;
 pub mod error_text;
 pub(crate) use emit::emit;
+#[cfg(test)]
+#[path = "convert_tests_spectrum.rs"]
+mod convert_tests_spectrum;
 pub mod exit;
 mod extract;
 #[cfg(test)]
@@ -42,10 +45,6 @@ pub mod flow;
 mod flow_align_join_tests;
 mod flow_apply;
 mod flow_base;
-mod flow_convert_notes;
-#[cfg(test)]
-#[path = "convert_tests_spectrum.rs"]
-mod convert_tests_spectrum;
 #[cfg(test)]
 mod flow_bentazone_export_tests;
 #[cfg(test)]
@@ -58,6 +57,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_convert_notes;
 mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;

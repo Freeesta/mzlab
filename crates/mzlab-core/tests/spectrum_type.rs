@@ -56,7 +56,15 @@ impl Reader for Fake {
         // isolated counts at irregular masses, or a gaussian trace every 0.1 Da
         let (mz, y): (Vec<f64>, Vec<f64>) = if self.sparse {
             (0..9)
-                .map(|i| (100.0 + f64::from(i) * 7.31 + (f64::from(i) * 1.7).sin() * 2.0 + k as f64 * 0.01, 1.0 + f64::from(i % 3)))
+                .map(|i| {
+                    (
+                        100.0
+                            + f64::from(i) * 7.31
+                            + (f64::from(i) * 1.7).sin() * 2.0
+                            + k as f64 * 0.01,
+                        1.0 + f64::from(i % 3),
+                    )
+                })
                 .unzip()
         } else {
             (0..300)
@@ -154,7 +162,12 @@ fn the_choice_is_taken_once_and_told() {
     let c = conv.type_choice(&mut l, 0).unwrap();
     assert_eq!((c.basis, c.force), (Basis::Sparse, Some(false)));
     assert!(c.share.unwrap() < 0.5 && c.scans == 6);
-    assert!(c.text(true).starts_with("spectrum=auto; written=centroid; basis=sparse"));
+    assert!(c
+        .text(true)
+        .starts_with("spectrum=auto; written=centroid; basis=sparse"));
     let c = conv.type_choice(&mut fake(false, true), 0).unwrap();
-    assert_eq!((c.basis, c.force, c.recorded()), (Basis::Continuous, None, false));
+    assert_eq!(
+        (c.basis, c.force, c.recorded()),
+        (Basis::Continuous, None, false)
+    );
 }
