@@ -86,10 +86,11 @@ fn flags_tell_detected_small_edge_and_empty_targets_apart() {
     let empty = get(&r, "s1.mzML|empty");
     assert_ne!(empty[6], "ok", "{:?}", empty);
     assert_ne!(empty[7], "detected", "{:?}", empty);
-    // every row has one of the three states
+    // every row has one of the three states, words of the shared evidence vocabulary (no gap filling here, so never `filled`)
     for (_, c) in &r {
         assert!(
-            matches!(c[7].as_str(), "detected" | "forced" | "absent"),
+            matches!(c[7].as_str(), "detected" | "forced" | "absent")
+                && mzlab_feat::EVIDENCE.contains(&c[7].as_str()),
             "{c:?}"
         );
         assert_eq!(c[7] == "absent", c[2].is_empty(), "{c:?}");
