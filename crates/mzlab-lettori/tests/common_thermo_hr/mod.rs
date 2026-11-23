@@ -44,10 +44,10 @@ pub fn folder(name: &str) -> PathBuf {
 /// A file opened as the site and the app open it.
 pub fn reader_of(b: Vec<u8>) -> Box<dyn mzlab_core::readers::Reader> {
     let set = FileSet {
-        membri: vec![Member {
-            nome: "hr.raw".into(),
+        members: vec![Member {
+            name: "hr.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };

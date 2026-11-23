@@ -25,13 +25,13 @@ fn open_with(
     ]
     .into_iter()
     .map(|(n, b)| Member {
-        nome: n,
+        name: n,
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     })
     .collect();
-    readers::open(FileSet { membri: members }, &Limits::sito())
+    readers::open(FileSet { members }, &Limits::sito())
 }
 
 /// A GC/MS run whose scans after the first are MRM visits.

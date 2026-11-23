@@ -55,11 +55,11 @@ fn side(b: &B1) -> BTreeMap<(String, String), (Side, &LongRow)> {
         .map(|(k, g)| {
             let ncs: Vec<&str> = g
                 .iter()
-                .map(|r| r.nome_comune.as_str())
+                .map(|r| r.common_name.as_str())
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect();
-            let id = |n: &str| b.ident.iter().find(|i| i.nome_comune == n);
+            let id = |n: &str| b.ident.iter().find(|i| i.common_name == n);
             let level = ncs
                 .iter()
                 .filter_map(|n| id(n))

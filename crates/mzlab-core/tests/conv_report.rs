@@ -61,7 +61,7 @@ pub fn check(doc: &json::Value, reader: &str) {
 fn an_agilent_conversion_carries_conv_with_its_gaps_and_reasons() {
     let (idx, peak) = encode(&sample());
     let xml = conv_help::mzml(FileSet {
-        membri: vec![
+        members: vec![
             conv_help::member("x.D/AcqData/MSScan.bin", &idx),
             conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
@@ -81,7 +81,7 @@ fn a_cut_folder_writes_the_scans_declared_and_read_in_conv() {
     let (idx, peak) = encode(&sample());
     let doc = |scan: &[u8]| {
         conv_di(&conv_help::mzml(FileSet {
-            membri: vec![
+            members: vec![
                 conv_help::member("x.D/AcqData/MSScan.bin", scan),
                 conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
                 conv_help::member("x.D/AcqData/MSTS.xml", MSTS),
@@ -156,7 +156,7 @@ fn a_reader_without_profile_refuses_the_profile_route_with_a_key() {
     let (idx, peak) = encode(&sample());
     let mut l = readers::open(
         FileSet {
-            membri: vec![
+            members: vec![
                 conv_help::member("x.D/AcqData/MSScan.bin", &idx),
                 conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
             ],

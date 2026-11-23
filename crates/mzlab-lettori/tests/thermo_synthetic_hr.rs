@@ -33,10 +33,10 @@ fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let set = FileSet {
-        membri: vec![Member {
-            nome: "hr.raw".into(),
+        members: vec![Member {
+            name: "hr.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };
@@ -81,10 +81,10 @@ fn a_v66_file_relabelled_with_an_unverified_version_is_refused_with_its_number()
         let mut x = b.clone();
         x[36..40].copy_from_slice(&v.to_le_bytes());
         let set = FileSet {
-            membri: vec![Member {
-                nome: "hr.raw".into(),
+            members: vec![Member {
+                name: "hr.raw".into(),
                 dim: x.len() as u64,
-                dati: Box::new(x),
+                data: Box::new(x),
                 sha1: None,
             }],
         };
@@ -135,10 +135,10 @@ fn scans_without_a_readable_event_have_no_ms_level() {
     let m = opentfraw::mzml::scan_metadata(&raw, &mut std::io::Cursor::new(b.clone()), 0).unwrap();
     assert_eq!(m.ms_level, None);
     let set = FileSet {
-        membri: vec![Member {
-            nome: "hr.raw".into(),
+        members: vec![Member {
+            name: "hr.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };
@@ -203,10 +203,10 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
     let _ = std::fs::remove_dir_all(&d);
     let file = hex(&Sha256::digest(&b));
     let set = FileSet {
-        membri: vec![Member {
-            nome: "p.raw".into(),
+        members: vec![Member {
+            name: "p.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };
@@ -279,10 +279,10 @@ fn dda_windows(
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let mut set = FileSet {
-        membri: vec![Member {
-            nome: "dda.raw".into(),
+        members: vec![Member {
+            name: "dda.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b),
+            data: Box::new(b),
             sha1: None,
         }],
     };

@@ -102,7 +102,7 @@ pub fn inventory(mut fs: FileSet, limits: &Limits, full: bool) -> Result<FileInv
     let (name, ole, si) = super::listing::container_of(&mut fs, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
-    let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
+    let mut scan = std::mem::replace(&mut sm.data, Box::new(Vec::<u8>::new()));
     let table = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
         .map(|t| idx::sections(&t))

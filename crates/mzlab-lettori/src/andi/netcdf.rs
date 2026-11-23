@@ -92,7 +92,7 @@ impl Cur<'_> {
         if a < self.base || f > self.base + self.buf.len() as u64 {
             let l = n.max(WINDOW).min(self.dim - a);
             self.buf = vec![0u8; usize::try_from(l).map_err(|_| Error::memory_budget())?];
-            self.dati.read_at(a, &mut self.buf)?;
+            self.data.read_at(a, &mut self.buf)?;
             self.base = a;
         }
         self.pos = f;
@@ -165,17 +165,17 @@ impl Cur<'_> {
                 let w = kind.width() as usize;
                 Val::Num(b.chunks_exact(w).map(|x| kind.value(x)).collect())
             };
-            out.push(Attr { nome: name, val });
+            out.push(Attr { name, val });
         }
         Ok(out)
     }
 }
 
 impl Cdf {
-    /// Parses the header of the file `dati` of `dim` bytes.
+    /// Parses the header of the file `data` of `dim` bytes.
     pub fn open(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Cdf> {
         let mut c = Cur {
-            dati: data,
+            data,
             dim,
             pos: 0,
             buf: Vec::new(),
@@ -239,7 +239,7 @@ impl Cdf {
                 return Err(broken("variable starts past the end of the file"));
             }
             self.var.push(Var {
-                nome: name,
+                name,
                 dims,
                 att,
                 tipo: kind,
@@ -267,13 +267,13 @@ impl Cdf {
     }
 
     pub fn find(&self, name: &str) -> Option<&Var> {
-        self.var.iter().find(|v| v.nome == name)
+        self.var.iter().find(|v| v.name == name)
     }
 
     /// A global attribute as text.
     pub fn text(&self, name: &str) -> Option<&str> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Testo(t) if a.nome == name => Some(t.trim()).filter(|t| !t.is_empty()),
+            Val::Testo(t) if a.name == name => Some(t.trim()).filter(|t| !t.is_empty()),
             _ => None,
         })
     }
@@ -281,7 +281,7 @@ impl Cdf {
     /// A global attribute as a number.
     pub fn number(&self, name: &str) -> Option<f64> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Num(n) if a.nome == name => n.first().copied(),
+            Val::Num(n) if a.name == name => n.first().copied(),
             _ => None,
         })
     }
@@ -370,13 +370,13 @@ impl Var {
     /// An attribute of the variable as a number.
     pub fn number(&self, name: &str) -> Option<f64> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Num(n) if a.nome == name => n.first().copied(),
+            Val::Num(n) if a.name == name => n.first().copied(),
             _ => None,
         })
     }
     pub fn text(&self, name: &str) -> Option<&str> {
         self.att.iter().find_map(|a| match &a.val {
-            Val::Testo(t) if a.nome == name => Some(t.trim()),
+            Val::Testo(t) if a.name == name => Some(t.trim()),
             _ => None,
         })
     }
@@ -403,12 +403,12 @@ pub enum Val {
 }
 
 pub struct Attr {
-    pub nome: String,
+    pub name: String,
     pub val: Val,
 }
 
 pub struct Var {
-    pub nome: String,
+    pub name: String,
     pub dims: Vec<usize>,
     pub att: Vec<Attr>,
     pub tipo: Kind,
@@ -432,7 +432,7 @@ pub struct Cdf {
 
 /// The header read through a window over the file.
 struct Cur<'a> {
-    dati: &'a mut dyn ReadAt,
+    data: &'a mut dyn ReadAt,
     dim: u64,
     pos: u64,
     buf: Vec<u8>,

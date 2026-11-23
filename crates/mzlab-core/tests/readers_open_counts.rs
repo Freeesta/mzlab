@@ -71,16 +71,16 @@ fn pair() -> Option<(Vec<Vec<u8>>, u64)> {
     Some((v, total))
 }
 
-fn set(dati: &[Vec<u8>], c: &Rc<Conti>) -> FileSet {
+fn set(data: &[Vec<u8>], c: &Rc<Conti>) -> FileSet {
     let names = ["multi.wiff", "multi.wiff.scan"];
     FileSet {
-        membri: dati
+        members: data
             .iter()
             .zip(names)
             .map(|(d, n)| Member {
-                nome: n.into(),
+                name: n.into(),
                 dim: d.len() as u64,
-                dati: Box::new(Contato {
+                data: Box::new(Contato {
                     data: d.clone(),
                     c: c.clone(),
                 }),
@@ -92,19 +92,19 @@ fn set(dati: &[Vec<u8>], c: &Rc<Conti>) -> FileSet {
 
 #[test]
 fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
-    let Some((dati, total)) = pair() else {
+    let Some((data, total)) = pair() else {
         eprintln!("SKIP read_open_counts.rs: python3 not available");
         return;
     };
     let c = Rc::new(Conti::default());
     // the list of samples (`native_samples`)
-    let l = readers::open(set(&dati, &c), &Limits::sito()).unwrap();
+    let l = readers::open(set(&data, &c), &Limits::sito()).unwrap();
     assert_eq!(l.samples().len(), SAMPLES);
     drop(l);
     let list = (c.reads.get(), c.bytes.get());
     // one index builder per sample, each in its own worker (`build_mzidx_native`)
     for s in 0..SAMPLES {
-        let mut l = wiff::reader::open_only(set(&dati, &c), &Limits::sito(), Some(s)).unwrap();
+        let mut l = wiff::reader::open_only(set(&data, &c), &Limits::sito(), Some(s)).unwrap();
         assert!(!l.index(s).unwrap().is_empty());
     }
     let all = (c.reads.get(), c.bytes.get());
@@ -123,7 +123,7 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
         list.1
     );
     // a builder reads the container and the heads of its own injection only
-    let (contenitore, scan) = (dati[0].len() as u64, dati[1].len() as u64);
+    let (contenitore, scan) = (data[0].len() as u64, data[1].len() as u64);
     let builders = all.1 - list.1;
     assert!(
         builders <= SAMPLES as u64 * contenitore + scan + scan / 10,

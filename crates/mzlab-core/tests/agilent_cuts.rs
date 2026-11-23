@@ -22,12 +22,12 @@ fn open(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn
     }
     readers::open(
         FileSet {
-            membri: members
+            members: members
                 .into_iter()
                 .map(|(n, b)| Member {
-                    nome: n.into(),
+                    name: n.into(),
                     dim: b.len() as u64,
-                    dati: Box::new(b),
+                    data: Box::new(b),
                     sha1: None,
                 })
                 .collect(),

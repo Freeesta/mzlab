@@ -58,17 +58,17 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
             );
         }
         let fs = FileSet {
-            membri: vec![
+            members: vec![
                 Member {
-                    nome: format!("{name}.wiff"),
+                    name: format!("{name}.wiff"),
                     dim: wiff_bytes.len() as u64,
-                    dati: Box::new(wiff_bytes),
+                    data: Box::new(wiff_bytes),
                     sha1: None,
                 },
                 Member {
-                    nome: format!("{name}.wiff.scan"),
+                    name: format!("{name}.wiff.scan"),
                     dim: scan_bytes.len() as u64,
-                    dati: Box::new(scan_bytes),
+                    data: Box::new(scan_bytes),
                     sha1: None,
                 },
             ],
@@ -132,17 +132,17 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
     assert!(lc.gradient.iter().any(|g| g.b.is_some_and(|b| b >= 80.0)));
 
     let fs = FileSet {
-        membri: vec![
+        members: vec![
             Member {
-                nome: "MRM.wiff".into(),
+                name: "MRM.wiff".into(),
                 dim: wiff_bytes.len() as u64,
-                dati: Box::new(wiff_bytes),
+                data: Box::new(wiff_bytes),
                 sha1: None,
             },
             Member {
-                nome: "MRM.wiff.scan".into(),
+                name: "MRM.wiff.scan".into(),
                 dim: scan_bytes.len() as u64,
-                dati: Box::new(scan_bytes),
+                data: Box::new(scan_bytes),
                 sha1: None,
             },
         ],

@@ -128,9 +128,9 @@ pub fn open_bare(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 /// `open_bare` for a listing: a SCIEX pair is read from its container and index alone (`wiff::reader::open_listing`).
 fn open_as(mut fs: FileSet, limits: &Limits, listing: bool) -> Result<Box<dyn Reader>> {
     let name = fs
-        .membri
+        .members
         .first()
-        .map(|m| m.nome.clone())
+        .map(|m| m.name.clone())
         .unwrap_or_default();
     let v = riconosci(&mut fs).ok_or_else(|| refusal(&fs, name))?;
     // only a build with the SCIEX reader names it: the other families must not pull it in
@@ -174,8 +174,8 @@ const ONLY_HERE: [&str; 8] = [
 /// (`err.file.notThisFormat`, a cut or damaged copy); anything else is `err.file.notAccepted` (the engine of the site then asks the readers module).
 fn refusal(fs: &FileSet, name: String) -> Error {
     let short = |n: &str| n.rsplit(['/', '\\']).next().unwrap_or(n).to_string();
-    for m in &fs.membri {
-        let n = m.nome.to_ascii_lowercase();
+    for m in &fs.members {
+        let n = m.name.to_ascii_lowercase();
         let all_of_them = estensioni();
         let Some(e) = all_of_them
             .iter()
@@ -185,7 +185,7 @@ fn refusal(fs: &FileSet, name: String) -> Error {
             continue;
         };
         if m.dim == 0 {
-            return Error::new("err.file.empty").with("name", short(&m.nome));
+            return Error::new("err.file.empty").with("name", short(&m.name));
         }
         if ONLY_HERE.contains(e) {
             // a `.wiff.scan` has no signature of its own: its pair is refused for the `.wiff` beside it, which is the file to name (only a build with
@@ -195,10 +195,10 @@ fn refusal(fs: &FileSet, name: String) -> Error {
             #[cfg(not(any(feature = "sciex", feature = "tutte")))]
             let pair: Option<usize> = None;
             let (m, e) = pair
-                .and_then(|i| fs.membri.get(i))
+                .and_then(|i| fs.members.get(i))
                 .map_or((m, *e), |w| (w, ".wiff"));
             return Error::new("err.file.notThisFormat")
-                .with("name", short(&m.nome))
+                .with("name", short(&m.name))
                 .with("ext", e)
                 .with("size", m.dim);
         }

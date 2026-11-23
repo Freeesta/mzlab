@@ -1,4 +1,4 @@
-"""The tools of the Rosina bench (tools/rosina/, docs/studi/ROSINA.md F): the truth made from an mzML is valid and stable, TRFP and timsdata inputs are folded in, the downloader
+"""The tools of the Rosina bench (tools/rosina/, docs/studies/ROSINA.md F): the truth made from an mzML is valid and stable, TRFP and timsdata inputs are folded in, the downloader
 resumes and refuses, the index checker rejects what the vocabulary does not allow, and the metadata map covers every row of the data sheets."""
 import csv
 import hashlib
@@ -214,8 +214,8 @@ def test_the_metadata_map_covers_every_row_of_the_cards():
     with (STR / "mappa_metadati.tsv").open(newline="", encoding="utf-8") as f:
         mappa = list(csv.DictReader(f, delimiter="\t"))
     expectations = {}
-    for tab in sorted((ROOT / "docs/studi/rosina").glob("SCHEDA_*.md")):
-        name = tab.stem.removeprefix("SCHEDA_").lower()
+    for tab in sorted((ROOT / "docs/studies/rosina").glob("SHEET_*.md")):
+        name = tab.stem.removeprefix("SHEET_").lower()
         inside = False
         for row in tab.read_text(encoding="utf-8").splitlines():
             if row.startswith("| Vendor field"):

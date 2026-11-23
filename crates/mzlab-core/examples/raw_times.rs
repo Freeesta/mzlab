@@ -136,10 +136,10 @@ fn set(path: &str) -> (FileSet, Counters) {
         .into_owned();
     (
         FileSet {
-            membri: vec![Member {
-                nome: name,
+            members: vec![Member {
+                name,
                 dim,
-                dati: Box::new(b),
+                data: Box::new(b),
                 sha1: None,
             }],
         },
@@ -235,10 +235,10 @@ fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
                 .len();
             let f = File::open(&file).map_err(|_| mzlab_core::Error::new("error.badIndex"))?;
             Ok(FileSet {
-                membri: vec![Member {
-                    nome: file.rsplit('/').next().unwrap_or("").to_string(),
+                members: vec![Member {
+                    name: file.rsplit('/').next().unwrap_or("").to_string(),
                     dim,
-                    dati: Box::new(f),
+                    data: Box::new(f),
                     sha1: None,
                 }],
             })

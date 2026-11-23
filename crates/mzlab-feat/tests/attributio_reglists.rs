@@ -33,7 +33,7 @@ fn b1_of(g: &Value, lists: Option<&[&str]>) -> B1 {
         .unwrap()
         .iter()
         .map(|r| IdentityIn {
-            nome_comune: s(&r["nome_comune"]),
+            common_name: s(&r["nome_comune"]),
             group: s(&r["group"]),
             best_level: r["best_level"].as_i64().unwrap(),
             in_site: sites
@@ -47,7 +47,7 @@ fn b1_of(g: &Value, lists: Option<&[&str]>) -> B1 {
         .unwrap()
         .iter()
         .map(|r| StructRow {
-            nome_comune: s(&r["nome_comune"]),
+            common_name: s(&r["nome_comune"]),
             identity: s(&r["identity"]),
             first_block: r["first_block"].as_str().map(str::to_string),
             inchikey: r["inchikey"].as_str().map(str::to_string),
@@ -70,8 +70,8 @@ fn check_ident(case: &str, b: &B1, g: &Value) {
     let want = g["ident"].as_array().unwrap();
     assert_eq!(b.ident.len(), want.len());
     for (i, w) in b.ident.iter().zip(want) {
-        let at = format!("{case} {}", i.nome_comune);
-        let got = json!({"nome_comune": i.nome_comune, "first_blocks": i.first_blocks, "inchikeys": i.inchikeys, "key_origin": i.key_origin,
+        let at = format!("{case} {}", i.common_name);
+        let got = json!({"nome_comune": i.common_name, "first_blocks": i.first_blocks, "inchikeys": i.inchikeys, "key_origin": i.key_origin,
             "structure_basis": i.structure_basis, "SPLIT": i.split, "MERGE": i.merge, "sites": i.sites, "all_sites": i.all_sites,
             "n_lists": i.n_lists, "lists": i.lists});
         for (k, v) in got.as_object().unwrap() {
@@ -89,7 +89,7 @@ fn check_long(case: &str, b: &B1, g: &Value) {
     for (r, w) in b.long.iter().zip(want) {
         assert_eq!(
             json!([
-                &r.nome_comune,
+                &r.common_name,
                 &r.identity,
                 &r.first_block,
                 &r.list_id,

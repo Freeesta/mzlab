@@ -24,22 +24,22 @@ pub struct Vb {
     pub text: Vec<u8>,
 }
 
-pub fn var(nome: &str, dims: &[usize], tipo: u32, dati: Vec<f64>) -> Vb {
+pub fn var(name: &str, dims: &[usize], tipo: u32, data: Vec<f64>) -> Vb {
     Vb {
-        name: nome.into(),
+        name: name.into(),
         dims: dims.to_vec(),
         kind: tipo,
         att: Vec::new(),
-        data: dati,
+        data,
         text: Vec::new(),
     }
 }
 
-pub fn car(nome: &str, dims: &[usize], text: &str, row: usize) -> Vb {
+pub fn car(name: &str, dims: &[usize], text: &str, row: usize) -> Vb {
     let mut b = text.as_bytes().to_vec();
     b.resize(row, 0);
     Vb {
-        name: nome.into(),
+        name: name.into(),
         dims: dims.to_vec(),
         kind: 2,
         att: Vec::new(),

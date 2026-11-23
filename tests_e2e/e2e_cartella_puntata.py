@@ -37,7 +37,7 @@ try:
             assert rows(pg) == ["a.mzML", "sub/b.mzML"], rows(pg)
             t = pg.inner_text("#cartbody"); assert "Data" in t and "Other" not in t and "not loaded" in t, t
             assert pg.evaluate("getComputedStyle(document.querySelector('.cprow')).color") != pg.evaluate("getComputedStyle(document.body).color")
-            assert "not loaded" in pg.get_attribute(".cprow", "aria-label")
+            assert "not loaded" in pg.inner_text(".cprow")
             assert count(pg) == 0
         step("rows in grey (Data only), unknown and hidden files absent, nothing loaded", grey)
         def desktop():

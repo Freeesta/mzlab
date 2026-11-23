@@ -18,7 +18,7 @@ pub const ACTIVATIONS: [(&str, &str, &str); 9] = [
     ("SID", "MS:1000136", "surface-induced dissociation"),
 ];
 
-/// The (accession, term) of the method named `nome` (any case, spaces around ignored).
+/// The (accession, term) of the method named `name` (any case, spaces around ignored).
 pub fn from_name(name: &str) -> Option<(&'static str, &'static str)> {
     let n = name.trim();
     ACTIVATIONS

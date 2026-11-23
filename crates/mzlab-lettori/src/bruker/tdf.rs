@@ -51,9 +51,9 @@ impl BrukerReader {
         let base = if tsf { "analysis.tsf" } else { "analysis.tdf" };
         let bin = format!("{base}_bin");
         let first_one = fs
-            .membri
+            .members
             .first()
-            .map(|m| m.nome.clone())
+            .map(|m| m.name.clone())
             .unwrap_or_default();
         let Some(db_m) = take(&mut fs, base) else {
             return Err(match fs.find(&bin) {
@@ -61,9 +61,9 @@ impl BrukerReader {
                 None => Error::new(legacy_key(&fs).unwrap_or("err.file.brukerBaf")),
             });
         };
-        let bin_m = take(&mut fs, &bin).ok_or_else(|| absent(&db_m.nome, &bin))?;
-        let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
-        let db = Sqlite::open(db_m.dati, db_m.dim, wal, limits);
+        let bin_m = take(&mut fs, &bin).ok_or_else(|| absent(&db_m.name, &bin))?;
+        let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.data, m.dim));
+        let db = Sqlite::open(db_m.data, db_m.dim, wal, limits);
         let mut db = db?;
         // a damaged page or record of a table is left out and counted (`Sqlite::left_out`), the rest of the run is read
         db.tolerant = true;
@@ -71,7 +71,7 @@ impl BrukerReader {
         let mut desc = build(&data);
         limits.ok_entries(desc.len() as u64)?;
         // a copy of `*_bin` cut short: the spectra of the frames past its end leave the index and are counted, the rest reads
-        let mut bin = bin_m.dati;
+        let mut bin = bin_m.data;
         let pos: Vec<i64> = data.frames.iter().map(|f| f.pos).collect();
         let cut = cut_ones(&pos, &mut *bin, bin_m.dim, tsf);
         let all = desc.len();
@@ -89,19 +89,19 @@ impl BrukerReader {
             .unwrap_or(2);
         let samples = vec![Sample {
             id: 0,
-            nome: cartella(&db_m.nome).unwrap_or("").to_string(),
+            name: cartella(&db_m.name).unwrap_or("").to_string(),
             scansioni: desc.len(),
             size: None,
         }];
         let mut l = BrukerReader {
             tsf,
-            nome: db_m.nome,
-            bin_name: bin_m.nome,
+            name: db_m.name,
+            bin_name: bin_m.name,
             db,
             bin,
             dim_bin: bin_m.dim,
             dim_db: db_m.dim,
-            dati: data,
+            data,
             desc,
             limits: *limits,
             testata: header,
@@ -121,7 +121,7 @@ impl BrukerReader {
 
     fn build_index(&mut self) {
         for d in &self.desc {
-            let f = &self.dati.frames[d.frame];
+            let f = &self.data.frames[d.frame];
             self.indice.push(ScanEntry {
                 id: d.id.clone(),
                 rt: f.moment / 60.0,
@@ -147,7 +147,7 @@ impl BrukerReader {
     /// The peaks of frame `fi` (TDF), kept for the next call: the spectra of a frame come one after the other.
     fn peaks(&mut self, fi: usize) -> Result<&Peaks> {
         if self.cache.as_ref().is_none_or(|c| c.0 != fi) {
-            let f = &self.dati.frames[fi];
+            let f = &self.data.frames[fi];
             let b = read_block(
                 &mut *self.bin,
                 self.dim_bin,
@@ -167,9 +167,9 @@ impl BrukerReader {
     /// TOF positions and intensities of spectrum `d`, and whether they are a profile.
     fn points(&mut self, d: &Desc) -> Result<(Vec<f64>, Vec<f64>, bool)> {
         if self.tsf {
-            let f = &self.dati.frames[d.frame];
+            let f = &self.data.frames[d.frame];
             let camp = self
-                .dati
+                .data
                 .meta
                 .get("DigitizerNumSamples")
                 .and_then(|v| v.parse().ok())
@@ -195,9 +195,9 @@ impl BrukerReader {
 
     fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
         let d = self.desc.get(k).cloned().ok_or_else(|| bad_index(k))?;
-        let f = self.dati.frames[d.frame].clone();
+        let f = self.data.frames[d.frame].clone();
         let cal = self
-            .dati
+            .data
             .cal
             .get(&f.cal)
             .filter(|c| c.validate())
@@ -259,7 +259,7 @@ impl BrukerReader {
         (
             vec![
                 SrcFile {
-                    name: self.nome.clone(),
+                    name: self.name.clone(),
                     sha1: sha.clone(),
                     bytes: self.dim_db,
                 },
@@ -269,7 +269,7 @@ impl BrukerReader {
                     bytes: self.dim_bin,
                 },
             ],
-            vec![(self.nome.clone(), sha), (self.bin_name.clone(), None)],
+            vec![(self.name.clone(), sha), (self.bin_name.clone(), None)],
         )
     }
 }
@@ -324,9 +324,9 @@ impl Reader for BrukerReader {
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         let d = self.desc.get(k).ok_or_else(|| bad_index(k))?;
-        let f = &self.dati.frames[d.frame];
+        let f = &self.data.frames[d.frame];
         let field = |name: &str, value: String, units: Option<&str>, cv: Option<&str>| Field {
-            nome: name.into(),
+            name: name.into(),
             valore: value,
             unita: units.map(Into::into),
             cv: cv.map(Into::into),
@@ -399,12 +399,12 @@ impl Reader for BrukerReader {
         self.one(c)?;
         let (f, names) = self.file();
         let doc = self.testata.document(f);
-        let folder = cartella(&self.nome).unwrap_or(&self.nome).to_string();
+        let folder = cartella(&self.name).unwrap_or(&self.name).to_string();
         Ok(Some(self.testata.header(&folder, &names, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
-        let num = |k: &str| self.dati.meta.get(k).and_then(|v| v.parse::<f64>().ok());
+        let num = |k: &str| self.data.meta.get(k).and_then(|v| v.parse::<f64>().ok());
         let mut params = Vec::new();
         let mut precursors = Vec::new();
         if let Some(d) = self.desc.get(s.index) {
@@ -465,13 +465,13 @@ fn open_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 pub struct BrukerReader {
     tsf: bool,
     /// Name of the database file as given (`x.d/analysis.tdf`).
-    nome: String,
+    name: String,
     bin_name: String,
     db: Sqlite,
     bin: Box<dyn ReadAt>,
     dim_bin: u64,
     dim_db: u64,
-    dati: Data,
+    data: Data,
     desc: Vec<Desc>,
     limits: Limits,
     testata: BrukerHeader,

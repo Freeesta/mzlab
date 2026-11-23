@@ -24,13 +24,13 @@ fn folder() -> Option<FileSet> {
         }
         let f = std::fs::File::open(&p).ok()?;
         members.push(Member {
-            nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
+            name: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
-            dati: Box::new(f),
+            data: Box::new(f),
             sha1: None,
         });
     }
-    Some(FileSet { membri: members })
+    Some(FileSet { members })
 }
 
 /// (function, cycle, RT in minutes, TIC of the cycle, intensity-weighted mean m/z) of the oracle.

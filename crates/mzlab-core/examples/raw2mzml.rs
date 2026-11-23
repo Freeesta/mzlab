@@ -7,10 +7,10 @@ fn main() {
     let path = std::path::Path::new(&a[1]);
     let dim = std::fs::metadata(path).expect("stat").len();
     let set = FileSet {
-        membri: vec![Member {
-            nome: path.file_name().unwrap().to_string_lossy().into_owned(),
+        members: vec![Member {
+            name: path.file_name().unwrap().to_string_lossy().into_owned(),
             dim,
-            dati: Box::new(std::fs::File::open(path).expect("open")),
+            data: Box::new(std::fs::File::open(path).expect("open")),
             sha1: None,
         }],
     };

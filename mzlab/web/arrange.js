@@ -4,7 +4,7 @@
 const ARR_T = (/** @type {string} */ k, /** @type {any} */ v = undefined) => I18N.t(k, v);
 const arrCss = document.createElement("style");
 arrCss.textContent = ".arrange-grip{flex:none;min-width:24px;min-height:24px;padding:0 2px;margin-right:2px;border:0;background:transparent;color:var(--muted);cursor:grab;touch-action:none;opacity:0;line-height:1;font-size:14px}" +
-  ".pnl:hover .arrange-grip,.arrange-grip:focus-visible,.arrange-grip[aria-expanded=true]{opacity:1}.arrange-grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.arrange-grip{opacity:1;min-width:40px;min-height:40px}}" +
+  ".pnl:hover .arrange-grip,.arrange-grip:focus-visible,.arrange-grip[aria-expanded=true]{opacity:1}.arrange-grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.arrange-grip{opacity:1;min-width:44px;min-height:44px}}" +
   ".pnl.arrange-drag{opacity:.45}.arrange-prev{position:absolute;z-index:5001;box-sizing:border-box;pointer-events:none;border:2px dashed var(--accent);background:var(--sel);opacity:.8;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:600}" +
   ".arrange-prev.no{border-color:var(--muted);background:var(--soft);color:var(--muted)}" +
   ".arrange-menu{position:fixed;z-index:10005;min-width:200px;max-width:min(320px,94vw);max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:4px}" +

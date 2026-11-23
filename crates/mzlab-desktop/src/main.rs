@@ -122,7 +122,7 @@ fn register_paths(state: tauri::State<'_, Arc<State>>, paths: Vec<String>) -> Ve
 /// The folder of the data pointed at by the user (kept in `config.json`), if it still exists.
 fn data_root(app: &AppHandle) -> Option<PathBuf> {
     let d = data_dir(app).ok()?;
-    let p = PathBuf::from(libraries::read_config(&d).dati?);
+    let p = PathBuf::from(libraries::read_config(&d).data?);
     p.is_dir().then_some(p)
 }
 
@@ -144,7 +144,7 @@ async fn data_choose_dir(app: AppHandle) -> Result<Option<String>, String> {
         return Ok(None);
     };
     let name = folder_name(&path);
-    save_config(&app, |c| c.dati = Some(path.to_string_lossy().into_owned()))?;
+    save_config(&app, |c| c.data = Some(path.to_string_lossy().into_owned()))?;
     Ok(Some(name))
 }
 
@@ -178,7 +178,7 @@ fn data_register(
 
 #[tauri::command]
 fn data_forget(app: AppHandle) -> Result<(), String> {
-    save_config(&app, |c| c.dati = None)
+    save_config(&app, |c| c.data = None)
 }
 
 /// Version of this native binary (compared with `desktop_min` of the manifest).

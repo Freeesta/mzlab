@@ -106,7 +106,7 @@ fn write(l: &mut dyn Reader, rich: bool) -> String {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(s.id))
             .raw(",\"name\":")
-            .str(&s.nome)
+            .str(&s.name)
             .raw(",\"scans\":")
             .int(if quiet { 0 } else { s.scansioni as i64 });
         if let Some(dim) = s.size {

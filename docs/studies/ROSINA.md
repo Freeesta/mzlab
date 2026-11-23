@@ -34,7 +34,7 @@ Truth file `verita/1`: one JSON per native file (one per sample in multi-sample 
 - `scans[]`: `id`, `rt_min`, `level`, `polarity`, `precursor_mz`, `isolation`, `ce`, `activation`, `profile`, `n_points`, `tic`, `bpi_mz`, `bpi`.
 - `points`: for 8 chosen scans (first, last, median, max TIC, one per level) m/z and intensity as exact numbers.
 - `chromatograms[]`: `id`, `type`, `n`, `sum`, `max`, 16 sample points.
-- `metadata`: field -> value as the oracle gives it, with the vendor name and the expected `metodo/1` path from `SCHEDE.md`.
+- `metadata`: field -> value as the oracle gives it, with the vendor name and the expected `metodo/1` path from `SHEETS.md`.
 - Optional: `tolerance` (`hr`, `lr` or an object that changes single thresholds) and `mobility` (Bruker). Typical size 50-500 KB.
 Generators (in `tools/rosina/`, they read what an oracle produced; the oracles run on Mac or Windows, never in the site): `verita.py MZML` (from the reference mzML), `verita_trfp.py` (ThermoRawFileParser JSON), `verita_timsdata.py` (`timsdata` 1/K0 table), `verita_scandump.py` (from a `scandump/1`).
 
@@ -56,7 +56,7 @@ Outcome per file: `L` (F0-F5 against V1 or V2 evidence, see Evidence), `P` (a le
 
 ### F.3 Where it runs
 - Public CI (`test.yml`): F0-F4 and F6 on synthetic and small public files; F5 on the synthetic `metodo/1` documents.
-- Private nightly workflow in `mzlab-dati` (text in `rosina/WORKFLOW_NOTTE.md`): checks out `Freeesta/mzlab` `main`, runs `cargo test -p mzlab-lettori --features tutte --test 'truth_*'` (one test per family) on every `scratchpad/rosina/verita/**/*.verita.json` (files <= 90 MB); the format x level summary stays in an artefact, never public.
+- Private nightly workflow in `mzlab-dati` (text in `rosina/WORKFLOW_NIGHTLY.md`): checks out `Freeesta/mzlab` `main`, runs `cargo test -p mzlab-lettori --features tutte --test 'truth_*'` (one test per family) on every `scratchpad/rosina/verita/**/*.verita.json` (files <= 90 MB); the format x level summary stays in an artefact, never public.
 - Local (Mac): F8 and the files in the big-files folder, with the same test and `MZLAB_DATI_GRANDI=<path>`.
 
 ### F.4 Edge cases (case x format; an empty cell is "no file", to be found)
@@ -71,7 +71,7 @@ Outcome per file: `L` (F0-F5 against V1 or V2 evidence, see Evidence), `P` (a le
 - Several samples per container: SCIEX Z22807392 (20 samples). Truncated or in-acquisition files: Bruker PXD074950 `-wal`; the rest to build. Endianness: all little-endian (Bruker SQLite big-endian).
 
 ## Method
-Principles: (1) the vendor's own library is the oracle, not only msconvert; every oracle runs only on the Mac or a Windows PC, never in the site, and its result is frozen in a truth file; (2) triangulate: at least two independent sources per file (mzLab reader, vendor oracle, authors' mzML, free reader such as opentfraw, openwraw, timsrust, pyteomics); if mzLab agrees with one only, the field is "to clarify", not "verified"; (3) metadata field by field (`SCHEDE.md`): a field the oracle sees and mzLab does not is a defect (rule "no loss", `docs/agenti/raw-not-extracted.md`); (4) converter conformance: mzML 1.1 XSD, OpenMS `FileInfo -v`, declared `psi-ms.obo` version, `indexedmzML` offsets and SHA-1, mzLab centroids declared in `dataProcessing`, never passed off as the vendor's; (5) robustness and scale: one fuzz target per family seeded from the first KB of truncated real files; one large file per family opened locally with time and peak memory written to `docs/agenti/measurements.md`, 64-bit offsets proven on real files; (6) community: ask for ProteoWizard `vendor_readers/*Test.data` fixtures, propose missing CV terms to HUPO-PSI, ask SCIEX (`.wiff2`) and Bruker (BAF) for documentation, use the NORMAN network for environmental files.
+Principles: (1) the vendor's own library is the oracle, not only msconvert; every oracle runs only on the Mac or a Windows PC, never in the site, and its result is frozen in a truth file; (2) triangulate: at least two independent sources per file (mzLab reader, vendor oracle, authors' mzML, free reader such as opentfraw, openwraw, timsrust, pyteomics); if mzLab agrees with one only, the field is "to clarify", not "verified"; (3) metadata field by field (`SHEETS.md`): a field the oracle sees and mzLab does not is a defect (rule "no loss", `docs/agenti/raw-not-extracted.md`); (4) converter conformance: mzML 1.1 XSD, OpenMS `FileInfo -v`, declared `psi-ms.obo` version, `indexedmzML` offsets and SHA-1, mzLab centroids declared in `dataProcessing`, never passed off as the vendor's; (5) robustness and scale: one fuzz target per family seeded from the first KB of truncated real files; one large file per family opened locally with time and peak memory written to `docs/agenti/measurements.md`, 64-bit offsets proven on real files; (6) community: ask for ProteoWizard `vendor_readers/*Test.data` fixtures, propose missing CV terms to HUPO-PSI, ask SCIEX (`.wiff2`) and Bruker (BAF) for documentation, use the NORMAN network for environmental files.
 
 | Oracle | Gives | Runs on |
 |---|---|---|
@@ -108,7 +108,7 @@ The converter also needs the PSI validator passed and an identical re-read with 
 | netCDF/ANDI | no (open format) | `.D` of the same run (done) | exporting software | netCDF4-python, xcms | V2/V4 + ASTM spec |
 | Others' mzML, mzXML, mzData | no (open formats) | conversion of the same native | none | pyteomics, OpenMS | V4 with two third-party readers |
 
-Metadata as a priority of the maintainer: per format a table "vendor field -> place in the file -> `metodo/1` path -> how the vendor software shows it -> automatic oracle" (`rosina/SCHEDE.md`). Format versions: an unseen version gives an error with the version in `detail`, not a guess.
+Metadata as a priority of the maintainer: per format a table "vendor field -> place in the file -> `metodo/1` path -> how the vendor software shows it -> automatic oracle" (`rosina/SHEETS.md`). Format versions: an unseen version gives an error with the version in `detail`, not a guess.
 
 ## Packages (E)
 | # | Package | Touches | Depends on | Truths from |
@@ -132,7 +132,7 @@ Each package touches only its own folder and area file, so they run in parallel.
 4. Waters lock mass: read as today (file m/z) by default; reference-function correction becomes a declared option, proven against the MassLynx SDK (R-05).
 5. Converter centroids: two declared modes, "vendor centroids" (never redone) and "mzLab centroids" (`dataProcessing` names mzLab); the default stays as today.
 6. New modules instead of higher size ceilings: `sciex-tof`, `shimadzu-tof`, `storici` (mzData, maybe MGF as a run).
-7. CI with data: nightly workflow in the private repo (`rosina/WORKFLOW_NOTTE.md`); no data in the public repo.
+7. CI with data: nightly workflow in the private repo (`rosina/WORKFLOW_NIGHTLY.md`); no data in the public repo.
 8. imzML is out of scope (0.8 % of studies, a different view); a note in R-08 only.
 
 ## Done
@@ -140,5 +140,5 @@ R-00 bench: `tools/rosina/*.py` (truth from mzML, TRFP, `timsdata`, scandump; do
 
 ## Open
 - Packages R-01 (mzML converter), R-02 (Thermo), R-03 (SCIEX), R-04 (Agilent), R-05 (Waters), R-06 (Bruker), R-07 (Shimadzu), R-08 (minor open formats). Priority order: R-02, R-03, R-04, R-01, R-05, R-06, R-07, R-08.
-- `.wiff2` and BAF remain refused (`docs/agenti/native-reading.md`); modules `sciex-tof`, `shimadzu-tof`, `storici` do not exist yet. No chat raises an existing ceiling. Sources: `rosina/FONTI.md`; sheets: `rosina/SCHEDE.md`.
+- `.wiff2` and BAF remain refused (`docs/agenti/native-reading.md`); modules `sciex-tof`, `shimadzu-tof`, `storici` do not exist yet. No chat raises an existing ceiling. Sources: `rosina/SOURCES.md`; sheets: `rosina/SHEETS.md`.
 - Next step: R-02 (Thermo TSQ and traps against ThermoRawFileParser truths), then R-03 and R-04.

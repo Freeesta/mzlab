@@ -71,7 +71,7 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
             None => (false, corpo),
         };
         let mut parts = corpo.splitn(2, |c: char| c.is_whitespace());
-        let nome = parts.next().unwrap_or("").to_string();
+        let name = parts.next().unwrap_or("").to_string();
         let mut attr = Vec::new();
         let mut remainder = parts.next().unwrap_or("");
         while let Some(e) = remainder.find('=') {
@@ -87,7 +87,7 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
             remainder = &v[fine + 2..];
         }
         out.push(Tag {
-            name: nome,
+            name,
             attr,
             closing: chiusura,
             empty,

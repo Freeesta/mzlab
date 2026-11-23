@@ -4,15 +4,15 @@ One sheet per format: state, what is missing, possible proofs (scale V1-V7 of `.
 
 | Format | Sheet | State today | Priority | Package |
 |---|---|---|---|---|
-| Thermo `.raw` | `SCHEDA_THERMO.md` | spectra L (Orbitrap, Q Exactive, Exploris); TSQ and traps P | 1 | R-02 |
-| SCIEX `.wiff` (QTRAP, API) | `SCHEDA_SCIEX.md` | L for the 3200 and QTRAP 5500/6500 (MRM, EPI, PIS, NL); multiple periods refused | 1 | R-03 |
-| SCIEX `.wiff` TOF (TripleTOF, ZenoTOF, X500) | `SCHEDA_SCIEX.md` | refused (TOF block codec) | 2 | R-03 (module `sciex-tof`) |
-| SCIEX `.wiff2` | `SCHEDA_SCIEX.md` | refused | guide | none |
-| Agilent `.D` GC/MS and LC/MS | `SCHEDA_AGILENT.md` | GC/MS L; QqQ MRM/dMRM and Q-TOF P; DAD not decoded; IMS refused | 1 | R-04 |
-| Waters `.raw` | `SCHEDA_WATERS.md` | MRM/SIR P (V2 from Workbench); TOF, MSe P; lock mass not applied; IMS summed | 2 | R-05 |
-| Bruker TDF/TSF | `SCHEDA_BRUKER.md` | TDF L for m/z (V1 on compression 1); 1/K0 absent; compression 2 only V7 | 2 | R-06 |
-| Bruker BAF/YEP | `SCHEDA_BRUKER.md` | not read | guide | none |
-| Shimadzu `.lcd`/`.qgd` | `SCHEDA_SHIMADZU.md` | P: no reference; polarity, CE and dwell not decoded; 9030 refused | 3 | R-07 |
+| Thermo `.raw` | `SHEET_THERMO.md` | spectra L (Orbitrap, Q Exactive, Exploris); TSQ and traps P | 1 | R-02 |
+| SCIEX `.wiff` (QTRAP, API) | `SHEET_SCIEX.md` | L for the 3200 and QTRAP 5500/6500 (MRM, EPI, PIS, NL); multiple periods refused | 1 | R-03 |
+| SCIEX `.wiff` TOF (TripleTOF, ZenoTOF, X500) | `SHEET_SCIEX.md` | refused (TOF block codec) | 2 | R-03 (module `sciex-tof`) |
+| SCIEX `.wiff2` | `SHEET_SCIEX.md` | refused | guide | none |
+| Agilent `.D` GC/MS and LC/MS | `SHEET_AGILENT.md` | GC/MS L; QqQ MRM/dMRM and Q-TOF P; DAD not decoded; IMS refused | 1 | R-04 |
+| Waters `.raw` | `SHEET_WATERS.md` | MRM/SIR P (V2 from Workbench); TOF, MSe P; lock mass not applied; IMS summed | 2 | R-05 |
+| Bruker TDF/TSF | `SHEET_BRUKER.md` | TDF L for m/z (V1 on compression 1); 1/K0 absent; compression 2 only V7 | 2 | R-06 |
+| Bruker BAF/YEP | `SHEET_BRUKER.md` | not read | guide | none |
+| Shimadzu `.lcd`/`.qgd` | `SHEET_SHIMADZU.md` | P: no reference; polarity, CE and dwell not decoded; 9030 refused | 3 | R-07 |
 | netCDF/ANDI | here | L (V2 with the `.D` of the same run) | 3 | R-08 |
 | Third-party mzML | here | L (`metodo/1` header P: no real msconvert mzML) | 1 | R-01, R-08 |
 | mzXML | here | L, V7 only | 3 | R-08 |

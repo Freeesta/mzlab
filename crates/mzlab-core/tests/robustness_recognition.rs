@@ -20,10 +20,10 @@ const MS: [u8; 2] = [0x01, 0x32];
 fn reads(name: String, b: Vec<u8>, dim: u64) -> Vec<String> {
     let mut k = Vec::new();
     let set = || FileSet {
-        membri: vec![Member {
-            nome: name.clone(),
+        members: vec![Member {
+            name: name.clone(),
             dim,
-            dati: Box::new(Letture(b.clone())),
+            data: Box::new(Letture(b.clone())),
             sha1: None,
         }],
     };

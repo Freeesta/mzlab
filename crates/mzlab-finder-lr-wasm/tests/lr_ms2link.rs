@@ -1,4 +1,4 @@
-//! The MS2 matches of the low-resolution Dig (`lr::ms2link`) on the synthetic series: one test per case of the table of `docs/studi/TABUI_MS2_LR.md`
+//! The MS2 matches of the low-resolution Dig (`lr::ms2link`) on the synthetic series: one test per case of the table of `docs/studies/TABUI_MS2_LR.md`
 //! §8. The MS2 files are written here: traces over the whole run (a constant level with noise plus Gaussian peaks at given times), as the 3200 writes
 //! the experiments of a product-ion injection.
 

@@ -49,10 +49,10 @@ pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
 pub(crate) fn plan(path: &Path, wanted: &[u32]) -> Result<mzlab_core::readers::ranges::Plan> {
     let fs = crate::flow_set::file_set(path)?;
     let members: Vec<(String, u64)> = fs
-        .membri
+        .members
         .iter()
         .map(|m| {
-            let n = m.nome.rsplit(['/', '\\']).next().unwrap_or(&m.nome);
+            let n = m.name.rsplit(['/', '\\']).next().unwrap_or(&m.name);
             (n.to_string(), m.dim)
         })
         .collect();

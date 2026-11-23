@@ -5,7 +5,9 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OLD_WORDS = ["apri", "scrivi", "chiave", "lunghezza", "percorso", "nodo"]
+OLD_WORDS = ["apri", "scrivi", "chiave", "lunghezza", "percorso", "nodo", "nome", "dati", "membri"]
+# not identifiers: the file-name family (tools/dati_*.rs), repository paths (`tests/dati/`, `dati/HRMS/`), the private repo name and JSON keys named in comments
+KEEP = re.compile(r"mzlab-dati|scansione_dati|(?<=[a-z\]])\.nome\b|dati_percorsi|dati_sintetici|[A-Za-z0-9_.-]*/dati(?=/)|(?<![A-Za-z0-9_])dati/")
 OLD = re.compile(r"(?<![A-Za-z0-9])(" + "|".join(OLD_WORDS) + r")(?![a-z0-9])")
 SKIP = {"tests/test_no_old_rust_names.py"}
 
@@ -23,7 +25,7 @@ def test_old_rust_names_are_gone():
         for n, line in enumerate((ROOT / f).read_text(encoding="utf8").splitlines(), 1):
             if f.endswith(".rs"):
                 # string contents (JSON keys, labels) follow their own families
-                if OLD.search(STRING.sub('""', line)):
+                if OLD.search(KEEP.sub("", STRING.sub('""', line))):
                     hits.append(f"{f}:{n}")
             elif DOC_API.search(line):
                 hits.append(f"{f}:{n}")

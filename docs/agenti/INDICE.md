@@ -169,7 +169,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |
 | multi-library spectral matching engine for mzFlow ("Attribution" node, `table.attribute`) and MSⁿ side panel: `libset`, `libmatch/1`, presets, analogs with ΔFormula, `libraries/2` catalog | `docs/agenti/spectral-match.md` |
-| rows of the MS² spectrum card (notes, retention times, CE ± spread, sample), `mzlab-cli file items` | `docs/agenti/spectrum-rows.md` |
+| MS² spectrum card header (`ms2c`), the removed info rows (notes, retention times, CE, sample) and where `p.note` is still stored, `mzlab-cli file items` | `docs/agenti/spectrum-rows.md` |
 | progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/startup.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | scientific correctness study: fixed findings (one line each) and the open owner decisions A4, C2, D2 | `docs/agenti/study-science.md` |

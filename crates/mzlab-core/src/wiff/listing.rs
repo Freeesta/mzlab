@@ -153,7 +153,7 @@ impl WiffReader {
 pub(super) fn container_of(fs: &mut FileSet, limits: &Limits) -> Result<(String, Ole, usize)> {
     let wi = wiff_member(fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
     let name = member(fs, wi)?
-        .nome
+        .name
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or("x.wiff")

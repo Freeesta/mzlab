@@ -1,4 +1,4 @@
-"""Ground truth `verita/1` (docs/studi/ROSINA.md F.1) from a `scandump/1` written by an oracle (RFR) or by our reader (docs/agenti/scandump.md).
+"""Ground truth `verita/1` (docs/studies/ROSINA.md F.1) from a `scandump/1` written by an oracle (RFR) or by our reader (docs/agenti/scandump.md).
 A tool of the test bench, never part of the site: no calculation of the program lives here.
     python3 tools/rosina/verita_scandump.py DUMP.scandump.jsonl.gz [--oracle NOME VERSIONE OPZIONI] > FILE.verita.json
 Standard library only. The peaks come from the `peaks` rows of the dump; the metadata of the header go in `metadati` as the oracle wrote them."""

@@ -37,7 +37,7 @@ impl Reader for Fake {
     }
     fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![Field {
-            nome: "a".into(),
+            name: "a".into(),
             valore: "b".into(),
             unita: None,
             cv: Some("MS:1".into()),
@@ -73,7 +73,7 @@ fn the_session_answers_and_closes() {
     let fin = Fake {
         samples: vec![Sample {
             id: 1,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: 1,
             size: None,
         }],
@@ -210,7 +210,7 @@ fn the_json_texts_equal_serde_json() {
     let old: Vec<_> = r
         .samples()
         .iter()
-        .map(|c| json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
+        .map(|c| json!({ "id": c.id, "name": c.name, "scans": c.scansioni }))
         .collect();
     assert_eq!(
         parse(s.samples(h).unwrap()),
@@ -221,7 +221,7 @@ fn the_json_texts_equal_serde_json() {
         .scan_header(0, 0)
         .unwrap()
         .iter()
-        .map(|f| json!({ "name": f.nome, "value": f.valore, "unit": f.unita, "cv": f.cv }))
+        .map(|f| json!({ "name": f.name, "value": f.valore, "unit": f.unita, "cv": f.cv }))
         .collect();
     assert_eq!(
         parse(s.scan_header(h, 0, 0).unwrap()),

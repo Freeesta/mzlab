@@ -54,7 +54,7 @@ impl Loading<'_> {
         self.spent += rows.len() as u64;
         c.limits.ok_entries(self.spent)?;
         let dat = c.search(&name("DAT"));
-        let dat_len = dat.map_or(0, |i| c.fs.membri[i].dim);
+        let dat_len = dat.map_or(0, |i| c.fs.members[i].dim);
         let larg = idx::width(&rows, dat_len);
         let cod = if f.mirato() {
             None

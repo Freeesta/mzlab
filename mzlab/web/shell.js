@@ -89,7 +89,7 @@ function sortFiles(){const c=fileComparator(ST.files,(/** @type {FileRiga} */ f)
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=(/** @type {string} */ name)=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
 (()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
-  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");})();
+  $("#dropdam").title=I18N.t("load.method.drop")+" ("+fm+")";})();   // a title, not an aria-label: the name stays the visible text (WCAG 2.5.3)
 // each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((/** @type {{ name: string, info?: { key?: string, params?: unknown }, size: number }} */ m,/** @type {number} */ i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");

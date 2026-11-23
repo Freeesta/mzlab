@@ -46,7 +46,9 @@ window.MAPPA = (() => {
     const ov = document.createElement("canvas"); ov.className = "mzov"; ov.setAttribute("aria-hidden", "true"); grid.appendChild(ov);
     const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; sp.setAttribute("role", "img"); grid.appendChild(sp);
     const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
-    Object.assign(st(p), { ov, sp, xc, grid });
+    const { chip, live } = MAPCURSORE.dom(grid);
+    Object.assign(st(p), { ov, sp, xc, grid, chip, live });
+    cv.addEventListener("focus", () => liveSync(p)); cv.addEventListener("blur", () => liveSync(p));
     // the tooltip of a label: its m/z and its S/N (intensity over the noise around it)
     sp.addEventListener("mousemove", ev => {
       const r = sp.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, s = st(p), l = (s.lbls || []).find((/** @type {Record<string, any>} */ o) => x >= o.x - 2 && x <= o.x + o.w + 2 && y >= o.y - 2 && y <= o.y + o.h + 2), q = l && s.snr ? s.snr.get(l.i) : null;
@@ -201,7 +203,7 @@ window.MAPPA = (() => {
   function overlay(/** @type {Pannello} */ p) {
     const s = st(p), g = s.ovg, a = p._a; if (!g || !a) return;
     g.clearRect(0, 0, a.W, a.H);
-    if (!is2d(p)) return;
+    if (!is2d(p)) { liveSync(p); return; }
     drawPoints(p, g);
     // axis lock (asse.js): the line along which the gesture may move
     if (s.guide) {
@@ -225,8 +227,10 @@ window.MAPPA = (() => {
     g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = ecss("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = ecss("--ink"); g.stroke(); s.dot = { x, y };
   }
   function readout(/** @type {Pannello} */ p) {
-    // Map 2D has no header readout text to prevent 2-row wrapping
+    // Map 2D has no header readout text (it would wrap to two rows): the coordinates travel with the cursor instead
+    liveSync(p);
   }
+  const liveSync = (/** @type {Pannello} */ p) => MAPCURSORE.sync(p, { st, is2d, point, mzd, T, MIRINO });   // chip and XIC dot of the cursor (mappa-cursore.js)
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
   // Asked only for what the point needs and the page does not hold: the scan is found in the page on the RT axis of the file (/api/scan_axis, once), the
@@ -375,11 +379,12 @@ window.MAPPA = (() => {
   const canvasOf = (/** @type {Record<string, any>} */ c) => MAPMARGINI.sized(c, devicePixelRatio);
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
   // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
-  function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8, /** @type {{y: number, end: number} | null} */ guide = null) {
+  function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8, /** @type {{y: number, end: number} | null} */ guide = null, /** @type {number} */ cur = -1) {
     /** @type {Record<string, any>[]} */ const out = []; s.lbls = out; g.font = fpx(12.5); g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3.5; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
     const px = parseFloat(g.font) || 12.5, asc = Math.round(px * .8), hh = Math.round(px * 1.05);
+    if (cur >= 0) out.push(MAPCURSORE.label(g, W, get(cur), x0, guide, px, asc, hh, fpx));   // the peak under the cursor first, never dropped
     for (const i of order) {
-      if (out.length >= limit) break; const q = get(i);
+      if (out.length >= limit) break; if (i === cur) continue; const q = get(i);
       const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + Math.round(px * .35) : q.y - 4, bx = { x, y: by - asc, w, h: hh };
       if (out.some(o => bx.x < o.x + o.w + 2 && o.x < bx.x + bx.w + 2 && bx.y < o.y + o.h + 1 && o.y < bx.y + bx.h + 1)) continue;
       // the guide line never runs through text: a label that would meet it is left out (the marked peak's own label sits beyond the guide's end)
@@ -418,7 +423,7 @@ window.MAPPA = (() => {
     const mapTop = o.y + M.t, mapBot = o.y + p.cv.clientHeight - M.b, mapH = mapBot - mapTop;
     const Y = (/** @type {number} */ v) => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
-    if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
+    s.curPk = null; if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     // difference A − B: bars right (more in A) and left (more in B) of a zero line
     const sg = !!sp.signed, ab = (/** @type {number} */ v) => sg ? Math.abs(v) : v;
     let ymax = 0; const vis = /** @type {number[]} */ ([]); for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
@@ -450,18 +455,21 @@ window.MAPPA = (() => {
     let mk = -1; for (const i of vis) if (Math.abs(sp.mz[i] - cen) <= tol && (mk < 0 || Math.abs(sp.mz[i] - pt.mz) < Math.abs(sp.mz[mk] - pt.mz))) mk = i;
     const inWin = pt.mz >= a.y0 && pt.mz <= a.y1, gy = inWin ? Math.round(Y(pt.mz)) + .5 : 0, gEnd = mk >= 0 ? tipOf(mk) : x1;
     s.gd = inWin ? { y: gy, end: gEnd } : null;   // kept for the tests
+    s.curPk = inWin && mk >= 0 ? sp.mz[mk].toFixed(mzd(p)) : null;   // the chip of the cursor names it
     if (inWin) { g.save(); g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
       if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - 4); g.lineTo(gEnd + .5, gy + 4); g.stroke(); }   // clear end mark at the tip
       g.restore();
     }
-    sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: tipOf(i), t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit, inWin ? { y: gy, end: gEnd } : null);
+    // the peak under the cursor: its own bar, thicker and in the ink colour, over the others without covering them (2.5 px against 1 px)
+    if (inWin && mk >= 0) { const by = Math.round(Y(sp.mz[mk])) + .5; g.save(); g.strokeStyle = ecss("--ink"); g.lineWidth = 2.5; g.beginPath(); g.moveTo(x0, by); g.lineTo(tipOf(mk), by); g.stroke(); g.restore(); }
+    sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: tipOf(i), t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit, inWin ? { y: gy, end: gEnd } : null, inWin ? mk : -1);
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
   /** @param {Pannello} p @param {Record<string, any> | null} pt @param {Record<string, any>} [xi] @param {boolean} [prev] */
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
     const { g, W, H } = canvasOf(s.xc), ink = ecss("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
-    const o = MAPMARGINI.rel(p.cv, s.xc);
+    const o = MAPMARGINI.rel(p.cv, s.xc); s.xg = null;
     const ml = o.x + M.l, mr = o.x + p.cv.clientWidth - M.r, pw = mr - ml;
     const X = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
     g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
@@ -477,6 +485,7 @@ window.MAPPA = (() => {
     if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map((/** @type {Record<string, any>} */ t) => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
     // zero always sits on the axis; 8% headroom above the highest point keeps the apex label inside the box
     const lo0 = sg ? -ymax : 0, Y = (/** @type {number} */ v) => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax * 1.08) || 1) * (H - mt - mb);
+    s.xg = { X, Y, mt, mb, H, tr: sg ? tr[0] : null };   // read by liveSync: the dot of the cursor rides this trace
     // intensity axis, like the other chromatograms
     g.beginPath(); g.moveTo(ml + .5, mt); g.lineTo(ml + .5, H - mb + .5); g.stroke();
     if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(ml - 4, y); g.lineTo(ml, y); g.stroke(); g.fillText(fmtA(t), ml - 6, y + 3.5); } }
@@ -501,6 +510,7 @@ window.MAPPA = (() => {
     tr.forEach((/** @type {Record<string, any>} */ t, /** @type {number} */ n) => {
       // drawn like the XIC of the lens: filled trace, no apex lost, the number on the apex of the first one
       const f = E.files[t.k], v = XICDRAW.slice(/** @type {{ rt: number[], y: number[] }} */ (t), a.x0, a.x1), b = XICDRAW.apex(v); if (!v.rt.length) return;
+      if (!n) s.xg.tr = v;
       g.globalAlpha = prev ? .5 : 1; XICDRAW.trace(g, v, X, Y, H - mb, pw, f ? f.color : ink, n ? [4, 3] : undefined);
       if (!n && !prev && XICDRAW.clearPeak(v, b)) { g.font = fpx(11); XICDRAW.apexLabel(g, v, b, X(v.rt[b]), Y(v.y[b]), ml, mr, ecss("--ink")); } g.globalAlpha = 1;
     });
@@ -508,6 +518,7 @@ window.MAPPA = (() => {
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
     g.fillText(xi.uv ? T(sg ? "mappa.uv.botDiff" : "mappa.uv.bot", { lo: lo.toFixed(1), hi: hi.toFixed(1), max: fmt(ymax) }) : prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+    liveSync(p);
   }
 
   // ---------------------------------------------------------------- mouse
@@ -540,7 +551,7 @@ window.MAPPA = (() => {
     s.sl = null; if (s.hov && s.lpx && !s.frz) s.hov = xy2pt(p, s.lpx[0], s.lpx[1]);
     frame(p);
   }
-  function leave(/** @type {Pannello} */ p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); }
+  function leave(/** @type {Pannello} */ p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); else liveSync(p); }
   function wheel(/** @type {Pannello} */ p, /** @type {WheelEvent} */ e, /** @type {number} */ px, /** @type {number} */ py) {
     // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;
@@ -968,7 +979,7 @@ window.MAPPA = (() => {
       `<select data-mz="dens" title="${T("mappa.dens.title")}" aria-label="${T("mappa.dens.title")}">${["few", "mid", "many"].map(k => opt(k, DENS[PREF.dens] ? PREF.dens : "mid", T(DENS[k].lab))).join("")}</select>`;
     if (dif) dif.outerHTML = !hasRef ? `<label class="muted" title="${T("mappa.fix.title")}"><input type="checkbox" data-mz="fix"${PREF.fix ? " checked" : ""}> ${T("mappa.fix")}</label>` : hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg === false ? "" : " checked"}> ${T("mappa.show.neg")}</label>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" aria-pressed="${!!st(p).mark}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = (/** @type {string} */ k) => /** @type {Record<string, any>} */ (c.querySelector(`[data-mz="${k}"]`)), num = (/** @type {HTMLInputElement} */ el) => numIt(el.value);
@@ -984,7 +995,7 @@ window.MAPPA = (() => {
     Q("mir").onclick = () => { const s = st(p); s.mir = !mirOn(p); layout(p); draw(p); };
   }
 
-  function markBtn(/** @type {Pannello} */ p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
+  function markBtn(/** @type {Pannello} */ p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) { b.classList.toggle("on", !!st(p).mark); b.setAttribute("aria-pressed", String(!!st(p).mark)); } p.cv.style.cursor = st(p).mark ? "copy" : ""; }
 
     // «Open in 3D»: the viewer is loaded the first time it is asked for
   // what the student sees when the 3D viewer cannot open: the real cause in a sentence, what to try, and the technical lines (copyable); the 2D map is untouched

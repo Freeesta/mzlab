@@ -54,17 +54,17 @@ fn content(names: &[String]) -> Option<Content> {
 
 /// The member of `fs` that is a Shimadzu container, and what it holds; failing that, a `.qgd`/`.lcd` OLE2 container it cannot read the data of.
 fn find(fs: &mut FileSet) -> Option<(usize, Content)> {
-    (0..fs.membri.len())
+    (0..fs.members.len())
         .find_map(|i| {
-            let c = content(&dir::names(&mut fs.membri[i])?)?;
+            let c = content(&dir::names(&mut fs.members[i])?)?;
             Some((i, c))
         })
-        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, other(&mut fs.membri[i])?))))
+        .or_else(|| (0..fs.members.len()).find_map(|i| Some((i, other(&mut fs.members[i])?))))
 }
 
 /// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
 fn other(m: &mut mzlab_core::readers::Member) -> Option<Content> {
-    let n = m.nome.to_ascii_lowercase();
+    let n = m.name.to_ascii_lowercase();
     if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
         return None;
     }
@@ -96,11 +96,11 @@ fn refusal(detail: &str) -> Error {
 /// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
 fn cut_before(m: &mut mzlab_core::readers::Member) -> Option<Error> {
     let mut h = vec![0u8; m.dim.min(512) as usize];
-    m.dati.read_at(0, &mut h).ok()?;
+    m.data.read_at(0, &mut h).ok()?;
     let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;
     Some(
         Error::new("err.file.cutShort")
-            .with("name", &m.nome)
+            .with("name", &m.name)
             .with("size", m.dim)
             .with("needed", need),
     )
@@ -116,7 +116,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
             )))
         }
         Content::Broken => {
-            let m = &mut fs.membri[i];
+            let m = &mut fs.members[i];
             if let Some(e) = cut_before(m) {
                 return Err(e);
             }
@@ -125,19 +125,19 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         }
         _ => {}
     }
-    let mut m = fs.membri.swap_remove(i);
+    let mut m = fs.members.swap_remove(i);
     // the container and the raw stream are both in memory
     limits.fits(m.dim.saturating_mul(2))?;
     let mut data = Vec::new();
     data.try_reserve_exact(m.dim as usize)
         .map_err(|_| Error::memory_budget())?;
     data.resize(m.dim as usize, 0);
-    m.dati.read_at(0, &mut data)?;
-    let ole = Ole::open(data, &m.nome, limits)?;
+    m.data.read_at(0, &mut data)?;
+    let ole = Ole::open(data, &m.name, limits)?;
     // sectors in use past the end: the raw stream would read short and the file would open with fewer scans, or none, unsaid
     if let Some(need) = ole.cut_short() {
         return Err(Error::new("err.file.cutShort")
-            .with("name", &m.nome)
+            .with("name", &m.name)
             .with("size", m.dim)
             .with("needed", need));
     }
@@ -157,20 +157,20 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     }
     // the file name without its folder, as the other readers keep it
     let name = m
-        .nome
+        .name
         .rsplit(['/', '\\'])
         .next()
-        .unwrap_or(&m.nome)
+        .unwrap_or(&m.name)
         .to_string();
     Ok(Box::new(ShimadzuReader {
         samples: vec![Sample {
             id: 0,
-            nome: name.clone(),
+            name: name.clone(),
             scansioni: d.indice.len(),
             size: None,
         }],
         sha1: ole.sha1_hex(),
-        nome: name,
+        name,
         dim: m.dim,
         fam,
         d,
@@ -179,7 +179,7 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 }
 
 pub struct ShimadzuReader {
-    nome: String,
+    name: String,
     dim: u64,
     sha1: String,
     fam: Fam,
@@ -196,6 +196,6 @@ impl ShimadzuReader {
     }
 
     fn id(&self) -> (&str, u64, &str) {
-        (&self.nome, self.dim, &self.sha1)
+        (&self.name, self.dim, &self.sha1)
     }
 }

@@ -1,4 +1,4 @@
-//! Self-description of a step of a workflow, `step/1` (`docs/studi/workflow/contract.schema.json`): plain data written next to the code that runs the
+//! Self-description of a step of a workflow, `step/1` (`docs/studies/workflow/contract.schema.json`): plain data written next to the code that runs the
 //! step, one descriptor per step and version, exported to JSON by `json::registry_json`. Nothing here runs a step or changes a result.
 //! `core_steps` holds the steps owned by this crate; `mzlab_feat::steps::registry` adds the others and is the whole list.
 

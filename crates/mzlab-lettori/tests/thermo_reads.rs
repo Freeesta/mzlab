@@ -24,10 +24,10 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     let bytes = Raw::tsq(63, scans).bytes();
     let calls = Rc::new(Cell::new(0));
     let set = FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: bytes.len() as u64,
-            dati: Box::new(Counted(bytes.clone(), calls.clone())),
+            data: Box::new(Counted(bytes.clone(), calls.clone())),
             sha1: None,
         }],
     };
@@ -44,10 +44,10 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     // the rows are the same as from a plain slice
     let mut r = mzlab_lettori::open(
         FileSet {
-            membri: vec![Member {
-                nome: "x.raw".into(),
+            members: vec![Member {
+                name: "x.raw".into(),
                 dim: bytes.len() as u64,
-                dati: Box::new(bytes),
+                data: Box::new(bytes),
                 sha1: None,
             }],
         },

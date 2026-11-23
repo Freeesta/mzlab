@@ -82,7 +82,7 @@ const CartPuntVista = (() => {
     const T = (k, p) => I18N.t(k, p), st = S.stats.get(x.path), size = st && typeof sz === "function" ? " · " + sz(st.size) : "";
     const state = T(done ? "cartp.loaded" : "cartp.notloaded");
     const one = done ? "" : `<button type="button" class="sec sm cpone" data-i="${i}" aria-label="${esc(T("cartp.one.aria", { name: x.name }))}">${T("cartp.one")}</button>`;
-    return `<li class="cpli"><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + size)}</span></button>${one}</li>`;
+    return `<li class="cpli"><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" title="${esc(T("cartp.row.tip"))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + size)}</span></button>${one}</li>`;
   }
   function render() {
     const box = document.getElementById("cartbody"), pick = document.getElementById("cartpick");

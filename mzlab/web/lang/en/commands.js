@@ -113,7 +113,6 @@ I18N.add("en", {
   "cmd.panel.show": "Show panels",
   "cmd.panel.files": "Files ({n})",
   "cmd.panel.files0": "Files (0)",
-  "cmd.panel.name": "Side panel",
   "cmd.panel.tip": "Shows or hides the side panel (Ctrl/⌘+B)",
   "cmd.panel.kw": "side panel show hide toggle",
   "cmd.disp.arrange.lab": "Side by side",

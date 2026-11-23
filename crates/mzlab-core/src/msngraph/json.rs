@@ -110,9 +110,9 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
         .str(env!("CARGO_PKG_VERSION"))
         .raw(",\"source\":");
     match source {
-        Some((nome, sha)) => o
+        Some((name, sha)) => o
             .raw("{\"name\":")
-            .str(nome)
+            .str(name)
             .raw(",\"sha256_idx\":")
             .str(sha)
             .raw("}"),

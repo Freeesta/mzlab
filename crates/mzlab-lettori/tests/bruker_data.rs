@@ -19,14 +19,14 @@ fn set_of(dir: &Path) -> FileSet {
         .map(|p| {
             let f = std::fs::File::open(&p).unwrap();
             Member {
-                nome: format!("{name}/{}", p.file_name().unwrap().to_string_lossy()),
+                name: format!("{name}/{}", p.file_name().unwrap().to_string_lossy()),
                 dim: f.metadata().unwrap().len(),
-                dati: Box::new(f),
+                data: Box::new(f),
                 sha1: None,
             }
         })
         .collect();
-    FileSet { membri: members }
+    FileSet { members }
 }
 
 fn spectra_mzml(p: &Path) -> Vec<Spectrum> {

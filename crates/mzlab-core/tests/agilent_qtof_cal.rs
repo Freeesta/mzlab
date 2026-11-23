@@ -52,19 +52,19 @@ fn folder_id(cal: Option<Vec<u8>>, cal_id: i32) -> FileSet {
         }
     }
     let m = |n: &str, b: Vec<u8>| Member {
-        nome: format!("x.D/AcqData/{n}"),
+        name: format!("x.D/AcqData/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     };
-    let mut membri = vec![
+    let mut members = vec![
         m("MSScan.bin", lc::index(&recs)),
         m("MSPeak.bin", peak),
         m("MSScan.xsd", lc::xsd("DataDependentScanParamType")),
         m("DefaultMassCal.xml", DEFAULT.to_vec()),
     ];
-    membri.extend(cal.map(|c| m("MSMassCal.bin", c)));
-    FileSet { membri }
+    members.extend(cal.map(|c| m("MSMassCal.bin", c)));
+    FileSet { members }
 }
 
 fn mzml(fs: FileSet) -> mzlab_core::error::Result<String> {

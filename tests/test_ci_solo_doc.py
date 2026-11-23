@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import ci_solo_doc as ci  # noqa: E402
 
-DOCS = ["CLAUDE.md", "CHANGELOG.md", "docs/agenti/ci-fast.md", "docs/studi/ottimizza/x.md", ".claude/settings.json", ".claude/agents/finder.md"]
+DOCS = ["CLAUDE.md", "CHANGELOG.md", "docs/agenti/ci-fast.md", "docs/studies/ottimizza/x.md", ".claude/settings.json", ".claude/agents/finder.md"]
 OTHER = ["tools/x.py", "tests/test_x.py", "docs/schemi/tools-1.json", "docs/agenti/mappa.png", "docs/agenti/ci-fast.md.py", "docs/../tools/x.md", "x/CLAUDE.md",
          "tools/lab/fixtures/a.md", "crates/mzlab-x/README.md", "mzlab/web/index.html", ".github/workflows/test.yml",
          "docs", ".claudeX/a.md", "Cargo.toml", "mzlab/web/lang/en.js", "doc/a.md"]

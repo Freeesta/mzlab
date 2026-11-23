@@ -62,11 +62,11 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
     }
     let mut names: Vec<&str> = Vec::new();
     for f in &fields {
-        if !names.contains(&f.nome.as_str()) {
-            names.push(&f.nome);
+        if !names.contains(&f.name.as_str()) {
+            names.push(&f.name);
         }
     }
-    let with_cv = |n: &str| fields.iter().any(|f| f.nome == n && f.cv.is_some());
+    let with_cv = |n: &str| fields.iter().any(|f| f.name == n && f.cv.is_some());
     let cv = names.iter().filter(|n| with_cv(n)).count();
     let mut s = String::from("{\"schema\":\"conversion/1\",\"reader\":\"");
     s += l.format().id();

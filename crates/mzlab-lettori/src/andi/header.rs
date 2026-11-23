@@ -28,24 +28,24 @@ impl AndiHeader {
             if v.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
-            let c = Field::new("andi:global", &a.nome, &v);
-            let c = map(&a.nome).map_or(c, |m| Field::new("andi:global", &a.nome, &v).map(m));
-            t.fields.push(if identity(&a.nome) { c.id() } else { c });
+            let c = Field::new("andi:global", &a.name, &v);
+            let c = map(&a.name).map_or(c, |m| Field::new("andi:global", &a.name, &v).map(m));
+            t.fields.push(if identity(&a.name) { c.id() } else { c });
         }
         t.title = cdf.text("experiment_title").map(str::to_string);
         t.created = cdf.text("experiment_date_time_stamp").map(str::to_string);
         t.user = cdf.text("operator_name").map(str::to_string);
         t.ionizzazione = cdf.text("test_ionization_mode").map(str::to_string);
         t.detector = cdf.text("test_detector_type").map(str::to_string);
-        for v in cdf.var.iter().filter(|v| v.nome.starts_with("instrument_")) {
+        for v in cdf.var.iter().filter(|v| v.name.starts_with("instrument_")) {
             let s = single(cdf.strings(data, limits, v)?).unwrap_or_default();
             if s.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
-            let c = Field::new("andi:instrument", &v.nome, &s);
-            t.fields.push(if identity(&v.nome) { c.id() } else { c });
+            let c = Field::new("andi:instrument", &v.name, &s);
+            t.fields.push(if identity(&v.name) { c.id() } else { c });
             let ch = Some(s);
-            match v.nome.as_str() {
+            match v.name.as_str() {
                 "instrument_mfr" => t.maker = ch,
                 "instrument_model" => t.model = ch,
                 "instrument_serial_no" => t.series = ch,
@@ -60,12 +60,12 @@ impl AndiHeader {
         Ok(t)
     }
 
-    /// The `method/1` document of the file `nome` (`dim` bytes, `sha1` when read).
-    pub(super) fn document(&self, nome: &str, dim: u64, sha1: Option<String>) -> String {
+    /// The `method/1` document of the file `name` (`dim` bytes, `sha1` when read).
+    pub(super) fn document(&self, name: &str, dim: u64, sha1: Option<String>) -> String {
         let src = Source {
             format: "andi-ms",
             files: vec![SrcFile {
-                name: nome.to_string(),
+                name: name.to_string(),
                 sha1,
                 bytes: dim,
             }],

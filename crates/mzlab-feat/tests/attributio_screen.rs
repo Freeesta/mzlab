@@ -105,7 +105,7 @@ fn b2_matches_the_golden_data() {
         .unwrap()
         .iter()
         .map(|r| StructRow {
-            nome_comune: s(&r["nome_comune"]),
+            common_name: s(&r["nome_comune"]),
             first_block: r["first_block"].as_str().map(str::to_string),
             ..StructRow::default()
         })

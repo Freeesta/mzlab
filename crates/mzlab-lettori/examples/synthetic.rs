@@ -14,10 +14,10 @@ mod thermo;
 /// The helper the shared ANDI module expects from its parent.
 fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: name.into(),
+        members: vec![Member {
+            name: name.into(),
             dim: byte.len() as u64,
-            dati: Box::new(byte),
+            data: Box::new(byte),
             sha1: None,
         }],
     }

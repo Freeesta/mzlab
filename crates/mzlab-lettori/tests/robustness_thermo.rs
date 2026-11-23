@@ -8,10 +8,10 @@ mod dati_percorsi;
 
 fn file_set(byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: byte.len() as u64,
-            dati: Box::new(byte),
+            data: Box::new(byte),
             sha1: None,
         }],
     }

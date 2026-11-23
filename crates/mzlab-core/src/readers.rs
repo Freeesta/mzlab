@@ -128,9 +128,9 @@ impl Default for Limits {
 
 /// One file of a set, with the bytes at any offset.
 pub struct Member {
-    pub nome: String,
+    pub name: String,
     pub dim: u64,
-    pub dati: Box<dyn ReadAt>,
+    pub data: Box<dyn ReadAt>,
     /// SHA-1 of the whole member when the caller already has it (taken during the copy of the file): the reader that writes the header of an mzML uses it instead of reading the file again.
     pub sha1: Option<String>,
 }
@@ -138,33 +138,33 @@ pub struct Member {
 /// The files that make one dataset: `X.wiff` + `X.wiff.scan`, the members of a `.raw` or `.D` folder, or a single file. The names are logical (relative to the dataset).
 #[derive(Default)]
 pub struct FileSet {
-    pub membri: Vec<Member>,
+    pub members: Vec<Member>,
 }
 
 impl FileSet {
     /// `err.file.notAccepted` for this set, named by its first member (the name the page and the CLI show).
     pub fn not_accepted(&self) -> Error {
         let name = self
-            .membri
+            .members
             .first()
-            .map(|m| m.nome.as_str())
+            .map(|m| m.name.as_str())
             .unwrap_or_default();
         Error::new("err.file.notAccepted").with("name", name)
     }
     /// Index of the member whose name ends with `suffisso`, ignoring case.
     pub fn find(&self, suffisso: &str) -> Option<usize> {
         let s = suffisso.to_lowercase();
-        self.membri
+        self.members
             .iter()
-            .position(|m| m.nome.to_lowercase().ends_with(&s))
+            .position(|m| m.name.to_lowercase().ends_with(&s))
     }
     /// The first `n` bytes of member `i` (fewer when it is shorter): what `riconosci` looks at, never the extension alone.
     pub fn testa(&mut self, i: usize, n: usize) -> Vec<u8> {
-        let Some(m) = self.membri.get_mut(i) else {
+        let Some(m) = self.members.get_mut(i) else {
             return Vec::new();
         };
         let mut b = vec![0u8; n.min(usize::try_from(m.dim).unwrap_or(usize::MAX))];
-        if m.dati.read_at(0, &mut b).is_err() {
+        if m.data.read_at(0, &mut b).is_err() {
             b.clear();
         }
         b
@@ -175,7 +175,7 @@ impl FileSet {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sample {
     pub id: u32,
-    pub nome: String,
+    pub name: String,
     pub scansioni: usize,
     pub size: Option<u64>,
 }
@@ -208,7 +208,7 @@ pub struct ScanEntry {
 /// A name, a value and, when the file or the CV says so, a unit and an accession (`MS:1000927`): what the header of a scan holds besides its peaks.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Field {
-    pub nome: String,
+    pub name: String,
     pub valore: String,
     pub unita: Option<String>,
     pub cv: Option<String>,

@@ -141,18 +141,18 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
 /// Default window of the cleavages (`struct_ppm`), ppm; the same as `mzlab-cli msn graph --structures`.
 const PPM_STRUCTURE: f64 = 10.0;
 
-/// The `msn-graph/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `pick`; `api/msn_grafo`).
+/// The `msn-graph/1` of the file `name` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `pick`; `api/msn_grafo`).
 /// `read_idx` reads the `.mzidx` (`idx_size` bytes) and `read_file` the mzML the index points into.
 #[wasm_bindgen]
 pub fn msn_graph(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, j, o) = compute_with(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (g, j, o) = compute_with(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
     match q.get("structures").filter(|n| !n.is_empty()) {
         None => Ok(j),
         Some(node) => {
@@ -179,19 +179,19 @@ pub fn msn_graph_export(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let clean_flag = q.get("clean").is_some_and(|v| v == "1");
     if let Some(view) = q.get("view").filter(|v| !v.is_empty()) {
-        let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+        let (_, j) = compute(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
         let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
         return Ok(table_text(&v, view, clean_flag));
     }
     let format = q.get("format").unwrap_or("");
     if format == "massbank" || q.get("library").is_some_and(|v| v == "1") {
-        let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+        let (_, j) = compute(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
         let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
         let get = |k: &str, d: &'static str| q.get(k).filter(|s| !s.is_empty()).unwrap_or(d);
         let format = if format == "massbank" {
@@ -214,7 +214,7 @@ pub fn msn_graph_export(
         .map_err(js_err);
     }
     let (f, clean, node) = from_export_request(&|k| q.get(k).map(String::from)).map_err(js_err)?;
-    let (g, _) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (g, _) = compute(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
     Ok(esporta(&g, f, clean, node.as_deref()))
 }
 
@@ -225,13 +225,13 @@ pub fn msnlib_add(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     query: &str,
     library: &str,
     molecule_id: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (g, j) = compute(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
     let (l, duplicate) = aggiungi(library, molecule_id, &g, &j).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("{\"library\":").str(&l).raw(",\"duplicate\":");
@@ -246,12 +246,12 @@ pub fn msnlib_search(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     query: &str,
     library: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let o = opzioni_cerca(&|k| q.get(k).map(String::from)).map_err(js_err)?;
-    let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (_, j) = compute(read_idx, idx_size, read_file, name, &q).map_err(js_err)?;
     cerca(library, &j, &o).map_err(js_err)
 }

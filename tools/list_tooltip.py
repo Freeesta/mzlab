@@ -14,8 +14,8 @@ import inventory_tooltip as INV  # noqa: E402
 
 ROOT = INV.ROOT
 HINT_KEY = re.compile(r"(\.title|\.tip|\.tt|\.hint|Title)$|^tip\.")
-AREAS = {"pannelli": "Panels, chart toolbars, bar, legends", "spettri": "Spectrum, map, DDA, XIC, integration",
-         "liste": "Files, lists, libraries, tables, calculator", "disegno": "Draw, fragmentation graph, infusion",
+AREAS = {"panels": "Panels, chart toolbars, bar, legends", "spectra": "Spectrum, map, DDA, XIC, integration",
+         "lists": "Files, lists, libraries, tables, calculator", "drawing": "Draw, fragmentation graph, infusion",
          "tabui": "Tabui (TP_Mine, English only)", "flow-ui": "Flow buttons and menus (English only)",
          "flow-nodi": "Flow steps and parameters (English only)", "catalogo": "Catalog keys not reached by a site"}
 FLAG_RULES = [  # (reason, regex)

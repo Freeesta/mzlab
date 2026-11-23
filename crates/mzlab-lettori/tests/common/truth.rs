@@ -1,4 +1,4 @@
-//! The Rosina test bench (docs/studi/ROSINA.md F): compares a reader with the ground truth `verita/1` of an external oracle, levels F0-F5, and reports per file `L`, `P` or `NV`.
+//! The Rosina test bench (docs/studies/ROSINA.md F): compares a reader with the ground truth `verita/1` of an external oracle, levels F0-F5, and reports per file `L`, `P` or `NV`.
 //! Included with `#[path = "common/truth.rs"] mod verita;` by `truth_bench.rs` (the bench on built files) and by `verita_<famiglia>.rs` (the real corpus, skipped without data).
 #![allow(dead_code)]
 
@@ -11,7 +11,7 @@ mod levels_f;
 #[allow(unused_imports)]
 pub use levels_f::{json_path, normalize};
 
-/// Tolerances of F.2 (docs/studi/ROSINA.md): m/z by ppm (high resolution) or by Da (unit resolution), times in minutes, intensities relative.
+/// Tolerances of F.2 (docs/studies/ROSINA.md): m/z by ppm (high resolution) or by Da (unit resolution), times in minutes, intensities relative.
 #[derive(Clone, Copy)]
 pub struct Tol {
     pub mz_ppm: Option<f64>,
@@ -198,9 +198,9 @@ fn set_of(native: &Path) -> Option<mzlab_core::readers::FileSet> {
     fn member(p: &Path, name: String) -> Option<Member> {
         let f = std::fs::File::open(p).ok()?;
         Some(Member {
-            nome: name,
+            name,
             dim: f.metadata().ok()?.len(),
-            dati: Box::new(f),
+            data: Box::new(f),
             sha1: None,
         })
     }
@@ -235,11 +235,11 @@ fn set_of(native: &Path) -> Option<mzlab_core::readers::FileSet> {
             }
         }
     }
-    Some(FileSet { membri: members })
+    Some(FileSet { members })
 }
 
 /// The tolerances a truth asks for: `"hr"`, `"lr"`, or an object that overrides single fields of the family default (`mz_ppm` null = by Da, `mz_da`, `rt_min`, `intensita_rel`, `cromatogramma_rel`),
-/// e.g. 1 ppm for a file with a calibration per scan (docs/studi/ROSINA.md F.2).
+/// e.g. 1 ppm for a file with a calibration per scan (docs/studies/ROSINA.md F.2).
 pub fn tolerance_of(v: &Value, base: Tol) -> Tol {
     match &v["tolleranza"] {
         Value::String(s) if s == "hr" => Tol::HR,

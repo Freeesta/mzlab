@@ -25,9 +25,9 @@ impl ReadAt for Short {
 
 fn member(n: &str, b: Vec<u8>) -> Member {
     Member {
-        nome: format!("x.D/AcqData/{n}"),
+        name: format!("x.D/AcqData/{n}"),
         dim: b.len() as u64,
-        dati: Box::new(b),
+        data: Box::new(b),
         sha1: None,
     }
 }
@@ -36,13 +36,13 @@ fn member(n: &str, b: Vec<u8>) -> Member {
 fn a_side_member_that_cannot_be_read_is_named_and_the_run_read() {
     let (scan, peak) = encode(&sample());
     let ts = Member {
-        nome: "x.D/AcqData/MSTS.xml".into(),
+        name: "x.D/AcqData/MSTS.xml".into(),
         dim: 100,
-        dati: Box::new(Short(b"<TimeSegments/>".to_vec())),
+        data: Box::new(Short(b"<TimeSegments/>".to_vec())),
         sha1: None,
     };
     let fs = FileSet {
-        membri: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak), ts],
+        members: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak), ts],
     };
     let mut l = readers::open(fs, &Limits::sito()).expect("the run opens");
     assert_eq!(l.index(0).unwrap().len(), 3);
@@ -66,7 +66,7 @@ fn an_mrm_visit_that_does_not_decode_leaves_the_srm_chromatograms_and_is_counted
     let at = 68 + 48 + 24;
     peak[at..at + 8].copy_from_slice(&f64::NAN.to_le_bytes());
     let fs = FileSet {
-        membri: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak)],
+        members: vec![member("MSScan.bin", scan), member("MSPeak.bin", peak)],
     };
     let mut l = readers::open(fs, &Limits::sito()).expect("the run opens");
     let srm: Vec<_> = l

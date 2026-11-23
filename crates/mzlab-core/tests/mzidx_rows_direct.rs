@@ -306,8 +306,8 @@ fn first_ms1_low_resolution_in_a_high_file() {
 /// passes (the page passes the name of its list entry, `X.mzML` or `X.raw.mzML`): the same `.mzidx` on the site, in the app and from the CLI.
 #[test]
 fn the_source_of_a_vendor_index_is_the_dataset_name() {
-    let imp = |nome: &str| upload::Fingerprint {
-        nome: nome.into(),
+    let imp = |name: &str| upload::Fingerprint {
+        name: name.into(),
         dim: 1,
         sha256: String::new(),
         sha1: String::new(),
@@ -322,10 +322,10 @@ fn the_source_of_a_vendor_index_is_the_dataset_name() {
             "X.D",
         ),
     ] {
-        let membri: Vec<_> = members.into_iter().map(imp).collect();
+        let members: Vec<_> = members.into_iter().map(imp).collect();
         for name in ["X.mzML", "X.raw.mzML", "X_2.raw.mzML"] {
             let mut l = Finto::vario(10, 5, 3);
-            let p = upload::prepare_reader(&mut l, 0, &membri, name).unwrap();
+            let p = upload::prepare_reader(&mut l, 0, &members, name).unwrap();
             let src = json::parse(p.table.source_json.as_bytes()).unwrap();
             assert_eq!(
                 src.get("name").and_then(Value::str),

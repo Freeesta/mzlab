@@ -82,10 +82,10 @@ fn a_short_or_long_pass_gives_nothing() {
 
 fn set(b: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Member {
-            nome: "x.raw".into(),
+        members: vec![Member {
+            name: "x.raw".into(),
             dim: b.len() as u64,
-            dati: Box::new(b.to_vec()),
+            data: Box::new(b.to_vec()),
             sha1: None,
         }],
     }
@@ -106,15 +106,15 @@ fn fingerprints_give_the_sha1_to_the_member_and_the_known_ones_replace_the_read(
         ),
         (sha256.clone(), sha1.clone(), probe.clone())
     );
-    assert_eq!(fs.membri[0].sha1.as_deref(), Some(sha1.as_str()));
+    assert_eq!(fs.members[0].sha1.as_deref(), Some(sha1.as_str()));
     // taken before: the same, without reading the member
     let mut fs = set(&[]);
-    fs.membri[0].dim = b.len() as u64;
+    fs.members[0].dim = b.len() as u64;
     let known =
         upload::known_fingerprints(&mut fs, &[(sha256.clone(), sha1.clone(), probe.clone())])
             .unwrap();
     assert_eq!(known, imp);
-    assert_eq!(fs.membri[0].sha1.as_deref(), Some(sha1.as_str()));
+    assert_eq!(fs.members[0].sha1.as_deref(), Some(sha1.as_str()));
     // not as many as the members: the caller reads them
     assert!(upload::known_fingerprints(&mut set(&b), &[]).is_none());
 }

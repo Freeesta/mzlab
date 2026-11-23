@@ -103,7 +103,7 @@ fn fake_with(filter: &str, pol: i8, method: &str) -> SrmFromScans {
     SrmFromScans::new(Box::new(Fake {
         campioni: vec![Sample {
             id: 1,
-            nome: "a".into(),
+            name: "a".into(),
             scansioni: 4,
             size: None,
         }],

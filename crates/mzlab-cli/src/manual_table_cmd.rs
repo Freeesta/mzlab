@@ -233,7 +233,7 @@ fn samples_of(
         .map_or(name.as_str(), |s| s.0)
         .to_string();
     let wiff = lower.ends_with(".wiff");
-    let list: Vec<String> = l.samples().iter().map(|c| c.nome.clone()).collect();
+    let list: Vec<String> = l.samples().iter().map(|c| c.name.clone()).collect();
     let mut out = Vec::new();
     for (c, given) in list.iter().enumerate() {
         let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), c)?;

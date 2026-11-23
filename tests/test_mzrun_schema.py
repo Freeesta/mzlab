@@ -11,7 +11,7 @@ from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "docs/schemi/mzrun-2.json").read_text())
-CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
+CONTRACT = json.loads((ROOT / "docs/studies/workflow/contract.schema.json").read_text())
 EXAMPLES = ROOT / "tests/data/mzrun"
 
 

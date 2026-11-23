@@ -76,7 +76,7 @@ pub(crate) fn campi(head: &str) -> Vec<Field> {
         let get = |k: &str| a.iter().rev().find(|(n, _)| n == k).map(|(_, v)| v.clone());
         if let Some(name) = get("name").filter(|n| !n.is_empty()) {
             out.push(Field {
-                nome: name,
+                name,
                 valore: get("value").unwrap_or_default(),
                 unita: get("unitName"),
                 cv: get("accession"),
@@ -123,7 +123,7 @@ pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M)
     o.raw(",\"tic\":").num(sc.tic).raw(",\"key\":").str(&sc.key()).raw(",\"pairs\":[");
     for (i, f) in fields.iter().enumerate() {
         let unit = f.unita.as_deref().unwrap_or("");
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(&f.nome).raw(",\"value\":").str(&f.valore).raw(",\"unit\":").str(unit).raw("}");
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(&f.name).raw(",\"value\":").str(&f.valore).raw(",\"unit\":").str(unit).raw("}");
     }
     o.raw("]}");
     Ok(o.0)
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn reads_pairs() {
         let h = r#"<spectrum><cvParam cvRef="MS" accession="MS:1" name="ms level" value="1"/><userParam name="x" value="a" unitName="s" /><cvParamX name="no"/><cvParam name=""/></spectrum>"#;
-        let p: Vec<_> = campi(h).into_iter().map(|c| (c.nome, c.valore, c.unita, c.cv)).collect();
+        let p: Vec<_> = campi(h).into_iter().map(|c| (c.name, c.valore, c.unita, c.cv)).collect();
         assert_eq!(p, vec![("ms level".into(), "1".into(), None, Some("MS:1".into())), ("x".into(), "a".into(), Some("s".into()), None)]);
     }
 

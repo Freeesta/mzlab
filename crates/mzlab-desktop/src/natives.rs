@@ -27,13 +27,13 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
             .map_err(|e| Error::new("err.file.raw").with("detail", e.to_string()))?;
         let dim = map.bytes().len() as u64;
         out.push(Member {
-            nome: name.clone(),
+            name: name.clone(),
             dim,
-            dati: Box::new(MapAt(Arc::new(map))),
+            data: Box::new(MapAt(Arc::new(map))),
             sha1: None,
         });
     }
-    Ok(FileSet { membri: out })
+    Ok(FileSet { members: out })
 }
 
 /// The reader of a dataset; with `centroid` its profile scans become centroids.

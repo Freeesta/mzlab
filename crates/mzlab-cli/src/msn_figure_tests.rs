@@ -300,7 +300,7 @@ fn the_step_writes_the_bytes_of_the_command() {
         let want = crate::msn_outputs::bytes(
             std::str::from_utf8(&g).unwrap(),
             crate::msn_outputs::Format::from_name(format).unwrap(),
-            View::da_nome(view).unwrap(),
+            View::from_name(view).unwrap(),
         )
         .unwrap();
         assert_eq!(got, want, "{format} {view}");

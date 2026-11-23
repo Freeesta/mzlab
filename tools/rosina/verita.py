@@ -1,4 +1,4 @@
-"""Ground truth `verita/1` (docs/studi/ROSINA.md F.1) from an mzML written by an oracle (msconvert, the authors' converter), run on Windows, Mac or Linux.
+"""Ground truth `verita/1` (docs/studies/ROSINA.md F.1) from an mzML written by an oracle (msconvert, the authors' converter), run on Windows, Mac or Linux.
 A tool of the test bench, never part of the site: no calculation of the program lives here.
     python3 tools/rosina/verita.py FILE.mzML [--oracle NOME VERSIONE OPZIONI] [--native FILE] [--sample N] > FILE.verita.json
 Standard library only. Binary arrays: 32/64-bit floats, zlib, no numpress (the oracle is asked for plain arrays)."""

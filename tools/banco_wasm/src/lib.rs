@@ -193,7 +193,7 @@ pub fn raw_parse() -> f64 {
 pub fn raw_index() -> f64 {
     use mzlab_core::readers::{self, FileSet, Limiti, Membro};
     let bytes = FILE.with(|f| f.borrow().clone());
-    let fs = FileSet { membri: vec![Membro { nome: "x.raw".into(), dim: bytes.len() as u64, dati: Box::new(bytes), sha1: None }] };
+    let fs = FileSet { members: vec![Membro { name: "x.raw".into(), dim: bytes.len() as u64, data: Box::new(bytes), sha1: None }] };
     let mut l = readers::open(fs, &Limiti::sito()).unwrap();
     let p = upload::prepare_lettore(&mut *l, 0, &[], "x.mzML").unwrap();
     let mut out = Cursor::new(Vec::new());

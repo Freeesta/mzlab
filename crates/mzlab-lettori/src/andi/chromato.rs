@@ -54,7 +54,7 @@ pub(super) fn entries(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Vec<
     }]
 }
 
-/// The trace `nome`: times in minutes, the ordinates scaled by `scale_factor`/`add_offset` when the variable has them.
+/// The trace `name`: times in minutes, the ordinates scaled by `scale_factor`/`add_offset` when the variable has them.
 pub(super) fn trace(
     cdf: &Cdf,
     data: &mut dyn ReadAt,
