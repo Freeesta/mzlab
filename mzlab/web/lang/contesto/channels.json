@@ -9,7 +9,7 @@
   "canali.manint.del.aria": "Label of the button that deletes an integration; {ch} = channel (m/z or transition), {s} = sample.",
   "canali.sim.ion": "Name of a SIM channel whose m/z the file does not give; {n} = position of the channel (1, 2, …).",
   "canali.sim.cell": "\"Experiment\" cell of the file table for a SIM file; {n} = number of monitored ions.",
-  "canali.btn.aria": "Accessible name of the channels button; {n} = number of traced channels.",
+  "canali.btn.aria": "Accessible name of the channels button; {v} = its visible text (the name must contain it, WCAG 2.5.3), {n} = number of traced channels.",
   "canali.pick.ck": "Tooltip on hovering the checkbox of a row of the transition / SIM ion picker; {et} = channel label (m/z).",
   "canali.row": "Description read by a screen reader of a row of the channel tree; {et} = channel label, {n} = number of points (scans), {a} and {b} = start and end time in minutes.",
   "canali.kind.aria": "Accessible name of the button that chooses what the chromatogram traces; {v} = button text (for example TIC or TIC + 1).",

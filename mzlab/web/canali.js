@@ -187,7 +187,7 @@
     const [uv, det, log] = cx ? others(cx) : [[], [], []], c0 = ms2 ? "ms2" : p.kind, kinds = grp(T("canali.grp.uv"), kindRows(p, uv, c0)) + grp(T("canali.grp.det"), kindRows(p, det, c0));
     const ms = ms2 ? kindRows(p, [["ms2", T("ctl.ms2scans"), T("ctl.noMs2")]], c0) : rows(p, tree, sel, only, files.length, only && sim);
     const body = only && !kinds ? ms : grp(T("canali.grp.ms"), ms) + kinds + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size, v: txt }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
       `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"` : ""} class="can-tree">${body}</div></div></span>`;
   }

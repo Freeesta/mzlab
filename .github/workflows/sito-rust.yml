@@ -293,7 +293,8 @@ jobs:
           key: sito-pw-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
       - name: Install
         run: |
-          python -m pip install -e ".[test]" playwright axe-playwright-python
+          # axe-playwright-python bundles axe-core (0.1.9 = axe-core 4.14.0): pinned because 0.1.9 (2026-11-23) switched on label-content-name-mismatch and broke every PR at once; bump it on purpose, with the e2e a11y tests green
+          python -m pip install -e ".[test]" playwright axe-playwright-python==0.1.9
           python -m playwright install --with-deps chromium
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.ref == 'refs/heads/main' && steps.pwcache.outputs.cache-hit != 'true'
