@@ -5,7 +5,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
+CONTRACT = json.loads((ROOT / "docs/studies/workflow/contract.schema.json").read_text())
 STEPS = json.loads((ROOT / "docs/schemi/steps-cli-1.json").read_text())
 
 

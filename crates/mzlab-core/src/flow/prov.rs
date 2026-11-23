@@ -1,4 +1,4 @@
-//! Writer of the `prov/1` record of a run (`docs/studi/workflow/contract.schema.json`, def `prov1`): an entity for every file read or made, an activity for
+//! Writer of the `prov/1` record of a run (`docs/studies/workflow/contract.schema.json`, def `prov1`): an entity for every file read or made, an activity for
 //! every instance, the agent that ran them. The same inputs and parameters give the same text, but for `ms` and `heap_peak_bytes`.
 
 use super::canon::value_text;

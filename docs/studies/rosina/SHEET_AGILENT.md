@@ -1,6 +1,6 @@
 # Rosina C: Agilent `.D` (MassHunter GC/MS and LC/MS)
 
-Legend and index: `SCHEDE.md`. Readers: `crates/mzlab-core/src/agilent/` (GC/MS, engine) and `agilent_ext/` (LC/MS, module `agilent`, feature `estesi`); details in `docs/agenti/agilent.md`, `agilent-lcms.md`.
+Legend and index: `SHEETS.md`. Readers: `crates/mzlab-core/src/agilent/` (GC/MS, engine) and `agilent_ext/` (LC/MS, module `agilent`, feature `estesi`); details in `docs/agenti/agilent.md`, `agilent-lcms.md`.
 
 ## Status
 - Single-quadrupole GC/MS (5977, EI, scan and SIM): L, V2 against msconvert on the three reference runs; ChemStation `data.ms` read.

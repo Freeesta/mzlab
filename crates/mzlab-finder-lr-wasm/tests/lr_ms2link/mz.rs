@@ -1,4 +1,4 @@
-//! The m/z of the match and the isotope rule (`docs/studi/TABUI_MS2_LR.md` §4 rules 2-3): the precursor is compared with the m/z read in the table
+//! The m/z of the match and the isotope rule (`docs/studies/TABUI_MS2_LR.md` §4 rules 2-3): the precursor is compared with the m/z read in the table
 //! too, and an isotope peak takes only its own peak of the trace.
 
 use super::*;

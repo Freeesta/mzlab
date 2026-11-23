@@ -1,4 +1,4 @@
-//! The rules of the match (`docs/studi/TABUI_MS2_LR.md` §4), applied experiment by experiment: polarity, m/z, isotope, time, drift, one peak and
+//! The rules of the match (`docs/studies/TABUI_MS2_LR.md` §4), applied experiment by experiment: polarity, m/z, isotope, time, drift, one peak and
 //! several rows, in-source fragments, corrections of the user and the experiments that no row got.
 
 use mzlab_core::idxread::{Index, ReadAt};

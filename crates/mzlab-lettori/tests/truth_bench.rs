@@ -1,4 +1,4 @@
-//! The Rosina bench (docs/studi/ROSINA.md F) tried on files built here: a truth `verita/1` made from the data that wrote an mzML must give `L`/`P` for the reader of the module `aperti`,
+//! The Rosina bench (docs/studies/ROSINA.md F) tried on files built here: a truth `verita/1` made from the data that wrote an mzML must give `L`/`P` for the reader of the module `aperti`,
 //! and a truth that differs by more than the tolerance must give a defect at the right level. Public CI: no real data.
 #![cfg(feature = "aperti")]
 

@@ -1,4 +1,4 @@
-"""Dynamic tooltip guard (docs/inventari/TOOLTIP.md, rule 20): on the built site, with synthetic files of every kind loaded (Full Scan, MS2, MRM, mixed IDA,
+"""Dynamic tooltip guard (docs/inventories/TOOLTIP.md, rule 20): on the built site, with synthetic files of every kind loaded (Full Scan, MS2, MRM, mixed IDA,
 high-resolution DDA, .wiff Q1 / PI / EPI and SIM), every element that carries a tooltip (title, data-tip, data-tiph: the three things the program's own tooltip reads) is
 collected, and the real hover is measured for the group headers, every HTML tooltip and the longest texts. Fails on a tooltip longer than 60
 characters, with more than one sentence, wider than 28ch or taller than 3 lines when it is drawn. The static twin over the catalogs is tests/test_tooltip_corti.py.

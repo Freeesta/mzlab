@@ -4,9 +4,9 @@
 - **Compilation date**: 16 October 2026
 - **Author**: Sub-agent A7 (mzLab / Gemini)
 - **Generated files**:
-  - `docs/letteratura_cc/siti_sperimentali.csv` (39 sites and intermediates across 10 molecules)
-  - `docs/letteratura_cc/coppie_isomeri_rt.csv` (12 real pairs of positional isomers with RTs measured by RP-LC)
-  - `docs/letteratura_cc/RAPPORTO.md` (this summary and validation document)
+  - `docs/literature_cc/experimental_sites.csv` (39 sites and intermediates across 10 molecules)
+  - `docs/literature_cc/isomer_pairs_rt.csv` (12 real pairs of positional isomers with RTs measured by RP-LC)
+  - `docs/literature_cc/REPORT.md` (this summary and validation document)
 
 ---
 
@@ -129,7 +129,7 @@ All 22 DOIs entered in the T8 track files were verified deterministically by que
 
 **12 real pairs of positional isomers** (same neutral chemical formula and same exact monoisotopic mass) arising from degradation or metabolic processes were identified and validated, separated by reversed-phase chromatography (RP-C18 columns) with rigorously documented analytical parameters.
 
-### Summary of the 12 Verified Pairs (`coppie_isomeri_rt.csv`):
+### Summary of the 12 Verified Pairs (`isomer_pairs_rt.csv`):
 1. **Ibuprofen**: 2-hydroxyibuprofen ($t_R = 7.64	ext{ min}$) vs 1-hydroxyibuprofen ($t_R = 7.84	ext{ min}$) on Halo C-18 ($50 	imes 4.6	ext{ mm}$, $2.7\ \mu	ext{m}$). The tertiary aliphatic hydroxyl at C2 reduces hydrophobic interaction more than the secondary benzylic hydroxyl at C1 (*J. Xenobiotics 2024*, doi:10.3390/jox15010005).
 2. **Caffeine**: Theobromine ($t_R = 3.8	ext{ min}$) vs Paraxanthine ($t_R = 4.8	ext{ min}$) on Zorbax SB-Aq ($2.1 	imes 100	ext{ mm}$, $3.5\ \mu	ext{m}$) with a phosphate buffer/ACN gradient (*J. Anal. Methods Chem. 2018*, doi:10.1155/2018/2085059).
 3. **Caffeine**: Paraxanthine ($t_R = 4.8	ext{ min}$) vs Theophylline ($t_R = 5.5	ext{ min}$) on the same Zorbax SB-Aq column. Critical resolution of a pair traditionally co-eluting on conventional isocratic C18 phases.
@@ -155,4 +155,4 @@ All 22 DOIs entered in the T8 track files were verified deterministically by que
 3. **Reaction kinetics and transient vs persistent products**:
    - In AOP processes, many primary $ullet	ext{OH}$ radical adducts (e.g. cyclohexadienyl adducts or hydroxyalkyl radicals) have half-lives below one microsecond and undergo dehydration, elimination or further rapid oxidation (e.g. 5-hydroxyimidacloprid $	o$ olefin; catechol $	o$ ortho-quinone). Analytical studies measure the final stable products or intermediates long-lived enough for LC analysis.
 4. **Value for the mzLab calculation engine**:
-   - The quantitative data collected in `coppie_isomeri_rt.csv` and `siti_sperimentali.csv` provide an objective test basis both for the Fukui orientation quantum-mechanical module (T2/T7) and for the RP-LC retention-ordering tests (T5).
+   - The quantitative data collected in `isomer_pairs_rt.csv` and `experimental_sites.csv` provide an objective test basis both for the Fukui orientation quantum-mechanical module (T2/T7) and for the RP-LC retention-ordering tests (T5).

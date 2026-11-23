@@ -5,7 +5,7 @@ mzLab is a professional free LC-MS analysis program (browser site plus desktop a
 ## Reporting
 - Errors and questions: [new issue](https://github.com/Freeesta/mzlab/issues/new/choose). **Never attach laboratory data or personal data**: the repository is public.
 - Vulnerabilities: not in a public issue, see [SECURITY.md](SECURITY.md).
-- Guides for people who use the program: [docs/utenti/](docs/utenti/README.md).
+- Guides for people who use the program: [docs/users/](docs/users/README.md).
 
 ## Proposing a change
 1. Open an issue first to describe the change, above all if it changes the behaviour or the interface.

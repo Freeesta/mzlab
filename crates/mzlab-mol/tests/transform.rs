@@ -1,5 +1,5 @@
 //! The record `trasf/1`: validation against the two molecules it names, the stereo rule, chains and the canonical rewrite
-//! (docs/studi/TRANSFORMATION_RECORD.md). The molecules are small and the maps are written by hand.
+//! (docs/studies/TRANSFORMATION_RECORD.md). The molecules are small and the maps are written by hand.
 
 use mzlab_mol::{delta, Mol, RegionKind, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};
 

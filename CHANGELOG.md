@@ -36,5 +36,5 @@ First public release.
 - Licences: code MIT, example files CC0, third-party material in `THIRD-PARTY-LICENSES.md`.
 - Accessibility (WCAG 2.2 AA) checked with axe on Data, HR bench, Drawing and the tour.
 - Security policy (`SECURITY.md`), Dependabot, licence checks with `cargo-deny`, CycloneDX SBOM.
-- Guides for students and teachers, privacy, accessibility and the hosting plan B in `docs/utenti/`.
+- Guides for students and teachers, privacy, accessibility and the hosting plan B in `docs/users/`.
 - Release flow on the tag `vX.Y.Z`: site zip, installers for macOS, Windows and Linux, `SHA256SUMS`, SBOM.

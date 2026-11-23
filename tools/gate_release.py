@@ -144,10 +144,10 @@ def version_of(root: Path) -> str:
 
 def check_checklist(root: Path, version: str | None = None) -> Result:
     v = version or version_of(root)
-    rel = f"docs/rilascio/CHECKLIST-v{v}.md"
+    rel = f"docs/release/CHECKLIST-v{v}.md"
     lines = _lines(root / rel)
     if not lines:
-        return "release checklist", [f"{rel}:1: missing -> cp docs/rilascio/CHECKLIST-TEMPLATE.md {rel} and tick every box"]
+        return "release checklist", [f"{rel}:1: missing -> cp docs/release/CHECKLIST-TEMPLATE.md {rel} and tick every box"]
     bad = [f"{rel}:{n}: open box -> do it, then tick it: {l.strip()[:80]}" for n, l in enumerate(lines, 1) if re.match(r"\s*[-*] \[ \]", l)]
     if not any(re.match(r"\s*[-*] \[[xX]\]", l) for l in lines):
         bad.append(f"{rel}:1: no ticked box -> the file is not a checklist")

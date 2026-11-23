@@ -1,6 +1,6 @@
 # mzFinder low resolution: MS2 matching rule and targets
 
-Engine and `ms2_links/1` contract: `docs/agenti/mzfinder-lr.md`; matching rules: `docs/studi/TABUI_MS2_LR.md` §4-§5. This file holds the engine side only (association rule, MS2 targets); the Tabui page that showed them was deleted, the engine, CLI and Flow keep using it.
+Engine and `ms2_links/1` contract: `docs/agenti/mzfinder-lr.md`; matching rules: `docs/studies/TABUI_MS2_LR.md` §4-§5. This file holds the engine side only (association rule, MS2 targets); the Tabui page that showed them was deleted, the engine, CLI and Flow keep using it.
 
 ## MS2 → feature association rule and "Fragment ions found"
 
@@ -18,7 +18,7 @@ Code in the Rust engine (`crates/mzlab-feat/src/legacy/lr/`): `ms2assoc.rs` (pur
 
 ## Tabui LR MS2 targets
 
-The student acquires an MS2 on an ion because they saw it in the full scan: if the LR Dig does not list it, the MS2 must not stay orphaned. Code: `crates/mzlab-feat/src/legacy/lr/ms2target.rs`, called by `ms2link::ms2_link`; study: `docs/studi/TABUI_MS2_LR.md` §6; matches: `docs/agenti/mzfinder-lr.md`.
+The student acquires an MS2 on an ion because they saw it in the full scan: if the LR Dig does not list it, the MS2 must not stay orphaned. Code: `crates/mzlab-feat/src/legacy/lr/ms2target.rs`, called by `ms2link::ms2_link`; study: `docs/studies/TABUI_MS2_LR.md` §6; matches: `docs/agenti/mzfinder-lr.md`.
 
 ### Rules
 - `ms2_link` removes the `ms2_target` rows of a previous call, matches the experiments (first pass), then for every trace peak `no_row` / `no_row_at_rt` (not `front`, not `parent_rt`, not `user`) looks in the aligned table (`LrDig.table`) for the row with read m/z within the tolerance of P (half the file's isolation window, otherwise `PREC_TOL`; never the offset)

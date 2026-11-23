@@ -10,7 +10,7 @@ import gate_release as g  # noqa: E402
 def tree(tmp: Path) -> Path:
     (tmp / "docs/agenti").mkdir(parents=True)
     (tmp / "docs/schemi").mkdir(parents=True)
-    (tmp / "docs/rilascio").mkdir(parents=True)
+    (tmp / "docs/release").mkdir(parents=True)
     (tmp / "crates/mzlab-x").mkdir(parents=True)
     (tmp / "crates/mzlab-x/README.md").write_text("A crate.\n")
     (tmp / "Cargo.toml").write_text('[workspace.package]\nversion = "1.2.3"\n')
@@ -18,7 +18,7 @@ def tree(tmp: Path) -> Path:
     (tmp / "docs/agenti/cli.md").write_text("`a.one` and `a.two`\n")
     (tmp / "docs/agenti/area.md").write_text("x\n")
     (tmp / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and cli.md\n")
-    (tmp / "docs/rilascio/CHECKLIST-v1.2.3.md").write_text("- [x] done\n")
+    (tmp / "docs/release/CHECKLIST-v1.2.3.md").write_text("- [x] done\n")
     return tmp
 
 
@@ -48,10 +48,10 @@ def test_uncited_area_file_fails(tmp_path):
 
 def test_open_box_or_missing_checklist_fails(tmp_path):
     root = tree(tmp_path)
-    (root / "docs/rilascio/CHECKLIST-v1.2.3.md").write_text("- [x] a\n- [ ] b\n")
+    (root / "docs/release/CHECKLIST-v1.2.3.md").write_text("- [x] a\n- [ ] b\n")
     rc, out = run(root)
     assert rc == 1 and "CHECKLIST-v1.2.3.md:2" in out
-    (root / "docs/rilascio/CHECKLIST-v1.2.3.md").unlink()
+    (root / "docs/release/CHECKLIST-v1.2.3.md").unlink()
     assert run(root)[0] == 1
 
 
