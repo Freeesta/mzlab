@@ -50,7 +50,7 @@ I18N.add("en", {
   "load.phrase.16": "Don't panic",
   "load.phrase.17": "Fouling the source",
   "load.drop": "<b>Drop files here</b> or <u>browse</u><small class=\"fmts\">.mzML, .raw, .wiff (+ .wiff.scan), .D (folder)</small>",
-  "load.drop.aria": "Choose the data files: .mzML, .raw, .wiff with its .wiff.scan, a whole .D folder",
+  "load.drop.title": "Choose the data files: .mzML, .raw, .wiff with its .wiff.scan, a whole .D folder",
   "files.hint.empty": "Your files will land here!",
   "empty.lists": "Matches will land here!",
   "empty.losses": "Losses will land here!",

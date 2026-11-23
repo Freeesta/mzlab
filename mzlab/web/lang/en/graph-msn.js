@@ -174,7 +174,7 @@ I18N.add("en", {
   "msngrafo.str.col.atoms": "Piece atoms",
   "msngrafo.str.col.peaks": "Other explained peaks",
   "msngrafo.str.show": "Show",
-  "msngrafo.str.show.tip": "Shows this bond in the drawing",
+  "msngrafo.str.show.tip": "Show this bond in the drawing",
   "msngrafo.str.none": "No cut of the structure gives the m/z of this ion.",
   "msngrafo.str.nomark": "The bond is not found in the drawing",
   "msngrafo.str.ev.label": "cut {bond} of the MSn graph",

@@ -23,8 +23,18 @@ RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {ty
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 RUN_MINOR = """() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}})
   .then(r => r.violations.filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
+# WCAG 2.5.3 Label in Name, checked by hand as well as by axe: axe-core 4.14 (axe-playwright-python 0.1.9, 2026-11-23) turned
+# label-content-name-mismatch on, and it is only as good as the axe version. Same rule as axe: text in (parentheses) is ignored, then the
+# visible words must appear in the accessible name as whole words, in order. Covers a control whose aria-label replaces its text.
+NAMES = """(sel) => { const words = s => { let t = (s || '').normalize('NFKD').toLowerCase(), u; while ((u = t.replace(/\\([^()]*\\)/g, '')) !== t) t = u; return t.match(/[\\p{L}\\p{N}]+/gu) || []; }, bad = [];
+  for (const e of (document.querySelector(sel) || document).querySelectorAll('button[aria-label], [role=button][aria-label], a[href][aria-label], [role=tab][aria-label], summary[aria-label]')) {
+    if (!e.checkVisibility()) continue;
+    const vis = words([...e.childNodes].map(function f(n) { return n.nodeType === 3 ? n.textContent : n.nodeType === 1 && n.checkVisibility() ? [...n.childNodes].map(f).join('') : ''; }).join(' ')), nm = words(e.getAttribute('aria-label'));
+    if (vis.length && !nm.some((_, i) => vis.every((w, j) => nm[i + j] === w))) bad.push((e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + [...e.classList].join('.')) + ' name="' + e.getAttribute('aria-label') + '" text="' + e.innerText.trim() + '"'); }
+  return bad; }"""
 def axe_ok(pg, sel="body"):
     v = [x for x in pg.evaluate(RUN, sel) if x[0] not in KNOWN]; assert not v, v
+    n = pg.evaluate(NAMES, sel); assert not n, ("label in name", n)
 VISIBLE = """() => [...document.querySelectorAll('button, select, input:not([type=hidden]), a[href], [role=button], [role=tab], [tabindex="0"], summary')]
   .filter(e => e.offsetParent !== null && !e.disabled && e.tabIndex >= 0 && !e.closest('[hidden], [inert], dialog:not([open])') && getComputedStyle(e).visibility !== 'hidden')"""
 try:
