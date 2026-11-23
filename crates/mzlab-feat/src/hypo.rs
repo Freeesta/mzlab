@@ -31,7 +31,7 @@ pub const SRC_NETWORK: u8 = 32;
 
 pub const REGISTRY_FORMAT: &str = "hypotheses/3";
 
-/// Refuses a registry of another format or version (`hypotheses/3`, with its Italian outcome names, is not converted): `error.hypo.registryFormat`.
+/// Refuses a registry of another format or version (`hypotheses/2`, with its Italian outcome names, is not converted): `error.hypo.registryFormat`.
 pub fn check_registry_format(v: &mzlab_core::json::Value) -> std::result::Result<(), String> {
     match v.get("format").and_then(mzlab_core::json::Value::str) {
         Some(REGISTRY_FORMAT) => Ok(()),

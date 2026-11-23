@@ -66,6 +66,18 @@
     },
     "unexplained": {
      "type": "integer"
+    },
+    "dropped_by_blank": {
+     "type": "integer",
+     "description": "rows dropped by gate 1 because of the blank control (present only when the roles of the files were given)"
+    },
+    "dropped_by_t0": {
+     "type": "integer",
+     "description": "rows dropped by gate 1 because of the t0 control (present only when the roles of the files were given)"
+    },
+    "dropped_by_dark": {
+     "type": "integer",
+     "description": "rows dropped by gate 1 because of the dark control (present only when the roles of the files were given)"
     }
    }
   },
@@ -137,6 +149,30 @@
        }
       }
      }
+    }
+   }
+  },
+  "roles": {
+   "type": "object",
+   "description": "the roles of the files behind gate 1 (present only when the roles of the files were given): shown, never a threshold",
+   "properties": {
+    "no_t0": {
+     "type": "boolean",
+     "description": "the series has no t0 file"
+    },
+    "dark_over_t0": {
+     "type": [
+      "number",
+      "null"
+     ],
+     "description": "the parent in the dark over the parent at t0, or null when it cannot be measured"
+    },
+    "blank_kinds": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "the types of the blank files"
     }
    }
   }

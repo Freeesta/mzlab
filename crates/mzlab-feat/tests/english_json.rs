@@ -18,7 +18,7 @@ const AMBIGUOUS: &[&str] = &[
     "modo", "stato", "tema", "tocca", "canale",
 ];
 
-/// Every key and string value of `v` with an Italian word (`RT_attesa_min` gives `attesa`).
+/// Every key and string value of `v` with an Italian word (`rt_attesa` gives `attesa`).
 fn italian_in(v: &Value, path: &str, out: &mut Vec<String>) {
     let bad = |s: &str| {
         s.split(|c: char| !c.is_alphabetic()).any(|w| {

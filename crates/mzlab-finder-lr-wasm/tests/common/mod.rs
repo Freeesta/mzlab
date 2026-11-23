@@ -291,7 +291,7 @@ pub fn italian() -> std::collections::HashSet<String> {
         .collect()
 }
 
-/// Every key and string value of `v` that holds an Italian word (split at anything that is not a letter, so `RT_attesa_min` gives `attesa`).
+/// Every key and string value of `v` that holds an Italian word (split at anything that is not a letter, so `rt_attesa` gives `attesa`).
 pub fn hits(v: &Value, path: &str, it: &std::collections::HashSet<String>, out: &mut Vec<String>) {
     let bad = |s: &str| {
         s.split(|c: char| !c.is_alphabetic())

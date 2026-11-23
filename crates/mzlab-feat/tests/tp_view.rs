@@ -235,3 +235,19 @@ fn the_block_survives_the_file() {
     let (b2, m2) = read_table(&write_table(&t2, &Recipe::default(), &Origin::default())).unwrap();
     assert!(b2.tp.is_empty() && m2.get("tp").is_none());
 }
+
+/// A block of the first version (`tp/1`, Italian keys) is refused with a stable key, never converted. The id is the same length, so the
+/// bytes of the file stay valid and only the schema of the block differs.
+#[test]
+fn a_block_of_the_first_version_is_refused() {
+    let mut t = table();
+    t.tp = run(&signs(), None);
+    let mut bytes = write_table(&t, &Recipe::default(), &Origin::default());
+    let at = bytes
+        .windows(b"\"schema\":\"tp/2\"".len())
+        .position(|w| w == b"\"schema\":\"tp/2\"")
+        .expect("the meta names the block");
+    bytes[at + "\"schema\":\"tp/".len()] = b'1';
+    let err = read_table(&bytes).err().expect("the old block is refused");
+    assert_eq!(err.key, "error.mzfeat.tpFormat");
+}
