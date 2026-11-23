@@ -1,5 +1,5 @@
 //! The entries of the low-resolution Dig on the table of the pipeline: the parent (its row also measures the calibration offset), one entry per
-//! hypothesis of `hypotheses/2` (one per chromatographic peak when its nominal m/z has isomers) and the unexpected ions (rows that match nothing,
+//! hypothesis of `hypotheses/3` (one per chromatographic peak when its nominal m/z has isomers) and the unexpected ions (rows that match nothing,
 //! grow over time and are absent at t0 and in the blank).
 
 use std::collections::HashSet;
@@ -31,7 +31,7 @@ pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
 const UID: i64 = 100_000;
 const ISO_STEP: i64 = 10_000;
 
-/// A hypothesis of `hypotheses/2` that names a product of the parent.
+/// A hypothesis of `hypotheses/3` that names a product of the parent.
 #[derive(Debug, Clone)]
 pub struct Hyp {
     pub label: String,
@@ -107,6 +107,10 @@ fn promote(h: Hyp, adduct: &str) -> Hyp {
     let steps = |l: &str| l.matches('+').count() as u32 + 1;
     let parsed = |a: &String| {
         let (f, rest) = a.split_once(" (")?;
+        // a way to the leader's own formula is not a different ion to promote
+        if f == h.formula {
+            return None;
+        }
         let label = rest.strip_suffix(')')?;
         let fm = parse_formula(f).ok()?;
         let neutral = mass(&fm);
@@ -329,7 +333,7 @@ pub fn candidates(
 }
 
 /// The free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass on the cells of the table
-/// (`forte` or `possibile`, growth, persistence, absent at t0 and in the blank not failed).
+/// (`strong` or `possible`, growth, persistence, absent at t0 and in the blank not failed).
 pub fn free_rows(t: &Aligned, files: &[FileIn], known: &[f64], s: &Settings) -> Vec<usize> {
     (0..t.len())
         .filter(|&r| t.rt[r] >= s.rt_min && !known.iter().any(|m| (t.mz[r] - m).abs() <= s.tol_da))
@@ -343,13 +347,13 @@ pub fn free_rows(t: &Aligned, files: &[FileIn], known: &[f64], s: &Settings) -> 
             ]
             .iter()
             .all(|n| status(&sc.criteria, n) != "fail");
-            matches!(sc.label, "forte" | "possibile") && fine
+            matches!(sc.label, "strong" | "possible") && fine
         })
         .collect()
 }
 
 /// The unexpected ions: free rows (not within the tolerance of the parent or a hypothesis) after `rt_min` whose criteria pass
-/// (`forte` or `possibile`, growth not failed, absent at t0 and in the blank), not the isotope peak of a stronger ion, the best
+/// (`strong` or `possible`, growth not failed, absent at t0 and in the blank), not the isotope peak of a stronger ion, the best
 /// of two neighbours, at most `max_unexpected` by score and area.
 pub fn unexpected(
     t: &Aligned,
@@ -430,13 +434,13 @@ pub fn isotope_of(e: &Entry, all: &[Entry], tol: f64, rt_tol: f64) -> Option<(i6
     None
 }
 
-/// The isotope criterion of an entry (it caps the score at 40 and the label at `debole` when it fails).
+/// The isotope criterion of an entry (it caps the score at 40 and the label at `weak` when it fails).
 pub fn isotope_crit(e: &mut Entry, hit: Option<(i64, String)>) {
     match hit {
         Some((id, text)) => {
             e.criteria.push(crit(ISOTOPE, "fail", text));
             e.score = e.score.map(|s| s.min(40.0));
-            e.label = "debole";
+            e.label = "weak";
             e.isotope_of = Some(id);
         }
         None => e.criteria.push(crit(

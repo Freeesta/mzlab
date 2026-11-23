@@ -905,9 +905,10 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
-  --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
-               smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
-               median of 3 against spikes); numbers only
+  --set        the names of the "params" of the output: half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the
+               tallest peak), valley (fraction 0-1 of the smaller peak the valley must go down to keep two peaks, as printed), sn (smallest height over
+               the noise), min_pts, despike (1/0: median of 3 against spikes); numbers only. The old names lr_half, lr_valley (in %), lr_sn,
+               lr_min_pts, lr_despike still work and log a note on stderr
   --split MODE drop (default) = one baseline under touching peaks, valley = each baseline ends at the valley
   --area-unit  s = counts x s (default, as peak area), min = counts x min
   output       {"params":{half, half_auto, valley, sn, min_pts, despike, split, noise, baseline (always "engine")}, "peaks":[{lo, hi, t0, t1, rt, b0, b1, area, below,

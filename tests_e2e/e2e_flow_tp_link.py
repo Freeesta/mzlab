@@ -1,5 +1,5 @@
 """Flow «This browser» tp.link@2 (flow/lazy/flow-web-tp.js, flow-live-jobs.js): over the synthetic identity series (blank, dark, t0 and three treated files, an invented parent and its products) the
-plan index, detect, align, gapfill, tp.generate, tp.link makes in the browser the `.mzfeat` (with tp/1 and interp/1) that `mzlab-cli flow run` makes of the same plan (the same sections; only the source names of the header differ); a second run takes
+plan index, detect, align, gapfill, tp.generate, tp.link makes in the browser the `.mzfeat` (with tp/2 and interp/1) that `mzlab-cli flow run` makes of the same plan (the same sections; only the source names of the header differ); a second run takes
 it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_tp_link.py"""
 import base64, hashlib, json, struct, os, shutil, subprocess, sys, tempfile, threading, urllib.request

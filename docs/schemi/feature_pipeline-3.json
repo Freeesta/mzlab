@@ -182,7 +182,7 @@
      ]
     }
    },
-   "description": "register of the hypotheses (hypotheses/2): searched, found and hash of its JSON"
+   "description": "register of the hypotheses (hypotheses/3): searched, found and hash of its JSON"
   },
   "runs": {
    "const": 1,

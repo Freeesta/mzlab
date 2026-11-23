@@ -1,4 +1,4 @@
-//! The native executor of `tp.generate@1`: the registry of the hypotheses (`hypotheses/2`) of a parent, `mzlab_feat::hypo::generate` on the rules of
+//! The native executor of `tp.generate@1`: the registry of the hypotheses (`hypotheses/3`) of a parent, `mzlab_feat::hypo::generate` on the rules of
 //! the campaign, the call the page makes for the hypotheses of a series (`run_hypotheses`: no suspect index, no families, no imported list).
 //! The parent file is a formula, a SMILES (its groups and cleavage products select the rules) or a JSON `{"name","formula","smiles"}`. A bare line is a formula only when it is written as `elements::fmt` writes it.
 
@@ -34,7 +34,7 @@ pub fn hypo_params(job: &Job, nature: &Nature) -> HypoParams {
     p
 }
 
-/// `hypotheses/2` text of the parent file under the parameters of the job.
+/// `hypotheses/3` text of the parent file under the parameters of the job.
 pub fn generate_text(job: &Job, parent: &[u8], nature: &Nature) -> Result<String> {
     let p = run_tp::read_parent(parent);
     let structure = if p.smiles.is_empty() {

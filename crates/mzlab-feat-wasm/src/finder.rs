@@ -91,7 +91,7 @@ impl FinderDig {
 }
 
 /// `api.run` on high-resolution files: `table` = the `.mzfeat` with the proofs of the LC files (in the order of the files of `files_json` that are
-/// samples, blanks or controls), `registry` = `hypotheses/2`, `read`/`sizes` = their `.mzidx` in the same order (the MS2 of the candidates).
+/// samples, blanks or controls), `registry` = `hypotheses/3`, `read`/`sizes` = their `.mzidx` in the same order (the MS2 of the candidates).
 #[wasm_bindgen]
 pub fn finder_dig(
     files_json: &str,

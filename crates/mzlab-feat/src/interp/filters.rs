@@ -27,7 +27,7 @@ pub struct RowFacts {
     pub bad_quality: bool,
     /// A non-first member of an isotope group.
     pub isotope: bool,
-    /// `tp/1` status of the row.
+    /// `tp/2` status of the row.
     pub tp_status: u8,
     /// The error of the formula is beyond the tolerance of the file (set by `build`; false when it was not measured).
     pub mass_error: bool,

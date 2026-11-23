@@ -308,7 +308,7 @@ pub fn write_file<R: RecipeTexts + ?Sized>(f: &FileFeatures, r: &R, o: &Origin) 
     v
 }
 
-/// Adds the columns of the block `tp/1` to `cols` when the table has one; says whether it did.
+/// Adds the columns of the block `tp/2` to `cols` when the table has one; says whether it did.
 fn tp_cols<'a>(tp: &'a TpBlock, cols: &mut Vec<(&'static str, Col<'a>)>) -> bool {
     if tp.is_empty() {
         return false;
@@ -336,7 +336,7 @@ pub fn write_table_to<W: WriteAt, R: RecipeTexts + ?Sized>(
     write_table_tp(sink, t, &t.tp, r, o, evid)
 }
 
-/// `write_table_to` with the block `tp/1` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
+/// `write_table_to` with the block `tp/2` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
 pub fn write_table_tp<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     t: &Aligned,
@@ -348,7 +348,7 @@ pub fn write_table_tp<W: WriteAt, R: RecipeTexts + ?Sized>(
     write_table_recipe(sink, t, tp, &r.table_text(), o, evid)
 }
 
-/// Bytes of the `.mzfeat` of a series whose recipe is the text `recipe` of another table (`"recipe"` of its meta), with no block `tp/1` and no graph of the proofs.
+/// Bytes of the `.mzfeat` of a series whose recipe is the text `recipe` of another table (`"recipe"` of its meta), with no block `tp/2` and no graph of the proofs.
 pub fn write_table_like(t: &Aligned, recipe: &str, o: &Origin) -> Vec<u8> {
     let mut v = Vec::new();
     write_table_recipe(&mut v, t, &TpBlock::default(), recipe, o, &mut (&[][..]))

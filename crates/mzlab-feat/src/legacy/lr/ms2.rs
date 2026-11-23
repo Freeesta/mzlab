@@ -300,29 +300,29 @@ pub fn transitions_json(o: &mut Out, d: &LrDig, e: &Entry, m: &Pool) {
             .str(&e.name)
             .raw(",\"formula\":")
             .str(&e.formula);
-        o.raw(",\"Q1\":")
+        o.raw(",\"q1\":")
             .num(round(e.mz, 1))
-            .raw(",\"Q3_osservato\":")
+            .raw(",\"q3_observed\":")
             .num(f.mz);
-        o.raw(",\"Q3_consigliato\":")
+        o.raw(",\"q3_suggested\":")
             .num(round(f.mz - offset, 1))
-            .raw(",\"CE\":");
+            .raw(",\"ce\":");
         match m.collision_energy.filter(|c| *c != 0.0) {
             Some(c) => o.num(c),
             None => o.str(""),
         };
-        o.raw(",\"RT_attesa_min\":");
+        o.raw(",\"rt_expected_min\":");
         match e.ref_rt.filter(|r| *r != 0.0) {
             Some(r) => o.num(round(r, 2)),
             None => o.str(""),
         };
-        o.raw(",\"finestra_RT_min\":")
+        o.raw(",\"rt_window_min\":")
             .num(round(2.0 * d.settings.rt_tol_min, 2));
-        o.raw(",\"intensita_rel_%\":")
+        o.raw(",\"rel_intensity_pct\":")
             .num(f.rel)
-            .raw(",\"scansioni_ms2\":")
+            .raw(",\"ms2_scans\":")
             .int(m.scans as i64);
-        o.raw(",\"nota\":")
+        o.raw(",\"note\":")
             .str("candidate: to be optimised on the instrument")
             .raw("}");
     }

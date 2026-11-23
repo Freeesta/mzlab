@@ -15,7 +15,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
         .and_then(|(_, v)| v.f64())
 }
 
-/// `filtri/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `hypotheses/2` `hypotheses`: the code the `.wasm` `interp` runs.
+/// `filtri/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `hypotheses/3` `hypotheses`: the code the `.wasm` `interp` runs.
 pub fn refilter_text(job: &Job, tp: &[u8], hypotheses: &[u8]) -> Result<String> {
     mzlab_ops::run::feat::interp::refilter_text(
         &|n| param(job, n),

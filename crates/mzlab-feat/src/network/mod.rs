@@ -1,4 +1,4 @@
-//! The network of the products (`rete/1`): the parent and the accepted products of `tp/1` as nodes in columns by step, and an arc for every rule whose
+//! The network of the products (`rete/1`): the parent and the accepted products of `tp/2` as nodes in columns by step, and an arc for every rule whose
 //! change of formula takes the ion formula of one to that of another, with the MS2 evidence of the arc and the reason in words. A network is not an
 //! identification: it raises no level. Used by the Flow step `tp.network` and the view `TP_Mine/lazy/rete-vista.js`; the layout is computed here.
 
@@ -43,7 +43,7 @@ impl Default for NetworkParams {
 }
 
 /// A row of the table as the network reads it: the formula of its ion from the best hypothesis (`interp/1`) and the fragments of its MS2 against the
-/// parent's. `row` is the index in the table (and in the arrays of `tp/1`), `id` the id of the row.
+/// parent's. `row` is the index in the table (and in the arrays of `tp/2`), `id` the id of the row.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NetworkRow {
     pub row: usize,

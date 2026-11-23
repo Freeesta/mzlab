@@ -2,6 +2,8 @@
 
 One row per speed change (readers, Flow, engine), in the order they were made. Rule of 22/10: even gains of a few percent count (a new dependency from ≥ 3 % on its target). A gain counts only if it exceeds the measured noise (`noise` of the bench, `thermo-speed.md`); before and after with the same bench binary, the same machine, the fastest run (`best`) over ≥ 15 runs and the 40-character SHA of `main` for the "before" measurement.
 
+Targeted extraction over many files (per-call CLI route against one pass per file, baseline, roadmap SP1-SP16): `docs/studies/SPEED_STUDY.md` (`tools/bench/speed_study.py`).
+
 Abandoned or postponed routes (without gain) are in `optimizations-tried.md`: read it (and `measurements-one-pass.md`) before optimizing.
 
 Site loading (page, first paint, batches of files, first file of a batch) has its own table: `measurements-speed-site.md`; the page measurements (FCP, LCP, engine ready per scenario) are in `measurements-loading.md`.
@@ -61,3 +63,4 @@ Site loading (page, first paint, batches of files, first file of a batch) has it
 | site Flow in blocks (`blocks_js.rs`; 4 synthetic `.mzidx`, Chromium, best of 15; identical OPFS) | align 21.6 s; Flow 37.1 | 3.1; 6.7 | −86 %; −82 % |
 | site `qc.mass_accuracy` in blocks (12 synthetic `.mzidx`, Chromium; identical outputs) | 6.3 s; 1 file 0.64 | 1.4; 0.16 | −78 % |
 | `quant targets`, every target in one pass per file instead of one `trace xic \| peak auto-lr` pair per target and file (`tools/bench_quant_targets.py`: 245 synthetic unit-resolution mzML, 1200 scans, 250 targets, 844 MB, 4 vCPU; same bytes for 1 and 4 workers; 1 pass per file) | per-target route, index from `--cache`: 1186 s extrapolated (19.4 ms per target and file, 122,500 processes) | mzML 4 workers 9.4 s (CPU 34.1 s, RSS 144 MB), 1 worker 27.3 s; `.mzidx` from `--cache` 4 workers 4.1 s (RSS 54 MB) | −99 % |
+| `trace xic --mz LIST --format csv`, wide CSV from the route's tokens without a `String` per token or a `format!` per cell (`trace_xic.rs`; 275 ions, synthetic unit-resolution file of `speed_synthetic.py`, 2400 scans, 4 vCPU, `cli`, best of 15 alternated runs, before = `main` ca98df616d458d88cbdd252ba7c832c0bd7c3d97, `trace_xic.rs` unchanged up to 4529765d63d1eca2ac2d3fd19808617cc39710a1; CSV, `--rt` CSV and JSON identical by SHA-256; `speed_study.py --before BIN`) | 330 ms | 229 ms | −31 % |
