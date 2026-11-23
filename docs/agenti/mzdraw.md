@@ -18,12 +18,13 @@ The `qqq` teaching site and the Drawing page keep Ketcher (`drawing.md`); mzDraw
 | open/drop/paste molfile, KET, CDXML, CDX | matrix below; slice 1 molfile + SMILES |
 | export images, `.ket`, MOL/SDF | slice 1 molfile + SVG, slice 3 the rest |
 | right-click menu, touch copy/cut/paste | slice 2 (own clipboard, no Ketcher traps) |
-| labels under structures, formula analysis, Information..., fragments, cuts, mechanism, partial structures, multicentre, evidence colours, substructure search, outside links, CIP card | later, one by one: every engine already takes a molfile (`label/1`, `analysis/1`, `frag/1`, `cut/1`, `mechanism/1`, `parz/1`, `highlight/1`, `substructure/1`, `link/1`, `cip/1`); mzDraw hands over the same molfile plus stable atom ids |
+| labels under structures, formula analysis, Information..., fragments, cuts, mechanism, partial structures, multicentre, evidence colours, substructure search, outside links, CIP card | later, one by one: every engine already takes a molfile (`label/1`, `analysis/1`, `descriptors/1`, `frag/1`, `cut/1`, `mechanism/1`, `parz/1`, `highlight/1`, `substructure/1`, `link/1`, `cip/1`); mzDraw hands over the same molfile plus stable atom ids |
 | `TPDraw` API for mzFinder and Tabui (`load`, `smiles`, `partial`, `mark`, `highlight`) | later; the wasm API is shaped for it (`Editor::export`, `select`, `overlay`) |
 
 ## Assets reused (nothing here is rewritten)
 - `mzlab-mol` (deps: `serde`, `serde_json`, `sha2`): record `mol/1`, SMILES/CXSMILES and molfile V2000/V3000 readers and writers, `drawing_from_molfile` (wedges, query marks kept), valence table, Kekulé, aromaticity perception, stereo sites, canonical order, pieces.
 - `mzlab-feat` `chem/` (features `check`, `sub`): `check/1`, `cip/1`, `highlight/1`, `sdf/1`, labels, analysis. mzDraw calls them only from the glue layer.
+  Drawing values (logP, MR, TPSA, H-bond counts, rotors, weight, `analysis/1`) come from ONE function, `chem::descriptors::descriptors_json` (`descriptors/1`): mzDraw, the molkit `.wasm`, the app and `mzlab-cli mol measure` give the same bytes.
 - Agent drawing (`agent-draw.md`, branch `claude/agent-draw`): the route "own Rust layout + SVG writer in `mzlab-mol`". Work in progress elsewhere and consumed here, never duplicated: `Mol::layout_2d` / `layout_2d_fixed` and `mol draw` (D1), the SVG writer (D2), the edit patches of `mol draw --set edit=` (D3), the KET and CDXML writers (D4), the CDXML reader (DRAW-CDXML).
 - Until D1 exists, "Clean up" calls `mzdraw::layout::clean_up`, one function that returns the coordinates unchanged with `status: "unavailable"`; wiring D1 changes that function only.
 

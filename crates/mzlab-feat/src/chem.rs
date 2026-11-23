@@ -13,6 +13,8 @@ pub mod cip;
 mod cip_rank;
 pub mod cut;
 #[cfg(feature = "check")]
+pub mod descriptors;
+#[cfg(feature = "check")]
 pub mod draw;
 #[cfg(feature = "check")]
 mod draw_build;

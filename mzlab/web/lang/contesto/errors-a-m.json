@@ -66,6 +66,8 @@
   "error.badModel": "Engine error message; {pos} = position.",
   "error.badMolecules": "Engine error message; {op} = operation.",
   "error.check.tooBig": "Drawing check error; {max} = maximum number of atoms.",
+  "error.descr.molfile": "Error of the molecular descriptors of the drawing (mol measure); {detail} = what the molfile reader could not read.",
+  "error.descr.tooBig": "Error of the molecular descriptors of the drawing (mol measure); {max} = maximum number of atoms.",
   "error.chem.charge": "Engine error message; {charge} = charge.",
   "error.chem.element": "Engine error message; {element} = element.",
   "error.chem.embed": "Engine error message; {reason} = reason.",

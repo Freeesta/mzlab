@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::isoscore::isotopes_of;
 use mzlab_core::json::{self, round, Out, Value};
 
-use super::labels::{atom_in, shape, shape_json, Counts};
+use super::labels::{atom_in, shape, shape_json, AtomIn, Counts};
 
 /// Sticks below this share of the tallest (%) are left out; probabilities below `PRUNE` are dropped while convolving.
 const MIN_REL: f64 = 0.01;
@@ -105,14 +105,20 @@ pub fn analysis_json(request: &str) -> Result<String> {
         .iter()
         .map(atom_in)
         .collect();
+    let mut o = Out::default();
+    analysis_out(&mut o, &atoms)?;
+    Ok(o.0)
+}
+
+/// The `analysis/1` object of `atoms` written to `o`: one writer for `analysis_json` and the `descriptors/1` of a molfile (`chem::descriptors`).
+pub(super) fn analysis_out(o: &mut Out, atoms: &[AtomIn]) -> Result<()> {
     if atoms.is_empty() {
         return Err(Error::new("error.anal.empty"));
     }
-    let s = shape(&atoms)?;
+    let s = shape(atoms)?;
     let (avg, per, dist) = tally(&s.n)?;
-    let mut o = Out::default();
     o.raw("{\"schema\":\"analysis/1\",\"structure\":");
-    shape_json(&mut o, &s);
+    shape_json(o, &s);
     o.raw(",\"average\":")
         .num(round(avg, 6))
         .raw(",\"composition\":[");
@@ -169,5 +175,5 @@ pub fn analysis_json(request: &str) -> Result<String> {
         k += 1;
     }
     o.raw("]}");
-    Ok(o.0)
+    Ok(())
 }

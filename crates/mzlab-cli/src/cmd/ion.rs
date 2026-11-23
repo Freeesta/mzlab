@@ -11,6 +11,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("mol anal", "mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure", crate::mol_label_cmd::run_anal).schema("analysis/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol check", "mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)", crate::plain::mol_check_cmd::run).schema("check/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol cip", "mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing", crate::plain::mol_cip_cmd::run).schema("cip/1").exits(&[0, 2, 4, 6]),
+    Entry::new("mol measure", "mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing", crate::plain::mol_measure_cmd::run).schema("descriptors/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol hilite", "mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours", crate::plain::mol_hilite_cmd::run).schema("highlight/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol sel", "mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection", crate::plain::mol_sel_cmd::run).schema("selection/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol link", "mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs", crate::plain::mol_link_cmd::run).schema("link/1").exits(&[0, 2, 4, 6]),

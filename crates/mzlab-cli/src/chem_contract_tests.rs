@@ -11,7 +11,7 @@ const NO_ELEMENT: &str = "\n  t\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    
 
 const MOL: &str = "\n  t\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\nM  END\n";
 
-/// A V2000 molfile of `n` carbons and no bond: over the atom limit of the check (400) and of the graph (200).
+/// A V2000 molfile of `n` carbons and no bond (none: nothing to measure): over the atom limit of the check (400) and of the graph (200).
 fn many_atoms(n: usize) -> String {
     let atom = "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n";
     format!(
@@ -76,6 +76,7 @@ fn every_answer_opens_with_its_schema_and_none_has_a_format_key() {
         (vec!["mol", "anal", &anal], "analysis/1"),
         (vec!["mol", "check", &mf], "check/1"),
         (vec!["mol", "cip", &mf], "cip/1"),
+        (vec!["mol", "measure", &mf], "descriptors/1"),
         (vec!["mol", "hilite", &mf], "highlight/1"),
         (vec!["mol", "sel", &mf], "selection/1"),
         (vec!["mol", "link", &link], "link/1"),
@@ -164,7 +165,7 @@ fn exit_codes_split_syntax_impossible_and_unreadable() {
     assert_eq!(run(&["mol", "label", "/no/such/r.json"]).code, 4);
     let junk = tmp("junk.json", "not json");
     for c in [
-        "label", "anal", "check", "cip", "hilite", "sel", "link", "mech",
+        "label", "anal", "check", "cip", "measure", "hilite", "sel", "link", "mech",
     ] {
         let o = run(&["mol", c, &junk]);
         assert_eq!(o.code, 4, "mol {c}: {}", o.stderr);
@@ -188,7 +189,7 @@ fn a_junk_molfile_is_unreadable_for_every_command_that_reads_one() {
     let wrapped = tmp("junk_mf.json", "{\"molfile\":\"this is not a molfile\"}");
     let bare = tmp("junk.mol", "this is not a molfile");
     let no_element = tmp("noel.json", &format!("{{\"molfile\":{NO_ELEMENT:?}}}"));
-    for c in ["check", "cip", "hilite", "sel", "mech"] {
+    for c in ["check", "cip", "measure", "hilite", "sel", "mech"] {
         assert_eq!(run(&["mol", c, &wrapped]).code, 4, "mol {c}");
     }
     // sel and mech read the molfile into the graph, which has no mass for an element the table lacks
@@ -247,6 +248,7 @@ struct Fx {
     export_big: String,
     atoms_big: String,
     bad_query: String,
+    empty_mf: String,
 }
 
 fn fixtures() -> Fx {
@@ -270,10 +272,8 @@ fn fixtures() -> Fx {
         empty: tmp("p_empty.smi", ""),
         list_big: tmp("p_big.smi", &"C\n".repeat(200_001)),
         export_big: tmp("p_big.mol", &export_too_big()),
-        atoms_big: tmp(
-            "p_atoms.json",
-            &format!("{{\"molfile\":{:?}}}", many_atoms(500)),
-        ),
+        atoms_big: tmp("p_big.json", &format!("{{\"molfile\":{:?}}}", many_atoms(500))),
+        empty_mf: tmp("p_none.json", &format!("{{\"molfile\":{:?}}}", many_atoms(0))),
         bad_query: tmp(
             "p_query.json",
             &format!(
@@ -365,10 +365,11 @@ fn mol_probes(fx: &Fx) -> Probes<'_> {
             ],
         ),
     ];
-    // the one request each of the five refuses although it parses: too many atoms (check, sel, mech), a bad query (hilite); cip has none
+    // the request each refuses although it parses: too many atoms (check), a bad query (hilite), an unknown element (sel, mech), no atom (measure)
     for (c, refused) in [
         ("check", Some(&fx.atoms_big)),
         ("cip", None),
+        ("measure", Some(&fx.empty_mf)),
         ("hilite", Some(&fx.bad_query)),
         ("sel", Some(&fx.no_element)),
         ("mech", Some(&fx.no_element)),

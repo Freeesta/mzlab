@@ -22,6 +22,8 @@ pub(crate) mod mol_export_cmd;
 pub(crate) mod mol_hilite_cmd;
 #[path = "mol_link_cmd.rs"]
 pub(crate) mod mol_link_cmd;
+#[path = "mol_measure_cmd.rs"]
+pub(crate) mod mol_measure_cmd;
 #[path = "mol_mech_cmd.rs"]
 pub(crate) mod mol_mech_cmd;
 #[path = "mol_open_cmd.rs"]
