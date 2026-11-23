@@ -657,6 +657,8 @@ html.in-draw #sb-toggle{display:none}
  .sb-dock-btn,#v-data.sb-sheet #sb-x{min-width:44px;min-height:44px}
  /* the card headers (chromatogram, spectrum, map) beside the list: same 44 px floor; the 1/2 link chip stays a small pill with an invisible 44 px hit area */
  .pnl .hd :is(select,input:not([type=checkbox]),.bt,.corrb,.fcount,.x,.ci,.ovb){min-width:44px;min-height:44px}
+ .pnl .hd{gap:3px}   /* 44 px controls need the room the 6 px gaps took: a one-row header must still fit */
+ .pnl .hd .x{margin-left:0}
  .pnl .hd button.ppair{position:relative;overflow:visible}
  .pnl .hd button.ppair::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
 }
