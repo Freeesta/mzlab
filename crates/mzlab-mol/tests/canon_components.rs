@@ -1,13 +1,13 @@
 //! The canonical form of drawings with many equal components is unchanged by the faster orbit pruning: `can()`, the canonical record
-//! and the SMILES of the synthetic set (`canon_set`) match the values frozen from the search before the change, and any writing order
-//! of the same components gives the same canonical record.
+//! and the SMILES of the synthetic set (`canon_set`) match `data/golden_canon.json` (written by `examples/golden_canon.rs`; the search
+//! before the change gives the same bytes), and any writing order of the same components gives the same canonical record.
 
 mod canon_set;
 
 use mzlab_mol::{hex, Mol};
 use sha2::{Digest, Sha256};
 
-/// `[smiles, can(), sha256 of canonical().to_json(), sha256 of to_smiles()]`, frozen with the search before the union-find.
+/// `[smiles, can(), sha256 of canonical().to_json(), sha256 of to_smiles()]`, from `cargo run --release -p mzlab-mol --example golden_canon`.
 const GOLDEN: &str = include_str!("data/golden_canon.json");
 
 fn sha(text: &str) -> String {

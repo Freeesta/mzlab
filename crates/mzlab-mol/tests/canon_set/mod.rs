@@ -1,5 +1,5 @@
 //! The synthetic set of the canonical-form tests: single molecules, mixtures, salts and 1 to 40 equal copies of one unit, with
-//! enhanced-stereo groups inside one copy and across copies. Shared by `canon_components.rs` and the example that froze the golden values.
+//! enhanced-stereo groups inside one copy and across copies. Shared by `canon_components.rs` and `examples/golden_canon.rs`.
 
 /// Copies tried for every unit: each count up to 12, then the larger ones where the old search grew fastest.
 pub const COPIES: &[usize] = &[
