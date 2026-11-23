@@ -183,7 +183,10 @@ fn crowded(n: usize, files: usize, seed: u64) -> Aligned {
     t
 }
 
-fn bits(t: &Aligned) -> (Vec<u64>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u8>) {
+/// The columns of a table as bits: area, height, apex RT, width and state.
+type Bits = (Vec<u64>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u8>);
+
+fn bits(t: &Aligned) -> Bits {
     (
         t.area.iter().map(|x| x.to_bits()).collect(),
         t.height.iter().map(|x| x.to_bits()).collect(),
