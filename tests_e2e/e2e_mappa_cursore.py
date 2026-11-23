@@ -39,7 +39,9 @@ try:
                 hover(14.38, mz)
                 L = pg.evaluate(f"({M}._mz.lbls||[]).map(l=>({{...l}}))"); W = pg.evaluate(f"{M}._mz.sp.getBoundingClientRect().width"); gd = pg.evaluate(f"{M}._mz.gd")
                 cur = [l for l in L if l.get("cur")]; assert len(cur) == 1, (mz, L)
-                c = cur[0]; assert abs(float(c["t"]) - mz) < 1.0, (c["t"], mz)             # one pixel is about a dalton: the sight takes the nearest peak of its XIC window
+                c = cur[0]; cen = pg.evaluate(f"Math.round({M}._mz.hov.mz)+0.3")                 # one pixel is more than a dalton: the label is a peak of the XIC window of the sight (round(m/z)+0.3 +- 0.5)
+                assert abs(float(c["t"]) - cen) <= 0.55, (c["t"], cen, mz)
+                assert pg.evaluate(f"{M}._mz.spec.mz.some(m=>Math.abs(m-{float(c['t'])})<0.06)"), ("the label is a peak of the spectrum", c["t"])
                 assert c["x"] >= 0 and c["x"] + c["w"] <= W, ("clipped at the edge", c, W)
                 if gd: assert not (c["x"] < gd["end"] + 1 and c["y"] - 2 < gd["y"] < c["y"] + c["h"] + 2), ("under the guide", c, gd)
                 for o in L:
