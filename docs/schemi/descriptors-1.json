@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "descriptors/1",
+  "title": "descriptors/1: logP, MR, TPSA, H-bond counts, rotors, average weight and formula analysis of a drawing",
+  "description": "The answer of `mzlab-cli mol measure`, the molkit `.wasm` `descriptors`, the app (`feat/grafo` kind `descriptors`) and mzDraw: one function, crates/mzlab-feat/src/chem/descriptors.rs. Numbers rounded to 4 decimals; theory for the drawn structure, nothing is fitted to data.",
+  "type": "object",
+  "required": [
+    "schema",
+    "logp",
+    "mr",
+    "tpsa",
+    "hbd",
+    "hba",
+    "rotors",
+    "mw",
+    "analysis"
+  ],
+  "properties": {
+    "schema": {
+      "const": "descriptors/1"
+    },
+    "logp": {
+      "type": "number",
+      "description": "Wildman-Crippen logP, hydrogens included"
+    },
+    "mr": {
+      "type": "number",
+      "description": "Wildman-Crippen molar refractivity"
+    },
+    "tpsa": {
+      "type": "number",
+      "description": "topological polar surface area (Ertl 2000), N and O only, square angstrom"
+    },
+    "hbd": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "N and O atoms carrying at least one hydrogen"
+    },
+    "hba": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "hydrogen-bond acceptors (O, and N with a free lone pair)"
+    },
+    "rotors": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "strict rotatable bonds"
+    },
+    "mw": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "average molecular weight from conventional atomic weights (a drawn isotope counts with its mass number); null when an element has none"
+    },
+    "analysis": {
+      "type": "object",
+      "description": "the analysis/1 document of the whole drawing (docs/schemi/analysis-1.json), the bytes of `mzlab-cli mol anal` for the same atoms",
+      "required": [
+        "schema",
+        "structure",
+        "average",
+        "composition",
+        "pattern"
+      ],
+      "properties": {
+        "schema": {
+          "const": "analysis/1"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

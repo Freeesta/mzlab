@@ -1,7 +1,7 @@
 //! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
-//! drawing; `substructure` gives `substructure/1` (`substructure_db/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z;
+//! drawing; `substructure` gives `substructure/1` (`substructure_db/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z; `descriptors` gives `descriptors/1`, its logP, TPSA and formula analysis;
 //! `sdf` gives the `sdf/1` file (molfile or SDF with data items); `draw` the 2D layout of a spec (`draw/1` scene, molfile or SVG; `draw_png` the PNG file); `open_file` gives `open/1`, the text the editor reads for a structure file (charset, empty CDXML attributes, binary CDX as base64). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record;
-//! the CLI (`mol check`, `mol search`, `mol cip`, `mol export`, `mol draw`, `mol open`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `sdf`, `draw`, `open`) run the same
+//! the CLI (`mol check`, `mol search`, `mol cip`, `mol measure`, `mol export`, `mol draw`, `mol open`) and the app (`feat/grafo`, kinds `check`, `sub`, `cip`, `descriptors`, `sdf`, `draw`, `open`) run the same
 //! `mzlab_feat::chem` functions. `flow_moiety` is the Flow step `structure.moiety` (`moiety::moiety_text`, the function `flow run` calls).
 //! Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
@@ -65,6 +65,13 @@ pub fn open_size(size: f64) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn cip(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cip::cip_json(request).map_err(js_err)
+}
+
+/// `descriptors/1` of a request `{"molfile"}` (logP, MR, TPSA, H-bond counts, rotors, average weight and `analysis/1`): the function mzDraw calls,
+/// the same bytes as `mzlab-cli mol measure` and the app (`feat/grafo` kind `descriptors`).
+#[wasm_bindgen]
+pub fn descriptors(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::descriptors::descriptors_json(request).map_err(js_err)
 }
 
 /// `highlight/1` of a request `{"molfile", "world", "selected", "layers"}`: the atoms and bonds a piece of evidence colours on the drawing, the same

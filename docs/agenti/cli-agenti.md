@@ -112,7 +112,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 <!--json-->
 - JSON already (`--json` only makes a failure an `error/1`):
 `flow report|record`, `file info|index|inventory|verify|items|channels`, `sample vars|group|table|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|list|dda-window`, `peak auto|auto-lr|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `ion mz|pattern|match`
-`mol label|anal|check|cip|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
+`mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
 `table compare`, `flow run|check|steps|verify|command`, `file list|pair|validate|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):

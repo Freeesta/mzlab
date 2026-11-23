@@ -3,7 +3,9 @@
 molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `highlight/1` of the evidence colours like
 `mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json); the 2D layout of a spec (`draw`, `draw/1` scene and molfile) like `mzlab-cli mol draw`
-and the app, also as KET and CDXML (tests/dati/draw_d1.json, 30 specs; tests/dati/draw_d3.json, the edit patches of `--set edit=`). Skipped without cargo, wasm-bindgen or node."""
+and the app, also as KET and CDXML (tests/dati/draw_d1.json, 30 specs; tests/dati/draw_d3.json, the edit patches of `--set edit=`); the `descriptors/1` of a drawing
+(`descriptors`, the function mzDraw calls) like `mzlab-cli mol measure` and the app for V2000 and V3000 files (tests/dati/descriptors_disegno.json). Skipped without cargo,
+wasm-bindgen or node."""
 import json
 import zlib
 import shutil
@@ -89,6 +91,19 @@ def test_cip_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     assert json.loads(site) == {"schema": "cip/1", "atoms": [{"atom": 1, "label": "R"}], "bonds": [{"a": 3, "b": 4, "label": "E"}]}
     r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"molfile": "nonsense"}), "cip"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.cip.molfile"
+
+
+def test_descriptors_through_wasm_equal_the_cli_and_the_app_fixture_for_v2000_and_v3000(pkg, tmp_path):
+    fx = json.loads((ROOT / "tests" / "dati" / "descriptors_disegno.json").read_text(encoding="utf-8"))
+    assert any("V3000" in c["request"]["molfile"] for c in fx["cases"])
+    for i, c in enumerate(fx["cases"]):
+        req = tmp_path / f"req{i}.json"
+        req.write_text(json.dumps(c["request"]), encoding="utf-8")
+        site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"), "descr")
+        assert site == cli("mol", "measure", str(req), runner=run), c["name"]
+        assert site.strip() == c["descriptors"], c["name"]
+    r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"molfile": "nonsense"}), "descr"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.descr.molfile"
 
 
 def test_substructure_over_a_list_through_wasm_equals_the_cli_and_the_fixture(pkg, tmp_path):

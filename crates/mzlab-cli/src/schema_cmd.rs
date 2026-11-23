@@ -25,6 +25,7 @@ embed!(
     "compact-steps-1.json",
     "context-1.json",
     "cut-1.json",
+    "descriptors-1.json",
     "design-1.json",
     "design_canonical-1.json",
     "design_check-1.json",

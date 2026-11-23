@@ -1,6 +1,6 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `label/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol label`), with the request as an object or as text (a bracket delta too), and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
-//! `kind: "analysis"` gives `analysis/1`, `kind: "sel"` `selection/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mechanism/1` bytes of `tests/dati/mechanism_mclafferty.json`.
+//! `kind: "analysis"` gives `analysis/1`, `kind: "sel"` `selection/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "descriptors"` the `descriptors/1` bytes of every case of `tests/dati/descriptors_disegno.json` (V2000 and V3000), `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mechanism/1` bytes of `tests/dati/mechanism_mclafferty.json`.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -218,6 +218,29 @@ fn cip_route_gives_the_bytes_of_the_fixture() {
         &[],
     );
     assert_eq!(bad.err().map(|e| e.key), Some("error.cip.molfile"));
+}
+
+#[test]
+fn descriptors_route_gives_the_bytes_of_the_fixture() {
+    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol measure` in tests/test_molkit_wasm.py
+    let fx: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/dati/descriptors_disegno.json")).unwrap();
+    let st = State::new();
+    for c in fx["cases"].as_array().unwrap() {
+        let p = json!({"kind": "descriptors", "request": c["request"].clone()});
+        assert_eq!(
+            text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+            c["descriptors"].as_str().unwrap(),
+            "{}",
+            c["name"]
+        );
+    }
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "descriptors", "request": {"molfile": "x"}}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.descr.molfile"));
 }
 
 /// Standard base64 with padding, written here and not borrowed from the engine: the route's own decoder is under test.

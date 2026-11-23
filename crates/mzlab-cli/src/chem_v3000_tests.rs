@@ -36,7 +36,7 @@ fn v2000_and_v3000_of_one_molecule_give_the_same_bytes_in_every_command_that_rea
         tmp("a.json", &request(V2000)),
         tmp("b.json", &request(V3000)),
     );
-    for c in ["sel", "check", "cip", "mech"] {
+    for c in ["sel", "check", "cip", "measure", "mech"] {
         let (x, y) = (run(&["mol", c, &a]), run(&["mol", c, &b]));
         assert_eq!(x.code, y.code, "mol {c}: {}", y.stderr);
         assert_eq!(x.stdout, y.stdout, "mol {c}");
@@ -68,7 +68,7 @@ fn a_damaged_v3000_file_is_unreadable_for_every_command_that_reads_one() {
     // the counts line says three atoms and two bonds, the file holds one bond fewer: a file cut short
     let cut_short = V3000.replace("M  V30 2 1 2 3\n", "");
     let req = tmp("short.json", &request(&cut_short));
-    for c in ["sel", "check", "cip", "mech"] {
+    for c in ["sel", "check", "cip", "measure", "mech"] {
         let o = run(&["mol", c, &req]);
         assert_eq!(o.code, 4, "mol {c}: {}", o.stderr);
         let o = run(&["mol", c, &req, "--json"]);
@@ -111,6 +111,22 @@ fn a_file_above_999_atoms_is_read_or_refused_with_its_code_never_empty() {
             "mol {c}: {text}"
         );
     }
+    // the descriptors read it whole (V3000 above 999 atoms) up to their own limit of 2000
+    let o = run(&["mol", "measure", &req]);
+    assert_eq!(o.code, 0, "mol measure: {}", o.stderr);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"formula\":\"C1200H2402\""));
+    let o = run(&[
+        "mol",
+        "measure",
+        &tmp("huge.json", &request(&chain(2001))),
+        "--json",
+    ]);
+    assert_eq!(o.code, 1, "mol measure: {}", o.stderr);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("error.descr.tooBig"));
     // the cut reads the bare file: the same refusal, exit 1 with the key in the answer
     let bare = tmp("big.mol", &big);
     let o = run(&["mol", "cut", &bare, "--set", "bonds=0-1", "--json"]);

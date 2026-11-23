@@ -77,6 +77,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
@@ -186,6 +187,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
@@ -295,6 +297,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
