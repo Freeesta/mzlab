@@ -47,7 +47,7 @@ fn stem(w: &str) -> String {
 /// The search words of `s`: lower case, split at anything but letters and digits, stop words and one-letter words dropped.
 pub(crate) fn words(s: &str) -> Vec<String> {
     let s = s.to_lowercase().replace("s/n", "snr").replace("m/z", "mz");
-    let mut out: Vec<String> = s
+    let out: Vec<String> = s
         .split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|w| w.len() > 1 && !STOP.contains(w))
         .map(stem)
