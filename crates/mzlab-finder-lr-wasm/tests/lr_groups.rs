@@ -382,3 +382,76 @@ fn scale() {
         s.len()
     );
 }
+
+#[test]
+fn every_row_carries_its_evidence_per_condition_from_the_one_alignment() {
+    let s = summary_of(&run(&names(), true, "{}"));
+    let g = &s["groups"];
+    for (mz, name) in [(257, "TP1"), (273, "TP2"), (225, "TP3")] {
+        let id = &row_of(g, mz)["row"];
+        let row = s["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"].as_f64() == id.as_f64())
+            .unwrap_or_else(|| panic!("no Dig row of id {id}"));
+        assert!(CONDS.contains(&row["cond"].as_str().unwrap()), "{row}");
+        let by = row["by_cond"].as_array().unwrap();
+        assert_eq!(
+            by.iter()
+                .map(|c| c["cond"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            CONDS,
+            "{name}"
+        );
+        let present = present_truth(name);
+        for c in by {
+            let k = c["k_points"].as_u64().unwrap();
+            if present.contains(&c["cond"].as_str().unwrap()) {
+                assert!(k >= 1, "{name} {c}");
+            } else {
+                assert_eq!(k, 0, "{name} {c}");
+            }
+        }
+        // the points of the whole series, each with its condition (empty for the shared blank and standard)
+        for p in row["points"].as_array().unwrap() {
+            let c = p["cond"].as_str().unwrap();
+            assert!(
+                CONDS.contains(&c) || (c.is_empty() && p["role"] != "sample"),
+                "{p}"
+            );
+        }
+        let total = row["k_points"].as_u64().unwrap();
+        assert!(by.iter().all(|c| c["k_points"].as_u64().unwrap() <= total));
+    }
+}
+
+/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture one_alignment`: the native pipeline and Dig of the 38
+/// files as one series that compares six conditions (one alignment) against one run per condition (its 6 files with the shared blank and
+/// standard), timings in `docs/agenti/measurements.md`.
+#[test]
+#[ignore]
+fn one_alignment_against_one_per_condition() {
+    let all = names();
+    let idxs: Vec<Vec<u8>> = all.iter().map(|n| index_of_file(&dir().join(n))).collect();
+    let t = std::time::Instant::now();
+    let d = dig_with(&files_json(&all, true), BENTAZONE, "{}", &idxs);
+    let one = t.elapsed();
+    let rows = d.entries.len();
+    let t = std::time::Instant::now();
+    let mut per = 0;
+    for c in CONDS {
+        let pick: Vec<usize> = (0..all.len())
+            .filter(|&k| all[k].starts_with(&format!("{c}_")) || !all[k].contains('_'))
+            .collect();
+        let n: Vec<String> = pick.iter().map(|&k| all[k].clone()).collect();
+        let ix: Vec<Vec<u8>> = pick.iter().map(|&k| idxs[k].clone()).collect();
+        per += dig_with(&files_json(&n, true), BENTAZONE, "{}", &ix)
+            .entries
+            .len();
+    }
+    println!(
+        "38 files: one alignment {one:?} ({rows} rows), one per condition {:?} ({per} rows over 6 runs)",
+        t.elapsed()
+    );
+}

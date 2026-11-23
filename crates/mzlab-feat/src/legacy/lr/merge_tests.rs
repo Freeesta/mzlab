@@ -114,3 +114,100 @@ fn the_evidence_words_separate_a_rejected_peak_from_the_gap_filling() {
     assert_eq!(evidence_word(CELL_ABSENT, false), "absent");
     assert_eq!(evidence_word(CELL_NA, true), "absent");
 }
+
+/// The pairwise loop `merge_split` had before its m/z index: every later row of the order compared with every row.
+fn merge_pairwise(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
+    let mut ord: Vec<usize> = (0..t.len()).collect();
+    let tot: Vec<f64> = ord.iter().map(|&r| detected_area(t, r)).collect();
+    mzlab_core::sortc::by(&mut ord, |&a, &b| tot[b].total_cmp(&tot[a]).then(a.cmp(&b)));
+    let mut gone = vec![false; t.len()];
+    let mut out = Vec::new();
+    for (i, &a) in ord.iter().enumerate() {
+        if gone[a] || tot[a] <= 0.0 {
+            continue;
+        }
+        for &b in &ord[i + 1..] {
+            if gone[b] || tot[b] <= 0.0 {
+                continue;
+            }
+            if (t.mz[a] - t.mz[b]).abs() > da || (t.rt[a] - t.rt[b]).abs() > rt {
+                continue;
+            }
+            let (apart, both) = resolved(t, a, b);
+            if !apart {
+                out.push(absorb(t, a, b, both));
+                gone[b] = true;
+            }
+        }
+    }
+    out
+}
+
+/// A table of `n` rows crowded in m/z and RT (many partners per row), random states, areas and apexes.
+fn crowded(n: usize, files: usize, seed: u64) -> Aligned {
+    let mut s = seed;
+    let mut next = move || {
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (s >> 11) as f64 / (1u64 << 53) as f64
+    };
+    let mut t = Aligned {
+        n_files: files,
+        ..Aligned::default()
+    };
+    for _ in 0..n {
+        t.mz.push(200.0 + (next() * 40.0).floor() * 0.1 + next() * 0.05);
+        t.rt.push(5.0 + next() * 2.0);
+        for _ in 0..files {
+            let det = next() < 0.4;
+            t.area.push(if det {
+                1.0 + (next() * 1e3).floor()
+            } else {
+                5.0
+            });
+            t.height.push(1.0);
+            t.apex_rt.push(if det {
+                (5.0 + next() * 2.0) as f32
+            } else {
+                f32::NAN
+            });
+            t.width.push(if det {
+                (0.05 + next() * 0.3) as f32
+            } else {
+                f32::NAN
+            });
+            t.state.push(if det { CELL_DETECTED } else { CELL_FILLED });
+        }
+    }
+    t
+}
+
+fn bits(t: &Aligned) -> (Vec<u64>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u8>) {
+    (
+        t.area.iter().map(|x| x.to_bits()).collect(),
+        t.height.iter().map(|x| x.to_bits()).collect(),
+        t.apex_rt.iter().map(|x| x.to_bits()).collect(),
+        t.width.iter().map(|x| x.to_bits()).collect(),
+        t.state.clone(),
+    )
+}
+
+#[test]
+fn the_mz_index_merges_exactly_as_the_pairwise_loop() {
+    for (seed, n) in [(1, 50), (2, 300), (3, 800)] {
+        for (da, rt) in [(0.3, 0.3), (0.1, 0.5), (1.0, 0.2)] {
+            let (mut a, mut b) = (crowded(n, 6, seed), crowded(n, 6, seed));
+            let (ma, mb) = (merge_split(&mut a, da, rt), merge_pairwise(&mut b, da, rt));
+            assert!(!ma.is_empty(), "the table has merges to compare");
+            assert_eq!(ma.len(), mb.len(), "{seed} {da} {rt}");
+            for (x, y) in ma.iter().zip(&mb) {
+                assert_eq!(
+                    (x.kept.row, x.absorbed.row, &x.taken, x.both),
+                    (y.kept.row, y.absorbed.row, &y.taken, y.both)
+                );
+            }
+            assert!(bits(&a) == bits(&b), "{seed} {da} {rt}");
+        }
+    }
+}

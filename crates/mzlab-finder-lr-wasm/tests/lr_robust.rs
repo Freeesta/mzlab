@@ -211,3 +211,49 @@ fn a_weak_trace_found_only_by_forced_integration_is_never_detected() {
     assert_eq!(b["state"], "detected", "{b}");
     assert!(r["controls"]["blank"].as_f64().unwrap() > 0.0, "{r}");
 }
+
+/// Two isobaric products at m/z 270.1, the second `d` min later: formed together, one handing over to the other (both present in the middle
+/// times), or one after the other with no time in common (the pattern a split ion also has).
+fn isobars(kind: &str, d: f64) -> impl Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)> + '_ {
+    move |t| {
+        let Some(k) = t else { return Vec::new() };
+        let (a, b) = match kind {
+            "together" => (
+                1.0e6 * (1.0 - (-0.08 * k).exp()),
+                6.0e5 * (1.0 - (-0.03 * k).exp()),
+            ),
+            "hand-off" => (
+                2.0e6 * (-0.06 * k).exp() * (1.0 - (-0.3 * k).exp()),
+                1.0e6 * (1.0 - (-0.02 * k).exp()).powi(2),
+            ),
+            _ if k <= 15.0 => (1.0e6 * (1.0 - (-0.08 * k).exp()), 0.0),
+            _ => (0.0, 1.0e6 * (1.0 - (-0.08 * k).exp())),
+        };
+        [(6.0, a), (6.0 + d, b)]
+            .into_iter()
+            .filter(|p| p.1 > 0.0)
+            .map(|(rt, amp)| (270.1, rt, 0.05, amp))
+            .collect()
+    }
+}
+
+#[test]
+fn isobaric_products_0_3_to_0_5_min_apart_are_never_merged() {
+    // the evidence for the default merge_rt_min 0.3 (docs/agenti/mzfinder-lr.md): two real products this far apart stay two rows
+    for kind in ["together", "hand-off", "apart"] {
+        for d in [0.3, 0.4, 0.5] {
+            let (files, idxs) = series_with(&isobars(kind, d));
+            let s = sum(&dig(&files, &idxs));
+            let mine: Vec<&Value> = s["merged"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|x| (x["kept"]["mz"].as_f64().unwrap() - 270.4).abs() < 0.5)
+                .collect();
+            assert!(mine.is_empty(), "{kind} {d}: {mine:#?}");
+            if kind != "together" {
+                assert_eq!(rows_near(&s, 270.1).len(), 2, "{kind} {d}");
+            }
+        }
+    }
+}

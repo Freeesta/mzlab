@@ -65,7 +65,8 @@ fn resolved(t: &Aligned, a: usize, b: usize) -> (bool, usize) {
 
 /// Merges the split rows of `t` in place (`da` Da, `rt` min; either at 0 switches it off) and returns the log. The row with the larger detected
 /// area is kept; per column it takes the other row's cell when that one is detected and its own is not, or both are detected and the other's area
-/// is larger. The absorbed row keeps its m/z and RT but holds no peak any more.
+/// is larger. The absorbed row keeps its m/z and RT but holds no peak any more. Rows are visited from the largest detected area down; the
+/// partners of a row are found in an index sorted by m/z (only the `da` window is compared, not every later row) and taken in the same order.
 pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
     if da <= 0.0 || rt <= 0.0 || t.n_files == 0 {
         return Vec::new();
@@ -73,53 +74,75 @@ pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
     let mut ord: Vec<usize> = (0..t.len()).collect();
     let tot: Vec<f64> = ord.iter().map(|&r| detected_area(t, r)).collect();
     mzlab_core::sortc::by(&mut ord, |&a, &b| tot[b].total_cmp(&tot[a]).then(a.cmp(&b)));
+    let mut rank = vec![0; t.len()];
+    for (i, &r) in ord.iter().enumerate() {
+        rank[r] = i;
+    }
+    // the rows that hold a peak, by m/z (NaN last: never inside a window)
+    let mut by_mz: Vec<usize> = (0..t.len()).filter(|&r| tot[r] > 0.0).collect();
+    mzlab_core::sortc::by(&mut by_mz, |&a, &b| {
+        t.mz[a].total_cmp(&t.mz[b]).then(a.cmp(&b))
+    });
+    let mzs: Vec<f64> = by_mz.iter().map(|&r| t.mz[r]).collect();
+    // a window a little wider than `da`: the exact test below decides, so rounding never drops a partner
+    let pad = da * (1.0 + 1e-9) + 1e-9;
     let mut gone = vec![false; t.len()];
     let mut out = Vec::new();
     for (i, &a) in ord.iter().enumerate() {
         if gone[a] || tot[a] <= 0.0 {
             continue;
         }
-        for &b in &ord[i + 1..] {
-            if gone[b] || tot[b] <= 0.0 {
-                continue;
-            }
-            if (t.mz[a] - t.mz[b]).abs() > da || (t.rt[a] - t.rt[b]).abs() > rt {
+        let lo = mzs.partition_point(|&m| m < t.mz[a] - pad);
+        let hi = mzs.partition_point(|&m| m <= t.mz[a] + pad);
+        let mut near: Vec<usize> = by_mz[lo..hi]
+            .iter()
+            .copied()
+            .filter(|&b| rank[b] > i)
+            .collect();
+        near.sort_unstable_by_key(|&b| rank[b]);
+        for b in near {
+            if gone[b] || (t.mz[a] - t.mz[b]).abs() > da || (t.rt[a] - t.rt[b]).abs() > rt {
                 continue;
             }
             let (apart, both) = resolved(t, a, b);
             if apart {
                 continue;
             }
-            let (ka, kb) = (was(t, a), was(t, b));
-            let mut taken = Vec::new();
-            for k in 0..t.n_files {
-                let (x, y) = (t.cell(a, k), t.cell(b, k));
-                let dx = t.state[x] == CELL_DETECTED;
-                let dy = t.state[y] == CELL_DETECTED;
-                if dy && (!dx || t.area[y] > t.area[x]) {
-                    t.area[x] = t.area[y];
-                    t.height[x] = t.height[y];
-                    t.apex_rt[x] = t.apex_rt[y];
-                    t.width[x] = t.width[y];
-                    t.state[x] = t.state[y];
-                    taken.push(k);
-                }
-                t.area[y] = 0.0;
-                t.height[y] = 0.0;
-                t.apex_rt[y] = f32::NAN;
-                t.width[y] = f32::NAN;
-                t.state[y] = CELL_ABSENT;
-            }
+            out.push(absorb(t, a, b, both));
             gone[b] = true;
-            out.push(Merge {
-                kept: ka,
-                absorbed: kb,
-                taken,
-                both,
-            });
         }
     }
     out
+}
+
+/// Moves the peaks of row `b` into row `a` (see `merge_split`) and returns the log of the merge.
+fn absorb(t: &mut Aligned, a: usize, b: usize, both: usize) -> Merge {
+    let (ka, kb) = (was(t, a), was(t, b));
+    let mut taken = Vec::new();
+    for k in 0..t.n_files {
+        let (x, y) = (t.cell(a, k), t.cell(b, k));
+        let dx = t.state[x] == CELL_DETECTED;
+        let dy = t.state[y] == CELL_DETECTED;
+        if dy && (!dx || t.area[y] > t.area[x]) {
+            t.area[x] = t.area[y];
+            t.height[x] = t.height[y];
+            t.apex_rt[x] = t.apex_rt[y];
+            t.width[x] = t.width[y];
+            t.state[x] = t.state[y];
+            taken.push(k);
+        }
+        t.area[y] = 0.0;
+        t.height[y] = 0.0;
+        t.apex_rt[y] = f32::NAN;
+        t.width[y] = f32::NAN;
+        t.state[y] = CELL_ABSENT;
+    }
+    Merge {
+        kept: ka,
+        absorbed: kb,
+        taken,
+        both,
+    }
 }
 
 /// Why two rows were merged, in words.
