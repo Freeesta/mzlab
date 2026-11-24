@@ -1,4 +1,5 @@
-//! Tests of `mol cip`: the bytes of the shared fixture, the keyed refusal of a structure past the work limit (exit 1), usage errors.
+//! Tests of `mol cip`: the bytes of the shared fixture `cip_disegno.json`, which the molkit `.wasm` and the app give too, the keyed
+//! refusal `error.cip.tooComplex` of the fixture `cip_complex.json` (exit 1, data) with its parameters, and the usage errors.
 use crate::execute;
 
 fn run(a: &[&str]) -> crate::Outcome {

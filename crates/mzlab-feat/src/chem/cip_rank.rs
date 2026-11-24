@@ -12,8 +12,8 @@ use std::cmp::Ordering;
 pub(crate) const RULES: usize = 7;
 /// Index of rule 4b; it and rule 5 after it compare whole branches instead of node values.
 const LIKE: usize = 5;
-/// Largest digraph grown for one label; past it the label is left out.
-const NODE_CAP: usize = 40_000;
+/// Largest digraph grown for one label; past it the label is left out and `Chem::capped` says so.
+pub(crate) const NODE_CAP: usize = 40_000;
 /// Atom index of an implicit hydrogen or of a lone pair.
 pub(crate) const NO_ATOM: usize = usize::MAX;
 
@@ -34,6 +34,8 @@ pub(crate) struct Chem {
     /// Work of every digraph grown on this molecule (nodes made and nodes compared); past `limit` each digraph stops as if too big.
     pub spent: Cell<u64>,
     pub limit: u64,
+    /// Whether one digraph reached `NODE_CAP` (its label is then missing).
+    pub capped: Cell<bool>,
 }
 
 /// A defined tetrahedral centre of the record.
@@ -133,6 +135,7 @@ impl<'a> Digraph<'a> {
     fn push(&mut self, parent: usize, atom: usize, dup: Option<usize>) -> usize {
         if self.nodes.len() >= NODE_CAP {
             self.over = true;
+            self.c.capped.set(true);
         }
         self.spend(1);
         let i = self.nodes.len();

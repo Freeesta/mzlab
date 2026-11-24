@@ -1,6 +1,7 @@
 //! `cip/1` against the CIP labeler of RDKit (`tests/data/golden_cip.json`, written by `tools/cip_riferimento.py`): every molecule read from
 //! its SMILES by `mzlab-mol`, and one in four from the 2D molfile the Draw page would send, must get exactly the R/S, r/s and E/Z of RDKit;
-//! piece by piece the labels are those of the whole record, 40 copies take well under a second and one chain past the work limit is refused.
+//! piece by piece the labels are those of the whole record, 40 copies take well under a second, and one chain past the work limit or one
+//! digraph past its node cap is refused.
 use mzlab_feat::chem::cip::{cip_json, cip_labels, drawing_labels, WORK_LIMIT};
 use mzlab_mol::Mol;
 use serde_json::Value;
@@ -198,14 +199,37 @@ fn one_chain_past_the_work_limit_is_refused_with_its_evidence() {
     let e = drawing_labels(&chain).err().unwrap();
     assert_eq!(e.key, "error.cip.tooComplex");
     let p = |k: &str| e.params.iter().find(|x| x.0 == k).unwrap().1.clone();
+    // eight copies of two centres and two double bonds: every defined element of the chain, whatever the stage
     assert_eq!(
-        (p("stage"), p("atoms"), p("sites")),
-        ("sites".into(), "136".into(), "39".into())
+        (p("stage"), p("atoms"), p("elements")),
+        ("sites".into(), "136".into(), "32".into())
     );
     assert_eq!(p("limit"), WORK_LIMIT.to_string());
     assert!(p("work").parse::<u64>().unwrap() > WORK_LIMIT);
     // the same chain four copies long still finishes, with the labels of the whole record
     same_as_whole_record(&[DEFINED; 4].join(""));
+}
+
+#[test]
+fn one_digraph_past_its_node_cap_is_refused_not_left_unlabelled() {
+    // two dodecahedranyl arms told apart only by one carbon-13: the digraph of the centre passes 40,000 nodes long before the work limit
+    let cage = "C12C3C4C5C1C6C7C2C8C3C9C4C%10C5C6C%11C7C8C9C%10%11";
+    let heavy = cage.replace("C%10%11", "[13CH]%10%11");
+    let m = Mol::from_smiles(&format!("F[C@H]({cage}){heavy}")).unwrap();
+    // without the refusal the label was simply missing
+    assert!(cip_labels(&m, &m.stereo_sites()).atoms.is_empty());
+    let e = drawing_labels(&drawing(m.clone())).err().unwrap();
+    assert_eq!(e.key, "error.cip.tooComplex");
+    let p = |k: &str| e.params.iter().find(|x| x.0 == k).unwrap().1.clone();
+    let got: Vec<String> = ["stage", "atoms", "elements", "work", "limit"]
+        .iter()
+        .map(|k| p(k))
+        .collect();
+    assert_eq!(got, ["digraph", "42", "1", "40001", "40000"]);
+    // a small piece beside it is not labelled alone: the drawing is refused whole, never in part
+    let two = Mol::from_smiles(&format!("F[C@H](Cl)Br.F[C@H]({cage}){heavy}")).unwrap();
+    let e = drawing_labels(&drawing(two)).err().unwrap();
+    assert_eq!(e.params[1], ("atoms", "42".to_string()));
 }
 
 #[test]

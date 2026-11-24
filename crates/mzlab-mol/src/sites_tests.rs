@@ -144,12 +144,16 @@ fn sites_among_the_defined_ones_are_those_of_all_sites() {
 #[test]
 fn sites_among_none_test_nothing_and_a_limit_names_the_piece() {
     assert_eq!(copies(40).stereo_sites_among(&[], 0), Ok(Vec::new()));
-    let chain = Mol::from_smiles(&[PIECE; 3].join("")).expect("smiles");
+    // behind a two-atom piece: the refusal names the chain by its first atom
+    let chain = Mol::from_smiles(&format!("CC.{}", [PIECE; 3].join(""))).expect("smiles");
     let all = chain.stereo_sites();
     let over = chain
         .stereo_sites_among(&all, 1000)
         .expect_err("over the limit");
-    assert_eq!((over.atoms, over.sites), (chain.atoms.len(), 14));
+    assert_eq!(
+        (over.atoms, over.sites, over.first),
+        (chain.atoms.len() - 2, 14, 2)
+    );
     assert!(over.work > 1000);
     assert_eq!(chain.stereo_sites_among(&all, u64::MAX), Ok(all));
 }
