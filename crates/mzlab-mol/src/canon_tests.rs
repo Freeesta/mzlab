@@ -220,3 +220,27 @@ fn work_is_linear_in_tied_pieces_with_different_stereo() {
         }
     }
 }
+
+#[test]
+fn the_search_size_bound_is_fixed_at_1000_leaves() {
+    // the bound decides which records keep the plain search's order, so moving it changes `can()`: a CAN_VERSION decision
+    assert_eq!(SEARCH_SIZE, 1_000);
+    // R and S copies of an amino acid: C(12, 6) = 924 interleavings keep the search, C(13, 6) = 1716 order the pieces alone
+    let (a, b) = ("N[C@@H](C)C(=O)O", "N[C@H](C)C(=O)O");
+    let contiguous = |m: &Mol| {
+        let (piece, _) = m.piece_labels();
+        let order = m.canonical_order();
+        let mut by_new = vec![0usize; order.len()];
+        for (old, &new) in order.iter().enumerate() {
+            by_new[new as usize] = piece[old];
+        }
+        by_new.windows(2).filter(|w| w[0] != w[1]).count() + 1 == m.pieces().len()
+    };
+    let below = alternating(a, b, 12);
+    let mut s = search(&below);
+    let start = s.refine(s.initial());
+    s.explore(start, &mut Vec::new());
+    assert_eq!(below.canonical_order(), s.best.map(|(_, p)| p).unwrap());
+    assert!(!contiguous(&below), "the search interleaves the pieces");
+    assert!(contiguous(&alternating(a, b, 13)), "past the bound each piece is in one run");
+}
