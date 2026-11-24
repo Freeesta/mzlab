@@ -391,3 +391,72 @@ fn mol_draw_edit_failure_is_a_keyed_usage_error_naming_the_operation() {
     );
     assert_eq!(run(&["mol", "draw", "CCO", "--set", "edit=nope"]).code, 2);
 }
+
+#[test]
+fn mol_draw_edit_stereo_group_gives_the_engine_bytes_and_its_inverse_undoes_it() {
+    let spec = "smiles:C[C@H](O)C[C@@H](N)C[C@H](F)Cl |&1:1,o1:4,&2:7|";
+    let set = r#"[{"op":"stereo.group","atoms":[1,7],"g":"or1"}]"#;
+    let o = run(&[
+        "mol",
+        "draw",
+        spec,
+        "--json",
+        "--set",
+        &format!("edit={set}"),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let mut req = mzlab_core::json::Out::default();
+    req.raw("{\"spec\":")
+        .str(spec)
+        .raw(",\"format\":\"scene\",\"edit\":")
+        .str(set)
+        .raw("}");
+    let engine = mzlab_feat::chem::draw::draw_json(&req.0).unwrap();
+    assert_eq!(text(&o).trim_end(), engine);
+    assert!(
+        engine.contains(r#""i":1,"el":"C","chg":0,"iso":0,"h":1,"stg":"or1""#),
+        "{engine}"
+    );
+    // the inverse (each atom back to its group) on the molfile the patch made gives the starting groups again
+    let edited = text(&run(&[
+        "mol",
+        "draw",
+        spec,
+        "--set",
+        &format!("edit={set}"),
+    ]));
+    let undo = r#"[{"op":"stereo.group","atoms":[1],"g":"and1"},{"op":"stereo.group","atoms":[7],"g":"and2"}]"#;
+    let p = std::env::temp_dir().join(format!("mol_draw_stg_{}.mol", std::process::id()));
+    std::fs::write(&p, &edited).unwrap();
+    let back = run(&[
+        "mol",
+        "draw",
+        p.to_str().unwrap(),
+        "--json",
+        "--set",
+        &format!("edit={undo}"),
+    ]);
+    std::fs::remove_file(&p).ok();
+    let stg = |o: &crate::Outcome| {
+        let v = mzlab_core::json::parse(text(o).as_bytes()).unwrap();
+        let atoms = v.get("atoms").unwrap().arr().to_vec();
+        atoms
+            .iter()
+            .map(|a| a.get("stg").and_then(|s| s.str()).unwrap_or("").to_string())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(stg(&back), stg(&run(&["mol", "draw", spec, "--json"])));
+    let bad = run(&[
+        "mol",
+        "draw",
+        spec,
+        "--set",
+        r#"edit=[{"op":"stereo.group","atoms":[0],"g":"abs"}]"#,
+    ]);
+    let e = bad.error.as_ref().expect("a keyed error");
+    let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.as_str());
+    assert_eq!(
+        (bad.code, param("reason"), param("index")),
+        (2, Some("not_stereocentre"), Some("0"))
+    );
+}

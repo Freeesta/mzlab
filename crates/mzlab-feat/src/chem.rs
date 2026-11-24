@@ -41,6 +41,8 @@ mod edit;
 #[cfg(feature = "check")]
 mod edit_end;
 #[cfg(feature = "check")]
+mod edit_group;
+#[cfg(feature = "check")]
 mod edit_op;
 #[cfg(feature = "check")]
 mod edit_set;

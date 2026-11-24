@@ -9,6 +9,8 @@ from draw_fixture import ROOT, draw, molfile, picture
 
 # (name, spec, patch); a patch is a list of operations or the object {"ops": [...]}
 ALA = "N[C@@H](C)C(=O)O"
+# three centres in the groups and1, or1, and2 (atoms 1, 4, 7)
+THREE = "C[C@H](O)C[C@@H](N)C[C@H](F)Cl |&1:1,o1:4,&2:7|"
 CASES = [
     ("methyl on benzene is toluene", "c1ccccc1", [{"op": "atom.add", "el": "C"}, {"op": "bond.add", "a": 0, "b": 6}]),
     ("element", "CCO", [{"op": "atom.set", "id": 2, "el": "S"}]),
@@ -52,6 +54,14 @@ CASES = [
     ("too many atoms", "C" * 2000, [{"op": "atom.add", "el": "C"}]),
     ("too many bonds", "C" * 2000, [{"op": "bond.add", "a": 0, "b": k} for k in range(2, 600)]),
     ("too many ids in a list", "CCO", [{"op": "remove", "atoms": [0] * 2001}]),
+    ("stereo group set", THREE, [{"op": "stereo.group", "atoms": [7], "g": "and1"}]),
+    ("stereo group cleared", THREE, [{"op": "stereo.group", "atoms": [1, 4], "g": "none"}]),
+    ("stereo group renumbered", THREE, [{"op": "stereo.group", "atoms": [1], "g": "or1"}, {"op": "stereo.group", "atoms": [4], "g": "and9"}]),
+    ("stereo group across pieces", "C[C@H](O)CC.N[C@@H](C)C(=O)O", [{"op": "stereo.group", "atoms": [1, 6], "g": "abs"}]),
+    ("stereo group dropped with its centre", THREE, [{"op": "remove", "atoms": [2]}]),
+    ("stereo group on a centre a wedge makes", "CC(O)CC", [{"op": "stereo.group", "atoms": [1], "g": "or1"}, {"op": "bond.set", "a": 1, "b": 0, "wedge": 1}]),
+    ("wedge on a drawing with stereo groups", THREE, [{"op": "bond.set", "a": 1, "b": 0, "wedge": -1}]),
+    ("stereo group on no stereocentre", THREE, [{"op": "stereo.group", "atoms": [0], "g": "and1"}]),
 ]
 
 

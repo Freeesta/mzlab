@@ -1,11 +1,12 @@
 //! The end of an edit patch: the record the slots make with the stereo that survived, hydrogens counted again, the atoms without a position placed
-//! around the fixed ones, and the wedges of the patch read back by the molfile reader.
+//! around the fixed ones, the wedges of the patch read back by the molfile reader, then the stereo groups on the centres still defined.
 
 use mzlab_core::error::Result;
-use mzlab_mol::{allowed_valences, Coords, Mol, Stereo, StereoGroup};
+use mzlab_mol::{allowed_valences, Coords, Mol, Stereo};
 
 use super::draw::{note, too_big, Drawn};
 use super::edit::Ed;
+use super::edit_group::regroup;
 use super::edit_op::{fail, pair};
 use super::edit_set::Index;
 
@@ -74,7 +75,7 @@ fn keep_stereo(d: &Drawn, ed: &Ed, ix: &Index) -> (Vec<Stereo>, Vec<String>) {
     (stereo, dropped)
 }
 
-/// The record the slots and bonds make, with the stereo that survived; the second list is what was dropped.
+/// The record the slots and bonds make, with the stereo that survived and no groups yet; the second list is what was dropped.
 fn rebuild(d: &Drawn, ed: &Ed, ix: &Index) -> (Mol, Vec<String>) {
     let bonds = ed
         .bonds
@@ -89,33 +90,11 @@ fn rebuild(d: &Drawn, ed: &Ed, ix: &Index) -> (Mol, Vec<String>) {
         })
         .collect();
     let (stereo, dropped) = keep_stereo(d, ed, ix);
-    let kept = |x: u32| {
-        stereo
-            .iter()
-            .any(|s| matches!(s, Stereo::Tetra { c, .. } if *c == x))
-    };
-    let groups = d
-        .mol
-        .groups
-        .iter()
-        .filter_map(|g| {
-            let atoms: Vec<u32> = g
-                .atoms
-                .iter()
-                .filter_map(|&x| ix.get(x))
-                .filter(|&x| kept(x))
-                .collect();
-            (!atoms.is_empty()).then_some(StereoGroup {
-                kind: g.kind,
-                atoms,
-            })
-        })
-        .collect();
     let mut m = Mol::new(
         ed.slots.iter().map(|s| s.atom.clone()).collect(),
         bonds,
         stereo,
-        groups,
+        Vec::new(),
     );
     m.coords = None;
     (m, dropped)
@@ -213,6 +192,9 @@ pub(super) fn finish(d: &mut Drawn, mut ed: Ed, n_ops: usize) -> Result<()> {
     if !ed.wedges.is_empty() {
         (m, wedge_gone) = read_wedges(m, &ed, &ix, d)?;
     }
+    // the groups go on after the read-back: a V2000 molfile cannot hold them, and a wedge of the patch may make a centre a group names
+    let (left, renumbered) = regroup(&mut m, &ed, &d.mol)?;
+    let join = |v: Vec<u32>| v.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
     let labelled = ed.slots.iter().filter(|s| s.label.is_some()).count();
     if labelled > 0
         && (m.atoms.len() > V2000_MAX || m.bonds.len() > V2000_MAX || !m.groups.is_empty())
@@ -235,6 +217,8 @@ pub(super) fn finish(d: &mut Drawn, mut ed: Ed, n_ops: usize) -> Result<()> {
         ("edit_h_recounted", out_list(&ix, n, &recounted)),
         ("edit_stereo_dropped", dropped.join(",")),
         ("edit_wedge_dropped", wedge_gone.join(",")),
+        ("edit_group_dropped", join(left)),
+        ("edit_group_renumbered", join(renumbered)),
     ] {
         if !list.is_empty() {
             d.choices.push(note(key, list));
@@ -262,10 +246,10 @@ fn field(l: &str, r: std::ops::Range<usize>) -> usize {
 fn read_wedges(m: Mol, ed: &Ed, ix: &Index, d: &Drawn) -> Result<(Mol, Vec<String>)> {
     let last = ed.wedges.last().map_or(0, |w| w.3);
     let bad = |reason, detail: &str| fail(last, "wedge", reason, detail);
-    if m.atoms.len() > V2000_MAX || m.bonds.len() > V2000_MAX || !m.groups.is_empty() {
+    if m.atoms.len() > V2000_MAX || m.bonds.len() > V2000_MAX {
         return Err(bad(
             "wedge_size",
-            "a wedge is set on a V2000 molfile: at most 999 atoms and bonds, no stereo groups",
+            "a wedge is set on a V2000 molfile: at most 999 atoms and bonds",
         ));
     }
     let marks: Vec<(usize, usize, i8)> = ed
