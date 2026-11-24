@@ -1,4 +1,4 @@
-//! `tp.network@1` in a plan: the `.mzfeat` with the blocks `tp/1` and `interp/1` (written by the real store on invented rows of the timolol formula)
+//! `tp.network@1` in a plan: the `.mzfeat` with the blocks `tp/2` and `interp/1` (written by the real store on invented rows of the timolol formula)
 //! gives the same `rete/1` as the engine called directly, which `mzlab-feat/tests/network.rs` checks arc by arc.
 
 use std::path::Path;

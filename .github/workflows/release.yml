@@ -443,16 +443,17 @@ jobs:
               printf '%s\n' "$all"
               exit 1
             fi
-            cp "$f" "dist/$p$3"
+            cp "$f" "dist/$3"
           }
-          one mzlab-desktop-Windows '*.exe' Windows.exe
-          one mzlab-desktop-macOS '*.dmg' Mac.dmg
-          one mzlab-desktop-Linux '*.AppImage' Linux.AppImage
-          one mzlab-desktop-Linux '*.deb' Linux.deb
-          one mzlab-cli-linux-x86_64 'mzlab-cli-*-linux-x86_64' cli-Linux-x86_64
-          one mzlab-cli-linux-aarch64 'mzlab-cli-*-linux-aarch64' cli-Linux-aarch64
-          one mzlab-cli-macos-aarch64 'mzlab-cli-*-macos-aarch64' cli-Mac-aarch64
-          one sito 'mzlab-site-*.zip' sito.zip
+          one mzlab-desktop-Windows '*.exe' "${p}Windows.exe"
+          one mzlab-desktop-macOS '*.dmg' "${p}Mac.dmg"
+          one mzlab-desktop-Linux '*.AppImage' "${p}Linux.AppImage"
+          one mzlab-desktop-Linux '*.deb' "${p}Linux.deb"
+          # The CLI binaries keep fixed names (no version) for releases/latest/download/ (tools/install.sh).
+          one mzlab-cli-linux-x86_64 'mzlab-cli-*-linux-x86_64' mzlab-cli-linux-x86_64
+          one mzlab-cli-linux-aarch64 'mzlab-cli-*-linux-aarch64' mzlab-cli-linux-aarch64
+          one mzlab-cli-macos-aarch64 'mzlab-cli-*-macos-aarch64' mzlab-cli-macos-aarch64
+          one sito 'mzlab-site-*.zip' "${p}sito.zip"
           (cd pezzi && zip -qr "../dist/${p}sicurezza-SBOM.zip" sbom sito/sbom-js.cdx.json)
           cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - name: Draft release (download table on top, then the notes of CHANGELOG.md)

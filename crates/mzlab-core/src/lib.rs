@@ -232,6 +232,7 @@ pub mod similarity;
 pub mod ratio;
 pub mod pca;
 pub mod qaqc;
+pub mod glob;
 pub mod statistics;
 pub mod statmat;
 #[cfg(feature = "statcmp")]

@@ -100,7 +100,7 @@ fn candidates<'a>(d: &'a lr::LrDig, label: &str) -> Vec<&'a lr::Entry> {
 }
 
 fn shown(d: &lr::LrDig) -> usize {
-    candidates(d, "forte").len() + candidates(d, "possibile").len()
+    candidates(d, "strong").len() + candidates(d, "possible").len()
 }
 
 fn proposed(d: &lr::LrDig) -> Vec<(f64, Option<f64>, String)> {
@@ -116,9 +116,9 @@ fn a_parent_that_is_not_in_the_files_gives_no_product() {
     let d = dig("C15H12N2O"); // carbamazepine: its [M+H]+ grows in the series instead of falling
     assert!(!d.parent_ok);
     assert_eq!(d.entries[0].id, 0);
-    assert_eq!(shown(&d), 0, "{:?}", candidates(&d, "forte"));
+    assert_eq!(shown(&d), 0, "{:?}", candidates(&d, "strong"));
     // the candidates with a peak stay in the table, in the weak band
-    assert!(candidates(&d, "debole").iter().all(|e| e
+    assert!(candidates(&d, "weak").iter().all(|e| e
         .criteria
         .iter()
         .any(|c| c.name == lr::PARENT_OK && c.status == "fail")));
@@ -133,9 +133,9 @@ fn random_parents_give_no_strong_candidate() {
         let d = dig(f);
         assert!(proposed(&d).is_empty(), "{f}: {:?}", proposed(&d));
         assert!(
-            candidates(&d, "forte").is_empty(),
+            candidates(&d, "strong").is_empty(),
             "{f}: {:?}",
-            candidates(&d, "forte")
+            candidates(&d, "strong")
         );
     }
 }
@@ -155,9 +155,25 @@ fn the_right_parent_keeps_its_products() {
         has(362.06, 13.02) && has(378.05, 13.57) && has(396.06, 13.41),
         "{pf:?}"
     );
-    assert!(pf.len() <= 6, "{pf:?}");
+    // with the merge of split rows off, the documented products and their isomers (at most 6); on (the default) it joins the 378 rows at 12.95
+    // and 13.16 min (apexes 13.04 min in t5, 13.25 min in t10: the consecutive-files rule of persistence) and that isomer alone becomes strong
+    let off = proposed(&dig_set("C14H13F4N3O2S", r#"{"merge_da": 0}"#));
+    assert!(off.len() <= 6, "{off:?}");
+    let new: Vec<_> = pf.iter().filter(|x| !off.contains(x)).collect();
+    assert!(
+        new.len() == 1
+            && (new[0].0 - 378.05).abs() < 0.1
+            && new[0].1.is_some_and(|t| (t - 13.16).abs() < 0.05),
+        "{new:?}"
+    );
+    assert!(
+        d.merged
+            .iter()
+            .any(|m| (m.kept.rt - 13.16).abs() < 0.05 && (m.kept.mz - 378.3).abs() < 0.5),
+        "the merge that makes it is logged"
+    );
     // the strong candidates that co-elute with a heavier one are marked to verify; the three documented products and the isomer at another RT are not
-    let marked: Vec<(i64, f64)> = candidates(&d, "forte")
+    let marked: Vec<(i64, f64)> = candidates(&d, "strong")
         .iter()
         .filter(|e| lr::coelute::of(&d, e).is_some())
         .map(|e| (e.mz.round() as i64, e.ref_rt.unwrap()))
@@ -167,7 +183,7 @@ fn the_right_parent_keeps_its_products() {
         marked.iter().all(|m| [322, 338].contains(&m.0)),
         "{marked:?}"
     );
-    for e in candidates(&d, "forte") {
+    for e in candidates(&d, "strong") {
         let peak = e.criteria.iter().find(|c| c.name == lr::peakchk::PEAK);
         assert!(
             peak.is_some_and(|c| c.status == "pass"),
@@ -201,16 +217,16 @@ fn table_threshold_noise() {
         for f in decoys {
             let d = dig_set(f, s);
             ds += shown(&d);
-            df += candidates(&d, "forte").len();
+            df += candidates(&d, "strong").len();
             dp += proposed(&d).len();
         }
         let f = dig_set("C14H13F4N3O2S", s);
         println!(
             "{n} | {}/{} | {ds}/{df}/{dp} | {}/{}/{}",
             shown(&c),
-            candidates(&c, "forte").len(),
+            candidates(&c, "strong").len(),
             shown(&f),
-            candidates(&f, "forte").len(),
+            candidates(&f, "strong").len(),
             proposed(&f).len()
         );
     }
@@ -235,8 +251,8 @@ fn failed(e: &lr::Entry) -> Vec<&'static str> {
 /// The rows in the order of the table: label, candidates before unexpected ions, score, strongest area.
 fn table_order(d: &lr::LrDig) -> Vec<&lr::Entry> {
     let rk = |l: &str| match l {
-        "forte" => 0,
-        "possibile" => 1,
+        "strong" => 0,
+        "possible" => 1,
         _ => 2,
     };
     let mut v: Vec<&lr::Entry> = d.entries.iter().filter(|e| e.id != 0).collect();
@@ -267,8 +283,8 @@ fn report_rows(rows: &[&lr::Entry]) {
 
 fn report_weak(rows: &[&lr::Entry]) {
     let mut why: std::collections::BTreeMap<String, usize> = Default::default();
-    for e in rows.iter().filter(|e| !e.unexpected && e.label != "forte") {
-        if e.label == "possibile" {
+    for e in rows.iter().filter(|e| !e.unexpected && e.label != "strong") {
+        if e.label == "possible" {
             println!(
                 "possible mz {:.2} rt {:?} area {:.2e} steps {} by_chance {} fail {:?}",
                 e.mz,
@@ -287,7 +303,7 @@ fn report_weak(rows: &[&lr::Entry]) {
 /// Strong unexpected ions with a `coelutes` mark (same RT as a heavier strong or possible candidate: probable fragments of it).
 fn report_coelution(d: &lr::LrDig, rows: &[&lr::Entry]) {
     let (mut coel, mut tot) = (0, 0);
-    for u in rows.iter().filter(|e| e.unexpected && e.label == "forte") {
+    for u in rows.iter().filter(|e| e.unexpected && e.label == "strong") {
         tot += 1;
         if let Some(c) = lr::coelute::of(d, u) {
             coel += 1;
@@ -311,7 +327,7 @@ fn report_decoys() {
     for fm in decoys {
         let x = dig(fm);
         shown_all += shown(&x);
-        strong_all += candidates(&x, "forte").len();
+        strong_all += candidates(&x, "strong").len();
         prop_all += proposed(&x).len();
     }
     println!(

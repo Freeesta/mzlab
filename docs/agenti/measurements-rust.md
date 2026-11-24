@@ -103,6 +103,8 @@ Median (min-max) and max RSS, without → with `ROUND_MAX` (32 MB): 64 MB 2684 (
 
 ## LR Dig with several conditions (`cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture scale`, `N=20` or `N=40`, native, 4 CPUs, synthetic files of `tests/data/groups/`)
 20 files (3 conditions, blank, standard): indices 90 ms, pipeline + Dig 130 ms, `summary` with `gruppi` 2 ms, memory peak 8.1 MB. 40 files (6 conditions, blank, standard, 2 more replicates): 170-195 ms, 240-300 ms, 3 ms, 11.3 MB. Ratio 40/20: time 1.9-2.3×, memory 1.4×. `finder-lr.wasm` without `wasm-opt`: 2 055 819 bytes with the conditions (+6.8 % over 1 925 570 without).
+- One alignment against one Dig per condition (`--ignored --nocapture one_alignment_against_one_per_condition`, 38 files, 6 conditions, 3 runs): one alignment 235-279 ms and 90 rows; six Digs 236-252 ms in all and 540 rows (each product once per condition, nothing to compare across them).
+- Row merge (`lr/merge.rs`, m/z index against the pairwise loop, crowded random table, native): 2 000 rows 1.0 ms against 12.2 ms (49 merges each), 20 000 rows 32 ms against 1.21 s (3 427 merges each).
 - Browser (headless Chromium, site built without `wasm-opt`, 2 files per condition: t0 and t10): Dig from "Run" to the table, 20 files (10 conditions) 0.9-1.9 s (median 1.3 s), 40 files (20 conditions) 2.4-2.9 s (median 2.4 s): ratio 1.8× (single tests 1.5-2.7×, short and noisy times). Browser memory peak during the Dig 770-840 MB with 20 files, 850-915 MB with 40 (1.03-1.1×). First draw of the "Compare conditions" view 38-67 ms.
 
 ## Interpretation of the TPs on real data (`tools/valida/tp_timololo.py`)

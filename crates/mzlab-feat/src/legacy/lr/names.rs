@@ -66,7 +66,7 @@ pub fn net_change(formula: &str, parent: &str) -> String {
 /// `oxidation_to_carbonyl` -> `Oxidation to carbonyl`; `loss of C4H8 + loss of SO2` -> `Loss of C4H8 and SO2`; the parent gives `—`,
 /// an unexpected ion an empty text. The ` @ 13.57 min` of an isomer is not part of the rule.
 pub fn modification(name: &str, unexpected: bool) -> String {
-    if name == "progenitore" || name == "parent" {
+    if name == "parent" {
         return NONE.to_string();
     }
     if unexpected || name.is_empty() {
@@ -187,7 +187,7 @@ pub fn tp_names(es: &[Entry], detected: &[bool]) -> Vec<String> {
     let mut out = vec![String::new(); es.len()];
     let mut groups: BTreeMap<i64, BTreeMap<String, Vec<usize>>> = BTreeMap::new();
     for (i, e) in es.iter().enumerate() {
-        if e.label == "progenitore" {
+        if e.label == "parent" {
             out[i] = "Parent".into();
             continue;
         }

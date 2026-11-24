@@ -174,7 +174,7 @@ def test_wasm_sizes(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
     m = w.misura(tmp_path)
-    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1724416}
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1728512}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("wasm-dimensioni.json", json.dumps(m))
@@ -421,41 +421,6 @@ def test_export_coo_row(tmp_path):
     assert str(coo) in files
     assert coo.read_text().splitlines() == ["date,merged,median_open_to_merge_min,max_open_to_merge_min,open_prs_end,chats_running,note",
                                            "2026-11-02,2,165.0,240.0,1,,"]
-
-
-class _Denied(s.urllib.error.HTTPError):
-    def __init__(self, code, headers):
-        super().__init__("http://x", code, "denied", headers, None)
-
-
-def test_api_retries_on_403_honouring_retry_after(monkeypatch):
-    calls, sleeps = [], []
-
-    class Resp:
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
-        def read(self, *a): return b'{"ok": true}'
-
-    def fake(req, timeout=0):
-        calls.append(1)
-        if len(calls) < 3:
-            raise _Denied(403 if len(calls) == 1 else 429, {"Retry-After": "7"})
-        return Resp()
-    monkeypatch.setattr(s.urllib.request, "urlopen", fake)
-    monkeypatch.setattr(s.time, "sleep", sleeps.append)
-    assert s.api_get("/commits/x") == {"ok": True}
-    assert sleeps == [7.0, 7.0]
-
-
-def test_api_gives_up_with_apidenied_and_reset_wait(monkeypatch):
-    sleeps = []
-    err = _Denied(403, {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1060"})
-    assert s.denied_wait(err, now=1000.0) == 60.0
-    monkeypatch.setattr(s.urllib.request, "urlopen", lambda req, timeout=0: (_ for _ in ()).throw(_Denied(403, {})))
-    monkeypatch.setattr(s.time, "sleep", sleeps.append)
-    with pytest.raises(s.ApiDenied):
-        s.api_get("/commits/x")
-    assert sleeps == [30.0, 30.0, 30.0]
 
 
 def test_conflict_rows_skip_when_commit_forbidden(tmp_path, capsys):

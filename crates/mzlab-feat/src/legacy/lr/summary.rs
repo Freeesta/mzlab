@@ -23,7 +23,7 @@ pub fn evidence(e: &Entry) -> (bool, &'static str) {
     if e.id == 0 {
         return (false, "");
     }
-    if !matches!(e.label, "forte" | "possibile") {
+    if !matches!(e.label, "strong" | "possible") {
         return (false, NOT_MET);
     }
     let formula = !e.formula.is_empty() && !e.unexpected;
@@ -33,7 +33,7 @@ pub fn evidence(e: &Entry) -> (bool, &'static str) {
     if formula && e.by_chance {
         return (false, BY_CHANCE);
     }
-    if formula && e.label == "forte" {
+    if formula && e.label == "strong" {
         (true, PROPOSED)
     } else {
         (false, MASS)
@@ -44,7 +44,7 @@ pub fn evidence(e: &Entry) -> (bool, &'static str) {
 /// the unexpected ions and the rows that fail the criteria. It says how expected the transformation is, not what the data prove.
 pub fn pred(e: &Entry) -> Option<u8> {
     let shown = e.id != 0 && !e.unexpected && !e.formula.is_empty();
-    (shown && matches!(e.label, "forte" | "possibile") && (1..=4).contains(&e.pred))
+    (shown && matches!(e.label, "strong" | "possible") && (1..=4).contains(&e.pred))
         .then_some(e.pred)
 }
 
@@ -124,8 +124,8 @@ struct Row<'a> {
     sim: Option<f64>,
 }
 
-fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str, status: &str) {
-    let e = r.e;
+fn row_json(o: &mut Out, d: &LrDig, r: &Row, tp_name: &str, parent_formula: &str, status: &str) {
+    let (e, p_mz) = (r.e, d.parent.mz);
     o.raw("{\"id\":")
         .int(e.id)
         .raw(",\"kind\":")
@@ -201,15 +201,16 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
     if e.ms2_target {
         o.raw(",\"ms2_target\":true");
     }
+    super::points::json(o, d, e);
     o.raw("}");
 }
 
 fn rank(label: &str) -> u8 {
     match label {
-        "progenitore" => 0,
-        "forte" => 1,
-        "possibile" => 2,
-        "debole" => 3,
+        "parent" => 0,
+        "strong" => 1,
+        "possible" => 2,
+        "weak" => 3,
         _ => 4,
     }
 }
@@ -351,7 +352,7 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         .map(|e| {
             rows.iter()
                 .find(|r| std::ptr::eq(r.e, e))
-                .is_some_and(|r| e.label == "progenitore" || e.unexpected || r.max_area > 0.0)
+                .is_some_and(|r| e.label == "parent" || e.unexpected || r.max_area > 0.0)
         })
         .collect();
     let names = names::tp_names(&d.entries, &found);
@@ -364,8 +365,8 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
             .unwrap_or(0);
         row_json(
             &mut o,
+            d,
             r,
-            d.parent.mz,
             &names[at],
             &d.parent.formula,
             if r.e.id == 0 && !d.parent_ok {
@@ -383,6 +384,8 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         .raw(if d.parent_ok { "true" } else { "false" })
         .raw(",\"chance\":");
     super::chance::json(&mut o, &d.chance);
+    o.raw(",\"merged\":");
+    super::merge::json(&mut o, &d.merged, &d.lc);
     o.raw(",\"unexpected_left\":{\"over_limit\":")
         .int(d.unexpected_left.0 as i64)
         .raw(",\"isotope_or_flat\":")
@@ -411,7 +414,7 @@ pub fn live(d: &LrDig) -> String {
     let pass = d
         .entries
         .iter()
-        .filter(|e| !e.unexpected && e.id != 0 && matches!(e.label, "forte" | "possibile"));
+        .filter(|e| !e.unexpected && e.id != 0 && matches!(e.label, "strong" | "possible"));
     for (i, e) in pass.enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"kind\":\"candidate\",\"id\":")

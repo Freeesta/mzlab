@@ -264,6 +264,12 @@ fn the_documents_have_schema_first_and_a_newline() {
     assert!(out(&["schema", "error/1"]).ends_with('\n'));
 }
 
+/// The `args` or `flags` of a command of the listing: the whole listing leaves out an empty list.
+fn members<'a>(c: &'a serde_json::Value, key: &str) -> &'a Vec<serde_json::Value> {
+    static NONE: Vec<serde_json::Value> = Vec::new();
+    c[key].as_array().unwrap_or(&NONE)
+}
+
 /// The exit codes `exit_codes_note` states, from the compact listing of command `c` alone (written out again here, not taken from `exits_of`).
 fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -> Vec<u8> {
     let flags = members(c, "flags");
@@ -297,12 +303,6 @@ fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -
         v.push(6);
     }
     v
-}
-
-/// The `args` or `flags` of a command of the listing: the whole listing leaves out an empty list.
-fn members<'a>(c: &'a serde_json::Value, key: &str) -> &'a Vec<serde_json::Value> {
-    static NONE: Vec<serde_json::Value> = Vec::new();
-    c[key].as_array().unwrap_or(&NONE)
 }
 
 /// The words of a usage line outside its `[...]` groups, without the `...` tokens: what `examples_note` says an example is made of.
@@ -437,6 +437,37 @@ fn the_global_cache_flag_is_not_the_normative_one() {
         assert!(
             !e.help.contains("--cache"),
             "{}: synopsis names --cache",
+            e.name
+        );
+    }
+}
+
+/// The compact listing leaves out `stdout.format` only when it is json, or text with a `json_flag` (and `stdout` when nothing else is left); the full entry always has it.
+#[test]
+fn a_json_stdout_is_said_once_in_the_compact_listing() {
+    let doc = json(&out(&["commands", "--json"]));
+    assert!(doc["stdout_note"]
+        .as_str()
+        .is_some_and(|n| n.contains("json")));
+    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        let words: Vec<&str> = e.name.split(' ').collect();
+        let mut args = vec!["commands", "--json"];
+        args.extend(&words);
+        let full = json(&out(&args));
+        let whole = &full["commands"][0]["stdout"];
+        assert!(whole["format"].is_string(), "{}", e.name);
+        let json_out = whole["format"] == "json";
+        let text_json_flag = whole["format"] == "text" && whole["json_flag"] == true;
+        assert_eq!(
+            c["stdout"].get("format").is_none(),
+            json_out || text_json_flag,
+            "{}",
+            e.name
+        );
+        assert_eq!(
+            c.get("stdout").is_none(),
+            json_out && whole.get("schema").is_none(),
+            "{}",
             e.name
         );
     }

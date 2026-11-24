@@ -17,7 +17,7 @@ use js_sys::{Array, Function, Uint8Array};
 use mzlab_core::budget::MemBudget;
 use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::{Error, Result};
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "quant_targets"))]
 use mzlab_core::idxread::Index;
 use mzlab_core::idxread::ReadAt;
 #[cfg(feature = "proofs")]
@@ -25,7 +25,7 @@ use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2", feature = "quant_targets"))]
 mod blocks_js;
 #[cfg(feature = "finder")]
 pub mod finder;
@@ -71,6 +71,8 @@ pub mod run_tab;
 pub mod run_stat;
 #[cfg(feature = "flow_compare")]
 pub mod run_compare;
+#[cfg(feature = "quant_targets")]
+pub mod run_quant;
 
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
@@ -131,13 +133,13 @@ impl ReadAt for JsReader {
     }
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2", feature = "quant_targets"))]
 /// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
 fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<Box<dyn ReadAt>>> {
     Index::open(blocks_of(read, k, size, together), size as u64)
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2", feature = "quant_targets"))]
 /// The reader of index `k` that `open_in` opens: boxed, the one reader type of every index of this module (`lrscreen::Centroids` is boxed too).
 fn blocks_of(read: &Function, k: usize, size: f64, together: usize) -> Box<dyn ReadAt> {
     let r = JsReader {
@@ -147,7 +149,7 @@ fn blocks_of(read: &Function, k: usize, size: f64, together: usize) -> Box<dyn R
     Box::new(blocks_js::Blocks::over(r, size as u64, together))
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2", feature = "quant_targets"))]
 fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<Box<dyn ReadAt>>> {
     open_in(read, k, size, 1)
 }
@@ -334,7 +336,7 @@ pub struct Hypotheses {
 #[cfg(feature = "proofs")]
 #[wasm_bindgen]
 impl Hypotheses {
-    /// The registry `hypotheses/2` as JSON (hypotheses with sources, formula, m/z and outcome).
+    /// The registry `hypotheses/3` as JSON (hypotheses with sources, formula, m/z and outcome).
     pub fn registry_json(&self) -> String {
         self.inner.registry.to_json()
     }

@@ -78,6 +78,7 @@ fn contract_and_rows_of_python() {
         "parent_ok",
         "chance",
         "unexpected_left",
+        "merged",
     ];
     same_shape(&without(&s, &rust_only), &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
@@ -89,6 +90,12 @@ fn contract_and_rows_of_python() {
             "modification",
             "pred",
             "coelutes",
+            "table_row",
+            "points",
+            "k_points",
+            "controls",
+            "cond",
+            "by_cond",
         ];
         same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
@@ -96,14 +103,12 @@ fn contract_and_rows_of_python() {
         }
     }
     let rows = s["rows"].as_array().unwrap();
-    assert_eq!(rows[0]["label"], "progenitore");
+    assert_eq!(rows[0]["label"], "parent");
     assert_eq!(rows[0]["id"], 0);
     let found = |m: f64, rt: f64| {
         rows.iter().any(|r| {
-            matches!(
-                r["label"].as_str(),
-                Some("progenitore" | "forte" | "possibile")
-            ) && (r["mz"].as_f64().unwrap() - m).abs() <= 0.35
+            matches!(r["label"].as_str(), Some("parent" | "strong" | "possible"))
+                && (r["mz"].as_f64().unwrap() - m).abs() <= 0.35
                 && r["ref_rt"].as_f64().is_some_and(|x| (x - rt).abs() <= 0.25)
         })
     };
@@ -119,7 +124,7 @@ fn contract_and_rows_of_python() {
     );
     for r in rows
         .iter()
-        .filter(|r| matches!(r["label"].as_str(), Some("forte" | "possibile")))
+        .filter(|r| matches!(r["label"].as_str(), Some("strong" | "possible")))
     {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
@@ -172,7 +177,7 @@ fn no_level_only_prediction() {
     for r in rows {
         assert!(r["level"].is_null(), "{r}");
         let shown =
-            matches!(r["label"].as_str(), Some("forte" | "possibile")) && r["kind"] != "unexpected";
+            matches!(r["label"].as_str(), Some("strong" | "possible")) && r["kind"] != "unexpected";
         match r["pred"].as_i64() {
             Some(p) => assert!(shown && (2..=4).contains(&p), "{r}"),
             None => assert!(!shown || r["formula"] == "", "{r}"),
@@ -206,7 +211,7 @@ fn isotope_and_offset() {
         "offset {}",
         o.offset
     );
-    let strong = |e: &&lr::Entry| matches!(e.label, "forte" | "possibile");
+    let strong = |e: &&lr::Entry| matches!(e.label, "strong" | "possible");
     assert!(
         !d.entries
             .iter()
@@ -305,7 +310,15 @@ fn ms2_files_give_the_fragments_and_the_transitions() {
     assert!((frags[0]["mz"].as_f64().unwrap() - (parent.mz_x - 17.0)).abs() < 0.01);
     let t = p["transitions"].as_array().unwrap();
     assert_eq!(t.len(), 3);
-    assert!((t[0]["Q3_consigliato"].as_f64().unwrap() - (parent.mz_x - 17.0 - SHIFT)).abs() < 0.1);
+    // the detail with the MS2 and the transitions has English keys and values too
+    let mut bad = Vec::new();
+    english(&p, "detail", &mut bad);
+    assert!(
+        bad.is_empty(),
+        "Italian in the MS2 detail: {:?}",
+        kinds(bad)
+    );
+    assert!((t[0]["q3_suggested"].as_f64().unwrap() - (parent.mz_x - 17.0 - SHIFT)).abs() < 0.1);
     let other = d.entries.iter().find(|e| e.steps > 0).expect("a product");
     assert_eq!(get(other.id)["ms2"]["scans"], 0);
 }

@@ -24,8 +24,11 @@ fn trace() -> (Vec<f64>, Vec<f64>) {
     (rt, y)
 }
 
-fn write(rt: &[f64], y: &[f64]) -> std::path::PathBuf {
-    let f = std::env::temp_dir().join(format!("mzlab_peak_auto_lr_{}.csv", std::process::id()));
+fn write(rt: &[f64], y: &[f64], tag: &str) -> std::path::PathBuf {
+    let f = std::env::temp_dir().join(format!(
+        "mzlab_peak_auto_lr_{tag}_{}.csv",
+        std::process::id()
+    ));
     let body: Vec<String> = rt.iter().zip(y).map(|(a, b)| format!("{a},{b}")).collect();
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     f
@@ -34,7 +37,7 @@ fn write(rt: &[f64], y: &[f64]) -> std::path::PathBuf {
 #[test]
 fn the_output_is_the_core_json_byte_for_byte() {
     let (rt, y) = trace();
-    let f = write(&rt, &y);
+    let f = write(&rt, &y, "core");
     let p = f.to_str().unwrap();
     let o = run(args(&[p]));
     assert_eq!(o.code, 0);
@@ -48,15 +51,15 @@ fn the_output_is_the_core_json_byte_for_byte() {
     let o = run(args(&[
         p,
         "--set",
-        "lr_half=3",
+        "half=3",
         "--set",
-        "lr_valley=30",
+        "valley=0.3",
         "--set",
-        "lr_sn=4",
+        "sn=4",
         "--set",
-        "lr_min_pts=6",
+        "min_pts=6",
         "--set",
-        "lr_despike=0",
+        "despike=0",
         "--split",
         "valley",
         "--from",
@@ -98,7 +101,36 @@ fn the_output_is_the_core_json_byte_for_byte() {
 fn bad_arguments_are_refused() {
     assert_ne!(run(args(&[])).code, 0);
     assert_eq!(run(args(&["x.csv", "--split", "tangent"])).code, 2);
-    assert_ne!(run(args(&["x.csv", "--set", "lr_half=-1"])).code, 0);
+    assert_ne!(run(args(&["x.csv", "--set", "half=-1"])).code, 0);
+    assert_ne!(run(args(&["x.csv", "--set", "valley=30"])).code, 0);
     assert_ne!(run(args(&["x.csv", "--set", "hr_sn=3"])).code, 0);
     assert_eq!(run(args(&["--help"])).code, 0);
+}
+
+// the names of the output's "params" are the --set names; the old dialog names still work, log a note and keep their units (valley in %)
+#[test]
+fn old_set_names_are_aliases_with_a_note() {
+    let (rt, y) = trace();
+    let f = write(&rt, &y, "alias");
+    let p = f.to_str().unwrap();
+    let new = run(args(&[p, "--set", "sn=4", "--set", "valley=0.3"]));
+    let old = run(args(&[p, "--set", "lr_sn=4", "--set", "lr_valley=30"]));
+    assert_eq!(new.stdout, old.stdout);
+    assert!(new.stderr.is_empty());
+    assert!(
+        old.stderr.contains("lr_sn is the old name of sn"),
+        "{}",
+        old.stderr
+    );
+    assert!(
+        old.stderr.contains("lr_valley is the old name of valley"),
+        "{}",
+        old.stderr
+    );
+    let out = String::from_utf8(new.stdout).unwrap();
+    assert!(
+        out.contains("\"sn\":4,") && out.contains("\"valley\":0.3,"),
+        "{out}"
+    );
+    let _ = std::fs::remove_file(&f);
 }

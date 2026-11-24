@@ -19,6 +19,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["sample", "design", "canonical", "/nonexistent/d.json"],
     &["features", "/nonexistent/x.mzML"],
     &["table", "compare", "/no/t", "--ref", "a", "--blank", "b"],
+    &["quant", "targets", "--targets", "/no/t.csv", "/no/x.mzML"],
     &[
         "file",
         "convert",

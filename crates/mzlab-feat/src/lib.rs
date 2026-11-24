@@ -108,6 +108,7 @@ pub mod prof;
 mod prog;
 pub mod qc;
 pub mod quality;
+pub mod quant_targets;
 pub mod recipe;
 mod recipe_lr;
 pub mod regulatory;
@@ -129,6 +130,8 @@ mod slab_cuts;
 pub mod slabs;
 pub mod spill;
 pub use mzlab_core::sortc;
+/// The evidence words of a cell (detected, forced, filled, absent), shared by every output that reports a value per file.
+pub use aligned::{evidence_word, EVIDENCE};
 mod chunked;
 pub mod plausible;
 pub mod stat;

@@ -70,6 +70,11 @@ impl<R: ReadAt> Routes<R> {
         Ok((r(&m.rt, 4), m.y.iter().map(|c| r(c, 1)).collect()))
     }
 
+    /// Drops the matrix the last sweep keeps for a repeat call, so a caller sweeping chunk after chunk holds one matrix at a time.
+    pub fn forget_sweep(&mut self) {
+        self.sweep = None;
+    }
+
     /// The matrix of the sweep, smoothed by `smooth` points per column, from the memo when the last sweep asked the same.
     pub fn sweep_matrix(
         &mut self,

@@ -1,4 +1,4 @@
-//! The view of the transformation products (`tp/1`): the gates in order with their status, kinship from the signs of the proofs, the block in the `.mzfeat`
+//! The view of the transformation products (`tp/2`): the gates in order with their status, kinship from the signs of the proofs, the block in the `.mzfeat`
 //! and back, and that the controls are read (a view with no controls is an error, not a pass).
 
 use mzlab_feat::evid::rowproofs::{Signs, AGAINST, FOR, NONE};
@@ -219,12 +219,12 @@ fn the_block_survives_the_file() {
     assert_eq!(back.tp, t.tp);
     assert_eq!(
         meta.get("tp").unwrap().get("schema").and_then(|v| v.str()),
-        Some("tp/1")
+        Some("tp/2")
     );
     assert_eq!(
         meta.get("tp")
             .unwrap()
-            .get("conteggi")
+            .get("counts")
             .unwrap()
             .get("tp")
             .and_then(|v| v.f64()),
@@ -234,4 +234,20 @@ fn the_block_survives_the_file() {
     let t2 = table();
     let (b2, m2) = read_table(&write_table(&t2, &Recipe::default(), &Origin::default())).unwrap();
     assert!(b2.tp.is_empty() && m2.get("tp").is_none());
+}
+
+/// A block of the first version (`tp/1`, Italian keys) is refused with a stable key, never converted. The id is the same length, so the
+/// bytes of the file stay valid and only the schema of the block differs.
+#[test]
+fn a_block_of_the_first_version_is_refused() {
+    let mut t = table();
+    t.tp = run(&signs(), None);
+    let mut bytes = write_table(&t, &Recipe::default(), &Origin::default());
+    let at = bytes
+        .windows(b"\"schema\":\"tp/2\"".len())
+        .position(|w| w == b"\"schema\":\"tp/2\"")
+        .expect("the meta names the block");
+    bytes[at + "\"schema\":\"tp/".len()] = b'1';
+    let err = read_table(&bytes).expect_err("the old block is refused");
+    assert_eq!(err.key, "error.mzfeat.tpFormat");
 }

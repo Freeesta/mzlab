@@ -36,6 +36,7 @@ GROUPS = {
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features finder",
         f"build --target {WASM} -p mzlab-feat-wasm --features untargeted",
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features flow_compare",
+        f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features quant_targets",
         f"build --target {WASM} -p mzlab-attributio-wasm --features rev",
         f"build --target {WASM} -p mzlab-attributio-wasm --features all",
     ],

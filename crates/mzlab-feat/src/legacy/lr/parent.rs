@@ -31,7 +31,7 @@ pub(super) fn parent_entry(
     };
     evaluate(&mut p, t, lc, s.persist());
     let (parent_ok, pc) = parent_check(&p, lc, s);
-    (p.score, p.label, p.criteria) = (None, "progenitore", pc);
+    (p.score, p.label, p.criteria) = (None, "parent", pc);
     let labels: Vec<String> = lc.iter().map(|f| f.label.clone()).collect();
     if let Some(k) = peakchk::criterion(t, chk, p.row, s, &labels) {
         p.criteria.insert(1, k);
