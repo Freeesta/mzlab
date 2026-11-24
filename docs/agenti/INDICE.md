@@ -155,6 +155,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | reader modules, one per family (`crates/mzlab-lettori*`, separate `.wasm` in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, rule R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, ceilings) | `docs/agenti/readers-module.md` |
 | "aperti" module (mzML with numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/readers-open.md` |
 | Thermo `.raw`: activation, "unknown", rejected event table, damaged scans and controllers (`warn.raw.damaged`), precursors (target, selected ion, MSn chains, SPS, MSX, SRM from the event) | `docs/agenti/readers-thermo-precursors.md` |
+| recipes for whole campaigns: kinetic LR campaign (vendor files, `--name sample`, roles, `quant.targets`, `peak auto-lr` check, `tp.dig_lr` per condition, LR export; plan template `docs/recipes/`, `workflow_kinetic_tests.rs`) | `docs/agenti/recipes.md` |
 | Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli db ref-list` | `docs/agenti/reference-lists.md` |
 | release: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, single version, SBOM, gate (`gate_release.py`); Dependabot, CodeQL, security settings to turn on by hand | `docs/agenti/release.md` |
 | full reset and Files mode of the browser reset: what is left in OPFS and storage, how to measure (`tools/prepara_sito.py`, `tests_e2e/misura_reset.py`) | `docs/agenti/reset.md` |
