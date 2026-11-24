@@ -1,6 +1,6 @@
 uscita = "wasm-feat/pack"
 pacchetto = "mzlab-pack-wasm"
-chiavi = { pack = 30 }
+chiavi = { pack = 31 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 139264
