@@ -109,3 +109,27 @@ def test_a_pack_of_one_part_is_a_valid_zip(pkg, tmp_path):
     z = zipfile.ZipFile(app / "pack.part0001")
     assert z.testzip() is None
     assert {n: z.read(n) for n in z.namelist()} == files
+
+
+def test_unusable_names_and_part_sizes_are_refused_alike(pkg, tmp_path):
+    # two paths that differ only in case (one file on macOS / Windows) and a colon in a name: the same error key on the site and in the app, nothing written
+    src = tmp_path / "src"
+    src.mkdir()
+    for n in ("A.txt", "a.txt", "c:x.txt"):
+        (src / n).write_bytes(b"x")
+    for names, key in ((["A.txt", "a.txt"], "err.pack.duplicate"), (["c:x.txt"], "err.pack.path")):
+        listing = [[n, str(src / n)] for n in names]
+        site = tmp_path / f"site-{key}"
+        site.mkdir()
+        out = wasm(pkg, tmp_path, op="pack", files=listing, dir=str(site), name="pack", part_size=PART)
+        assert key in out["error"], out
+        assert not list(site.iterdir())
+        cli_out = tmp_path / f"cli-{key}"
+        r = subprocess.run(cli_argv("file", "pack", *[str(src / n) for n in names], "--out", str(cli_out), "--json"), cwd=ROOT, capture_output=True)
+        assert r.returncode == 3 and key in r.stdout.decode() + r.stderr.decode(), (key, r.returncode, r.stdout, r.stderr)
+        assert not (cli_out / "pack.pack.json").exists()
+    # a part size that is not a number used to loop for ever
+    one = [["A.txt", str(src / "A.txt")]]
+    for bad in ("NaN", 0, 1023):
+        out = wasm(pkg, tmp_path, op="pack", files=one, dir=str(tmp_path), name="pack", part_size=bad)
+        assert "err.run.input" in out["error"], (bad, out)

@@ -66,13 +66,26 @@ pub fn part_name(name: &str, i: usize) -> String {
     format!("{name}.part{:04}", i + 1)
 }
 
-/// Whether `p` is a relative path that stays inside the folder it is written under: no leading `/`, no `\`, no NUL, no `.` or `..` or empty component, no drive.
+/// Whether `p` is a relative path that stays inside the folder it is written under: no leading `/`, no `\`, no NUL, no `:` anywhere (a drive such as
+/// `C:x`, or an NTFS stream), no `.` or `..` or empty component.
 pub fn safe_path(p: &str) -> bool {
     !p.is_empty()
-        && !p.contains(['\\', '\0'])
+        && !p.contains(['\\', '\0', ':'])
         && !p.starts_with('/')
         && p.split('/').all(|c| !matches!(c, "" | "." | ".."))
-        && !p.split('/').next().is_some_and(|c| c.ends_with(':'))
+}
+
+/// Two paths that are one file on a case-insensitive file system (macOS, Windows), or the same path twice: `err.pack.duplicate` naming both.
+pub fn refuse_duplicates<'a>(paths: impl Iterator<Item = &'a str>) -> Result<()> {
+    let mut seen = std::collections::BTreeMap::new();
+    for p in paths {
+        if let Some(first) = seen.insert(p.to_lowercase(), p) {
+            return Err(Error::new("err.pack.duplicate")
+                .with("path", p)
+                .with("other", first));
+        }
+    }
+    Ok(())
 }
 
 fn plain_name(n: &str) -> bool {
@@ -209,11 +222,17 @@ pub fn pack(
     sink: &mut dyn PartSink,
     o: &Options,
 ) -> Result<Manifest> {
+    if o.part_size == 0 {
+        return Err(
+            Error::new("err.run.input").with("detail", "the part size must be at least 1 byte")
+        );
+    }
     for (name, _) in files {
         if !safe_path(name) || zipstream::check_name(name).is_err() {
             return Err(Error::new("err.pack.path").with("path", name));
         }
     }
+    refuse_duplicates(files.iter().map(|f| f.0.as_str()))?;
     let planned = plan(files, o);
     let mut parts = Parts {
         sink,
@@ -415,10 +434,7 @@ pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest> {
     {
         return Err(bad("the parts do not add up to stream_bytes"));
     }
-    let mut seen = std::collections::BTreeSet::new();
-    if !files.iter().all(|f| seen.insert(f.path.as_str())) {
-        return Err(bad("a path is listed twice"));
-    }
+    refuse_duplicates(files.iter().map(|f| f.path.as_str()))?;
     Ok(Manifest {
         name,
         part_size,

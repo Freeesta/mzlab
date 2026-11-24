@@ -168,7 +168,7 @@ fn refuse_existing(m: &Manifest, sink: &mut dyn FileSink) -> Result<()> {
     }
 }
 
-/// Writes one file from its span and keeps it only when its SHA-256 is the manifest's; a write failure drops it and is the error.
+/// Writes one file from its span and keeps it only when its SHA-256 is the manifest's; a write or read failure drops it and is the error.
 fn copy_file(span: &mut Span<'_>, sink: &mut dyn FileSink, f: &FileRec) -> Result<bool> {
     sink.begin(&f.path)?;
     let (mut sha, mut buf) = (Sha256::new(), vec![0u8; 1 << 20]);
@@ -183,7 +183,11 @@ fn copy_file(span: &mut Span<'_>, sink: &mut dyn FileSink, f: &FileRec) -> Resul
                     return Err(e);
                 }
             }
-            Err(_) => break false,
+            // a part that cannot be read now is an input problem, not a file that does not match
+            Err(e) => {
+                sink.end(false)?;
+                return Err(input(e));
+            }
         }
     } && hex(&sha.finalize()) == f.sha256;
     sink.end(ok)?;

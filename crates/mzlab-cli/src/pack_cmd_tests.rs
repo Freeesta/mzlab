@@ -345,3 +345,73 @@ fn usage_and_input_errors_have_their_own_codes() {
         Some("error/1")
     );
 }
+
+#[test]
+fn a_failed_force_repack_leaves_the_older_pack_as_it_was() {
+    let (src, out) = (tmp("keep-src"), tmp("keep-out"));
+    campaign(&src);
+    let args = |extra: &[&str]| -> Vec<String> {
+        [&["--out", &s(&out), "--part-size", "4096"], extra]
+            .concat()
+            .iter()
+            .map(|x| x.to_string())
+            .collect()
+    };
+    assert_eq!(
+        crate::pack_cmd::pack_run(args(&[&s(&src)])).code,
+        0,
+        "first pack"
+    );
+    let snapshot = |d: &Path| -> Vec<(String, Vec<u8>)> {
+        let mut v: Vec<_> = std::fs::read_dir(d)
+            .unwrap()
+            .map(|e| e.unwrap())
+            .map(|e| {
+                (
+                    e.file_name().to_string_lossy().into_owned(),
+                    std::fs::read(e.path()).unwrap(),
+                )
+            })
+            .collect();
+        v.sort();
+        v
+    };
+    let before = snapshot(&out);
+    // the input vanishes after it was listed: the pack stops half way through writing
+    let job = crate::pack_cmd::job_of(args(&[&s(&src), "--force"]))
+        .ok()
+        .unwrap();
+    let items = vec![crate::pack_cmd::Item {
+        rel: "gone".into(),
+        path: src.join("gone"),
+        size: 10,
+    }];
+    let list = vec![("gone".to_string(), 10)];
+    let o = mzlab_core::pack::Options {
+        name: "pack".into(),
+        part_size: 4096,
+        zip64_at: mzlab_core::zipstream::ZIP64_AT,
+    };
+    assert_eq!(crate::pack_cmd::write_pack(job, &items, &list, &o).code, 4);
+    assert_eq!(
+        snapshot(&out),
+        before,
+        "old parts and manifest are untouched"
+    );
+}
+
+#[test]
+fn unusable_input_names_exit_three_not_a_silent_overwrite() {
+    for (tag, names) in [("case", vec!["A.txt", "a.txt"]), ("colon", vec!["c:x.txt"])] {
+        let (src, out) = (
+            tmp(&format!("bad-src-{tag}")),
+            tmp(&format!("bad-out-{tag}")),
+        );
+        for n in &names {
+            std::fs::write(src.join(n), b"x").unwrap();
+        }
+        let r = cli(&["file", "pack", &s(&src), "--out", &s(&out)]);
+        assert_eq!(r.code, 3, "{tag}: {}", r.stderr);
+        assert!(!out.join("pack.pack.json").exists(), "{tag}");
+    }
+}

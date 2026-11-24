@@ -22,7 +22,7 @@ usage: mzlab-cli file pack FILE_OR_DIR... --out DIR [--part-size SIZE] [--name N
   --name NAME  default pack
   --dry-run    list the files and the planned parts (sizes only, no hash), write nothing
 the same input gives the same bytes; one part is a ZIP with the files at their paths (7z, unzip). Every choice is logged on the standard error.
-exit: 0 done; 2 usage; 4 an input is missing; 6 an output exists (no --force) or cannot be written; 8 a file changed size while read (still being written)";
+exit: 0 done; 2 usage; 3 an unusable path (not plain, or two that differ only in case); 4 an input is missing; 6 an output exists (no --force) or cannot be written; 8 a file changed size while read (still being written)";
 
 pub const UNPACK_HELP: &str = "mzlab-cli file unpack: rebuild the files of a pack from its parts, checking every part and every file.
 
@@ -69,10 +69,10 @@ fn size_of(text: &str) -> Result<u64, String> {
 }
 
 /// One file to pack: its name in the pack, its path and its size now.
-struct Item {
-    rel: String,
-    path: PathBuf,
-    size: u64,
+pub(crate) struct Item {
+    pub(crate) rel: String,
+    pub(crate) path: PathBuf,
+    pub(crate) size: u64,
 }
 
 fn name_of(p: &Path) -> Result<String, String> {
@@ -170,12 +170,13 @@ pub(crate) fn out_err(e: impl ToString) -> Error {
     Error::new("err.run.output").with("detail", e)
 }
 
-/// Parts written into a folder, one file each; the files this run created are known so a failed run can remove them.
+/// Parts written into a folder, one file each, under temporary names: a failed run removes them and leaves any older pack as it was, a good one renames them.
 struct DirSink {
     dir: PathBuf,
     name: String,
     cur: Option<(usize, BufWriter<File>)>,
-    made: Vec<PathBuf>,
+    /// (temporary, final) path of every part started.
+    made: Vec<(PathBuf, PathBuf)>,
 }
 
 impl DirSink {
@@ -187,13 +188,37 @@ impl DirSink {
     }
 }
 
+impl DirSink {
+    /// Drops the temporary parts, leaving every older output as it was.
+    fn discard(&mut self) {
+        drop(self.cur.take());
+        for (tmp, _) in &self.made {
+            let _ = fs::remove_file(tmp);
+        }
+    }
+
+    /// Moves the parts into place, then the manifest last, so a manifest never points at parts that are not there.
+    fn commit(&self, manifest: &Path, text: &str) -> Result<(), Error> {
+        for (tmp, to) in &self.made {
+            fs::rename(tmp, to).map_err(|e| out_err(format!("{}: {e}", to.display())))?;
+        }
+        let tmp = self.dir.join(format!(".{}.pack.json.tmp", self.name));
+        fs::write(&tmp, text)
+            .and_then(|()| fs::rename(&tmp, manifest))
+            .map_err(|e| out_err(format!("{}: {e}", manifest.display())))
+    }
+}
+
 impl PartSink for DirSink {
     fn put(&mut self, part: usize, bytes: &[u8]) -> Result<(), Error> {
         if self.cur.as_ref().is_none_or(|(i, _)| *i != part) {
             self.finish()?;
-            let path = self.dir.join(pack::part_name(&self.name, part));
+            let to = self.dir.join(pack::part_name(&self.name, part));
+            let path = self
+                .dir
+                .join(format!(".{}.mzpack-tmp", pack::part_name(&self.name, part)));
             let f = File::create(&path).map_err(|e| out_err(format!("{}: {e}", path.display())))?;
-            self.made.push(path);
+            self.made.push((path, to));
             self.cur = Some((part, BufWriter::with_capacity(1 << 20, f)));
         }
         match self.cur.as_mut() {
@@ -232,7 +257,7 @@ fn old_outputs(dir: &Path, name: &str) -> Vec<PathBuf> {
 }
 
 /// What the command line asked for, and the log of the choices made while reading it.
-struct Job {
+pub(crate) struct Job {
     json: bool,
     dry: bool,
     force: bool,
@@ -244,7 +269,7 @@ struct Job {
 }
 
 /// The arguments of `file pack`; `Err` is the answer to give at once (help or a usage error).
-fn job_of(args: Vec<String>) -> Result<Job, Outcome> {
+pub(crate) fn job_of(args: Vec<String>) -> Result<Job, Outcome> {
     let json = flags(&args);
     let p = match extract::parse(
         args,
@@ -320,8 +345,13 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
     write_pack(job, &items, &list, &o)
 }
 
-/// Writes the parts and the manifest; a failed run removes the parts it had written.
-fn write_pack(mut job: Job, items: &[Item], list: &[(String, u64)], o: &Options) -> Outcome {
+/// Writes the parts and the manifest; a failed run removes what it had written and leaves an older pack of the same name untouched.
+pub(crate) fn write_pack(
+    mut job: Job,
+    items: &[Item],
+    list: &[(String, u64)],
+    o: &Options,
+) -> Outcome {
     let (out, name) = (job.out.clone(), job.name.clone());
     let old = old_outputs(&out, &name);
     if !old.is_empty() && !job.force {
@@ -356,27 +386,22 @@ fn write_pack(mut job: Job, items: &[Item], list: &[(String, u64)], o: &Options)
     let m = match result {
         Ok(m) => m,
         Err(e) => {
-            for f in &sink.made {
-                let _ = fs::remove_file(f);
-            }
+            sink.discard();
             job.log.push_str(&format!(
-                "removed the {} part(s) this run had written\n",
+                "removed the {} temporary part(s) this run had written; existing outputs are untouched\n",
                 sink.made.len()
             ));
             return with_log(Outcome::fail_error(&e), job.log);
         }
     };
     let manifest = out.join(format!("{name}.pack.json"));
-    let tmp = out.join(format!(".{name}.pack.json.tmp"));
-    if let Err(e) =
-        fs::write(&tmp, pack::manifest_json(&m)).and_then(|()| fs::rename(&tmp, &manifest))
-    {
-        let e = out_err(format!("{}: {e}", manifest.display()));
+    if let Err(e) = sink.commit(&manifest, &pack::manifest_json(&m)) {
+        sink.discard();
         return with_log(Outcome::fail_error(&e), job.log);
     }
     for stale in old
         .iter()
-        .filter(|f| !sink.made.contains(f) && **f != manifest)
+        .filter(|f| !sink.made.iter().any(|m| &m.1 == *f) && **f != manifest)
     {
         if fs::remove_file(stale).is_ok() {
             job.log.push_str(&format!(

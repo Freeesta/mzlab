@@ -44,7 +44,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file channels", "mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON", crate::channels_cmd::run).schema("channels/1").examples(&["mzlab-cli file channels sample.mzML"]),
     Entry::new("file pair", "mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name", crate::pair_cmd::run).exits(&[0, 1, 2]),
     Entry::new("file validate", "mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1", validate).schema("mzml-validation/1").exits(&[0, 1, 2, 4]),
-    Entry::new("file pack", "mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   parts + pack/1 manifest", pack_run).schema("pack-run/1").exits(&[0, 2, 4, 6, 8]),
+    Entry::new("file pack", "mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   parts + pack/1 manifest", pack_run).schema("pack-run/1").exits(&[0, 2, 3, 4, 6, 8]),
     Entry::new("file unpack", "mzlab-cli file unpack NAME.pack.json --out DIR [--parts DIR] [--dry-run] [--force]   rebuild; lost files listed", unpack_run).schema("unpack-run/1").exits(&[0, 1, 2, 3, 4, 6]),
     Entry::new("file check-pack", "mzlab-cli file check-pack NAME.pack.json [--parts DIR]   parts to resend, no write", verify_run).schema("verify-pack/1").exits(&[0, 1, 2, 3, 4]),
     Entry::new("file convert", "mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files to indexed mzML", crate::convert::run).schema("convert/1").exits(&[0, 1, 2, 3, 4, 5]),

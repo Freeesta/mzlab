@@ -176,7 +176,7 @@ fn list_of(text: &str) -> std::result::Result<Vec<(String, u64)>, JsValue> {
 }
 
 fn options(name: &str, part_size: f64) -> std::result::Result<Options, JsValue> {
-    if !pack::safe_path(name) || name.contains('/') || part_size < 1024.0 {
+    if !pack::safe_path(name) || name.contains('/') || part_size.is_nan() || part_size < 1024.0 {
         return Err(error_json(&Error::new("err.run.input").with(
             "detail",
             "name must be a plain file name and part_size at least 1024",

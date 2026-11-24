@@ -39,6 +39,22 @@ async function folderOf(root, path) {
   return { d, name };
 }
 
+/** Whether a relative path exists under `root`; looks folders up without creating any. @param {any} root @param {string} path */
+async function existsUnder(root, path) {
+  const parts = path.split("/"), name = /** @type {string} */ (parts.pop());
+  let d = root;
+  try { for (const p of parts) d = await d.getDirectoryHandle(p); } catch (_) { return false; }
+  return d.getFileHandle(name).then(() => true, () => d.getDirectoryHandle(name).then(() => true, () => false));
+}
+
+/** The `field` of every entry of `key` in a manifest text; anything that is not that shape gives none, so the module's own check answers with its error key. @param {string} manifest @param {string} key @param {string} field */
+function listed(manifest, key, field) {
+  try {
+    const v = JSON.parse(manifest)?.[key];
+    return Array.isArray(v) ? v.map(x => String(x?.[field])) : [];
+  } catch (_) { return []; }
+}
+
 /** The parts of a manifest as sync read handles (null = not there). @param {any} dir @param {string[]} names */
 async function openParts(dir, names) {
   if (names.length > MAX_OPEN) throw refuse(`${names.length} parts: use a part size that gives at most ${MAX_OPEN}, or the app`);
@@ -93,8 +109,7 @@ export async function packFiles({ files, dir, name = "pack", partSize = 25e6, dr
  */
 export async function verifyPack({ manifest, dir, seen }) {
   const mod = await load("pack");
-  const names = /** @type {{name: string}[]} */ (JSON.parse(manifest).parts).map(p => p.name);
-  const hs = await openParts(dir, names);
+  const hs = await openParts(dir, listed(manifest, "parts", "name"));
   try { const r = partReaders(hs); return mod.verify_pack(manifest, r.size, r.read, seen ?? null); } finally { closeAll(hs); }
 }
 
@@ -105,18 +120,15 @@ export async function verifyPack({ manifest, dir, seen }) {
  */
 export async function unpackPack({ manifest, dir, out, force = false, dryRun = false, seen }) {
   const mod = await load("pack");
-  const doc = JSON.parse(manifest);
-  const names = /** @type {{name: string}[]} */ (doc.parts).map(p => p.name), paths = /** @type {{path: string}[]} */ (doc.files).map(f => f.path);
+  const names = listed(manifest, "parts", "name"), paths = listed(manifest, "files", "path");
   if (paths.length > MAX_OPEN) throw refuse(`${paths.length} files: at most ${MAX_OPEN} in one call, use the app`);
   /** @type {Set<string>} */ const taken = new Set();
-  if (!force) for (const p of paths) {
-    const { d, name } = await folderOf(out, p).catch(() => ({ d: null, name: "" }));
-    if (d && await d.getFileHandle(name).then(() => true, () => false)) taken.add(p);
-  }
+  if (!force) for (const p of paths) if (await existsUnder(out, p)) taken.add(p);
   const hs = await openParts(dir, names);
   /** @type {Map<string, {fh: any, ah: any, d: any, name: string, tmp: string, keep?: boolean}>} */ const ready = new Map();
   try {
-    if (!dryRun) for (const p of paths) {
+    // nothing is created for a dry run or when the module is about to refuse because files exist: the command line writes nothing then either
+    if (!dryRun && !taken.size) for (const p of paths) {
       const { d, name } = await folderOf(out, p), tmp = `.${name}.mzpack-tmp`;
       const fh = await d.getFileHandle(tmp, { create: true }), ah = await fh.createSyncAccessHandle();
       ah.truncate(0);

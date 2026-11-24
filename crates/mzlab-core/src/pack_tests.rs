@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::io::Read;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::pack::{self, Manifest, Options, PartSink};
 use crate::pack_read::{self, FileSink, FileState, PartSource, PartState};
 
@@ -234,7 +234,19 @@ fn a_dry_run_writes_nothing() {
 #[test]
 fn a_path_that_leaves_the_folder_is_refused_in_the_manifest_and_when_packing() {
     let (m, _) = make(4096, zipstream_at());
-    for evil in ["../x", "/abs", "a/../../x", "a\\b", "C:/x", "a//b", "./a"] {
+    for evil in [
+        "../x",
+        "/abs",
+        "a/../../x",
+        "a\\b",
+        "C:/x",
+        "a//b",
+        "./a",
+        "C:x",
+        "C:x/y",
+        "D:evil.exe",
+        "a/b:stream",
+    ] {
         let text = pack::manifest_json(&m).replace("\"z\"", &format!("{evil:?}"));
         assert_eq!(
             pack::parse_manifest(text.as_bytes()).err().unwrap().key,
@@ -309,4 +321,65 @@ fn an_entry_over_the_zip64_limit_round_trips_too() {
     )
     .unwrap();
     assert_eq!(out.done.len(), 5);
+}
+
+#[test]
+fn paths_that_are_one_file_on_a_case_insensitive_disk_are_refused() {
+    let (m, _) = make(4096, zipstream_at());
+    let mut sink = Mem::default();
+    let mut open = |_: usize| -> Result<Box<dyn Read>> { Ok(Box::new(std::io::empty())) };
+    let two = [("Sample.raw".to_string(), 0), ("sample.raw".to_string(), 0)];
+    let e = pack::pack(&two, &mut open, &mut sink, &opts(1024, zipstream_at()))
+        .err()
+        .unwrap();
+    assert_eq!(e.key, "err.pack.duplicate");
+    let text = pack::manifest_json(&m).replace("\"z\"", "\"A/BIG.bin\"");
+    assert_eq!(
+        pack::parse_manifest(text.as_bytes()).err().unwrap().key,
+        "err.pack.duplicate"
+    );
+}
+
+#[test]
+fn a_part_size_of_zero_is_refused_instead_of_looping() {
+    let mut sink = Mem::default();
+    let mut open = |_: usize| -> Result<Box<dyn Read>> { Ok(Box::new(std::io::empty())) };
+    let e = pack::pack(
+        &[("f".into(), 0)],
+        &mut open,
+        &mut sink,
+        &opts(0, zipstream_at()),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(e.key, "err.run.input");
+}
+
+/// Parts that are the right size but cannot be opened for reading once `shut` is set.
+struct Locked(Parts, std::rc::Rc<std::cell::Cell<bool>>);
+impl PartSource for Locked {
+    fn size(&mut self, i: usize) -> Result<Option<u64>> {
+        self.0.size(i)
+    }
+    fn open(&mut self, i: usize, from: u64) -> Result<Box<dyn Read>> {
+        if i == 0 && self.1.get() {
+            return Err(Error::new("err.run.input").with("detail", "locked"));
+        }
+        self.0.open(i, from)
+    }
+}
+
+#[test]
+fn a_part_that_cannot_be_read_is_an_input_error_not_a_mismatch() {
+    let (m, parts) = make(4096, zipstream_at());
+    let shut = std::rc::Rc::new(std::cell::Cell::new(false));
+    let mut src = Locked(Parts(parts.into_iter().map(Some).collect()), shut.clone());
+    let mut out = Out::default();
+    // every part is verified first; the lock closes once part 0 has been, before the files are copied
+    let r = pack_read::unpack(&m, &mut src, &mut out, false, true, &mut |i, _| {
+        if i == 0 {
+            shut.set(true);
+        }
+    });
+    assert_eq!(r.err().unwrap().key, "err.run.input");
 }

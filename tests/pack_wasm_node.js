@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const mod = require(path.join(process.argv[2], "mzlab_pack_wasm.js"));
 const job = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+if (job.part_size === "NaN") job.part_size = NaN;   // JSON cannot carry it
 const readAt = (fd, off, len) => { const b = Buffer.alloc(len); const n = fs.readSync(fd, b, 0, len, off); return new Uint8Array(b.subarray(0, n)); };
 const out = {};
 try {

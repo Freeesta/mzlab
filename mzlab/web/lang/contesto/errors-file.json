@@ -66,6 +66,7 @@
   "err.file.zlib": "Engine error message; {detail} = technical detail.",
   "err.pack.manifest": "{detail} = what is wrong with the pack manifest (not JSON, wrong schema, inconsistent offsets, bad hash).",
   "err.pack.path": "{path} = the path of the manifest or of the input that is not a plain relative name.",
+  "err.pack.duplicate": "{path} = the second of two input or manifest paths that differ only in letter case (or are equal); {other} = the first.",
   "err.pack.exists": "{path} = the first existing file or part; {count} = how many already exist.",
   "err.pack.growing": "{path} = the input whose size changed while it was read."
 }
