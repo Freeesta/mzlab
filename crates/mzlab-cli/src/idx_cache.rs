@@ -168,6 +168,33 @@ fn is_sound(entry: &Path) -> bool {
         && Head::read(&mut f, size).is_ok()
 }
 
+/// The entry name of the dataset of SHA-256 `sha` and sample `label`: file, sample, index format and program version.
+fn key_of(sha: &str, label: &str) -> String {
+    format!(
+        "{sha}-{}-f{}-e{}.mzidx",
+        &sha256_hex(label.as_bytes())[..12],
+        mzlab_core::idx_newer::VERSION_MAX,
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
+/// What the cache of `dir` holds for (`path`, `label`), building and writing nothing: `reused` (a sound entry the next call reuses), `stale`
+/// (an entry that would be rebuilt) or `missing`; with the entry's name and the SHA-256 of the file.
+pub(crate) fn peek(dir: &Path, path: &Path, label: &str) -> Result<(&'static str, String, String)> {
+    std::fs::metadata(path).map_err(|e| {
+        Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
+    })?;
+    let sha = sha_of(path)?;
+    let key = key_of(&sha, label);
+    let entry = dir.join(&key);
+    let status = match (entry.exists(), entry.exists() && is_sound(&entry)) {
+        (false, _) => "missing",
+        (true, true) => "reused",
+        (true, false) => "stale",
+    };
+    Ok((status, key, sha))
+}
+
 /// Puts the index of (`path`, `label`) at `idx`: the entry of `dir` when there is a sound one, else what `build` writes there, which is then kept.
 /// With `strict` a cache that cannot be read or written is an error (exit 6); without it the index is built and kept nowhere, and stderr says so.
 pub(crate) fn make(
@@ -204,12 +231,7 @@ pub(crate) fn make(
             });
         }
     };
-    let key = format!(
-        "{sha}-{}-f{}-e{}.mzidx",
-        &sha256_hex(label.as_bytes())[..12],
-        mzlab_core::idx_newer::VERSION_MAX,
-        env!("CARGO_PKG_VERSION")
-    );
+    let key = key_of(&sha, label);
     let entry = dir.join(&key);
     if entry.exists() {
         if is_sound(&entry) {

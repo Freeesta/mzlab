@@ -136,6 +136,7 @@ fn plan() -> Vec<Value> {
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 1.0}),
     ];
     steps.extend(route_steps::stat_steps());
+    steps.extend(route_steps::raw_steps());
     steps.extend(name_steps());
     // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`;
     // two numbers with the larger second are a range (`250.8-251.5`), a shift that leaves m/z < 1 is `err.formula.mzLow`

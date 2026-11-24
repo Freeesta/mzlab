@@ -19,7 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca, load as loadModule } from "./rust-msngrafo.js";
-import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js";
+import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js"; import { rawInfo } from "./rust-raw.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -463,7 +463,7 @@ async function handle(ev) {
         await ARCH.lease("idx", m.name + ".mzidx");
         const lr = lrSlot.get(m.name), reader = readerFor(blob, ["idx", m.name + ".mzidx"]); info = (lr !== undefined && lr !== m.slot && openGate.same(lr, blob) && engine.share_index(m.slot, lr, reader)) || engine.open_index(m.slot, blob.size, reader); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); tilePol.set(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;      // the same index already in the slot of the list: shared, not parsed again (one scan table per file)
       }
-      case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
+      case "route": info = m.path === "/api/rawinfo" ? await rawInfo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }) : engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index; api/rawinfo: the lazy module `raw`
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
       case "mzmlroute": case "specbg": case "scanbin": return scanOp(m);                            // api/spectra, scan, scanavg, scanbin, spectrum with a background: see scanOp
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML

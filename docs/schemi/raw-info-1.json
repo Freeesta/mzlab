@@ -1,0 +1,553 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-info/1",
+  "title": "raw-info/1: what kind of data a file holds, `mzlab-cli raw info`",
+  "description": "Per file, from its index: polarity, RT range, scan counts per MS level, scan types, mass range, the m/z grid and the ion quantum of a probe of the lowest MS level, the declared spectrum type checked against the data, the mass offset on request (--offset-ion). The sample members are those of the engine route /api/rawinfo the site answers, byte for byte. A file that cannot be read has `error` (an error/1) and exit 1, the document stays on stdout. stdout is the same with and without --cache. Code: crates/mzlab-core/src/rawinfo.rs, crates/mzlab-cli/src/raw_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "files",
+    "warnings",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-info/1"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "container",
+              "sha256",
+              "size_bytes",
+              "samples"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "container": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "polarity",
+                    "rt",
+                    "n_scans",
+                    "ms_levels",
+                    "n_chromatograms",
+                    "scan_types",
+                    "mass_range",
+                    "probe",
+                    "grid",
+                    "ion_quantum",
+                    "mass_offset",
+                    "spectrum_type"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "polarity": {
+                      "type": "array",
+                      "items": {
+                        "enum": [
+                          "+",
+                          "-",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "rt": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "n_scans": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "ms_levels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "level",
+                          "n_scans"
+                        ],
+                        "properties": {
+                          "level": {
+                            "type": "integer"
+                          },
+                          "n_scans": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "n_chromatograms": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "scan_types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "channel",
+                          "code",
+                          "ms_level",
+                          "polarity",
+                          "n_scans",
+                          "rt_min",
+                          "rt_max"
+                        ],
+                        "properties": {
+                          "channel": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "ms_level": {
+                            "type": "integer"
+                          },
+                          "polarity": {
+                            "enum": [
+                              "+",
+                              "-",
+                              "both"
+                            ]
+                          },
+                          "n_scans": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "rt_min": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "rt_max": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "mass_range": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "probe": {
+                      "type": "object",
+                      "required": [
+                        "ms_level",
+                        "asked",
+                        "scans"
+                      ],
+                      "properties": {
+                        "ms_level": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "asked": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "scans": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "grid": {
+                      "type": "object",
+                      "required": [
+                        "step_da",
+                        "phase_da",
+                        "kind",
+                        "support",
+                        "n_spacings"
+                      ],
+                      "properties": {
+                        "step_da": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "phase_da": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "nominal",
+                            "stepped",
+                            "continuous",
+                            "unknown"
+                          ]
+                        },
+                        "support": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "n_spacings": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "ion_quantum": {
+                      "type": "object",
+                      "required": [
+                        "cps",
+                        "candidate",
+                        "support",
+                        "n_positive",
+                        "median_ions",
+                        "method",
+                        "status"
+                      ],
+                      "properties": {
+                        "cps": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "candidate": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "support": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "n_positive": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "median_ions": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "method": {
+                          "const": "min_positive_or_step"
+                        },
+                        "status": {
+                          "enum": [
+                            "ok",
+                            "continuous",
+                            "none"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "mass_offset": {
+                      "type": "object",
+                      "required": [
+                        "status"
+                      ],
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "not_measured",
+                            "measured"
+                          ]
+                        },
+                        "how": {
+                          "type": "string"
+                        },
+                        "da": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "evidence": {
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "spectrum_type": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "data",
+                        "agree",
+                        "runs_share",
+                        "fine_share",
+                        "profile_scans",
+                        "level_scans"
+                      ],
+                      "properties": {
+                        "label": {
+                          "enum": [
+                            "profile",
+                            "centroid",
+                            "mixed",
+                            "unknown"
+                          ]
+                        },
+                        "data": {
+                          "enum": [
+                            "profile",
+                            "centroid",
+                            "mixed",
+                            "unknown"
+                          ]
+                        },
+                        "agree": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "runs_share": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "fine_share": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "profile_scans": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "level_scans": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "error"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "error": {
+                "type": "object",
+                "description": "an error/1 document",
+                "properties": {
+                  "schema": {
+                    "const": "error/1"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "program",
+        "version",
+        "commit",
+        "engine",
+        "command",
+        "files",
+        "params",
+        "choices",
+        "cite"
+      ],
+      "properties": {
+        "program": {
+          "const": "mzLab"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "index_format",
+            "quantum"
+          ],
+          "properties": {
+            "index_format": {
+              "type": "integer"
+            },
+            "quantum": {
+              "const": "ionstat.quantum"
+            }
+          },
+          "additionalProperties": false
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "sha256",
+              "size",
+              "sample"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "value",
+              "why"
+            ],
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "value": {},
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cite": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

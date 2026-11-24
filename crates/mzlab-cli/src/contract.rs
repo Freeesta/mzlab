@@ -40,6 +40,8 @@ pub(crate) const VERDICT: &[&str] = &[
     "file verify",
     "file unpack",
     "file check-pack",
+    "raw info",
+    "raw cache",
     "sample list",
     "db ref-list",
     "llm eval",

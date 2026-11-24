@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-plan/1",
+  "title": "raw-plan/1: what `mzlab-cli raw info --dry-run` would read",
+  "description": "The query with its defaults resolved and each file with its size and cache status (none without a cache, else missing, reused or stale); no peak is read. Code: crates/mzlab-cli/src/raw_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "command",
+    "query",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-plan/1"
+    },
+    "command": {
+      "const": "raw info"
+    },
+    "query": {
+      "type": "object",
+      "required": [
+        "probe",
+        "offset_ion",
+        "sample"
+      ],
+      "properties": {
+        "probe": {
+          "type": "integer"
+        },
+        "offset_ion": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "mz",
+                "rt"
+              ],
+              "properties": {
+                "mz": {
+                  "type": "number"
+                },
+                "rt": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "sample": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "size_bytes",
+          "cache"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "cache": {
+            "enum": [
+              "none",
+              "missing",
+              "reused",
+              "stale"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

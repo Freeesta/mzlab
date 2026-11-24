@@ -48,6 +48,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file list", "inventory folder directory what is there", &["file inventory", "file info", "sample list"]),
     r("file inventory", "inventory samples checksum", &["file list", "sample list"]),
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list"]),
+    r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache"]),
+    r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
     r("file channels", "sim srm mrm channel list transitions", &["trace chrom", "peak table"]),
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
         .ex("mzlab-cli file convert run.wiff --out mzml/ --json"),

@@ -36,6 +36,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
+       mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
+       mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -151,6 +153,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
+       mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
+       mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -266,6 +270,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
+       mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
+       mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
