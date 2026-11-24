@@ -83,7 +83,8 @@ pub fn table_of(t: &Aligned, v: &View) -> Aligned {
         for k in 0..nf {
             let c = t.cell(r, k);
             out.area.push(v.area_at(t, r, k).unwrap_or(t.area[c]));
-            out.height.push(t.height[c]);
+            out.height
+                .push(v.height_at(t, r, k).map_or(t.height[c], |h| h as f32));
             out.apex_rt.push(t.apex_rt[c]);
             out.width.push(t.width[c]);
             out.state.push(t.state[c]);

@@ -29,6 +29,8 @@ pub struct View {
     pub fallback: Option<Vec<bool>>,
     /// Divisor offset of the replicate SD in the QC document: 1 (sample SD, n - 1, the default) or 0 (population SD, the old behaviour).
     pub cv_ddof: usize,
+    /// The `blank` object of the counts: the evidence of every row the first blank rule with options dropped; `None` without such a rule.
+    pub blank_evidence: Option<String>,
 }
 
 /// The view of `t` under a method and a list of rules.
@@ -46,10 +48,46 @@ pub fn build_with(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rul
     let extra = filters::Extra { labels: Some(&labels), istd_row };
     let why = filters::apply_extra(t, samples, rules, Some(&factors), &extra)?;
     let rows = (0..why.len() as u32).filter(|&r| why[r as usize] == 0).collect();
-    let is_blank: Vec<bool> = samples.iter().map(|s| s.kind == "blank").collect();
-    let sub = filters_blank::subtraction(t, &factors, rules, &is_blank)?;
+    let sub = filters_blank::subtraction(t, &factors, rules, (samples, &labels))?;
     let fallback = filters::blank_fallback(samples, rules, &labels);
-    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback, cv_ddof: 1 })
+    let blank_evidence = blank_evidence(t, samples, rules, &factors, &why, &labels)?;
+    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback, cv_ddof: 1, blank_evidence })
+}
+
+/// The evidence of the rows the first `BlankWith` rule dropped: per row its id, the deciding value, the blank level of its group and the fold (`null` when
+/// no blank level above 0 exists), so the user sees why every row went. `None` when no rule has blank options.
+fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f64], why: &[u8], labels: &Labels) -> Result<Option<String>> {
+    let Some((idx, fold, o)) = rules.iter().enumerate().find_map(|(i, r)| match r {
+        Rule::BlankWith(f, o) => Some((i, *f, *o)),
+        _ => None,
+    }) else {
+        return Ok(None);
+    };
+    let (blank, sample) = crate::filters_nts::blank_and_samples(samples);
+    let (groups, _) = filters_blank::blank_groups(o.matching, labels, &sample, &blank, t.n_files);
+    let mut j = Out::default();
+    j.raw("{\"quantity\":").str(match o.quantity {
+        filters_blank::Quantity::Area => "area",
+        filters_blank::Quantity::Height => "height",
+        filters_blank::Quantity::NormArea => "norm_area",
+    });
+    j.raw(",\"fold\":").num(fold.max(1.0)).raw(",\"groups\":").int(groups.len() as i64).raw(",\"dropped\":[");
+    let mut first = true;
+    for (row, &w) in why.iter().enumerate() {
+        if w as usize != idx + 1 {
+            continue;
+        }
+        j.raw(if first { "" } else { "," });
+        first = false;
+        j.raw("[").int(i64::from(t.id(row)));
+        match filters_blank::evidence(t, Some(factors), &o, row, &groups)? {
+            Some((x, level, f)) => j.raw(",").num(x).raw(",").num(level).raw(",").num(f),
+            None => j.raw(",null,0,null"),
+        };
+        j.raw("]");
+    }
+    j.raw("]}");
+    Ok(Some(j.0))
 }
 
 impl View {
@@ -71,6 +109,14 @@ impl View {
         match &self.sub {
             Some(s) => s.cell(t, &self.factors, row, file),
             None => norm::normalised(t, &self.factors, row, file),
+        }
+    }
+
+    /// Height of row `row` of the table in `file`: the measured one, or with the height subtraction the height minus the blank.
+    pub fn height_at(&self, t: &Aligned, row: usize, file: usize) -> Option<f64> {
+        match &self.sub {
+            Some(s) => s.height_cell(t, row, file),
+            None => crate::norm::measured(t, row, file).map(|_| f64::from(t.height[row * t.n_files + file])),
         }
     }
 
@@ -106,6 +152,9 @@ impl View {
                 j.raw(if i > 0 { "," } else { "" }).raw(if b { "true" } else { "false" });
             }
             j.raw("]");
+        }
+        if let Some(b) = &self.blank_evidence {
+            j.raw(",\"blank\":").raw(b);
         }
         j.raw("}");
         j.0

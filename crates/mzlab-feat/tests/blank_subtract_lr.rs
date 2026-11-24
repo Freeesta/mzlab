@@ -1,0 +1,185 @@
+//! AU-7: the blank subtraction at unit mass: on heights, and with the blanks matched by batch or matrix; every cell is height (or area) minus the fold
+//! times the blank of its own group, not below 0, and the counts say why every row was dropped.
+
+use mzlab_feat::filters::Rule;
+use mzlab_feat::filters_blank::{BlankOpts, Labels, Matching, Quantity};
+use mzlab_feat::norm::Method;
+use mzlab_feat::samples::{propose, Sample};
+use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use mzlab_feat::view;
+
+/// Files: blank A, sample A1, sample A2, blank B, sample B1, dark. Batches A, A, A, B, B, A.
+const KINDS: [&str; 6] = ["blank", "sample", "sample", "blank", "sample", "dark"];
+const BATCH: [&str; 6] = ["A", "A", "A", "B", "B", "A"];
+
+/// `cells[row][file]` = (area, height).
+fn table(cells: &[[(f64, f32); 6]]) -> (Aligned, Vec<Sample>) {
+    let names: Vec<(String, String)> = (0..6)
+        .map(|k| (format!("f{k}.mzML"), "00".repeat(32)))
+        .collect();
+    let mut s = propose(&names);
+    for (x, k) in s.iter_mut().zip(KINDS) {
+        x.kind = k.into();
+    }
+    let mut t = Aligned::with_capacity(6, cells.len());
+    for (row, r) in cells.iter().enumerate() {
+        t.mz.push(100.0 + row as f64);
+        t.rt.push(5.0);
+        for &(a, h) in r {
+            t.area.push(a);
+            t.height.push(h);
+            t.apex_rt.push(5.0);
+            t.width.push(0.1);
+            t.state
+                .push(if a > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
+        }
+    }
+    (t, s)
+}
+
+fn labels() -> Labels {
+    Labels {
+        batch: BATCH.iter().map(|x| x.to_string()).collect(),
+        ..Labels::default()
+    }
+}
+
+fn rule(q: Quantity, m: Matching) -> Rule {
+    Rule::BlankWith(
+        2.0,
+        BlankOpts {
+            quantity: q,
+            matching: m,
+            subtract: true,
+            ..BlankOpts::default()
+        },
+    )
+}
+
+const ROW0: [(f64, f32); 6] = [
+    (10.0, 100.0),
+    (500.0, 900.0),
+    (400.0, 700.0),
+    (30.0, 300.0),
+    (600.0, 1000.0),
+    (50.0, 50.0),
+];
+
+#[test]
+fn heights_are_subtracted_by_batch_and_floored_at_zero() {
+    let (t, s) = table(&[ROW0]);
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        labels(),
+    )
+    .unwrap();
+    assert_eq!(v.rows, vec![0]);
+    // batch A blank height 100, batch B blank height 300, fold 2: cut 200 and 600
+    assert_eq!(v.height_at(&t, 0, 1), Some(700.0));
+    assert_eq!(v.height_at(&t, 0, 2), Some(500.0));
+    assert_eq!(v.height_at(&t, 0, 4), Some(400.0));
+    // the dark file takes all blanks (mean 200, cut 400): 50 - 400 -> 0
+    assert_eq!(v.height_at(&t, 0, 5), Some(0.0));
+    // the blanks stay; the areas are not touched by a height subtraction
+    assert_eq!(v.height_at(&t, 0, 0), Some(100.0));
+    assert_eq!(v.area_at(&t, 0, 1), Some(500.0));
+}
+
+#[test]
+fn with_all_blanks_one_level_serves_every_sample() {
+    let (t, s) = table(&[ROW0]);
+    let v = view::build(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::All)],
+    )
+    .unwrap();
+    // mean of the blank heights 200, cut 400
+    assert_eq!(v.height_at(&t, 0, 1), Some(500.0));
+    assert_eq!(v.height_at(&t, 0, 4), Some(600.0));
+}
+
+#[test]
+fn area_subtraction_by_matrix_uses_the_matrix_blank() {
+    let (t, s) = table(&[ROW0]);
+    let l = Labels {
+        matrix: BATCH.iter().map(|x| x.to_string()).collect(),
+        ..Labels::default()
+    };
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Area, Matching::Matrix)],
+        l,
+    )
+    .unwrap();
+    assert_eq!(v.area_at(&t, 0, 1), Some(480.0)); // 500 - 2 * 10
+    assert_eq!(v.area_at(&t, 0, 4), Some(540.0)); // 600 - 2 * 30
+    assert_eq!(
+        v.height_at(&t, 0, 1),
+        Some(900.0),
+        "an area subtraction leaves the heights"
+    );
+}
+
+#[test]
+fn the_counts_give_the_evidence_of_every_dropped_row() {
+    let mut weak = ROW0;
+    weak[1] = (100.0, 150.0); // best height 150 < 2 * 100 in batch A and 300 in B
+    weak[2] = (90.0, 120.0);
+    weak[4] = (100.0, 500.0);
+    let (t, s) = table(&[ROW0, weak]);
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        labels(),
+    )
+    .unwrap();
+    assert_eq!(v.rows, vec![0]);
+    let counts = v.counts_json();
+    // row id 2 (ids start at 1): the best fold is 500 / 300 = 1.666...
+    assert!(counts.contains("\"blank\":{\"quantity\":\"height\",\"fold\":2,\"groups\":2,\"dropped\":[[2,500,300,1.6666"), "{counts}");
+    assert!(counts.contains("\"discarded\":[1]"), "{counts}");
+}
+
+#[test]
+fn a_rule_without_options_adds_nothing_to_the_counts() {
+    let (t, s) = table(&[ROW0]);
+    let v = view::build(&t, &s, &Method::None, &[Rule::Blank(2.0)]).unwrap();
+    assert!(!v.counts_json().contains("\"blank\""));
+}
+
+#[test]
+fn the_csv_and_the_view_table_carry_the_subtracted_heights() {
+    use mzlab_feat::export::{csv_full, Ctx};
+    let (t, s) = table(&[ROW0]);
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        labels(),
+    )
+    .unwrap();
+    let c = Ctx {
+        table: &t,
+        samples: &s,
+        view: Some(&v),
+        table_sha256: "",
+        polarity: 1,
+    };
+    let csv = csv_full(&c, false);
+    let line = csv.lines().nth(1).unwrap();
+    // sample A1: area 500 untouched, height 900 - 2 * 100 = 700
+    assert!(line.contains(",500,700,DETECTED,"), "{line}");
+    let out = mzlab_feat::view_table::table_of(&t, &v);
+    assert_eq!(out.height[1], 700.0);
+    assert_eq!(out.area[1], 500.0);
+}

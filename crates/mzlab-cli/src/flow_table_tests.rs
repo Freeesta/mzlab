@@ -193,6 +193,43 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+#[test]
+fn the_height_subtraction_by_batch_matches_the_page_and_logs_the_evidence() {
+    let d = dir("subtract_height");
+    let t = table();
+    std::fs::write(d.join("table.mzfeat"), &t).unwrap();
+    let named: Vec<_> = files()
+        .into_iter()
+        .map(|(n, s)| (n, s, String::new()))
+        .collect();
+    let mut cs = core_samples::propose(&named);
+    for (c, b) in cs.iter_mut().zip(["B1", "B1", "B2", "B2"]) {
+        c.batch = b.into();
+    }
+    let samples = core_samples::table_to_json(&core_samples::Table {
+        samples: cs,
+        columns: Vec::new(),
+    });
+    std::fs::write(d.join("samples.json"), &samples).unwrap();
+    let params = r#"{"blank_ratio":3,"blank_quantity":"height","blank_match":"batch","blank_subtract":true}"#;
+    let got = run(&d, params).unwrap();
+    let via =
+        mzlab_ops::run::table::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
+            .unwrap();
+    assert_eq!(
+        page(&t, &samples, &via),
+        got,
+        "the step and the page give the same bytes"
+    );
+    // the evidence names the quantity and every row the rule dropped, with its fold
+    assert!(
+        got.contains("\"blank\":{\"quantity\":\"height\",\"fold\":3,\"groups\":"),
+        "{got}"
+    );
+    assert!(got.contains("\"dropped\":["), "{got}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
 fn samples_text_v1(doc: &str) -> String {
     doc.to_string()
 }

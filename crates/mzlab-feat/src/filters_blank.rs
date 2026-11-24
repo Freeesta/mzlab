@@ -71,7 +71,7 @@ impl Default for BlankOpts {
     }
 }
 
-fn value(
+pub(crate) fn value(
     t: &Aligned,
     factors: Option<&[f64]>,
     q: Quantity,
@@ -300,59 +300,7 @@ pub fn passes_groups(
     })
 }
 
-/// The blank subtraction of a view: the level of every row and the files that are blanks (left as they are).
-#[derive(Debug, Clone, PartialEq)]
-pub struct Subtraction {
-    pub opts: BlankOpts,
-    pub fold: f64,
-    pub level: Vec<f64>,
-    pub is_blank: Vec<bool>,
-}
-
-impl Subtraction {
-    /// The cell as the view shows it: the area (normalised) minus `fold` times the blank level, not below 0.
-    pub fn cell(&self, t: &Aligned, factors: &[f64], row: usize, file: usize) -> Option<f64> {
-        let a = measured(t, row, file)?;
-        let f = factors[file];
-        if self.is_blank[file] {
-            return Some(a * f);
-        }
-        let cut = self.fold * self.level[row];
-        Some(match self.opts.quantity {
-            Quantity::NormArea => (a * f - cut).max(0.0),
-            _ => (a - cut).max(0.0) * f,
-        })
-    }
-}
-
-/// The subtraction a list of rules asks for, if any (the first `BlankWith` with `subtract`); an error with `Height`.
-pub fn subtraction(
-    t: &Aligned,
-    factors: &[f64],
-    rules: &[crate::filters::Rule],
-    is_blank: &[bool],
-) -> Result<Option<Subtraction>> {
-    let Some((fold, o)) = rules.iter().find_map(|r| match r {
-        crate::filters::Rule::BlankWith(f, o) if o.subtract => Some((*f, *o)),
-        _ => None,
-    }) else {
-        return Ok(None);
-    };
-    if o.quantity == Quantity::Height || o.matching != Matching::All {
-        return Err(bad());
-    }
-    let blank: Vec<usize> = (0..t.n_files).filter(|&k| is_blank[k]).collect();
-    let mut level = Vec::with_capacity(t.len());
-    for row in 0..t.len() {
-        level.push(blank_level(t, Some(factors), &o, row, &blank)?);
-    }
-    Ok(Some(Subtraction {
-        opts: o,
-        fold: fold.max(1.0),
-        level,
-        is_blank: is_blank.to_vec(),
-    }))
-}
+pub use crate::blank_subtract::{evidence, subtraction, Subtraction};
 
 /// CV (%) of the areas of `row` over the QC files with the files without a peak counted as 0: sample standard deviation over the mean. `None`
 /// (an empty cell, never 0) with fewer than 2 QC files or a mean that is not positive.

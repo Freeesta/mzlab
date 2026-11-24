@@ -2493,12 +2493,12 @@
                   },
                   {
                     "type":"boolean",
-                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
+                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering, on the quantity chosen (areas, or heights when the quantity is height); each sample uses the blanks of its own batch or matrix with the matching below; the ratio is at least 1 when any blank option is set"
                   },
                   {
                     "enum":["all","batch","matrix"],
                     "default":"all",
-                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as blank_fallback; not with the subtraction"
+                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as blank_fallback"
                   },
                   {
                     "type":"boolean",

@@ -34,6 +34,14 @@ impl Ctx<'_> {
         }
     }
 
+    /// Height of a cell: as measured, or minus the blank with the height subtraction of the view; None where the file has no peak.
+    pub fn height(&self, row: usize, file: usize) -> Option<f64> {
+        match self.view {
+            Some(v) => v.height_at(self.table, row, file),
+            None => measured(self.table, row, file).map(|_| f64::from(self.table.height[row * self.table.n_files + file])),
+        }
+    }
+
     /// Lines `# ...` that open the formats that allow comments.
     pub fn header(&self) -> Vec<String> {
         crate::report::header_lines(self.table, self.samples, self.view, self.table_sha256)
@@ -114,7 +122,7 @@ pub fn csv_full(c: &Ctx, mzmine_states: bool) -> String {
             let cell = r * t.n_files + k;
             let a = c.area(r, k);
             row.push(a.map_or(String::new(), sig8));
-            row.push(a.map_or(String::new(), |_| sig8(f64::from(t.height[cell]))));
+            row.push(a.and_then(|_| c.height(r, k)).map_or(String::new(), sig8));
             row.push(state_word(if a.is_some() { t.state[cell] } else { CELL_ABSENT }, mzmine_states).into());
         }
         write_line(&mut out, row);
