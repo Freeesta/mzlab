@@ -1,5 +1,5 @@
 //! The file names of the mzML files made after the sample names (`mzlab-cli file convert --name sample`): a sample name cleaned to a safe file name and the
-//! clashes settled in the order of the files, each choice with the note that says it. One function for the CLI, the app and the site (JSON form: `mzml_names_route`).
+//! clashes settled in the order of the files, each choice with the note that says it. One function for the CLI, the app and the site (route `mzml_names`).
 
 use crate::error::{Error, Result};
 
@@ -98,7 +98,7 @@ pub fn mzml_names(items: &[Item]) -> Vec<Named> {
     made
 }
 
-/// The JSON form (`mzml_names_route`; `route_all` does not carry it until the rotte .wasm has room for it): `{"files":[{"who","plain","sample","id"}]}` → `{"files":[{"out","note"}]}`, the names of `mzml_names` (`note` null when there is none).
+/// The route `mzml_names` of `route_all`: `{"files":[{"who","plain","sample","id"}]}` → `{"files":[{"out","note"}]}`, the names of `mzml_names` (`note` null when there is none).
 pub fn route(input: &str) -> Result<String> {
     let v = crate::json::parse(input.as_bytes())?;
     let rows = v

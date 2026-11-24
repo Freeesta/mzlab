@@ -52,11 +52,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--strict", "also check hashes"),
     ("--rules", "use the rules"),
     ("--roles", "JSON file roles"),
-    (
-        "--name",
-        "answer name; file convert: mzML named after the file or the sample",
-    ),
-    ("--text", "a plain table instead of JSON"),
+    ("--name", "answer name; convert: file or sample"),
+    ("--text", "plain table, not JSON"),
     ("--match", "also list compatible"),
     ("--full", "every part + SHA-256"),
     ("--rt", "window in min: A or A,B"),

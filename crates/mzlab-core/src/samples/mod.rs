@@ -31,9 +31,7 @@ mod variables;
 
 pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
-pub use file_names::{
-    clean_sample_name, mzml_names, route as mzml_names_route, Item as NameItem, Named,
-};
+pub use file_names::{clean_sample_name, mzml_names, Item as NameItem, Named};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{digest, from_json, from_value, to_json};
 pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};
@@ -225,7 +223,7 @@ fn number_replicates_pairwise(cs: &mut [Sample]) {
     }
 }
 
-/// The bindings (a `samples/1` document is read by every operation that takes one; `route_all` adds `model`, `from_file`, `csv_read` and `csv_write`): `op` is
+/// The bindings (a `samples/1` document is read by every operation that takes one; `route_all` adds `model`, `from_file`, `csv_read`, `csv_write` and `mzml_names`): `op` is
 /// `propose` or `propose_explained` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `validate`, `per_tp`, `canonical` or `digest`
 /// (a `samples/1`) or `relink` (`{"samples","file":[{"path","sha256"}]}`); JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
 pub fn route(op: &str, input: &str) -> Result<String> {
@@ -299,6 +297,7 @@ pub fn route_all(op: &str, input: &str) -> Result<String> {
         "model" => apply_model(input),
         "csv_read" => csv_read(input),
         "csv_write" => csv_write(input),
+        "mzml_names" => file_names::route(input),
         "variables" => variables::route_variables(input),
         "group_name" => variables::route_group_name(input),
         // the experimental design (`design/1`) rides the same route: `design_propose`, `design_validate`, `design_canonical`, `design_digest`

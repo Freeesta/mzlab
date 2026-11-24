@@ -1,7 +1,7 @@
 //! The file names of `file convert --name sample`: a sample name as a safe file name, clashes settled in order (case aside) with a note each, and the route
 //! `mzml_names` that the site and the app call giving the same names as the function the CLI calls. Synthetic names only.
 
-use mzlab_core::samples::{clean_sample_name, mzml_names, mzml_names_route, NameItem};
+use mzlab_core::samples::{clean_sample_name, mzml_names, route_all, NameItem};
 
 fn item<'a>(
     who: &'a str,
@@ -110,7 +110,7 @@ fn the_route_gives_the_names_of_the_function() {
     ];
     let want = mzml_names(&items);
     let input = r#"{"files":[{"who":"a@1","plain":"a-1.mzML","sample":"Blank","id":1},{"who":"a@2","plain":"a-2.mzML","sample":"blank","id":2},{"who":"c","plain":"c.mzML","sample":"x y"}]}"#;
-    let got = mzml_names_route(input).unwrap();
+    let got = route_all("mzml_names", input).unwrap();
     let v = mzlab_core::json::parse(got.as_bytes()).unwrap();
     let rows = v.get("files").unwrap().arr();
     assert_eq!(rows.len(), want.len());
@@ -119,5 +119,5 @@ fn the_route_gives_the_names_of_the_function() {
         assert_eq!(r.get("note").and_then(|x| x.str()), w.note.as_deref());
     }
     // the same bytes twice
-    assert_eq!(got, mzml_names_route(input).unwrap());
+    assert_eq!(got, route_all("mzml_names", input).unwrap());
 }
