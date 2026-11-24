@@ -62,6 +62,12 @@ pub fn flow_defaults(step: &str) -> Result<String, JsValue> {
     mzlab_core::step::defaults::route(step).map_err(|e| error_json(&e))
 }
 
+/// The target list that joins the feature tables of several series, `union/1` (`mzlab_core::series_union::route`): JSON in, JSON out.
+#[wasm_bindgen]
+pub fn union_tables(body: &str) -> Result<String, JsValue> {
+    mzlab_core::series_union::route(body).map_err(|e| error_json(&e))
+}
+
 /// The short command line of a plan, or the plan with the `--set` of a line applied (`mzlab_core::flow::line_route`): JSON in, text out.
 #[wasm_bindgen]
 pub fn flow_line(body: &str) -> Result<String, JsValue> {

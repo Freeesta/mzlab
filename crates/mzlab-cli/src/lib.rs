@@ -218,6 +218,7 @@ mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod quant_targets_cmd;
+mod quant_union_cmd;
 mod raw_cache_cmd;
 mod raw_cmd;
 mod renamed;

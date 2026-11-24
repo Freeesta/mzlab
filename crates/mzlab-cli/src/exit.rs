@@ -82,6 +82,9 @@ const INTEGRITY_PREFIXES: &[&str] = &[
     "err.normative.pin",
     "err.normative.sources",
     "err.pack.",
+    "err.union.table",
+    "err.union.empty",
+    "err.union.request",
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
