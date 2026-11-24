@@ -163,7 +163,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
 }
 
 /// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
-fn skeleton(u: &Usage) -> String {
+pub(super) fn skeleton(u: &Usage) -> String {
     let toks = tokens(&u.synopsis);
     let kept: Vec<&str> = toks
         .iter()
@@ -171,6 +171,28 @@ fn skeleton(u: &Usage) -> String {
         .filter(|t| !t.starts_with('[') && *t != "...")
         .collect();
     format!("mzlab-cli {}", kept.join(" "))
+}
+
+/// The arguments of the usage line; the whole listing marks the exception, an argument in brackets (`optional`), the path listing says `required`.
+fn args_json(u: &Usage, compact: bool) -> Vec<Value> {
+    u.args
+        .iter()
+        .map(|a| {
+            let mut o = Obj::new().put("name", text(&a.name));
+            if !(compact && (a.kind == "path" || a.kind == "rest" && a.name == "...")) {
+                o = o.put("kind", text(a.kind));
+            }
+            if compact && !a.required {
+                o = o.b("optional", true);
+            } else if !compact && a.required {
+                o = o.b("required", true);
+            }
+            if a.repeat {
+                o = o.b("repeat", true);
+            }
+            o.done()
+        })
+        .collect()
 }
 
 /// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, `flag_type`, an argument of kind `path`,
@@ -192,23 +214,7 @@ fn command_json(
         .put("path", text(e.name))
         .put("synopsis", text(&u.synopsis))
         .put("summary", text(&u.summary));
-    let args: Vec<Value> = u
-        .args
-        .iter()
-        .map(|a| {
-            let mut o = Obj::new().put("name", text(&a.name));
-            if !(compact && (a.kind == "path" || a.kind == "rest" && a.name == "...")) {
-                o = o.put("kind", text(a.kind));
-            }
-            if a.required {
-                o = o.b("required", true);
-            }
-            if a.repeat {
-                o = o.b("repeat", true);
-            }
-            o.done()
-        })
-        .collect();
+    let args = args_json(&u, compact);
     let flags: Vec<Value> = u
         .flags
         .iter()
@@ -241,6 +247,9 @@ fn command_json(
         let v = exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
         o = o.put("exit_codes", Value::Arr(v));
     }
+    if !compact {
+        o = related(o, e.name);
+    }
     if !compact || examples != [skeleton(&u)] {
         o = o.put(
             "examples",
@@ -248,6 +257,20 @@ fn command_json(
         );
     }
     o.done()
+}
+
+/// The full form names the related commands and steps and the one call that replaces a loop of this one (`related.rs`).
+fn related(mut o: Obj, name: &str) -> Obj {
+    if let Some(r) = super::related::of(name) {
+        o = o.put(
+            "see_also",
+            Value::Arr(r.also.iter().map(|a| text(a)).collect()),
+        );
+        if !r.bulk.is_empty() {
+            o = o.put("bulk", text(r.bulk));
+        }
+    }
+    o
 }
 
 /// Whether the words `path` are the start of the name of `e`.
@@ -300,7 +323,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help: see flag_help; no flag type: see flag_type, else string; no arg kind: path, or `...` (rest); no args or flags: none"))
+            .put("flag_help_note", text("no flag help: see flag_help; no flag type: see flag_type, else string; no arg kind: path, or `...` (rest); no args or flags: none; an arg is required unless `optional`"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out; exact: `commands --json PATH`"))
             .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));

@@ -88,6 +88,7 @@ I18N.add("en", {
   "err.cli.input.missing": "The input {input} was not found: pass the file, or the folder that holds it, with --in.",
   "err.cli.input.twice": "The input {input} was given more than once.",
   "err.cli.command.unknown": "No command is named “{path}”: mzlab-cli commands lists them.",
+  "err.cli.find.none": "No command or Flow step matches “{words}”: mzlab-cli commands lists every command, mzlab-cli flow steps every step.",
   "err.cli.command.renamed": "“{old}” is now “{now}”: this build has no command named “{old}”.",
   "err.cli.command.removed": "“{old}” was removed with {why}: this build has no command named “{old}”.",
   "err.run.input": "An input could not be read ({detail}). Check that the file is there and complete, then try again.",

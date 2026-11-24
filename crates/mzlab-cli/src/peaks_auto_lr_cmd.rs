@@ -21,7 +21,10 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|
   --area-unit  s = counts x s (default, as peak area), min = counts x min
   output       {\"params\":{half, half_auto, valley, sn, min_pts, despike, split, noise, baseline (always \"engine\")}, \"peaks\":[{lo, hi, t0, t1, rt, b0, b1, area, below,
                area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
-               b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)";
+               b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)
+
+Many traces or files: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
+(the trace xic answers of many files) or the Flow step chrom.transitions (a target list of SIM ions / SRM transitions with S/N); never one call per trace.";
 
 /// Sets one parameter by the name the output prints (`valley` is a fraction there); the old dialog names (`lr_*`, valley in %) are aliases and
 /// return a note for stderr.

@@ -23,9 +23,9 @@ pub fn help() -> String {
     format!(
 "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
-       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH [--max-shift MIN]
-       mzlab-cli peak table (FILE... | --traces PATH) --auto [--params PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
+       mzlab-cli peak table (FILE... | --traces PATH...) --shifts --windows PATH [--max-shift MIN]
+       mzlab-cli peak table (FILE... | --traces PATH...) --auto [--params PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --windows PATH  a JSON list of windows [{{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
@@ -47,7 +47,8 @@ usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [-
               {{\"windows\", \"log\", \"groups\", \"unmatched\"}} (the bytes of the page's api/manauto); no windows file is needed
   --params PATH   with --auto: a JSON file {{\"rt_tol_min\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}}; a missing key keeps its default
   --traces PATH   instead of FILEs: a JSON list [{{\"name\", \"conc\"?, \"conc_unit\"?, \"transitions\": [{{\"rt\": [MIN], \"y\": [..], \"panel\"?, \"label\"?, \"unit\"?, \"q1\"?, \"q3\"?, \"name\"?}}]}}] of
-                  traces you supply (a chromatogram, an XIC, a DAD trace); \"corr\" on a window is a note kept in its row. With a panel on a trace the
+                  traces you supply (a chromatogram, an XIC, a DAD trace), or the trace-set/1 or trace/1 that trace xic and trace chrom write, one sample per file:
+                  --traces a.json --traces b.json (one channel per trace, an XIC by its m/z); \"corr\" on a window is a note kept in its row. With a panel on a trace the
                   table has more columns after origin: {ext}
   --columns LIST  more columns after the others, any of: sn ({sn}: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
                   fig ({fig}, on the window's own baseline), quality ({quality}); the bytes of the page's table
@@ -77,7 +78,7 @@ struct Request {
     times: Option<PathBuf>,
     shifts: bool,
     auto: Option<PathBuf>,
-    traces: Option<PathBuf>,
+    traces: Vec<PathBuf>,
     columns: Vec<String>,
     max_shift: Option<f64>,
     json: bool,
@@ -87,7 +88,7 @@ struct Request {
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut windows, mut sums, mut shifts, mut out) =
         (Vec::new(), None, false, false, None);
-    let (mut auto, mut params, mut times, mut traces) = (false, None, None, None);
+    let (mut auto, mut params, mut times, mut traces) = (false, None, None, Vec::new());
     let (mut columns, mut json): (Vec<String>, bool) = (Vec::new(), false);
     let mut max_shift: Option<f64> = None;
     let mut it = args.into_iter();
@@ -101,7 +102,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             }
             "--params" => params = Some(PathBuf::from(it.next().ok_or("--params needs a path")?)),
             "--times" => times = Some(PathBuf::from(it.next().ok_or("--times needs a path")?)),
-            "--traces" => traces = Some(PathBuf::from(it.next().ok_or("--traces needs a path")?)),
+            "--traces" => traces.push(PathBuf::from(it.next().ok_or("--traces needs a path")?)),
             "--columns" => {
                 let l = it.next().ok_or("--columns needs a list")?;
                 if l.is_empty() {
@@ -125,8 +126,8 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             _ => files.push(PathBuf::from(a)),
         }
     }
-    if files.is_empty() == traces.is_none() {
-        return Err("peak table needs at least one file, or --traces PATH (not both)".into());
+    if files.is_empty() == traces.is_empty() {
+        return Err("peak table needs at least one file, or --traces PATH... (not both)".into());
     }
     if params.is_some() && !auto {
         return Err("--params PATH goes with --auto".into());
@@ -295,10 +296,11 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         )?),
         None => None,
     };
-    let files = match &c.traces {
-        // traces the caller supplies (a chromatogram, an XIC, a DAD trace), as the page sends them to the engine
-        Some(p) => std::fs::read_to_string(p).map_err(io)?,
-        None => files_json_timed(&c.files, warn, times.as_ref())?,
+    // traces the caller supplies (a chromatogram, an XIC, a DAD trace), as the page sends them or as `trace xic` writes them
+    let files = if c.traces.is_empty() {
+        files_json_timed(&c.files, warn, times.as_ref())?
+    } else {
+        crate::traces_in::read(&c.traces)?
     };
     if let Some(p) = &c.auto {
         let params = if p.as_os_str().is_empty() {

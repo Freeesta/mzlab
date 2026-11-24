@@ -15,7 +15,10 @@ usage: mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line
   --baseline   zero (y = 0, the default: any background under the peak is part of the area) or line
   --set        numbers of a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
                base_y1 absent = base_y0, a level). edges, the line between the boundaries, is the page's own (picchi.js)
-  output       {\"baseline\":MODE,\"area\":COUNTS_S,\"below\":COUNTS_S,\"height\":COUNTS,\"rt\":MIN}: area signed, below = the part under the line";
+  output       {\"baseline\":MODE,\"area\":COUNTS_S,\"below\":COUNTS_S,\"height\":COUNTS,\"rt\":MIN}: area signed, below = the part under the line
+
+Many traces or files: `peak table FILE... --windows PATH` integrates the same fixed windows in every trace of every file in one call
+(`--traces A.json --traces B.json` for trace xic answers); never one call per peak.";
 
 /// The `--set` names of a baseline (`Baseline::from_params`) from a list of `NAME=VALUE`.
 pub(crate) fn baseline_of(sets: &[(String, String)]) -> Result<Baseline, String> {

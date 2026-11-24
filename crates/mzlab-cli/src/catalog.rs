@@ -3,6 +3,8 @@
 
 use crate::cmd::{entries, Entry};
 mod doc;
+mod find;
+pub(crate) mod related;
 pub(crate) use doc::catalog_json;
 #[cfg(test)]
 pub(crate) use doc::exits_of;
@@ -52,7 +54,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--strict", "also check hashes"),
     ("--rules", "use the rules"),
     ("--roles", "JSON file roles"),
-    ("--name", "answer name"),
+    ("--name", "answer name; convert: file or sample"),
+    ("--text", "plain table, not JSON"),
     ("--match", "also list compatible"),
     ("--full", "every part + SHA-256"),
     ("--rt", "window in min: A or A,B"),
@@ -107,6 +110,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--force", "replace existing"),
     ("--parts", "parts folder"),
     ("--part-size", "part size, e.g. 25MB"),
+    ("--find", "task words"),
     ("--targets", "targets CSV or JSON"),
     ("--min-sn", "lowest detected S/N"),
     ("--offset", "m/z offset"),
@@ -345,14 +349,29 @@ pub(crate) fn usage_of(e: &Entry) -> Usage {
 pub(crate) fn run(args: Vec<String>) -> Outcome {
     let mut json = false;
     let mut path = Vec::new();
+    let mut find: Option<Vec<String>> = None;
     for a in args {
         match a.as_str() {
             "--json" => json = true,
+            // a second --find adds its words to the first
+            "--find" => {
+                find.get_or_insert_with(Vec::new);
+            }
             s if s.starts_with('-') => {
                 return Outcome::fail(&format!("unknown option {s}"));
             }
-            _ => path.push(a),
+            // after --find every word is a task word
+            _ => match find.as_mut() {
+                Some(q) => q.push(a),
+                None => path.push(a),
+            },
         }
+    }
+    if let Some(q) = find {
+        if !path.is_empty() {
+            return Outcome::fail("commands takes PATH... or --find WORDS..., not both");
+        }
+        return find::run(&q, json);
     }
     if !entries().any(|e| under(e, &path)) {
         let err = mzlab_core::Error::new("err.cli.command.unknown").with("path", path.join(" "));

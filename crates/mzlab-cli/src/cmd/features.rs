@@ -235,7 +235,7 @@ fn out_failure(to: &std::path::Path, e: &std::io::Error) -> Outcome {
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]",
+    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV",
     run,
 ), Entry::new(
     "table compare",

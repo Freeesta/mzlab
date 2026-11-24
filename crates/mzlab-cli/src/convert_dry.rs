@@ -63,6 +63,7 @@ fn planned(list: &[Entry], out: &Path) -> Vec<Planned> {
                 reader,
                 input_bytes,
                 empty: e.empty,
+                rename: e.note.clone(),
             }
         })
         .collect()

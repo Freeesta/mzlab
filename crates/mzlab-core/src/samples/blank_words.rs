@@ -35,7 +35,7 @@ fn table() -> &'static Table {
 
 /// A token is a word or a word followed by digits only (`wash1`).
 fn is_word(tok: &str, word: &str) -> bool {
-    tok.starts_with(word) && tok[word.len()..].chars().all(|c| c.is_ascii_digit())
+    tok.starts_with(word) && tok[word.len()..].bytes().all(|c| c.is_ascii_digit())
 }
 
 /// Whether the lowercase name (without folders and extension) reads as a blank: a blank word is there and every other letter token is neutral
@@ -49,7 +49,7 @@ pub fn is_blank_name(stem_low: &str) -> bool {
     let hit = |w: &&str| t.words.iter().any(|x| is_word(w, x)) || t.exact.iter().any(|x| x == w);
     toks.iter().any(hit)
         && toks.iter().all(|w| {
-            hit(w) || w.chars().all(|c| c.is_ascii_digit()) || t.neutral.iter().any(|n| n == w)
+            hit(w) || w.bytes().all(|c| c.is_ascii_digit()) || t.neutral.iter().any(|n| n == w)
         })
 }
 

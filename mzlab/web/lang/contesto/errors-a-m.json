@@ -126,6 +126,7 @@
   "err.cli.out": "CLI error: an output cannot be written; {path} = the path.",
   "err.cli.input.missing": "CLI error of flow run: an input of the plan was not found; {input} = its name.",
   "err.cli.command.unknown": "CLI error of commands: no command has this path; {path} = the words given.",
+  "err.cli.find.none": "CLI error of commands --find: no command or step matches the task words; {words} = the search words kept.",
   "err.cli.command.renamed": "CLI usage error: the first word is the name an earlier build gave a command; {old} = that word, {now} = the command path it has now.",
   "err.cli.command.removed": "CLI usage error: the first word names a command that no longer exists; {old} = that word, {why} = what it belonged to.",
   "err.run.internal": "CLI error: the program panicked and answered before it stopped; {detail} = the panic message and its source position, cut to 300 characters.",
