@@ -22,6 +22,9 @@ pub const QUANTUM_MIN_N: usize = 3;
 /// integer-valued analog or processed data (1000, 1001, 1003 ...) at hundreds or thousands of its unit step.
 pub const QUANTUM_MAX_IONS: f64 = 100.0;
 
+/// Relative difference under which two values are the same value for the quantum (rounding of f32 intensities and of their sums).
+pub const JITTER: f64 = 1e-6;
+
 /// Where the cps of one ion comes from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OneIon {
@@ -93,7 +96,9 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
     // with a high background no point may hold a single ion: the smallest step between distinct values is one too
     let mut d = pos.clone();
     let med = median(&mut d);
-    d.dedup();
+    // values within `JITTER` of each other are one value: a sum of f32 intensities (an XIC over a window) leaves steps of 1e-3 cps that are
+    // rounding, not a step of the signal
+    d.dedup_by(|b, a| *b - *a <= JITTER * *b);
     let step = d
         .windows(2)
         .map(|w| w[1] - w[0])

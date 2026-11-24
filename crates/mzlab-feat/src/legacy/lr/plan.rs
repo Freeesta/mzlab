@@ -1,6 +1,7 @@
 //! What the low-resolution Dig reads from the page: every file of `api.run` (with the kind `classify` gave it), the parent and the settings.
 
 use mzlab_core::elements::{fmt, ion_mz, mass};
+use mzlab_core::ionstat::OneIon;
 use mzlab_core::json::{self, Out, Value};
 
 use super::super::sample::guess;
@@ -48,6 +49,10 @@ pub struct Settings {
     /// Rows of one ion split by the alignment are merged before the kinetics (`merge`): m/z within `merge_da` Da and RT within `merge_rt_min` min; 0 = off.
     pub merge_da: f64,
     pub merge_rt_min: f64,
+    /// Rule R1 (`ionstat`, evidence only: never a gate or a score): cps of one ion of the noise floor of each checked XIC; `Auto` = its quantum.
+    pub one_ion: mzlab_core::ionstat::OneIon,
+    /// ... and the weight of the SD term of that floor.
+    pub noise_sd_weight: f64,
     /// Options of the comparison of conditions (`groups/1`) from the settings key `groups`; the defaults of the module when absent.
     pub groups: crate::groups::GroupOpts,
 }
@@ -57,6 +62,15 @@ impl Settings {
         super::labels::Persist {
             min_files: self.min_files,
             rt_tol: self.rt_tol_min,
+        }
+    }
+
+    /// The parameters of the one-ion floor (R1); its S/N threshold is the `min_snr` of the peak check.
+    pub fn floor(&self) -> mzlab_core::ionstat::FloorParams {
+        mzlab_core::ionstat::FloorParams {
+            one_ion: self.one_ion,
+            sd_weight: self.noise_sd_weight,
+            min_sn: self.min_snr,
         }
     }
 }
@@ -80,6 +94,8 @@ impl Default for Settings {
             parent_decay: true,
             merge_da: 0.3,
             merge_rt_min: 0.3,
+            one_ion: mzlab_core::ionstat::OneIon::Auto,
+            noise_sd_weight: mzlab_core::ionstat::SD_WEIGHT,
             groups: crate::groups::GroupOpts::default(),
         }
     }
@@ -308,6 +324,13 @@ pub fn settings(settings_json: &str) -> Settings {
     s.parent_decay = flag("parent_decay").unwrap_or(s.parent_decay);
     s.merge_da = num("merge_da").map_or(s.merge_da, |x| x.max(0.0));
     s.merge_rt_min = num("merge_rt_min").map_or(s.merge_rt_min, |x| x.max(0.0));
+    // one_ion: "auto" or absent = the quantum, 0 = off, > 0 = cps of one ion; a negative or unreadable value keeps auto
+    s.one_ion = match num("one_ion") {
+        Some(x) if x > 0.0 => OneIon::Cps(x),
+        Some(0.0) => OneIon::Off,
+        _ => OneIon::Auto,
+    };
+    s.noise_sd_weight = num("noise_sd_weight").map_or(s.noise_sd_weight, |x| x.max(0.0));
     if let Some(o) = v
         .get("groups")
         .and_then(|g| crate::groups::opts_from_value(g).ok())
@@ -346,6 +369,13 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
         .num(s.merge_da)
         .raw(",\"merge_rt_min\":")
         .num(s.merge_rt_min);
+    o.raw(",\"one_ion\":");
+    match s.one_ion {
+        OneIon::Auto => o.str("auto"),
+        OneIon::Off => o.num(0.0),
+        OneIon::Cps(c) => o.num(c),
+    };
+    o.raw(",\"noise_sd_weight\":").num(s.noise_sd_weight);
     o.raw("}");
 }
 

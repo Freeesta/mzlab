@@ -79,6 +79,7 @@ fn contract_and_rows_of_python() {
         "chance",
         "unexpected_left",
         "merged",
+        "noise_floor",
     ];
     same_shape(&without(&s, &rust_only), &g["summary"], "summary");
     for row in s["rows"].as_array().unwrap() {
@@ -96,6 +97,7 @@ fn contract_and_rows_of_python() {
             "controls",
             "cond",
             "by_cond",
+            "checks",
         ];
         same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {

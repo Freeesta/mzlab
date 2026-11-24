@@ -81,7 +81,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),
-    r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution", &["tp.generate", "table compare"])
+    r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution one ion noise floor", &["tp.generate", "table compare", "peak noise"])
         .bulk("one run digs the whole series: every file in index, one table; other settings: rerun in the same --out with --set (cached)"),
     r("tp.generate", "hypotheses transformation products candidates suspects parent", &["tp.dig_lr", "tp.filter", "tp.network"]),
     r("tp.network", "pathway network scheme products draw", &["mol draw", "structure.render"]),

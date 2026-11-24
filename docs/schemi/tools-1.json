@@ -2870,7 +2870,9 @@
                   "dead_factor",
                   "parent_decay",
                   "merge_da",
-                  "merge_rt_min"
+                  "merge_rt_min",
+                  "one_ion",
+                  "noise_sd_weight"
                 ]
               },
               "value":{
@@ -2890,7 +2892,13 @@
                   {"type":"number","minimum":0,"default":1.5,"description":"Dead-volume factor"},
                   {"type":"boolean","default":true,"description":"Parent must fall over time"},
                   {"type":"number","minimum":0,"default":0.3,"description":"Merge split rows within"},
-                  {"type":"number","minimum":0,"default":0.3,"description":"Merge split rows within RT"}
+                  {"type":"number","minimum":0,"default":0.3,"description":"Merge split rows within RT"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"R1, evidence only: empty = auto (the quantum of each XIC), 0 = off"
+                  },
+                  {"type":"number","minimum":0,"default":0.5,"description":"SD weight of the noise floor"}
                 ]
               }
             },

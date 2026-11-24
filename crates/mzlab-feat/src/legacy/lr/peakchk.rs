@@ -4,6 +4,7 @@
 //! `CELL_FILLED` (not detected), so a baseline hump, a single spike or the unretained front never makes a product, its persistence or its growth.
 
 use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::ionstat::{measure, FloorAsk, FloorResult};
 
 use super::detail::xic;
 use super::labels::{crit, Crit};
@@ -105,12 +106,27 @@ fn noise(rt: &[f64], ys: &[f64], apex: f64, far: f64) -> f64 {
     }
 }
 
+/// The noise floor of one ion (rule R1, `mzlab_core::ionstat::measure`) on the raw XIC `(rt, y)`: the peak window is the apex ± the `far`
+/// distance of `noise` (`rt_tol_min`, at least 0.3 min), the background every other point, so `mzlab-cli peak noise` on the same trace with
+/// `--rt` set to that window gives the same numbers. `None` when the trace has no point outside the window.
+pub fn floor_of(rt: &[f64], y: &[f64], apex: f64, s: &Settings) -> Option<FloorResult> {
+    let w = s.rt_tol_min.max(0.3);
+    let ask = FloorAsk {
+        from: None,
+        to: None,
+        peak: Some((apex - w, apex + w)),
+    };
+    measure(rt, y, ask, s.floor()).ok()
+}
+
 /// The checks of the cells of the table (`row * n_files + file`), `None` where the cell was not detected or not checked.
 #[derive(Debug, Clone, Default)]
 pub struct Checks {
     pub q: Vec<Option<PeakQ>>,
     /// S/N of the XIC at the row's RT for the cells with an area but no detected peak (`forced_snr`), only for reporting.
     pub forced: Vec<Option<f64>>,
+    /// The one-ion noise floor (R1, `floor_of`) of every cell with a peak check or a forced S/N: evidence only, it never changes a state.
+    pub floor: Vec<Option<FloorResult>>,
     done: Vec<bool>,
 }
 
@@ -119,6 +135,7 @@ impl Checks {
         Checks {
             q: vec![None; t.len() * t.n_files],
             forced: vec![None; t.len() * t.n_files],
+            floor: vec![None; t.len() * t.n_files],
             done: vec![false; t.len()],
         }
     }
@@ -156,6 +173,7 @@ pub fn gate<R: ReadAt>(
             if !q.ok() {
                 t.state[cell] = CELL_FILLED;
             }
+            c.floor[cell] = floor_of(&rt, &y, q.apex_rt, s);
             c.q[cell] = Some(q);
         }
     }
@@ -188,7 +206,9 @@ pub fn forced_snr<R: ReadAt>(
             }
             let Some(i) = slot.as_mut() else { continue };
             let (rt, y) = xic(i, t.mz[r] - s.tol_da, t.mz[r] + s.tol_da, 0.0)?;
-            c.forced[cell] = Some(judge(&rt, &y, t.rt[r], s).snr);
+            let q = judge(&rt, &y, t.rt[r], s);
+            c.floor[cell] = floor_of(&rt, &y, q.apex_rt, s);
+            c.forced[cell] = Some(q.snr);
         }
     }
     Ok(())

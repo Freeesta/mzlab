@@ -3,7 +3,8 @@
 //! points carry a detected peak (the others enter the kinetics as zeros); and the detected peak of the row in the blank, the dark control and the
 //! standard against the treated maximum. A forced or filled area (noise integrated where no peak passed) never counts as detected. In a series
 //! that compares conditions (one alignment of every file), each point names its condition and `by_cond` repeats the kinetic points and the
-//! control ratios in the view of each condition (`cond::members`); `cond` is the condition whose criteria the row carries.
+//! control ratios in the view of each condition (`cond::members`); `cond` is the condition whose criteria the row carries. `sn_floor` and
+//! `checks` are the one-ion noise floor (R1, `floorchk`), evidence only.
 
 use mzlab_core::json::{round, Out};
 
@@ -63,6 +64,7 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
             .raw(",\"cond\":")
             .str(&e.cond)
             .raw(",\"by_cond\":[]");
+        super::floorchk::json(o, d, e);
         return;
     };
     let t = &d.table;
@@ -85,6 +87,8 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
             .opt(t.area[c].is_finite().then(|| round(t.area[c], 1)))
             .raw(",\"snr\":")
             .opt(peakchk::snr(t, &d.checks, r, k).map(|x| round(x, 1)))
+            .raw(",\"sn_floor\":")
+            .opt(super::floorchk::sn_floor(d, r, k).map(|x| round(x, 1)))
             .raw(",\"state\":")
             .str(evidence_word(
                 t.state[c],
@@ -117,4 +121,5 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
             .raw("}");
     }
     o.raw("]");
+    super::floorchk::json(o, d, e);
 }

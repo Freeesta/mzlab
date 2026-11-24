@@ -1,6 +1,8 @@
 //! mzFlow against the Dig of mzFinder on the five demo full-scan files of the site (`mzlab/web/esempi/FullScan_t*.mzML`, unit resolution): the base
 //! chain gives the table of the page byte for byte and `tp.dig_lr` the JSON of `lr::dig` over it. `tp.link@2` reads the same table through the gates of `tp/2` in Da.
 
+#[path = "flow_lr_floor_tests.rs"]
+mod floor;
 #[path = "flow_lr_tol_tests.rs"]
 mod tol;
 
@@ -90,6 +92,12 @@ fn run_flow(d: &Path, tail: &str) -> String {
 
 /// The chain of the page (`feat-worker.js`): indexes in memory, each file detected with its own recipe, aligned with the first one.
 fn page(d: &Path) -> (Vec<u8>, String) {
+    let (table, dg, _) = page_dig(d, "{}");
+    (table, summary(&dg, "{}") + "\n")
+}
+
+/// `page` with the settings of the page, keeping the Dig and the indexes of the files.
+fn page_dig(d: &Path, settings: &str) -> (Vec<u8>, lr::LrDig, Vec<Vec<u8>>) {
     let idxs: Vec<Vec<u8>> = NAMES
         .iter()
         .map(|n| {
@@ -128,13 +136,13 @@ fn page(d: &Path) -> (Vec<u8>, String) {
     let dg = lr::dig(
         &files,
         &parent,
-        "{}",
+        settings,
         &table,
         &h.registry.to_json(),
         &mut |k| Ok(open(k)),
     )
     .unwrap();
-    (table, summary(&dg, "{}") + "\n")
+    (table, dg, idxs)
 }
 
 #[test]
