@@ -161,7 +161,7 @@ impl FinderLrDig {
     }
 }
 
-/// `api.run` on a low-resolution series: `table` = the `.mzfeat` of the columns of `finder_lr_plan`, `registry` = `hypotheses/2` of the parent,
+/// `api.run` on a low-resolution series: `table` = the `.mzfeat` of the columns of `finder_lr_plan`, `registry` = `hypotheses/3` of the parent,
 /// `read`/`sizes` = the `.mzidx` of the columns (the XICs of the chromatographic check of the peaks).
 #[wasm_bindgen]
 pub fn finder_lr_dig(

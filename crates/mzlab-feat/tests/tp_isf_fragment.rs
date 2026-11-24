@@ -1,5 +1,5 @@
 //! MEASURE (no default is changed): a true product whose formula is also an MS2 fragment of the parent (so it co-elutes inside the ISF window), 2 % of the parent
-//! at the t0 and growing to 40 % of it at the last of 7 treated times. Its status in `tp/1` with the default gates, for parents that decay to 100 %, 50 %, 20 %,
+//! at the t0 and growing to 40 % of it at the last of 7 treated times. Its status in `tp/2` with the default gates, for parents that decay to 100 %, 50 %, 20 %,
 //! 10 % and 5 % of their t0 area, with and without the fragment list of the parent's MS2. The table is built here (the gates read areas, RT and the MS2 fragments).
 //! Numbers: `docs/agenti/mzfeat-tp.md` (MISURA). A constant 2 % ratio (a genuine in-source fragment) is the control of the harness.
 

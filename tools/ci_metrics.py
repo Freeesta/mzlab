@@ -14,6 +14,7 @@ Standard library only. The data file `eventi.jsonl` lives on the orphan branch `
     python3 tools/ci_metrics.py compatta --data-file D.jsonl [--days 14]          # drop the heavy fields of old rows
     python3 tools/ci_metrics.py esporta [--data-file D.jsonl] [--out DIR]           # one CSV per row type + giornaliero-coo.csv
     python3 tools/ci_metrics.py percorso [--data-file D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
+    python3 tools/ci_metrics.py denials --data-file D.jsonl                       # exit 3 when the API denied three polls within the last hour (persistent failure)
     python3 tools/ci_metrics.py riepilogo [--data-file D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
 """
 from __future__ import annotations
@@ -27,12 +28,11 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import ci_metrics_data as dati_ci
+import ci_metrics_api as ghapi
 from ci_metrics_api import ApiDenied, api_get, denied_wait, warn  # noqa: F401
 import ci_metrics_file as file_ci
 import ci_metrics_day as giorno_ci
@@ -130,9 +130,21 @@ def recent_rows(data: str, api=api_get, fetch=dati_ci.download, ora: datetime | 
         if len(r) < 100:
             break
     runs = sorted(runs, key=lambda x: x["updated_at"])[:massimo]
-    out = [row for run in runs for row in run_obj_rows(run, api, fetch)]
-    out += dati_ci.load_rows(api, ora.strftime("%Y-%m-%dT%H:%M:%SZ"))
-    return out, runs[-1]["updated_at"] if runs else last
+    out, done = [], last
+    for run in runs:
+        try:
+            out += run_obj_rows(run, api, fetch)
+        except ApiDenied as e:
+            warn(f"registra-recenti: stopped before run {run['id']}: {e}")
+            return out, min(done, ghapi.second_before(run["updated_at"]))      # strictly older: a tie must not lose the denied run
+        done = run["updated_at"]
+    stamp = ora.strftime("%Y-%m-%dT%H:%M:%SZ")  # one `carico` row per 10-minute bucket: skip the ~100 job reads when it is already recorded
+    if not any(r.get("tipo") == "carico" and r.get("k") == stamp[:15] for r in read_all(data)):
+        try:
+            out += dati_ci.load_rows(api, stamp)
+        except ApiDenied as e:
+            warn(f"runner load not read: {e}")
+    return out, done
 
 
 CAUSE_COMMIT = [("merge di main", r"Merge .*\bmain\b"), ("limite", r"limit|soglia|tetto|size|budget"),
@@ -197,6 +209,11 @@ def fill_green(righe: list[dict], api=api_get, massimo: int = 30) -> int:
         r["verde_provato"] = True
         try:
             r["verde_a_unione_s"] = secs(green_at(r["sha"], api), r["ts_utc"])
+        except ApiDenied as e:
+            del r["verde_provato"]      # a denied read says nothing about the row: untried for the next poll
+            fatte -= 1
+            warn(f"riempi-verde: stopped after {fatte} rows: {e}")
+            break
         except Exception:
             pass
     return fatte
@@ -405,7 +422,7 @@ def write_rows(path: str, righe: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("comando", choices=["registra-run", "registra-pr-recenti", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
+    ap.add_argument("comando", choices=["registra-run", "registra-pr-recenti", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso", "denials"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--event", default=os.environ.get("GITHUB_EVENT_PATH"))
     ap.add_argument("--data-file", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
@@ -427,6 +444,8 @@ def main() -> int:
             riepilogo(ev, a.da)
         return 0
     data = a.data_file or "eventi.jsonl"
+    if a.comando == "denials":
+        return ghapi.denials_exit(read_all(data))
     if a.comando == "accoda":
         print(f"{enqueue(leggi(a.file), data)} new lines")
         if a.cursor and os.path.exists(a.cursor):
@@ -446,6 +465,7 @@ def main() -> int:
             remain -= fill_green(righe, massimo=remain)
             write_rows(p, righe)
         print(f"{a.maximum - remain} rows tried")
+        enqueue(ghapi.finish(a.comando), data)
         return 0
     try:
         if a.comando == "registra-recenti":
@@ -466,6 +486,7 @@ def main() -> int:
         # a metrics collector never turns main red: no rows this time, the cursor does not advance, the next poll retries
         warn(f"{a.comando}: no rows recorded ({e})")
         righe = []
+    righe += ghapi.finish(a.comando)
     if a.new:
         write_rows(a.new, righe)
     else:

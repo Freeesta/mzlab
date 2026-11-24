@@ -252,7 +252,7 @@ try:
             a, n = dict(run), dict(lr_native["run"])
             a.pop("timing", None); n.pop("timing", None)
             assert a == n, [k for k in n if a.get(k) != n.get(k)]
-            assert run["rows"][0]["label"] == "progenitore", run["rows"][0]
+            assert run["rows"][0]["label"] == "parent", run["rows"][0]
             assert lr_native["detail"], "no row passes the criteria"
             for d in lr_native["detail"]: assert pg.evaluate("([i]) => window.TPCALL('detail', i)", [d["id"]]) == d, d["id"]
             t = pg.evaluate("() => window.TPCALL('frag_tree')")
@@ -268,7 +268,7 @@ try:
             files = LR_FILES + [{"name": epi.name, "type": "sample", "time": None, "kind": "ms2"}, {"name": std.name, "type": "standard", "time": None, "kind": "mrm"}, {"name": t0.name, "type": "sample", "time": 0, "kind": "mrm"}]
             call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
             run = call("run", files, LR_PARENT, {}, "")
-            assert run["rows"][0]["label"] == "progenitore" and [r["id"] for r in run["rows"]] == [r["id"] for r in lr_native["run"]["rows"]], "the rows change with MS2 and MRM files"
+            assert run["rows"][0]["label"] == "parent" and [r["id"] for r in run["rows"]] == [r["id"] for r in lr_native["run"]["rows"]], "the rows change with MS2 and MRM files"
             m = run["mrm"]; assert m and len(m["rows"]) == 2 and len(m["transitions"]) >= 2, m          # the integration of every transition, no calibration line
             assert m["calibration"] is None and not [k for k in ("slope", "intercept") if k in json.dumps(m).lower()], "the program draws no calibration line"
             d = call("detail", run["rows"][0]["id"])
@@ -282,7 +282,7 @@ try:
         def lr_no_formula():
             call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
             run = call("run", LR_FILES, {"name": "parent", "mz": demo_mz}, {}, "")
-            assert run["rows"] and run["rows"][0]["label"] == "progenitore" and run["parent"]["formula"] == "", (run["parent"], run["rows"][:1])
+            assert run["rows"] and run["rows"][0]["label"] == "parent" and run["parent"]["formula"] == "", (run["parent"], run["rows"][:1])
         step("a low-resolution series with a parent known only by its m/z runs in the app", lr_no_formula)
         def clean():
             bad = [u for u in reqs if re.search(r"pyodide|wasm-feat|mzlab\.zip", u, re.I)]

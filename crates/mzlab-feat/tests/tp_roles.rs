@@ -144,7 +144,7 @@ fn the_minutes_alone_keep_the_old_gate() {
         .iter()
         .all(|n| n & (NOTE_BLANK | NOTE_T0 | NOTE_DARK | NOTE_NO_T0) == 0));
     assert!(b.roles.is_none());
-    assert!(!b.meta_json().contains("ruoli"));
+    assert!(!b.meta_json().contains("roles"));
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn the_counts_go_in_the_meta_and_back() {
     names[0] = "X_blank_solv";
     let b = run(Some(&roles(&names)));
     let meta = b.meta_json();
-    assert!(meta.contains("\"scartate_bianco\":1,\"scartate_t0\":1,\"scartate_buio\":1},\"ruoli\":{\"senza_t0\":false,\"buio_su_t0\":0.8,\"bianchi\":[\"solvent\"]}"), "{meta}");
+    assert!(meta.contains("\"dropped_by_blank\":1,\"dropped_by_t0\":1,\"dropped_by_dark\":1},\"roles\":{\"no_t0\":false,\"dark_over_t0\":0.8,\"blank_kinds\":[\"solvent\"]}"), "{meta}");
     let back = TpBlock::from_meta(&parse(meta.as_bytes()).unwrap());
     assert_eq!(back.roles, b.roles);
 }

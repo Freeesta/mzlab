@@ -1,4 +1,4 @@
-//! The view of the transformation products (`tp/1`): which rows of the table are formed in the treatment, are not the parent in disguise and are
+//! The view of the transformation products (`tp/2`): which rows of the table are formed in the treatment, are not the parent in disguise and are
 //! explained, and how sure their kinship with the parent is. It decides nothing about identity (that stays the cascade of `levels/1`) and deletes no row:
 //! every row keeps a status and the numbers behind it.
 //!
@@ -32,7 +32,7 @@ use crate::evid::rowproofs::Signs;
 use crate::hypo::Hypothesis;
 use crate::trace_base::filled;
 
-pub const SCHEMA: &str = "tp/1";
+pub const SCHEMA: &str = crate::tp_block::TP_SCHEMA;
 
 /// What the view reads.
 pub struct TpInputs<'a> {

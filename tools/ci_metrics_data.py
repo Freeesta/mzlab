@@ -18,6 +18,7 @@ import zipfile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
+import ci_metrics_api as ghapi
 from ci_metrics_day import COO_COLUMNS, daily, coo_rows  # noqa: F401
 
 SLOW_S = 5
@@ -38,25 +39,27 @@ def areas(files: list[str]) -> dict[str, int]:
 
 
 def download(path: str) -> bytes | None:
-    """Raw bytes of an API path whose answer is a redirect (job logs, artifact zips): the token goes to the API only, never to the storage URL."""
-    base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-    repo = os.environ.get("GITHUB_REPOSITORY", "Freeesta/mzlab")
-    h = {"Accept": "application/vnd.github+json", "User-Agent": "mzlab-stat-ci"}
-    if os.environ.get("GITHUB_TOKEN"):
-        h["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-
+    """Raw bytes of an API path whose answer is a redirect (job logs, artifact zips): the token goes to the API only, never to the storage URL.
+    None when the file is gone (expired log or artifact); a 403/429 is retried as `api_get` does and ends in ApiDenied, never in a silent None."""
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *a, **k):
             return None
-    try:
-        urllib.request.build_opener(NoRedirect).open(urllib.request.Request(f"{base}/repos/{repo}{path}", headers=h), timeout=60)
-    except urllib.error.HTTPError as e:
-        loc = e.headers.get("Location")
-        if e.code in (301, 302, 303, 307) and loc:
-            with urllib.request.urlopen(urllib.request.Request(loc, headers={"User-Agent": "mzlab-stat-ci"}), timeout=120) as r:
-                return r.read()
-    except Exception:
-        pass
+    ghapi.check_reserve(path)
+    for attempt in range(ghapi.DENIED_RETRIES + 1):
+        try:
+            urllib.request.build_opener(NoRedirect).open(urllib.request.Request(ghapi.api_url(path), headers=ghapi.headers()), timeout=60)
+        except urllib.error.HTTPError as e:
+            loc = e.headers.get("Location")
+            if e.code in (403, 429):
+                ghapi.handle_denied(e, path, attempt)
+                continue
+            if e.code in (301, 302, 303, 307) and loc:
+                ghapi.note(e.headers)
+                with urllib.request.urlopen(urllib.request.Request(loc, headers={"User-Agent": "mzlab-stat-ci"}), timeout=120) as r:
+                    return r.read()
+        except Exception:
+            pass
+        return None
     return None
 
 

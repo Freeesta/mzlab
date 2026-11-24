@@ -89,7 +89,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Rust and module measurements (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-rust.md` |
 | vendor readers, `.raw`, `.wiff`, `.D` (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/measurements-speed-raw.md` |
 | cumulative table of site load speed gains (page, first paint, file batches, side list, "Remove all", first file of a batch) | `docs/agenti/measurements-speed-site.md` |
-| cumulative speed-gain table (date · PR · step · before · after · %) | `docs/agenti/measurements-speed.md` |
+| cumulative speed-gain table (date · PR · step · before · after · %); targeted extraction speed study (`docs/studies/SPEED_STUDY.md`, `tools/bench/speed_study.py`) | `docs/agenti/measurements-speed.md` |
 | engine measurements, export validation (mzTab-M), Tabui flow and network clicks | `docs/agenti/measurements.md` |
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
@@ -114,7 +114,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Feature table in the Pipeline (steps 5-6: QC, filter bar, `PIPET` with `TPTAB` and expanded row `TPRIGA`) | `docs/agenti/mzfeat-table-view.md` |
 | table, ids and samples (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-table.md` |
 | tests and measurements (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tests.md` |
-| `tp/1` products view (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tp.md` |
+| `tp/2` products view (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tp.md` |
 | "Pipeline" panel and on-demand file family, `family_record` (area: mzFinder in the browser (`crates/mzlab-feat-wasm`,…) | `docs/agenti/mzfeat-wasm-panel.md` |
 | mzFinder in the browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, Pipeline panel `TP_Mine/js/32_pipeline.js`, parameter estimation `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
 | HR feature pipeline in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` |
@@ -130,7 +130,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzML conformance matrix (variants, `tools/mzml_variants.py` fixtures, known gaps) | `docs/agenti/mzml-matrix.md` |
 | `mzrun/2` file (`*.mzrun.json`: record and presets of an analysis, `self_sha256` fingerprint, application rules, schema `docs/schemi/mzrun-2.json`) | `docs/agenti/mzrun.md` |
 | native reading of `.raw`, `.wiff`, `.D` in the site (samples, OPFS, progress, mzML on request) | `docs/agenti/native-reading.md` |
-| product network (`crates/mzlab-feat/src/network/`, `rete/1`: edges by rule on `tp/1`, steps, coordinates, edge reason) | `docs/agenti/network.md` |
+| product network (`crates/mzlab-feat/src/network/`, `rete/1`: edges by rule on `tp/2`, steps, coordinates, edge reason) | `docs/agenti/network.md` |
 | derived files (`.mzidx`, `.mzfeat`, `.mzfeatf`) of a newer format than the program: `error.newerFormat`, read-only | `docs/agenti/new-format.md` |
 | builder of the EU and US regulatory lists (`mzlab-cli db normative build`, `crates/mzlab-cli/src/normative/`, `normative/sources.json`, sources, pin, `resolve`, output) | `docs/agenti/normative.md` |
 | hand-typed numeric fields (`campi.js`, `CAMPI.num`, `data-num`, calculators, `campo.*` rejection note, `numIt` without Infinity, `lib_campi.sweep`) | `docs/agenti/number-fields.md` |

@@ -74,37 +74,37 @@
  "python_rows": [
   {
    "kind": "candidate",
-   "label": "progenitore",
+   "label": "parent",
    "mz": 241.0641,
    "ref_rt": 9.0
   },
   {
    "kind": "candidate",
-   "label": "forte",
+   "label": "strong",
    "mz": 257.0591,
    "ref_rt": 7.4
   },
   {
    "kind": "candidate",
-   "label": "forte",
+   "label": "strong",
    "mz": 289.0489,
    "ref_rt": 4.4
   },
   {
    "kind": "candidate",
-   "label": "forte",
+   "label": "strong",
    "mz": 257.0591,
    "ref_rt": 8.3
   },
   {
    "kind": "unexpected",
-   "label": "forte",
+   "label": "strong",
    "mz": 333.2194,
    "ref_rt": 6.8
   },
   {
    "kind": "unexpected",
-   "label": "forte",
+   "label": "strong",
    "mz": 355.1053,
    "ref_rt": 5.2
   }

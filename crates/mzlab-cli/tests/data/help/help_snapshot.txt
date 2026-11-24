@@ -14,7 +14,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -49,12 +49,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor and peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
@@ -78,7 +78,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
@@ -125,7 +125,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -160,12 +160,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor and peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
@@ -189,7 +189,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
@@ -236,7 +236,7 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature against the reference and the blank: candidate products
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -271,12 +271,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV, optionally minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV, optionally minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor and peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
@@ -300,7 +300,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
        mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors and formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
@@ -905,9 +905,10 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
-  --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
-               smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
-               median of 3 against spikes); numbers only
+  --set        the names of the "params" of the output: half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the
+               tallest peak), valley (fraction 0-1 of the smaller peak the valley must go down to keep two peaks, as printed), sn (smallest height over
+               the noise), min_pts, despike (1/0: median of 3 against spikes); numbers only. The old names lr_half, lr_valley (in %), lr_sn,
+               lr_min_pts, lr_despike still work and log a note on stderr
   --split MODE drop (default) = one baseline under touching peaks, valley = each baseline ends at the valley
   --area-unit  s = counts x s (default, as peak area), min = counts x min
   output       {"params":{half, half_auto, valley, sn, min_pts, despike, split, noise, baseline (always "engine")}, "peaks":[{lo, hi, t0, t1, rt, b0, b1, area, below,

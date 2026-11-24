@@ -9,13 +9,15 @@ OLD = re.compile(
     r"|riga_tracce|(?<![\w-])riga\.json"  # bare names too: output file names, ids, prose
     r"|\"sources\"\s*:\s*\[[^\]]*\"(regola|sospetti|rottura|rete|famiglia|importata)\""  # old hypothesis source labels in fixtures
     r"|\"rottura\+"  # the old label of a cleavage product
+    r"|(?<![\w-])hypotheses/2(?![\w])|(?<![\w-])(non_cercata|non_trovata)(?![\w])"  # the registry with Italian outcomes
+    r"|Q3_osservato|Q3_consigliato|RT_attesa_min|finestra_RT_min|scansioni_ms2|intensita_rel_%"  # the Italian keys of the Dig transitions
 )
 # The refusal code and its tests name the superseded feature_pipeline versions on purpose.
 OLD_PIPELINE = re.compile(r"feature_pipeline/[12](?!\d)")
 PIPELINE_OK = {"mzlab/web/workflow.js", "tests/test_pipeline_recipe.py", "tests/test_no_old_tp_names.py"}
 SKIP = {"tests/test_no_old_schema_ids.py", "docs/agenti/english-remaining.md"}
-# The old registry id is the input of the refusal test.
-REFUSAL_TESTS = {"crates/mzlab-feat/tests/hypo_registry_format.rs"}
+# The old registry id is the input of the refusal test and is named by the refusal code (`check_registry_format`).
+REFUSAL_TESTS = {"crates/mzlab-feat/tests/hypo_registry_format.rs", "crates/mzlab-feat/src/hypo.rs"}
 
 
 def _files():
