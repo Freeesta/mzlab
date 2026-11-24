@@ -2,13 +2,13 @@
 //! (exact name, then case, then without the extension); what cannot be matched, what is ambiguous and what is repeated is reported with its evidence and every
 //! automatic choice is logged. Nothing is refused for a finding: the user decides from the report.
 
-use super::csv::{detect, field_of};
+use super::csv::{detect, field_of, sep_of};
 use super::csv_fields::records;
 use super::json::role_alias;
 use super::order::{base, stem};
 use super::{files_of, propose, table_from_value, table_to_json, Sample, Table};
 use crate::error::{Error, Result};
-use crate::json::{parse, Out};
+use crate::json::{parse, Out, Value};
 
 pub const SCHEMA: &str = "sample-import/1";
 
@@ -169,6 +169,126 @@ fn apply(s: &mut Sample, r: &Row, log: &mut Vec<String>) -> bool {
     true
 }
 
+/// Rows matched to files: for each file the rows (indices) that name it, and the rows that name none or several.
+fn match_rows(
+    rows: &[Row],
+    names: &[String],
+    log: &mut Vec<String>,
+) -> (Vec<Vec<usize>>, Vec<String>) {
+    let mut by_file: Vec<Vec<usize>> = vec![Vec::new(); names.len()];
+    let mut unmatched = Vec::new();
+    for (k, r) in rows.iter().enumerate() {
+        let (rule, hit) = candidates(&r.key, names);
+        let why = if hit.is_empty() {
+            "no file"
+        } else {
+            "ambiguous"
+        };
+        if let [i] = hit.as_slice() {
+            by_file[*i].push(k);
+            if rule != "exact" {
+                let m = format!("match:{rule}");
+                log.push(obj(&[
+                    ("what", m),
+                    ("row", r.n.to_string()),
+                    ("file", names[*i].clone()),
+                    ("from", r.key.clone()),
+                    ("to", names[*i].clone()),
+                ]));
+            }
+            continue;
+        }
+        let near: Vec<String> = hit.iter().map(|&i| names[i].clone()).collect();
+        unmatched.push(obj(&[
+            ("row", r.n.to_string()),
+            ("file", r.key.clone()),
+            ("why", why.into()),
+            ("candidates", quoted(&near)),
+        ]));
+    }
+    (by_file, unmatched)
+}
+
+/// What laying the rows over the samples found: duplicate rows, unknown roles, how many files got a row and whether any duplicates disagree.
+#[derive(Default)]
+struct Settled {
+    duplicates: Vec<String>,
+    unknown: Vec<String>,
+    matched: usize,
+    conflict: bool,
+}
+
+/// Lays the first row of each file over its sample; a file with several rows is a duplicate (the first is kept, the others are the evidence).
+fn settle(
+    table: &mut Table,
+    rows: &[Row],
+    by_file: &[Vec<usize>],
+    log: &mut Vec<String>,
+) -> Settled {
+    let mut st = Settled::default();
+    for (i, ks) in by_file.iter().enumerate() {
+        let Some(&first) = ks.first() else { continue };
+        let file = table.samples[i].file.clone();
+        st.matched += 1;
+        if ks.len() > 1 {
+            let key = |k: usize| (&rows[k].name, &rows[k].role, &rows[k].group);
+            let differ = ks.iter().any(|&k| key(k) != key(first));
+            st.conflict |= differ;
+            let nums: Vec<String> = ks.iter().map(|&k| rows[k].n.to_string()).collect();
+            let kept = rows[first].n.to_string();
+            st.duplicates.push(obj(&[
+                ("file", file.clone()),
+                ("rows", list(&nums)),
+                ("conflict", differ.to_string()),
+                ("kept", kept.clone()),
+            ]));
+            log.push(obj(&[
+                ("what", "duplicate_first".into()),
+                ("row", kept.clone()),
+                ("file", file.clone()),
+                ("from", nums.join(",")),
+                ("to", kept),
+            ]));
+        }
+        if !apply(&mut table.samples[i], &rows[first], log) {
+            st.unknown.push(obj(&[
+                ("row", rows[first].n.to_string()),
+                ("file", file),
+                ("value", rows[first].role.clone()),
+            ]));
+        }
+    }
+    st
+}
+
+/// A sample name on several files: evidence only, one sample in the two polarities is two files with one name.
+fn shared_names(table: &Table) -> Vec<String> {
+    let mut shared: Vec<(&str, Vec<&str>)> = Vec::new();
+    for s in table.samples.iter().filter(|s| !s.sample_id.is_empty()) {
+        match shared.iter_mut().find(|(id, _)| *id == s.sample_id) {
+            Some((_, files)) => files.push(&s.file),
+            None => shared.push((&s.sample_id, vec![&s.file])),
+        }
+    }
+    let files = |f: &[&str]| quoted(&f.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+    shared
+        .iter()
+        .filter(|(_, f)| f.len() > 1)
+        .map(|(id, f)| obj(&[("name", id.to_string()), ("files", files(f))]))
+        .collect()
+}
+
+/// The table the rows go over: the given `samples/1`, else the samples the names of `files` propose.
+fn base_table(v: &Value, input: &str) -> Result<Table> {
+    match v.get("samples") {
+        Some(doc) => table_from_value(doc),
+        None => Ok(Table {
+            samples: propose(&files_of(input)?),
+            columns: Vec::new(),
+        }),
+    }
+}
+
 /// `{"text", "separator"?, "files": [{"name","sha256"?}] | "samples": <samples/1>}` -> `sample-import/1`: the samples with the rows laid over them and the report
 /// (`status` complete | partial, `rows`, `matched`, `unmatched_rows`, `unmatched_files`, `duplicates`, `unknown_roles`, `shared_names`, `choices`).
 pub fn import(input: &str) -> Result<String> {
@@ -177,132 +297,31 @@ pub fn import(input: &str) -> Result<String> {
         .get("text")
         .and_then(|x| x.str())
         .ok_or_else(|| Error::new("error.badRequest"))?;
-    let sep = match v.get("separator").and_then(|s| s.str()) {
-        None | Some("") => None,
-        Some(",") => Some(','),
-        Some(";") => Some(';'),
-        Some("\t") | Some("tab") => Some('\t'),
-        Some(_) => return Err(Error::new("error.badRequest")),
-    };
-    let mut table = match v.get("samples") {
-        Some(doc) => table_from_value(doc)?,
-        None => Table {
-            samples: propose(&files_of(input)?),
-            columns: Vec::new(),
-        },
-    };
-    let (mut log, mut unmatched, mut unknown) = (Vec::new(), Vec::new(), Vec::new());
+    let sep = sep_of(&v)?;
+    let mut table = base_table(&v, input)?;
+    let mut log = Vec::new();
     let rows = read_rows(text, sep, &mut log)?;
     let names: Vec<String> = table.samples.iter().map(|s| s.file.clone()).collect();
-    let mut by_file: Vec<Vec<usize>> = vec![Vec::new(); names.len()];
-    for (k, r) in rows.iter().enumerate() {
-        let (rule, hit) = candidates(&r.key, &names);
-        match hit.as_slice() {
-            [i] => {
-                by_file[*i].push(k);
-                if rule != "exact" {
-                    log.push(obj(&[
-                        ("what", format!("match:{rule}")),
-                        ("row", r.n.to_string()),
-                        ("file", names[*i].clone()),
-                        ("from", r.key.clone()),
-                        ("to", names[*i].clone()),
-                    ]));
-                }
-            }
-            [] => unmatched.push(obj(&[
-                ("row", r.n.to_string()),
-                ("file", r.key.clone()),
-                ("why", "no file".into()),
-                ("candidates", "[]".into()),
-            ])),
-            many => unmatched.push(obj(&[
-                ("row", r.n.to_string()),
-                ("file", r.key.clone()),
-                ("why", "ambiguous".into()),
-                (
-                    "candidates",
-                    quoted(&many.iter().map(|&i| names[i].clone()).collect::<Vec<_>>()),
-                ),
-            ])),
-        }
-    }
-    let (mut duplicates, mut matched) = (Vec::new(), 0);
-    let mut conflict = false;
-    for (i, ks) in by_file.iter().enumerate() {
-        let Some(&first) = ks.first() else { continue };
-        matched += 1;
-        if ks.len() > 1 {
-            let same =
-                |a: &Row, b: &Row| (&a.name, &a.role, &a.group) == (&b.name, &b.role, &b.group);
-            let differ = ks.iter().any(|&k| !same(&rows[k], &rows[first]));
-            conflict |= differ;
-            let nums: Vec<String> = ks.iter().map(|&k| rows[k].n.to_string()).collect();
-            duplicates.push(obj(&[
-                ("file", names[i].clone()),
-                ("rows", list(&nums)),
-                ("conflict", differ.to_string()),
-                ("kept", rows[first].n.to_string()),
-            ]));
-            log.push(obj(&[
-                ("what", "duplicate_first".into()),
-                ("row", rows[first].n.to_string()),
-                ("file", names[i].clone()),
-                ("from", nums.join(",")),
-                ("to", rows[first].n.to_string()),
-            ]));
-        }
-        if !apply(&mut table.samples[i], &rows[first], &mut log) {
-            unknown.push(obj(&[
-                ("row", rows[first].n.to_string()),
-                ("file", names[i].clone()),
-                ("value", rows[first].role.clone()),
-            ]));
-        }
-    }
+    let (by_file, unmatched) = match_rows(&rows, &names, &mut log);
+    let st = settle(&mut table, &rows, &by_file, &mut log);
     let free: Vec<String> = (0..names.len())
         .filter(|&i| by_file[i].is_empty())
         .map(|i| names[i].clone())
         .collect();
-    // a sample name on several files: one sample in both polarities is legitimate, so this is evidence, not a fault
-    let mut shared = Vec::new();
-    for (i, s) in table.samples.iter().enumerate() {
-        let id = &s.sample_id;
-        let all: Vec<String> = table
-            .samples
-            .iter()
-            .filter(|o| &o.sample_id == id)
-            .map(|o| o.file.clone())
-            .collect();
-        let first = table.samples.iter().position(|o| &o.sample_id == id) == Some(i);
-        if !id.is_empty() && all.len() > 1 && first {
-            shared.push(obj(&[("name", id.clone()), ("files", quoted(&all))]));
-        }
-    }
-    let complete = unmatched.is_empty() && free.is_empty() && !conflict && unknown.is_empty();
+    let complete = unmatched.is_empty() && free.is_empty() && !st.conflict && st.unknown.is_empty();
     let mut o = Out::default();
-    o.raw("{\"report\":{\"choices\":")
-        .raw(&list(&log))
-        .raw(",\"duplicates\":")
-        .raw(&list(&duplicates))
-        .raw(",\"matched\":")
-        .int(matched)
-        .raw(",\"rows\":")
-        .int(rows.len() as i64)
-        .raw(",\"shared_names\":")
-        .raw(&list(&shared))
-        .raw(",\"status\":")
-        .str(if complete { "complete" } else { "partial" })
-        .raw(",\"unknown_roles\":")
-        .raw(&list(&unknown))
-        .raw(",\"unmatched_files\":")
-        .raw(&quoted(&free))
-        .raw(",\"unmatched_rows\":")
-        .raw(&list(&unmatched))
-        .raw("},\"samples\":")
-        .raw(&table_to_json(&table))
-        .raw(",\"schema\":")
-        .str(SCHEMA)
-        .raw("}");
+    o.raw("{\"report\":{\"choices\":").raw(&list(&log));
+    o.raw(",\"duplicates\":").raw(&list(&st.duplicates));
+    o.raw(",\"matched\":").int(st.matched as i64);
+    o.raw(",\"rows\":").int(rows.len() as i64);
+    o.raw(",\"shared_names\":")
+        .raw(&list(&shared_names(&table)));
+    o.raw(",\"status\":")
+        .str(if complete { "complete" } else { "partial" });
+    o.raw(",\"unknown_roles\":").raw(&list(&st.unknown));
+    o.raw(",\"unmatched_files\":").raw(&quoted(&free));
+    o.raw(",\"unmatched_rows\":").raw(&list(&unmatched));
+    o.raw("},\"samples\":").raw(&table_to_json(&table));
+    o.raw(",\"schema\":").str(SCHEMA).raw("}");
     Ok(o.0)
 }

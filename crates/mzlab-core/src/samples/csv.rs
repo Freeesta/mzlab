@@ -412,7 +412,7 @@ pub fn write(t: &Table, sep: char) -> String {
     out
 }
 
-fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
+pub(super) fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
     match v.get("separator").and_then(|s| s.str()) {
         None | Some("") => Ok(None),
         Some(",") => Ok(Some(',')),

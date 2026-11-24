@@ -174,75 +174,87 @@ fn engine(e: &Error) -> Outcome {
     o
 }
 
-pub(crate) fn run(args: Vec<String>) -> Outcome {
-    let (json, dry) = (
-        args.iter().any(|a| a == "--json"),
-        args.iter().any(|a| a == "--dry-run"),
-    );
+/// The request of the engine: the CSV text plus the `samples/1` document or the files (name and hash) it goes over.
+fn request(csv: &str, samples: Option<&str>, paths: &[String]) -> Result<String, Outcome> {
+    let mut body = mzlab_core::json::Out::default();
+    body.raw("{\"text\":").str(csv);
+    match samples {
+        Some(s) => {
+            let t = text(s)?;
+            if parse(t.as_bytes()).is_err() {
+                return Err(engine(&Error::new("error.badSamples")));
+            }
+            body.raw(",\"samples\":").raw(&t);
+        }
+        None => {
+            body.raw(",\"files\":[");
+            for (i, (n, sha)) in files(paths)?.iter().enumerate() {
+                body.raw(if i > 0 { "," } else { "" })
+                    .raw("{\"name\":")
+                    .str(n);
+                body.raw(",\"sha256\":").str(sha).raw("}");
+            }
+            body.raw("]");
+        }
+    }
+    body.raw("}");
+    Ok(body.0)
+}
+
+/// The arguments checked: (META.csv, files, --samples, --out), or the outcome that ends the command (help, usage error).
+type Parsed = (String, Vec<String>, Option<String>, Option<String>);
+
+fn arguments(args: Vec<String>, dry: bool) -> Result<Parsed, Outcome> {
     let rest: Vec<String> = args.into_iter().filter(|a| a != "--json").collect();
     let p = match crate::extract::parse(rest, &["--samples", "--out"], &["--dry-run"]) {
         Ok(Some(p)) => p,
-        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
+        Ok(None) => return Err(Outcome::ok(format!("{HELP}\n").into_bytes())),
+        Err(e) => return Err(Outcome::fail(&e)),
     };
     let (samples, out) = (
         p.get("--samples").map(String::from),
         p.get("--out").map(String::from),
     );
     let Some((meta, paths)) = p.pos.split_first() else {
-        return Outcome::fail("sample import needs META.csv and FILE|DIR... or --samples SAMPLES.json (sample import --help)");
+        return Err(Outcome::fail("sample import needs META.csv and FILE|DIR... or --samples SAMPLES.json (sample import --help)"));
     };
     if samples.is_some() == !paths.is_empty() {
-        return Outcome::fail(
+        return Err(Outcome::fail(
             "sample import takes FILE|DIR... or --samples SAMPLES.json, one of them",
-        );
+        ));
     }
     if dry && out.is_some() {
-        return Outcome::fail("--dry-run writes nothing: drop --out");
+        return Err(Outcome::fail("--dry-run writes nothing: drop --out"));
     }
-    let csv = match text(meta) {
-        Ok(t) => t,
+    Ok((meta.clone(), paths.to_vec(), samples, out))
+}
+
+/// The engine's document, the report in it and the bare `samples/1` it holds.
+fn answer(body: &str) -> Result<(String, Value, String), Outcome> {
+    let doc = mzlab_core::samples::route_all("import", body).map_err(|e| engine(&e))?;
+    let Ok(v) = parse(doc.as_bytes()) else {
+        return Err(Outcome::fail(
+            "sample import: the engine answered with a document that is not JSON",
+        ));
+    };
+    let mut o = mzlab_core::json::Out::default();
+    mzlab_core::json::write_value(&mut o, v.get("samples").unwrap_or(&Value::Null));
+    Ok((doc, v.get("report").cloned().unwrap_or(Value::Null), o.0))
+}
+
+pub(crate) fn run(args: Vec<String>) -> Outcome {
+    let json = args.iter().any(|a| a == "--json");
+    let dry = args.iter().any(|a| a == "--dry-run");
+    let (meta, paths, samples, out) = match arguments(args, dry) {
+        Ok(p) => p,
         Err(o) => return o,
     };
-    let mut body = mzlab_core::json::Out::default();
-    body.raw("{\"text\":").str(&csv);
-    match &samples {
-        Some(s) => match text(s) {
-            Ok(t) if parse(t.as_bytes()).is_ok() => body.raw(",\"samples\":").raw(&t),
-            Ok(_) => return engine(&Error::new("error.badSamples")),
-            Err(o) => return o,
-        },
-        None => match files(paths) {
-            Ok(f) => {
-                body.raw(",\"files\":[");
-                for (i, (n, sha)) in f.iter().enumerate() {
-                    body.raw(if i > 0 { "," } else { "" })
-                        .raw("{\"name\":")
-                        .str(n)
-                        .raw(",\"sha256\":")
-                        .str(sha)
-                        .raw("}");
-                }
-                body.raw("]")
-            }
-            Err(o) => return o,
-        },
-    };
-    body.raw("}");
-    let doc = match mzlab_core::samples::route_all("import", &body.0) {
+    let done = text(&meta)
+        .and_then(|csv| request(&csv, samples.as_deref(), &paths))
+        .and_then(|b| answer(&b));
+    let (doc, report, samples_json) = match done {
         Ok(d) => d,
-        Err(e) => return engine(&e),
-    };
-    let Ok(v) = parse(doc.as_bytes()) else {
-        return Outcome::fail(
-            "sample import: the engine answered with a document that is not JSON",
-        );
-    };
-    let report = v.get("report").cloned().unwrap_or(Value::Null);
-    let samples_json = {
-        let mut o = mzlab_core::json::Out::default();
-        mzlab_core::json::write_value(&mut o, v.get("samples").unwrap_or(&Value::Null));
-        o.0
+        Err(o) => return o,
     };
     if let Some(path) = &out {
         if let Err(e) = std::fs::write(path, format!("{samples_json}\n")) {
