@@ -327,7 +327,7 @@ pub fn settings(settings_json: &str) -> Settings {
     // one_ion: "auto" or absent = the quantum, 0 = off, > 0 = cps of one ion; a negative or unreadable value keeps auto
     s.one_ion = match num("one_ion") {
         Some(x) if x > 0.0 => OneIon::Cps(x),
-        Some(x) if x == 0.0 => OneIon::Off,
+        Some(0.0) => OneIon::Off,
         _ => OneIon::Auto,
     };
     s.noise_sd_weight = num("noise_sd_weight").map_or(s.noise_sd_weight, |x| x.max(0.0));

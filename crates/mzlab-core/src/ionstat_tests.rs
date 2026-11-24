@@ -236,7 +236,7 @@ fn no_background_point_is_an_error_and_the_json_keys_are_stable() {
 #[test]
 fn the_rounding_of_summed_f32_intensities_is_not_a_step() {
     // one ion is 13333.3336 cps stored as f32; an XIC sums ions of several m/z bins, so 2 and 3 ions differ from 2q and 3q by about 1e-3
-    let one = f64::from(13333.3336f32);
+    let one = f64::from(13_333.334_f32);
     let y: Vec<f64> = [
         0.0,
         one,
