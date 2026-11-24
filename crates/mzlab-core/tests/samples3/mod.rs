@@ -2,6 +2,7 @@
 //! (regex and template, spans, the generated names) and `from_file`; schema check.
 
 mod csv;
+mod import;
 mod model;
 mod series;
 

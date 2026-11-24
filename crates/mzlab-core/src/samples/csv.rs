@@ -57,14 +57,14 @@ fn lower(v: &str) -> Cow<'_, str> {
 }
 
 /// The field a header names (the fixed name, or a synonym), None for a free column.
-fn field_of(h: &str) -> Option<&'static str> {
+pub(super) fn field_of(h: &str) -> Option<&'static str> {
     let l = h.trim().to_lowercase();
     if let Some(f) = FIXED.iter().find(|f| **f == l) {
         return Some(f);
     }
     Some(match l.as_str() {
-        "name" | "filename" => "file",
-        "sample_id" | "sample" => "sample_id",
+        "name" | "filename" | "file_name" | "file name" => "file",
+        "sample_id" | "sample" | "sample_name" | "sample name" => "sample_id",
         "polarity" => "polarity",
         "matrix" => "matrix",
         "batch" => "batch",
@@ -81,7 +81,7 @@ fn field_of(h: &str) -> Option<&'static str> {
 }
 
 /// The separator of the first line: the one of `,` `;` tab used most outside quotes (`,` when none).
-fn detect(text: &str) -> char {
+pub(super) fn detect(text: &str) -> char {
     let mut n = [0usize; 3];
     let mut inq = false;
     for c in text.trim_start_matches('\u{feff}').chars() {

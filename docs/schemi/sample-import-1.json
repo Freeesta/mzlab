@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sample-import/1",
+  "title": "sample-import/1: a table of file -> sample name, role and group laid over the samples of a set of files",
+  "description": "The answer of `mzlab-cli sample import --json` and of the `import` op of the `samples` route (same bytes in the site and the app): `samples` is a samples/1 and `report` says what was matched, what was not and every automatic choice. Nothing is refused for a finding; `status` is `partial` when a row or a file is unmatched, duplicate rows disagree or a role word is unknown. Code: crates/mzlab-core/src/samples/import.rs.",
+  "type": "object",
+  "required": ["schema", "samples", "report"],
+  "properties": {
+    "schema": {"const": "sample-import/1"},
+    "samples": {"$ref": "samples/1"},
+    "report": {
+      "type": "object",
+      "required": ["status", "rows", "matched", "unmatched_rows", "unmatched_files", "duplicates", "unknown_roles", "shared_names", "choices"],
+      "properties": {
+        "status": {"enum": ["complete", "partial"]},
+        "rows": {"type": "integer", "description": "Rows of the table (blank rows skipped)."},
+        "matched": {"type": "integer", "description": "Files that got a row."},
+        "unmatched_rows": {
+          "type": "array",
+          "description": "Rows that name no file (`no file`) or two or more (`ambiguous`, with the `candidates`): nothing is guessed.",
+          "items": {
+            "type": "object",
+            "required": ["row", "file", "why", "candidates"],
+            "properties": {
+              "row": {"type": "integer", "description": "Row number in the table, the header is row 1."},
+              "file": {"type": "string"},
+              "why": {"enum": ["no file", "ambiguous"]},
+              "candidates": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "unmatched_files": {"type": "array", "items": {"type": "string"}, "description": "Files no row names; they keep what their names proposed."},
+        "duplicates": {
+          "type": "array",
+          "description": "Files named by two or more rows: the first row is kept (`kept`); `conflict` says whether the rows disagree.",
+          "items": {
+            "type": "object",
+            "required": ["file", "rows", "conflict", "kept"],
+            "properties": {
+              "file": {"type": "string"},
+              "rows": {"type": "array", "items": {"type": "integer"}},
+              "conflict": {"type": "boolean"},
+              "kept": {"type": "integer"}
+            }
+          }
+        },
+        "unknown_roles": {
+          "type": "array",
+          "description": "A role word that is not a role; the role the name proposed is kept.",
+          "items": {
+            "type": "object",
+            "required": ["row", "file", "value"],
+            "properties": {"row": {"type": "integer"}, "file": {"type": "string"}, "value": {"type": "string"}}
+          }
+        },
+        "shared_names": {
+          "type": "array",
+          "description": "A sample name on several files: evidence only (one sample in two polarities is two files).",
+          "items": {
+            "type": "object",
+            "required": ["name", "files"],
+            "properties": {"name": {"type": "string"}, "files": {"type": "array", "items": {"type": "string"}}}
+          }
+        },
+        "choices": {
+          "type": "array",
+          "description": "Every automatic choice, in the order made: `match:case`, `match:stem`, `match:stem-case` (a row matched without an exact name), `duplicate_first`, `sample_name`, `role` and `group` (the value before and after), `ignored_column`.",
+          "items": {
+            "type": "object",
+            "required": ["what", "row", "file", "from", "to"],
+            "properties": {
+              "what": {"type": "string"},
+              "row": {"type": "integer"},
+              "file": {"type": "string"},
+              "from": {"type": "string"},
+              "to": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

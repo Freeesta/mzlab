@@ -4,7 +4,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::cmd::entries;
-use crate::{execute, pack_cmd_tests::MISSING as PACK, raw_cmd::tests::MISSING as RAW, Outcome};
+use crate::{
+    execute, pack_cmd_tests::MISSING as PACK, raw_cmd::tests::MISSING as RAW,
+    samples_import::tests::MISSING as IMPORT, Outcome,
+};
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
 pub(crate) const MISSING: &[&[&str]] = &[
@@ -382,7 +385,12 @@ fn a_command_without_a_json_form_says_so_and_never_reports_an_unknown_option() {
 
 #[test]
 fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
-    let cases: Vec<_> = MISSING.iter().chain(PACK).chain(RAW).collect();
+    let cases: Vec<_> = MISSING
+        .iter()
+        .chain(PACK)
+        .chain(RAW)
+        .chain(IMPORT)
+        .collect();
     for a in &cases {
         let o = run(a);
         assert_eq!(o.code, 4, "{a:?}: {}", o.stderr);
@@ -434,38 +442,6 @@ pub(crate) fn wiff(name: &str) -> (PathBuf, String) {
     );
     let f = dir.join("in/grande.wiff").to_string_lossy().into_owned();
     (dir, f)
-}
-
-#[test]
-fn an_unknown_selector_is_exit_5_with_error_1() {
-    let (dir, f) = wiff("sample");
-    for a in [
-        vec!["file", "channels", &f, "--sample", "9"],
-        vec!["features", &f, "--sample", "9"],
-        vec![
-            "file",
-            "convert",
-            &f,
-            "--sample",
-            "9",
-            "--out",
-            "/tmp/mzlab_contract_unused",
-        ],
-        vec!["sample", "select", &f, "--sample", "9"],
-        vec!["trace", "chrom", &f, "--id", "sim:nothing"],
-        vec!["spectrum", "get", &f, "--scan", "99999"],
-        vec!["flow", "steps", "--id", "no.such.step"],
-    ] {
-        // the node selector of `msn graph` needs a graph file: covered by msn_graph_tests
-        let o = run(&a);
-        assert_eq!(o.code, 5, "{a:?}: {}", o.stderr);
-    }
-    let o = run(&["file", "channels", &f, "--sample", "9", "--json"]);
-    assert_eq!(
-        one_error(&o, 5, "channels --json")["error_key"],
-        "err.sample.unknown"
-    );
-    let _ = std::fs::remove_dir_all(dir);
 }
 
 #[test]

@@ -171,7 +171,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | routes (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-routes.md` |
 | `step/1` descriptors (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-step.md` |
 | Rust engine (`crates/`, golden data `tools/golden.py`) | `docs/agenti/rust.md` |
-| sample file roles, times and metadata (`samples/1`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, indexes for the TP path) | `docs/agenti/samples.md` |
+| sample file roles, times and metadata (`samples/1`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, indexes for the TP path, table import `sample import`) | `docs/agenti/samples.md` |
 | scandump, RFR oracle | `docs/agenti/scandump.md` |
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |

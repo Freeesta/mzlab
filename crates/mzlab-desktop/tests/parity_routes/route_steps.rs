@@ -78,3 +78,31 @@ pub fn first_difference(a: &str, w: &str) -> String {
         near(w)
     )
 }
+
+/// The table of the `import` steps: a stem match, a case match, an unmatched row, duplicate rows, an unknown role, a wash and a name that looks like a number.
+const IMPORT_CSV: &str = "file,sample name,role,group\nMQ_blk,12,wash,G1\nmq_wash_1,B,blank,G1\nghost.mzML,C,std,G2\nTW_blk,D,QC,G2\nTW_blk,E,dark,G2\nMQ_std_BTZ_1ppm,F,maybe,\n";
+
+/// The design steps and the sample table import (`sample-import/1`): matches by name, case and stem, an unmatched row, duplicates, an unknown role, a wash, a name
+/// that looks like a number, other separators, a CSV without a file column, a samples base and a bad request.
+pub fn sample_steps() -> Vec<Value> {
+    let files = json!([{"name": "MQ_blk.mzML"}, {"name": "MQ_wash_1.mzML"}, {"name": "TW_blk.mzML"}, {"name": "MQ_std_BTZ_1ppm.mzML"}]);
+    let step = |body: Value| json!({"op": "lr_samples", "cop": "import", "body": body.to_string()});
+    let mut steps = design_steps();
+    steps.extend([
+        step(json!({"files": files, "text": IMPORT_CSV})),
+        step(json!({"files": files, "text": IMPORT_CSV.replace(',', ";")})),
+        step(json!({"files": files, "text": IMPORT_CSV.replace(',', "\t")})),
+        step(json!({"files": [{"name": "a.mzML"}], "text": "role\nstd\n"})),
+        step(json!({"text": "file\na\n"})),
+        step(json!({"files": files})),
+    ]);
+    steps
+}
+
+/// The import steps are not vacuous: four of the six give a `sample-import/1` (the other two are the same refusal in the app and the .wasm).
+pub fn check_import_answers(plan: &[Value], wasm: &[Value]) {
+    let n = plan.iter().zip(wasm).filter(|(s, _)| s["cop"] == "import").filter(|(_, w)| {
+        matches!(super::from_wasm(w), super::Got::Text(t) if t.contains("\"schema\":\"sample-import/1\""))
+    });
+    assert_eq!(n.count(), 4);
+}

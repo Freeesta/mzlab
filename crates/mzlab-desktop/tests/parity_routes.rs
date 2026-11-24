@@ -164,7 +164,7 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_ricerca", "body": format!("{head}{tables}}}")}));
     }
-    steps.extend(route_steps::design_steps());
+    steps.extend(route_steps::sample_steps());
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
@@ -306,6 +306,7 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         &wasm,
         &[1, 11, 14, 17, 18, 24, 26, 29, 30, 34, 35, 36, 37],
     );
+    route_steps::check_import_answers(&plan, &wasm);
     // a slot that was never opened is an error with the same key in both
     for w in &wasm[wasm.len() - 3..] {
         assert_eq!(from_wasm(w), Got::Err("err.file.raw".into()));

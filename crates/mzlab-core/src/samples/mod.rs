@@ -11,6 +11,7 @@ mod csv_fields;
 mod csv_tests;
 mod file_names;
 mod from_file;
+mod import;
 mod json;
 mod json3;
 mod model;
@@ -33,6 +34,7 @@ pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
 pub use file_names::{clean_sample_name, default_names, mzml_names, Item as NameItem, Named};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
+pub use import::import;
 pub use json::{digest, from_json, from_value, to_json};
 pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};
 pub use model::{apply_model, Applied};
@@ -297,6 +299,7 @@ pub fn route_all(op: &str, input: &str) -> Result<String> {
         "model" => apply_model(input),
         "csv_read" => csv_read(input),
         "csv_write" => csv_write(input),
+        "import" => import(input),
         "mzml_names" => file_names::route(input),
         "variables" => variables::route_variables(input),
         "group_name" => variables::route_group_name(input),

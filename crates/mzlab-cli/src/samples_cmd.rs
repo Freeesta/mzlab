@@ -16,6 +16,7 @@ pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split 
 usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli sample group NAME...
        mzlab-cli sample table [--names FILE|- | FILE...] [--text]
+       mzlab-cli sample import META.csv (FILE|DIR)... [--dry-run] [--json]   (sample import --help)
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
        mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
@@ -470,6 +471,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let (op, body) = match sub {
         Some("vars") => ("variables", variables_args(it.collect())),
         Some("table") => return crate::samples_table::run(it.collect()),
+        Some("import") => return crate::samples_import::run(it.collect()),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {

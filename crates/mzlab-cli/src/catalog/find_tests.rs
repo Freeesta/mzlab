@@ -15,6 +15,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "assign roles blank qc standard to the samples",
         "sample table",
     ),
+    (
+        "import sample names and roles from a csv metadata table",
+        "sample import",
+    ),
     ("non-targeted feature table of all files", "features"),
     (
         "integrate a target list of SIM ions in many files",
