@@ -44,7 +44,7 @@ fn the_omitted_keys_restore_to_the_full_listing() {
         empty += usize::from(want.is_empty());
         let native = c
             .get("executable_native")
-            .map_or(true, |v| v.as_bool().unwrap());
+            .is_none_or(|v| v.as_bool().unwrap());
         assert_eq!(
             native,
             f["executable_native"].as_bool().unwrap(),
