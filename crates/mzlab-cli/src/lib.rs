@@ -32,10 +32,10 @@ mod emit;
 pub mod error_text;
 pub(crate) use emit::emit;
 #[cfg(test)]
+mod convert_name_tests;
+#[cfg(test)]
 #[path = "convert_tests_spectrum.rs"]
 mod convert_tests_spectrum;
-#[cfg(test)]
-mod convert_name_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]
