@@ -386,6 +386,7 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
     super::chance::json(&mut o, &d.chance);
     o.raw(",\"merged\":");
     super::merge::json(&mut o, &d.merged, &d.lc);
+    super::floorchk::summary_json(&mut o, d, rows.iter().map(|r| r.e));
     o.raw(",\"unexpected_left\":{\"over_limit\":")
         .int(d.unexpected_left.0 as i64)
         .raw(",\"isotope_or_flat\":")

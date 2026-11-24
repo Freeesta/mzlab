@@ -67,6 +67,8 @@ pub fn dig_lr_step() -> Step {
             Param::boolean("parent_decay", "Parent must fall over time").default_bool(d.parent_decay),
             Param::number("merge_da", "Merge split rows within").min(0.0).default_num(d.merge_da).unit("Da"),
             Param::number("merge_rt_min", "Merge split rows within RT").min(0.0).default_num(d.merge_rt_min).unit("min"),
+            Param::number("one_ion", "Cps of one ion (noise floor)").min(0.0).unit("cps").doc("R1, evidence only: empty = auto (the quantum of each XIC), 0 = off"),
+            Param::number("noise_sd_weight", "SD weight of the noise floor").min(0.0).default_num(d.noise_sd_weight),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -153,5 +155,21 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         &mut |k| open(&indexes[k]).map_err(|e| e.key.to_string()),
     )
     .map_err(|e| Error::new("err.flow.dig").with("detail", e))?;
-    write_made(r, job, summary(&d, "{}") + "\n", DataType::Report)
+    let out = summary(&d, "{}");
+    notes(&out);
+    write_made(r, job, out + "\n", DataType::Report)
+}
+
+/// The log of the one-ion noise floor (`noise_floor.log` of the Dig, R1) on stderr as `note:` lines: the automatic choice, then each row that
+/// warns or fails; the data stay on stdout or in the artifact.
+fn notes(dig: &str) {
+    let Ok(v) = mzlab_core::json::parse(dig.as_bytes()) else {
+        return;
+    };
+    let Some(log) = v.get("noise_floor").and_then(|n| n.get("log")) else {
+        return;
+    };
+    for l in log.arr().iter().filter_map(|x| x.str()) {
+        eprintln!("note: {l}");
+    }
 }

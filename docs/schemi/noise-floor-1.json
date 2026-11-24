@@ -32,7 +32,7 @@
       }
     },
     "quantum": {
-      "description": "The smallest positive background value or step between distinct values, and the share of positive values within 0.02 of an integer multiple of it; accepted with at least 3 positive values, a support of 0.9 and a level (median positive value in quanta) of at most 100, since integer spacing alone is not evidence of ion counting. Null without positive values.",
+      "description": "The smallest positive background value or step between distinct values (values within a relative 1e-6 of each other are one value: the rounding of summed f32 intensities is not a step), and the share of positive values within 0.02 of an integer multiple of it; accepted with at least 3 positive values, a support of 0.9 and a level (median positive value in quanta) of at most 100, since integer spacing alone is not evidence of ion counting. Null without positive values.",
       "oneOf": [
         { "type": "null" },
         {

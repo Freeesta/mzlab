@@ -6,6 +6,7 @@ pub mod chance;
 pub mod coelute;
 pub mod cond;
 pub mod detail;
+pub mod floorchk;
 pub mod groups_out;
 pub mod isf;
 pub mod kin;

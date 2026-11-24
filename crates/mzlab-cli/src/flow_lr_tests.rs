@@ -3,6 +3,8 @@
 
 #[path = "flow_lr_tol_tests.rs"]
 mod tol;
+#[path = "flow_lr_floor_tests.rs"]
+mod floor;
 
 use std::path::{Path, PathBuf};
 
@@ -90,6 +92,12 @@ fn run_flow(d: &Path, tail: &str) -> String {
 
 /// The chain of the page (`feat-worker.js`): indexes in memory, each file detected with its own recipe, aligned with the first one.
 fn page(d: &Path) -> (Vec<u8>, String) {
+    let (table, dg, _) = page_dig(d, "{}");
+    (table, summary(&dg, "{}") + "\n")
+}
+
+/// `page` with the settings of the page, keeping the Dig and the indexes of the files.
+fn page_dig(d: &Path, settings: &str) -> (Vec<u8>, lr::LrDig, Vec<Vec<u8>>) {
     let idxs: Vec<Vec<u8>> = NAMES
         .iter()
         .map(|n| {
@@ -128,13 +136,13 @@ fn page(d: &Path) -> (Vec<u8>, String) {
     let dg = lr::dig(
         &files,
         &parent,
-        "{}",
+        settings,
         &table,
         &h.registry.to_json(),
         &mut |k| Ok(open(k)),
     )
     .unwrap();
-    (table, summary(&dg, "{}") + "\n")
+    (table, dg, idxs)
 }
 
 #[test]
@@ -278,3 +286,4 @@ fn the_parent_file_gives_the_adduct_that_sets_the_polarity_of_the_dig() {
         "[M+H]+"
     );
 }
+
