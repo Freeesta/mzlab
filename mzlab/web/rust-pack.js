@@ -36,7 +36,11 @@ async function folderOf(root, path, made) {
   const parts = path.split("/"), name = /** @type {string} */ (parts.pop());
   let d = root;
   for (const p of parts) {
-    try { d = await d.getDirectoryHandle(p); } catch (_) { const n = await d.getDirectoryHandle(p, { create: true }); made.push([d, p]); d = n; }
+    try { d = await d.getDirectoryHandle(p); } catch (_) {
+      // a file where a folder is wanted is the command line's `err.run.output`, not a raw DOMException
+      const n = await d.getDirectoryHandle(p, { create: true }).catch(/** @param {any} e */ e => { throw JSON.stringify({ error_key: "err.run.output", params: { detail: `${path}: ${e?.name ?? e}` } }); });
+      made.push([d, p]); d = n;
+    }
   }
   return { d, name };
 }
@@ -92,7 +96,7 @@ const partReaders = handles => ({
 /**
  * Packs `files` (relative path + FileSystemFileHandle) into parts in `dir` (a FileSystemDirectoryHandle) and writes `NAME.pack.json` there; returns `{manifest, doc}`, the
  * manifest text and the `pack-run/1` document. `dryRun` reads nothing and writes nothing, and is refused for the names a real run refuses. Existing parts or manifest of that
- * name are `err.pack.exists` unless `force`; the new parts are written under temporary names and moved into place only when all of them are, so a failed run leaves an older pack as it was.
+ * name are `err.pack.exists` unless `force`; the new parts are written under temporary names and moved into place only when all of them are, so a run that fails before the moves leaves an older pack as it was.
  * @param {{files: Input[], dir: any, name?: string, partSize?: number, dryRun?: boolean, force?: boolean}} m
  */
 export async function packFiles({ files, dir, name = "pack", partSize = 25e6, dryRun = false, force = false }) {

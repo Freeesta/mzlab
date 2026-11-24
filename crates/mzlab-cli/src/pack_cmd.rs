@@ -159,7 +159,7 @@ pub(crate) fn out_err(e: impl ToString) -> Error {
     Error::new("err.run.output").with("detail", e)
 }
 
-/// Parts written into a folder, one file each, under temporary names: a failed run removes them and leaves any older pack as it was, a good one renames them.
+/// Parts written into a folder, one file each, under temporary names: a run that fails before the renames removes them and leaves any older pack as it was, a good one renames them.
 struct DirSink {
     dir: PathBuf,
     name: String,
@@ -342,7 +342,7 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
     write_pack(job, &items, &list, &o)
 }
 
-/// Writes the parts and the manifest; a failed run removes what it had written and leaves an older pack of the same name untouched.
+/// Writes the parts and the manifest; a run that fails before the renames removes what it had written and leaves an older pack of the same name untouched.
 pub(crate) fn write_pack(
     mut job: Job,
     items: &[Item],

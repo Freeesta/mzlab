@@ -166,6 +166,6 @@ def test_the_page_code_over_a_stand_in_for_opfs_does_what_the_app_does(pkg, tmp_
         "dry_run_colon": "err.pack.path", "dry_run_colon_real": "err.pack.path", "dry_run_colon_empty": True,
         "bad_manifest_stream": "err.pack.path", "bad_manifest_stream_empty": True, "bad_manifest_dotdot": "err.pack.path", "bad_manifest_dotdot_empty": True,
         "bad_manifest_abs": "err.pack.path", "bad_manifest_abs_empty": True,
-        "unpack_round_trip": "unpack-run/1", "lost_part_same_tree_as_the_app": True, "nothing_left_over": True, "unpack_exists": "err.pack.exists",
+        "unpack_round_trip": "unpack-run/1", "lost_part_same_tree_as_the_app": True, "nothing_left_over": True, "unpack_exists": "err.pack.exists", "file_where_a_folder_is_wanted": "err.run.output", "file_where_a_folder_is_wanted_left": True,
     }
     assert got == want

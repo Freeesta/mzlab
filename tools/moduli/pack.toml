@@ -3,6 +3,6 @@ pacchetto = "mzlab-pack-wasm"
 chiavi = { pack = 31 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 139264
-misura = 126124
-nota = "file pack / unpack / check-pack (split archives and their manifest through OPFS callbacks); lazy, loaded on the first use; new module, cap = measurement x 1.10 rounded to 4 KiB"
+tetto = 147456
+misura = 136812
+nota = "file pack / unpack / check-pack (split archives and their manifest through OPFS callbacks); lazy, loaded on the first use; new module, cap = measurement x 1.05 rounded up to 4 KiB"

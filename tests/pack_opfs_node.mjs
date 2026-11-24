@@ -124,6 +124,14 @@ await unpackPack({ manifest, dir: fromDisk(lost), out: lostOut });
 checks.lost_part_same_tree_as_the_app = same(listFake(lostOut), listDisk(cliLost));
 checks.nothing_left_over = !listFake(out).concat(listFake(lostOut)).some(e => e.includes(".mzpack-tmp"));
 
+// a file where the manifest wants a folder is the module's `err.run.output`, and nothing is left behind
+{
+  const blocked = new Dir(), node = new Node();
+  blocked.map.set("camp", node);
+  checks.file_where_a_folder_is_wanted = await key(() => unpackPack({ manifest, dir: fromDisk(app), out: blocked }));
+  checks.file_where_a_folder_is_wanted_left = same(listFake(blocked), ["f:camp:"]);
+}
+
 // an existing target is refused without force and nothing is created
 const again = fromDisk(src);
 checks.unpack_exists = await key(() => unpackPack({ manifest, dir: fromDisk(app), out: again }));

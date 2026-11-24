@@ -20,6 +20,7 @@ fn compact_optional_is_the_full_listings_missing_required_for_every_argument() {
     let doc = json(&["commands", "--json"]);
     let mut n = 0;
     for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        assert_eq!(c["path"], e.name);
         let mut path = vec!["commands", "--json"];
         path.extend(e.name.split(' '));
         let whole = json(&path);
