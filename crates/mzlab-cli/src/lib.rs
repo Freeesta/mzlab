@@ -22,6 +22,7 @@ pub mod convert;
 mod convert_dry;
 mod convert_entries;
 mod convert_help;
+mod convert_names;
 mod convert_report;
 mod dad_cmd;
 mod dad_ms;
@@ -30,6 +31,8 @@ mod design_cmd;
 mod emit;
 pub mod error_text;
 pub(crate) use emit::emit;
+#[cfg(test)]
+mod convert_name_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]
@@ -201,6 +204,7 @@ mod quant_targets_cmd;
 mod renamed;
 mod sample_select;
 mod samples_cmd;
+mod samples_table;
 mod schema_cmd;
 mod spectrum_cmd;
 mod steps_cmd;
@@ -209,6 +213,7 @@ mod table_compare_cmd;
 mod table_compare_cmd_tests;
 mod trace_cmd;
 mod trace_xic;
+mod traces_in;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;

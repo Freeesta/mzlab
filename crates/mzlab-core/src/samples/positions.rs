@@ -58,9 +58,12 @@ fn word_span(low: &[char], words: &[&str]) -> Option<(usize, usize)> {
         while e < low.len() && low[e].is_ascii_alphanumeric() {
             e += 1;
         }
-        let tok: String = low[i..e].iter().collect();
+        let tok = &low[i..e];
+        // the words are ASCII: their length in bytes is their length in characters
         let hit = words.iter().any(|w| {
-            tok == *w || (tok.starts_with(w) && tok[w.len()..].chars().all(|c| c.is_ascii_digit()))
+            tok.len() >= w.len()
+                && tok.iter().zip(w.chars()).all(|(a, b)| *a == b)
+                && tok[w.len()..].iter().all(char::is_ascii_digit)
         });
         if hit {
             return Some((i, e));
@@ -157,10 +160,19 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
 }
 
 /// The span that decided the role: its word, or the time for a time zero.
-fn kind_span(low: &[char], c: &Sample, by_time: Option<(usize, usize)>) -> Option<(usize, usize)> {
+fn kind_span(
+    low: &[char],
+    stem: (&[char], usize),
+    c: &Sample,
+    by_time: Option<(usize, usize)>,
+) -> Option<(usize, usize)> {
     let words: &[&str] = match c.kind.as_str() {
         "infusion" => &["infusion", "infusione", "fia"],
-        "dark" => &["dark", "buio", "adsorption"],
+        // a dark word, else the lone `d` the role was read from (in the stem, after a condition)
+        "dark" => {
+            return word_span(low, &super::names::DARK_WORDS)
+                .or_else(|| super::names::lone_d(stem.0).map(|(a, b)| (a + stem.1, b + stem.1)))
+        }
         "qc" => &["qc"],
         "blank" => &BLANK_WORDS,
         "calibration" => &[
@@ -228,7 +240,7 @@ pub fn of_file(name: &str, c: &Sample, stem: &str, time: Option<(usize, usize)>)
         };
     }
     let by_time = time.map(|(a, b)| (a + off, b + off));
-    if let Some((a, b)) = kind_span(&low, c, by_time) {
+    if let Some((a, b)) = kind_span(&low, (&stem_low, off), c, by_time) {
         push(&mut items, "kind", a, b);
     }
     if let Some((a, b)) = blank_span(&low, c) {

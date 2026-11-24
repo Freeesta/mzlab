@@ -88,6 +88,15 @@ fn flags_have_type_unit_and_default() {
     assert_eq!(preset["enum"], json("[\"auto\",\"pos\",\"neg\"]"));
     let doc = json(&out(&["commands", "--json", "mol", "cip"]));
     assert_eq!(doc["commands"][0]["stdin"], true);
+    // the compact listing leaves it to the synopsis (`MOLFILE|-`)
+    let all = json(&out(&["commands", "--json"]));
+    let cip = all["commands"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["path"] == "mol cip")
+        .unwrap();
+    assert!(cip["synopsis"].as_str().unwrap().contains("|-") && cip.get("stdin").is_none());
 }
 
 #[test]

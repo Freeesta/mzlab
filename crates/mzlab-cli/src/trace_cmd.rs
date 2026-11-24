@@ -23,7 +23,10 @@ usage: mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--fo
   --rt A,B    keep the points with A <= rt <= B (minutes); for uv:auto the window the band is proposed in
   --n N       points at most per extreme of an analog trace (default 2000)
   --format F  json (default) or csv with the header rt_min,intensity, the input of every `peak` command
-  --out PATH  write there instead of the standard output";
+  --out PATH  write there instead of the standard output
+
+Many traces or files: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
+(the trace xic answers of many files) or the Flow step chrom.transitions (a target list of SIM ions / SRM transitions with S/N); never one call per trace.";
 
 /// A trace the way a route gives it, plus what produced it.
 pub(crate) struct Answer {

@@ -161,7 +161,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
 }
 
 /// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
-fn skeleton(u: &Usage) -> String {
+pub(super) fn skeleton(u: &Usage) -> String {
     let toks = tokens(&u.synopsis);
     let kept: Vec<&str> = toks
         .iter()
@@ -233,12 +233,15 @@ fn command_json(
     if !(compact && crate::cmd::json_by_default(e.name) && e.schema.is_empty()) {
         o = o.put("stdout", stdout_json(e, compact));
     }
-    if u.stdin {
+    if u.stdin && !compact {
         o = o.b("stdin", true);
     }
     if !compact || exits != derived_exits(e, &u) {
         let v = exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
         o = o.put("exit_codes", Value::Arr(v));
+    }
+    if !compact {
+        o = related(o, e.name);
     }
     if !compact || examples != [skeleton(&u)] {
         o = o.put(
@@ -247,6 +250,20 @@ fn command_json(
         );
     }
     o.done()
+}
+
+/// The full form names the related commands and steps and the one call that replaces a loop of this one (`related.rs`).
+fn related(mut o: Obj, name: &str) -> Obj {
+    if let Some(r) = super::related::of(name) {
+        o = o.put(
+            "see_also",
+            Value::Arr(r.also.iter().map(|a| text(a)).collect()),
+        );
+        if !r.bulk.is_empty() {
+            o = o.put("bulk", text(r.bulk));
+        }
+    }
+    o
 }
 
 /// Whether the words `path` are the start of the name of `e`.
@@ -299,7 +316,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest)"))
+            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json; no stdout: json, no schema"));
