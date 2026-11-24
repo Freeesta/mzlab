@@ -256,12 +256,11 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         Ok(d) => d,
         Err(o) => return o,
     };
-    if let Some(path) = &out {
-        if let Err(e) = std::fs::write(path, format!("{samples_json}\n")) {
-            return Outcome::fail_error(
-                &Error::new("err.cli.out").with("path", format!("{path}: {e}")),
-            );
-        }
+    let wrote = out.as_ref().map(|path| {
+        std::fs::write(path, format!("{samples_json}\n")).map_err(|e| format!("{path}: {e}"))
+    });
+    if let Some(Err(e)) = wrote {
+        return Outcome::fail_error(&Error::new("err.cli.out").with("path", e));
     }
     let complete = str_of(&report, "status") == "complete";
     let shown = if json || dry { doc } else { samples_json };

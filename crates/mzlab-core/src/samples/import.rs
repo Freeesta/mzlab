@@ -32,10 +32,13 @@ fn role_of(word: &str) -> Option<(&'static str, Option<&'static str>)> {
     }
 }
 
+/// A matching rule: its name and whether a file name fits the key.
+type Rule<'a> = (&'static str, &'a dyn Fn(&str) -> bool);
+
 /// The files a key may mean, from the strictest rule that finds any: (rule, indices).
 fn candidates(key: &str, files: &[String]) -> (&'static str, Vec<usize>) {
     let key = base(key);
-    let rules: [(&str, &dyn Fn(&str) -> bool); 4] = [
+    let rules: [Rule; 4] = [
         ("exact", &|f| base(f) == key),
         ("case", &|f| base(f).eq_ignore_ascii_case(key)),
         ("stem", &|f| stem(f) == stem(key)),
