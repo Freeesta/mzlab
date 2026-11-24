@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli, run
+from cargo_util import build, cli, run, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -28,8 +28,7 @@ def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("compare")
     import lr_synthetic
     lr_synthetic.make(d, 1)
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_compare")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_compare")))
     build("-p", "mzlab-cli")
     names = [str(d / n) for n in NAMES]
     (d / "samples.json").write_text(cli("sample", "table", *names).stdout, encoding="utf-8")

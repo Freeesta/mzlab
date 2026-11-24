@@ -1,6 +1,7 @@
 """Cargo helpers shared by the tests that drive the Rust binaries and .wasm: `run` reports the stderr of a failed command, `build` / `cli` / `example` / `build_example` build once per machine
 (several xdist workers may ask at the same time) or, when MZLAB_PREBUILT names the folder of the `prebuilt` jobs of test.yml (tools/ci_prebuilt.py), install the file that CI already built;
-without the variable, or for a build that folder does not list, cargo runs exactly as before."""
+without the variable, or for a build that folder does not list, cargo runs exactly as before. `wasm_module` gives a .wasm build its own copy (see there)."""
+import hashlib
 import os
 import shutil
 import subprocess
@@ -10,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from ci_prebuilt import canon, directory, manifest, outputs  # noqa: E402
+from ci_prebuilt import WASM, canon, directory, manifest, outputs  # noqa: E402
 from flock_util import lock_exclusive  # noqa: E402
 
 _manifest: dict[str, str] | None = None
@@ -96,3 +97,23 @@ def build_example(package, example):
         lock_exclusive(lock)
         if not installed("-p", package, "--example", example):
             run("cargo", "build", "--release", "--locked", "-q", "-p", package, "--example", example)
+
+
+def wasm_module(*cargo_args, runner=run) -> Path:
+    """The .wasm of `cargo build --target wasm32-unknown-unknown ARGS` (one package) as a copy of its own under target/wasm-variants/, keyed by ARGS.
+    Builds of one crate with other features (the reader families, the mzFinder and attributio modules) all write the same target/ path: a worker that read that
+    path after its own build could pack the module another worker had just built or installed there. Build and copy run under one lock per target/ path."""
+    keys = canon(["build", *cargo_args])
+    if len(keys) != 1 or not keys[0].startswith(WASM + "|"):
+        raise ValueError(f"wasm_module(): one package built for {WASM} expected, not {cargo_args}")
+    src = ROOT / outputs(keys[0])[0]
+    dst = ROOT / "target/wasm-variants" / hashlib.sha1(keys[0].encode()).hexdigest()[:12] / src.name
+    tag = hashlib.sha1(str(src).encode()).hexdigest()[:12]   # one lock per output file of this checkout
+    with open(Path(tempfile.gettempdir()) / f"mzlab-wasm-{tag}.lock", "w") as lock:
+        lock_exclusive(lock)
+        build(*cargo_args, runner=runner)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dst.with_name(f"{dst.name}.{os.getpid()}.tmp")   # replaced atomically: a worker that packs the previous copy keeps it
+        shutil.copyfile(src, tmp)
+        os.replace(tmp, dst)
+    return dst

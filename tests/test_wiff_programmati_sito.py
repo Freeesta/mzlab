@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import build, run
+from cargo_util import build, run, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -20,8 +20,7 @@ WASM = ROOT / "target/wasm32-unknown-unknown/release"
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("programmati")
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")))
     build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
     build("-p", "mzlab-cli")

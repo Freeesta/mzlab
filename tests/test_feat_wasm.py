@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli
+from cargo_util import build, cli, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -30,12 +30,12 @@ def built(tmp_path_factory):
     with ThreadPoolExecutor(2) as pool:
         made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser))
         build("-p", "mzlab-feat-wasm", "--example", "native", runner=run)
-        build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
+        module = wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
         made.result()
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
     assert len(idx) == 6
     pkg = root / "pkg"
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), str(module))
     return root, idx, pkg
 
 
@@ -303,9 +303,8 @@ def test_a_budget_that_fits_nothing_is_refused_with_the_key_and_the_files_saved(
 def built_sizes(built, tmp_path_factory):
     """The same series with a .wasm that also carries `untargeted` (default features + untargeted)."""
     root, idx, _ = built
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--features", "untargeted", runner=run)
     pkg = tmp_path_factory.mktemp("pkg_sizes")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--features", "untargeted", runner=run)))
     return idx, pkg
 
 
