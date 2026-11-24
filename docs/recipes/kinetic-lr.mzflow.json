@@ -1,0 +1,8 @@
+{"format":"mzflow/2","inputs":[{"name":"Blank_01.mzML","type":"raw"},{"name":"t0.mzML","type":"raw"},{"name":"Fe_t5.mzML","type":"raw"},{"name":"Fe_t15.mzML","type":"raw"},{"name":"Fe_t30.mzML","type":"raw"},{"name":"Cu_t5.mzML","type":"raw"},{"name":"Cu_t15.mzML","type":"raw"},{"name":"Cu_t30.mzML","type":"raw"},{"name":"samples.json","type":"samples"},{"name":"parent.json","type":"structure"},{"name":"targets.csv","type":"report"}],"steps":[
+{"id":"idx","step":"index.mzidx@1","in":{"source":["file:Blank_01.mzML","file:t0.mzML","file:Fe_t5.mzML","file:Fe_t15.mzML","file:Fe_t30.mzML","file:Cu_t5.mzML","file:Cu_t15.mzML","file:Cu_t30.mzML"]}},
+{"id":"det","step":"features.detect@2","in":{"index":["idx.index"]}},
+{"id":"ali","step":"features.align@1","in":{"peaks":["det.peaks"]}},
+{"id":"gap","step":"features.gapfill@1","in":{"table":"ali.table","index":["idx.index"]}},
+{"id":"qt","step":"quant.targets@1","in":{"raw":["idx.index"],"targets":"file:targets.csv"},"params":{"offset":"auto","blank_pattern":"blank*"}},
+{"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}},
+{"id":"exp","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}}]}

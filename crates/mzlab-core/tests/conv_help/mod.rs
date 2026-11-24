@@ -5,6 +5,16 @@ use std::path::Path;
 
 use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::readers_mzml::Conversion;
+use mzlab_core::spectrum_type::{Basis, SpectrumType, TypeChoice};
+
+/// The conversion that writes each scan with the flag of its reader (what the writer did before the spectrum-type decision): the tests that compare the
+/// mzML with the rows of the reader use it, since their synthetic points are sparse and `auto` would write them as centroids.
+pub fn keep_flags() -> Conversion<'static> {
+    Conversion {
+        decided: Some(TypeChoice::keep(SpectrumType::Auto, Basis::Reader)),
+        ..Conversion::default()
+    }
+}
 
 pub fn member(name: &str, data: &[u8]) -> Member {
     Member {
@@ -18,7 +28,7 @@ pub fn member(name: &str, data: &[u8]) -> Member {
 /// The mzML of the first sample of `fs`.
 pub fn mzml(fs: FileSet) -> Vec<u8> {
     let mut l = readers::open(fs, &Limits::sito()).unwrap();
-    Conversion::default()
+    keep_flags()
         .write(&mut *l, 0, Vec::new(), &mut |_, _| {})
         .unwrap()
 }
@@ -82,7 +92,7 @@ pub fn mzml_wiff(dir: &Path, name: &str, c: usize, centroid: bool) -> Vec<u8> {
     } else {
         l
     };
-    Conversion::default()
+    keep_flags()
         .write(&mut *l, c, Vec::new(), &mut |_, _| {})
         .unwrap()
 }

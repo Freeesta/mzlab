@@ -142,6 +142,8 @@ Already covered by running chats (not duplicated): the integration engine and pe
 
 Order: AU-12, AU-13; then AU-14 and AU-15 in parallel; AU-16; AU-17, AU-18, AU-19 in parallel. Every chat ships CLI, app and site with its parity test (§R).
 
+Screening checks for transformation products (one-ion noise floor, kinetic shape, isotope ratio, adduct pairs, matrix blank) continue as TP-0..TP-6 in `TP_SCREENING_RULES.md`; TP-0 starts `mzlab_core::ionstat` (the one-ion floor), which AU-13 extends with counts, L_C/L_D and upper limits; TP-2 shares the shape classes of AU-17, TP-4 the mass-difference table of AU-10/AU-16, TP-5 the function of AU-18.
+
 ## Not copied from MZmine
 - Defaults hidden in code: mzLab's descriptors stay the single source (AU-5 only prints them).
 - An isotope filter in ppm for unit-mass data: AU-10 uses Da and correlation.

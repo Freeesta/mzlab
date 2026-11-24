@@ -22,7 +22,7 @@ def test_the_command_list_of_the_doc_is_current():
 
 def test_the_list_names_every_command_group():
     block = cli_doc.listing([])
-    for name in ("features", "flow run|check", "mol label|anal", "file list", "peak auto|auto-lr|edges"):
+    for name in ("features", "flow run|check", "mol label|anal", "file list", "peak auto|auto-lr|noise|edges"):
         assert name in block
     assert "old:" not in block
     assert "canali" not in block

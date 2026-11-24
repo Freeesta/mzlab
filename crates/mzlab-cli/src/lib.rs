@@ -9,6 +9,8 @@ use mzlab_core::error::{Error, Result};
 mod argv;
 mod catalog;
 #[cfg(test)]
+mod catalog_optional_tests;
+#[cfg(test)]
 mod catalog_tests;
 mod channels_cmd;
 pub mod citation;
@@ -33,6 +35,9 @@ pub mod error_text;
 pub(crate) use emit::emit;
 #[cfg(test)]
 mod convert_name_tests;
+#[cfg(test)]
+#[path = "convert_tests_spectrum.rs"]
+mod convert_tests_spectrum;
 pub mod exit;
 mod extract;
 #[cfg(test)]
@@ -57,6 +62,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_convert_notes;
 mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;
@@ -201,6 +207,7 @@ mod pair_cmd;
 mod par;
 #[cfg(test)]
 mod peak_exits_tests;
+mod peak_noise_cmd;
 mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;

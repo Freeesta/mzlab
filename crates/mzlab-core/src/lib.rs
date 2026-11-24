@@ -118,6 +118,7 @@ pub mod transport;
 pub mod readers_centroids;
 pub mod readers_finite;
 pub mod readers_mzml;
+pub mod spectrum_type;
 pub mod readers_session;
 pub mod conv;
 pub mod method;
@@ -155,6 +156,7 @@ pub mod peakq_auto;
 pub mod peakq_lr;
 pub mod area_unit;
 pub mod peakq_lrauto;
+pub mod ionstat;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

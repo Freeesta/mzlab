@@ -1,0 +1,4 @@
+id,mz,rt_min,rt_max,polarity,role
+parent,343.09,13.8,14.8,+,parent
+P287,287.1,14.2,15.2,+,target
+P201,201.1,6.6,7.6,+,target

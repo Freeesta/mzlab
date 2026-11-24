@@ -1,5 +1,6 @@
-//! The five chains an agent runs with `mzlab-cli`, each on synthetic data: every call must exit 0 and the chain must take exactly the number of
-//! calls the docs promise (`for-agents.md`), so a chain cannot grow a step or lose a route without this file saying so.
+//! The six chains an agent runs with `mzlab-cli`, each on synthetic data (the sixth, a kinetic LR campaign, in `workflow_kinetic_tests.rs`):
+//! every call must exit 0 and the chain must take exactly the number of calls the docs promise (`for-agents.md`, `recipes.md`), so a chain
+//! cannot grow a step or lose a route without this file saying so.
 
 use std::path::{Path, PathBuf};
 
@@ -8,6 +9,11 @@ use mzlab_core::json::{parse, Value};
 use crate::convert_fixtures::makers;
 use crate::flow_run_tests::fixture;
 use crate::flow_stats_tests::table_for;
+
+#[path = "workflow_kinetic_tests.rs"]
+mod kinetic;
+#[path = "workflow_kinetic_series.rs"]
+mod kinetic_series;
 
 /// A new empty folder of the workflow `tag` (one per test: the tests run in parallel).
 fn dir(tag: &str) -> PathBuf {

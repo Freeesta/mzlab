@@ -240,6 +240,7 @@ fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
             peaks: src.picchi(),
             opz: Options::default(),
             steps: Some(&[]),
+            ..Conversion::default()
         };
         let mut w = conv
             .write(&mut *l, 0, sink, &mut |_, _| {})

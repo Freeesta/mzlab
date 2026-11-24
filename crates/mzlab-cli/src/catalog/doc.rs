@@ -240,7 +240,7 @@ fn command_json(
     if !(compact && crate::cmd::json_by_default(e.name) && e.schema.is_empty()) {
         o = o.put("stdout", stdout_json(e, compact));
     }
-    if u.stdin {
+    if u.stdin && !compact {
         o = o.b("stdin", true);
     }
     if !compact || exits != derived_exits(e, &u) {
@@ -323,9 +323,9 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help: see flag_help; no flag type: see flag_type, else string; no arg kind: path, or `...` (rest); no args or flags: none; an arg is required unless `optional`"))
-            .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out; exact: `commands --json PATH`"))
-            .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"))
+            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`; no args or flags: none; an arg is required unless `optional`"))
+            .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
+            .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"

@@ -76,3 +76,32 @@ fn peak_area_is_the_core_text() {
     assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 0, &[]), "");
     assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 2, &[1.0]), "");
 }
+
+#[test]
+fn noise_floor_is_the_core_text() {
+    use mzlab_core::ionstat::{floor_json, measure, FloorAsk, FloorParams};
+    // ion counts of 2222 cps: zero but for one ion now and then, a peak of 2, 3, 2 ions at 1.0 min
+    let rt: Vec<f64> = (0..100).map(|i| f64::from(i) * 0.02).collect();
+    let mut y: Vec<f64> = (0..100)
+        .map(|i| if i % 30 == 4 { 2222.0 } else { 0.0 })
+        .collect();
+    y[49..52].copy_from_slice(&[4444.0, 6666.0, 4444.0]);
+    let ask = FloorAsk {
+        peak: Some((0.95, 1.05)),
+        ..FloorAsk::default()
+    };
+    let want = floor_json(&measure(&rt, &y, ask, FloorParams::default()).unwrap());
+    let nan = f64::NAN;
+    assert_eq!(
+        super::noise_floor(&rt, &y, &[nan, nan, 0.95, 1.05], &[]),
+        want
+    );
+    assert!(
+        want.contains("\"one_ion\":2222,\"one_ion_source\":\"auto\""),
+        "{want}"
+    );
+    assert_eq!(
+        super::noise_floor(&rt, &y, &[nan, nan, -1.0, 5.0], &[]),
+        "E{\"key\":\"err.noise.noBackground\"}"
+    );
+}
