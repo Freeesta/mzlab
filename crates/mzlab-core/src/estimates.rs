@@ -150,7 +150,7 @@ struct File<'a> {
     error: bool,
 }
 
-fn pick<'a>(doc: &'a Value, path: &[&str]) -> Option<f64> {
+fn pick(doc: &Value, path: &[&str]) -> Option<f64> {
     let mut v = doc;
     for k in path {
         v = v.get(k)?;
@@ -275,7 +275,7 @@ fn value_of<'a>(m: &'a Measure, taken: &[&File]) -> (Value, Option<Found<'a>>) {
                 .done(),
         );
     }
-    sorted.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(&mut sorted, |a, b| a.total_cmp(b));
     let o = Obj::new()
         .put("name", text(m.name))
         .put("unit", text(m.unit));

@@ -2,7 +2,7 @@
 //! (`features.estimate`, the function `flow run` and the page call) and put together by `mzlab_core::estimates` (`estimate/1`): per value the median over the
 //! files with its figures, and the plan parameters it would set, each with the evidence. Nothing is written to a plan: `--emit-set` prints the `--set` lines.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::value_text;
@@ -85,7 +85,7 @@ fn table(doc: &Value) -> String {
 }
 
 /// The `estimates/1` of one file as an entry, with what the file decided on its own (`decided`).
-fn entry(f: &PathBuf, p: &Parsed, given: &[(String, Value)]) -> Result<(Value, String)> {
+fn entry(f: &Path, p: &Parsed, given: &[(String, Value)]) -> Result<(Value, String)> {
     extract::with_tmp("estimate", |tmp| {
         let sample = p
             .sample(f)
