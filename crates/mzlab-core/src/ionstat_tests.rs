@@ -1,5 +1,6 @@
 //! `ionstat` on synthetic ion-count traces (multiples of a quantum of cps per ion, Poisson background from a fixed seed): the MAD = 0 case,
-//! the all-zero trace, a counting background where the Poisson term matters, the quantum rule and the JSON keys.
+//! the all-zero trace, a counting background where the Poisson term matters, the quantum rule (integer analog data rejected), an empty
+//! peak window and the JSON keys.
 
 use super::*;
 
@@ -138,7 +139,53 @@ fn the_quantum_needs_its_support() {
     assert_eq!(quantum(&[0.0, 0.0]), None);
     // no point holds a single ion, the steps between values do
     let high = quantum(&[7000.0, 9000.0, 8000.0, 11000.0, 9000.0]).unwrap();
-    assert!(high.accepted && high.q == 1000.0, "{high:?}");
+    assert!(
+        high.accepted && high.q == 1000.0 && high.level == 9.0,
+        "{high:?}"
+    );
+}
+
+#[test]
+fn integer_valued_analog_data_is_not_a_counting_trace() {
+    // a rounded analog or processed export: every value is an integer, so the unit step has full support, but at a thousand steps
+    let y: Vec<f64> = (0..60).map(|i| 1000.0 + ((i * 7) % 11) as f64).collect();
+    let q = quantum(&y).unwrap();
+    assert_eq!((q.q, q.support), (1.0, 1.0));
+    assert!(!q.accepted && q.level > QUANTUM_MAX_IONS, "{q:?}");
+    let rt: Vec<f64> = (0..60).map(|i| i as f64 * 0.02).collect();
+    let mut yp = y.clone();
+    yp[30] = 1200.0;
+    let ask = FloorAsk {
+        peak: Some((0.59, 0.61)),
+        ..FloorAsk::default()
+    };
+    let r = measure(&rt, &yp, ask, FloorParams::default()).unwrap();
+    assert_eq!(r.floor.one_ion_source, "auto_rejected");
+    let c = r.check.unwrap();
+    assert_eq!(c.status, "warn", "{}", c.rule);
+    assert!(c.rule.contains("no ion term"), "{}", c.rule);
+}
+
+#[test]
+fn an_empty_peak_window_is_not_applicable_with_its_reason() {
+    let (rt, y) = trace(2222.0, 0.02, &[]);
+    let ask = FloorAsk {
+        peak: Some((10.0, 11.0)),
+        ..FloorAsk::default()
+    };
+    let r = measure(&rt, &y, ask, FloorParams::default()).unwrap();
+    assert_eq!(r.peak, None);
+    let c = r.check.as_ref().unwrap();
+    assert_eq!(c.status, "n/a");
+    assert!(
+        c.rule
+            .contains("no finite point in the peak window 10.0-11.0 min"),
+        "{}",
+        c.rule
+    );
+    assert!(floor_json(&r)
+        .contains("\"check\":{\"id\":\"noise_floor\",\"status\":\"n/a\",\"value\":null"));
+    assert!(floor_log(&r).ends_with("no S/N"), "{}", floor_log(&r));
 }
 
 #[test]

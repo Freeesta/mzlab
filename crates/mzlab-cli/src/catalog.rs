@@ -58,7 +58,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--text", "plain table, not JSON"),
     ("--match", "also list compatible"),
     ("--full", "every part + SHA-256"),
-    ("--rt", "window in min: A or A,B"),
+    ("--rt", "window in min: A,B, or A if the usage says"),
     ("--ms-level", "MS level, default 1"),
     ("--baseline", "baseline mode"),
     ("--noise", "noise method"),

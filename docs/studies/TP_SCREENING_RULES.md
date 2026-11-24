@@ -27,7 +27,7 @@ Dig = the LR Dig (`crates/mzlab-feat/src/legacy/lr/`, Flow step `tp.dig_lr`, sit
 | parent linearity from standards (saturation lowers k) | no | MRM `analyse` has no calibration line (`mrm.rs`, `calibration: null`); `kin.rs` fits the parent decay without a linearity check | R7 below |
 | declared scan range as perimeter | partial | `scan_window` of the run route (`itemroutes.rs`) | a hypothesis outside the window is `no_data`, not absent (R8) |
 | full scan of all nominal traces, both polarities | partial | the pipeline detects over the whole axis (unexpected ions, `rows::free_rows`); `mapscan.rs` 1 Da cells for maps; AU-16 binned view planned | per-trace census in one call (AU-16) |
-| confidence level <= 5 without MS2, 3 with MS2 and fragments, 1 with standard RT and MS2 | differs | `levels/1` profile `lr`: never above 3, 4 if the nominal formula alone explains the ion, else 5; Dig `level` null, `confidence` 4/5 without MS2 (`summary.rs`) | owner decision D3 below (4 or 5 without MS2) |
+| confidence level <= 5 without MS2, 3 with MS2 and fragments, 1 with standard RT and MS2 | differs | `levels/1` profile `lr`: never above 4 (`MAX_LEVEL_UNIT` "4", `evid/graph.rs`: an MS2 does not raise a level at unit resolution, Tabui decision D6), 4 if the nominal formula alone explains the ion, else 5; Dig `level` null, `confidence` 4/5 without MS2 (`summary.rs`) | the vademecum's 3 with MS2 and 5 without it against D6: owner decision D3 below |
 | NEG/POS pairs 2 Da apart at one RT | no | no cross-polarity pairing | R9 below |
 | in-source fragments following the parent curve | yes | `lr/isf.rs::isf_eval` (`probs.isf`), `insource` of the unexpected ions (lighter than P within 0.5 `rt_tol_min`), `coelute.rs` | correlation with the parent curve is not printed as a number (R10) |
 
@@ -43,11 +43,11 @@ Commands an agent may think are missing and that exist: `ion pattern` (expected 
 - Parity: the checks are computed inside `lr::dig`, so the site (`finder-lr` `.wasm`) and the app/CLI (`flow_digl.rs`) give the same bytes; each chat adds a flow = page test on a synthetic series (`tests/lr_robust.rs` style).
 
 ### B.2 R1 noise floor of one ion (implemented)
-- Inputs: the background points of a trace (cps) and an optional peak window; `one_ion` = cps of one ion (`auto`: the quantum, the smallest positive value or step between values, accepted when >= 90 % of positive values are within 0.02 of its multiples and there are >= 3; a number: set, for example 2222 in EMS NEG and 1000 in Q1 POS on the example instrument; 0: off).
+- Inputs: the background points of a trace (cps) and an optional peak window; `one_ion` = cps of one ion (`auto`: the quantum, the smallest positive value or step between values, accepted when >= 90 % of positive values are within 0.02 of its multiples, there are >= 3 and their median is at most 100 quanta, so integer-valued analog data at 1000, 1001, 1003 is not a counting trace; a number: set, for example 2222 in EMS NEG and 1000 in Q1 POS on the example instrument; 0: off).
 - Formula: noise = max(1.4826 MAD, `sd_weight` SD, `one_ion` sqrt(max(lambda, 1))), lambda = mean background counts per point. Near zero the ion term is one ion; above one count per point it is the Poisson error. Ties go to the first of mad, sd, ion term.
 - Defaults: `sd_weight` 0.5, `min_sn` 5 (the Dig `min_snr`), `one_ion` auto.
-- Evidence: `terms{mad, sd, sd_term, one_ion, one_ion_source, lambda, ion_term}`, `estimator`, `quantum{q, support, n_positive, accepted}`, `peak{height, sn, sn_mad, ions}`; `sn_mad` is the S/N a pure MAD gives (null when the MAD is 0, the explosion the vademecum describes).
-- Verdict: `pass` S/N >= `min_sn` with an ion term; `fail` below; `warn` without an ion term (off, or no accepted quantum: analog or processed data) or with noise 0.
+- Evidence: `terms{mad, sd, sd_term, one_ion, one_ion_source, lambda, ion_term}`, `estimator`, `quantum{q, support, n_positive, level, accepted}`, `peak{height, sn, sn_mad, ions}`; `sn_mad` is the S/N a pure MAD gives (null when the MAD is 0, the explosion the vademecum describes).
+- Verdict: `pass` S/N >= `min_sn` with an ion term; `fail` below; `warn` without an ion term (off, or no accepted quantum: analog or processed data) or with noise 0; `n/a` when no finite point is in the peak window, with the reason in `rule`.
 - Today: `mzlab-cli peak noise TRACE.csv --rt A,B [--set one_ion=auto|CPS|0]` prints `noise-floor/1`; mzlab-wasm `noise_floor` (worker op `noise`, `QUALITA.noiseFloor`) gives the same bytes. Next (TP-1): the same function on the XIC of each cell in `peakchk`, as `points[].sn_floor` and a `noise_floor` check.
 
 ### B.3 R2 kinetic shape: absent at T0, grows
@@ -90,7 +90,7 @@ Commands an agent may think are missing and that exist: `ion pattern` (expected 
 | level | needs (unit resolution) | today |
 |---|---|---|
 | 1 | standard of the TP: RT within tolerance and MS2 match | not emitted (the chemist decides, `TPDEC`) |
-| 2-3 | MS2 with diagnostic fragments shared or shifted from P (`ms2.rs` `note`), 3 at most at unit mass (`MAX_LEVEL_UNIT`) | `levels/1` `lr` caps at 3 |
+| 2-3 | MS2 with diagnostic fragments shared or shifted from P (`ms2.rs` `note`); the vademecum gives 3 at unit mass | not emitted: `MAX_LEVEL_UNIT` is 4, an MS2 does not raise a level at unit resolution (Tabui D6; D3) |
 | 4 | nominal formula alone explains the ion, all of R1-R5 pass | `levels/1` gives 4; the vademecum gives 5 (D3) |
 | 5 | a mass of interest that passes R1, R2 and R5 | `levels/1` 5 |
 A row that fails R2 or R5 keeps its number and its level and shows the failed check; the level is never raised by a check alone.
@@ -110,5 +110,5 @@ Order: TP-1 after CONTRACT-ENGLISH merges; TP-2; TP-3 in parallel with TP-2; TP-
 ## D. Owner decisions
 - D1: the checks as evidence only (recommended first: the score and labels do not move, goldens stay) or as part of the score.
 - D2: `one_ion` default `auto` (recommended; the quantum is shown with its support) or a per-instrument table in the settings.
-- D3: level 4 or 5 for a nominal formula without MS2 (`levels/1` gives 4; the vademecum says 5).
+- D3: the scheme of B.8 against the existing Tabui decision D6. Today (D6, `MAX_LEVEL_UNIT` 4) an MS2 does not raise a level at unit resolution and a nominal formula alone gives 4. The vademecum gives 3 with MS2 and diagnostic fragments and 5 without MS2. Keep D6 (no change, recommended until a unit-resolution MS2 proof exists), or adopt B.8 as a `levels/1` profile of its own.
 - D4: R5 without a matrix blank: `warn` (recommended) or `fail`.

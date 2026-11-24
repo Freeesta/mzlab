@@ -58,7 +58,7 @@ CASES = [  # name, from, to, peak a, peak b, one_ion ("" = auto)
 
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
-    d = tmp_path_factory.mktemp("rumore")
+    d = tmp_path_factory.mktemp("noise")
     build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
     build("-p", "mzlab-cli")

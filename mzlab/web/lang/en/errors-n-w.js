@@ -1,5 +1,5 @@
 I18N.add("en", {
-  "err.noise.noBackground": "No background point is left in the stretch: widen from/to or narrow the peak window (--rt).",
+  "err.noise.noBackground": "No background point is left in the stretch: check that from <= to, widen from/to or narrow the peak window (--rt).",
   "err.normative.usage": "{message}",
   "err.normative.sources": "The sources file is not valid: {message}.",
   "err.normative.pin": "A source changed since it was pinned: {message}.",

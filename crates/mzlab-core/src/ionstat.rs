@@ -18,6 +18,9 @@ pub const QUANTUM_TOL: f64 = 0.02;
 pub const QUANTUM_SUPPORT: f64 = 0.9;
 /// Fewest positive values behind an automatic quantum.
 pub const QUANTUM_MIN_N: usize = 3;
+/// Largest median of the positive values, in quanta, of an accepted quantum: a counting background sits at a few ions per point,
+/// integer-valued analog or processed data (1000, 1001, 1003 ...) at hundreds or thousands of its unit step.
+pub const QUANTUM_MAX_IONS: f64 = 100.0;
 
 /// Where the cps of one ion comes from.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -65,16 +68,19 @@ impl FloorParams {
     }
 }
 
-/// The quantum of a trace: the smallest positive value or step between distinct values, and the share of positive values that are its integer multiples.
+/// The quantum of a trace: the smallest positive value or step between distinct values, the share of positive values that are its integer
+/// multiples and their median in quanta (`level`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Quantum {
     pub q: f64,
     pub support: f64,
     pub n_positive: usize,
+    pub level: f64,
     pub accepted: bool,
 }
 
-/// The quantum of `y` (`None` without positive values); accepted with at least `QUANTUM_MIN_N` positive values and `QUANTUM_SUPPORT`.
+/// The quantum of `y` (`None` without positive values); accepted with at least `QUANTUM_MIN_N` positive values, `QUANTUM_SUPPORT` and a
+/// `level` of at most `QUANTUM_MAX_IONS` (integer spacing alone is not evidence of counting).
 pub fn quantum(y: &[f64]) -> Option<Quantum> {
     let pos: Vec<f64> = y
         .iter()
@@ -86,7 +92,7 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
     }
     // with a high background no point may hold a single ion: the smallest step between distinct values is one too
     let mut d = pos.clone();
-    crate::sortc::slice_by(&mut d, f64::total_cmp);
+    let med = median(&mut d);
     d.dedup();
     let step = d
         .windows(2)
@@ -98,11 +104,15 @@ pub fn quantum(y: &[f64]) -> Option<Quantum> {
         .filter(|&&v| (v / q - (v / q).round()).abs() <= QUANTUM_TOL)
         .count();
     let support = on as f64 / pos.len() as f64;
+    let level = med / q;
     Some(Quantum {
         q,
         support,
         n_positive: pos.len(),
-        accepted: pos.len() >= QUANTUM_MIN_N && support >= QUANTUM_SUPPORT,
+        level,
+        accepted: pos.len() >= QUANTUM_MIN_N
+            && support >= QUANTUM_SUPPORT
+            && level <= QUANTUM_MAX_IONS,
     })
 }
 
@@ -221,7 +231,8 @@ pub struct PeakSn {
     pub ions: Option<f64>,
 }
 
-/// The check of the peak: `pass` (S/N on the floor >= min_sn), `fail`, or `warn` (no ion term, or noise 0: the floor could not be applied).
+/// The check of the peak: `pass` (S/N on the floor >= min_sn), `fail`, `warn` (no ion term, or noise 0: the floor could not be applied) or
+/// `n/a` (no finite point in the peak window).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Check {
     pub status: &'static str,
@@ -323,7 +334,18 @@ pub fn measure(
             ions: f.one_ion.map(|c| height / c),
         })
     });
-    let check = peak.as_ref().map(|pk| check(&f, pk, p.sd_weight, p.min_sn));
+    let check = match (&peak, ask.peak) {
+        (Some(pk), _) => Some(check(&f, pk, p.sd_weight, p.min_sn)),
+        (None, Some((a, b))) => Some(Check {
+            status: "n/a",
+            rule: format!(
+                "no finite point in the peak window {}-{} min: no S/N",
+                rd(a),
+                rd(b)
+            ),
+        }),
+        (None, None) => None,
+    };
     Ok(FloorResult {
         params: p,
         ask,
@@ -339,6 +361,7 @@ fn quantum_json(q: &Option<Quantum>) -> Value {
             .n("q", q.q)
             .n("support", q.support)
             .i("n_positive", q.n_positive as i64)
+            .n("level", q.level)
             .b("accepted", q.accepted)
             .done()
     })

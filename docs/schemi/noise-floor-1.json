@@ -32,17 +32,18 @@
       }
     },
     "quantum": {
-      "description": "The smallest positive background value or step between distinct values, and the share of positive values within 0.02 of an integer multiple of it; accepted with at least 3 positive values and a support of 0.9. Null without positive values.",
+      "description": "The smallest positive background value or step between distinct values, and the share of positive values within 0.02 of an integer multiple of it; accepted with at least 3 positive values, a support of 0.9 and a level (median positive value in quanta) of at most 100, since integer spacing alone is not evidence of ion counting. Null without positive values.",
       "oneOf": [
         { "type": "null" },
         {
           "type": "object",
-          "required": ["q", "support", "n_positive", "accepted"],
+          "required": ["q", "support", "n_positive", "level", "accepted"],
           "additionalProperties": false,
           "properties": {
             "q": { "type": "number", "exclusiveMinimum": 0 },
             "support": { "type": "number", "minimum": 0, "maximum": 1 },
             "n_positive": { "type": "integer", "minimum": 1 },
+            "level": { "type": "number", "minimum": 0 },
             "accepted": { "type": "boolean" }
           }
         }
@@ -92,7 +93,7 @@
           "additionalProperties": false,
           "properties": {
             "id": { "const": "noise_floor" },
-            "status": { "enum": ["pass", "warn", "fail"], "description": "pass: sn >= min_sn with an ion term; fail: below; warn: no ion term (off or no accepted quantum) or noise 0." },
+            "status": { "enum": ["pass", "warn", "fail", "n/a"], "description": "pass: sn >= min_sn with an ion term; fail: below; warn: no ion term (off or no accepted quantum) or noise 0; n/a: no finite point in the peak window." },
             "value": { "type": ["number", "null"] },
             "threshold": { "type": "number" },
             "rule": { "type": "string", "description": "The numbers behind the status, in words." }
