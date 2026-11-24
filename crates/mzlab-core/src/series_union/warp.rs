@@ -34,7 +34,7 @@ impl Curve {
     /// (median, largest) absolute shift of the nodes, min.
     pub fn size(&self) -> (f64, f64) {
         let mut a: Vec<f64> = self.nodes.iter().map(|n| n.1.abs()).collect();
-        a.sort_by(f64::total_cmp);
+        crate::sortc::slice_by(&mut a, f64::total_cmp);
         (median(&a), a.last().copied().unwrap_or(0.0))
     }
 }
@@ -50,7 +50,9 @@ pub fn median(sorted: &[f64]) -> f64 {
 /// The indices of `rows` sorted by m/z, to scan the rows inside a window.
 pub fn by_mz(rows: &[Row]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..rows.len()).collect();
-    idx.sort_by(|&a, &b| rows[a].mz.total_cmp(&rows[b].mz).then(a.cmp(&b)));
+    crate::sortc::slice_by(&mut idx, |&a, &b| {
+        rows[a].mz.total_cmp(&rows[b].mz).then(a.cmp(&b))
+    });
     idx
 }
 
@@ -70,7 +72,7 @@ fn near(
         .filter(|&&i| rows[i].polarity == pol)
         .map(|&i| ((rows[i].rt - rt).abs(), i))
         .collect();
-    hit.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    crate::sortc::slice_by(&mut hit, |a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
     hit
 }
 
@@ -97,14 +99,16 @@ pub fn build(reference: &[Row], rows: &[Row], p: &Params) -> Option<Curve> {
     if anchors.len() < 3 {
         return None;
     }
-    anchors.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+    crate::sortc::slice_by(&mut anchors, |a, b| {
+        a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1))
+    });
     let (n, blocks) = (anchors.len(), (anchors.len() / 3).clamp(1, 8));
     let nodes = (0..blocks)
         .map(|b| {
             let block = &anchors[b * n / blocks..(b + 1) * n / blocks];
             let mid = |f: fn(&(f64, f64)) -> f64| {
                 let mut v: Vec<f64> = block.iter().map(f).collect();
-                v.sort_by(f64::total_cmp);
+                crate::sortc::slice_by(&mut v, f64::total_cmp);
                 median(&v)
             };
             (mid(|a| a.0), mid(|a| a.1))

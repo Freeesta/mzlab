@@ -258,7 +258,7 @@ fn dropped_value(dropped: &[&Done], series: &[Series]) -> Vec<Value> {
 /// Targets in output order: polarity, m/z, RT, then the first member (a total order, so the bytes never depend on the input order).
 fn sorted<'a>(m: &'a Merged, series: &[Series], p: &Params) -> Vec<Done<'a>> {
     let mut all: Vec<Done> = m.targets.iter().map(|t| finish(t, series, p)).collect();
-    all.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut all, |a, b| {
         pol_rank(a.t.polarity)
             .cmp(&pol_rank(b.t.polarity))
             .then(a.mz.total_cmp(&b.mz))

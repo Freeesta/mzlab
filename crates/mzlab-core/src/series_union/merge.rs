@@ -33,7 +33,9 @@ pub struct Merged {
 
 fn pairs(s: &Series, rts: &[f64], targets: &[Target], p: &Params) -> Vec<(f64, f64, usize, usize)> {
     let mut order: Vec<usize> = (0..targets.len()).collect();
-    order.sort_by(|&a, &b| targets[a].mz0.total_cmp(&targets[b].mz0).then(a.cmp(&b)));
+    crate::sortc::slice_by(&mut order, |&a, &b| {
+        targets[a].mz0.total_cmp(&targets[b].mz0).then(a.cmp(&b))
+    });
     let mut out = Vec::new();
     for (i, r) in s.rows.iter().enumerate() {
         let from = order.partition_point(|&t| targets[t].mz0 < r.mz - p.da);
@@ -50,7 +52,7 @@ fn pairs(s: &Series, rts: &[f64], targets: &[Target], p: &Params) -> Vec<(f64, f
             }
         }
     }
-    out.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut out, |a, b| {
         a.0.total_cmp(&b.0)
             .then(a.1.total_cmp(&b.1))
             .then(a.2.cmp(&b.2))
