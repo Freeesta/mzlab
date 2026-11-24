@@ -160,6 +160,17 @@ fn subtraction_reaches_zero_and_leaves_the_blanks() {
     );
     let v = view::build(&t, &s, &Method::None, &[rule]).unwrap();
     assert_eq!(v.area_at(&t, 0, 3), Some(0.0), "never below 0");
+    // the subtraction on heights is accepted (it was refused before AU-7)
+    let h = Rule::BlankWith(
+        3.0,
+        opts(Quantity::Height, Stat::Mean, Scope::MaxFeature, true),
+    );
+    let v = view::build(&t, &s, &Method::None, &[h]).unwrap();
+    assert_eq!(
+        v.height_at(&t, 0, 3),
+        Some(0.0),
+        "heights 1 - 3 * 1 are floored at 0"
+    );
 }
 
 #[test]

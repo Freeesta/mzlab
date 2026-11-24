@@ -2417,7 +2417,7 @@
                   },
                   {
                     "type":"boolean",
-                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering, on the quantity chosen (areas, or heights when the quantity is height); each sample uses the blanks of its own batch or matrix with the matching below; the ratio is at least 1 when any blank option is set"
+                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering, on the quantity chosen (areas, or heights when the quantity is height); each sample uses the blanks of its own batch or matrix with the matching below; the ratio is at least 1 when any blank option is set; the counts list the first 200 dropped rows with their fold (dropped_total, truncated) and the files that used all blanks"
                   },
                   {
                     "enum":["all","batch","matrix"],

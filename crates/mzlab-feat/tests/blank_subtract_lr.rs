@@ -183,3 +183,84 @@ fn the_csv_and_the_view_table_carry_the_subtracted_heights() {
     assert_eq!(out.height[1], 700.0);
     assert_eq!(out.area[1], 500.0);
 }
+
+#[test]
+fn the_evidence_is_capped_and_says_how_many_rows_were_dropped() {
+    let mut weak = ROW0;
+    weak[1] = (100.0, 150.0);
+    weak[2] = (90.0, 120.0);
+    weak[4] = (100.0, 500.0);
+    let rows = vec![weak; 250];
+    let (t, s) = table(&rows);
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        labels(),
+    )
+    .unwrap();
+    assert!(v.rows.is_empty());
+    let counts = v.counts_json();
+    assert!(
+        counts.contains("\"dropped_total\":250,\"truncated\":true"),
+        "{counts}"
+    );
+    // the first 200 rows by row order: ids 1..=200 and no more
+    assert_eq!(counts.matches("],[").count(), 199, "{counts}");
+    assert!(
+        counts.contains("[200,500,300,") && !counts.contains("[201,500,300,"),
+        "{counts}"
+    );
+    // under the cap nothing is cut
+    let (t, s) = table(&[weak]);
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        labels(),
+    )
+    .unwrap();
+    assert!(v
+        .counts_json()
+        .contains("\"dropped_total\":1,\"truncated\":false"));
+}
+
+#[test]
+fn the_counts_name_the_files_that_used_all_blanks() {
+    let (t, s) = table(&[ROW0]);
+    // sample f2 is in batch C that has no blank: it falls back to all blanks; the dark file f5 is cut by all blanks too
+    let mut l = labels();
+    l.batch[2] = "C".into();
+    let v = view::build_with(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::Batch)],
+        l,
+    )
+    .unwrap();
+    let counts = v.counts_json();
+    assert!(counts.contains("\"fallback_all\":{\"total\":1,\"files\":[\"f2.mzML\"]},\"ungrouped_all\":{\"total\":1,\"files\":[\"f5.mzML\"]}"), "{counts}");
+    // with all blanks nobody falls back, and without the subtraction the dark file is not listed
+    let v = view::build(
+        &t,
+        &s,
+        &Method::None,
+        &[rule(Quantity::Height, Matching::All)],
+    )
+    .unwrap();
+    assert!(v
+        .counts_json()
+        .contains("\"fallback_all\":{\"total\":0,\"files\":[]},\"ungrouped_all\":{\"total\":1,"));
+    let plain = Rule::BlankWith(
+        2.0,
+        BlankOpts {
+            quantity: Quantity::Height,
+            ..BlankOpts::default()
+        },
+    );
+    let v = view::build(&t, &s, &Method::None, &[plain]).unwrap();
+    assert!(!v.counts_json().contains("ungrouped_all"));
+}

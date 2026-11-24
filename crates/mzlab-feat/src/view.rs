@@ -54,8 +54,13 @@ pub fn build_with(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rul
     Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback, cv_ddof: 1, blank_evidence })
 }
 
+/// Rows of `counts.blank.dropped` and files of its lists that are written; the totals always count all of them.
+const EVIDENCE_CAP: usize = 200;
+
 /// The evidence of the rows the first `BlankWith` rule dropped: per row its id, the deciding value, the blank level of its group and the fold (`null` when
-/// no blank level above 0 exists), so the user sees why every row went. `None` when no rule has blank options.
+/// no blank level above 0 exists), so the user sees why every row went; the first `EVIDENCE_CAP` rows by row order, with `dropped_total` and `truncated`.
+/// It also names the automatic choices: the samples with no blank of their batch or matrix that used all blanks (`fallback_all`) and, with the subtraction,
+/// the files that are neither samples nor blanks (dark) that were cut by all blanks (`ungrouped_all`). `None` when no rule has blank options.
 fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f64], why: &[u8], labels: &Labels) -> Result<Option<String>> {
     let Some((idx, fold, o)) = rules.iter().enumerate().find_map(|(i, r)| match r {
         Rule::BlankWith(f, o) => Some((i, *f, *o)),
@@ -64,7 +69,7 @@ fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f6
         return Ok(None);
     };
     let (blank, sample) = crate::filters_nts::blank_and_samples(samples);
-    let (groups, _) = filters_blank::blank_groups(o.matching, labels, &sample, &blank, t.n_files);
+    let (groups, fallback) = filters_blank::blank_groups(o.matching, labels, &sample, &blank, t.n_files);
     let mut j = Out::default();
     j.raw("{\"quantity\":").str(match o.quantity {
         filters_blank::Quantity::Area => "area",
@@ -72,13 +77,17 @@ fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f6
         filters_blank::Quantity::NormArea => "norm_area",
     });
     j.raw(",\"fold\":").num(fold.max(1.0)).raw(",\"groups\":").int(groups.len() as i64).raw(",\"dropped\":[");
-    let mut first = true;
+    let (mut total, mut written) = (0usize, 0usize);
     for (row, &w) in why.iter().enumerate() {
         if w as usize != idx + 1 {
             continue;
         }
-        j.raw(if first { "" } else { "," });
-        first = false;
+        total += 1;
+        if written == EVIDENCE_CAP {
+            continue;
+        }
+        j.raw(if written > 0 { "," } else { "" });
+        written += 1;
         j.raw("[").int(i64::from(t.id(row)));
         match filters_blank::evidence(t, Some(factors), &o, row, &groups)? {
             Some((x, level, f)) => j.raw(",").num(x).raw(",").num(level).raw(",").num(f),
@@ -86,7 +95,20 @@ fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f6
         };
         j.raw("]");
     }
-    j.raw("]}");
+    j.raw("],\"dropped_total\":").int(total as i64).raw(",\"truncated\":").raw(if total > written { "true" } else { "false" });
+    let list = |j: &mut Out, key: &str, files: Vec<usize>| {
+        j.raw(",\"").raw(key).raw("\":{\"total\":").int(files.len() as i64).raw(",\"files\":[");
+        for (n, &k) in files.iter().take(EVIDENCE_CAP).enumerate() {
+            j.raw(if n > 0 { "," } else { "" }).str(&samples[k].file);
+        }
+        j.raw("]}");
+    };
+    list(&mut j, "fallback_all", (0..t.n_files).filter(|&k| fallback[k]).collect());
+    if o.subtract {
+        let used: Vec<usize> = groups.iter().flat_map(|(s, _)| s.iter().copied()).collect();
+        list(&mut j, "ungrouped_all", (0..t.n_files).filter(|&k| !blank.contains(&k) && !used.contains(&k)).collect());
+    }
+    j.raw("}");
     Ok(Some(j.0))
 }
 
