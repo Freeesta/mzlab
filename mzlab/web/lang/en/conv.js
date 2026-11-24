@@ -80,6 +80,8 @@ I18N.add("en", {
   "conv.q.save": "Save the mzML files…",
   "conv.q.saveTitle": "Choose a folder: every mzML that is ready goes there",
   "conv.q.saved": "{n} mzML files saved",
+  "conv.q.kept": "Not replaced, a different file with this name is already in the folder: {names}",
+  "conv.q.own": "Not a usable file name, saved under its own name: {names}",
   "conv.comp": "Compression",
   "conv.comp.standard": "Standard",
   "conv.comp.smallest": "Smallest",

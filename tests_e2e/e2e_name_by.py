@@ -6,7 +6,7 @@ named so. Needs the site and the .wasm: python tools/build_site.py."""
 import json, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
+from lib import ROOT, free_port, axe_path
 from cli_cmd import cli_command
 
 PORT = free_port()
@@ -28,12 +28,12 @@ for _ in range(300000):      # wait for the server to listen (connection attempt
 INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}"
 
 def cli_names():
-    """What the command line writes for the same file with `--name sample`: the names of its items and its `note:` lines, in the order of the samples."""
+    """What the command line writes for the same file with `--name sample`: the sample number and file name of each item, in the order of the samples, and its `note:` lines."""
     out = D / "cli_out"
     r = subprocess.run([*cli_command(), "file", "convert", str(D / "nomi.wiff"), "--out", str(out), "--name", "sample", "--dry-run", "--json"], capture_output=True, text=True, timeout=600)
     assert r.returncode == 0, (r.returncode, r.stderr[-400:])
     items = json.loads(r.stdout)["items"]
-    return [Path(i["output"]).name for i in items], [l for l in r.stderr.splitlines() if l.startswith("note:")]
+    return [[i["sample_id"], Path(i["output"]).name] for i in items], [l for l in r.stderr.splitlines() if l.startswith("note:")]
 
 try:
     with sync_playwright() as p:
@@ -66,13 +66,22 @@ try:
         def by_sample():
             pg.select_option("#cvnameby", "sample")
             pg.wait_for_function("document.getElementById('cvnotes') && !document.getElementById('cvnotes').hidden", timeout=60000)
-            got = pg.evaluate("CONV.listed().map(n => CONV.nameOf(n))")
+            got = pg.evaluate("CONV.listed().map(n => [CONV.meta.get(n).id, CONV.nameOf(n)])")      # sample number and name, in the order of the list
             want, notes = cli_names()
-            assert sorted(got) == sorted(want), (got, want)
+            assert got == want, (got, want)      # file by file, in the order of the samples: a swap of two names fails
             shown = pg.eval_on_selector_all("#cvnotes li", "l => l.map(x => x.textContent)")
-            assert sorted(shown) == sorted(notes), (shown, notes)
+            assert shown == notes, (shown, notes)
             assert len(shown) >= 1 and any("already taken" in t for t in shown), shown      # the two samples named alike: the later one yields, and it is said
         step("Sample name: the names and the notes are those of `mzlab-cli file convert --name sample` for the same file", by_sample)
+        def accessible_with_notes():
+            # the notes are list items of a plain list inside a polite live region (a `role=status` on the list itself would break its semantics)
+            assert pg.eval_on_selector("#cvnotes", "e => e.tagName === 'UL' && !e.hasAttribute('role') && e.parentElement.getAttribute('role') === 'status'")
+            AXE = axe_path(); assert AXE, "axe-core not available (pip install axe-playwright-python)"
+            pg.add_script_tag(path=AXE)
+            v = pg.evaluate("""() => axe.run({include: [['#cvnotes'], ['#cvnameby']]}, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa','best-practice']}})
+              .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact) || v.id === 'list' || v.id === 'listitem').map(v => [v.id, v.impact, v.nodes.slice(0, 3).map(n => n.target.join(' '))]))""")
+            assert not v, v
+        step("Sample name: the notes are visible and the bar passes axe (list and listitem included)", accessible_with_notes)
         def saved_by_sample():
             with pg.expect_download(timeout=120000) as d: pg.evaluate("n => CONV.download(n)", listed[0])
             want = pg.evaluate("n => CONV.nameOf(n)", listed[0])

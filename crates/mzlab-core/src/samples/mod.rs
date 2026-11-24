@@ -31,7 +31,7 @@ mod variables;
 
 pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
-pub use file_names::{clean_sample_name, mzml_names, Item as NameItem, Named};
+pub use file_names::{clean_sample_name, default_names, mzml_names, Item as NameItem, Named};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{digest, from_json, from_value, to_json};
 pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};

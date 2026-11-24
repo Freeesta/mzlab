@@ -99,7 +99,7 @@ fn two_files_give_the_bytes_of_the_command_line_and_cancel_stops_the_second() {
     );
     // saving puts the ready files in one folder
     let to = d.path().join("saved");
-    assert_eq!(c.save(&to, &HashMap::new()).unwrap(), 1);
+    assert_eq!(c.save(&to, &HashMap::new()).unwrap().saved, 1);
     assert_eq!(
         std::fs::read(to.join("a.mzML")).unwrap(),
         std::fs::read(&got).unwrap()
@@ -271,38 +271,43 @@ fn saving_names_each_file_as_the_page_asks_and_never_outside_the_folder() {
     c.add("b.mzXML", 0, &b);
     wait(&c, "a.mzXML", "done");
     wait(&c, "b.mzXML", "done");
-    // the same bytes of the command line for `--name sample`: the names of `mzml_names` for these two files are the ones the page passes
-    let cli = d.path().join("cli");
-    let o = mzlab_cli::convert::run(vec![
-        a.to_string_lossy().into_owned(),
-        b.to_string_lossy().into_owned(),
-        "--out".into(),
-        cli.to_string_lossy().into_owned(),
-        "--name".into(),
-        "sample".into(),
-    ]);
-    assert_eq!(o.code, 0, "{}", o.stderr);
-    let mut want: Vec<String> = std::fs::read_dir(&cli)
-        .unwrap()
-        .flatten()
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.ends_with(".mzML"))
-        .collect();
-    want.sort();
-    // a page file the map does not list keeps its name; a name that is a path is refused
+    // a name the route `mzml_names` gave for a sample (not the cache's name, which is the file's); a name that is a path is refused
+    let asked = "Blank.mzML".to_string();
     let names = HashMap::from([
-        ("a.mzXML".to_string(), want[0].clone()),
+        ("a.mzXML".to_string(), asked.clone()),
         ("b.mzXML".to_string(), "../escape.mzML".to_string()),
     ]);
     let to = d.path().join("saved");
-    assert_eq!(c.save(&to, &names).unwrap(), 2);
+    let cache_name = c.ready("a.mzXML").unwrap().file_name().unwrap().to_owned();
+    assert_ne!(
+        asked.as_str(),
+        cache_name.to_string_lossy(),
+        "the test must ask for a name other than the cache's"
+    );
+    let r = c.save(&to, &names).unwrap();
+    assert_eq!(r.saved, 2);
+    assert_eq!(r.own, ["b.mzML"], "the refused name is said, not dropped");
+    assert!(r.kept.is_empty());
     assert_eq!(
-        std::fs::read(to.join(&want[0])).unwrap(),
+        std::fs::read(to.join(&asked)).unwrap(),
         std::fs::read(c.ready("a.mzXML").unwrap()).unwrap()
+    );
+    assert!(
+        !to.join(&cache_name).exists(),
+        "saved under the asked name only"
     );
     assert!(
         to.join("b.mzML").is_file(),
         "the refused name keeps its own"
     );
     assert!(!d.path().join("escape.mzML").exists());
+    // a second save of the same files is the same files; another file under a name already there is never replaced, and is said
+    let again = c.save(&to, &names).unwrap();
+    assert_eq!((again.saved, again.kept.len()), (2, 0));
+    // (a hard link shares its bytes with the cache: the user's own file takes its place by name)
+    std::fs::remove_file(to.join(&asked)).unwrap();
+    std::fs::write(to.join(&asked), b"mine").unwrap();
+    let kept = c.save(&to, &names).unwrap();
+    assert_eq!((kept.saved, kept.kept.clone()), (1, vec![asked.clone()]));
+    assert_eq!(std::fs::read(to.join(&asked)).unwrap(), b"mine");
 }

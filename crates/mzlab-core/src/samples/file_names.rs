@@ -45,6 +45,34 @@ pub fn clean_sample_name(name: &str) -> Option<String> {
     })
 }
 
+/// The name of a gzip-compressed mzML without the `.gz` (`x.mzML.gz` -> `x.mzML`), any other name as it is.
+fn sans_gz(name: &str) -> &str {
+    name.strip_suffix(".gz")
+        .filter(|n| n.to_lowercase().ends_with(".mzml"))
+        .unwrap_or(name)
+}
+
+/// The default names of the mzML files of `files` (file name, sample id when its dataset has several samples): `NAME.mzML` or `NAME-ID.mzML`, NAME without its
+/// extension; two that would be equal keep the extension of their input (`a.raw.mzML`, `a.D.mzML`). The one rule of the CLI, the app and the site.
+pub fn default_names(files: &[(&str, Option<u32>)]) -> Vec<String> {
+    let name = |n: &str, id: Option<u32>, long: bool| {
+        let n = sans_gz(n);
+        let base = if long {
+            n
+        } else {
+            n.rsplit_once('.').map_or(n, |p| p.0)
+        };
+        id.map_or(format!("{base}.mzML"), |i| format!("{base}-{i}.mzML"))
+    };
+    let short: Vec<String> = files.iter().map(|(n, id)| name(n, *id, false)).collect();
+    (0..files.len())
+        .map(|k| {
+            let clash = short.iter().filter(|s| **s == short[k]).count() > 1;
+            name(files[k].0, files[k].1, clash)
+        })
+        .collect()
+}
+
 /// One mzML to name: `who` (`NAME` or `NAME@ID`, for the notes), the `plain` name it would get otherwise (with its `.mzML`), the sample name and its id.
 pub struct Item<'a> {
     pub who: &'a str,
@@ -104,7 +132,8 @@ pub fn mzml_names(items: &[Item]) -> Vec<Named> {
     made
 }
 
-/// The route `mzml_names` of `route_all`: `{"files":[{"who","plain","sample","id"}]}` → `{"files":[{"out","note"}]}`, the names of `mzml_names` (`note` null when there is none).
+/// The route `mzml_names` of `route_all`: `{"files":[{"who","file","plain","sample","id"}]}` → `{"files":[{"out","note"}]}`, the names of `mzml_names` (`note` null when there is none).
+/// A row with no `plain` gets the default name of its `file` (and `id`), settled with the other such rows (`default_names`).
 pub fn route(input: &str) -> Result<String> {
     let v = crate::json::parse(input.as_bytes())?;
     let Some(crate::json::Value::Arr(rows)) = v.get("files") else {
@@ -113,13 +142,28 @@ pub fn route(input: &str) -> Result<String> {
     fn text<'a>(r: &'a crate::json::Value, k: &str) -> Option<&'a str> {
         r.get(k).and_then(|x| x.str())
     }
+    let id_of = |r: &crate::json::Value| r.get("id").and_then(|x| x.f64()).map(|x| x as u32);
+    let files: Vec<(&str, Option<u32>)> = rows
+        .iter()
+        .filter(|r| text(r, "plain").is_none())
+        .map(|r| (text(r, "file").unwrap_or(""), id_of(r)))
+        .collect();
+    let mut made = default_names(&files).into_iter();
+    let plain: Vec<String> = rows
+        .iter()
+        .map(|r| match text(r, "plain") {
+            Some(p) => p.to_string(),
+            None => made.next().unwrap_or_default(),
+        })
+        .collect();
     let items: Vec<Item> = rows
         .iter()
-        .map(|r| Item {
+        .enumerate()
+        .map(|(k, r)| Item {
             who: text(r, "who").unwrap_or(""),
-            plain: text(r, "plain").unwrap_or(""),
+            plain: &plain[k],
             sample: text(r, "sample"),
-            id: r.get("id").and_then(|x| x.f64()).map(|x| x as u32),
+            id: id_of(r),
         })
         .collect();
     let mut j = crate::json::Out::default();

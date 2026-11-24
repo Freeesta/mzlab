@@ -14,16 +14,14 @@ async function ask(/** @type {any} */ conv, /** @type {string[]} */ list) {
       who = m.members[0].name.split("/")[0];
       if (s) { sample = s.name; if (all.length > 1) id = m.id; }
     }
-    items.push({ who, id, sample, plain: name });
+    // a maker's file says its file and sample number and the engine settles its default name (`file`); a file with no reader (a plain mzML) is written as it is listed (`plain`)
+    items.push(m ? { who: id == null ? who : who + "@" + id, file: who, id, sample } : { who, plain: name, id, sample });
   }
-  // the default name of the CLI for a maker's file (NAME.mzML, NAME-ID.mzML, the extension kept when two would be equal): what a file with no usable sample name is written as
-  const cut = (/** @type {string} */ n) => n.replace(/\.gz$/i, ""), stem = (/** @type {string} */ n) => { const g = cut(n), i = g.lastIndexOf("."); return i < 0 ? g : g.slice(0, i); };
-  const short = (/** @type {Bag} */ x) => stem(x.who) + (x.id == null ? "" : "-" + x.id) + ".mzML", own = items.filter(x => conv.meta.has(x.plain));
-  for (const x of own) x.plain = (own.filter(y => short(y) === short(x)).length > 1 ? cut(x.who) : stem(x.who)) + (x.id == null ? "" : "-" + x.id) + ".mzML";
   let r = null;
-  try { r = await fetch("api/samples/mzml_names", { method: "POST", body: JSON.stringify({ files: items.map(x => ({ who: x.id == null ? x.who : x.who + "@" + x.id, plain: x.plain, sample: x.sample, id: x.id })) }) }).then(x => x.json()); } catch (_) { r = null; }
-  if (!r || !Array.isArray(r.files) || r.files.length !== list.length) { conv.notes = [I18N.t("conv.nameby.fail")]; return; }
+  try { r = await fetch("api/samples/mzml_names", { method: "POST", body: JSON.stringify({ files: items }) }).then(x => x.json()); } catch (_) { r = null; }
+  if (!r || !Array.isArray(r.files) || r.files.length !== list.length) { conv.notes = [I18N.t("conv.nameby.fail")]; return false; }
   list.forEach((n, i) => { conv.renames.set(n, r.files[i]); if (r.files[i].note) conv.notes.push(r.files[i].note); });
+  return true;
 }
 
 // the notes under the choice (in place: the table is not drawn again)

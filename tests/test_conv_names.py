@@ -1,5 +1,5 @@
 """«Name files by: sample name» (mzlab/web/conv-names.js, run by node with the engine stubbed): what the page tells the route `mzml_names` for each file (the file it came from,
-the reader's sample name, the sample number only for a dataset with several samples, the default name of the CLI as the name to keep) and what it keeps of the answer."""
+the reader's sample name, the sample number only for a dataset with several samples; the default name is the engine's, so the page sends none for a maker's file) and what it keeps of the answer."""
 import json
 import shutil
 import subprocess
@@ -16,7 +16,7 @@ const members = (n, extra) => [{ name: n, blob: { size: 10 } }, ...(extra ? [{ n
 const SETS = { "nomi.wiff": [{ id: 1, name: "Sample A" }, { id: 2, name: "Sample B" }, { id: 3, name: "nomi.wiff #3" }], "a.raw": [{ id: 1, name: "S one" }], "a.D/AcqData": [{ id: 1, name: "S two" }] };
 window.MZLAB_RUST = { nativeSamples: async m => ({ samples: SETS[m[0].name] }) };
 let posted = null, answer = null;
-global.fetch = async (_u, o) => { posted = JSON.parse(o.body); if (answer === "boom") throw new Error("down"); return { json: async () => answer || { files: posted.files.map(f => ({ out: f.plain, note: null })) } }; };
+global.fetch = async (_u, o) => { posted = JSON.parse(o.body); if (answer === "boom") throw new Error("down"); return { json: async () => answer || { files: posted.files.map(f => ({ out: f.plain || f.file, note: null })) } }; };
 require(%s);
 const conv = { meta: new Map(), renames: new Map(), notes: [] };
 %s
@@ -35,19 +35,12 @@ conv.meta.set("nomi_s3.mzML", { members: members("nomi.wiff", "nomi.wiff.scan"),
 conv.meta.set("a.mzML", { members: members("a.raw"), c: 0, id: 1 });
 """, """(async () => { await CONVNAMES.ask(conv, ["Sample A.mzML", "nomi_s3.mzML", "a.mzML", "plain.mzML"]); console.log(JSON.stringify(posted.files)); })();""")
     assert got == [
-        {"who": "nomi.wiff@1", "plain": "nomi-1.mzML", "sample": "Sample A", "id": 1},
-        {"who": "nomi.wiff@3", "plain": "nomi-3.mzML", "sample": "nomi.wiff #3", "id": 3},
-        {"who": "a.raw", "plain": "a.mzML", "sample": "S one", "id": None},
+        {"who": "nomi.wiff@1", "file": "nomi.wiff", "sample": "Sample A", "id": 1},
+        {"who": "nomi.wiff@3", "file": "nomi.wiff", "sample": "nomi.wiff #3", "id": 3},
+        {"who": "a.raw", "file": "a.raw", "sample": "S one", "id": None},
         {"who": "plain.mzML", "plain": "plain.mzML", "sample": None, "id": None},
     ]
-
-
-def test_two_files_of_one_stem_keep_their_extension_as_the_cli_does():
-    got = run("""
-conv.meta.set("x1.mzML", { members: members("a.raw"), c: 0, id: 1 });
-conv.meta.set("x2.mzML", { members: members("a.D/AcqData"), c: 0, id: 1 });
-""", """(async () => { await CONVNAMES.ask(conv, ["x1.mzML", "x2.mzML"]); console.log(JSON.stringify(posted.files.map(f => [f.who, f.plain]))); })();""")
-    assert got == [["a.raw", "a.raw.mzML"], ["a.D", "a.D.mzML"]]
+    assert all("plain" not in f for f in got[:3]), "the default name of a maker's file is the engine's, not the page's"
 
 
 def test_the_names_and_notes_of_the_route_are_kept_as_given():
@@ -62,5 +55,5 @@ answer = { files: [{ out: "S_one.mzML", note: null }, { out: "S_one-2.mzML", not
 
 
 def test_an_engine_that_does_not_answer_leaves_the_names_and_says_so():
-    got = run("answer = 'boom';", """(async () => { await CONVNAMES.ask(conv, ["a.mzML"]); console.log(JSON.stringify([[...conv.renames], conv.notes])); })();""")
-    assert got == [[], ["conv.nameby.fail"]]
+    got = run("answer = 'boom';", """(async () => { const ok = await CONVNAMES.ask(conv, ["a.mzML"]); console.log(JSON.stringify([[...conv.renames], conv.notes, ok])); })();""")
+    assert got == [[], ["conv.nameby.fail"], False]      # false: the caller forgets its signature and asks again at the next save

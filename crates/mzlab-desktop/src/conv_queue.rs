@@ -309,8 +309,12 @@ impl State {
         text(self.queue.list().to_string())
     }
 
-    /// `conv_save {dest, names}`: the ready mzML files in the folder `dest`, each under its entry of `names` when there is one; `{"saved": n}`.
-    pub fn conv_save(&self, dest: &Path, names: &HashMap<String, String>) -> Result<usize> {
+    /// `conv_save {dest, names}`: the ready mzML files in the folder `dest`, each under its entry of `names` when there is one; `{saved, kept, own}` (`conv_save.rs`).
+    pub fn conv_save(
+        &self,
+        dest: &Path,
+        names: &HashMap<String, String>,
+    ) -> Result<crate::conv_save::Saved> {
         self.queue.save(dest, names)
     }
 

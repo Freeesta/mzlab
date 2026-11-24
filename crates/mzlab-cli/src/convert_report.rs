@@ -330,13 +330,6 @@ pub(crate) fn compression_sets(kind: &str) -> Result<[String; 2], String> {
     Ok([format!("conv.zlib_level={z}"), format!("conv.numpress={n}")])
 }
 
-/// The name of a gzip-compressed mzML without the `.gz` (`x.mzML.gz` -> `x.mzML`), any other name as it is.
-pub(crate) fn sans_gz(name: &str) -> &str {
-    name.strip_suffix(".gz")
-        .filter(|n| n.to_lowercase().ends_with(".mzml"))
-        .unwrap_or(name)
-}
-
 /// A failure of `convert` with its own code and a hint (its `error/1` key is the generic one of the code).
 pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
     Outcome {

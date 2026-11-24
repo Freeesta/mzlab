@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::readers::{selection, Format, Limits};
-use mzlab_core::samples::{mzml_names, NameItem};
+use mzlab_core::samples::{default_names, mzml_names, NameItem};
 
 use crate::flow_set::file_set;
 
@@ -78,17 +78,6 @@ fn sample_ids(p: &Path, sel: Option<&[u32]>) -> Result<(Vec<Row>, Option<String>
     Ok((ids, only))
 }
 
-/// `NAME.mzML` or `NAME-ID.mzML`, NAME without its extension unless `long`.
-fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
-    let name = crate::convert_report::sans_gz(name);
-    let base = if long {
-        name
-    } else {
-        name.rsplit_once('.').map_or(name, |p| p.0)
-    };
-    id.map_or(format!("{base}.mzML"), |i| format!("{base}-{i}.mzML"))
-}
-
 /// The mzML files of the datasets: one per sample of a dataset with several; two that would get the same name keep the extension of their input.
 /// With `by_sample` (`--name sample`) each file is `SAMPLE.mzML`: the cleaned sample name; two equal names (case aside, as on Windows and macOS) become
 /// `SAMPLE-ID.mzML` (a dataset with one sample: `SAMPLE-N.mzML`, N the order of the clash), a name that cleans to nothing keeps the default name, each with its `note`.
@@ -122,14 +111,10 @@ pub(crate) fn entries(
     if sel.is_some() && all.iter().all(|(_, _, id, _)| id.is_none()) {
         return Err(Error::new("err.sample.single"));
     }
-    let short: Vec<String> = all
-        .iter()
-        .map(|(_, n, id, _)| out_name(n, *id, false))
-        .collect();
-    let clash = |k: usize| short.iter().filter(|s| **s == short[k]).count() > 1;
-    let mut outs: Vec<String> = (0..all.len())
-        .map(|k| out_name(&all[k].1, all[k].2, clash(k)))
-        .collect();
+    // the default names of the core: the one rule the app and the site ask the engine for
+    let files: Vec<(&str, Option<u32>)> =
+        all.iter().map(|(_, n, id, _)| (n.as_str(), *id)).collect();
+    let mut outs = default_names(&files);
     let mut notes: Vec<Option<String>> = vec![None; all.len()];
     if by_sample {
         rename_by_sample(&all, &mut outs, &mut notes);

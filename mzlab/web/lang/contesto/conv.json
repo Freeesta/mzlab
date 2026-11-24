@@ -29,6 +29,8 @@
   "conv.row.noCalibration": "Warning on the row of a .d folder with frames without m/z calibration: their spectra are not in the list; {n} = left out, {read} = read, {declared} = declared. Do not say that the file ends.",
   "conv.q.fail": "Next to the file in the list, in the desktop app: the background conversion to mzML failed; {msg} = short cause.",
   "conv.q.saved": "Notice after \"Save the mzML files…\" in the desktop app; {n} = mzML files put in the chosen folder.",
+  "conv.q.kept": "Notice after \"Save the mzML files…\" in the desktop app; {names} = the file names left alone because a different file with that name is already in the chosen folder.",
+  "conv.q.own": "Notice after \"Save the mzML files…\" in the desktop app; {names} = the file names saved under their own name because the name asked for is not a bare .mzML file name.",
   "conv.sum.head": "Totals row below the loaded files, once loading is finished; {n} = files finished, {parts} = the list of counts (conv.sum.* keys), {time} = time from the first start to the last end (m:ss).",
   "conv.sum.full": "Count in the summary: {n} = full scan files loaded.",
   "conv.sum.ms2": "Count in the summary: {n} = MS2 (product ion) files loaded.",

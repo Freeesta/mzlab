@@ -96,9 +96,9 @@ const CONV = {
     this.sig = sig; this.renames = new Map(); this.notes = [];
     if (this.nameBy === "sample" && list.length) {
       this.busy = loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.ask(this, list)).finally(() => { this.busy = null; });
-      await this.busy;
+      if (!(await /** @type {Promise<any>} */ (this.busy))) this.sig = "";      // the engine did not answer: the next save asks again
     }
-    /** @type {any} */ (window).CONVNAMES ? /** @type {any} */ (window).CONVNAMES.paint(this) : 0;
+    /** @type {any} */ (window).CONVNAMES ?/** @type {any} */ (window).CONVNAMES.paint(this) : 0;
   },
   async setNameBy(/** @type {string} */ v) {
     this.nameBy = v === "sample" ? "sample" : "file"; this.sig = "";
@@ -204,7 +204,9 @@ const CONVQ = {
   async saveAll() {
     const f = typeof window !== "undefined" && /** @type {any} */ (window).MZLAB_SAVE_MZML_DIR; if (!f) return;
     await CONV.syncNames();
-    try { const n = await f(Object.fromEntries(CONV.listed().map(k => [k, CONV.nameOf(k)]).filter(([k, v]) => k !== v))); if (n != null) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t("conv.q.saved", { n }); box.appendChild(d); setTimeout(() => d.remove(), 8000); } } }
+    // with «Sample name» every file is named (the whole map: a file the map left out would be saved under its cache name); the app says what it kept and what it could not name as asked
+    try { const r = await f(Object.fromEntries(CONV.listed().map(k => [k, CONV.nameOf(k)]).filter(([k, v]) => CONV.nameBy === "sample" || k !== v))); const box = document.getElementById("up");
+      if (r != null && box) for (const t of [I18N.t("conv.q.saved", { n: r.saved }), r.kept.length && I18N.t("conv.q.kept", { names: r.kept.join(", ") }), r.own.length && I18N.t("conv.q.own", { names: r.own.join(", ") })].filter(Boolean)) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = t; box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
     catch (e) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
   },
 };
@@ -356,7 +358,7 @@ const CONVROWS = {
     const st = this.toolState(), off = (/** @type {boolean} */ on) => (on ? "" : " data-off inert");
     return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <button type="button" class="hq" data-help="compressione" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span>` +
       `<br><label>${T("conv.nameby")} <select id="cvnameby" title="${T("conv.nameby.title")}">${[["file", T("conv.nameby.file")], ["sample", T("conv.nameby.sample")]].map(([k, t]) => `<option value="${k}"${CONV.nameBy === k ? " selected" : ""}>${t}</option>`).join("")}</select></label></details>` +
-      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm dlic" id="dlall" data-cvtool="dl"${off(st.dl)} aria-haspopup="menu" aria-label="${T("conv.dlall")}" title="${T("conv.dlall")}">${CONV.ICON}</button><button type="button" class="sec sm" id="rmall">${T("load.table.removeAll")}</button></div><ul class="muted sm" id="cvnotes" role="status" aria-live="polite" hidden></ul></div>`;
+      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm dlic" id="dlall" data-cvtool="dl"${off(st.dl)} aria-haspopup="menu" aria-label="${T("conv.dlall")}" title="${T("conv.dlall")}">${CONV.ICON}</button><button type="button" class="sec sm" id="rmall">${T("load.table.removeAll")}</button></div><div role="status" aria-live="polite"><ul class="muted sm" id="cvnotes" hidden></ul></div></div>`;
   },
   // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows, `conc` = the concentration column is there
   table(/** @type {string} */ head, /** @type {string} */ body, conc = true, extra = 0) {
