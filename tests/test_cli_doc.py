@@ -31,5 +31,5 @@ def test_the_list_names_every_command_group():
 
 def test_the_json_list_and_the_exit_table_come_from_the_binary():
     json_list, exits = cli_doc.listing(["json"]), cli_doc.listing(["exits"])
-    assert "`flow run|check|steps|verify|command`" in json_list and "`features`" in json_list
+    assert "`flow run|check|steps|defaults|verify|command`" in json_list and "`features`" in json_list
     assert "| 5 | selector not found" in exits and "| 6 |" in exits

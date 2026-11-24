@@ -339,7 +339,7 @@ async function lrOp(m) {
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: (await rotte()).stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_provenance": return { info: provenance(m.ctx || "") };
-    case "lr_flow_command": return { info: (await rotte()).flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
+    case "lr_flow_command": return { info: (await rotte()).flow_command(m.body || "") };  case "lr_flow_defaults": return { info: (await rotte()).flow_defaults(m.body || "") };   // the copyable shell command of a mzflow/2 plan; step-params/1 of a step/1 object; "E" + JSON = an error
     case "lr_flow_line": { const r = await rotte(); try { return { info: r.flow_line(m.body || "") }; } catch (e) { return { info: "E" + String(e) }; } }   // the short line of a plan, or the plan with a line's --set applied; "E" + JSON = an error
     case "lr_flow_sched": return { info: (await rotte()).flow_sched(m.sop || "", m.body || "") };                   // the live scheduler of the Flow (sched_route): JSON in, JSON out
     case "lr_samples": return { info: (await rotte()).samples(m.cop || "", m.body || "") };                       // samples/1 (propose, validate, ...): JSON in, JSON out

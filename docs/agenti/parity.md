@@ -18,6 +18,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 | Instrument log of a `.raw` (`natregistro`, `/api/registro`) | `thermo` module (`registroDi`) | `rpc_nat.rs` | - (no command; the CLI's `method/1` lists the series) | `crates/mzlab-desktop/tests/natregistry.rs` (app = log reader + `mzlab_lettori::json::chromatogram_json`, the function the module calls); the synthetic `.raw` has no status log: the test goes through the TIC and through the error of an absent series |
 | Background mass (`masscal`) | yes | `rpc.rs` | - | `parity_masscal.rs` |
 | Copyable command, short line (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parity_flow_command.rs` |
+| Step defaults, `step-params/1` (`lr_flow_defaults`) | `.wasm` `rotte` | `rpc_lr.rs` | `flow defaults` | `parity_flow_defaults.rs` |
 | mzML validation (`api/mzml_valida`) | `valida` module | `lr_valida` | `validate` | `test_valida_wasm.py`, `crates/mzlab-desktop/tests/rpc.rs` |
 | Site-only by nature | `module`, `policy`, `budget`, `down`, `lr_gunzip`, `lr_cen_have`, `lr_cen_adopt`; `lr_flow_line`/`lr_flow_sched` (the app uses `flow/line`, `flow/live/*`) | - | - | `SOLO_SITO` |
 | Load "Cancel" (`lr_cancel`) | stops copies and indexes | `IdxBuilder::cancel`: the file's index builds stop at the next read or write and leave no files (neither `.part` nor index); `lr_remove` also removes the file's indexes | - | `crates/mzlab-desktop/tests/cancel.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (site) |

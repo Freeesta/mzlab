@@ -3,6 +3,7 @@
 //! `core_steps` holds the steps owned by this crate; `mzlab_feat::steps::registry` adds the others and is the whole list.
 
 mod core_steps;
+pub mod defaults;
 pub mod json;
 mod read;
 

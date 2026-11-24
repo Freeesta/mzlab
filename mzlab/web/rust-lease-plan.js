@@ -5,7 +5,7 @@
 
 /** ops that read no leased file: they never call the engine on an open index, `lrOpen` or `ARCH.lease` (tests/test_lease_plan.py greps their case lines) */
 export const READ_FREE = new Set([
-  "lr_samples", "lr_kv_get", "lr_kv_set", "lr_stat", "lr_flow_command", "lr_flow_line", "lr_flow_sched", "lr_molecules", "lr_molecules_archive",
+  "lr_samples", "lr_kv_get", "lr_kv_set", "lr_stat", "lr_flow_command", "lr_flow_defaults", "lr_flow_line", "lr_flow_sched", "lr_molecules", "lr_molecules_archive",
   "lr_composition", "lr_isotope_fine", "lr_provenance", "lr_ricerca", "lr_reflist", "lr_reflist_match", "lr_adduct_table", "lr_formula", "lr_elements", "lr_ion_pattern", "lr_cancel",
   "open", "close", "reset", "down", "budget", "natsamples", "natplan", "natdefault", "natselect", "natsame", "nat2mzml", "natregistro", "natsrm", "mzml2cen",
 ]);

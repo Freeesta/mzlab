@@ -119,6 +119,7 @@ embed!(
     "screen-1.json",
     "selection-1.json",
     "spectrum-1.json",
+    "step-params-1.json",
     "substructure-1.json",
     "substructure_db-1.json",
     "tabcheck-1.json",
