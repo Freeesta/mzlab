@@ -50,7 +50,7 @@ fn a_complete_table_prints_the_samples_and_exits_0() {
     assert_eq!(kinds, ["dark", "blank", "qc"]);
     // every automatic choice is on stderr: the role the name proposed and the one the table gave
     assert!(
-        err.contains("auto: role row 2 run_a.mzML \"sample\" -> \"dark\""),
+        err.contains("auto: role row 2 run_a.mzML “sample” -> “dark”"),
         "{err}"
     );
     // the files were hashed: the SHA-256 is the key the roles are matched by
@@ -81,7 +81,7 @@ fn findings_are_exit_1_with_evidence_and_the_document_is_still_written() {
     let r = v.get("report").unwrap();
     assert_eq!(r.get("status").and_then(Value::str), Some("partial"));
     assert!(
-        err.contains("unmatched row 4: \"ghost.mzML\" (no file)"),
+        err.contains("unmatched row 4: “ghost.mzML” (no file)"),
         "{err}"
     );
     assert!(err.contains("unmatched file: run_c.mzML (no row)"), "{err}");
@@ -90,7 +90,7 @@ fn findings_are_exit_1_with_evidence_and_the_document_is_still_written() {
         "{err}"
     );
     assert!(
-        err.contains("unknown role: row 5 \"perhaps\" for run_b.mzML"),
+        err.contains("unknown role: row 5 “perhaps” for run_b.mzML"),
         "{err}"
     );
     // --out holds the bare samples/1, the same as the `samples` of the document
@@ -180,4 +180,85 @@ fn a_samples_file_is_the_base_and_help_lists_the_exit_codes() {
     let (code, help, _) = run(&["sample", "import", "--help"]);
     assert_eq!(code, 0);
     assert!(help.contains("Exit codes: 0") && help.contains("--dry-run"));
+}
+
+#[test]
+fn an_output_that_is_an_input_is_a_usage_error_and_the_input_is_not_touched() {
+    let (d, meta) = set("outin", "file,role\nrun_a.mzML,dark\n");
+    let samples = d.join("base.json").to_string_lossy().into_owned();
+    std::fs::write(&samples, "{}").unwrap();
+    let data = d.join("run_a.mzML").to_string_lossy().into_owned();
+    // the same file by its name, by a `.` spelling and as the data file of the list
+    let dotted = d.join(".").join("meta.csv").to_string_lossy().into_owned();
+    for (args, out) in [
+        (vec!["sample", "import", &meta, &data], meta.clone()),
+        (vec!["sample", "import", &meta, &data], dotted),
+        (
+            vec!["sample", "import", &meta, "--samples", &samples],
+            samples.clone(),
+        ),
+        (vec!["sample", "import", &meta, &data], data.clone()),
+    ] {
+        let mut a = args.clone();
+        a.extend(["--out", &out]);
+        let (code, stdout, err) = run(&a);
+        assert_eq!(code, 2, "{out}: {err}");
+        assert!(
+            stdout.contains("\"error_key\":\"err.cli.import.outIsInput\"")
+                && err.contains("is also an input"),
+            "stdout={stdout:?} stderr={err}"
+        );
+    }
+    assert_eq!(
+        std::fs::read_to_string(&meta).unwrap(),
+        "file,role\nrun_a.mzML,dark\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&data).unwrap(),
+        "synthetic run_a.mzML"
+    );
+    assert_eq!(std::fs::read_to_string(&samples).unwrap(), "{}");
+}
+
+#[test]
+fn an_output_that_cannot_be_written_is_exit_6_and_leaves_no_temporary_file() {
+    let (d, meta) = set("outfail", "file,role\nrun_a.mzML,dark\n");
+    let data = d.to_str().unwrap();
+    // a folder that is not there, and a folder where the file should go: both are err.cli.out
+    let missing = d
+        .join("no_such_dir")
+        .join("s.json")
+        .to_string_lossy()
+        .into_owned();
+    let (code, _, err) = run(&["sample", "import", &meta, data, "--out", &missing]);
+    assert_eq!(
+        (code, err.contains("cannot be written")),
+        (6, true),
+        "{err}"
+    );
+    let folder = d.join("taken");
+    std::fs::create_dir(&folder).unwrap();
+    let folder = folder.to_string_lossy().into_owned();
+    let (code, _, err) = run(&["sample", "import", &meta, data, "--out", &folder]);
+    assert_eq!(code, 6, "{err}");
+    assert!(!std::path::Path::new(&format!("{folder}.part")).exists());
+}
+
+#[test]
+fn an_output_replaces_the_old_file_whole_through_a_rename() {
+    let (d, meta) = set("outok", "file,role\nrun_a.mzML,dark\n");
+    let out = d.join("s.json");
+    std::fs::write(&out, "old").unwrap();
+    let (code, _, err) = run(&[
+        "sample",
+        "import",
+        &meta,
+        d.to_str().unwrap(),
+        "--out",
+        out.to_str().unwrap(),
+    ]);
+    assert_eq!(code, 1, "{err}");
+    let written = std::fs::read_to_string(&out).unwrap();
+    assert!(written.starts_with("{\"schema\":\"samples/1\"") && written.ends_with('\n'));
+    assert!(!d.join("s.json.part").exists());
 }

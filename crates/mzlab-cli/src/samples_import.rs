@@ -17,13 +17,13 @@ usage: mzlab-cli sample import META.csv (FILE|DIR)... [--samples SAMPLES.json] [
   FILE|DIR       the real files, named by their file name and hashed (SHA-256); a DIR gives the mzML, mzXML, .wiff, .raw, .d and similar files in it, sorted. The roles and times
                  the names propose (`sample table`) are the start and the rows overwrite them
   --samples S    start from this samples/1 instead of FILE|DIR (its files are the ones the rows are matched to)
-  --out PATH     also write the samples/1 there (not with --dry-run)
+  --out PATH     also write the samples/1 there, whole or not at all (temporary file, then rename); not with --dry-run, and never a path that is also META.csv, --samples or a FILE
   --dry-run      report only: the sample-import/1 document on stdout, nothing written
   --json         the sample-import/1 document on stdout ({report, samples, schema}); without it the samples/1 alone, so `> samples.json` works as with `sample table`
-A row is matched to a file by exact name, then by case, then without the extension; two files for one key is `ambiguous` and nothing is guessed. `wash` is a blank of kind wash.
+A row is a record of the CSV (the header is row 1; empty lines are not counted). It is matched to a file by exact name, then by case, then without the extension; two files for one key is `ambiguous` and nothing is guessed. `wash` is a blank of kind wash.
 Stderr: one line per finding (`unmatched row`, `unmatched file`, `duplicate`, `unknown role`) with its evidence and one `auto:` line per automatic choice (a match that was not exact, the first of
 duplicate rows, a role or name changed, with the value before and after). Nothing is refused for a finding: the user edits the CSV or the samples/1 and runs it again.
-Exit codes: 0 every row matched and every file has one; 1 findings (the documents are still written); 2 usage; 3 the CSV or the samples file is not valid; 4 a file missing or unreadable; 6 --out cannot be written.";
+Exit codes: 0 every row matched and every file has one; 1 findings (the documents are still written); 2 usage (also --out naming an input); 3 the CSV or the samples file is not valid; 4 a file missing or unreadable; 6 --out cannot be written.";
 
 /// The kinds of data file a DIR contributes (a `.d` or `.raw` may be a folder).
 const DATA: [&str; 8] = ["mzml", "mzxml", "wiff", "raw", "d", "cdf", "mgf", "mzdata"];
@@ -94,72 +94,126 @@ fn num_of(v: &Value, k: &str) -> i64 {
     v.get(k).and_then(Value::f64).unwrap_or(0.0) as i64
 }
 
-/// The stderr lines of a report: the findings with their evidence, then the automatic choices.
+/// The text of a `lang/en` key with each `{name}` filled in, in one pass (a value that holds `{x}` stays as it is).
+fn say(key: &str, vals: &[(&str, String)]) -> String {
+    let t = crate::error_text::catalog_text(key).unwrap_or(key);
+    let mut out = String::new();
+    let mut rest = t;
+    while let Some(i) = rest.find('{') {
+        out += &rest[..i];
+        let tail = &rest[i + 1..];
+        match tail.find('}').and_then(|j| {
+            vals.iter()
+                .find(|(k, _)| *k == &tail[..j])
+                .map(|(_, v)| (j, v))
+        }) {
+            Some((j, v)) => {
+                out += v;
+                rest = &tail[j + 1..];
+            }
+            None => {
+                out.push('{');
+                rest = tail;
+            }
+        }
+    }
+    out + rest
+}
+
+/// The strings of a JSON array of the report.
+fn texts(v: &Value, k: &str) -> Vec<String> {
+    v.get(k)
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .map(|x| {
+            x.str()
+                .map_or_else(|| x.f64().unwrap_or(0.0).to_string(), String::from)
+        })
+        .collect()
+}
+
+/// The stderr lines of a report: the findings with their evidence, then the automatic choices (the texts are `err.cli.import.*` of `lang/en`).
 fn lines(report: &Value) -> String {
     let each = |k: &str| report.get(k).map_or(&[][..], Value::arr);
     let mut out = String::new();
     for r in each("unmatched_rows") {
-        let near = r.get("candidates").map_or(&[][..], Value::arr);
-        let near: Vec<&str> = near.iter().filter_map(Value::str).collect();
-        out += &format!(
-            "unmatched row {}: \"{}\" ({}{})\n",
-            num_of(r, "row"),
-            str_of(r, "file"),
-            str_of(r, "why"),
-            if near.is_empty() {
-                String::new()
-            } else {
-                format!(": {}", near.join(", "))
-            }
+        let near = texts(r, "candidates").join(", ");
+        let key = if near.is_empty() {
+            "err.cli.import.unmatchedRow"
+        } else {
+            "err.cli.import.unmatchedRowNear"
+        };
+        let (n, f) = row_file(r);
+        out += &say(
+            key,
+            &[
+                ("row", n),
+                ("file", f),
+                ("why", str_of(r, "why").into()),
+                ("near", near),
+            ],
         );
+        out += "\n";
     }
     for f in each("unmatched_files").iter().filter_map(Value::str) {
-        out += &format!("unmatched file: {f} (no row)\n");
+        out += &say("err.cli.import.unmatchedFile", &[("file", f.into())]);
+        out += "\n";
     }
     for d in each("duplicates") {
-        let rows: Vec<String> = d
-            .get("rows")
-            .map_or(&[][..], Value::arr)
-            .iter()
-            .map(|r| r.f64().unwrap_or(0.0).to_string())
-            .collect();
-        let same = d.get("conflict") == Some(&Value::Bool(false));
-        out += &format!(
-            "duplicate: {} in rows {} ({}; row {} kept)\n",
-            str_of(d, "file"),
-            rows.join(", "),
-            if same { "same values" } else { "values differ" },
-            num_of(d, "kept")
-        );
+        let key = if d.get("conflict") == Some(&Value::Bool(false)) {
+            "err.cli.import.duplicateSame"
+        } else {
+            "err.cli.import.duplicateDiffer"
+        };
+        let vals = [
+            ("file", str_of(d, "file").into()),
+            ("rows", texts(d, "rows").join(", ")),
+            ("kept", num_of(d, "kept").to_string()),
+        ];
+        out += &say(key, &vals);
+        out += "\n";
     }
     for u in each("unknown_roles") {
-        out += &format!(
-            "unknown role: row {} \"{}\" for {} (the role of the name is kept)\n",
-            num_of(u, "row"),
-            str_of(u, "value"),
-            str_of(u, "file")
+        let (n, f) = row_file(u);
+        out += &say(
+            "err.cli.import.unknownRole",
+            &[
+                ("row", n),
+                ("file", f),
+                ("value", str_of(u, "value").into()),
+            ],
         );
+        out += "\n";
     }
     for c in each("shared_names") {
-        let files: Vec<&str> = c
-            .get("files")
-            .map_or(&[][..], Value::arr)
-            .iter()
-            .filter_map(Value::str)
-            .collect();
-        out += &format!("note: sample name \"{}\" is on {} files ({}): fine for the two polarities of one sample\n", str_of(c, "name"), files.len(), files.join(", "));
+        let files = texts(c, "files");
+        out += &say(
+            "err.cli.import.sharedName",
+            &[
+                ("name", str_of(c, "name").into()),
+                ("count", files.len().to_string()),
+                ("files", files.join(", ")),
+            ],
+        );
+        out += "\n";
     }
     for c in each("choices") {
-        out += &format!(
-            "auto: {} row {} {} \"{}\" -> \"{}\"\n",
-            str_of(c, "what"),
-            num_of(c, "row"),
-            str_of(c, "file"),
-            str_of(c, "from"),
-            str_of(c, "to")
-        );
+        let (n, f) = row_file(c);
+        let vals = [
+            ("what", str_of(c, "what").into()),
+            ("row", n),
+            ("file", f),
+            ("from", str_of(c, "from").into()),
+            ("to", str_of(c, "to").into()),
+        ];
+        out += &say("err.cli.import.auto", &vals);
+        out += "\n";
     }
     out
+}
+
+fn row_file(v: &Value) -> (String, String) {
+    (num_of(v, "row").to_string(), str_of(v, "file").to_string())
 }
 
 /// A CSV or samples file the engine refuses is exit 3 here (a missing one is exit 4).
@@ -201,6 +255,40 @@ fn request(csv: &str, samples: Option<&str>, paths: &[String]) -> Result<String,
     Ok(body.0)
 }
 
+/// A usage error (exit 2) of this command: a key `err.cli.import.*` and its parameters.
+fn usage(key: &'static str, params: &[(&'static str, String)]) -> Outcome {
+    let mut e = Error::new(key);
+    for (k, v) in params {
+        e = e.with(k, v);
+    }
+    Outcome::fail_error(&e)
+}
+
+/// `a` and `b` name one file once symlinks and `..` are resolved (a file that is not there yet is its folder plus its name).
+fn same_file(a: &str, b: &str) -> bool {
+    let real = |p: &str| {
+        let path = Path::new(p);
+        path.canonicalize().ok().or_else(|| {
+            let dir = path
+                .parent()
+                .filter(|d| !d.as_os_str().is_empty())
+                .unwrap_or(Path::new("."));
+            Some(dir.canonicalize().ok()?.join(path.file_name()?))
+        })
+    };
+    matches!((real(a), real(b)), (Some(x), Some(y)) if x == y)
+}
+
+/// Writes `text` at `path` through a temporary file of the same folder and a rename, so a failed write leaves the old file as it was.
+fn write_out(path: &str, text: &str) -> std::io::Result<()> {
+    let part = format!("{path}.part");
+    let done = std::fs::write(&part, text).and_then(|_| std::fs::rename(&part, path));
+    if done.is_err() {
+        let _ = std::fs::remove_file(&part);
+    }
+    done
+}
+
 /// The arguments checked: (META.csv, files, --samples, --out), or the outcome that ends the command (help, usage error).
 type Parsed = (String, Vec<String>, Option<String>, Option<String>);
 
@@ -216,15 +304,19 @@ fn arguments(args: Vec<String>, dry: bool) -> Result<Parsed, Outcome> {
         p.get("--out").map(String::from),
     );
     let Some((meta, paths)) = p.pos.split_first() else {
-        return Err(Outcome::fail("sample import needs META.csv and FILE|DIR... or --samples SAMPLES.json (sample import --help)"));
+        return Err(usage("err.cli.import.needsInput", &[]));
     };
     if samples.is_some() == !paths.is_empty() {
-        return Err(Outcome::fail(
-            "sample import takes FILE|DIR... or --samples SAMPLES.json, one of them",
-        ));
+        return Err(usage("err.cli.import.oneSource", &[]));
     }
     if dry && out.is_some() {
-        return Err(Outcome::fail("--dry-run writes nothing: drop --out"));
+        return Err(usage("err.cli.import.dryOut", &[]));
+    }
+    if let Some(o) = &out {
+        let inputs = std::iter::once(meta).chain(samples.iter()).chain(paths);
+        if inputs.into_iter().any(|i| same_file(i, o)) {
+            return Err(usage("err.cli.import.outIsInput", &[("path", o.clone())]));
+        }
     }
     Ok((meta.clone(), paths.to_vec(), samples, out))
 }
@@ -233,9 +325,9 @@ fn arguments(args: Vec<String>, dry: bool) -> Result<Parsed, Outcome> {
 fn answer(body: &str) -> Result<(String, Value, String), Outcome> {
     let doc = mzlab_core::samples::route_all("import", body).map_err(|e| engine(&e))?;
     let Ok(v) = parse(doc.as_bytes()) else {
-        return Err(Outcome::fail(
-            "sample import: the engine answered with a document that is not JSON",
-        ));
+        let mut o = usage("err.cli.import.engine", &[]);
+        o.code = crate::exit::INTERNAL;
+        return Err(o);
     };
     let mut o = mzlab_core::json::Out::default();
     mzlab_core::json::write_value(&mut o, v.get("samples").unwrap_or(&Value::Null));
@@ -257,7 +349,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         Err(o) => return o,
     };
     let wrote = out.as_ref().map(|path| {
-        std::fs::write(path, format!("{samples_json}\n")).map_err(|e| format!("{path}: {e}"))
+        write_out(path, &format!("{samples_json}\n")).map_err(|e| format!("{path}: {e}"))
     });
     if let Some(Err(e)) = wrote {
         return Outcome::fail_error(&Error::new("err.cli.out").with("path", e));

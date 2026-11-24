@@ -5,14 +5,14 @@ use serde_json::{json, Value};
 
 use mzlab_core::samples;
 
-fn run(files: &[&str], text: &str) -> Value {
+pub(super) fn run(files: &[&str], text: &str) -> Value {
     let files: Vec<Value> = files.iter().map(|n| json!({"name": n})).collect();
     let out =
         samples::route_all("import", &json!({"files": files, "text": text}).to_string()).unwrap();
     serde_json::from_str(&out).unwrap()
 }
 
-fn sample<'a>(doc: &'a Value, file: &str) -> &'a Value {
+pub(super) fn sample<'a>(doc: &'a Value, file: &str) -> &'a Value {
     doc["samples"]["samples"]
         .as_array()
         .unwrap()
@@ -21,7 +21,7 @@ fn sample<'a>(doc: &'a Value, file: &str) -> &'a Value {
         .unwrap()
 }
 
-fn what<'a>(doc: &'a Value, w: &str) -> Vec<&'a Value> {
+pub(super) fn what<'a>(doc: &'a Value, w: &str) -> Vec<&'a Value> {
     doc["report"]["choices"]
         .as_array()
         .unwrap()
