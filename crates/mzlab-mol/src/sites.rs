@@ -45,11 +45,7 @@ impl Mol {
         // plain loops: iterator adapters cost the `.wasm` more
         for k in 0..count {
             // a single piece, or one that cannot be cut out, is tested in the whole record with its own numbering
-            let one = if count > 1 {
-                base.only_piece(&piece, k)
-            } else {
-                None
-            };
+            let one = (count > 1).then(|| base.only_piece(&piece, k)).flatten();
             // atoms of a cut-out piece keep their relative order, so a local index is the rank among the piece's atoms
             let mut local = vec![0u32; piece.len()];
             let mut size = 0;
@@ -83,6 +79,7 @@ impl Mol {
                             atoms: size as usize,
                             sites: mine.len(),
                             work: work.get() - start,
+                            first: piece.iter().position(|&p| p == k).unwrap_or(0) as u32,
                         });
                     };
                     f
@@ -476,12 +473,13 @@ struct Cand {
     sure: bool,
 }
 
-/// The piece whose flip tests passed the work limit of `stereo_sites_among`: its atoms, its candidate sites and the work done on it.
+/// The piece whose flip tests passed the limit of `stereo_sites_among`: its atoms, candidate sites, work done and first atom (record index).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SitesOver {
     pub atoms: usize,
     pub sites: usize,
     pub work: u64,
+    pub first: u32,
 }
 
 /// A place in a record where stereo can exist.

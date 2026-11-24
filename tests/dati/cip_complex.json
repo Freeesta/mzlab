@@ -2,8 +2,8 @@
   "error_key": "error.cip.tooComplex",
   "params": {
     "atoms": "102",
+    "elements": "24",
     "limit": "8000000",
-    "sites": "24",
     "stage": "labels",
     "work": "8000476"
   },

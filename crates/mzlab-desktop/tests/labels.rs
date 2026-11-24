@@ -218,24 +218,36 @@ fn cip_route_gives_the_bytes_of_the_fixture() {
         &[],
     );
     assert_eq!(bad.err().map(|e| e.key), Some("error.cip.molfile"));
-    // a structure past the work limit: the key and evidence of tests/dati/cip_complex.json
-    let fx: serde_json::Value =
-        serde_json::from_str(include_str!("../../../tests/dati/cip_complex.json")).unwrap();
-    let e = st
-        .rpc(
-            "feat/grafo",
-            &json!({"kind": "cip", "request": fx["request"].clone()}),
-            &[],
-        )
-        .err()
-        .unwrap();
-    assert_eq!(e.key, fx["error_key"].as_str().unwrap());
-    let params: serde_json::Map<String, serde_json::Value> = e
-        .params
-        .iter()
-        .map(|(k, v)| (k.to_string(), json!(v)))
-        .collect();
-    assert_eq!(serde_json::Value::Object(params), fx["params"]);
+    // past the work limit and past the node cap: the key and evidence of tests/dati/cip_complex.json and cip_digraph.json
+    for t in [
+        include_str!("../../../tests/dati/cip_complex.json"),
+        include_str!("../../../tests/dati/cip_digraph.json"),
+    ] {
+        let fx: serde_json::Value = serde_json::from_str(t).unwrap();
+        let e = st
+            .rpc(
+                "feat/grafo",
+                &json!({"kind": "cip", "request": fx["request"].clone()}),
+                &[],
+            )
+            .err()
+            .unwrap();
+        assert_eq!(e.key, fx["error_key"].as_str().unwrap());
+        let params: serde_json::Map<String, serde_json::Value> = e
+            .params
+            .iter()
+            .map(|(k, v)| (k.to_string(), json!(v)))
+            .collect();
+        assert_eq!(serde_json::Value::Object(params), fx["params"]);
+        // the two-centre drawing keeps the label of one centre and reports the other in `capped`
+        if let Some(p) = fx.get("partial") {
+            let p2 = json!({"kind": "cip", "request": p["request"].clone()});
+            assert_eq!(
+                text(st.rpc("feat/grafo", &p2, &[]).unwrap()),
+                p["cip"].as_str().unwrap()
+            );
+        }
+    }
 }
 
 #[test]

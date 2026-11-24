@@ -12,6 +12,7 @@ I18N.add("en", {
   "draw.cip.atom": "{atom}: {label}",
   "draw.cip.atomLow": "{atom}: {label} (pseudoasymmetric: only R against S of the substituents tells them apart)",
   "draw.cip.bond": "{a}={b}: {label}",
+  "draw.cip.capped": "{atom}: no descriptor, its CIP digraph passes 40,000 nodes (the other labels are complete)",
   "draw.cip.skip.query": "The drawing has generic (query) atoms or bonds: no descriptors.",
   "draw.cip.skip.kekule": "An aromatic ring cannot be written with alternating double bonds: no descriptors.",
   "draw.cip.skip.tooBig": "The drawing is too big for the descriptors (over 400 atoms)."

@@ -128,8 +128,13 @@ fn the_pieces_of_a_record_are_records_of_their_own() {
     for x in &p {
         x.validate().unwrap();
     }
+    assert_eq!(
+        m.piece_members(),
+        vec![vec![0, 1, 2, 3], vec![4], (5..11).collect::<Vec<u32>>()]
+    );
     let one = Mol::from_smiles("CCO").unwrap();
     assert_eq!(one.pieces(), vec![one.clone()]);
+    assert_eq!(one.piece_members(), vec![vec![0, 1, 2]]);
 }
 
 #[test]

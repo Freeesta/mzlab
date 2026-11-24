@@ -10,6 +10,8 @@ pub mod check;
 #[cfg(feature = "check")]
 pub mod cip;
 #[cfg(feature = "check")]
+mod cip_drawing;
+#[cfg(feature = "check")]
 mod cip_rank;
 pub mod cut;
 #[cfg(feature = "check")]

@@ -18,6 +18,16 @@ impl Mol {
         out
     }
 
+    /// The atoms of each connected piece, ascending, pieces in the order of their first atom as `pieces` gives them.
+    pub fn piece_members(&self) -> Vec<Vec<u32>> {
+        let (piece, count) = self.piece_labels();
+        let mut members = vec![Vec::new(); count];
+        for (x, &k) in piece.iter().enumerate() {
+            members[k].push(x as u32);
+        }
+        members
+    }
+
     /// The piece of every atom (numbered in the order of its first atom) and the number of pieces.
     pub(crate) fn piece_labels(&self) -> (Vec<usize>, usize) {
         let n = self.atoms.len();

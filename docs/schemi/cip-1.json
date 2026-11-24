@@ -53,6 +53,13 @@
         }
       }
     },
+    "capped": {
+      "description": "Centres on a stereo site left without a label because their CIP digraph passed 40,000 nodes; present only when not empty.",
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
     "skip": {
       "type": "string"
     }

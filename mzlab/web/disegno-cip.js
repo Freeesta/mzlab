@@ -41,6 +41,7 @@ export async function cipNow() {
       list.appendChild(row(t(low ? "draw.cip.atomLow" : "draw.cip.atom", { atom: name(a.atom), label: a.label }), [a.atom], ids));
     }
     for (const b of r.bonds) list.appendChild(row(t("draw.cip.bond", { a: name(b.a), b: name(b.b), label: b.label }), [b.a, b.b], ids));
+    for (const c of r.capped || []) list.appendChild(row(t("draw.cip.capped", { atom: name(c) }), [c], ids));
     const n = r.atoms.length + r.bonds.length;
     status.textContent = r.skip ? t(`draw.cip.skip.${r.skip}`) : n ? t("draw.cip.found", { n }) : t("draw.cip.none");
     return r;

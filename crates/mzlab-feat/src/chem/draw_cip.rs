@@ -154,7 +154,7 @@ fn bond_spot(g: &Geo, a: u32, b: u32) -> Spot {
 
 /// R/S/r/s beside the defined centres and E/Z beside the defined double bonds, in the free angle that touches no label or bond.
 pub(super) fn cip_marks(g: &Geo, labels: &mut Vec<Label>, prims: &mut Vec<Prim>) {
-    let CipLabels { atoms, bonds } = cip_labels(g.m, &defined_sites(g.m));
+    let CipLabels { atoms, bonds, .. } = cip_labels(g.m, &defined_sites(g.m));
     let segs: Vec<(V, V)> = (0..g.m.atoms.len())
         .flat_map(|i| {
             g.nb[i]
