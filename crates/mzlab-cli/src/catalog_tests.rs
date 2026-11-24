@@ -88,6 +88,15 @@ fn flags_have_type_unit_and_default() {
     assert_eq!(preset["enum"], json("[\"auto\",\"pos\",\"neg\"]"));
     let doc = json(&out(&["commands", "--json", "mol", "cip"]));
     assert_eq!(doc["commands"][0]["stdin"], true);
+    // the compact listing leaves it to the synopsis (`MOLFILE|-`)
+    let all = json(&out(&["commands", "--json"]));
+    let cip = all["commands"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["path"] == "mol cip")
+        .unwrap();
+    assert!(cip["synopsis"].as_str().unwrap().contains("|-") && cip.get("stdin").is_none());
 }
 
 #[test]
@@ -406,6 +415,9 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
             );
             assert_eq!(whole["examples"], serde_json::json!([want]), "{}", e.name);
         }
+        // the rule of `flag_help_note`: stdin is true exactly when an argument is written `NAME|-`
+        assert!(c.get("stdin").is_none(), "{}", e.name);
+        assert_eq!(whole.get("stdin").is_some(), reads_stdin(c), "{}", e.name);
     }
     assert!(
         doc["commands"]
@@ -417,6 +429,19 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
     );
     let n = out(&["commands", "--json"]).len();
     assert!(n < 33_000, "the compact listing is {n} bytes");
+}
+
+/// Whether the synopsis writes one of the command's arguments as `NAME|-`.
+fn reads_stdin(c: &serde_json::Value) -> bool {
+    let words: Vec<&str> = c["synopsis"]
+        .as_str()
+        .unwrap()
+        .split([' ', '[', ']', '(', ')'])
+        .collect();
+    c["args"].as_array().unwrap().iter().any(|a| {
+        let w = format!("{}|-", a["name"].as_str().unwrap());
+        words.iter().any(|x| x.trim_end_matches("...") == w)
+    })
 }
 
 /// The global `--cache` is the index cache; `db normative build` keeps its own `--cache` (sources folder), and no other command names the flag.

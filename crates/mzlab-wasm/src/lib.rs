@@ -27,7 +27,7 @@ mod source_check;
 mod blocks;
 mod gunzip;
 mod peak_area;
-pub use peak_area::{peak_area, window_end};
+pub use peak_area::{noise_floor, peak_area, window_end};
 pub(crate) use blocks::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.

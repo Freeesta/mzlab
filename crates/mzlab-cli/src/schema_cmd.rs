@@ -88,6 +88,7 @@ embed!(
     "mzflow-2.json",
     "mzml-validation-1.json",
     "mzrun-2.json",
+    "noise-floor-1.json",
     "normative-build-1.json",
     "open-1.json",
     "param-choices-1.json",

@@ -59,6 +59,12 @@ window.QUALITA = {
     const params = [pk.lrHalf, pk.lrValley, pk.lrSn, NaN, NaN, pk.lrSplit];
     return call({ op: "lrauto", rt: f64(x), y: f64(y), x0, x1, params: f64(params) });
   },
+  /** The noise of an ion-counting trace with a floor of one ion and the S/N of the peak in [a, b] (min; null: noise only), by the engine (ionstat.rs): the JSON text
+   * noise-floor/1, the bytes of `mzlab-cli peak noise`; "E" + { key } when no background point is left; null without the engine. oneIon: null = auto, 0 = off, cps. */
+  noiseFloor(x, y, a, b, oneIon) {
+    const n = v => (v == null ? NaN : v);
+    return call({ op: "noise", rt: f64(x), y: f64(y), ask: f64([NaN, NaN, n(a), n(b)]), params: f64([n(oneIon)]) });
+  },
   /** Area of the peak between the times a and b (min) from zero (mode 1) or from the line `line` = [t0, y0, t1, y1] (mode 2), by the engine (baseline.rs):
    * the JSON text { baseline, area (signed, counts x s), below (the part under the line), height, rt }, the bytes of `mzlab-cli peak area`; null without the engine. */
   peakArea(x, y, a, b, mode, line) { return call({ op: "area", rt: f64(x), y: f64(y), a, b, mode, line: f64(line || []) }); },

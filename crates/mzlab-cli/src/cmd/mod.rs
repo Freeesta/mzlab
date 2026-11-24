@@ -79,6 +79,7 @@ const JSON_DEFAULT: &[&str] = &[
     "peak edges",
     "peak auto",
     "peak auto-lr",
+    "peak noise",
     "peak area",
     "peak window",
     "schema",

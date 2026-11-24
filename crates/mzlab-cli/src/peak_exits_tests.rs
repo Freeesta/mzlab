@@ -13,6 +13,7 @@ fn the_exits_of_every_peak_command_are_listed() {
     let names = [
         "peak auto",
         "peak auto-lr",
+        "peak noise",
         "peak edges",
         "peak area",
         "peak window",
