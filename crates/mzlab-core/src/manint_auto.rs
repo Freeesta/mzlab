@@ -73,7 +73,7 @@ fn group(found: &mut [Found], tol: f64) -> Vec<f64> {
 }
 
 /// The windows of every peak of every channel of every file, grouped, and the log of each file, as JSON:
-/// `{"tol", "windows": [{"file", "tr", "a", "b", "baseline": "line", "line": [t0, y0, t1, y1], "grp", "origin": "auto"|"unmatched", "sn"}], "log": [{"file", "tr", "peaks": [apex...]}], "groups", "unmatched"}`.
+/// `{"tol", "windows": [{"file", "tr", "a", "b", "baseline": "line", "line": [t0, y0, t1, y1], "grp", "origin": "auto"|"unmatched", "sn", "state": "detected"}], "log": [{"file", "tr", "peaks": [apex...]}], "groups", "unmatched"}`.
 /// `grp` is the mean apex of the group (min): the table orders the rows of a channel by it.
 pub fn auto_text(files: &str, params: &str) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
@@ -130,9 +130,10 @@ pub fn auto_text(files: &str, params: &str) -> Result<String> {
             let alone = held > 1 && mine.iter().filter(|g| g.group == f.group).count() == 1;
             n_alone += usize::from(alone);
             out.push(format!(
-                "{{\"file\":{},\"tr\":{},\"a\":{},\"b\":{},\"baseline\":\"line\",\"line\":[{},{},{},{}],\"grp\":{},\"origin\":\"{}\",\"sn\":{}}}",
+                "{{\"file\":{},\"tr\":{},\"a\":{},\"b\":{},\"baseline\":\"line\",\"line\":[{},{},{},{}],\"grp\":{},\"origin\":\"{}\",\"sn\":{},\"state\":\"{}\"}}",
                 f.file, f.tr, f.a, f.b, f.line[0], f.line[1], f.line[2], f.line[3], means[f.group],
-                if alone { "unmatched" } else { "auto" }, f.sn
+                if alone { "unmatched" } else { "auto" }, f.sn,
+                crate::value_word::origin_state(if alone { "unmatched" } else { "auto" })
             ));
         }
     }

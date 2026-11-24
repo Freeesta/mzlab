@@ -132,6 +132,28 @@ fn contract_and_rows_of_python() {
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
         detail_like_python(&det, &g, id);
+        states_beside_snr(&det);
+    }
+}
+
+/// The value-state word beside the S/N of every file's cell, in `rows[]` and on the peak drawn on the trace.
+fn states_beside_snr(det: &Value) {
+    let words = ["detected", "forced", "filled", "absent"];
+    for (row, tr) in det["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(det["traces"].as_array().unwrap())
+    {
+        let st = row["state"].as_str().expect("state beside snr");
+        assert!(words.contains(&st), "{st}");
+        assert!(row["snr"].is_number());
+        if row["detected"] == true {
+            assert_eq!(st, "detected");
+        }
+        if tr["peak"].is_object() {
+            assert_eq!(tr["peak"]["state"], row["state"]);
+        }
     }
 }
 

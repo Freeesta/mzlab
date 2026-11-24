@@ -44,7 +44,8 @@ fn end_name(e: End) -> &'static str {
 
 /// The result as the JSON the page (`lr_auto_integrate` of mzlab-wasm) and `mzlab-cli peak auto-lr` both print, the same bytes: the parameters used
 /// (`half_auto` true when the half window was chosen here, `baseline` always "engine": this route never reads the page's baseline setting) and every
-/// peak (times in min, baseline in counts with what its clamp did, areas in counts x min, never negative, `below` the part cut off under the line).
+/// peak (`state` the value-state word: every peak listed was found and checked, so `detected`; the whole trace has its own `state`, `na` under 7 points,
+/// `absent` with no peak; times in min, baseline in counts with what its clamp did, areas in counts x min, never negative, `below` the part cut off under the line).
 pub fn lr_auto_json(rt: &[f64], r: &LrAuto) -> String {
     let p = &r.params;
     let head = format!(
@@ -56,11 +57,15 @@ pub fn lr_auto_json(rt: &[f64], r: &LrAuto) -> String {
         .iter()
         .map(|k| {
             format!(
-                "{{\"lo\":{},\"hi\":{},\"t0\":{},\"t1\":{},\"rt\":{},\"b0\":{},\"b1\":{},\"area\":{},\"below\":{},\"area_zero\":{},\"height\":{},\"sn\":{},\"end0\":\"{}\",\"end1\":\"{}\",\"clamp0\":\"{}\",\"clamp1\":\"{}\"}}",
-                k.lo, k.hi, rt[k.lo], rt[k.hi], rt[k.apex], k.base_lo, k.base_hi, k.area, k.below, k.area_zero, k.height, k.sn, end_name(k.end_lo), end_name(k.end_hi),
+                "{{\"lo\":{},\"hi\":{},\"t0\":{},\"t1\":{},\"rt\":{},\"b0\":{},\"b1\":{},\"area\":{},\"below\":{},\"area_zero\":{},\"height\":{},\"sn\":{},\"state\":\"{}\",\"end0\":\"{}\",\"end1\":\"{}\",\"clamp0\":\"{}\",\"clamp1\":\"{}\"}}",
+                k.lo, k.hi, rt[k.lo], rt[k.hi], rt[k.apex], k.base_lo, k.base_hi, k.area, k.below, k.area_zero, k.height, k.sn, crate::value_word::DETECTED, end_name(k.end_lo), end_name(k.end_hi),
                 clamp_name(k.clamp_lo), clamp_name(k.clamp_hi)
             )
         })
         .collect();
-    format!("{head},\"peaks\":[{}]}}", rows.join(","))
+    format!(
+        "{head},\"state\":\"{}\",\"peaks\":[{}]}}",
+        crate::value_word::trace_state(rt.len(), r.peaks.len()),
+        rows.join(",")
+    )
 }

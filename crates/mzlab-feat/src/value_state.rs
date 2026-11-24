@@ -25,6 +25,16 @@ pub fn under_loq(state: &'static str, below: bool) -> &'static str {
     }
 }
 
+/// The state of a `chrom.transitions` cell from its `peak` flag: `ok`/`edge` are a peak found and checked (`detected`), `no_peak` is a covered window
+/// without one (`absent`), `no_trace` (no channel) and `no_rt` (a row without a window) measured nothing (`na`). An unknown flag is `na`, never a number's word.
+pub fn flag_state(flag: &str) -> &'static str {
+    match flag {
+        "ok" | "edge" => VALUE_STATES[0],
+        "no_peak" => VALUE_STATES[4],
+        _ => VALUE_STATES[5],
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,5 +64,17 @@ mod tests {
         assert_eq!(under_loq("detected", false), "detected");
         assert_eq!(under_loq("absent", true), "absent");
         assert_eq!(under_loq("na", true), "na");
+    }
+
+    #[test]
+    fn flags_and_origins_map_to_states() {
+        let f: Vec<&str> = ["ok", "edge", "no_peak", "no_trace", "no_rt", "x"]
+            .iter()
+            .map(|f| flag_state(f))
+            .collect();
+        assert_eq!(f, ["detected", "detected", "absent", "na", "na", "na"]);
+        for w in mzlab_core::value_word::WORDS {
+            assert!(VALUE_STATES.contains(&w), "{w}");
+        }
     }
 }

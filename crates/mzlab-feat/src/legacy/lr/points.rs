@@ -57,6 +57,19 @@ fn k_in(d: &LrDig, r: usize, among: &[usize]) -> usize {
         .count()
 }
 
+/// The state word of column `k` of row `e` (the one `points[].state` carries): from the aligned table where the entry has a row there, else from the
+/// cell itself (`detected` or `absent`; an entry without a row has no gap filling or targeted pass behind it).
+pub fn word(d: &LrDig, e: &Entry, k: usize, detected: bool) -> &'static str {
+    match e.row.filter(|&r| r < d.table.len()) {
+        Some(r) => {
+            let c = d.table.cell(r, k);
+            evidence_word(d.table.state[c], d.checks.q[c].is_some_and(|q| !q.ok()))
+        }
+        None if detected => evidence_word(CELL_DETECTED, false),
+        None => evidence_word(crate::aligned::CELL_ABSENT, false),
+    }
+}
+
 /// The keys of the evidence of row `e`, appended to its object.
 pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
     let Some(r) = e.row.filter(|&r| r < d.table.len()) else {

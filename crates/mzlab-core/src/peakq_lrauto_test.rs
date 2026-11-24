@@ -181,6 +181,26 @@ fn a_tailing_peak_keeps_its_tail_and_the_json_names_every_choice() {
             && j.contains("\"end1\":\"background\""),
         "{j}"
     );
+    // the value-state word beside the S/N of the peak, and the state of the whole trace after the parameters
+    assert!(
+        j.contains("\"sn\":") && j.contains("\"state\":\"detected\",\"end0\""),
+        "{j}"
+    );
+    assert!(
+        j.contains("}},\"state\":\"detected\",\"peaks\":[")
+            || j.contains("},\"state\":\"detected\",\"peaks\":["),
+        "{j}"
+    );
+}
+
+#[test]
+fn the_trace_state_says_why_there_is_no_peak() {
+    let (rt, y, _) = trace(&[], 1);
+    let j = lr_auto_json(&rt, &run(&rt, &y));
+    assert!(j.contains("\"state\":\"absent\",\"peaks\":[]"), "{j}");
+    let (rt, y) = (&rt[..6], &y[..6]);
+    let j = lr_auto_json(rt, &run(rt, y));
+    assert!(j.contains("\"state\":\"na\",\"peaks\":[]"), "{j}");
 }
 
 #[test]

@@ -6,6 +6,7 @@
   "type": "object",
   "required": [
     "params",
+    "state",
     "peaks"
   ],
   "additionalProperties": false,
@@ -66,6 +67,14 @@
         }
       }
     },
+    "state": {
+      "enum": [
+        "detected",
+        "absent",
+        "na"
+      ],
+      "description": "Value state of the whole trace (docs/agenti/value-states.md): `detected` with at least one peak, `absent` when it was searched and has none, `na` when it has fewer than 7 points (nothing was measured)."
+    },
     "peaks": {
       "type": "array",
       "items": {
@@ -84,6 +93,7 @@
           "area_zero",
           "height",
           "sn",
+          "state",
           "end0",
           "end1",
           "clamp0",
@@ -137,6 +147,10 @@
           "sn": {
             "type": "number",
             "description": "Height of the smoothed peak above the background over the noise."
+          },
+          "state": {
+            "const": "detected",
+            "description": "Value state of the peak: every listed peak was found and passed the S/N floor, so `detected`."
           },
           "end0": {
             "enum": [

@@ -163,3 +163,31 @@ fn an_empty_columns_list_is_refused() {
     assert_eq!(o.code, 2, "{}", o.stderr);
     assert!(o.stderr.contains("--columns needs a list"), "{}", o.stderr);
 }
+
+/// `--columns state` adds the value-state word, the same bytes as the engine, named in the help; a window the user gave is `forced`, the engine's own
+/// peaks (`--auto` windows fed back) are `detected`.
+#[test]
+fn the_state_column_is_the_engine_word_and_the_help_names_it() {
+    let d = std::env::temp_dir().join(format!("mzlab_cli_state_{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let files = format!(
+        "[{{\"name\":\"a.mzML\",\"transitions\":[{}]}}]",
+        trace("XIC", "m/z 100.1")
+    );
+    let windows = "[{\"file\":0,\"tr\":0,\"a\":1.2,\"b\":1.8}]";
+    let (tp, wp) = (d.join("traces.json"), d.join("windows.json"));
+    std::fs::write(&tp, &files).unwrap();
+    std::fs::write(&wp, windows).unwrap();
+    let (t, w) = (tp.display().to_string(), wp.display().to_string());
+    let o = run(&["--traces", &t, "--windows", &w, "--columns", "state"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let doc = format!("{{\"windows\":{windows},\"columns\":[\"state\"]}}");
+    let want = mzlab_core::manint::table_text(&files, &doc, false).unwrap();
+    let out = String::from_utf8(o.stdout).unwrap();
+    assert_eq!(out, want);
+    let (head, row) = (want.lines().next().unwrap(), want.lines().nth(1).unwrap());
+    assert!(head.ends_with(mzlab_core::manint::STATE_HEAD), "{head}");
+    assert!(row.ends_with(",forced"), "{row}");
+    assert!(crate::manual_table_cmd::help().contains("state"));
+    let _ = std::fs::remove_dir_all(&d);
+}

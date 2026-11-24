@@ -51,7 +51,7 @@ fn on_trace(rt: &[f64], y: &[f64], c: &Cell) -> (f64, usize) {
     (snr, pts)
 }
 
-fn peak_json(o: &mut Out, c: &Cell, snr: f64, pts: usize) {
+fn peak_json(o: &mut Out, c: &Cell, snr: f64, pts: usize, state: &str) {
     if c.apex_rt.is_none() {
         o.raw("null");
         return;
@@ -66,6 +66,8 @@ fn peak_json(o: &mut Out, c: &Cell, snr: f64, pts: usize) {
         .num(round(c.hi - c.lo, 4));
     o.raw(",\"snr\":")
         .num(round(snr, 4))
+        .raw(",\"state\":")
+        .str(state)
         .raw(",\"points\":")
         .int(pts as i64);
     o.raw(",\"left\":")
@@ -91,6 +93,7 @@ fn files_json<R: ReadAt>(
         let (rt, y) = xic(&mut open(k)?, e.mz_x - tol, e.mz_x + tol, d.settings.rt_min)?;
         let c = &e.cells[k];
         let (snr, pts) = on_trace(&rt, &y, c);
+        let state = super::points::word(d, e, k, c.detected);
         let sep = if k > 0 { "," } else { "" };
         rows.raw(sep)
             .raw("{\"label\":")
@@ -104,7 +107,9 @@ fn files_json<R: ReadAt>(
             .raw(",\"height\":")
             .num(c.height)
             .raw(",\"snr\":")
-            .num(snr);
+            .num(snr)
+            .raw(",\"state\":")
+            .str(state);
         rows.raw(",\"points\":")
             .int(pts as i64)
             .raw(",\"apex_rt\":")
@@ -129,7 +134,7 @@ fn files_json<R: ReadAt>(
             .raw(",\"y\":")
             .floats(&ys)
             .raw(",\"peak\":");
-        peak_json(&mut traces, c, snr, pts);
+        peak_json(&mut traces, c, snr, pts, state);
         traces.raw("}");
     }
     o.raw(",\"rows\":[")

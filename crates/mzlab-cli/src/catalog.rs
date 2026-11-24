@@ -75,7 +75,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--windows", "JSON file of windows"),
     ("--auto", "engine peaks, as JSON"),
     ("--traces", "JSON file of traces"),
-    ("--columns", "sn, fig, quality"),
+    ("--columns", "sn, fig, quality, state"),
     ("--max-shift", "farthest a followed window moves, min"),
     ("--polarity", "+ or -"),
     ("--mz", "m/z"),

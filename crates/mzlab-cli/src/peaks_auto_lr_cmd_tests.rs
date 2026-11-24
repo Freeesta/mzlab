@@ -43,10 +43,13 @@ fn the_output_is_the_core_json_byte_for_byte() {
     assert_eq!(o.code, 0);
     let core = lr_auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], LrAutoParams::default());
     assert_eq!(core.peaks.len(), 3);
+    let out = String::from_utf8(o.stdout).unwrap();
     assert_eq!(
-        String::from_utf8(o.stdout).unwrap(),
+        out,
         format!("{}\n", lr_auto_json_in(&rt, &core, AreaUnit::Seconds))
     );
+    // the value-state word of the trace and of each of its 3 peaks, beside their S/N
+    assert_eq!(out.matches("\"state\":\"detected\"").count(), 4, "{out}");
     // the dialog names, in the units of the page (valley in %)
     let o = run(args(&[
         p,
