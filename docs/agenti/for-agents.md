@@ -15,6 +15,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | correlated ions, isotopes, adducts of one compound | Flow step `features.group`; one ion: `ion pattern`, `ion match` |
 | centroid profile spectra | Flow step `spectra.centroid` |
 | products of a parent, unit resolution (kinetics) | Flow step `tp.dig_lr`: ONE run over the whole series (every file in `index`); other settings: rerun the same `--out` with `--set` (cached) |
+| kinetic LR campaign: names, roles, targets, products per condition | the 9-call recipe and plan template of `recipes.md` (`docs/recipes/kinetic-lr.mzflow.json`) |
 | hypotheses of the products | Flow step `tp.generate` |
 | structure picture (SVG, PNG, CDXML, KET, molfile) | `mol draw SMILES --format svg --out a.svg`; pathway: Flow step `tp.network` |
 | calibration curve, LOD, LOQ | Flow step `quant.curve` |
@@ -40,8 +41,8 @@ For an agent running on the user's computer (Claude Code, Claude Cowork or other
 6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/2`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/2`.
 7. **Fix**: rerun in the same `RUN` with other `--set`: the cache redoes only the steps that change (`cached` in `prov/1`); `--fresh` redoes everything.
 
-## Five chains (tested)
-Each chain is a test on synthetic data in `crates/mzlab-cli/src/workflow_tests.rs`: every call exits 0 and the call count below is asserted. Add `--cache DIR` (or `MZLAB_CACHE`) to the file commands of a chain that reads the same files twice; `file index FILE...` builds the indexes first (`cli-agenti.md`).
+## Six chains (tested)
+Chains 1-5 follow; the sixth, a whole kinetic LR campaign from vendor files to the kinetics per condition, is `recipes.md` (test: `crates/mzlab-cli/src/workflow_kinetic_tests.rs`). Each chain is a test on synthetic data in `crates/mzlab-cli/src/workflow_tests.rs` or that file: every call exits 0 and the call count below is asserted. Add `--cache DIR` (or `MZLAB_CACHE`) to the file commands of a chain that reads the same files twice; `file index FILE...` builds the indexes first (`cli-agenti.md`).
 1. Unknown folder to a CSV (7 calls): `file list DIR --json`; `llm inspect DIR > inspection.json`; `llm params --inspection inspection.json`; `flow steps --compact`; `sample table FILE... > samples.json`; `flow check PLAN.json --json`; `flow run PLAN.json --in DIR --out RUN --json` (the plan ends with `export.table_csv@1`).
 2. Reproducible run (5): `sample table FILE... > roles.json`; `flow check PLAN.json`; `flow run PLAN.json --in DIR --out RUN`; `flow record RUN --roles roles.json --out RUN/run.mzrun.json`; `flow verify RUN/run.mzrun.json --json`.
 3. Trace to peaks (3): `file channels FILE` (take the `id`); `trace chrom FILE --id ID --format csv > trace.csv`; `peak auto-lr trace.csv`.
