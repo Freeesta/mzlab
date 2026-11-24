@@ -16,6 +16,7 @@ use crate::flow_stats_tests::{campioni_2, design, table};
 /// The steps that read a table and need no file this test does not make.
 const CONSUMERS: &[&str] = &[
     "features.group",
+    "features.companions",
     "table.kmd",
     "table.pca",
     "table.stats",

@@ -1,5 +1,5 @@
 //! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`),
-//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`) and `features.group` (`mzlab_feat::ionnet`) and `table.plausible` (`mzlab_feat::plausible::plausible_text`), the functions `flow run` calls.
+//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`), `features.group` (`mzlab_feat::ionnet`), `features.companions` (`mzlab_feat::companions`) and `table.plausible` (`mzlab_feat::plausible::plausible_text`), the functions `flow run` calls.
 //! Loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -119,4 +119,36 @@ pub fn flow_uv_peaks(
 pub fn flow_plausible(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;
     mzlab_feat::plausible::plausible_text(&params, table).map_err(crate::js_err)
+}
+
+/// The `companions/1` text of `table` (the bytes of a unit-mass `.mzfeat`) and its warnings; `params_json` is the step's parameters merged with its defaults.
+/// Errors are JSON `{"error_key","params"}` texts (`err.flow.companions.list`).
+#[wasm_bindgen]
+pub fn flow_companions(
+    params_json: &str,
+    table: &[u8],
+) -> std::result::Result<Companioned, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    let m = mzlab_feat::companions::companions_text(&params, table).map_err(crate::js_err)?;
+    Ok(Companioned(m))
+}
+
+/// What `flow_companions` made: the text (taken once, not copied) and the `warn.*` keys of the record as a JSON array.
+#[wasm_bindgen]
+pub struct Companioned(mzlab_feat::companions::Made);
+
+#[wasm_bindgen]
+impl Companioned {
+    pub fn take_text(&mut self) -> String {
+        std::mem::take(&mut self.0.text)
+    }
+    pub fn warnings(&self) -> String {
+        let mut o = mzlab_core::json::Out::default();
+        o.raw("[");
+        for (k, w) in self.0.warnings.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).str(w);
+        }
+        o.raw("]");
+        o.0
+    }
 }

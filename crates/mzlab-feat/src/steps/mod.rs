@@ -2,6 +2,7 @@
 //! The parameters are the fields of `recipe::Recipe` that each step reads, with their defaults written out; `tests/steps.rs` builds the recipe
 //! from these defaults and compares its fingerprint with `Recipe::default()`. The identification chain is in `ident*.rs` (`attributio()`).
 
+mod companions;
 mod detect;
 mod group;
 mod ident;
@@ -59,6 +60,7 @@ pub fn registry() -> Vec<Step> {
         table::filter(),
         table::drift(),
         group::group(),
+        companions::companions(),
         stats::stats(),
         stats::pca(),
         stats::kmd(),

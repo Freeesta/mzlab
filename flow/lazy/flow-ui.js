@@ -128,6 +128,7 @@
       "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
       "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
       "error.featMemory": `Not enough memory for the «${q.fase}» phase (about ${q.stima_mb} MB needed of ${q.budget_mb} MB).`,
+      "warn.flow.companions.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files no pair was tested, so there are no edges. The mass relations that fit are listed as weak, with their numbers.",
       "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
     };
     // a memory refusal is told by the page's catalogue (IT+EN, the notice of its phase with the next step), as browser.js does

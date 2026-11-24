@@ -1,0 +1,49 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "companions/1",
+ "title": "companions/1: ions that co-elute with a row of a unit-mass table, with the evidence of each pair",
+ "description": "Written by features.companions@1 (crates/mzlab-feat/src/companions/): for every pair of rows within rt_tol whose nominal m/z difference fits an isotope step (+1, +2), an adduct of [M+H]+ or an in-source loss of the lists, or that only co-elute, an edge with the numbers behind it. An edge needs the Pearson of the heights over the files (min_corr, at least min_corr_samples files); a mass difference alone never makes one. No row is merged or removed. ids are the row ids of the table. ratio is the height of `to` over the height of `from` (the lighter row is `from`).",
+ "type": "object",
+ "required": ["format", "rows", "files", "params", "counts", "id", "companion_of", "companion_via", "edges", "weak", "weak_dropped", "weak_truncated"],
+ "properties": {
+  "format": {"const": "companions/1"},
+  "rows": {"type": "integer", "minimum": 0},
+  "files": {"type": "integer", "minimum": 0},
+  "params": {"type": "object", "description": "the parameters used: rt_tol, min_corr, weak_corr, min_corr_samples, da_tol, max_edges, adducts and losses (the nominal differences, Da)"},
+  "counts": {
+   "type": "object",
+   "required": ["pairs", "isotope", "relation", "coelution", "weak", "untested", "implied", "dropped"],
+   "description": "pairs = pairs of rows within rt_tol that are at least da_tol apart; isotope, relation and coelution = edges written; weak = a relation fits and r is between weak_corr and min_corr; untested = r not computed (too few shared files or a constant level); implied = co-elution edges left out because isotope and relation edges already link the rows, or a stronger one links the row to the same group; dropped = edges past max_edges after the implied ones are left out; the strongest (Pearson, then the rows) are kept (counted, never silent)",
+   "additionalProperties": {"type": "integer", "minimum": 0}
+  },
+  "id": {"type": "array", "items": {"type": "integer"}, "description": "row ids of the table, one per row"},
+  "companion_of": {"type": "array", "items": {"type": ["integer", "null"]}, "description": "per row: the id of the parent it is a companion of (the best edge by r, then the smaller RT offset), null when none"},
+  "companion_via": {"type": "array", "items": {"enum": ["isotope", "relation", null]}, "description": "per row: the kind of the edge that gave companion_of"},
+  "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}, "description": "sorted by from, to, kind"},
+  "weak": {"type": "array", "maxItems": 200, "items": {"$ref": "#/$defs/edge"}, "description": "candidates whose mass relation fits but whose r is below min_corr (null = not tested), with the same numbers"},
+  "weak_dropped": {"type": "integer", "minimum": 0, "description": "weak candidates past the 200 listed; the listed ones are the strongest (|r| descending, an untested pair last, then the rows)"},
+  "weak_truncated": {"type": "boolean"}
+ },
+ "$defs": {
+  "edge": {
+   "type": "object",
+   "required": ["from", "to", "kind", "relations", "delta_da", "parent", "rule", "r", "n_files", "rt_offset", "apex_shift", "ratio", "carbons", "hint"],
+   "properties": {
+    "from": {"type": "integer", "description": "id of the lighter row"},
+    "to": {"type": "integer", "description": "id of the heavier row"},
+    "kind": {"enum": ["isotope", "relation", "coelution"]},
+    "relations": {"type": "array", "items": {"type": "string"}, "description": "every relation that fits the difference, never one forced: isotope_p1, isotope_p2, adduct_* and loss_* names (adduct_nh4 and loss_nh3 both fit 17 Da)"},
+    "delta_da": {"type": "number", "description": "m/z of `to` minus m/z of `from`"},
+    "parent": {"type": ["integer", "null"], "description": "the row the other is a companion of; null for co-elution"},
+    "rule": {"enum": ["lighter", "heavier", "intensity", null], "description": "why that parent: the lighter row of an isotope step or adduct, the heavier row of a loss, the more intense row when both an adduct and a loss fit"},
+    "r": {"type": ["number", "null"], "description": "Pearson of the heights over the files that measure both rows"},
+    "n_files": {"type": "integer", "description": "files that measure both rows"},
+    "rt_offset": {"type": "number", "description": "RT of `to` minus RT of `from`, min"},
+    "apex_shift": {"type": ["number", "null"], "description": "median apex of `to` minus apex of `from` over the files that detect both, min"},
+    "ratio": {"type": "object", "required": ["median", "lo", "hi"], "description": "height of `to` over `from` per file: median and range", "properties": {"median": {"type": ["number", "null"]}, "lo": {"type": ["number", "null"]}, "hi": {"type": ["number", "null"]}}},
+    "carbons": {"type": ["array", "null"], "items": {"type": "integer"}, "minItems": 2, "maxItems": 2, "description": "isotope_p1 only: the carbons the M+1/M range implies at 1.08 % per carbon, an upper bound when N, S or Si add to it"},
+    "hint": {"enum": ["cl_br_s", null], "description": "isotope_p2 only: M+2/M of at least 0.25, so Cl, Br or S is a reading to look at (evidence, no verdict)"}
+   }
+  }
+ }
+}

@@ -436,8 +436,8 @@ usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION] [--template]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with "executable_native" and "citation" at the end
-  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names, algorithm ids and
-                    executable_native, no prose (a few KB; --json is the full descriptors)
+  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names and algorithm ids, no prose;
+                    "algorithms" is left out when empty and "executable_native" when true (a few KB; --json is the full descriptors)
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --template        with --id: not the descriptor but a one-step mzflow/2 plan to edit (a file input per required port, every parameter at its default; `flow check` reads it)
   --help            this text

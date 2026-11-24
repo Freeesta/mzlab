@@ -21,6 +21,7 @@
           "export.mztab",
           "export.table_csv",
           "features.align",
+          "features.companions",
           "features.detect",
           "features.estimate",
           "features.gapfill",
@@ -91,6 +92,7 @@
               "export.mztab@1",
               "export.table_csv@1",
               "features.align@1",
+              "features.companions@1",
               "features.detect@2",
               "features.estimate@1",
               "features.gapfill@1",
@@ -197,6 +199,7 @@
               "export.mztab@1",
               "export.table_csv@1",
               "features.align@1",
+              "features.companions@1",
               "features.detect@2",
               "features.estimate@1",
               "features.gapfill@1",
@@ -770,6 +773,67 @@
                     "minimum":0,
                     "default":0.0015,
                     "description":"Lower bound of the m/z tolerance; the larger of it and ppm wins"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.companions@1"},
+              "name":{
+                "enum":["rt_tol","min_corr","weak_corr","min_corr_samples","da_tol","adducts","losses","max_edges"]
+              },
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Largest distance between the RT of two rows that are companions"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.9,
+                    "description":"Smallest height correlation over the files for an edge; mass alone never gives one"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Pairs with a fitting mass difference and a correlation between this and the edge level are listed as weak"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":2,
+                    "default":3,
+                    "description":"The heights are compared only when both rows are measured in at least this many files"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.4,
+                    "description":"How far an m/z difference may be from a nominal difference of the lists"
+                  },
+                  {
+                    "type":"string",
+                    "default":"17,22,38,41,63",
+                    "description":"Comma-separated nominal differences (Da) from [M+H]+ to its adducts: 17 NH4, 22 Na, 38 K, 41 H+acetonitrile, 63 Na+acetonitrile"
+                  },
+                  {
+                    "type":"string",
+                    "default":"17,18,28,42,44,46",
+                    "description":"Comma-separated nominal differences (Da) of in-source fragments: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":20000,
+                    "description":"Edges kept at most; the others are counted in counts.dropped and never silently lost"
                   }
                 ]
               }
@@ -3193,6 +3257,7 @@
                 "export.mztab@1",
                 "export.table_csv@1",
                 "features.align@1",
+                "features.companions@1",
                 "features.detect@2",
                 "features.estimate@1",
                 "features.gapfill@1",

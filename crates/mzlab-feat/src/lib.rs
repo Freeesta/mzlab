@@ -24,6 +24,7 @@ mod channels;
 #[cfg(feature = "chem")]
 pub mod chem;
 pub mod classes;
+pub mod companions;
 pub mod deconvolve;
 pub mod detect_route;
 pub mod dia;
