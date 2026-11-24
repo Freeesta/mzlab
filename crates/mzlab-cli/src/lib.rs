@@ -134,6 +134,9 @@ mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
 mod flow_quant;
+mod flow_quant_targets;
+#[cfg(test)]
+mod flow_quant_targets_tests;
 mod flow_reactivity;
 #[cfg(test)]
 mod flow_reactivity_tests;
@@ -193,6 +196,7 @@ mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
+mod quant_targets_cmd;
 mod renamed;
 mod sample_select;
 mod samples_cmd;

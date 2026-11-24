@@ -22,6 +22,8 @@ flow_tab = []
 flow_stat = []
 # `flow_compare` = `table.compare` of the Flow (`run_compare.rs`): a .wasm of its own, `flowcompare`, loaded only by its executor (`flow-web-stat.js`); NOT among the defaults.
 flow_compare = []
+# `quant_targets` = `quant.targets` of the Flow (`run_quant.rs`): a .wasm of its own, `quanttargets`, loaded only by its executor (`flow-web-quanttargets.js`); NOT among the defaults.
+quant_targets = []
 # `detect` carries `mzlab-feat/untargeted` for what `features.detect` and `features.align` reach of it: the isotope finder (`flow_isofinder`, `isofinder`), the algorithm
 # `adap_localmin` (`flow`, `adap`, `resolve`, `arpls`, `smooth`, `pipeline_stream`) and the table algorithm `align_mzmine` (`flow_align`, `join`, `gapfill`); about 136 KB of `hr` before wasm-opt.
 detect = ["mzlab-feat/untargeted", "mzlab-ops/detect"]
