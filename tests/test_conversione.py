@@ -150,3 +150,39 @@ def test_a_sample_that_left_the_list_is_forgotten():
       C.forget(["a.mzML"]);
       console.log(JSON.stringify([C.files.has("a.mzML"), C.sources.has("a.mzML"), [...C.made.keys()], C.files.has("b.mzML"), C.sources.has("b.mzML")]));""")
     assert got == [False, False, ["standard:b.mzML"], True, True]
+
+
+def test_a_name_module_that_cannot_load_says_so_and_asks_again_at_the_next_save():
+    """«Sample name» when conv-names.js fails to load (rejected promise): the note is written under the choice, the signature is forgotten, a second caller waiting
+    on `busy` does not throw, and the next call tries again (it loads, so the names come)."""
+    got = run("""
+      const C = c.CONV, shown = [];
+      global.I18N = { t: k => k };
+      const ul = { hidden: true, replaceChildren(...li) { shown.push(li.map(x => x.textContent)); } };
+      global.document = { getElementById: id => id === "cvnotes" ? ul : null, createElement: () => ({}) };
+      global.window = {};
+      let fail = true;
+      global.loadScript = async () => { if (fail) throw new Error("offline"); window.CONVNAMES = { ask: async cv => { cv.renames.set("a.mzML", { out: "S.mzML", note: null }); return true; }, paint() {} }; };
+      C.add("a.mzML", { size: 9 }); C.nameBy = "sample";
+      (async () => {
+        await Promise.all([C.syncNames(), C.syncNames()]);
+        const first = { notes: [...C.notes], sig: C.sig, shown: [...shown], hidden: ul.hidden };
+        fail = false; await C.syncNames();
+        console.log(JSON.stringify({ first, then: C.nameOf("a.mzML") }));
+      })();""")
+    assert got == {"first": {"notes": ["conv.nameby.load"], "sig": "", "shown": [["conv.nameby.load"], ["conv.nameby.load"]], "hidden": False}, "then": "S.mzML"}
+
+
+def test_save_all_survives_a_names_step_that_throws():
+    """«Save the mzML files…» (CONVSAVEALL of conversione-carta.js): a syncNames that throws is caught with the rest (a note, no unhandled rejection) and the folder is not written."""
+    carta = JS.with_name("conversione-carta.js")
+    got = run(f"""
+      const added = [];
+      global.I18N = {{ t: k => k }}; global.window = {{ MZLAB_SAVE_MZML_DIR: async () => {{ added.push("saved"); return {{ saved: 0, kept: [], own: [] }}; }} }};
+      const box = {{ appendChild: d => added.push(d.textContent) }};
+      global.document = {{ getElementById: () => box, createElement: () => ({{ remove() {{}} }}) }};
+      global.setTimeout = () => 0;
+      global.CONV = c.CONV; c.CONV.syncNames = async () => {{ throw new Error("boom"); }};
+      require({str(carta)!r});
+      window.CONVSAVEALL().then(() => console.log(JSON.stringify(added)), e => console.log(JSON.stringify(["rejected", String(e)])));""")
+    assert got == ["conv.dl.needsApp"]

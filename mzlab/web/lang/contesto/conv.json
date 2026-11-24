@@ -1,4 +1,5 @@
 {
+  "conv.nameby.load": "Note under the «Name files by» choice when the lazy module conv-names.js could not be loaded (network or cache error): the files are saved under their file names.",
   "conv.file": "Row of the .raw conversion panel: {i} = number of the file being converted, {n} = how many .raw files in all, {name} = file name.",
   "conv.detail.scans": "Numbers below the conversion bar: {done} = scans converted, {total} = scans in the file.",
   "conv.detail.indexed": "Numbers below the bar during indexing: {done} = files indexed, {total} = files, {elapsed} = elapsed time (m:ss).",

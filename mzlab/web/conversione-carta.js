@@ -81,3 +81,12 @@ function group(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes, /*
 }
 
 /** @type {any} */ (window).CONVCARD = group;
+
+// the desktop's «Save the mzML files…» (CONVQ.saveAll in conversione.js): the names first (CONV.syncNames, inside the try), then the whole folder in one call
+/** @type {any} */ (window).CONVSAVEALL = async () => {
+  const f = typeof window !== "undefined" && /** @type {any} */ (window).MZLAB_SAVE_MZML_DIR; if (!f) return;
+  // with «Sample name» every file is named (the whole map: a file the map left out would be saved under its cache name); the app says what it kept and what it could not name as asked
+  try { await CONV.syncNames(); const r = await f(Object.fromEntries(CONV.listed().map(k => [k, CONV.nameOf(k)]).filter(([k, v]) => CONV.nameBy === "sample" || k !== v))); const box = document.getElementById("up");
+    if (r != null && box) for (const t of [I18N.t("conv.q.saved", { n: r.saved }), r.kept.length && I18N.t("conv.q.kept", { names: r.kept.join(", ") }), r.own.length && I18N.t("conv.q.own", { names: r.own.join(", ") })].filter(Boolean)) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = t; box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
+  catch (e) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
+};
