@@ -230,7 +230,8 @@ fn bond_label(c: &Chem, s: &Stereo, upto: usize) -> Option<u8> {
 type Labels = (Vec<(u32, u8, bool)>, Vec<(usize, usize, u8)>);
 
 /// With the work done and whether one digraph reached `NODE_CAP`; past `limit` work units the digraphs stop and labels are missing.
-fn labels(m: &Mol, units: &[&Stereo], limit: u64) -> (Labels, u64, bool) {
+/// Every unit feeds the rules; only those with `ranked` set get a digraph and a label.
+fn labels(m: &Mol, units: &[&Stereo], ranked: &[bool], limit: u64) -> (Labels, u64, bool) {
     let mut c = chem_of(m);
     c.limit = limit;
     for s in units {
@@ -241,7 +242,9 @@ fn labels(m: &Mol, units: &[&Stereo], limit: u64) -> (Labels, u64, bool) {
     let bonds = |c: &Chem, upto: usize| -> Vec<(usize, usize, u8)> {
         units
             .iter()
-            .filter_map(|s| match s {
+            .zip(ranked)
+            .filter(|u| *u.1)
+            .filter_map(|(s, _)| match s {
                 Stereo::Db { a, b, .. } => {
                     bond_label(c, s, upto).map(|v| (*a as usize, *b as usize, v))
                 }
@@ -254,7 +257,9 @@ fn labels(m: &Mol, units: &[&Stereo], limit: u64) -> (Labels, u64, bool) {
     }
     let centres = units
         .iter()
-        .filter_map(|s| match s {
+        .zip(ranked)
+        .filter(|u| *u.1)
+        .filter_map(|(s, _)| match s {
             Stereo::Tetra { c: at, .. } => {
                 centre_label(&c, *at as usize, RULES - 1).map(|(v, p)| (*at, v, p))
             }
@@ -316,7 +321,11 @@ fn named(centres: Labels, sites: &[Site]) -> CipLabels {
 
 /// Without a work limit; a label whose digraph reaches `NODE_CAP` is left out (the figure of `draw_cip.rs`).
 pub fn cip_labels(m: &Mol, sites: &[Site]) -> CipLabels {
-    named(labels(m, &defined(m), u64::MAX).0, sites)
+    let units = defined(m);
+    named(
+        labels(m, &units, &vec![true; units.len()], u64::MAX).0,
+        sites,
+    )
 }
 
 /// The atom that places an element in its piece.
@@ -334,8 +343,7 @@ fn site_of(s: &Stereo) -> Site {
     }
 }
 
-/// The refusal of a structure past a limit, with its atoms and defined elements (`stage`: `sites` and `labels` count work units against
-/// `WORK_LIMIT`, `digraph` the nodes of one label's digraph against `NODE_CAP`).
+/// The refusal of a structure past `WORK_LIMIT`, with its atoms and defined elements (`stage`: `sites` or `labels`).
 fn too_complex(stage: &str, atoms: usize, elements: usize, work: u64, limit: u64) -> Error {
     Error::new("error.cip.tooComplex")
         .with("stage", stage)
@@ -345,16 +353,19 @@ fn too_complex(stage: &str, atoms: usize, elements: usize, work: u64, limit: u64
         .with("limit", limit)
 }
 
-/// The labels of one piece within the work limit, refused past it or once one digraph reaches `NODE_CAP`.
-fn piece_labels(p: &Mol, mine: &[&Stereo]) -> Result<Labels> {
-    let (l, work, capped) = labels(p, mine, WORK_LIMIT);
+/// The labels of one piece within the work limit, refused past it or once the digraph of one label reaches `NODE_CAP`.
+fn piece_labels(p: &Mol, mine: &[&Stereo], ranked: &[bool]) -> Result<Labels> {
+    let (l, work, capped) = labels(p, mine, ranked, WORK_LIMIT);
     let (atoms, elements) = (p.atoms.len(), mine.len());
     if work > WORK_LIMIT {
         return Err(too_complex("labels", atoms, elements, work, WORK_LIMIT));
     }
     if capped {
-        let (n, cap) = (NODE_CAP as u64 + 1, NODE_CAP as u64);
-        return Err(too_complex("digraph", atoms, elements, n, cap));
+        return Err(Error::new("error.cip.digraphTooBig")
+            .with("atoms", atoms)
+            .with("elements", elements)
+            .with("nodes", NODE_CAP + 1)
+            .with("limit", NODE_CAP));
     }
     Ok(l)
 }
@@ -395,17 +406,20 @@ pub fn drawing_labels(d: &Drawing) -> Result<CipLabels> {
     let mut all: Labels = (Vec::new(), Vec::new());
     for (p, at) in parts.iter().zip(&members) {
         let mine = defined(p);
-        // a piece with no element on a site keeps no label: its digraphs are not grown (`at` is ascending, so a < b holds)
-        let on_site = |s: &&Stereo| {
-            sites.contains(&match site_of(s) {
-                Site::Tetra(c) => Site::Tetra(at[c as usize]),
-                Site::Db(a, b) => Site::Db(at[a as usize], at[b as usize]),
+        // an element off every site keeps no label, so its digraph is never grown (`at` is ascending, so a < b holds)
+        let ranked: Vec<bool> = mine
+            .iter()
+            .map(|s| {
+                sites.contains(&match site_of(s) {
+                    Site::Tetra(c) => Site::Tetra(at[c as usize]),
+                    Site::Db(a, b) => Site::Db(at[a as usize], at[b as usize]),
+                })
             })
-        };
-        if !mine.iter().any(on_site) {
+            .collect();
+        if !ranked.contains(&true) {
             continue;
         }
-        let (centres, bonds) = piece_labels(p, &mine)?;
+        let (centres, bonds) = piece_labels(p, &mine, &ranked)?;
         let g = |x: usize| at[x] as usize;
         all.0.extend(
             centres

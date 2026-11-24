@@ -219,17 +219,36 @@ fn one_digraph_past_its_node_cap_is_refused_not_left_unlabelled() {
     // without the refusal the label was simply missing
     assert!(cip_labels(&m, &m.stereo_sites()).atoms.is_empty());
     let e = drawing_labels(&drawing(m.clone())).err().unwrap();
-    assert_eq!(e.key, "error.cip.tooComplex");
+    assert_eq!(e.key, "error.cip.digraphTooBig");
     let p = |k: &str| e.params.iter().find(|x| x.0 == k).unwrap().1.clone();
-    let got: Vec<String> = ["stage", "atoms", "elements", "work", "limit"]
+    let got: Vec<String> = ["atoms", "elements", "nodes", "limit"]
         .iter()
         .map(|k| p(k))
         .collect();
-    assert_eq!(got, ["digraph", "42", "1", "40001", "40000"]);
+    assert_eq!(got, ["42", "1", "40001", "40000"]);
     // a small piece beside it is not labelled alone: the drawing is refused whole, never in part
     let two = Mol::from_smiles(&format!("F[C@H](Cl)Br.F[C@H]({cage}){heavy}")).unwrap();
     let e = drawing_labels(&drawing(two)).err().unwrap();
-    assert_eq!(e.params[1], ("atoms", "42".to_string()));
+    assert_eq!(e.params[0], ("atoms", "42".to_string()));
+}
+
+#[test]
+fn an_element_off_every_site_grows_no_digraph() {
+    // the second centre is drawn between two identical arms of 8 and 12 phenylenes, so it is no site; ranking its arms alone would pass
+    // the work limit or the node cap. The first centre is told apart at the first sphere and keeps the label of the short analogue.
+    let short = drawing(Mol::from_smiles("F[C@H](Cl)C[C@H](c1ccccc1)c1ccccc1").unwrap());
+    let want = drawing_labels(&short).unwrap().atoms;
+    assert_eq!(want.len(), 1);
+    for n in [8, 12] {
+        let arm = "c1ccc(cc1)".repeat(n);
+        let m = Mol::from_smiles(&format!("F[C@H](Cl)C[C@H]({arm}){arm}")).unwrap();
+        assert_eq!(m.stereo_sites(), [mzlab_mol::Site::Tetra(1)]);
+        assert_eq!(
+            drawing_labels(&drawing(m)).unwrap().atoms,
+            want,
+            "{n} rings"
+        );
+    }
 }
 
 #[test]
