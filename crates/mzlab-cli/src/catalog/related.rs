@@ -54,7 +54,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
         .ex("mzlab-cli file convert run.wiff --out mzml/ --json"),
     r("sample list", "sample names wiff", &["sample select", "file convert"]),
-    r("sample table", "roles blank qc standard control time point names", &["sample design propose", "table.filter"]),
+    r("sample table", "roles blank qc standard control time point names", &["sample import", "sample design propose", "table.filter"]),
+    r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),
     r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
     r("trace xic", "extracted ion chromatogram eic xic many ions list mz", &["peak table", "trace chrom", "chrom.transitions"])

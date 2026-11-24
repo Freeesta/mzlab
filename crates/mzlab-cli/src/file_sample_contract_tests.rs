@@ -5,6 +5,7 @@ use std::path::Path;
 
 use mzlab_core::json::{parse, Value};
 
+use crate::contract_tests::{one_error, wiff};
 use crate::convert_fixtures::{folder, makers};
 use crate::{execute, Outcome};
 
@@ -348,4 +349,36 @@ fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
     seen.entry("file validate").or_default().insert(0);
     assert_listed(&seen);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn an_unknown_selector_is_exit_5_with_error_1() {
+    let (dir, f) = wiff("sample");
+    for a in [
+        vec!["file", "channels", &f, "--sample", "9"],
+        vec!["features", &f, "--sample", "9"],
+        vec![
+            "file",
+            "convert",
+            &f,
+            "--sample",
+            "9",
+            "--out",
+            "/tmp/mzlab_contract_unused",
+        ],
+        vec!["sample", "select", &f, "--sample", "9"],
+        vec!["trace", "chrom", &f, "--id", "sim:nothing"],
+        vec!["spectrum", "get", &f, "--scan", "99999"],
+        vec!["flow", "steps", "--id", "no.such.step"],
+    ] {
+        // the node selector of `msn graph` needs a graph file: covered by msn_graph_tests
+        let o = run(&a);
+        assert_eq!(o.code, 5, "{a:?}: {}", o.stderr);
+    }
+    let o = run(&["file", "channels", &f, "--sample", "9", "--json"]);
+    assert_eq!(
+        one_error(&o, 5, "channels --json")["error_key"],
+        "err.sample.unknown"
+    );
+    let _ = std::fs::remove_dir_all(dir);
 }

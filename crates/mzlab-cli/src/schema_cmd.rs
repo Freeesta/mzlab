@@ -110,6 +110,7 @@ embed!(
     "rete-1.json",
     "run-report-2.json",
     "runorder-1.json",
+    "sample-import-1.json",
     "sample-list-1.json",
     "sample-select-1.json",
     "samples-1.json",

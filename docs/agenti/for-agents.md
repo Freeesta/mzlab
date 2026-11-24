@@ -6,7 +6,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 |---|---|
 | what a folder holds | `file list DIR --json`; per `.wiff` sample: `file inventory`, `sample list` |
 | convert with sample names | `sample list FILE --json` (sample numbers and names), then `file convert FILE... --out DIR --sample LIST --json`: one `NAME-ID.mzML` per sample (NAME = the file name, ID = the sample number) |
-| roles (blank, QC, standard, time) | `sample table FILE... > samples.json`; design: `sample design propose` |
+| roles (blank, QC, standard, time) | `sample table FILE... > samples.json`; roles and names from a lab CSV: `sample import META.csv DIR --dry-run`, then without it; design: `sample design propose` |
 | profile or centroid, ion counts, m/z grid, mass offset of a file | `raw info FILE... [--offset-ion MZ@RT]` (`raw-info/1`); index cache first: `raw cache FILE... --cache DIR` |
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
