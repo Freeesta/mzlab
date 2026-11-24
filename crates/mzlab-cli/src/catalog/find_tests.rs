@@ -25,6 +25,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("non-targeted feature table of all files", "features"),
     (
+        "one target list from the feature tables of several series",
+        "quant union",
+    ),
+    (
         "integrate a target list of SIM ions in many files",
         "chrom.transitions",
     ),

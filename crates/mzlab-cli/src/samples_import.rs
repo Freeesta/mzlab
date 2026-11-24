@@ -95,7 +95,7 @@ fn num_of(v: &Value, k: &str) -> i64 {
 }
 
 /// The text of a `lang/en` key with each `{name}` filled in, in one pass (a value that holds `{x}` stays as it is).
-fn say(key: &str, vals: &[(&str, String)]) -> String {
+pub(crate) fn say(key: &str, vals: &[(&str, String)]) -> String {
     let t = crate::error_text::catalog_text(key).unwrap_or(key);
     let mut out = String::new();
     let mut rest = t;
@@ -265,7 +265,7 @@ fn usage(key: &'static str, params: &[(&'static str, String)]) -> Outcome {
 }
 
 /// `a` and `b` name one file once symlinks and `..` are resolved (a file that is not there yet is its folder plus its name).
-fn same_file(a: &str, b: &str) -> bool {
+pub(crate) fn same_file(a: &str, b: &str) -> bool {
     let real = |p: &str| {
         let path = Path::new(p);
         path.canonicalize().ok().or_else(|| {

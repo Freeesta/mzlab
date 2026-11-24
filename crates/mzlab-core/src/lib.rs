@@ -250,6 +250,7 @@ pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
 pub mod samples;
+pub mod series_union;
 pub mod molecules;
 pub mod design;
 pub mod tpmine_irls;

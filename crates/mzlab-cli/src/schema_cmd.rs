@@ -128,6 +128,7 @@ embed!(
     "tp-2.json",
     "trace-1.json",
     "trace-set-1.json",
+    "union-1.json",
     "uvband-1.json",
     "verify-1.json",
     "version-1.json",

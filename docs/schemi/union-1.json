@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "union/1",
+  "title": "union/1: the feature tables of several series joined into one target list",
+  "description": "The answer of `mzlab-cli quant union --json` and of the `lr_union` route (same bytes in the site and the app): `csv` is the table `quant targets --targets` reads (id, mz, rt_min, rt_max, polarity, role), `targets` the same rows with the rows each came from. Rows of different series are one target when their m/z agree within `da` and their RT, after the optional `rt_warp` map onto the first series, within `rt_tol`; rows of one series are never merged (two targets that stay within both tolerances are listed in `conflicts`, both kept). Nothing is refused for a finding; every automatic choice is in `choices`. Code: crates/mzlab-core/src/series_union/.",
+  "type": "object",
+  "required": ["schema", "params", "counts", "series", "targets", "conflicts", "dropped", "choices", "csv"],
+  "properties": {
+    "schema": {"const": "union/1"},
+    "params": {
+      "type": "object",
+      "required": ["da", "rt_tol", "rt_gap", "rt_warp", "min_series", "pad", "polarity"],
+      "properties": {
+        "da": {"type": "number", "description": "m/z agreement of two rows of one target, Da."},
+        "rt_tol": {"type": "number", "description": "RT agreement after the map, min."},
+        "rt_gap": {"type": "number", "description": "Widest RT gap of an anchor pair of the map, min."},
+        "rt_warp": {"enum": ["off", "piecewise"]},
+        "min_series": {"type": "integer"},
+        "pad": {"type": "number", "description": "Minutes added on both sides of every window."},
+        "polarity": {"enum": ["", "+", "-"], "description": "Polarity given to the rows that have none of their own; empty: every scan."}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["rows_in", "targets", "merged", "dropped", "conflicts"],
+      "properties": {
+        "rows_in": {"type": "integer"},
+        "targets": {"type": "integer", "description": "Rows of the target list."},
+        "merged": {"type": "integer", "description": "Targets that hold rows of more than one series."},
+        "dropped": {"type": "integer", "description": "Targets left out for `min_series`."},
+        "conflicts": {"type": "integer"}
+      }
+    },
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "rows", "joined", "new", "warp"],
+        "properties": {
+          "name": {"type": "string"},
+          "rows": {"type": "integer"},
+          "joined": {"type": "integer", "description": "Rows that joined a target of an earlier series."},
+          "new": {"type": "integer", "description": "Rows that started a target."},
+          "warp": {
+            "type": "object",
+            "required": ["method"],
+            "properties": {
+              "method": {"enum": ["reference", "off", "piecewise"]},
+              "anchors": {"type": "integer", "description": "Rows both this series and the first one hold (piecewise only)."},
+              "applied": {"type": "boolean", "description": "False when fewer than 3 anchors left the series as it is."},
+              "median_shift": {"type": "number"},
+              "max_shift": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "mz", "rt", "rt_min", "rt_max", "polarity", "series", "members"],
+        "properties": {
+          "id": {"type": "string", "description": "U0001, U0002, ... sorted by polarity (none, -, +), m/z, RT."},
+          "mz": {"type": "number", "description": "Mean m/z of the rows."},
+          "rt": {"type": "number", "description": "Mean RT of the rows in the frame of the first series, min."},
+          "rt_min": {"type": "number", "description": "Start of the window: the earliest start of a row's own window, less `pad`, at least 0."},
+          "rt_max": {"type": "number"},
+          "polarity": {"enum": ["+", "-", null]},
+          "series": {"type": "integer", "description": "Number of series that hold the target."},
+          "members": {
+            "type": "array",
+            "description": "The rows the target came from: the first is the one the others were compared with.",
+            "items": {
+              "type": "object",
+              "required": ["series", "id", "line", "mz", "rt", "rt_warped", "delta_mz", "delta_rt"],
+              "properties": {
+                "series": {"type": "string"},
+                "id": {"type": "string"},
+                "line": {"type": "integer", "description": "Line in the table, the header is line 1."},
+                "mz": {"type": "number"},
+                "rt": {"type": "number", "description": "RT in the table of its own series."},
+                "rt_warped": {"type": "number", "description": "RT after the map, in the frame of the first series."},
+                "delta_mz": {"type": "number", "description": "m/z minus that of the first row."},
+                "delta_rt": {"type": "number", "description": "rt_warped minus that of the first row."}
+              }
+            }
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "description": "Targets of one polarity within `da` and `rt_tol` that could not merge (rows of one series); both are in `targets`.",
+      "items": {"type": "object", "required": ["a", "b", "delta_mz", "delta_rt"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}, "delta_mz": {"type": "number"}, "delta_rt": {"type": "number"}}}
+    },
+    "dropped": {
+      "type": "array",
+      "description": "Targets left out because fewer series than `min_series` hold them.",
+      "items": {"type": "object", "required": ["mz", "rt", "polarity", "series", "reason", "members"], "properties": {"mz": {"type": "number"}, "rt": {"type": "number"}, "polarity": {"enum": ["+", "-", null]}, "series": {"type": "integer"}, "reason": {"const": "min_series"}, "members": {"type": "array"}}}
+    },
+    "choices": {
+      "type": "array",
+      "description": "Every automatic choice: rt_warp (anchors, max_shift), rt_warp_skipped (anchors), window_from_rt_tol (rows without a window got rt +- rt_tol), polarity_from_param (rows), rt_min_clamped (targets whose start fell below 0).",
+      "items": {"type": "object", "required": ["what", "series"], "properties": {"what": {"type": "string"}, "series": {"type": "string"}}}
+    },
+    "csv": {"type": "string", "description": "id,mz,rt_min,rt_max,polarity,role, one row per target, role `target`."}
+  }
+}

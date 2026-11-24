@@ -251,4 +251,12 @@ Entry::new(
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")
-.exits(&[0, 2, 4, 6])];
+.exits(&[0, 2, 4, 6]),
+Entry::new(
+    "quant union",
+    "mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list",
+    crate::quant_union_cmd::run,
+)
+.schema("union/1")
+.exits(&[0, 2, 3, 4, 6])
+.examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"])];
