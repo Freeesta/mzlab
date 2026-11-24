@@ -36,6 +36,8 @@ mod dad_msat;
 mod design_cmd;
 mod emit;
 pub mod error_text;
+#[cfg(test)]
+mod steps_compact_tests;
 pub(crate) use emit::emit;
 #[cfg(test)]
 mod convert_name_tests;

@@ -17,8 +17,8 @@ usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION] [--template]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with \"executable_native\" and \"citation\" at the end
-  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names, algorithm ids and
-                    executable_native, no prose (a few KB; --json is the full descriptors)
+  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names and algorithm ids, no prose;
+                    \"algorithms\" is left out when empty and \"executable_native\" when true (a few KB; --json is the full descriptors)
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --template        with --id: not the descriptor but a one-step mzflow/2 plan to edit (a file input per required port, every parameter at its default; `flow check` reads it)
   --help            this text
@@ -51,10 +51,11 @@ fn compact_json(list: &[&Step]) -> String {
                 .collect(),
         )
     };
+    // what is the default is left out: `algorithms` when the step has none, `executable_native` when it is true (restore: `[]` and `true`)
     let steps = list
         .iter()
         .map(|s| {
-            Obj::new()
+            let o = Obj::new()
                 .put("id", text(s.id))
                 .i("version", i64::from(s.version))
                 .put("title", text(s.title))
@@ -63,13 +64,21 @@ fn compact_json(list: &[&Step]) -> String {
                 .put(
                     "params",
                     Value::Arr(s.params.iter().map(|p| text(p.name)).collect()),
-                )
-                .put(
+                );
+            let o = if s.algorithms.is_empty() {
+                o
+            } else {
+                o.put(
                     "algorithms",
                     Value::Arr(s.algorithms.iter().map(|a| text(a.id)).collect()),
                 )
-                .b("executable_native", executable(s.id))
-                .done()
+            };
+            (if executable(s.id) {
+                o
+            } else {
+                o.b("executable_native", false)
+            })
+            .done()
         })
         .collect();
     let doc = Obj::new()

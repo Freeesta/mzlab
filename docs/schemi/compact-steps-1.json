@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "steps-compact/1",
   "title": "steps-compact/1: the Flow steps without their prose",
-  "description": "The answer of `mzlab-cli flow steps --compact`: per step the id, version, title, ports with their data types, the names of the parameters and of the algorithms, and whether `flow run` executes it. The full descriptors (step/1) are `flow steps --json [--id ID]`. Code: crates/mzlab-cli/src/steps_cmd.rs.",
+  "description": "The answer of `mzlab-cli flow steps --compact`: per step the id, version, title, ports with their data types, the names of the parameters and of the algorithms, and, only when they differ from the default, the algorithm ids and `executable_native: false`. The full descriptors (step/1) are `flow steps --json [--id ID]`. Code: crates/mzlab-cli/src/steps_cmd.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -26,9 +26,7 @@
           "title",
           "in",
           "out",
-          "params",
-          "algorithms",
-          "executable_native"
+          "params"
         ],
         "properties": {
           "id": {
@@ -95,12 +93,14 @@
             }
           },
           "algorithms": {
+            "description": "Algorithm ids; omitted when the step has none (read it as []).",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "executable_native": {
+            "description": "Present, and false, only when `flow run` does not execute the step (the Flow page does); omitted means true.",
             "type": "boolean"
           }
         }

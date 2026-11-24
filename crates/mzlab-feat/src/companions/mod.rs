@@ -155,10 +155,51 @@ pub fn find(t: &Aligned, p: &Params) -> Found {
     }
     let by_ids = |x: &Edge, y: &Edge| x.a.cmp(&y.a).then(x.b.cmp(&y.b)).then(x.kind.cmp(&y.kind));
     crate::sortc::any_by(&mut out.edges, by_ids);
-    crate::sortc::any_by(&mut out.weak, by_ids);
+    // the weak list is cut at `text::WEAK_CAP`: the strongest first (|Pearson|, an untested pair last), so the kept ones are the most informative
+    crate::sortc::any_by(&mut out.weak, |x, y| {
+        crate::sortc::asc_nan_last(-x.ev.r.abs(), -y.ev.r.abs()).then(by_ids(x, y))
+    });
     drop_implied(&mut out, n);
+    cap_edges(&mut out, p.max_edges);
     choose_parents(&mut out);
     out
+}
+
+/// At most `max` edges stay, the strongest (Pearson, then the rows): the others are counted in `counts.dropped` and in their kind's count no more.
+/// The cap comes after `drop_implied`, so an edge that adds nothing never takes the place of one that does.
+fn cap_edges(f: &mut Found, max: usize) {
+    if f.edges.len() <= max {
+        return;
+    }
+    let mut rank: Vec<usize> = (0..f.edges.len()).collect();
+    let e = &f.edges;
+    crate::sortc::any_by(&mut rank, |&x, &y| {
+        crate::sortc::asc_nan_last(-e[x].ev.r, -e[y].ev.r)
+            .then(e[x].a.cmp(&e[y].a))
+            .then(e[x].b.cmp(&e[y].b))
+            .then(e[x].kind.cmp(&e[y].kind))
+    });
+    let mut keep = vec![false; e.len()];
+    for &i in &rank[..max] {
+        keep[i] = true;
+    }
+    let mut i = 0;
+    let mut cut = Counts::default();
+    f.edges.retain(|e| {
+        i += 1;
+        if !keep[i - 1] {
+            match e.kind {
+                Kind::Isotope => cut.isotope += 1,
+                Kind::Relation => cut.relation += 1,
+                Kind::Coelution => cut.coelution += 1,
+            }
+        }
+        keep[i - 1]
+    });
+    f.counts.isotope -= cut.isotope;
+    f.counts.relation -= cut.relation;
+    f.counts.coelution -= cut.coelution;
+    f.counts.dropped = cut.isotope + cut.relation + cut.coelution;
 }
 
 /// A co-elution edge between two rows that isotope and relation edges already link (through any chain) says nothing new, and of several edges between
@@ -249,15 +290,11 @@ fn pair(t: &Aligned, p: &Params, i: usize, j: usize, out: &mut Found) {
             }
         } else if ev.r >= p.min_corr {
             parent_of(t, &mut e);
-            if out.edges.len() < p.max_edges {
-                out.edges.push(e);
-                match kind {
-                    Kind::Isotope => out.counts.isotope += 1,
-                    Kind::Relation => out.counts.relation += 1,
-                    Kind::Coelution => out.counts.coelution += 1,
-                }
-            } else {
-                out.counts.dropped += 1;
+            out.edges.push(e);
+            match kind {
+                Kind::Isotope => out.counts.isotope += 1,
+                Kind::Relation => out.counts.relation += 1,
+                Kind::Coelution => out.counts.coelution += 1,
             }
         } else if explained && ev.r >= p.weak_corr {
             out.counts.weak += 1;

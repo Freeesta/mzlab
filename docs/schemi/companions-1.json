@@ -4,7 +4,7 @@
  "title": "companions/1: ions that co-elute with a row of a unit-mass table, with the evidence of each pair",
  "description": "Written by features.companions@1 (crates/mzlab-feat/src/companions/): for every pair of rows within rt_tol whose nominal m/z difference fits an isotope step (+1, +2), an adduct of [M+H]+ or an in-source loss of the lists, or that only co-elute, an edge with the numbers behind it. An edge needs the Pearson of the heights over the files (min_corr, at least min_corr_samples files); a mass difference alone never makes one. No row is merged or removed. ids are the row ids of the table. ratio is the height of `to` over the height of `from` (the lighter row is `from`).",
  "type": "object",
- "required": ["format", "rows", "files", "params", "counts", "id", "companion_of", "companion_via", "edges", "weak", "weak_truncated"],
+ "required": ["format", "rows", "files", "params", "counts", "id", "companion_of", "companion_via", "edges", "weak", "weak_dropped", "weak_truncated"],
  "properties": {
   "format": {"const": "companions/1"},
   "rows": {"type": "integer", "minimum": 0},
@@ -13,7 +13,7 @@
   "counts": {
    "type": "object",
    "required": ["pairs", "isotope", "relation", "coelution", "weak", "untested", "implied", "dropped"],
-   "description": "pairs = pairs of rows within rt_tol that are at least da_tol apart; isotope, relation and coelution = edges written; weak = a relation fits and r is between weak_corr and min_corr; untested = r not computed (too few shared files or a constant level); implied = co-elution edges left out because isotope and relation edges already link the rows, or a stronger one links the row to the same group; dropped = edges past max_edges (counted, never silent)",
+   "description": "pairs = pairs of rows within rt_tol that are at least da_tol apart; isotope, relation and coelution = edges written; weak = a relation fits and r is between weak_corr and min_corr; untested = r not computed (too few shared files or a constant level); implied = co-elution edges left out because isotope and relation edges already link the rows, or a stronger one links the row to the same group; dropped = edges past max_edges after the implied ones are left out; the strongest (Pearson, then the rows) are kept (counted, never silent)",
    "additionalProperties": {"type": "integer", "minimum": 0}
   },
   "id": {"type": "array", "items": {"type": "integer"}, "description": "row ids of the table, one per row"},
@@ -21,6 +21,7 @@
   "companion_via": {"type": "array", "items": {"enum": ["isotope", "relation", null]}, "description": "per row: the kind of the edge that gave companion_of"},
   "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}, "description": "sorted by from, to, kind"},
   "weak": {"type": "array", "maxItems": 200, "items": {"$ref": "#/$defs/edge"}, "description": "candidates whose mass relation fits but whose r is below min_corr (null = not tested), with the same numbers"},
+  "weak_dropped": {"type": "integer", "minimum": 0, "description": "weak candidates past the 200 listed; the listed ones are the strongest (|r| descending, an untested pair last, then the rows)"},
   "weak_truncated": {"type": "boolean"}
  },
  "$defs": {

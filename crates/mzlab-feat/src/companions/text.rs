@@ -5,7 +5,7 @@ use super::{Edge, Found, Kind, Params};
 use crate::table::Aligned;
 use mzlab_core::json::{round, Out};
 
-/// Weak candidates listed at most; `counts` holds the totals.
+/// Weak candidates listed at most, the strongest first; `weak_dropped` counts the others.
 pub const WEAK_CAP: usize = 200;
 /// 13C/12C of nature (1.08 %): carbons implied by an M+1/M ratio, an upper bound when N, S or Si add to it.
 const C13: f64 = 0.0108;
@@ -128,6 +128,8 @@ pub fn to_json(t: &Aligned, p: &Params, f: &Found) -> String {
     o.raw("]");
     edges(&mut o, t, "edges", &f.edges, usize::MAX);
     edges(&mut o, t, "weak", &f.weak, WEAK_CAP);
+    o.raw(",\"weak_dropped\":")
+        .int(f.weak.len().saturating_sub(WEAK_CAP) as i64);
     o.raw(",\"weak_truncated\":")
         .raw(if f.weak.len() > WEAK_CAP {
             "true"
