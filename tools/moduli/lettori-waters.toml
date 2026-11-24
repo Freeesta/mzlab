@@ -6,4 +6,4 @@ wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 385024
 misura = 383072
-nota = "zlib-rs +30 KB, measured rounded to 256 B; the spectrum-type decision of the writer per MS level (+5.9 KB over the earlier measure)"
+nota = "zlib-rs +30 KB, measured rounded to 256 B; the spectrum-type decision of the writer per MS level (+5.9 KB over main)"

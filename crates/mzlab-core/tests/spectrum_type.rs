@@ -21,6 +21,10 @@ enum Shape {
     Q1,
     /// Three points on a fine grid.
     Few,
+    /// A zero-suppressed time-of-flight scan: 5 fragment peaks of 8 bins every 0.004 Da among `n` isolated single-bin hits.
+    Hits(usize),
+    /// One isolated count.
+    One,
     /// No points.
     Empty,
 }
@@ -82,6 +86,16 @@ fn points(shape: Shape, k: usize) -> Vec<f64> {
             .collect(),
         Shape::Q1 => (0..200).map(|i| 100.0 + f64::from(i) * 0.5).collect(),
         Shape::Few => vec![300.0, 300.004, 300.008],
+        Shape::Hits(n) => {
+            let hits = (0..n).map(|i| 50.0 + i as f64 * 1.37 + (i as f64 * 1.7).sin() * 0.3);
+            let peaks = (0..5).flat_map(|p| {
+                (0..8).map(move |i| 100.31 + f64::from(p) * 41.1 + f64::from(i) * 0.004)
+            });
+            let mut v: Vec<f64> = hits.chain(peaks).collect();
+            v.sort_by(f64::total_cmp);
+            v
+        }
+        Shape::One => vec![300.0 + k as f64],
         Shape::Empty => Vec::new(),
     }
 }
@@ -225,6 +239,29 @@ fn zero_suppressed_high_resolution_peaks_stay_profile_at_any_width() {
             "{n}"
         );
     }
+}
+
+#[test]
+fn real_peaks_among_many_isolated_hits_keep_the_level_profile() {
+    // the coarse spacings of the hits dilute the share of fine ones, but a fine grid is a fine grid: 100, 200 and 1000 hits per scan
+    for n in [100, 200, 1000] {
+        let c = auto(vec![(Shape::Hits(n), 2); 6]);
+        assert_eq!((c.basis, c.sparse), (Basis::Continuous, 0), "{n} hits");
+        let (doc, back) = convert(
+            &mut many(vec![(Shape::Hits(n), 2); 6], true),
+            SpectrumType::Auto,
+        );
+        assert!(
+            doc.contains("MS:1000128") && all_profile(&back, true),
+            "{n}"
+        );
+    }
+}
+
+#[test]
+fn isolated_single_points_are_counts_not_a_profile() {
+    let c = auto(vec![(Shape::One, 2); 6]);
+    assert_eq!((c.basis, c.sparse), (Basis::Sparse, 1 << 2));
 }
 
 #[test]

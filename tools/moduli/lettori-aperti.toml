@@ -6,4 +6,4 @@ wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 569344
 misura = 568146
-nota = "readers with indexed-mzML writer; aperti and sciex count a scan that does not decode (+1.9 KB); measured plus margin, rounded to 512 B; the spectrum-type decision of the writer per MS level (+1.9 KB)"
+nota = "readers with indexed-mzML writer; aperti and sciex count a scan that does not decode (+1.9 KB); measured plus margin, rounded to 512 B; the spectrum-type decision of the writer per MS level (+6.0 KB over main)"

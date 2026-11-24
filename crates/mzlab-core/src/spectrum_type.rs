@@ -20,8 +20,10 @@ const MAX_STEP: f64 = 0.6;
 const SPARSE_BELOW: f64 = 0.5;
 /// A neighbour spacing under this (Da) is a fine grid: peaks of two or three points of a high-resolution profile have no run but are never ion counts.
 const FINE_STEP: f64 = 0.05;
-/// A level where this share of the neighbour spacings is fine is a high-resolution profile: `auto` never touches it.
-const FINE_SHARE: f64 = 0.25;
+/// A level where this share of the neighbour spacings is fine is a high-resolution profile: `auto` never touches it. Low on purpose: zero-suppressed
+/// profile peaks sit among many isolated single-bin hits whose coarse spacings dilute the share (a few real peaks per hundreds of hits still give about 1 %);
+/// unit-resolution ion counts have no spacing this fine to speak of.
+const FINE_SHARE: f64 = 0.02;
 /// MS levels told apart (the higher ones count as the last).
 const LEVELS: usize = 32;
 
@@ -245,9 +247,8 @@ struct Level {
 impl Level {
     /// Profile scans were seen, few of their points are in runs and the spacings are not those of a fine grid.
     fn is_sparse(&self) -> bool {
-        self.scans > 0
-            && (self.inside as f64) < SPARSE_BELOW * self.total as f64
-            && (self.fine as f64) < FINE_SHARE * self.gaps as f64
+        let fine_grid = self.fine > 0 && (self.fine as f64) >= FINE_SHARE * self.gaps as f64;
+        self.scans > 0 && (self.inside as f64) < SPARSE_BELOW * self.total as f64 && !fine_grid
     }
 }
 

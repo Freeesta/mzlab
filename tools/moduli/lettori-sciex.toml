@@ -6,4 +6,4 @@ wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 500736
 misura = 499449
-nota = "carries the .wiff device traces (+6 KB), the by-sector OLE open (+2.6 KB), the sample list and the section ranges of the range copy (+1.4 KB); measured plus margin, rounded to 1 KiB; the spectrum-type decision of the writer per MS level (+1.8 KB)"
+nota = "carries the .wiff device traces (+6 KB), the by-sector OLE open (+2.6 KB), the sample list and the section ranges of the range copy (+1.4 KB); measured plus margin, rounded to 1 KiB; the spectrum-type decision of the writer per MS level (+5.1 KB over main)"
