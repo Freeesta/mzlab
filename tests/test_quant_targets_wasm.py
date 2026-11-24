@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli, run
+from cargo_util import build, cli, run, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -36,8 +36,7 @@ def work(tmp_path_factory):
     rows = ["id,mz,rt_min,rt_max"] + [f"c{c['id']},{c['mz']},{c['rt_s'] / 60 - 0.3:.3f},{c['rt_s'] / 60 + 0.3:.3f}" for c in truth["compounds"][:15]]
     rows.append("away,333.3,0.1,0.4")   # no peak there: an absent row
     (d / "targets.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "quant_targets")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "quant_targets")))
     build("-p", "mzlab-cli")
     plan = {"format": "mzflow/2", "inputs": [{"name": n, "type": "raw"} for n in NAMES] + [{"name": "targets.csv", "type": "report"}],
             "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n for n in NAMES]}},

@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build
+from cargo_util import build, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")) and not os.environ.get("CI"), reason="cargo, wasm-bindgen or node not available")
@@ -23,9 +23,8 @@ def run(*a, ok=(0,)):
 def built(tmp_path_factory):
     root = tmp_path_factory.mktemp("wiffwrite")
     build("-p", "mzlab-cli", runner=run)
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "wiffwrite", runner=run)
     pkg = root / "pkg"
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "wiffwrite", runner=run)))
     files = root / "files"
     run("python3", "tools/wiff_riferimento.py", str(files))
     return pkg, files

@@ -50,7 +50,7 @@ def test_the_builds_of_the_tests_are_prebuilt():
             if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Name)) or not all(isinstance(a, ast.Constant) for a in n.args):
                 continue
             a = [x.value for x in n.args]
-            if n.func.id in ("build", "installed"):
+            if n.func.id in ("build", "installed", "wasm_module"):
                 ks = cp.canon(["build", *a])
             elif n.func.id in ("example", "example_argv") and len(a) >= 2:
                 feat = [x for kw in n.keywords if kw.arg == "features" for x in ("--features", kw.value.value)]
@@ -109,7 +109,7 @@ def test_no_test_module_redefines_what_it_imports_from_cargo_util():
 
 def test_every_cargo_util_helper_a_test_calls_is_imported_or_defined():
     """A call to build/cli/example/... in a module that neither imports nor defines it fails only when its fixture runs (and only where cargo is installed)."""
-    helpers, bad = {"build", "cli", "example", "installed", "cli_argv", "example_argv", "build_example"}, []
+    helpers, bad = {"build", "cli", "example", "installed", "cli_argv", "example_argv", "build_example", "wasm_module"}, []
     for f in sorted((ROOT / "tests").glob("test_*.py")) + [ROOT / "tests" / "conftest.py"]:
         tree = ast.parse(f.read_text(encoding="utf-8"))
         known = set()

@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build
+from cargo_util import build, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -27,9 +27,8 @@ def run(*a, check=True):
 def built(tmp_path_factory):
     root = tmp_path_factory.mktemp("normwasm")
     build("-p", "mzlab-cli", runner=run)
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "finder", runner=run)
     pkg = root / "pkg"
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "finder", runner=run)))
     (root / "run.js").write_text(NODE)
     out = root / "package"
     run("target/release/mzlab-cli", "db", "normative", "pack", "normative", str(out))

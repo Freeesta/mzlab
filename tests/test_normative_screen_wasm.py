@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build
+from cargo_util import build, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -42,8 +42,7 @@ def made(tmp_path_factory):
     wasm = "target/wasm32-unknown-unknown/release/"
     build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-table-wasm", runner=run)
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(root / "t"), wasm + "mzlab_feat_table_wasm.wasm")
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-attributio-wasm", "--features", "all", runner=run)
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(root / "a"), wasm + "mzlab_attributio_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(root / "a"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-attributio-wasm", "--features", "all", runner=run)))
     (root / "run.js").write_text(NODE)
     run("node", str(root / "run.js"), str(root / "t" / "mzlab_feat_table_wasm.js"), str(root / "a" / "mzlab_attributio_wasm.js"), str(out))
     return out

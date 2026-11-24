@@ -9,11 +9,10 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import build, run
+from cargo_util import run, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
-WASM = ROOT / "target/wasm32-unknown-unknown/release"
 sys.path.insert(0, str(ROOT / "tools"))
 from wiff_riferimento import Writer, header, ion_spray
 
@@ -39,8 +38,7 @@ def full_scan(out, stem, samples):
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("sonda")
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")))
     full_scan(d, "uno", 1)
     full_scan(d, "sei", 6)
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d)], check=True, capture_output=True)

@@ -1,9 +1,11 @@
 """Shared by the e2e of mzFinder in the browser (e2e_feat_worker.py, e2e_feat_run.py): the two .wasm of crates/mzlab-feat-wasm built into a folder with the workers, and a server for it."""
-import shutil, subprocess, threading
+import shutil, subprocess, sys, threading
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from lib import ROOT, free_port
+sys.path.insert(0, str(ROOT / "tests")); sys.path.insert(0, str(ROOT / "tools"))
+from cargo_util import wasm_module
 
 def sh(*a, cwd=ROOT):
     return subprocess.run(a, cwd=cwd, check=True, capture_output=True, encoding="utf-8").stdout
@@ -12,9 +14,9 @@ def build_wasm(tmp: Path):
     """feat/ and proofs/ (wasm-bindgen --target web), feat-worker.js and feat-run.js in `tmp`; the sizes after wasm-opt (empty without it)."""
     sizes = {}
     for which in ("detect", "proofs"):
-        sh("cargo", "build", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", which)
+        module = wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", which)   # its own copy: other e2e build other features
         out = tmp / ("feat" if which == "detect" else "proofs")
-        sh("wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+        sh("wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), str(module))
         bg = out / "mzlab_feat_wasm_bg.wasm"
         if shutil.which("wasm-opt"):
             sh("wasm-opt", "-Oz", "--enable-bulk-memory", "--enable-sign-ext", "--enable-mutable-globals", "--enable-nontrapping-float-to-int", "-o", str(bg), str(bg))

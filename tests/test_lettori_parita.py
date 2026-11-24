@@ -15,7 +15,7 @@ import zlib
 from pathlib import Path
 
 import pytest
-from cargo_util import example_argv, installed
+from cargo_util import example_argv, installed, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -49,11 +49,9 @@ _packages = {}
 def package(tools, fam):
     """The module of the family, built as the site builds it (no wasm-opt: it does not change what the code computes) and packed for Node."""
     if fam not in _packages:
-        if not installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam):
-            b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
-            assert b.returncode == 0, b.stderr[-2000:]
+        module = wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam)   # the copy of this family, not target/'s
         out = tools["tmp"] / f"pkg_{fam}"
-        w = run(["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), str(ROOT / "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")])
+        w = run(["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), str(module)])
         assert w.returncode == 0, w.stderr[-2000:]
         _packages[fam] = out
     return _packages[fam]
