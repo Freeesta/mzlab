@@ -27,7 +27,9 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
 | mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
+| compact `commands --json` (cap 33,000 B): what is shared or derived from the usage line (`flag_help`, `flag_type`, exit codes, examples, stdout, `args`, a flag's `required`/`repeat`/`enum`), restore tests, adding a command | `docs/agenti/cli-catalog.md` |
 | `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--spectrum` (centroid/profile term, sparse data), `--report`, exit codes | `docs/agenti/cli-convert.md` |
+| CLI coverage: registries, steps `FileRunner` runs natively (`EXECUTORS`), `--set` parameters, steps without an executor (`err.flow.step.native`) | `docs/agenti/cli-coverage.md` |
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page; `features-notes/1` at `--notes` or beside `--out`) | `docs/agenti/cli.md` |
 | running the verification in the cloud container (Chromium, `--setup`, tests against the built site) | `docs/agenti/cloud-environment.md` |
@@ -98,6 +100,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | own 2D layout (`mzlab-mol::layout`), `mol draw`: molfile, `draw/1` scene, KET/CDXML, SVG/PNG pictures (`chem/draw*.rs`), edit patch `--set edit=` (`chem/edit*.rs`, `draw_edit/1`), RDKit quality gates, `draw_d1/d3.json` parity | `docs/agenti/mol-draw.md` |
+| tests and goldens of the `mol/1` record (`mzlab-mol` `tests/*.rs`, golden data from RDKit, intended limits, OpenChemLib trap): read only to change a test or regenerate a golden file | `docs/agenti/mol-tests.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecules/catalogue.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |
 | infusion MSn fragmentation graph (`msn-graph/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msn-lib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |

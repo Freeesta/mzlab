@@ -1,5 +1,5 @@
 # CLI steps: one line per native step
-List of the steps run by `FileRunner`, with file, inputs, output and test; rules, registries and gaps are in `cli.md` ("Coverage").
+List of the steps run by `FileRunner`, with file, inputs, output and test; rules, registries and gaps are in `cli-coverage.md`.
 
 - `spectra.centroid`: profile mzML → centroids (`--set INSTANCE.fwhm=|threshold=`); see `rust-flow.md`. An omitted `fwhm` is measured on isolated peaks (continuous data searched again at 8, 24 and 64 grid points) and is an estimate in `estimates`, with the number of peaks, only if measured; below 8 peaks the fallback width 0.7 Da is used, never called estimated, with `warn.centroid.widthFallback` and `fwhm_basis` = `fallback` in the file record. `threshold` has the default value 3 sigma.
   The file record also has `merged` and `saturated` (centroids with those flags, counted the same way) and `fwhm_model` (`{a, b}` or `single`); `merged` > 0 gives the warning `warn.centroid.merged`, a warning and not an answer; the mzML does not change. `convert --peaks mzlab` (native only, like the choice itself) puts the same counts in `centroidi` `{merged, saturated}` of the `--report`, from the file note in the record (the same for a file taken from the cache), and with `merged` > 0 a line `warning: ... (warn.centroid.merged)` on stderr that does not change the output.

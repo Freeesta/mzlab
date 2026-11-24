@@ -3,6 +3,7 @@
 use std::collections::BTreeSet;
 
 use crate::catalog_implied_tests::flags_of;
+use crate::catalog_restore_tests::restored_args;
 use crate::cmd::entries;
 use crate::execute;
 
@@ -285,7 +286,7 @@ fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -
     let flags = flags_of(c);
     let has = |f: &str| flags.iter().any(|x| x["name"] == f);
     // an arg with no kind is a path (or `...`, a rest): both read a file; a flag with no type takes its `flag_type`
-    let reads = members(c, "args")
+    let reads = restored_args(c)
         .iter()
         .any(|a| a.get("kind").is_none_or(|k| k == "path" || k == "rest"))
         || flags.iter().any(|f| {
@@ -343,7 +344,7 @@ fn defaults_give_the_full_types(
     whole: &serde_json::Value,
     name: &str,
 ) {
-    for (a, g) in members(c, "args")
+    for (a, g) in restored_args(c)
         .iter()
         .zip(whole["args"].as_array().unwrap())
     {
@@ -428,7 +429,7 @@ fn reads_stdin(c: &serde_json::Value) -> bool {
         .unwrap()
         .split([' ', '[', ']', '(', ')'])
         .collect();
-    members(c, "args").iter().any(|a| {
+    restored_args(c).iter().any(|a| {
         let w = format!("{}|-", a["name"].as_str().unwrap());
         words.iter().any(|x| x.trim_end_matches("...") == w)
     })

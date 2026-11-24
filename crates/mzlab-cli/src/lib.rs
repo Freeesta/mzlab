@@ -13,6 +13,8 @@ mod catalog_implied_tests;
 #[cfg(test)]
 mod catalog_optional_tests;
 #[cfg(test)]
+mod catalog_restore_tests;
+#[cfg(test)]
 mod catalog_tests;
 mod channels_cmd;
 pub mod citation;
