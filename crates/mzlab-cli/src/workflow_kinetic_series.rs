@@ -49,7 +49,7 @@ fn g(rt: f64, c: f64, sd: f64) -> f64 {
         }
 }
 
-/// The ions of one file, (observed m/z, RT, sigma, height): the parent decays faster under Fe; P305 forms in both conditions, P229 only under Fe.
+/// The ions of one file, (observed m/z, RT, sigma, height): the parent decays faster under Fe; P287 forms in both conditions, P201 only under Fe.
 fn ions(cond: &str, t: f64) -> Vec<(f64, f64, f64, f64)> {
     let mut v = vec![(391.3, 18.3, 0.08, 6e5), (279.2, 2.1, 0.1, 3e5)];
     if t < 0.0 {
@@ -58,22 +58,22 @@ fn ions(cond: &str, t: f64) -> Vec<(f64, f64, f64, f64)> {
     let k = if cond == "Cu" { 0.015 } else { 0.035 };
     let p = 2.0e7 * (-k * t).exp();
     for (mz, rel) in [
-        (364.07, 1.0),
-        (365.07, 0.16),
-        (366.07, 0.055),
-        (194.0, 0.8),
-        (152.0, 0.95),
+        (343.09, 1.0),
+        (344.09, 0.18),
+        (345.09, 0.063),
+        (211.0, 0.8),
+        (167.0, 0.95),
     ] {
         v.push((mz + OFF, 14.3, 0.06, rel * p));
     }
     v.push((
-        305.0 + OFF,
+        287.1 + OFF,
         14.7,
         0.06,
         2.5e6 * (1.0 - (-2.0 * k * t).exp()),
     ));
     if cond == "Fe" {
-        v.push((229.1 + OFF, 7.07, 0.06, 1.2e6 * (1.0 - (-0.04 * t).exp())));
+        v.push((201.1 + OFF, 7.07, 0.06, 1.2e6 * (1.0 - (-0.04 * t).exp())));
     }
     v
 }

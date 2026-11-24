@@ -49,7 +49,7 @@ fn kinetic_lr_campaign() {
     by_hand(&mut c, &d, &mzml, &cell);
     c.done(9);
     kinetics(&run);
-    shortcut_is_the_flow_table(&d, &mzml, &converted, &run);
+    shortcut_is_the_flow_table(&d, &mzml, &run);
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -86,6 +86,10 @@ fn roles(c: &mut Chain, converted: &[String], mzml: &Path) {
         8,
         "{}",
         samples.stderr
+    );
+    assert!(
+        samples.stdout.starts_with(b"{\"schema\":\"samples/1\""),
+        "sample table prints samples/1"
     );
     std::fs::write(mzml.join("samples.json"), &samples.stdout).unwrap();
     let roles = parse(&samples.stdout).unwrap();
@@ -134,7 +138,7 @@ fn run_plan(c: &mut Chain, d: &Path, mzml: &Path, run: &Path) {
     assert_eq!(done.get("code").and_then(Value::f64), Some(0.0));
 }
 
-/// Calls 8-9: the cell of P229 in `Fe_t15` by hand, `trace xic` at the measured offset into `peak auto-lr` with the step's settings.
+/// Calls 8-9: the cell of P201 in `Fe_t15` by hand, `trace xic` at the measured offset into `peak auto-lr` with the step's settings.
 fn by_hand(c: &mut Chain, d: &Path, mzml: &Path, cell: &HashMap<String, String>) {
     let f = mzml.join("Fe_t15.mzML");
     let off = &cell["mz_offset_da"];
@@ -143,7 +147,7 @@ fn by_hand(c: &mut Chain, d: &Path, mzml: &Path, cell: &HashMap<String, String>)
         "xic",
         s(&f),
         "--mz",
-        "229.1",
+        "201.1",
         "--da",
         "0.5",
         "--polarity",
@@ -153,7 +157,16 @@ fn by_hand(c: &mut Chain, d: &Path, mzml: &Path, cell: &HashMap<String, String>)
         "--format",
         "csv",
     ]);
-    let trace = d.join("P229_Fe_t15.csv");
+    let head = String::from_utf8_lossy(&xic.stdout)
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .to_string();
+    assert_eq!(
+        head, "rt_min,intensity",
+        "trace xic prints the trace the peak commands read"
+    );
+    let trace = d.join("P201_Fe_t15.csv");
     std::fs::write(&trace, &xic.stdout).unwrap();
     let lr = c.call(&[
         "peak",
@@ -168,11 +181,17 @@ fn by_hand(c: &mut Chain, d: &Path, mzml: &Path, cell: &HashMap<String, String>)
         "--set",
         "min_pts=2",
     ]);
+    // `peak auto-lr` prints no `schema` key: its document opens with the parameters used.
+    assert!(
+        lr.stdout.starts_with(b"{\"params\":"),
+        "{}",
+        String::from_utf8_lossy(&lr.stdout[..lr.stdout.len().min(80)])
+    );
     same_cell(cell, &parse(&lr.stdout).unwrap());
 }
 
 /// The target table: the states per condition and the offset measured on the parent, with its evidence and choice in the log; returns the
-/// row of P229 in `Fe_t15` that the agent checks by hand.
+/// row of P201 in `Fe_t15` that the agent checks by hand.
 fn evidence(run: &Path) -> HashMap<String, String> {
     let qt = std::fs::read_to_string(run.join("qt.csv")).unwrap();
     let log: serde_json::Value =
@@ -205,15 +224,15 @@ fn evidence(run: &Path) -> HashMap<String, String> {
     };
     assert_eq!(state("Blank_01.mzML", "parent"), "absent");
     assert_eq!(state("t0.mzML", "parent"), "detected");
-    assert_eq!(state("t0.mzML", "P305"), "absent");
+    assert_eq!(state("t0.mzML", "P287"), "absent");
     for f in ["Fe_t5", "Fe_t15", "Fe_t30", "Cu_t5", "Cu_t15", "Cu_t30"] {
-        assert_eq!(state(&format!("{f}.mzML"), "P305"), "detected", "{f}");
-        let p229 = if f.starts_with("Fe") {
+        assert_eq!(state(&format!("{f}.mzML"), "P287"), "detected", "{f}");
+        let p201 = if f.starts_with("Fe") {
             "detected"
         } else {
             "absent"
         };
-        assert_eq!(state(&format!("{f}.mzML"), "P229"), p229, "{f}");
+        assert_eq!(state(&format!("{f}.mzML"), "P201"), p201, "{f}");
     }
     let off: f64 = r.iter().find(|x| x["file"] == "Fe_t15.mzML").unwrap()["mz_offset_da"]
         .parse()
@@ -223,7 +242,7 @@ fn evidence(run: &Path) -> HashMap<String, String> {
         "offset measured on the parent: {off}"
     );
     r.into_iter()
-        .find(|x| x["file"] == "Fe_t15.mzML" && x["id"] == "P229")
+        .find(|x| x["file"] == "Fe_t15.mzML" && x["id"] == "P201")
         .unwrap()
 }
 
@@ -280,11 +299,11 @@ fn kinetics(run: &Path) {
         rows.iter()
             .find(|r| (r["mz"].as_f64().unwrap() - mz).abs() < 0.5)
     };
-    let p305 = near(305.0 + OFF).expect("P305 is a row");
-    assert_eq!(p305["in_all"], true, "{p305}");
-    let p229 = near(229.1 + OFF).expect("P229 is a row");
-    assert_eq!(p229["present_in"], serde_json::json!(["Fe"]), "{p229}");
-    for r in [p305, p229] {
+    let p287 = near(287.1 + OFF).expect("P287 is a row");
+    assert_eq!(p287["in_all"], true, "{p287}");
+    let p201 = near(201.1 + OFF).expect("P201 is a row");
+    assert_eq!(p201["present_in"], serde_json::json!(["Fe"]), "{p201}");
+    for r in [p287, p201] {
         for c in r["cond"]
             .as_array()
             .unwrap()
@@ -302,24 +321,48 @@ fn kinetics(run: &Path) {
     assert!(csv.lines().count() > 3, "the LR table has rows: {csv}");
 }
 
-/// The one-call CLI route of the target step (`quant targets`) writes the bytes of the Flow table and log for the same files and settings.
-fn shortcut_is_the_flow_table(d: &Path, mzml: &Path, files: &[String], run: &Path) {
+/// The plan's raw files in the order of `idx.in.source`: the order of the rows and of `files[]` of the target table.
+fn plan_files() -> Vec<String> {
+    let plan = parse(PLAN.as_bytes()).unwrap();
+    let idx = plan.get("steps").unwrap().arr()[0].clone();
+    assert_eq!(text(&idx, "id"), "idx");
+    let src = idx.get("in").unwrap().get("source").unwrap().arr().to_vec();
+    src.iter()
+        .map(|v| v.str().unwrap().trim_start_matches("file:").to_string())
+        .collect()
+}
+
+/// The one-call CLI route of the target step, run as the recipe writes it (`MZML/` and the two outputs put in the test folders), lists the
+/// files in the plan's order and writes the bytes of the Flow table and log.
+fn shortcut_is_the_flow_table(d: &Path, mzml: &Path, run: &Path) {
+    let line = RECIPE
+        .split("`mzlab-cli quant targets ")
+        .nth(1)
+        .and_then(|r| r.split('`').next())
+        .expect("the recipe cites the quant targets shortcut");
+    let words: Vec<&str> = line.split_whitespace().collect();
+    let named: Vec<String> = words
+        .iter()
+        .filter(|w| w.ends_with(".mzML"))
+        .map(|w| w.trim_start_matches("MZML/").to_string())
+        .collect();
+    assert_eq!(
+        named,
+        plan_files(),
+        "the shortcut lists the plan's files in its order"
+    );
     let (csv, log) = (d.join("qt.csv"), d.join("qt.log.json"));
-    let t = s(&mzml.join("targets.csv")).to_string();
-    let mut a: Vec<&str> = vec![
-        "quant",
-        "targets",
-        "--targets",
-        &t,
-        "--offset",
-        "auto",
-        "--blank-pattern",
-        "blank*",
-    ];
-    a.extend(files.iter().map(String::as_str));
-    a.extend(["--out", s(&csv), "--log", s(&log)]);
-    let o = crate::execute(&a.iter().map(|x| x.to_string()).collect::<Vec<_>>());
-    assert_eq!(o.code, 0, "{}", o.stderr);
+    let mut a = vec!["quant".to_string(), "targets".to_string()];
+    a.extend(words.iter().map(|w| match *w {
+        "qt.csv" => s(&csv).to_string(),
+        "qt.log.json" => s(&log).to_string(),
+        w => match w.strip_prefix("MZML/") {
+            Some(f) => s(&mzml.join(f)).to_string(),
+            None => w.trim_matches('\'').to_string(),
+        },
+    }));
+    let o = crate::execute(&a);
+    assert_eq!(o.code, 0, "{a:?}: {}", o.stderr);
     assert!(
         std::fs::read(&csv).unwrap() == std::fs::read(run.join("qt.csv")).unwrap(),
         "quant targets CSV = Flow qt.csv"
