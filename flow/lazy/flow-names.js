@@ -51,6 +51,7 @@
     "chrom.uv_peaks": ["Find UV peaks", "process", "Integrates the peaks of the UV trace of each file."],
     "features.table": ["Feature table", "process", "Detects and aligns the features of the files and writes the table."],
     "quant.calibrate": ["Apply calibration curves", "process", "Turns the signal of each compound into a concentration with the curves you imported."],
+    "quant.targets": ["Target list", "process", "Integrates every target of a table (m/z and RT window) in every file, one pass per file."],
     "quant.curve": ["Calibration curve", "process", "Fits a weighted line to the integrated peaks of the standards and gives the concentration of every sample, with LOD and LOQ."],
     "qc.mass_accuracy": ["Check mass accuracy", "process", "Measures the mass error of each file on known ions and, if you choose a model, corrects the m/z of the feature table."],
     "spectra.ms2": ["Read MS2 spectra", "input", "Reads the MS2 scans of data-dependent runs as spectra."],

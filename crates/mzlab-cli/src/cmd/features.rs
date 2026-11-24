@@ -244,4 +244,11 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 )
 .schema("compare/1")
 .exits(&[0, 2, 4, 5, 6])
-.examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"])];
+.examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
+Entry::new(
+    "quant targets",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
+    crate::quant_targets_cmd::run,
+)
+.schema("quant-targets/1")
+.exits(&[0, 2, 4, 6])];

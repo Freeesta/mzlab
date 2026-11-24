@@ -1,4 +1,4 @@
-"""Accessibility of the Data view in the fast path (--smoke, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree; moderate/minor best practice on the Data view),
+"""Accessibility of the Data view in the fast path (--smoke, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on ten states (start, file, MRM, map, settings, search, calculator, periodic table in light and dark, integration window, MSn tree; moderate/minor best practice on the Data view),
 keyboard only (every visible control reachable with Tab, visible focus, no focus trap in the charts, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/accessibility.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
@@ -91,6 +91,15 @@ try:
             pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent"); axe_ok(pg, "#calcdlg")
             pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!BARRA.isOpen('calc')")
         step("axe: calculator window", calc)
+        def ptable():
+            # the dialog is modal: axe runs on it alone, in both themes; the label-in-name check by hand (number, symbol, mass in the name, in order) runs inside axe_ok
+            for th in ("light", "dark"):
+                pg.evaluate(f"document.documentElement.setAttribute('data-theme','{th}')")
+                pg.click("#np-pt"); wait_for_js(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118"); axe_ok(pg, "#refdlg")
+                n = pg.evaluate("document.querySelector('#refbody .pt-c[data-s=\"Cl\"]').getAttribute('aria-label')"); assert n.startswith("17, Cl, 34.9689, Chlorine"), n      # visible text first, in order
+                pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#refdlg').open")
+            pg.evaluate("document.documentElement.removeAttribute('data-theme')")
+        step("axe: periodic table dialog (light and dark, names contain the visible text in order)", ptable)
         def integration():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6)})()"); wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)

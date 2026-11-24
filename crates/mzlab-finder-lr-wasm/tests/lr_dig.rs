@@ -94,6 +94,8 @@ fn contract_and_rows_of_python() {
             "points",
             "k_points",
             "controls",
+            "cond",
+            "by_cond",
         ];
         same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {

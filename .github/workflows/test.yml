@@ -377,12 +377,12 @@ jobs:
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --smoke --part ${{ matrix.parte }}/2
-      # the site above has no feature modules (tools/prepara_sito.py does not build them): build molkit and flowcompare with wasm-opt (tools/build_misura_ci.sh) so the size step below measures them; strict: no wasm-opt, no unoptimised figure
-      - name: Build molkit and flowcompare with wasm-opt (for the size step)
+      # the site above has no feature modules (tools/prepara_sito.py does not build them): build molkit, flowcompare and quanttargets with wasm-opt (tools/build_misura_ci.sh) so the size step below measures them; strict: no wasm-opt, no unoptimised figure
+      - name: Build molkit, flowcompare and quanttargets with wasm-opt (for the size step)
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
         env:
           MZLAB_WASM_OPT_STRICT: "1"
-        run: tools/build_misura_ci.sh molkit flowcompare
+        run: tools/build_misura_ci.sh molkit flowcompare quanttargets
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}

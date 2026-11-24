@@ -102,7 +102,12 @@ fn wanted(p: &Path, known: &[&str]) -> bool {
 }
 
 /// The datasets in the folder `dir`, in name order; the folder `skip` (the output) is not looked into.
-fn scan(dir: &Path, skip: &Path, known: &[&str], out: &mut Vec<PathBuf>) -> Result<(), String> {
+pub(crate) fn scan(
+    dir: &Path,
+    skip: &Path,
+    known: &[&str],
+    out: &mut Vec<PathBuf>,
+) -> Result<(), String> {
     let list = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let mut entries: Vec<PathBuf> = list.flatten().map(|e| e.path()).collect();
     entries.sort();
