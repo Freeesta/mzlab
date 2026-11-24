@@ -211,6 +211,7 @@ pub mod sniff;
 pub mod source;
 pub mod srm;
 pub mod estimate;
+pub mod estimates;
 pub mod flow;
 pub mod mzrun;
 pub mod step;

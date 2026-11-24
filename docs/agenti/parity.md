@@ -20,6 +20,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 | Copyable command, short line (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parity_flow_command.rs` |
 | Step defaults, `step-params/1` (`lr_flow_defaults`) | `.wasm` `rotte` | `rpc_lr.rs` | `flow defaults` | `parity_flow_defaults.rs` |
 | Series union, `union/1` (`lr_union`) | `.wasm` `rotte` (`union_tables`) | `rpc_lr.rs` | `quant union` | `parity_union.rs` |
+| Estimated parameters, `estimate/1` (`lr_estimate`; ships: the `.wasm` export and the app op, no page caller, the site has no command line; its per-file part is `features.estimate` of Flow) | `.wasm` `rotte` (`estimate_set`) | `rpc_lr.rs` | `estimate` | `parity_estimate.rs` (the `.wasm` leg runs in `test_parita_rotte_app.py`) |
 | mzML validation (`api/mzml_valida`) | `valida` module | `lr_valida` | `validate` | `test_valida_wasm.py`, `crates/mzlab-desktop/tests/rpc.rs` |
 | Site-only by nature | `module`, `policy`, `budget`, `down`, `lr_gunzip`, `lr_cen_have`, `lr_cen_adopt`; `lr_flow_line`/`lr_flow_sched` (the app uses `flow/line`, `flow/live/*`) | - | - | `SOLO_SITO` |
 | Load "Cancel" (`lr_cancel`) | stops copies and indexes | `IdxBuilder::cancel`: the file's index builds stop at the next read or write and leave no files (neither `.part` nor index); `lr_remove` also removes the file's indexes | - | `crates/mzlab-desktop/tests/cancel.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (site) |

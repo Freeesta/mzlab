@@ -3,6 +3,6 @@ pacchetto = "mzlab-rotte-wasm"
 chiavi = { rotte = 19 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 991232
-misura = 986643
+tetto = 1011712
+misura = 1006018
 nota = "statistics, molecules, Data and Flow routes out of the engine, loaded on the first request of one of them"

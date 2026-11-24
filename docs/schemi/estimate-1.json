@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "estimate/1",
+  "title": "estimate/1: detection parameters measured on several files, put together, with their evidence",
+  "description": "The answer of `mzlab-cli estimate FILE... --json` (plus the citation member) and of the `lr_estimate` op (same bytes in the site and the app): each file's `estimates/1`, per value the median over the files with the figures behind it, and the plan parameters it would set. A measurement of these files, never a setting: nothing is applied. Not to be confused with `estimates/1` (plural, one file, what the Flow step `features.estimate` writes): `files` holds those. Code: crates/mzlab-core/src/estimates.rs.",
+  "type": "object",
+  "required": ["schema", "summary", "files", "values", "params", "skipped", "left_out", "choices", "notes"],
+  "properties": {
+    "schema": {"const": "estimate/1"},
+    "citation": {"type": "string", "description": "CLI only."},
+    "summary": {
+      "type": "object",
+      "required": ["files", "estimated", "no_estimate", "errors", "polarity", "axis"],
+      "properties": {
+        "files": {"type": "integer", "description": "Files given."},
+        "estimated": {"type": "integer", "description": "Files whose values are in the medians (the group most files share)."},
+        "no_estimate": {"type": "integer", "description": "Files with no estimates/1 (read error); the CLI exits 1 when it is above 0."},
+        "errors": {"type": "integer"},
+        "polarity": {"enum": [-1, 0, 1], "description": "Polarity of the group the values come from; 0 when the files did not decide."},
+        "axis": {"type": "string", "description": "Axis of that group: Da or ppm; empty when no file has an estimate."}
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Per file the `estimates/1` object (with `decided`: what the file decided on its own, name, value and proof) or {file, error: error/1}.",
+      "items": {"type": "object"}
+    },
+    "values": {
+      "type": "array",
+      "description": "One entry per measure, in the order noise_floor, min_height, ppm, da, fwhm, rt_tol, dead, defect.",
+      "items": {
+        "type": "object",
+        "required": ["name", "unit", "files", "median", "min", "max", "points", "per_file"],
+        "properties": {
+          "name": {"enum": ["noise_floor", "min_height", "ppm", "da", "fwhm", "rt_tol", "dead", "defect"]},
+          "unit": {"type": "string"},
+          "files": {"type": "integer", "description": "Files that have this value."},
+          "median": {"type": ["number", "null"]},
+          "min": {"type": ["number", "null"]},
+          "max": {"type": ["number", "null"]},
+          "points": {"type": ["integer", "null"], "description": "Evidence only: the points (peaks) the measurement was made from, summed over the files (ppm, da, fwhm); null for the others. NOT the weight of the median, which counts every file once."},
+          "per_file": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["file", "value", "points"],
+              "properties": {"file": {"type": "string"}, "value": {"type": ["number", "null"]}, "points": {"type": ["number", "null"]}}
+            }
+          }
+        }
+      }
+    },
+    "params": {
+      "type": "array",
+      "description": "The plan parameters the values would set. With a plan (`--emit-set`): one entry per instance of the step in the plan; without: the instance is the last part of the step id.",
+      "items": {
+        "type": "object",
+        "required": ["set", "instance", "step", "param", "value", "unit", "current", "from", "rule", "files", "min", "max", "points"],
+        "properties": {
+          "set": {"type": "string", "description": "INSTANCE.NAME=VALUE, to pass with `--set`."},
+          "instance": {"type": "string"},
+          "step": {"type": "string"},
+          "param": {"type": "string"},
+          "value": {"type": "number", "description": "The median to 4 significant figures."},
+          "unit": {"type": "string"},
+          "current": {"description": "What the plan writes for the parameter now; null when it does not write it."},
+          "from": {"type": "string", "description": "The measure in `values`."},
+          "rule": {"type": "string", "description": "How the value was made, with the polarity and axis of the group of files that fed it and the number of files."},
+          "files": {"type": "integer"},
+          "min": {"type": "number"},
+          "max": {"type": "number"},
+          "points": {"type": ["integer", "null"], "description": "Evidence only, as in `values`; not a weight."}
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "description": "Parameters not proposed and why.",
+      "items": {
+        "type": "object",
+        "required": ["step", "param", "from", "reason"],
+        "properties": {
+          "step": {"type": "string"}, "param": {"type": "string"}, "from": {"type": "string"},
+          "reason": {"enum": ["noValue", "axis", "noInstance"], "description": "noValue: not measured; axis: the parameter is for the other axis; noInstance: the plan has no instance of the step."}
+        }
+      }
+    },
+    "left_out": {
+      "type": "array",
+      "description": "Files with a polarity or axis other than the group the values come from.",
+      "items": {"type": "object", "required": ["file", "polarity", "axis"], "properties": {"file": {"type": "string"}, "polarity": {"type": "number"}, "axis": {"type": "string"}}}
+    },
+    "choices": {
+      "type": "array",
+      "description": "Every automatic choice: what, value, why.",
+      "items": {"type": "object", "required": ["what", "value", "why"]}
+    },
+    "notes": {
+      "type": "array",
+      "description": "{key, params} messages: warn.estimate.mixed, note.estimate.fewFiles (fewer than 3 files).",
+      "items": {"type": "object", "required": ["key", "params"]}
+    }
+  }
+}

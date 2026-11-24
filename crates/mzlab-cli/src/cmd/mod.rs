@@ -24,6 +24,7 @@ const JSON_FLAG: &[&str] = &[
     "table compare",
     "quant targets",
     "quant union",
+    "estimate",
     "commands",
     "file validate",
     "file convert",

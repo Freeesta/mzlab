@@ -123,6 +123,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--rt-gap", "widest RT gap of an anchor pair, min"),
     ("--min-series", "keep targets seen in this many series"),
     ("--pad", "widen every window, min"),
+    ("--axis", "m/z axis: da or ppm"),
+    ("--emit-set", "plan to name the instances"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

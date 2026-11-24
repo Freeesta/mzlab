@@ -36,6 +36,7 @@ embed!(
     "draw_edit-1.json",
     "draw-image-1.json",
     "elements-1.json",
+    "estimate-1.json",
     "estimates-1.json",
     "error-1.json",
     "evalrun-1.json",

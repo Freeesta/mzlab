@@ -68,6 +68,12 @@ pub fn union_tables(body: &str) -> Result<String, JsValue> {
     mzlab_core::series_union::route(body).map_err(|e| error_json(&e))
 }
 
+/// The detection parameters measured on several files put together, `estimate/1` (`mzlab_core::estimates::route`): `{"files": [...], "plan": ...}` in, JSON out.
+#[wasm_bindgen]
+pub fn estimate_set(body: &str) -> Result<String, JsValue> {
+    mzlab_core::estimates::route(body).map_err(|e| error_json(&e))
+}
+
 /// The short command line of a plan, or the plan with the `--set` of a line applied (`mzlab_core::flow::line_route`): JSON in, text out.
 #[wasm_bindgen]
 pub fn flow_line(body: &str) -> Result<String, JsValue> {
