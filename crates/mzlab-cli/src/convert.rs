@@ -63,6 +63,15 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 }
                 a.sets.push(format!("conv.peaks={v}"));
             }
+            "--spectrum" => {
+                let v = value(&mut it, &x)?;
+                if mzlab_core::spectrum_type::SpectrumType::parse(&v).is_none() {
+                    return Err(format!(
+                        "--spectrum {v}: expected auto, centroid or profile"
+                    ));
+                }
+                a.sets.push(format!("conv.spectrum={v}"));
+            }
             "--set" => a.sets.push(value(&mut it, &x)?),
             "--fresh" => a.fresh = true,
             "--json" => a.json = true,
@@ -294,6 +303,7 @@ fn item(
                 notes,
                 flagged: crate::convert_report::flagged_of(run, &e.label),
                 lost: crate::convert_report::lost_of(run, &e.label),
+                spectrum_type: crate::convert_report::spectrum_type_of(run, &e.label),
                 rename: e.note.clone(),
             }
         }

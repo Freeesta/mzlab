@@ -2,7 +2,7 @@
 
 pub(crate) const HELP: &str = "mzlab-cli file convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--name file|sample] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--name file|sample] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--spectrum TYPE] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -19,16 +19,20 @@ usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--name file
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
                        points of the profile) or mzlab (centroids of mzLab)
+  --spectrum TYPE      the spectrum-type term of the mzML, the points do not change: auto (default: what the reader says, but sparse data, isolated
+                       ion counts with no continuous trace, are written as centroid MS:1000127), centroid or profile (every spectrum as asked).
+                       The decision is told on stderr (`spectrum type: INPUT: ...`) and kept as `spectrum_type` in the provenance and in the --report;
+                       when you asked or auto changed the reader's flag it is also in the run of the mzML (userParam `mzLab spectrum type`)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
   --report FILE.json   the convert/1 document in a file: {schema, dry_run, out, items}, one item per input: input, output, sha256, spectra, seconds, skipped,
-                       conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+                       conversion, warnings, spectrum_type (centroids with --peaks mzlab); or input, error, cause
   --json               the same convert/1 document on stdout instead of the list of mzML files; a non-zero exit gives one error/1 that carries it as `report`
   --dry-run            checks the inputs, the samples and the settings and says what would be converted (input, output, sample_id, reader, input_bytes)
                        without writing anything
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
-  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
+  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, spectrum, dad); the options above are the short forms
   --help               this text
 
 progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 partial; a

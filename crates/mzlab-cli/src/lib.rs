@@ -33,6 +33,9 @@ pub mod error_text;
 pub(crate) use emit::emit;
 #[cfg(test)]
 mod convert_name_tests;
+#[cfg(test)]
+#[path = "convert_tests_spectrum.rs"]
+mod convert_tests_spectrum;
 pub mod exit;
 mod extract;
 #[cfg(test)]
@@ -57,6 +60,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_convert_notes;
 mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;
