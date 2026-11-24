@@ -92,7 +92,7 @@ fn points(shape: Shape, k: usize) -> Vec<f64> {
                 (0..8).map(move |i| 100.31 + f64::from(p) * 41.1 + f64::from(i) * 0.004)
             });
             let mut v: Vec<f64> = hits.chain(peaks).collect();
-            v.sort_by(f64::total_cmp);
+            mzlab_core::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
             v
         }
         Shape::One => vec![300.0 + k as f64],
