@@ -1,4 +1,4 @@
-//! The network of a `.mzfeat` that carries `tp/1` and `interp/1`: the rows come from the interpretation (formula of the best hypothesis, fragments of the
+//! The network of a `.mzfeat` that carries `tp/2` and `interp/1`: the rows come from the interpretation (formula of the best hypothesis, fragments of the
 //! MS2 against the parent's), the time of the strongest area of each row from the roles of the files. Used by the `.wasm` `interp` and the native runner.
 
 use std::collections::HashMap;

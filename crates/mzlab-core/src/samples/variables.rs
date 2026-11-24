@@ -163,7 +163,7 @@ fn find_matrix(fs: &mut [Fl]) {
         let low = fold(&t.text);
         let ok = f.toks.len() > 1
             && (2..=6).contains(&low.chars().count())
-            && low.chars().all(|c| c.is_ascii_alphabetic())
+            && low.bytes().all(|c| c.is_ascii_alphabetic())
             && !is_role_word(&low)
             && !is_cond_word(&t.text);
         ok.then_some(low)
@@ -193,7 +193,7 @@ fn classify(fs: &mut [Fl]) {
             let (a, b, low) = (f.toks[i].a, f.toks[i].b, fold(&f.toks[i].text));
             let in_time = f.time.is_some_and(|t| a < t.2 && b > t.1);
             let unit_next = i + 1 < n && unit_of(&f.toks[i + 1].text) == Some(false);
-            let numeric = low.chars().all(|c| c.is_ascii_digit() || c == '.');
+            let numeric = low.bytes().all(|c| c.is_ascii_digit() || c == b'.');
             f.toks[i].class = if in_time {
                 "time"
             } else if f.conc.is_some()

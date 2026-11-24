@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "peak-auto-lr/1",
+  "title": "peak-auto-lr/1: the peaks of `mzlab-cli peak auto-lr`",
+  "description": "Every peak of a low-resolution (SIM/MRM) trace found by the engine, the same bytes as the page's \u00abIntegrate every peak shown\u00bb. The parameters used are named like `--set` (`half`, `valley` as a fraction of the height, `sn`, `min_pts`, `despike`); the old dialog names `lr_*` still work as `--set` aliases and log a note on stderr. Unlike `peak-auto/1` the document has no `schema` field, because the page prints the same bytes. Code: crates/mzlab-cli/src/peaks_auto_lr_cmd.rs, crates/mzlab-core/src/peakq_lrauto_json.rs.",
+  "type": "object",
+  "required": [
+    "params",
+    "peaks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "half",
+        "half_auto",
+        "valley",
+        "sn",
+        "min_pts",
+        "despike",
+        "split",
+        "baseline",
+        "noise"
+      ],
+      "properties": {
+        "half": {
+          "type": "integer",
+          "description": "Half window of the Savitzky-Golay smoothing of the detection copy, points (--set half; 0 chooses it from the FWHM of the tallest peak)."
+        },
+        "half_auto": {
+          "type": "boolean",
+          "description": "True when the half window was chosen here (it was not set)."
+        },
+        "valley": {
+          "type": "number",
+          "description": "Two maxima stay two peaks only when the smaller rises above the valley by this fraction of its own height (--set valley takes the fraction; the old lr_valley took %)."
+        },
+        "sn": {
+          "type": "number",
+          "description": "Smallest height over the noise for a peak (--set sn; old name lr_sn)."
+        },
+        "min_pts": {
+          "type": "integer",
+          "description": "Minimum points in a peak (--set min_pts)."
+        },
+        "despike": {
+          "type": "boolean",
+          "description": "Median of 3 before the smoothing, so single-point spikes never become peaks (--set despike)."
+        },
+        "split": {
+          "enum": [
+            "drop",
+            "valley"
+          ],
+          "description": "How touching peaks are separated (--split)."
+        },
+        "baseline": {
+          "const": "engine",
+          "description": "Always `engine`: this route never reads a baseline setting."
+        },
+        "noise": {
+          "type": "number",
+          "description": "MAD noise of the raw trace, counts."
+        }
+      }
+    },
+    "peaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lo",
+          "hi",
+          "t0",
+          "t1",
+          "rt",
+          "b0",
+          "b1",
+          "area",
+          "below",
+          "area_zero",
+          "height",
+          "sn",
+          "end0",
+          "end1",
+          "clamp0",
+          "clamp1"
+        ],
+        "properties": {
+          "lo": {
+            "type": "integer",
+            "description": "Index of the first point of the peak in the trace."
+          },
+          "hi": {
+            "type": "integer",
+            "description": "Index of the last point of the peak."
+          },
+          "t0": {
+            "type": "number",
+            "description": "Start of the peak, min."
+          },
+          "t1": {
+            "type": "number",
+            "description": "End of the peak, min."
+          },
+          "rt": {
+            "type": "number",
+            "description": "Apex, min."
+          },
+          "b0": {
+            "type": "number",
+            "description": "Baseline at t0, counts."
+          },
+          "b1": {
+            "type": "number",
+            "description": "Baseline at t1, counts."
+          },
+          "area": {
+            "type": "number",
+            "description": "Area above the baseline line, counts x s (counts x min with --area-unit min); never negative."
+          },
+          "below": {
+            "type": "number",
+            "description": "The part of the trace under the baseline line that was cut off, same unit as area."
+          },
+          "area_zero": {
+            "type": "number",
+            "description": "Area above zero, same unit as area."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height above the baseline, counts."
+          },
+          "sn": {
+            "type": "number",
+            "description": "Height of the smoothed peak above the background over the noise."
+          },
+          "end0": {
+            "enum": [
+              "background",
+              "valley",
+              "cap"
+            ],
+            "description": "How the left end was found: the smoothed trace came down to the background (or the trace ended); the valley shared with the neighbour; the walk stopped at 5 FWHM from the apex, still above the background."
+          },
+          "end1": {
+            "enum": [
+              "background",
+              "valley",
+              "cap"
+            ],
+            "description": "Same for the right end."
+          },
+          "clamp0": {
+            "enum": [
+              "none",
+              "trace",
+              "zero"
+            ],
+            "description": "What the clamp did to b0: none; lowered onto the trace; raised to zero."
+          },
+          "clamp1": {
+            "enum": [
+              "none",
+              "trace",
+              "zero"
+            ],
+            "description": "Same for b1."
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "params": {
+        "half": 2,
+        "half_auto": true,
+        "valley": 0.1,
+        "sn": 5,
+        "min_pts": 5,
+        "despike": true,
+        "split": "drop",
+        "baseline": "engine",
+        "noise": 549.5483
+      },
+      "peaks": [
+        {
+          "lo": 73,
+          "hi": 87,
+          "t0": 1.825,
+          "t1": 2.175,
+          "rt": 2,
+          "b0": 273.2062,
+          "b1": 273.0654,
+          "area": 179455.366,
+          "below": 0,
+          "area_zero": 185191.2176,
+          "height": 19926.8642,
+          "sn": 36.2604,
+          "end0": "background",
+          "end1": "background",
+          "clamp0": "none",
+          "clamp1": "none"
+        }
+      ]
+    }
+  ]
+}

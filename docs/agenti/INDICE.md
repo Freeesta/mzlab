@@ -59,7 +59,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mapping to mzmine steps (area: graphical Flow (tab: step palette `step/1`, chain, modules…) | `docs/agenti/flow-mzmine.md` |
 | Flow: names, groups and view cards of the MSn infusion model | `docs/agenti/flow-ux.md` |
 | web runner of the Flow ("This browser": `flow/lazy/flow-web-{run,ui,worker}.js`, `flow:web-step` events, `estimate_series` estimate, phone/tablet warning, Run off above the high level) | `docs/agenti/flow-web.md` |
-| external agents using `mzlab-cli` from the shell: sequence, five tested chains (`workflow_tests.rs`), plan examples; LR campaign study and roadmap: `docs/studies/AGENT_USE_STUDY.md`; raw data access (`raw`, AU-12..19): `docs/studies/RAW_ACCESS_STUDY.md` | `docs/agenti/for-agents.md` |
+| external agents using `mzlab-cli`: task → command table, `commands --find` (`catalog/find.rs`, `related.rs`), `cli` profile, tested chains; LR study `docs/studies/AGENT_USE_STUDY.md`; raw access (`raw`, AU-12..19) `docs/studies/RAW_ACCESS_STUDY.md` | `docs/agenti/for-agents.md` |
 | "Group by" of the file list (`#sb-by`, `groups.js`, `groups-for.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
 | experiment groups in Tabui: conditions, `groups/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/groups-view.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |
@@ -89,7 +89,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Rust and module measurements (area: engine measurements, export validation (mzTab-M), clicks…) | `docs/agenti/measurements-rust.md` |
 | vendor readers, `.raw`, `.wiff`, `.D` (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/measurements-speed-raw.md` |
 | cumulative table of site load speed gains (page, first paint, file batches, side list, "Remove all", first file of a batch) | `docs/agenti/measurements-speed-site.md` |
-| cumulative speed-gain table (date · PR · step · before · after · %) | `docs/agenti/measurements-speed.md` |
+| cumulative speed-gain table (date · PR · step · before · after · %); targeted extraction speed study (`docs/studies/SPEED_STUDY.md`, `tools/bench/speed_study.py`) | `docs/agenti/measurements-speed.md` |
 | engine measurements, export validation (mzTab-M), Tabui flow and network clicks | `docs/agenti/measurements.md` |
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
@@ -114,7 +114,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Feature table in the Pipeline (steps 5-6: QC, filter bar, `PIPET` with `TPTAB` and expanded row `TPRIGA`) | `docs/agenti/mzfeat-table-view.md` |
 | table, ids and samples (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-table.md` |
 | tests and measurements (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tests.md` |
-| `tp/1` products view (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tp.md` |
+| `tp/2` products view (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tp.md` |
 | "Pipeline" panel and on-demand file family, `family_record` (area: mzFinder in the browser (`crates/mzlab-feat-wasm`,…) | `docs/agenti/mzfeat-wasm-panel.md` |
 | mzFinder in the browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, Pipeline panel `TP_Mine/js/32_pipeline.js`, parameter estimation `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
 | HR feature pipeline in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` |
@@ -130,7 +130,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzML conformance matrix (variants, `tools/mzml_variants.py` fixtures, known gaps) | `docs/agenti/mzml-matrix.md` |
 | `mzrun/2` file (`*.mzrun.json`: record and presets of an analysis, `self_sha256` fingerprint, application rules, schema `docs/schemi/mzrun-2.json`) | `docs/agenti/mzrun.md` |
 | native reading of `.raw`, `.wiff`, `.D` in the site (samples, OPFS, progress, mzML on request) | `docs/agenti/native-reading.md` |
-| product network (`crates/mzlab-feat/src/network/`, `rete/1`: edges by rule on `tp/1`, steps, coordinates, edge reason) | `docs/agenti/network.md` |
+| product network (`crates/mzlab-feat/src/network/`, `rete/1`: edges by rule on `tp/2`, steps, coordinates, edge reason) | `docs/agenti/network.md` |
 | derived files (`.mzidx`, `.mzfeat`, `.mzfeatf`) of a newer format than the program: `error.newerFormat`, read-only | `docs/agenti/new-format.md` |
 | builder of the EU and US regulatory lists (`mzlab-cli db normative build`, `crates/mzlab-cli/src/normative/`, `normative/sources.json`, sources, pin, `resolve`, output) | `docs/agenti/normative.md` |
 | hand-typed numeric fields (`campi.js`, `CAMPI.num`, `data-num`, calculators, `campo.*` rejection note, `numIt` without Infinity, `lib_campi.sweep`) | `docs/agenti/number-fields.md` |
@@ -146,6 +146,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | substitution position in TP isomers (MS2-compatible classes, `chem/positions.rs`, `posiz/1`) | `docs/agenti/positions.md` |
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progress.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-mass.md` |
+| target list over many files (`quant.targets`, `quant targets`: (m/z, RT window) table, one sweep per file, `peak auto-lr` engine, flags below_threshold/edge/in_blank, `--offset auto`, `quant-targets-log/1`, wasm size measures) | `docs/agenti/quant-targets.md` |
 | `.raw` → mzML conversion: bench `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, starting points V1-V9, causes of D8 and D11, synthetic dense case, parallel encoding (`convert_times`) | `docs/agenti/raw-mzml.md` |
 | register of raw-file fields: extracted or declared ("no loss" rule) | `docs/agenti/raw-not-extracted.md` |
 | validation on experimental sites and discarded experiments (area: parent reactivity engine (crates/mzlab-chem, .wasm chem,…) | `docs/agenti/reactivity-studies.md` |

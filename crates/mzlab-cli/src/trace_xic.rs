@@ -25,7 +25,10 @@ usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | 
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
   --out PATH  write there instead of the standard output
-  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4";
+  --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4
+
+One call per file answers every ion of a list (--mz M1,M2,... or --sweep), never one call per ion; their peaks in every file in one call:
+`peak table --traces A.json --traces B.json --auto` on the --out of each file. A target list of SIM ions / SRM transitions: the Flow step chrom.transitions.";
 
 /// Most ions one call extracts (each one reads the section once).
 const MAX_IONS: usize = 500;
@@ -283,8 +286,9 @@ fn plan(j: &Job, off: &mzlab_core::mzcal::Offset) -> String {
     )
 }
 
-/// The wide CSV of several traces that share their scans: `rt_min,xic:<mz>,...`.
-fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
+/// The wide CSV of several traces that share their scans: `rt_min,xic:<mz>,...`. The cells are the route's number tokens, borrowed and pushed
+/// once each (no per-cell allocation: a list of 275 ions over 2400 scans is 660 000 cells).
+fn wide_csv(docs: &[(String, Vec<(&str, &str)>)]) -> Result<String> {
     let bad = || Error::new("error.badIndex");
     let first = &docs.first().ok_or_else(bad)?.1;
     let mut s = String::from("rt_min");
@@ -292,13 +296,20 @@ fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
         if pts.len() != first.len() || pts.iter().zip(first).any(|(a, b)| a.0 != b.0) {
             return Err(bad());
         }
-        s += &format!(",{id}");
+        s.push(',');
+        s.push_str(id);
     }
     s.push('\n');
-    for i in 0..first.len() {
-        s += &first[i].0;
+    let cells: usize = docs
+        .iter()
+        .map(|(_, p)| p.iter().map(|c| c.1.len() + 1).sum::<usize>())
+        .sum();
+    s.reserve(cells + first.iter().map(|c| c.0.len() + 1).sum::<usize>());
+    for (i, row) in first.iter().enumerate() {
+        s.push_str(row.0);
         for (_, pts) in docs {
-            s += &format!(",{}", pts[i].1);
+            s.push(',');
+            s.push_str(pts[i].1);
         }
         s.push('\n');
     }
@@ -370,11 +381,7 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
             for (mz, a) in &answers {
                 let x = extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
                 let y = extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
-                let pts = extract::pairs(&x, &y, j.win)
-                    .into_iter()
-                    .map(|(a, b)| (a.to_string(), b.to_string()))
-                    .collect();
-                cols.push((id(*mz), pts));
+                cols.push((id(*mz), extract::pairs(&x, &y, j.win)));
             }
             wide_csv(&cols)?
         }

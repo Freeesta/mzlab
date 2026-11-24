@@ -12,30 +12,34 @@
 /** @typedef {{ key: string, code: string, name: string }} TavClass */
 window.TAVOLA = (() => {
   // Class colours: Okabe-Ito hues mixed into the panel colour (so the ink keeps its contrast in light, dark and high contrast), a 4 px
-  // bar of the pure hue, the letter code of the class and a thin pattern: colour is never the only signal. Fixed row heights, so the
-  // table never changes size; the focus ring is drawn inside the cell, so no scrolling parent can cut it.
+  // bar of the pure hue and a fine, faint pattern (one per class, nothing else on the cell): colour is never the only signal (WCAG 1.4.1).
+  // The class name is in the legend, the tooltip, the accessible name and the card. Fixed row heights, so the table never changes size;
+  // the focus ring is drawn inside the cell, so no scrolling parent can cut it.
   const HUES = { alkali: "#d55e00", alkaline: "#e69f00", transition: "#56b4e9", post_transition: "#009e73", metalloid: "#f0e442", nonmetal: "#cc79a7", noble: "#0072b2", lanthanide: "#999999", actinide: "#6b6b6b" };
-  const LINE = "color-mix(in srgb,var(--ink) 18%,transparent)";
+  const LINE = "color-mix(in srgb,var(--ink) 11%,transparent)";
+  // 4 px period lines (diagonals, horizontal, vertical), dots, a cross-hatch, a grid and sparse dots: nine different shapes, none of them heavy.
+  const ln = (/** @type {number} */ deg, /** @type {number} */ per) => `repeating-linear-gradient(${deg}deg,transparent 0 ${per - 1}px,${LINE} ${per - 1}px ${per}px)`;
   const PATTERNS = {
-    alkali: `repeating-linear-gradient(45deg,${LINE} 0 1px,transparent 1px 5px)`,
-    alkaline: `repeating-linear-gradient(135deg,${LINE} 0 1px,transparent 1px 5px)`,
+    alkali: ln(45, 4),
+    alkaline: ln(135, 4),
     transition: "none",
-    post_transition: `repeating-linear-gradient(0deg,${LINE} 0 1px,transparent 1px 5px)`,
-    metalloid: `repeating-linear-gradient(90deg,${LINE} 0 1px,transparent 1px 5px)`,
-    nonmetal: `radial-gradient(${LINE} 1px,transparent 1.5px) 0 0/6px 6px`,
-    noble: `repeating-linear-gradient(45deg,${LINE} 0 1px,transparent 1px 6px),repeating-linear-gradient(135deg,${LINE} 0 1px,transparent 1px 6px)`,
-    lanthanide: `repeating-linear-gradient(0deg,${LINE} 0 2px,transparent 2px 7px)`,
-    actinide: `repeating-linear-gradient(90deg,${LINE} 0 2px,transparent 2px 7px)`,
+    post_transition: ln(0, 4),
+    metalloid: ln(90, 4),
+    nonmetal: `radial-gradient(${LINE} .7px,transparent 1.1px) 0 0/4px 4px`,
+    noble: `${ln(45, 5)},${ln(135, 5)}`,
+    lanthanide: `${ln(0, 5)},${ln(90, 5)}`,
+    actinide: `radial-gradient(${LINE} 1.1px,transparent 1.5px) 0 0/8px 8px`,
   };
   const classCss = Object.keys(HUES).map(k => {
     const h = /** @type {Record<string, string>} */ (HUES)[k], p = /** @type {Record<string, string>} */ (PATTERNS)[k];
-    return `.pt-c[data-k="${k}"],.pt-key[data-k="${k}"]{background:${p},color-mix(in srgb,${h} 26%,var(--panel));border-left:4px solid ${h}}
+    return `.pt-c[data-k="${k}"],.pt-sw[data-k="${k}"]{background:${p},color-mix(in srgb,${h} 26%,var(--panel));border-left:4px solid ${h}}
 .pt[data-f="${k}"] .pt-c:not([data-k="${k}"]){opacity:.3}`;
   }).join("\n");
   const CSS = `.pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));grid-template-rows:repeat(7,46px) 12px repeat(2,46px);gap:3px;margin:8px 0;padding:2px;position:relative}
 .pt-c{font:inherit;color:var(--ink);text-align:inherit;border:1px solid var(--line);border-radius:4px;padding:2px 3px;background:var(--panel);cursor:pointer;line-height:1.1;height:46px;min-width:24px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center}
-.pt-t{display:flex;justify-content:space-between;width:100%;font-size:8px;color:var(--ink)}.pt-c b{font-size:15px;line-height:1.05}.pt-c small{font-size:9px;color:var(--ink)}
-.pt-m{position:absolute;right:3px;top:12px;font-size:8px;font-weight:600;color:var(--ink)}
+.pt-t{display:flex;justify-content:space-between;align-items:baseline;width:100%;min-width:0;font-size:8px;color:var(--ink)}.pt-c b{font-size:15px;line-height:1.05}.pt-c small{font-size:9px;color:var(--ink)}
+.pt-m{font-style:normal;font-size:8px;font-weight:600;color:var(--ink);opacity:0;white-space:nowrap}.pt-m::after{content:attr(data-m)}
+.pt-c:hover .pt-m,.pt-c:focus-visible .pt-m,.pt-c.pin .pt-m{opacity:1}
 .pt-c.org{box-shadow:inset 0 0 0 2px var(--accent)}.pt-c.org b{font-weight:800}
 .pt-c:hover,.pt-c.pin{outline:2px solid var(--accent);outline-offset:-2px;z-index:1}.pt-c:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;z-index:1}
 ${classCss}
@@ -43,9 +47,10 @@ ${classCss}
 .pt-big{float:left;margin:0 10px 4px 0;border:1px solid var(--line);border-radius:6px;padding:2px 8px;text-align:center}.pt-big span{display:block;font-size:10px;color:var(--muted)}.pt-big b{font-size:26px}
 .pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
 .pt-leg{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:2px 0 6px;font-size:10px;color:var(--ink)}
-.pt-key{font:inherit;font-size:10px;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px;min-height:24px;cursor:pointer}.pt-key[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
+.pt-key{font:inherit;font-size:10px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:2px 6px 2px 3px;min-height:24px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}.pt-sw{display:inline-block;width:20px;height:14px;border-radius:2px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pt-cls{color:var(--muted)}.pt-key[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
 .pt-key:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
-@media (forced-colors:active){.pt-c,.pt-key{border-color:CanvasText}.pt-c.pin,.pt-c:focus-visible,.pt-key[aria-pressed="true"]{outline-color:Highlight}.pt-bar{background:CanvasText}.pt-c.org{box-shadow:inset 0 0 0 2px Highlight}}`;
+@media (forced-colors:active){.pt-c,.pt-key,.pt-sw{border-color:CanvasText}.pt-c.pin,.pt-c:focus-visible,.pt-key[aria-pressed="true"]{outline-color:Highlight}.pt-bar{background:CanvasText}.pt-c.org{box-shadow:inset 0 0 0 2px Highlight}}`;
   let styled = false;
   /** Grid cell of an element: the 18 columns of the main table, the f-block (La-Yb, Ac-No) on rows 9 and 10, Lu and Lr under Y. @param {number} z */
   function cell(z) {
@@ -72,10 +77,11 @@ ${classCss}
     const pct = (/** @type {number} */ a) => String(+a.toFixed(4));
     function info(/** @type {TavEl} */ e) {
       const main = e.isotopes.length ? e.isotopes.reduce((a, b) => (b.abund > a.abund ? b : a)) : null;
-      let h = `<div class="pt-big"><span>${e.z}</span><b>${EH(e.symbol)}</b></div><div><b style="font-size:15px">${EH(e.name)}</b></div>`;
+      let h = `<div class="pt-big"><span>${e.z}</span><b>${EH(e.symbol)}</b></div><div><b style="font-size:15px">${EH(e.name)}</b></div><div class="pt-cls">${EH(t("tbl.pt.class", { cls: CL[e.class].name }))}</div>`;
+      const mark = e.m2_rel != null ? t("tbl.pt.tip.m2") : e.mono_only ? t("tbl.pt.tip.one") : "";
       if (e.mono == null) return h + `<div>${t("tbl.na")}</div>`;
-      if (!main || e.avg == null) return h + `<div>${t("tbl.pt.monoOnly", { m: e.mono.toFixed(5) })}</div>`;
-      h += `<div>${t("tbl.pt.card", { w: e.avg.toFixed(4), m: e.mono.toFixed(5) })}</div>
+      if (!main || e.avg == null) return h + `<div>${t("tbl.pt.monoOnly", { m: e.mono.toFixed(5) })}</div>` + (mark ? `<div class="pt-cls">${EH(mark)}</div>` : "");
+      h += `<div>${t("tbl.pt.card", { w: e.avg.toFixed(4), m: e.mono.toFixed(5) })}</div>` + (mark ? `<div class="pt-cls">${EH(mark)}</div>` : "") + `
         <table class="sm" style="margin-top:6px"><tr><th>${t("tbl.pt.col.iso")}</th><th class="num">${t("tbl.pt.col.mass")}</th><th class="num" title="${EH(t("tbl.pt.tip.abund"))}">${t("tbl.pt.col.abund")}</th><th class="num" title="${EH(t("tbl.pt.tip.delta"))}">${t("tbl.pt.col.delta")}</th><th></th></tr>` +
         e.isotopes.map(i => `<tr><td><sup>${i.a}</sup>${EH(e.symbol)}</td><td class="num">${i.mass.toFixed(5)}</td><td class="num">${pct(i.abund)}</td>` +
           `<td class="num">${i === main ? "" : (i.mass - main.mass > 0 ? "+" : "") + (i.mass - main.mass).toFixed(4)}</td>` +
@@ -84,14 +90,18 @@ ${classCss}
     }
     function periodic() {
       const cells = elements.map(e => {
-        const [r, c] = cell(e.z), cls = CL[e.class];
-        const label = e.mono == null ? t("tbl.pt.ariaNone", { name: e.name, s: e.symbol, z: e.z, cls: cls.name }) : e.avg == null ? t("tbl.pt.ariaMono", { name: e.name, s: e.symbol, z: e.z, cls: cls.name, m: e.mono.toFixed(5) }) : t("tbl.pt.aria", { name: e.name, s: e.symbol, z: e.z, cls: cls.name, m: e.mono.toFixed(5), w: e.avg.toFixed(4) });
-        const mark = e.m2_rel != null ? `<sup class="pt-m" title="${EH(t("tbl.pt.tip.m2"))}">+2</sup>` : e.mono_only ? `<sup class="pt-m" title="${EH(t("tbl.pt.tip.one"))}">1</sup>` : "";
-        return `<button type="button" class="pt-c${ORGANIC.has(e.symbol) ? " org" : ""}${e.mono == null ? " nd" : ""}" data-s="${e.symbol}" data-k="${e.class}" data-r="${r}" data-c="${c}" tabindex="${e.z === 1 ? 0 : -1}" aria-label="${EH(label)}" style="grid-row:${r};grid-column:${c}">` +
-          `<span class="pt-t"><span>${e.z}</span><span>${cls.code}</span></span><b>${e.symbol}</b>${mark}<small>${mono(e)}</small></button>`;
+        const [r, c] = cell(e.z), cls = CL[e.class], shown = mono(e);
+        // The name starts with the visible text in its order (number, symbol, mass: WCAG 2.5.3 Label in Name), then the rest.
+        const p = { name: e.name, s: e.symbol, z: e.z, cls: cls.name, shown, m: e.mono == null ? "" : e.mono.toFixed(5), w: e.avg == null ? "" : e.avg.toFixed(4) };
+        const label = e.mono == null ? t("tbl.pt.ariaNone", p) : e.avg == null ? t("tbl.pt.ariaMono", p) : t("tbl.pt.aria", p);
+        const note = e.m2_rel != null ? t("tbl.pt.tip.m2") : e.mono_only ? t("tbl.pt.tip.one") : "";
+        // The marker is drawn by CSS (data-m), so it is not part of the text of the button; it shows on hover, focus and pin.
+        const mark = e.m2_rel != null ? "+2" : e.mono_only ? "1" : "";
+        return `<button type="button" class="pt-c${ORGANIC.has(e.symbol) ? " org" : ""}${e.mono == null ? " nd" : ""}" data-s="${e.symbol}" data-k="${e.class}" data-r="${r}" data-c="${c}" tabindex="${e.z === 1 ? 0 : -1}" aria-label="${EH(label + (note ? ". " + note : ""))}" title="${EH(t("tbl.pt.tip.cell", p))}" style="grid-row:${r};grid-column:${c}">` +
+          `<span class="pt-t"><span>${e.z}</span>${mark ? `<i class="pt-m" data-m="${mark}" aria-hidden="true"></i>` : ""}</span> <b>${e.symbol}</b> <small>${shown}</small></button>`;   // the spaces keep the words apart for axe (Label in Name); a flex container ignores them
       }).join("");
-      const keys = classes.map(c => `<button type="button" class="pt-key" data-k="${c.key}" aria-pressed="false" title="${EH(t("tbl.pt.tip.class"))}">${c.code} ${EH(c.name)}</button>`).join("");
-      const legend = `<div class="pt-leg" role="group" aria-label="${EH(t("tbl.pt.legend"))}">${keys}<span>${t("tbl.pt.key.use")}</span><span title="${EH(t("tbl.pt.tip.one"))}">1 ${t("tbl.pt.key.one")}</span><span title="${EH(t("tbl.pt.tip.m2"))}">+2 ${t("tbl.pt.key.m2")}</span></div>`;
+      const keys = classes.map(c => `<button type="button" class="pt-key" data-k="${c.key}" aria-pressed="false" title="${EH(t("tbl.pt.tip.class"))}"><span class="pt-sw" data-k="${c.key}" aria-hidden="true"></span>${EH(c.name)}</button>`).join("");
+      const legend = `<div class="pt-leg" role="group" aria-label="${EH(t("tbl.pt.legend"))}">${keys}<span>${t("tbl.pt.key.use")}</span><span>${t("tbl.pt.key.mark")}</span><span title="${EH(t("tbl.pt.tip.one"))}">1 ${t("tbl.pt.key.one")}</span><span title="${EH(t("tbl.pt.tip.m2"))}">+2 ${t("tbl.pt.key.m2")}</span></div>`;
       // Data sources (kept here, not shown in the page): see crates/mzlab-core/src/periodic.rs. Hovering or focusing an element shows its card
       // (click or Enter pins it); the elements of the formulas are boxed with the accent colour.
       return `${legend}<div class="pt" role="group" aria-label="${EH(t("icon.pt"))}">${cells}<div class="pt-info" id="pt-info" tabindex="0" role="region" aria-label="${EH(t("tbl.pt.info"))}" aria-live="polite">${info(EL.C)}</div></div>`;

@@ -17,16 +17,18 @@ concurrency:
   group: stat-ci-${{ github.event_name == 'schedule' && 'poll' || github.run_id }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  actions: read
-  checks: read
-  pull-requests: read
+# No scope by default: each job asks only for what it uses.
+permissions: {}
 
 jobs:
   registra:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write        # push the rows to the `stat-ci` branch; also /commits/{sha} and the checkout
+      actions: read          # /actions/runs, jobs, logs and artifacts of the polled runs
+      checks: read           # /commits/{sha}/check-runs (green-to-merge time)
+      pull-requests: read    # /pulls, /pulls/{n}/files, /pulls/{n}/reviews
     env:
       GITHUB_TOKEN: ${{ github.token }}
     steps:
@@ -81,6 +83,10 @@ jobs:
           done
           echo "::warning::stat-ci: events not published"
           exit 0
+      # One denied poll is a warning and a row; three within an hour (rows already published above) turn this run red, so a persistent failure is seen.
+      - name: Persistent API denial
+        working-directory: dati
+        run: python3 ../tools/ci_metrics.py denials --data-file eventi.jsonl
 
   # Every commit rewrites a JSONL part, so the history of `stat-ci` grows without bound while the tip stays small.
   # Nothing reads the history (readers use the tip), so once it passes a threshold the branch is replaced by one commit with the same tree.
@@ -90,6 +96,8 @@ jobs:
     needs: registra
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write        # force-push the squashed `stat-ci` branch; git only, no API read, so nothing else
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Squash the history of stat-ci

@@ -47,7 +47,7 @@ fn from_json(bytes: &[u8]) -> Result<Vec<Expected>> {
     Ok(list)
 }
 
-/// The accepted products (`tp/1` status product) of a `tp.link` file, and whether the series was linked in negative mode: the detection polarity of the recipe, else
+/// The accepted products (`tp/2` status product) of a `tp.link` file, and whether the series was linked in negative mode: the detection polarity of the recipe, else
 /// the sign of observed m/z minus neutral mass of the rows that have a formula. A row without a formula (unit resolution) is listed at its observed ion m/z.
 fn from_mzfeat(bytes: &[u8]) -> Result<(Vec<Expected>, bool)> {
     let (table, meta) = read_table_from(&mut Slice(bytes), bytes.len() as u64)?;

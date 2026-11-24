@@ -2,10 +2,24 @@
 //! bonds, stereo, groups, coordinates, property layers and regions follow their atoms; the `id` is dropped (it named the whole record).
 
 use crate::model::{Mol, Stereo, StereoGroup};
+use crate::sortm::SortM;
 
 impl Mol {
     /// Each connected piece as its own record, in the order of its first atom; atoms keep their relative order and their layers.
     pub fn pieces(&self) -> Vec<Mol> {
+        let (piece, count) = self.piece_labels();
+        if count <= 1 {
+            return vec![self.clone()];
+        }
+        let mut out = Vec::new();
+        for k in 0..count {
+            out.extend(self.only_piece(&piece, k));
+        }
+        out
+    }
+
+    /// The piece of every atom (numbered in the order of its first atom) and the number of pieces.
+    pub(crate) fn piece_labels(&self) -> (Vec<usize>, usize) {
         let n = self.atoms.len();
         let mut piece = vec![usize::MAX; n];
         let mut count = 0;
@@ -30,17 +44,74 @@ impl Mol {
             }
             count += 1;
         }
-        if count <= 1 {
-            return vec![self.clone()];
-        }
-        let mut out = Vec::new();
-        for k in 0..count {
-            out.extend(self.only_piece(&piece, k));
-        }
-        out
+        (piece, count)
     }
 
-    fn only_piece(&self, piece: &[usize], k: usize) -> Option<Mol> {
+    /// The core (atoms, bonds, stereo, groups restricted to it) of every part (atoms with one `label`, `count` parts) in one pass,
+    /// atoms in their relative order: the core of `only_piece` for each, without renumbering the whole record once per part.
+    pub(crate) fn part_cores(&self, label: &[usize], count: usize) -> Option<Vec<Mol>> {
+        let mut parts = vec![Mol::new(Vec::new(), Vec::new(), Vec::new(), Vec::new()); count];
+        let mut local = vec![0u32; label.len()];
+        for (x, &k) in label.iter().enumerate() {
+            local[x] = parts.get(k)?.atoms.len() as u32;
+            parts[k].atoms.push(self.atoms[x].clone());
+        }
+        let at = |x: u32| label.get(x as usize).copied();
+        for b in &self.bonds {
+            let k = at(b.a)?;
+            let mut b = b.clone();
+            (b.a, b.b) = (local[b.a as usize], local[b.b as usize]);
+            parts[k].bonds.push(b);
+        }
+        for x in &self.stereo {
+            let mut x = x.clone();
+            let k = match &mut x {
+                Stereo::Tetra { c, refs, .. } => {
+                    for r in refs.iter_mut().flatten() {
+                        *r = local[*r as usize];
+                    }
+                    let k = at(*c)?;
+                    *c = local[*c as usize];
+                    k
+                }
+                Stereo::Db { a, b, refs, .. } => {
+                    for r in refs.iter_mut().flatten() {
+                        *r = local[*r as usize];
+                    }
+                    let k = at(*b)?;
+                    (*a, *b) = (local[*a as usize], local[*b as usize]);
+                    k
+                }
+            };
+            parts[k].stereo.push(x);
+        }
+        for g in &self.groups {
+            let mut by_part: Vec<(usize, u32)> = Vec::new();
+            for &a in &g.atoms {
+                by_part.push((at(a)?, local[a as usize]));
+            }
+            by_part.sortm();
+            for (w, &(k, a)) in by_part.iter().enumerate() {
+                if w == 0 || by_part[w - 1].0 != k {
+                    parts[k].groups.push(StereoGroup {
+                        kind: g.kind,
+                        atoms: Vec::new(),
+                    });
+                }
+                parts[k].groups.last_mut()?.atoms.push(a);
+            }
+        }
+        // the identity renumbering sorts and normalises each part as the renumbering of `only_piece` does
+        parts
+            .iter()
+            .map(|p| {
+                p.renumbered(&(0..p.atoms.len() as u32).collect::<Vec<_>>())
+                    .ok()
+            })
+            .collect()
+    }
+
+    pub(crate) fn only_piece(&self, piece: &[usize], k: usize) -> Option<Mol> {
         // plain loops: iterator adapters and `retain` closures cost the `.wasm` more
         let n = piece.len();
         let mut new_of_old = vec![0u32; n];

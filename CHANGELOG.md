@@ -9,6 +9,7 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 ### Added
 - Desktop app: a double click on an `.mzML` or Thermo `.raw` file opens it in the Data view (file associations of the installers); with the app already open the file goes into the same window, no second copy starts. Agilent `.D`, Bruker `.d` and Waters `.raw` folders cannot be associated: drag them onto the window or use «Open».
 - Desktop app: when a file is opened this way, every other time the app asks whether to make mzLab the default app for these files (with the steps for Windows, Mac and Linux) until you answer «Yes» or «Don't ask again»; Settings → «Default app» asks again.
+- Command line: `tools/install.sh` installs the prebuilt `mzlab-cli` of the latest release on Linux (x86_64, aarch64) and macOS (Apple silicon) in one line, checked against `SHA256SUMS`, without sudo: `curl -fsSL https://raw.githubusercontent.com/Freeesta/mzlab/main/tools/install.sh | sh`.
 
 ### Changed
 - Flow, «Detect features»: «Maximum gap» counts the scans a trace may miss between two of its points (0 = consecutive scans), as in «Fill gaps»; the default is 1, the same traces as before. Plans and presets saved with the old count (step version 1) are converted on opening (N becomes N − 1) and give the same feature table.
@@ -20,6 +21,7 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 - The right-click menu and the palette (⌘K) offer the panel layout: place next to, move up/down, full width, equal widths, reset.
 - The «Drag here to place side by side» hint appears only once; new «Place side by side» step in the «Tools and moves» tour; balloons never overlap.
 - New option in Settings «Spectrum next to the chromatogram» (off by default): the spectrum opened with a double click goes on the same row as the chromatogram when there is room; Ctrl+Z undoes it.
+- The command-line binaries of a release have fixed names without the version (`mzlab-cli-linux-x86_64`, `mzlab-cli-linux-aarch64`, `mzlab-cli-macos-aarch64`), so `releases/latest/download/` always reaches them.
 
 ## [1.0.0] - 2026-10-20
 

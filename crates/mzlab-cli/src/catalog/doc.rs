@@ -97,7 +97,7 @@ fn flag_json(
 }
 
 /// The stdout of `name`: its format and the schema the entry names.
-fn stdout_json(e: &Entry) -> Value {
+fn stdout_json(e: &Entry, compact: bool) -> Value {
     let json = crate::cmd::json_by_default(e.name);
     let format = if json {
         "json"
@@ -106,7 +106,10 @@ fn stdout_json(e: &Entry) -> Value {
     } else {
         "text"
     };
-    let mut o = Obj::new().put("format", text(format));
+    let mut o = Obj::new();
+    if !(compact && json) {
+        o = o.put("format", text(format));
+    }
     // like every other member, a schema that is not there is left out
     if !e.schema.is_empty() {
         o = o.put("schema", text(e.schema));
@@ -158,7 +161,7 @@ fn derived_exits(e: &Entry, u: &Usage) -> Vec<u8> {
 }
 
 /// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
-fn skeleton(u: &Usage) -> String {
+pub(super) fn skeleton(u: &Usage) -> String {
     let toks = tokens(&u.synopsis);
     let kept: Vec<&str> = toks
         .iter()
@@ -169,7 +172,7 @@ fn skeleton(u: &Usage) -> String {
 }
 
 /// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, `flag_type`, an argument of kind `path`,
-/// the derived exit codes, a skeleton example).
+/// the derived exit codes, a skeleton example, a stdout of JSON without a schema).
 fn command_json(
     e: &Entry,
     compact: bool,
@@ -225,14 +228,20 @@ fn command_json(
                     })
                     .collect(),
             ),
-        )
-        .put("stdout", stdout_json(e));
+        );
+    // the most common format, JSON, is said once at the top (`stdout_note`): no format, and no stdout when nothing else is left
+    if !(compact && crate::cmd::json_by_default(e.name) && e.schema.is_empty()) {
+        o = o.put("stdout", stdout_json(e, compact));
+    }
     if u.stdin {
         o = o.b("stdin", true);
     }
     if !compact || exits != derived_exits(e, &u) {
         let v = exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
         o = o.put("exit_codes", Value::Arr(v));
+    }
+    if !compact {
+        o = related(o, e.name);
     }
     if !compact || examples != [skeleton(&u)] {
         o = o.put(
@@ -241,6 +250,20 @@ fn command_json(
         );
     }
     o.done()
+}
+
+/// The full form names the related commands and steps and the one call that replaces a loop of this one (`related.rs`).
+fn related(mut o: Obj, name: &str) -> Obj {
+    if let Some(r) = super::related::of(name) {
+        o = o.put(
+            "see_also",
+            Value::Arr(r.also.iter().map(|a| text(a)).collect()),
+        );
+        if !r.bulk.is_empty() {
+            o = o.put("bulk", text(r.bulk));
+        }
+    }
+    o
 }
 
 /// Whether the words `path` are the start of the name of `e`.
@@ -295,7 +318,8 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("flag_type", types_json)
             .put("flag_help_note", text("no flag help: see flag_help; no flag type: see flag_type, else string; no arg kind: path, or `...` (rest)"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out; exact: `commands --json PATH`"))
-            .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"));
+            .put("examples_note", text("no examples: `mzlab-cli ` + the synopsis without [optional] groups and `...`"))
+            .put("stdout_note", text("no stdout format: json; no stdout: json, no schema"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"
 }

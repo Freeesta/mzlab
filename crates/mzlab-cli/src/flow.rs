@@ -100,6 +100,7 @@ pub fn steps() -> Vec<Step> {
         crate::flow_quant::quant_step(),
         crate::flow_curve::curve_step(),
         crate::flow_massacc::massacc_step(),
+        crate::flow_quant_targets::quant_targets_step(),
     ]);
     all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
     all.push(mzlab_feat::steps::export_annotations());
@@ -406,6 +407,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(rtpredict::EXECUTORS)
         .chain(plausible::EXECUTORS)
         .chain(crate::flow_massacc::EXECUTORS)
+        .chain(crate::flow_quant_targets::EXECUTORS)
         .chain(flow_runorder::EXECUTORS)
         .chain(flow_moiety::EXECUTORS)
         .chain(flow_methods::EXECUTORS)

@@ -276,8 +276,8 @@ fn candidates_json(o: &mut Out, e: &Entry, adduct: &str) {
     o.raw("]");
 }
 
-/// One alternative of a row as (label, neutral formula): «label» (the formula of the row), «FORMULA (label)» (another formula of the same
-/// nominal m/z, `hypo::merge`) or «label (FORMULA, m/z 123.4567)» (an alternative of the parent, `rows::parent_alternatives`).
+/// One alternative of a row as (label, neutral formula): «FORMULA (label)» (a way to a formula of the same ion, `hypo::merge`; the row's own
+/// formula gives the row's ion) or «label (FORMULA, m/z 123.4567)» (an alternative of the parent, `rows::parent_alternatives`).
 fn alternative(a: &str, own: &str) -> (String, String) {
     let is_formula = |t: &str| {
         t.chars().next().is_some_and(|c| c.is_ascii_uppercase())

@@ -142,8 +142,14 @@ pub fn from_rules(
         let Some(formula) = to_formula(&f) else {
             continue;
         };
+        // the other ways to the same net formula, in the one alternative format `FORMULA (PATH)`
+        let alts = path
+            .alts
+            .iter()
+            .map(|a| format!("{} ({a})", elements::fmt(&formula)))
+            .collect();
         out.push(hypothesis(
-            &formula, p, path.label, SRC_RULE, path.steps, path.level, path.dir, path.alts,
+            &formula, p, path.label, SRC_RULE, path.steps, path.level, path.dir, alts,
         ));
     }
     out.retain(|h| h.mz >= p.min_mz);

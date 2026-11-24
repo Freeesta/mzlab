@@ -1,8 +1,9 @@
 //! Canonical atom order of a record: partition refinement on the constitution, then a search over the tied atoms that keeps the smallest
 //! core JSON, so the stereo elements are the last invariant and two writings of one molecule give the same record byte for byte.
 //! Automorphisms prune the search: those of each component and the swaps of equal components are known before it starts, the others are
-//! found on the way, and their orbits at a node grow in a union-find, so many equal components (a TP import) cost a polynomial. The order
-//! is ours and versioned by `CAN_VERSION`; it is not RDKit's or InChI's.
+//! found on the way, and their orbits at a node grow in a union-find, so many equal components (a TP import) cost a polynomial. Many
+//! pieces of one constitution with different stereo would cost every interleaving: past a bound the pieces are ordered alone and sorted.
+//! The order is ours and versioned by `CAN_VERSION`; it is not RDKit's or InChI's.
 
 use crate::model::Mol;
 use crate::sortm::SortM;
@@ -13,6 +14,9 @@ use std::collections::HashMap;
 pub const CAN_VERSION: &str = "mol1";
 /// Leaves of the search tree visited at most; past it the best leaf so far is used (only molecules with huge symmetry get there).
 const LEAF_LIMIT: usize = 20_000;
+/// Largest whole search (in leaves, counted without labels) kept for records with tied units of different stereo; past it the units
+/// are ordered alone, so many of them cost linear time and the order stays canonical where the search would stop at `LEAF_LIMIT`.
+const SEARCH_SIZE: u64 = 1_000;
 
 impl Mol {
     /// New index of every atom in the canonical order: a permutation, the argument of `renumbered`.
@@ -23,14 +27,18 @@ impl Mol {
     /// The canonical order and the work units it took (refinement rounds, leaves, orbit steps and checks, each counted per atom touched).
     pub(crate) fn canonical_order_counted(&self) -> (Vec<u32>, u64) {
         let mut s = Search::new(self);
-        s.autos = s.component_autos();
         let start = s.refine(s.initial());
-        s.explore(start, &mut Vec::new());
-        let work = s.work.get();
-        let order = s
-            .best
-            .map_or_else(|| (0..self.atoms.len() as u32).collect(), |(_, p)| p);
-        (order, work)
+        match s.by_units(&start) {
+            Units::Order(order) => (order, s.work.get()),
+            Units::Autos(autos) => {
+                s.autos = autos;
+                s.explore(start, &mut Vec::new());
+                let order = s
+                    .best
+                    .map_or_else(|| (0..self.atoms.len() as u32).collect(), |(_, p)| p);
+                (order, s.work.get())
+            }
+        }
     }
 
     /// Constitution classes (rank of every atom after refinement, stereo ignored): label independent, equal for atoms no bond pattern separates.
@@ -41,8 +49,16 @@ impl Mol {
 
     /// The same molecule with its atoms in canonical order (layers moved along, `id` kept as it is).
     pub fn canonical(&self) -> Mol {
-        let order = self.canonical_order();
-        self.renumbered(&order).unwrap_or_else(|_| self.clone())
+        self.canonical_counted().0
+    }
+
+    /// The canonical record and the work units its order took.
+    pub(crate) fn canonical_counted(&self) -> (Mol, u64) {
+        let (order, work) = self.canonical_order_counted();
+        (
+            self.renumbered(&order).unwrap_or_else(|_| self.clone()),
+            work,
+        )
     }
 
     /// Identity string of the molecule: the version and the core hash of the canonical record; stereo (and its status) is part of it.
@@ -69,20 +85,73 @@ impl<'a> Search<'a> {
         }
     }
 
-    /// Automorphisms the connected components give before any search: the symmetries of each component (from its own search) and the
-    /// swap of two components with the same canonical record. Each is kept only if the whole record renumbered by it gives the same core JSON,
-    /// so a layer across components (an enhanced-stereo group) can only drop one; they prune whole subtrees whose leaves repeat certificates
-    /// already seen, so the first smallest leaf, and with it the order, is the one the plain search finds.
-    fn component_autos(&self) -> Vec<Vec<usize>> {
-        let members = self.components();
-        let pieces = self.mol.pieces();
-        if members.len() < 2 || pieces.len() != members.len() {
-            return Vec::new();
+    /// What the units (connected pieces joined by the enhanced-stereo groups that cross them) give before any search. Each unit is
+    /// searched alone (equal writings once). Two units the refinement ties (the same classes) but with different canonical records
+    /// (equal constitution, different stereo) make the search try every interleaving of them; past `SEARCH_SIZE` leaves the order is
+    /// then the units sorted by canonical record, each in its own order, one after the other. Otherwise the whole search runs.
+    fn by_units(&self, cls: &[usize]) -> Units {
+        let (label, count) = self.units();
+        if count < 2 {
+            return Units::Autos(self.component_autos(None));
         }
-        // pieces come in the order of their first atom with their atoms in order, as `members`; equal writings are searched once
+        let Some(units) = self.searched(&label, count) else {
+            return Units::Autos(Vec::new());
+        };
+        let (members, found, known) = &units;
+        // Units with equal refinement classes (as sorted lists) are the ones the search cannot tell apart. The size of the whole
+        // search does not depend on the labels: the interleavings of tied units with different records (a multinomial per set of tied
+        // units) times the distinct leaves of every unit. A small one keeps the search, and with it the order it always gave.
+        let sig: Vec<Vec<usize>> = members
+            .iter()
+            .map(|m| {
+                let mut c: Vec<usize> = m.iter().map(|&x| cls[x]).collect();
+                c.sortm();
+                c
+            })
+            .collect();
+        let cert = |k: usize| &known[&found[k]];
+        let mut by_sig: Vec<usize> = (0..count).collect();
+        by_sig.sortm_by(|&x, &y| (&sig[x], &cert(x).0).cmp(&(&sig[y], &cert(y).0)));
+        let (mut apart, mut size, mut total, mut same) = (false, 1u64, 0u64, 0u64);
+        for (w, &k) in by_sig.iter().enumerate() {
+            let prev = w.checked_sub(1).map(|v| by_sig[v]);
+            let tied = prev.is_some_and(|j| sig[j] == sig[k]);
+            let equal = tied && prev.is_some_and(|j| cert(j).0 == cert(k).0);
+            apart |= tied && !equal;
+            total = if tied { total + 1 } else { 1 };
+            same = if equal { same + 1 } else { 1 };
+            // exact below the bound; past it the value stays past it (every factor is at least 1)
+            size = (size * total / same)
+                .saturating_mul(cert(k).3)
+                .min(SEARCH_SIZE + 1);
+        }
+        if !apart || size <= SEARCH_SIZE {
+            let same = count == self.mol.piece_labels().1;
+            return Units::Autos(self.component_autos(if same { Some(units) } else { None }));
+        }
+        let mut by_cert: Vec<usize> = (0..count).collect();
+        by_cert.sortm_by(|&a, &b| known[&found[a]].0.cmp(&known[&found[b]].0));
+        let mut order = vec![0u32; cls.len()];
+        let mut at = 0u32;
+        for k in by_cert {
+            for (&x, &l) in members[k].iter().zip(&known[&found[k]].1) {
+                order[x] = at + l;
+            }
+            at += members[k].len() as u32;
+        }
+        Units::Order(order)
+    }
+
+    /// Each part (atoms with one `label`) searched alone, equal writings once: the atoms of every part in ascending order, the
+    /// written core JSON of every part, and what the search of each writing gives.
+    fn searched(&self, label: &[usize], count: usize) -> Option<Searched> {
+        let mut members = vec![Vec::new(); count];
+        for (x, &k) in label.iter().enumerate() {
+            members[k].push(x);
+        }
         let mut known: HashMap<String, Piece> = HashMap::new();
         let mut found = Vec::new();
-        for p in pieces {
+        for p in self.mol.part_cores(label, count)? {
             let written = p.core_json();
             if !known.contains_key(&written) {
                 let mut s = Search::new(&p);
@@ -90,15 +159,38 @@ impl<'a> Search<'a> {
                 s.explore(start, &mut Vec::new());
                 self.work.set(self.work.get() + s.work.get());
                 let (cert, order) = s.best.unwrap_or_default();
-                known.insert(written.clone(), (cert, order, s.autos));
+                let distinct = s.leaves.len() as u64;
+                known.insert(written.clone(), (cert, order, s.autos, distinct));
             }
             found.push(written);
         }
+        Some((members, found, known))
+    }
+
+    /// Automorphisms the connected components give before any search: the symmetries of each component (from its own search) and the
+    /// swap of two components with the same canonical record (`pieces`: their searches when already made). Each is kept only if the whole
+    /// record renumbered by it gives the same core JSON, so a group across components can only drop one; they prune whole subtrees whose
+    /// leaves repeat certificates already seen, so the first smallest leaf, and with it the order, is the one the plain search finds.
+    fn component_autos(&self, pieces: Option<Searched>) -> Vec<Vec<usize>> {
+        let pieces = match pieces {
+            Some(p) => p,
+            None => {
+                let (label, count) = self.mol.piece_labels();
+                if count < 2 {
+                    return Vec::new();
+                }
+                let Some(p) = self.searched(&label, count) else {
+                    return Vec::new();
+                };
+                p
+            }
+        };
+        let (members, found, known) = &pieces;
         let n = self.adj.len();
         let mut candidates: Vec<Vec<usize>> = Vec::new();
         let mut last_of: HashMap<&str, usize> = HashMap::new();
         for (k, written) in found.iter().enumerate() {
-            let (cert, order, autos) = &known[written];
+            let (cert, order, autos, _) = &known[written];
             for g in autos {
                 let mut whole: Vec<usize> = (0..n).collect();
                 for (x, &y) in g.iter().enumerate() {
@@ -114,31 +206,40 @@ impl<'a> Search<'a> {
         self.verified(candidates)
     }
 
-    /// Atoms of every connected component, sorted, components in the order of their first atom.
-    fn components(&self) -> Vec<Vec<usize>> {
-        let n = self.adj.len();
-        let mut piece = vec![usize::MAX; n];
-        let mut members: Vec<Vec<usize>> = Vec::new();
-        for s in 0..n {
-            if piece[s] != usize::MAX {
-                continue;
+    /// The unit of every atom (connected pieces joined by the groups over more than one of them), numbered in the order of its first
+    /// atom, and the number of units.
+    fn units(&self) -> (Vec<usize>, usize) {
+        let (piece, count) = self.mol.piece_labels();
+        let mut join: Vec<usize> = (0..count).collect();
+        fn root(join: &mut [usize], mut x: usize) -> usize {
+            while join[x] != x {
+                join[x] = join[join[x]];
+                x = join[x];
             }
-            let mut list = vec![s];
-            piece[s] = members.len();
-            let mut i = 0;
-            while i < list.len() {
-                for &(y, _) in &self.adj[list[i]] {
-                    if piece[y] == usize::MAX {
-                        piece[y] = members.len();
-                        list.push(y);
-                    }
-                }
-                i += 1;
-            }
-            list.sortm();
-            members.push(list);
+            x
         }
-        members
+        for g in &self.mol.groups {
+            for w in g.atoms.windows(2) {
+                let (a, b) = (
+                    root(&mut join, piece[w[0] as usize]),
+                    root(&mut join, piece[w[1] as usize]),
+                );
+                join[a.max(b)] = a.min(b);
+            }
+        }
+        // pieces are numbered in the order of their first atom and a root is the smallest piece, so roots keep that order
+        let mut number = vec![usize::MAX; count];
+        let mut units = 0;
+        let mut label = vec![0usize; piece.len()];
+        for (x, &p) in piece.iter().enumerate() {
+            let r = root(&mut join, p);
+            if number[r] == usize::MAX {
+                number[r] = units;
+                units += 1;
+            }
+            label[x] = number[r];
+        }
+        (label, units)
     }
 
     /// The candidates that are automorphisms of the whole record (the same core JSON once renumbered by them).
@@ -272,8 +373,17 @@ impl<'a> Search<'a> {
     }
 }
 
-/// What the search of one component gives: its certificate, its canonical order and its automorphisms.
-type Piece = (String, Vec<u32>, Vec<Vec<usize>>);
+/// What the search of one unit gives: its certificate, its canonical order, its automorphisms and its distinct leaves.
+type Piece = (String, Vec<u32>, Vec<Vec<usize>>, u64);
+
+/// Parts searched alone: the atoms of each, the written core JSON of each, and the search of every distinct writing.
+type Searched = (Vec<Vec<usize>>, Vec<String>, HashMap<String, Piece>);
+
+/// The order of the whole record from its units alone, or the automorphisms they seed the whole search with.
+enum Units {
+    Order(Vec<u32>),
+    Autos(Vec<Vec<usize>>),
+}
 
 struct Search<'a> {
     mol: &'a Mol,

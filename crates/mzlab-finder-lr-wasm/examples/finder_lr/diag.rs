@@ -46,7 +46,7 @@ fn step(d: &LrDig, r: usize) -> String {
             .any(|c| c.name == *n && c.status == "fail")
     })
     .collect();
-    if !bad.is_empty() || !matches!(sc.label, "forte" | "possibile") {
+    if !bad.is_empty() || !matches!(sc.label, "strong" | "possible") {
         return format!("criteria: label {}, failed: {:?}", sc.label, bad);
     }
     "passes the criteria: dropped as the weaker of two neighbours or by max_unexpected".into()

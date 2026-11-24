@@ -327,3 +327,72 @@ fn the_json_has_only_the_keys_of_the_english_schema() {
     }
     std::fs::remove_file(f).unwrap();
 }
+
+const ROLE_NAMES: &str =
+    "MQ_H2O2_T00\nMQ_H2O2_T30\nMQ_H2O2D_T00\nTW_BLKD_T00\nMQ_STD05\nQC_MQ\nMQ_BLK_1\nMQ_Wash_1\n";
+
+fn roles_file(tag: &str) -> std::path::PathBuf {
+    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-roles-{tag}.txt", std::process::id()));
+    std::fs::write(&p, ROLE_NAMES).unwrap();
+    p
+}
+
+#[test]
+fn table_json_is_the_route_answer_and_every_role_is_logged_on_stderr() {
+    let f = roles_file("json");
+    let (code, out, err) = run(&["sample", "table", "--names", f.to_str().unwrap()]);
+    assert_eq!(code, 0, "{err}");
+    let files: Vec<String> = ROLE_NAMES
+        .lines()
+        .map(|n| format!("{{\"name\":\"{n}\",\"sha256\":\"\",\"kind\":\"\"}}"))
+        .collect();
+    let want = route("propose", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    assert_eq!(out, want + "\n");
+    // the roles are in the JSON under `kind` (and `blank_kind` for a wash): a dark control and a dark matrix blank are not t0
+    for (name, kind) in [
+        ("MQ_H2O2_T00", "t0"),
+        ("MQ_H2O2D_T00", "dark"),
+        ("TW_BLKD_T00", "dark"),
+        ("MQ_STD05", "std"),
+        ("QC_MQ", "qc"),
+        ("MQ_BLK_1", "blank"),
+    ] {
+        let line = err
+            .lines()
+            .find(|l| l.starts_with(&format!("auto: {name} ")))
+            .unwrap_or_else(|| panic!("{name}: {err}"));
+        assert!(line.contains(&format!("kind={kind} ")), "{line}");
+    }
+    assert!(out.contains("\"kind\":\"dark\"") && out.contains("\"blank_kind\":\"wash\""));
+    assert!(
+        err.contains("auto: MQ_Wash_1 blank_kind=wash \"Wash\""),
+        "{err}"
+    );
+    assert_eq!(err.lines().count(), ROLE_NAMES.lines().count());
+}
+
+#[test]
+fn table_text_shows_the_role_of_each_file() {
+    let f = roles_file("text");
+    let (code, out, _) = run(&["sample", "table", "--names", f.to_str().unwrap(), "--text"]);
+    assert_eq!(code, 0);
+    let rows: Vec<Vec<&str>> = out.lines().map(|l| l.split('\t').collect()).collect();
+    assert_eq!(rows[0], ["file", "role", "time_min", "series", "replicate"]);
+    let role = |n: &str| rows.iter().find(|r| r[0] == n).map(|r| r[1]).unwrap();
+    assert_eq!(role("MQ_H2O2_T00"), "t0");
+    assert_eq!(role("MQ_H2O2_T30"), "sample");
+    assert_eq!(role("MQ_H2O2D_T00"), "dark");
+    assert_eq!(role("TW_BLKD_T00"), "dark");
+    assert_eq!(role("MQ_Wash_1"), "blank/wash");
+    assert_eq!(role("QC_MQ"), "qc");
+}
+
+#[test]
+fn table_exit_codes_a_bad_option_is_2_and_a_missing_names_file_gives_no_table() {
+    let (code, out, err) = run(&["sample", "table", "--bogus"]);
+    assert_eq!(code, 2, "{err}");
+    assert!(!out.contains("samples/1"));
+    let (code, out, _) = run(&["sample", "table", "--names", "/nonexistent/names.txt"]);
+    assert_ne!(code, 0);
+    assert!(!out.contains("samples/1"));
+}

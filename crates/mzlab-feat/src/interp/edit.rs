@@ -1,4 +1,4 @@
-//! The modification of a row: the difference of neutral formula from the parent given by its best hypothesis (`hypotheses/2`), the alternatives within
+//! The modification of a row: the difference of neutral formula from the parent given by its best hypothesis (`hypotheses/3`), the alternatives within
 //! the tolerance and the isotope check of the MS1 at the apex (M+1/M, M+2/M, sulfur count). Used by `interp::build_row`.
 
 use crate::sortc::SortC;

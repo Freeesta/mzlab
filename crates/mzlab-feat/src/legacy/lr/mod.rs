@@ -171,29 +171,29 @@ fn evaluate_peak(e: &mut Entry, t: &Aligned, lc: &[FileIn], s: &Settings, c: &pe
 }
 
 /// The criteria a product cannot do without: a chromatographic peak, persistence, and formation (absent at time zero or growing). When one
-/// fails the row is `debole` (score at most 40) whatever the share of the others: an ion present at t0 that does not grow, or seen in one
+/// fails the row is `weak` (score at most 40) whatever the share of the others: an ion present at t0 that does not grow, or seen in one
 /// sample only, is not evidence of a product.
 fn weak_unless_formed(e: &mut Entry) {
     let st = |n: &str| status(&e.criteria, n);
     let formed = !(st("absent at time zero") == "fail" && st(GROWS) == "fail");
     if st(peakchk::PEAK) == "fail" || st(labels::PERSISTS) == "fail" || !formed {
         e.score = e.score.map(|x| x.min(40.0));
-        e.label = "debole";
+        e.label = "weak";
     }
 }
 
 /// A candidate reached by two transformations, or of a class of hypotheses that matches no more ions than the decoys (`chance`), is at most
-/// `possibile` (score at most 74): at unit resolution such a match is no evidence of the transformation, but the ion stays in the table.
+/// `possible` (score at most 74): at unit resolution such a match is no evidence of the transformation, but the ion stays in the table.
 fn not_strong_by_chance(e: &mut Entry) {
-    if e.label == "forte" && (e.steps > 1 || e.by_chance) {
+    if e.label == "strong" && (e.steps > 1 || e.by_chance) {
         e.score = e.score.map(|x| x.min(74.0));
-        e.label = "possibile";
+        e.label = "possible";
     }
 }
 
 pub const PARENT_OK: &str = "parent of the series";
 
-/// A candidate of a parent that `parent_check` does not confirm: it stays in the table, `debole` (score at most 40), because a match to the
+/// A candidate of a parent that `parent_check` does not confirm: it stays in the table, `weak` (score at most 40), because a match to the
 /// transformations of a parent that is not in the files is no evidence of a product.
 fn orphan(e: &mut Entry, parent: &ParentLr) {
     e.criteria.push(labels::crit(
@@ -205,7 +205,7 @@ fn orphan(e: &mut Entry, parent: &ParentLr) {
         ),
     ));
     e.score = e.score.map(|x| x.min(40.0));
-    e.label = "debole";
+    e.label = "weak";
 }
 
 /// Isotope check and kinetic generation of one entry (`snapshot` = the entries the isotope is looked for in).
@@ -240,7 +240,7 @@ fn finish(entries: &mut [Entry], lc: &[FileIn], s: &Settings, gens: &GensBy) {
 }
 
 /// The unexpected ions after the isotope check, at most `max_unexpected`: the ones that pass by score then area, then the ones that are weak only
-/// because of the chromatographic peak or persistence (they stay visible as `debole`); isotope peaks and ions that do not grow are dropped.
+/// because of the chromatographic peak or persistence (they stay visible as `weak`); isotope peaks and ions that do not grow are dropped.
 fn keep_unexpected(entries: Vec<Entry>, max: usize) -> (Vec<Entry>, (usize, usize)) {
     let (known, unexp): (Vec<Entry>, Vec<Entry>) = entries.into_iter().partition(|e| !e.unexpected);
     let good: Vec<&Entry> = unexp
@@ -251,7 +251,7 @@ fn keep_unexpected(entries: Vec<Entry>, max: usize) -> (Vec<Entry>, (usize, usiz
         .collect();
     let mut ord: Vec<usize> = (0..good.len()).collect();
     let sc = |e: &Entry| e.score.unwrap_or(0.0);
-    let weak = |e: &Entry| e.label == "debole";
+    let weak = |e: &Entry| e.label == "weak";
     mzlab_core::sortc::by(&mut ord, |&a, &b| {
         weak(good[a])
             .cmp(&weak(good[b]))
@@ -294,7 +294,7 @@ fn products<R: ReadAt>(
         evaluate_peak(e, t, lc, s, chk);
     }
     if s.discover {
-        // the unexpected ions of the table as the pipeline gave it, then checked: one without a real peak stays, `debole`
+        // the unexpected ions of the table as the pipeline gave it, then checked: one without a real peak stays, `weak`
         let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
         let mut un = rows::unexpected(t, lc, &known, s, off);
         let urows: Vec<usize> = un.iter().filter_map(|e| e.row).collect();
@@ -316,7 +316,7 @@ fn products<R: ReadAt>(
 }
 
 /// `api.run` on a low-resolution series after the pipeline: `table` = the `.mzfeat` of the full-scan columns (in the order of `plan::columns`),
-/// `registry` = the `hypotheses/2` JSON of the hypotheses of the parent, `open(k)` = the `.mzidx` of column `k` (the XICs of `peakchk`).
+/// `registry` = the `hypotheses/3` JSON of the hypotheses of the parent, `open(k)` = the `.mzidx` of column `k` (the XICs of `peakchk`).
 pub fn dig<R: ReadAt>(
     files_json: &str,
     parent_json: &str,

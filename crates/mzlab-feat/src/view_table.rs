@@ -1,6 +1,6 @@
 //! The table a view stands for: the rows the view keeps, in their order, with the areas the view shows (normalised, blank subtracted). A Flow step that
 //! reads a `table` and is not an export runs on this table, so a `table.filter` wired into it gives what the same step gives on a table holding those rows.
-//! The rows take the ids 1..n of the new table; the block `tp/1` and the graph of the proofs are left out (both point at rows of the old table).
+//! The rows take the ids 1..n of the new table; the block `tp/2` and the graph of the proofs are left out (both point at rows of the old table).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;

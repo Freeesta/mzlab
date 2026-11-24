@@ -21,6 +21,7 @@ const JSON_FLAG: &[&str] = &[
     "flow command",
     "flow steps",
     "table compare",
+    "quant targets",
     "commands",
     "file validate",
     "file convert",
@@ -342,7 +343,7 @@ pub(crate) fn help() -> Outcome {
 pub(crate) fn features_help() -> Outcome {
     let line = entries()
         .find(|e| e.name == "features")
-        .map_or("", |e| e.help);
+        .map_or("", |e| e.help.split("   ").next().unwrap_or(e.help));
     let text = format!(
         "{HEAD}\n\nusage: {line}\n\n{TAIL}\n\n{}\n",
         crate::citation::reminder()

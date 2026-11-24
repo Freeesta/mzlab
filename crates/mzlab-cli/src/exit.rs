@@ -32,6 +32,9 @@ const INPUT_KEYS: &[&str] = &[
     "err.msn.rules.document",
     "error.badIndex",
     "err.compare.input",
+    "err.quant.targets.table",
+    "err.quant.targets.empty",
+    "err.quant.targets.noFiles",
 ];
 const OUTPUT_KEYS: &[&str] = &[
     "err.cli.out",
@@ -50,6 +53,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.mol.draw.not_found_bare",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
+    "err.cli.find.none",
     "err.cli.schema.unknown",
     "err.flow.instance",
     "err.llm.tool.unknown",

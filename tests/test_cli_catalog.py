@@ -35,7 +35,10 @@ def test_mzflow2_validates_the_base_plan_and_refuses_a_broken_one(cli):
 
 def test_the_commands_of_the_cli_validate_against_their_schemas(cli):
     for args, name in ((("commands", "--json"), "commands/1"), (("schema", "--list"), "schemas/1"), (("flow", "steps", "--compact"), "steps-compact/1"),
-                       (("llm", "tools", "--compact"), "tools-compact/1")):
+                       (("llm", "tools", "--compact"), "tools-compact/1"),
+                       (("commands", "--find", "integrate", "sim", "peaks", "--json"), "commands-find/1"),
+                       (("commands", "--find", "kinetics", "products", "--json"), "commands-find/1"),
+                       (("commands", "--json", "peak", "auto-lr"), "commands/1")):
         doc = cli(*args)
         assert doc["schema"] == name
         assert not list(Draft202012Validator(cli("schema", name)).iter_errors(doc)), name

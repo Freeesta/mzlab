@@ -108,6 +108,7 @@ pub mod prof;
 mod prog;
 pub mod qc;
 pub mod quality;
+pub mod quant_targets;
 pub mod recipe;
 mod recipe_lr;
 pub mod regulatory;

@@ -447,3 +447,28 @@ fn the_global_cache_flag_is_not_the_normative_one() {
         );
     }
 }
+
+/// The compact listing leaves out `stdout.format` only when it is json (and `stdout` when nothing else is left); the full entry always has it.
+#[test]
+fn a_json_stdout_is_said_once_in_the_compact_listing() {
+    let doc = json(&out(&["commands", "--json"]));
+    assert!(doc["stdout_note"]
+        .as_str()
+        .is_some_and(|n| n.contains("json")));
+    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        let words: Vec<&str> = e.name.split(' ').collect();
+        let mut args = vec!["commands", "--json"];
+        args.extend(&words);
+        let full = json(&out(&args));
+        let whole = &full["commands"][0]["stdout"];
+        assert!(whole["format"].is_string(), "{}", e.name);
+        let json_out = whole["format"] == "json";
+        assert_eq!(c["stdout"].get("format").is_none(), json_out, "{}", e.name);
+        assert_eq!(
+            c.get("stdout").is_none(),
+            json_out && whole.get("schema").is_none(),
+            "{}",
+            e.name
+        );
+    }
+}

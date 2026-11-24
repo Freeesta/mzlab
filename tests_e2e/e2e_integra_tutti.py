@@ -57,12 +57,20 @@ try:
         step("each record is the engine's peak: same baseline, same area", same_area)
         pg.screenshot(path=str(HERE / "shots" / "integra_tutti.png"))
         def parity():
-            for pk, sets in (("{}", []), ("{lrSmooth:7,lrValley:20,lrSn:4,lrSplit:1}", ["lr_half=3", "lr_valley=20", "lr_sn=4", "lr_split=valley"])):
+            # the names of --set are the names of the output "params" (valley a fraction); the old dialog names stay as aliases and give the same bytes
+            new = ["half=3", "valley=0.2", "sn=4", "split=valley"]
+            old = ["lr_half=3", "lr_valley=20", "lr_sn=4", "lr_split=valley"]
+            def argv(sets):
+                return cli_argv("peak", "auto-lr", "-", *[a for x in sets for a in ((("--split", x.split("=")[1])) if x.endswith(("split=valley",)) else ("--set", x))])
+            for pk, sets in (("{}", []), ("{lrSmooth:7,lrValley:20,lrSn:4,lrSplit:1}", new)):
                 pg.evaluate(f"(async()=>{{const s={M}._a.sr[0];window.__csv=s.x.map((t,i)=>t+','+s.y[i]).join('\\n');window.__lr=await QUALITA.lrAuto(s.x,s.y,0,1e9,INTTUTTI.engineParams({{...PK,...{pk}}}))}})()")
                 wait_for_js(pg, "typeof window.__lr==='string'")
                 site, csv = pg.evaluate("window.__lr"), pg.evaluate("window.__csv")
-                out = subprocess.run(cli_argv("peak", "auto-lr", "-", *[a for x in sets for a in ((("--split", x.split("=")[1])) if x.startswith("lr_split=") else ("--set", x))]), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
+                out = subprocess.run(argv(sets), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
                 assert out == site + "\n", (out[:300], site[:300])
+                if sets:
+                    legacy = subprocess.run(argv(old), input=csv, capture_output=True, text=True, cwd=ROOT, check=True)
+                    assert legacy.stdout == out and "lr_sn is the old name of sn" in legacy.stderr, (legacy.stdout[:200], legacy.stderr[:200])
                 assert json.loads(site)["params"]["split"] == ("valley" if sets else "drop") and len(json.loads(site)["peaks"]) == 3
                 pg.evaluate("window.__lr=null")
         step("the page engine and mzlab-cli peak auto-lr give the same bytes", parity)

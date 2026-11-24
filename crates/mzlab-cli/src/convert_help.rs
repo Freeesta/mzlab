@@ -2,7 +2,7 @@
 
 pub(crate) const HELP: &str = "mzlab-cli file convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--spectrum TYPE] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--name file|sample] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--spectrum TYPE] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -11,6 +11,10 @@ usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compressi
   --sample LIST        only these samples of a dataset with several (.wiff): ids and ranges, 1,3,5 or 2-4; the others are not read. The mzML of a
                        sample is the same bytes as in a run without it. An id the dataset does not have stops the run (exit 5); a dataset with one
                        sample is converted as it is. `mzlab-cli sample select FILE --sample LIST` checks a list without converting
+  --name WHICH         how the mzML is called: file (default: the name of the file, NAME-ID for the sample of a dataset with several) or sample (the
+                       sample name, cleaned to a safe file name: SAMPLE.mzML). Two equal sample names (case aside) become SAMPLE-ID.mzML
+                       (a dataset with one sample: SAMPLE-N.mzML), a name with nothing usable keeps the default name; each change is a `note:`
+                       line on stderr, and the bytes of the mzML do not depend on its name
   --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the

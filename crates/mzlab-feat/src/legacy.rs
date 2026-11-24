@@ -1,5 +1,5 @@
 //! Compatibility layer of mzFinder: the JSON that the mzFinder API returns, computed in Rust. `classify` and `formula_info` are ports with
-//! parity to the former Python engine; `summary` and `detail` translate the series of the pipeline (L1-L9, evid/1, tp/1) into the
+//! parity to the former Python engine; `summary` and `detail` translate the series of the pipeline (L1-L9, evid/1, tp/2) into the
 //! rows and the detail that the former page read.
 
 pub mod dig;
@@ -59,7 +59,7 @@ pub fn classify<R: ReadAt>(
 }
 
 /// `api.run` on high-resolution files after the pipeline: `files_json` and `parent_json` as the page passes them, `table` the bytes of the
-/// `series_evid.mzfeat` of the LC files (in the order of `series::lc_files`), `registry` the `hypotheses/2` JSON, `open(k)` the index of file `k`.
+/// `series_evid.mzfeat` of the LC files (in the order of `series::lc_files`), `registry` the `hypotheses/3` JSON, `open(k)` the index of file `k`.
 pub fn dig<R: ReadAt>(
     files_json: &str,
     parent_json: &str,

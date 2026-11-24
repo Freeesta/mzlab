@@ -1,7 +1,7 @@
 """The gate of the transformation-product (TP) view, `cancello_tp/1` (written as `cancello_tp.json` beside `cancello.json`): the measures of the table §5.2 of the TP
 architecture against a truth `verita_tp/1` (or the historical `timolol_truth.json` keys). The gate of quality of the feature table (`cancello.py`) stays as it is.
 
-Without the block `tp/1` the "raw" view is the list of candidates of the pipeline (identities with a proof in favour, in the order of the panel), the starting point
+Without the block `tp/2` the "raw" view is the list of candidates of the pipeline (identities with a proof in favour, in the order of the panel), the starting point
 that the TP engine has to beat. Generation, level, region and determinism come from `cancello_tp_motore.py` and need a truth that has the fields (the synthetic V1X one); the
 others (decoys, low-resolution, weak recall) and every measure the truth cannot support are not measured (`ok` null) and keep the gate closed; `lr_tp` has no threshold and does not count. Aggregated numbers only: no names, no data."""
 from __future__ import annotations
@@ -32,7 +32,7 @@ def position(series: Series, mz: float, rt: float | None) -> int:
 
 
 def ranks_view(series: Series, handled_columns: list[int]) -> dict[int, int]:
-    """Rank (1-based) of every row of the view. With the block `tp/1` in the table the view is the rows with status 0, in the order kinship, points, largest treated
+    """Rank (1-based) of every row of the view. With the block `tp/2` in the table the view is the rows with status 0, in the order kinship, points, largest treated
     area; without it, the raw view: the candidates of the pipeline in the order of the panel (points, then the largest treated area)."""
     amax = series.tabella.massimo(handled_columns)
     points = {int(i["id"]): i["totale"] for i in series.identita}

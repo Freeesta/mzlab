@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "rete/1",
  "title": "rete/1: the network of the transformation products",
- "description": "The parent and the accepted products of tp/1 as nodes in columns by step, and an arc for every rule whose change of the ion formula takes one to another. Computed by crates/mzlab-feat/src/network/; the view draws what it finds here. A network is not an identification and raises no level.",
+ "description": "The parent and the accepted products of tp/2 as nodes in columns by step, and an arc for every rule whose change of the ion formula takes one to another. Computed by crates/mzlab-feat/src/network/; the view draws what it finds here. A network is not an identification and raises no level.",
  "type": "object",
  "required": ["schema", "params", "parent", "columns", "nodes", "arcs", "n_arcs"],
  "properties": {
@@ -27,12 +27,12 @@
    "required": ["id", "row", "mz", "rt", "neutral_formula", "ion_formula", "kinship", "step", "pos"],
    "properties": {
     "id": {"type": "integer", "minimum": 1},
-    "row": {"type": "integer", "minimum": 0, "description": "index in the table and in the arrays of tp/1 (id = row + 1)"},
+    "row": {"type": "integer", "minimum": 0, "description": "index in the table and in the arrays of tp/2 (id = row + 1)"},
     "mz": {"type": "number"},
     "rt": {"type": "number"},
     "neutral_formula": {"type": "string"},
     "ion_formula": {"type": "string"},
-    "kinship": {"type": "integer", "minimum": 0, "maximum": 4, "description": "kinship of tp/1 (0 none, 1 doubtful, 2 possible, 3 probable, 4 certain); 0 for the parent"},
+    "kinship": {"type": "integer", "minimum": 0, "maximum": 4, "description": "kinship of tp/2 (0 none, 1 doubtful, 2 possible, 3 probable, 4 certain); 0 for the parent"},
     "step": {"type": "integer", "minimum": 0, "description": "arcs away from the parent (0 = the parent); a group the parent does not reach starts at 1 from its earliest node"},
     "pos": {"type": "integer", "minimum": 0, "description": "place in the column, by m/z, then RT, then id"}
    }
