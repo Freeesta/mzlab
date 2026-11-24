@@ -52,7 +52,7 @@ for o in OUTPUTS + [ZERO, "table_edges"]:
 assert NAT["peaks"].count(",ok,") + NAT["peaks"].count(",ok\n") >= 6, NAT["peaks"]
 assert len(NAT["candidates"].strip().splitlines()) == 3, NAT["candidates"]
 assert len({NAT[o] for o in OUTPUTS}) == 3, "the three outputs of the native run must differ"
-assert NAT["peaks"].splitlines()[0].endswith(",peak,baseline,below") and ",zero," in NAT["peaks"], NAT["peaks"][:300]
+assert NAT["peaks"].splitlines()[0].endswith(",peak,baseline,below,state") and ",zero," in NAT["peaks"], NAT["peaks"][:300]
 assert ",edges," in NAT[ZERO] and NAT[ZERO] != NAT["peaks"], NAT[ZERO][:300]
 data = site / "static" / "dati_flow_transitions"; data.mkdir()
 for n in NAMES: shutil.copy2(run / n, data / n)

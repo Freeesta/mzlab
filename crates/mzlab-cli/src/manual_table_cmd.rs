@@ -16,14 +16,14 @@ use crate::Outcome;
 
 /// The help text; the column lists come from the constants that write the CSV header, so the help cannot drift from the bytes.
 pub fn help() -> String {
-    use mzlab_core::manint::{EXT_HEAD, FIG_HEAD, HEAD, QUALITY_HEAD, SN_HEAD};
+    use mzlab_core::manint::{EXT_HEAD, FIG_HEAD, HEAD, QUALITY_HEAD, SN_HEAD, STATE_HEAD};
     let head = HEAD.trim_end();
     let ext = EXT_HEAD.trim_start_matches(',');
     let list = |h: &str| h.trim_start_matches(',').to_string();
     format!(
 "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--json] [--out PATH]
        mzlab-cli peak table (FILE... | --traces PATH...) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH...) --auto [--params PATH]
 
@@ -50,7 +50,7 @@ usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums]
                   traces you supply (a chromatogram, an XIC, a DAD trace), or the trace-set/1 or trace/1 that trace xic and trace chrom write, one sample per file:
                   --traces a.json --traces b.json (one channel per trace, an XIC by its m/z); \"corr\" on a window is a note kept in its row. With a panel on a trace the
                   table has more columns after origin: {ext}
-  --columns LIST  more columns after the others, any of: sn ({sn}: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
+  --columns LIST  more columns after the others, any of: state ({state}: forced for a window given or moved by you, detected for the engine's own peak, absent for no_peak), sn ({sn}: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
                   fig ({fig}, on the window's own baseline), quality ({quality}); the bytes of the page's table
   --json      the table as JSON {{\"columns\": [NAME], \"rows\": [{{NAME: TEXT}}]}} (every cell the text of the CSV, so a number keeps its digits); with --shifts or --auto the
               answer is JSON already and --json changes nothing
@@ -67,7 +67,8 @@ spreadsheet in any locale.",
         ext = ext,
         sn = list(SN_HEAD),
         fig = list(FIG_HEAD),
-        quality = list(QUALITY_HEAD)
+        quality = list(QUALITY_HEAD),
+        state = list(STATE_HEAD)
     )
 }
 

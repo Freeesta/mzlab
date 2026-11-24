@@ -67,7 +67,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -186,7 +186,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -305,7 +305,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -840,7 +840,7 @@ exit 0
 --- stdout
 mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--max-shift MIN] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--json] [--out PATH]
        mzlab-cli peak table (FILE... | --traces PATH...) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH...) --auto [--params PATH]
 
@@ -867,7 +867,7 @@ usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums]
                   traces you supply (a chromatogram, an XIC, a DAD trace), or the trace-set/1 or trace/1 that trace xic and trace chrom write, one sample per file:
                   --traces a.json --traces b.json (one channel per trace, an XIC by its m/z); "corr" on a window is a note kept in its row. With a panel on a trace the
                   table has more columns after origin: panel,conc,conc_unit,correction,below,area_unit
-  --columns LIST  more columns after the others, any of: sn (sn_zone: the height over the noise of the stretch a window names with "noise": [a, b], empty without),
+  --columns LIST  more columns after the others, any of: state (state: forced for a window given or moved by you, detected for the engine's own peak, absent for no_peak), sn (sn_zone: the height over the noise of the stretch a window names with "noise": [a, b], empty without),
                   fig (w_half_min,plates,tailing, on the window's own baseline), quality (gaussian,asymmetry,noise_score); the bytes of the page's table
   --json      the table as JSON {"columns": [NAME], "rows": [{NAME: TEXT}]} (every cell the text of the CSV, so a number keeps its digits); with --shifts or --auto the
               answer is JSON already and --json changes nothing

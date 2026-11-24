@@ -73,6 +73,24 @@ fn the_windows_are_the_table_rows_grouped_by_peak_then_file() {
 }
 
 #[test]
+fn every_auto_window_carries_the_detected_state_beside_its_sn() {
+    let t = auto_text(&three(), "{}").unwrap();
+    assert_eq!(
+        t.matches("\"state\":\"detected\"").count(),
+        t.matches("\"sn\":").count()
+    );
+    assert!(t.matches("\"state\":").count() >= 3, "{t}");
+    // the windows go back into the table with the state column: the engine's own peaks are `detected`
+    let w = &t[t.find("\"windows\":").unwrap() + 10..t.find(",\"log\"").unwrap()];
+    let doc = format!("{{\"windows\":{w},\"columns\":[\"state\"]}}");
+    let csv = table_text(&three(), &doc, false).unwrap();
+    assert!(
+        csv.lines().skip(1).all(|l| l.ends_with(",detected")),
+        "{csv}"
+    );
+}
+
+#[test]
 fn the_same_request_gives_the_same_bytes() {
     assert_eq!(
         auto_text(&three(), "{}").unwrap(),

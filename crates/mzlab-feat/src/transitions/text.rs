@@ -222,7 +222,7 @@ const ROW_HEAD: &str = "name,isomer_group,q1,q3,polarity,rt,rt_window";
 
 fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> String {
     let mut out =
-        format!("sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak{BASE_HEAD},below\n");
+        format!("sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak{BASE_HEAD},below,state\n");
     for (sample, v) in cells {
         for (r, c) in rows.iter().zip(v) {
             let f = c.found.as_ref();
@@ -239,6 +239,8 @@ fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> Stri
             );
             // `below` stays empty against the edge line: `find_peak` clips what lies under it to 0
             out += &format!("{},{}", base_cell(s), opt(c.below, 1));
+            // the value-state word beside the `peak` flag, appended after the older columns
+            out += &format!(",{}", crate::value_state::flag_state(c.flag));
             out.push('\n');
         }
     }

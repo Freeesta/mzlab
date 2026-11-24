@@ -216,7 +216,7 @@ fn from_zero_the_cli_and_the_browser_entry_agree_and_say_so() {
         .lines()
         .next()
         .unwrap()
-        .ends_with(",peak,baseline,below"));
+        .ends_with(",peak,baseline,below,state"));
     let (az, ae): (f64, f64) = (
         cell(&zero, "s1.mzML", "isoA", "area").parse().unwrap(),
         cell(&edges, "s1.mzML", "isoA", "area").parse().unwrap(),

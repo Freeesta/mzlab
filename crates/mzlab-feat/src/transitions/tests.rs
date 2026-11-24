@@ -138,7 +138,7 @@ fn the_example_table_reads_and_its_isobaric_rows_share_a_group() {
 #[test]
 fn each_row_takes_its_peak_inside_its_window_and_says_why_it_has_none() {
     let text = channels_text(&params("peaks"), TABLE, &samples()).unwrap();
-    assert!(text.starts_with("sample,name,isomer_group,q1,q3,polarity,rt,rt_window,apex_rt,area,height,snr,fwhm_s,peak,baseline,below\n"));
+    assert!(text.starts_with("sample,name,isomer_group,q1,q3,polarity,rt,rt_window,apex_rt,area,height,snr,fwhm_s,peak,baseline,below,state\n"));
     assert_eq!(text.lines().count(), 1 + 2 * 7);
     for (sample, name, apex) in [
         ("s1.mzML", "isoA", 2.5),
@@ -162,6 +162,10 @@ fn each_row_takes_its_peak_inside_its_window_and_says_why_it_has_none() {
     assert_eq!(get(&line(&text, "s1.mzML", "wrongPol"), "peak"), "no_trace");
     assert_eq!(get(&line(&text, "s1.mzML", "srm"), "peak"), "no_trace");
     assert_eq!(get(&line(&text, "s1.mzML", "unknown"), "peak"), "no_rt");
+    // the value-state word beside every flag: a number is `detected`, a window without a peak `absent`, nothing measured `na`
+    assert_eq!(get(&line(&text, "s1.mzML", "isoA"), "state"), "detected");
+    assert_eq!(get(&line(&text, "s1.mzML", "wrongPol"), "state"), "na");
+    assert_eq!(get(&line(&text, "s1.mzML", "unknown"), "state"), "na");
     // the same bytes on every call
     assert_eq!(
         text,
@@ -178,6 +182,7 @@ fn a_window_without_a_peak_is_no_peak() {
         "no_peak",
         "{text}"
     );
+    assert_eq!(get(&line(&text, "s1.mzML", "flat"), "state"), "absent");
     let wide = channels_text(&params("table"), t, &samples()).unwrap();
     assert!(
         wide.lines().nth(1).unwrap().ends_with(",,,,,0,,,zero"),
@@ -267,7 +272,7 @@ fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
         .lines()
         .next()
         .unwrap()
-        .ends_with(",peak,baseline,below"));
+        .ends_with(",peak,baseline,below,state"));
     let mut p = params("peaks");
     p.push(("baseline".into(), Value::Str("zero".into())));
     let zero = channels_text(&p, TABLE, &s).unwrap();
@@ -277,7 +282,7 @@ fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
         .lines()
         .next()
         .unwrap()
-        .ends_with(",peak,baseline,below"));
+        .ends_with(",peak,baseline,below,state"));
     let (e, z) = (
         line(&edges, "s1.mzML", "ionB"),
         line(&zero, "s1.mzML", "ionB"),

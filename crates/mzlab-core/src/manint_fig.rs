@@ -1,4 +1,4 @@
-//! Optional figure columns of `manint::table_text` (`columns` of the windows document): `sn` (S/N against the noise zone the user picked), `fig`
+//! Optional figure columns of `manint::table_text` (`columns` of the windows document): `state` (the value-state word of the window), `sn` (S/N against the noise zone the user picked), `fig`
 //! (width at half height, plates, USP tailing) and `quality` (Gaussian similarity, asymmetry at 10 %, noise score). Port of `chromPeak` / `noiseSD` of
 //! the page's former dialog, so the numbers of the one table equal it; the figures are measured on the window's own baseline.
 
@@ -13,14 +13,17 @@ pub(super) struct Cols {
     pub sn: bool,
     pub fig: bool,
     pub quality: bool,
+    pub state: bool,
 }
 
 /// The header cells of each group, in the order the groups are written.
 pub const SN_HEAD: &str = ",sn_zone";
 pub const FIG_HEAD: &str = ",w_half_min,plates,tailing";
 pub const QUALITY_HEAD: &str = ",gaussian,asymmetry,noise_score";
+/// The value-state word of the window (`value_word::origin_state` of its `origin`).
+pub const STATE_HEAD: &str = ",state";
 
-/// The windows alone (an array), or `{"windows": [...], "columns": ["sn", "fig", "quality"]}` to add the optional figure columns.
+/// The windows alone (an array), or `{"windows": [...], "columns": ["sn", "fig", "quality", "state"]}` to add the optional figure columns.
 pub(super) fn split(doc: &Value) -> Result<(&Value, Cols)> {
     match doc {
         Value::Obj(_) => Ok((
@@ -32,7 +35,7 @@ pub(super) fn split(doc: &Value) -> Result<(&Value, Cols)> {
 }
 
 impl Cols {
-    /// The groups named in `columns` (a JSON array of `sn`, `fig`, `quality`); an unknown name is an error, never ignored.
+    /// The groups named in `columns` (a JSON array of `sn`, `fig`, `quality`, `state`); an unknown name is an error, never ignored.
     pub(super) fn of(v: Option<&Value>) -> Result<Cols> {
         let mut c = Cols::default();
         for n in v.map_or(&[][..], Value::arr) {
@@ -40,6 +43,7 @@ impl Cols {
                 Some("sn") => c.sn = true,
                 Some("fig") => c.fig = true,
                 Some("quality") => c.quality = true,
+                Some("state") => c.state = true,
                 other => {
                     return Err(Error::new("err.manint.columns").with("column", other.unwrap_or("")))
                 }
@@ -49,7 +53,10 @@ impl Cols {
     }
     /// How many cells the groups add to a row.
     pub(super) fn count(&self) -> usize {
-        3 * usize::from(self.quality) + 3 * usize::from(self.fig) + usize::from(self.sn)
+        3 * usize::from(self.quality)
+            + 3 * usize::from(self.fig)
+            + usize::from(self.sn)
+            + usize::from(self.state)
     }
     pub(super) fn any(&self) -> bool {
         self.count() > 0
@@ -65,6 +72,9 @@ impl Cols {
         }
         if self.quality {
             s += QUALITY_HEAD;
+        }
+        if self.state {
+            s += STATE_HEAD;
         }
         s
     }
@@ -102,6 +112,9 @@ impl Cols {
                 num(q.as_ref().and_then(|q| q.asymmetry), 2),
                 num(q.as_ref().map(|q| q.noise_score), 2)
             );
+        }
+        if self.state {
+            s += &format!(",{}", crate::value_word::origin_state(r.origin));
         }
         s
     }

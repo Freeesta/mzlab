@@ -159,6 +159,9 @@ fn ion_json(o: &mut Out, i: &Ion) {
         .opt(i.rt.map(|v| round(v, 4)))
         .raw(",\"snr\":")
         .num(round(i.snr, 4));
+    // beside the S/N: a peak that passed the S/N floor is `detected`, anything else is a covered window without one
+    o.raw(",\"state\":")
+        .str(crate::aligned::EVIDENCE[if i.detected { 0 } else { 3 }]);
     o.raw(",\"detected\":")
         .raw(if i.detected { "true" } else { "false" });
     o.raw(",\"left\":")

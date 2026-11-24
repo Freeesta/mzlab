@@ -444,7 +444,7 @@ use edges::{drop_line, edge3, edges_area};
 mod csv;
 use csv::csv_text;
 pub use csv::EXT_HEAD;
-pub use fig::{FIG_HEAD, QUALITY_HEAD, SN_HEAD};
+pub use fig::{FIG_HEAD, QUALITY_HEAD, SN_HEAD, STATE_HEAD};
 #[path = "manint_fig.rs"]
 mod fig;
 use fig::Cols;

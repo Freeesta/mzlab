@@ -73,6 +73,31 @@ fn the_snr_needs_a_noise_zone() {
 }
 
 #[test]
+fn the_state_column_names_how_the_window_was_made() {
+    let (h, r) = cells(&format!(
+        "{{\"windows\":[{}],\"columns\":[\"state\"]}}",
+        win("")
+    ));
+    let n = HEAD.trim_end().split(',').count();
+    assert_eq!((h[n].as_str(), r[n].as_str()), ("state", "forced"));
+    // `forced` is a given window (origin manual): the table without the column keeps its bytes
+    let plain = table_text(&files(), &format!("[{}]", win("")), false).unwrap();
+    let with = table_text(
+        &files(),
+        &format!("{{\"windows\":[{}],\"columns\":[\"state\"]}}", win("")),
+        false,
+    )
+    .unwrap();
+    let cut = |t: &str| {
+        t.lines()
+            .map(|l| l.rsplit_once(',').unwrap().0.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(cut(&with) + "\n", plain);
+}
+
+#[test]
 fn a_window_too_narrow_gives_empty_cells_and_an_unknown_group_is_refused() {
     let w = "{\"file\":0,\"tr\":0,\"a\":3.0,\"b\":3.01,\"baseline\":\"edges\"}";
     let (_, r) = cells(&format!("{{\"windows\":[{w}],\"columns\":[\"fig\"]}}"));
