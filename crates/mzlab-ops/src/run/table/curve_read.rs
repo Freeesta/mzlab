@@ -76,6 +76,8 @@ pub(super) struct Resp {
     pub(super) peak: Option<String>,
     /// an S/N ≤ 0 of a peak, left out of the S/N limits
     pub(super) bad_snr: Option<f64>,
+    /// the S/N as the file gives it, for any row (also one that is not a peak or has S/N ≤ 0): evidence of the state, never used in a limit
+    pub(super) seen_snr: Option<f64>,
 }
 
 /// A row of the responses that is not a peak: (analyte or empty, line, reason).
@@ -127,6 +129,7 @@ pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<(Vec<Resp
             snr: sn.filter(|v| *v > 0.0 && is_peak),
             peak: (peak.is_some() && status != "ok").then(|| status.to_string()),
             bad_snr: sn.filter(|v| *v <= 0.0 && is_peak),
+            seen_snr: sn,
         });
     }
     if out.is_empty() {

@@ -93,3 +93,7 @@ def test_the_golden_json_and_csv_agree_with_an_independent_weighted_fit():
             if s["role"] == "sample":
                 want = "below_range" if back < min(x) else "above_range" if back > max(x) else "ok"
                 assert row["note"] == want, (an, s["sample"], row["note"])
+                # the value state of a measured number (AU-3): under the lowest calibrator it is below_loq, else detected
+                assert row["state"] == ("below_loq" if want == "below_range" else "detected"), (an, s["sample"], row["state"])
+            key = (an, s["sample"])
+            assert (float(row["sn"]) == snr[key]) if key in snr else row["sn"] == "", (key, row["sn"])

@@ -7,6 +7,7 @@
 use mzlab_core::calib::{fit, Fit, Model};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
+use mzlab_feat::value_state::under_loq;
 
 use super::curve_read::{
     bad_param, parse_responses, parse_standards, settings, Resp, Settings, Skipped, Std,
@@ -24,7 +25,7 @@ const LOQ_SN: f64 = 10.0;
 pub const ROLES: [&str; 4] = ["standard", "qc", "sample", "blank"];
 /// The header of the concentrations CSV.
 pub const CSV_HEAD: &str =
-    "analyte,sample,role,level,signal,istd_signal,response,concentration,unit,accuracy_pct,note\n";
+    "analyte,sample,role,level,signal,istd_signal,response,concentration,unit,accuracy_pct,note,state,sn\n";
 /// What a sample absent from the standards table is: an unknown, without level or dilution.
 static UNLISTED: Std = Std {
     sample: String::new(),
@@ -175,6 +176,22 @@ impl<'a> Run<'a> {
             .unwrap_or(&UNLISTED)
     }
 
+    /// The value state of the analyte's number in a sample and its S/N (as the responses give it, also when the peak is not used): `na` when
+    /// the responses have no row for the pair (nothing was measured), `absent` when the row is not a peak (`peak` is not `ok` or `edge`), else `detected`.
+    fn value(&self, a: &str, s: &str) -> (&'static str, Option<f64>) {
+        match self.peak(a, s) {
+            None => ("na", None),
+            Some(r) => (
+                if r.signal.is_some() {
+                    "detected"
+                } else {
+                    "absent"
+                },
+                r.seen_snr,
+            ),
+        }
+    }
+
     fn response(&self, a: &str, istd: Option<&str>, s: &str) -> Response {
         let sig = self.peak(a, s).and_then(|r| r.signal);
         let Some(is) = istd else {
@@ -212,12 +229,15 @@ impl<'a> Run<'a> {
             }
             let x = t.conc.unwrap_or(0.0);
             let (_, _, y) = self.response(a, istd, s);
+            let (state, sn) = self.value(a, s);
             let mut p = Point {
                 std: t,
                 x,
                 y: y.ok(),
                 w: None,
                 out: y.err(),
+                state,
+                sn,
             };
             let user = self
                 .set
@@ -383,7 +403,14 @@ impl<'a> Run<'a> {
             csv.push_str(c);
             csv.push(',');
         }
+        // a measured number under the range of the curve is `below_loq` (the lowest calibrator is the LLOQ); the peak's S/N is the evidence
+        let (state, sn) = self.value(a, s);
+        let state = under_loq(state, note == "below_range");
         csv.push_str(note);
+        csv.push(',');
+        csv.push_str(state);
+        csv.push(',');
+        csv.push_str(&opt_csv(sn));
         csv.push('\n');
     }
 }
@@ -462,6 +489,9 @@ pub fn curve_text(
     Ok((o.0, csv, warnings))
 }
 
+#[cfg(test)]
+#[path = "curve_state_tests.rs"]
+mod state_tests;
 #[cfg(test)]
 #[path = "curve_tests.rs"]
 mod tests;

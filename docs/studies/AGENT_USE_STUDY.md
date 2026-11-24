@@ -121,6 +121,8 @@ Acceptance tests:
 - `table.stats` on a table with FILLED cells excludes them by default, and `prov/1` names the states used.
 - The MZmine-format export still prints ESTIMATED for FILLED and TARGETED (golden file unchanged).
 
+Status: slice 1 of AU-3 (state and S/N in the concentration outputs `quant.curve` and `quant.calibrate`) is in `docs/agenti/value-states.md`, with the follow-ups still open (aligned CSV `snr` and the ABSENT/NA split, Dig rows, `table.stats` state filters).
+
 ## 3. CSV sample metadata and blank subtraction with fold change
 ### 3.1 Metadata CSV
 The engine reads `samples/1` from CSV (`samples/csv.rs`: separators `,` `;` tab, synonyms `condition`, `replicate`, `role`, `dose`, `time`, free columns kept), and the page uses it (`F.metaImport`); the CLI has only `sample table` (roles from names).

@@ -70,10 +70,10 @@ fn the_synthetic_series_gives_the_golden_files() {
     // u1 is below and u4 above the calibrated range, the QC is back within 15 %
     assert!(csv
         .lines()
-        .any(|l| l.starts_with("A,u1,") && l.ends_with(",below_range")));
+        .any(|l| l.starts_with("A,u1,") && l.contains(",below_range,below_loq,")));
     assert!(csv
         .lines()
-        .any(|l| l.starts_with("A,u4,") && l.ends_with(",above_range")));
+        .any(|l| l.starts_with("A,u4,") && l.contains(",above_range,detected,")));
     let qc: f64 = csv
         .lines()
         .find(|l| l.starts_with("A,qc1,"))

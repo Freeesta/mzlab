@@ -21,7 +21,7 @@ const LEVELS: [(f64, &str); 5] = [
 ];
 
 /// Standards s1..s5 of A at the five levels, unknowns u1 (10), u2 (100), a blank b; area = 100 + 50·x.
-fn exact() -> (String, String) {
+pub(super) fn exact() -> (String, String) {
     let mut resp = String::from("sample,name,area,height,snr\n");
     let mut stds = String::from("sample;level;concentration;unit;role\n");
     for (i, (x, l)) in LEVELS.iter().enumerate() {
@@ -39,7 +39,7 @@ fn exact() -> (String, String) {
     (resp, stds)
 }
 
-fn run(params: &[(&str, &str)], resp: &str, stds: &str) -> (Value, String, Vec<String>) {
+pub(super) fn run(params: &[(&str, &str)], resp: &str, stds: &str) -> (Value, String, Vec<String>) {
     let (json, csv, warn) = curve_text(&p(params), resp.as_bytes(), stds.as_bytes()).unwrap();
     (parse(json.as_bytes()).unwrap(), csv, warn)
 }
@@ -55,10 +55,15 @@ fn close(got: f64, want: f64) {
     );
 }
 
-fn line<'a>(csv: &'a str, start: &str) -> &'a str {
+pub(super) fn line<'a>(csv: &'a str, start: &str) -> &'a str {
     csv.lines()
         .find(|l| l.starts_with(start))
         .unwrap_or_else(|| panic!("{start}: {csv}"))
+}
+
+/// The `note` of a row: the third field from the end (`note,state,sn`).
+pub(super) fn note_of(line: &str) -> &str {
+    line.rsplit(',').nth(2).unwrap_or("")
 }
 
 #[test]
@@ -83,8 +88,8 @@ fn an_exact_line_back_calculates_its_standards_and_flags_the_unknowns() {
     let u1: Vec<&str> = line(&csv, "A,u1,").split(',').collect();
     close(u1[7].parse().unwrap(), 10.0);
     assert_eq!(u1[10], "ok");
-    assert!(line(&csv, "A,u2,").ends_with(",above_range"));
-    assert!(line(&csv, "A,b,blank,").ends_with(",below_range"));
+    assert_eq!(note_of(line(&csv, "A,u2,")), "above_range");
+    assert_eq!(note_of(line(&csv, "A,b,blank,")), "below_range");
     assert_eq!(warn, vec!["warn.flow.curve.range"]);
     // the same inputs give the same bytes
     let a = curve_text(&[], r.as_bytes(), s.as_bytes()).unwrap();
@@ -145,7 +150,7 @@ fn the_internal_standard_cancels_a_varying_injection() {
     let u1: Vec<&str> = line(&csv, "A,u1,").split(',').collect();
     assert_eq!((u1[4], u1[5], u1[6]), ("9000", "1500", "6"));
     close(u1[7].parse().unwrap(), 3.0);
-    assert!(line(&csv, "A,u2,").ends_with(",no_istd"));
+    assert_eq!(note_of(line(&csv, "A,u2,")), "no_istd");
     assert!(warn.contains(&"warn.flow.curve.noResponse".to_string()));
     let log = doc.get("log").unwrap().arr();
     assert!(log
@@ -178,7 +183,7 @@ fn an_excluded_point_is_logged_with_the_users_reason_and_left_out_of_the_fit() {
     close(num(s3, "back"), 16.0);
     let log = doc.get("log").unwrap().at(0).unwrap();
     assert_eq!(log.get("note").and_then(Value::str), Some("spiked vial"));
-    assert!(line(&csv, "A,s3,").ends_with(",excluded_by_user"));
+    assert_eq!(note_of(line(&csv, "A,s3,")), "excluded_by_user");
     assert!(warn.contains(&"warn.flow.curve.excluded".to_string()));
     // `*` excludes a sample for every analyte; a sample that does not exist is refused
     assert!(curve_text(&p(&[("exclude", "*|s3")]), r.as_bytes(), s.as_bytes()).is_ok());
@@ -209,7 +214,7 @@ fn a_zero_standard_has_no_weight_under_one_over_x_and_is_logged() {
         c.get("range").unwrap().at(0).and_then(Value::f64),
         Some(1.0)
     );
-    assert!(line(&csv, "A,u3,").ends_with(",below_range"));
+    assert_eq!(note_of(line(&csv, "A,u3,")), "below_range");
     assert!(log_has(&doc, "range_lower", "lowest_nonzero_standard", "1"));
 }
 
@@ -338,7 +343,7 @@ fn a_curve_without_enough_levels_reports_its_error_and_quantifies_nothing() {
         Some("err.flow.curve.singular")
     );
     assert!(c.get("a").unwrap().is_null());
-    assert!(line(&csv, "A,u,").ends_with(",no_curve"));
+    assert_eq!(note_of(line(&csv, "A,u,")), "no_curve");
     assert_eq!(warn, vec!["warn.flow.curve.failed"]);
 }
 
@@ -379,7 +384,7 @@ fn the_manual_integrations_and_the_transitions_tables_are_read_as_they_are() {
         s1,A,,200,100,+,1,0.5,1,150,10,8,3,ok,zero,0\ns2,A,,200,100,+,1,0.5,1,250,10,8,3,edge,zero,0\n\
         s3,A,,200,100,+,1,0.5,1,450,10,8,3,ok,zero,0\nu,A,,200,100,+,1,0.5,1,90,10,1,3,no_peak,zero,0\n";
     let (doc, csv, warn) = run(&[("weight", "1")], resp, &format!("{stds}u;;sample\n"));
-    assert!(line(&csv, "A,u,").ends_with(",no_response"));
+    assert_eq!(note_of(line(&csv, "A,u,")), "no_response");
     // the peak cut at the window edge stays in the fit, never unseen; the row without a peak says which status it had
     assert!(log_has(&doc, "kept", "peak_at_window_edge", "edge"));
     assert!(log_has(

@@ -6,7 +6,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 use mzlab_feat::samples::{self, KINDS};
 use mzlab_feat::store::{origin_from_meta, read_table_from, Slice};
-use mzlab_feat::table::{Aligned, CELL_ABSENT};
+use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_NA};
+use mzlab_feat::value_state::{cell_state, under_loq};
 
 pub const DEFAULT_MZ_TOL: f64 = 0.5;
 pub const DEFAULT_RT_TOL: f64 = 0.3;
@@ -183,6 +184,46 @@ fn flag_of(measured: f64, c: &Curve) -> &'static str {
     }
 }
 
+/// The fields of one cell after the file name: `signal,concentration,unit,flag,state,row_sn`, and its flag. A cell without a peak (`absent`) or not measured
+/// (`na`) has empty numbers; the S/N is the median of the row's detected peaks, empty when the table keeps no summary.
+fn cell_line(
+    t: &Aligned,
+    row: usize,
+    cell: usize,
+    c: &Curve,
+    by_height: bool,
+) -> (String, &'static str) {
+    let row_sn = (!t.meta.is_empty())
+        .then(|| t.meta.get(row).q_snr)
+        .filter(|v| v.is_finite())
+        .map_or(String::new(), |v| format!("{v}"));
+    let unit = quoted(&c.unit);
+    let state = cell_state(t.state[cell], false);
+    if t.state[cell] == CELL_ABSENT || t.state[cell] == CELL_NA {
+        let flag = if t.state[cell] == CELL_NA {
+            "not_applicable"
+        } else {
+            "not_detected"
+        };
+        return (format!(",,{unit},{flag},{state},{row_sn}"), flag);
+    }
+    let signal = if by_height {
+        f64::from(t.height[cell])
+    } else {
+        t.area[cell]
+    };
+    let measured = (signal - c.intercept) / c.slope;
+    let flag = flag_of(measured, c);
+    let state = under_loq(state, flag == "below_range");
+    (
+        format!(
+            "{signal},{:.6e},{unit},{flag},{state},{row_sn}",
+            measured * c.dilution
+        ),
+        flag,
+    )
+}
+
 /// The sample types to quantify, each one a type of `samples/1`.
 fn kinds_of(params: &[(String, Value)]) -> Result<Vec<String>> {
     let kinds: Vec<String> = param(params, "kinds")
@@ -233,8 +274,10 @@ fn warn_keys(on: [bool; 4]) -> Vec<String> {
         .collect()
 }
 
-/// The CSV `compound,mz,rt,sample,signal,concentration,unit,flag` and the warnings. `flag` is `ok`, `not_detected`, `below_range`, `above_range` or `negative`;
-/// the range is checked on the concentration read from the curve, the dilution factor is applied after it.
+/// The CSV `compound,mz,rt,sample,signal,concentration,unit,flag,state,row_sn` and the warnings. `flag` is `ok`, `not_detected`, `not_applicable` (the file does not cover the row),
+/// `below_range`, `above_range` or `negative`; the range is checked on the concentration read from the curve, the dilution factor is applied after it. `state` is the value state
+/// of the number (`detected`, `forced`, `filled`, `below_loq`, `absent`, `na`: a file that does not cover the row has no number, never a NaN) and `row_sn`
+/// the median S/N of the detected peaks of the row, empty when the table keeps no summary (the S/N of one cell is in the file's own features).
 pub fn quant_text(
     params: &[(String, Value)],
     table: &[u8],
@@ -258,7 +301,8 @@ pub fn quant_text(
     if !listed {
         warnings.push("warn.flow.quant.unlisted".into());
     }
-    let mut out = String::from("compound,mz,rt,sample,signal,concentration,unit,flag\n");
+    let mut out =
+        String::from("compound,mz,rt,sample,signal,concentration,unit,flag,state,row_sn\n");
     let (mut no_row, mut shared, mut range, mut negative) = (false, false, false, false);
     let mut taken: Vec<usize> = Vec::new();
     for c in &curves {
@@ -280,24 +324,10 @@ pub fn quant_text(
                 t.rt[row],
                 quoted(name)
             );
-            if t.state[cell] == CELL_ABSENT {
-                out += &format!("{head},,{},not_detected\n", quoted(&c.unit));
-                continue;
-            }
-            let signal = if by_height {
-                t.height[cell] as f64
-            } else {
-                t.area[cell]
-            };
-            let measured = (signal - c.intercept) / c.slope;
-            let flag = flag_of(measured, c);
+            let (line, flag) = cell_line(&t, row, cell, c, by_height);
+            out += &format!("{head}{line}\n");
             negative |= flag == "negative";
             range |= flag.ends_with("_range");
-            out += &format!(
-                "{head}{signal},{:.6e},{},{flag}\n",
-                measured * c.dilution,
-                quoted(&c.unit)
-            );
         }
     }
     warnings.extend(warn_keys([no_row, shared, range, negative]));
