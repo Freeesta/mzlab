@@ -21,6 +21,7 @@ const JSON_FLAG: &[&str] = &[
     "flow command",
     "flow steps",
     "table compare",
+    "quant targets",
     "commands",
     "file validate",
     "file convert",

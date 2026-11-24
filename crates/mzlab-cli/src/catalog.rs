@@ -107,6 +107,12 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--factor", "ratio threshold"),
     ("--pseudocount", "auto or a number"),
     ("--find", "task words"),
+    ("--targets", "targets CSV or JSON"),
+    ("--min-sn", "lowest detected S/N"),
+    ("--offset", "m/z offset"),
+    ("--blank-pattern", "blank file name globs"),
+    ("--log", "log file"),
+    ("--workers", "files at once"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

@@ -41,8 +41,16 @@ impl Mol {
 
     /// The same molecule with its atoms in canonical order (layers moved along, `id` kept as it is).
     pub fn canonical(&self) -> Mol {
-        let order = self.canonical_order();
-        self.renumbered(&order).unwrap_or_else(|_| self.clone())
+        self.canonical_counted().0
+    }
+
+    /// The canonical record and the work units its order took.
+    pub(crate) fn canonical_counted(&self) -> (Mol, u64) {
+        let (order, work) = self.canonical_order_counted();
+        (
+            self.renumbered(&order).unwrap_or_else(|_| self.clone()),
+            work,
+        )
     }
 
     /// Identity string of the molecule: the version and the core hash of the canonical record; stereo (and its status) is part of it.

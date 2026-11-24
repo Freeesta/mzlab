@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quant-targets/1",
+  "title": "quant-targets/1: every target of a table integrated in every file",
+  "description": "The answer of `mzlab-cli quant targets --json`: the rows of the long table (the CSV of the command and of the Flow step `quant.targets@1`, one row per file and target, in input order, never hidden) and the log. Peaks are found by the peak auto-lr engine inside each target's RT window; every row has a state: detected (no flag among no_scans, no_peak, below_threshold, bad_shape), forced or absent. Code: crates/mzlab-feat/src/quant_targets/.",
+  "type": "object",
+  "required": [
+    "schema",
+    "rows",
+    "log"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "quant-targets/1"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "id",
+          "area",
+          "height",
+          "sn",
+          "rt",
+          "flag",
+          "state",
+          "points",
+          "shape",
+          "start_rt",
+          "end_rt",
+          "peaks_in_window",
+          "smooth_half",
+          "mz_offset_da"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "File name as given (no folder)."
+          },
+          "id": {
+            "type": "string",
+            "description": "Target id of the table."
+          },
+          "area": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Area of the peak, counts x s (null: no peak)."
+          },
+          "height": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Apex height, counts."
+          },
+          "sn": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Signal-to-noise of the peak (peak auto-lr noise)."
+          },
+          "rt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Apex RT, min."
+          },
+          "flag": {
+            "type": "string",
+            "pattern": "^(ok|(no_scans|no_peak|below_threshold|bad_shape|edge|in_blank)(;(below_threshold|bad_shape|edge|in_blank))*)$",
+            "description": "ok, or the flags joined by ';': no_scans, no_peak, below_threshold, bad_shape, edge, in_blank."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "detected",
+              "forced",
+              "absent"
+            ],
+            "description": "detected: a peak with S/N >= min_sn and an acceptable shape; forced: a peak under min_sn or the shape minimum, its numbers kept and flagged; absent: no peak in the window or no scan (numbers null). No value is gap-filled."
+          },
+          "points": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Scans between the edges of the peak."
+          },
+          "shape": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Correlation of the peak with a Gaussian of the same apex and width (peakq::quality)."
+          },
+          "start_rt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Left edge, min."
+          },
+          "end_rt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Right edge, min."
+          },
+          "peaks_in_window": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Peaks with their apex inside the window; the row is the tallest."
+          },
+          "smooth_half": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Savitzky-Golay half window the detection used on this trace."
+          },
+          "mz_offset_da": {
+            "type": "number",
+            "description": "m/z offset (observed - true) applied to this trace, Da."
+          }
+        }
+      }
+    },
+    "log": {
+      "type": "object",
+      "description": "quant-targets-log/1: the log --log writes and the log port of the step.",
+      "required": [
+        "schema",
+        "params",
+        "files",
+        "choices",
+        "warnings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "quant-targets-log/1"
+        },
+        "params": {
+          "type": "object",
+          "required": [
+            "da",
+            "min_sn",
+            "min_points",
+            "min_shape",
+            "offset",
+            "blank_pattern",
+            "ms_level",
+            "smooth_half",
+            "valley"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "da": {
+              "type": "number"
+            },
+            "min_sn": {
+              "type": "number"
+            },
+            "min_points": {
+              "type": "integer"
+            },
+            "min_shape": {
+              "type": "number"
+            },
+            "offset": {
+              "type": "string"
+            },
+            "blank_pattern": {
+              "type": "string"
+            },
+            "ms_level": {
+              "type": "integer"
+            },
+            "smooth_half": {
+              "type": "integer"
+            },
+            "valley": {
+              "type": "number"
+            }
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "blank",
+              "offsets",
+              "detected"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "blank": {
+                "type": "boolean"
+              },
+              "detected": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Rows of this file without no_scans, no_peak, below_threshold, bad_shape."
+              },
+              "offsets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "polarity",
+                    "mz_offset_da",
+                    "reference",
+                    "evidence"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "polarity": {
+                      "enum": [
+                        "+",
+                        "-",
+                        "any"
+                      ]
+                    },
+                    "mz_offset_da": {
+                      "type": "number"
+                    },
+                    "reference": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "The reference row measured (offset auto)."
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "description": "The mzcal evidence of the offset (mode, ion, scans, apex, spread, S/N)."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "value",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

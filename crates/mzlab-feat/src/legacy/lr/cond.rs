@@ -38,10 +38,15 @@ fn is_t0(f: &FileIn) -> bool {
 }
 
 fn is_blank(f: &FileIn) -> bool {
-    f.kind == "blank" || f.kind == "control"
+    f.kind == "blank"
 }
 
-/// The columns that judge condition `cond`: its treated samples, and per kind of control its own files if it has any, else the shared ones.
+fn is_dark(f: &FileIn) -> bool {
+    f.kind == "control"
+}
+
+/// The columns that judge condition `cond`: its treated samples, and per kind of control (t0, blank, dark control) its own files if it has any,
+/// else the shared ones: a condition with its own dark control still reads the shared blank.
 pub fn members(files: &[FileIn], cond: &str) -> Vec<usize> {
     let of =
         |k: &usize, sel: &dyn Fn(&FileIn) -> bool, c: &str| sel(&files[*k]) && files[*k].cond == c;
@@ -51,7 +56,7 @@ pub fn members(files: &[FileIn], cond: &str) -> Vec<usize> {
         .filter(|k| files[**k].kind == "sample" && !is_t0(&files[**k]) && files[**k].cond == cond)
         .copied()
         .collect();
-    for sel in [&is_t0 as &dyn Fn(&FileIn) -> bool, &is_blank] {
+    for sel in [&is_t0 as &dyn Fn(&FileIn) -> bool, &is_blank, &is_dark] {
         let own: Vec<usize> = all.iter().filter(|k| of(k, sel, cond)).copied().collect();
         out.extend(if own.is_empty() {
             all.iter().filter(|k| of(k, sel, "")).copied().collect()

@@ -32,6 +32,9 @@ const INPUT_KEYS: &[&str] = &[
     "err.msn.rules.document",
     "error.badIndex",
     "err.compare.input",
+    "err.quant.targets.table",
+    "err.quant.targets.empty",
+    "err.quant.targets.noFiles",
 ];
 const OUTPUT_KEYS: &[&str] = &[
     "err.cli.out",
