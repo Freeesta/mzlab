@@ -201,6 +201,7 @@
         "baseline": "engine",
         "noise": 549.5483
       },
+      "state": "detected",
       "peaks": [
         {
           "lo": 73,
@@ -215,6 +216,7 @@
           "area_zero": 185191.2176,
           "height": 19926.8642,
           "sn": 36.2604,
+          "state": "detected",
           "end0": "background",
           "end1": "background",
           "clamp0": "none",
