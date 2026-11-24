@@ -6,6 +6,19 @@ use crate::model::{Mol, Stereo, StereoGroup};
 impl Mol {
     /// Each connected piece as its own record, in the order of its first atom; atoms keep their relative order and their layers.
     pub fn pieces(&self) -> Vec<Mol> {
+        let (piece, count) = self.piece_labels();
+        if count <= 1 {
+            return vec![self.clone()];
+        }
+        let mut out = Vec::new();
+        for k in 0..count {
+            out.extend(self.only_piece(&piece, k));
+        }
+        out
+    }
+
+    /// The piece of every atom (numbered in the order of its first atom) and the number of pieces.
+    pub(crate) fn piece_labels(&self) -> (Vec<usize>, usize) {
         let n = self.atoms.len();
         let mut piece = vec![usize::MAX; n];
         let mut count = 0;
@@ -30,17 +43,10 @@ impl Mol {
             }
             count += 1;
         }
-        if count <= 1 {
-            return vec![self.clone()];
-        }
-        let mut out = Vec::new();
-        for k in 0..count {
-            out.extend(self.only_piece(&piece, k));
-        }
-        out
+        (piece, count)
     }
 
-    fn only_piece(&self, piece: &[usize], k: usize) -> Option<Mol> {
+    pub(crate) fn only_piece(&self, piece: &[usize], k: usize) -> Option<Mol> {
         // plain loops: iterator adapters and `retain` closures cost the `.wasm` more
         let n = piece.len();
         let mut new_of_old = vec![0u32; n];

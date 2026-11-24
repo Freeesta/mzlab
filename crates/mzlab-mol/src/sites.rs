@@ -1,10 +1,11 @@
 //! Which atoms and double bonds of a record can carry stereo: `stereo_sites` lists them and `with_stereo_sites` turns a record into
 //! "defined where written, `unknown` where it could be, nothing elsewhere". A site needs a chemically fit atom or bond and substituents
 //! that differ; substituents that only differ through stereo elsewhere (ring cis/trans, pseudo-asymmetric centres) are settled by trying
-//! to flip the element in records whose other sites are given values and comparing canonical forms.
+//! to flip the element in records whose other sites are given values and comparing canonical forms, each piece alone (pieces are independent).
 
 use crate::model::{Cfg, Mol, Parity, Status, Stereo, StereoGroup};
 use crate::sortm::SortM;
+use std::cell::Cell;
 
 /// Number of random assignments of the other sites tried before a site is declared not stereogenic.
 const TRIES: usize = 64;
@@ -16,16 +17,54 @@ const LONE_PAIR: usize = 1;
 impl Mol {
     /// The sites of the molecule, tetrahedral centres first, then double bonds, each in ascending order. Whatever stereo the record carries is ignored.
     pub fn stereo_sites(&self) -> Vec<Site> {
+        self.stereo_sites_counted().0
+    }
+
+    /// The sites and the canonicalisation work their flip tests took. Stereo of different pieces is independent (a flip changes the
+    /// multiset of pieces only if it changes its own piece), so each piece is tested alone: equal pieces add up instead of multiplying.
+    pub(crate) fn stereo_sites_counted(&self) -> (Vec<Site>, u64) {
         let base = self.stripped();
         let cands = base.candidates();
+        let work = Cell::new(0);
+        let (piece, count) = base.piece_labels();
         let mut out = Vec::new();
-        for (i, c) in cands.iter().enumerate() {
-            if c.sure || base.flips(&cands, i) {
-                out.push(c.site);
+        // plain loops: iterator adapters cost the `.wasm` more
+        for k in 0..count {
+            // a single piece, or one that cannot be cut out, is tested in the whole record with its own numbering
+            let one = if count > 1 {
+                base.only_piece(&piece, k)
+            } else {
+                None
+            };
+            // atoms of a cut-out piece keep their relative order, so a local index is the rank among the piece's atoms
+            let mut local = vec![0u32; piece.len()];
+            let mut size = 0;
+            for a in 0..piece.len() {
+                if piece[a] == k {
+                    local[a] = if one.is_some() { size } else { a as u32 };
+                    size += 1;
+                }
+            }
+            let (mut mine, mut sites) = (Vec::new(), Vec::new());
+            for c in &cands {
+                let (first, s) = match c.site {
+                    Site::Tetra(a) => (a, Site::Tetra(local[a as usize])),
+                    Site::Db(a, b) => (a, Site::Db(local[a as usize], local[b as usize])),
+                };
+                if piece[first as usize] == k {
+                    mine.push(c);
+                    sites.push(s);
+                }
+            }
+            let m = one.as_ref().unwrap_or(&base);
+            for (i, c) in mine.iter().enumerate() {
+                if c.sure || m.flips(&sites, i, &work) {
+                    out.push(c.site);
+                }
             }
         }
         out.sortm();
-        out
+        (out, work.get())
     }
 
     /// The record with stereo only on its sites: a written element is kept, a site without one becomes `unknown`, any other element is dropped
@@ -130,7 +169,7 @@ impl Mol {
     }
 
     /// Whether flipping candidate `i` changes the molecule for some values of the other candidates.
-    fn flips(&self, cands: &[Cand], i: usize) -> bool {
+    fn flips(&self, cands: &[Site], i: usize, work: &Cell<u64>) -> bool {
         let others: Vec<usize> = (0..cands.len()).filter(|&j| j != i).collect();
         let mut state = 0x9E37_79B9_7F4A_7C15u64;
         let total = if others.len() <= 5 {
@@ -155,10 +194,12 @@ impl Mol {
                 let mut v: Vec<(Site, bool)> = others
                     .iter()
                     .zip(&bits)
-                    .map(|(&j, &b)| (cands[j].site, b))
+                    .map(|(&j, &b)| (cands[j], b))
                     .collect();
-                v.push((cands[i].site, flip));
-                self.with_values(&v).canonical().core_json()
+                v.push((cands[i], flip));
+                let (m, w) = self.with_values(&v).canonical_counted();
+                work.set(work.get() + w);
+                m.core_json()
             };
             if given(true) != given(false) {
                 return true;
@@ -409,3 +450,7 @@ pub enum Site {
     /// Double bond `a`-`b` with `a < b`.
     Db(u32, u32),
 }
+
+#[cfg(test)]
+#[path = "sites_tests.rs"]
+mod tests;
