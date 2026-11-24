@@ -54,17 +54,20 @@ fn global_help(name: &str) -> &'static str {
         .map_or("", |(_, h)| *h)
 }
 
-/// `with_help` false: the flag is described once at the top of the compact listing (`flag_help`); `with_type` false: its type is in `flag_type`.
-fn flag_json(
-    f: &Flag,
-    with_required: bool,
-    with_help: bool,
-    with_type: bool,
+/// What a flag object shows. The compact listing sets `help` false for a flag described once at the top (`flag_help`), `kind` false for one typed in
+/// `flag_type`, and `derived` false: `required`, `repeat` and an enum's values are then read from the synopsis (`flag_help_note`).
+#[derive(Clone, Copy)]
+struct Show {
+    help: bool,
+    kind: bool,
+    derived: bool,
     global: bool,
-) -> Value {
+}
+
+fn flag_json(f: &Flag, show: Show) -> Value {
     // Members that are null or false are left out: `commands --json` stays small.
     let mut o = Obj::new().put("name", text(&f.name));
-    if with_type {
+    if show.kind {
         o = o.put("type", text(f.kind));
     }
     if let Some(u) = f.unit {
@@ -73,24 +76,26 @@ fn flag_json(
     if let Some(d) = &f.default {
         o = o.put("default", text(d));
     }
-    if !f.values.is_empty() {
+    // an enum flag lists its values only in the full form: the compact one leaves them to the synopsis (`a|b|c`)
+    if !f.values.is_empty() && (show.derived || f.kind != "enum") {
         o = o.put(
             "enum",
             Value::Arr(f.values.iter().map(|v| text(v)).collect()),
         );
     }
-    if with_help {
-        let h = if global {
+    if show.help {
+        let h = if show.global {
             global_help(&f.name)
         } else {
             help_of(&f.name)
         };
         o = o.put("help", text(h));
     }
-    if f.repeat {
+    // `repeat` (the value ends `...`) and `required` (written outside `[ ]` and `( )`) are read from the synopsis in the compact listing
+    if show.derived && f.repeat {
         o = o.b("repeat", true);
     }
-    if with_required && f.required {
+    if show.derived && f.required {
         o = o.b("required", true);
     }
     o.done()
@@ -173,6 +178,11 @@ pub(super) fn skeleton(u: &Usage) -> String {
     format!("mzlab-cli {}", kept.join(" "))
 }
 
+/// Whether the compact listing leaves out the `args` of `u`: every argument is a path (or the `...` rest), so the operand words of the synopsis give them.
+fn args_derivable(u: &Usage) -> bool {
+    u.args.iter().all(|a| a.kind == "path" || a.kind == "rest")
+}
+
 /// The arguments of the usage line; the whole listing marks the exception, an argument in brackets (`optional`), the path listing says `required`.
 fn args_json(u: &Usage, compact: bool) -> Vec<Value> {
     u.args
@@ -233,11 +243,19 @@ fn command_json(
                     Some(k) => *k == f.kind,
                     None => f.kind == "string",
                 };
-            flag_json(f, true, !shared, !typed, false)
+            flag_json(
+                f,
+                Show {
+                    help: !shared,
+                    kind: !typed,
+                    derived: !compact,
+                    global: false,
+                },
+            )
         })
         .collect();
     // the whole listing leaves out an empty list (`flag_help_note` says so)
-    if !(compact && args.is_empty()) {
+    if !(compact && (args.is_empty() || args_derivable(&u))) {
         o = o.put("args", Value::Arr(args));
     }
     if !(compact && flags.is_empty()) {
@@ -301,7 +319,15 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
                 kind: if *n == "--cache" { "path" } else { "bool" },
                 ..Flag::default()
             };
-            flag_json(&f, false, true, true, true)
+            flag_json(
+                &f,
+                Show {
+                    help: true,
+                    kind: true,
+                    derived: false,
+                    global: true,
+                },
+            )
         })
         .collect();
     let uses = flag_uses();
@@ -330,7 +356,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`; no args or flags: none; an arg is required unless `optional`; --json and an optional --out are not in flags, only the synopsis"))
+            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no flag required: it is written outside [ ] and ( ) in the synopsis; no flag repeat: its value ends `...`; no flag enum: the values are the `a|b` of its value in the synopsis; no arg kind: path, or `...` (rest); no args: the operands of the synopsis, when all are paths (in [ ] or ( ) = optional; end `...` = repeat); no stdin: true if an argument is `NAME|-`; no flags: none; an arg is required unless `optional`; --json and an optional --out are not in flags, only the synopsis"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));

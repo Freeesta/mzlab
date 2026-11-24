@@ -9,9 +9,9 @@ fn json(args: &[&str]) -> serde_json::Value {
     serde_json::from_slice(&o.stdout).unwrap()
 }
 
-/// The `args` of a command of the listing: the whole listing leaves out an empty list.
+/// The `args` of a command of the listing: its own list, else the operands of the synopsis (`catalog_restore_tests.rs`).
 fn args_of(c: &serde_json::Value) -> Vec<serde_json::Value> {
-    c["args"].as_array().cloned().unwrap_or_default()
+    crate::catalog_restore_tests::restored_args(c)
 }
 
 /// Every argument is `optional` in the whole listing or `required` in the path listing, never both and never neither.

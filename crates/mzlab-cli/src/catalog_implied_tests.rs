@@ -26,9 +26,10 @@ pub(crate) fn flags_of(c: &serde_json::Value) -> Vec<serde_json::Value> {
         })
         .collect();
     assert!(
-        listed
-            .iter()
-            .all(|f| f["name"] != "--json" && f != &serde_json::json!({"name": "--out"})),
+        listed.iter().all(|f| f["name"] != "--json"
+                // a bare `--out` is listed only when it is required (written outside brackets, so `required` is read from the synopsis)
+                && (f != &serde_json::json!({"name": "--out"})
+                    || crate::catalog_restore_tests::is_required(c, "--out"))),
         "{}",
         c["path"]
     );
