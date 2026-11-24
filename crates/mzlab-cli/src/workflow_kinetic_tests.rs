@@ -1,4 +1,4 @@
-//! 6. Kinetic LR campaign (`docs/agenti/recipes.md`): a synthetic unit-resolution series of two conditions, a shared t0 and a blank, written as
+//! The sixth chain, a kinetic LR campaign (`docs/agenti/recipes.md`): a synthetic unit-resolution series of two conditions, a shared t0 and a blank, written as
 //! vendor files (mzXML), taken from the sample listing to the kinetics of every product per condition with the plan template of
 //! `docs/recipes/`. The call count is asserted, the target table of the plan is the bytes of `quant targets`, one cell is the answer of
 //! `trace xic` into `peak auto-lr`, and every command, step and `--set` the recipe cites exists.
@@ -410,10 +410,6 @@ fn sets() -> Vec<&'static str> {
     RECIPE
         .split("--set ")
         .skip(1)
-        .map(|set| {
-            set.split(|ch: char| ch == '=' || ch == '`' || ch == ' ')
-                .next()
-                .unwrap()
-        })
+        .map(|set| set.split(['=', '`', ' ']).next().unwrap())
         .collect()
 }
