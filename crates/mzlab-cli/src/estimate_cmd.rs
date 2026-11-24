@@ -112,6 +112,40 @@ fn entry(f: &PathBuf, p: &Parsed, given: &[(String, Value)]) -> Result<(Value, S
     })
 }
 
+/// `--axis` and `--polarity` as the values every file is measured with, or the usage error.
+fn given_of(p: &Parsed) -> std::result::Result<Vec<(String, Value)>, &'static str> {
+    let mut given = Vec::new();
+    match p.get("--axis").map(str::to_lowercase).as_deref() {
+        None => {}
+        Some("da") => given.push(("axis".into(), Value::Str("Da".into()))),
+        Some("ppm") => given.push(("axis".into(), Value::Str("ppm".into()))),
+        Some(_) => return Err("--axis takes da or ppm"),
+    }
+    match p.get("--polarity") {
+        None => {}
+        Some("+" | "1") => given.push(("polarity".into(), Value::Num(1.0))),
+        Some("-" | "-1") => given.push(("polarity".into(), Value::Num(-1.0))),
+        Some(_) => return Err("--polarity takes + or -"),
+    }
+    Ok(given)
+}
+
+/// The plan `--emit-set` names (`null` without it), or the failure to report.
+fn plan_of(p: &Parsed) -> std::result::Result<Value, Outcome> {
+    let Some(path) = p.get("--emit-set") else {
+        return Ok(Value::Null);
+    };
+    let bytes = std::fs::read(path).map_err(|e| {
+        let err = Error::new("err.flow.io").with("detail", format!("{path}: {e}"));
+        Outcome::fail_error(&err)
+    })?;
+    match json::parse(&bytes) {
+        Ok(v) if v.get("steps").is_some_and(|s| matches!(s, Value::Arr(_))) => Ok(v),
+        Ok(_) => Err(Outcome::fail("err.flow.shape path=steps expected=array")),
+        Err(_) => Err(Outcome::fail("err.flow.json")),
+    }
+}
+
 pub(crate) fn run(args: Vec<String>) -> Outcome {
     let as_json = args.iter().any(|a| a == "--json");
     let p = match extract::parse(
@@ -127,38 +161,16 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     if files.is_empty() {
         return Outcome::fail("estimate needs a file");
     }
-    let mut given: Vec<(String, Value)> = Vec::new();
-    match p.get("--axis").map(str::to_lowercase).as_deref() {
-        None => {}
-        Some("da") => given.push(("axis".into(), Value::Str("Da".into()))),
-        Some("ppm") => given.push(("axis".into(), Value::Str("ppm".into()))),
-        Some(_) => return Outcome::fail("--axis takes da or ppm"),
-    }
-    match p.get("--polarity") {
-        None => {}
-        Some("+" | "1") => given.push(("polarity".into(), Value::Num(1.0))),
-        Some("-" | "-1") => given.push(("polarity".into(), Value::Num(-1.0))),
-        Some(_) => return Outcome::fail("--polarity takes + or -"),
-    }
+    let given = match given_of(&p) {
+        Ok(g) => g,
+        Err(m) => return Outcome::fail(m),
+    };
     if let Some(e) = crate::raw_cmd::missing(&files) {
         return crate::sample_select::fail(&e);
     }
-    let plan = match p.get("--emit-set") {
-        None => Value::Null,
-        Some(path) => {
-            let bytes = match std::fs::read(path) {
-                Ok(b) => b,
-                Err(e) => {
-                    let err = Error::new("err.flow.io").with("detail", format!("{path}: {e}"));
-                    return Outcome::fail_error(&err);
-                }
-            };
-            match json::parse(&bytes) {
-                Ok(v) if v.get("steps").is_some_and(|s| matches!(s, Value::Arr(_))) => v,
-                Ok(_) => return Outcome::fail("err.flow.shape path=steps expected=array"),
-                Err(_) => return Outcome::fail("err.flow.json"),
-            }
-        }
+    let plan = match plan_of(&p) {
+        Ok(v) => v,
+        Err(o) => return o,
     };
     let (mut entries, mut notes, mut bad) = (Vec::new(), String::new(), false);
     for f in &files {
@@ -175,10 +187,22 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             }
         }
     }
+    answer(&p, entries, plan, notes, bad, as_json)
+}
+
+/// Puts the entries together (`mzlab_core::estimates::route`) and prints the form asked for; exit 1 when a file gave no estimate or nothing was measured.
+fn answer(
+    p: &Parsed,
+    entries: Vec<Value>,
+    plan: Value,
+    mut notes: String,
+    bad: bool,
+    as_json: bool,
+) -> Outcome {
     let body = write(
         &Obj::new()
             .put("files", Value::Arr(entries))
-            .put("plan", plan.clone())
+            .put("plan", plan)
             .done(),
     );
     let answer = match mzlab_core::estimates::route(&body) {

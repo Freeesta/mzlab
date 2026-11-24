@@ -203,13 +203,7 @@ fn majority(files: &[File]) -> Option<(f64, String)> {
     let mut seen: Vec<((f64, String), usize)> = Vec::new();
     for f in files.iter().filter(|f| f.doc.is_some()) {
         let doc = f.doc?;
-        let key = (
-            doc.get("polarity").and_then(Value::f64).unwrap_or(0.0),
-            doc.get("axis")
-                .and_then(Value::str)
-                .unwrap_or("")
-                .to_string(),
-        );
+        let key = key_of(doc);
         match seen.iter_mut().find(|(k, _)| *k == key) {
             Some(s) => s.1 += 1,
             None => seen.push((key, 1)),
@@ -224,45 +218,30 @@ fn majority(files: &[File]) -> Option<(f64, String)> {
     best.map(|b| b.0)
 }
 
-/// `estimate/1` of `{"files": [estimates/1 object or {"file", "error"} ...], "plan": mzflow/2 object or null}`.
-pub fn route(body: &str) -> Result<String> {
-    let v = json::parse(body.as_bytes())?;
-    let list = match v.get("files") {
-        Some(Value::Arr(a)) if !a.is_empty() => a,
-        _ => {
-            return Err(Error::new("err.flow.shape")
-                .with("path", "files")
-                .with("expected", "a non-empty array"))
-        }
-    };
-    let plan = v.get("plan").filter(|p| !p.is_null());
-    let files: Vec<File> = list
-        .iter()
-        .map(|e| File {
-            name: e.get("file").and_then(Value::str).unwrap_or("").to_string(),
-            doc: e.get("schema").map(|_| e),
-            error: e.get("error").is_some(),
-        })
-        .collect();
-    let group = majority(&files);
-    let mut choices = Vec::new();
-    let mut notes = Vec::new();
-    let mut left_out = Vec::new();
-    let mut taken: Vec<&File> = Vec::new();
-    let mut no_estimate = 0;
-    for f in &files {
+/// The `(polarity, axis)` a file decided.
+fn key_of(doc: &Value) -> (f64, String) {
+    (
+        doc.get("polarity").and_then(Value::f64).unwrap_or(0.0),
+        doc.get("axis")
+            .and_then(Value::str)
+            .unwrap_or("")
+            .to_string(),
+    )
+}
+
+/// The files of the group, the `left_out` entries of the others and how many files have no estimate.
+fn split_group<'a>(
+    files: &'a [File],
+    group: Option<&(f64, String)>,
+) -> (Vec<&'a File<'a>>, Vec<Value>, i64) {
+    let (mut taken, mut left_out, mut no_estimate) = (Vec::new(), Vec::new(), 0);
+    for f in files {
         let Some(doc) = f.doc else {
             no_estimate += 1;
             continue;
         };
-        let key = (
-            doc.get("polarity").and_then(Value::f64).unwrap_or(0.0),
-            doc.get("axis")
-                .and_then(Value::str)
-                .unwrap_or("")
-                .to_string(),
-        );
-        if Some(&key) == group.as_ref() {
+        let key = key_of(doc);
+        if Some(&key) == group {
             taken.push(f);
         } else {
             left_out.push(
@@ -274,93 +253,106 @@ pub fn route(body: &str) -> Result<String> {
             );
         }
     }
-    let (gp, ga) = group.clone().unwrap_or((0.0, String::new()));
-    if !left_out.is_empty() {
-        choices.push(
+    (taken, left_out, no_estimate)
+}
+
+/// A measure over the files taken: its entry of `values` and, when some file has it, `(measure, median, sorted values, points)`.
+type Found<'a> = (&'a Measure, f64, Vec<f64>, i64);
+
+fn value_of<'a>(m: &'a Measure, taken: &[&File]) -> (Value, Option<Found<'a>>) {
+    let (mut per_file, mut sorted, mut points) = (Vec::new(), Vec::new(), 0i64);
+    for f in taken {
+        let Some(doc) = f.doc else { continue };
+        let x = pick(doc, m.path);
+        let n = m.points.and_then(|p| pick(doc, &[p, "n"]));
+        points += n.unwrap_or(0.0) as i64;
+        sorted.extend(x);
+        per_file.push(
             Obj::new()
-                .put("what", text("group"))
-                .put("value", Obj::new().n("polarity", gp).put("axis", text(&ga)).done())
-                .put(
-                    "why",
-                    text("the polarity and axis most files share; the others are in left_out and count in none of the values"),
-                )
+                .put("file", text(&f.name))
+                .put("value", opt(x))
+                .put("points", opt(n))
                 .done(),
         );
-        notes.push(msg(
-            "warn.estimate.mixed",
-            &[("left_out", int(left_out.len() as i64))],
-        ));
     }
-    if taken.len() < FEW_FILES {
-        notes.push(msg(
-            "note.estimate.fewFiles",
-            &[("files", int(taken.len() as i64))],
-        ));
+    sorted.sort_by(|a, b| a.total_cmp(b));
+    let o = Obj::new()
+        .put("name", text(m.name))
+        .put("unit", text(m.unit));
+    let pts = if m.points.is_some() {
+        int(points)
+    } else {
+        Value::Null
+    };
+    if sorted.is_empty() {
+        let o = o
+            .i("files", 0)
+            .put("median", Value::Null)
+            .put("min", Value::Null)
+            .put("max", Value::Null)
+            .put("points", Value::Null);
+        return (o.put("per_file", Value::Arr(per_file)).done(), None);
     }
-    let mut values = Vec::new();
-    let mut found: Vec<(&Measure, f64, Vec<f64>, i64)> = Vec::new();
-    for m in MEASURES {
-        let mut per_file = Vec::new();
-        let mut xs = Vec::new();
-        let mut points = 0i64;
-        for f in &taken {
-            let Some(doc) = f.doc else { continue };
-            let x = pick(doc, m.path);
-            let n = m.points.and_then(|p| pick(doc, &[p, "n"]));
-            points += n.unwrap_or(0.0) as i64;
-            xs.extend(x);
-            per_file.push(
-                Obj::new()
-                    .put("file", text(&f.name))
-                    .put("value", opt(x))
-                    .put("points", opt(n))
-                    .done(),
-            );
-        }
-        let mut sorted = xs.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let mut o = Obj::new()
-            .put("name", text(m.name))
-            .put("unit", text(m.unit));
-        if sorted.is_empty() {
-            o = o
-                .i("files", 0)
-                .put("median", Value::Null)
-                .put("min", Value::Null)
-                .put("max", Value::Null)
-                .put("points", Value::Null);
-        } else {
-            let med = median(&sorted);
-            o = o
-                .i("files", sorted.len() as i64)
-                .n("median", med)
-                .n("min", sorted[0])
-                .n("max", sorted[sorted.len() - 1])
-                .put(
-                    "points",
-                    if m.points.is_some() {
-                        int(points)
-                    } else {
-                        Value::Null
-                    },
-                );
-            found.push((m, med, sorted.clone(), points));
-        }
-        values.push(o.put("per_file", Value::Arr(per_file)).done());
-    }
-    let mut params = Vec::new();
-    let mut skipped = Vec::new();
+    let med = median(&sorted);
+    let o = o
+        .i("files", sorted.len() as i64)
+        .n("median", med)
+        .n("min", sorted[0])
+        .n("max", sorted[sorted.len() - 1])
+        .put("points", pts);
+    (
+        o.put("per_file", Value::Arr(per_file)).done(),
+        Some((m, med, sorted, points)),
+    )
+}
+
+/// One `params` entry: the plan parameter `id.param` the measure sets, with its evidence.
+fn proposal(t: &Target, f: &Found, id: &str, current: Option<Value>) -> Value {
+    let (m, med, sorted, points) = f;
+    let proposed = rounded(*med);
+    Obj::new()
+        .put(
+            "set",
+            text(&format!("{id}.{}={}", t.param, value_text(&num(proposed)))),
+        )
+        .put("instance", text(id))
+        .put("step", text(t.step))
+        .put("param", text(t.param))
+        .put("value", num(proposed))
+        .put("unit", text(m.unit))
+        .put("current", current.unwrap_or(Value::Null))
+        .put("from", text(m.name))
+        .put(
+            "rule",
+            text("median over the files, to 4 significant figures; the evidence is under values"),
+        )
+        .i("files", sorted.len() as i64)
+        .n("min", sorted[0])
+        .n("max", sorted[sorted.len() - 1])
+        .put(
+            "points",
+            if m.points.is_some() {
+                int(*points)
+            } else {
+                Value::Null
+            },
+        )
+        .done()
+}
+
+/// The plan parameters the measures set (`params`) and those left alone with the reason (`skipped`).
+fn proposals(found: &[Found], plan: Option<&Value>, axis: &str) -> (Vec<Value>, Vec<Value>) {
+    let (mut params, mut skipped) = (Vec::new(), Vec::new());
     let steps = plan.map(plan_steps);
     for t in TARGETS {
-        if !t.axis.is_empty() && t.axis != ga {
+        if !t.axis.is_empty() && t.axis != axis {
             skipped.push(skip(t, "axis"));
             continue;
         }
-        let Some((m, med, sorted, points)) = found.iter().find(|f| f.0.name == t.measure) else {
+        let Some(f) = found.iter().find(|f| f.0.name == t.measure) else {
             skipped.push(skip(t, "noValue"));
             continue;
         };
-        let proposed = rounded(*med);
         // each instance of the step in the plan, or the default instance name when no plan was given
         let instances: Vec<(String, Option<Value>)> = match &steps {
             Some(all) => all
@@ -372,32 +364,74 @@ pub fn route(body: &str) -> Result<String> {
         };
         if instances.is_empty() {
             skipped.push(skip(t, "noInstance"));
-            continue;
         }
         for (id, current) in instances {
             let now = current.as_ref().and_then(|p| p.get(t.param)).cloned();
-            params.push(
-                Obj::new()
-                    .put("set", text(&format!("{id}.{}={}", t.param, value_text(&num(proposed)))))
-                    .put("instance", text(&id))
-                    .put("step", text(t.step))
-                    .put("param", text(t.param))
-                    .put("value", num(proposed))
-                    .put("unit", text(m.unit))
-                    .put("current", now.unwrap_or(Value::Null))
-                    .put("from", text(m.name))
-                    .put(
-                        "rule",
-                        text("median over the files, to 4 significant figures; the evidence is under values"),
-                    )
-                    .i("files", sorted.len() as i64)
-                    .n("min", sorted[0])
-                    .n("max", sorted[sorted.len() - 1])
-                    .put("points", if m.points.is_some() { int(*points) } else { Value::Null })
-                    .done(),
-            );
+            params.push(proposal(t, f, &id, now));
         }
     }
+    (params, skipped)
+}
+
+/// The `choices` and `notes` of a run whose files do not all agree or are few.
+fn choices_notes(left_out: usize, taken: usize, gp: f64, ga: &str) -> (Vec<Value>, Vec<Value>) {
+    let (mut choices, mut notes) = (Vec::new(), Vec::new());
+    if left_out > 0 {
+        choices.push(
+            Obj::new()
+                .put("what", text("group"))
+                .put("value", Obj::new().n("polarity", gp).put("axis", text(ga)).done())
+                .put(
+                    "why",
+                    text("the polarity and axis most files share; the others are in left_out and count in none of the values"),
+                )
+                .done(),
+        );
+        notes.push(msg(
+            "warn.estimate.mixed",
+            &[("left_out", int(left_out as i64))],
+        ));
+    }
+    if taken < FEW_FILES {
+        notes.push(msg(
+            "note.estimate.fewFiles",
+            &[("files", int(taken as i64))],
+        ));
+    }
+    (choices, notes)
+}
+
+/// `estimate/1` of `{"files": [estimates/1 object or {"file", "error"} ...], "plan": mzflow/2 object or null}`.
+pub fn route(body: &str) -> Result<String> {
+    let v = json::parse(body.as_bytes())?;
+    let list = match v.get("files") {
+        Some(Value::Arr(a)) if !a.is_empty() => a,
+        _ => {
+            return Err(Error::new("err.flow.shape")
+                .with("path", "files")
+                .with("expected", "a non-empty array"))
+        }
+    };
+    let files: Vec<File> = list
+        .iter()
+        .map(|e| File {
+            name: e.get("file").and_then(Value::str).unwrap_or("").to_string(),
+            doc: e.get("schema").map(|_| e),
+            error: e.get("error").is_some(),
+        })
+        .collect();
+    let group = majority(&files);
+    let (taken, left_out, no_estimate) = split_group(&files, group.as_ref());
+    let (gp, ga) = group.unwrap_or((0.0, String::new()));
+    let (choices, notes) = choices_notes(left_out.len(), taken.len(), gp, &ga);
+    let (mut values, mut found) = (Vec::new(), Vec::new());
+    for m in MEASURES {
+        let (entry, f) = value_of(m, &taken);
+        values.push(entry);
+        found.extend(f);
+    }
+    let plan = v.get("plan").filter(|p| !p.is_null());
+    let (params, skipped) = proposals(&found, plan, &ga);
     let summary = Obj::new()
         .i("files", files.len() as i64)
         .i("estimated", taken.len() as i64)
