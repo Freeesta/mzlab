@@ -72,7 +72,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract", &["spectrum list", "spectra.centroid"]),
     r("ion pattern", "isotope pattern chlorine bromine", &["features.group", "ion mz"]),
-    r("ion match", "adduct neutral loss contaminant", &["features.group", "ion mz"]),
+    r("ion match", "adduct neutral loss contaminant", &["features.group", "features.companions", "ion mz"]),
     r("mol draw", "draw depict structure picture image figure svg png cdxml ket molfile smiles 2d", &["structure.render", "tp.network", "mol export"])
         .ex("mzlab-cli mol draw 'smiles:CCO' --format svg --out ethanol.svg"),
     r("flow record", "provenance record reproducible", &["flow verify", "flow report"]),
@@ -84,6 +84,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
     r("table.filter", "blank subtraction threshold background remove filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
+    r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),
     r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution one ion noise floor", &["tp.generate", "table compare", "peak noise"])

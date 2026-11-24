@@ -1,4 +1,5 @@
 I18N.add("en", {
+  "err.flow.companions.list": "“{item}” in a list of mass differences is not a positive number of Da.",
   "err.flow.curve.duplicate": "The peak of {analyte} in sample {sample} appears more than once.",
   "err.flow.curve.param": "The value {value} of the parameter {name} is not one the step knows.",
   "err.flow.curve.points": "Too few standards are left to fit this curve.",
@@ -106,6 +107,7 @@ I18N.add("en", {
   "warn.flow.curve.unlisted": "Some samples are not in the standards file: they were treated as unknown samples.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
+  "warn.flow.companions.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files no pair was tested, so there are no edges. The mass relations that fit are listed as weak, with their numbers.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
   "warn.flow.quant.negative": "Some concentrations came out negative: they are kept and flagged.",
   "warn.flow.quant.noRow": "A calibration curve has no matching row in the table: it was not applied.",

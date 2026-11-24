@@ -72,7 +72,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |
-| grouping the ions of a compound (`features.group`, `ionnet/1`: correlation, isotopes, ion identity networking, GNPS edges; `crates/mzlab-feat/src/ionnet/`) | `docs/agenti/ion-groups.md` |
+| grouping the ions of a compound (`features.group`, `ionnet/1`: correlation, isotopes, GNPS edges; `ionnet/`) and companion ions at unit mass (`features.companions`, `companions/1`, AU-10; `companions/`) | `docs/agenti/ion-groups.md` |
 | texts, `lang/`, `help.js`, English only; marked-up texts (italic m/z, superscript MS2) written once, before first paint | `docs/agenti/languages.md` |
 | identification levels (Schymanski scale 2a/2b/3a/3b, prediction scale, "L3" and "Prev. 2" labels, Tabui, Attributio, untargeted) | `docs/agenti/levels.md` |
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |

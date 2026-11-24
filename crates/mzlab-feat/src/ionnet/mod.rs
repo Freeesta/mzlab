@@ -4,7 +4,7 @@
 
 pub mod ions;
 mod net;
-mod pairs;
+pub(crate) mod pairs;
 
 use crate::store::{origin_from_meta, read_table};
 use crate::table::Aligned;

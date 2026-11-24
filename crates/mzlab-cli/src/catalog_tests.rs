@@ -169,7 +169,7 @@ fn unknown_names_are_selector_errors_and_sizes_stay_small() {
     let n = out(&["commands", "--json"]).len();
     assert!(n < 40_000, "commands --json is {n} bytes");
     let n = out(&["flow", "steps", "--compact"]).len();
-    assert!(n < 20_000, "flow steps --compact is {n} bytes");
+    assert!(n < 21_000, "flow steps --compact is {n} bytes");
     let steps = json(&out(&["flow", "steps", "--compact"]));
     assert_eq!(steps["schema"], "steps-compact/1");
     assert_eq!(

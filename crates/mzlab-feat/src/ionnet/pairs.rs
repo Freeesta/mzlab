@@ -13,12 +13,12 @@ pub struct Corr {
     pub r: f64,
 }
 
-fn measured(t: &Aligned, c: usize) -> bool {
+pub(crate) fn measured(t: &Aligned, c: usize) -> bool {
     matches!(t.state[c], CELL_DETECTED | CELL_TARGETED | CELL_FILLED) && t.height[c] > 0.0
 }
 
 /// Pearson of `x` and `y`; NaN when one of them has no spread.
-fn pearson(x: &[f64], y: &[f64]) -> f64 {
+pub(crate) fn pearson(x: &[f64], y: &[f64]) -> f64 {
     let n = x.len() as f64;
     let (mx, my) = (x.iter().sum::<f64>() / n, y.iter().sum::<f64>() / n);
     let (mut sxy, mut sxx, mut syy) = (0.0, 0.0, 0.0);

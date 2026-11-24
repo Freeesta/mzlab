@@ -65,6 +65,9 @@ mod flow_centroid_tests;
 mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
+mod flow_companions;
+#[cfg(test)]
+mod flow_companions_tests;
 mod flow_compare;
 mod flow_convert_notes;
 mod flow_curve;

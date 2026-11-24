@@ -19,6 +19,7 @@
   "err.flow.annotations.level": "Engine error message; {level} = level.",
   "err.flow.cardinality": "Engine error message; {count} = number, {port} = input.",
   "err.flow.check": "Engine error message; {count} = number, {instance} = step name.",
+  "err.flow.companions.list": "Engine error message; {item} = the item of the adducts or losses list of the plan that is not a positive number (e.g. x).",
   "err.flow.format": "Engine error message; {format} = format.",
   "err.flow.formula.table": "Engine error message; {column} = column name.",
   "err.flow.group.ion": "Engine error message; {ion} = name of the ion species written in the plan (e.g. [M+Na]+).",

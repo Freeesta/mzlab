@@ -50,6 +50,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "features.group",
     ),
     (
+        "find adducts and in-source fragments that co-elute at unit mass",
+        "features.companions",
+    ),
+    (
         "kinetics dig of the transformation products at unit resolution",
         "tp.dig_lr",
     ),
