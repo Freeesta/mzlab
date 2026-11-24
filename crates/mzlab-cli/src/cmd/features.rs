@@ -259,4 +259,12 @@ Entry::new(
 )
 .schema("union/1")
 .exits(&[0, 2, 3, 4, 6])
-.examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"])];
+.examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"]),
+Entry::new(
+    "estimate",
+    "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data, with their evidence",
+    crate::estimate_cmd::run,
+)
+.schema("estimate/1")
+.exits(&[0, 1, 2, 3, 4, 5, 6])
+.examples(&["mzlab-cli estimate MZML/*.mzML --axis da --json"])];

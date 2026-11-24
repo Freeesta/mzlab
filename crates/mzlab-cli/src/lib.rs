@@ -44,6 +44,9 @@ mod convert_name_tests;
 #[cfg(test)]
 #[path = "convert_tests_spectrum.rs"]
 mod convert_tests_spectrum;
+mod estimate_cmd;
+#[cfg(test)]
+mod estimate_cmd_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]

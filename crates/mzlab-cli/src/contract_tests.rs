@@ -11,6 +11,7 @@ use crate::{
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
 pub(crate) const MISSING: &[&[&str]] = &[
+    &["estimate", "/nonexistent/x.mzML"],
     &[
         "sample",
         "design",

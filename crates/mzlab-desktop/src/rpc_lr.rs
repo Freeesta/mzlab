@@ -200,7 +200,7 @@ impl State {
             "lr_formula" => text(mzlab_core::elements::formula_mz(s("f"), Some(s("adduct")).filter(|a| !a.is_empty()))?),
             "lr_ion_pattern" => text(mzlab_core::ionpattern::route(s("f"), s("adduct"))?),
             "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
-            "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?), "lr_flow_defaults" => text(mzlab_core::step::defaults::route(s("body"))?), "lr_union" => text(mzlab_core::series_union::route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
+            "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?), "lr_flow_defaults" => text(mzlab_core::step::defaults::route(s("body"))?), "lr_estimate" => text(mzlab_core::estimates::route(s("body"))?), "lr_union" => text(mzlab_core::series_union::route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
             "lr_ricerca" => text(mzlab_core::search::match_number(s("body"))?),
             "lr_reflist" => text(mzlab_core::reflist::route(s("body"))?),
             "lr_reflist_match" => text(mzlab_core::reflist::lookup::route(s("body"))?),

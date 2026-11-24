@@ -52,6 +52,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/drawing-unsaved.md` |
 | Drawing (Ketcher) | `docs/agenti/drawing.md` |
 | the Italian still left in the repository (counts per area, families to rename in order, what is kept on purpose; `tools/check_english.py`) | `docs/agenti/english-remaining.md` |
+| parameters measured on the data (`mzlab-cli estimate`, `estimate/1`, `estimates.rs`: median over files, `--set` lines with evidence, skipped, left out, choices; `lr_estimate`, `estimate_set`; AU-6 slice 1) | `docs/agenti/estimate.md` |
 | export of all user data: browser storage inventory, ZIP writer (`zip.rs`); chunked exports in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenance, `export/` cleanup) | `docs/agenti/export-data.md` |
 | contract of the vendor readers (`readers.rs`, `Lettore` trait, registry, `Limiti`), adding a format | `docs/agenti/extending.md` |
 | "XIC" button in the spectrum bar, XIC lens on peak hover (`xic-lente.js`), bench and baseline table of viewer times (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/fast-viewer.md` |

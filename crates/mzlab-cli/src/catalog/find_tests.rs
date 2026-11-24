@@ -19,6 +19,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "what are the default parameters of a flow step",
         "flow defaults",
     ),
+    ("which noise floor and tolerances fit my files", "estimate"),
     (
         "import sample names and roles from a csv metadata table",
         "sample import",

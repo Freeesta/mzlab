@@ -57,6 +57,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample table", "roles blank qc standard control time point names", &["sample import", "sample design propose", "table.filter"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),
+    r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect blank level set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
     r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
     r("trace xic", "extracted ion chromatogram eic xic many ions list mz", &["peak table", "trace chrom", "chrom.transitions"])
