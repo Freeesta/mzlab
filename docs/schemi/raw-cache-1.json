@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-cache/1",
+  "title": "raw-cache/1: the index cache entries of files, `mzlab-cli raw cache`",
+  "description": "Per file: the cache entry `file index` writes (built or reused), or under --check what a next call would do (reused, stale, missing; exit 1 unless all are reused), with what a sound entry holds: scans, sections per MS level and polarity, the ion quantum of its lowest MS level. Without --cache DIR or MZLAB_CACHE: exit 2. Code: crates/mzlab-cli/src/raw_cache_cmd.rs, idx_cache.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "cache",
+    "check",
+    "files",
+    "warnings",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-cache/1"
+    },
+    "cache": {
+      "type": "string"
+    },
+    "check": {
+      "type": "boolean"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "sample",
+              "status",
+              "key",
+              "sha256",
+              "bytes",
+              "n_scans",
+              "sections",
+              "ion_quantum"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "built",
+                  "reused",
+                  "stale",
+                  "missing"
+                ]
+              },
+              "key": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "n_scans": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sections": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "level",
+                    "polarity",
+                    "n_scans",
+                    "n_peaks"
+                  ],
+                  "properties": {
+                    "level": {
+                      "type": "integer"
+                    },
+                    "polarity": {
+                      "type": "string"
+                    },
+                    "n_scans": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "n_peaks": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "ion_quantum": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "cps",
+                      "candidate",
+                      "support",
+                      "n_positive",
+                      "median_ions",
+                      "method",
+                      "status"
+                    ],
+                    "properties": {
+                      "cps": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "candidate": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "support": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "n_positive": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "median_ions": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "method": {
+                        "const": "min_positive_or_step"
+                      },
+                      "status": {
+                        "enum": [
+                          "ok",
+                          "continuous",
+                          "none"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "error"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "error": {
+                "type": "object",
+                "description": "an error/1 document",
+                "properties": {
+                  "schema": {
+                    "const": "error/1"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "program",
+        "version",
+        "commit",
+        "engine",
+        "command",
+        "files",
+        "params",
+        "choices",
+        "cite"
+      ],
+      "properties": {
+        "program": {
+          "const": "mzLab"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "index_format",
+            "quantum"
+          ],
+          "properties": {
+            "index_format": {
+              "type": "integer"
+            },
+            "quantum": {
+              "const": "ionstat.quantum"
+            }
+          },
+          "additionalProperties": false
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "sha256",
+              "size",
+              "sample"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "value",
+              "why"
+            ],
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "value": {},
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cite": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -51,6 +51,13 @@ pub fn stat_steps() -> Vec<Value> {
     out
 }
 
+/// `raw info` on the index of slot 0 (`/api/rawinfo`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe out of range.
+pub fn raw_steps() -> Vec<Value> {
+    ["?probe=8", "?probe=64&offset_mz=300", "?probe=0"]
+        .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawinfo", "query": q}))
+        .to_vec()
+}
+
 /// Where two text answers first differ: the position and the text around it (a report is thousands of characters and the CI log keeps a tail).
 pub fn first_difference(a: &str, w: &str) -> String {
     let at = a

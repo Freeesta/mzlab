@@ -195,6 +195,12 @@ fn args_json(u: &Usage, compact: bool) -> Vec<Value> {
         .collect()
 }
 
+/// The flags the compact listing leaves out of `flags` (`flag_help_note`): `--json` (global, and `stdout.json_flag` says the command reads it) and an
+/// optional `--out`; the synopsis shows both, `flag_help` and `flag_type` describe them.
+pub(super) fn implied(f: &Flag) -> bool {
+    f.name == "--json" || f.name == "--out" && !f.required
+}
+
 /// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, `flag_type`, an argument of kind `path`,
 /// the derived exit codes, a skeleton example, a stdout of JSON without a schema).
 fn command_json(
@@ -218,6 +224,7 @@ fn command_json(
     let flags: Vec<Value> = u
         .flags
         .iter()
+        .filter(|f| !(compact && implied(f)))
         .map(|f| {
             let shared = compact && uses.get(&f.name) > Some(&1);
             // the type is the flag's own, else its `flag_type`, else string
@@ -323,7 +330,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`; no args or flags: none; an arg is required unless `optional`"))
+            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`; no args or flags: none; an arg is required unless `optional`; --json and an optional --out are not in flags, only the synopsis"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));

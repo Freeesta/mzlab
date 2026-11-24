@@ -178,7 +178,7 @@ impl State {
                 text(out)
             }
             "route" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => opt(r.handle(s("path"), &q())?),
+                Some(r) => opt(mzlab_core::rawinfo::handle(r, s("path"), &q())?),
                 None => text(""),
             },
             "scaninfo" => match eng.idx.get(&u("slot")) {

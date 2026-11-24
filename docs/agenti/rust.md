@@ -18,7 +18,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `readers-module.md`.
 - `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`libraries.md`).
 - `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-caps.md`).
-- Other `.wasm` bridges, one per lazily loaded module (`crates/mzlab-*-wasm`: `flowcal`, `mol`, `msnfigura`, `normative`, `pack`, `rotte`, `ticfondo`), each with its purpose in its `lib.rs` header; `mzlab-ops`: the native orchestration of the engines shared by browser bridge, CLI and app.
+- Other `.wasm` bridges, one per lazily loaded module (`crates/mzlab-*-wasm`: `flowcal`, `mol`, `msnfigura`, `normative`, `pack`, `raw`, `rotte`, `ticfondo`), each with its purpose in its `lib.rs` header; `mzlab-ops`: the native orchestration of the engines shared by browser bridge, CLI and app.
 - `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn graph.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).

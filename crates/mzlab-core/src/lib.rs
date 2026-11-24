@@ -157,6 +157,7 @@ pub mod peakq_lr;
 pub mod area_unit;
 pub mod peakq_lrauto;
 pub mod ionstat;
+pub mod rawinfo;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

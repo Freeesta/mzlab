@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::cmd::entries;
-use crate::{execute, Outcome};
+use crate::{execute, pack_cmd_tests::MISSING as PACK, raw_cmd::tests::MISSING as RAW, Outcome};
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
 pub(crate) const MISSING: &[&[&str]] = &[
@@ -382,7 +382,8 @@ fn a_command_without_a_json_form_says_so_and_never_reports_an_unknown_option() {
 
 #[test]
 fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
-    for a in MISSING.iter().chain(crate::pack_cmd_tests::MISSING) {
+    let cases: Vec<_> = MISSING.iter().chain(PACK).chain(RAW).collect();
+    for a in &cases {
         let o = run(a);
         assert_eq!(o.code, 4, "{a:?}: {}", o.stderr);
         let args: Vec<String> = a.iter().map(|w| w.to_string()).collect();
@@ -403,9 +404,8 @@ fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
     }
     for e in entries() {
         let words: Vec<&str> = e.name.split(' ').collect();
-        let covered = MISSING
+        let covered = cases
             .iter()
-            .chain(crate::pack_cmd_tests::MISSING)
             .any(|a| a.len() >= words.len() && a[..words.len()] == words[..])
             || NO_FILE.contains(&e.name);
         assert!(

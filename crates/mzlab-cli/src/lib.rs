@@ -9,6 +9,8 @@ use mzlab_core::error::{Error, Result};
 mod argv;
 mod catalog;
 #[cfg(test)]
+mod catalog_implied_tests;
+#[cfg(test)]
 mod catalog_optional_tests;
 #[cfg(test)]
 mod catalog_tests;
@@ -213,6 +215,8 @@ mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod quant_targets_cmd;
+mod raw_cache_cmd;
+mod raw_cmd;
 mod renamed;
 mod sample_select;
 mod samples_cmd;

@@ -2,6 +2,7 @@
 
 use std::collections::BTreeSet;
 
+use crate::catalog_implied_tests::flags_of;
 use crate::cmd::entries;
 use crate::execute;
 
@@ -46,7 +47,7 @@ fn the_flags_of_help_and_catalog_are_the_same() {
             .filter(|w| w.starts_with("--"))
             .map(String::from)
             .collect();
-        let in_catalog: BTreeSet<String> = members(c, "flags")
+        let in_catalog: BTreeSet<String> = flags_of(c)
             .iter()
             .map(|f| f["name"].as_str().unwrap().to_string())
             .collect();
@@ -281,7 +282,7 @@ fn members<'a>(c: &'a serde_json::Value, key: &str) -> &'a Vec<serde_json::Value
 
 /// The exit codes `exit_codes_note` states, from the compact listing of command `c` alone (written out again here, not taken from `exits_of`).
 fn derived_exits(name: &str, c: &serde_json::Value, types: &serde_json::Value) -> Vec<u8> {
-    let flags = members(c, "flags");
+    let flags = flags_of(c);
     let has = |f: &str| flags.iter().any(|x| x["name"] == f);
     // an arg with no kind is a path (or `...`, a rest): both read a file; a flag with no type takes its `flag_type`
     let reads = members(c, "args")
@@ -353,10 +354,8 @@ fn defaults_give_the_full_types(
         };
         assert_eq!(kind, g["kind"], "{name}: {}", a["name"]);
     }
-    for (f, g) in members(c, "flags")
-        .iter()
-        .zip(whole["flags"].as_array().unwrap())
-    {
+    // the flags put back are the full ones, in order (`catalog_implied_tests.rs`)
+    for (f, g) in flags_of(c).iter().zip(whole["flags"].as_array().unwrap()) {
         let flag = f["name"].as_str().unwrap();
         let kind = f
             .get("type")
@@ -379,10 +378,7 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
         let whole = full(e);
         assert!(whole.get("compact").is_none());
         defaults_give_the_full_types(&doc, c, &whole, e.name);
-        for (f, g) in members(c, "flags")
-            .iter()
-            .zip(whole["flags"].as_array().unwrap())
-        {
+        for (f, g) in flags_of(c).iter().zip(whole["flags"].as_array().unwrap()) {
             let name = f["name"].as_str().unwrap();
             // a flag with no help here takes the shared one, and it is the help of the full listing
             let help = f.get("help").or_else(|| shared.get(name)).unwrap();

@@ -1,4 +1,4 @@
-//! The `file`, `sample`, `trace`, `dad` and `spectrum` groups: what a file holds, how its samples are named and selected, its traces and spectra.
+//! The `file`, `raw`, `sample`, `trace`, `dad` and `spectrum` groups: what a file holds, how its samples are named and selected, its traces and spectra.
 
 use super::{pre, Entry};
 use crate::Outcome;
@@ -48,6 +48,12 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file unpack", "mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files", unpack_run).schema("unpack-run/1").exits(&[0, 1, 2, 3, 4, 6]),
     Entry::new("file check-pack", "mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend", verify_run).schema("verify-pack/1").exits(&[0, 1, 2, 3, 4]),
     Entry::new("file convert", "mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML", crate::convert::run).schema("convert/1").exits(&[0, 1, 2, 3, 4, 5]),
+    Entry::new("raw info", "mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check", crate::raw_cmd::info_run)
+        .schema("raw-info/1")
+        .exits(&[0, 1, 2, 4, 5, 6]),
+    Entry::new("raw cache", "mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries", crate::raw_cache_cmd::cache_run)
+        .schema("raw-cache/1")
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("sample vars", "mzlab-cli sample vars NAME...   how file names split into variables", |a| crate::samples_cmd::run(pre("vars", a))),
     Entry::new("sample group", "mzlab-cli sample group NAME...   the file names' group name", |a| crate::samples_cmd::run(pre("group", a))),
     Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr", |a| crate::samples_cmd::run(pre("table", a))),

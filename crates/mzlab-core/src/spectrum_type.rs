@@ -245,10 +245,52 @@ struct Level {
 }
 
 impl Level {
+    /// One more scan of points `mz` (ascending).
+    fn add(&mut self, mz: &[f64]) {
+        let (inside, total) = run_points(mz);
+        self.scans += 1;
+        self.inside += inside;
+        self.total += total;
+        for w in mz.windows(2) {
+            let d = w[1] - w[0];
+            if d > 0.0 {
+                self.gaps += 1;
+                self.fine += usize::from(d < FINE_STEP);
+            }
+        }
+    }
+
     /// Profile scans were seen, few of their points are in runs and the spacings are not those of a fine grid.
     fn is_sparse(&self) -> bool {
         let fine_grid = self.fine > 0 && (self.fine as f64) >= FINE_SHARE * self.gaps as f64;
         self.scans > 0 && (self.inside as f64) < SPARSE_BELOW * self.total as f64 && !fine_grid
+    }
+}
+
+/// The detector of `auto` over scans a caller already holds (`rawinfo`: probed from a `.mzidx`): their points in runs and their fine spacings.
+#[derive(Clone, Copy, Default)]
+pub struct Runs(Level);
+
+impl Runs {
+    /// One more scan of points `mz` (ascending).
+    pub fn add(&mut self, mz: &[f64]) {
+        self.0.add(mz);
+    }
+    /// Share of the points in runs (`None` without points).
+    pub fn runs_share(&self) -> Option<f64> {
+        (self.0.total > 0).then(|| self.0.inside as f64 / self.0.total as f64)
+    }
+    /// Share of the neighbour spacings under `FINE_STEP` (`None` without spacings).
+    pub fn fine_share(&self) -> Option<f64> {
+        (self.0.gaps > 0).then(|| self.0.fine as f64 / self.0.gaps as f64)
+    }
+    /// What `auto` decides for scans labelled profile: sparse counts are centroids, a fine grid never is.
+    pub fn sparse(&self) -> bool {
+        self.0.is_sparse()
+    }
+    /// Scans labelled centroid read as a profile: most points in runs (no fine-grid rule: high-resolution centroids sit close together).
+    pub fn continuous(&self) -> bool {
+        self.0.total > 0 && (self.0.inside as f64) >= SPARSE_BELOW * self.0.total as f64
     }
 }
 
@@ -286,19 +328,8 @@ fn probe(l: &mut dyn Reader, c: usize) -> Result<Probe> {
         }
         seen.scans += 1;
         if s.profile {
-            let (inside, total) = run_points(&s.mz);
-            let lv = &mut seen.of[usize::from(s.level).min(LEVELS - 1)];
             seen.flagged += 1;
-            lv.scans += 1;
-            lv.inside += inside;
-            lv.total += total;
-            for w in s.mz.windows(2) {
-                let d = w[1] - w[0];
-                if d > 0.0 {
-                    lv.gaps += 1;
-                    lv.fine += usize::from(d < FINE_STEP);
-                }
-            }
+            seen.of[usize::from(s.level).min(LEVELS - 1)].add(&s.mz);
         }
     }
     Ok(seen)
