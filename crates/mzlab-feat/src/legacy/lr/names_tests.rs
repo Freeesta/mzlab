@@ -23,7 +23,7 @@ fn net_change_cases() {
 #[test]
 fn modification_cases() {
     for (n, u, want) in [
-        ("progenitore", false, "\u{2014}"),
+        ("parent", false, "\u{2014}"),
         ("Oxidation_to_carbonyl", false, "Oxidation to carbonyl"),
         (
             "oxidation to carbonyl @ 13.57 min",
@@ -60,9 +60,9 @@ fn nm(es: &[Entry]) -> Vec<String> {
 #[test]
 fn searched_not_detected_gets_no_tp_name() {
     let es = [
-        e(1, 362.09, "A", Some(5.0), "forte"),
-        e(2, 362.09, "A", None, "debole"),
-        e(3, 362.31, "B", Some(6.0), "forte"),
+        e(1, 362.09, "A", Some(5.0), "strong"),
+        e(2, 362.09, "A", None, "weak"),
+        e(3, 362.31, "B", Some(6.0), "strong"),
     ];
     assert_eq!(
         tp_names(&es, &[true, false, true]),
@@ -77,7 +77,7 @@ fn outputs_are_english_text() {
     for t in [
         net_change("C10H14N3O6S", P),
         modification("loss of propene (N-deisopropylation)", false),
-        modification("progenitore", false),
+        modification("parent", false),
     ] {
         assert!(
             t.chars()
@@ -91,28 +91,28 @@ fn outputs_are_english_text() {
 fn names() {
     let n = tp_names(
         &[
-            e(0, 362.1, P, Some(5.0), "progenitore"),
-            e(1, 378.2, "X", None, "forte"),
+            e(0, 362.1, P, Some(5.0), "parent"),
+            e(1, 378.2, "X", None, "strong"),
         ],
         &[true, true],
     );
     assert_eq!(n, ["Parent", "TP 378"]);
     let n = nm(&[
-        e(3, 362.0912, "A", Some(7.2), "forte"),
-        e(1, 362.0912, "A", Some(5.1), "forte"),
-        e(2, 362.0912, "A", Some(6.0), "forte"),
+        e(3, 362.0912, "A", Some(7.2), "strong"),
+        e(1, 362.0912, "A", Some(5.1), "strong"),
+        e(2, 362.0912, "A", Some(6.0), "strong"),
     ]);
     assert_eq!(n, ["TP 362 C", "TP 362 A", "TP 362 B"]);
     let n = nm(&[
-        e(1, 362.3112, "A", Some(5.0), "forte"),
-        e(2, 362.2234, "B", Some(6.0), "forte"),
+        e(1, 362.3112, "A", Some(5.0), "strong"),
+        e(2, 362.2234, "B", Some(6.0), "strong"),
     ]);
     assert_eq!(n, ["TP 362_31", "TP 362_22"]);
     let n = nm(&[
-        e(1, 362.3112, "A", Some(5.0), "forte"),
-        e(2, 362.3112, "A", Some(6.0), "forte"),
-        e(3, 362.3140, "B", Some(7.0), "forte"),
+        e(1, 362.3112, "A", Some(5.0), "strong"),
+        e(2, 362.3112, "A", Some(6.0), "strong"),
+        e(3, 362.3140, "B", Some(7.0), "strong"),
     ]);
     assert_eq!(n, ["TP 362_311 A", "TP 362_311 B", "TP 362_314"]);
-    assert_eq!(nm(&[e(1, 362.51, "A", None, "forte")]), ["TP 363"]);
+    assert_eq!(nm(&[e(1, 362.51, "A", None, "strong")]), ["TP 363"]);
 }

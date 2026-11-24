@@ -74,7 +74,7 @@ fn mark_predecessors(
 
 /// The nodes that an edge touches: the parent, then the candidates (`cands[k - 1]` is node `k`).
 fn write_nodes(o: &mut Out, d: &Dig, cands: &[&Cand], edges: &[Edge]) {
-    o.raw("{\"nodes\":[{\"id\":\"progenitore\",\"label\":\"parent\",\"formula\":")
+    o.raw("{\"nodes\":[{\"id\":\"parent\",\"label\":\"parent\",\"formula\":")
         .str(&d.parent.formula())
         .raw(",\"mz\":null,\"rt\":null,\"score\":null,\"level\":null}");
     let used = |k: usize| edges.iter().any(|e| e.from == k || e.to == k);
@@ -111,7 +111,7 @@ fn edge_share(e: &Edge, cands: &[&Cand]) -> Option<(usize, f64)> {
 fn write_edges(o: &mut Out, edges: &[Edge], cands: &[&Cand], forms: &[Counts], rules: &Rules) {
     let id = |o: &mut Out, k: usize| {
         if k == 0 {
-            o.str("progenitore");
+            o.str("parent");
         } else {
             o.int(cands[k - 1].id());
         }

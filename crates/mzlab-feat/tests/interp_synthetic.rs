@@ -23,7 +23,7 @@ use mzlab_feat::trace::Params;
 
 const PARENT: &str = r#"{"neutral":"C22H31N3O4S"}"#;
 // the product +3C of the parent of the synthetic series, as the registry of hypotheses would hold it
-const REGISTRY: &str = r#"{"format":"hypotheses/2","hypotheses":[{"id":1,"label":"x","formula":"C25H31N3O4S","mz":470.210804,"level":3,"sources":["rule"]}]}"#;
+const REGISTRY: &str = r#"{"format":"hypotheses/3","hypotheses":[{"id":1,"label":"x","formula":"C25H31N3O4S","mz":470.210804,"level":3,"sources":["rule"]}]}"#;
 
 fn series() -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_feat_interp_{}", std::process::id()));
@@ -45,7 +45,7 @@ fn series() -> Option<PathBuf> {
     ok.then_some(out)
 }
 
-/// The table of the one-file series with the block `tp/1` made by hand: every row a product but the parent; the parent and the product of the series.
+/// The table of the one-file series with the block `tp/2` made by hand: every row a product but the parent; the parent and the product of the series.
 fn table_of(open: &dyn Fn(usize) -> Result<Index<std::fs::File>>) -> (Aligned, usize, usize) {
     let mut ix = open(0).unwrap();
     let (mut f, links) = analyse(&mut ix, &Params::default(), &Steps::default()).unwrap();

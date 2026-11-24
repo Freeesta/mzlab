@@ -286,8 +286,9 @@ fn plan(j: &Job, off: &mzlab_core::mzcal::Offset) -> String {
     )
 }
 
-/// The wide CSV of several traces that share their scans: `rt_min,xic:<mz>,...`.
-fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
+/// The wide CSV of several traces that share their scans: `rt_min,xic:<mz>,...`. The cells are the route's number tokens, borrowed and pushed
+/// once each (no per-cell allocation: a list of 275 ions over 2400 scans is 660 000 cells).
+fn wide_csv(docs: &[(String, Vec<(&str, &str)>)]) -> Result<String> {
     let bad = || Error::new("error.badIndex");
     let first = &docs.first().ok_or_else(bad)?.1;
     let mut s = String::from("rt_min");
@@ -295,13 +296,20 @@ fn wide_csv(docs: &[(String, Vec<(String, String)>)]) -> Result<String> {
         if pts.len() != first.len() || pts.iter().zip(first).any(|(a, b)| a.0 != b.0) {
             return Err(bad());
         }
-        s += &format!(",{id}");
+        s.push(',');
+        s.push_str(id);
     }
     s.push('\n');
-    for i in 0..first.len() {
-        s += &first[i].0;
+    let cells: usize = docs
+        .iter()
+        .map(|(_, p)| p.iter().map(|c| c.1.len() + 1).sum::<usize>())
+        .sum();
+    s.reserve(cells + first.iter().map(|c| c.0.len() + 1).sum::<usize>());
+    for (i, row) in first.iter().enumerate() {
+        s.push_str(row.0);
         for (_, pts) in docs {
-            s += &format!(",{}", pts[i].1);
+            s.push(',');
+            s.push_str(pts[i].1);
         }
         s.push('\n');
     }
@@ -373,11 +381,7 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
             for (mz, a) in &answers {
                 let x = extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
                 let y = extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
-                let pts = extract::pairs(&x, &y, j.win)
-                    .into_iter()
-                    .map(|(a, b)| (a.to_string(), b.to_string()))
-                    .collect();
-                cols.push((id(*mz), pts));
+                cols.push((id(*mz), extract::pairs(&x, &y, j.win)));
             }
             wide_csv(&cols)?
         }

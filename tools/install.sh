@@ -52,7 +52,12 @@ platform() {
 # fetch URL FILE: prints the HTTP status of the last response ("000" if there was none).
 fetch() {
 	if command -v curl >/dev/null 2>&1; then
-		c=$(curl -sSL --retry 2 -o "$2" -w '%{http_code}' "$1" 2>"$tmp/err") || :
+		# Toward GitHub only HTTPS, redirects included; MZLAB_BASE_URL (a mirror, a test server) may be plain HTTP.
+		if [ "$https_only" = 1 ]; then
+			c=$(curl -sSL --proto '=https' --proto-redir '=https' --retry 2 -o "$2" -w '%{http_code}' "$1" 2>"$tmp/err") || :
+		else
+			c=$(curl -sSL --retry 2 -o "$2" -w '%{http_code}' "$1" 2>"$tmp/err") || :
+		fi
 		case "$c" in [0-9][0-9][0-9]) printf '%s' "$c" ;; *) printf '000' ;; esac
 	else
 		wget -S -O "$2" "$1" 2>"$tmp/err" || true
@@ -98,8 +103,10 @@ main() {
 
 	plat=$(platform)
 	asset="mzlab-cli-$plat"
+	https_only=1
 	if [ -n "${MZLAB_BASE_URL:-}" ]; then
 		base=${MZLAB_BASE_URL%/}
+		https_only=0
 	elif [ -n "$version" ]; then
 		base="https://github.com/$REPO/releases/download/v$version"
 	else

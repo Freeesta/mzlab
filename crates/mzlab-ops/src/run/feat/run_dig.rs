@@ -9,7 +9,7 @@ use mzlab_core::json::Out;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
 
-/// What the Dig of a unit-resolution series (`lr::dig`) is given besides the table: the files and samples, the parent and the `hypotheses/2` the search in the series annotated.
+/// What the Dig of a unit-resolution series (`lr::dig`) is given besides the table: the files and samples, the parent and the `hypotheses/3` the search in the series annotated.
 pub struct DigInputs {
     pub files: String,
     pub who: String,

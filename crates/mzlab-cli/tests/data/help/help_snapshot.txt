@@ -58,7 +58,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   integrations of SIM/MRM/XIC traces of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -102,7 +102,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: commands for a task (commands-find/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
        mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -168,7 +168,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   integrations of SIM/MRM/XIC traces of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -212,7 +212,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: commands for a task (commands-find/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
        mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -278,7 +278,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
-       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   integrations of SIM/MRM/XIC traces of many files, CSV
+       mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -322,7 +322,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: commands for a task (commands-find/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
        mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -906,9 +906,10 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
-  --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
-               smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
-               median of 3 against spikes); numbers only
+  --set        the names of the "params" of the output: half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the
+               tallest peak), valley (fraction 0-1 of the smaller peak the valley must go down to keep two peaks, as printed), sn (smallest height over
+               the noise), min_pts, despike (1/0: median of 3 against spikes); numbers only. The old names lr_half, lr_valley (in %), lr_sn,
+               lr_min_pts, lr_despike still work and log a note on stderr
   --split MODE drop (default) = one baseline under touching peaks, valley = each baseline ends at the valley
   --area-unit  s = counts x s (default, as peak area), min = counts x min
   output       {"params":{half, half_auto, valley, sn, min_pts, despike, split, noise, baseline (always "engine")}, "peaks":[{lo, hi, t0, t1, rt, b0, b1, area, below,

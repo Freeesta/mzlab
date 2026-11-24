@@ -1,4 +1,4 @@
-//! The network of a `.mzfeat` with the blocks `tp/1` and `interp/1` (`network::network_text`), written by the real store on invented rows of the timolol
+//! The network of a `.mzfeat` with the blocks `tp/2` and `interp/1` (`network::network_text`), written by the real store on invented rows of the timolol
 //! formula: the arcs, the time course from the roles of the files, the table and the interpretation in two files or in one, and the errors of a file
 //! without a block.
 
