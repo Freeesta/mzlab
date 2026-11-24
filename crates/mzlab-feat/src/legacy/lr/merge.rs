@@ -67,6 +67,7 @@ fn resolved(t: &Aligned, a: usize, b: usize) -> (bool, usize) {
 /// area is kept; per column it takes the other row's cell when that one is detected and its own is not, or both are detected and the other's area
 /// is larger. The absorbed row keeps its m/z and RT but holds no peak any more. Rows are visited from the largest detected area down; the
 /// partners of a row are found in an index sorted by m/z (only the `da` window is compared, not every later row) and taken in the same order.
+/// A row with a non-finite m/z or RT is never merged (no difference to compare).
 pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
     if da <= 0.0 || rt <= 0.0 || t.n_files == 0 {
         return Vec::new();
@@ -78,8 +79,10 @@ pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
     for (i, &r) in ord.iter().enumerate() {
         rank[r] = i;
     }
-    // the rows that hold a peak, by m/z (NaN last: never inside a window)
-    let mut by_mz: Vec<usize> = (0..t.len()).filter(|&r| tot[r] > 0.0).collect();
+    // the rows that hold a peak and a finite m/z, by m/z (a NaN would break the order `partition_point` needs)
+    let mut by_mz: Vec<usize> = (0..t.len())
+        .filter(|&r| tot[r] > 0.0 && t.mz[r].is_finite())
+        .collect();
     mzlab_core::sortc::by(&mut by_mz, |&a, &b| {
         t.mz[a].total_cmp(&t.mz[b]).then(a.cmp(&b))
     });
@@ -89,7 +92,7 @@ pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
     let mut gone = vec![false; t.len()];
     let mut out = Vec::new();
     for (i, &a) in ord.iter().enumerate() {
-        if gone[a] || tot[a] <= 0.0 {
+        if gone[a] || tot[a] <= 0.0 || !t.mz[a].is_finite() {
             continue;
         }
         let lo = mzs.partition_point(|&m| m < t.mz[a] - pad);
@@ -99,9 +102,9 @@ pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
             .copied()
             .filter(|&b| rank[b] > i)
             .collect();
-        near.sort_unstable_by_key(|&b| rank[b]);
+        mzlab_core::sortc::by(&mut near, |&x, &y| rank[x].cmp(&rank[y]));
         for b in near {
-            if gone[b] || (t.mz[a] - t.mz[b]).abs() > da || (t.rt[a] - t.rt[b]).abs() > rt {
+            if gone[b] || !within(t, a, b, da, rt) {
                 continue;
             }
             let (apart, both) = resolved(t, a, b);
@@ -113,6 +116,11 @@ pub fn merge_split(t: &mut Aligned, da: f64, rt: f64) -> Vec<Merge> {
         }
     }
     out
+}
+
+/// Whether rows `a` and `b` are within `da` in m/z and `rt` in RT; false when a difference is NaN (a NaN or an infinite value on both sides).
+fn within(t: &Aligned, a: usize, b: usize, da: f64, rt: f64) -> bool {
+    (t.mz[a] - t.mz[b]).abs() <= da && (t.rt[a] - t.rt[b]).abs() <= rt
 }
 
 /// Moves the peaks of row `b` into row `a` (see `merge_split`) and returns the log of the merge.

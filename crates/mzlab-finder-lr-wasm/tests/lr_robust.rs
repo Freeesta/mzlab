@@ -239,21 +239,78 @@ fn isobars(kind: &str, d: f64) -> impl Fn(Option<f64>) -> Vec<(f64, f64, f64, f6
 
 #[test]
 fn isobaric_products_0_3_to_0_5_min_apart_are_never_merged() {
-    // the evidence for the default merge_rt_min 0.3 (docs/agenti/mzfinder-lr.md): two real products this far apart stay two rows
+    // the evidence for the default merge_rt_min 0.3 (docs/agenti/mzfinder-lr.md): two real products this far apart are never joined, under the
+    // default nor under 0.2, so the rows are those of the alignment with the merge off. Handing over or apart they are two rows; formed together
+    // 0.4 min apart the alignment already gives one row (the second product never gets a row of its own: upstream of the merge)
+    let ids = |s: &Value| -> Vec<Value> {
+        rows_near(s, 270.1)
+            .iter()
+            .map(|r| r["id"].clone())
+            .collect()
+    };
     for kind in ["together", "hand-off", "apart"] {
         for d in [0.3, 0.4, 0.5] {
             let (files, idxs) = series_with(&isobars(kind, d));
-            let s = sum(&dig(&files, &idxs));
-            let mine: Vec<&Value> = s["merged"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter(|x| (x["kept"]["mz"].as_f64().unwrap() - 270.4).abs() < 0.5)
-                .collect();
-            assert!(mine.is_empty(), "{kind} {d}: {mine:#?}");
-            if kind != "together" {
-                assert_eq!(rows_near(&s, 270.1).len(), 2, "{kind} {d}");
+            let off = ids(&sum(&dig_with(&files, PARENT, r#"{"merge_da": 0}"#, &idxs)));
+            for set in ["{}", r#"{"merge_rt_min": 0.2}"#] {
+                let s = sum(&dig_with(&files, PARENT, set, &idxs));
+                let mine: Vec<&Value> = s["merged"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter(|x| (x["kept"]["mz"].as_f64().unwrap() - 270.4).abs() < 0.5)
+                    .collect();
+                assert!(mine.is_empty(), "{kind} {d} {set}: {mine:#?}");
+                assert_eq!(ids(&s), off, "{kind} {d} {set}");
+                if kind != "together" || d != 0.4 {
+                    assert_eq!(off.len(), 2, "{kind} {d} {set}");
+                }
             }
         }
     }
+}
+
+#[test]
+fn a_merge_rt_min_of_0_2_leaves_a_drift_of_0_25_min_split() {
+    // the cost of the lower value: the product of `drifting` (6.0 then 6.25 min) stays two pieces of three kinetic points each
+    let (files, idxs) = series_with(&drifting);
+    let s = sum(&dig_with(&files, PARENT, r#"{"merge_rt_min": 0.2}"#, &idxs));
+    let mut k: Vec<u64> = rows_near(&s, 270.1)
+        .iter()
+        .map(|r| r["k_points"].as_u64().unwrap())
+        .collect();
+    k.sort_unstable();
+    assert_eq!(k, [3, 3], "{s:#}");
+}
+
+#[test]
+fn a_condition_with_its_own_dark_control_still_reads_the_shared_blank() {
+    // conditions A and B over the timed samples, t0 and blank shared, a dark control of A only: A judges its rows against its dark control
+    // and the shared blank, B against the shared blank and no dark control
+    let (files, mut idxs) = series();
+    let mut list: Vec<Value> = serde_json::from_str(&files).unwrap();
+    for (i, f) in list
+        .iter_mut()
+        .enumerate()
+        .filter(|(_, f)| f["type"] == "sample")
+    {
+        if f["time"].as_f64().unwrap() > 0.0 {
+            f["cond"] = Value::from(if i % 2 == 1 { "A" } else { "B" });
+        }
+    }
+    list.push(serde_json::json!({"name": "lr_dark_A.mzML", "time": null, "type": "control", "kind": "full", "cond": "A"}));
+    idxs.push(index_with(None, 123, &|_| Vec::new()));
+    let s = sum(&dig(&serde_json::to_string(&list).unwrap(), &idxs));
+    let parent = &s["rows"][0];
+    let by = parent["by_cond"].as_array().unwrap();
+    assert_eq!(by.len(), 2, "{parent:#}");
+    for c in by {
+        assert!(
+            c["blank"].is_number(),
+            "the shared blank is a column of {c}"
+        );
+    }
+    assert_eq!(by[0]["cond"], "A");
+    assert!(by[0]["dark"].is_number(), "{}", by[0]);
+    assert!(by[1]["dark"].is_null(), "{}", by[1]);
 }

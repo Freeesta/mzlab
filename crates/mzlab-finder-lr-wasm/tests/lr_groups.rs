@@ -330,7 +330,7 @@ fn the_other_polarity_pairs_equal_neutral_masses() {
 }
 
 /// `cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture scale` with `N=20` or `N=40` under `/usr/bin/time -v`:
-/// the whole native pipeline (detection, alignment, Dig, block `groups`) of N full-scan files of the folder (`docs/agenti/measurements.md`).
+/// the whole native pipeline (detection, alignment, Dig, block `groups`) of N full-scan files of the folder (`docs/agenti/measurements-rust.md`).
 #[test]
 #[ignore]
 fn scale() {
@@ -428,7 +428,7 @@ fn every_row_carries_its_evidence_per_condition_from_the_one_alignment() {
 
 /// `cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture one_alignment`: the native pipeline and Dig of the 38
 /// files as one series that compares six conditions (one alignment) against one run per condition (its 6 files with the shared blank and
-/// standard), timings in `docs/agenti/measurements.md`.
+/// standard), timings in `docs/agenti/measurements-rust.md`.
 #[test]
 #[ignore]
 fn one_alignment_against_one_per_condition() {
