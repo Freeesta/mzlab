@@ -34,6 +34,12 @@ impl Rel {
         self.example = e;
         self
     }
+    /// Whether `bulk` is another command (`mzlab-cli OTHER ...`) rather than this one's own batch use (`trace xic --mz M1,M2`).
+    pub(crate) fn elsewhere(&self) -> bool {
+        self.bulk
+            .strip_prefix("mzlab-cli ")
+            .is_some_and(|b| !b.starts_with(&format!("{} ", self.name)))
+    }
 }
 
 const PEAK_BULK: &str = "mzlab-cli peak table FILE... --auto: every peak of every channel of every file in one call; a target list: step chrom.transitions";
@@ -54,8 +60,10 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
     r("peak auto-lr", "integrate peaks one trace sim mrm area snr", &["peak table", "chrom.transitions", "trace chrom"]).bulk(PEAK_BULK),
-    r("peak auto", "integrate peaks one trace high resolution", &["peak table", "features.detect"]).bulk(PEAK_BULK),
-    r("peak area", "integrate one peak area", &["peak table"]).bulk(PEAK_BULK),
+    r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
+        .bulk("mzlab-cli features FILE... --out table.csv: every high-resolution peak of many files in one call (peak table --auto is the low-resolution engine)"),
+    r("peak area", "integrate one peak area", &["peak table"])
+        .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
     r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract", &["spectrum list", "spectra.centroid"]),

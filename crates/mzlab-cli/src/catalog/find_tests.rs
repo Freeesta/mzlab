@@ -255,3 +255,57 @@ fn the_full_listing_of_a_command_names_its_see_also_and_bulk() {
     );
     assert!(c["bulk"].as_str().is_some(), "{c}");
 }
+
+/// Only a `bulk` that is another command demotes a row on ties; `trace xic` and `tp.dig_lr` describe their own batch use.
+#[test]
+fn only_a_bulk_that_names_another_command_demotes() {
+    let of = |n: &str| crate::catalog::related::of(n).unwrap();
+    assert!(
+        of("peak auto-lr").elsewhere()
+            && of("peak area").elsewhere()
+            && of("peak auto").elsewhere()
+    );
+    assert!(
+        !of("trace xic").elsewhere()
+            && !of("tp.dig_lr").elsewhere()
+            && !of("peak table").elsewhere()
+    );
+}
+
+/// `peak table --auto` is the low-resolution engine: the high-resolution `peak auto` points at `features`, a fixed window at `--windows`.
+#[test]
+fn the_bulk_route_of_a_peak_command_runs_the_same_kind_of_integration() {
+    let of = |n: &str| crate::catalog::related::of(n).unwrap().bulk;
+    assert!(
+        of("peak auto").starts_with("mzlab-cli features "),
+        "{}",
+        of("peak auto")
+    );
+    assert!(of("peak area").contains("--windows") && !of("peak area").contains("--auto"));
+    assert!(of("peak auto-lr").contains("peak table FILE... --auto"));
+    let help = |c: &[&str]| {
+        let mut a: Vec<String> = c.iter().map(|s| s.to_string()).collect();
+        a.push("--help".into());
+        String::from_utf8(crate::execute(&a).stdout).unwrap()
+    };
+    let hr = help(&["peak", "auto"]);
+    assert!(
+        hr.contains("`features FILE...`") && !hr.contains("`peak table FILE... --auto`"),
+        "{hr}"
+    );
+    let area = help(&["peak", "area"]);
+    assert!(
+        area.contains("--windows PATH") && !area.contains("--auto"),
+        "{area}"
+    );
+}
+
+/// A second `--find` adds its words: none is dropped.
+#[test]
+fn a_repeated_find_keeps_every_word() {
+    let o =
+        crate::execute(&["commands", "--find", "sim", "--find", "snr", "--json"].map(String::from));
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["query"], serde_json::json!(["sim", "snr"]));
+}

@@ -63,9 +63,11 @@ fn sample(o: &mut Out, d: &Value, path: &str) -> Result<()> {
         _ => return Err(shape(path)),
     };
     let file = d.get("file").and_then(Value::str).unwrap_or(path);
-    let name = match d.get("sample").and_then(Value::str) {
-        Some(s) => format!("{file} {s}"),
-        None => file.to_string(),
+    // the sample of a multi-sample file is a number (`trace xic --sample 2`), null for a file of one
+    let name = match d.get("sample") {
+        Some(Value::Str(s)) => format!("{file}#{s}"),
+        Some(Value::Num(n)) => format!("{file}#{n}"),
+        _ => file.to_string(),
     };
     o.raw("{\"name\":");
     o.str(&name);
@@ -89,8 +91,12 @@ pub(crate) fn read(paths: &[std::path::PathBuf]) -> Result<String> {
     }
     if let [(path, t)] = texts.as_slice() {
         let v = parse(t.as_bytes()).map_err(|_| shape(path))?;
-        // the page's own list, unchanged: the same bytes as before
-        if list(&v).is_some_and(|a| a.iter().all(|s| s.get("schema").is_none())) {
+        // the page's own list (samples with their transitions), unchanged: the same bytes as before
+        if list(&v).is_some_and(|a| {
+            !a.is_empty()
+                && a.iter()
+                    .all(|s| s.get("schema").is_none() && s.get("transitions").is_some())
+        }) {
             return Ok(t.clone());
         }
         if v.get("schema").is_none() && list(&v).is_none() {
@@ -111,6 +117,10 @@ pub(crate) fn read(paths: &[std::path::PathBuf]) -> Result<String> {
             first = false;
             sample(&mut o, d, path)?;
         }
+    }
+    // `[]` (or files with no document) would be an empty table
+    if first {
+        return Err(shape(texts.first().map_or("", |t| t.0.as_str())));
     }
     o.raw("]");
     Ok(o.0)

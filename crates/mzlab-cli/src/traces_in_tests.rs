@@ -138,3 +138,51 @@ fn a_csv_is_refused_as_a_shape_not_read_as_json() {
         assert!(o.stderr.contains("trace-set/1"), "{}", o.stderr);
     }
 }
+
+/// `[]` or a list of numbers is no list of samples: refused like any other shape.
+#[test]
+fn an_empty_list_or_a_list_of_numbers_is_refused() {
+    let d = dir();
+    for (name, body) in [("empty.json", "[]"), ("numbers.json", "[1,2]")] {
+        let p = d.join(name);
+        std::fs::write(&p, body).unwrap();
+        let o = run(&[
+            "peak",
+            "table",
+            "--traces",
+            &p.display().to_string(),
+            "--auto",
+        ]);
+        assert_eq!(o.code, crate::exit::USAGE, "{name}: {}", o.stderr);
+        assert!(o.stderr.contains("trace-set/1"), "{name}: {}", o.stderr);
+    }
+}
+
+/// Two traces of one multi-sample file (`trace xic --sample 1`, `--sample 2`: the sample is a number) stay two samples, `x.wiff#1` and `x.wiff#2`.
+#[test]
+fn the_samples_of_one_multi_sample_file_keep_their_numbers() {
+    let doc = |n: u32| {
+        format!(
+            "{{\"schema\":\"trace-set/1\",\"file\":\"x.wiff\",\"sample\":{n},\"traces\":[{{\"schema\":\"trace/1\",\"id\":\"xic 100\",\"evidence\":{{\"mz\":100}},\"points\":[[1.0,0],[1.1,5],[1.2,0]]}}]}}"
+        )
+    };
+    let d = dir();
+    let (a, b) = (d.join("s1.json"), d.join("s2.json"));
+    std::fs::write(&a, doc(1)).unwrap();
+    std::fs::write(&b, doc(2)).unwrap();
+    let list = crate::traces_in::read(&[a.clone(), b.clone()]).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&list).unwrap();
+    let names: Vec<&str> = v
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["x.wiff#1", "x.wiff#2"]);
+    // a file of one sample (null) keeps its plain name
+    let one = d.join("one.json");
+    std::fs::write(&one, doc(1).replace("\"sample\":1", "\"sample\":null")).unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(&crate::traces_in::read(&[one]).unwrap()).unwrap();
+    assert_eq!(v[0]["name"], "x.wiff");
+}

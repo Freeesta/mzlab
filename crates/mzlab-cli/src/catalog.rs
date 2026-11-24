@@ -349,7 +349,10 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     for a in args {
         match a.as_str() {
             "--json" => json = true,
-            "--find" => find = Some(Vec::new()),
+            // a second --find adds its words to the first
+            "--find" => {
+                find.get_or_insert_with(Vec::new);
+            }
             s if s.starts_with('-') => {
                 return Outcome::fail(&format!("unknown option {s}"));
             }

@@ -25,8 +25,8 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|
                signed one against that line. With zero (the default) b0/b1 are not written (the area is measured from 0) and \"choices\" says so; base_*
                numbers with a baseline other than line are an error (exit 2)
 
-Many traces or files: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
-(the trace xic answers of many files) or the Flow step chrom.transitions (a target list of SIM ions / SRM transitions with S/N); never one call per trace.";
+Many traces or files: `features FILE...` (or the Flow step features.detect) finds every high-resolution peak of many files in one call;
+`peak table --auto` is the low-resolution engine (peak auto-lr), not this one; never one call per trace.";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;

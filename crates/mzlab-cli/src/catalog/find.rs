@@ -169,8 +169,8 @@ pub(crate) fn search(query: &[String]) -> Vec<(Item, f64, Vec<String>)> {
             (score > 0.0).then(|| (it, (score * 100.0).round() / 100.0, matched))
         })
         .collect();
-    // on equal scores the one call for many goes before a one-at-a-time command (a `related` row with `bulk`)
-    let one_at_a_time = |it: &Item| related::of(&it.name).is_some_and(|r| !r.bulk.is_empty());
+    // on equal scores the one call for many goes before a one-at-a-time command (its `bulk` is another command)
+    let one_at_a_time = |it: &Item| related::of(&it.name).is_some_and(related::Rel::elsewhere);
     hits.sort_by(|a, b| {
         b.1.total_cmp(&a.1)
             .then_with(|| one_at_a_time(&a.0).cmp(&one_at_a_time(&b.0)))
