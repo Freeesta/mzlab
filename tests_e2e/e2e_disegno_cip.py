@@ -1,6 +1,7 @@
 """Disegno, stereodescriptors (`cip/1` of the molkit .wasm): the toggle is off by default and the card says that mass spectrometry cannot tell
 stereoisomers apart; on, (R,E)-pent-3-en-2-ol drawn with its wedge lists «C2: R» and «C4=C5: E» as text rows (role=status) that select their
-atoms; the mirror image reads S; a molecule without defined stereo says so; off again clears the list. Run from the repo root after
+atoms; the mirror image reads S; a centre whose CIP digraph passes the node cap gets a row of its own while the other keeps R
+(tests/dati/cip_digraph.json); a molecule without defined stereo says so; off again clears the list. Run from the repo root after
 tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
 # covers: mzlab/web/disegno-verifica.js, mzlab/web/disegno-cip.js, mzlab/web/lang/en/draw-cip.js
 # covers: mzlab/web/draw.js
@@ -18,6 +19,7 @@ KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 # the fixture of the parity tests: hashed wedge from C2 to C1, trans double bond C4=C5; MIRROR makes it a solid wedge
 MOL = json.load(open(os.path.join(HERE, "..", "tests", "dati", "cip_disegno.json"), encoding="utf-8"))["request"]["molfile"]
 MIRROR = MOL.replace("  2  1  1  6", "  2  1  1  1")
+CAPPED = json.load(open(os.path.join(HERE, "..", "tests", "dati", "cip_digraph.json"), encoding="utf-8"))["partial"]["request"]["molfile"]
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
@@ -56,6 +58,13 @@ try:
             got = rows(MIRROR)
             assert got == ["C2: S", "C4=C5: E"], (got, pg.inner_text("#cip-card"))
         step("the solid wedge (mirror image) reads S, the canvas is followed while on", mirror)
+
+        def capped():
+            got = rows(CAPPED)
+            want = pg.evaluate("[I18N.t('draw.cip.atom', {atom: 'C2', label: 'R'}), I18N.t('draw.cip.capped', {atom: 'C5'})]")
+            assert got == want, (got, pg.inner_text("#cip-card"))
+            assert pg.inner_text("#cip-status") == pg.evaluate("I18N.t('draw.cip.found', {n: 1})")
+        step("a centre between two dodecahedranyl cages passes the node cap: its own row, C2 keeps R", capped)
 
         def none():
             assert rows("CCO") == [], pg.inner_text("#cip-card")

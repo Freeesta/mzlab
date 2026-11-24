@@ -194,7 +194,7 @@ I18N.add("en", {
   "error.cip.request": "The request of the CIP descriptors is not valid JSON with a molfile.",
   "error.cip.molfile": "The drawing cannot be read as a molfile.",
   "error.cip.tooComplex": "No descriptors: one structure ({atoms} atoms, {elements} defined stereo elements) passed a work limit ({work} of {limit} steps allowed). Chained rings whose arms differ only by stereo multiply the work; label a smaller part.",
-  "error.cip.digraphTooBig": "No descriptors: one structure ({atoms} atoms, {elements} defined stereo elements) needs a CIP digraph of more than {limit} nodes for one label ({nodes} reached). Ring systems with many paths make it grow; label a smaller part.",
+  "error.cip.digraphTooBig": "No descriptors: in one structure ({atoms} atoms, {elements} defined stereo elements) the CIP digraph of every label, or of a double bond the others depend on, needs more than {limit} nodes ({nodes} reached). Ring systems with many paths make it grow; label a smaller part.",
   "error.descr.request": "The request of the molecular descriptors is not valid JSON with a molfile.",
   "error.descr.molfile": "The drawing cannot be read as a molfile: {detail}.",
   "error.descr.tooBig": "The drawing has more than {max} atoms: the descriptors are for drawings, not libraries.",

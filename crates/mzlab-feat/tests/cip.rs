@@ -210,11 +210,21 @@ fn one_chain_past_the_work_limit_is_refused_with_its_evidence() {
     same_as_whole_record(&[DEFINED; 4].join(""));
 }
 
+/// Two dodecahedranyl groups, the second told apart from the first only by one carbon-13 when `heavy`.
+fn cages(heavy: bool) -> (String, String) {
+    let cage = "C12C3C4C5C1C6C7C2C8C3C9C4C%10C5C6C%11C7C8C9C%10%11".to_string();
+    let other = if heavy {
+        cage.replace("C%10%11", "[13CH]%10%11")
+    } else {
+        cage.clone()
+    };
+    (cage, other)
+}
+
 #[test]
-fn one_digraph_past_its_node_cap_is_refused_not_left_unlabelled() {
-    // two dodecahedranyl arms told apart only by one carbon-13: the digraph of the centre passes 40,000 nodes long before the work limit
-    let cage = "C12C3C4C5C1C6C7C2C8C3C9C4C%10C5C6C%11C7C8C9C%10%11";
-    let heavy = cage.replace("C%10%11", "[13CH]%10%11");
+fn a_drawing_left_with_no_label_by_the_node_cap_is_refused() {
+    // the digraph of the centre passes 40,000 nodes long before the work limit
+    let (cage, heavy) = cages(true);
     let m = Mol::from_smiles(&format!("F[C@H]({cage}){heavy}")).unwrap();
     // without the refusal the label was simply missing
     assert!(cip_labels(&m, &m.stereo_sites()).atoms.is_empty());
@@ -226,10 +236,32 @@ fn one_digraph_past_its_node_cap_is_refused_not_left_unlabelled() {
         .map(|k| p(k))
         .collect();
     assert_eq!(got, ["42", "1", "40001", "40000"]);
-    // a small piece beside it is not labelled alone: the drawing is refused whole, never in part
-    let two = Mol::from_smiles(&format!("F[C@H](Cl)Br.F[C@H]({cage}){heavy}")).unwrap();
-    let e = drawing_labels(&drawing(two)).err().unwrap();
-    assert_eq!(e.params[0], ("atoms", "42".to_string()));
+}
+
+#[test]
+fn a_centre_past_the_node_cap_loses_only_its_own_label() {
+    // the first centre is told apart at the first sphere (F > Cl > C > H); the second, between two cages, is a site (the cage CH are)
+    // whose digraph passes the cap: it is reported in `capped`, the first keeps the label of its short analogue
+    let want = drawing_labels(&drawing(Mol::from_smiles("F[C@H](Cl)C[C@H](Br)I").unwrap()))
+        .unwrap()
+        .atoms;
+    assert_eq!(want.len(), 2);
+    for heavy in [false, true] {
+        let (a, b) = cages(heavy);
+        let m = Mol::from_smiles(&format!("F[C@H](Cl)C[C@H]({a}){b}")).unwrap();
+        assert!(m.stereo_sites().contains(&mzlab_mol::Site::Tetra(4)));
+        let l = drawing_labels(&drawing(m)).unwrap();
+        assert_eq!(
+            (l.atoms, l.capped),
+            (want[..1].to_vec(), vec![4]),
+            "13C {heavy}"
+        );
+    }
+    // in another piece too: the small piece keeps its label, the cage centre is reported by its record index
+    let (a, b) = cages(true);
+    let two = Mol::from_smiles(&format!("F[C@H](Cl)Br.F[C@H]({a}){b}")).unwrap();
+    let l = drawing_labels(&drawing(two)).unwrap();
+    assert_eq!((l.atoms.len(), l.capped), (1, vec![5]));
 }
 
 #[test]
@@ -275,16 +307,28 @@ fn open_sites_cost_no_flip_test_and_big_drawings_skip_before_any() {
 }
 
 #[test]
-fn the_refusal_fixture_gives_its_key_and_parameters() {
-    // the same fixture is checked against the molkit `.wasm`, `mzlab-cli mol cip` (tests/test_molkit_wasm.py) and the app (labels.rs)
+fn the_refusal_fixtures_give_their_key_and_parameters() {
+    // the same fixtures are checked against the molkit `.wasm`, `mzlab-cli mol cip` (tests/test_molkit_wasm.py) and the app (labels.rs):
+    // past the work limit, and past the node cap (`cip_digraph.json`, whose two-centre drawing keeps one label and reports one centre)
+    for text in [
+        include_str!("../../../tests/dati/cip_complex.json"),
+        include_str!("../../../tests/dati/cip_digraph.json"),
+    ] {
+        let fx: Value = serde_json::from_str(text).unwrap();
+        let e = cip_json(&fx["request"].to_string()).unwrap_err();
+        assert_eq!(e.key, fx["error_key"].as_str().unwrap());
+        let params: serde_json::Map<String, Value> = e
+            .params
+            .iter()
+            .map(|(k, v)| (k.to_string(), Value::String(v.clone())))
+            .collect();
+        assert_eq!(Value::Object(params), fx["params"]);
+    }
     let fx: Value =
-        serde_json::from_str(include_str!("../../../tests/dati/cip_complex.json")).unwrap();
-    let e = cip_json(&fx["request"].to_string()).unwrap_err();
-    assert_eq!(e.key, fx["error_key"].as_str().unwrap());
-    let params: serde_json::Map<String, Value> = e
-        .params
-        .iter()
-        .map(|(k, v)| (k.to_string(), Value::String(v.clone())))
-        .collect();
-    assert_eq!(Value::Object(params), fx["params"]);
+        serde_json::from_str(include_str!("../../../tests/dati/cip_digraph.json")).unwrap();
+    let p = &fx["partial"];
+    assert_eq!(
+        cip_json(&p["request"].to_string()).unwrap(),
+        p["cip"].as_str().unwrap()
+    );
 }
