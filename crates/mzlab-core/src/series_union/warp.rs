@@ -20,7 +20,11 @@ impl Curve {
         }
         match n.windows(2).find(|w| rt <= w[1].0) {
             Some(w) => {
-                let t = if w[1].0 > w[0].0 { (rt - w[0].0) / (w[1].0 - w[0].0) } else { 0.0 };
+                let t = if w[1].0 > w[0].0 {
+                    (rt - w[0].0) / (w[1].0 - w[0].0)
+                } else {
+                    0.0
+                };
                 w[0].1 + t * (w[1].1 - w[0].1)
             }
             None => n[n.len() - 1].1,
@@ -51,7 +55,14 @@ pub fn by_mz(rows: &[Row]) -> Vec<usize> {
 }
 
 /// The rows of `sorted` (from `by_mz`) with m/z within `da` of `mz` and the same polarity, with their RT gap, the nearest RT first.
-fn near(rows: &[Row], sorted: &[usize], mz: f64, pol: Option<i8>, rt: f64, da: f64) -> Vec<(f64, usize)> {
+fn near(
+    rows: &[Row],
+    sorted: &[usize],
+    mz: f64,
+    pol: Option<i8>,
+    rt: f64,
+    da: f64,
+) -> Vec<(f64, usize)> {
     let from = sorted.partition_point(|&i| rows[i].mz < mz - da);
     let mut hit: Vec<(f64, usize)> = sorted[from..]
         .iter()
@@ -67,8 +78,18 @@ pub fn build(reference: &[Row], rows: &[Row], p: &Params) -> Option<Curve> {
     let (ref_sorted, own_sorted) = (by_mz(reference), by_mz(rows));
     let mut anchors: Vec<(f64, f64)> = Vec::new();
     for (i, r) in rows.iter().enumerate() {
-        let Some(&(gap, j)) = near(reference, &ref_sorted, r.mz, r.polarity, r.rt, p.da).first() else { continue };
-        let back = near(rows, &own_sorted, reference[j].mz, reference[j].polarity, reference[j].rt, p.da);
+        let Some(&(gap, j)) = near(reference, &ref_sorted, r.mz, r.polarity, r.rt, p.da).first()
+        else {
+            continue;
+        };
+        let back = near(
+            rows,
+            &own_sorted,
+            reference[j].mz,
+            reference[j].polarity,
+            reference[j].rt,
+            p.da,
+        );
         if gap <= p.rt_gap && back.first().map(|b| b.1) == Some(i) {
             anchors.push((r.rt, reference[j].rt - r.rt));
         }

@@ -24,7 +24,10 @@ pub struct Series {
 }
 
 fn bad(table: &str, line: usize, detail: &str) -> Error {
-    Error::new("err.union.table").with("table", table).with("row", line.to_string()).with("detail", detail)
+    Error::new("err.union.table")
+        .with("table", table)
+        .with("row", line.to_string())
+        .with("detail", detail)
 }
 
 /// The fields of a line; a field in double quotes may hold the delimiter, `""` is a quote.
@@ -48,7 +51,10 @@ fn split(line: &str, d: char) -> Vec<String> {
 
 /// The delimiter that cuts the header into most fields (`,` on a tie).
 fn delimiter(header: &str) -> char {
-    [',', ';', '\t'].into_iter().max_by_key(|d| (split(header, *d).len(), *d == ',')).unwrap_or(',')
+    [',', ';', '\t']
+        .into_iter()
+        .max_by_key(|d| (split(header, *d).len(), *d == ','))
+        .unwrap_or(',')
 }
 
 fn polarity(t: &str) -> Option<Option<i8>> {
@@ -78,15 +84,31 @@ pub fn read(name: &str, text: &str, p: &Params) -> Result<Series> {
     let names: Vec<String> = split(header, d).iter().map(|h| h.to_lowercase()).collect();
     let col = |k: &[&str]| names.iter().position(|n| k.contains(&n.as_str()));
     let need = |k: &[&str]| col(k).ok_or_else(|| bad(name, hl, &format!("no_column_{}", k[0])));
-    let (mz_at, rt_at) = (need(&["mz", "m/z", "row m/z"])?, need(&["rt", "row retention time", "retention time"])?);
-    let (id_at, lo_at, hi_at, pol_at) =
-        (col(&["id", "name", "row id"]), col(&["rt_range:min", "rt_min"]), col(&["rt_range:max", "rt_max"]), col(&["polarity"]));
-    let mut s = Series { name: name.to_string(), rows: Vec::new(), windowless: 0, polarity_set: 0 };
+    let (mz_at, rt_at) = (
+        need(&["mz", "m/z", "row m/z"])?,
+        need(&["rt", "row retention time", "retention time"])?,
+    );
+    let (id_at, lo_at, hi_at, pol_at) = (
+        col(&["id", "name", "row id"]),
+        col(&["rt_range:min", "rt_min"]),
+        col(&["rt_range:max", "rt_max"]),
+        col(&["polarity"]),
+    );
+    let mut s = Series {
+        name: name.to_string(),
+        rows: Vec::new(),
+        windowless: 0,
+        polarity_set: 0,
+    };
     for (line, l) in lines {
         let cells = split(l, d);
         let get = |i: Option<usize>| i.and_then(|i| cells.get(i)).map_or("", |c| c.as_str());
-        let mz = number(get(Some(mz_at))).filter(|v| *v > 0.0).ok_or_else(|| bad(name, line, "bad_mz"))?;
-        let rt = number(get(Some(rt_at))).filter(|v| *v >= 0.0).ok_or_else(|| bad(name, line, "bad_rt"))?;
+        let mz = number(get(Some(mz_at)))
+            .filter(|v| *v > 0.0)
+            .ok_or_else(|| bad(name, line, "bad_mz"))?;
+        let rt = number(get(Some(rt_at)))
+            .filter(|v| *v >= 0.0)
+            .ok_or_else(|| bad(name, line, "bad_rt"))?;
         let window = match (number(get(lo_at)), number(get(hi_at))) {
             (Some(a), Some(b)) if a >= 0.0 && b > a => Some((a, b)),
             _ => None,
@@ -96,8 +118,19 @@ pub fn read(name: &str, text: &str, p: &Params) -> Result<Series> {
         s.polarity_set += usize::from(own.is_none() && pol.is_some());
         s.windowless += usize::from(window.is_none());
         let id = get(id_at);
-        let id = if id.is_empty() { line.to_string() } else { id.to_string() };
-        s.rows.push(Row { id, mz, rt, window, polarity: pol, line });
+        let id = if id.is_empty() {
+            line.to_string()
+        } else {
+            id.to_string()
+        };
+        s.rows.push(Row {
+            id,
+            mz,
+            rt,
+            window,
+            polarity: pol,
+            line,
+        });
     }
     Ok(s)
 }

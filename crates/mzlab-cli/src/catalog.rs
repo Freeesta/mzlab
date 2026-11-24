@@ -119,6 +119,10 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--blank-pattern", "blank file name globs"),
     ("--log", "log file"),
     ("--workers", "files at once"),
+    ("--rt-warp", "RT map between series: off or piecewise"),
+    ("--rt-gap", "widest RT gap of an anchor pair, min"),
+    ("--min-series", "keep targets seen in this many series"),
+    ("--pad", "widen every window, min"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).

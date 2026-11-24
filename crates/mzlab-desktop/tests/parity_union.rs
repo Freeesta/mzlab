@@ -20,20 +20,38 @@ fn table(shared: usize, own: usize, own_mz: f64, shift: f64) -> String {
 }
 
 fn request(tables: &[(&str, String)], params: Value) -> String {
-    let t: Vec<Value> = tables.iter().map(|(n, x)| json!({"name": n, "text": x})).collect();
+    let t: Vec<Value> = tables
+        .iter()
+        .map(|(n, x)| json!({"name": n, "text": x}))
+        .collect();
     json!({"tables": t, "params": params}).to_string()
 }
 
 /// Requests that cover the merge, the map, the drops, the polarity and the errors.
 fn bodies() -> Vec<String> {
-    let shifted = [("s1", table(10, 3, 300.0, 0.0)), ("s2", table(10, 3, 400.0, 0.2))];
+    let shifted = [
+        ("s1", table(10, 3, 300.0, 0.0)),
+        ("s2", table(10, 3, 400.0, 0.2)),
+    ];
     vec![
         request(&shifted, json!({})),
         request(&shifted, json!({"rt_warp": "piecewise"})),
-        request(&shifted, json!({"rt_warp": "piecewise", "min_series": 2, "pad": 0.05, "polarity": "-"})),
-        request(&[("s1", table(2, 0, 0.0, 0.0)), ("s2", table(2, 0, 0.0, 0.2))], json!({"rt_warp": "piecewise", "rt_tol": "0.3"})),
-        request(&[("s1", "id,mz,rt\na,200.0,3.00\nb,200.2,3.05\n".into())], json!({})),
-        request(&[("s1", "id;mz;rt;polarity\na;200;3;-\nb;200;3;\n".into())], json!({"polarity": "+"})),
+        request(
+            &shifted,
+            json!({"rt_warp": "piecewise", "min_series": 2, "pad": 0.05, "polarity": "-"}),
+        ),
+        request(
+            &[("s1", table(2, 0, 0.0, 0.0)), ("s2", table(2, 0, 0.0, 0.2))],
+            json!({"rt_warp": "piecewise", "rt_tol": "0.3"}),
+        ),
+        request(
+            &[("s1", "id,mz,rt\na,200.0,3.00\nb,200.2,3.05\n".into())],
+            json!({}),
+        ),
+        request(
+            &[("s1", "id;mz;rt;polarity\na;200;3;-\nb;200;3;\n".into())],
+            json!({"polarity": "+"}),
+        ),
         request(&[("s1", "id,mz,rt\na,x,3\n".into())], json!({})),
         request(&[("s1", table(1, 0, 0.0, 0.0))], json!({"da": 9})),
         "{\"tables\":[]}".to_string(),
@@ -67,7 +85,10 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         return;
     };
     let dir = tempfile::tempdir().unwrap();
-    let plan: Vec<Value> = bodies().iter().map(|b| json!({"op": "union_tables", "body": b})).collect();
+    let plan: Vec<Value> = bodies()
+        .iter()
+        .map(|b| json!({"op": "union_tables", "body": b}))
+        .collect();
     let file = dir.path().join("plan.json");
     std::fs::write(&file, serde_json::to_string(&plan).unwrap()).unwrap();
     let empty = dir.path().join("empty");
@@ -80,7 +101,11 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         .arg(&file)
         .output()
         .expect("node runs");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let wasm: Vec<Value> = serde_json::from_slice(&out.stdout).unwrap();
     let st = State::new();
     for (body, w) in bodies().iter().zip(&wasm) {
@@ -97,5 +122,8 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         };
         assert_eq!(app, site, "{}", &body[..body.len().min(60)]);
     }
-    assert!(wasm[0]["s"].as_str().unwrap().contains("\"schema\":\"union/1\""));
+    assert!(wasm[0]["s"]
+        .as_str()
+        .unwrap()
+        .contains("\"schema\":\"union/1\""));
 }

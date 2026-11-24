@@ -16,6 +16,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -135,6 +136,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
@@ -254,6 +256,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan

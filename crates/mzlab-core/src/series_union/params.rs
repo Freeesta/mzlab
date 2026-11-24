@@ -27,7 +27,9 @@ pub struct Params {
 }
 
 fn bad(name: &str, value: &str) -> Error {
-    Error::new("err.union.param").with("name", name).with("value", value)
+    Error::new("err.union.param")
+        .with("name", name)
+        .with("value", value)
 }
 
 fn number(name: &str, v: &Value) -> Result<f64> {
@@ -50,7 +52,15 @@ fn within(name: &str, v: &Value, lo: f64, hi: f64) -> Result<f64> {
 
 impl Params {
     pub fn defaults() -> Params {
-        Params { da: 0.5, rt_tol: 0.1, rt_gap: 0.5, warp: Warp::Off, min_series: 1, pad: 0.0, polarity: None }
+        Params {
+            da: 0.5,
+            rt_tol: 0.1,
+            rt_gap: 0.5,
+            warp: Warp::Off,
+            min_series: 1,
+            pad: 0.0,
+            polarity: None,
+        }
     }
 
     pub fn from_json(v: Option<&Value>) -> Result<Params> {

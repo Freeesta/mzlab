@@ -37,14 +37,25 @@ fn pairs(s: &Series, rts: &[f64], targets: &[Target], p: &Params) -> Vec<(f64, f
     let mut out = Vec::new();
     for (i, r) in s.rows.iter().enumerate() {
         let from = order.partition_point(|&t| targets[t].mz0 < r.mz - p.da);
-        for &t in order[from..].iter().take_while(|&&t| targets[t].mz0 <= r.mz + p.da) {
-            let (dr, dm) = ((rts[i] - targets[t].rt0).abs(), (r.mz - targets[t].mz0).abs());
+        for &t in order[from..]
+            .iter()
+            .take_while(|&&t| targets[t].mz0 <= r.mz + p.da)
+        {
+            let (dr, dm) = (
+                (rts[i] - targets[t].rt0).abs(),
+                (r.mz - targets[t].mz0).abs(),
+            );
             if targets[t].polarity == r.polarity && dr <= p.rt_tol {
                 out.push((dr, dm, i, t));
             }
         }
     }
-    out.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)).then(a.2.cmp(&b.2)).then(a.3.cmp(&b.3)));
+    out.sort_by(|a, b| {
+        a.0.total_cmp(&b.0)
+            .then(a.1.total_cmp(&b.1))
+            .then(a.2.cmp(&b.2))
+            .then(a.3.cmp(&b.3))
+    });
     out
 }
 
@@ -52,19 +63,40 @@ pub fn merge(series: &[Series], p: &Params) -> Merged {
     let mut targets: Vec<Target> = Vec::new();
     let mut warps = Vec::new();
     for (k, s) in series.iter().enumerate() {
-        let curve = if k > 0 && p.warp == Warp::Piecewise { build(&series[0].rows, &s.rows, p) } else { None };
-        let rts: Vec<f64> = s.rows.iter().map(|r| r.rt + curve.as_ref().map_or(0.0, |c| c.shift(r.rt))).collect();
+        let curve = if k > 0 && p.warp == Warp::Piecewise {
+            build(&series[0].rows, &s.rows, p)
+        } else {
+            None
+        };
+        let rts: Vec<f64> = s
+            .rows
+            .iter()
+            .map(|r| r.rt + curve.as_ref().map_or(0.0, |c| c.shift(r.rt)))
+            .collect();
         let mut taken = vec![false; s.rows.len()];
         let mut used = vec![false; targets.len()];
         for (_, _, i, t) in pairs(s, &rts, &targets, p) {
             if !taken[i] && !used[t] {
                 taken[i] = true;
                 used[t] = true;
-                targets[t].members.push(Member { series: k, row: i, rt: rts[i] });
+                targets[t].members.push(Member {
+                    series: k,
+                    row: i,
+                    rt: rts[i],
+                });
             }
         }
         for (i, r) in s.rows.iter().enumerate().filter(|(i, _)| !taken[*i]) {
-            targets.push(Target { members: vec![Member { series: k, row: i, rt: rts[i] }], polarity: r.polarity, mz0: r.mz, rt0: rts[i] });
+            targets.push(Target {
+                members: vec![Member {
+                    series: k,
+                    row: i,
+                    rt: rts[i],
+                }],
+                polarity: r.polarity,
+                mz0: r.mz,
+                rt0: rts[i],
+            });
         }
         warps.push(Warped { curve });
     }
