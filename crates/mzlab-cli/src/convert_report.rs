@@ -24,6 +24,8 @@ pub(crate) enum Item {
         flagged: Option<(usize, usize)>,
         /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
         lost: Option<(usize, usize, String)>,
+        /// With `--name sample`: why the file got a name other than the plain sample name (a clash, an unsafe name).
+        rename: Option<String>,
     },
     Failed {
         input: String,
@@ -179,7 +181,7 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
 }
 
 /// The `convert/1` document (`--report FILE`, and the stdout of `--json`): `{"schema","dry_run":false,"out","items":[...]}` with, per input,
-/// `{input, output, sha256, spectra, seconds, skipped, conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
+/// `{input, output, sha256, spectra, seconds, skipped, rename (with `--name sample`, when the name is not the plain sample name), conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
 pub(crate) fn report(items: &[Item], out: &Path) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"convert/1\",\"dry_run\":false,\"out\":")
@@ -198,6 +200,7 @@ pub(crate) fn report(items: &[Item], out: &Path) -> String {
                 conv,
                 notes,
                 flagged,
+                rename,
                 ..
             } => {
                 o.raw("{\"input\":").str(input);
@@ -210,6 +213,9 @@ pub(crate) fn report(items: &[Item], out: &Path) -> String {
                 } else {
                     ",\"skipped\":false"
                 });
+                if let Some(r) = rename {
+                    o.raw(",\"rename\":").str(r);
+                }
                 if let Some(c) = conv {
                     o.raw(",\"conversion\":").raw(c);
                 }
@@ -246,6 +252,8 @@ pub(crate) struct Planned {
     pub(crate) reader: Option<&'static str>,
     pub(crate) input_bytes: u64,
     pub(crate) empty: bool,
+    /// With `--name sample`: why the file is not called after its sample plainly.
+    pub(crate) rename: Option<String>,
 }
 
 /// The `convert/1` document of `--dry-run`: what would be converted, nothing written.
@@ -270,10 +278,14 @@ pub(crate) fn dry_run(plan: &[Planned], out: &Path) -> String {
         };
         o.raw(",\"input_bytes\":").int(p.input_bytes as i64);
         o.raw(if p.empty {
-            ",\"empty\":true}"
+            ",\"empty\":true"
         } else {
-            ",\"empty\":false}"
+            ",\"empty\":false"
         });
+        if let Some(r) = &p.rename {
+            o.raw(",\"rename\":").str(r);
+        }
+        o.raw("}");
     }
     o.raw("\n]}\n");
     o.0
