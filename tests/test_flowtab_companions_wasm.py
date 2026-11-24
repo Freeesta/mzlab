@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli, run
+from cargo_util import cli, run, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "crates" / "mzlab-feat" / "tests" / "data" / "companions"
@@ -17,8 +17,7 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 @pytest.fixture(scope="module")
 def pkg(tmp_path_factory):
     d = tmp_path_factory.mktemp("flowtab")
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_tab")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_tab")))
     return d
 
 
