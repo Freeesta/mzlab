@@ -1,5 +1,6 @@
 //! Tests of the conversion queue (`conv_queue.rs`) on small synthetic files.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -98,7 +99,7 @@ fn two_files_give_the_bytes_of_the_command_line_and_cancel_stops_the_second() {
     );
     // saving puts the ready files in one folder
     let to = d.path().join("saved");
-    assert_eq!(c.save(&to).unwrap(), 1);
+    assert_eq!(c.save(&to, &HashMap::new()).unwrap().saved, 1);
     assert_eq!(
         std::fs::read(to.join("a.mzML")).unwrap(),
         std::fs::read(&got).unwrap()
@@ -256,4 +257,57 @@ fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
     let big = Queue::with_budget(8192.0);
     assert_eq!(big.limit(), wanted);
     assert!(big.list().get("notice").is_none());
+}
+
+#[test]
+fn saving_names_each_file_as_the_page_asks_and_never_outside_the_folder() {
+    let d = tempfile::tempdir().unwrap();
+    let (a, b) = (d.path().join("a.mzXML"), d.path().join("b.mzXML"));
+    mzxml_file(&a, 3);
+    mzxml_file(&b, 4);
+    let c = Queue::with_workers(1);
+    c.set_folder(d.path().join("cache"));
+    c.add("a.mzXML", 0, &a);
+    c.add("b.mzXML", 0, &b);
+    wait(&c, "a.mzXML", "done");
+    wait(&c, "b.mzXML", "done");
+    // a name the route `mzml_names` gave for a sample (not the cache's name, which is the file's); a name that is a path is refused
+    let asked = "Blank.mzML".to_string();
+    let names = HashMap::from([
+        ("a.mzXML".to_string(), asked.clone()),
+        ("b.mzXML".to_string(), "../escape.mzML".to_string()),
+    ]);
+    let to = d.path().join("saved");
+    let cache_name = c.ready("a.mzXML").unwrap().file_name().unwrap().to_owned();
+    assert_ne!(
+        asked.as_str(),
+        cache_name.to_string_lossy(),
+        "the test must ask for a name other than the cache's"
+    );
+    let r = c.save(&to, &names).unwrap();
+    assert_eq!(r.saved, 2);
+    assert_eq!(r.own, ["b.mzML"], "the refused name is said, not dropped");
+    assert!(r.kept.is_empty());
+    assert_eq!(
+        std::fs::read(to.join(&asked)).unwrap(),
+        std::fs::read(c.ready("a.mzXML").unwrap()).unwrap()
+    );
+    assert!(
+        !to.join(&cache_name).exists(),
+        "saved under the asked name only"
+    );
+    assert!(
+        to.join("b.mzML").is_file(),
+        "the refused name keeps its own"
+    );
+    assert!(!d.path().join("escape.mzML").exists());
+    // a second save of the same files is the same files; another file under a name already there is never replaced, and is said
+    let again = c.save(&to, &names).unwrap();
+    assert_eq!((again.saved, again.kept.len()), (2, 0));
+    // (a hard link shares its bytes with the cache: the user's own file takes its place by name)
+    std::fs::remove_file(to.join(&asked)).unwrap();
+    std::fs::write(to.join(&asked), b"mine").unwrap();
+    let kept = c.save(&to, &names).unwrap();
+    assert_eq!((kept.saved, kept.kept.clone()), (1, vec![asked.clone()]));
+    assert_eq!(std::fs::read(to.join(&asked)).unwrap(), b"mine");
 }

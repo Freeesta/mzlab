@@ -11,6 +11,7 @@ const NATIVO = {
     const f = new File([JSON.stringify({ mzlab: "nat1", ds: key })], name),
       size = sampleSize != null ? sampleSize : (members.length === 1 ? members[0].blob.size : null);
     Object.defineProperty(f, "mzlabNat", { value: { key, members, c, id, centroid: !!centroid, size } });
+    if (typeof CONV !== "undefined") CONV.meta.set(name, { members, c, id });      // the sample name is asked for when «Name files by sample name» is chosen (conversione.js)
     return f;
   },
   // the size to show: the one of the sample or members

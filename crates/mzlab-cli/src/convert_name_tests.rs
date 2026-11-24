@@ -1,5 +1,5 @@
 //! `mzlab-cli file convert --name sample`: the mzML is called after the sample, the bytes do not depend on the name, clashes and unsafe names are settled
-//! deterministically and logged, the default naming is unchanged, a bad value is a usage error (exit 2).
+//! deterministically and logged, the default naming changes only for names equal case aside (the `K-` prefix, noted), a bad value is a usage error (exit 2).
 
 use std::path::PathBuf;
 

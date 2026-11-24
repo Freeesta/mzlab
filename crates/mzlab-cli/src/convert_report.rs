@@ -26,7 +26,7 @@ pub(crate) enum Item {
         lost: Option<(usize, usize, String)>,
         /// The spectrum-type decision (always, for a file written by this version); boxed so that `Done` stays within the size gap of `Failed`.
         spectrum_type: Option<Box<str>>,
-        /// With `--name sample`: why the file got a name other than the plain sample name (a clash, an unsafe name).
+        /// Why the file got a name other than the plain one (a clash, the `K-` prefix of the default naming, an unsafe sample name with `--name sample`).
         rename: Option<String>,
     },
     Failed {
@@ -208,7 +208,7 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
 }
 
 /// The `convert/1` document (`--report FILE`, and the stdout of `--json`): `{"schema","dry_run":false,"out","items":[...]}` with, per input,
-/// `{input, output, sha256, spectra, seconds, skipped, rename (with `--name sample`, when the name is not the plain sample name), conversion, warnings}` (`centroids` {merged, saturated} with `--peaks mzlab`, `spectrum_type`) or `{input, error, cause}`.
+/// `{input, output, sha256, spectra, seconds, skipped, rename (when an automatic rename was made, with either naming), conversion, warnings}` (`centroids` {merged, saturated} with `--peaks mzlab`, `spectrum_type`) or `{input, error, cause}`.
 pub(crate) fn report(items: &[Item], out: &Path) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"convert/1\",\"dry_run\":false,\"out\":")
@@ -283,7 +283,7 @@ pub(crate) struct Planned {
     pub(crate) reader: Option<&'static str>,
     pub(crate) input_bytes: u64,
     pub(crate) empty: bool,
-    /// With `--name sample`: why the file is not called after its sample plainly.
+    /// Why the file is not called by its plain name (any naming: a clash, the `K-` prefix, an unsafe sample name).
     pub(crate) rename: Option<String>,
 }
 
@@ -328,13 +328,6 @@ pub(crate) fn compression_sets(kind: &str) -> Result<[String; 2], String> {
         .ok_or_else(|| format!("--compression {kind}: expected standard, smallest or none"))?;
     let (z, n) = (o.livello, o.numpress);
     Ok([format!("conv.zlib_level={z}"), format!("conv.numpress={n}")])
-}
-
-/// The name of a gzip-compressed mzML without the `.gz` (`x.mzML.gz` -> `x.mzML`), any other name as it is.
-pub(crate) fn sans_gz(name: &str) -> &str {
-    name.strip_suffix(".gz")
-        .filter(|n| n.to_lowercase().ends_with(".mzml"))
-        .unwrap_or(name)
 }
 
 /// A failure of `convert` with its own code and a hint (its `error/1` key is the generic one of the code).

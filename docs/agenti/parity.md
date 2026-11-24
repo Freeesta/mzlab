@@ -41,6 +41,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 |---|---|---|---|
 | Conversion to mzML (8 families) | `wasm-lettori/*` modules (`to_mzml`) | `convert`, `nat2mzml` | `test_lettori_parita.py` (same SHA-256, synthetic data) |
 | "Download .mzML" (every compression) of a sample converted by the module at load | `conversione.js` `again` (`to_mzml_with`, without the optical matrix; the load file stays with the UV panel) | `convert --compression C` (conv.dad false) | `test_wiff_scarica_mzml.py` (`mistopi` sample 2, `dadmetodo` with a DAD; byte for byte), `test_conversione.py`, `e2e_numpress_modulo.py` |
+| «Name files by» sample name of the mzML to save | `conversione.js` `syncNames` → `api/samples/mzml_names` (rotte .wasm) | same route `lr_samples`; `convert --name sample`; `save_mzml_folder` names | `tests_e2e/e2e_name_by.py` (site names and notes = CLI `--dry-run`), `samples_file_names.rs` (route = function), `conv_queue_tests.rs` |
 | mzML with Numpress as input | `aperti` module | native path | `numpress_mzml.rs` |
 | Direct reading without mzML (6 families) | via mzML in OPFS | direct | to do (open in the site Waters, Agilent LC/MS, Bruker, Shimadzu, ANDI, mzXML for the engine like Thermo) |
 | Files over 4 GiB, threads inside a file | no | yes | limit: memory64 and `atomics` (`wasm-potential.md`) |

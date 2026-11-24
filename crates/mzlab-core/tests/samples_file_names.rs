@@ -1,7 +1,7 @@
 //! The file names of `file convert --name sample`: a sample name as a safe file name, clashes settled in order (case aside) with a note each, and the route
 //! `mzml_names` that the site and the app call giving the same names as the function the CLI calls. Synthetic names only.
 
-use mzlab_core::samples::{clean_sample_name, mzml_names, route_all, NameItem};
+use mzlab_core::samples::{clean_sample_name, default_names, mzml_names, route_all, NameItem};
 
 fn item<'a>(
     who: &'a str,
@@ -142,6 +142,37 @@ fn a_file_without_a_sample_name_is_renamed_on_a_clash_and_says_so() {
         note.contains("A.raw") && note.contains("already taken"),
         "{note}"
     );
+}
+
+#[test]
+fn the_default_names_keep_the_extension_only_on_a_clash() {
+    let n = default_names(&[
+        ("a.raw", None),
+        ("a.D", None),
+        ("b.mzML.gz", None),
+        ("s.wiff", Some(1)),
+        ("s.wiff", Some(2)),
+    ]);
+    assert_eq!(
+        n,
+        ["a.raw.mzML", "a.D.mzML", "b.mzML", "s-1.mzML", "s-2.mzML"]
+    );
+}
+
+#[test]
+fn a_route_row_without_a_plain_name_gets_the_default_of_its_file() {
+    // the page tells the file and the sample number, the engine settles the plain name (what the CLI writes without `--name sample`)
+    let input = r#"{"files":[{"who":"s.wiff@1","file":"s.wiff","id":1,"sample":null},{"who":"s.wiff@2","file":"s.wiff","id":2,"sample":null},{"who":"x.mzML","plain":"x.mzML","sample":null}]}"#;
+    let got = route_all("mzml_names", input).unwrap();
+    let v = mzlab_core::json::parse(got.as_bytes()).unwrap();
+    let outs: Vec<&str> = v
+        .get("files")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|r| r.get("out").unwrap().str().unwrap())
+        .collect();
+    assert_eq!(outs, ["s-1.mzML", "s-2.mzML", "x.mzML"]);
 }
 
 #[test]
