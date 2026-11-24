@@ -106,15 +106,17 @@ fn stdout_json(e: &Entry, compact: bool) -> Value {
     } else {
         "text"
     };
+    let json_flag = !json && crate::cmd::reads_json(e.name);
     let mut o = Obj::new();
-    if !(compact && json) {
+    // the compact listing says once what a command with a `json_flag` prints without it (`stdout_note`): text
+    if !(compact && (json || json_flag && format == "text")) {
         o = o.put("format", text(format));
     }
     // like every other member, a schema that is not there is left out
     if !e.schema.is_empty() {
         o = o.put("schema", text(e.schema));
     }
-    if !json && crate::cmd::reads_json(e.name) {
+    if json_flag {
         o = o.b("json_flag", true);
     }
     o.done()
@@ -171,6 +173,28 @@ pub(super) fn skeleton(u: &Usage) -> String {
     format!("mzlab-cli {}", kept.join(" "))
 }
 
+/// The arguments of the usage line; the whole listing marks the exception, an argument in brackets (`optional`), the path listing says `required`.
+fn args_json(u: &Usage, compact: bool) -> Vec<Value> {
+    u.args
+        .iter()
+        .map(|a| {
+            let mut o = Obj::new().put("name", text(&a.name));
+            if !(compact && (a.kind == "path" || a.kind == "rest" && a.name == "...")) {
+                o = o.put("kind", text(a.kind));
+            }
+            if compact && !a.required {
+                o = o.b("optional", true);
+            } else if !compact && a.required {
+                o = o.b("required", true);
+            }
+            if a.repeat {
+                o = o.b("repeat", true);
+            }
+            o.done()
+        })
+        .collect()
+}
+
 /// `compact`: leave out what the top of the listing or the usage line already says (`flag_help`, `flag_type`, an argument of kind `path`,
 /// the derived exit codes, a skeleton example, a stdout of JSON without a schema).
 fn command_json(
@@ -189,46 +213,29 @@ fn command_json(
     let mut o = Obj::new()
         .put("path", text(e.name))
         .put("synopsis", text(&u.synopsis))
-        .put("summary", text(&u.summary))
-        .put(
-            "args",
-            Value::Arr(
-                u.args
-                    .iter()
-                    .map(|a| {
-                        let mut o = Obj::new().put("name", text(&a.name));
-                        if !(compact && (a.kind == "path" || a.kind == "rest" && a.name == "...")) {
-                            o = o.put("kind", text(a.kind));
-                        }
-                        if a.required {
-                            o = o.b("required", true);
-                        }
-                        if a.repeat {
-                            o = o.b("repeat", true);
-                        }
-                        o.done()
-                    })
-                    .collect(),
-            ),
-        )
-        .put(
-            "flags",
-            Value::Arr(
-                u.flags
-                    .iter()
-                    .map(|f| {
-                        let shared = compact && uses.get(&f.name) > Some(&1);
-                        // the type is the flag's own, else its `flag_type`, else string
-                        let typed = compact
-                            && match types.get(&f.name) {
-                                Some(k) => *k == f.kind,
-                                None => f.kind == "string",
-                            };
-                        flag_json(f, true, !shared, !typed, false)
-                    })
-                    .collect(),
-            ),
-        );
+        .put("summary", text(&u.summary));
+    let args = args_json(&u, compact);
+    let flags: Vec<Value> = u
+        .flags
+        .iter()
+        .map(|f| {
+            let shared = compact && uses.get(&f.name) > Some(&1);
+            // the type is the flag's own, else its `flag_type`, else string
+            let typed = compact
+                && match types.get(&f.name) {
+                    Some(k) => *k == f.kind,
+                    None => f.kind == "string",
+                };
+            flag_json(f, true, !shared, !typed, false)
+        })
+        .collect();
+    // the whole listing leaves out an empty list (`flag_help_note` says so)
+    if !(compact && args.is_empty()) {
+        o = o.put("args", Value::Arr(args));
+    }
+    if !(compact && flags.is_empty()) {
+        o = o.put("flags", Value::Arr(flags));
+    }
     // the most common format, JSON, is said once at the top (`stdout_note`): no format, and no stdout when nothing else is left
     if !(compact && crate::cmd::json_by_default(e.name) && e.schema.is_empty()) {
         o = o.put("stdout", stdout_json(e, compact));
@@ -316,10 +323,10 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("mzlab-cli commands --json PATH... gives each command in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`"))
+            .put("flag_help_note", text("no flag help or type: see flag_help, flag_type (else string); no arg kind: path, or `...` (rest); no stdin: true if an argument is `NAME|-`; no args or flags: none; an arg is required unless `optional`"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
-            .put("stdout_note", text("no stdout format: json; no stdout: json, no schema"));
+            .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));
     }
     write(&doc.put("commands", Value::Arr(commands)).done()) + "\n"
 }

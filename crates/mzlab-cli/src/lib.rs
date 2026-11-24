@@ -9,6 +9,8 @@ use mzlab_core::error::{Error, Result};
 mod argv;
 mod catalog;
 #[cfg(test)]
+mod catalog_optional_tests;
+#[cfg(test)]
 mod catalog_tests;
 mod channels_cmd;
 pub mod citation;
@@ -195,6 +197,12 @@ mod mzml_variants_tests;
 mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
+#[cfg(not(target_family = "wasm"))]
+mod pack_cmd;
+#[cfg(all(test, not(target_family = "wasm")))]
+mod pack_cmd_tests;
+#[cfg(not(target_family = "wasm"))]
+mod pack_read_cmd;
 mod pair_cmd;
 mod par;
 #[cfg(test)]

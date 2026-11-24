@@ -159,5 +159,7 @@
   "err.mz.offset.spec": "Usage error of the --mz-offset flag of trace xic and features, and of mzoff= on api/xic: not a number or auto:MZ[@RT]. {text} = what was given.",
   "err.mz.offset.range": "Usage error of --mz-offset: a fixed offset above 0.6 Da in size. {da} = the number given.",
   "warn.mz.offset.notFound": "Warning on stderr of trace xic and features with --mz-offset auto: the known ion gave no peak 3 times above the median of its XIC, so the offset is 0.",
-  "warn.mz.offset.wide": "Warning on stderr of trace xic and features with --mz-offset auto: the centroids of the known ion spread by more than 0.15 Da (their median absolute deviation); the offset is still applied."
+  "warn.mz.offset.wide": "Warning on stderr of trace xic and features with --mz-offset auto: the centroids of the known ion spread by more than 0.15 Da (their median absolute deviation); the offset is still applied.",
+  "err.run.input": "{detail} = what failed while reading an input (file name and system message, or a failed read callback).",
+  "err.run.output": "{detail} = what failed while writing an output (file name and system message, or a failed write callback)."
 }

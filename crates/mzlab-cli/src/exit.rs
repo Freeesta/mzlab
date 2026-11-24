@@ -42,6 +42,7 @@ const OUTPUT_KEYS: &[&str] = &[
     "err.normative.fetch",
     "err.normative.large",
     "err.normative.parse",
+    "err.pack.exists",
 ];
 const SELECTOR_KEYS: &[&str] = &[
     "err.sample.unknown",
@@ -80,6 +81,7 @@ const INTEGRITY_PREFIXES: &[&str] = &[
     "err.llm.replay.format",
     "err.normative.pin",
     "err.normative.sources",
+    "err.pack.",
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
@@ -173,7 +175,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.run.internal" => return INTERNAL,
         _ => {}
     }
-    if key == "err.file.wiffGrowing" {
+    if key == "err.file.wiffGrowing" || key == "err.pack.growing" {
         GROWING
     } else if INPUT_KEYS.contains(&key)
         || key.starts_with("err.file.")

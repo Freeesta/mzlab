@@ -91,6 +91,8 @@ I18N.add("en", {
   "err.cli.find.none": "No command or Flow step matches “{words}”: mzlab-cli commands lists every command, mzlab-cli flow steps every step.",
   "err.cli.command.renamed": "“{old}” is now “{now}”: this build has no command named “{old}”.",
   "err.cli.command.removed": "“{old}” was removed with {why}: this build has no command named “{old}”.",
+  "err.run.input": "An input could not be read ({detail}). Check that the file is there and complete, then try again.",
+  "err.run.output": "An output could not be written ({detail}). Check that there is room and that the folder can be written to, then try again.",
   "err.run.internal": "mzlab-cli stopped on an internal error ({detail}). This is a bug, not a problem with your data: please report the command line.",
   "err.cli.schema.unknown": "No schema is named “{name}”: mzlab-cli schema --list lists them.",
   "err.cli.json.unsupported": "This command has no JSON form: run it without --json.",

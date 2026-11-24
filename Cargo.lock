@@ -2606,6 +2606,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-pack-wasm"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-picchi"
 version = "1.0.0"
 dependencies = [

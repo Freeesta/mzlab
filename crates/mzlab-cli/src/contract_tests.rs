@@ -382,7 +382,7 @@ fn a_command_without_a_json_form_says_so_and_never_reports_an_unknown_option() {
 
 #[test]
 fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
-    for a in MISSING {
+    for a in MISSING.iter().chain(crate::pack_cmd_tests::MISSING) {
         let o = run(a);
         assert_eq!(o.code, 4, "{a:?}: {}", o.stderr);
         let args: Vec<String> = a.iter().map(|w| w.to_string()).collect();
@@ -405,6 +405,7 @@ fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
         let words: Vec<&str> = e.name.split(' ').collect();
         let covered = MISSING
             .iter()
+            .chain(crate::pack_cmd_tests::MISSING)
             .any(|a| a.len() >= words.len() && a[..words.len()] == words[..])
             || NO_FILE.contains(&e.name);
         assert!(

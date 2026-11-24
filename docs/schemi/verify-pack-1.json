@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verify-pack/1",
+  "title": "verify-pack/1: the parts of a pack checked, `mzlab-cli file verify-pack`",
+  "description": "Each part's status; `resend` lists the missing and corrupt parts, the only ones to send again. Code: crates/mzlab-core/src/pack_read.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "ok",
+    "name",
+    "parts",
+    "missing",
+    "corrupt",
+    "resend"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "verify-pack/1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "size",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "missing",
+              "corrupt"
+            ]
+          },
+          "why": {
+            "enum": [
+              "size",
+              "sha256"
+            ]
+          }
+        }
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "corrupt": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resend": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

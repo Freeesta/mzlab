@@ -32,6 +32,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
+       mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
+       mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
@@ -144,6 +147,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
+       mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
+       mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
@@ -256,6 +262,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
+       mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
+       mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name

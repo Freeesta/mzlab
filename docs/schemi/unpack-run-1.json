@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unpack-run/1",
+  "title": "unpack-run/1: the result of `mzlab-cli file unpack`",
+  "description": "Each part's and each file's status. `written` (or `ready` under `dry_run`) files are checked against their SHA-256; `lost` lie in a missing or corrupt part; `mismatch` bytes were not those of the manifest and were not kept. `lost` lists the paths of both. Code: crates/mzlab-core/src/pack_read.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "ok",
+    "dry_run",
+    "name",
+    "parts",
+    "files",
+    "lost"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "unpack-run/1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "size",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "missing",
+              "corrupt"
+            ]
+          },
+          "why": {
+            "enum": [
+              "size",
+              "sha256"
+            ]
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "size",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "written",
+              "ready",
+              "lost",
+              "mismatch"
+            ]
+          }
+        }
+      }
+    },
+    "lost": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
