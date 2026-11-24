@@ -1,6 +1,6 @@
 """The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` and the `cip/1` of a drawing byte for byte like `mzlab-cli mol check` and
-`mol cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
-molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
+`mol cip` and the app fixtures (tests/dati/check_disegno.json, cip_disegno.json and the refusal cip_complex.json, read by
+crates/mzlab-desktop/tests/labels.rs too), and a bad molfile as a keyed JSON error; the `substructure_db/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `highlight/1` of the evidence colours like
 `mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json); the 2D layout of a spec (`draw`, `draw/1` scene and molfile) like `mzlab-cli mol draw`
 and the app, also as KET and CDXML (tests/dati/draw_d1.json, 30 specs; tests/dati/draw_d3.json, the edit patches of `--set edit=`); the `descriptors/1` of a drawing
@@ -91,6 +91,15 @@ def test_cip_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     assert json.loads(site) == {"schema": "cip/1", "atoms": [{"atom": 1, "label": "R"}], "bonds": [{"a": 3, "b": 4, "label": "E"}]}
     r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"molfile": "nonsense"}), "cip"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == "error.cip.molfile"
+    # a structure past the work limit: one key and the same evidence in the site, the CLI (exit 1) and the app (tests/dati/cip_complex.json)
+    big = json.loads((ROOT / "tests" / "dati" / "cip_complex.json").read_text(encoding="utf-8"))
+    req.write_text(json.dumps(big["request"]), encoding="utf-8")
+    r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"), "cip"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    err = json.loads(r.stderr)
+    assert r.returncode == 1 and (err["error_key"], err["params"]) == (big["error_key"], big["params"])
+    c = subprocess.run(cli_argv("mol", "cip", str(req), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    out = json.loads(c.stdout)
+    assert c.returncode == 1 and (out["error_key"], out["params"]) == (big["error_key"], big["params"])
 
 
 def test_descriptors_through_wasm_equal_the_cli_and_the_app_fixture_for_v2000_and_v3000(pkg, tmp_path):

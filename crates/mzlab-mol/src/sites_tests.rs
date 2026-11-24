@@ -1,5 +1,6 @@
 //! Stereo sites piece by piece: the same sites as the flip test over the whole record (kept here as the reference) on the RDKit golden
-//! molecules, the canonical-form set and random records of 1 to 4 pieces, and work that grows linearly with equal pieces (counted, not timed).
+//! molecules, the canonical-form set and random records of 1 to 4 pieces, and work that grows linearly with equal pieces (counted, not timed);
+//! `stereo_sites_among` keeps of the wanted sites what `stereo_sites` keeps and stops at its work limit.
 
 use super::*;
 
@@ -14,7 +15,7 @@ fn whole_record(m: &Mol) -> (Vec<Site>, u64) {
     let work = Cell::new(0);
     let mut out = Vec::new();
     for (i, c) in cands.iter().enumerate() {
-        if c.sure || base.flips(&sites, i, &work) {
+        if c.sure || base.flips_within(&sites, i, &work, u64::MAX) == Some(true) {
             out.push(c.site);
         }
     }
@@ -108,4 +109,47 @@ fn equal_pieces_were_multiplied_by_the_whole_record_test() {
     let (_, w1) = whole_record(&copies(1));
     let (_, w2) = whole_record(&copies(2));
     assert!(w2 > 2 * w1, "whole record {w2}, one piece {w1}");
+}
+
+/// What `stereo_sites_among` keeps of the defined elements is what `stereo_sites` keeps of them, and it tests nothing else.
+fn among_defined(smiles: &str) {
+    let m = Mol::from_smiles(smiles).unwrap_or_else(|e| panic!("{smiles}: {e}"));
+    let wanted: Vec<Site> = m
+        .stereo
+        .iter()
+        .map(|s| match s {
+            Stereo::Tetra { c, .. } => Site::Tetra(*c),
+            Stereo::Db { a, b, .. } => Site::Db(*a, *b),
+        })
+        .collect();
+    let all = m.stereo_sites();
+    let want: Vec<Site> = all.iter().copied().filter(|s| wanted.contains(s)).collect();
+    assert_eq!(
+        m.stereo_sites_among(&wanted, u64::MAX),
+        Ok(want),
+        "{smiles}"
+    );
+}
+
+#[test]
+fn sites_among_the_defined_ones_are_those_of_all_sites() {
+    for s in golden() {
+        among_defined(s.split(' ').next().unwrap_or_default());
+    }
+    for k in [2, 3] {
+        among_defined(&vec!["CC(C)/C=C/C(=O)N[C@H]1CC[C@H](CC1)/C=C/C"; k].join(""));
+    }
+}
+
+#[test]
+fn sites_among_none_test_nothing_and_a_limit_names_the_piece() {
+    assert_eq!(copies(40).stereo_sites_among(&[], 0), Ok(Vec::new()));
+    let chain = Mol::from_smiles(&[PIECE; 3].join("")).expect("smiles");
+    let all = chain.stereo_sites();
+    let over = chain
+        .stereo_sites_among(&all, 1000)
+        .expect_err("over the limit");
+    assert_eq!((over.atoms, over.sites), (chain.atoms.len(), 14));
+    assert!(over.work > 1000);
+    assert_eq!(chain.stereo_sites_among(&all, u64::MAX), Ok(all));
 }

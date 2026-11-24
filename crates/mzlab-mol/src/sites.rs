@@ -23,9 +23,23 @@ impl Mol {
     /// The sites and the canonicalisation work their flip tests took. Stereo of different pieces is independent (a flip changes the
     /// multiset of pieces only if it changes its own piece), so each piece is tested alone: equal pieces add up instead of multiplying.
     pub(crate) fn stereo_sites_counted(&self) -> (Vec<Site>, u64) {
+        self.sites_tested(None, u64::MAX).unwrap_or_default()
+    }
+
+    /// Which of `wanted` are sites, ascending: what `stereo_sites` keeps of them, testing no other candidate (the other candidates of a
+    /// piece still take values in each test). Fails when the flip tests of one piece pass `limit` work units, with what that piece holds.
+    pub fn stereo_sites_among(&self, wanted: &[Site], limit: u64) -> Result<Vec<Site>, SitesOver> {
+        self.sites_tested(Some(wanted), limit).map(|r| r.0)
+    }
+
+    fn sites_tested(
+        &self,
+        wanted: Option<&[Site]>,
+        limit: u64,
+    ) -> Result<(Vec<Site>, u64), SitesOver> {
         let base = self.stripped();
         let cands = base.candidates();
-        let work = Cell::new(0);
+        let work = Cell::new(0u64);
         let (piece, count) = base.piece_labels();
         let mut out = Vec::new();
         // plain loops: iterator adapters cost the `.wasm` more
@@ -57,14 +71,29 @@ impl Mol {
                 }
             }
             let m = one.as_ref().unwrap_or(&base);
+            let start = work.get();
+            let stop = start.saturating_add(limit);
             for (i, c) in mine.iter().enumerate() {
-                if c.sure || m.flips(&sites, i, &work) {
+                if wanted.is_some_and(|w| !w.contains(&c.site)) {
+                    continue;
+                }
+                let site = c.sure || {
+                    let Some(f) = m.flips_within(&sites, i, &work, stop) else {
+                        return Err(SitesOver {
+                            atoms: size as usize,
+                            sites: mine.len(),
+                            work: work.get() - start,
+                        });
+                    };
+                    f
+                };
+                if site {
                     out.push(c.site);
                 }
             }
         }
         out.sortm();
-        (out, work.get())
+        Ok((out, work.get()))
     }
 
     /// The record with stereo only on its sites: a written element is kept, a site without one becomes `unknown`, any other element is dropped
@@ -168,8 +197,8 @@ impl Mol {
         out
     }
 
-    /// Whether flipping candidate `i` changes the molecule for some values of the other candidates.
-    fn flips(&self, cands: &[Site], i: usize, work: &Cell<u64>) -> bool {
+    /// Whether flipping candidate `i` changes the molecule for some values of the other candidates; `None` once `work` would pass `stop`.
+    fn flips_within(&self, cands: &[Site], i: usize, work: &Cell<u64>, stop: u64) -> Option<bool> {
         let others: Vec<usize> = (0..cands.len()).filter(|&j| j != i).collect();
         let mut state = 0x9E37_79B9_7F4A_7C15u64;
         let total = if others.len() <= 5 {
@@ -197,15 +226,20 @@ impl Mol {
                     .map(|(&j, &b)| (cands[j], b))
                     .collect();
                 v.push((cands[i], flip));
-                let (m, w) = self.with_values(&v).canonical_counted();
-                work.set(work.get() + w);
-                m.core_json()
+                let done = self
+                    .with_values(&v)
+                    .canonical_within(stop.saturating_sub(work.get()));
+                let w = match &done {
+                    Ok((_, w)) | Err(w) => *w,
+                };
+                work.set(work.get().saturating_add(w));
+                done.ok().map(|(m, _)| m.core_json())
             };
-            if given(true) != given(false) {
-                return true;
+            if given(true)? != given(false)? {
+                return Some(true);
             }
         }
-        false
+        Some(false)
     }
 
     /// The record with every given site defined; `true` = clockwise / cis.
@@ -440,6 +474,14 @@ struct Cand {
     twins: Vec<(usize, usize, usize)>,
     /// All substituents differ already by constitution: no flip test needed.
     sure: bool,
+}
+
+/// The piece whose flip tests passed the work limit of `stereo_sites_among`: its atoms, its candidate sites and the work done on it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SitesOver {
+    pub atoms: usize,
+    pub sites: usize,
+    pub work: u64,
 }
 
 /// A place in a record where stereo can exist.

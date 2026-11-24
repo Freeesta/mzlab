@@ -26,17 +26,27 @@ impl Mol {
 
     /// The canonical order and the work units it took (refinement rounds, leaves, orbit steps and checks, each counted per atom touched).
     pub(crate) fn canonical_order_counted(&self) -> (Vec<u32>, u64) {
+        self.order_within(u64::MAX)
+            .unwrap_or_else(|w| ((0..self.atoms.len() as u32).collect(), w))
+    }
+
+    /// The canonical order, or the work done when the search passed `limit` work units (the search stops there).
+    fn order_within(&self, limit: u64) -> Result<(Vec<u32>, u64), u64> {
         let mut s = Search::new(self);
+        s.limit = limit;
         let start = s.refine(s.initial());
         match s.by_units(&start) {
-            Units::Order(order) => (order, s.work.get()),
+            Units::Order(order) => Ok((order, s.work.get())),
             Units::Autos(autos) => {
                 s.autos = autos;
                 s.explore(start, &mut Vec::new());
+                if s.work.get() > limit {
+                    return Err(s.work.get());
+                }
                 let order = s
                     .best
                     .map_or_else(|| (0..self.atoms.len() as u32).collect(), |(_, p)| p);
-                (order, s.work.get())
+                Ok((order, s.work.get()))
             }
         }
     }
@@ -54,11 +64,17 @@ impl Mol {
 
     /// The canonical record and the work units its order took.
     pub(crate) fn canonical_counted(&self) -> (Mol, u64) {
-        let (order, work) = self.canonical_order_counted();
-        (
+        self.canonical_within(u64::MAX)
+            .unwrap_or_else(|w| (self.clone(), w))
+    }
+
+    /// `canonical_counted`, or the work done when the search passed `limit` work units.
+    pub(crate) fn canonical_within(&self, limit: u64) -> Result<(Mol, u64), u64> {
+        let (order, work) = self.order_within(limit)?;
+        Ok((
             self.renumbered(&order).unwrap_or_else(|_| self.clone()),
             work,
-        )
+        ))
     }
 
     /// Identity string of the molecule: the version and the core hash of the canonical record; stereo (and its status) is part of it.
@@ -82,6 +98,7 @@ impl<'a> Search<'a> {
             autos: Vec::new(),
             visited: 0,
             work: Cell::new(0),
+            limit: u64::MAX,
         }
     }
 
@@ -330,7 +347,7 @@ impl<'a> Search<'a> {
         let mut done: Vec<usize> = Vec::new();
         let mut orbits = Orbits::new(n);
         for v in members {
-            if self.visited >= LEAF_LIMIT {
+            if self.visited >= LEAF_LIMIT || self.work.get() > self.limit {
                 return;
             }
             orbits.absorb(&self.autos, prefix, &self.work);
@@ -394,6 +411,8 @@ struct Search<'a> {
     autos: Vec<Vec<usize>>,
     visited: usize,
     work: Cell<u64>,
+    /// Work past which the search stops (the caller then has no order).
+    limit: u64,
 }
 
 /// Orbits, at one node, of the automorphisms found so far that fix every atom of the node's prefix: the same relation the closure

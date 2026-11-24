@@ -50,6 +50,6 @@ pub use model::{
     StereoGroup, FORMAT,
 };
 pub use query::{read_target, AtomTest, BondTest, SubQuery};
-pub use sites::Site;
+pub use sites::{Site, SitesOver};
 pub use substruct::SubOptions;
 pub use transform::{Evidence, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};

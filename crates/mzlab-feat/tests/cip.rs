@@ -1,6 +1,7 @@
 //! `cip/1` against the CIP labeler of RDKit (`tests/data/golden_cip.json`, written by `tools/cip_riferimento.py`): every molecule read from
-//! its SMILES by `mzlab-mol`, and one in four from the 2D molfile the Draw page would send, must get exactly the R/S, r/s and E/Z of RDKit.
-use mzlab_feat::chem::cip::{cip_json, cip_labels};
+//! its SMILES by `mzlab-mol`, and one in four from the 2D molfile the Draw page would send, must get exactly the R/S, r/s and E/Z of RDKit;
+//! piece by piece the labels are those of the whole record, 40 copies take well under a second and one chain past the work limit is refused.
+use mzlab_feat::chem::cip::{cip_json, cip_labels, drawing_labels, WORK_LIMIT};
 use mzlab_mol::Mol;
 use serde_json::Value;
 
@@ -101,4 +102,146 @@ fn drawings_without_labels_say_why() {
         cip_json(r#"{"molfile":"x"}"#).unwrap_err().key,
         "error.cip.molfile"
     );
+}
+
+/// The drawing of a record as `cip_json` reads it (no query atom, Kekulé form found).
+fn drawing(m: Mol) -> mzlab_mol::Drawing {
+    mzlab_mol::Drawing {
+        mol: m,
+        kekule: true,
+        aromatic_h: Vec::new(),
+        arom_atoms: Vec::new(),
+        query_atoms: Vec::new(),
+        query_bonds: Vec::new(),
+        wedges: Vec::new(),
+        sites: Vec::new(),
+    }
+}
+
+/// Labels as comparable strings, in their order.
+fn flat(l: &mzlab_feat::chem::cip::CipLabels) -> (Vec<String>, Vec<String>) {
+    (
+        l.atoms.iter().map(|(a, s)| format!("{a}{s}")).collect(),
+        l.bonds
+            .iter()
+            .map(|(a, b, s)| format!("{a}-{b}{s}"))
+            .collect(),
+    )
+}
+
+/// Piece by piece, testing only the defined sites, gives what the whole record with all its sites gave (the labels before the split).
+fn same_as_whole_record(smiles: &str) {
+    let m = Mol::from_smiles(smiles).unwrap_or_else(|e| panic!("{smiles}: {e}"));
+    let old = cip_labels(&m, &m.stereo_sites());
+    let new = drawing_labels(&drawing(m)).unwrap_or_else(|e| panic!("{smiles}: {}", e.to_json()));
+    assert_eq!(flat(&new), flat(&old), "{smiles}");
+}
+
+#[test]
+fn pieces_give_the_labels_of_the_whole_record_on_the_goldens() {
+    for e in golden()["smiles"].as_array().unwrap() {
+        same_as_whole_record(e["smiles"].as_str().unwrap());
+    }
+}
+
+#[test]
+fn pieces_give_the_labels_of_the_whole_record_on_random_mixtures() {
+    let g = golden();
+    let pool: Vec<&str> = g["smiles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["smiles"].as_str().unwrap().split(' ').next().unwrap())
+        .collect();
+    let mut state = 0x2545_F491_4F6C_DD1Du64;
+    let mut next = |n: usize| {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (state >> 33) as usize % n
+    };
+    for _ in 0..150 {
+        let k = 2 + next(4);
+        let parts: Vec<&str> = (0..k).map(|_| pool[next(pool.len())]).collect();
+        same_as_whole_record(&parts.join("."));
+    }
+}
+
+/// The amide of the report: two cis/trans double bonds on a 1,4-disubstituted cyclohexane (ring cis/trans), defined or open.
+const DEFINED: &str = "CC(C)/C=C/C(=O)N[C@H]1CC[C@H](CC1)/C=C/C";
+const OPEN: &str = "CC(C)C=CC(=O)NC1CCC(CC1)C=CC";
+
+#[test]
+fn forty_copies_are_labelled_copy_by_copy_well_under_a_second() {
+    let one = flat(&drawing_labels(&drawing(Mol::from_smiles(DEFINED).unwrap())).unwrap());
+    let n = Mol::from_smiles(DEFINED).unwrap().atoms.len();
+    let many = drawing(Mol::from_smiles(&[DEFINED; 40].join(".")).unwrap());
+    let t = std::time::Instant::now();
+    let l = drawing_labels(&many).unwrap();
+    let took = t.elapsed();
+    assert_eq!((l.atoms.len(), l.bonds.len()), (80, 80));
+    for (k, (a, s)) in l.atoms.iter().enumerate() {
+        assert_eq!(format!("{}{s}", a - (k / 2 * n) as u32), one.0[k % 2]);
+    }
+    for (k, (a, b, s)) in l.bonds.iter().enumerate() {
+        let off = (k / 2 * n) as u32;
+        assert_eq!(format!("{}-{}{s}", a - off, b - off), one.1[k % 2]);
+    }
+    // about 60 ms native in release; the bound leaves room for a debug build
+    let most = if cfg!(debug_assertions) { 10.0 } else { 1.0 };
+    assert!(took.as_secs_f64() < most, "40 copies took {took:?}");
+}
+
+#[test]
+fn one_chain_past_the_work_limit_is_refused_with_its_evidence() {
+    let chain = drawing(Mol::from_smiles(&[DEFINED; 8].join("")).unwrap());
+    let e = drawing_labels(&chain).err().unwrap();
+    assert_eq!(e.key, "error.cip.tooComplex");
+    let p = |k: &str| e.params.iter().find(|x| x.0 == k).unwrap().1.clone();
+    assert_eq!(
+        (p("stage"), p("atoms"), p("sites")),
+        ("sites".into(), "136".into(), "39".into())
+    );
+    assert_eq!(p("limit"), WORK_LIMIT.to_string());
+    assert!(p("work").parse::<u64>().unwrap() > WORK_LIMIT);
+    // the same chain four copies long still finishes, with the labels of the whole record
+    same_as_whole_record(&[DEFINED; 4].join(""));
+}
+
+#[test]
+fn open_sites_cost_no_flip_test_and_big_drawings_skip_before_any() {
+    for (copies, join, skip) in [
+        (21, "", None),
+        (40, ".", Some("tooBig")),
+        (40, "", Some("tooBig")),
+    ] {
+        let mut m = Mol::from_smiles(&vec![OPEN; copies].join(join)).unwrap();
+        m.coords = Some(m.layout_2d());
+        let req = serde_json::json!({ "molfile": m.to_molfile("t") }).to_string();
+        let t = std::time::Instant::now();
+        let out: Value = serde_json::from_str(&cip_json(&req).unwrap()).unwrap();
+        let took = t.elapsed();
+        assert_eq!(out["atoms"], serde_json::json!([]));
+        assert_eq!(out["skip"].as_str(), skip, "{copies} copies {join:?}");
+        let most = if cfg!(debug_assertions) { 10.0 } else { 1.0 };
+        assert!(
+            took.as_secs_f64() < most,
+            "{copies} copies {join:?} took {took:?}"
+        );
+    }
+}
+
+#[test]
+fn the_refusal_fixture_gives_its_key_and_parameters() {
+    // the same fixture is checked against the molkit `.wasm`, `mzlab-cli mol cip` (tests/test_molkit_wasm.py) and the app (labels.rs)
+    let fx: Value =
+        serde_json::from_str(include_str!("../../../tests/dati/cip_complex.json")).unwrap();
+    let e = cip_json(&fx["request"].to_string()).unwrap_err();
+    assert_eq!(e.key, fx["error_key"].as_str().unwrap());
+    let params: serde_json::Map<String, Value> = e
+        .params
+        .iter()
+        .map(|(k, v)| (k.to_string(), Value::String(v.clone())))
+        .collect();
+    assert_eq!(Value::Object(params), fx["params"]);
 }

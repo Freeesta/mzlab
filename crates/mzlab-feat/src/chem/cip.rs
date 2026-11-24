@@ -6,12 +6,18 @@
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out};
-use mzlab_mol::{atomic_number, Cfg, Mol, Parity, Site, Status, Stereo};
+use mzlab_mol::{atomic_number, Cfg, Drawing, Mol, Parity, Site, Status, Stereo};
+use std::cell::Cell;
 
 use super::cip_rank::{handed, Centre, Chem, Digraph, NO_ATOM, RULES};
 
 /// Above this many atoms no label is given (small molecules only).
 const MAX_ATOMS: usize = 400;
+/// Work allowed on one structure (connected piece) of a drawing, for each of two stages: the flip tests that tell whether its defined
+/// elements sit on stereo sites (canonical-search units) and the digraphs of its labels (nodes made and compared). Both grow exponentially
+/// with the rings whose arms only stereo tells apart in one chain; past the limit the drawing is refused (`error.cip.tooComplex`), never
+/// labelled in part. About half a second of native work.
+pub const WORK_LIMIT: u64 = 8_000_000;
 
 fn chem_of(m: &Mol) -> Chem {
     let n = m.atoms.len();
@@ -54,6 +60,8 @@ fn chem_of(m: &Mol) -> Chem {
         adj,
         db: Vec::new(),
         tetra: vec![None; n],
+        spent: Cell::new(0),
+        limit: u64::MAX,
     }
 }
 
@@ -220,8 +228,10 @@ fn bond_label(c: &Chem, s: &Stereo, upto: usize) -> Option<u8> {
 /// (found first by rules 1a to 2, then again with rule 3); auxiliary R/S for rule 5 come from each digraph itself.
 type Labels = (Vec<(u32, u8, bool)>, Vec<(usize, usize, u8)>);
 
-fn labels(m: &Mol, units: &[&Stereo]) -> Labels {
+/// `Err` with the work done once the digraphs pass `limit` work units.
+fn labels(m: &Mol, units: &[&Stereo], limit: u64) -> std::result::Result<Labels, u64> {
     let mut c = chem_of(m);
+    c.limit = limit;
     for s in units {
         if let Some((at, cen)) = centre_of(s) {
             c.tetra[at] = Some(cen);
@@ -250,7 +260,11 @@ fn labels(m: &Mol, units: &[&Stereo]) -> Labels {
             Stereo::Db { .. } => None,
         })
         .collect();
-    (centres, bonds(&c, RULES - 1))
+    let bonds = bonds(&c, RULES - 1);
+    if c.spent.get() > limit {
+        return Err(c.spent.get());
+    }
+    Ok((centres, bonds))
 }
 
 /// CIP descriptors of a record: `R`/`S`/`r`/`s` per centre and `E`/`Z` per double bond, for the defined elements that sit on one of `sites`.
@@ -260,9 +274,9 @@ pub struct CipLabels {
     pub bonds: Vec<(u32, u32, &'static str)>,
 }
 
-pub fn cip_labels(m: &Mol, sites: &[Site]) -> CipLabels {
-    let units: Vec<&Stereo> = m
-        .stereo
+/// The defined elements of a record, in its order.
+fn defined(m: &Mol) -> Vec<&Stereo> {
+    m.stereo
         .iter()
         .filter(|s| {
             matches!(
@@ -276,27 +290,124 @@ pub fn cip_labels(m: &Mol, sites: &[Site]) -> CipLabels {
                 }
             )
         })
-        .collect();
-    let (centres, bonds) = labels(m, &units);
+        .collect()
+}
+
+/// The names of the labels that sit on one of `sites`.
+fn named(centres: Labels, sites: &[Site]) -> CipLabels {
     // by value (1 S or E, 2 R or Z) and case
     const NAMES: [&str; 6] = ["S", "R", "s", "r", "E", "Z"];
     let mut l = CipLabels {
         atoms: Vec::new(),
         bonds: Vec::new(),
     };
-    for (at, v, low) in centres {
+    for (at, v, low) in centres.0 {
         if sites.contains(&Site::Tetra(at)) {
             l.atoms
                 .push((at, NAMES[usize::from(v - 1) + 2 * usize::from(low)]));
         }
     }
-    for (a, b, v) in bonds {
+    for (a, b, v) in centres.1 {
         let (a, b) = (a as u32, b as u32);
         if sites.contains(&Site::Db(a, b)) {
             l.bonds.push((a, b, NAMES[usize::from(v + 3)]));
         }
     }
     l
+}
+
+pub fn cip_labels(m: &Mol, sites: &[Site]) -> CipLabels {
+    named(labels(m, &defined(m), u64::MAX).unwrap_or_default(), sites)
+}
+
+fn site_of(s: &Stereo) -> Site {
+    match s {
+        Stereo::Tetra { c, .. } => Site::Tetra(*c),
+        Stereo::Db { a, b, .. } => Site::Db(*a, *b),
+    }
+}
+
+/// The refusal of a structure past a work limit, with what it holds (`stage`: `sites` or `labels`).
+fn too_complex(stage: &str, atoms: usize, sites: usize, work: u64, limit: u64) -> Error {
+    Error::new("error.cip.tooComplex")
+        .with("stage", stage)
+        .with("atoms", atoms)
+        .with("sites", sites)
+        .with("work", work)
+        .with("limit", limit)
+}
+
+/// The labels of a drawing structure by structure: only its defined elements are tested as sites, each connected piece is labelled
+/// alone (no rule reaches another piece), and the labels come back in the order of the record, as `cip_labels` gives them.
+pub fn drawing_labels(d: &Drawing) -> Result<CipLabels> {
+    let units = defined(&d.mol);
+    let wanted: Vec<Site> = units.iter().map(|s| site_of(s)).collect();
+    let sites = d
+        .site_record()
+        .stereo_sites_among(&wanted, WORK_LIMIT)
+        .map_err(|o| too_complex("sites", o.atoms, o.sites, o.work, WORK_LIMIT))?;
+    // the piece of every atom, numbered in the order of its first atom as `Mol::pieces` numbers them
+    let n = d.mol.atoms.len();
+    let mut nb = vec![Vec::new(); n];
+    for b in &d.mol.bonds {
+        nb[b.a as usize].push(b.b as usize);
+        nb[b.b as usize].push(b.a as usize);
+    }
+    let mut piece = vec![usize::MAX; n];
+    let mut count = 0;
+    for s in 0..n {
+        if piece[s] != usize::MAX {
+            continue;
+        }
+        let mut stack = vec![s];
+        piece[s] = count;
+        while let Some(x) = stack.pop() {
+            for &y in &nb[x] {
+                if piece[y] == usize::MAX {
+                    piece[y] = count;
+                    stack.push(y);
+                }
+            }
+        }
+        count += 1;
+    }
+    let mut members = vec![Vec::new(); count];
+    for (x, &k) in piece.iter().enumerate() {
+        members[k].push(x as u32);
+    }
+    let parts = if members.len() > 1 {
+        d.mol.pieces()
+    } else {
+        vec![d.mol.clone()]
+    };
+    let mut all: Labels = (Vec::new(), Vec::new());
+    for (p, at) in parts.iter().zip(&members) {
+        let mine = defined(p);
+        if mine.is_empty() {
+            continue;
+        }
+        let (centres, bonds) = labels(p, &mine, WORK_LIMIT)
+            .map_err(|w| too_complex("labels", p.atoms.len(), mine.len(), w, WORK_LIMIT))?;
+        let g = |x: usize| at[x] as usize;
+        all.0.extend(
+            centres
+                .into_iter()
+                .map(|(c, v, low)| (at[c as usize], v, low)),
+        );
+        all.1
+            .extend(bonds.into_iter().map(|(a, b, v)| (g(a), g(b), v)));
+    }
+    // back in the order of the record's elements
+    let mut ordered: Labels = (Vec::new(), Vec::new());
+    for w in &wanted {
+        match *w {
+            Site::Tetra(c) => ordered.0.extend(all.0.iter().find(|l| l.0 == c)),
+            Site::Db(a, b) => ordered
+                .1
+                .extend(all.1.iter().find(|l| (l.0 as u32, l.1 as u32) == (a, b))),
+        }
+    }
+    Ok(named(ordered, &sites))
 }
 
 /// `cip/1` of a request `{"molfile": "..."}`: `skip` (`query`, `kekule`, `tooBig`) says why a drawing gets no labels at all.
@@ -306,7 +417,7 @@ pub fn cip_json(request: &str) -> Result<String> {
         .get("molfile")
         .and_then(json::Value::str)
         .ok_or_else(|| Error::new("error.cip.request"))?;
-    let d = Mol::drawing_from_molfile(mf).map_err(|_| Error::new("error.cip.molfile"))?;
+    let d = Mol::drawing_unsited(mf).map_err(|_| Error::new("error.cip.molfile"))?;
     let skip = if d.mol.atoms.len() > MAX_ATOMS {
         Some("tooBig")
     } else if !d.query_atoms.is_empty() || !d.query_bonds.is_empty() {
@@ -317,7 +428,7 @@ pub fn cip_json(request: &str) -> Result<String> {
         None
     };
     let l = match skip {
-        None => cip_labels(&d.mol, &d.sites),
+        None => drawing_labels(&d)?,
         Some(_) => CipLabels {
             atoms: Vec::new(),
             bonds: Vec::new(),

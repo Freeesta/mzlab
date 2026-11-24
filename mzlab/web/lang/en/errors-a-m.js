@@ -193,6 +193,7 @@ I18N.add("en", {
   "error.groups.sizeMismatch": "The groups do not match the table ({what}): rebuild the groups.",
   "error.cip.request": "The request of the CIP descriptors is not valid JSON with a molfile.",
   "error.cip.molfile": "The drawing cannot be read as a molfile.",
+  "error.cip.tooComplex": "No descriptors: one structure ({atoms} atoms, {sites} stereo elements) passed the work limit ({limit} steps). Chained rings whose arms differ only by stereo multiply the work; label a smaller part.",
   "error.descr.request": "The request of the molecular descriptors is not valid JSON with a molfile.",
   "error.descr.molfile": "The drawing cannot be read as a molfile: {detail}.",
   "error.descr.tooBig": "The drawing has more than {max} atoms: the descriptors are for drawings, not libraries.",
