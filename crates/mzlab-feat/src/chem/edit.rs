@@ -2,15 +2,17 @@
 //! index in the drawing the patch starts from; a new atom gets the next free id) while the patch runs, bonds are named by their two atoms.
 //! Coordinates the patch does not touch stay as they are; only atoms added without a position are placed, around the fixed ones. Stereo
 //! elements of atoms whose bonds changed are dropped and logged; a wedge set by the patch is read back by the molfile reader's own rules.
+//! Enhanced stereo groups follow the atoms (`stereo.group` sets them, `edit_group.rs`).
 //! Units: a bare `x`, `y`, `dx`, `dy` is in bond lengths (1.0 = 1.5 angstrom), the same names ending in `_a` are angstrom; never mixed.
 //! This file holds the operations; `edit_op.rs` reads their fields, `edit_end.rs` builds the record.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{Out, Value};
+use mzlab_core::json::Value;
 use mzlab_mol::{is_element, Atom};
 
 use super::draw::{Drawn, MAX_ATOMS};
 use super::edit_end::finish;
+use super::edit_group::labels;
 use super::edit_op::{clip, fail, pair, r4, Op, MAX_ID};
 use super::edit_set::{weight, Index, Sets, Slot, MAX_BONDS, MAX_OPS, MAX_PATCH};
 
@@ -39,13 +41,6 @@ impl Drawn {
     }
 }
 
-/// The `label` of atom `i` in the scene, when the patch set one.
-pub(super) fn put_label(o: &mut Out, d: &Drawn, i: usize) {
-    if let Some(l) = d.label_at(i) {
-        o.raw(",\"label\":").str(l);
-    }
-}
-
 pub(super) struct Ed {
     pub(super) slots: Vec<Slot>,
     pub(super) bonds: Vec<(u32, u32, u8)>,
@@ -61,7 +56,7 @@ fn same(b: &(u32, u32, u8), x: u32, y: u32) -> bool {
 }
 
 impl Ed {
-    fn slot(&mut self, op: &Op, id: u32) -> Result<&mut Slot> {
+    pub(super) fn slot(&mut self, op: &Op, id: u32) -> Result<&mut Slot> {
         self.slots
             .iter_mut()
             .find(|s| s.id == id)
@@ -156,6 +151,8 @@ impl Ed {
             },
             xy,
             label: None,
+            stg: None,
+            stg_op: None,
         });
         self.next = self.next.max(id + 1);
         self.added.push(id);
@@ -374,6 +371,7 @@ impl Ed {
     #[inline(never)]
     fn start(d: &Drawn) -> Ed {
         let m = &d.mol;
+        let stg = labels(m).0;
         let xy = |i: usize| {
             m.coords
                 .as_ref()
@@ -395,6 +393,8 @@ impl Ed {
                         .iter()
                         .find(|l| l.0 == i as u32)
                         .map(|l| l.1.clone()),
+                    stg: stg[i],
+                    stg_op: None,
                 })
                 .collect(),
             bonds: m.bonds.iter().map(|b| (b.a, b.b, b.o)).collect(),
@@ -484,6 +484,7 @@ pub(super) fn apply(d: &mut Drawn, edit: &Value) -> Result<()> {
             "remove" => ed.remove(&op),
             "move" => ed.move_atoms(&op),
             "merge" => ed.merge(&op),
+            "stereo.group" => ed.stereo_group(&op),
             _ => Err(op.err("unknown_op", name)),
         }?;
     }

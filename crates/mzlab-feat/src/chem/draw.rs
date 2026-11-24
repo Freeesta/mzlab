@@ -432,7 +432,7 @@ pub fn scene(d: &Drawn) -> Result<String> {
             .unwrap_or(0.0)
             + 0.0
     };
-    let mut o = Out::default();
+    let (stg, mut o) = (super::edit_group::labels(m).0, Out::default());
     o.raw("{\"schema\":\"draw/1\",\"spec_kind\":")
         .str(d.kind)
         .raw(",\"title\":")
@@ -450,7 +450,7 @@ pub fn scene(d: &Drawn) -> Result<String> {
             .int(i64::from(a.iso))
             .raw(",\"h\":")
             .int(i64::from(a.h));
-        super::edit::put_label(&mut o, d, i);
+        super::edit_group::put_atom(&mut o, d, i, &stg);
         o.raw(",\"x_a\":")
             .raw(&coord(xy(i, 0)))
             .raw(",\"y_a\":")

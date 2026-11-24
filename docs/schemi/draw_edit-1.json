@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "draw_edit/1",
   "title": "draw_edit/1: an edit patch for a drawing",
-  "description": "The patch `mzlab-cli mol draw SPEC --set edit=JSON|@PATH` applies to a drawing (also the `edit` member of the molkit `draw` request and of the app route `kind: \"draw\"`): a list of operations, or the object {\"schema\": \"draw_edit/1\", \"ops\": [...]}, applied in order, all or none. A failure is the error `err.mol.draw.edit` (exit 2) with the `index` of the operation, its `op`, a `reason` word and a `detail`; text that is not a patch is `err.mol.draw.editJson`. Atoms keep their id while the patch runs; coordinates the patch does not touch stay as they are. Stereo elements of atoms whose bonds changed are dropped and logged in `choices` (`edit_stereo_dropped`). At most 1000 operations, 65536 bytes as text, and the same for a list (counted as its compact JSON text, a number as 8 bytes; `err.mol.draw.editJson`), 2500 bonds and 2000 ids in a list; the choices and warnings it adds (`edit_added`, `edit_placed`, `edit_h_recounted`, `edit_stereo_dropped`, `edit_wedge_dropped`, `edit_valence`) are lists of scene atom indices. Code: crates/mzlab-feat/src/chem/edit.rs.",
+  "description": "The patch `mzlab-cli mol draw SPEC --set edit=JSON|@PATH` applies to a drawing (also the `edit` member of the molkit `draw` request and of the app route `kind: \"draw\"`): a list of operations, or the object {\"schema\": \"draw_edit/1\", \"ops\": [...]}, applied in order, all or none. A failure is the error `err.mol.draw.edit` (exit 2) with the `index` of the operation, its `op`, a `reason` word and a `detail`; text that is not a patch is `err.mol.draw.editJson`. Atoms keep their id while the patch runs; coordinates the patch does not touch stay as they are. Stereo elements of atoms whose bonds changed are dropped and logged in `choices` (`edit_stereo_dropped`). Stereo groups (scene `stg`) follow their atoms: one whose centre is no longer defined leaves its group (`edit_group_dropped`); the numbers of a kind are made consecutive at the end (`edit_group_renumbered`). At most 1000 operations, 65536 bytes as text, and the same for a list (counted as its compact JSON text, a number as 8 bytes; `err.mol.draw.editJson`), 2500 bonds and 2000 ids in a list; the choices and warnings it adds (`edit_added`, `edit_placed`, `edit_h_recounted`, `edit_stereo_dropped`, `edit_wedge_dropped`, `edit_group_dropped`, `edit_group_renumbered`, `edit_valence`) are lists of scene atom indices. Code: crates/mzlab-feat/src/chem/edit.rs, edit_group.rs.",
   "oneOf": [
     {
       "type": "array",
@@ -339,6 +339,37 @@
               "minimum": 0,
               "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
               "maximum": 2147483647
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Puts stereocentres into an enhanced stereo group (abs absolute, and<n> racemic, or<n> relative) or takes them out of any (none). Numbers are literal while the patch runs; at the end the groups of a kind are numbered 1, 2, ... in order. Checked at the end of the patch: any g but none on an atom that is not then a defined tetrahedral centre fails with reason not_stereocentre (detail: its id); none never fails on an atom that exists. The exact inverse sets each atom whose scene `stg` changed back to its earlier value (none when it had none).",
+          "required": [
+            "op",
+            "atoms",
+            "g"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "stereo.group"
+            },
+            "atoms": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "an atom id: its index in the drawing the patch starts from, or the id an atom.add gave (the next free one by default)",
+                "maximum": 2147483647
+              },
+              "minItems": 1,
+              "maxItems": 2000
+            },
+            "g": {
+              "type": "string",
+              "pattern": "^(none|abs|and[1-9][0-9]{0,3}|or[1-9][0-9]{0,3})$",
+              "description": "none, abs, and1, or1, ...: n from 1 to 2000, no leading zero"
             }
           }
         }

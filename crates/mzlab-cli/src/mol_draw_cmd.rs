@@ -24,9 +24,9 @@ usage: mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set
   --set scale    pixels per angstrom of svg/png, 8 to 80 (default 24)
   --set cip      on (default) or off: R/S and E/Z marks of the picture
   --set highlight  0,1,0-1@red;5@blue: atoms, bonds a-b, a colour name (red orange yellow green cyan blue purple pink gray)
-  --set edit     a patch (schema draw_edit/1): a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge), as text
-                 or @PATH, all or none, at most 1000 operations and 65536 bytes; x, y, dx, dy are in bond lengths (1.0 = 1.5 angstrom),
-                 x_a, y_a, dx_a, dy_a in angstrom, never mixed in one operation
+  --set edit     a patch (schema draw_edit/1): a JSON list of operations (atom.add|atom.set|bond.add|bond.set|remove|move|merge|
+                 stereo.group), as text or @PATH, all or none, at most 1000 operations and 65536 bytes; x, y, dx, dy are in bond lengths
+                 (1.0 = 1.5 angstrom), x_a, y_a, dx_a, dy_a in angstrom, never mixed in one operation
   --out PATH     write there instead of the standard output
 
 KET and CDXML are open formats written from their public documentation, not tested against ChemDraw or Ketcher.

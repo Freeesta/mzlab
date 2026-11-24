@@ -3,6 +3,8 @@
 use mzlab_core::json::Value;
 use mzlab_mol::Atom;
 
+use super::edit_group::Label;
+
 /// Operations in one patch, bytes of a patch given as text, and bonds a drawing may reach: a patch is a short list of edits, and the
 /// work of an apply is bounded by these and by `MAX_ATOMS`.
 pub(super) const MAX_OPS: usize = 1000;
@@ -14,6 +16,9 @@ pub(super) struct Slot {
     pub(super) atom: Atom,
     pub(super) xy: Option<[f64; 2]>,
     pub(super) label: Option<String>,
+    /// The stereo group of the atom (`edit_group.rs`) and the index of the operation that set it, when one did.
+    pub(super) stg: Option<Label>,
+    pub(super) stg_op: Option<usize>,
 }
 
 /// A set of atom ids (at most a few thousand): a list without repeats.
@@ -45,8 +50,8 @@ pub(super) struct Sets {
 /// The place of each atom id in the slots: the ids and places packed in one sorted list, searched by bisection.
 pub(super) struct Index(Vec<u64>);
 
-/// Ascending order of `v`, by a plain merge sort (the one sort of this module: the library sorts would each add a copy to the `.wasm`).
-fn sort64(v: &mut Vec<u64>) {
+/// Ascending order of `v`, by a plain merge sort (the one sort of the patch: the library sorts would each add a copy to the `.wasm`).
+pub(super) fn sort64(v: &mut Vec<u64>) {
     let n = v.len();
     let mut buf = v.clone();
     let mut w = 1;

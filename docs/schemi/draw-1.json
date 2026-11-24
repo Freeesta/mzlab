@@ -64,6 +64,11 @@
             "type": "string",
             "description": "text set by an edit patch (atom.set label); a V2000 molfile carries it as an alias line"
           },
+          "stg": {
+            "type": "string",
+            "pattern": "^(abs|and[1-9][0-9]*|or[1-9][0-9]*)$",
+            "description": "the enhanced stereo group of the atom (absent: in none): abs, and<n> or or<n>, numbered per kind in the order of the groups as CXSMILES &n/on and V3000 STERACn/STERELn; set by the draw_edit/1 operation stereo.group"
+          },
           "x_a": {
             "type": "number"
           },
