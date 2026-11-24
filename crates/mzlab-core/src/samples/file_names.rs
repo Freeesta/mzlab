@@ -30,9 +30,14 @@ pub fn clean_sample_name(name: &str) -> Option<String> {
     }
     let cut = out.find('.').unwrap_or(out.len());
     let dev = out[..cut].to_ascii_uppercase();
-    let numbered = dev.len() == 4 && (dev.starts_with("COM") || dev.starts_with("LPT"));
-    let reserved = matches!(dev.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-        || (numbered && matches!(dev.as_bytes()[3], b'1'..=b'9'));
+    // COM0-9 and LPT0-9, also with a superscript 1-3 (`COM¹`): the part after the three letters is one character
+    let mut tail = dev.get(3..).unwrap_or("").chars();
+    let numbered = (dev.starts_with("COM") || dev.starts_with("LPT"))
+        && tail
+            .next()
+            .is_some_and(|c| c.is_ascii_digit() || matches!(c, '¹' | '²' | '³'))
+        && tail.next().is_none();
+    let reserved = matches!(dev.as_str(), "CON" | "PRN" | "AUX" | "NUL") || numbered;
     Some(if reserved {
         format!("{}_{}", &out[..cut], &out[cut..])
     } else {
@@ -78,14 +83,15 @@ pub fn mzml_names(items: &[Item]) -> Vec<Named> {
         seen.push(name.to_lowercase());
         let out = format!("{name}.mzML");
         let who = it.who;
-        let note = if it.sample.is_none() {
+        // every automatic rename is said, a clash included, whether or not the file has a sample name
+        let note = if name != base {
+            Some(format!(
+                "note: {who}: the name {base} is already taken: written as {out}"
+            ))
+        } else if it.sample.is_none() {
             None
         } else if clean.is_none() {
             Some(format!("note: {who}: the sample name is empty or has no usable characters: written as {out}"))
-        } else if name != base {
-            Some(format!(
-                "note: {who}: the sample name {base} is already taken: written as {out}"
-            ))
         } else {
             it.sample.filter(|raw| *raw != base).map(|raw| {
                 format!(
@@ -101,14 +107,13 @@ pub fn mzml_names(items: &[Item]) -> Vec<Named> {
 /// The route `mzml_names` of `route_all`: `{"files":[{"who","plain","sample","id"}]}` → `{"files":[{"out","note"}]}`, the names of `mzml_names` (`note` null when there is none).
 pub fn route(input: &str) -> Result<String> {
     let v = crate::json::parse(input.as_bytes())?;
-    let rows = v
-        .get("files")
-        .ok_or_else(|| Error::new("error.badSamples"))?;
+    let Some(crate::json::Value::Arr(rows)) = v.get("files") else {
+        return Err(Error::new("error.badSamples"));
+    };
     fn text<'a>(r: &'a crate::json::Value, k: &str) -> Option<&'a str> {
         r.get(k).and_then(|x| x.str())
     }
     let items: Vec<Item> = rows
-        .arr()
         .iter()
         .map(|r| Item {
             who: text(r, "who").unwrap_or(""),

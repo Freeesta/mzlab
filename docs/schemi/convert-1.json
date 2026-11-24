@@ -106,7 +106,7 @@
           },
           "rename": {
             "type": "string",
-            "description": "With `--name sample`: why the file is not called after its sample plainly (a clash, an unsafe or empty name); absent otherwise."
+            "description": "Why the file is not called by its plain name: a name equal to another input's case aside (position prefix `K-`), or with `--name sample` a clash, an unsafe or an empty sample name; absent when the file has its plain name."
           }
         }
       }

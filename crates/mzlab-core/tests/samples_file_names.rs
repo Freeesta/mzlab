@@ -43,8 +43,12 @@ fn a_device_name_gets_its_underscore_right_after_the_reserved_part() {
         ("aux.d", "aux_.d"),
         ("COM1", "COM1_"),
         ("lpt9.x", "lpt9_.x"),
-        // not devices: COM0, COM10, a longer word
-        ("COM0", "COM0"),
+        ("COM0", "COM0_"),
+        ("lpt0", "lpt0_"),
+        ("COM¹", "COM¹_"),
+        ("LPT³.x", "LPT³_.x"),
+        // not devices: two digits, a longer word, a letter
+        ("COMA", "COMA"),
         ("COM10", "COM10"),
         ("CONSOLE", "CONSOLE"),
     ] {
@@ -120,4 +124,40 @@ fn the_route_gives_the_names_of_the_function() {
     }
     // the same bytes twice
     assert_eq!(got, route_all("mzml_names", input).unwrap());
+}
+
+#[test]
+fn a_file_without_a_sample_name_is_renamed_on_a_clash_and_says_so() {
+    let items = [
+        item("a.raw", "a.mzML", None, None),
+        item("A.raw", "A.mzML", None, None),
+        item("b.raw", "b.mzML", None, None),
+    ];
+    let n = mzml_names(&items);
+    let outs: Vec<&str> = n.iter().map(|x| x.out.as_str()).collect();
+    assert_eq!(outs, ["a.mzML", "A-2.mzML", "b.mzML"]);
+    assert!(n[0].note.is_none() && n[2].note.is_none());
+    let note = n[1].note.as_deref().unwrap();
+    assert!(
+        note.contains("A.raw") && note.contains("already taken"),
+        "{note}"
+    );
+}
+
+#[test]
+fn the_route_refuses_a_document_without_a_list_of_files() {
+    for input in [
+        r#"{}"#,
+        r#"{"files":{}}"#,
+        r#"{"files":"a"}"#,
+        r#"{"files":null}"#,
+        "[]",
+    ] {
+        let e = route_all("mzml_names", input).unwrap_err();
+        assert_eq!(e.key, "error.badSamples", "{input}");
+    }
+    assert_eq!(
+        route_all("mzml_names", r#"{"files":[]}"#).unwrap(),
+        r#"{"files":[]}"#
+    );
 }

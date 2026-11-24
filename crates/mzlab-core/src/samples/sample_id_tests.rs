@@ -76,3 +76,27 @@ fn roles_std_qc_blank_and_wash_by_id() {
     assert!(read("MQ_H2O2_Tx").bad_time);
     assert!(read("MQ_ZZZ_T10").unknown_cond);
 }
+
+#[test]
+fn the_id_and_the_file_name_read_the_same_dark_mark() {
+    use crate::samples::role_and_minutes;
+    // every condition fused with the dark mark is a dark word of the names, and the other way round for the fused ones
+    for w in super::DARK {
+        let id = format!("MQ-{w}-T30");
+        assert_eq!(read(&id).kind, Some("dark"), "{id}");
+        assert_eq!(role_and_minutes(&id.replace('-', "_")).0, "dark", "{id}");
+        assert!(
+            super::super::names::DARK_WORDS.contains(&w.to_lowercase().as_str()),
+            "{w}"
+        );
+    }
+    // `CD` is no dark mark: a sample for both readers, with a condition the ID convention does not know
+    for id in ["MQ-CD-T30", "MQ_CD_T30", "TW-CD-T05"] {
+        let i = read(id);
+        assert_eq!((i.kind, i.unknown_cond), (Some("sample"), true), "{id}");
+        assert_eq!(role_and_minutes(id).0, "sample", "{id}");
+    }
+    // a known condition apart from its dark mark is still dark in both
+    assert_eq!(read("MQ-C-D-T30").kind, Some("dark"));
+    assert_eq!(role_and_minutes("MQ_C_D_T30").0, "dark");
+}

@@ -346,7 +346,8 @@ fn prepared(
     }
 }
 
-/// The usage failure of an output that would be written over its own input, or (`--name sample`, no `--fresh`) over the mzML of another input.
+/// The usage failure of an output that would be written over its own input, or (`--name sample`, no `--fresh`) over the mzML of another input; a dry run
+/// reports the same refusal as the real run.
 fn overwrites(a: &Args, entries: &[Entry], (out, work): (&Path, &Path)) -> Option<Outcome> {
     let over_input = entries.iter().find_map(|e| {
         let to = out.join(&e.out);
@@ -365,15 +366,13 @@ fn overwrites(a: &Args, entries: &[Entry], (out, work): (&Path, &Path)) -> Optio
         ));
     }
     let other = crate::convert_names::taken_by_other(entries, out, work);
-    other
-        .filter(|_| a.name_by_sample && !a.fresh && !a.dry_run)
-        .map(|to| {
-            fail(
-                2,
-                &format!("{to} already exists and is not the mzML of this input"),
-                "choose another --out folder, or pass --fresh to replace it",
-            )
-        })
+    other.filter(|_| a.name_by_sample && !a.fresh).map(|to| {
+        fail(
+            2,
+            &format!("{to} already exists and is not the mzML of this input"),
+            "choose another --out folder, or pass --fresh to replace it",
+        )
+    })
 }
 
 /// The work folder `work` (inside `out`), or the usage failure that says `out` cannot be written.

@@ -6,7 +6,8 @@ use super::Sample;
 
 pub(super) const MATRICES: [&str; 2] = ["TW", "MQ"];
 pub(super) const IRRADIATED: [&str; 6] = ["C", "N2", "O2", "AIR", "H2O2", "PMS"];
-pub(super) const DARK: [&str; 3] = ["H2O2D", "PMSD", "BLKD"];
+/// The conditions fused with the dark mark: the same words as `names::DARK_WORDS` (a test keeps them equal), so `CD` is no dark mark.
+pub(super) const DARK: [&str; 6] = ["H2O2D", "PMSD", "BLKD", "N2D", "O2D", "AIRD"];
 const BLANK: [&str; 4] = ["BLK", "BLKP", "SB", "WASH"];
 
 /// What an ID says: the role, the matrix, the condition, the time in minutes and the standard concentration.
@@ -67,7 +68,12 @@ pub fn read(id: &str) -> IdInfo {
             // a dark control is a known condition (or the matrix blank) followed by `D`, fused or apart (`N2D`, `BLK-D`); the `D` of an unknown condition is
             // not read: the condition stays as written and is reported unknown
             let apart = parts.len() == 4;
-            let (stem, fused) = cond.strip_suffix('D').map_or((*cond, false), |s| (s, true));
+            let fused = DARK.contains(cond);
+            let stem = if fused {
+                &cond[..cond.len() - 1]
+            } else {
+                *cond
+            };
             let known = IRRADIATED.contains(&stem) || ((apart || fused) && stem == "BLK");
             let dark = known && (apart || fused);
             r.kind = Some(if dark { "dark" } else { "sample" });

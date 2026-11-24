@@ -85,6 +85,19 @@ fn equal_sample_names_get_their_id_and_a_note() {
     let json = convert(&[p(&src), "--out", p(&report), "--name", "sample", "--json"]);
     let text = String::from_utf8(json.stdout).unwrap();
     assert_eq!(text.matches("\"rename\":").count(), 2, "{text}");
+    // the default naming says its own renames too: two inputs of one name keep their position, with the note and `rename`
+    let plain = dir.join("plain");
+    let o = convert(&[p(&src), "--out", p(&plain), "--json"]);
+    let text = String::from_utf8(o.stdout).unwrap();
+    assert_eq!(text.matches("\"rename\":").count(), 4, "{text}");
+    assert_eq!(
+        o.stderr
+            .matches("another input has the same file name")
+            .count(),
+        4,
+        "{}",
+        o.stderr
+    );
     let dry = convert(&[
         p(&src),
         "--out",
@@ -157,7 +170,7 @@ fn another_input_never_replaces_a_named_mzml_without_fresh() {
     // the same input again is the same file: allowed (and cached)
     assert_eq!(run(&one, &[]).code, 0);
     let before = mzmls(&out);
-    // another input would take the name of the first: refused, nothing changes, a dry run only looks
+    // another input would take the name of the first: refused, nothing changes
     let o = run(&two, &[]);
     assert_eq!(o.code, 2, "{}", o.stderr);
     assert!(
@@ -166,7 +179,15 @@ fn another_input_never_replaces_a_named_mzml_without_fresh() {
         o.stderr
     );
     assert_eq!(mzmls(&out), before);
-    assert_eq!(run(&two, &["--dry-run"]).code, 0);
+    // a dry run says what the real run would do: the same refusal, exit 2, and `--fresh` clears it for both
+    let o = run(&two, &["--dry-run"]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("not the mzML of this input"),
+        "{}",
+        o.stderr
+    );
+    assert_eq!(run(&two, &["--dry-run", "--fresh"]).code, 0);
     // `--fresh` is the explicit replacement
     assert_eq!(run(&two, &["--fresh"]).code, 0);
     // a file the table does not know (made by hand) is refused too
