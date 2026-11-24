@@ -25,7 +25,7 @@ fn set(tag: &str, csv: &str) -> (std::path::PathBuf, String) {
     for n in ["run_a.mzML", "run_b.mzML", "run_c.mzML"] {
         std::fs::write(d.join(n), format!("synthetic {n}")).unwrap();
     }
-    let meta = d.join("meta.csv");
+    let meta = d.join("table.csv");
     std::fs::write(&meta, csv).unwrap();
     (d.clone(), meta.to_string_lossy().into_owned())
 }
@@ -189,7 +189,7 @@ fn an_output_that_is_an_input_is_a_usage_error_and_the_input_is_not_touched() {
     std::fs::write(&samples, "{}").unwrap();
     let data = d.join("run_a.mzML").to_string_lossy().into_owned();
     // the same file by its name, by a `.` spelling and as the data file of the list
-    let dotted = d.join(".").join("meta.csv").to_string_lossy().into_owned();
+    let dotted = d.join(".").join("table.csv").to_string_lossy().into_owned();
     for (args, out) in [
         (vec!["sample", "import", &meta, &data], meta.clone()),
         (vec!["sample", "import", &meta, &data], dotted),
