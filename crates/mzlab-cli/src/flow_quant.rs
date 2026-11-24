@@ -17,7 +17,7 @@ pub fn quant_step() -> Step {
             Port::new("curves", DataType::Report, "Calibration curves imported as CSV: name, mz, rt, slope, intercept, unit, range_min, range_max, dilution"),
             Port::new("samples", DataType::Samples, "Roles of the files (a samples/1 document)"),
         ],
-        outs: vec![Port::new("concentrations", DataType::Report, "Concentration of each compound in each sample as CSV")],
+        outs: vec![Port::new("concentrations", DataType::Report, "Concentration of each compound in each sample as CSV, with the value state and row S/N of every cell")],
         params: vec![
             Param::number("mz_tol", "m/z tolerance to match a curve to a row")
                 .default_num(DEFAULT_MZ_TOL)
@@ -44,7 +44,7 @@ pub fn quant_step() -> Step {
         ..Step::core(
             "quant.calibrate",
             "Calibrate",
-            "Applies imported calibration curves (signal = slope x concentration + intercept) to the signal of the matched rows of the table; concentrations outside the linear range or below zero are flagged. The line is not fitted here.",
+            "Applies imported calibration curves (signal = slope x concentration + intercept) to the signal of the matched rows of the table; concentrations outside the linear range or below zero are flagged, and every number carries its value state (detected, forced, filled, below_loq, absent, na) and the S/N of its row. The line is not fitted here.",
         )
     }
 }

@@ -5,7 +5,8 @@ use std::path::Path;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples::{self, propose};
 use mzlab_feat::store::{write_table, Origin};
-use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_NA};
+use mzlab_feat::table::{RowMeta, RowQ};
 
 const NAMES: [&str; 4] = ["blank.mzML", "a1.mzML", "a2.mzML", "a3.mzML"];
 
@@ -18,6 +19,11 @@ fn files() -> Vec<(String, String)> {
 
 /// Row 0 (250.1, 6.0) and row 1 (300.2, 7.0); the second one is not detected in `a1`.
 fn table() -> Vec<u8> {
+    table_with(false)
+}
+
+/// `edge_cases`: `a1` does not cover row 1 (`CELL_NA`, its area is NaN) and the rows keep a summary with a median S/N of 25 and 7.5.
+fn table_with(edge_cases: bool) -> Vec<u8> {
     let rows: [(f64, f64, [f64; 4]); 2] = [
         (250.1, 6.0, [0.0, 1000.0, 5000.0, 100000.0]),
         (300.2, 7.0, [0.0, 0.0, 6000.0, 8000.0]),
@@ -37,6 +43,19 @@ fn table() -> Vec<u8> {
                 CELL_ABSENT
             });
         }
+    }
+    if edge_cases {
+        t.state[5] = CELL_NA;
+        t.area[5] = f64::NAN;
+        t.height[5] = f32::NAN;
+        let mut meta = RowMeta::default();
+        for q_snr in [25.0, 7.5] {
+            meta.push(&RowQ {
+                q_snr,
+                ..RowQ::NONE
+            });
+        }
+        t.meta = meta;
     }
     let origin = Origin {
         inputs: files(),
@@ -77,13 +96,13 @@ fn run(d: &Path, params: &str) -> Result<(String, String), String> {
 fn curves_are_applied_and_flagged() {
     let d = dir("apply");
     let (csv, prov) = run(&d, "{}").unwrap();
-    let want = "compound,mz,rt,sample,signal,concentration,unit,flag\n\
-        Alpha,250.1,6,a1.mzML,1000,2.000000e0,mg/L,ok\n\
-        Alpha,250.1,6,a2.mzML,5000,1.000000e1,mg/L,ok\n\
-        Alpha,250.1,6,a3.mzML,100000,2.000000e2,mg/L,above_range\n\
-        \"Beta, test\",300.2,7,a1.mzML,,,mg/L,not_detected\n\
-        \"Beta, test\",300.2,7,a2.mzML,6000,8.000000e0,mg/L,ok\n\
-        \"Beta, test\",300.2,7,a3.mzML,8000,1.200000e1,mg/L,ok\n";
+    let want = "compound,mz,rt,sample,signal,concentration,unit,flag,state,row_sn\n\
+        Alpha,250.1,6,a1.mzML,1000,2.000000e0,mg/L,ok,detected,\n\
+        Alpha,250.1,6,a2.mzML,5000,1.000000e1,mg/L,ok,detected,\n\
+        Alpha,250.1,6,a3.mzML,100000,2.000000e2,mg/L,above_range,detected,\n\
+        \"Beta, test\",300.2,7,a1.mzML,,,mg/L,not_detected,absent,\n\
+        \"Beta, test\",300.2,7,a2.mzML,6000,8.000000e0,mg/L,ok,detected,\n\
+        \"Beta, test\",300.2,7,a3.mzML,8000,1.200000e1,mg/L,ok,detected,\n";
     assert_eq!(csv, want);
     for key in ["warn.flow.quant.noRow", "warn.flow.quant.range"] {
         assert!(prov.contains(key), "{key} missing: {prov}");
@@ -104,7 +123,7 @@ fn parameters_change_the_matching_and_the_signal() {
     // height is a tenth of the area in the table; the intercept makes Beta negative
     let (csv, prov) = run(&d, r#"{"signal":"height"}"#).unwrap();
     assert!(
-        csv.contains("a2.mzML,600,-2.800000e0,mg/L,negative"),
+        csv.contains("a2.mzML,600,-2.800000e0,mg/L,negative,detected,"),
         "{csv}"
     );
     assert!(prov.contains("warn.flow.quant.negative"));
@@ -141,5 +160,30 @@ fn a_curve_file_that_cannot_be_read_fails() {
     // a spreadsheet with ; and a decimal comma is read
     std::fs::write(d.join("curves.csv"), format!("{head}A;250,1;6,0;1000;0\n")).unwrap();
     assert!(run(&d, "{}").unwrap().0.contains("a2.mzML,5000,5.000000e0"));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_cell_the_file_does_not_cover_is_not_applicable_and_a_low_number_is_below_loq() {
+    let d = dir("states");
+    std::fs::write(d.join("table.mzfeat"), table_with(true)).unwrap();
+    // Alpha has its lower limit at 1.5 mg/L: a1 reads 1.0 (before the dilution of 1)
+    std::fs::write(d.join("curves.csv"), "name,mz,rt,slope,intercept,unit,range_min,range_max,dilution\nAlpha,250.0,6.1,1000,0,mg/L,1.5,20,1\n\"Beta, test\",300.3,7.0,500,2000,mg/L,,,\n").unwrap();
+    let (csv, _) = run(&d, "{}").unwrap();
+    let lines: Vec<&str> = csv.lines().collect();
+    assert_eq!(
+        lines[1],
+        "Alpha,250.1,6,a1.mzML,1000,1.000000e0,mg/L,below_range,below_loq,25"
+    );
+    assert_eq!(
+        lines[2],
+        "Alpha,250.1,6,a2.mzML,5000,5.000000e0,mg/L,ok,detected,25"
+    );
+    // never a NaN number: the cell is not applicable, and the row's S/N is still shown as evidence
+    assert_eq!(
+        lines[4],
+        "\"Beta, test\",300.2,7,a1.mzML,,,mg/L,not_applicable,na,7.5"
+    );
+    assert!(!csv.contains("NaN"), "{csv}");
     let _ = std::fs::remove_dir_all(&d);
 }

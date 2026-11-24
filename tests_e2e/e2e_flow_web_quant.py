@@ -156,7 +156,7 @@ try:
                 at = next((j for j, (x, y) in enumerate(zip(nat, web)) if x != y), 0)
                 assert nat == web and len(web) > 50, (i, "first difference at", at, nat[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
                 assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE[i]).hexdigest(), i
-                assert web.startswith("compound,mz,rt,sample,signal,concentration,unit,flag\n") and ",ok\n" in web and "ghost" not in web, (i, web[:300])
+                assert web.startswith("compound,mz,rt,sample,signal,concentration,unit,flag,state,row_sn\n") and ",ok,detected," in web and "ghost" not in web, (i, web[:300])
         step("the browser gives the concentrations CSV of the native flow run, byte for byte (area, and height with a range and a dilution)", first)
 
         def curve():

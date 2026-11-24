@@ -23,6 +23,9 @@ pub(super) struct Point<'a> {
     pub(super) w: Option<f64>,
     /// `None` = in the fit, else why not.
     pub(super) out: Option<&'static str>,
+    /// The value state (`mzlab_feat::value_state`) and the S/N of the peak.
+    pub(super) state: &'static str,
+    pub(super) sn: Option<f64>,
 }
 
 /// Accuracy of a back-calculated value against its nominal concentration, both in the injected solution (the dilution is not applied): the
@@ -91,6 +94,8 @@ pub(super) fn write_points(o: &mut Out, points: &[Point], f: Option<&Fit>) {
         o.raw(",\"back\":").opt(back);
         o.raw(",\"accuracy_pct\":")
             .opt(back.filter(|_| p.x > 0.0).map(|b| accuracy(b, p.x)));
+        o.raw(",\"state\":").str(p.state);
+        o.raw(",\"sn\":").opt(p.sn);
         o.raw("}");
     }
     o.raw("]");

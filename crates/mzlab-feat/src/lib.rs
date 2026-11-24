@@ -133,6 +133,7 @@ pub use mzlab_core::sortc;
 /// The evidence words of a cell (detected, forced, filled, absent), shared by every output that reports a value per file.
 pub use aligned::{evidence_word, EVIDENCE};
 mod chunked;
+pub mod value_state;
 pub mod plausible;
 pub mod stat;
 pub mod steps;
