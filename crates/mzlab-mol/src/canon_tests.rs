@@ -242,5 +242,8 @@ fn the_search_size_bound_is_fixed_at_1000_leaves() {
     s.explore(start, &mut Vec::new());
     assert_eq!(below.canonical_order(), s.best.map(|(_, p)| p).unwrap());
     assert!(!contiguous(&below), "the search interleaves the pieces");
-    assert!(contiguous(&alternating(a, b, 13)), "past the bound each piece is in one run");
+    assert!(
+        contiguous(&alternating(a, b, 13)),
+        "past the bound each piece is in one run"
+    );
 }
