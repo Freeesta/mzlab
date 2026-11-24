@@ -89,10 +89,8 @@ fn clashes_yield_to_the_earlier_file_case_aside_and_each_says_why() {
         ]
     );
     let lower: Vec<String> = outs.iter().map(|o| o.to_lowercase()).collect();
-    let mut sorted = lower.clone();
-    sorted.sort();
-    sorted.dedup();
-    assert_eq!(sorted.len(), lower.len(), "no two names equal case aside");
+    let unique: std::collections::HashSet<&String> = lower.iter().collect();
+    assert_eq!(unique.len(), lower.len(), "no two names equal case aside");
     assert!(n[0].note.is_none() && n[3].note.is_none() && n[4].note.is_none());
     assert!(n[1].note.as_deref().unwrap().contains("a@2"));
     assert!(n[5]
