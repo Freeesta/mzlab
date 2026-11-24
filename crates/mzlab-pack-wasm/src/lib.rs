@@ -196,14 +196,12 @@ fn sorted(list: Vec<(String, u64)>) -> (Vec<(String, u64)>, Vec<usize>) {
     (order.iter().map(|i| list[*i].clone()).collect(), order)
 }
 
-/// `pack-run/1` of a dry run: the plan of `files` (`[[path, size], ...]`), nothing read.
+/// `pack-run/1` of a dry run: the plan of `files` (`[[path, size], ...]`), nothing read; refused for the names a real run refuses.
 #[wasm_bindgen]
 pub fn pack_plan(files: &str, name: &str, part_size: f64) -> std::result::Result<String, JsValue> {
     let (list, _) = sorted(list_of(files)?);
-    Ok(pack::run_json(
-        &pack::plan(&list, &options(name, part_size)?),
-        true,
-    ))
+    let m = pack::plan_checked(&list, &options(name, part_size)?).map_err(|e| error_json(&e))?;
+    Ok(pack::run_json(&m, true))
 }
 
 /// Writes the parts of `files` (`[[path, size], ...]`; `read(i, offset, length)` gives bytes of file `i` of that list, empty at the end;

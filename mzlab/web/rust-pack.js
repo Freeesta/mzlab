@@ -31,12 +31,32 @@ function writeAll(ah, bytes, at) {
 /** @param {any[]} handles */
 function closeAll(handles) { for (const h of handles) try { h?.close(); } catch (_) { /* already closed */ } }
 
-/** The folder of a relative path under `root` (created on the way) and the file name. @param {any} root @param {string} path */
-async function folderOf(root, path) {
+/** The folder of a relative path under `root` (created on the way, each one made is pushed to `made`) and the file name. @param {any} root @param {string} path @param {any[][]} made */
+async function folderOf(root, path, made) {
   const parts = path.split("/"), name = /** @type {string} */ (parts.pop());
   let d = root;
-  for (const p of parts) d = await d.getDirectoryHandle(p, { create: true });
+  for (const p of parts) {
+    try { d = await d.getDirectoryHandle(p); } catch (_) { const n = await d.getDirectoryHandle(p, { create: true }); made.push([d, p]); d = n; }
+  }
   return { d, name };
+}
+
+/** Moves the file `tmp` of `d` to `name` (an older file of that name is replaced); a sync handle on either must be closed. @param {any} d @param {string} tmp @param {string} name */
+async function place(d, tmp, name) {
+  const fh = await d.getFileHandle(tmp);
+  await d.removeEntry(name).catch(() => {});
+  if (typeof fh.move === "function") { await fh.move(d, name); return; }
+  const bytes = new Uint8Array(await (await fh.getFile()).arrayBuffer());
+  const h = await (await d.getFileHandle(name, { create: true })).createSyncAccessHandle();
+  try { h.truncate(0); writeAll(h, bytes, 0); h.flush(); } finally { h.close(); }
+  await d.removeEntry(tmp);
+}
+
+/** The names `NAME.partNNNN` and `NAME.pack.json` already in `dir`, sorted. @param {any} dir @param {string} name */
+async function outputsOf(dir, name) {
+  const prefix = `${name}.part`, v = [];
+  for await (const n of dir.keys()) if (n === `${name}.pack.json` || (n.startsWith(prefix) && /^\d+$/.test(n.slice(prefix.length)))) v.push(n);
+  return v.sort();
 }
 
 /** Whether a relative path exists under `root`; looks folders up without creating any. @param {any} root @param {string} path */
@@ -71,34 +91,42 @@ const partReaders = handles => ({
 
 /**
  * Packs `files` (relative path + FileSystemFileHandle) into parts in `dir` (a FileSystemDirectoryHandle) and writes `NAME.pack.json` there; returns `{manifest, doc}`, the
- * manifest text and the `pack-run/1` document. `dryRun` reads nothing and writes nothing. Existing parts of that name are replaced: the caller asks first.
- * @param {{files: Input[], dir: any, name?: string, partSize?: number, dryRun?: boolean}} m
+ * manifest text and the `pack-run/1` document. `dryRun` reads nothing and writes nothing, and is refused for the names a real run refuses. Existing parts or manifest of that
+ * name are `err.pack.exists` unless `force`; the new parts are written under temporary names and moved into place only when all of them are, so a failed run leaves an older pack as it was.
+ * @param {{files: Input[], dir: any, name?: string, partSize?: number, dryRun?: boolean, force?: boolean}} m
  */
-export async function packFiles({ files, dir, name = "pack", partSize = 25e6, dryRun = false }) {
+export async function packFiles({ files, dir, name = "pack", partSize = 25e6, dryRun = false, force = false }) {
   const mod = await load("pack");
   if (files.length > MAX_OPEN) throw refuse(`${files.length} files: at most ${MAX_OPEN} in one call, use the app`);
   const sizes = await Promise.all(files.map(async f => (await f.handle.getFile()).size));
   const list = JSON.stringify(files.map((f, i) => [f.path, sizes[i]]));
-  const plan = mod.pack_plan(list, name, partSize);
+  const plan = mod.pack_plan(list, name, partSize);   // the names and the part size are checked here, before anything is touched
   if (dryRun) return { manifest: "", doc: plan };
   const names = /** @type {{name: string}[]} */ (JSON.parse(plan).parts).map(p => p.name);
   if (names.length > MAX_OPEN) throw refuse(`${names.length} parts: use a larger part size, or the app`);
+  const old = await outputsOf(dir, name);
+  if (old.length && !force) throw JSON.stringify({ error_key: "err.pack.exists", params: { path: old[0], count: old.length } });
+  const tmpOf = (/** @type {string} */ n) => `.${n}.mzpack-tmp`, manifestName = `${name}.pack.json`, manifestTmp = `.${manifestName}.tmp`;
   /** @type {any[]} */ const ins = [], outs = [];
   try {
     for (const f of files) ins.push(await f.handle.createSyncAccessHandle());
-    for (const n of names) { const h = await (await dir.getFileHandle(n, { create: true })).createSyncAccessHandle(); h.truncate(0); outs.push(h); }
+    for (const n of names) { const h = await (await dir.getFileHandle(tmpOf(n), { create: true })).createSyncAccessHandle(); h.truncate(0); outs.push(h); }
     const at = names.map(() => 0);
     const manifest = mod.pack(list, name, partSize,
       (/** @type {number} */ i, /** @type {number} */ off, /** @type {number} */ len) => readAt(ins[i], off, len),
       (/** @type {number} */ part, /** @type {Uint8Array} */ bytes) => { writeAll(outs[part], bytes, at[part]); at[part] += bytes.length; });
     for (const h of outs) h.flush();
     closeAll(outs);
-    const mh = await (await dir.getFileHandle(`${name}.pack.json`, { create: true })).createSyncAccessHandle();
+    // the manifest is written first under its temporary name (a full disk shows before an older part is replaced), then the parts and the manifest are moved into place
+    const mh = await (await dir.getFileHandle(manifestTmp, { create: true })).createSyncAccessHandle();
     try { mh.truncate(0); writeAll(mh, new TextEncoder().encode(manifest), 0); mh.flush(); } finally { mh.close(); }
+    for (const n of names) await place(dir, tmpOf(n), n);
+    await place(dir, manifestTmp, manifestName);
+    for (const o of old) if (o !== manifestName && !names.includes(o)) await dir.removeEntry(o).catch(() => {});   // parts of an older, longer pack
     return { manifest, doc: mod.pack_doc(manifest) };
   } catch (e) {
     closeAll(outs);
-    for (const n of names) await dir.removeEntry(n).catch(() => {});   // a failed run leaves no parts, as the command line
+    for (const n of [...names.map(tmpOf), manifestTmp]) await dir.removeEntry(n).catch(() => {});   // a failed run removes its own files only
     throw e;
   } finally { closeAll(ins); }
 }
@@ -120,16 +148,20 @@ export async function verifyPack({ manifest, dir, seen }) {
  */
 export async function unpackPack({ manifest, dir, out, force = false, dryRun = false, seen }) {
   const mod = await load("pack");
+  mod.pack_doc(manifest);   // the module reads the manifest first: a bad one is its error key, and no folder or file is created for it
   const names = listed(manifest, "parts", "name"), paths = listed(manifest, "files", "path");
   if (paths.length > MAX_OPEN) throw refuse(`${paths.length} files: at most ${MAX_OPEN} in one call, use the app`);
-  /** @type {Set<string>} */ const taken = new Set();
+  /** @type {Set<string>} */ const taken = new Set(), began = new Set();
   if (!force) for (const p of paths) if (await existsUnder(out, p)) taken.add(p);
   const hs = await openParts(dir, names);
   /** @type {Map<string, {fh: any, ah: any, d: any, name: string, tmp: string, keep?: boolean}>} */ const ready = new Map();
+  /** @type {Map<string, any[][]>} */ const madeBy = new Map();
   try {
     // nothing is created for a dry run or when the module is about to refuse because files exist: the command line writes nothing then either
     if (!dryRun && !taken.size) for (const p of paths) {
-      const { d, name } = await folderOf(out, p), tmp = `.${name}.mzpack-tmp`;
+      /** @type {any[][]} */ const made = [];
+      madeBy.set(p, made);
+      const { d, name } = await folderOf(out, p, made), tmp = `.${name}.mzpack-tmp`;
       const fh = await d.getFileHandle(tmp, { create: true }), ah = await fh.createSyncAccessHandle();
       ah.truncate(0);
       ready.set(p, { fh, ah, d, name, tmp });
@@ -138,7 +170,7 @@ export async function unpackPack({ manifest, dir, out, force = false, dryRun = f
     let at = 0;
     const files = {
       exists: (/** @type {string} */ p) => taken.has(p),
-      begin: (/** @type {string} */ p) => { cur = ready.get(p) ?? null; at = 0; },
+      begin: (/** @type {string} */ p) => { cur = ready.get(p) ?? null; at = 0; began.add(p); },
       write: (/** @type {Uint8Array} */ b) => { if (cur) { writeAll(cur.ah, b, at); at += b.length; } },
       end: (/** @type {boolean} */ keep) => { if (cur) { cur.ah.flush(); cur.ah.close(); cur.keep = keep; } cur = null; },
     };
@@ -146,16 +178,21 @@ export async function unpackPack({ manifest, dir, out, force = false, dryRun = f
     const answer = mod.unpack(manifest, r.size, r.read, files, force, dryRun, seen ?? null);
     // the temporary files are moved into place (or dropped) once the module has decided about each of them
     for (const v of ready.values()) {
-      if (v.keep) {
-        if (force) await v.d.removeEntry(v.name).catch(() => {});
-        if (typeof v.fh.move === "function") await v.fh.move(v.d, v.name);
-        else { const f = await v.fh.getFile(); const h = await (await v.d.getFileHandle(v.name, { create: true })).createSyncAccessHandle(); try { h.truncate(0); writeAll(h, new Uint8Array(await f.arrayBuffer()), 0); h.flush(); } finally { h.close(); } await v.d.removeEntry(v.tmp); }
-      } else await v.d.removeEntry(v.tmp).catch(() => {});
+      closeAll([v.ah]);   // a file the module never began (its parts are lost) still holds its handle, and an open file cannot be removed
+      if (v.keep) await place(v.d, v.tmp, v.name);
+      else await v.d.removeEntry(v.tmp).catch(() => {});
     }
     ready.clear();
+    await dropEmptyFolders(madeBy, began);
     return answer;
   } finally {
     closeAll(hs);
     for (const v of ready.values()) { try { v.ah.close(); } catch (_) { /* closed */ } await v.d.removeEntry(v.tmp).catch(() => {}); }
+    if (ready.size) await dropEmptyFolders(madeBy, began);
   }
+}
+
+/** The folders made for files the module never began (their parts were lost) go again, as the command line makes none for them; a folder with anything in it stays. @param {Map<string, any[][]>} madeBy @param {Set<string>} began */
+async function dropEmptyFolders(madeBy, began) {
+  for (const [p, made] of madeBy) if (!began.has(p)) for (const [parent, nm] of [...made].reverse()) await parent.removeEntry(nm).catch(() => {});
 }

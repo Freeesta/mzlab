@@ -22,7 +22,7 @@ usage: mzlab-cli file pack FILE_OR_DIR... --out DIR [--part-size SIZE] [--name N
   --name NAME  default pack
   --dry-run    list the files and the planned parts (sizes only, no hash), write nothing
 the same input gives the same bytes; one part is a ZIP with the files at their paths (7z, unzip). Every choice is logged on the standard error.
-exit: 0 done; 2 usage; 3 an unusable path (not plain, or two that differ only in case); 4 an input is missing; 6 an output exists (no --force) or cannot be written; 8 a file changed size while read (still being written)";
+exit: 0 done; 2 usage; 3 an unusable path (not plain, or two that clash: equal, equal in case, a file named like a folder); 4 an input is missing; 6 an output exists (no --force) or cannot be written; 8 a file changed size while read (still being written)";
 
 pub const UNPACK_HELP: &str = "mzlab-cli file unpack: rebuild the files of a pack from its parts, checking every part and every file.
 
@@ -150,19 +150,8 @@ fn gather(inputs: &[String], skip: Option<&Path>, log: &mut String) -> Result<Ve
             });
         }
     }
+    // two inputs stored under one name are refused with the other clashes (`pack::check_files`), not here
     items.sort_by(|a, b| a.rel.cmp(&b.rel));
-    if let Some(w) = items
-        .windows(2)
-        .find(|w| w.first().map(|x| &x.rel) == w.get(1).map(|x| &x.rel))
-    {
-        let (a, b) = (&w[0], &w[1]);
-        return Err(format!(
-            "two inputs would be stored as {}: {} and {}",
-            a.rel,
-            a.path.display(),
-            b.path.display()
-        ));
-    }
     Ok(items)
 }
 
@@ -199,13 +188,17 @@ impl DirSink {
 
     /// Moves the parts into place, then the manifest last, so a manifest never points at parts that are not there.
     fn commit(&self, manifest: &Path, text: &str) -> Result<(), Error> {
-        for (tmp, to) in &self.made {
-            fs::rename(tmp, to).map_err(|e| out_err(format!("{}: {e}", to.display())))?;
-        }
+        // the manifest is written first under its temporary name, so a full disk is found before any older part is replaced
         let tmp = self.dir.join(format!(".{}.pack.json.tmp", self.name));
-        fs::write(&tmp, text)
-            .and_then(|()| fs::rename(&tmp, manifest))
-            .map_err(|e| out_err(format!("{}: {e}", manifest.display())))
+        let fail = |p: &Path, e: std::io::Error| {
+            let _ = fs::remove_file(&tmp);
+            out_err(format!("{}: {e}", p.display()))
+        };
+        fs::write(&tmp, text).map_err(|e| fail(manifest, e))?;
+        for (part, to) in &self.made {
+            fs::rename(part, to).map_err(|e| fail(to, e))?;
+        }
+        fs::rename(&tmp, manifest).map_err(|e| fail(manifest, e))
     }
 }
 
@@ -328,6 +321,10 @@ pub fn pack_run(args: Vec<String>) -> Outcome {
         part_size: job.part_size,
         zip64_at: mzlab_core::zipstream::ZIP64_AT,
     };
+    // the dry run and the real run are refused for the same names, with the same error
+    if let Err(e) = pack::check_files(&list, &o) {
+        return with_log(Outcome::fail_error(&e), job.log);
+    }
     job.log.push_str(&format!(
         "{} files in path order, {} bytes\n",
         items.len(),

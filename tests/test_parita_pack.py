@@ -112,24 +112,60 @@ def test_a_pack_of_one_part_is_a_valid_zip(pkg, tmp_path):
 
 
 def test_unusable_names_and_part_sizes_are_refused_alike(pkg, tmp_path):
-    # two paths that differ only in case (one file on macOS / Windows) and a colon in a name: the same error key on the site and in the app, nothing written
-    src = tmp_path / "src"
-    src.mkdir()
-    for n in ("A.txt", "a.txt", "c:x.txt"):
-        (src / n).write_bytes(b"x")
-    for names, key in ((["A.txt", "a.txt"], "err.pack.duplicate"), (["c:x.txt"], "err.pack.path")):
+    # names no pack can carry (two that differ only in case, a colon, a file with a folder of its name): the same error key on the site and in the app, in a real run and in a
+    # dry run, nothing written
+    cases = {
+        "err.pack.duplicate": ["A.txt", "a.txt"],
+        "err.pack.path": ["c:x.txt"],
+        "err.pack.duplicate#folder": ["a", "A/b"],
+    }
+    for tag, names in cases.items():
+        key = tag.split("#")[0]
+        src = tmp_path / f"src-{tag}"
+        for n in names:
+            (src / n).parent.mkdir(parents=True, exist_ok=True)
+            (src / n).write_bytes(b"x")
         listing = [[n, str(src / n)] for n in names]
-        site = tmp_path / f"site-{key}"
-        site.mkdir()
-        out = wasm(pkg, tmp_path, op="pack", files=listing, dir=str(site), name="pack", part_size=PART)
-        assert key in out["error"], out
-        assert not list(site.iterdir())
-        cli_out = tmp_path / f"cli-{key}"
-        r = subprocess.run(cli_argv("file", "pack", *[str(src / n) for n in names], "--out", str(cli_out), "--json"), cwd=ROOT, capture_output=True)
-        assert r.returncode == 3 and key in r.stdout.decode() + r.stderr.decode(), (key, r.returncode, r.stdout, r.stderr)
-        assert not (cli_out / "pack.pack.json").exists()
-    # a part size that is not a number used to loop for ever
+        for op in ("pack", "plan"):
+            site = tmp_path / f"site-{tag}-{op}"
+            site.mkdir()
+            out = wasm(pkg, tmp_path, op=op, files=listing, dir=str(site), name="pack", part_size=PART)
+            assert key in out["error"], (op, out)
+            assert not list(site.iterdir())
+        for extra in ([], ["--dry-run"]):
+            cli_out = tmp_path / f"cli-{tag}-{len(extra)}"
+            r = subprocess.run(cli_argv("file", "pack", str(src), "--out", str(cli_out), "--json", *extra), cwd=ROOT, capture_output=True)
+            assert r.returncode == 3 and key in r.stdout.decode() + r.stderr.decode(), (tag, extra, r.returncode, r.stdout, r.stderr)
+            assert not (cli_out / "pack.pack.json").exists()
+    src = tmp_path / "src-err.pack.duplicate"
     one = [["A.txt", str(src / "A.txt")]]
+    # a part size that is not a number used to loop for ever
     for bad in ("NaN", 0, 1023):
         out = wasm(pkg, tmp_path, op="pack", files=one, dir=str(tmp_path), name="pack", part_size=bad)
         assert "err.run.input" in out["error"], (bad, out)
+
+
+def test_the_page_code_over_a_stand_in_for_opfs_does_what_the_app_does(pkg, tmp_path):
+    # mzlab/web/rust-pack.js on the nodejs build of the module and an in-memory File System API: the app's parts, no overwrite without force, a failed run keeps the older pack,
+    # a dry run and a bad manifest are refused before anything is created, a lost part makes the app's tree
+    src, app, lost, cli_lost, work = (tmp_path / n for n in ("src", "app", "lost", "cli_lost", "work"))
+    campaign(src)
+    work.mkdir()
+    cli("file", "pack", str(src / "camp"), "--out", str(app), "--part-size", "1KiB", "--json")
+    shutil.copytree(app, lost)
+    (lost / "pack.part0005").unlink()
+    cli("file", "unpack", str(lost / "pack.pack.json"), "--out", str(cli_lost), "--json", code=1)
+    r = subprocess.run(["node", str(ROOT / "tests/pack_opfs_node.mjs"), str(pkg), str(src), str(app), str(lost), str(cli_lost), str(work)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-3000:]
+    got = json.loads(r.stdout)
+    want = {
+        "same_bytes_as_the_app": True, "document": "pack-run/1", "exists_refused": "err.pack.exists", "exists_changed_nothing": True,
+        "failure_key": "err.pack.growing", "failure_kept_the_old_pack": True, "force_replaced": True,
+        "dry_run_case": "err.pack.duplicate", "dry_run_case_real": "err.pack.duplicate", "dry_run_case_empty": True,
+        "dry_run_folder": "err.pack.duplicate", "dry_run_folder_real": "err.pack.duplicate", "dry_run_folder_empty": True,
+        "dry_run_colon": "err.pack.path", "dry_run_colon_real": "err.pack.path", "dry_run_colon_empty": True,
+        "bad_manifest_stream": "err.pack.path", "bad_manifest_stream_empty": True, "bad_manifest_dotdot": "err.pack.path", "bad_manifest_dotdot_empty": True,
+        "bad_manifest_abs": "err.pack.path", "bad_manifest_abs_empty": True,
+        "unpack_round_trip": "unpack-run/1", "lost_part_same_tree_as_the_app": True, "nothing_left_over": True, "unpack_exists": "err.pack.exists",
+    }
+    assert got == want

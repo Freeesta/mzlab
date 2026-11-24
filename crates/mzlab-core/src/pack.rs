@@ -75,17 +75,53 @@ pub fn safe_path(p: &str) -> bool {
         && p.split('/').all(|c| !matches!(c, "" | "." | ".."))
 }
 
-/// Two paths that are one file on a case-insensitive file system (macOS, Windows), or the same path twice: `err.pack.duplicate` naming both.
+/// Two paths that cannot both be written: the same path twice, two that are one file on a case-insensitive file system (macOS, Windows), or a file named
+/// like a folder another path goes through (`a` and `a/b`): `err.pack.duplicate` naming both. Unicode forms of one accent are not folded (no table in the engine);
+/// unpack refuses a target that appeared during the run (`err.pack.exists`) instead of replacing it.
 pub fn refuse_duplicates<'a>(paths: impl Iterator<Item = &'a str>) -> Result<()> {
+    let all: Vec<&str> = paths.collect();
     let mut seen = std::collections::BTreeMap::new();
-    for p in paths {
-        if let Some(first) = seen.insert(p.to_lowercase(), p) {
-            return Err(Error::new("err.pack.duplicate")
-                .with("path", p)
-                .with("other", first));
+    for p in &all {
+        if let Some(first) = seen.insert(p.to_lowercase(), *p) {
+            return Err(clash(p, first));
+        }
+    }
+    for p in &all {
+        let low = p.to_lowercase();
+        for (i, _) in low.match_indices('/') {
+            if let Some(file) = seen.get(&low[..i]) {
+                return Err(clash(p, file));
+            }
         }
     }
     Ok(())
+}
+
+fn clash(path: &str, other: &str) -> Error {
+    Error::new("err.pack.duplicate")
+        .with("path", path)
+        .with("other", other)
+}
+
+/// What `pack` refuses before it reads or writes anything: a part size of 0, a path that is not plain (`err.pack.path`), two that clash.
+pub fn check_files(files: &[(String, u64)], o: &Options) -> Result<()> {
+    if o.part_size == 0 {
+        return Err(
+            Error::new("err.run.input").with("detail", "the part size must be at least 1 byte")
+        );
+    }
+    for (name, _) in files {
+        if !safe_path(name) || zipstream::check_name(name).is_err() {
+            return Err(Error::new("err.pack.path").with("path", name));
+        }
+    }
+    refuse_duplicates(files.iter().map(|f| f.0.as_str()))
+}
+
+/// `plan` after the same checks as `pack`: a dry run that exits 0 is a run that would not be refused for its names.
+pub fn plan_checked(files: &[(String, u64)], o: &Options) -> Result<Manifest> {
+    check_files(files, o)?;
+    Ok(plan(files, o))
 }
 
 fn plain_name(n: &str) -> bool {
@@ -222,18 +258,7 @@ pub fn pack(
     sink: &mut dyn PartSink,
     o: &Options,
 ) -> Result<Manifest> {
-    if o.part_size == 0 {
-        return Err(
-            Error::new("err.run.input").with("detail", "the part size must be at least 1 byte")
-        );
-    }
-    for (name, _) in files {
-        if !safe_path(name) || zipstream::check_name(name).is_err() {
-            return Err(Error::new("err.pack.path").with("path", name));
-        }
-    }
-    refuse_duplicates(files.iter().map(|f| f.0.as_str()))?;
-    let planned = plan(files, o);
+    let planned = plan_checked(files, o)?;
     let mut parts = Parts {
         sink,
         size: o.part_size,

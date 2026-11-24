@@ -400,18 +400,70 @@ fn a_failed_force_repack_leaves_the_older_pack_as_it_was() {
     );
 }
 
+/// A folder whose files have names no pack can carry: both the real run and `--dry-run` give exit 3 and write nothing.
 #[test]
-fn unusable_input_names_exit_three_not_a_silent_overwrite() {
-    for (tag, names) in [("case", vec!["A.txt", "a.txt"]), ("colon", vec!["c:x.txt"])] {
+fn unusable_input_names_exit_three_in_a_real_run_and_a_dry_run() {
+    let cases: [(&str, &[&str]); 3] = [
+        ("case", &["A.txt", "a.txt"]),
+        ("colon", &["c:x.txt"]),
+        ("folder", &["a", "A/b"]),
+    ];
+    for (tag, names) in cases {
         let (src, out) = (
             tmp(&format!("bad-src-{tag}")),
             tmp(&format!("bad-out-{tag}")),
         );
-        for n in &names {
-            std::fs::write(src.join(n), b"x").unwrap();
+        for n in names {
+            let at = src.join(n);
+            std::fs::create_dir_all(at.parent().unwrap()).unwrap();
+            std::fs::write(&at, b"x").unwrap();
         }
-        let r = cli(&["file", "pack", &s(&src), "--out", &s(&out)]);
-        assert_eq!(r.code, 3, "{tag}: {}", r.stderr);
-        assert!(!out.join("pack.pack.json").exists(), "{tag}");
+        let (sd, od) = (s(&src), s(&out));
+        for extra in [&[][..], &["--dry-run", "--json"][..]] {
+            let mut a = vec!["file", "pack", &sd, "--out", &od];
+            a.extend_from_slice(extra);
+            let r = cli(&a);
+            assert_eq!(r.code, 3, "{tag} {extra:?}: {}", r.stderr);
+            assert!(!out.join("pack.pack.json").exists(), "{tag} {extra:?}");
+        }
     }
+}
+
+#[test]
+fn one_input_given_twice_is_a_clash_like_any_other_not_a_usage_error() {
+    let (src, out) = (tmp("twice-src"), tmp("twice-out"));
+    std::fs::write(src.join("f.bin"), b"x").unwrap();
+    let (f, od) = (s(&src.join("f.bin")), s(&out));
+    for extra in [&[][..], &["--dry-run"][..]] {
+        let mut a = vec!["file", "pack", &f, &f, "--out", &od];
+        a.extend_from_slice(extra);
+        let r = cli(&a);
+        assert_eq!(r.code, 3, "{extra:?}: {}", r.stderr);
+        assert!(r.stderr.contains("err.pack.duplicate"), "{}", r.stderr);
+    }
+}
+
+#[test]
+fn a_manifest_that_cannot_be_written_leaves_the_older_parts_in_place() {
+    let (src, out) = (tmp("mf-src"), tmp("mf-out"));
+    campaign(&src);
+    let (sd, od) = (s(&src), s(&out));
+    let go = |extra: &[&str]| {
+        let mut a = vec!["file", "pack", sd.as_str()];
+        a.extend_from_slice(&["--out", od.as_str(), "--part-size", "4096"]);
+        a.extend_from_slice(extra);
+        cli(&a)
+    };
+    assert_eq!(go(&[]).code, 0);
+    let part = out.join("pack.part0001");
+    let before = std::fs::read(&part).unwrap();
+    std::fs::write(src.join("added.bin"), data(5000, 9)).unwrap();
+    // a folder where the manifest's temporary file goes: writing it fails before any older part is replaced
+    std::fs::create_dir(out.join(".pack.pack.json.tmp")).unwrap();
+    assert_eq!(go(&["--force"]).code, 6);
+    assert_eq!(
+        std::fs::read(&part).unwrap(),
+        before,
+        "the older part is untouched"
+    );
 }

@@ -161,11 +161,15 @@ fn refuse_existing(m: &Manifest, sink: &mut dyn FileSink) -> Result<()> {
         }
     }
     match taken.first() {
-        Some(first) => Err(Error::new("err.pack.exists")
-            .with("path", first)
-            .with("count", taken.len())),
+        Some(first) => Err(exists(first, taken.len())),
         None => Ok(()),
     }
+}
+
+fn exists(path: &str, count: usize) -> Error {
+    Error::new("err.pack.exists")
+        .with("path", path)
+        .with("count", count)
 }
 
 /// Writes one file from its span and keeps it only when its SHA-256 is the manifest's; a write or read failure drops it and is the error.
@@ -232,6 +236,10 @@ pub fn unpack(
         if !write {
             files.push(FileState::Ready);
             continue;
+        }
+        // a target that appeared since the first look (a name this disk folds onto one written a moment ago) is not replaced
+        if !force && sink.exists(&f.path)? {
+            return Err(exists(&f.path, 1));
         }
         let mut span = Span {
             src: &mut *src,

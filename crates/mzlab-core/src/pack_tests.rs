@@ -383,3 +383,79 @@ fn a_part_that_cannot_be_read_is_an_input_error_not_a_mismatch() {
     });
     assert_eq!(r.err().unwrap().key, "err.run.input");
 }
+
+#[test]
+fn a_dry_run_plan_is_refused_for_the_names_a_real_run_refuses() {
+    let o = opts(1024, zipstream_at());
+    let bad: [&[&str]; 6] = [
+        &["A.txt", "a.txt"],
+        &["same", "same"],
+        &["c:x.txt"],
+        &["a", "a/b"],
+        &["A", "a/b"],
+        &["x/../y"],
+    ];
+    for names in bad {
+        let list: Vec<(String, u64)> = names.iter().map(|n| (n.to_string(), 0)).collect();
+        let mut open = |_: usize| -> Result<Box<dyn Read>> { Ok(Box::new(std::io::empty())) };
+        let real = pack::pack(&list, &mut open, &mut Mem::default(), &o)
+            .err()
+            .unwrap();
+        let plan = pack::plan_checked(&list, &o).err().unwrap();
+        assert_eq!(
+            (&plan.key, &plan.params),
+            (&real.key, &real.params),
+            "{names:?}"
+        );
+    }
+    assert!(pack::plan_checked(&[("a/b".into(), 1), ("a/c".into(), 1)], &o).is_ok());
+}
+
+/// A disk that folds `e` + a combining accent onto the one-character form, as macOS does.
+struct Folding(Out);
+impl Folding {
+    fn fold(p: &str) -> String {
+        p.replace("e\u{301}", "\u{e9}")
+    }
+}
+impl FileSink for Folding {
+    fn exists(&mut self, p: &str) -> Result<bool> {
+        let want = Self::fold(p);
+        Ok(self.0.done.keys().any(|k| Self::fold(k) == want))
+    }
+    fn begin(&mut self, p: &str) -> Result<()> {
+        self.0.begin(p)
+    }
+    fn write(&mut self, b: &[u8]) -> Result<()> {
+        self.0.write(b)
+    }
+    fn end(&mut self, keep: bool) -> Result<()> {
+        self.0.end(keep)
+    }
+}
+
+#[test]
+fn unpack_stops_at_a_name_the_disk_folds_onto_a_file_it_just_wrote() {
+    let list = [("caf\u{e9}".to_string(), 3), ("cafe\u{301}".to_string(), 3)];
+    let mut parts = Mem::default();
+    let mut open =
+        |_: usize| -> Result<Box<dyn Read>> { Ok(Box::new(std::io::Cursor::new(vec![7u8; 3]))) };
+    let m = pack::pack(&list, &mut open, &mut parts, &opts(1024, zipstream_at())).unwrap();
+    let mut sink = Folding(Out::default());
+    let e = pack_read::unpack(
+        &m,
+        &mut Parts(parts.0.into_iter().map(Some).collect()),
+        &mut sink,
+        false,
+        true,
+        &mut |_, _| {},
+    )
+    .err()
+    .unwrap();
+    assert_eq!(e.key, "err.pack.exists");
+    assert_eq!(
+        sink.0.done.len(),
+        1,
+        "the first file stays, the second is not written"
+    );
+}

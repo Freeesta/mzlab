@@ -358,6 +358,25 @@ fn defaults_give_the_full_types(
     }
 }
 
+/// Every argument is `optional` in the whole listing or `required` in the path listing, never both and never neither.
+#[test]
+fn compact_optional_is_the_full_listings_missing_required_for_every_argument() {
+    let doc = json(&out(&["commands", "--json"]));
+    let mut n = 0;
+    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        let whole = full(e);
+        let (short, long) = (members(c, "args"), members(&whole, "args"));
+        assert_eq!(short.len(), long.len(), "{}", e.name);
+        for (a, b) in short.iter().zip(long) {
+            let (opt, req) = (a.get("optional").is_some(), b.get("required").is_some());
+            assert!(opt != req, "{}: {}", e.name, a["name"]);
+            assert!(a.get("required").is_none() && b.get("optional").is_none());
+            n += 1;
+        }
+    }
+    assert!(n > 50, "only {n} arguments compared");
+}
+
 /// The whole listing says what is shared or derivable once, and gives each command in full under its path: nothing is lost, only moved.
 #[test]
 fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
