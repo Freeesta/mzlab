@@ -24,8 +24,8 @@ pub(crate) enum Item {
         flagged: Option<(usize, usize)>,
         /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
         lost: Option<(usize, usize, String)>,
-        /// The spectrum-type decision (always, for a file written by this version).
-        spectrum_type: Option<String>,
+        /// The spectrum-type decision (always, for a file written by this version); boxed so that `Done` stays within the size gap of `Failed`.
+        spectrum_type: Option<Box<str>>,
         /// With `--name sample`: why the file got a name other than the plain sample name (a clash, an unsafe name).
         rename: Option<String>,
     },
@@ -48,13 +48,13 @@ pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(us
 }
 
 /// The spectrum-type decision (`spectrum=..; written=..; basis=..`) of the input `label`, from the note of its file in the record of the run.
-pub(crate) fn spectrum_type_of(run: &mzlab_core::flow::Run, label: &str) -> Option<String> {
+pub(crate) fn spectrum_type_of(run: &mzlab_core::flow::Run, label: &str) -> Option<Box<str>> {
     let note = run
         .activities
         .iter()
         .flat_map(|a| &a.files)
         .find(|(n, _)| n == label)?;
-    note.1.get("spectrum_type")?.str().map(str::to_string)
+    note.1.get("spectrum_type")?.str().map(Box::from)
 }
 
 /// The partial read (declared, read, cause) of the input `label`, from the note of its file in the record of the run: counted once the scans were read,
