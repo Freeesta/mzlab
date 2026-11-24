@@ -94,6 +94,7 @@ I18N.add("en", {
   "conv.nameby.sample": "Sample name",
   "conv.nameby.title": "Name each saved mzML after its file or after its sample",
   "conv.nameby.fail": "The sample names could not be read: the files keep their file names.",
+  "conv.nameby.load": "The sample-name module could not be loaded: the files keep their file names.",
   "conv.dl.needsApp": "Update the desktop app to save the mzML",
   "conv.help.summary": "Don't have mzML files?",
   "conv.help.hint": "You loaded {types} files: convert them like this.",

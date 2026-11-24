@@ -92,13 +92,20 @@ const CONV = {
   async syncNames() {
     const list = this.listed(), sig = this.nameBy + "\n" + list.join("\n");
     if (this.busy) await this.busy;
-    if (sig === this.sig) { if (this.notes.length) await loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.paint(this)); return; }
+    if (sig === this.sig) { if (this.notes.length) await this.paintNotes(); return; }
     this.sig = sig; this.renames = new Map(); this.notes = [];
     if (this.nameBy === "sample" && list.length) {
-      this.busy = loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.ask(this, list)).finally(() => { this.busy = null; });
-      if (!(await /** @type {Promise<any>} */ (this.busy))) this.sig = "";      // the engine did not answer: the next save asks again
+      this.busy = loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.ask(this, list)).catch(() => null).finally(() => { this.busy = null; });      // never rejects (a second caller awaits it): null = conv-names.js did not load
+      const ok = await /** @type {Promise<any>} */ (this.busy);
+      if (ok === null) this.notes = [I18N.t("conv.nameby.load")]; if (!ok) this.sig = "";      // no names: the next save asks again
     }
-    /** @type {any} */ (window).CONVNAMES ?/** @type {any} */ (window).CONVNAMES.paint(this) : 0;
+    await this.paintNotes();
+  },
+  // the notes under the choice: conv-names.js paints them; when it could not be loaded the note is written here (nothing shown and nothing to clear: no-op)
+  async paintNotes() {
+    if (/** @type {any} */ (window).CONVNAMES) { /** @type {any} */ (window).CONVNAMES.paint(this); return; }
+    const u = document.getElementById("cvnotes"); if (!u || (!this.notes.length && u.hidden !== false)) return;
+    u.replaceChildren(...this.notes.map(t => { const li = document.createElement("li"); li.textContent = t; return li; })); u.hidden = !this.notes.length;
   },
   async setNameBy(/** @type {string} */ v) {
     this.nameBy = v === "sample" ? "sample" : "file"; this.sig = "";
@@ -200,15 +207,8 @@ const CONVQ = {
     const s = this.st.get(name); if (!s) return "";
     return s.state === "done" ? I18N.t("conv.q.done") : s.state === "failed" ? I18N.t("conv.q.fail", { msg: DIAG.pulisci(s.error, 160) }) : s.state === "cancelled" ? "" : I18N.t(s.state === "run" ? "conv.q.run" : "conv.q.wait");
   },
-  // one folder, one click: every ready mzML goes there
-  async saveAll() {
-    const f = typeof window !== "undefined" && /** @type {any} */ (window).MZLAB_SAVE_MZML_DIR; if (!f) return;
-    await CONV.syncNames();
-    // with «Sample name» every file is named (the whole map: a file the map left out would be saved under its cache name); the app says what it kept and what it could not name as asked
-    try { const r = await f(Object.fromEntries(CONV.listed().map(k => [k, CONV.nameOf(k)]).filter(([k, v]) => CONV.nameBy === "sample" || k !== v))); const box = document.getElementById("up");
-      if (r != null && box) for (const t of [I18N.t("conv.q.saved", { n: r.saved }), r.kept.length && I18N.t("conv.q.kept", { names: r.kept.join(", ") }), r.own.length && I18N.t("conv.q.own", { names: r.own.join(", ") })].filter(Boolean)) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = t; box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
-    catch (e) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
-  },
+  // one folder, one click: every ready mzML goes there (the body is conversione-carta.js)
+  async saveAll() { await loadScript("m:conversione-carta.js"); await /** @type {any} */ (window).CONVSAVEALL(); },
 };
 
 // the files being read, converted and indexed (the samples of a maker's file, the files a module converts), as rows of the list of the files (index.html renderFiles) from the moment
