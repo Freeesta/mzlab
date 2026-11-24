@@ -13,7 +13,7 @@ CONTRACT = json.loads((ROOT / "docs/studies/workflow/contract.schema.json").read
 STEPS = json.loads((ROOT / "docs/schemi/steps-1.json").read_text())
 SKETCH = json.loads((ROOT / "docs/studies/workflow/step.features.detect.json").read_text())
 IDS = ["import.raw", "convert.mzml", "index.mzidx", "features.estimate", "features.detect", "features.align",
-       "features.gapfill", "table.filter", "table.drift", "features.group", "table.stats", "table.pca", "table.kmd", "table.compare", "table.plausible", "features.ms2_link", "export.table_csv",
+       "features.gapfill", "table.filter", "table.drift", "features.group", "features.companions", "table.stats", "table.pca", "table.kmd", "table.compare", "table.plausible", "features.ms2_link", "export.table_csv",
        "export.inclusion", "export.mztab"]
 
 

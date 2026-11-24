@@ -18,12 +18,12 @@ fn params() -> Vec<Param> {
             .min(-1.0)
             .max(1.0)
             .default_num(0.9)
-            .doc("Smallest Pearson correlation of the heights of two rows over the files for an edge; a mass difference alone never gives one"),
+            .doc("Smallest height correlation over the files for an edge; mass alone never gives one"),
         Param::number("weak_corr", "Weak correlation")
             .min(-1.0)
             .max(1.0)
             .default_num(0.5)
-            .doc("Pairs whose mass difference fits a relation and whose correlation is between this and the edge level are listed as weak, with the same numbers")
+            .doc("Pairs with a fitting mass difference and a correlation between this and the edge level are listed as weak")
             .advanced(),
         Param::integer("min_corr_samples", "Files for the correlation")
             .min(2.0)
@@ -35,13 +35,13 @@ fn params() -> Vec<Param> {
             .min(0.0)
             .default_num(0.4)
             .unit("Da")
-            .doc("How far the m/z difference of two rows may be from a nominal difference of the lists (the isotope steps 1 and 2 included)"),
+            .doc("How far an m/z difference may be from a nominal difference of the lists"),
         Param::text("adducts", "Adduct differences")
             .default_str(ADDUCTS)
             .doc("Comma-separated nominal differences (Da) from [M+H]+ to its adducts: 17 NH4, 22 Na, 38 K, 41 H+acetonitrile, 63 Na+acetonitrile"),
         Param::text("losses", "In-source loss differences")
             .default_str(LOSSES)
-            .doc("Comma-separated nominal differences (Da) between an ion and its in-source fragment: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"),
+            .doc("Comma-separated nominal differences (Da) of in-source fragments: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"),
         Param::integer("max_edges", "Largest edge count")
             .min(0.0)
             .default_num(20000.0)

@@ -798,14 +798,14 @@
                     "minimum":-1,
                     "maximum":1,
                     "default":0.9,
-                    "description":"Smallest Pearson correlation of the heights of two rows over the files for an edge; a mass difference alone never gives one"
+                    "description":"Smallest height correlation over the files for an edge; mass alone never gives one"
                   },
                   {
                     "type":"number",
                     "minimum":-1,
                     "maximum":1,
                     "default":0.5,
-                    "description":"Pairs whose mass difference fits a relation and whose correlation is between this and the edge level are listed as weak, with the same numbers"
+                    "description":"Pairs with a fitting mass difference and a correlation between this and the edge level are listed as weak"
                   },
                   {
                     "type":"integer",
@@ -817,7 +817,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0.4,
-                    "description":"How far the m/z difference of two rows may be from a nominal difference of the lists (the isotope steps 1 and 2 included)"
+                    "description":"How far an m/z difference may be from a nominal difference of the lists"
                   },
                   {
                     "type":"string",
@@ -827,7 +827,7 @@
                   {
                     "type":"string",
                     "default":"17,18,28,42,44,46",
-                    "description":"Comma-separated nominal differences (Da) between an ion and its in-source fragment: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"
+                    "description":"Comma-separated nominal differences (Da) of in-source fragments: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"
                   },
                   {
                     "type":"integer",
