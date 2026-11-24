@@ -104,6 +104,20 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
         Some((k, _)) => o.str(&d.lc[k].name),
         None => o.raw("null"),
     };
+    evidence(o, ck.cell.map(|x| x.1));
+    o.raw(",\"cells\":{");
+    for (i, s) in STATUSES.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .str(s)
+            .raw(":")
+            .int(ck.cells[i] as i64);
+    }
+    o.raw("}},\"rule\":").str(&ck.rule).raw("}]");
+}
+
+/// The keys of `evidence` after `file`: the peak, the floor and its terms (null without a measured cell).
+fn evidence(o: &mut Out, f: Option<&FloorResult>) {
+    let pk = f.and_then(|f| f.peak.as_ref());
     o.raw(",\"apex_rt\":");
     opt_r(o, pk.map(|p| p.apex_rt), 4);
     o.raw(",\"window\":");
@@ -138,10 +152,17 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
     match f {
         Some(f) => {
             let t = &f.floor;
-            o.raw("{\"mad\":").num(round(t.mad, 3)).raw(",\"sd\":").num(round(t.sd, 3));
-            o.raw(",\"sd_term\":").num(round(t.sd_term, 3)).raw(",\"one_ion\":");
+            o.raw("{\"mad\":")
+                .num(round(t.mad, 3))
+                .raw(",\"sd\":")
+                .num(round(t.sd, 3));
+            o.raw(",\"sd_term\":")
+                .num(round(t.sd_term, 3))
+                .raw(",\"one_ion\":");
             opt_r(o, t.one_ion, 4);
-            o.raw(",\"one_ion_source\":").str(t.one_ion_source).raw(",\"lambda\":");
+            o.raw(",\"one_ion_source\":")
+                .str(t.one_ion_source)
+                .raw(",\"lambda\":");
             opt_r(o, t.lambda, 4);
             o.raw(",\"ion_term\":");
             opt_r(o, t.ion_term, 3);
@@ -165,14 +186,6 @@ pub fn json(o: &mut Out, d: &LrDig, e: &Entry) {
             .raw("}"),
         None => o.raw("null"),
     };
-    o.raw(",\"cells\":{");
-    for (i, s) in STATUSES.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .str(s)
-            .raw(":")
-            .int(ck.cells[i] as i64);
-    }
-    o.raw("}},\"rule\":").str(&ck.rule).raw("}]");
 }
 
 /// `,"noise_floor":{...}` of the summary: the parameters, how often the automatic quantum was accepted, the rows per status and the log (first
@@ -186,16 +199,28 @@ pub fn summary_json<'a>(o: &mut Out, d: &LrDig, rows: impl Iterator<Item = &'a E
         by[slot(ck.status)] += 1;
         if matches!(ck.status, "warn" | "fail") {
             let at = ck.cell.map_or(String::new(), |(k, f)| {
-                let rt = f.peak.as_ref().map_or(String::new(), |p| format!(", apex {:.2} min", p.apex_rt));
+                let rt = f
+                    .peak
+                    .as_ref()
+                    .map_or(String::new(), |p| format!(", apex {:.2} min", p.apex_rt));
                 format!(" ({}{rt})", d.lc[k].name)
             });
-            lines.push(format!("{} r={} check {ID} {}: {}{at}", e.name, e.id, ck.status, ck.rule));
+            lines.push(format!(
+                "{} r={} check {ID} {}: {}{at}",
+                e.name, e.id, ck.status, ck.rule
+            ));
         }
     }
     let fl: Vec<&FloorResult> = d.checks.floor.iter().flatten().collect();
-    let accepted = fl.iter().filter(|f| f.floor.one_ion_source == "auto").count();
+    let accepted = fl
+        .iter()
+        .filter(|f| f.floor.one_ion_source == "auto")
+        .count();
     let src = match s.one_ion {
-        OneIon::Auto => format!("auto (the quantum of each XIC, accepted in {accepted} of {} cells)", fl.len()),
+        OneIon::Auto => format!(
+            "auto (the quantum of each XIC, accepted in {accepted} of {} cells)",
+            fl.len()
+        ),
         OneIon::Cps(c) => format!("set, {} cps", super::labels::g(c)),
         OneIon::Off => "off".to_string(),
     };
