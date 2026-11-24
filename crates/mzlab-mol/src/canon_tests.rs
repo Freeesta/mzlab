@@ -131,3 +131,92 @@ fn work_grows_polynomially_with_equal_components() {
         }
     }
 }
+
+/// A permutation of `0..n` from a seed (Fisher-Yates over a small LCG).
+fn shuffled(n: usize, mut seed: u64) -> Vec<u32> {
+    let mut p: Vec<u32> = (0..n as u32).collect();
+    for i in (1..n).rev() {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        p.swap(i, (seed >> 33) as usize % (i + 1));
+    }
+    p
+}
+
+/// `k` pieces alternating between two writings of one constitution with different stereo.
+fn alternating(a: &str, b: &str, k: usize) -> Mol {
+    let parts: Vec<&str> = (0..k).map(|i| if i % 2 == 0 { a } else { b }).collect();
+    Mol::from_smiles(&parts.join(".")).expect(a)
+}
+
+#[test]
+fn part_cores_are_the_cores_of_only_piece() {
+    for text in [
+        "C[C@H](O)CC.C[C@@H](O)CC.OCC.C[C@@H](O)CC.C/C=C/C |&1:1,6,o1:14|",
+        "[Na+].[Cl-].c1ccccc1.N[C@@H](C)C(=O)O",
+        "C[C@H](O)[C@@H](O)C",
+    ] {
+        let m0 = Mol::from_smiles(text).expect(text);
+        for seed in 0..4 {
+            let m = m0.renumbered(&shuffled(m0.atoms.len(), seed)).unwrap();
+            let s = search(&m);
+            for (label, count) in [m.piece_labels(), s.units()] {
+                let cores = m.part_cores(&label, count).expect(text);
+                for (k, core) in cores.iter().enumerate() {
+                    let one = m.only_piece(&label, k).unwrap();
+                    let same = one
+                        .renumbered(&(0..one.atoms.len() as u32).collect::<Vec<_>>())
+                        .unwrap();
+                    assert_eq!(core.core_json(), same.core_json(), "{text} part {k}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn small_records_of_tied_pieces_keep_the_order_of_the_plain_search() {
+    // under `SEARCH_SIZE` the order is the search's, as before the units; a racemate written as two pieces keeps its `can`
+    for (a, b) in [
+        ("N[C@@H](C)C(=O)O", "N[C@H](C)C(=O)O"),
+        ("C/C=C/C", "C/C=C\\C"),
+        ("C[C@H](O)[C@@H](O)C", "C[C@H](O)[C@H](O)C"),
+    ] {
+        for k in 2..=6 {
+            let m = alternating(a, b, k);
+            let mut s = search(&m);
+            let start = s.refine(s.initial());
+            s.explore(start, &mut Vec::new());
+            let plain = s.best.map(|(_, p)| p).expect(a);
+            assert_eq!(m.canonical_order(), plain, "{a} / {b} x{k}");
+        }
+    }
+}
+
+#[test]
+fn work_is_linear_in_tied_pieces_with_different_stereo() {
+    // the search alone took about C(k, k/2) leaves (16 pieces of an amino acid and its enantiomer: 1.7 s); shuffled atoms make every
+    // piece a writing of its own, so each is searched; a doubling of the pieces stays under 3 times the work
+    for (a, b) in [
+        ("N[C@@H](C)C(=O)O", "N[C@H](C)C(=O)O"),
+        ("C[C@H](O)[C@@H](O)C", "C[C@H](O)[C@H](O)C"),
+    ] {
+        let work: Vec<u64> = [50usize, 100, 200]
+            .iter()
+            .map(|&k| {
+                let m = alternating(a, b, k);
+                let m = m.renumbered(&shuffled(m.atoms.len(), 7)).unwrap();
+                m.canonical_order_counted().1
+            })
+            .collect();
+        for w in work.windows(2) {
+            assert!(
+                w[1] <= 3 * w[0],
+                "{a} / {b}: work {} then {} for twice the pieces",
+                w[0],
+                w[1]
+            );
+        }
+    }
+}
