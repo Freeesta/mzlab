@@ -204,3 +204,65 @@ fn exit_codes_a_missing_file_4_usage_2_a_bad_plan_3_and_a_file_that_cannot_be_re
     assert!(v.get("files").unwrap().arr()[1].get("error").is_some());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_json_is_the_core_document_plus_the_citation_member_and_nothing_else() {
+    let (d, _) = fixture("estimate_bytes");
+    let files = paths(&d);
+    let mut args: Vec<&str> = files.iter().map(String::as_str).collect();
+    args.extend(["--axis", "da", "--json"]);
+    let o = run(&args);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let text = String::from_utf8(o.stdout).unwrap();
+    let v = json::parse(text.as_bytes()).unwrap();
+    // the body the command gave the core: the files of the document, no plan
+    let body = format!(
+        "{{\"files\":{},\"plan\":null}}",
+        mzlab_core::jsonb::write(v.get("files").unwrap())
+    );
+    let core = mzlab_core::estimates::route(&body).unwrap();
+    let cut = text.rfind(",\"citation\":").expect("citation member");
+    assert_eq!(format!("{}}}\n", &text[..cut]), core);
+    // the group that fed each proposal is named in its rule and in the `--emit-set` comment
+    let plan = d.join("plan.json");
+    let o = run(&[&files[0], &files[1], "--axis", "da", "--emit-set", p(&plan)]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let lines = String::from_utf8(o.stdout).unwrap();
+    assert!(lines.contains("polarity 1 axis Da"), "{lines}");
+    let rule = v.get("params").unwrap().arr()[0]
+        .get("rule")
+        .and_then(Value::str)
+        .unwrap();
+    assert!(rule.contains("polarity 1 and axis Da"), "{rule}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_citation_is_added_only_to_an_object() {
+    assert!(crate::estimate_cmd::with_citation("{\"a\":1}\n").ends_with("}\n"));
+    assert!(crate::estimate_cmd::with_citation("{\"a\":1}\n").contains(",\"citation\":"));
+    assert_eq!(crate::estimate_cmd::with_citation("[1]"), "[1]");
+    assert_eq!(crate::estimate_cmd::with_citation(""), "");
+}
+
+#[test]
+fn usage_errors_carry_their_keys() {
+    let (d, _) = fixture("estimate_keys");
+    let files = paths(&d);
+    for (a, key) in [
+        (vec![], "err.cli.estimate.needsFile"),
+        (
+            vec![files[0].as_str(), "--axis", "x"],
+            "err.cli.estimate.axis",
+        ),
+        (
+            vec![files[0].as_str(), "--polarity", "2"],
+            "err.cli.estimate.polarity",
+        ),
+    ] {
+        let o = run(&a);
+        assert_eq!(o.code, 2);
+        assert!(o.stderr.contains(key), "{key}: {}", o.stderr);
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}

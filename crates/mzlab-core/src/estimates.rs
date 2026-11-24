@@ -307,7 +307,7 @@ fn value_of<'a>(m: &'a Measure, taken: &[&File]) -> (Value, Option<Found<'a>>) {
 }
 
 /// One `params` entry: the plan parameter `id.param` the measure sets, with its evidence.
-fn proposal(t: &Target, f: &Found, id: &str, current: Option<Value>) -> Value {
+fn proposal(t: &Target, f: &Found, id: &str, current: Option<Value>, group: (f64, &str)) -> Value {
     let (m, med, sorted, points) = f;
     let proposed = rounded(*med);
     Obj::new()
@@ -324,7 +324,12 @@ fn proposal(t: &Target, f: &Found, id: &str, current: Option<Value>) -> Value {
         .put("from", text(m.name))
         .put(
             "rule",
-            text("median over the files, to 4 significant figures; the evidence is under values"),
+            text(&format!(
+                "median over the {} file(s) of polarity {} and axis {} (the group most files share; the others are in left_out), to 4 significant figures; the evidence is under values",
+                sorted.len(),
+                value_text(&num(group.0)),
+                group.1
+            )),
         )
         .i("files", sorted.len() as i64)
         .n("min", sorted[0])
@@ -341,7 +346,12 @@ fn proposal(t: &Target, f: &Found, id: &str, current: Option<Value>) -> Value {
 }
 
 /// The plan parameters the measures set (`params`) and those left alone with the reason (`skipped`).
-fn proposals(found: &[Found], plan: Option<&Value>, axis: &str) -> (Vec<Value>, Vec<Value>) {
+fn proposals(
+    found: &[Found],
+    plan: Option<&Value>,
+    group: (f64, &str),
+) -> (Vec<Value>, Vec<Value>) {
+    let axis = group.1;
     let (mut params, mut skipped) = (Vec::new(), Vec::new());
     let steps = plan.map(plan_steps);
     for t in TARGETS {
@@ -367,7 +377,7 @@ fn proposals(found: &[Found], plan: Option<&Value>, axis: &str) -> (Vec<Value>, 
         }
         for (id, current) in instances {
             let now = current.as_ref().and_then(|p| p.get(t.param)).cloned();
-            params.push(proposal(t, f, &id, now));
+            params.push(proposal(t, f, &id, now, group));
         }
     }
     (params, skipped)
@@ -431,7 +441,7 @@ pub fn route(body: &str) -> Result<String> {
         found.extend(f);
     }
     let plan = v.get("plan").filter(|p| !p.is_null());
-    let (params, skipped) = proposals(&found, plan, &ga);
+    let (params, skipped) = proposals(&found, plan, (gp, &ga));
     let summary = Obj::new()
         .i("files", files.len() as i64)
         .i("estimated", taken.len() as i64)

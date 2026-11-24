@@ -28,17 +28,17 @@ usage: mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--sample ID]
   --out PATH         write there instead of the standard output
 
 files that do not agree on polarity and axis: the group most files share gives the values, the others are listed in `left_out`; fewer than 3 files give a note, never a refusal.
-exit 0 done, 1 a file gave no estimate (the others are answered), 2 usage, 3 the plan is not a plan, 4 a file or the plan is missing, 5 unknown sample, 6 output not written";
+exit 0 done, 1 a file gave no estimate or no value has a median (the others are answered), 2 usage, 3 the plan is not a plan, 4 a file or the plan is missing, 5 unknown sample, 6 output not written";
 
 /// The members of the `--set` comment of one proposed parameter.
-fn comment(p: &Value) -> String {
+fn comment(p: &Value, group: &str) -> String {
     let n = |k: &str| p.get(k).map(value_text).unwrap_or_default();
     let now = match p.get("current") {
         Some(Value::Null) | None => "the plan does not write it".to_string(),
         Some(v) => format!("the plan has {}", value_text(v)),
     };
     format!(
-        "{}: median of {} file(s), min {}, max {}; {now}",
+        "{}: median of {} file(s) of {group}, min {}, max {}; {now}",
         p.get("from").and_then(Value::str).unwrap_or(""),
         n("files"),
         n("min"),
@@ -48,6 +48,15 @@ fn comment(p: &Value) -> String {
 
 /// `--set` lines of the proposals, one per line, each with its evidence.
 fn set_lines(doc: &Value) -> String {
+    let s = doc.get("summary");
+    let group = format!(
+        "polarity {} axis {}",
+        s.and_then(|s| s.get("polarity"))
+            .map_or(String::new(), value_text),
+        s.and_then(|s| s.get("axis"))
+            .and_then(Value::str)
+            .unwrap_or("")
+    );
     doc.get("params")
         .map_or(&[][..], Value::arr)
         .iter()
@@ -55,7 +64,7 @@ fn set_lines(doc: &Value) -> String {
             format!(
                 "--set {}   # {}\n",
                 p.get("set").and_then(Value::str).unwrap_or(""),
-                comment(p)
+                comment(p, &group)
             )
         })
         .collect()
@@ -113,19 +122,19 @@ fn entry(f: &Path, p: &Parsed, given: &[(String, Value)]) -> Result<(Value, Stri
 }
 
 /// `--axis` and `--polarity` as the values every file is measured with, or the usage error.
-fn given_of(p: &Parsed) -> std::result::Result<Vec<(String, Value)>, &'static str> {
+fn given_of(p: &Parsed) -> std::result::Result<Vec<(String, Value)>, Error> {
     let mut given = Vec::new();
     match p.get("--axis").map(str::to_lowercase).as_deref() {
         None => {}
         Some("da") => given.push(("axis".into(), Value::Str("Da".into()))),
         Some("ppm") => given.push(("axis".into(), Value::Str("ppm".into()))),
-        Some(_) => return Err("--axis takes da or ppm"),
+        Some(v) => return Err(Error::new("err.cli.estimate.axis").with("value", v)),
     }
     match p.get("--polarity") {
         None => {}
         Some("+" | "1") => given.push(("polarity".into(), Value::Num(1.0))),
         Some("-" | "-1") => given.push(("polarity".into(), Value::Num(-1.0))),
-        Some(_) => return Err("--polarity takes + or -"),
+        Some(v) => return Err(Error::new("err.cli.estimate.polarity").with("value", v)),
     }
     Ok(given)
 }
@@ -141,8 +150,12 @@ fn plan_of(p: &Parsed) -> std::result::Result<Value, Outcome> {
     })?;
     match json::parse(&bytes) {
         Ok(v) if v.get("steps").is_some_and(|s| matches!(s, Value::Arr(_))) => Ok(v),
-        Ok(_) => Err(Outcome::fail("err.flow.shape path=steps expected=array")),
-        Err(_) => Err(Outcome::fail("err.flow.json")),
+        Ok(_) => Err(Outcome::fail_error(
+            &Error::new("err.flow.shape")
+                .with("path", "steps")
+                .with("expected", "array"),
+        )),
+        Err(_) => Err(Outcome::fail_error(&Error::new("err.flow.json"))),
     }
 }
 
@@ -159,11 +172,11 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     };
     let files: Vec<PathBuf> = p.pos.iter().map(PathBuf::from).collect();
     if files.is_empty() {
-        return Outcome::fail("estimate needs a file");
+        return Outcome::fail_error(&Error::new("err.cli.estimate.needsFile"));
     }
     let given = match given_of(&p) {
         Ok(g) => g,
-        Err(m) => return Outcome::fail(m),
+        Err(e) => return Outcome::fail_error(&e),
     };
     if let Some(e) = crate::raw_cmd::missing(&files) {
         return crate::sample_select::fail(&e);
@@ -188,6 +201,16 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         }
     }
     answer(&p, entries, plan, notes, bad, as_json)
+}
+
+/// The engine's document with the `citation` member added at the end of the object and nothing else changed; a text that is not an object is returned as it is.
+pub(crate) fn with_citation(answer: &str) -> String {
+    match answer.trim_end().strip_suffix('}') {
+        Some(body) if body.starts_with('{') => {
+            format!("{body},{}}}\n", crate::citation::member())
+        }
+        _ => answer.to_string(),
+    }
 }
 
 /// Puts the entries together (`mzlab_core::estimates::route`) and prints the form asked for; exit 1 when a file gave no estimate or nothing was measured.
@@ -227,9 +250,7 @@ fn answer(
         notes += &format!("{}\n", value_text(n));
     }
     let out = if as_json {
-        // the engine's document and the citation member, nothing else
-        let body = answer.trim_end().strip_suffix('}').unwrap_or(&answer);
-        format!("{body},{}}}\n", crate::citation::member())
+        with_citation(&answer)
     } else if p.get("--emit-set").is_some() {
         set_lines(&doc)
     } else {

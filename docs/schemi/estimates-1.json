@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "estimates/1",
   "title": "estimates/1: what `features.estimate` measured on one file",
-  "description": "The file, the polarity and axis it was measured with, the measurements of `run::preview` that are numbers (each with the figures it comes from; their members are those of KEPT in crates/mzlab-ops/src/run/feat/run_estimate.rs and are not listed here) and, only when there are any, the `notices` of the file (crates/mzlab-ops/src/run/feat/lr_note.rs). The same text from the `flow_estimate` of the page and from `flow run`.",
+  "description": "The file, the polarity and axis it was measured with, the measurements of `run::preview` that are numbers (each with the figures it comes from; their members are those of KEPT in crates/mzlab-ops/src/run/feat/run_estimate.rs and are not listed here) and, only when there are any, the `notices` of the file (crates/mzlab-ops/src/run/feat/lr_note.rs). The same text from the `flow_estimate` of the page and from `flow run`. Not to be confused with `estimate/1` (singular), the answer of `mzlab-cli estimate`, which puts the `estimates/1` of several files together (median, evidence, plan parameters).",
   "type": "object",
   "required": ["schema", "file", "polarity", "axis"],
   "properties": {

@@ -1,6 +1,7 @@
 //! `estimate/1` (op `lr_estimate`) in the app, in the CLI's core function and in the site: bodies of synthetic `estimates/1` objects (three files, two axes,
 //! one file with an error, with and without a plan, a body that is not one) go to the app's rpc, to `mzlab_core::estimates::route` and, when `MZLAB_WASM_PKG`
 //! names the built `.wasm` (see `parity_routes.rs`), to the module of the site; the answers must be the same bytes.
+//! The `.wasm` leg is skipped when the variable is unset (a plain `cargo test` never runs it): `tests/test_parita_rotte_app.py` builds the module and sets it.
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -80,6 +81,7 @@ fn the_app_gives_the_answer_of_the_core_and_the_same_error_keys() {
 #[test]
 fn the_app_gives_the_same_bytes_as_the_wasm() {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
+        eprintln!("the .wasm leg of parity_estimate did not run: MZLAB_WASM_PKG is not set (tests/test_parita_rotte_app.py runs it)");
         return;
     };
     let dir = tempfile::tempdir().unwrap();
