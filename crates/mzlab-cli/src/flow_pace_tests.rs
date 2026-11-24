@@ -3,6 +3,7 @@
 
 use mzlab_core::mzmlwrite::Options;
 use mzlab_core::readers_mzml::Peaks;
+use mzlab_core::spectrum_type::SpectrumType;
 
 use crate::convert_fixtures::{folder, makers, wiff};
 
@@ -38,7 +39,7 @@ fn the_conversion_reports_monotone_progress_and_is_the_same_bytes() {
     crate::flow_base::write_mzml(&src, None, &a, Peaks::File, Options::default()).unwrap();
     let mut seen = Vec::new();
     let step = &mut |d, t| seen.push((d, t));
-    let how = (Peaks::File, Options::default());
+    let how = (Peaks::File, Options::default(), SpectrumType::Auto);
     crate::flow_base::write_mzml_with(&src, None, &b, how, step, &None).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     well_formed(&seen);
@@ -50,10 +51,10 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
 {
     let d = folder("pace_hash");
     let src = makers(&d, false).join("a.mzXML");
-    let how = (Peaks::File, Options::default());
+    let how = (Peaks::File, Options::default(), SpectrumType::Auto);
     // no memo of the input yet: the reader takes the SHA-1 of the header itself
     let a = d.join("a.mzML");
-    let (_, bytes, sha, _, _) =
+    let (_, bytes, sha, _, _, _) =
         crate::flow_base::write_mzml_with(&src, None, &a, how, &mut |_, _| {}, &None).unwrap();
     assert_eq!(
         crate::flow_hash::file_sha256(&a).unwrap(),

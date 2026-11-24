@@ -149,7 +149,7 @@ fn a_second_run_skips_every_file_and_puts_back_a_removed_one() {
     let o = convert(&args);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(
-        o.stderr.starts_with("done: 0 converted, 2 skipped"),
+        o.stderr.contains("done: 0 converted, 2 skipped"),
         "{}",
         o.stderr
     );
@@ -159,7 +159,7 @@ fn a_second_run_skips_every_file_and_puts_back_a_removed_one() {
 
     let o = convert(&[p(&src), "--out", p(&out), "--fresh"]);
     assert!(
-        o.stderr.starts_with("done: 2 converted, 0 skipped"),
+        o.stderr.contains("done: 2 converted, 0 skipped"),
         "{}",
         o.stderr
     );
@@ -168,7 +168,7 @@ fn a_second_run_skips_every_file_and_puts_back_a_removed_one() {
     // another setting is another conversion
     let o = convert(&[p(&src), "--out", p(&out), "--zlib", "6", "--numpress"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    assert!(o.stderr.starts_with("done: 2 converted"), "{}", o.stderr);
+    assert!(o.stderr.contains("done: 2 converted"), "{}", o.stderr);
     assert_ne!(mzmls(&out), first);
     let _ = std::fs::remove_dir_all(&dir);
 }

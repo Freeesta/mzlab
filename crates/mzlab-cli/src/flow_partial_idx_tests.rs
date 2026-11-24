@@ -21,7 +21,17 @@ fn said(c: &Value) -> (Vec<String>, Option<Value>) {
             .map(str::to_string)
             .collect()
     });
-    (w, c.get("files").and_then(|f| f.get("c.wiff@1")).cloned())
+    let note = c.get("files").and_then(|f| f.get("c.wiff@1")).cloned();
+    // the conversion also notes its spectrum-type decision, which the index does not: only the counts and the cause are compared
+    let counts = note.map(|n| {
+        let keep = ["cause", "declared", "read"];
+        Value::Obj(
+            keep.iter()
+                .filter_map(|k| n.get(k).map(|v| ((*k).to_string(), v.clone())))
+                .collect(),
+        )
+    });
+    (w, counts)
 }
 
 fn step<'a>(doc: &'a Value, id: &str) -> &'a Value {

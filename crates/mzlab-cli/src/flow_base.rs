@@ -12,11 +12,11 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::json::Value;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
 use mzlab_core::readers::{Limits, Losses};
 use mzlab_core::readers_mzml::{Conversion, Peaks};
+use mzlab_core::spectrum_type::SpectrumType;
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
@@ -90,7 +90,7 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         },
     );
     let mut made = Made::new("index", a);
-    note_losses(&mut made, &lost);
+    crate::flow_convert_notes::note_losses(&mut made, &lost);
     Ok(made)
 }
 
@@ -352,45 +352,36 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
         Some("mzlab") => Peaks::Mzlab,
         _ => Peaks::File,
     };
+    let spectrum = job
+        .resolved
+        .params
+        .iter()
+        .find(|p| p.0 == "spectrum")
+        .and_then(|p| p.1.str())
+        .and_then(SpectrumType::parse)
+        .unwrap_or_default();
     let gate = r.gate(job);
     let (path, label) = (r.path(input), input.label.as_deref());
     let mut pace = gate.pace();
-    let (profile, bytes, sha256, lost, flagged) =
-        write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
+    let (profile, bytes, sha256, lost, flagged, chosen) = write_mzml_with(
+        &path,
+        label,
+        &out,
+        (peaks, opz, spectrum),
+        &mut pace,
+        &gate.stop,
+    )?;
     crate::flow_set::remember_sha(&out, bytes, &sha256);
     let mut made = Made::new("mzml", r.keep_known(out, DataType::Mzml, bytes, sha256));
     if profile {
         made.warnings.push("warn.flow.profile".into());
     }
-    note_losses(&mut made, &lost);
+    crate::flow_convert_notes::note_losses(&mut made, &lost);
     if peaks == Peaks::Mzlab {
-        note_flagged(&mut made, flagged);
+        crate::flow_convert_notes::note_flagged(&mut made, flagged);
     }
+    crate::flow_convert_notes::note_spectrum(&mut made, chosen);
     Ok(made)
-}
-
-/// The centroids of our own peak picking flagged merged and saturated in the note of the file (`--report` of `convert`); a merged one raises
-/// `warn.centroid.merged`, a notice and not an answer.
-fn note_flagged(made: &mut Made, (merged, saturated): (usize, usize)) {
-    let counts = [
-        ("merged".to_string(), Value::Num(merged as f64)),
-        ("saturated".to_string(), Value::Num(saturated as f64)),
-    ];
-    match &mut made.file {
-        Some(Value::Obj(o)) => o.extend(counts),
-        _ => made.file = Some(Value::Obj(counts.to_vec())),
-    }
-    if merged > 0 {
-        made.warnings.push("warn.centroid.merged".into());
-    }
-}
-
-/// A partial read in the record of the run (prov.json, report.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
-fn note_losses(made: &mut Made, lost: &Losses) {
-    if lost.partial() {
-        made.warnings.push(lost.cause.into());
-        made.file = Some(lost.note());
-    }
 }
 
 /// Writes the sample `label` (`ID` of a `NAME@ID` input; the first when empty) of the dataset at `path` to `out` as indexed mzML; true when the file keeps
@@ -402,11 +393,13 @@ pub(crate) fn write_mzml(
     peaks: Peaks,
     opz: Options,
 ) -> Result<bool> {
-    write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None).map(|w| w.0)
+    let how = (peaks, opz, SpectrumType::Auto);
+    write_mzml_with(path, label, out, how, &mut |_, _| {}, &None).map(|w| w.0)
 }
 
-/// What `write_mzml_with` gives: profile kept, size, SHA-256, losses of the read, centroids flagged (merged, saturated).
-type Written = (bool, u64, String, Losses, (usize, usize));
+/// What `write_mzml_with` gives: profile kept, size, SHA-256, losses of the read, centroids flagged (merged, saturated), the spectrum-type decision when
+/// it is recorded in the file (asked, or sparse data written as centroid).
+type Written = (bool, u64, String, Losses, (usize, usize), String);
 
 /// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
 /// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, the size and SHA-256 of the file
@@ -415,7 +408,7 @@ pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
     out: &Path,
-    (peaks, opz): (Peaks, Options),
+    (peaks, opz, spectrum): (Peaks, Options, SpectrumType),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
 ) -> Result<Written> {
@@ -427,15 +420,26 @@ pub(crate) fn write_mzml_with(
     if let Some(t) = lost.report(path) {
         eprintln!("{t}");
     }
-    // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
-    let profile = peaks == Peaks::File
-        && !reader.index(sample)?.is_empty()
-        && reader.scan(sample, 0)?.profile;
-    let conv = Conversion {
+    let mut conv = Conversion {
         peaks,
         opz,
         steps: Some(&[]),
+        spectrum,
+        decided: None,
     };
+    let choice = conv.type_choice(&mut *reader, sample)?;
+    conv.decided = Some(choice);
+    // the flag of the first scan as the reader gives it (a scan that does not read counts as centroid: the writer reports it)
+    let first = if peaks == Peaks::File && !reader.index(sample)?.is_empty() {
+        reader.scan(sample, 0).ok().map(|s| (s.profile, s.level))
+    } else {
+        None
+    };
+    // The note of the file always carries the decision (`--report`, stderr of `convert`, prov.json); the mzML itself only when it is the user's or it
+    // changed what the reader says, so the other files keep their bytes.
+    let note = choice.text();
+    // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
+    let profile = first.is_some_and(|(p, l)| p && choice.keeps(p, l));
     let written = File::create(out).map_err(io).and_then(|f| {
         let sink = BufWriter::new(HashWrite::new(Stopping::new(f, stop.clone())));
         let (mut w, flagged) =
@@ -458,7 +462,7 @@ pub(crate) fn write_mzml_with(
                 Some(t) if after != lost => eprintln!("{t}"),
                 _ => {}
             }
-            Ok((profile, bytes, sha256, after, flagged))
+            Ok((profile, bytes, sha256, after, flagged, note))
         }
         Err(e) => {
             let _ = std::fs::remove_file(out);

@@ -27,7 +27,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
 | mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
-| `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--report`, exit codes | `docs/agenti/cli-convert.md` |
+| `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--spectrum` (centroid/profile term, sparse data), `--report`, exit codes | `docs/agenti/cli-convert.md` |
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page; `features-notes/1` at `--notes` or beside `--out`) | `docs/agenti/cli.md` |
 | running the verification in the cloud container (Chromium, `--setup`, tests against the built site) | `docs/agenti/cloud-environment.md` |
@@ -59,7 +59,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mapping to mzmine steps (area: graphical Flow (tab: step palette `step/1`, chain, modules…) | `docs/agenti/flow-mzmine.md` |
 | Flow: names, groups and view cards of the MSn infusion model | `docs/agenti/flow-ux.md` |
 | web runner of the Flow ("This browser": `flow/lazy/flow-web-{run,ui,worker}.js`, `flow:web-step` events, `estimate_series` estimate, phone/tablet warning, Run off above the high level) | `docs/agenti/flow-web.md` |
-| external agents using `mzlab-cli` from the shell: sequence, five tested chains (`workflow_tests.rs`), plan examples; LR campaign study and roadmap: `docs/studies/AGENT_USE_STUDY.md`; raw data access (`raw`, AU-12..19): `docs/studies/RAW_ACCESS_STUDY.md` | `docs/agenti/for-agents.md` |
+| external agents using `mzlab-cli`: task → command table, `commands --find` (`catalog/find.rs`, `related.rs`), `cli` profile, tested chains; LR study `docs/studies/AGENT_USE_STUDY.md`; raw access (`raw`, AU-12..19) `docs/studies/RAW_ACCESS_STUDY.md` | `docs/agenti/for-agents.md` |
 | "Group by" of the file list (`#sb-by`, `groups.js`, `groups-for.js`, key, "Then by", "Contains", follows new files, undo) | `docs/agenti/groups-by.md` |
 | experiment groups in Tabui: conditions, `groups/1`, `crates/mzlab-feat/src/groups/`; "Compare conditions" view (`TP_Mine/lazy/groups-view.js`: TP × condition matrix, UpSet, charts, exports) and graft into Tabui LR | `docs/agenti/groups.md` |
 | header (full screen, logo, (i)), loading area and table, progressive startup (`AVVIO`), "interface at once" rule; page audit (CLS, shifting panels, memory, errors; `tests_e2e/audit_pagine.py`, `e2e_giro_intestazione`) | `docs/agenti/header.md` |

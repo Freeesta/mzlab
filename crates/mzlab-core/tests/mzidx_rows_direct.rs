@@ -5,6 +5,7 @@
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
 
+mod conv_help;
 mod fake_reader;
 mod mzidx_meta;
 
@@ -13,7 +14,7 @@ use mzidx_meta::without;
 use mzlab_core::json::{self, Value};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::Reader;
-use mzlab_core::{mzidx, readers_mzml, upload};
+use mzlab_core::{mzidx, upload};
 
 const BIG: usize = mzidx::DEFAULT_BUDGET;
 
@@ -34,7 +35,9 @@ fn trial(label: &str, l: Finto) {
 fn try_with(label: &str, mut l: Finto, with_mzml: bool) {
     let name = format!("{label}.mzML");
     let a = with_mzml.then(|| {
-        let mzml = readers_mzml::write(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mzml = conv_help::keep_flags()
+            .write(&mut l, 0, Vec::new(), &mut |_, _| {})
+            .unwrap();
         let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
         let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
             .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"));
@@ -266,7 +269,9 @@ fn equal_after_rounding_between_two_buckets() {
             sp.intensity = (0..sp.mz.len()).map(|j| (k * 10 + j) as f32).collect();
         }
     }
-    let mzml = readers_mzml::write(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = conv_help::keep_flags()
+        .write(&mut l, 0, Vec::new(), &mut |_, _| {})
+        .unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "uguali.mzML").unwrap();
     assert!(pa.table.hr1, "the MS1 sections hold f32");
     let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();

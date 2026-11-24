@@ -7,6 +7,7 @@
 // the extras are set field by field: some exist only with `precursori`
 #![allow(clippy::field_reassign_with_default)]
 
+mod conv_help;
 mod mzidx_meta;
 
 use mzlab_core::error::{Error, Result};
@@ -14,7 +15,7 @@ use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::scantable::{Row, Table};
-use mzlab_core::{mzidx_reader, readers_mzml, scantable};
+use mzlab_core::{mzidx_reader, scantable};
 
 struct One {
     campioni: Vec<Sample>,
@@ -250,7 +251,9 @@ fn reader_tic_as_from_mzml() {
     for (n, seed) in CASI {
         let mut l = reader(n, seed, true, false);
         let direct = mzidx_reader::righe(&mut l, 0).unwrap();
-        let mut mzml = readers_mzml::write(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mut mzml = conv_help::keep_flags()
+            .write(&mut l, 0, Vec::new(), &mut |_, _| {})
+            .unwrap();
         let size = mzml.len() as u64;
         let text = scantable::read(&mut mzml, size).unwrap();
         compare(&format!("{n} scans, mzML"), &direct, &text);

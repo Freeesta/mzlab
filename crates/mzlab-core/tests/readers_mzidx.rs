@@ -10,6 +10,7 @@ mod agilent_synth;
 mod mzidx_meta;
 mod mzidx_sections;
 use mzidx_meta::without;
+mod conv_help;
 mod readers_routes;
 
 use std::io::Cursor;
@@ -25,7 +26,7 @@ use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::readers::{self, ChromatogramEntry, FileSet, Limits, Member};
 use mzlab_core::source::{MzmlTraces, ReaderSource, Scansioni, Traces};
-use mzlab_core::{mzidx, readers_mzml, upload};
+use mzlab_core::{mzidx, upload};
 use readers_routes::{mzml_of, same_routes};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -73,7 +74,9 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     let mut l = readers::open(fs, &Limits::desktop()).unwrap();
     let name = format!("{label}.mzML");
     // A: through the mzML
-    let mzml = readers_mzml::write(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = conv_help::keep_flags()
+        .write(&mut *l, c, Vec::new(), &mut |_, _| {})
+        .unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
     let (a, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
     same_sources(label, mzml, &a, &mut *l, c);
@@ -298,7 +301,9 @@ fn a_sections_mismatch_names_its_array() {
         ],
     };
     let mut l = readers::open(fs, &Limits::desktop()).unwrap();
-    let mzml = readers_mzml::write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = conv_help::keep_flags()
+        .write(&mut *l, 0, Vec::new(), &mut |_, _| {})
+        .unwrap();
     let p = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "x.mzML").unwrap();
     let (a, _) = mzidx::build_mzml_to_vec(&p.table, &mzml, BIG).unwrap();
     let scans_off = u64_at(&a, 32) as usize;

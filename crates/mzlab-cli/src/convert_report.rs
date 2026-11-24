@@ -24,6 +24,8 @@ pub(crate) enum Item {
         flagged: Option<(usize, usize)>,
         /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
         lost: Option<(usize, usize, String)>,
+        /// The spectrum-type decision (always, for a file written by this version); boxed so that `Done` stays within the size gap of `Failed`.
+        spectrum_type: Option<Box<str>>,
         /// Why the file got a name other than the plain one (a clash, the `K-` prefix of the default naming, an unsafe sample name with `--name sample`).
         rename: Option<String>,
     },
@@ -43,6 +45,16 @@ pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(us
         .find(|(n, _)| n == label)?;
     let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
     Some((n("merged")?, n("saturated")?))
+}
+
+/// The spectrum-type decision (`spectrum=..; written=..; basis=..`) of the input `label`, from the note of its file in the record of the run.
+pub(crate) fn spectrum_type_of(run: &mzlab_core::flow::Run, label: &str) -> Option<Box<str>> {
+    let note = run
+        .activities
+        .iter()
+        .flat_map(|a| &a.files)
+        .find(|(n, _)| n == label)?;
+    note.1.get("spectrum_type")?.str().map(Box::from)
 }
 
 /// The partial read (declared, read, cause) of the input `label`, from the note of its file in the record of the run: counted once the scans were read,
@@ -169,6 +181,21 @@ pub(crate) fn merged_lines(items: &[Item]) -> String {
         .collect()
 }
 
+/// One stderr line per input with the spectrum-type decision (from the note of its file, so a file taken from the cache says it too).
+pub(crate) fn spectrum_lines(items: &[Item]) -> String {
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                spectrum_type: Some(t),
+                ..
+            } => Some(format!("spectrum type: {input}: {t}\n")),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The scans declared and read and the cause key when the `conversion/1` document `conv` says the read was partial.
 pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;
@@ -181,7 +208,7 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
 }
 
 /// The `convert/1` document (`--report FILE`, and the stdout of `--json`): `{"schema","dry_run":false,"out","items":[...]}` with, per input,
-/// `{input, output, sha256, spectra, seconds, skipped, rename (when an automatic rename was made, with either naming), conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
+/// `{input, output, sha256, spectra, seconds, skipped, rename (when an automatic rename was made, with either naming), conversion, warnings}` (`centroids` {merged, saturated} with `--peaks mzlab`, `spectrum_type`) or `{input, error, cause}`.
 pub(crate) fn report(items: &[Item], out: &Path) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"convert/1\",\"dry_run\":false,\"out\":")
@@ -200,6 +227,7 @@ pub(crate) fn report(items: &[Item], out: &Path) -> String {
                 conv,
                 notes,
                 flagged,
+                spectrum_type,
                 rename,
                 ..
             } => {
@@ -228,6 +256,9 @@ pub(crate) fn report(items: &[Item], out: &Path) -> String {
                 if let Some((m, s)) = flagged {
                     o.raw(",\"centroids\":{\"merged\":").int(*m as i64);
                     o.raw(",\"saturated\":").int(*s as i64).raw("}");
+                }
+                if let Some(t) = spectrum_type {
+                    o.raw(",\"spectrum_type\":").str(t);
                 }
                 o.raw("}");
             }
@@ -346,7 +377,7 @@ pub(crate) fn summary(items: &[Item], out: &Path, json: bool) -> Outcome {
         })
         .collect();
     let partial = partial_lines(items);
-    let notes = notes + &crate::convert_report::merged_lines(items);
+    let notes = notes + &spectrum_lines(items) + &crate::convert_report::merged_lines(items);
     let (code, stderr) = if failed == 0 {
         (
             if partial.is_empty() { 0 } else { 3 },
