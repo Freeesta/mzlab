@@ -138,15 +138,7 @@ impl<R: ReadAt> Routes<R> {
             Some(l) => Some(self.probe(l, probe)?),
             None => None,
         };
-        o.raw(",\"probe\":{\"ms_level\":");
-        match &p {
-            Some(p) => o.int(i64::from(p.level)),
-            None => o.raw("null"),
-        };
-        o.raw(",\"asked\":").int(probe as i64);
-        o.raw(",\"scans\":")
-            .int(p.as_ref().map_or(0, |p| p.scans.len()) as i64)
-            .raw("}");
+        o.raw(",\"probe\":").raw(&probe_json(p.as_ref(), probe));
         o.raw(",\"grid\":").raw(&grid_json(p.as_ref()));
         o.raw(",\"ion_quantum\":").raw(&quantum_json(p.as_ref()));
         o.raw(",\"mass_offset\":");
@@ -259,6 +251,21 @@ impl<R: ReadAt> Routes<R> {
         p.scans = scans.into_iter().filter(|s| !s.is_empty()).collect();
         Ok(p)
     }
+}
+
+/// `probe`: the level probed, the scans asked and the scans read (those with points).
+fn probe_json(p: Option<&Probe>, asked: usize) -> String {
+    let mut o = Out::default();
+    o.raw("{\"ms_level\":");
+    match p {
+        Some(p) => o.int(i64::from(p.level)),
+        None => o.raw("null"),
+    };
+    o.raw(",\"asked\":").int(asked as i64);
+    o.raw(",\"scans\":")
+        .int(p.map_or(0, |p| p.scans.len()) as i64)
+        .raw("}");
+    o.0
 }
 
 /// Grid steps tried, largest first (Da): a spacing on 0.1 is also on 0.05, so the first that holds is the grid.

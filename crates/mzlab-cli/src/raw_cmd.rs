@@ -334,6 +334,21 @@ fn offset_json(o: Option<(f64, Option<f64>)>) -> String {
     out.0
 }
 
+/// `provenance.parameters`: the query with its defaults resolved.
+fn params_json(p: &Parsed, a: &Ask) -> String {
+    let mut params = Out::default();
+    params
+        .raw("{\"probe\":")
+        .int(a.probe as i64)
+        .raw(",\"offset_ion\":")
+        .raw(&offset_json(a.offset));
+    params
+        .raw(",\"sample\":")
+        .raw(&p.get("--sample").map_or("null".into(), jstr))
+        .raw("}");
+    params.0
+}
+
 pub fn info_run(args: Vec<String>) -> Outcome {
     let command: Vec<String> = ["mzlab-cli", "raw", "info"]
         .iter()
@@ -387,21 +402,12 @@ pub fn info_run(args: Vec<String>) -> Outcome {
             }
         }
     }
-    let mut params = Out::default();
-    params
-        .raw("{\"probe\":")
-        .int(a.probe as i64)
-        .raw(",\"offset_ion\":")
-        .raw(&offset_json(a.offset));
-    params
-        .raw(",\"sample\":")
-        .raw(&p.get("--sample").map_or("null".into(), jstr))
-        .raw("}");
+    let params = params_json(&p, &a);
     let text = format!(
         "{{\"schema\":\"raw-info/1\",\"files\":[{}],\"warnings\":[{}],{}}}\n",
         entries.join(","),
         warnings.join(","),
-        provenance(&command, &provs, &params.0, &choices)
+        provenance(&command, &provs, &params, &choices)
     );
     let mut o = crate::emit(text, &p.out());
     if o.code == 0 {
