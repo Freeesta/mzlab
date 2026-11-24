@@ -53,6 +53,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.mol.draw.not_found_bare",
     "err.flow.step.unknown",
     "err.cli.command.unknown",
+    "err.cli.find.none",
     "err.cli.schema.unknown",
     "err.flow.instance",
     "err.llm.tool.unknown",

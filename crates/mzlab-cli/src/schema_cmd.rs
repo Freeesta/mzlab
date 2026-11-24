@@ -21,6 +21,7 @@ embed!(
     "compare-1.json",
     "cip-1.json",
     "commands-1.json",
+    "commands-find-1.json",
     "convert-1.json",
     "compact-steps-1.json",
     "context-1.json",
