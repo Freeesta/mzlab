@@ -26,7 +26,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | conditional GitHub workflows (concurrency, pages, skipped jobs) | `docs/agenti/ci-fast.md` |
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
-| mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps --json|--template`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
+| mzlab-cli for AI agents: `--json` commands, exit codes, stdout/stderr, `--dry-run`, `flow steps|defaults`, `flow check`, `--json` list, prebuilt binaries, `--cache`, citation rule, `--version` commit, renamed commands, panics (`err.run.internal`) | `docs/agenti/cli-agenti.md` |
 | compact `commands --json` (cap 33,000 B): what is shared or derived from the usage line (`flag_help`, `flag_type`, exit codes, examples, stdout, `args`, a flag's `required`/`repeat`/`enum`), restore tests, adding a command | `docs/agenti/cli-catalog.md` |
 | `mzlab-cli file convert`: vendor files and folders to mzML, `--peaks`, `--spectrum` (centroid/profile term, sparse data), `--report`, exit codes | `docs/agenti/cli-convert.md` |
 | CLI coverage: registries, steps `FileRunner` runs natively (`EXECUTORS`), `--set` parameters, steps without an executor (`err.flow.step.native`) | `docs/agenti/cli-coverage.md` |

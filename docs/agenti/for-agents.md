@@ -65,7 +65,7 @@ For the ion table of a series with RT drift between samples (TiO2, about 0.2 min
 The recipe is tested only on the high-resolution TiO2 series: on the flufenacet demo (default HR recipe) `rt_warp=piecewise` and `rt_gap=0.3` halve the rows (families 11 195 -> 3 537, ions 13 910 -> 4 135) but two of the three documented products move away and the view goes from 1 to 0 rows: do not apply it to another series without testing it with the expected-ion check.
 
 ## Learn the format, then check before running (tested: `flow_template_tests.rs`)
-1. `mzlab-cli flow steps --compact` (ids, ports, parameter names), then `mzlab-cli flow steps --json --id features.detect` for the types, limits and defaults of one step.
+1. `mzlab-cli flow steps --compact` (ids, ports, parameter names), then `mzlab-cli flow defaults features.detect --json` for the defaults, limits, units and `--set` keys of one step (a rule that is off when empty has `default: null`).
 2. `mzlab-cli flow steps --id features.detect@2 --template > plan.json`: a valid one-step plan; add the steps and links you need (`"in":{"index":["idx.index"]}`) and change only the parameters you want.
 3. `mzlab-cli flow check plan.json --json`: exit 3 names every problem with its `path`, e.g. `det.params.min_hight` (unknown parameter), `det.params.min_height` (wrong type), `det.in.index` (missing port), `steps[1].param` (a key the format does not have). `flow run plan.json --in DIR --dry-run` repeats the check with the inputs and prints what WOULD run; it never writes.
 

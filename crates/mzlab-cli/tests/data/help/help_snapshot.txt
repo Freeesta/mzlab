@@ -19,6 +19,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
@@ -137,6 +138,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
@@ -255,6 +257,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
@@ -365,6 +368,7 @@ exit 0
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
@@ -379,6 +383,7 @@ exit 0
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
        mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files

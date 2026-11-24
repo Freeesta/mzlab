@@ -56,6 +56,12 @@ pub fn flow_command(plan: &str) -> Result<String, JsValue> {
     mzlab_core::flow::command_route(plan).map_err(|e| error_json(&e))
 }
 
+/// The parameters of a Flow step with their defaults, `step-params/1` (`mzlab_core::step::defaults::route`): a `step/1` object in, JSON out.
+#[wasm_bindgen]
+pub fn flow_defaults(step: &str) -> Result<String, JsValue> {
+    mzlab_core::step::defaults::route(step).map_err(|e| error_json(&e))
+}
+
 /// The short command line of a plan, or the plan with the `--set` of a line applied (`mzlab_core::flow::line_route`): JSON in, text out.
 #[wasm_bindgen]
 pub fn flow_line(body: &str) -> Result<String, JsValue> {

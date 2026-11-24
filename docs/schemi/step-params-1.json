@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "step-params/1",
+  "title": "step-params/1: the parameters of one Flow step with their defaults and the --set keys",
+  "description": "The answer of `mzlab-cli flow defaults STEP --json` (plus the citation member) and of the `lr_flow_defaults` op (same bytes in the site and the app): one entry per parameter of the step, then those of each algorithm, read from the step/1 descriptor. Code: crates/mzlab-core/src/step/defaults.rs.",
+  "type": "object",
+  "required": ["schema", "step", "version", "title", "instance", "params"],
+  "properties": {
+    "schema": {"const": "step-params/1"},
+    "step": {"type": "string", "description": "Step id."},
+    "version": {"type": "integer"},
+    "title": {"type": "string"},
+    "instance": {"type": "string", "description": "Instance name used in set_key: the last part of the step id, as `flow steps --template` names it."},
+    "citation": {"type": "string", "description": "CLI only."},
+    "params": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "set_key", "type", "default", "when_empty", "minimum", "maximum", "enum", "unit", "algorithm", "advanced", "description"],
+        "properties": {
+          "name": {"type": "string"},
+          "set_key": {"type": "string", "description": "INSTANCE.NAME of `--set`. For an algorithm parameter, select the algorithm first (`INSTANCE.algorithm=ID`)."},
+          "type": {"enum": ["number", "integer", "boolean", "string", "pair", "choice"], "description": "pair: two numbers, `--set key=A,B`; choice: one value of `enum`."},
+          "default": {"description": "The value the step uses when the parameter is not set; null when it has none."},
+          "when_empty": {"enum": ["off", "estimated", null], "description": "Set when default is null: `off` the rule is not applied, `estimated` the step measures the value and writes it with its proof."},
+          "minimum": {"type": ["number", "null"]},
+          "maximum": {"type": ["number", "null"]},
+          "enum": {"type": ["array", "null"]},
+          "unit": {"type": ["string", "null"]},
+          "algorithm": {"type": ["string", "null"], "description": "Id of the algorithm the parameter belongs to; null for the step's own."},
+          "advanced": {"type": "boolean"},
+          "description": {"type": ["string", "null"], "description": "English text of the descriptor."}
+        }
+      }
+    }
+  }
+}

@@ -16,6 +16,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "sample table",
     ),
     (
+        "what are the default parameters of a flow step",
+        "flow defaults",
+    ),
+    (
         "import sample names and roles from a csv metadata table",
         "sample import",
     ),

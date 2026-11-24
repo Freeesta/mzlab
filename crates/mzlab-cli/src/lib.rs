@@ -68,6 +68,7 @@ mod flow_chimeric_tests;
 mod flow_compare;
 mod flow_convert_notes;
 mod flow_curve;
+mod flow_defaults;
 #[cfg(test)]
 mod flow_detect_adap_tests;
 #[cfg(test)]

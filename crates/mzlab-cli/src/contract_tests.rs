@@ -257,6 +257,7 @@ const NO_FILE: &[&str] = &[
     "completions zsh",
     "completions fish",
     "flow steps",
+    "flow defaults",
     "file pair",
 ];
 

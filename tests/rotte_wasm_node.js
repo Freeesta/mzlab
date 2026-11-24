@@ -36,6 +36,7 @@ const run = s => {
     case "origin": return { s: e.origin(s.items, s.k, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "flow_command": return { s: rotte().flow_command(s.body) };
+    case "flow_defaults": return { s: rotte().flow_defaults(s.body) };
     case "lr_ricerca": return { s: wasm.search_number(s.body) };
     case "lr_reflist": return { s: wasm.reflist_parse(s.body) };
     case "lr_reflist_match": return { s: wasm.reflist_match(s.body) };
