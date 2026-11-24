@@ -5,6 +5,7 @@
 //! the same tree hung from that centre; the duplicate of a double bond in a mancude ring has the mean atomic number of the atoms it could
 //! copy in the other Kekulé forms. Not done: rule 4c, rules 4b and 5 on double bonds.
 
+use std::cell::Cell;
 use std::cmp::Ordering;
 
 /// Rules in the order they are used: 1a, 1b, 2, 3, 4a, 4b, 5.
@@ -30,6 +31,9 @@ pub(crate) struct Chem {
     /// For an atom whose one double bond is in a mancude ring: twelve times the mean atomic number of its possible partners, and their mass (0
     /// when they differ), given to the duplicate of that bond.
     pub manc: Vec<Option<(u16, u16)>>,
+    /// Work of every digraph grown on this molecule (nodes made and nodes compared); past `limit` each digraph stops as if too big.
+    pub spent: Cell<u64>,
+    pub limit: u64,
 }
 
 /// A defined tetrahedral centre of the record.
@@ -117,10 +121,20 @@ impl<'a> Digraph<'a> {
         }
     }
 
+    /// Counts `n` units of work on the molecule; past its limit the digraph stops growing and comparing.
+    fn spend(&mut self, n: usize) {
+        let s = self.c.spent.get().saturating_add(n as u64);
+        self.c.spent.set(s);
+        if s > self.c.limit {
+            self.over = true;
+        }
+    }
+
     fn push(&mut self, parent: usize, atom: usize, dup: Option<usize>) -> usize {
         if self.nodes.len() >= NODE_CAP {
             self.over = true;
         }
+        self.spend(1);
         let i = self.nodes.len();
         let (z, mass) = match atom {
             NO_ATOM => (0, 0),
@@ -395,6 +409,7 @@ impl<'a> Digraph<'a> {
                     runs.push(Vec::new());
                 }
                 prev = Some((g, x));
+                self.spend(1);
                 let n = &self.nodes[x.1];
                 if !n.dup && n.atom != NO_ATOM && self.c.tetra[n.atom].is_some() {
                     let v = self.auxiliary(x.1);
@@ -415,6 +430,7 @@ impl<'a> Digraph<'a> {
 
     /// Breadth-first comparison of the branches through `a` and `b` under one rule (`Greater`: `a` ranks first).
     fn cmp_rule(&mut self, a: Arc, b: Arc, rule: usize, root: usize) -> Ordering {
+        self.spend(1);
         if rule == LIKE {
             return self.pattern(a, root).cmp(&self.pattern(b, root));
         }
@@ -430,6 +446,7 @@ impl<'a> Digraph<'a> {
             let mut next = Vec::new();
             for (x, y) in front {
                 let (kx, ky) = (self.ranked(x, rule, root), self.ranked(y, rule, root));
+                self.spend(1 + kx.len() + ky.len());
                 for j in 0..kx.len().max(ky.len()) {
                     let vx = kx.get(j).map_or(0, |&n| self.key(n, rule, root));
                     let vy = ky.get(j).map_or(0, |&n| self.key(n, rule, root));

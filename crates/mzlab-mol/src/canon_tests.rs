@@ -73,6 +73,7 @@ fn search(m: &Mol) -> Search<'_> {
         autos: Vec::new(),
         visited: 0,
         work: Cell::new(0),
+        limit: u64::MAX,
     }
 }
 

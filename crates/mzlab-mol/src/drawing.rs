@@ -40,6 +40,13 @@ pub struct Drawing {
 impl Mol {
     /// Reads the first record of a V2000 or V3000 molfile as drawn; fails only on a file that cannot be read at all.
     pub fn drawing_from_molfile(text: &str) -> Result<Drawing, MolError> {
+        let mut d = Mol::drawing_unsited(text)?;
+        d.sites = d.site_record().stereo_sites();
+        Ok(d)
+    }
+
+    /// `drawing_from_molfile` with `sites` left empty, for a caller that tests only the sites it needs (`Drawing::site_record`).
+    pub fn drawing_unsited(text: &str) -> Result<Drawing, MolError> {
         let draft = read_draft(text)?;
         let query_atoms: Vec<u32> = (0..draft.atoms.len() as u32)
             .filter(|&i| draft.atoms[i as usize].query)
@@ -67,13 +74,8 @@ impl Mol {
         arom_atoms.sortm();
         arom_atoms.dedup();
         let (mol, kekule) = draft.finish(true)?;
-        let mut stand_in = mol.clone();
-        for &i in &query_atoms {
-            stand_in.atoms[i as usize].el = "Xe".into();
-        }
-        stand_in.validate()?;
-        Ok(Drawing {
-            sites: stand_in.stereo_sites(),
+        let d = Drawing {
+            sites: Vec::new(),
             mol,
             kekule: kekule.is_some(),
             aromatic_h: kekule.iter().flatten().map(|&i| i as u32).collect(),
@@ -81,7 +83,20 @@ impl Mol {
             query_atoms,
             query_bonds,
             wedges,
-        })
+        };
+        d.site_record().validate()?;
+        Ok(d)
+    }
+}
+
+impl Drawing {
+    /// The record the stereo sites are read on: query atoms stand as an element without valence rules.
+    pub fn site_record(&self) -> Mol {
+        let mut m = self.mol.clone();
+        for &i in &self.query_atoms {
+            m.atoms[i as usize].el = "Xe".into();
+        }
+        m
     }
 }
 
