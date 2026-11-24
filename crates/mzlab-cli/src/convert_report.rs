@@ -24,7 +24,7 @@ pub(crate) enum Item {
         flagged: Option<(usize, usize)>,
         /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
         lost: Option<(usize, usize, String)>,
-        /// With `--name sample`: why the file got a name other than the plain sample name (a clash, an unsafe name).
+        /// Why the file got a name other than the plain one (a clash, the `K-` prefix of the default naming, an unsafe sample name with `--name sample`).
         rename: Option<String>,
     },
     Failed {
@@ -181,7 +181,7 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
 }
 
 /// The `convert/1` document (`--report FILE`, and the stdout of `--json`): `{"schema","dry_run":false,"out","items":[...]}` with, per input,
-/// `{input, output, sha256, spectra, seconds, skipped, rename (with `--name sample`, when the name is not the plain sample name), conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
+/// `{input, output, sha256, spectra, seconds, skipped, rename (when an automatic rename was made, with either naming), conversion, warnings}` (and `centroids` {merged, saturated} with `--peaks mzlab`) or `{input, error, cause}`.
 pub(crate) fn report(items: &[Item], out: &Path) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"convert/1\",\"dry_run\":false,\"out\":")
@@ -252,7 +252,7 @@ pub(crate) struct Planned {
     pub(crate) reader: Option<&'static str>,
     pub(crate) input_bytes: u64,
     pub(crate) empty: bool,
-    /// With `--name sample`: why the file is not called after its sample plainly.
+    /// Why the file is not called by its plain name (any naming: a clash, the `K-` prefix, an unsafe sample name).
     pub(crate) rename: Option<String>,
 }
 

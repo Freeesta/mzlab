@@ -168,7 +168,7 @@ pub(crate) fn entries(
     Ok(made)
 }
 
-/// The notes of `--name sample` (a clash, an unsafe name), one line each.
+/// The notes of the automatic renames (a clash with either naming, an unsafe sample name with `--name sample`), one line each.
 pub(crate) fn notes(list: &[Entry]) -> String {
     let n = list.iter().filter_map(|e| e.note.as_deref());
     n.map(|n| format!("{n}\n")).collect()

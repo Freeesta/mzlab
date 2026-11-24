@@ -8,6 +8,12 @@
 const CONV = {
   files: new Map(),
   compression: "standard", // «Download .mzML»: "standard" (zlib), "smallest" (zlib and MS-Numpress) or "none"; the same names as `convert --compression`
+  nameBy: "file",          // «Name files by»: "file" (the name in the list) or "sample" (the sample name of the reader, from the route `mzml_names` of the engine: `convert --name sample`)
+  meta: /** @type {Map<string, { members: { name: string, blob: Blob }[], c: number, id: number }>} */ (new Map()),   // list name -> the members and sample of a maker's file (NATIVO.sample): the reader's sample name is asked for when «sample name» is chosen
+  renames: /** @type {Map<string, { out: string, note: string | null }>} */ (new Map()),                                // list name -> the name and note the route gave, for the files of `sig`
+  notes: /** @type {string[]} */ ([]),   // the notes of the route (every automatic rename), shown under the choice
+  sig: "",
+  busy: /** @type {Promise<void> | null} */ (null),
   // rough size of the mzML as a fraction of the maker's file, by kind of compression (shown as an estimate before the conversion; the real size is shown after)
   RATIO: /** @type {Record<string, number>} */ ({ standard: 1, smallest: 0.55, none: 1.6 }),
   key(/** @type {string} */ name) { return this.compression + ":" + name; },
@@ -32,7 +38,7 @@ const CONV = {
   sources: /** @type {Map<string, { fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }>} */ (new Map()),
   add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
   // samples that left the list: their mzML and source go, so a later file of the same name is neither taken for them (NATIVO.cachedModulo) nor downloaded as them
-  forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
+  forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); this.meta.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
   // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (else two copies of each sample)
   async settle(/** @type {string} */ name) {
     const b = this.files.get(name);
@@ -77,18 +83,42 @@ const CONV = {
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
     finally { if (temp) window.GZFLUSSO.drop(temp); }
   },
+  // the files that can be saved, in the order of the list
+  listed() { return [...new Set([...this.files.keys(), ...this.native()])]; },
+  // the name a file is saved under: its own, or with «sample name» the one the route gave
+  nameOf(/** @type {string} */ name) { const r = this.nameBy === "sample" ? this.renames.get(name) : null; return r ? r.out : name; },
+  // the names of every file as the engine gives them (`api/samples/mzml_names`, the function of `mzlab-cli file convert --name sample`): the page only tells it, per file, the file it came from, the sample
+  // name the reader reports and the sample number; the cleaning, the clashes and the notes are the engine's. A file with no sample name (a plain mzML) keeps its name.
+  async syncNames() {
+    const list = this.listed(), sig = this.nameBy + "\n" + list.join("\n");
+    if (this.busy) await this.busy;
+    if (sig === this.sig) { if (this.notes.length) await loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.paint(this)); return; }
+    this.sig = sig; this.renames = new Map(); this.notes = [];
+    if (this.nameBy === "sample" && list.length) {
+      this.busy = loadScript("m:conv-names.js").then(() => /** @type {any} */ (window).CONVNAMES.ask(this, list)).finally(() => { this.busy = null; });
+      await this.busy;
+    }
+    /** @type {any} */ (window).CONVNAMES ? /** @type {any} */ (window).CONVNAMES.paint(this) : 0;
+  },
+  async setNameBy(/** @type {string} */ v) {
+    this.nameBy = v === "sample" ? "sample" : "file"; this.sig = "";
+    const s = /** @type {HTMLSelectElement | null} */ (document.getElementById("cvnameby")); if (s) s.value = this.nameBy;
+    await this.syncNames();
+  },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(/** @type {string} */ name) {
     let blob = this.held(name);
     if (!blob && this.writes(name)) blob = await this.make(name);
     if (!blob) return false;
     if (!window.MZLAB_DESKTOP && !await this.valid(blob, name)) return false;
+    await this.syncNames();
+    const out = this.nameOf(name);
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !/** @type {any} */ (window).MZLAB_SAVE_MZML) return false;
-      try { const ok = !!(await /** @type {any} */ (window).MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
+      try { const ok = !!(await /** @type {any} */ (window).MZLAB_SAVE_MZML(blob.mzlabId, out)); return ok; }
       catch (e) { const n = document.getElementById("up"); if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); n.appendChild(d); setTimeout(() => d.remove(), 12000); } return false; }
     }
-    saveBlob(blob, name, 60000);
+    saveBlob(blob, out, 60000);
     return true;
   },
   // the check of `mzlab-cli file convert` (the app makes it natively): an mzML the validator calls INVALID is not saved; each Blob is checked once
@@ -132,7 +162,7 @@ const CONV = {
     this.paintSizes(); const e = document.getElementById("cvest"); if (e) e.textContent = this.estimate();
     if (name == null) await this.downloadAll(); else await this.download(name);
   },
-  async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
+  async downloadAll() { await this.syncNames(); for (const n of this.listed()) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
 // desktop app: the mzML files the background queue (conv_queue.rs) makes of the maker's files of the list. State of each file: queued | run | done | failed | cancelled.
@@ -173,7 +203,8 @@ const CONVQ = {
   // one folder, one click: every ready mzML goes there
   async saveAll() {
     const f = typeof window !== "undefined" && /** @type {any} */ (window).MZLAB_SAVE_MZML_DIR; if (!f) return;
-    try { const n = await f(); if (n != null) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t("conv.q.saved", { n }); box.appendChild(d); setTimeout(() => d.remove(), 8000); } } }
+    await CONV.syncNames();
+    try { const n = await f(Object.fromEntries(CONV.listed().map(k => [k, CONV.nameOf(k)]).filter(([k, v]) => k !== v))); if (n != null) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t("conv.q.saved", { n }); box.appendChild(d); setTimeout(() => d.remove(), 8000); } } }
     catch (e) { const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
   },
 };
@@ -323,8 +354,9 @@ const CONVROWS = {
   tools() {
     /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
     const st = this.toolState(), off = (/** @type {boolean} */ on) => (on ? "" : " data-off inert");
-    return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <button type="button" class="hq" data-help="compressione" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span></details>` +
-      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm dlic" id="dlall" data-cvtool="dl"${off(st.dl)} aria-haspopup="menu" aria-label="${T("conv.dlall")}" title="${T("conv.dlall")}">${CONV.ICON}</button><button type="button" class="sec sm" id="rmall">${T("load.table.removeAll")}</button></div></div>`;
+    return `<div class="cvtool"><div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label>${T("conv.comp")} <select id="cvcomp">${[["standard", T("conv.comp.standard")], ["smallest", T("conv.comp.smallest")], ["none", T("conv.comp.none")]].map(([k, t]) => `<option value="${k}"${CONV.compression === k ? " selected" : ""}>${t}</option>`).join("")}</select></label> <button type="button" class="hq" data-help="compressione" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button> <span id="cvest" class="muted" aria-live="polite">${CONV.estimate()}</span>` +
+      `<br><label>${T("conv.nameby")} <select id="cvnameby" title="${T("conv.nameby.title")}">${[["file", T("conv.nameby.file")], ["sample", T("conv.nameby.sample")]].map(([k, t]) => `<option value="${k}"${CONV.nameBy === k ? " selected" : ""}>${t}</option>`).join("")}</select></label></details>` +
+      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm dlic" id="dlall" data-cvtool="dl"${off(st.dl)} aria-haspopup="menu" aria-label="${T("conv.dlall")}" title="${T("conv.dlall")}">${CONV.ICON}</button><button type="button" class="sec sm" id="rmall">${T("load.table.removeAll")}</button></div><ul class="muted sm" id="cvnotes" role="status" aria-live="polite" hidden></ul></div>`;
   },
   // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows, `conc` = the concentration column is there
   table(/** @type {string} */ head, /** @type {string} */ body, conc = true, extra = 0) {

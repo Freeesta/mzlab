@@ -1,5 +1,6 @@
 //! Tests of the conversion queue (`conv_queue.rs`) on small synthetic files.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -98,7 +99,7 @@ fn two_files_give_the_bytes_of_the_command_line_and_cancel_stops_the_second() {
     );
     // saving puts the ready files in one folder
     let to = d.path().join("saved");
-    assert_eq!(c.save(&to).unwrap(), 1);
+    assert_eq!(c.save(&to, &HashMap::new()).unwrap(), 1);
     assert_eq!(
         std::fs::read(to.join("a.mzML")).unwrap(),
         std::fs::read(&got).unwrap()
@@ -256,4 +257,52 @@ fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
     let big = Queue::with_budget(8192.0);
     assert_eq!(big.limit(), wanted);
     assert!(big.list().get("notice").is_none());
+}
+
+#[test]
+fn saving_names_each_file_as_the_page_asks_and_never_outside_the_folder() {
+    let d = tempfile::tempdir().unwrap();
+    let (a, b) = (d.path().join("a.mzXML"), d.path().join("b.mzXML"));
+    mzxml_file(&a, 3);
+    mzxml_file(&b, 4);
+    let c = Queue::with_workers(1);
+    c.set_folder(d.path().join("cache"));
+    c.add("a.mzXML", 0, &a);
+    c.add("b.mzXML", 0, &b);
+    wait(&c, "a.mzXML", "done");
+    wait(&c, "b.mzXML", "done");
+    // the same bytes of the command line for `--name sample`: the names of `mzml_names` for these two files are the ones the page passes
+    let cli = d.path().join("cli");
+    let o = mzlab_cli::convert::run(vec![
+        a.to_string_lossy().into_owned(),
+        b.to_string_lossy().into_owned(),
+        "--out".into(),
+        cli.to_string_lossy().into_owned(),
+        "--name".into(),
+        "sample".into(),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let mut want: Vec<String> = std::fs::read_dir(&cli)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".mzML"))
+        .collect();
+    want.sort();
+    // a page file the map does not list keeps its name; a name that is a path is refused
+    let names = HashMap::from([
+        ("a.mzXML".to_string(), want[0].clone()),
+        ("b.mzXML".to_string(), "../escape.mzML".to_string()),
+    ]);
+    let to = d.path().join("saved");
+    assert_eq!(c.save(&to, &names).unwrap(), 2);
+    assert_eq!(
+        std::fs::read(to.join(&want[0])).unwrap(),
+        std::fs::read(c.ready("a.mzXML").unwrap()).unwrap()
+    );
+    assert!(
+        to.join("b.mzML").is_file(),
+        "the refused name keeps its own"
+    );
+    assert!(!d.path().join("escape.mzML").exists());
 }

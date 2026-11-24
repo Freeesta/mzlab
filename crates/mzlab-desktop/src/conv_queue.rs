@@ -3,6 +3,7 @@
 //! `conv_list` then carries the same notice the CLI prints) and never while an index of Data is being built. The page reads it with
 //! `conv_list`, stops it with `conv_cancel`, saves the ready files with `conv_save`; `flow/run` takes a ready mzML instead of converting again.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -14,7 +15,7 @@ use sha2::{Digest, Sha256};
 
 use crate::conv_stamp::stamp;
 use crate::engine::State;
-use crate::rpc::{io_error, text, Answer};
+use crate::rpc::{text, Answer};
 
 /// How many index builds of Data are running: the queue waits for them to end.
 static INDEXING: AtomicUsize = AtomicUsize::new(0);
@@ -36,7 +37,7 @@ impl Drop for Indexing {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Phase {
+pub(crate) enum Phase {
     Queued,
     Running,
     Done,
@@ -45,21 +46,21 @@ enum Phase {
 }
 
 /// One dataset (a `.raw`, a `.wiff` with its scan file, a `.D` folder) and the page files (samples) that come from it.
-struct Job {
+pub(crate) struct Job {
     /// never reused: a running worker finds its job by this, not by a position that other changes shift
     id: u64,
     root: PathBuf,
     out: PathBuf,
     /// size and date of all the files of the dataset when it was queued: a ready mzML is only good for the same bytes
     stamp: Option<(u64, u64)>,
-    names: Vec<(String, u32)>,
-    phase: Phase,
-    files: Vec<PathBuf>,
+    pub(crate) names: Vec<(String, u32)>,
+    pub(crate) phase: Phase,
+    pub(crate) files: Vec<PathBuf>,
 }
 
 #[derive(Default)]
 pub(crate) struct Inner {
-    jobs: Vec<Job>,
+    pub(crate) jobs: Vec<Job>,
     threads: usize,
     next_id: u64,
 }
@@ -181,7 +182,7 @@ impl Queue {
     }
 }
 
-fn lock(m: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
+pub(crate) fn lock(m: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
@@ -308,9 +309,9 @@ impl State {
         text(self.queue.list().to_string())
     }
 
-    /// `conv_save {dest}`: the ready mzML files in the folder `dest`; `{"saved": n}`.
-    pub fn conv_save(&self, dest: &Path) -> Result<usize> {
-        self.queue.save(dest)
+    /// `conv_save {dest, names}`: the ready mzML files in the folder `dest`, each under its entry of `names` when there is one; `{"saved": n}`.
+    pub fn conv_save(&self, dest: &Path, names: &HashMap<String, String>) -> Result<usize> {
+        self.queue.save(dest, names)
     }
 
     /// The ready mzML of the page file `name`, for `flow/run`.
@@ -416,7 +417,7 @@ fn work(inner: Arc<Mutex<Inner>>, recheck: Duration) {
 }
 
 /// The file of a finished job that holds sample `id`.
-fn file_of(job: &Job, id: u32) -> Option<PathBuf> {
+pub(crate) fn file_of(job: &Job, id: u32) -> Option<PathBuf> {
     match job.files.as_slice() {
         [one] => Some(one.clone()),
         many => many
@@ -467,27 +468,5 @@ impl Queue {
             Some(n) if many => json!({ "jobs": rows, "notice": n }),
             _ => json!({ "jobs": rows }),
         }
-    }
-
-    /// Puts every ready mzML in the folder `dest` (a hard link where the system allows, else a copy); how many.
-    pub(crate) fn save(&self, dest: &Path) -> Result<usize> {
-        std::fs::create_dir_all(dest).map_err(|e| io_error(&e))?;
-        let files: Vec<PathBuf> = lock(&self.inner)
-            .jobs
-            .iter()
-            .filter(|j| j.phase == Phase::Done)
-            .flat_map(|j| j.files.clone())
-            .collect();
-        let mut n = 0;
-        for f in files {
-            let Some(name) = f.file_name() else { continue };
-            let to = dest.join(name);
-            let _ = std::fs::remove_file(&to);
-            std::fs::hard_link(&f, &to)
-                .or_else(|_| std::fs::copy(&f, &to).map(|_| ()))
-                .map_err(|e| io_error(&e))?;
-            n += 1;
-        }
-        Ok(n)
     }
 }

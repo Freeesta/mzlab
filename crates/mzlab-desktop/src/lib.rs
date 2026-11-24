@@ -5,6 +5,7 @@
 mod conv_queue;
 #[cfg(test)]
 mod conv_queue_tests;
+mod conv_save;
 mod conv_stamp;
 #[cfg(feature = "app")]
 pub mod dialog;
