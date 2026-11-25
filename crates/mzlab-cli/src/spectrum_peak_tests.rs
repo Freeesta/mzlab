@@ -15,11 +15,22 @@ const SIGMA: f64 = 0.05;
 /// 300 product-ion scans of precursor 250.3 every 0.02 min from 1.0: m/z 100.3 rises over a flat 20 cps (`peak`), m/z 150.3 is a flat 50 cps.
 fn mzml(tag: &str, peak: bool) -> (std::path::PathBuf, String) {
     let d = dir(tag);
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "r".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(300).unwrap();
     for i in 0..300 {
         let rt = 1.0 + i as f64 * 0.02;
-        let rise = if peak { (1000.0 * (-(rt - APEX).powi(2) / (2.0 * SIGMA * SIGMA)).exp()).round() } else { 0.0 };
+        let rise = if peak {
+            (1000.0 * (-(rt - APEX).powi(2) / (2.0 * SIGMA * SIGMA)).exp()).round()
+        } else {
+            0.0
+        };
         let s = Spectrum {
             index: i,
             id: format!("scan={}", i + 1),
@@ -46,7 +57,16 @@ fn ok(a: &[&str]) -> (Value, String, String) {
     (parse(text.as_bytes()).unwrap(), text, o.stderr)
 }
 
-const ARGS: [&str; 8] = ["--rt", "2,6", "--ms-level", "2", "--precursor", "250.3", "--peak", "auto"];
+const ARGS: [&str; 8] = [
+    "--rt",
+    "2,6",
+    "--ms-level",
+    "2",
+    "--precursor",
+    "250.3",
+    "--peak",
+    "auto",
+];
 
 #[test]
 fn the_document_is_the_route_evidence_and_its_lines() {
@@ -63,7 +83,10 @@ fn the_document_is_the_route_evidence_and_its_lines() {
     .unwrap()
     .unwrap();
     let cut = text.rfind(",\"mz\":[").unwrap();
-    assert!(doc.contains(&format!("\"peak\":{}}}", &text[..cut])), "{doc}");
+    assert!(
+        doc.contains(&format!("\"peak\":{}}}", &text[..cut])),
+        "{doc}"
+    );
     assert_eq!(doc_points(&doc), route_points(&text, "mz"));
     assert!(err.is_empty(), "{err}");
     let p = v.get("evidence").unwrap().get("peak").unwrap();
@@ -72,7 +95,16 @@ fn the_document_is_the_route_evidence_and_its_lines() {
     assert_eq!(v.get("n_points").unwrap().f64(), Some(1.0));
     assert!(p.get("n_scans").unwrap().f64().unwrap() > 3.0);
     assert!(p.get("total_ions").unwrap().f64().unwrap() > 0.0);
-    assert_eq!(p.get("sum").unwrap().get("background").unwrap().get("applied").unwrap().str(), Some("sides"));
+    assert_eq!(
+        p.get("sum")
+            .unwrap()
+            .get("background")
+            .unwrap()
+            .get("applied")
+            .unwrap()
+            .str(),
+        Some("sides")
+    );
     let _ = std::fs::remove_dir_all(d);
 }
 
@@ -84,7 +116,15 @@ fn set_changes_the_window_and_csv_is_the_lines() {
         a.extend(ARGS);
         a.extend(extra);
         let (v, _, _) = ok(&a);
-        let w = v.get("evidence").unwrap().get("peak").unwrap().get("window_min").unwrap().arr().to_vec();
+        let w = v
+            .get("evidence")
+            .unwrap()
+            .get("peak")
+            .unwrap()
+            .get("window_min")
+            .unwrap()
+            .arr()
+            .to_vec();
         w[1].f64().unwrap() - w[0].f64().unwrap()
     };
     let (two, three) = (width(&[]), width(&["--set", "factor=3,side_min=0.2"]));
@@ -94,7 +134,9 @@ fn set_changes_the_window_and_csv_is_the_lines() {
     a.extend(["--format", "csv"]);
     let o = run(&a);
     assert_eq!(o.code, 0);
-    assert!(String::from_utf8(o.stdout).unwrap().starts_with("mz,intensity\n100.3,"));
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .starts_with("mz,intensity\n100.3,"));
     let _ = std::fs::remove_dir_all(d);
 }
 
@@ -124,11 +166,56 @@ fn bad_requests_are_usage_errors_exit_2() {
         vec!["--scan", "3", "--peak", "auto"],
         vec!["--rt", "2,6", "--ms-level", "2", "--peak", "now"],
         vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--sum"],
-        vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--minus", &f],
-        vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--id", "ms:1"],
-        vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--set", "nope=1"],
-        vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--set", "factor=0"],
-        vec!["--rt", "2,6", "--ms-level", "2", "--peak", "auto", "--fill-ms", "0"],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--minus",
+            &f,
+        ],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--id",
+            "ms:1",
+        ],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--set",
+            "nope=1",
+        ],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--set",
+            "factor=0",
+        ],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--fill-ms",
+            "0",
+        ],
         vec!["--rt", "2,6", "--ms-level", "2", "--set", "factor=3"],
         vec!["--rt", "2,6", "--ms-level", "2", "--precursor", "250.3"],
     ] {

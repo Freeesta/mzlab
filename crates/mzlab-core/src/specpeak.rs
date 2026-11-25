@@ -263,8 +263,15 @@ struct Found<'a> {
 fn emit(mut o: Out, f: &Found) -> String {
     let (g, (side_l, side_r)) = (f.g, f.sides);
     let flags: Vec<String> = f.flags.iter().map(|x| format!("\"{x}\"")).collect();
-    let verdict = if f.has_spectrum { "peak" } else { "window_only" };
-    o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[{}]", flags.join(",")));
+    let verdict = if f.has_spectrum {
+        "peak"
+    } else {
+        "window_only"
+    };
+    o.raw(&format!(
+        ",\"verdict\":\"{verdict}\",\"flags\":[{}]",
+        flags.join(",")
+    ));
     o.raw(&format!(
         ",\"apex\":{},\"fwhm_min\":{},\"half_height\":{},\"window_min\":[{},{}]",
         f.apex_json,
@@ -274,7 +281,12 @@ fn emit(mut o: Out, f: &Found) -> String {
         rd(g.window.1)
     ));
     let side_json = |s: (f64, f64), v: (usize, f64)| {
-        format!("{{\"window_min\":[{},{}],\"n_scans\":{}}}", rd(s.0), rd(s.1), v.0)
+        format!(
+            "{{\"window_min\":[{},{}],\"n_scans\":{}}}",
+            rd(s.0),
+            rd(s.1),
+            v.0
+        )
     };
     o.raw(&format!(
         ",\"sides\":{{\"left\":{},\"right\":{},\"anchored_min\":[{},{}]}}",
@@ -284,10 +296,14 @@ fn emit(mut o: Out, f: &Found) -> String {
         rd(g.anchored.1)
     ));
     o.raw(",\"background\":").raw(f.background);
-    o.raw(",\"spectrum\":").raw(if f.has_spectrum { "true" } else { "false" });
+    o.raw(",\"spectrum\":")
+        .raw(if f.has_spectrum { "true" } else { "false" });
     o.raw(",\"n_scans\":").int(f.n_win as i64);
     // the ions the window rests on: counts x fill time, null until the fill time is stated or known (`evidence.sum.ions`)
-    o.raw(",\"total_ions\":").raw(&ions_of(f.sum)).raw(",\"sum\":").raw(f.sum);
+    o.raw(",\"total_ions\":")
+        .raw(&ions_of(f.sum))
+        .raw(",\"sum\":")
+        .raw(f.sum);
     // the lines last: a reader that wants the evidence alone cuts the answer at `,"mz":[`
     o.raw(",\"rule\":").str(f.rule);
     lines(&mut o, f.lines.0, f.lines.1);

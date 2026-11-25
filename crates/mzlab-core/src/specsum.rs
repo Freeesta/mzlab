@@ -41,7 +41,13 @@ impl<R: ReadAt> Routes<R> {
         let fill = fill_of(q)?;
         let precursor = q.num("precursor")?;
         let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
-        Ok(Some(self.sum_evidence(level, (lo, hi), precursor, fill, NO_BACKGROUND)?))
+        Ok(Some(self.sum_evidence(
+            level,
+            (lo, hi),
+            precursor,
+            fill,
+            NO_BACKGROUND,
+        )?))
     }
 
     /// The evidence of the sum of a window, with the `background` member the caller states (`NO_BACKGROUND` or what `specpeak` subtracted).
@@ -58,7 +64,9 @@ impl<R: ReadAt> Routes<R> {
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
         let (n, total, types) = self.tally(level, (lo, hi), prec)?;
-        Ok(answer(level, fill, n, total, &types, &probe, quant, background))
+        Ok(answer(
+            level, fill, n, total, &types, &probe, quant, background,
+        ))
     }
 
     /// The scans of a window of one level (inside it and, for a product-ion level, near the precursor): how many, their counts, and the same per scan type

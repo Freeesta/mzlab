@@ -17,6 +17,21 @@ pub(crate) struct PeakOpt {
     pub fill_ms: Option<String>,
 }
 
+/// `--peak auto` and `--sum` are two modes of one window: the peak mode makes its own sum, so `--sum` options are read only without it.
+pub(crate) fn modes(
+    p: &Parsed,
+    at: &At,
+    flags: (bool, bool),
+) -> std::result::Result<(Option<PeakOpt>, Option<super::sum::SumOpt>), String> {
+    let peak = options(p, at, flags)?;
+    let sum = if peak.is_some() {
+        None
+    } else {
+        super::sum::options(p, at, flags)?
+    };
+    Ok((peak, sum))
+}
+
 /// `--peak`, `--set`, `--precursor` and `--fill-ms` of a request: `None` without `--peak`; a usage message for a request the apex search cannot answer.
 pub(crate) fn options(
     p: &Parsed,
@@ -128,7 +143,13 @@ pub(crate) fn run(
     );
     let ev = format!(
         "\"evidence\":{{\"route\":\"/api/specpeak\",\"query\":{},\"peak\":{evidence}{}}}",
-        extract::jstr(&pairs.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("&")),
+        extract::jstr(
+            &pairs
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect::<Vec<_>>()
+                .join("&")
+        ),
         // the level the file's only level gave (`spectrum get` without `--ms-level`)
         level_auto.map_or(String::new(), |a| format!(",\"level_auto\":{a}"))
     );

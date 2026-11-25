@@ -38,3 +38,21 @@ usage: mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] 
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: scan_id,scan_no,ms_level,rt_min,tic,precursor_mz,base_peak_mz,base_peak_intensity
   --out PATH  write there instead of the standard output";
+
+/// The flags of `spectrum get` that take a value.
+pub(crate) const GET_VALUES: &[&str] = &[
+    "--rt",
+    "--scan",
+    "--ms-level",
+    "--id",
+    "--sample",
+    "--minus",
+    "--minus-sample",
+    "--minus-rt",
+    "--fill-ms",
+    "--peak",
+    "--set",
+    "--precursor",
+    "--format",
+    "--out",
+];

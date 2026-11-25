@@ -21,7 +21,14 @@ fn gauss(t: f64) -> f64 {
 
 /// 300 product-ion scans (precursor 250.3) every 0.01 min from 0.5: m/z 100.3 rises with the peak, m/z 150.3 stays flat. `peak` false: both flat.
 fn routes(peak: bool) -> Routes<Vec<u8>> {
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "r".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(300).unwrap();
     for i in 0..300 {
         let rt = 0.5 + i as f64 * 0.01;
@@ -43,7 +50,9 @@ fn routes(peak: bool) -> Routes<Vec<u8>> {
     let b = w.finish().unwrap();
     let mut src = b.clone();
     let p = crate::upload::prepare(&mut src, b.len() as u64, "r.mzML").unwrap();
-    let idx = crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20).unwrap().0;
+    let idx = crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20)
+        .unwrap()
+        .0;
     let n = idx.len() as u64;
     Routes::new(Index::open(idx, n).unwrap())
 }
@@ -67,7 +76,10 @@ fn the_apex_fwhm_and_window_of_a_known_peak() {
     let mut r = routes(true);
     let v = ask(&mut r, "rt0=1&rt1=3&level=2&precursor=250.3").unwrap();
     assert_eq!(v.get("verdict").unwrap().str(), Some("peak"));
-    assert!((num(&v, &["apex", "rt_min"]) - APEX).abs() <= 0.011, "{v:?}");
+    assert!(
+        (num(&v, &["apex", "rt_min"]) - APEX).abs() <= 0.011,
+        "{v:?}"
+    );
     let fwhm = num(&v, &["fwhm_min"]);
     assert!((fwhm - FWHM).abs() < 0.015, "fwhm {fwhm} against {FWHM}");
     let (a, b) = pair(&v, "window_min");
@@ -81,29 +93,63 @@ fn the_sides_lie_outside_the_window_and_the_peak_and_the_background_is_flat() {
     let v = ask(&mut r, "rt0=1&rt1=3&level=2&precursor=250.3").unwrap();
     let (a, b) = pair(&v, "window_min");
     let sides = v.get("sides").unwrap();
-    let (l, rr) = (pair(sides.get("left").unwrap(), "window_min"), pair(sides.get("right").unwrap(), "window_min"));
-    let (start, end) = (num(&v, &["apex", "start_min"]), num(&v, &["apex", "end_min"]));
+    let (l, rr) = (
+        pair(sides.get("left").unwrap(), "window_min"),
+        pair(sides.get("right").unwrap(), "window_min"),
+    );
+    let (start, end) = (
+        num(&v, &["apex", "start_min"]),
+        num(&v, &["apex", "end_min"]),
+    );
     assert!(l.1 <= a - 0.05 + 1e-3 && l.1 <= start, "{l:?} {a} {start}");
     assert!(rr.0 >= b + 0.05 - 1e-3 && rr.0 >= end, "{rr:?} {b} {end}");
     assert!((l.1 - l.0 - 0.3).abs() < 1e-3 && (rr.1 - rr.0 - 0.3).abs() < 1e-3);
     // the two ions of the background add to 70 cps per scan; the tails of the peak are outside the sides
     let cps = num(&v, &["background", "per_scan_cps"]);
     assert!((cps - (BG[0] + BG[1])).abs() < 1.0, "{cps}");
-    assert_eq!(v.get("background").unwrap().get("applied").unwrap().str(), Some("sides"));
-    assert_eq!(v.get("sum").unwrap().get("background").unwrap().get("applied").unwrap().str(), Some("sides"));
+    assert_eq!(
+        v.get("background").unwrap().get("applied").unwrap().str(),
+        Some("sides")
+    );
+    assert_eq!(
+        v.get("sum")
+            .unwrap()
+            .get("background")
+            .unwrap()
+            .get("applied")
+            .unwrap()
+            .str(),
+        Some("sides")
+    );
 }
 
 #[test]
 fn the_spectrum_keeps_the_ion_and_drops_the_flat_mass() {
     let mut r = routes(true);
     let v = ask(&mut r, "rt0=1&rt1=3&level=2&precursor=250.3&fill_ms=20").unwrap();
-    let mz: Vec<f64> = v.get("mz").unwrap().arr().iter().map(|x| x.f64().unwrap()).collect();
-    let y: Vec<f64> = v.get("y").unwrap().arr().iter().map(|x| x.f64().unwrap()).collect();
+    let mz: Vec<f64> = v
+        .get("mz")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|x| x.f64().unwrap())
+        .collect();
+    let y: Vec<f64> = v
+        .get("y")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|x| x.f64().unwrap())
+        .collect();
     assert_eq!(mz.len(), 1, "{mz:?}");
     assert!((mz[0] - 100.3).abs() < 1e-3);
     // the net of the ion: the sum of the peak over the scans of the window (the background of 20 cps per scan is subtracted)
     let (a, b) = pair(&v, "window_min");
-    let want: f64 = (0..300).map(|i| 0.5 + i as f64 * 0.01).filter(|t| *t >= a && *t <= b).map(gauss).sum();
+    let want: f64 = (0..300)
+        .map(|i| 0.5 + i as f64 * 0.01)
+        .filter(|t| *t >= a && *t <= b)
+        .map(gauss)
+        .sum();
     assert!((y[0] - want).abs() < 0.01 * want, "{} against {want}", y[0]);
     // n_scans and the ions are those of the sum evidence of the same window
     let n = num(&v, &["n_scans"]);
@@ -116,7 +162,11 @@ fn the_spectrum_keeps_the_ion_and_drops_the_flat_mass() {
 fn the_window_factor_and_the_side_width_are_parameters() {
     let mut r = routes(true);
     let a = ask(&mut r, "rt0=1&rt1=3&level=2&precursor=250.3").unwrap();
-    let b = ask(&mut r, "rt0=1&rt1=3&level=2&precursor=250.3&factor=3&side_min=0.2&gap_min=0.1").unwrap();
+    let b = ask(
+        &mut r,
+        "rt0=1&rt1=3&level=2&precursor=250.3&factor=3&side_min=0.2&gap_min=0.1",
+    )
+    .unwrap();
     let (w1, w2) = (pair(&a, "window_min"), pair(&b, "window_min"));
     assert!(((w2.1 - w2.0) / (w1.1 - w1.0) - 1.5).abs() < 0.01);
     let left = pair(b.get("sides").unwrap().get("left").unwrap(), "window_min");
@@ -141,9 +191,29 @@ fn a_range_without_scans_is_no_data_and_bad_parameters_are_refused() {
     let mut r = routes(true);
     let v = ask(&mut r, "rt0=50&rt1=60&level=2&precursor=250.3").unwrap();
     assert_eq!(v.get("verdict").unwrap().str(), Some("no_data"));
-    for bad in ["factor=0", "factor=x", "side_min=0", "gap_min=-1", "min_points=2.5", "min_sn=-1"] {
-        let e = ask(&mut r, &format!("rt0=1&rt1=3&level=2&precursor=250.3&{bad}")).unwrap_err();
-        assert!(e.key == "err.spec.peak" || e.key == "err.request.badNumber", "{bad}: {}", e.key);
+    for bad in [
+        "factor=0",
+        "factor=x",
+        "side_min=0",
+        "gap_min=-1",
+        "min_points=2.5",
+        "min_sn=-1",
+    ] {
+        let e = ask(
+            &mut r,
+            &format!("rt0=1&rt1=3&level=2&precursor=250.3&{bad}"),
+        )
+        .unwrap_err();
+        assert!(
+            e.key == "err.spec.peak" || e.key == "err.request.badNumber",
+            "{bad}: {}",
+            e.key
+        );
     }
-    assert_eq!(ask(&mut r, "rt0=1&rt1=3&level=2&fill_ms=0").unwrap_err().key, "err.spec.fill");
+    assert_eq!(
+        ask(&mut r, "rt0=1&rt1=3&level=2&fill_ms=0")
+            .unwrap_err()
+            .key,
+        "err.spec.fill"
+    );
 }

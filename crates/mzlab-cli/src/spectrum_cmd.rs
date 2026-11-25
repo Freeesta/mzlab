@@ -12,6 +12,7 @@ use crate::Outcome;
 
 #[path = "spectrum_help.rs"]
 mod help;
+use help::GET_VALUES;
 pub use help::{HELP_GET, HELP_LIST};
 #[path = "spectrum_level.rs"]
 mod level;
@@ -238,27 +239,7 @@ fn doc(
 
 pub fn get(args: Vec<String>) -> Outcome {
     let go = || -> std::result::Result<_, String> {
-        let Some(p) = extract::parse(
-            args,
-            &[
-                "--rt",
-                "--scan",
-                "--ms-level",
-                "--id",
-                "--sample",
-                "--minus",
-                "--minus-sample",
-                "--minus-rt",
-                "--fill-ms",
-                "--peak",
-                "--set",
-                "--precursor",
-                "--format",
-                "--out",
-            ],
-            &["--sum"],
-        )?
-        else {
+        let Some(p) = extract::parse(args, GET_VALUES, &["--sum"])? else {
             return Ok(Err(HELP_GET));
         };
         let file = one_file(&p, "spectrum get")?;
@@ -278,8 +259,7 @@ pub fn get(args: Vec<String>) -> Outcome {
             return Err("--minus is not for --id (the blank is read at the same level)".into());
         }
         let flags = (blank.is_some(), p.get("--id").is_some());
-        let peak = peak::options(&p, &at, flags)?;
-        let sum = if peak.is_some() { None } else { sum::options(&p, &at, flags)? };
+        let (peak, sum) = peak::modes(&p, &at, flags)?;
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,
@@ -304,7 +284,15 @@ pub fn get(args: Vec<String>) -> Outcome {
                 Some((f, id, w)) => Some(minus::open(f, *id, *w, tmp)?),
                 None => None,
             };
-            let (doc, notes) = get_one(&mut s, &at, level, chan.as_deref(), csv, &mut m, (&modes.0, &modes.1))?;
+            let (doc, notes) = get_one(
+                &mut s,
+                &at,
+                level,
+                chan.as_deref(),
+                csv,
+                &mut m,
+                (&modes.0, &modes.1),
+            )?;
             Ok((doc, s.note.clone() + &notes))
         }),
         &out,
