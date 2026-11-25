@@ -14,6 +14,9 @@ pub const NO_FILL: &str = "note.spec.sum.noFill";
 /// The key of the note that says why `ions_by_quantum` is null.
 pub const NO_QUANTUM: &str = "note.spec.sum.noQuantum";
 
+/// Per scan type: its key, the scans of that type and their counts.
+type Types = Vec<(String, usize, f64)>;
+
 impl<R: ReadAt> Routes<R> {
     /// `/api/specsum?rt0=A&rt1=B[&level=N][&precursor=P][&filt=F|channel=ID][&fill_ms=T]`: the evidence of the summed spectrum of the window, `None` when
     /// the request has no window.
@@ -59,11 +62,8 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The scans of the selection: how many, their counts, and the same per scan type (in order of first appearance).
-    fn tally(
-        &mut self,
-        sel: Option<&crate::spectrum::Selection>,
-    ) -> Result<(usize, f64, Vec<(String, usize, f64)>)> {
-        let mut types: Vec<(String, usize, f64)> = Vec::new();
+    fn tally(&mut self, sel: Option<&crate::spectrum::Selection>) -> Result<(usize, f64, Types)> {
+        let mut types: Types = Vec::new();
         let (mut n, mut total) = (0usize, 0.0f64);
         if let Some(sl) = sel {
             let ar = self.idx.arrays(sl.si)?.clone();
@@ -91,7 +91,7 @@ fn answer(
     fill: Option<f64>,
     n: usize,
     total: f64,
-    types: &[(String, usize, f64)],
+    types: &Types,
     probe: &crate::rawinfo::Probe,
     quant: Option<crate::ionstat::Quantum>,
 ) -> String {
