@@ -20,14 +20,24 @@ pub(crate) fn json_lines(result: &str) -> Vec<String> {
         return Vec::new();
     };
     let text = |n: &mzlab_core::json::Value, k: &str| {
-        n.get(k).and_then(|x| x.str()).unwrap_or_default().to_string()
+        n.get(k)
+            .and_then(|x| x.str())
+            .unwrap_or_default()
+            .to_string()
     };
     let owned: Vec<[String; 4]> = v
         .get("pairing")
         .map(|p| p.arr())
         .unwrap_or_default()
         .iter()
-        .map(|n| [text(n, "action"), text(n, "file"), text(n, "role"), text(n, "evidence")])
+        .map(|n| {
+            [
+                text(n, "action"),
+                text(n, "file"),
+                text(n, "role"),
+                text(n, "evidence"),
+            ]
+        })
         .collect();
     let rows: Vec<[&str; 4]> = owned
         .iter()
@@ -48,7 +58,11 @@ fn rows_lines(rows: &[[&str; 4]]) -> Vec<String> {
                 (_, "sample", true) => "err.cli.pair.proposedNone",
                 (_, _, true) => "err.cli.pair.proposedName",
             };
-            let v = [("file", file.to_string()), ("role", role.to_string()), ("part", evidence.to_string())];
+            let v = [
+                ("file", file.to_string()),
+                ("role", role.to_string()),
+                ("part", evidence.to_string()),
+            ];
             say(key, &v)
         })
         .collect()

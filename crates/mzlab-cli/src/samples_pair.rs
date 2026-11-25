@@ -23,7 +23,11 @@ Exit codes: 0 every file has its sample and no sample is left over; 1 automatic 
 /// The names of the files of the series: the file names of the arguments, or the inputs of the table.
 fn series(files: &[String], table: Option<&str>) -> Result<Vec<String>, Outcome> {
     let Some(t) = table else {
-        let name = |f: &String| Path::new(f).file_name().map_or(f.clone(), |n| n.to_string_lossy().into_owned());
+        let name = |f: &String| {
+            Path::new(f)
+                .file_name()
+                .map_or(f.clone(), |n| n.to_string_lossy().into_owned())
+        };
         return Ok(files.iter().map(name).collect());
     };
     let bytes = std::fs::read(t).map_err(|_| missing(t))?;
@@ -80,12 +84,17 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     let shown = if json {
         let mut o = Out::default();
         o.raw("{\"schema\":\"sample-pair/1\",\"status\":")
-            .str(if paired.notes.is_empty() { "complete" } else { "adjusted" })
+            .str(if paired.notes.is_empty() {
+                "complete"
+            } else {
+                "adjusted"
+            })
             .raw(",\"samples\":")
             .raw(&paired.text)
             .raw(",\"pairing\":");
         let pairing = mzlab_core::samples::notes_json(&paired.notes);
-        o.raw(if pairing.is_empty() { "[]" } else { &pairing }).raw("}");
+        o.raw(if pairing.is_empty() { "[]" } else { &pairing })
+            .raw("}");
         o.0
     } else {
         paired.text.clone()

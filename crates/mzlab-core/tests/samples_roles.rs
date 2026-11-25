@@ -219,10 +219,7 @@ fn the_lenient_pairing_keeps_the_fields_it_does_not_know() {
         .map(|r| r.get("file").and_then(|x| x.str()).unwrap())
         .collect();
     assert_eq!(files, ["a_t10.mzML", "a_t0.mzML", "a_dark.mzML"]);
-    let kept = rows
-        .iter()
-        .filter(|r| r.get("free_text").is_some())
-        .count();
+    let kept = rows.iter().filter(|r| r.get("free_text").is_some()).count();
     assert_eq!(kept, 1, "the extra field of the row that is still there");
     assert_eq!(rows[2].get("kind").and_then(|x| x.str()), Some("dark"));
 }

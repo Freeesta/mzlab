@@ -124,7 +124,12 @@ fn samples_the_table_does_not_carry_are_left_out_and_the_dig_runs() {
     let at = a.find(",\"pairing\":[").expect("the pairing of the dig");
     let end = a[at..].find(']').unwrap() + at + 1;
     let (note, rest) = (&a[at..end], format!("{}{}", &a[..at], &a[end..]));
-    assert!(note.contains("\"left_out\"") && note.contains("Smp_darkcontrol.mzML") && note.contains("Smp_std_5ppm.mzML"), "{note}");
+    assert!(
+        note.contains("\"left_out\"")
+            && note.contains("Smp_darkcontrol.mzML")
+            && note.contains("Smp_std_5ppm.mzML"),
+        "{note}"
+    );
     assert!(!b.contains("\"pairing\""));
     assert!(
         rest == b,
