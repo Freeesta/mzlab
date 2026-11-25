@@ -61,8 +61,11 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli features a.mzML b.mzML --report report.json --out table.csv"),
     r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect blank level set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
+    r("quant targets", "target list windows many files batches internal standard reference rt drift shift align retention time correction mass offset per polarity negative positive calibration error", &["trace xic", "quant union", "raw xic", "dad delay"])
+        .ex("mzlab-cli quant targets --targets t.csv runs/ --offset auto --rt-ref auto"),
+    r("dad delay", "delay lag detector pda uv dad ms offset flow cell tubing synchronise align uv to ms time correction", &["dad peaks", "dad ms-at", "file convert"]),
     r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
-    r("trace xic", "extracted ion chromatogram eic xic many ions list mz", &["peak table", "trace chrom", "chrom.transitions"])
+    r("trace xic", "extracted ion chromatogram eic xic many ions list mz mass offset calibration error polarity", &["peak table", "trace chrom", "chrom.transitions", "quant targets"])
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),

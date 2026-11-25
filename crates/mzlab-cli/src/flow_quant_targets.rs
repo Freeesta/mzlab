@@ -35,6 +35,11 @@ pub fn quant_targets_step() -> Step {
             Param::text("offset", "m/z offset").default_str("0")
                 .doc("Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]")
                 .tip("Observed minus true m/z: 0, a number of Da, or auto to measure it on a standard."),
+            Param::text("rt_ref", "RT reference").default_str("off")
+                .doc("Follow an internal reference between batches: off, auto (first standard or parent row) or a target id, each with an optional @RT where it is expected (else its window centre); every window moves by the apex found minus that, per file; the log and the rt_shift_min column say what was done")
+                .tip("Keep the RT windows on an internal reference when batches drift."),
+            Param::number("rt_span", "RT search half-width").min(0.05).max(5.0).default_num(0.6).unit("min").advanced()
+                .doc("The reference apex is looked for in its window widened by this on each side (rt_ref on)"),
             Param::text("blank_pattern", "Blank files").default_str("")
                 .doc("Comma list of case-insensitive globs over the file names; a target detected in a blank flags the samples in_blank"),
             Param::integer("ms_level", "MS level").min(1.0).max(10.0).default_num(1.0).advanced(),

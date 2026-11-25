@@ -79,6 +79,15 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    (
+        "retention times drift between batches, align on an internal standard",
+        "quant targets",
+    ),
+    (
+        "mass offset differs by polarity, measure it on the parent",
+        "quant targets",
+    ),
+    ("delay of the uv detector against the ms", "dad delay"),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
 ];
