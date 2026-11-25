@@ -34,7 +34,7 @@ def spread(out, writer, header, ion_spray, full, product):
 
 
 def damaged(out, writer, header, full, product):
-    """Three damaged methods, one file each: `cut_header.wiff` (the `ExperimentHeader` of the product-ion experiment ends before the scan-type code), `cut_range.wiff` (the `MassRangeEx` announces two ranges and holds one) and `bad_tag.wiff` (a parameter tag of odd length, the garbage a bad copy leaves)."""
+    """Three damaged methods, one file each, in `out/damaged/` (the engine .wasm lists such a pair that the app refuses, so the tests that walk every pair of `out` must not meet them): `cut_header.wiff` (the `ExperimentHeader` of the product-ion experiment ends before the scan-type code), `cut_range.wiff` (the `MassRangeEx` announces two ranges and holds one) and `bad_tag.wiff` (a parameter tag of odd length, the garbage a bad copy leaves)."""
     blocks = [("scan", full if e == 0 else product, 1000.0 * c + 100.0 * e, 1.0) for c in range(2) for e in range(2)]
 
     def head(code, prec, count=1, cut=None):
@@ -42,13 +42,15 @@ def damaged(out, writer, header, full, product):
         d[176:180] = struct.pack("<I", count)
         return bytes(d[:cut] if cut else d)
 
+    (out / "damaged").mkdir(exist_ok=True)
+
     def make(name, headers, ranges):
         method = {"Experiment0/ExperimentHeader": head(15, 30.0), "Experiment1/ExperimentHeader": headers,
                   "Experiment0/MassRangeEx/MassRangeEx": counted_range([(100.0, 300.0, 0.06, (60.0, 10.0, 0.0, 0.0))]),
                   "Experiment1/MassRangeEx/MassRangeEx": ranges}
         w = writer()
         w.sample(1, blocks, method)
-        w.save(out, name)
+        w.save(out / "damaged", name)
 
     good = counted_range([(50.0, 300.0, 0.06, (60.0, 35.0, 0.0, 15.0))])
     make("cut_header", head(11, 253.1, cut=100), good)

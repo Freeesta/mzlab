@@ -159,7 +159,7 @@ fn damaged_method_streams_are_reported_and_never_panic() {
         ("cut_range", "err.file.wiffMassRange"),
         ("bad_tag", "err.file.wiffMassRange"),
     ] {
-        let file = dir.join(format!("{name}.wiff"));
+        let file = dir.join("damaged").join(format!("{name}.wiff"));
         let o = run(&["file", "method", &file.to_string_lossy()]);
         assert_eq!(o.code, 4, "{name}: {}", o.stderr);
         assert!(o.stderr.contains(key), "{name}: {}", o.stderr);
