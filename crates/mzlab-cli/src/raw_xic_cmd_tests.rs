@@ -244,6 +244,11 @@ fn inconsistent_rows_fail_the_file_loud_with_a_data_error() {
     for (rows, masses, what) in [
         (vec!["{not json".to_string()], 1, "unreadable row"),
         (ok.clone(), 2, "fewer rows than masses"),
+        (
+            vec![ok[0].clone(), ok[0].clone()],
+            1,
+            "more rows than masses",
+        ),
         (vec![], 1, "no rows"),
     ] {
         let e = super::check_rows(&rows, masses, "a.mzML").unwrap_err();

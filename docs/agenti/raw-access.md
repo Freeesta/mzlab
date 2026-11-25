@@ -2,7 +2,8 @@
 
 The first slice of the raw access study (`docs/studies/RAW_ACCESS_STUDY.md`, `RAW_ACCESS_STUDY_2.md` §1-2). Code: `crates/mzlab-core/src/rawinfo.rs` (all logic,
 route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-rawxic-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
-`rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` and `rawxic` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
+`rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` and `rawxic` `.wasm` vs the CLI, byte for byte),
+  `crates/mzlab-desktop/tests/parity_routes.rs` and `parity_routes/raw_pol.rs` (app vs `.wasm`: the shared example is positive-only, `raw_pol.rs` is a file of alternating polarity read on every section, `+` and `-`; no `--sample` step on the app leg: a route answers over the index of one sample already chosen, so the sample choice is pinned CLI against `.wasm`).
 
 ## `raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]`
 - Per file `file`, `container`, `sha256`, `size_bytes`, `samples` (the sample read: `--sample`, else the first, logged in `provenance.choices`); per sample, from the index only:
