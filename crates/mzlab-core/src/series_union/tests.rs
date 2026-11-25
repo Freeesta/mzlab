@@ -174,9 +174,9 @@ fn polarity_any_is_every_scan_like_no_polarity_and_a_wrong_word_is_refused() {
     for any in [r#"{"polarity":"any"}"#, r#"{"polarity":""}"#] {
         assert_eq!(run(&t, any).get("csv"), none.get("csv"), "{any}");
     }
-    let bad = super::route(&format!(
-        r#"{{"tables":[{{"name":"s1","text":"id,mz,rt\na,200,3\n"}}],"params":{{"polarity":"both"}}}}"#
-    ));
+    let bad = super::route(
+        r#"{"tables":[{"name":"s1","text":"id,mz,rt\na,200,3\n"}],"params":{"polarity":"both"}}"#,
+    );
     assert_eq!(bad.unwrap_err().key, "err.union.param");
 }
 
