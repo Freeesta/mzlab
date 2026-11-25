@@ -54,10 +54,18 @@ impl<R: ReadAt> Routes<R> {
         let sel = self.select_scans(level, lo, hi, prec, filt.as_deref())?;
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
-        // (scan type, scans, counts), types in order of first appearance
+        let (n, total, types) = self.tally(sel.as_ref())?;
+        Ok(Some(answer(level, fill, n, total, &types, &probe, quant)))
+    }
+
+    /// The scans of the selection: how many, their counts, and the same per scan type (in order of first appearance).
+    fn tally(
+        &mut self,
+        sel: Option<&crate::spectrum::Selection>,
+    ) -> Result<(usize, f64, Vec<(String, usize, f64)>)> {
         let mut types: Vec<(String, usize, f64)> = Vec::new();
         let (mut n, mut total) = (0usize, 0.0f64);
-        if let Some(sl) = &sel {
+        if let Some(sl) = sel {
             let ar = self.idx.arrays(sl.si)?.clone();
             for j in (0..ar.rt.len()).filter(|&j| sl.ok[j]) {
                 let key = self.idx.scans[ar.scan_ids[j] as usize].key();
@@ -73,47 +81,60 @@ impl<R: ReadAt> Routes<R> {
                 }
             }
         }
-        let ions = |counts: f64, ms: Option<f64>| ms.map(|t| counts * t / 1000.0);
-        let opt = |o: &mut Out, v: Option<f64>| match v {
-            Some(v) => {
-                o.num(round(v, 1));
-            }
-            None => {
-                o.raw("null");
-            }
-        };
-        let mut o = Out::default();
-        o.raw("{\"mode\":\"sum\",\"ms_level\":")
-            .int(i64::from(level));
-        o.raw(",\"n_scans\":").int(n as i64);
-        o.raw(",\"counts_cps\":").num(round(total, 1));
-        o.raw(",\"fill_time\":{\"ms\":");
-        match fill {
-            Some(t) => o.num(t).raw(",\"source\":\"user\",\"note\":null"),
-            None => o.raw("null,\"source\":\"none\",\"note\":").str(NO_FILL),
-        };
-        o.raw("},\"ions\":");
-        opt(&mut o, ions(total, fill));
-        o.raw(",\"by_scan_type\":[");
-        for (i, (k, c, s)) in types.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" }).raw("{\"scan_type\":");
-            o.str(k).raw(",\"n_scans\":").int(*c as i64);
-            o.raw(",\"counts_cps\":")
-                .num(round(*s, 1))
-                .raw(",\"ions\":");
-            opt(&mut o, ions(*s, fill));
-            o.raw("}");
-        }
-        o.raw("],\"ion_quantum\":")
-            .raw(&crate::rawinfo::quantum_json(Some(&probe)));
-        o.raw(",\"ions_by_quantum\":");
-        opt(&mut o, quant.map(|q| total / q.q));
-        o.raw(",\"ions_by_quantum_note\":");
-        match quant {
-            Some(_) => o.raw("null"),
-            None => o.str(NO_QUANTUM),
-        };
-        o.raw(",\"background\":{\"applied\":\"none\",\"method\":null}}");
-        Ok(Some(o.0))
+        Ok((n, total, types))
     }
+}
+
+/// The answer text (see the module header for the keys).
+fn answer(
+    level: u8,
+    fill: Option<f64>,
+    n: usize,
+    total: f64,
+    types: &[(String, usize, f64)],
+    probe: &crate::rawinfo::Probe,
+    quant: Option<crate::ionstat::Quantum>,
+) -> String {
+    let ions = |counts: f64, ms: Option<f64>| ms.map(|t| counts * t / 1000.0);
+    let opt = |o: &mut Out, v: Option<f64>| match v {
+        Some(v) => {
+            o.num(round(v, 1));
+        }
+        None => {
+            o.raw("null");
+        }
+    };
+    let mut o = Out::default();
+    o.raw("{\"mode\":\"sum\",\"ms_level\":")
+        .int(i64::from(level));
+    o.raw(",\"n_scans\":").int(n as i64);
+    o.raw(",\"counts_cps\":").num(round(total, 1));
+    o.raw(",\"fill_time\":{\"ms\":");
+    match fill {
+        Some(t) => o.num(t).raw(",\"source\":\"user\",\"note\":null"),
+        None => o.raw("null,\"source\":\"none\",\"note\":").str(NO_FILL),
+    };
+    o.raw("},\"ions\":");
+    opt(&mut o, ions(total, fill));
+    o.raw(",\"by_scan_type\":[");
+    for (i, (k, c, s)) in types.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"scan_type\":");
+        o.str(k).raw(",\"n_scans\":").int(*c as i64);
+        o.raw(",\"counts_cps\":")
+            .num(round(*s, 1))
+            .raw(",\"ions\":");
+        opt(&mut o, ions(*s, fill));
+        o.raw("}");
+    }
+    o.raw("],\"ion_quantum\":")
+        .raw(&crate::rawinfo::quantum_json(Some(probe)));
+    o.raw(",\"ions_by_quantum\":");
+    opt(&mut o, quant.map(|q| total / q.q));
+    o.raw(",\"ions_by_quantum_note\":");
+    match quant {
+        Some(_) => o.raw("null"),
+        None => o.str(NO_QUANTUM),
+    };
+    o.raw(",\"background\":{\"applied\":\"none\",\"method\":null}}");
+    o.0
 }
