@@ -16,7 +16,8 @@ pub(super) fn union() -> Step {
             Param::number("da", "m/z agreement").min(0.001).max(5.0).default_num(0.5).unit("Da")
                 .doc("Rows of different series are one target when their m/z differ by no more than this"),
             Param::number("rt_tol", "RT agreement").min(0.001).max(5.0).default_num(0.1).unit("min")
-                .doc("... and their RT, after the map, by no more than this; the window of a row without one is its RT plus and minus this"),
+                .doc("... and their RT, after the map, by no more than this; the window of a row without one is its RT plus and minus this")
+                .tip("RT agreement after the map; also the half-window of a row without an RT range."),
             Param::choice("rt_warp", "RT map", &["off", "piecewise"]).default_str("off")
                 .doc("piecewise maps every other series onto the first from the rows both hold (fewer than 3 anchors: no map, logged)"),
             Param::number("rt_gap", "Widest anchor gap").min(0.001).max(5.0).default_num(0.5).unit("min")
@@ -26,7 +27,8 @@ pub(super) fn union() -> Step {
             Param::number("pad", "Window padding").min(0.0).max(5.0).default_num(0.0).unit("min")
                 .doc("Minutes added on both sides of every window"),
             Param::choice("polarity", "Polarity", &["any", "+", "-"]).default_str("any")
-                .doc("The polarity of the rows (a table holds none): + or -, any = every scan; run one list per polarity"),
+                .doc("The polarity of the rows (a table holds none): + or -, any = every scan; run one list per polarity")
+                .tip("The polarity of the list: + or -, any = every scan; run one list per polarity."),
         ],
         runs_in: RunsIn {
             wasm: Some("flowtab"),
