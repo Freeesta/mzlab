@@ -43,7 +43,7 @@ pub fn z_of(alpha: f64) -> f64 {
             / (((((B[0] * r + B[1]) * r + B[2]) * r + B[3]) * r + B[4]) * r + 1.0);
     }
     // the upper tail (alpha < 0.02425): the lower-tail formula of alpha, negated
-    let q = (-2.0 * alpha.ln()).sqrt();
+    let q = (-2.0 * libm::log(alpha)).sqrt();
     -((((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
         / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0))
 }
@@ -117,7 +117,7 @@ fn count_stats(
         z * (lambda * n_p * (1.0 + n_p / n_b)).sqrt()
     };
     // never under the exact Poisson limit of zero background (3.0 counts at alpha 0.05)
-    let l_d = (z * z + 2.0 * l_c).max(-t.alpha.ln());
+    let l_d = (z * z + 2.0 * l_c).max(-libm::log(t.alpha));
     let sd = var.max(1.0).sqrt();
     let (mut run, mut cur) = (0usize, 0usize);
     let mut prev: Option<usize> = None;
