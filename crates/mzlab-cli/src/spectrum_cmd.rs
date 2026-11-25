@@ -10,6 +10,8 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, Parsed, Sample};
 use crate::Outcome;
 
+#[path = "spectrum_level.rs"]
+mod level;
 #[path = "spectrum_minus.rs"]
 mod minus;
 
@@ -20,7 +22,7 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
   --rt MIN    the scan nearest to MIN (minutes) at the level; the evidence names it
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
   --scan NO   the scan with that number (`spectrum list` prints it as scan_no); its level and precursor are used; no such scan: exit 5
-  --ms-level N the level (default 1, or the level of --scan)
+  --ms-level N the level (default: the level of --scan; the file's only level; else 1, and a file without level 1 names its levels: exit 5)
   --id CHANNEL only the scans of an ms:<key> or dd:<level> channel `file channels` lists
   --sample ID the sample of a file with several (.wiff); default the first
   --minus FILE a blank: its mean spectrum is subtracted (the engine's `/api/spectrum` with a background: lines where the difference is above zero,
@@ -138,7 +140,7 @@ fn get_one(
     csv: bool,
     minus: &mut Option<minus::Minus>,
 ) -> Result<String> {
-    let mut level = level.unwrap_or(1);
+    let (mut level, auto) = level::start(s, at, level)?;
     let mut resolved = "null".to_string();
     let mut pairs: Vec<(&str, String)> = Vec::new();
     let sid = scan_index(s, at, level, chan)?;
@@ -201,8 +203,9 @@ fn get_one(
         extract::jstr(&s.name),
         s.sample.map_or("null".to_string(), |i| i.to_string())
     );
+    let auto = auto.map_or(String::new(), |a| format!(",\"level_auto\":{a}"));
     let ev = format!(
-        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}{minus_ev}}}",
+        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved}{auto},\"answer\":{{{}}}{minus_ev}}}",
         extract::jstr(&text_of(&pairs)),
         ans
     );

@@ -396,3 +396,6 @@ fn table_exit_codes_a_bad_option_is_2_and_a_missing_names_file_gives_no_table() 
     assert_ne!(code, 0);
     assert!(!out.contains("samples/1"));
 }
+
+#[path = "samples_check_tests.rs"]
+mod check_tests;
