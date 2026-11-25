@@ -161,7 +161,15 @@ pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
         .iter()
         .map(|p| format!("  {}", problem_line(p)))
         .collect();
-    let hint = "fix the plan in the Flow page or with --set";
+    // a parameter out of range, of the wrong type or unknown: the values the data suggest and the limits are one call away
+    let params = problems
+        .iter()
+        .any(|p| p.error_key.starts_with("err.flow.param."));
+    let hint = if params {
+        "fix the plan in the Flow page or with --set; values measured on your files: mzlab-cli estimate FILE... --emit-set PLAN.json; limits and defaults: mzlab-cli flow defaults STEP"
+    } else {
+        "fix the plan in the Flow page or with --set"
+    };
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
     let mut o = fail(&err, &msg, hint);
