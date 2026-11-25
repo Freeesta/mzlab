@@ -162,6 +162,7 @@
   "err.cli.pair.oneSource": "Usage error of sample pair: both FILE... and --table, or neither, were given.",
   "err.cli.pair.proposedName": "Terminal line of the steps that pair the samples/1 with the files of a table: a file with no row takes a role read from its name that no single word gave (the lone D of a dark control); {file} = the file, {role} = the role.",
   "err.cli.pair.proposedNone": "Terminal line of tp.dig_lr, tp.link and tp.network: a file of the table with no row in the samples/1 takes the role of a plain sample because its name has no role word; {file} = the file, {role} = the role.",
+  "err.cli.samples.missing": "Hint of flow check and flow run when a step has no wired samples input (err.flow.port.missing on the port samples): the roles come from a samples/1, the two commands that write one, and the command that checks the pairing.",
   "err.cli.samples.hint": "Hint of a failed flow run when a step refuses its samples input (error.badSamples): the document must be a samples/1, and the two commands that write one.",
   "err.cli.union.summary": "Terminal line of quant union: what it made; {rows} = rows in all tables, {series} = number of tables, {targets} = rows of the target list, {merged} = targets that hold rows of more than one series.",
   "err.cli.union.conflict": "Terminal line of quant union: two targets of the list stand within the m/z and RT tolerances but could not merge because they come from one series; {a}, {b} = their ids, {dmz} = m/z distance in Da, {drt} = RT distance in minutes.",

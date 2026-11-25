@@ -209,3 +209,43 @@ fn a_wrong_samples_document_gets_a_hint_naming_the_commands() {
     );
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// A plan whose Dig has no `samples` input: `flow check` (exit 3) and `flow run` name the commands that write one instead of the general hint (DISCOVERABILITY).
+#[test]
+fn a_plan_without_a_samples_input_gets_a_hint_naming_the_commands() {
+    let d = fixture("nosamples", &ALL, &ALL);
+    let text = std::fs::read_to_string(d.join("plan.json")).unwrap();
+    let text = text
+        .replace(r#"{"name":"samples.json","type":"samples"},"#, "")
+        .replace(r#""samples":"file:samples.json","#, "");
+    std::fs::write(d.join("plan.json"), text).unwrap();
+    let plan = d.join("plan.json").to_str().unwrap().to_string();
+    let out = d.join("out");
+    for args in [
+        vec!["flow", "check", &plan],
+        vec![
+            "flow",
+            "run",
+            &plan,
+            "--in",
+            d.to_str().unwrap(),
+            "--out",
+            out.to_str().unwrap(),
+        ],
+    ] {
+        let a: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+        let o = execute(&a);
+        assert_eq!(o.code, 3, "{}", o.stderr);
+        let hint = o
+            .stderr
+            .lines()
+            .find(|l| l.starts_with("hint: "))
+            .unwrap_or("");
+        assert!(
+            hint.contains("mzlab-cli sample table") && hint.contains("mzlab-cli sample import"),
+            "{}",
+            o.stderr
+        );
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}

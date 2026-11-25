@@ -154,6 +154,18 @@ pub(crate) fn fail(err: &Error, msg: &str, hint: &str) -> Outcome {
     o
 }
 
+/// The hint of an invalid plan: a step with no wired `samples` input names the commands that write one (discoverability of the roles), else the general one.
+fn invalid_hint(problems: &[Problem]) -> String {
+    let no_samples = problems
+        .iter()
+        .any(|p| p.port == "samples" && p.error_key == "err.flow.port.missing");
+    if no_samples {
+        crate::samples_import::say("err.cli.samples.missing", &[])
+    } else {
+        "fix the plan in the Flow page or with --set".to_string()
+    }
+}
+
 /// Exit 3 for a plan that is not valid: one problem per line on stderr, and the list of problems in the `error/1` document.
 pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
     let list: Vec<String> = problems.iter().map(problem_text).collect();
@@ -161,10 +173,10 @@ pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
         .iter()
         .map(|p| format!("  {}", problem_line(p)))
         .collect();
-    let hint = "fix the plan in the Flow page or with --set";
+    let hint = invalid_hint(problems);
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
-    let mut o = fail(&err, &msg, hint);
+    let mut o = fail(&err, &msg, &hint);
     let mut j = Out::default();
     problem_list(&mut j, problems);
     if let Some(f) = o.error.as_mut() {

@@ -21,7 +21,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
-| FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | - | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
 | FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
