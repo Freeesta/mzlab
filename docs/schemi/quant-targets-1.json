@@ -216,7 +216,8 @@
               "blank",
               "offsets",
               "detected",
-              "forced"
+              "forced",
+              "detected_min"
             ],
             "additionalProperties": false,
             "properties": {
@@ -271,6 +272,35 @@
                     }
                   }
                 }
+              },
+              "detected_min": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "The weakest detected peaks of this file: the smallest S/N and the fewest scans at or over half height among its detected rows, each with the id of its target, so the user sees how close the accepted peaks are to the thresholds. null when the file has no detected row.",
+                "required": [
+                  "sn",
+                  "sn_id",
+                  "half_pts",
+                  "half_pts_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "sn": {
+                    "type": "number"
+                  },
+                  "sn_id": {
+                    "type": "string"
+                  },
+                  "half_pts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "half_pts_id": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -300,7 +330,7 @@
         },
         "decisions": {
           "type": "array",
-          "description": "The evidence of every forced row (a peak that missed a check): each check with the value measured, its limit and whether it passed. A detected row is not listed (its numbers are in the table).",
+          "description": "The evidence of every row that is not detected: a peak that missed a check (state forced) lists every check with the value measured, its limit and whether it passed (limit null: a shape gate that is off, its value is shown only); a row with no peak (state absent) has the reason in flag (no_peak or no_scans) and no checks. A detected row is not listed: its numbers are in the table and the weakest ones of each file in files[].detected_min.",
           "items": {
             "type": "object",
             "required": [
@@ -319,10 +349,14 @@
                 "type": "string"
               },
               "state": {
-                "const": "forced"
+                "enum": [
+                  "forced",
+                  "absent"
+                ]
               },
               "flag": {
-                "type": "string"
+                "type": "string",
+                "description": "The flags of the row joined with ';' (below_threshold, bad_shape, edge, in_blank; no_peak or no_scans for an absent row)."
               },
               "checks": {
                 "type": "array",
@@ -355,7 +389,11 @@
                       "description": "null: the trace gave no number (an asymmetry on a peak that does not come down inside its limits); such a check passes."
                     },
                     "limit": {
-                      "type": "number"
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "null: a shape gate that is off (min_half, max_fwhm, max_asym = 0); the check is listed for its value and always passes."
                     },
                     "op": {
                       "enum": [
@@ -367,7 +405,8 @@
                       "type": "boolean"
                     }
                   }
-                }
+                },
+                "description": "Empty for an absent row."
               }
             }
           }

@@ -38,6 +38,7 @@ fn targets() -> String {
     for i in 0..8 {
         t += &format!("blip{i},{},4.0,6.0\n", 210 + 10 * i);
     }
+    t += "none,333.0,4.0,6.0\n"; // no ion there in any file: an absent row
     t
 }
 
@@ -175,4 +176,52 @@ fn a_blip_in_the_blank_flags_the_matrix_only_while_the_blank_detects_it() {
     );
     let (new, _) = go(&[("blank_pattern", "blank*"), ("min_half", "3")]);
     assert!(!new.contains("in_blank"), "{new}");
+}
+
+/// The log shows what the decision rested on even when the gates are off: every check with its value (limit null for a gate that is off), a
+/// reason for every row without a peak, and the weakest detected peak of each file (how close the accepted peaks are to the thresholds).
+#[test]
+fn the_log_lists_every_forced_and_absent_row_and_the_weakest_detected_peak_of_each_file() {
+    let (_, log) = go(&[]);
+    let v: serde_json::Value = serde_json::from_str(&log).unwrap();
+    let dec = v["decisions"].as_array().unwrap();
+    let row = |file: &str, id: &str| {
+        dec.iter()
+            .find(|d| d["file"] == file && d["id"] == id)
+            .unwrap_or_else(|| panic!("{file}|{id} not in decisions: {log}"))
+    };
+    // a forced row (a blip under S/N 3): all six checks, the gates that are off with a measured value and a null limit
+    let forced = dec.iter().find(|d| d["state"] == "forced").expect(&log);
+    let checks = forced["checks"].as_array().unwrap();
+    let names: Vec<_> = checks.iter().map(|c| c["name"].as_str().unwrap()).collect();
+    assert_eq!(
+        names,
+        ["sn", "points", "shape", "half_pts", "fwhm_s", "asym"]
+    );
+    let half = &checks[3];
+    assert!(half["value"].is_number() && half["limit"].is_null() && half["pass"] == true);
+    assert_eq!(
+        checks[0]["limit"], 3.0,
+        "the S/N threshold is always judged"
+    );
+    // the real peak is detected: not in decisions; a target with no ion in its window is absent: its reason, no checks
+    assert!(!dec
+        .iter()
+        .any(|d| d["file"] == "Matrix.mzML" && d["id"] == "real"));
+    let absent = row("Blank_01.mzML", "none");
+    assert_eq!(
+        (absent["state"].as_str(), absent["flag"].as_str()),
+        (Some("absent"), Some("no_peak"))
+    );
+    assert!(absent["checks"].as_array().unwrap().is_empty());
+    // per file: the weakest detected peak, with the target it belongs to
+    let min = &v["files"][0]["detected_min"];
+    assert!(
+        min["sn"].as_f64().unwrap() >= 3.0 && min["sn_id"].is_string(),
+        "{log}"
+    );
+    assert!(
+        min["half_pts"].as_u64().unwrap() >= 1 && min["half_pts_id"].is_string(),
+        "{log}"
+    );
 }

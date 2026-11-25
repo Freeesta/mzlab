@@ -100,13 +100,13 @@ fn strings(o: &mut Out, list: &[String]) {
     o.raw("]");
 }
 
-/// The evidence of every peak that missed a check (state `forced`): the row, the flags it got and each check with its value and limit, so a
-/// threshold can be judged from the log without rerunning. A peak that passed everything is not listed (its numbers are in the table).
+/// The evidence of every row that is not `detected`: a peak that missed a check (state `forced`) with each check, its value and its limit, so a
+/// threshold can be judged from the log without rerunning, and a row with no peak (`absent`) with its reason (`no_peak` or `no_scans`) and no
+/// checks. The detected rows are summarized per file (`detected_min`); their numbers are in the table.
 fn decisions(o: &mut Out, p: &Params, rows: &[Row], names: &[String], targets: &[Target]) {
     o.raw("[");
     let mut first = true;
-    for r in rows.iter().filter(|r| r.state() == "forced") {
-        let Some(h) = &r.hit else { continue };
+    for r in rows.iter().filter(|r| r.state() != "detected") {
         o.raw(if first { "{\"file\":" } else { ",{\"file\":" })
             .str(&names[r.file]);
         first = false;
@@ -114,7 +114,12 @@ fn decisions(o: &mut Out, p: &Params, rows: &[Row], names: &[String], targets: &
         o.raw(",\"state\":").str(r.state());
         o.raw(",\"flag\":").str(&r.flags.join(";"));
         o.raw(",\"checks\":[");
-        for (i, c) in gates::checks(h, p).iter().enumerate() {
+        let checks = r
+            .hit
+            .as_ref()
+            .map(|h| gates::checks(h, p))
+            .unwrap_or_default();
+        for (i, c) in checks.iter().enumerate() {
             o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
                 .str(c.name);
             o.raw(",\"value\":");
@@ -122,7 +127,11 @@ fn decisions(o: &mut Out, p: &Params, rows: &[Row], names: &[String], targets: &
                 Some(v) => o.num(v),
                 None => o.raw("null"),
             };
-            o.raw(",\"limit\":").num(c.limit);
+            o.raw(",\"limit\":");
+            match c.limit {
+                Some(l) => o.num(l),
+                None => o.raw("null"),
+            };
             o.raw(",\"op\":").str(if c.min { ">=" } else { "<=" });
             o.raw(",\"pass\":")
                 .raw(if c.pass { "true}" } else { "false}" });
@@ -167,7 +176,19 @@ pub(crate) fn log(
                 .raw("}");
         }
         o.raw("],\"detected\":").int(f.detected as i64);
-        o.raw(",\"forced\":").int(f.forced as i64).raw("}");
+        o.raw(",\"forced\":").int(f.forced as i64);
+        o.raw(",\"detected_min\":");
+        match (&f.min_sn, &f.min_half) {
+            (Some((sn_id, sn)), Some((half_id, half))) => {
+                o.raw("{\"sn\":").num(*sn).raw(",\"sn_id\":").str(sn_id);
+                o.raw(",\"half_pts\":").int(*half as i64);
+                o.raw(",\"half_pts_id\":").str(half_id).raw("}");
+            }
+            _ => {
+                o.raw("null");
+            }
+        }
+        o.raw("}");
     }
     o.raw("],\"choices\":[");
     for (i, c) in choices.iter().enumerate() {

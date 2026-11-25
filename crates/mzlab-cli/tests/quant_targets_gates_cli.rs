@@ -70,28 +70,31 @@ fn blip_dir(tag: &str) -> PathBuf {
     d
 }
 
-#[test]
-fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_a_hint_and_exit_codes() {
-    let d = blip_dir("gates");
-    let base = [
+/// The CLI over `runs` of a `blip_dir` with a blank pattern and the given extra arguments.
+fn run_in(d: &Path, extra: &[&str]) -> Output {
+    let mut a = vec![
         "--targets",
         "targets.csv",
         "runs",
         "--blank-pattern",
         "blank*",
     ];
-    let run = |extra: &[&str]| {
-        let mut a = base.to_vec();
-        a.extend_from_slice(extra);
-        cli(&a, &d)
-    };
-    let count = |o: &Output, word: &str| {
-        text(&o.stdout)
-            .lines()
-            .filter(|l| l.contains(&format!(",{word},")))
-            .count()
-    };
-    let old = run(&[]);
+    a.extend_from_slice(extra);
+    cli(&a, d)
+}
+
+/// The rows of a table on stdout in the given state.
+fn count(o: &Output, word: &str) -> usize {
+    text(&o.stdout)
+        .lines()
+        .filter(|l| l.contains(&format!(",{word},")))
+        .count()
+}
+
+#[test]
+fn the_old_defaults_detect_the_blips_and_a_hint_names_the_gates_on_stderr() {
+    let d = blip_dir("hint");
+    let old = run_in(&d, &[]);
     assert_eq!(old.status.code(), Some(0), "{}", text(&old.stderr));
     assert!(
         count(&old, "detected") > 2,
@@ -109,7 +112,13 @@ fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_a_hint_and_exit_cod
         "{}",
         text(&old.stderr)
     );
-    let new = run(&["--set", "min_half=3", "--log", "log.json"]);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_in_the_log() {
+    let d = blip_dir("gates");
+    let new = run_in(&d, &["--set", "min_half=3", "--log", "log.json"]);
     assert_eq!(new.status.code(), Some(0), "{}", text(&new.stderr));
     assert_eq!(count(&new, "detected"), 1, "{}", text(&new.stdout));
     // 18 rows: the real peak detected, one blank target without any peak (absent), the rest forced
@@ -118,8 +127,18 @@ fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_a_hint_and_exit_cod
         serde_json::from_str(&std::fs::read_to_string(d.join("log.json")).unwrap()).unwrap();
     assert_eq!(log["params"]["min_half"], 3);
     let dec = log["decisions"].as_array().unwrap();
-    assert_eq!(dec.len(), count(&new, "forced"));
-    let half = dec[0]["checks"]
+    // every row that is not detected has its line: the forced ones with their checks, the absent ones with the reason
+    assert_eq!(
+        dec.len(),
+        count(&new, "forced") + count(&new, "absent"),
+        "{}",
+        text(&new.stdout)
+    );
+    assert!(
+        log["files"][0]["detected_min"]["sn"].is_number()
+            || log["files"][1]["detected_min"]["sn"].is_number()
+    );
+    let half = dec.iter().find(|d| d["state"] == "forced").unwrap()["checks"]
         .as_array()
         .unwrap()
         .iter()
@@ -130,8 +149,15 @@ fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_a_hint_and_exit_cod
         (Some(3.0), Some(">="))
     );
     // the log keys are the schema's, and every state is a word of the vocabulary
-    schema_lists_the_log_keys(&text(&run(&["--set", "min_half=3", "--json"]).stdout));
-    // exit codes: a gate out of its range is a usage error (2), never clamped; the data is untouched on stdout
+    schema_lists_the_log_keys(&text(
+        &run_in(&d, &["--set", "min_half=3", "--json"]).stdout,
+    ));
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_gate_out_of_its_range_is_a_usage_error_and_stdout_stays_empty() {
+    let d = blip_dir("range");
     for bad in [
         "max_asym=0.5",
         "min_half=-1",
@@ -140,7 +166,7 @@ fn the_shape_gate_turns_blips_into_forced_rows_with_evidence_a_hint_and_exit_cod
         "min_half=x",
         "max_widht=3",
     ] {
-        let o = run(&["--set", bad]);
+        let o = run_in(&d, &["--set", bad]);
         assert_eq!(o.status.code(), Some(2), "{bad}: {}", text(&o.stderr));
         assert!(o.stdout.is_empty(), "{bad}");
     }

@@ -67,6 +67,9 @@ pub(crate) struct FileLog {
     pub detected: usize,
     /// Rows with a peak that missed a check (state `forced`): their evidence is in the log `decisions`.
     pub forced: usize,
+    /// The weakest detected rows of the file (target id and value): how close the accepted peaks are to the thresholds.
+    pub min_sn: Option<(String, f64)>,
+    pub min_half: Option<(String, usize)>,
 }
 
 /// An automatic choice of the run: what, the value taken, why.
@@ -148,6 +151,18 @@ fn offsets<R: ReadAt>(
 /// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too).
 fn integrate(rt: &[f64], y: &[f64], t: &Target, p: &Params) -> (Option<Hit>, usize, usize, bool) {
     tallest(rt, y, t.rt_min, t.rt_max, p.smooth_half, p.valley_pct)
+}
+
+/// The detected row with the smallest `key` of its peak: (target id, value). The first one wins a tie, so the log is stable.
+fn weakest(rows: &[Row], targets: &[Target], key: impl Fn(&Hit) -> f64) -> Option<(String, f64)> {
+    rows.iter()
+        .filter(|r| r.detected())
+        .filter_map(|r| r.hit.as_ref().map(|h| (r.target, key(h))))
+        .fold(None, |best: Option<(usize, f64)>, (t, v)| match best {
+            Some((_, b)) if b <= v => best,
+            _ => Some((t, v)),
+        })
+        .map(|(t, v)| (targets[t].id.clone(), v))
 }
 
 /// The flags of a row from its hit (`in_blank` comes after every file).
@@ -335,6 +350,9 @@ impl Job {
             offsets: offs,
             detected: rows.iter().filter(|x| x.detected()).count(),
             forced: rows.iter().filter(|x| x.state() == "forced").count(),
+            min_sn: weakest(&rows, &self.targets, |h| h.sn),
+            min_half: weakest(&rows, &self.targets, |h| h.half_pts as f64)
+                .map(|(id, v)| (id, v as usize)),
         };
         Ok(FilePass {
             rows,
