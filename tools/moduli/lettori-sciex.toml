@@ -5,5 +5,5 @@ senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 508928
-misura = 502209
-nota = "carries the .wiff device traces (+6 KB), the by-sector OLE open (+2.6 KB), the sample list and the section ranges of the range copy (+1.4 KB); measured plus margin, rounded to 1 KiB; the spectrum-type decision of the writer per MS level (+5.1 KB over main); the DP cvParam of the writer now written in every build, not only with `precursori` (+2.8 KB, CI size step, 502,209 B before the damaged-stream reporting)"
+misura = 503973
+nota = "carries the .wiff device traces (+6 KB), the by-sector OLE open (+2.6 KB), the sample list and the section ranges of the range copy (+1.4 KB); measured plus margin, rounded to 1 KiB; the spectrum-type decision of the writer per MS level (+5.1 KB over main); the DP cvParam of the writer now written in every build, not only with `precursori` (+2.8 KB, CI size step; 502,209 B before the damaged-stream reporting, 503,973 B after)"
