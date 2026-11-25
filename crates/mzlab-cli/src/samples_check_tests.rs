@@ -144,3 +144,17 @@ fn a_cut_scan_is_short_and_padding_is_not_an_alarm() {
     assert!(consistency(&out).is_none(), "{out}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// Queued table rows (listed samples with nothing in them) do not hide a section the index does not hold: the pair is still flagged as unlisted.
+#[test]
+fn queued_empty_rows_do_not_hide_an_unindexed_section() {
+    let d = pairs("consistency_queued");
+    let at = at_in(&d, "unindexed_in_coda");
+    age_pair(&d, "unindexed_in_coda", 3600);
+    let (code, out, err) = run(&["sample", "list", &at, "--json"]);
+    assert_eq!(code, 1, "{err}");
+    let c = consistency(&out).expect("consistency");
+    assert_eq!(c.get("status").and_then(|v| v.str()), Some("unlisted"));
+    assert_eq!(c.get("sections_unlisted").and_then(|v| v.f64()), Some(1.0));
+    let _ = std::fs::remove_dir_all(&d);
+}

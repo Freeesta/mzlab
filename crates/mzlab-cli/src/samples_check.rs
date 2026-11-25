@@ -27,7 +27,14 @@ pub(super) fn completeness(
 ) -> Option<mzlab_core::wiff::Completeness> {
     let listing = l.listing();
     let (scan_bytes, end) = listing.scan?;
-    let highest = l.samples().iter().map(|s| s.id).max().unwrap_or(0);
+    // a listed sample with nothing in it is a queued row whose section the index does not hold yet: only sections above the last non-empty sample are searched
+    let highest = l
+        .samples()
+        .iter()
+        .filter(|s| s.size != Some(0))
+        .map(|s| s.id)
+        .max()
+        .unwrap_or(0);
     let unlisted = if scan_bytes > end {
         let mut f = crate::flow_set::scan_file(path)?;
         mzlab_core::wiff::unlisted_sections(&mut f, scan_bytes, end, highest)
