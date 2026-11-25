@@ -89,7 +89,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("dad ms-at", "mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time", |a| crate::dad_cmd::run(pre("ms-at", a))),
     Entry::new("dad delay", "mzlab-cli dad delay FILE ...   the delay between the DAD and the MS", |a| crate::dad_cmd::run(pre("delay", a))),
     Entry::new("dad peaks", "mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions", |a| crate::dad_cmd::run(pre("peaks", a))),
-    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV, or minus a blank", crate::spectrum_cmd::get)
+    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV; --sum adds the scans of a window and counts them and the ions; or minus a blank", crate::spectrum_cmd::get)
         .schema("spectrum/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("spectrum list", "mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)", crate::spectrum_cmd::list)

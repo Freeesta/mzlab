@@ -39,7 +39,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | DAD (UV/Vis) detector of the `.wiff`: matrix, RT-λ map, UV spectrum, TWC/XWC (`xwc.js`), XWC integration, DAD on the MRM panel (`dad-mrm.js`) | `docs/agenti/dad.md` |
 | calculator ("what it could be" groups under the number), Adducts panel, facts on 3200 data, gradient, analog traces, data tables, theme | `docs/agenti/data-3200.md` |
 | sidebar of the Data view, tools, hints, tour | `docs/agenti/data-bar.md` |
-| data channels, `file info`, `trace`, `spectrum` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
+| data channels, `file info`, `trace`, `spectrum` incl. `--sum` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
 | load a folder, pointed and remembered folder (greyed list, "Others", desktop), background warm-up of the pointed folder's files (queue, `lr_warm`, `lr_warm_claim`) | `docs/agenti/data-folder.md` |
 | peak integration in the Data view (automatic tool, one click = all peaks in HR, parameters, `auto_integrate`) | `docs/agenti/data-integration.md` |
 | first load of several files (only the first opens), fields of the load table | `docs/agenti/data-loading.md` |
@@ -152,7 +152,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | substitution position in TP isomers (MS2-compatible classes, `chem/positions.rs`, `posiz/1`) | `docs/agenti/positions.md` |
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progress.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-mass.md` |
-| target list over many files (`quant.targets`, `quant targets`: one sweep per file, `peak auto-lr` engine, flags, `--offset auto`, `quant-targets-log/1`; `quant union` and step `features.union`: one list for many series, `union/1`, `rt_warp`, AU-4) | `docs/agenti/quant-targets.md` |
+| target list over many files (`quant.targets`, `quant targets`: one sweep per file, `peak auto-lr` engine, flags, `--offset auto`, `--rt-ref`, `quant-targets-log/1`; `quant union` and step `features.union`: one list for many series, `union/1`, `rt_warp`, AU-4) | `docs/agenti/quant-targets.md` |
 | `raw info` / `raw cache` / `raw xic`: what a raw file holds and whether a peak is there (`raw-info/1`, `raw-cache/1`, `raw-xic/1`, `raw-plan/1`: grid, ion quantum, offset, cache, verdicts with ion counts; routes `/api/rawinfo`, `/api/rawxic`) | `docs/agenti/raw-access.md` |
 | `.raw` → mzML conversion: bench `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, starting points V1-V9, causes of D8 and D11, synthetic dense case, parallel encoding (`convert_times`) | `docs/agenti/raw-mzml.md` |
 | register of raw-file fields: extracted or declared ("no loss" rule) | `docs/agenti/raw-not-extracted.md` |
