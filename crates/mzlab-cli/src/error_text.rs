@@ -98,8 +98,13 @@ pub(crate) fn human(msg: &str) -> String {
 
 /// A calm notice (the one the desktop app gives its page as `{"key", "params"}`) as the terminal line: «text (key)».
 pub fn warning(n: &crate::convert::Notice) -> String {
-    let remainder: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
-    render(n.key, n.key, &remainder)
+    // the parameters stay whole (a file name with spaces or `=`), which the text form `key k=v` cannot tell apart
+    let par = n
+        .params
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
+    render_params(n.key, n.key, par)
 }
 
 /// A notice of the engine documents (`warnings` of `file method`) as the terminal line: «text (key)».

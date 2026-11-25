@@ -55,7 +55,33 @@
     },
     "evidence": {
       "type": "object",
-      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level) and answer (the route's own members)."
+      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level), answer (the route's own members) and, only when --ms-level was absent and the file's only MS level is not 1, level_auto; with --sum, `sum` (n_scans, counts_cps, fill_time, ions, by_scan_type, ion_quantum, ions_by_quantum, background: the bytes of /api/specsum); in the mean of a window of two scans or more, `hint` (key, text, command) names --sum.",
+      "properties": {
+        "level_auto": {
+          "type": "object",
+          "description": "Present only when --ms-level was absent and the file's only MS level is not 1: the level that was used and why.",
+          "required": [
+            "ms_level",
+            "levels",
+            "why"
+          ],
+          "properties": {
+            "ms_level": {
+              "type": "integer"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "why": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
     }
   }
 }

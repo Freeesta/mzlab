@@ -34,6 +34,25 @@ pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
     Ok(l.samples().iter().map(|s| s.id).collect())
 }
 
+/// How many samples `path` holds when it holds several (best effort: an mzML, an index or a file the listing cannot read has none to choose from).
+pub(crate) fn several(path: &Path) -> Option<usize> {
+    let low = path.to_string_lossy().to_lowercase();
+    if [".mzml", ".mzml.gz", ".mzxml", ".mzidx"]
+        .iter()
+        .any(|e| low.ends_with(e))
+    {
+        return None;
+    }
+    present(path).ok().map(|p| p.len()).filter(|n| *n > 1)
+}
+
+/// The ids and names of the samples of `path`, from the container and index alone.
+pub(crate) fn named(path: &Path) -> Result<Vec<(u32, String)>> {
+    let fs = crate::flow_set::file_set(path)?;
+    let l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
+    Ok(l.samples().iter().map(|s| (s.id, s.name.clone())).collect())
+}
+
 /// The ids and section bytes (0 when the reader gives none) of the samples of `path`, from the container and index alone.
 pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
     let fs = crate::flow_set::file_set(path)?;

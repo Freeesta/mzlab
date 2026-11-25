@@ -7,13 +7,17 @@ use mzlab_core::error::Result;
 use mzlab_core::flow::value_text;
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::axis::MassAxis;
-use mzlab_feat::lrscreen::{centroid_wanted, Log};
+use mzlab_feat::lrscreen::{centroid_wanted, label_reason, LabelCheck, Log};
 use mzlab_feat::recipe::Recipe;
-use mzlab_ops::run::feat::lr_note::{note_of, Note};
+use mzlab_ops::run::feat::lr_note::{self, note_of, Note};
+
+use crate::convert::Notice;
 
 /// One member of the series: how it is called, what the index says and whether its profile scans are centroided.
 struct Member {
     name: String,
+    /// The column of the table (`sample_label`), only for a sample chosen with `--sample`.
+    column: Option<String>,
     note: Note,
     centroid: bool,
 }
@@ -22,22 +26,87 @@ fn members(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[Strin
     idxs.iter()
         .enumerate()
         .filter_map(|(k, idx)| {
-            let index = crate::open(idx).ok()?;
-            let name = match labels.get(k).filter(|l| !l.is_empty()) {
-                Some(l) => l.clone(),
-                None => files[k].display().to_string(),
+            let mut index = crate::open(idx).ok()?;
+            // a chosen sample is `FILE@ID` (the identity) with its column apart; a label is `COLUMN@ID`
+            let (name, column) = match labels.get(k).map(|l| crate::flow_set::split_sample(l)) {
+                Some((c, Some(id))) => (
+                    format!(
+                        "{}@{id}",
+                        files[k]
+                            .file_name()
+                            .map_or(String::new(), |n| n.to_string_lossy().into_owned())
+                    ),
+                    Some(c.to_string()),
+                ),
+                _ => (files[k].display().to_string(), None),
             };
             Some(Member {
-                centroid: centroid_wanted(&index, recipe),
-                note: note_of(recipe, &index),
+                column,
+                centroid: centroid_wanted(&mut index, recipe),
+                note: note_of(recipe, &mut index),
                 name,
             })
         })
         .collect()
 }
 
+/// The label check behind a member's notice (its numbers), when the file is labelled profile but holds sparse ion counts.
+fn label_of(x: &Member) -> Option<LabelCheck> {
+    let n = x
+        .note
+        .notices
+        .iter()
+        .find(|n| n.key == lr_note::LABEL_MISMATCH)?;
+    let p = |k: &str| n.params.iter().find(|(q, _)| *q == k).map(|(_, v)| *v);
+    Some(LabelCheck {
+        profile: p("profile")?,
+        scans: p("scans")?,
+        probed: p("probed")?,
+        points: p("points")?,
+        spacings: p("spacings")?,
+        runs_pct: p("runs")?,
+        fine_pct: p("fine")?,
+        sparse: true,
+    })
+}
+
+/// Why the centroid switch is what it is for a member: the numbers of the label check, else the share of profile scans.
+fn centroid_why(x: &Member) -> String {
+    match label_of(x) {
+        Some(c) => format!("{}: {}", x.name, label_reason(&c)),
+        None => format!(
+            "{}: {} of {} MS1 scans in profile mode",
+            x.name, x.note.profile, x.note.scans
+        ),
+    }
+}
+
 fn num(x: f64) -> String {
     value_text(&Value::Num(x))
+}
+
+/// The note that rows are still close after the duplicate merge, with the first pair's numbers: the hint that `dedup_overlap` exists.
+pub(crate) fn near_notice(log: &Log) -> Option<Notice> {
+    let n = log.near.first()?;
+    Some(Notice {
+        key: "note.features.nearDup",
+        params: vec![
+            ("n", log.near.len().to_string()),
+            ("mz_a", format!("{:.3}", n.a.0)),
+            ("mz_b", format!("{:.3}", n.b.0)),
+            ("rt_a", format!("{:.2}", n.a.1)),
+            ("rt_b", format!("{:.2}", n.b.1)),
+        ],
+    })
+}
+
+/// A number that may be missing (NaN): `null` then.
+fn opt(x: f64) -> String {
+    if x.is_finite() {
+        num(x)
+    } else {
+        "null".into()
+    }
 }
 
 fn share(n: &Note) -> f64 {
@@ -102,6 +171,7 @@ pub(crate) fn plan_text(
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"member\":")
             .str(&x.name);
+        column(&mut o, x);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroid\":{}",
             x.note.unit,
@@ -123,6 +193,13 @@ pub(crate) fn plan_text(
     Ok(o.0)
 }
 
+/// `,"column":"..."` of a member chosen with `--sample`: the label its column has in the table (a run without `--sample` keeps its bytes).
+fn column(o: &mut Out, x: &Member) {
+    if let Some(c) = &x.column {
+        o.raw(",\"column\":").str(c);
+    }
+}
+
 fn row(o: &mut Out, r: (f64, f64)) {
     o.raw(&format!("{{\"mz\":{},\"rt\":{}}}", num(r.0), num(r.1)));
 }
@@ -135,6 +212,7 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"member\":")
             .str(&x.name);
+        column(o, x);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}{}}}",
             x.note.unit,
@@ -152,41 +230,53 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
     }
 }
 
-/// `features-report/1`: `rows` = features detected in each member; the evidence of the recipe holds the shifts, the merged rows and the choices.
-pub(crate) fn report_text(
-    recipe: &Recipe,
-    idxs: &[PathBuf],
-    files: &[PathBuf],
-    labels: &[String],
-    rows: &[usize],
-) -> String {
-    let m = members(recipe, idxs, files, labels);
-    let log: Log = recipe
-        .screen
-        .evidence
-        .as_ref()
-        .map(|e| e.take())
-        .unwrap_or_default();
-    for (x, f) in m.iter().zip(&log.offsets) {
-        eprint!("{}", crate::mz_offset::lines(&x.name, f));
-    }
-    let mut o = Out::default();
-    o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
-        .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
-    files_json(&mut o, recipe, &m, &log, rows);
-    o.raw("],\"merged\":[");
+/// The `merged` array of the report: every row `dedup` dropped, with the rule, its threshold and both rows' numbers.
+fn merged_json(o: &mut Out, log: &Log) {
     for (k, g) in log.merged.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw("{\"kept\":");
-        row(&mut o, g.kept);
+        row(o, g.kept);
         o.raw(",\"dropped\":");
-        row(&mut o, g.dropped);
+        row(o, g.dropped);
         o.raw(&format!(
-            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{}}}",
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"rule\":\"{}\",\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{},\"threshold\":{},\"height_kept\":{},\"height_dropped\":{}}}",
             num(g.dmz_da),
             num(g.drt_min),
-            num(g.r)
+            opt(g.r),
+            g.rule,
+            opt(g.overlap),
+            opt(g.overlap_wide),
+            g.shared,
+            num(g.threshold),
+            num(g.height.0),
+            num(g.height.1)
         ));
     }
+}
+
+/// Pairs listed in the `near` array of the report; `near_total` has the count of all of them.
+const NEAR_MAX: usize = 20;
+
+/// The `near` array: the pairs still within the dedup window that neither rule merged (the hint that `dedup_overlap` exists), the first `NEAR_MAX`.
+fn near_json(o: &mut Out, log: &Log) {
+    for (k, g) in log.near.iter().take(NEAR_MAX).enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).raw("{\"a\":");
+        row(o, g.a);
+        o.raw(",\"b\":");
+        row(o, g.b);
+        o.raw(&format!(
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{}}}",
+            num(g.dmz_da),
+            num(g.drt_min),
+            opt(g.r),
+            opt(g.overlap),
+            opt(g.overlap_wide),
+            g.shared
+        ));
+    }
+}
+
+/// The `choices` array of the report: the axis, the centroid switch of each unit-resolution file and what the screening logged by itself.
+fn choices_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log) {
     o.raw("],\"choices\":[");
     let mut first = true;
     let mut choice = |o: &mut Out, key: &str, value: &str, reason: &str| {
@@ -208,23 +298,57 @@ pub(crate) fn report_text(
         } else {
             format!("{} is high resolution", x.name)
         };
-        choice(&mut o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
+        choice(o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
     }
     for x in m.iter().filter(|x| x.note.unit) {
-        let why = format!(
-            "{}: {} of {} MS1 scans in profile mode",
-            x.name, x.note.profile, x.note.scans
-        );
-        choice(
-            &mut o,
-            "centroid",
-            if x.centroid { "on" } else { "off" },
-            &why,
-        );
+        let why = centroid_why(x);
+        choice(o, "centroid", if x.centroid { "on" } else { "off" }, &why);
     }
-    for c in &log.choices {
-        choice(&mut o, &c.key, &c.value, &c.reason);
+    // the label-check choice of a file is already said with that file's own numbers above: dropped per file, by its exact reason
+    let said: Vec<String> = m
+        .iter()
+        .filter_map(label_of)
+        .map(|c| label_reason(&c))
+        .collect();
+    for c in log
+        .choices
+        .iter()
+        .filter(|c| !(c.key == "centroid" && said.contains(&c.reason)))
+    {
+        choice(o, &c.key, &c.value, &c.reason);
     }
+}
+
+/// `features-report/1`: `rows` = features detected in each member; the evidence of the recipe holds the shifts, the merged rows and the choices.
+pub(crate) fn report_text(
+    recipe: &Recipe,
+    idxs: &[PathBuf],
+    files: &[PathBuf],
+    labels: &[String],
+    rows: &[usize],
+) -> String {
+    let m = members(recipe, idxs, files, labels);
+    let log: Log = recipe
+        .screen
+        .evidence
+        .as_ref()
+        .map(|e| e.take())
+        .unwrap_or_default();
+    for (x, f) in m.iter().zip(&log.offsets) {
+        eprint!("{}", crate::mz_offset::lines(&x.name, f));
+    }
+    if let Some(n) = near_notice(&log) {
+        eprintln!("note: {}", crate::error_text::warning(&n));
+    }
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
+        .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
+    files_json(&mut o, recipe, &m, &log, rows);
+    o.raw("],\"merged\":[");
+    merged_json(&mut o, &log);
+    o.raw(&format!("],\"near_total\":{},\"near\":[", log.near.len()));
+    near_json(&mut o, &log);
+    choices_json(&mut o, recipe, &m, &log);
     o.raw("]}\n");
     o.0
 }

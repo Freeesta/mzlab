@@ -118,8 +118,16 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
                 stderr += &format!("{}: {}\n", a.instance, advice.trim_start());
             }
         }
+        let samples = run
+            .activities
+            .iter()
+            .filter_map(|a| a.error.as_ref())
+            .map(|e| crate::flow_digl::pairnotes::hint(&e.error_key))
+            .find(|h| !h.is_empty())
+            .map(|h| format!("{h}; "))
+            .unwrap_or_default();
         stderr += &format!(
-            "hint: the other outputs, prov.json and report.json are in {}\n",
+            "hint: {samples}the other outputs, prov.json and report.json are in {}\n",
             out.display()
         );
         1

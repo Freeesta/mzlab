@@ -1,6 +1,7 @@
 //! `features`: the feature table of LC-MS files as CSV; the arguments are parsed here.
 
 use super::Entry;
+use crate::sample_label::Kind;
 use crate::{features_full, features_plan_of, Outcome};
 use std::path::PathBuf;
 
@@ -87,33 +88,99 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
     Ok(Some(r))
 }
 
-/// The files and the sample labels of the series: with `--sample`, a file with several samples gives one member per selected sample (`NAME@ID`, in the
-/// order of the file), any other file is one member as it is; with no file of several samples the selection has nothing to apply to.
-fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
+/// The files and the labels of the series: with `--sample`, a file with several samples gives one member per selected sample, labelled `COLUMN@ID` where
+/// COLUMN is the sample name (`sample_label`: the file name only breaks a tie) and ID the sample id; any other file is one member as it is (empty label, its
+/// own name). With no file of several samples the selection has nothing to apply to. Without `--sample`, a file with several samples is its first sample and
+/// the output says how to choose.
+fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>, String)> {
     let Some(want) = &a.sample else {
-        return Ok((a.files.clone(), vec![String::new(); a.files.len()]));
+        let notes = a.files.iter().map(|f| first_sample_note(f)).collect();
+        return Ok((a.files.clone(), vec![String::new(); a.files.len()], notes));
     };
-    let (mut files, mut labels, mut applied) = (Vec::new(), Vec::new(), false);
+    let (mut files, mut ids, mut applied) = (Vec::new(), Vec::new(), false);
+    let mut names: Vec<(usize, String)> = Vec::new();
     for f in &a.files {
-        let present = crate::sample_select::present(f)?;
+        let present = crate::sample_select::named(f)?;
         if present.len() < 2 {
             files.push(f.clone());
-            labels.push(String::new());
+            ids.push(None);
             continue;
         }
         applied = true;
-        let name = f
-            .file_name()
-            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        for id in mzlab_core::readers::selection::resolve(&present, want)? {
+        let have: Vec<u32> = present.iter().map(|(i, _)| *i).collect();
+        for id in mzlab_core::readers::selection::resolve(&have, want)? {
+            names.push((
+                files.len(),
+                present
+                    .iter()
+                    .find(|(i, _)| *i == id)
+                    .map(|(_, n)| n.clone())
+                    .unwrap_or_default(),
+            ));
             files.push(f.clone());
-            labels.push(format!("{name}@{id}"));
+            ids.push(Some(id));
         }
     }
     if !applied {
         return Err(mzlab_core::error::Error::new("err.sample.single"));
     }
-    Ok((files, labels))
+    let file_of = |k: usize| {
+        files[k]
+            .file_name()
+            .map_or(String::new(), |n| n.to_string_lossy().into_owned())
+    };
+    let fnames: Vec<String> = names.iter().map(|(k, _)| file_of(*k)).collect();
+    let members: Vec<crate::sample_label::Member> = names
+        .iter()
+        .zip(&fnames)
+        .map(|((k, n), f)| crate::sample_label::Member {
+            file: f,
+            id: ids[*k].unwrap_or(0),
+            sample: n,
+        })
+        .collect();
+    let columns = crate::sample_label::labels(&members);
+    let mut labels = vec![String::new(); files.len()];
+    let mut notes = String::new();
+    for (((k, sample), (column, tie)), f) in names.iter().zip(&columns).zip(&fnames) {
+        let id = ids[*k].unwrap_or(0);
+        labels[*k] = format!("{column}@{id}");
+        let key = match tie {
+            Kind::Own => "note.features.column",
+            Kind::Tie => "note.features.columnTie",
+            Kind::Numbered => "note.features.columnNumbered",
+        };
+        notes += &format!(
+            "note: {}\n",
+            crate::error_text::warning(&crate::convert::Notice {
+                key,
+                params: vec![
+                    ("column", column.clone()),
+                    ("id", id.to_string()),
+                    ("sample", sample.clone()),
+                    ("file", f.clone()),
+                ],
+            })
+        );
+    }
+    Ok((files, labels, notes))
+}
+
+/// Without `--sample` a file with several samples gives its first sample only: the note names the command that chooses (empty when there is nothing to say).
+fn first_sample_note(f: &std::path::Path) -> String {
+    let Some(count) = crate::sample_select::several(f) else {
+        return String::new();
+    };
+    format!(
+        "note: {}\n",
+        crate::error_text::warning(&crate::convert::Notice {
+            key: "note.features.firstSample",
+            params: vec![
+                ("file", f.display().to_string()),
+                ("count", count.to_string()),
+            ],
+        })
+    )
 }
 
 /// `params` (the JSON text of the recipe, empty for the defaults) with the string key `key` set to `mode` (`--centroid`, `--mz-offset`).
@@ -168,10 +235,12 @@ fn run(args: Vec<String>) -> Outcome {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-feat{k}", std::process::id()));
+    let mut said = String::new();
     let r = std::fs::create_dir_all(&tmp)
         .map_err(crate::io)
         .and_then(|_| expand(&a))
-        .and_then(|(files, labels)| {
+        .and_then(|(files, labels, notes)| {
+            said = notes;
             let params = with_key(&a.params, "centroid", a.centroid.as_deref());
             let params = with_key(&params, "mz_offset", a.mz_offset.as_deref());
             if a.dry_run {
@@ -190,7 +259,9 @@ fn run(args: Vec<String>) -> Outcome {
     };
     if a.dry_run {
         // the plan is the only output: nothing is written, not even the notes of the indexes
-        return Outcome::ok(csv.into_bytes());
+        let mut plan = Outcome::ok(csv.into_bytes());
+        plan.stderr += &said;
+        return plan;
     }
     if let Err(e) = notes {
         return Outcome::fail(&e);
@@ -210,6 +281,7 @@ fn run(args: Vec<String>) -> Outcome {
             Outcome::ok(Vec::new())
         }
     };
+    done.stderr += &said;
     if let Some(p) = &a.report {
         let to = if p.is_dir() {
             p.join("features-report.json")
@@ -247,7 +319,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 .examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "quant targets",
-    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference",
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")

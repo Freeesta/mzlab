@@ -133,7 +133,14 @@ fn csv(table: &[u8], name: &str) -> Result<Loaded> {
     })
 }
 
-/// The role and time of each column from a `samples/1` document, by name (with or without `.mzML`), else by SHA-256.
+/// `file` without its last extension (a dot that is not the first character).
+fn without_extension(file: &str) -> &str {
+    file.rsplit_once('.')
+        .filter(|(head, _)| !head.is_empty())
+        .map_or(file, |(head, _)| head)
+}
+
+/// The role and time of each column from a `samples/1` document, by name (with or without `.mzML`, or its last extension), else by SHA-256.
 fn meta_of(l: &Loaded, samples: &[u8]) -> Result<Vec<Option<CmpCol>>> {
     let all = samples_of(samples).map_err(|e| unreadable(e.key))?;
     Ok((0..l.names.len())
@@ -143,6 +150,11 @@ fn meta_of(l: &Loaded, samples: &[u8]) -> Result<Vec<Option<CmpCol>>> {
             let found = all
                 .iter()
                 .find(|s| s.file == l.given[i] || strip_mzml(&s.file) == l.names[i])
+                // a CSV names a column without the extension of its file (`NAME` for `NAME.wiff`, `NAME.raw`, ...): the samples row has it
+                .or_else(|| {
+                    all.iter()
+                        .find(|s| without_extension(&s.file) == l.names[i])
+                })
                 .or_else(|| all.iter().find(by_sha));
             found.map(|s| CmpCol {
                 name: l.names[i].clone(),

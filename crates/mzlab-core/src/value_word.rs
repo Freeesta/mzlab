@@ -21,6 +21,17 @@ pub fn origin_state(origin: &str) -> &'static str {
     }
 }
 
+/// The state of a `raw xic` window from its verdict: `peak` was found and checked (`detected`), `trace` has signal under the thresholds with its numbers
+/// kept (`forced`), `nothing` is a covered window without a peak (`absent`), `no_data` measured nothing (`na`). An unknown verdict is `na`.
+pub fn verdict_state(verdict: &str) -> &'static str {
+    match verdict {
+        "peak" => DETECTED,
+        "trace" => FORCED,
+        "nothing" => ABSENT,
+        _ => NA,
+    }
+}
+
 /// The state of a whole trace given to `peak auto-lr`: `na` when it is too short to be searched (fewer than 7 points, nothing was measured), `detected`
 /// when it has peaks, `absent` when it was searched and has none.
 pub fn trace_state(points: usize, peaks: usize) -> &'static str {
@@ -36,6 +47,15 @@ pub fn trace_state(points: usize, peaks: usize) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn verdicts_map_to_states() {
+        let v: Vec<&str> = ["peak", "trace", "nothing", "no_data", "x"]
+            .iter()
+            .map(|v| verdict_state(v))
+            .collect();
+        assert_eq!(v, ["detected", "forced", "absent", "na", "na"]);
+    }
 
     #[test]
     fn origins_and_traces_map_to_states() {

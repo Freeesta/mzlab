@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "sample-list/1",
   "title": "sample-list/1: what the files hold, sample by sample",
-  "description": "The answer of `mzlab-cli sample list --json`: one entry per file, in the order given. An entry is the `samples_list/1` document the site and the app also use (format, bytes, scan, samples with id, name, scans, size, kinds, polarity, rt, tic, why, refused), or, for a file the reader refuses, an `error/1` document. Exit 1 when a sample or a file is refused or a .wiff.scan is cut (the document stays on stdout); a file that is missing or unreadable is one `error/1` (exit 4). Code: crates/mzlab-cli/src/samples_cmd.rs.",
+  "description": "The answer of `mzlab-cli sample list --json`: one entry per file, in the order given. An entry is the `samples_list/1` document the site and the app also use (format, bytes, scan, samples with id, name, scans, size, kinds, polarity, rt, tic, why, refused), or, for a file the reader refuses, an `error/1` document. `consistency` (only when the pair disagrees with itself) says the .wiff.scan ends before its index (`short`) or holds sections the index lacks (`unlisted`, a copy made while acquiring), with the numbers it rests on. Exit 1 when a sample or a file is refused or the pair disagrees, 8 when it does and a member was modified in the last `recent_s` seconds (the document stays on stdout in both); a file that is missing or unreadable is one `error/1` (exit 4). Code: crates/mzlab-cli/src/samples_cmd.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -25,6 +25,60 @@
               "samples_list/1",
               "error/1"
             ]
+          },
+          "consistency": {
+            "type": "object",
+            "description": "Present only for a .wiff pair whose .wiff.scan is shorter than its index or holds sections after the indexed part (wiff::completeness).",
+            "required": [
+              "status",
+              "scan_bytes",
+              "indexed_end",
+              "wiff_bytes",
+              "samples_listed",
+              "sections_unlisted",
+              "age_s",
+              "recent_s",
+              "still_writing"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "short",
+                  "unlisted"
+                ]
+              },
+              "scan_bytes": {
+                "type": "integer"
+              },
+              "indexed_end": {
+                "type": "integer"
+              },
+              "wiff_bytes": {
+                "type": "integer"
+              },
+              "samples_listed": {
+                "type": "integer",
+                "description": "Samples the .wiff index lists."
+              },
+              "sections_unlisted": {
+                "type": "integer",
+                "description": "Sections of the .wiff.scan after the indexed part that the index does not list."
+              },
+              "age_s": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Seconds since the newest member was modified."
+              },
+              "recent_s": {
+                "type": "integer",
+                "description": "The threshold: a member modified less than this many seconds ago may still be written (10)."
+              },
+              "still_writing": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }

@@ -1,6 +1,5 @@
-//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
-//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `sample list FILE...` is what the files hold, sample by
-//! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
+//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets from
+//! `api/samples/<op>`; names one per line from a file or stdin. `sample list FILE...`: what the files hold, from their index alone (`samples_list/1`).
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -9,6 +8,7 @@ use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::readers::Limits;
 
+use crate::samples_check::{attach, completeness, consistency_warning, probe_json};
 use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split them (sample-vars/1), as JSON.
@@ -17,6 +17,7 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
        mzlab-cli sample group NAME...
        mzlab-cli sample table [--names FILE|- | FILE...] [--text]
        mzlab-cli sample import META.csv (FILE|DIR)... [--dry-run] [--json]   (sample import --help)
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table TABLE.mzfeat] [--json]   (sample pair --help)
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
        mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
@@ -31,7 +32,8 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
   --text          with table: a plain table (file, role, time_min, series, replicate) in place of the JSON
   Every role and time the names decide is logged on stderr (`auto: NAME kind=dark \"BLKD\" ...`: the field, its value and the part of the name that decided it);
   the user overrides one by editing `kind` (or `time`) of the samples/1 before the next step. A dark control (`COND-D`, `H2O2D`) and a dark matrix blank
-  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.";
+  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.
+example: mzlab-cli sample table s/*.mzML > samples.json, then the `samples` input of tp.dig_lr or tp.link (a file the samples lack takes the role of its name, logged).";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -109,8 +111,7 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
-/// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
+/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 pub(crate) fn table(args: Vec<String>) -> Result<String, String> {
     let mut src = None;
     let mut paths = Vec::new();
@@ -159,36 +160,22 @@ const LIST_HELP: &str = "mzlab-cli sample list: what each file holds, sample by 
 
 usage: mzlab-cli sample list FILE... [--json] [--probe]
 
-  FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
+  FILE     a .wiff (its .wiff.scan beside it is read only past the indexed part, to compare the two), another vendor file or a .D / .raw folder
   --json   one sample-list/1 document on stdout, {\"schema\",\"files\":[samples_list/1 per FILE, in order]}; a file the reader refuses has its error/1 in its place (exit 1); without it, a table
   --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
            (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
 Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
 tic {apex_rt, apex, sum} (minutes), method (the .dam file), missing (index rows past the end of the data file), why (refused | inferred | empty),
-refused. Per file: format, bytes, scan {bytes, indexed_end}. No hashes, no log text, no operator. Nothing is written.
+refused. Per file: format, bytes, scan {bytes, indexed_end}, and only when the pair disagrees with itself consistency {status short|unlisted, scan_bytes, indexed_end, wiff_bytes, samples_listed, sections_unlisted, age_s, recent_s, still_writing}. No hashes, no log text, no operator. Nothing is written.
 Streams: data on stdout; progress (one line per file) and warnings on stderr.
-Exit codes: 0 listed; 1 a file or sample refused, or a cut .wiff.scan with --probe (the listing is still printed); 2 usage; 4 a file missing or unreadable.";
+Exit codes: 0 listed; 1 a file or sample refused, a cut .wiff.scan, or sections the index lacks in a pair not modified for 10 s; 2 usage; 4 a file missing or unreadable; 8 the same finding in a pair modified in the last 10 s (it may still be written). The listing is printed in every case.";
 
 struct Listed {
     json: String,
     refused: bool,
     cut: bool,
-}
-
-/// `{"scan_bytes", "indexed_end", "status"}` of the data file of a pair, `n/a` for a format without one.
-fn probe_json(scan: Option<(u64, u64)>) -> (String, &'static str) {
-    let Some((bytes, end)) = scan else {
-        return ("{\"status\":\"n/a\"}".into(), "n/a");
-    };
-    let status = match bytes.cmp(&end) {
-        std::cmp::Ordering::Less => "short",
-        std::cmp::Ordering::Equal => "ok",
-        std::cmp::Ordering::Greater => "longer",
-    };
-    (
-        format!("{{\"scan_bytes\":{bytes},\"indexed_end\":{end},\"status\":\"{status}\"}}"),
-        status,
-    )
+    /// The `.wiff` index and the `.wiff.scan` disagree (`consistency` in the JSON); `still_writing` adds a member modified in the last `RECENT_S` seconds.
+    mismatch: Option<mzlab_core::wiff::Completeness>,
 }
 
 /// The `samples_list/1` of one file (a `.wiff` from its container and index alone), `Err((exit code, error))` when it cannot be listed.
@@ -209,6 +196,10 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
     let mut l = mzlab_lettori::open_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
     let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
     let mut json = mzlab_core::readers::list_samples(&mut *l);
+    let mismatch = completeness(path, &mut *l);
+    if let Some(c) = &mismatch {
+        attach(&mut json, c);
+    }
     let mut cut = false;
     if probe {
         let (p, status) = probe_json(l.listing().scan);
@@ -216,7 +207,12 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
         json.pop();
         json += &format!(",\"probe\":{p}}}");
     }
-    Ok(Listed { json, refused, cut })
+    Ok(Listed {
+        json,
+        refused,
+        cut,
+        mismatch,
+    })
 }
 
 fn mb(bytes: f64) -> String {
@@ -417,13 +413,17 @@ fn list_run(args: Vec<String>) -> Outcome {
                         f.display()
                     );
                 }
-                if l.cut {
+                if l.cut && l.mismatch.is_none() {
                     err += &format!("warning: {}: the .wiff.scan is shorter than the index says: a copy cut short\n", f.display());
                 }
-                if l.json.contains("\"status\":\"longer\"") {
+                if l.mismatch.is_none() && l.json.contains("\"status\":\"longer\"") {
                     err += &format!("warning: {}: the .wiff.scan holds bytes after the last indexed section (a copy made while acquiring, or padding)\n", f.display());
                 }
                 code = code.max(u8::from(l.refused || l.cut));
+                if let Some(c) = &l.mismatch {
+                    err += &consistency_warning(&f.display().to_string(), c);
+                    code = code.max(if c.recent() { crate::exit::GROWING } else { 1 });
+                }
             }
             Err((c, e)) if c == crate::exit::DATA => {
                 // a file the reader refuses is part of the answer: its error/1 takes its place among the listings
@@ -472,7 +472,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let (op, body) = match sub {
         Some("vars") => ("variables", variables_args(it.collect())),
         Some("table") => return crate::samples_table::run(it.collect()),
-        Some("import") => return crate::samples_import::run(it.collect()),
+        Some(w @ ("import" | "pair")) => return crate::samples_pair::route(w, it.collect()),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {

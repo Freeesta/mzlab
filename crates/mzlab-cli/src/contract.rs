@@ -43,8 +43,10 @@ pub(crate) const VERDICT: &[&str] = &[
     "raw info",
     "raw cache",
     "raw xic",
+    "raw scan",
     "sample list",
     "sample import",
+    "sample pair",
     "db ref-list",
     "llm eval",
     "db normative build",
@@ -62,8 +64,12 @@ pub(crate) fn is_verdict(args: &[String]) -> bool {
 /// `o` with the contract applied; `command` is the name of the entry that ran (`""` when none matched).
 pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome {
     let json = args.iter().any(|a| a == "--json") || crate::cmd::json_by_default(command);
+    // `sample list` also answers exit 8 with its listing when the pair disagrees with itself and a member is still being written (`consistency`); a whole-run
+    // refusal of a growing pair carries its own `error` and stays an `error/1`
+    let growing_listing =
+        o.code == crate::exit::GROWING && command == "sample list" && o.error.is_none();
     let verdict = is_verdict(args)
-        && matches!(o.code, crate::exit::DATA | crate::exit::INTEGRITY)
+        && (matches!(o.code, crate::exit::DATA | crate::exit::INTEGRITY) || growing_listing)
         && !o.stdout.is_empty();
     if o.code != 0
         && json

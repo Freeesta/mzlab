@@ -128,6 +128,10 @@
           "mz_offset_da": {
             "type": "number",
             "description": "m/z offset (observed - true) applied to this trace, Da."
+          },
+          "rt_shift_min": {
+            "type": "number",
+            "description": "Only with rt_ref on: minutes the window of this row was moved in its file (the rt column stays the measured apex)."
           }
         }
       }
@@ -140,6 +144,7 @@
         "params",
         "files",
         "choices",
+        "decisions",
         "warnings"
       ],
       "additionalProperties": false,
@@ -154,6 +159,9 @@
             "min_sn",
             "min_points",
             "min_shape",
+            "min_half",
+            "max_fwhm",
+            "max_asym",
             "offset",
             "blank_pattern",
             "ms_level",
@@ -174,6 +182,18 @@
             "min_shape": {
               "type": "number"
             },
+            "min_half": {
+              "type": "integer",
+              "description": "Fewest scans in an unbroken run at or over half the height; 0 = gate off."
+            },
+            "max_fwhm": {
+              "type": "number",
+              "description": "Widest peak at half height, seconds; 0 = gate off."
+            },
+            "max_asym": {
+              "type": "number",
+              "description": "Largest asymmetry at 10 % of the height (larger of right/left and left/right, 1 = symmetric); 0 = gate off."
+            },
             "offset": {
               "type": "string"
             },
@@ -188,6 +208,14 @@
             },
             "valley": {
               "type": "number"
+            },
+            "rt_ref": {
+              "type": "string",
+              "description": "Only with rt_ref on: off, auto, ID or either with @RT."
+            },
+            "rt_span": {
+              "type": "number",
+              "description": "Only with rt_ref on: half-width added to the reference window, min."
             }
           }
         },
@@ -199,7 +227,9 @@
               "file",
               "blank",
               "offsets",
-              "detected"
+              "detected",
+              "forced",
+              "detected_min"
             ],
             "additionalProperties": false,
             "properties": {
@@ -213,6 +243,11 @@
                 "type": "integer",
                 "minimum": 0,
                 "description": "Rows of this file without no_scans, no_peak, below_threshold, bad_shape."
+              },
+              "forced": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Rows of this file with a peak that missed a check (state forced): their evidence is in decisions."
               },
               "offsets": {
                 "type": "array",
@@ -249,6 +284,120 @@
                     }
                   }
                 }
+              },
+              "detected_min": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "The weakest detected peaks of this file: the smallest S/N and the fewest scans at or over half height among its detected rows, each with the id of its target, so the user sees how close the accepted peaks are to the thresholds. null when the file has no detected row.",
+                "required": [
+                  "sn",
+                  "sn_id",
+                  "half_pts",
+                  "half_pts_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "sn": {
+                    "type": "number"
+                  },
+                  "sn_id": {
+                    "type": "string"
+                  },
+                  "half_pts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "half_pts_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "rt_ref": {
+                "type": "object",
+                "description": "Only with rt_ref on: the evidence of the internal reference in this file.",
+                "required": [
+                  "reference",
+                  "expected_rt",
+                  "apex_rt",
+                  "sn",
+                  "search",
+                  "peaks_in_search",
+                  "runner_up",
+                  "shift_min",
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "reference": {
+                    "type": "string"
+                  },
+                  "expected_rt": {
+                    "type": "number"
+                  },
+                  "apex_rt": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "sn": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "search": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "RT window the apex was looked for in, min."
+                  },
+                  "peaks_in_search": {
+                    "type": "integer",
+                    "description": "How many peaks the search window holds (0 in a blank, which is not measured)."
+                  },
+                  "runner_up": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "The second tallest peak of the search window, null when there is none: a rival of at least half the height (and over min_sn) makes the status ambiguous.",
+                    "required": [
+                      "apex_rt",
+                      "height_ratio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "apex_rt": {
+                        "type": "number"
+                      },
+                      "height_ratio": {
+                        "type": "number",
+                        "description": "Its height over the tallest peak."
+                      }
+                    }
+                  },
+                  "shift_min": {
+                    "type": "number",
+                    "description": "Applied to every window of the file; 0 for every status but ok."
+                  },
+                  "status": {
+                    "enum": [
+                      "ok",
+                      "edge",
+                      "ambiguous",
+                      "weak",
+                      "not_found",
+                      "blank"
+                    ],
+                    "description": "ok: applied. edge: the apex is on the border of the search window (a clipped peak). ambiguous: a second peak of at least half the height. weak: under the S/N, points or shape limits. not_found: no peak. blank: a blank file, not measured."
+                  }
+                }
               }
             }
           }
@@ -276,9 +425,119 @@
             }
           }
         },
+        "decisions": {
+          "type": "array",
+          "description": "The evidence of every row that is not detected: a peak that missed a check (state forced) lists every check with the value measured, its limit and whether it passed (limit null: a shape gate that is off, its value is shown only); a row with no peak (state absent) has the reason in flag (no_peak or no_scans) and no checks. A detected row is not listed: its numbers are in the table and the weakest ones of each file in files[].detected_min.",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "id",
+              "state",
+              "flag",
+              "checks"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "forced",
+                  "absent"
+                ]
+              },
+              "flag": {
+                "type": "string",
+                "description": "The flags of the row joined with ';' (below_threshold, bad_shape, edge, in_blank; no_peak or no_scans for an absent row)."
+              },
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "value",
+                    "limit",
+                    "op",
+                    "pass"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "enum": [
+                        "sn",
+                        "points",
+                        "shape",
+                        "half_pts",
+                        "fwhm_s",
+                        "asym"
+                      ]
+                    },
+                    "value": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "null: the trace gave no number (an asymmetry on a peak that does not come down inside its limits); such a check passes."
+                    },
+                    "limit": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "null: a shape gate that is off (min_half, max_fwhm, max_asym = 0); the check is listed for its value and always passes."
+                    },
+                    "op": {
+                      "enum": [
+                        ">=",
+                        "<="
+                      ]
+                    },
+                    "pass": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "description": "Empty for an absent row."
+              }
+            }
+          }
+        },
         "warnings": {
           "type": "array",
           "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hints": {
+      "type": "array",
+      "description": "Only in the CLI answer and only when the data point at a switch (the site has none): the note.quant.targets.* keys of the language files with their words and the text.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params",
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "text": {
             "type": "string"
           }
         }

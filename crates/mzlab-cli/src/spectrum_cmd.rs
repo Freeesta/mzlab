@@ -10,17 +10,24 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, Parsed, Sample};
 use crate::Outcome;
 
+#[path = "spectrum_level.rs"]
+mod level;
 #[path = "spectrum_minus.rs"]
 mod minus;
-
+#[path = "spectrum_sum.rs"]
+mod sum;
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
-usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
+usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
 
   --rt MIN    the scan nearest to MIN (minutes) at the level; the evidence names it
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
+  --sum       with --rt A,B: add the scans instead of averaging them (`mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum`); `evidence.sum` gives the
+              scans added, their counts (cps summed), the ions (counts x fill time) per scan type and the ion quantum, so a reader can judge whether the
+              spectrum rests on enough ions; no background is subtracted (`evidence.sum.background`); not with --minus or --id
+  --fill-ms T the fill time of a scan in ms for --sum when the file does not give it (the ions are null without it; the user states it, it is never guessed)
   --scan NO   the scan with that number (`spectrum list` prints it as scan_no); its level and precursor are used; no such scan: exit 5
-  --ms-level N the level (default 1, or the level of --scan)
+  --ms-level N the level (default: the level of --scan; the file's only level; else 1, and a file without level 1 names its levels: exit 5)
   --id CHANNEL only the scans of an ms:<key> or dd:<level> channel `file channels` lists
   --sample ID the sample of a file with several (.wiff); default the first
   --minus FILE a blank: its mean spectrum is subtracted (the engine's `/api/spectrum` with a background: lines where the difference is above zero,
@@ -54,7 +61,7 @@ fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
     }
 }
 
-fn query(pairs: &[(&str, String)]) -> Query {
+pub(crate) fn query(pairs: &[(&str, String)]) -> Query {
     Query(
         pairs
             .iter()
@@ -130,6 +137,16 @@ fn scalar_members(text: &str) -> Result<String> {
     Ok(ans.0)
 }
 
+/// The `scan` member of the evidence: the scan the request resolved to.
+fn scan_json(i: usize, sc: &mzlab_core::idxread::Scan) -> String {
+    format!(
+        "{{\"scan_id\":{i},\"scan_no\":{},\"rt_min\":{},\"ms_level\":{}}}",
+        sc.number(i),
+        extract::jnum(sc.rt),
+        sc.level
+    )
+}
+
 fn get_one(
     s: &mut Sample,
     at: &At,
@@ -137,8 +154,9 @@ fn get_one(
     chan: Option<&str>,
     csv: bool,
     minus: &mut Option<minus::Minus>,
-) -> Result<String> {
-    let mut level = level.unwrap_or(1);
+    sum: &Option<sum::SumOpt>,
+) -> Result<(String, String)> {
+    let (mut level, auto) = level::start(s, at, level)?;
     let mut resolved = "null".to_string();
     let mut pairs: Vec<(&str, String)> = Vec::new();
     let sid = scan_index(s, at, level, chan)?;
@@ -152,12 +170,7 @@ fn get_one(
             if let (true, Some(p)) = (sc.level > 1, sc.precursor) {
                 pairs.push(("precursor", p.to_string()));
             }
-            resolved = format!(
-                "{{\"scan_id\":{i},\"scan_no\":{},\"rt_min\":{},\"ms_level\":{}}}",
-                sc.number(i),
-                extract::jnum(sc.rt),
-                sc.level
-            );
+            resolved = scan_json(i, sc);
             (sc.rt, sc.rt)
         }
         (None, At::Window(a, b)) => (*a, *b),
@@ -173,6 +186,13 @@ fn get_one(
     );
     if let Some(c) = chan {
         pairs.push(("channel", c.into()));
+    }
+    // the evidence of a sum reads the window as the spectrum does, before `mode` joins the query
+    let sum_ev = (sum.as_ref())
+        .map(|o| sum::evidence(s, &pairs, &o.fill_ms))
+        .transpose()?;
+    if sum.is_some() {
+        pairs.push(("mode", "sum".into()));
     }
     let (text, minus_ev) = match minus {
         None => (
@@ -191,22 +211,40 @@ fn get_one(
     let x = extract::tokens(&text, "mz").ok_or_else(bad)?;
     let y = extract::tokens(&text, "y").ok_or_else(bad)?;
     let pts = extract::pairs(&x, &y, None);
+    let (extra, notes) = sum::tail(sum_ev.as_deref(), at, (csv, chan.is_some()), &text)?;
     if csv {
-        return Ok(extract::points_csv("mz", "intensity", &pts));
+        return Ok((extract::points_csv("mz", "intensity", &pts), notes));
     }
-    // the rest of the route's answer (mode, scans averaged, first and last scan, merge) is the evidence
-    let ans = scalar_members(&text)?;
+    let tail = format!("{minus_ev}{extra}");
+    // the scan member also carries `level_auto` when the file's only level was chosen
+    let scan = format!(
+        "{resolved}{}",
+        auto.map_or(String::new(), |a| format!(",\"level_auto\":{a}"))
+    );
+    Ok((doc(s, level, &pts, &scan, &pairs, &text, &tail)?, notes))
+}
+
+/// The `spectrum/1` document: the points, and as evidence the rest of the route's answer (mode, scans averaged, first and last scan, merge).
+fn doc(
+    s: &Sample,
+    level: u8,
+    pts: &[(&str, &str)],
+    resolved: &str,
+    pairs: &[(&str, String)],
+    text: &str,
+    tail: &str,
+) -> Result<String> {
     let head = format!(
         "\"file\":{},\"sample\":{},\"x_unit\":\"m/z\",\"y_unit\":\"counts\",\"ms_level\":{level}",
         extract::jstr(&s.name),
         s.sample.map_or("null".to_string(), |i| i.to_string())
     );
     let ev = format!(
-        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}{minus_ev}}}",
-        extract::jstr(&text_of(&pairs)),
-        ans
+        "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}{tail}}}",
+        extract::jstr(&text_of(pairs)),
+        scalar_members(text)?
     );
-    Ok(extract::points_doc("spectrum/1", &head, &pts, &ev))
+    Ok(extract::points_doc("spectrum/1", &head, pts, &ev))
 }
 
 pub fn get(args: Vec<String>) -> Outcome {
@@ -222,10 +260,11 @@ pub fn get(args: Vec<String>) -> Outcome {
                 "--minus",
                 "--minus-sample",
                 "--minus-rt",
+                "--fill-ms",
                 "--format",
                 "--out",
             ],
-            &[],
+            &["--sum"],
         )?
         else {
             return Ok(Err(HELP_GET));
@@ -246,6 +285,7 @@ pub fn get(args: Vec<String>) -> Outcome {
         if blank.is_some() && p.get("--id").is_some() {
             return Err("--minus is not for --id (the blank is read at the same level)".into());
         }
+        let sum = sum::options(&p, &at, (blank.is_some(), p.get("--id").is_some()))?;
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,
@@ -255,9 +295,10 @@ pub fn get(args: Vec<String>) -> Outcome {
             level,
             p.get("--id").map(String::from),
             blank,
+            sum,
         )))
     };
-    let (sample, csv, out, file, at, level, chan, blank) = match go() {
+    let (sample, csv, out, file, at, level, chan, blank, sum) = match go() {
         Ok(Ok(a)) => a,
         Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
@@ -269,10 +310,8 @@ pub fn get(args: Vec<String>) -> Outcome {
                 Some((f, id, w)) => Some(minus::open(f, *id, *w, tmp)?),
                 None => None,
             };
-            Ok((
-                get_one(&mut s, &at, level, chan.as_deref(), csv, &mut m)?,
-                s.note.clone(),
-            ))
+            let (doc, notes) = get_one(&mut s, &at, level, chan.as_deref(), csv, &mut m, &sum)?;
+            Ok((doc, s.note.clone() + &notes))
         }),
         &out,
     )
@@ -451,6 +490,9 @@ pub fn list(args: Vec<String>) -> Outcome {
     )
 }
 
+#[cfg(test)]
+#[path = "spectrum_sum_tests.rs"]
+mod sum_tests;
 #[cfg(test)]
 #[path = "spectrum_tests.rs"]
 mod tests;

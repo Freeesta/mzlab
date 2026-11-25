@@ -1030,6 +1030,7 @@
                   "max_gap",
                   "long_trace",
                   "dedup",
+                  "dedup_overlap",
                   "intensity_tol",
                   "abs_da"
                 ]
@@ -1068,6 +1069,13 @@
                     "enum":["auto","off"],
                     "default":"auto",
                     "description":"Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Unit resolution only: rows within 0.6 Da and the RT tolerance whose peaks, in the files where both were detected, cover at least this share of the narrower one (and half of it of the wider one), in 2 files or the only file, are one ion (a shoulder or broad top cut in two); 0 = off"
                   },
                   {
                     "type":"number",
@@ -1583,7 +1591,22 @@
             "properties":{
               "step":{"const":"quant.targets@1"},
               "name":{
-                "enum":["da","min_sn","min_points","min_shape","offset","blank_pattern","ms_level","smooth_half","valley"]
+                "enum":[
+                  "da",
+                  "min_sn",
+                  "min_points",
+                  "min_shape",
+                  "min_half",
+                  "max_fwhm",
+                  "max_asym",
+                  "offset",
+                  "rt_ref",
+                  "rt_span",
+                  "blank_pattern",
+                  "ms_level",
+                  "smooth_half",
+                  "valley"
+                ]
               },
               "value":{
                 "anyOf":[
@@ -1614,9 +1637,39 @@
                     "description":"A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"
                   },
                   {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak with fewer scans in an unbroken run at or over half its height is flagged bad_shape; 0 = off. Noise blips are one or two scans wide"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak wider than this at half height is flagged bad_shape; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak whose right/left (or left/right) width at 10 % of the height is over this is flagged bad_shape; 1 or more, 0 = off"
+                  },
+                  {
                     "type":"string",
                     "default":"0",
                     "description":"Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]"
+                  },
+                  {
+                    "type":"string",
+                    "default":"off",
+                    "description":"Follow an internal reference between batches: off, auto (first standard or parent row) or a target id, each with an optional @RT where it is expected (else its window centre); every window moves by the apex found minus that, per file; the log and the rt_shift_min column say what was done"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":5,
+                    "default":0.6,
+                    "description":"The reference apex is looked for in its window widened by this on each side (rt_ref on)"
                   },
                   {
                     "type":"string",
