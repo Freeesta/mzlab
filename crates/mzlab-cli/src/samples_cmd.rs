@@ -410,6 +410,7 @@ fn list_run(args: Vec<String>) -> Outcome {
                 } else {
                     table += &list_table(&l.json, &f.display().to_string());
                 }
+                err += &crate::method_cmd::hint_line(&f.display().to_string(), " --sample ID");
                 if l.refused {
                     err += &format!(
                         "warning: {}: a sample is refused (see its `refused`)\n",

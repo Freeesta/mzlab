@@ -190,6 +190,7 @@ mod idx_open;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
 mod items_cmd;
+mod method_cmd;
 pub mod llm;
 mod llm_ctx;
 mod manual_table_cmd;

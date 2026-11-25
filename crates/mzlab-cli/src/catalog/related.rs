@@ -47,14 +47,16 @@ const PEAK_BULK: &str = "mzlab-cli peak table FILE... --auto: every peak of ever
 pub(crate) static RELATED: &[Rel] = &[
     r("file list", "inventory folder directory what is there", &["file inventory", "file info", "sample list"]),
     r("file inventory", "inventory samples checksum", &["file list", "sample list"]),
-    r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list"]),
+    r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list", "file method"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
     r("raw xic", "peak trace nothing detected absent present at this mass time ions counts poisson detection limit upper limit blank carryover", &["quant targets", "trace xic", "raw info"]),
+    r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
+        .ex("mzlab-cli file method run.wiff --sample 1"),
     r("file channels", "sim srm mrm channel list transitions", &["trace chrom", "peak table"]),
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
         .ex("mzlab-cli file convert run.wiff --out mzml/ --json"),
-    r("sample list", "sample names wiff", &["sample select", "file convert"]),
+    r("sample list", "sample names wiff", &["sample select", "file convert", "file method"]),
     r("sample table", "roles blank qc standard control time point names", &["sample import", "sample design propose", "table.filter"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),

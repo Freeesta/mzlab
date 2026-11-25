@@ -138,6 +138,9 @@ pub struct Experiment {
     pub fixed: Option<f64>,
     /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
     pub ce: Option<f64>,
+    /// Collision energy spread (eV) and declustering potential (V) of the experiment, when the method gives one value for it.
+    pub ces: Option<f64>,
+    pub dp: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
     pub iso_half: Option<f64>,
     /// Detection window (s) of a scheduled MRM experiment (sMRM), when the method says it is scheduled.
@@ -282,6 +285,8 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             parent: None,
             fixed: None,
             ce: None,
+            ces: None,
+            dp: None,
             iso_half: None,
             window_s: None,
             polarity: d
@@ -312,21 +317,26 @@ fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) -> bo
 }
 
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
+/// The spread (`CES`) of a product-ion experiment and the declustering potential of any scan experiment follow the same rule.
 fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     let Some(m) = method else { return };
-    for (i, e) in experiments
-        .iter_mut()
-        .enumerate()
-        .filter(|(_, e)| e.level >= 2)
-    {
-        e.iso_half = Some(UNIT_HALF_WIDTH);
-        if let Some(methodinfo::Kind::Scan { ce, .. }) =
+    let one = |v: &[f64]| match v {
+        [x] => Some(*x),
+        _ => None,
+    };
+    for (i, e) in experiments.iter_mut().enumerate() {
+        if e.level >= 2 {
+            e.iso_half = Some(UNIT_HALF_WIDTH);
+        }
+        let Some(methodinfo::Kind::Scan { ce, ces, dp, .. }) =
             m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind)
-        {
-            e.ce = match ce[..] {
-                [v] => Some(v),
-                _ => None,
-            };
+        else {
+            continue;
+        };
+        e.dp = one(dp);
+        if e.level >= 2 {
+            e.ce = one(ce);
+            e.ces = one(ces);
         }
     }
 }

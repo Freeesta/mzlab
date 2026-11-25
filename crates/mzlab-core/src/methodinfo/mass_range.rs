@@ -85,6 +85,10 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
             Kind::Scan {
                 range: None,
                 ce: Vec::new(),
+                ces: Vec::new(),
+                dp: Vec::new(),
+                precursor: None,
+                code: None,
             }
         };
     };
@@ -114,24 +118,32 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
                 .collect(),
         );
     }
-    let mut ce: Vec<f64> = Vec::new();
-    for v in entries
-        .iter()
-        .filter_map(|e| value(e, "CE"))
-        .map(|v| round(v, 2))
-    {
-        if !ce.contains(&v) {
-            ce.push(v);
+    // distinct values of a parameter over the ranges, sorted
+    let distinct = |id: &str| {
+        let mut v: Vec<f64> = Vec::new();
+        for x in entries.iter().filter_map(|e| value(e, id)).map(|v| round(v, 2)) {
+            if !v.contains(&x) {
+                v.push(x);
+            }
         }
-    }
-    crate::sortc::by(&mut ce, |a, b| a.total_cmp(b));
+        crate::sortc::by(&mut v, |a, b| a.total_cmp(b));
+        v
+    };
+    let (ce, ces, dp) = (distinct("CE"), distinct("CES"), distinct("DP"));
     // the scan covers the first range's start to the last range's stop
     let (a, b) = match (entries.first(), entries.last()) {
         (Some(f), Some(l)) => (f64::from(f.m0), f64::from(l.m1)),
         _ => (f64::NAN, f64::NAN),
     };
     let range = (10.0 <= a && a < b && b <= 3000.0).then(|| [round(a, 2), round(b, 2)]);
-    Kind::Scan { range, ce }
+    Kind::Scan {
+        range,
+        ce,
+        ces,
+        dp,
+        precursor: None,
+        code: None,
+    }
 }
 
 /// The `n` entries of `d`, or why the stream does not hold exactly `n` entries of the grammar (the text goes in the `detail` of the error).

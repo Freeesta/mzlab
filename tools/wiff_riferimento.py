@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cfb_write  # noqa: E402
+import wiff_dispersione  # noqa: E402
 import wiff_dispositivi  # noqa: E402
 
 MARKER = b"\xfe\xff\xff\xff\x02\x00\x00\x00"
@@ -218,6 +219,7 @@ def main():
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
     energia = energy(out)
+    dispersione = wiff_dispersione.spread(out, Writer, header, ion_spray, FULL, PRODUCT)
     unindexed(out)
     transizioni = transitions(out)
     programmati = scheduled(out)
@@ -227,7 +229,7 @@ def main():
     ms3 = ms3_file(out)
     dad = dad_method(out)
     ida = ida_file(out)
-    (out / "riferimento.json").write_text(json.dumps({"dispositivi": wiff_dispositivi.devices_file(out, Writer, header), "ida": ida, "dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
+    (out / "riferimento.json").write_text(json.dumps({"dispositivi": wiff_dispositivi.devices_file(out, Writer, header), "ida": ida, "dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "dispersione": dispersione, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
 
 
 def ida_file(out: Path):

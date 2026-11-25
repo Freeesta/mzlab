@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file_method/1",
+  "title": "file_method/1: tandem-MS method parameters per scan segment, `mzlab-cli file method`",
+  "description": "One document per sample. A parameter the file does not give is null and `unavailable` names the reason: not_decoded (the format holds it, mzLab does not read it yet), not_in_method (the method has no such parameter), not_in_file (the format has no field for it). `warnings` lists a mass in the file or sample name that is not within 1 m/z of any precursor: a notice, never a blocked result. Code: crates/mzlab-core/src/filemethod.rs, crates/mzlab-cli/src/method_cmd.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "file",
+    "sample",
+    "format",
+    "sample_name",
+    "segments",
+    "acquired",
+    "unavailable",
+    "warnings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "file_method/1"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id (null for an mzML)."
+    },
+    "format": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Format the method came from (sciex-wiff, mzml, ...); null when the file carries no method."
+    },
+    "sample_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "experiment",
+          "scan",
+          "ms_level",
+          "name",
+          "precursor_mz",
+          "q3_mz",
+          "mz_range",
+          "ce_eV",
+          "ce_list_eV",
+          "ces_eV",
+          "dp_V",
+          "dwell_ms",
+          "fill_time_ms",
+          "q1_resolution"
+        ],
+        "properties": {
+          "experiment": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Experiment index in the method (MS level for an mzML header)."
+          },
+          "scan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Scan type tag (MRM, PI, EMS, ...)."
+          },
+          "ms_level": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Transition name (MRM only)."
+          },
+          "precursor_mz": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Precursor m/z (Th)."
+          },
+          "q3_mz": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Product m/z of an MRM transition (Th)."
+          },
+          "mz_range": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Scanned m/z range [low, high] (Th)."
+          },
+          "ce_eV": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Collision energy; null when the segment holds none or several (see ce_list_eV)."
+          },
+          "ce_list_eV": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Every distinct collision energy of the segment."
+          },
+          "ces_eV": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Collision energy spread (eV)."
+          },
+          "dp_V": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Declustering potential (V)."
+          },
+          "dwell_ms": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "fill_time_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Fill (ion injection) time (ms)."
+          },
+          "q1_resolution": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Q1 resolution setting."
+          }
+        }
+      }
+    },
+    "acquired": {
+      "type": "array",
+      "description": "What the scans hold: one row per precursor.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "precursor_mz",
+          "ce_eV",
+          "scans"
+        ],
+        "properties": {
+          "precursor_mz": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ce_eV": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "scans": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ce_eV": {
+          "enum": [
+            "not_decoded",
+            "not_in_method",
+            "not_in_file"
+          ]
+        },
+        "ces_eV": {
+          "enum": [
+            "not_decoded",
+            "not_in_method",
+            "not_in_file"
+          ]
+        },
+        "dp_V": {
+          "enum": [
+            "not_decoded",
+            "not_in_method",
+            "not_in_file"
+          ]
+        },
+        "fill_time_ms": {
+          "enum": [
+            "not_decoded",
+            "not_in_method",
+            "not_in_file"
+          ]
+        },
+        "q1_resolution": {
+          "enum": [
+            "not_decoded",
+            "not_in_method",
+            "not_in_file"
+          ]
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "name_mz",
+          "nearest_name_mz",
+          "nearest_precursor",
+          "delta_mz",
+          "tolerance_mz"
+        ],
+        "properties": {
+          "key": {
+            "const": "warn.file.nameMz"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_mz": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "nearest_name_mz": {
+            "type": "number"
+          },
+          "nearest_precursor": {
+            "type": "number"
+          },
+          "delta_mz": {
+            "type": "number",
+            "description": "Precursor minus name mass (Th)."
+          },
+          "tolerance_mz": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

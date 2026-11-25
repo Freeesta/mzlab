@@ -19,7 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca, load as loadModule } from "./rust-msngrafo.js";
-import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js"; import { rawInfo } from "./rust-raw.js";
+import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js"; import { rawInfo } from "./rust-raw.js"; import { fileMethod } from "./rust-filemethod.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -471,7 +471,7 @@ async function handle(ev) {
       case "mrmchrom": info = engine.mrm_chrom(m.slot, m.blob.size, readerFor(m.blob), m.kind); break;   // api/chrom of an MRM file: a chromatogram of the mzML
       case "fileinfo": case "canali": info = (m.op === "canali" ? engine.canali : engine.fileinfo).call(engine, m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index; api/channels: the channels of its scans and chromatograms
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
-      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;   case "ticbg": info = await ticFondo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }); break;   // api/subxic of a high-resolution survey ("" = Python's); api/tic_background: the TIC/BPC without its chemical background
+      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;   case "filemethod": info = await fileMethod(m); break;   case "ticbg": info = await ticFondo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }); break;   // api/subxic of a high-resolution survey ("" = Python's); api/tic_background: the TIC/BPC without its chemical background
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error

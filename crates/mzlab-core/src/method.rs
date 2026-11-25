@@ -185,17 +185,21 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
                     V::Arr(vec![]),
                 ),
             };
-            let ce = match &e.kind {
-                Kind::Scan { ce, .. } if !ce.is_empty() => {
-                    Some(V::Arr(ce.iter().map(|&c| V::Num(c)).collect()))
-                }
-                _ => None,
+            let list = |v: &[f64]| (!v.is_empty()).then(|| V::Arr(v.iter().map(|&c| V::Num(c)).collect()));
+            let (ce, ces, dp, precursor, code) = match &e.kind {
+                Kind::Scan { ce, ces, dp, precursor, code, .. } => (list(ce), list(ces), list(dp), num(*precursor), *code),
+                Kind::Mrm(_) => (None, None, None, None, None),
             };
+            let scan_type = crate::wiff::modes::tag(code).map(V::s);
             obj(vec![
                 ("index", Some(V::Num(e.index as f64))),
                 ("type", experiment_type(e).map(V::s)),
                 ("mz", mz),
+                ("scan_type", scan_type),
+                ("precursor_mz", precursor),
                 ("ce_eV", ce),
+                ("ces_eV", ces),
+                ("dp_V", dp),
                 ("parameters", Some(params(&m.compound))),
                 ("transitions", Some(transitions)),
             ])

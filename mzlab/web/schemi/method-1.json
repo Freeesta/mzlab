@@ -179,6 +179,24 @@
                         "type": "number"
                       }
                     },
+                    "scan_type": {
+                      "type": "string"
+                    },
+                    "precursor_mz": {
+                      "type": "number"
+                    },
+                    "ces_eV": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "dp_V": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
                     "parameters": {
                       "$ref": "#/$defs/parametri"
                     },

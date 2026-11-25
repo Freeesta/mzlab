@@ -2460,6 +2460,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-filemethod-wasm"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-finder-lr-wasm"
 version = "1.0.0"
 dependencies = [

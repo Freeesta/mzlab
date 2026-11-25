@@ -41,6 +41,10 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file inventory", "mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status", |a| crate::wiff_cmd::run(pre("list", a))),
     Entry::new("file verify", "mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources", |a| crate::wiff_cmd::run(pre("verify", a))),
     Entry::new("file items", "mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE", crate::items_cmd::run).schema("items/1").exits(&[0, 2, 4, 6]),
+    Entry::new("file method", "mzlab-cli file method FILE [--sample LIST] [--out PATH]   per scan segment: precursor, CE, CES, DP, fill time, Q1 resolution; null + reason when absent; name/precursor warning", crate::method_cmd::run)
+        .schema("file_method/1")
+        .exits(&[0, 2, 4, 5, 6])
+        .examples(&["mzlab-cli file method sample.wiff --sample 1"]),
     Entry::new("file channels", "mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON", crate::channels_cmd::run).schema("channels/1").examples(&["mzlab-cli file channels sample.mzML"]),
     Entry::new("file pair", "mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name", crate::pair_cmd::run).exits(&[0, 1, 2]),
     Entry::new("file validate", "mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1", validate).schema("mzml-validation/1").exits(&[0, 1, 2, 4]),
