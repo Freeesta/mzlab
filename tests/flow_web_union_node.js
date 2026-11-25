@@ -3,12 +3,15 @@
 const fs = require("fs");
 const path = require("path");
 const root = process.argv[2], answer = JSON.parse(process.argv[3]);
+const realPool = require("./real_pool.js");
 const log = { ident: [], rpc: [], files: {}, calls: [], remembered: [] };
 const tabs = [{ name: "a.mzfeat", key: "ka", read: async () => new Uint8Array([1, 2]) }, { name: "view-0123456789abcdef.mzfeat", key: "kb", read: async () => new Uint8Array([3]) }];
+const flowtab = { flow_series_csv: bytes => { log.ident.push({ mod: "flowtab", op: "flow_series_csv", table: Array.from(bytes) }); return "id,mz,rt\ncsv-of-" + bytes.length + "\n"; } };
+const pool = realPool(root, flowtab);   // the real `ident` and the real op of feat-worker.js over a mock of the .wasm
 globalThis.FLOW = {
   refs: () => ["file:a", "file:b"], defaults: () => ({ da: 0.5, polarity: "any" }), stepOf: () => ({}),
   webMsn: { keep: async () => {} },
-  runners: { web: { kit: { getPool: async () => ({ ident: async (mod, op, m) => { log.ident.push({ mod, op, table: Array.from(m.table) }); return "id,mz,rt\ncsv-of-" + m.table.length + "\n"; } }) } } },
+  runners: { web: { kit: { getPool: async () => pool } } },
   liveJobs: {
     job: () => "job", sha: async s => "sha:" + s, recall: async () => null, remember: async (p, key) => { log.remembered.push(key); },
     tableOf: async (x, p, inst, port, k) => tabs[k], detached: async (x, spec, inst, fn) => fn(),

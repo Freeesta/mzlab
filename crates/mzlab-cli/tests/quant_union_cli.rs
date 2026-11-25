@@ -212,3 +212,27 @@ fn the_union_then_quant_targets_gives_the_cells_of_each_series_alone() {
         ("detected", "detected")
     );
 }
+
+#[test]
+fn polarity_any_is_the_default_and_a_sign_stamps_the_rows_that_have_none() {
+    let d = dir("polarity");
+    let base = ["quant", "union", "a.csv", "b.csv"];
+    let run = |extra: &[&str]| {
+        let mut a = base.to_vec();
+        a.extend_from_slice(extra);
+        let o = cli(&a, &d);
+        assert_eq!(o.status.code(), Some(0), "{}", text(&o.stderr));
+        text(&o.stdout)
+    };
+    let default = run(&[]);
+    assert_eq!(run(&["--polarity", "any"]), default, "--polarity any");
+    assert_eq!(
+        run(&["--set", "polarity=any"]),
+        default,
+        "--set polarity=any"
+    );
+    let plus = run(&["--polarity", "+"]);
+    assert_ne!(plus, default, "a sign changes the polarity column");
+    assert_eq!(run(&["--set", "polarity=+"]), plus, "--set polarity=+");
+    let _ = std::fs::remove_dir_all(&d);
+}

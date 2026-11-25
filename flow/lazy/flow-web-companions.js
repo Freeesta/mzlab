@@ -23,7 +23,7 @@
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
       let made;
-      try { made = await p.ident("flowtab", "flow_companions", { params, table: await tab.read() }); } catch (e) { throw asError(e); }
+      try { made = await p.ident("flowtab", "flow_companions", { params, table: await tab.read() }, true); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text: made.text }, warnings = made.warnings || [];
       await J().remember(p, key, { ...r, warnings }); note(x, inst, warnings);
       x.files.set(inst.id, { id: inst.id, ...r });

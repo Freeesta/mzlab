@@ -222,8 +222,23 @@ fn an_agent_gets_the_defaults_the_json_of_the_run_and_a_distinct_exit_code() {
         "stdout is JSON: {shown}"
     );
     let bad = go(&["--set", "uni.da=9"]);
-    assert_ne!(bad.code, 0);
-    assert_ne!(bad.code, 2, "a refused value is not a usage error");
+    // A value out of range is a plan error: exit 3 (integrity), `err.flow.check` with the problem named by instance, path and key.
+    assert_eq!(bad.code, 3, "{}", bad.stderr);
     assert!(!bad.stderr.is_empty());
+    let doc = mzlab_core::json::parse(&bad.stdout).expect("error/1 on stdout");
+    assert_eq!(doc.get("schema").and_then(|v| v.str()), Some("error/1"));
+    assert_eq!(
+        doc.get("error_key").and_then(|v| v.str()),
+        Some("err.flow.check")
+    );
+    let problem = &doc.get("problems").unwrap().arr()[0];
+    assert_eq!(
+        problem.get("error_key").and_then(|v| v.str()),
+        Some("err.flow.param.range")
+    );
+    assert_eq!(
+        problem.get("path").and_then(|v| v.str()),
+        Some("uni.params.da")
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
