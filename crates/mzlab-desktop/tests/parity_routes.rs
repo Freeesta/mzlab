@@ -2,6 +2,8 @@
 //! goes to the desktop engine and to the engine `.wasm` (`mzlab-wasm`, wasm-bindgen `--target nodejs`, run by `tests/rotte_wasm_node.js`) on the same example and the
 //! same `.mzidx`, and every answer must be the same: the text, the numbers or the bytes, or the key of the error. `MZLAB_WASM_PKG` names the folder of the built module;
 //! `tests/test_parita_rotte_app.py` builds it and runs this test. Without it (or without node) the test does nothing.
+#[path = "parity_routes/raw_pol.rs"]
+mod raw_pol;
 #[path = "parity_routes/route_steps.rs"]
 mod route_steps;
 use mzlab_desktop::rpc::Answer;

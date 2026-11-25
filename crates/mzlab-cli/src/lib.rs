@@ -232,6 +232,7 @@ mod quant_targets_cmd;
 mod quant_union_cmd;
 mod raw_cache_cmd;
 mod raw_cmd;
+mod raw_xic_cmd;
 mod renamed;
 mod sample_select;
 mod samples_cmd;

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "raw-plan/1",
-  "title": "raw-plan/1: what `mzlab-cli raw info --dry-run` would read",
-  "description": "The query with its defaults resolved and each file with its size and cache status (none without a cache, else missing, reused or stale); no peak is read. Code: crates/mzlab-cli/src/raw_cmd.rs.",
+  "title": "raw-plan/1: what `mzlab-cli raw info --dry-run` or `raw xic --dry-run` would read",
+  "description": "The query with its defaults resolved and each file with its size and cache status (none without a cache, else missing, reused or stale); no peak is read. Code: crates/mzlab-cli/src/raw_cmd.rs, raw_xic_cmd.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -15,53 +15,122 @@
       "const": "raw-plan/1"
     },
     "command": {
-      "const": "raw info"
+      "enum": [
+        "raw info",
+        "raw xic"
+      ]
     },
     "query": {
-      "type": "object",
-      "required": [
-        "probe",
-        "offset_ion",
-        "sample"
-      ],
-      "properties": {
-        "probe": {
-          "type": "integer"
-        },
-        "offset_ion": {
-          "oneOf": [
-            {
-              "type": "null"
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "probe",
+            "offset_ion",
+            "sample"
+          ],
+          "properties": {
+            "probe": {
+              "type": "integer"
             },
-            {
-              "type": "object",
-              "required": [
-                "mz",
-                "rt"
-              ],
-              "properties": {
-                "mz": {
-                  "type": "number"
+            "offset_ion": {
+              "oneOf": [
+                {
+                  "type": "null"
                 },
-                "rt": {
-                  "type": [
-                    "number",
-                    "null"
-                  ]
+                {
+                  "type": "object",
+                  "required": [
+                    "mz",
+                    "rt"
+                  ],
+                  "properties": {
+                    "mz": {
+                      "type": "number"
+                    },
+                    "rt": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
                 }
-              },
-              "additionalProperties": false
+              ]
+            },
+            "sample": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
-          ]
+          },
+          "additionalProperties": false
         },
-        "sample": {
-          "type": [
-            "string",
-            "null"
-          ]
+        {
+          "type": "object",
+          "required": [
+            "mz",
+            "da",
+            "rt",
+            "ms_level",
+            "polarity",
+            "mz_offset",
+            "sample",
+            "set",
+            "limit"
+          ],
+          "properties": {
+            "mz": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "da": {
+              "type": "number"
+            },
+            "rt": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "ms_level": {
+              "type": "integer"
+            },
+            "polarity": {
+              "enum": [
+                "+",
+                "-",
+                null
+              ]
+            },
+            "mz_offset": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sample": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "set": {
+              "type": "object"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      ]
     },
     "files": {
       "type": "array",

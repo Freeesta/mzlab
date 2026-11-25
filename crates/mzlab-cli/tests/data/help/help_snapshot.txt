@@ -41,6 +41,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
+       mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -162,6 +163,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
+       mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -283,6 +285,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file convert INPUT... --out FOLDER [--name file|sample] [...]   vendor files to indexed mzML
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
+       mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr

@@ -51,11 +51,34 @@ pub fn stat_steps() -> Vec<Value> {
     out
 }
 
-/// `raw info` on the index of slot 0 (`/api/rawinfo`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe out of range.
+/// `raw info` and `raw xic` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
+/// out of range; two masses (a peak and an empty one), changed thresholds, an m/z offset, a question with no time and a width out of range; then the
+/// slot reopened on the negative section and back on every section. The shared example holds positive scans only, so that negative section is the empty one; a
+/// file of alternating polarity (each section with its own answer) is `raw_pol.rs`. There is no `--sample` step: the app and the site answer a route over the
+/// index of one sample already chosen (a multi-sample file reaches them as one file per sample), so the sample choice is the CLI's, pinned CLI against wasm.
 pub fn raw_steps() -> Vec<Value> {
-    ["?probe=8", "?probe=64&offset_mz=300", "?probe=0"]
-        .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawinfo", "query": q}))
-        .to_vec()
+    let info = ["?probe=8", "?probe=64&offset_mz=300", "?probe=0"]
+        .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawinfo", "query": q}));
+    let xic = [
+        "?mz=241.3,300.7&rt=2.5,3.5",
+        "?mz=241.3&rt=2.5,3.5&da=0.2&min_sn=5&min_points=4&alpha=0.01",
+        "?mz=241.0&rt=2.5,3.5&da=0.2&mz_offset=0.3",
+        "?mz=241.3",
+        "?mz=241.3&rt=2.5,3.5&da=0",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawxic", "query": q}));
+    let pol = |p: i32| json!({"op": "idxopen", "slot": 0, "name": super::NAME, "pol": p});
+    let negative = [
+        ("/api/rawinfo", "?probe=8"),
+        ("/api/rawxic", "?mz=241.3&rt=2.5,3.5"),
+    ]
+    .map(|(path, q)| json!({"op": "route", "slot": 0, "path": path, "query": q}));
+    info.into_iter()
+        .chain(xic)
+        .chain([pol(-1)])
+        .chain(negative)
+        .chain([pol(0)])
+        .collect()
 }
 
 /// Where two text answers first differ: the position and the text around it (a report is thousands of characters and the CI log keeps a tail).

@@ -245,7 +245,7 @@ pub struct Check {
 }
 
 /// Rounded for the text of a rule.
-fn rd(v: f64) -> String {
+pub(crate) fn rd(v: f64) -> String {
     let a = v.abs();
     let d = if a >= 100.0 {
         0

@@ -31,8 +31,8 @@ def test_every_module_is_built_by_a_script():
         if r["parte"] != "core":
             assert (ROOT / "crates" / r["pacchetto"] / "Cargo.toml").is_file(), n
     chiavi = [k for r in mod.values() for k in r.get("chiavi", {})]
-    assert len(chiavi) == len(set(chiavi)) == 32
-    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 33))
+    assert len(chiavi) == len(set(chiavi)) == 33
+    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 34))
 
 
 def test_workflow_caps_come_from_the_data():

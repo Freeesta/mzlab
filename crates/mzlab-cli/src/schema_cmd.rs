@@ -68,6 +68,7 @@ embed!(
     "raw-cache-1.json",
     "raw-info-1.json",
     "raw-plan-1.json",
+    "raw-xic-1.json",
     "pack-run-1.json",
     "unpack-run-1.json",
     "verify-pack-1.json",
