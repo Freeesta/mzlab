@@ -18,9 +18,9 @@ def run(*a):
     return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 
 
-def samples_json(idx):
+def samples_json(idx, blank=None):
     rows = [{"blank_kind": None, "compound": "", "concentration": None, "concentration_unit": None, "file": Path(p).stem + ".mzML", "injection_order": i + 1, "istd": False,
-             "kind": "sample", "note": "", "replicate": 1, "series": "", "sha256": "00" * 32, "time": None, "time_confirmed": False, "time_min": None, "time_unit": "min"} for i, p in enumerate(idx)]
+             "kind": "blank" if i == blank else "sample", "note": "", "replicate": 1, "series": "", "sha256": "00" * 32, "time": None, "time_confirmed": False, "time_min": None, "time_unit": "min"} for i, p in enumerate(idx)]
     return json.dumps({"schema": "samples/1", "samples": rows})
 
 
@@ -72,3 +72,21 @@ def test_wasm_and_native_write_the_same_files(built, spec):
     assert (nat / "features.csv").read_text().splitlines()[0].startswith("id;mz;rt;")
     assert len(json.loads((nat / "features.rows.json").read_text())["hojas"][0]["filas"]) == len(full)
     assert json.loads((nat / "report.json").read_text())["schema"] == "report/2"
+
+
+def test_wasm_and_native_give_the_same_blank_evidence_for_the_plain_ratio_filter(built):
+    """AU-7 slice 2: the plain `blank` rule (default options) writes `counts.blank` too, the same bytes in the app engine and in the .wasm."""
+    root, idx, pkg, table = built
+    (root / "samples_blank.json").write_text(samples_json(idx, blank=0))
+    (root / "spec_blank.json").write_text(json.dumps({"normalize": {"method": "none"}, "filter": [{"rule": "blank", "value": 3}]}))
+    args = [str(table), str(root / "samples_blank.json"), str(root / "spec_blank.json"), "1", *idx]
+    views = {}
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+        out = root / f"{name}-blank"
+        out.mkdir()
+        run(*cmd, str(out), *args)
+        views[name] = (out / "view.json").read_bytes()
+    assert views["nat"] == views["wasm"]
+    blank = json.loads(views["nat"])["counts"]["blank"]
+    assert blank["quantity"] == "area" and blank["fold"] == 3 and blank["groups"] == 1
+    assert blank["dropped_total"] >= len(blank["dropped"]) and blank["truncated"] is (blank["dropped_total"] > len(blank["dropped"]))

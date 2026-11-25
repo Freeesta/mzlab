@@ -150,10 +150,45 @@ fn the_counts_give_the_evidence_of_every_dropped_row() {
 }
 
 #[test]
-fn a_rule_without_options_adds_nothing_to_the_counts() {
-    let (t, s) = table(&[ROW0]);
+fn the_plain_ratio_filter_gives_the_same_evidence() {
+    // row 1 (id 1): best sample area 600 against a blank mean of 20; row 2: best 30 against 20 (fold 1.5 < 2); row 3: no peak in the blanks
+    let mut weak = ROW0;
+    weak[1] = (30.0, 0.0);
+    weak[2] = (25.0, 0.0);
+    weak[4] = (20.0, 0.0);
+    let mut clean = ROW0;
+    clean[0] = (0.0, 0.0);
+    clean[3] = (0.0, 0.0);
+    let (t, s) = table(&[ROW0, weak, clean]);
     let v = view::build(&t, &s, &Method::None, &[Rule::Blank(2.0)]).unwrap();
-    assert!(!v.counts_json().contains("\"blank\""));
+    assert_eq!(v.rows, vec![0, 2]);
+    let counts = v.counts_json();
+    assert!(counts.contains("\"discarded\":[1]"), "{counts}");
+    assert!(
+        counts.contains("\"blank\":{\"quantity\":\"area\",\"fold\":2,\"groups\":1,\"dropped\":[[2,30,20,1.5]],\"dropped_total\":1,\"truncated\":false,\"fallback_all\":{\"total\":0,\"files\":[]}}"),
+        "{counts}"
+    );
+    // the plain rule and the same rule written with its default options judge and report alike
+    let w = view::build(
+        &t,
+        &s,
+        &Method::None,
+        &[Rule::BlankWith(2.0, BlankOpts::default())],
+    )
+    .unwrap();
+    assert_eq!(w.rows, v.rows);
+    assert_eq!(w.counts_json(), counts);
+}
+
+#[test]
+fn a_ratio_under_one_is_reported_as_given() {
+    let (t, s) = table(&[ROW0]);
+    let v = view::build(&t, &s, &Method::None, &[Rule::Blank(0.5)]).unwrap();
+    assert!(
+        v.counts_json().contains("\"fold\":0.5,"),
+        "{}",
+        v.counts_json()
+    );
 }
 
 #[test]
