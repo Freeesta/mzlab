@@ -231,8 +231,10 @@ fn a_table_with_one_name_on_two_columns_is_exit_4_and_names_the_command_that_fix
         );
         let message = o.stderr.lines().find(|l| l.starts_with("error:")).unwrap();
         assert!(
-            message.contains("the same name") && !message.contains(hint),
-            "{message}"
+            message.contains("the same name")
+                && !message.contains(hint)
+                && !message.contains("mzlab-cli"),
+            "the message is neutral (the browser shows it too), the command is the hint: {message}"
         );
     }
     let o = run(&[
@@ -253,7 +255,7 @@ fn a_table_with_one_name_on_two_columns_is_exit_4_and_names_the_command_that_fix
 
 #[test]
 fn flow_inputs_naming_samples_get_the_same_columns() {
-    let (dir, wiff) = pair("flow");
+    let (dir, _) = pair("flow");
     let inputs = r#"{"name":"grande.wiff@1","type":"raw"},{"name":"grande.wiff@3","type":"raw"},{"name":"samples.json","type":"samples"}"#;
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{inputs}],"steps":[
@@ -378,4 +380,35 @@ fn the_sample_names_give_the_roles_and_times_the_selectors_of_table_compare_read
         assert!(text.contains(part), "{part} in {text}");
     }
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn the_same_sample_twice_is_numbered_and_the_note_says_so() {
+    let (dir, wiff) = pair("twice");
+    let o = run(&["features", &wiff, &wiff, "--sample", "1"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(
+        areas(&header(&o)),
+        [
+            "datafile:grande_s1 (grande #1)",
+            "datafile:grande_s1 (grande #1) [2]"
+        ]
+    );
+    // the first takes the file and the id, the second also its number; each note names the label shown
+    assert!(
+        o.stderr.contains("(note.features.columnTie)"),
+        "{}",
+        o.stderr
+    );
+    let numbered = o
+        .stderr
+        .lines()
+        .find(|l| l.contains("note.features.columnNumbered"))
+        .unwrap_or_else(|| panic!("no numbered note: {}", o.stderr));
+    assert!(
+        numbered.contains("Column grande_s1 (grande #1) [2].wiff is sample 1"),
+        "{numbered}"
+    );
+    assert!(numbered.contains("numbered [2], [3]"), "{numbered}");
+    let _ = std::fs::remove_dir_all(dir);
 }

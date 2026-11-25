@@ -1,6 +1,7 @@
 //! `features`: the feature table of LC-MS files as CSV; the arguments are parsed here.
 
 use super::Entry;
+use crate::sample_label::Kind;
 use crate::{features_full, features_plan_of, Outcome};
 use std::path::PathBuf;
 
@@ -144,10 +145,10 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>, Str
     for (((k, sample), (column, tie)), f) in names.iter().zip(&columns).zip(&fnames) {
         let id = ids[*k].unwrap_or(0);
         labels[*k] = format!("{column}@{id}");
-        let key = if *tie {
-            "note.features.columnTie"
-        } else {
-            "note.features.column"
+        let key = match tie {
+            Kind::Own => "note.features.column",
+            Kind::Tie => "note.features.columnTie",
+            Kind::Numbered => "note.features.columnNumbered",
         };
         notes += &format!(
             "note: {}\n",

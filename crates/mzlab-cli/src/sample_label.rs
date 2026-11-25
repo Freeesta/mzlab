@@ -37,8 +37,16 @@ fn clean(name: &str) -> String {
         .collect()
 }
 
-/// The labels of `members` (one per member, in order) and whether each had to take the tie-break (`NAME (FILE #ID)`). An empty sample name is `FILE #ID`.
-pub(crate) fn labels(members: &[Member]) -> Vec<(String, bool)> {
+/// How a label came about: the sample name as it is, the tie-break `NAME (FILE #ID)` (two samples have the name), or a ` [N]` number (the same file name twice).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Kind {
+    Own,
+    Tie,
+    Numbered,
+}
+
+/// The labels of `members` (one per member, in order) and how each came about. An empty sample name is `FILE #ID`.
+pub(crate) fn labels(members: &[Member]) -> Vec<(String, Kind)> {
     let plain: Vec<String> = members
         .iter()
         .map(|m| {
@@ -50,7 +58,7 @@ pub(crate) fn labels(members: &[Member]) -> Vec<(String, bool)> {
             }
         })
         .collect();
-    let mut out: Vec<(String, bool)> = members
+    let mut out: Vec<(String, Kind)> = members
         .iter()
         .zip(&plain)
         .map(|(m, p)| {
@@ -58,10 +66,10 @@ pub(crate) fn labels(members: &[Member]) -> Vec<(String, bool)> {
             if clash {
                 (
                     with_extension(&format!("{p} ({} #{})", base(m.file), m.id), m.file),
-                    true,
+                    Kind::Tie,
                 )
             } else {
-                (with_extension(p, m.file), false)
+                (with_extension(p, m.file), Kind::Own)
             }
         })
         .collect();
@@ -69,13 +77,13 @@ pub(crate) fn labels(members: &[Member]) -> Vec<(String, bool)> {
     for k in 1..out.len() {
         let seen = out[..k].iter().filter(|(n, _)| *n == out[k].0).count();
         if seen > 0 {
-            let (n, tie) = &out[k];
+            let n = &out[k].0;
             let name = n
                 .rsplit_once('.')
                 .map_or(format!("{n} [{}]", seen + 1), |(h, e)| {
                     format!("{h} [{}].{e}", seen + 1)
                 });
-            out[k] = (name, *tie);
+            out[k] = (name, Kind::Numbered);
         }
     }
     out

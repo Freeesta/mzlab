@@ -1,7 +1,9 @@
 """The label of a sample of a multi-sample `.wiff`: `mzlab-cli features --sample` (`crates/mzlab-cli/src/sample_label.rs`) and the site (`wiffName` of `mzlab/web/conversione.js`, run by node)
-give the same name for every sample whose name is not taken: trimmed, the characters `/ \\ : * ? " < > | #` as `_`, at most 120 characters. When two names collide the rules differ on purpose: the site
-counts (`S.wiff`, `S_2.wiff`, ...) the files of one batch, the command writes `NAME (FILESTEM #ID)` and says so on stderr (`note.features.columnTie`); the owner decides which one wins, see the PR that added this
-file. Fails, never skips, in CI when a tool is missing: `test_the_tools_are_there_in_ci`."""
+give the same name for every sample whose name is not taken: trimmed, the characters `/ \\ : * ? " < > | #` as `_`, at most 120 characters.
+
+COLLISION LABELS DIFFER BETWEEN THE SITE AND THE CLI until row COLLISION-LABEL of `docs/coda/CODA.md` is done: when two names collide the site counts (`S.wiff`, `S_2.wiff`, ...) over the files of one
+batch, and the command writes `NAME (FILESTEM #ID)` (`note.features.columnTie`; a repeated label is numbered ` [N]`, `note.features.columnNumbered`). This test does not cover collisions on purpose; that row
+puts one Rust function behind both and extends this test to them. Fails, never skips, in CI when a tool is missing: `test_the_tools_are_there_in_ci`."""
 import json
 import os
 import shutil

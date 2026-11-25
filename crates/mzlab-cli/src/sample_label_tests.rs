@@ -9,8 +9,8 @@ fn m<'a>(file: &'a str, id: u32, sample: &'a str) -> Member<'a> {
 #[test]
 fn a_sample_name_is_the_label_and_the_file_keeps_only_its_extension() {
     let l = labels(&[m("run.wiff", 1, "Sample_A"), m("run.wiff", 2, "Sample 1.5")]);
-    assert_eq!(l[0], ("Sample_A.wiff".to_string(), false));
-    assert_eq!(l[1], ("Sample 1.5.wiff".to_string(), false));
+    assert_eq!(l[0], ("Sample_A.wiff".to_string(), Kind::Own));
+    assert_eq!(l[1], ("Sample 1.5.wiff".to_string(), Kind::Own));
 }
 
 #[test]
@@ -31,11 +31,14 @@ fn names_that_collide_take_the_file_and_the_id_and_the_others_do_not() {
             "T (a #3).wiff"
         ]
     );
-    assert!(l.iter().all(|(_, tie)| *tie));
+    assert!(l.iter().all(|(_, k)| *k == Kind::Tie));
     let l = labels(&[m("a.wiff", 1, "S"), m("b.wiff", 1, "U")]);
     assert_eq!(
         l,
-        [("S.wiff".to_string(), false), ("U.wiff".to_string(), false)]
+        [
+            ("S.wiff".to_string(), Kind::Own),
+            ("U.wiff".to_string(), Kind::Own)
+        ]
     );
 }
 
@@ -44,6 +47,7 @@ fn one_file_twice_is_numbered_so_no_name_repeats() {
     let l = labels(&[m("a.wiff", 1, "S"), m("a.wiff", 1, "S")]);
     assert_eq!(l[0].0, "S (a #1).wiff");
     assert_eq!(l[1].0, "S (a #1) [2].wiff");
+    assert_eq!((l[0].1, l[1].1), (Kind::Tie, Kind::Numbered));
 }
 
 #[test]
