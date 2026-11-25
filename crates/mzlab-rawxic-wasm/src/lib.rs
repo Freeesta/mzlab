@@ -65,3 +65,15 @@ pub fn raw_xic(size: f64, read: Function, pol: i32, query: &str) -> Result<Strin
         .map_err(|e| error_json(&e))?;
     Ok(out.unwrap_or_default())
 }
+
+/// `api/specsum?rt0=A&rt1=B[&level=..&precursor=..&filt=..&channel=..&fill_ms=..]` (`Routes::spec_sum_route`, the evidence of `mzlab-cli spectrum get --sum`)
+/// over the `.mzidx` of `size` bytes read by `read`; `pol` as in `raw_xic`.
+#[wasm_bindgen]
+pub fn spec_sum(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
+    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
+    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
+    let out = r
+        .spec_sum_route(&Query::parse(query))
+        .map_err(|e| error_json(&e))?;
+    Ok(out.unwrap_or_default())
+}

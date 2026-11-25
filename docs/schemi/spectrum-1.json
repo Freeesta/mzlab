@@ -55,7 +55,7 @@
     },
     "evidence": {
       "type": "object",
-      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level) and answer (the route's own members)."
+      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level) and answer (the route's own members); with --sum, `sum` (n_scans, counts_cps, fill_time, ions, by_scan_type, ion_quantum, ions_by_quantum, background: the bytes of /api/specsum); in the mean of a window of two scans or more, `hint` (key, text, command) names --sum."
     }
   }
 }

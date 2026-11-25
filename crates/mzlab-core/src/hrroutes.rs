@@ -64,7 +64,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The precursor with its tolerance and the log width of a 3 ppm cell.
-    fn hr_cells(level: u8, precursor: Option<f64>, hr: &HrProfile) -> ((Option<f64>, f64), f64) {
+    pub(crate) fn hr_cells(level: u8, precursor: Option<f64>, hr: &HrProfile) -> ((Option<f64>, f64), f64) {
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 => (p * hr.ppm * 1e-6).max(1e-3),
             _ => 0.6,
