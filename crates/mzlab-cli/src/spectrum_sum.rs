@@ -16,7 +16,7 @@ pub(crate) struct SumOpt {
 pub(crate) fn options(
     p: &Parsed,
     at: &At,
-    has_blank: bool,
+    (has_blank, has_chan): (bool, bool),
 ) -> std::result::Result<Option<SumOpt>, String> {
     if !p.flag("--sum") {
         return match p.get("--fill-ms") {
@@ -29,6 +29,9 @@ pub(crate) fn options(
     }
     if has_blank {
         return Err("--sum is not for --minus (a sum has no blank subtracted)".into());
+    }
+    if has_chan {
+        return Err("--sum is not for --id (the sum reads the scans of the level; a channel is not asked of it yet)".into());
     }
     p.num("--fill-ms")?;
     Ok(Some(SumOpt {
@@ -44,7 +47,7 @@ pub(crate) fn evidence(
 ) -> Result<String> {
     let mut q: Vec<(&str, String)> = pairs
         .iter()
-        .filter(|(k, _)| matches!(*k, "rt0" | "rt1" | "level" | "precursor" | "channel"))
+        .filter(|(k, _)| matches!(*k, "rt0" | "rt1" | "level" | "precursor"))
         .cloned()
         .collect();
     if let Some(f) = fill {
@@ -62,11 +65,11 @@ fn note_text(key: &str) -> String {
 }
 
 /// What follows the evidence of `spectrum get` (a member to add to it) and the lines for the terminal: the sum's evidence and the notes it carries,
-/// or, for the mean of a window of two scans or more, the hint at `--sum` (in the evidence for JSON, on the terminal for CSV).
+/// or, for the mean of a window of two scans or more, the hint at `--sum` (in the evidence for JSON, on the terminal for CSV; none for `--id`, which a sum does not take).
 pub(crate) fn tail(
     sum: Option<&str>,
     at: &At,
-    csv: bool,
+    (csv, has_chan): (bool, bool),
     answer: &str,
 ) -> Result<(String, String)> {
     let (mut extra, mut notes) = (String::new(), String::new());
@@ -79,7 +82,7 @@ pub(crate) fn tail(
             }
         }
         extra = format!(",\"sum\":{e}");
-    } else if matches!(at, At::Window(..)) {
+    } else if matches!(at, At::Window(..)) && !has_chan {
         let n = parse(answer.as_bytes())?
             .get("scans")
             .and_then(Value::f64)

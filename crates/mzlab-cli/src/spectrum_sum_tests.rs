@@ -169,38 +169,25 @@ fn the_sum_can_be_found_from_the_help_the_task_words_and_the_catalog() {
 }
 
 #[test]
-fn a_channel_sums_the_same_scans_as_its_spectrum_whatever_the_level_asked() {
+fn a_channel_is_not_summed_and_its_mean_carries_no_hint_at_the_sum() {
     let Some(d) = synthetic() else { return };
     let p = d.join("C_IDA.mzML").to_string_lossy().into_owned();
-    let n = |v: &Value, k: &str| {
-        v.get("evidence")
-            .unwrap()
-            .get(k)
-            .and_then(|x| x.get("n_scans").or(x.get("scans")))
-            .and_then(Value::f64)
-    };
-    for level in ["1", "2"] {
-        let (v, _, _) = ok(&[
-            "spectrum",
-            "get",
-            &p,
-            "--rt",
-            "0,20",
-            "--id",
-            "ms:ms2 364",
-            "--ms-level",
-            level,
-            "--sum",
-        ]);
-        let ans = v
-            .get("evidence")
-            .unwrap()
-            .get("answer")
-            .unwrap()
-            .get("scans")
-            .and_then(Value::f64);
-        assert_eq!(ans, n(&v, "sum"), "level {level}");
-        // the channel is an MS2 one: its scans are found at level 2 only
-        assert_eq!(ans.unwrap() > 0.0, level == "2");
-    }
+    let get = [
+        "spectrum",
+        "get",
+        &p,
+        "--rt",
+        "0,20",
+        "--id",
+        "ms:ms2 364",
+        "--ms-level",
+        "2",
+    ];
+    let o = run(&[&get[..], &["--sum"]].concat());
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(o.stderr.contains("--sum is not for --id"), "{}", o.stderr);
+    // the mean of the channel's window is as before, with no pointer to a command that would refuse it
+    let o = run(&get);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(!String::from_utf8_lossy(&o.stdout).contains("\"hint\""));
 }

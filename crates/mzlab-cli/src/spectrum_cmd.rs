@@ -23,7 +23,7 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
   --sum       with --rt A,B: add the scans instead of averaging them (`mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum`); `evidence.sum` gives the
               scans added, their counts (cps summed), the ions (counts x fill time) per scan type and the ion quantum, so a reader can judge whether the
-              spectrum rests on enough ions; no background is subtracted (`evidence.sum.background`); not with --minus
+              spectrum rests on enough ions; no background is subtracted (`evidence.sum.background`); not with --minus or --id
   --fill-ms T the fill time of a scan in ms for --sum when the file does not give it (the ions are null without it; the user states it, it is never guessed)
   --scan NO   the scan with that number (`spectrum list` prints it as scan_no); its level and precursor are used; no such scan: exit 5
   --ms-level N the level (default 1, or the level of --scan)
@@ -206,7 +206,7 @@ fn get_one(
     let x = extract::tokens(&text, "mz").ok_or_else(bad)?;
     let y = extract::tokens(&text, "y").ok_or_else(bad)?;
     let pts = extract::pairs(&x, &y, None);
-    let (extra, notes) = sum::tail(sum_ev.as_deref(), at, csv, &text)?;
+    let (extra, notes) = sum::tail(sum_ev.as_deref(), at, (csv, chan.is_some()), &text)?;
     if csv {
         return Ok((extract::points_csv("mz", "intensity", &pts), notes));
     }
@@ -275,7 +275,7 @@ pub fn get(args: Vec<String>) -> Outcome {
         if blank.is_some() && p.get("--id").is_some() {
             return Err("--minus is not for --id (the blank is read at the same level)".into());
         }
-        let sum = sum::options(&p, &at, blank.is_some())?;
+        let sum = sum::options(&p, &at, (blank.is_some(), p.get("--id").is_some()))?;
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,

@@ -1,7 +1,8 @@
 //! `/api/specsum` (`spectrum get --sum`): what a summed spectrum is made of, so that a reader can judge whether it is credible: the scans added, their
 //! total counts (cps summed over scans) per scan type, the ions (counts x fill time, only when the fill time is known) and the ion quantum of the level
 //! (`ionstat::quantum`, the one of `raw info`). Read from the index only (the arrays of the section), so the site (the lazy `rawxic` `.wasm`), the app and
-//! the CLI answer the same bytes. Nothing is subtracted: the answer says so (`background.applied`).
+//! the CLI answer the same bytes. Nothing is subtracted: the answer says so (`background.applied`). The scans are chosen here from the section's arrays
+//! (window, level, precursor), not by `select_scans`: its filters (`msn:` tree, channels) would add ~65 KB to the lazy `.wasm`, so a channel is not asked of this route.
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -18,25 +19,13 @@ pub const NO_QUANTUM: &str = "note.spec.sum.noQuantum";
 type Types = Vec<(String, usize, f64)>;
 
 impl<R: ReadAt> Routes<R> {
-    /// `/api/specsum?rt0=A&rt1=B[&level=N][&precursor=P][&filt=F|channel=ID][&fill_ms=T]`: the evidence of the summed spectrum of the window, `None` when
+    /// `/api/specsum?rt0=A&rt1=B[&level=N][&precursor=P][&fill_ms=T]`: the evidence of the summed spectrum of the window, `None` when
     /// the request has no window.
     pub fn spec_sum_route(&mut self, q: &Query) -> Result<Option<String>> {
         let (Some(rt0), Some(rt1)) = (q.num("rt0")?, q.num("rt1")?) else {
             return Ok(None);
         };
-        let mut level = q.level();
-        let mut filt = q.some("filt").map(str::to_string);
-        if let Some(id) = q.some("channel") {
-            let ch = self.canali();
-            let i = ch
-                .find(id)
-                .ok_or_else(|| Error::new("err.canali.unknown").with("id", id))?;
-            // as `/api/spectrum`: the level of the request wins, the channel's is the default
-            if q.get("level").is_none() {
-                level = ch.v[i].livello.max(1);
-            }
-            filt = Some(format!("channel:{id}"));
-        }
+        let level = q.level();
         let fill = match q.num("fill_ms")? {
             Some(t) if t > 0.0 && t.is_finite() => Some(t),
             Some(t) => {
@@ -54,20 +43,44 @@ impl<R: ReadAt> Routes<R> {
             (precursor, 0.6)
         };
         let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
-        let sel = self.select_scans(level, lo, hi, prec, filt.as_deref())?;
+        let sel = self.pick(level, lo, hi, prec)?;
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
         let (n, total, types) = self.tally(sel.as_ref())?;
         Ok(Some(answer(level, fill, n, total, &types, &probe, quant)))
     }
 
+    /// The scans of a window of one level: the section and which of its scans are inside the window and near the precursor.
+    fn pick(
+        &mut self,
+        level: u8,
+        lo: f64,
+        hi: f64,
+        (precursor, tol): (Option<f64>, f64),
+    ) -> Result<Option<(usize, Vec<bool>)>> {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok(None);
+        };
+        let ar = self.idx.arrays(si)?.clone();
+        let want = if level > 1 { precursor } else { None };
+        let ok = (0..ar.rt.len())
+            .map(|j| {
+                let s = &self.idx.scans[ar.scan_ids[j] as usize];
+                ar.rt[j] >= lo
+                    && ar.rt[j] <= hi
+                    && want.is_none_or(|p| (s.prec(-1.0) - p).abs() <= tol)
+            })
+            .collect();
+        Ok(Some((si, ok)))
+    }
+
     /// The scans of the selection: how many, their counts, and the same per scan type (in order of first appearance).
-    fn tally(&mut self, sel: Option<&crate::spectrum::Selection>) -> Result<(usize, f64, Types)> {
+    fn tally(&mut self, sel: Option<&(usize, Vec<bool>)>) -> Result<(usize, f64, Types)> {
         let mut types: Types = Vec::new();
         let (mut n, mut total) = (0usize, 0.0f64);
-        if let Some(sl) = sel {
-            let ar = self.idx.arrays(sl.si)?.clone();
-            for j in (0..ar.rt.len()).filter(|&j| sl.ok[j]) {
+        if let Some((si, ok)) = sel {
+            let ar = self.idx.arrays(*si)?.clone();
+            for j in (0..ar.rt.len()).filter(|&j| ok[j]) {
                 let key = self.idx.scans[ar.scan_ids[j] as usize].key();
                 let c = ar.sumint[j];
                 n += 1;

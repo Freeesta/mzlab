@@ -141,7 +141,7 @@ impl Scan {
             .filter(|a| !a.is_empty())
             .or_else(|| last.map(|l| l.1.clone()))
             .unwrap_or_default()
-            .to_lowercase();
+            .to_ascii_lowercase();
         match &self.path {
             Some(p) if p.len() > 1 => {
                 let ms: Vec<String> = p
@@ -176,7 +176,7 @@ fn strip_range(f: &str) -> &str {
 
 /// `^(\w+)\s+([+-])\s` of the filter: the analyzer and the polarity sign.
 fn key_prefix(f: &str) -> Option<(&str, char)> {
-    let w = f.find(|c: char| !(c.is_alphanumeric() || c == '_'))?;
+    let w = f.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))?;
     if w == 0 {
         return None;
     }
