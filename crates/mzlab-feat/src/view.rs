@@ -7,7 +7,7 @@ use mzlab_core::json::{parse, Out, Value};
 
 use crate::aligned::Aligned;
 use crate::filters::{self, Rule};
-use crate::filters_blank::{self, Labels, Subtraction};
+use crate::filters_blank::{self, BlankOpts, Labels, Subtraction};
 use crate::norm::{self, Method};
 use crate::samples::Sample;
 
@@ -60,10 +60,13 @@ const EVIDENCE_CAP: usize = 200;
 /// The evidence of the rows the first `BlankWith` rule dropped: per row its id, the deciding value, the blank level of its group and the fold (`null` when
 /// no blank level above 0 exists), so the user sees why every row went; the first `EVIDENCE_CAP` rows by row order, with `dropped_total` and `truncated`.
 /// It also names the automatic choices: the samples with no blank of their batch or matrix that used all blanks (`fallback_all`) and, with the subtraction,
-/// the files that are neither samples nor blanks (dark) that were cut by all blanks (`ungrouped_all`). `None` when no rule has blank options.
+/// the files that are neither samples nor blanks (dark) that were cut by all blanks (`ungrouped_all`). `None` when no rule is a blank rule (the plain ratio filter included: it is the default options).
 fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f64], why: &[u8], labels: &Labels) -> Result<Option<String>> {
     let Some((idx, fold, o)) = rules.iter().enumerate().find_map(|(i, r)| match r {
-        Rule::BlankWith(f, o) => Some((i, *f, *o)),
+        Rule::BlankWith(f, o) => Some((i, f.max(1.0), *o)),
+        // The plain ratio filter is `BlankWith` with the default options, but `filters::passes` judges it with the ratio as given (it may be under 1) while
+        // `BlankWith` judges with `max(1, ratio)` (`filters_blank::passes`): each rule reports the fold it applies, so the two differ on purpose under 1.
+        Rule::Blank(f) => Some((i, *f, BlankOpts::default())),
         _ => None,
     }) else {
         return Ok(None);
@@ -76,7 +79,7 @@ fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f6
         filters_blank::Quantity::Height => "height",
         filters_blank::Quantity::NormArea => "norm_area",
     });
-    j.raw(",\"fold\":").num(fold.max(1.0)).raw(",\"groups\":").int(groups.len() as i64).raw(",\"dropped\":[");
+    j.raw(",\"fold\":").num(fold).raw(",\"groups\":").int(groups.len() as i64).raw(",\"dropped\":[");
     let (mut total, mut written) = (0usize, 0usize);
     for (row, &w) in why.iter().enumerate() {
         if w as usize != idx + 1 {

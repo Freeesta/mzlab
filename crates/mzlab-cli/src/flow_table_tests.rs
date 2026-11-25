@@ -181,6 +181,12 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
         mzlab_ops::run::table::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
             .unwrap();
     assert_eq!(page(&t, &samples_text_v1(&samples), &via), got);
+    // the plain ratio filter logs its evidence too (AU-7 slice 2), the same bytes as the page
+    let plain = run(&d, r#"{"blank_ratio":3}"#).unwrap();
+    assert!(
+        plain.contains("\"blank\":{\"quantity\":\"area\",\"fold\":3,\"groups\":1,\"dropped\":["),
+        "{plain}"
+    );
     // defaults: the new parameters off give the bytes of the old plan
     assert_eq!(
         run(&d, r#"{"blank_ratio":3}"#).unwrap(),
