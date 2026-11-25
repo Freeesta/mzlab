@@ -37,7 +37,10 @@ pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
 /// How many samples `path` holds when it holds several (best effort: an mzML, an index or a file the listing cannot read has none to choose from).
 pub(crate) fn several(path: &Path) -> Option<usize> {
     let low = path.to_string_lossy().to_lowercase();
-    if [".mzml", ".mzml.gz", ".mzxml", ".mzidx"].iter().any(|e| low.ends_with(e)) {
+    if [".mzml", ".mzml.gz", ".mzxml", ".mzidx"]
+        .iter()
+        .any(|e| low.ends_with(e))
+    {
         return None;
     }
     present(path).ok().map(|p| p.len()).filter(|n| *n > 1)
