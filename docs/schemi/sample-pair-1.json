@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sample-pair/1",
+  "title": "sample-pair/1: how a samples/1 pairs with the files of a series",
+  "description": "The answer of `mzlab-cli sample pair --json`: `samples` is the samples/1 in the order of the files, `pairing` every automatic choice made on the way (the same array the result of tp.dig_lr and tp.network carries as `pairing`). A sample whose file is not in the series is `left_out`; a file with no sample is `proposed` with the role its name gives and the part of the name that decided it. Nothing is refused for a choice; `status` is `adjusted` when there is one. Code: crates/mzlab-core/src/samples/roles_pair.rs.",
+  "type": "object",
+  "required": ["schema", "status", "samples", "pairing"],
+  "properties": {
+    "schema": {"const": "sample-pair/1"},
+    "status": {"enum": ["complete", "adjusted"]},
+    "samples": {"$ref": "samples/1"},
+    "pairing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "file", "role", "evidence"],
+        "properties": {
+          "action": {"enum": ["left_out", "proposed"]},
+          "file": {"type": "string", "description": "The file of the sample left out, or the file of the table that had no sample."},
+          "role": {"type": "string", "description": "The role of the sample left out, or the role the name proposed."},
+          "evidence": {"type": "string", "description": "proposed: the part of the name that decided the role, the minutes for a time zero, \"\" when no word did; left_out: \"\"."}
+        }
+      }
+    }
+  }
+}

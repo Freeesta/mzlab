@@ -208,9 +208,31 @@ fn default_workers(files: usize) -> usize {
         .max(1)
 }
 
-fn run_job(j: &Job) -> Result<(String, String)> {
+/// One note per input that holds several samples: this command integrates the first sample of a file, so the note names the way to the others.
+fn first_sample_notes(paths: &[PathBuf]) -> String {
+    let mut out = String::new();
+    for p in paths {
+        let Some(count) = crate::sample_select::several(p) else {
+            continue;
+        };
+        out += &format!(
+            "note: {}\n",
+            crate::error_text::warning(&crate::convert::Notice {
+                key: "note.quant.firstSample",
+                params: vec![
+                    ("file", p.display().to_string()),
+                    ("count", count.to_string()),
+                ],
+            })
+        );
+    }
+    out
+}
+
+fn run_job(j: &Job, said: &mut String) -> Result<(String, String)> {
     let targets = read(&j.targets)?;
     let paths = files(&j.inputs)?;
+    *said = first_sample_notes(&paths);
     let names: Vec<String> = paths.iter().map(|p| name_of(p)).collect();
     if j.dry {
         return Ok((
@@ -313,7 +335,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let (table, log) = match run_job(&j) {
+    let mut said = String::new();
+    let (table, log) = match run_job(&j, &mut said) {
         Ok(t) => t,
         Err(e) => return crate::sample_select::fail(&e),
     };
@@ -324,5 +347,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
         );
     }
-    crate::emit(table, &j.out)
+    let mut done = crate::emit(table, &j.out);
+    done.stderr += &said;
+    done
 }

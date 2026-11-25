@@ -194,6 +194,17 @@ fn pick(files: &[FileLr], keep: impl Fn(&FileLr) -> bool) -> Vec<FileIn> {
         .collect()
 }
 
+/// The array `pairing` of the files document as text (`samples::notes_json`), "" when it has none: the choices that paired the samples with the files, for the summary.
+pub fn pairing(files_json: &str) -> String {
+    let v = json::parse(files_json.as_bytes()).ok();
+    let mut o = json::Out::default();
+    match v.as_ref().and_then(|v| v.get("pairing")) {
+        Some(p) if !p.arr().is_empty() => json::write_value(&mut o, p),
+        _ => {}
+    }
+    o.0
+}
+
 /// The files as the page passes them to `api.run` (`kind` from `classify`; a file without one counts as full scan): a list, or
 /// `{"files": [...], "samples": <samples/1>}` when the page keeps the roles, times, conditions and replicates in the canonical model
 /// (they then win over the fields `type`, `time`, `cond` and `replica` of each file (the page's own file entries)).

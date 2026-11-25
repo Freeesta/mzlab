@@ -16,6 +16,18 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "sample table",
     ),
     (
+        "dark control not recognised in the transformation product screening",
+        "sample table",
+    ),
+    (
+        "tp.dig_lr fails when the plan contains a standard: set the roles from a csv",
+        "sample import",
+    ),
+    (
+        "preview which files are left out and which get a role from their name, check the roles of a table before the run",
+        "sample pair",
+    ),
+    (
         "what are the default parameters of a flow step",
         "flow defaults",
     ),

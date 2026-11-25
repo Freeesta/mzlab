@@ -14,6 +14,8 @@ use mzlab_core::flow::Artifact;
 use mzlab_feat::parent::parent_of;
 
 // `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
+#[path = "flow_pairnotes.rs"]
+pub(crate) mod pairnotes;
 #[path = "flow_uv.rs"]
 pub(crate) mod uv;
 
@@ -146,6 +148,7 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         &mut ix,
         &mut Files(lin.peaks.clone()),
     )?;
+    pairnotes::print(&inputs.notes);
     let d = lr::dig(
         &inputs.files,
         &inputs.who,

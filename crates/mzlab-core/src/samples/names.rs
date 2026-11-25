@@ -32,7 +32,7 @@ fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
     (stem, time, guess)
 }
 
-const CAL_WORDS: [&str; 6] = [
+pub(super) const CAL_WORDS: [&str; 6] = [
     "cal",
     "calib",
     "calibr",
@@ -41,12 +41,17 @@ const CAL_WORDS: [&str; 6] = [
     "curva",
 ];
 /// The dark words, with the conditions fused with the dark mark (`H2O2D`, `PMSD`, `BLKD`: the dark matrix blank).
-pub(super) const DARK_WORDS: [&str; 11] = [
+pub(super) const DARK_WORDS: [&str; 15] = [
     "dark",
     "buio",
     "adsorption",
     "control",
     "ctrl",
+    // the two words written as one token (`Smp_darkcontrol`): a whole token like the others, never a part of a longer word
+    "darkcontrol",
+    "darkctrl",
+    "controldark",
+    "ctrldark",
     "h2o2d",
     "pmsd",
     "blkd",

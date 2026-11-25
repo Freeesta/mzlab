@@ -217,7 +217,7 @@ fn row_file(v: &Value) -> (String, String) {
 }
 
 /// A CSV or samples file the engine refuses is exit 3 here (a missing one is exit 4).
-fn engine(e: &Error) -> Outcome {
+pub(crate) fn engine(e: &Error) -> Outcome {
     let mut o = Outcome::fail_error(e);
     if matches!(
         e.key,
