@@ -247,7 +247,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 .examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "quant targets",
-    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference",
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")

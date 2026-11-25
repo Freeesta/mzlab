@@ -1583,7 +1583,19 @@
             "properties":{
               "step":{"const":"quant.targets@1"},
               "name":{
-                "enum":["da","min_sn","min_points","min_shape","offset","blank_pattern","ms_level","smooth_half","valley"]
+                "enum":[
+                  "da",
+                  "min_sn",
+                  "min_points",
+                  "min_shape",
+                  "offset",
+                  "rt_ref",
+                  "rt_span",
+                  "blank_pattern",
+                  "ms_level",
+                  "smooth_half",
+                  "valley"
+                ]
               },
               "value":{
                 "anyOf":[
@@ -1617,6 +1629,18 @@
                     "type":"string",
                     "default":"0",
                     "description":"Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]"
+                  },
+                  {
+                    "type":"string",
+                    "default":"off",
+                    "description":"Follow an internal reference between batches: off, auto (first standard or parent row) or a target id, each with an optional @RT where it is expected (else its window centre); every window moves by the apex found minus that, per file; the log and the rt_shift_min column say what was done"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":5,
+                    "default":0.6,
+                    "description":"The reference apex is looked for in its window widened by this on each side (rt_ref on)"
                   },
                   {
                     "type":"string",

@@ -124,6 +124,10 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--min-sn", "lowest detected S/N"),
     ("--offset", "m/z offset"),
     ("--blank-pattern", "blank file name globs"),
+    (
+        "--rt-ref",
+        "internal RT reference: off, auto or a target id",
+    ),
     ("--log", "log file"),
     ("--workers", "files at once"),
     ("--rt-warp", "RT map between series: off or piecewise"),

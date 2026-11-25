@@ -1,7 +1,10 @@
 """`samples_list/1` of a SCIEX `.wiff` pair is the same bytes from the engine .wasm (`native_samples(.., true)`, through Node) and from `mzlab-cli sample list --json`,
 on every synthetic pair of tools/wiff_riferimento.py and on a pair of tools/wiff_grande.py (the app's native route is pinned to the same text by mzlab-desktop natives_tests.rs).
-Synthetic data only. python3 is part of the test (it fails without it); skipped only without cargo, wasm-bindgen or node."""
+Synthetic data only. python3 is part of the test (it fails without it). Skipped on a machine without cargo, wasm-bindgen or node; in CI (GITHUB_ACTIONS) those are
+required and a missing one fails. The app's listing alone adds `consistency` (the site has no file times) when a pair disagrees with itself: the test strips it and compares the rest."""
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -11,7 +14,16 @@ import pytest
 from cargo_util import build, cli_argv, run
 
 ROOT = Path(__file__).resolve().parents[1]
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there the wasm leg must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
+
+
+def test_the_tools_are_there_in_ci():
+    assert TOOLS or not CI, "cargo, wasm-bindgen and node must be installed in CI: this test would not run"
+
+
 LIST = """const w = require(process.argv[2]), fs = require("fs"), names = process.argv.slice(3), bs = names.map(n => fs.readFileSync(n));
 console.log(w.native_samples(names.map(n => n.split("/").pop()), new Float64Array(bs.map(b => b.length)), (i, o, n) => bs[i].subarray(o, o + n), true));"""
 
@@ -65,10 +77,13 @@ def test_the_site_and_the_app_list_every_synthetic_pair_with_the_same_bytes(work
         rc, text, err = app(wiff)
         if code == 0:
             assert json.loads(out)["schema"] == "samples_list/1", wiff
+            # the app alone checks the pair against its own index (`consistency`, only on a mismatch): the site has no file times, so its text stays the index's
+            text, found = re.subn(r',"consistency":\{[^{}]*\}\}$', "}", text)
+            assert found == wiff.name.startswith("unindexed"), (wiff, found)
             assert same_but_refused(out, text), wiff
             if '"why":"refused"' not in out:
                 assert text == out, wiff  # the line of the app is the very text of the site
-            assert rc in (0, 1), (wiff, rc, err)  # 1 = some sample refused
+            assert rc in (0, 1, 8), (wiff, rc, err)  # 1 = some sample refused or a partial copy; 8 = a partial copy modified a moment ago
             listed += 1
         else:
             # a pair no reader takes: the app answers with an error line, never a listing
@@ -87,6 +102,11 @@ def test_the_probe_adds_the_size_of_the_scan_file_and_a_cut_copy_exits_1(work):
     shutil.copy(work / "big" / "grande.wiff", cut / "grande.wiff")
     data = (work / "big" / "grande.wiff.scan").read_bytes()
     (cut / "grande.wiff.scan").write_bytes(data[:-500])
+    fresh = subprocess.run(cli_argv("sample", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert fresh.returncode == 8 and '"still_writing":true' in fresh.stdout, (fresh.returncode, fresh.stdout)  # written a moment ago: it may still be growing
+    old = os.stat(cut / "grande.wiff").st_mtime - 3600
+    for n in ("grande.wiff", "grande.wiff.scan"):
+        os.utime(cut / n, (old, old))  # an hour old: a finished, partial copy
     p = subprocess.run(cli_argv("sample", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert p.returncode == 1 and json.loads(unwrap(p.stdout.strip()))["probe"]["status"] == "short", (p.returncode, p.stdout)
     missing = subprocess.run(cli_argv("sample", "list", str(work / "nothing.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
