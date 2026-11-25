@@ -9,8 +9,9 @@ const { Engine } = wasm;
 let rotteMod; const rotte = () => rotteMod || (rotteMod = require(path.join(process.argv[2], "mzlab_rotte_wasm.js")));
 // api/tic_background lives in the lazy module `ticfondo` (crates/mzlab-ticfondo-wasm), which opens the index itself
 let ticMod; const tic = () => ticMod || (ticMod = require(path.join(process.argv[2], "mzlab_ticfondo_wasm.js")));
-// api/rawinfo and api/rawxic live in the lazy module `raw` (crates/mzlab-raw-wasm): rust-worker.js sends that route there, so does this runner
-let rawMod; const raw = () => rawMod || (rawMod = require(path.join(process.argv[2], "mzlab_raw_wasm.js")));
+// api/rawinfo lives in the lazy module `raw` (crates/mzlab-raw-wasm), api/rawxic in `rawxic` (crates/mzlab-rawxic-wasm): rust-worker.js sends each route to its module, so does this runner
+let rawMod, xicMod; const raw = () => rawMod || (rawMod = require(path.join(process.argv[2], "mzlab_raw_wasm.js")));
+const xic = () => xicMod || (xicMod = require(path.join(process.argv[2], "mzlab_rawxic_wasm.js")));
 const idx = fs.readFileSync(process.argv[3]), mzml = fs.readFileSync(process.argv[4]);
 const plan = JSON.parse(fs.readFileSync(process.argv[5], "utf8"));
 const reader = buf => (off, len) => new Uint8Array(buf.subarray(off, off + len));
@@ -23,7 +24,7 @@ const trace = (n, out) => ({ f64: Array.from(out.subarray(0, n)) });
 const run = s => {
   switch (s.op) {
     case "idxopen": return { s: e.open_index(s.slot, idx.length, rdIdx) };
-    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, 0, s.query || "") : s.path === "/api/rawxic" ? raw().raw_xic(idx.length, rdIdx, 0, s.query || "") : e.route(s.slot, s.path, s.query || "") };
+    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, 0, s.query || "") : s.path === "/api/rawxic" ? xic().raw_xic(idx.length, rdIdx, 0, s.query || "") : e.route(s.slot, s.path, s.query || "") };
     case "fileinfo": return { s: e.fileinfo(s.slot, s.name, mzml.length, rdMzml) };
     case "canali": return { s: e.canali(s.slot, s.name, mzml.length, rdMzml) };
     case "mrm": return { s: e.mrm(s.slot, mzml.length, rdMzml) };

@@ -1,4 +1,4 @@
-"""`raw xic` in the site: the lazy .wasm `raw` (mzlab-raw-wasm, through Node: `raw_xic(size, read, pol, query)`, the call rust-raw.js makes for the route
+"""`raw xic` in the site: the lazy .wasm `rawxic` (mzlab-rawxic-wasm, through Node: `raw_xic(size, read, pol, query)`, the call rust-raw.js makes for the route
 `/api/rawxic` over the .mzidx of OPFS) gives the same members and the same rows, byte for byte, as `mzlab-cli raw xic` on the synthetic files of
 `tools/dati_sintetici.py` (full scan, profile, MS2, alternating polarity); a question the route refuses has the same `error_key` in both. The desktop answers
 the same route (`crates/mzlab-desktop/tests/parity_routes.rs`). Skipped on a machine without cargo, wasm-bindgen, node or numpy; in CI (GITHUB_ACTIONS)
@@ -23,7 +23,7 @@ CI = bool(os.environ.get("GITHUB_ACTIONS"))
 pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
 
 NODE = """const [dir, idxPath, ...queries] = process.argv.slice(2);
-const { raw_xic } = require(dir + '/mzlab_raw_wasm.js'), fs = require('fs');
+const { raw_xic } = require(dir + '/mzlab_rawxic_wasm.js'), fs = require('fs');
 const b = fs.readFileSync(idxPath), read = (off, len) => new Uint8Array(b.subarray(off, off + len));
 const out = queries.map(q => { try { return { s: raw_xic(b.length, read, 0, q) }; } catch (x) { return { e: String(x) }; } });
 process.stdout.write(JSON.stringify(out));"""
@@ -57,7 +57,7 @@ def work(tmp_path_factory):
     d.full_scan_profile(w / "FS_profile.mzML", 3.0, r)
     d.ms2(w / "MS2.mzML", r, 15)
     d.mixed_polarity(w / "POL.mzML", r)
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-raw-wasm")))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-rawxic-wasm")))
     build("-p", "mzlab-cli")
     (w / "run.js").write_text(NODE, encoding="utf-8")
     return w

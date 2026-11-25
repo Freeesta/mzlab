@@ -1,5 +1,5 @@
-//! wasm-bindgen bridge of `api/rawinfo` and `api/rawxic` (`mzlab_core::rawinfo`, `mzlab_core::rawxic`, `docs/agenti/raw-access.md`): what one sample of a
-//! raw file holds, and is there a peak at a mass and time, from its `.mzidx` (the members and rows of `mzlab-cli raw info` and `raw xic`). A `.wasm` of its own (the engine has no room for it), fetched by the worker of the engine on the first
+//! wasm-bindgen bridge of `api/rawinfo` (`mzlab_core::rawinfo`, `docs/agenti/raw-access.md`): what one sample of a raw file holds, from its `.mzidx`
+//! (the members of `mzlab-cli raw info`). A `.wasm` of its own (the engine has no room for it), fetched by the worker of the engine on the first
 //! request (`load("raw")` of `mzlab/web/rust-raw.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use js_sys::{Function, Uint8Array};
@@ -62,18 +62,6 @@ pub fn raw_info(size: f64, read: Function, pol: i32, query: &str) -> Result<Stri
     r.pol = [1, -1].contains(&pol).then_some(pol as i8);
     let out = r
         .raw_info_route(&Query::parse(query))
-        .map_err(|e| error_json(&e))?;
-    Ok(out.unwrap_or_default())
-}
-
-/// `api/rawxic?mz=..&rt=A,B[&da=..&ms_level=..&mz_offset=..&min_sn=..]` (`Routes::raw_xic_route`) over the `.mzidx` of `size` bytes read by `read`:
-/// `{members, "rows":[..]}`, the bytes `mzlab-cli raw xic` prints per sample; `pol` as in `raw_info`.
-#[wasm_bindgen]
-pub fn raw_xic(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
-    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
-    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
-    let out = r
-        .raw_xic_route(&Query::parse(query))
         .map_err(|e| error_json(&e))?;
     Ok(out.unwrap_or_default())
 }

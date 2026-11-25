@@ -1,8 +1,8 @@
 # `raw info`, `raw cache`, `raw xic`: what a raw file holds and whether a peak is there, for an agent (`raw-info/1`, `raw-cache/1`, `raw-xic/1`)
 
 The first slice of the raw access study (`docs/studies/RAW_ACCESS_STUDY.md`, `RAW_ACCESS_STUDY_2.md` §1-2). Code: `crates/mzlab-core/src/rawinfo.rs` (all logic,
-route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
-`rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
+route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-rawxic-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
+`rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` and `rawxic` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
 
 ## `raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]`
 - Per file `file`, `container`, `sha256`, `size_bytes`, `samples` (the sample read: `--sample`, else the first, logged in `provenance.choices`); per sample, from the index only:
@@ -40,5 +40,5 @@ route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `
 
 ## Site, app, CLI
 - The page asks the route `/api/rawinfo?probe=N&offset_mz=M&offset_rt=T` of a slot: the site's worker sends it to the lazy `.wasm` `raw` (`mzlab-raw-wasm`, `rust-raw.js`,
-  over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw xic` is the route `/api/rawxic` of the same module; `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.
+  over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw xic` is the route `/api/rawxic`, answered by the lazy `.wasm` `rawxic` (`mzlab-rawxic-wasm`; `raw` keeps its size); `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.
 - Choices kept where the study left them open: no change to any S/N (D1), a lazy module of its own (D2, as the study recommends: in the engine it was over the cap), no `.mzbin` (D3), the command family `raw` (D7).
