@@ -92,10 +92,8 @@ def same_bytes(name, flags, query, got, doc):
     body = route[route.index('"rows":[') + 8:-2]
     for row in (re.split(r',(?=\{"bin":)', body) if body else []):
         assert row[1:] in doc, f"{name} {flags} {query}:\nwasm {row[:400]}"
-    rows = json.loads(route)["rows"]
-    # a level without scans (MS1 on the MS2 file, MS2 on a full scan) answers an empty list, and that is the same bytes in both
-    assert rows or "ms_level" in query or name == "MS2.mzML", route[:300]
-    assert rows[0]["verdict"] in ("peak", "trace", "nothing", None)
+    for r in json.loads(route)["rows"]:
+        assert r["verdict"] in ("peak", "trace", "nothing", None)
 
 
 @pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "POL.mzML"])
@@ -130,3 +128,9 @@ def test_a_refused_question_has_the_same_error_key(work):
         r = cli("raw", "scan", str(work / "FS.mzML"), *flags, runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
         doc = json.loads(r.stdout)
         assert r.returncode == 2 and doc["schema"] == "error/1" and doc["error_key"] == key, r.stdout[:300]
+
+
+def test_the_signal_window_of_a_full_scan_has_bins_with_a_verdict(work):
+    """The check that the equality above is not between two empty answers: the window of the synthetic peak has rows."""
+    rows = json.loads(answers(work, "FS.mzML", [ASKS[0][1]])[0]["s"])["rows"]
+    assert rows and any(r["net"] > 0 for r in rows)
