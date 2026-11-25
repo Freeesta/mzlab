@@ -7,8 +7,12 @@ use mzlab_core::json::round;
 use mzlab_core::rawxic::tallest;
 use mzlab_core::routes::Routes;
 
-use super::params::{OffsetMode, Params, RtRef};
-use super::run::{warn, Choice, GroupOffset, Row};
+#[cfg(not(target_arch = "wasm32"))]
+use super::params::OffsetMode;
+use super::params::{Params, RtRef};
+#[cfg(not(target_arch = "wasm32"))]
+use super::run::Row;
+use super::run::{warn, Choice, GroupOffset};
 use super::targets::{Role, Target};
 
 /// What the internal reference said in one file: where its apex was looked for, where it was found and the shift applied to every window.
@@ -33,6 +37,7 @@ pub struct Hint {
 
 /// The switches the evidence of the reference row points to: the offset at 0 while the reference is missed (`--offset auto`), and a reference
 /// whose apex moves 0.1 min or more between files while the windows stay (`--rt-ref auto`). Blank files do not count.
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn hints(p: &Params, targets: &[Target], rows: &[Row], blank: &[bool]) -> Vec<Hint> {
     let mut out = Vec::new();
     let Some(r) = targets.iter().position(|t| t.role == Role::Reference) else {
