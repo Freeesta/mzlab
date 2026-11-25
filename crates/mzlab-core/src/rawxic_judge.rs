@@ -169,6 +169,34 @@ fn pipeline(hit: Option<Hit>, flags: Vec<&'static str>, t: &Thresholds) -> Judge
     }
 }
 
+/// The rule that decided, with every value next to its threshold; the tests of a `peak` are all met, those of the others are shown with the ones of `trace`.
+fn rule_of(c: &Counts, t: &Thresholds, peak: bool, verdict: &str) -> String {
+    let ok_sn = c.sn_floor.is_some_and(|s| s >= t.min_sn);
+    let sn = c.sn_floor.map_or("n/a (no peak found)".to_string(), |s| {
+        format!("{} {} min_sn {}", rd(s), cmp(ok_sn), rd(t.min_sn))
+    });
+    let mut rule = format!(
+        "N {} {} L_D {}; sn_floor {sn}; run {} {} min_points {}",
+        rd(c.net),
+        cmp(c.net >= c.l_d),
+        rd(c.l_d),
+        c.run,
+        cmp(c.run >= t.min_points),
+        t.min_points
+    );
+    if !peak {
+        rule += &format!(
+            "; gross {} {} 2; N {} {} L_C {}",
+            rd(c.gross),
+            cmp(c.gross >= 2.0),
+            rd(c.net),
+            cmp(c.net >= c.l_c),
+            rd(c.l_c)
+        );
+    }
+    rule + &format!(" -> {verdict}")
+}
+
 /// The verdict of one window `[a, b]` of the trace (`rt`, `y` rounded like `trace xic`) with the ion quantum `q` of the file, `None` when its
 /// intensities are not counts. The numbers of `hit` are those of `quant targets`; the counts and the rule only decide the word.
 pub fn judge(rt: &[f64], y: &[f64], win: (f64, f64), q: Option<f64>, t: &Thresholds) -> Judged {
@@ -226,29 +254,7 @@ pub fn judge(rt: &[f64], y: &[f64], win: (f64, f64), q: Option<f64>, t: &Thresho
     } else {
         "nothing"
     };
-    let sn = c.sn_floor.map_or("n/a (no peak found)".to_string(), |s| {
-        format!("{} {} min_sn {}", rd(s), cmp(ok_sn), rd(t.min_sn))
-    });
-    let mut rule = format!(
-        "N {} {} L_D {}; sn_floor {sn}; run {} {} min_points {}",
-        rd(c.net),
-        cmp(ok_n),
-        rd(c.l_d),
-        c.run,
-        cmp(ok_run),
-        t.min_points
-    );
-    if !peak {
-        rule += &format!(
-            "; gross {} {} 2; N {} {} L_C {}",
-            rd(c.gross),
-            cmp(c.gross >= 2.0),
-            rd(c.net),
-            cmp(c.net >= c.l_c),
-            rd(c.l_c)
-        );
-    }
-    rule += &format!(" -> {verdict}");
+    let rule = rule_of(&c, t, peak, verdict);
     Judged {
         verdict,
         rule,
