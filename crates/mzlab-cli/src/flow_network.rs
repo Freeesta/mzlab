@@ -46,5 +46,6 @@ pub(crate) fn network_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         &table.1,
         samples.as_ref().map(|s| s.1.as_slice()),
     )?;
+    crate::flow_digl::pairnotes::print_json(&text);
     write_made(r, job, text, DataType::Transform)
 }

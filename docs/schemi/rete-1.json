@@ -19,7 +19,8 @@
   "columns": {"type": "integer", "minimum": 0, "description": "largest step plus one"},
   "nodes": {"type": "array", "items": {"$ref": "#/$defs/nodo"}, "description": "by step, then m/z, RT and id; the parent first"},
   "arcs": {"type": "array", "items": {"$ref": "#/$defs/arco"}, "description": "by source id, then target id"},
-  "n_arcs": {"type": "integer", "minimum": 0}
+  "n_arcs": {"type": "integer", "minimum": 0},
+  "pairing": {"type": "array", "description": "Only when the samples/1 did not pair with the files of the table as written: every automatic choice, as in sample-pair/1 (`left_out` or `proposed`, with its file, role and evidence).", "items": {"type": "object"}}
  },
  "$defs": {
   "nodo": {
