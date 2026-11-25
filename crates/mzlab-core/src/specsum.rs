@@ -65,7 +65,11 @@ impl<R: ReadAt> Routes<R> {
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
         let (n, total, types) = self.tally(level, (lo, hi), prec)?;
         Ok(answer(
-            level, fill, n, total, &types, &probe, quant, background,
+            level,
+            fill,
+            (n, total, &types),
+            (&probe, quant),
+            background,
         ))
     }
 
@@ -150,11 +154,8 @@ pub(crate) fn scan_type(s: &Scan) -> String {
 fn answer(
     level: u8,
     fill: Option<f64>,
-    n: usize,
-    total: f64,
-    types: &Types,
-    probe: &crate::rawinfo::Probe,
-    quant: Option<crate::ionstat::Quantum>,
+    (n, total, types): (usize, f64, &Types),
+    (probe, quant): (&crate::rawinfo::Probe, Option<crate::ionstat::Quantum>),
     background: &str,
 ) -> String {
     let ions = |counts: f64, ms: Option<f64>| ms.map(|t| counts * t / 1000.0);

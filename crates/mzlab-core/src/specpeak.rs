@@ -280,10 +280,8 @@ fn per_nominal(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     for (&m, &v) in mz.iter().zip(y) {
         let k = nominal(m);
         if k != key {
-            if let Some(t) = oy.last() {
-                if let Some(last) = om.last_mut() {
-                    *last = sx / t.max(1e-12);
-                }
+            if let (Some(t), Some(last)) = (oy.last(), om.last_mut()) {
+                *last = sx / t.max(1e-12);
             }
             (key, sx) = (k, 0.0);
             om.push(m);
