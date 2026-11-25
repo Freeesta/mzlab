@@ -47,6 +47,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "spectrum get",
     ),
     (
+        "spectrum of the chromatographic peak of a product ion with the background of both sides subtracted",
+        "spectrum get",
+    ),
+    (
         "blank subtraction threshold on the feature table",
         "table.filter",
     ),

@@ -19,7 +19,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 |---|---|---|---|
 | ION-COUNTS | `docs/coda/prompt/ION-COUNTS.md` | - | correctness: cps and ions per scan type, from the method; reuse `raw xic` ionstat |
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
-| MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
+| MS2-PEAK-HR | `docs/coda/prompt/MS2-PEAK-HR.md` | - | lost data: `spectrum get --peak auto` on profile and high-resolution levels (now `window_only`, no spectrum) |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
 | FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | chat:ROLES-IN-TP | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |

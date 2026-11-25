@@ -15,6 +15,18 @@ pub const NO_FILL: &str = "note.spec.sum.noFill";
 /// The key of the note that says why `ions_by_quantum` is null.
 pub const NO_QUANTUM: &str = "note.spec.sum.noQuantum";
 
+/// The `background` member of a sum that subtracts nothing.
+pub(crate) const NO_BACKGROUND: &str = "{\"applied\":\"none\",\"method\":null}";
+
+/// `fill_ms` of a request: a positive number or nothing; anything else is `err.spec.fill`.
+pub(crate) fn fill_of(q: &Query) -> Result<Option<f64>> {
+    match q.num("fill_ms")? {
+        Some(t) if t > 0.0 && t.is_finite() => Ok(Some(t)),
+        Some(_) => Err(Error::new("err.spec.fill")),
+        None => Ok(None),
+    }
+}
+
 /// Per scan type: its key, the scans of that type and their counts.
 type Types = Vec<(String, usize, f64)>;
 
@@ -26,24 +38,32 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         };
         let level = q.level();
-        let fill = match q.num("fill_ms")? {
-            Some(t) if t > 0.0 && t.is_finite() => Some(t),
-            Some(_) => return Err(Error::new("err.spec.fill")),
-            None => None,
-        };
+        let fill = fill_of(q)?;
         let precursor = q.num("precursor")?;
+        let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
+        Ok(Some(self.sum_evidence(level, (lo, hi), precursor, fill, NO_BACKGROUND)?))
+    }
+
+    /// The evidence of the sum of a window, with the `background` member the caller states (`NO_BACKGROUND` or what `specpeak` subtracted).
+    pub(crate) fn sum_evidence(
+        &mut self,
+        level: u8,
+        (lo, hi): (f64, f64),
+        precursor: Option<f64>,
+        fill: Option<f64>,
+        background: &str,
+    ) -> Result<String> {
         // the precursor window of the nominal-mass spectrum (`/api/spectrum` widens it in ppm only for a high-resolution centroid file, which `--sum` never sends)
         let prec = (precursor, 0.6);
-        let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
         let (n, total, types) = self.tally(level, (lo, hi), prec)?;
-        Ok(Some(answer(level, fill, n, total, &types, &probe, quant)))
+        Ok(answer(level, fill, n, total, &types, &probe, quant, background))
     }
 
     /// The scans of a window of one level (inside it and, for a product-ion level, near the precursor): how many, their counts, and the same per scan type
     /// (in order of first appearance). Read from the arrays of the section and the scan table, borrowed.
-    fn tally(
+    pub(crate) fn tally(
         &mut self,
         level: u8,
         (lo, hi): (f64, f64),
@@ -127,6 +147,7 @@ fn answer(
     types: &Types,
     probe: &crate::rawinfo::Probe,
     quant: Option<crate::ionstat::Quantum>,
+    background: &str,
 ) -> String {
     let ions = |counts: f64, ms: Option<f64>| ms.map(|t| counts * t / 1000.0);
     let opt = |o: &mut Out, v: Option<f64>| match v {
@@ -168,6 +189,6 @@ fn answer(
         Some(_) => o.raw("null"),
         None => o.str(NO_QUANTUM),
     };
-    o.raw(",\"background\":{\"applied\":\"none\",\"method\":null}}");
+    o.raw(",\"background\":").raw(background).raw("}");
     o.0
 }

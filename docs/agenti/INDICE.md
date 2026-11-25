@@ -39,7 +39,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | DAD (UV/Vis) detector of the `.wiff`: matrix, RT-λ map, UV spectrum, TWC/XWC (`xwc.js`), XWC integration, DAD on the MRM panel (`dad-mrm.js`) | `docs/agenti/dad.md` |
 | calculator ("what it could be" groups under the number), Adducts panel, facts on 3200 data, gradient, analog traces, data tables, theme | `docs/agenti/data-3200.md` |
 | sidebar of the Data view, tools, hints, tour | `docs/agenti/data-bar.md` |
-| data channels, `file info`, `trace`, `spectrum` incl. `--sum` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
+| data channels, `file info`, `trace`, `spectrum` incl. `--sum`, `--peak auto` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
 | load a folder, pointed and remembered folder (greyed list, "Others", desktop), background warm-up of the pointed folder's files (queue, `lr_warm`, `lr_warm_claim`) | `docs/agenti/data-folder.md` |
 | peak integration in the Data view (automatic tool, one click = all peaks in HR, parameters, `auto_integrate`) | `docs/agenti/data-integration.md` |
 | first load of several files (only the first opens), fields of the load table | `docs/agenti/data-loading.md` |
