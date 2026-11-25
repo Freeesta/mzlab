@@ -247,3 +247,26 @@ fn one_shared_file_is_not_enough_unless_the_series_is_one_file() {
     let (n, log) = merged_rows(t);
     assert_eq!((n, log.merged[0].shared), (1, 1));
 }
+
+#[test]
+fn a_file_that_cannot_be_opened_is_named_in_the_log_and_dedup_does_not_run() {
+    let mut r = Recipe::lr(0.0, 3e3, 7e3);
+    r.detect.polarity = None; // the `auto` case: the polarity is read from the files
+    r.screen.evidence = Some(crate::lrscreen::Evidence::new());
+    let mut open = |_k: usize| -> mzlab_core::error::Result<
+        mzlab_core::idxread::Index<Box<dyn mzlab_core::idxread::ReadAt>>,
+    > { Err(mzlab_core::error::Error::new("err.file.unreadable")) };
+    assert!(!one_polarity(2, &r, &mut open));
+    let log = r.screen.evidence.as_ref().unwrap().take();
+    let c = log
+        .choices
+        .iter()
+        .find(|c| c.key == "polarity")
+        .expect("a polarity choice");
+    assert_eq!(c.value, "unknown");
+    assert!(
+        c.reason.contains("file 1") && c.reason.contains("err.file.unreadable"),
+        "{}",
+        c.reason
+    );
+}

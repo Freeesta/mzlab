@@ -194,7 +194,8 @@ fn common_areas(t: &Aligned, a: usize, b: usize) -> usize {
 }
 
 /// Whether the rows of the series can be of one polarity only: the recipe names one, or every file has MS1 scans of the same single sign (the `auto`
-/// preset of a positive-only series is that case, and without this check `dedup` would never run on it). A file that cannot be opened says no.
+/// preset of a positive-only series is that case, and without this check `dedup` would never run on it). A file that cannot be opened says no, and
+/// that is logged as the `polarity` choice, so the report never shows a false "off" as if the files were mixed.
 pub(crate) fn one_polarity<R: mzlab_core::idxread::ReadAt>(
     n: usize,
     r: &Recipe,
@@ -208,8 +209,17 @@ pub(crate) fn one_polarity<R: mzlab_core::idxread::ReadAt>(
     }
     let mut seen: Option<i8> = None;
     for k in 0..n {
-        let Ok(index) = open(k) else {
-            return false;
+        let index = match open(k) {
+            Ok(i) => i,
+            Err(e) => {
+                choose(
+                    r,
+                    "polarity",
+                    "unknown",
+                    format!("file {} could not be opened to read its polarity ({e}), so dedup does not run", k + 1),
+                );
+                return false;
+            }
         };
         let scans = |pol| {
             index
@@ -238,7 +248,7 @@ pub(crate) fn merge(t: &mut Aligned, r: &Recipe, one_pol: bool) {
             r,
             "dedup",
             "off",
-            "rows of different polarity or transitions are never merged, and the files have them",
+            "dedup runs only on rows of one polarity without transitions: the series has mixed or transition rows, or a file could not be read (see the polarity choice)",
         );
         return;
     }
