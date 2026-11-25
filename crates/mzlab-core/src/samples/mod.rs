@@ -23,6 +23,7 @@ mod output_variables;
 mod positions;
 mod regex;
 mod relink;
+mod roles_pair;
 mod sample_id;
 mod time_token;
 mod validate;
@@ -42,6 +43,7 @@ pub use names::{propose, propose_explained, role_and_minutes, table_kind_of_name
 pub use order::order_like;
 pub use positions::{proposals_json, Position, Proposal};
 pub use relink::{relink, relink_json, RelinkMatch};
+pub use roles_pair::{order_for_roles, PairNote, Paired};
 pub use validate::{per_tp, per_tp_json, validate, validate_json, PerTp, Warning};
 pub use validate3::validate3;
 

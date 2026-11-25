@@ -396,3 +396,13 @@ fn table_exit_codes_a_bad_option_is_2_and_a_missing_names_file_gives_no_table() 
     assert_ne!(code, 0);
     assert!(!out.contains("samples/1"));
 }
+
+/// The entry point is findable from the steps that read the roles: the help of `sample table` names them with an example.
+#[test]
+fn the_help_of_sample_table_names_the_steps_that_read_its_roles() {
+    let help = crate::samples_cmd::HELP;
+    assert!(
+        help.contains("example: mzlab-cli sample table") && help.contains("tp.dig_lr"),
+        "{help}"
+    );
+}

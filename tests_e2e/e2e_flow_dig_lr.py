@@ -1,5 +1,5 @@
 """Flow «This browser» tp.dig_lr (flow/lazy/flow-web-tp.js `digInputs`, flow-live-jobs.js `tpDig`): over the five demo full-scan files (unit resolution) the browser makes the JSON of the Dig that
-`mzlab-cli flow run` makes of the same plan, byte for byte; a second run takes it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without).
+`mzlab-cli flow run` makes of the same plan, byte for byte; a second run takes it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without, FAIL in CI where `CI` is set). The samples also list a standard and a dark control the plan does not align (left out, same bytes).
 Run from the repo root: python3 tests_e2e/e2e_flow_dig_lr.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -13,6 +13,8 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
+    # in CI the browser leg of the byte-for-byte parity must run: a missing tool is a failure there, a skip only on a developer machine
+    if os.environ.get("CI"): print("FAIL cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm and are missing in CI"); sys.exit(1)
     print("SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm"); sys.exit(0)
 
 # the demo files under names that sort like the plan: the browser lists the indexes of OPFS by name, `flow run` takes the order of the plan
@@ -22,7 +24,9 @@ PARENT = json.dumps({"formula": "C14H13F4N3O2S"})
 def sample(n, t):
     return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": NAMES.index(n) + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
             "time_min": t, "kind": "t0" if t == 0 else "sample", "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
-SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES, TIMES)], "schema": "samples/1"}, separators=(",", ":"))
+# two more samples the plan does not align (a standard and a dark control): both legs leave them out, and the Dig is the same bytes
+def other(n, kind): return dict(sample(NAMES[0], None), file=n + ".mzML", kind=kind, time=None, time_min=None, injection_order=len(NAMES) + 1)
+SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES, TIMES)] + [other("Std_5ppm", "std"), other("Smp_darkcontrol", "dark")], "schema": "samples/1"}, separators=(",", ":"))
 PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "parent.json", "sha256": "", "type": "structure"}],
         "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
                   {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},

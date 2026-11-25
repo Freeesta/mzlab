@@ -159,6 +159,24 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
     None
 }
 
+/// The word of `name` that gave `kind` (case kept, "" when none is found): the evidence of a role read from a name that has no `Sample` yet.
+pub(super) fn role_word(name: &str, kind: &str) -> String {
+    let low: Vec<char> = name.to_lowercase().chars().collect();
+    let words: &[&str] = match kind {
+        "dark" => &super::names::DARK_WORDS,
+        "qc" => &["qc"],
+        "blank" => &BLANK_WORDS,
+        "std" => &STD_WORDS,
+        _ => return String::new(),
+    };
+    // a name with capitals that change length has no span (as in `propose_explained`)
+    let chars: Vec<char> = name.chars().collect();
+    match word_span(&low, words) {
+        Some((a, b)) if low.len() == chars.len() => chars[a..b].iter().collect(),
+        _ => String::new(),
+    }
+}
+
 /// The span that decided the role: its word, or the time for a time zero.
 fn kind_span(
     low: &[char],

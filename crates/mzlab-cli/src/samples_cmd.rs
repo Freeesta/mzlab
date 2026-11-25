@@ -31,7 +31,8 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
   --text          with table: a plain table (file, role, time_min, series, replicate) in place of the JSON
   Every role and time the names decide is logged on stderr (`auto: NAME kind=dark \"BLKD\" ...`: the field, its value and the part of the name that decided it);
   the user overrides one by editing `kind` (or `time`) of the samples/1 before the next step. A dark control (`COND-D`, `H2O2D`) and a dark matrix blank
-  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.";
+  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.
+example: mzlab-cli sample table s/*.mzML > samples.json, then the `samples` input of tp.dig_lr or tp.link (a file the samples lack takes the role of its name, logged).";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();

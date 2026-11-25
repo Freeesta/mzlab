@@ -80,9 +80,8 @@ pub fn network_text<T: ReadAt, P: ReadAt>(
         None
     } else {
         let names = crate::store::input_names(&table_meta);
-        Some(TpRoles::from_json(&mzlab_core::samples::order_like(
-            samples, &names,
-        )?)?)
+        let p = mzlab_core::samples::order_for_roles(samples, &names)?;
+        Some(TpRoles::from_json(&p.text)?)
     };
     let tmax = strongest_times(&aligned, roles.as_ref());
     let (meta, ids) =

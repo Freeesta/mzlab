@@ -6,7 +6,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 |---|---|
 | what a folder holds | `file list DIR --json`; per `.wiff` sample: `file inventory`, `sample list` |
 | convert with sample names | `sample list FILE --json` (sample numbers and names), then `file convert FILE... --out DIR --sample LIST --json`: one `NAME-ID.mzML` per sample (NAME = the file name, ID = the sample number) |
-| roles (blank, QC, standard, time) | `sample table FILE... > samples.json`; roles and names from a lab CSV: `sample import META.csv DIR --dry-run`, then without it; design: `sample design propose` |
+| roles (blank, QC, standard, dark control, time) | `sample table FILE... > samples.json` (`tp.dig_lr`/`tp.link` take the role of a file's name when the samples lack it, logged on stderr); roles and names from a lab CSV: `sample import META.csv DIR --dry-run`, then without it; design: `sample design propose` |
 | profile or centroid, ion counts, m/z grid, mass offset of a file | `raw info FILE... [--offset-ion MZ@RT]` (`raw-info/1`); index cache first: `raw cache FILE... --cache DIR` |
 | is there a peak at this m/z and time, in each file (verdict, rule, ion counts, upper limit) | `raw xic FILE... --mz LIST --rt A,B` (`raw-xic/1`), `--set min_sn=,min_points=,alpha=` |
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
