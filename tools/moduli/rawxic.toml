@@ -4,5 +4,5 @@ chiavi = { rawxic = 33 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 212992
-misura = 212912
-nota = "api/rawxic (`raw xic`: per m/z the quant-targets integrator plus ion-count verdicts over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first xic request; a module of its own because inside `raw` it took 217,402 -> 290,128 B (+33.4 %, over the 5 % rule), Coordinator decision; 212,912 B after wasm-opt (CI size step; 201,944 B at first, 211,941 B after `spectrum get --sum`), cap = first measurement x 1.05 rounded up to 4 KiB"
+misura = 212927
+nota = "api/rawxic (`raw xic`: per m/z the quant-targets integrator plus ion-count verdicts over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first xic request; a module of its own because inside `raw` it took 217,402 -> 290,128 B (+33.4 %, over the 5 % rule), Coordinator decision; 212,927 B after wasm-opt (CI size step; 201,944 B at first, 211,956 B on main after `spectrum get --sum`), cap = first measurement x 1.05 rounded up to 4 KiB"
