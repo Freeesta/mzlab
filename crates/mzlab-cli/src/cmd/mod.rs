@@ -295,7 +295,8 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 const HEAD: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.";
 const TAIL: &str = "  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --sample LIST      of a file with several samples (.wiff) only these, by id: 1,3,5 or 2-4, each one a member of the series (the others are
-                     not read; an id the file does not have: exit 5); without it the first sample of such a file
+                     not read; an id the file does not have: exit 5); without it the first sample of such a file. A column is the sample name plus
+                     the file's extension (NAME.wiff); two equal names become NAME (FILESTEM #ID).wiff; stderr logs every column
   --centroid MODE    unit resolution: auto (default) centroids a file that is mostly profile scans before detecting, on does it for every such file, off
                      detects the profile points as they are; high-resolution files are never centroided here
   --mz-offset SPEC   the instrument's m/z offset (observed - true, |DA| <= 0.6) or auto:MZ[@RT], measured per file on that known ion: m/z is corrected before the

@@ -206,6 +206,20 @@ fn params_of(o: &CmpOpts) -> R<(Params, Vec<Value>)> {
 
 pub(crate) fn plan_of(inp: &CmpIn, o: &CmpOpts) -> R<Plan> {
     let (par, mut choices) = params_of(o)?;
+    // two columns with one name (selectors ignore the case, so so does this) cannot be told apart by any selector: the table was made from several
+    // samples of one file under the file name
+    let low: Vec<String> = inp.names.iter().map(|n| n.to_lowercase()).collect();
+    if let Some((i, n)) = (0..low.len()).find_map(|i| {
+        let n = low[i].as_str();
+        (low[..i].iter().any(|o| o == n)).then_some((i, inp.names[i].as_str()))
+    }) {
+        let all = low.iter().filter(|o| **o == low[i]).count();
+        let text = format!(
+            "the name '{n}' is on {all} columns (the second is column {})",
+            i + 1
+        );
+        return user("err.compare.duplicate", &text);
+    }
     let cols = columns(inp);
     let has_meta = inp.meta.is_some();
     let reference = select(&o.ref_sel, inp.names, &cols, has_meta)?;

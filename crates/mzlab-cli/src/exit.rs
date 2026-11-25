@@ -32,6 +32,7 @@ const INPUT_KEYS: &[&str] = &[
     "err.msn.rules.document",
     "error.badIndex",
     "err.compare.input",
+    "err.compare.duplicate",
     "err.quant.targets.table",
     "err.quant.targets.empty",
     "err.quant.targets.noFiles",

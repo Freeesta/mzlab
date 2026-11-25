@@ -238,6 +238,7 @@ mod raw_plan;
 mod raw_scan_cmd;
 mod raw_xic_cmd;
 mod renamed;
+mod sample_label;
 mod sample_select;
 mod samples_check;
 mod samples_cmd;
