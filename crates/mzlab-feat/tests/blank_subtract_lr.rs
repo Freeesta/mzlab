@@ -181,14 +181,52 @@ fn the_plain_ratio_filter_gives_the_same_evidence() {
 }
 
 #[test]
-fn a_ratio_under_one_is_reported_as_given() {
-    let (t, s) = table(&[ROW0]);
-    let v = view::build(&t, &s, &Method::None, &[Rule::Blank(0.5)]).unwrap();
-    assert!(
-        v.counts_json().contains("\"fold\":0.5,"),
-        "{}",
-        v.counts_json()
+fn a_ratio_under_one_is_reported_as_applied_by_each_rule() {
+    // blank mean 20; the best sample area is 12: the plain rule applies 0.5 (limit 10: kept), `BlankWith` applies max(1, 0.5) (limit 20: dropped)
+    let mut r = ROW0;
+    r[1] = (12.0, 0.0);
+    r[2] = (10.0, 0.0);
+    r[4] = (11.0, 0.0);
+    let (t, s) = table(&[r]);
+    let plain = view::build(&t, &s, &Method::None, &[Rule::Blank(0.5)]).unwrap();
+    assert_eq!(
+        plain.rows,
+        vec![0],
+        "the plain rule is judged with the ratio as given"
     );
+    assert!(
+        plain
+            .counts_json()
+            .contains("\"fold\":0.5,\"groups\":1,\"dropped\":[],\"dropped_total\":0"),
+        "{}",
+        plain.counts_json()
+    );
+    let with = view::build(
+        &t,
+        &s,
+        &Method::None,
+        &[Rule::BlankWith(0.5, BlankOpts::default())],
+    )
+    .unwrap();
+    assert!(
+        with.rows.is_empty(),
+        "`BlankWith` raises a ratio under 1 to 1"
+    );
+    // reported == applied: fold 1, and the row's own fold 12 / 20 = 0.6 shows why it went
+    assert!(
+        with.counts_json()
+            .contains("\"fold\":1,\"groups\":1,\"dropped\":[[1,12,20,0.6]]"),
+        "{}",
+        with.counts_json()
+    );
+    // from 1 up the two rules agree on rows and evidence
+    let (a, b) = (Rule::Blank(1.0), Rule::BlankWith(1.0, BlankOpts::default()));
+    let (a, b) = (
+        view::build(&t, &s, &Method::None, &[a]).unwrap(),
+        view::build(&t, &s, &Method::None, &[b]).unwrap(),
+    );
+    assert_eq!(a.rows, b.rows);
+    assert_eq!(a.counts_json(), b.counts_json());
 }
 
 #[test]

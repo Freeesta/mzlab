@@ -1,7 +1,9 @@
 """The table bridge of mzFinder in WebAssembly (crates/mzlab-feat-table-wasm) gives the same bytes as the native example `table`: the view, the report, the CSV
 full (with the words of mzmine too), the FBMN quantification table, the MGF and the SIRIUS `.ms` have the same SHA-256 through Node as natively. The series is the
-synthetic one of tools/feat_mirato.py (profile `piccolo`), aligned by the native example `native`. Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+synthetic one of tools/feat_mirato.py (profile `piccolo`), aligned by the native example `native`. Skipped on a machine without cargo, the wasm32 target, wasm-bindgen, node or numpy; in CI (GITHUB_ACTIONS) those are
+required and a missing one fails. Run by the `solo311` shard of test.yml (tools/pytest_solo_311.txt)."""
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -10,7 +12,14 @@ import pytest
 from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there it must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
+
+
+def test_the_tools_are_there_in_ci():
+    assert TOOLS or not CI, "cargo, wasm-bindgen and node must be installed in CI: this test would not run"
 SPEC = {"normalize": {"method": "sum"}, "filter": [{"rule": "min_detected", "value": 2}]}
 
 
@@ -26,7 +35,12 @@ def samples_json(idx, blank=None):
 
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
-    pytest.importorskip("numpy")
+    try:
+        import numpy  # noqa: F401  (tools/feat_mirato.py needs it)
+    except ImportError:
+        if CI:
+            raise
+        pytest.skip("numpy not available")
     root = tmp_path_factory.mktemp("table")
     ser = root / "ser"
     run("python3", "tools/feat_mirato.py", "--seed", "2", "--profile", "piccolo", "--scale", "1.0", "--out", str(ser))
@@ -75,10 +89,12 @@ def test_wasm_and_native_write_the_same_files(built, spec):
 
 
 def test_wasm_and_native_give_the_same_blank_evidence_for_the_plain_ratio_filter(built):
-    """AU-7 slice 2: the plain `blank` rule (default options) writes `counts.blank` too, the same bytes in the app engine and in the .wasm."""
+    """AU-7 slice 2: the plain `blank` rule (default options) writes `counts.blank` too, the same bytes in the app engine and in the .wasm. The ratio is huge, so every row
+    with a peak in the blank is dropped and the evidence cannot be empty."""
     root, idx, pkg, table = built
+    ratio = 1e9
     (root / "samples_blank.json").write_text(samples_json(idx, blank=0))
-    (root / "spec_blank.json").write_text(json.dumps({"normalize": {"method": "none"}, "filter": [{"rule": "blank", "value": 3}]}))
+    (root / "spec_blank.json").write_text(json.dumps({"normalize": {"method": "none"}, "filter": [{"rule": "blank", "value": ratio}]}))
     args = [str(table), str(root / "samples_blank.json"), str(root / "spec_blank.json"), "1", *idx]
     views = {}
     for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
@@ -88,5 +104,9 @@ def test_wasm_and_native_give_the_same_blank_evidence_for_the_plain_ratio_filter
         views[name] = (out / "view.json").read_bytes()
     assert views["nat"] == views["wasm"]
     blank = json.loads(views["nat"])["counts"]["blank"]
-    assert blank["quantity"] == "area" and blank["fold"] == 3 and blank["groups"] == 1
-    assert blank["dropped_total"] >= len(blank["dropped"]) and blank["truncated"] is (blank["dropped_total"] > len(blank["dropped"]))
+    assert blank["quantity"] == "area" and blank["fold"] == ratio and blank["groups"] == 1
+    assert blank["dropped_total"] > 0 and len(blank["dropped"]) == min(blank["dropped_total"], 200)
+    assert blank["truncated"] is (blank["dropped_total"] > len(blank["dropped"]))
+    for rid, value, level, fold in blank["dropped"]:
+        assert level > 0 and fold == pytest.approx(value / level) and fold < ratio, (rid, value, level, fold)
+    assert blank["fallback_all"] == {"total": 0, "files": []} and "ungrouped_all" not in blank

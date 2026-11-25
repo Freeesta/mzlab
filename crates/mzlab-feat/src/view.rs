@@ -64,7 +64,8 @@ const EVIDENCE_CAP: usize = 200;
 fn blank_evidence(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: &[f64], why: &[u8], labels: &Labels) -> Result<Option<String>> {
     let Some((idx, fold, o)) = rules.iter().enumerate().find_map(|(i, r)| match r {
         Rule::BlankWith(f, o) => Some((i, f.max(1.0), *o)),
-        // the plain ratio filter is `BlankWith` with the default options; its ratio is applied as given (it may be under 1)
+        // The plain ratio filter is `BlankWith` with the default options, but `filters::passes` judges it with the ratio as given (it may be under 1) while
+        // `BlankWith` judges with `max(1, ratio)` (`filters_blank::passes`): each rule reports the fold it applies, so the two differ on purpose under 1.
         Rule::Blank(f) => Some((i, *f, BlankOpts::default())),
         _ => None,
     }) else {
