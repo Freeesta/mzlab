@@ -3,16 +3,18 @@
 //! the numbers behind the apex, the window, the sides, the background level and the rule of the verdict. Without an apex no spectrum is made (`no_apex`).
 //! Read from the index only, in the lazy `rawxic` `.wasm`, so the site, the app and the CLI answer the same bytes.
 
-use std::collections::BTreeMap;
-
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::hr_profile;
 use crate::json::{round, Out};
 use crate::rawxic::{tallest, GAP_MIN, MIN_POINTS, MIN_SN, SIDE_MIN, SMOOTH_HALF, VALLEY_PCT};
 use crate::routes::{Query, Routes};
-use crate::specpeaks::{merge_unit, nominal};
+use crate::specpeaks::nominal;
 use crate::specsum::fill_of;
+
+#[path = "specpeak_out.rs"]
+mod out;
+use out::{background_json, emit, head, without, Found};
 
 /// The window is `FACTOR` x FWHM wide, centred on the apex (`--set factor=`).
 pub const FACTOR: f64 = 2.0;
@@ -36,27 +38,30 @@ fn bad(name: &str, v: &str) -> Error {
         .with("value", v.to_string())
 }
 
+/// One number of the request in `(lo, hi]` (`open`) or `[lo, hi]`, or `d` when it is absent.
+#[inline(never)]
+fn param(q: &Query, name: &str, d: f64, (lo, hi): (f64, f64), open: bool) -> Result<f64> {
+    let v = q
+        .num(name)
+        .map_err(|_| bad(name, q.get(name).unwrap_or("")))?;
+    match v {
+        None => Ok(d),
+        Some(v) if v.is_finite() && v <= hi && (if open { v > lo } else { v >= lo }) => Ok(v),
+        Some(_) => Err(bad(name, q.get(name).unwrap_or(""))),
+    }
+}
+
 /// `factor`, `side_min`, `gap_min`, `min_sn`, `min_points` of a request; a value out of its range is refused.
 fn set_of(q: &Query) -> Result<Set> {
-    let get = |name: &str, d: f64, lo: f64, hi: f64, open: bool| -> Result<f64> {
-        let v = q
-            .num(name)
-            .map_err(|_| bad(name, q.get(name).unwrap_or("")))?;
-        match v {
-            None => Ok(d),
-            Some(v) if v.is_finite() && v <= hi && (if open { v > lo } else { v >= lo }) => Ok(v),
-            Some(_) => Err(bad(name, q.get(name).unwrap_or(""))),
-        }
-    };
-    let n = get("min_points", MIN_POINTS as f64, 1.0, 1e6, false)?;
+    let n = param(q, "min_points", MIN_POINTS as f64, (1.0, 1e6), false)?;
     if n.fract() != 0.0 {
         return Err(bad("min_points", q.get("min_points").unwrap_or("")));
     }
     Ok(Set {
-        factor: get("factor", FACTOR, 0.0, 100.0, true)?,
-        side: get("side_min", SIDE_MIN, 0.0, 1e4, true)?,
-        gap: get("gap_min", GAP_MIN, 0.0, 1e4, false)?,
-        min_sn: get("min_sn", MIN_SN, 0.0, 1e6, false)?,
+        factor: param(q, "factor", FACTOR, (0.0, 100.0), true)?,
+        side: param(q, "side_min", SIDE_MIN, (0.0, 1e4), true)?,
+        gap: param(q, "gap_min", GAP_MIN, (0.0, 1e4), false)?,
+        min_sn: param(q, "min_sn", MIN_SN, (0.0, 1e6), false)?,
         min_points: n as usize,
     })
 }
@@ -108,23 +113,58 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The sum (not the mean) of a window per nominal mass, and the scans it holds; the lines of one nominal mass are merged as `/api/spectrum` does.
+    /// It reads the scans of the level and the precursor only (no scan filter), so the module does not carry the filter code of `/api/spectrum`.
     fn nominal_sum(
         &mut self,
         level: u8,
         (lo, hi): (f64, f64),
         precursor: Option<f64>,
     ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
-        let before = std::mem::replace(&mut self.msn.opts.sum, true);
-        let b = self.binned(level, lo, hi, precursor, BIN, None);
-        self.msn.opts.sum = before;
-        Ok(match b? {
-            Some(b) if !b.mz.is_empty() => {
-                let (mz, y) = merge_unit(&b.mz, &b.y);
-                (mz, y, b.n)
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok((Vec::new(), Vec::new(), 0));
+        };
+        let want = if level > 1 { precursor } else { None };
+        let (ar, scans) = self.idx.arrays_scans(si)?;
+        let mut ok = vec![false; ar.rt.len()];
+        let mut n = 0;
+        for (j, hit) in ok.iter_mut().enumerate() {
+            let s = &scans[ar.scan_ids[j] as usize];
+            if ar.rt[j] >= lo
+                && ar.rt[j] <= hi
+                && want.is_none_or(|p| (s.prec(-1.0) - p).abs() <= 0.6)
+            {
+                *hit = true;
+                n += 1;
             }
-            Some(b) => (Vec::new(), Vec::new(), b.n),
-            None => (Vec::new(), Vec::new(), 0),
-        })
+        }
+        if n == 0 {
+            return Ok((Vec::new(), Vec::new(), 0));
+        }
+        // cells of `floor(mz / BIN)` come in order because the peaks do; each cell keeps its intensity-weighted m/z
+        let (mut cell, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);
+        let (mut cm, mut cy) = (Vec::new(), Vec::new());
+        let total = self.idx.sections[si].n_peaks;
+        self.idx.each_peak(si, 0, total, |pos, m, v| {
+            if !ok[pos] {
+                return;
+            }
+            let c = (m / BIN).floor() as i64;
+            if c != cell {
+                if cell != i64::MIN {
+                    cm.push(smy / sy.max(1e-12));
+                    cy.push(sy);
+                }
+                (cell, sy, smy) = (c, 0.0, 0.0);
+            }
+            sy += v;
+            smy += v * m;
+        })?;
+        if cell != i64::MIN {
+            cm.push(smy / sy.max(1e-12));
+            cy.push(sy);
+        }
+        let (mz, y) = per_nominal(&cm, &cy);
+        Ok((mz, y, n))
     }
 
     /// `/api/specpeak?rt0=A&rt1=B[&level=N][&precursor=P][&factor=2&side_min=0.3&gap_min=0.05&min_sn=3&min_points=3][&fill_ms=T]`: `rt0`..`rt1` is where the
@@ -207,12 +247,10 @@ impl<R: ReadAt> Routes<R> {
         n_side: usize,
     ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
         let (wm, wy, n) = self.nominal_sum(level, g.window, precursor)?;
-        let mut bg: BTreeMap<i64, f64> = BTreeMap::new();
-        for s in [g.left, g.right] {
-            let (sm, sy, _) = self.nominal_sum(level, s, precursor)?;
-            for (m, v) in sm.iter().zip(&sy) {
-                *bg.entry(nominal(*m)).or_insert(0.0) += v;
-            }
+        let mut sides = Vec::new();
+        for w in [g.left, g.right] {
+            let (sm, sy, _) = self.nominal_sum(level, w, precursor)?;
+            sides.push(sm.iter().map(|&m| nominal(m)).zip(sy).collect::<Vec<_>>());
         }
         let scale = if n_side > 0 {
             n as f64 / n_side as f64
@@ -222,7 +260,10 @@ impl<R: ReadAt> Routes<R> {
         let (mut mz, mut yy) = (Vec::new(), Vec::new());
         for (m, v) in wm.iter().zip(&wy) {
             // rounded as it is shown: a mass whose net is a rounding error of the flat background is not a line
-            let net = round(v - bg.get(&nominal(*m)).copied().unwrap_or(0.0) * scale, 1);
+            let net = round(
+                v - (at(&sides[0], nominal(*m)) + at(&sides[1], nominal(*m))) * scale,
+                1,
+            );
             if net > 0.0 {
                 mz.push(*m);
                 yy.push(net);
@@ -232,93 +273,37 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
-/// The start of every answer: the level, the parameters in force, the range searched and the chromatogram behind it.
-fn head(o: &mut Out, level: u8, (lo, hi): (f64, f64), p: &Set, (n, in_range): (usize, usize)) {
-    o.raw("{\"mode\":\"peak_auto\",\"ms_level\":")
-        .int(i64::from(level));
-    o.raw(&format!(
-        ",\"params\":{{\"factor\":{},\"side_min\":{},\"gap_min\":{},\"min_sn\":{},\"min_points\":{}}}",
-        p.factor, p.side, p.gap, p.min_sn, p.min_points
-    ));
-    o.raw(&format!(",\"search_min\":[{lo},{hi}]"));
-    let prec = if level > 1 { " and precursor" } else { "" };
-    o.raw(&format!(",\"trace\":{{\"n_scans\":{n},\"n_scans_searched\":{in_range},\"basis\":\"summed intensity of every scan of the level{prec}\"}}"));
+/// The cells of a spectrum (in order of m/z) merged per nominal mass: intensities added, m/z weighted by them.
+fn per_nominal(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
+    let (mut om, mut oy) = (Vec::<f64>::new(), Vec::<f64>::new());
+    let (mut key, mut sx) = (i64::MIN, 0.0f64);
+    for (&m, &v) in mz.iter().zip(y) {
+        let k = nominal(m);
+        if k != key {
+            if let Some(t) = oy.last() {
+                if let Some(last) = om.last_mut() {
+                    *last = sx / t.max(1e-12);
+                }
+            }
+            (key, sx) = (k, 0.0);
+            om.push(m);
+            oy.push(0.0);
+        }
+        sx += m * v;
+        if let Some(t) = oy.last_mut() {
+            *t += v;
+        }
+    }
+    if let (Some(t), Some(last)) = (oy.last(), om.last_mut()) {
+        *last = sx / t.max(1e-12);
+    }
+    (om, oy)
 }
 
-/// Everything a `peak` or `window_only` answer reports.
-struct Found<'a> {
-    g: &'a Geometry,
-    apex_json: &'a str,
-    sides: ((usize, f64), (usize, f64)),
-    background: &'a str,
-    sum: &'a str,
-    flags: &'a [&'static str],
-    rule: &'a str,
-    has_spectrum: bool,
-    n_win: usize,
-    lines: (&'a [f64], &'a [f64]),
-}
-
-/// The rest of an answer that found a window: verdict, geometry, sides, background, sum and, last, the lines.
-fn emit(mut o: Out, f: &Found) -> String {
-    let (g, (side_l, side_r)) = (f.g, f.sides);
-    let flags: Vec<String> = f.flags.iter().map(|x| format!("\"{x}\"")).collect();
-    let verdict = if f.has_spectrum {
-        "peak"
-    } else {
-        "window_only"
-    };
-    o.raw(&format!(
-        ",\"verdict\":\"{verdict}\",\"flags\":[{}]",
-        flags.join(",")
-    ));
-    o.raw(&format!(
-        ",\"apex\":{},\"fwhm_min\":{},\"half_height\":{},\"window_min\":[{},{}]",
-        f.apex_json,
-        rd(g.fwhm),
-        rd(g.half),
-        rd(g.window.0),
-        rd(g.window.1)
-    ));
-    let side_json = |s: (f64, f64), v: (usize, f64)| {
-        format!(
-            "{{\"window_min\":[{},{}],\"n_scans\":{}}}",
-            rd(s.0),
-            rd(s.1),
-            v.0
-        )
-    };
-    o.raw(&format!(
-        ",\"sides\":{{\"left\":{},\"right\":{},\"anchored_min\":[{},{}]}}",
-        side_json(g.left, side_l),
-        side_json(g.right, side_r),
-        rd(g.anchored.0),
-        rd(g.anchored.1)
-    ));
-    o.raw(",\"background\":").raw(f.background);
-    o.raw(",\"spectrum\":")
-        .raw(if f.has_spectrum { "true" } else { "false" });
-    o.raw(",\"n_scans\":").int(f.n_win as i64);
-    // the ions the window rests on: counts x fill time, null until the fill time is stated or known (`evidence.sum.ions`)
-    o.raw(",\"total_ions\":")
-        .raw(&ions_of(f.sum))
-        .raw(",\"sum\":")
-        .raw(f.sum);
-    // the lines last: a reader that wants the evidence alone cuts the answer at `,"mz":[`
-    o.raw(",\"rule\":").str(f.rule);
-    lines(&mut o, f.lines.0, f.lines.1);
-    o.0
-}
-
-/// The rest of an answer that makes no spectrum: the verdict, its rule and the apex candidate (`null` when there is none).
-fn without(mut o: Out, verdict: &str, rule: &str, apex: &str, in_range: usize) -> String {
-    o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[],\"apex\":{apex},\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,"));
-    o.raw("\"spectrum\":false,\"n_scans\":")
-        .int(in_range as i64);
-    o.raw(",\"total_ions\":null,\"sum\":null,\"rule\":")
-        .str(rule)
-        .raw(",\"mz\":[],\"y\":[]}");
-    o.0
+/// What a sorted list of (nominal mass, intensity) holds at `k`.
+fn at(side: &[(i64, f64)], k: i64) -> f64 {
+    side.binary_search_by_key(&k, |p| p.0)
+        .map_or(0.0, |i| side[i].1)
 }
 
 /// The rule that refuses a candidate apex under `min_sn` or `min_points`, `None` when it meets both.
@@ -398,32 +383,7 @@ fn side_of(rt: &[f64], y: &[f64], s: (f64, f64)) -> (usize, f64) {
     inside.fold((0, 0.0), |(n, t), i| (n + 1, t + y[i]))
 }
 
-/// The `background` member: what was subtracted and its level in cps per scan (`none` when no side has a scan).
-fn background_json(n_side: usize, total: f64) -> String {
-    if n_side == 0 {
-        return "{\"applied\":\"none\",\"method\":null,\"n_side_scans\":0,\"per_scan_cps\":null}"
-            .to_string();
-    }
-    format!(
-        "{{\"applied\":\"sides\",\"method\":{},\"n_side_scans\":{n_side},\"per_scan_cps\":{}}}",
-        quote(METHOD),
-        rd(total / n_side as f64)
-    )
-}
-
-/// The lines of the spectrum, the last two members of the answer, and the closing brace.
-fn lines(o: &mut Out, mz: &[f64], y: &[f64]) {
-    o.raw(",\"mz\":[");
-    for (i, v) in mz.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 3));
-    }
-    o.raw("],\"y\":[");
-    for (i, v) in y.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
-    }
-    o.raw("]}");
-}
-
+/// The scans of a trace inside the window.
 fn scans_in(rt: &[f64], (lo, hi): (f64, f64)) -> usize {
     rt.iter().filter(|&&t| t >= lo && t <= hi).count()
 }
