@@ -34,6 +34,7 @@ ASKS = [
     (["--rt", "13.5,16", "--side", "1", "--gap", "0.1", "--mz-range", "200,400"], "rt=13.5,16&side_min=1&gap_min=0.1&mz_range=200,400"),
     (["--rt", "6,8", "--set", "min_z=2,min_net=0.5,alpha=0.01"], "rt=6,8&min_z=2&min_net=0.5&alpha=0.01"),
     (["--rt", "6,8", "--bin", "0.1", "--mz-offset", "0.1"], "rt=6,8&bin=0.1&mz_offset=0.1"),
+    (["--rt", "6,8", "--ms-level", "2"], "rt=6,8&ms_level=2"),
 ]
 # questions both refuse: the same error key
 BAD = [
@@ -92,7 +93,8 @@ def same_bytes(name, flags, query, got, doc):
     for row in (re.split(r',(?=\{"bin":)', body) if body else []):
         assert row[1:] in doc, f"{name} {flags} {query}:\nwasm {row[:400]}"
     rows = json.loads(route)["rows"]
-    assert rows, route[:300]
+    # a level without scans (MS1 on the MS2 file, MS2 on a full scan) answers an empty list, and that is the same bytes in both
+    assert rows or "ms_level" in query or name == "MS2.mzML", route[:300]
     assert rows[0]["verdict"] in ("peak", "trace", "nothing", None)
 
 
