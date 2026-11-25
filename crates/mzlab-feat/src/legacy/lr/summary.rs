@@ -392,6 +392,9 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         .raw(",\"isotope_or_flat\":")
         .int(d.unexpected_left.1 as i64)
         .raw("}");
+    if !d.pairing.is_empty() {
+        o.raw(",\"pairing\":").raw(&d.pairing);
+    }
     if let Some(l) = &d.links {
         o.raw(",\"ms2_links\":");
         super::ms2link::json(&mut o, l);

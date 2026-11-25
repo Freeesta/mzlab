@@ -69,6 +69,8 @@ pub struct TpRoles {
     /// With two or more conditions (`series` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
     /// its correlations inside each condition.
     pub conditions: Vec<Vec<usize>>,
+    /// The automatic choices of the pairing with the table (`samples::order_for_roles`): a sample the table does not carry, a file given the role of its name.
+    pub notes: Vec<mzlab_core::samples::PairNote>,
 }
 
 impl TpRoles {
@@ -83,6 +85,7 @@ impl TpRoles {
             dark: p.dark,
             infusion: p.infusion,
             conditions: groups::treated_by_condition(cs),
+            notes: Vec::new(),
         }
     }
 
@@ -97,7 +100,14 @@ impl TpRoles {
             &mut crate::store_read::Slice(table),
             table.len() as u64,
         )?;
-        TpRoles::from_json(&mzlab_core::samples::order_like(samples, &names)?)
+        Self::paired(samples, &names)
+    }
+
+    /// The roles of the files of a table named `names`: a sample the table does not carry is left out and a file with no sample takes the role its name proposes,
+    /// each choice in `notes` (the strict `order_like` would stop the step on the difference).
+    fn paired(samples: &str, names: &[String]) -> Result<TpRoles> {
+        let p = mzlab_core::samples::order_for_roles(samples, names)?;
+        Ok(TpRoles { notes: p.notes, ..TpRoles::from_json(&p.text)? })
     }
 
     /// `for_table` on a `.mzfeat` read by offsets; None or an empty text is no roles.
@@ -106,7 +116,7 @@ impl TpRoles {
             return Ok(None);
         };
         let names = crate::store_read::table_names(table, size)?;
-        TpRoles::from_json(&mzlab_core::samples::order_like(c, &names)?).map(Some)
+        Self::paired(c, &names).map(Some)
     }
 
     /// The files the kinetics reads: the timed ones (the t0 and the treated) and the controls. With the roles the controls are the blanks and the

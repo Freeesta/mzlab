@@ -174,7 +174,9 @@ def test_wasm_sizes(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
     m = w.misura(tmp_path)
-    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1732608}
+    import tomllib
+    cap = tomllib.loads((Path(__file__).resolve().parent.parent / "tools" / "moduli" / "hr.toml").read_text())["tetto"]  # the cap lives in its toml only
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": cap}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("wasm-dimensioni.json", json.dumps(m))

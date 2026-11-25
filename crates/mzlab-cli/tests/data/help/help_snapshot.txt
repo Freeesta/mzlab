@@ -46,6 +46,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -168,6 +169,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -290,6 +292,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -808,6 +811,7 @@ usage: mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names

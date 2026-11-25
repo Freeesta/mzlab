@@ -243,6 +243,7 @@ mod sample_select;
 mod samples_check;
 mod samples_cmd;
 mod samples_import;
+mod samples_pair;
 mod samples_table;
 mod schema_cmd;
 mod spectrum_cmd;
