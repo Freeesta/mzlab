@@ -447,7 +447,7 @@ fn render(p: &Parsed, a: &XicAsk, command: &[String], mut g: Gathered) -> Outcom
     );
     let mut o = crate::emit(text, &p.out());
     if o.code == 0 {
-        o.stderr = g.notes;
+        o.stderr = g.notes + &crate::mz_offset::nothing_hint(a.ask.offset.is_some(), &g.rows);
         if g.bad {
             o.code = crate::exit::DATA;
         }

@@ -22,7 +22,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
 | FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | - | discoverability: sample roles and `sample import` |
-| FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | RAW-SCAN | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |

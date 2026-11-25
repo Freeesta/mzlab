@@ -402,6 +402,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         if c.verb == "peaks" {
             notes += &crate::dad_msat::offset_note(&t);
         }
+        if c.verb == "delay" {
+            notes += &crate::dad_msat::delay_note(&t);
+        }
         match (c.csv, c.verb.as_str()) {
             (true, "peaks") => crate::dad_msat::peaks_csv(&t),
             (true, _) => trace_csv(&t),
@@ -417,6 +420,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => Outcome::fail_error(&e).with_hint(match e.key {
             "err.sample.unknown" => "list the samples with `mzlab-cli sample list FILE --json`",
             "err.session.fileNotFound" => "check the path",
+            "err.dad.delayNoPeaks" => "no delay can be trusted here: give the lag in minutes yourself, `dad ms-at FILE --rt T --offset MIN` or `dad peaks FILE --offset MIN`",
             _ => "see mzlab-cli dad --help",
         }),
     }

@@ -177,3 +177,18 @@ fn raw_cache_builds_then_reuses_and_check_writes_nothing() {
     let _ = std::fs::remove_dir_all(d);
     let _ = std::fs::remove_dir_all(c);
 }
+
+#[test]
+fn a_measured_offset_says_which_flag_applies_it() {
+    let (d, f) = mzml_file("rawoffhint");
+    let o = run(&["raw", "info", &f, "--offset-ion", "241.3@3"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("--mz-offset auto:241.3@3"),
+        "{}",
+        o.stderr
+    );
+    // not measured: nothing to apply
+    assert!(!run(&["raw", "info", &f]).stderr.contains("--mz-offset"));
+    let _ = std::fs::remove_dir_all(d);
+}

@@ -40,6 +40,9 @@ route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `
 - `summary`: per mass the files answered, the rows per verdict, `max_sn_floor` with its file and the median `area` of the `peak` rows; always whole. `--limit` (default 50) caps `rows`: `n_total` and `truncated` say what was cut.
 - `--dry-run`: `raw-plan/1` with the query. Exit as `raw info`: 0, 1 a file could not be read or its rows are inconsistent (entry with `error`, key `err.raw.xic.rows`; never exit 7, which is the panic hook's), 2 usage, 4 missing, 5 unknown sample, 6 `--out` not writable.
 
+## Finding the m/z offset flag
+A peak off by a fraction of a Da is a shifted m/z axis: `commands --find mass shift` finds `trace xic`, `features` and `raw xic` (`--mz-offset DA|auto:MZ[@RT]`). Hints on stderr, never a changed value: an empty `trace xic` trace, or `raw xic` with nothing at any mass, with no offset given, names `--mz-offset`; `raw info --offset-ion` names the flag that applies the measured offset.
+
 ## Site, app, CLI
 - The page asks the route `/api/rawinfo?probe=N&offset_mz=M&offset_rt=T` of a slot: the site's worker sends it to the lazy `.wasm` `raw` (`mzlab-raw-wasm`, `rust-raw.js`,
   over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw xic` is the route `/api/rawxic`, answered by the lazy `.wasm` `rawxic` (`mzlab-rawxic-wasm`; `raw` keeps its size); `/api/specsum` (`spectrum get --sum`, `data-channels.md`) is answered by the same `rawxic` module (`spec_sum`); `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.

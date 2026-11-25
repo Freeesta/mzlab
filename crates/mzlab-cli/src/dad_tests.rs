@@ -92,6 +92,20 @@ fn ms_at_applies_the_signed_offset_and_delay_reports_its_evidence() {
 }
 
 #[test]
+fn delay_says_on_stderr_where_the_estimate_is_used_and_a_failed_one_names_the_manual_offset() {
+    let note = crate::dad_msat::delay_note("{\"delay\":{\"delay\":0.12,\"peaks\":3,\"corr\":0.9}}");
+    assert!(
+        note.contains("not applied") && note.contains("dad ms-at FILE --rt T --offset 0.12"),
+        "{note}"
+    );
+    assert_eq!(crate::dad_msat::delay_note("{}"), "");
+    // the estimate found no matching peak: exit 1 and the hint names the flag to give a lag by hand
+    let o = dad(&["delay", &example()]);
+    assert_eq!(o.code, 1);
+    assert!(o.stderr.contains("--offset MIN"), "{}", o.stderr);
+}
+
+#[test]
 fn ms_at_takes_the_nearest_scan_and_never_answers_an_empty_spectrum() {
     let f = example();
     // an instant that is not a scan time used to give `mz: []` with exit 0
