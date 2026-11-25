@@ -159,6 +159,7 @@ pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
         &hypotheses.1[..],
     ];
     let roles = TpRoles::for_table(&String::from_utf8_lossy(files[1]), files[0])?;
+    crate::flow_digl::pairnotes::print(&roles.notes);
     let bytes = link_bytes(r, job, &series, files)?;
     let out = r.work.join(format!("{}.mzfeat", job.instance.id));
     std::fs::write(&out, bytes).map_err(io)?;
