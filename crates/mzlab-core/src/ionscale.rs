@@ -63,7 +63,7 @@ impl ScanKind {
                 Some("EMS") => 0,
                 Some("EPI") | Some("PI") => 1,
                 Some("Q1") => 2,
-                _ if filter.contains("SIM") => 3,
+                _ if has_sim(filter) => 3,
                 _ => continue,
             };
             n[k] += 1;
@@ -74,6 +74,11 @@ impl ScanKind {
         }
         [ScanKind::Ems, ScanKind::Epi, ScanKind::Q1, ScanKind::Sim][best]
     }
+}
+
+/// `SIM` in a filter string; a byte window, because `str::contains` links the whole substring searcher into the `.wasm`.
+fn has_sim(filter: &str) -> bool {
+    filter.as_bytes().windows(3).any(|w| w == b"SIM")
 }
 
 /// What the method says about the time of a point (every field absent when the method does not say).
