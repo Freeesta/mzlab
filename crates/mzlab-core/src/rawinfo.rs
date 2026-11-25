@@ -6,7 +6,7 @@
 
 use crate::channels::{Famiglia, Source};
 use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
+use crate::idxread::{Index, ReadAt};
 use crate::ionstat::Quantum;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
@@ -218,43 +218,53 @@ impl<R: ReadAt> Routes<R> {
 
     /// At most `n` scans of `level`, equally spaced over the section (as the `auto` probe of `spectrum_type`): their points and intensities.
     pub fn probe(&mut self, level: u8, n: usize) -> Result<Probe> {
-        let mut p = Probe {
-            level,
-            n_level: 0,
-            n_profile: 0,
-            scans: Vec::new(),
-            inten: Vec::new(),
-        };
-        let Some(si) = self.idx.section_of(level, self.pol) else {
-            return Ok(p);
-        };
-        let n_scans = self.idx.sections[si].n_scans;
-        let ids = self.idx.arrays(si)?.scan_ids.clone();
-        p.n_level = n_scans;
-        p.n_profile = ids
-            .iter()
-            .filter(|&&k| self.idx.scans.get(k as usize).is_some_and(|s| s.profile))
-            .count();
-        let count = n.min(n_scans);
-        let mut lut = vec![u32::MAX; n_scans];
-        for j in 0..count {
-            let k = if count > 1 {
-                j * (n_scans - 1) / (count - 1)
-            } else {
-                0
-            };
-            lut[k] = j as u32;
-        }
-        let mut scans = vec![Vec::new(); count];
-        let inten = &mut p.inten;
-        self.idx.each_peak_for(si, &lut, |j, mz, y| {
-            scans[j].push(mz);
-            inten.push(y);
-        })?;
-        // a scan with no points is not looked at (the probe of `spectrum_type` skips them too)
-        p.scans = scans.into_iter().filter(|s| !s.is_empty()).collect();
-        Ok(p)
+        probe_index(&mut self.idx, level, self.pol, n)
     }
+}
+
+/// `Routes::probe` on any index: the one probe of `raw info`, `raw xic` and the label check of the feature recipe (`lrscreen::label_check`).
+pub fn probe_index<R: ReadAt>(
+    idx: &mut Index<R>,
+    level: u8,
+    pol: Option<i8>,
+    n: usize,
+) -> Result<Probe> {
+    let mut p = Probe {
+        level,
+        n_level: 0,
+        n_profile: 0,
+        scans: Vec::new(),
+        inten: Vec::new(),
+    };
+    let Some(si) = idx.section_of(level, pol) else {
+        return Ok(p);
+    };
+    let n_scans = idx.sections[si].n_scans;
+    let ids = idx.arrays(si)?.scan_ids.clone();
+    p.n_level = n_scans;
+    p.n_profile = ids
+        .iter()
+        .filter(|&&k| idx.scans.get(k as usize).is_some_and(|s| s.profile))
+        .count();
+    let count = n.min(n_scans);
+    let mut lut = vec![u32::MAX; n_scans];
+    for j in 0..count {
+        let k = if count > 1 {
+            j * (n_scans - 1) / (count - 1)
+        } else {
+            0
+        };
+        lut[k] = j as u32;
+    }
+    let mut scans = vec![Vec::new(); count];
+    let inten = &mut p.inten;
+    idx.each_peak_for(si, &lut, |j, mz, y| {
+        scans[j].push(mz);
+        inten.push(y);
+    })?;
+    // a scan with no points is not looked at (the probe of `spectrum_type` skips them too)
+    p.scans = scans.into_iter().filter(|s| !s.is_empty()).collect();
+    Ok(p)
 }
 
 /// `probe`: the level probed, the scans asked and the scans read (those with points).

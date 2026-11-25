@@ -234,6 +234,7 @@ mod raw_cache_cmd;
 mod raw_cmd;
 mod raw_xic_cmd;
 mod renamed;
+pub mod repeat_hint;
 mod sample_select;
 mod samples_cmd;
 mod samples_import;

@@ -7,9 +7,9 @@ use mzlab_core::error::Result;
 use mzlab_core::flow::value_text;
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::axis::MassAxis;
-use mzlab_feat::lrscreen::{centroid_wanted, Log};
+use mzlab_feat::lrscreen::{centroid_wanted, label_reason, LabelCheck, Log};
 use mzlab_feat::recipe::Recipe;
-use mzlab_ops::run::feat::lr_note::{note_of, Note};
+use mzlab_ops::run::feat::lr_note::{self, note_of, Note};
 
 /// One member of the series: how it is called, what the index says and whether its profile scans are centroided.
 struct Member {
@@ -22,18 +22,46 @@ fn members(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[Strin
     idxs.iter()
         .enumerate()
         .filter_map(|(k, idx)| {
-            let index = crate::open(idx).ok()?;
+            let mut index = crate::open(idx).ok()?;
             let name = match labels.get(k).filter(|l| !l.is_empty()) {
                 Some(l) => l.clone(),
                 None => files[k].display().to_string(),
             };
             Some(Member {
-                centroid: centroid_wanted(&index, recipe),
-                note: note_of(recipe, &index),
+                centroid: centroid_wanted(&mut index, recipe),
+                note: note_of(recipe, &mut index),
                 name,
             })
         })
         .collect()
+}
+
+/// The label check behind a member's notice (its numbers), when the file is labelled profile but holds sparse ion counts.
+fn label_of(x: &Member) -> Option<LabelCheck> {
+    let n = x
+        .note
+        .notices
+        .iter()
+        .find(|n| n.key == lr_note::LABEL_MISMATCH)?;
+    let p = |k: &str| n.params.iter().find(|(q, _)| *q == k).map(|(_, v)| *v);
+    Some(LabelCheck {
+        profile: p("profile")?,
+        scans: p("scans")?,
+        runs_pct: p("runs")?,
+        fine_pct: p("fine")?,
+        sparse: true,
+    })
+}
+
+/// Why the centroid switch is what it is for a member: the numbers of the label check, else the share of profile scans.
+fn centroid_why(x: &Member) -> String {
+    match label_of(x) {
+        Some(c) => format!("{}: {}", x.name, label_reason(&c)),
+        None => format!(
+            "{}: {} of {} MS1 scans in profile mode",
+            x.name, x.note.profile, x.note.scans
+        ),
+    }
 }
 
 fn num(x: f64) -> String {
@@ -211,10 +239,7 @@ pub(crate) fn report_text(
         choice(&mut o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
     }
     for x in m.iter().filter(|x| x.note.unit) {
-        let why = format!(
-            "{}: {} of {} MS1 scans in profile mode",
-            x.name, x.note.profile, x.note.scans
-        );
+        let why = centroid_why(x);
         choice(
             &mut o,
             "centroid",
@@ -222,7 +247,11 @@ pub(crate) fn report_text(
             &why,
         );
     }
-    for c in &log.choices {
+    for c in log
+        .choices
+        .iter()
+        .filter(|c| !(c.key == "centroid" && m.iter().any(|x| label_of(x).is_some())))
+    {
         choice(&mut o, &c.key, &c.value, &c.reason);
     }
     o.raw("]}\n");

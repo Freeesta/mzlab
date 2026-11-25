@@ -12,6 +12,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
 | every peak of every channel of every file | `peak table FILE... --auto` (one call, all files); hand windows: `--windows` |
+| list of targets (m/z + RT window) in many full-scan files: area, S/N, state per file and target | `quant targets FILE... --targets T.csv --json` (`quant-targets/1`); never one `peak auto-lr` per target and file; one list for many series: `quant union` |
 | XICs of many ions, then their peaks | `trace xic FILE --mz M1,M2,... --da 0.3 --out F.json` per file, then `peak table --traces A.json --traces B.json --auto` |
 | blank threshold, replicates, QC CV | Flow step `table.filter` (`blank_ratio`, `blank_subtract`, ...); by ratio: `table compare` |
 | correlated ions, isotopes, adducts of one compound | Flow step `features.group`; one ion: `ion pattern`, `ion match` |
@@ -42,6 +43,8 @@ For an agent running on the user's computer (Claude Code, Claude Cowork or other
 5. **Outcome**: with `--json` on stdout `flowrun/1` (status, times and SHA-256 of the files of each instance) or `error/1` (`error_key`, `params`, `hint`); exit code 0 all done, 1 some instance in error (the other outputs are written), 2 wrong usage, 3 invalid plan, 4 missing input or different SHA-256.
 6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/2`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/2`.
 7. **Fix**: rerun in the same `RUN` with other `--set`: the cache redoes only the steps that change (`cached` in `prov/1`); `--fresh` redoes everything.
+
+**Loop hint**: the 10th `peak auto-lr`, or `flow run` of a plan with `tp.dig_lr`, from one parent process (a script or shell loop, count per parent in the temp folder, `MZLAB_STATE_DIR`) prints `note.cli.repeat` on stderr naming the one call (`quant targets`, one Dig run), again every 1000th; stdout and exit code never change; `MZLAB_NO_HINTS=1` silences it (`repeat_hint.rs`, test `crates/mzlab-cli/tests/repeat_hint.rs`).
 
 ## Six chains (tested)
 Chains 1-5 follow; the sixth, a whole kinetic LR campaign from vendor files to the kinetics per condition, is `recipes.md` (test: `crates/mzlab-cli/src/workflow_kinetic_tests.rs`). Each chain is a test on synthetic data in `crates/mzlab-cli/src/workflow_tests.rs` or that file: every call exits 0 and the call count below is asserted. Add `--cache DIR` (or `MZLAB_CACHE`) to the file commands of a chain that reads the same files twice; `file index FILE...` builds the indexes first (`cli-agenti.md`).

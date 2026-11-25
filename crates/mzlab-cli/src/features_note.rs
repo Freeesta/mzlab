@@ -70,14 +70,14 @@ pub(crate) fn notes_text(notes: &[(String, Note)]) -> String {
 pub(crate) fn report(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[String]) {
     let mut notes = Vec::new();
     for (k, idx) in idxs.iter().enumerate() {
-        let Ok(index) = crate::open(idx) else {
+        let Ok(mut index) = crate::open(idx) else {
             continue;
         };
         let name = match labels.get(k).filter(|l| !l.is_empty()) {
             Some(l) => l.clone(),
             None => files[k].display().to_string(),
         };
-        let note = note_of(recipe, &index);
+        let note = note_of(recipe, &mut index);
         for l in lines(&name, &note) {
             eprintln!("{l}");
         }

@@ -14,6 +14,10 @@ pub const PROFILE_UNIT: &str = "warn.features.profileUnit";
 /// Key of the note that says the profile scans of a unit-resolution file were centroided before detection (`centroid` of `features.detect`); same parameters.
 pub const CENTROIDED: &str = "note.features.centroided";
 
+/// Key of the notice for a file whose scans are labelled profile but whose points are sparse ion counts: `auto` did not centroid it. Parameters `profile`,
+/// `scans`, `runs` (share of points in runs, %) and `fine` (share of fine-grid spacings, %).
+pub const LABEL_MISMATCH: &str = "warn.features.profileLabel";
+
 /// A notice: a lang key and its whole-number parameters, in the order the text names them.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notice {
@@ -48,8 +52,25 @@ pub fn notices_of(profile: usize, scans: usize) -> Vec<Notice> {
     }
 }
 
-/// The warning of profile scans becomes the note that they were centroided when the recipe centroids this file; with `centroid` off the warning stays.
-fn screened<R: ReadAt>(mut n: Vec<Notice>, recipe: &Recipe, index: &Index<R>) -> Vec<Notice> {
+/// The warning of profile scans becomes the note that they were centroided when the recipe centroids this file; with `centroid` off the warning stays;
+/// when the label is contradicted by the points (sparse ion counts) and `auto` left the file alone, the notice says that with the numbers.
+fn screened<R: ReadAt>(mut n: Vec<Notice>, recipe: &Recipe, index: &mut Index<R>) -> Vec<Notice> {
+    if n.is_empty() {
+        return n;
+    }
+    if recipe.screen.centroid == mzlab_feat::lrscreen::Switch::Auto {
+        if let Some(c) = mzlab_feat::lrscreen::label_check(index).filter(|c| c.sparse) {
+            return vec![Notice {
+                key: LABEL_MISMATCH,
+                params: vec![
+                    ("profile", c.profile),
+                    ("scans", c.scans),
+                    ("runs", c.runs_pct),
+                    ("fine", c.fine_pct),
+                ],
+            }];
+        }
+    }
     if mzlab_feat::lrscreen::centroid_wanted(index, recipe) {
         n.iter_mut().for_each(|x| x.key = CENTROIDED);
     }
@@ -57,7 +78,7 @@ fn screened<R: ReadAt>(mut n: Vec<Notice>, recipe: &Recipe, index: &Index<R>) ->
 }
 
 /// The note of the file `index` measured with `recipe`.
-pub fn note_of<R: ReadAt>(recipe: &Recipe, index: &Index<R>) -> Note {
+pub fn note_of<R: ReadAt>(recipe: &Recipe, index: &mut Index<R>) -> Note {
     let ms1 = || index.scans.iter().filter(|s| s.level == 1);
     let (profile, scans) = (ms1().filter(|s| s.profile).count(), ms1().count());
     let d = &recipe.detect;
