@@ -53,7 +53,8 @@ pub fn stat_steps() -> Vec<Value> {
 
 /// `raw info` and `raw xic` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
 /// out of range; two masses (a peak and an empty one), changed thresholds, an m/z offset, a question with no time and a width out of range; then the
-/// slot reopened on the negative section (`--polarity -`: the file holds positive scans only) and back on every section.
+/// slot reopened on the negative section and back on every section. Limit: the shared fixture holds positive scans only, so the negative section is the
+/// empty one; a mixed section and a second sample (`--sample`) are covered CLI against wasm in `tests/test_raw_xic_wasm.py`, not on the app leg.
 pub fn raw_steps() -> Vec<Value> {
     let info = ["?probe=8", "?probe=64&offset_mz=300", "?probe=0"]
         .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawinfo", "query": q}));

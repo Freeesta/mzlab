@@ -28,7 +28,7 @@ usage: mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--p
               side_min=0.3 (shortest side window, min), gap_min=0.05 (gap to a side, min); every value used is in `provenance.params`
   --limit N   most rows printed (default 50); `n_total` and `truncated` say what was cut, `summary` is always whole
   --dry-run   the resolved query and each file with its cache status (raw-plan/1); reads no peak
-exit 0 answered (any verdict, `nothing` too), 1 a file could not be read (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out not writable";
+exit 0 answered (any verdict, `nothing` too), 1 a file could not be read or its rows are inconsistent (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out not writable";
 
 /// Rows printed by default.
 const LIMIT: usize = 50;
@@ -380,32 +380,34 @@ struct Gathered {
     bad: bool,
 }
 
-/// A failure of this command itself (never of the data): `err.run.internal`.
-fn internal(why: &str) -> Outcome {
-    Outcome::fail_error(&Error::new("err.run.internal").with("detail", why))
+/// The rows of one file as values; a row that cannot be read or a count other than the masses' fails the file loud (`err.raw.xic.rows`, exit 1).
+fn check_rows(rows: &[String], masses: usize, file: &str) -> Result<Vec<Value>> {
+    let bad = |w: String| {
+        Error::new("err.raw.xic.rows")
+            .with("file", file)
+            .with("detail", w)
+    };
+    let parsed: Vec<Value> = rows
+        .iter()
+        .map(|r| parse(r.as_bytes()).map_err(|e| bad(format!("{e:?}"))))
+        .collect::<Result<_>>()?;
+    if parsed.len() != masses {
+        return Err(bad(format!("{} rows for {masses} masses", parsed.len())));
+    }
+    Ok(parsed)
 }
 
-/// Each file through `one`; a file that cannot be read keeps its place with an `error` entry, a whole-run failure ends the command.
+/// Each file through `one`; a file that cannot be answered keeps its place with an `error` entry, a whole-run failure ends the command.
 fn gather(p: &Parsed, a: &XicAsk) -> std::result::Result<Gathered, Outcome> {
     let mut g = Gathered::default();
     for f in &a.files {
         let sample = p.sample(f).map_err(|m| Outcome::fail(&m))?;
-        match one(f, sample, a) {
-            Ok((ans, note)) => {
-                // a row the summary cannot read, or a file with fewer rows than masses, would shift the summary: refuse instead
-                let parsed: Vec<Value> = ans
-                    .rows
-                    .iter()
-                    .map(|r| parse(r.as_bytes()).map_err(|e| internal(&format!("{e:?}"))))
-                    .collect::<std::result::Result<_, _>>()?;
-                if parsed.len() != a.ask.mz.len() {
-                    return Err(internal(&format!(
-                        "{} rows for {} masses in {}",
-                        parsed.len(),
-                        a.ask.mz.len(),
-                        name_of(f)
-                    )));
-                }
+        let answered = one(f, sample, a).and_then(|(ans, note)| {
+            let parsed = check_rows(&ans.rows, a.ask.mz.len(), &name_of(f))?;
+            Ok((ans, note, parsed))
+        });
+        match answered {
+            Ok((ans, note, parsed)) => {
                 g.per_file.push((name_of(f), parsed));
                 g.entries.push(ans.entry);
                 g.rows.extend(ans.rows);

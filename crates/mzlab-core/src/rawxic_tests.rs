@@ -222,10 +222,8 @@ fn the_route_gives_a_peak_a_background_ion_and_an_empty_mass() {
         assert!(p.get(k).is_some(), "{k}");
     }
     assert_eq!(p.get("sn_estimator").unwrap().str(), Some(SN_ESTIMATOR));
-    assert!(
-        rows[1].get("ul_counts").unwrap().f64().is_some()
-            && p.get("ul_counts").unwrap().f64().is_none()
-    );
+    assert!(rows[1].get("ul_counts").unwrap().f64().unwrap() > 0.0);
+    assert_eq!(p.get("ul_counts"), Some(&crate::json::Value::Null));
     // the upper limit names the level it was computed at: the default alpha, and the one asked for
     assert_eq!(rows[1].get("ul_alpha").unwrap().f64(), Some(0.05));
     assert_eq!(p.get("ul_alpha"), Some(&crate::json::Value::Null));

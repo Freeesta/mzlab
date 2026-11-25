@@ -36,7 +36,7 @@ fn a_peak_and_an_empty_mass_get_their_verdicts_with_the_rule_and_the_summary() {
                 .ends_with("-> peak")
     );
     assert_eq!(rows[1].get("verdict").unwrap().str(), Some("nothing"));
-    assert!(rows[1].get("ul_counts").is_some());
+    assert_eq!(rows[1].get("ul_counts"), Some(&Value::Null));
     // no ion quantum in this fixture: no counts, so no upper limit and no level for it (the values are pinned on the route's own test)
     assert_eq!(rows[1].get("ul_alpha"), Some(&Value::Null));
     assert_eq!(
@@ -194,6 +194,10 @@ fn an_unreadable_file_keeps_the_document_with_its_error_and_exit_1() {
 fn usage_errors_carry_their_keys() {
     let (d, f) = mzml_file("xickeys");
     let base = ["raw", "xic", f.as_str()];
+    let many = (0..=mzlab_core::rawxic::MAX_MASSES)
+        .map(|i| format!("{}", 100.0 + i as f64 * 0.01))
+        .collect::<Vec<_>>()
+        .join(",");
     for (rest, key) in [
         (vec!["--rt", "1,2"], "err.cli.rawxic.needsMz"),
         (vec!["--mz", "241.3"], "err.cli.rawxic.needsRt"),
@@ -210,6 +214,10 @@ fn usage_errors_carry_their_keys() {
             "err.cli.rawxic.polarity",
         ),
         (vec!["--mz", "241.3", "--rt", "2,1"], "err.raw.xic.param"),
+        (
+            vec!["--mz", many.as_str(), "--rt", "1,2"],
+            "err.raw.xic.many",
+        ),
     ] {
         let mut a = base.to_vec();
         a.extend(rest.iter().copied());
@@ -225,4 +233,22 @@ fn usage_errors_carry_their_keys() {
         Some("err.cli.rawxic.needsFile")
     );
     let _ = std::fs::remove_dir_all(d);
+}
+
+/// A row the summary cannot read, or a row count other than the masses', fails the file loud with `err.raw.xic.rows`: exit 1 (data), a
+/// per-file error that does not end the whole run, and never the panic-only exit 7.
+#[test]
+fn inconsistent_rows_fail_the_file_loud_with_a_data_error() {
+    let ok = vec![r#"{"verdict":"peak"}"#.to_string()];
+    assert_eq!(super::check_rows(&ok, 1, "a.mzML").unwrap().len(), 1);
+    for (rows, masses, what) in [
+        (vec!["{not json".to_string()], 1, "unreadable row"),
+        (ok.clone(), 2, "fewer rows than masses"),
+        (vec![], 1, "no rows"),
+    ] {
+        let e = super::check_rows(&rows, masses, "a.mzML").unwrap_err();
+        assert_eq!(e.key, "err.raw.xic.rows", "{what}");
+        assert_eq!(crate::exit::code_of(&e), crate::exit::DATA, "{what}");
+        assert!(!super::whole_run(&e), "{what}");
+    }
 }

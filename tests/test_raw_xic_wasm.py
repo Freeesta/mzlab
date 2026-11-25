@@ -35,7 +35,12 @@ ASKS = [
     (["--mz", "229.0", "--rt", "6,8", "--da", "0.1", "--mz-offset", "0.1"], "mz=229.0&rt=6,8&da=0.1&mz_offset=0.1"),
 ]
 # questions both refuse: the same error key
-BAD = [(["--mz", "229.1", "--rt", "8,6"], "mz=229.1&rt=8,6"), (["--mz", "229.1", "--rt", "6,8", "--da", "0"], "mz=229.1&rt=6,8&da=0")]
+MANY = ",".join(str(100 + i * 0.01) for i in range(1001))  # one more than rawxic::MAX_MASSES
+BAD = [
+    (["--mz", "229.1", "--rt", "8,6"], "mz=229.1&rt=8,6", "err.raw.xic.param"),
+    (["--mz", "229.1", "--rt", "6,8", "--da", "0"], "mz=229.1&rt=6,8&da=0", "err.raw.xic.param"),
+    (["--mz", MANY, "--rt", "6,8"], f"mz={MANY}&rt=6,8", "err.raw.xic.many"),
+]
 
 
 def test_the_tools_are_there_in_ci():
@@ -115,7 +120,8 @@ def test_a_sample_of_a_multi_sample_file_is_the_same_in_the_wasm_and_the_cli(wor
 
 
 def test_a_refused_question_has_the_same_error_key(work):
-    for (flags, query), got in zip(BAD, answers(work, "FS.mzML", [q for _, q in BAD])):
-        assert json.loads(got["e"])["error_key"] == "err.raw.xic.param", got
+    for (flags, query, key), got in zip(BAD, answers(work, "FS.mzML", [q for _, q, _ in BAD])):
+        assert json.loads(got["e"])["error_key"] == key, got
         r = cli("raw", "xic", str(work / "FS.mzML"), *flags, runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
-        assert r.returncode == 2 and json.loads(r.stdout)["schema"] == "error/1"
+        doc = json.loads(r.stdout)
+        assert r.returncode == 2 and doc["schema"] == "error/1" and doc["error_key"] == key, r.stdout[:300]

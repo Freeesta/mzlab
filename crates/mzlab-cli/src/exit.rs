@@ -95,6 +95,7 @@ const DATA_KEYS: &[&str] = &[
     "err.dad.delayNoPeaks",
     "err.flow.cancelled",
     "err.run.data",
+    "err.raw.xic.rows",
     "err.llm.eval.loop",
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",

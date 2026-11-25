@@ -5,4 +5,4 @@ wasm_opt = "@motore"
 parte = "a"
 tetto = 229376
 misura = 218481
-nota = "api/rawinfo (`raw info`: polarity, scans per level, m/z grid, ion quantum, spectrum type, offset over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first request; inside the engine it took +29.9 KB (+1.28 %, over its cap); new module, 217,402 B after wasm-opt in a local build, cap = measurement x 1.05 rounded up to 4 KiB, owner decision"
+nota = "api/rawinfo (`raw info`: polarity, scans per level, m/z grid, ion quantum, spectrum type, offset over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first request; inside the engine it took +29.9 KB (+1.28 %, over its cap); new module; CI-measured 218,481 B after wasm-opt (a local build gave 217,402 B: the +0.5 % is CI against that local build), cap = measurement x 1.05 rounded up to 4 KiB, owner decision"
