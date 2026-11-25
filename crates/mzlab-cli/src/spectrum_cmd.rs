@@ -10,15 +10,20 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, Parsed, Sample};
 use crate::Outcome;
 
+#[path = "spectrum_bins.rs"]
+mod bins;
 #[path = "spectrum_level.rs"]
 mod level;
+#[path = "spectrum_list.rs"]
+mod list_cmd;
 #[path = "spectrum_minus.rs"]
 mod minus;
 #[path = "spectrum_sum.rs"]
 mod sum;
+pub use list_cmd::list;
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
-usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
+usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]
 
   --rt MIN    the scan nearest to MIN (minutes) at the level; the evidence names it
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
@@ -35,17 +40,13 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
               another sample of FILE
   --minus-sample ID the sample of the blank (a file of several samples)
   --minus-rt A,B the blank's window in minutes; default the window of --rt, or the blank's scan nearest to a single --rt or --scan
+  --bin RULE  unit-resolution data cut into bins (`mzlab-cli spectrum get f.mzML --rt 6,7 --bin nominal --mz-offset 0.24`): the points are summed into
+              half-open bins [n - 0.5, n + 0.5) around integers (`nominal`) or [k/10 - 0.05, k/10 + 0.05) around tenths (`0.1`) AFTER the offset is taken off;
+              the output (spectrum-bins/1, or CSV bin,mz,counts,points) gives the bin, its centre of mass on the corrected scale (intensity-weighted) and the
+              counts summed; the rule and the offset (also 0) are in the document and on stderr; not with --minus or --sum; a high-resolution file is refused
+  --mz-offset DA|auto:MZ[@RT]  with --bin: the offset (observed - true, Da) taken off every m/z before the cut: a number (limit 0.6), or measured on the known ion MZ
+              (near RT min) as in `trace xic`; the evidence of an estimate is in the document
   --format F  json (default) or csv with the header mz,intensity
-  --out PATH  write there instead of the standard output";
-
-pub const HELP_LIST: &str = "mzlab-cli spectrum list: the scans of a file as JSON (scanlist/1) or CSV, the answer of the page's api/scanlist.
-
-usage: mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]
-
-  --ms-level N one level; default every level, in time order
-  --id CHANNEL only the scans of an ms:<key> or dd:<level> channel
-  --sample ID the sample of a file with several (.wiff); default the first
-  --format F  json (default) or csv: scan_id,scan_no,ms_level,rt_min,tic,precursor_mz,base_peak_mz,base_peak_intensity
   --out PATH  write there instead of the standard output";
 
 fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
@@ -147,20 +148,26 @@ fn scan_json(i: usize, sc: &mzlab_core::idxread::Scan) -> String {
     )
 }
 
-fn get_one(
+/// What a request resolved to before the route is asked: the level, the scan (`scan` member of the evidence), the route query and the window.
+pub(crate) struct Asked {
+    pub level: u8,
+    pub auto: Option<String>,
+    pub resolved: String,
+    pub pairs: Vec<(&'static str, String)>,
+    pub window: (f64, f64),
+}
+
+pub(crate) fn asked(
     s: &mut Sample,
     at: &At,
     level: Option<u8>,
     chan: Option<&str>,
-    csv: bool,
-    minus: &mut Option<minus::Minus>,
-    sum: &Option<sum::SumOpt>,
-) -> Result<(String, String)> {
+) -> Result<Asked> {
     let (mut level, auto) = level::start(s, at, level)?;
     let mut resolved = "null".to_string();
     let mut pairs: Vec<(&str, String)> = Vec::new();
     let sid = scan_index(s, at, level, chan)?;
-    let (lo, hi) = match (sid, at) {
+    let window = match (sid, at) {
         (Some(i), _) => {
             let sc = &s.routes.idx.scans[i];
             // a scan given by number states its own level; the level of --rt is the one asked for
@@ -179,14 +186,39 @@ fn get_one(
     pairs.splice(
         0..0,
         [
-            ("rt0", lo.to_string()),
-            ("rt1", hi.to_string()),
+            ("rt0", window.0.to_string()),
+            ("rt1", window.1.to_string()),
             ("level", level.to_string()),
         ],
     );
     if let Some(c) = chan {
         pairs.push(("channel", c.into()));
     }
+    Ok(Asked {
+        level,
+        auto,
+        resolved,
+        pairs,
+        window,
+    })
+}
+
+fn get_one(
+    s: &mut Sample,
+    at: &At,
+    level: Option<u8>,
+    chan: Option<&str>,
+    csv: bool,
+    minus: &mut Option<minus::Minus>,
+    sum: &Option<sum::SumOpt>,
+) -> Result<(String, String)> {
+    let Asked {
+        level,
+        auto,
+        resolved,
+        mut pairs,
+        window: (lo, hi),
+    } = asked(s, at, level, chan)?;
     // the evidence of a sum reads the window as the spectrum does, before `mode` joins the query
     let sum_ev = (sum.as_ref())
         .map(|o| sum::evidence(s, &pairs, &o.fill_ms))
@@ -261,6 +293,8 @@ pub fn get(args: Vec<String>) -> Outcome {
                 "--minus-sample",
                 "--minus-rt",
                 "--fill-ms",
+                "--bin",
+                "--mz-offset",
                 "--format",
                 "--out",
             ],
@@ -286,6 +320,7 @@ pub fn get(args: Vec<String>) -> Outcome {
             return Err("--minus is not for --id (the blank is read at the same level)".into());
         }
         let sum = sum::options(&p, &at, (blank.is_some(), p.get("--id").is_some()))?;
+        let bin = bins::options(&p, blank.is_some(), sum.is_some())?;
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,
@@ -296,9 +331,10 @@ pub fn get(args: Vec<String>) -> Outcome {
             p.get("--id").map(String::from),
             blank,
             sum,
+            bin,
         )))
     };
-    let (sample, csv, out, file, at, level, chan, blank, sum) = match go() {
+    let (sample, csv, out, file, at, level, chan, blank, sum, bin) = match go() {
         Ok(Ok(a)) => a,
         Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
@@ -306,6 +342,10 @@ pub fn get(args: Vec<String>) -> Outcome {
     finish(
         extract::with_tmp("spectrum", |tmp| {
             let mut s = extract::open_sample(&file, sample, tmp)?;
+            if let Some(b) = &bin {
+                let (doc, notes) = bins::get(&mut s, &at, level, chan.as_deref(), csv, b)?;
+                return Ok((doc, s.note.clone() + &notes));
+            }
             let mut m = match &blank {
                 Some((f, id, w)) => Some(minus::open(f, *id, *w, tmp)?),
                 None => None,
@@ -357,139 +397,9 @@ fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
     }
 }
 
-const COLS: [(&str, &str); 7] = [
-    ("sid", "scan_id"),
-    ("no", "scan_no"),
-    ("rt", "rt_min"),
-    ("tic", "tic"),
-    ("prec", "precursor_mz"),
-    ("bpmz", "base_peak_mz"),
-    ("bpint", "base_peak_intensity"),
-];
-
-/// The rows of `api/scanlist` for the levels asked, in time order: `(rt, [level, sid, no, rt, tic, prec, bpmz, bpint] tokens)`.
-fn list_rows(s: &mut Sample, level: Option<u8>, chan: Option<&str>) -> Result<Vec<Vec<String>>> {
-    let mut levels: Vec<u8> = match level {
-        Some(l) => vec![l],
-        None => s.routes.idx.sections.iter().map(|x| x.level).collect(),
-    };
-    levels.sort_unstable();
-    levels.dedup();
-    let mut rows: Vec<Vec<String>> = Vec::new();
-    for l in levels {
-        let mut q = vec![("level", l.to_string())];
-        if let Some(c) = chan {
-            q.push(("channel", c.into()));
-        }
-        let text = s
-            .routes
-            .handle("/api/scanlist", &query(&q))?
-            .ok_or_else(|| Error::new("err.scan.none"))?;
-        let cols: Vec<Vec<&str>> = COLS
-            .iter()
-            .map(|(k, _)| extract::tokens(&text, k).unwrap_or_default())
-            .collect();
-        for i in 0..cols[0].len() {
-            let mut r = vec![l.to_string()];
-            r.extend(
-                cols.iter()
-                    .map(|c| c.get(i).copied().unwrap_or("null").to_string()),
-            );
-            rows.push(r);
-        }
-    }
-    // rt is column 3 (after the level, scan id and scan number)
-    rows.sort_by(|a, b| {
-        a[3].parse::<f64>()
-            .unwrap_or(0.0)
-            .total_cmp(&b[3].parse::<f64>().unwrap_or(0.0))
-    });
-    Ok(rows)
-}
-
-fn list_doc(s: &mut Sample, level: Option<u8>, chan: Option<&str>, csv: bool) -> Result<String> {
-    let rows = list_rows(s, level, chan)?;
-    let cell = |t: &str| {
-        if t == "null" {
-            String::new()
-        } else {
-            t.to_string()
-        }
-    };
-    if csv {
-        let mut o =
-            "scan_id,scan_no,ms_level,rt_min,tic,precursor_mz,base_peak_mz,base_peak_intensity\n"
-                .to_string();
-        for r in &rows {
-            let v = [&r[1], &r[2], &r[0], &r[3], &r[4], &r[5], &r[6], &r[7]];
-            o += &v.iter().map(|t| cell(t)).collect::<Vec<_>>().join(",");
-            o += "\n";
-        }
-        return Ok(o);
-    }
-    let mut o = Out::default();
-    o.raw("{\"schema\":\"scanlist/1\",\"file\":").str(&s.name);
-    o.raw(",\"sample\":")
-        .raw(&s.sample.map_or("null".to_string(), |i| i.to_string()));
-    o.raw(",\"x_unit\":\"min\",\"n_scans\":")
-        .int(rows.len() as i64)
-        .raw(",\"scans\":[");
-    for (i, r) in rows.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" });
-        o.raw(&format!(
-            "{{\"scan_id\":{},\"scan_no\":{},\"ms_level\":{},\"rt_min\":{},\"tic\":{},\"precursor_mz\":{},\"base_peak_mz\":{},\"base_peak_intensity\":{}}}",
-            r[1], r[2], r[0], r[3], r[4], r[5], r[6], r[7]
-        ));
-    }
-    o.raw("],\"evidence\":{\"route\":\"/api/scanlist\",\"levels\":");
-    let levels: Vec<String> = {
-        let mut l: Vec<String> = rows.iter().map(|r| r[0].clone()).collect();
-        l.dedup();
-        l
-    };
-    o.raw(&format!("[{}]", levels.join(",")));
-    o.raw("}}");
-    Ok(o.0)
-}
-
-pub fn list(args: Vec<String>) -> Outcome {
-    let go = || -> std::result::Result<_, String> {
-        let Some(p) = extract::parse(
-            args,
-            &["--ms-level", "--id", "--sample", "--format", "--out"],
-            &[],
-        )?
-        else {
-            return Ok(Err(HELP_LIST));
-        };
-        let file = one_file(&p, "spectrum list")?;
-        let level = p.get("--ms-level").map(|_| p.level()).transpose()?;
-        Ok(Ok((
-            p.sample(&file)?,
-            p.csv()?,
-            p.out(),
-            file,
-            level,
-            p.get("--id").map(String::from),
-        )))
-    };
-    let (sample, csv, out, file, level, chan) = match go() {
-        Ok(Ok(a)) => a,
-        Ok(Err(h)) => return Outcome::ok(format!("{h}\n").into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    finish(
-        extract::with_tmp("scanlist", |tmp| {
-            let mut s = extract::open_sample(&file, sample, tmp)?;
-            Ok((
-                list_doc(&mut s, level, chan.as_deref(), csv)?,
-                s.note.clone(),
-            ))
-        }),
-        &out,
-    )
-}
-
+#[cfg(test)]
+#[path = "spectrum_bins_tests.rs"]
+mod bins_tests;
 #[cfg(test)]
 #[path = "spectrum_sum_tests.rs"]
 mod sum_tests;

@@ -27,8 +27,9 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | RAW-SCAN | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| NOMINAL-BIN | `docs/coda/prompt/NOMINAL-BIN.md` | - | `--bin nominal` for low-resolution profile data, honours `--mz-offset` |
-| SPECTRUM-COMPARE | `docs/coda/prompt/SPECTRUM-COMPARE.md` | NOMINAL-BIN | `spectrum compare A B`: cosine at the same CE with the matched ions |
+| SPECTRUM-COMPARE | `docs/coda/prompt/SPECTRUM-COMPARE.md` | - | `spectrum compare A B`: cosine at the same CE with the matched ions |
+| NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
+| NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | BLANK-CONTAMINANTS | `docs/coda/prompt/BLANK-CONTAMINANTS.md` | - | flag contaminant ions seen in blanks before an acquisition slot is spent; builds on AU-7 |

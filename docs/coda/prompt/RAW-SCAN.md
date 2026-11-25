@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** 'What is in the spectrum here that is not in the background?' is asked in every campaign.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §4, `docs/agenti/raw-access.md`, `crates/mzlab-core/src/rawxic.rs`, `ionstat.rs`, the binner of NOMINAL-BIN if merged. Start with `grep -n 'raw-access\|raw xic' docs/agenti/INDICE.md`, then `grep -n 'pub fn' crates/mzlab-core/src/rawxic.rs`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §4, `docs/agenti/raw-access.md`, `crates/mzlab-core/src/rawxic.rs`, `ionstat.rs`, the merged binner `nominalbin.rs` (`spectrum get --bin`). Start with `grep -n 'raw-access\|raw xic' docs/agenti/INDICE.md`, then `grep -n 'pub fn' crates/mzlab-core/src/rawxic.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `raw info|cache|xic` and `ionstat` (merged) give the counts and verdict rules to reuse.
 

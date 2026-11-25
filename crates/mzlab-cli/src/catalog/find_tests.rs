@@ -100,6 +100,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("contaminant ions of the matrix blank", "table compare"),
     ("subtract the blank spectrum from a sample", "spectrum get"),
+    (
+        "sum a profile fragment split between two integers into one nominal mass bin",
+        "spectrum get",
+    ),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.

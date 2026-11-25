@@ -129,8 +129,12 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/spectrum` on a window of a profile file.
-    pub(crate) fn profile_spectrum(&mut self, q: &Query, level: u8, (lo, hi): (f64, f64), step: f64) -> Result<String> {
+    pub(crate) fn profile_spectrum(&mut self, q: &Query, level: u8, (lo, hi): (f64, f64), step: f64, rebin: Option<&crate::nominalbin::Rebin>) -> Result<String> {
         let b = self.binned_cells(level, lo, hi, (q.num("precursor")?, 0.6), q.some("filt"), rint(step))?;
+        // `rebin`: the points summed on the grid are summed again per nominal bin, instead of the peak list
+        if let Some(rb) = rebin {
+            return Ok(crate::nominalbin::bins_json(&b.unwrap_or_else(crate::spectrum::Binned::none), rb));
+        }
         let mut o = Out::default();
         o.raw("{");
         let (mz, y, n) = b.as_ref().map_or((vec![], vec![], 0), |b| (b.mz.clone(), b.y.clone(), b.n));

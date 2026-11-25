@@ -10,6 +10,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | profile or centroid, ion counts, m/z grid, mass offset of a file | `raw info FILE... [--offset-ion MZ@RT]` (`raw-info/1`); index cache first: `raw cache FILE... --cache DIR` |
 | is there a peak at this m/z and time, in each file (verdict, rule, ion counts, upper limit) | `raw xic FILE... --mz LIST --rt A,B` (`raw-xic/1`), `--set min_sn=,min_points=,alpha=` |
 | is this MS2 spectrum credible: how many scans and ions it rests on | `spectrum get FILE --rt A,B --ms-level 2 --sum [--fill-ms T]`: `evidence.sum` (scans, cps, ions, quantum); the mean of a window hints at it |
+| a fragment of unit-resolution profile data split between two integers (106.7 and 107.0): one nominal-mass bin per ion, with the m/z offset taken off first | `spectrum get FILE --rt A,B --bin nominal [--mz-offset DA\|auto:MZ@RT]` (`spectrum-bins/1`: `bin`, centre of mass `mz`, `counts`, `points`; the rule and the offset are in the document and on stderr); `--bin 0.1` for tenths |
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
 | every peak of every channel of every file | `peak table FILE... --auto` (one call, all files); hand windows: `--windows` |
