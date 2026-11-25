@@ -24,7 +24,7 @@ usage: mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off
   --rt-gap MIN     widest RT gap of an anchor pair, min (default 0.5)
   --min-series N   a target seen in fewer series is listed as dropped and not written (default 1: every row is kept)
   --pad MIN        minutes added on both sides of every window (default 0)
-  --polarity P     the polarity of rows that have none of their own: + or - (default: every scan)
+  --polarity P     the polarity of rows that have none of their own: + or - (default or `any`: every scan)
   --set NAME=VALUE any of the parameters above by its name (da, rt_tol, rt_warp, rt_gap, min_series, pad, polarity)
   --json           union/1 on stdout: params, counts, series (with the RT map), targets with the rows each came from, conflicts, dropped, choices, csv
   --out PATH       write the output there instead of the standard output

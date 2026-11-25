@@ -31,7 +31,7 @@ pub(super) fn union() -> Step {
                 .tip("The polarity of the list: + or -, any = every scan; run one list per polarity."),
         ],
         runs_in: RunsIn {
-            wasm: Some("flowtab"),
+            wasm: Some("flowtab + rotte"),
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },

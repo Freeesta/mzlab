@@ -83,6 +83,24 @@ fn no_table_and_a_broken_one_are_refused() {
     assert!(union_text(&[], &[("x.mzfeat".into(), b"not a table".to_vec())]).is_err());
 }
 
+/// Tables that read fine but hold no row at all end in the key of the engine, not in an empty list.
+#[test]
+fn tables_without_a_row_are_err_union_empty() {
+    let none = || table(&[], 0.0);
+    assert_eq!(
+        series_csv(&none()).unwrap(),
+        "id,mz,rt,rt_range:min,rt_range:max\n"
+    );
+    let two = [
+        ("a.mzfeat".to_string(), none()),
+        ("b.mzfeat".to_string(), none()),
+    ];
+    assert_eq!(union_text(&[], &two).unwrap_err().key, "err.union.empty");
+    // one empty series next to a series with rows is still a list
+    let mixed = [two[0].clone(), series()[0].clone()];
+    assert!(union_text(&[], &mixed).is_ok());
+}
+
 /// The committed tables and texts: the shared golden of the engine, the `flowtab` `.wasm` (`tests/test_flowtab_union_wasm.py`) and the CLI.
 /// `MZLAB_UPDATE_UNION=1 cargo test -p mzlab-feat --test union_step` rewrites them.
 #[test]

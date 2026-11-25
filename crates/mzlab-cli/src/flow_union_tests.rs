@@ -177,3 +177,53 @@ fn a_value_out_of_range_is_refused_by_the_check_and_by_the_engine() {
     );
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// What an agent sees: `flow defaults` lists the parameters with their defaults, `flow run --json` has stable keys and a refused value has its own exit code.
+#[test]
+fn an_agent_gets_the_defaults_the_json_of_the_run_and_a_distinct_exit_code() {
+    let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    let o = crate::execute(&args(&["flow", "defaults", "features.union", "--json"]));
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let text = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(mzlab_core::json::parse(&o.stdout).is_ok(), "{text}");
+    for k in [
+        "da",
+        "rt_tol",
+        "rt_warp",
+        "rt_gap",
+        "min_series",
+        "pad",
+        "polarity",
+    ] {
+        assert!(
+            text.contains(&format!("\"{k}\"")),
+            "{k} missing from {text}"
+        );
+    }
+    let d = dir("agent");
+    let (plan_path, inp, out) = (
+        d.join("plan.json").to_string_lossy().to_string(),
+        d.to_string_lossy().to_string(),
+        d.join("out").to_string_lossy().to_string(),
+    );
+    std::fs::write(&plan_path, plan("{}")).unwrap();
+    let go = |extra: &[&str]| {
+        let mut a = vec![
+            "flow", "run", &plan_path, "--in", &inp, "--out", &out, "--json",
+        ];
+        a.extend_from_slice(extra);
+        crate::execute(&args(&a))
+    };
+    let ok = go(&[]);
+    assert_eq!(ok.code, 0, "{}", ok.stderr);
+    let shown = String::from_utf8_lossy(&ok.stdout).into_owned();
+    assert!(
+        mzlab_core::json::parse(&ok.stdout).is_ok(),
+        "stdout is JSON: {shown}"
+    );
+    let bad = go(&["--set", "uni.da=9"]);
+    assert_ne!(bad.code, 0);
+    assert_ne!(bad.code, 2, "a refused value is not a usage error");
+    assert!(!bad.stderr.is_empty());
+    let _ = std::fs::remove_dir_all(&d);
+}
