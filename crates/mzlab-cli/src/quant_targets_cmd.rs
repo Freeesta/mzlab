@@ -31,14 +31,18 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
                    minus that (never on a weak peak), written in the rt_shift_min column and the log; the search half-width is rt_span (0.6 min)
   --blank-pattern  comma list of case-insensitive globs over the file names: the blanks; a target detected in a blank flags the samples in_blank
   --set NAME=VALUE any parameter of the step quant.targets@1 (repeatable): min_points (5) and min_shape (0.5, Gaussian correlation) of an
-                   acceptable shape, ms_level (1), smooth_half (0 = automatic per trace) and valley (10 %) of the peak auto-lr engine
-  --log PATH       write the log (quant-targets-log/1: parameters, the offset of every file with its evidence, automatic choices, warnings)
+                   acceptable shape; shape gates, off at 0: min_half (scans at or over half the height), max_fwhm (s), max_asym (1 = symmetric);
+                   ms_level (1), smooth_half (0 = automatic per trace) and valley (10 %) of the peak auto-lr engine
+  --log PATH       write the log (quant-targets-log/1: parameters, the offset of every file with its evidence, automatic choices, decisions =
+                   the value, limit and pass of every check of each forced row, warnings)
   --format F       csv (default: file,id,area,height,sn,rt,flag,state,points,shape,start_rt,end_rt,peaks_in_window,smooth_half,mz_offset_da) or json
                    (quant-targets/1: the same rows as objects and the log); --json is --format json
   --dry-run        print quant-targets-plan/1 (files, blanks, targets, rows) and read no data
   --out PATH       write the table there instead of the standard output
   --workers N      files read at once, 1 to 8 (default: one per core, at most 8); the bytes written do not depend on it
 
+Weak peaks in blanks or matrix counted as detected? Raise --min-sn and add a shape gate: --set min_half=3 (noise blips are 1-2 scans wide);
+the rejected rows stay (state forced, numbers kept) and --log decisions says which check failed.
 Every row is written: area counts x s, height counts, rt min. State: detected (S/N >= --min-sn and an acceptable shape),
 forced (a peak under a threshold, numbers kept and flagged) or absent (no peak, no scan). Flags (;-joined, ok when none): no_scans (no scan of that level and polarity),
 no_peak, below_threshold (S/N under --min-sn, numbers kept), bad_shape, edge (apex on the first or last scan of the window), in_blank.

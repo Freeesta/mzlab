@@ -17,6 +17,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | every peak of every channel of every file | `peak table FILE... --auto` (one call, all files); hand windows: `--windows` |
 | list of targets (m/z + RT window) in many full-scan files: area, S/N, state per file and target | `quant targets FILE... --targets T.csv --json` (`quant-targets/1`); never one `peak auto-lr` per target and file; one list for many series: `quant union` |
 | XICs of many ions, then their peaks | `trace xic FILE --mz M1,M2,... --da 0.3 --out F.json` per file, then `peak table --traces A.json --traces B.json --auto` |
+| a target list in every file; weak noise peaks forced in blanks or matrix (state `detected`/`forced`/`absent`, S/N and shape gates) | `quant targets --targets T FILE... --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --log log.json`; the log `decisions` lists the evidence of every forced row |
 | blank threshold, replicates, QC CV; drop what a blank (carryover, contaminant, matrix blank) also shows | Flow step `table.filter` (`blank_ratio`, `blank_subtract`, ... `counts.blank` says how many it dropped); by ratio: `table compare`; one spectrum: `spectrum get --minus`; `features` says on stderr when file names look like blanks |
 | correlated ions, isotopes, adducts of one compound | Flow step `features.group`; one ion: `ion pattern`, `ion match` |
 | centroid profile spectra | Flow step `spectra.centroid` |

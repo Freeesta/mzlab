@@ -144,6 +144,7 @@
         "params",
         "files",
         "choices",
+        "decisions",
         "warnings"
       ],
       "additionalProperties": false,
@@ -158,6 +159,9 @@
             "min_sn",
             "min_points",
             "min_shape",
+            "min_half",
+            "max_fwhm",
+            "max_asym",
             "offset",
             "blank_pattern",
             "ms_level",
@@ -177,6 +181,18 @@
             },
             "min_shape": {
               "type": "number"
+            },
+            "min_half": {
+              "type": "integer",
+              "description": "Fewest scans in an unbroken run at or over half the height; 0 = gate off."
+            },
+            "max_fwhm": {
+              "type": "number",
+              "description": "Widest peak at half height, seconds; 0 = gate off."
+            },
+            "max_asym": {
+              "type": "number",
+              "description": "Largest asymmetry at 10 % of the height (larger of right/left and left/right, 1 = symmetric); 0 = gate off."
             },
             "offset": {
               "type": "string"
@@ -211,7 +227,9 @@
               "file",
               "blank",
               "offsets",
-              "detected"
+              "detected",
+              "forced",
+              "detected_min"
             ],
             "additionalProperties": false,
             "properties": {
@@ -225,6 +243,11 @@
                 "type": "integer",
                 "minimum": 0,
                 "description": "Rows of this file without no_scans, no_peak, below_threshold, bad_shape."
+              },
+              "forced": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Rows of this file with a peak that missed a check (state forced): their evidence is in decisions."
               },
               "offsets": {
                 "type": "array",
@@ -259,6 +282,35 @@
                       "type": "object",
                       "description": "The mzcal evidence of the offset (mode, ion, scans, apex, spread, S/N)."
                     }
+                  }
+                }
+              },
+              "detected_min": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "The weakest detected peaks of this file: the smallest S/N and the fewest scans at or over half height among its detected rows, each with the id of its target, so the user sees how close the accepted peaks are to the thresholds. null when the file has no detected row.",
+                "required": [
+                  "sn",
+                  "sn_id",
+                  "half_pts",
+                  "half_pts_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "sn": {
+                    "type": "number"
+                  },
+                  "sn_id": {
+                    "type": "string"
+                  },
+                  "half_pts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "half_pts_id": {
+                    "type": "string"
                   }
                 }
               },
@@ -369,6 +421,89 @@
               },
               "reason": {
                 "type": "string"
+              }
+            }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "description": "The evidence of every row that is not detected: a peak that missed a check (state forced) lists every check with the value measured, its limit and whether it passed (limit null: a shape gate that is off, its value is shown only); a row with no peak (state absent) has the reason in flag (no_peak or no_scans) and no checks. A detected row is not listed: its numbers are in the table and the weakest ones of each file in files[].detected_min.",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "id",
+              "state",
+              "flag",
+              "checks"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "forced",
+                  "absent"
+                ]
+              },
+              "flag": {
+                "type": "string",
+                "description": "The flags of the row joined with ';' (below_threshold, bad_shape, edge, in_blank; no_peak or no_scans for an absent row)."
+              },
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "value",
+                    "limit",
+                    "op",
+                    "pass"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "enum": [
+                        "sn",
+                        "points",
+                        "shape",
+                        "half_pts",
+                        "fwhm_s",
+                        "asym"
+                      ]
+                    },
+                    "value": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "null: the trace gave no number (an asymmetry on a peak that does not come down inside its limits); such a check passes."
+                    },
+                    "limit": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "null: a shape gate that is off (min_half, max_fwhm, max_asym = 0); the check is listed for its value and always passes."
+                    },
+                    "op": {
+                      "enum": [
+                        ">=",
+                        "<="
+                      ]
+                    },
+                    "pass": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "description": "Empty for an absent row."
               }
             }
           }

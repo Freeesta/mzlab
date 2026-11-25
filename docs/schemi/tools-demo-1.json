@@ -1596,6 +1596,9 @@
                   "min_sn",
                   "min_points",
                   "min_shape",
+                  "min_half",
+                  "max_fwhm",
+                  "max_asym",
                   "offset",
                   "rt_ref",
                   "rt_span",
@@ -1632,6 +1635,24 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak with fewer scans in an unbroken run at or over half its height is flagged bad_shape; 0 = off. Noise blips are one or two scans wide"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak wider than this at half height is flagged bad_shape; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak whose right/left (or left/right) width at 10 % of the height is over this is flagged bad_shape; 1 or more, 0 = off"
                   },
                   {
                     "type":"string",

@@ -3,6 +3,7 @@
 
 use mzlab_core::json::Out;
 
+use super::gates;
 use super::params::{Params, RtRef};
 use super::rtref::RtShift;
 use super::run::{Choice, FileLog, Row};
@@ -93,6 +94,9 @@ fn params_json(o: &mut Out, p: &Params) {
     o.raw(",\"min_sn\":").num(p.min_sn);
     o.raw(",\"min_points\":").int(p.min_points as i64);
     o.raw(",\"min_shape\":").num(p.min_shape);
+    o.raw(",\"min_half\":").int(p.min_half as i64);
+    o.raw(",\"max_fwhm\":").num(p.max_fwhm);
+    o.raw(",\"max_asym\":").num(p.max_asym);
     o.raw(",\"offset\":").str(&p.offset_text());
     o.raw(",\"blank_pattern\":").str(&p.blank_pattern);
     o.raw(",\"ms_level\":").int(p.ms_level as i64);
@@ -109,6 +113,47 @@ fn strings(o: &mut Out, list: &[String]) {
     o.raw("[");
     for (i, w) in list.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(w);
+    }
+    o.raw("]");
+}
+
+/// The evidence of every row that is not `detected`: a peak that missed a check (state `forced`) with each check, its value and its limit, so a
+/// threshold can be judged from the log without rerunning, and a row with no peak (`absent`) with its reason (`no_peak` or `no_scans`) and no
+/// checks. The detected rows are summarized per file (`detected_min`); their numbers are in the table.
+fn decisions(o: &mut Out, p: &Params, rows: &[Row], names: &[String], targets: &[Target]) {
+    o.raw("[");
+    let mut first = true;
+    for r in rows.iter().filter(|r| r.state() != "detected") {
+        o.raw(if first { "{\"file\":" } else { ",{\"file\":" })
+            .str(&names[r.file]);
+        first = false;
+        o.raw(",\"id\":").str(&targets[r.target].id);
+        o.raw(",\"state\":").str(r.state());
+        o.raw(",\"flag\":").str(&r.flags.join(";"));
+        o.raw(",\"checks\":[");
+        let checks = r
+            .hit
+            .as_ref()
+            .map(|h| gates::checks(h, p))
+            .unwrap_or_default();
+        for (i, c) in checks.iter().enumerate() {
+            o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
+                .str(c.name);
+            o.raw(",\"value\":");
+            match c.value {
+                Some(v) => o.num(v),
+                None => o.raw("null"),
+            };
+            o.raw(",\"limit\":");
+            match c.limit {
+                Some(l) => o.num(l),
+                None => o.raw("null"),
+            };
+            o.raw(",\"op\":").str(if c.min { ">=" } else { "<=" });
+            o.raw(",\"pass\":")
+                .raw(if c.pass { "true}" } else { "false}" });
+        }
+        o.raw("]}");
     }
     o.raw("]");
 }
@@ -151,6 +196,9 @@ pub(crate) fn log(
     files: &[FileLog],
     choices: &[Choice],
     warnings: &[String],
+    rows: &[Row],
+    names: &[String],
+    targets: &[Target],
 ) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"quant-targets-log/1\",\"params\":");
@@ -178,6 +226,18 @@ pub(crate) fn log(
                 .raw("}");
         }
         o.raw("],\"detected\":").int(f.detected as i64);
+        o.raw(",\"forced\":").int(f.forced as i64);
+        o.raw(",\"detected_min\":");
+        match (&f.min_sn, &f.min_half) {
+            (Some((sn_id, sn)), Some((half_id, half))) => {
+                o.raw("{\"sn\":").num(*sn).raw(",\"sn_id\":").str(sn_id);
+                o.raw(",\"half_pts\":").int(*half as i64);
+                o.raw(",\"half_pts_id\":").str(half_id).raw("}");
+            }
+            _ => {
+                o.raw("null");
+            }
+        }
         if let Some(r) = &f.rt {
             rt_json(&mut o, r);
         }
@@ -194,7 +254,9 @@ pub(crate) fn log(
             .str(&c.reason)
             .raw("}");
     }
-    o.raw("],\"warnings\":");
+    o.raw("],\"decisions\":");
+    decisions(&mut o, p, rows, names, targets);
+    o.raw(",\"warnings\":");
     strings(&mut o, warnings);
     o.raw("}");
     o.0

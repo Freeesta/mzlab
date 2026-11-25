@@ -201,6 +201,7 @@
           "window",
           "rt_window",
           "verdict",
+          "state",
           "rule",
           "apex_rt",
           "height",
@@ -263,6 +264,15 @@
               "no_data"
             ],
             "description": "peak: the ions pass the detection limit, the S/N on the one-ion floor and the run of scans; trace: ions above the critical level but not a peak; nothing: neither (see ul_*); no_data: no scan in the window"
+          },
+          "state": {
+            "enum": [
+              "detected",
+              "forced",
+              "absent",
+              "na"
+            ],
+            "description": "the value state of the row (docs/agenti/value-states.md): detected = peak, forced = trace (signal under the thresholds, numbers kept), absent = nothing, na = no_data"
           },
           "rule": {
             "type": "string",

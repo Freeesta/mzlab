@@ -96,6 +96,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
     (
+        "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
+        "quant targets",
+    ),
+    (
         "retention times drift between batches, align on an internal standard",
         "quant targets",
     ),
@@ -386,6 +390,35 @@ fn a_repeated_find_keeps_every_word() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["query"], serde_json::json!(["sim", "snr"]));
+}
+
+/// The state words and the shape gates of `quant targets` are findable: the search answers a task about weak peaks in blanks with the command, its
+/// example line names the gate, and its help shows both the state words and the gate parameters (a function nobody finds is not used).
+#[test]
+fn the_state_words_and_shape_gates_of_quant_targets_are_found_from_the_task_and_the_help() {
+    let o = crate::execute(
+        &[
+            "commands", "--find", "forced", "peaks", "in", "blanks", "shape", "gate", "--json",
+        ]
+        .map(String::from),
+    );
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    // The Flow step of the same function may rank just above its command (the bare word "blank" must keep the blank filter in the top five).
+    let top2 = &v["matches"].as_array().unwrap()[..2];
+    let first = top2
+        .iter()
+        .find(|m| m["name"] == "quant targets")
+        .unwrap_or_else(|| panic!("quant targets not in the first two: {top2:?}"));
+    assert!(
+        first["example"].as_str().unwrap().contains("min_half"),
+        "{first}"
+    );
+    let help = crate::execute(&["quant", "targets", "--help"].map(String::from));
+    let h = String::from_utf8_lossy(&help.stdout).into_owned();
+    for w in ["forced", "min_half", "max_fwhm", "max_asym", "decisions"] {
+        assert!(h.contains(w), "{w} not in the help");
+    }
 }
 
 /// The target-list route is found by the words of the loop that missed it (thousands of `peak auto-lr` calls), and `peak auto-lr` points at it.
