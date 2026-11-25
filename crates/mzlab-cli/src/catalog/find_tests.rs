@@ -96,6 +96,16 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("contaminant ions of the matrix blank", "table compare"),
     ("subtract the blank spectrum from a sample", "spectrum get"),
+    // the words of a user who does not know the measured-parameters, union and verdict commands exist
+    ("which parameters", "estimate"),
+    ("noise floor", "estimate"),
+    ("what threshold", "estimate"),
+    ("ppm", "estimate"),
+    ("what ppm tolerance fits my files", "estimate"),
+    ("targets from many series", "quant union"),
+    ("targets from many series", "features.union"),
+    ("is there a peak at this mass", "raw xic"),
+    ("how many ions", "raw xic"),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.
