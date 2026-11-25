@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Both paths run in the browser and are untested; a shape change would break them silently.
 
-**Read first.** `flow/lazy/flow-web-companions.js`, `tests/test_flow_web_contract_js.py`, `tests/test_flow_web_union_js.py`, `tests/real_pool.js`, `docs/agenti/wasm-caps.md`.
+**Read first.** `flow/lazy/flow-web-companions.js`, `tests/test_flow_web_contract_js.py`, `tests/test_flow_web_union_js.py`, `tests/real_pool.js`, `docs/agenti/wasm-caps.md`. Start with `grep -n 'flow web\|wasm-caps' docs/agenti/INDICE.md`, then `grep -n 'def test' tests/test_flow_web_union_js.py`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The two runners and a Node harness over the real `ident` exist; the cache-hit path is not covered.
 

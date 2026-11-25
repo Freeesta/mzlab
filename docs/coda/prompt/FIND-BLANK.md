@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Standing rule of the owner: if something exists but was not used, it is poorly signalled or not intuitive. The request came from a lab report; the feature was already on main.
 
-**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/mzfeat-table.md`, `docs/agenti/tic-background.md`.
+**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/mzfeat-table.md`, `docs/agenti/tic-background.md`. Start with `grep -n 'blank' docs/agenti/INDICE.md`, then `grep -n 'blank' crates/mzlab-cli/src/catalog/related.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** All exist (AU-7). `counts.blank` is written by the plain and the optioned filter. Check whether `features`/`table compare` output and the TP steps point to the blank filter when blanks are present and unused.
 

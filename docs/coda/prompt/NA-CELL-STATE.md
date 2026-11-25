@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** The CSV prints `UNKNOWN` for both, as MZmine does; printing `NA` changes an existing cell value, so it needs the owner's go or an opt-in parameter on the step (wasm, CLI, schema). Also open: per-cell S/N (a new `.mzfeat` store column).
 
-**Read first.** `docs/agenti/value-states.md` ('Not yet'), `crates/mzlab-feat/src/aligned.rs` (`EVIDENCE`, `CELL_NA`), `crates/mzlab-feat/src/value_state.rs`, `export.table_csv` in `crates/mzlab-feat/src/export/`.
+**Read first.** `docs/agenti/value-states.md` ('Not yet'), `crates/mzlab-feat/src/aligned.rs` (`EVIDENCE`, `CELL_NA`), `crates/mzlab-feat/src/value_state.rs`, `export.table_csv` in `crates/mzlab-feat/src/export/`. Start with `grep -n 'value states' docs/agenti/INDICE.md`, then `grep -rn 'CELL_NA' crates/mzlab-feat/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The `.mzfeat` store keeps `CELL_NA` in its state column; no store column is needed for `na`.
 

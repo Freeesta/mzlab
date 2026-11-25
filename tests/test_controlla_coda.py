@@ -23,7 +23,7 @@ def make(tmp_path, rows, prompts=None, brief=True):
     return tmp_path
 
 
-OK = cc.BRIEF_LINE + "\n\nGoal.\n"
+OK = cc.BRIEF_LINE + "\n\n# X\n\n" + "\n\n".join(f"{s} text" for s in cc.SECTIONS) + "\n"
 
 
 def test_a_consistent_queue_passes(tmp_path):
@@ -49,7 +49,20 @@ def test_an_orphan_prompt_fails(tmp_path):
 def test_a_prompt_without_the_brief_line_or_too_big_fails(tmp_path):
     root = make(tmp_path, [row("AA-ONE"), row("BB")], {"AA-ONE": "Goal.\n", "BB": OK + "x" * cc.MAX_PROMPT})
     bad = cc.peggiori(root)
-    assert any("must start with" in b for b in bad) and any("over 3500" in b for b in bad)
+    assert any("exactly" in b for b in bad) and any("over 3500" in b for b in bad)
+
+
+def test_the_brief_line_must_be_equal_not_a_prefix(tmp_path):
+    root = make(tmp_path, [row("AA")], {"AA": OK.replace("BRIEF.md.", "BRIEF.mdx.", 1)})
+    assert any("exactly" in b for b in cc.peggiori(root))
+    root = make(tmp_path / "ok", [row("AA")], {"AA": "  " + OK})   # surrounding spaces are not a difference
+    assert cc.peggiori(root) == []
+
+
+def test_a_prompt_without_a_required_section_fails(tmp_path):
+    for sec in cc.SECTIONS:
+        root = make(tmp_path / sec[2:6], [row("AA")], {"AA": OK.replace(sec, "text")})
+        assert any(f"missing the section {sec}" in b for b in cc.peggiori(root)), sec
 
 
 def test_duplicate_and_long_and_lower_case_ids_fail(tmp_path):

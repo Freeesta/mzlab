@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Adducts, in-source losses and dimers are separated from real products.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §5, `docs/agenti/ion-groups.md` (`features.companions`, AU-10: the mass-difference table is shared), `docs/agenti/raw-access.md`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §5, `docs/agenti/ion-groups.md` (`features.companions`, AU-10: the mass-difference table is shared), `docs/agenti/raw-access.md`. Start with `grep -n 'companion' docs/agenti/INDICE.md`, then `grep -rn 'companions' crates/mzlab-feat/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `features.companions` and its table are merged; `raw xic` gives traces and counts.
 

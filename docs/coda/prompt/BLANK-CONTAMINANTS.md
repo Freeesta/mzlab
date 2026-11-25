@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** An acquisition slot spent on a blank ion is wasted instrument time.
 
-**Read first.** `docs/agenti/mzfeat-table.md` (`counts.blank`, `blank_fold`, AU-7), `crates/mzlab-feat/src/view.rs::blank_evidence`, `docs/agenti/tic-background.md` (persistent background ions, `trace background`), `crates/mzlab-cli/src/dda_window_cmd.rs` (`spectrum dda-window`).
+**Read first.** `docs/agenti/mzfeat-table.md` (`counts.blank`, `blank_fold`, AU-7), `crates/mzlab-feat/src/view.rs::blank_evidence`, `docs/agenti/tic-background.md` (persistent background ions, `trace background`), `crates/mzlab-cli/src/dda_window_cmd.rs` (`spectrum dda-window`). Start with `grep -n 'blank\|background' docs/agenti/INDICE.md`, then `grep -n 'fn blank_evidence' crates/mzlab-feat/src/view.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** AU-7 blank subtraction and `counts.blank` (plain and with options) are merged; `trace background` finds persistent background ions. Reuse them. Missing: the flag in a list meant for an acquisition or inclusion list.
 

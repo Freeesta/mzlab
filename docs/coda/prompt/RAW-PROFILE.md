@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Carryover in washes and formation curves are read in one call.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §6, `docs/agenti/raw-access.md`, `docs/agenti/samples.md`, `crates/mzlab-core/src/rawxic.rs`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §6, `docs/agenti/raw-access.md`, `docs/agenti/samples.md`, `crates/mzlab-core/src/rawxic.rs`. Start with `grep -n 'raw-access\|sample file roles' docs/agenti/INDICE.md`, then `grep -n 'pub fn' crates/mzlab-core/src/rawxic.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `raw xic` rows and `samples/1` (merged); shape classes absent, sporadic, rise, decay, rise_fall, flat, irregular are specified, not built.
 

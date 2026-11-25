@@ -6,7 +6,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 1. One row is one task; the table below is in launch order, by impact: correctness, lost data, discoverability, the rest, follow-ups, the `raw` commands.
 2. A row is launched by opening a chat titled `DEV <ID>` whose prompt is `Read docs/coda/prompt/<id>.md and do it` (so a forgotten coordinator loses nothing).
 3. A row whose chat or PR is open is skipped. A task already implemented on main is a discoverability row (`FIND-*`), never dropped: the task is to find why the feature was not reached and fix that. The coordinator checks open chats and PRs; this file holds no running state, so it never needs a push to `main`.
-4. At most the owner's global chat cap of worker chats is open at once, mzDraw included (10 now; Sonnet only). Chats started with an inline prompt have no row; the PR of each is named below as `chat:<ID>`.
+4. At most the owner's global chat cap of worker chats is open at once, mzDraw included (the coordinator holds the current number); Sonnet only. Chats started with an inline prompt have no row; the PR of each is named below as `chat:<ID>`.
 5. A row whose `needs first` names ids is launched only after those rows are gone (merged); `chat:<ID>` is a running chat with no row: wait for its PR to merge (its PR deletes the token); `-` means it can start now.
 6. A row with `needs owner decision: <what>` is not launched by the coordinator; the owner answers first.
 7. A chat's PR deletes its row and `docs/coda/prompt/<id>.md`, deletes its id from the `needs first` cell of other rows, and adds one row plus one prompt per follow-up named in its PR body. The queue is therefore always current at merge.

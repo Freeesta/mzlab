@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** One blank level for the whole range hides a noisy low-mass region (follow-up of AU-6, #3709).
 
-**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs`, `docs/agenti/samples.md` (roles), the schema `docs/schemi/estimate-1.json`.
+**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs`, `docs/agenti/samples.md` (roles), the schema `docs/schemi/estimate-1.json`. Start with `grep -n 'estimate' docs/agenti/INDICE.md`, then `grep -n 'name: "' crates/mzlab-core/src/estimates.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `estimate` (merged) aggregates per value; roles come from `--samples` or names (AU-2, merged).
 

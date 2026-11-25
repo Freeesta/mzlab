@@ -18,10 +18,10 @@ Read `CLAUDE.md` and `.claude/skills/dev-task/SKILL.md` first. This file holds t
 - **How would an agent or user find this?** Every task ends by asking it. Put the entry point where they will look (error and output hints, the task table of `docs/agenti/for-agents.md`, `related.rs` task words and `see_also`, a help example) and test it (pattern: `crates/mzlab-cli/src/catalog/find_tests.rs`; `commands --find WORDS --json`). If the thing you were asked for already exists on main, do not close the task as done: it becomes a discoverability task (why was it not reached; fix the cause).
 
 ## Guards are never raised
-Run `python3 tools/controlla.py` for the live numbers and fix the cause when one fails. They cover: compact `commands --json` size, `flow steps --compact` size, every doc under 25,600 B, one INDICE row per area file (at most 300 characters, sorted), subcommand names of at most 10 characters, and the size and line limits of code.
+Run `python3 tools/controlla.py` for the live numbers and fix the cause when one fails. The tool enforces them; they cover the size of the compact `commands --json` and of `flow steps --compact`, the size of every doc, the INDICE rows (one per area file, short, sorted), the length of subcommand names, and the size and line limits of code.
 
 ## `.wasm` size
-A module cap changes only by the size the CI measures, and by at most 5 % per PR. Put module, raw bytes before, after and % in the PR body. Over 5 % needs the owner: new site code goes into a module with room or into a new lazy module. The `rotte` module is nearly full: do not grow it.
+A module cap changes only by the size the CI measures, and only inside the per-PR growth rule of `docs/agenti/wasm-caps.md`. Put module, raw bytes before, after and % in the PR body. Growth over that rule needs the owner: new site code goes into a module with room or into a new lazy module. The `rotte` module is nearly full: do not grow it.
 
 ## Process
 - Never skip, disable or quarantine a test; fix the cause. Regenerate generated files (schemas, `mappa.md`, `tools-1.json`, help snapshots) with their tool, never by hand.
@@ -29,4 +29,4 @@ A module cap changes only by the size the CI measures, and by at most 5 % per PR
 - Merge `main` in only on a real conflict (`python3 tools/fondi_main.py`); never rebase or force-push.
 
 ## Closing step (part of the same PR)
-The task came from `docs/coda/CODA.md`. In your PR: delete your row and `docs/coda/prompt/<id>.md`; delete your id (and `chat:<your id>`, for a chat started with an inline prompt) from the `needs first` cell of other rows; for each concrete follow-up named in your PR body add one row and one prompt file (start it with the line `Read docs/coda/BRIEF.md.`, at most 3,500 B). Run `python3 tools/controlla_coda.py`. If your task is blocked or obsolete, say so in the PR body and still remove the row. Follow-ups that change existing output bytes without an opt-in carry `needs owner decision: <what>` in the `needs first` cell.
+The task came from `docs/coda/CODA.md`. In your PR: delete your row and `docs/coda/prompt/<id>.md`; delete your id (and `chat:<your id>`, for a chat started with an inline prompt) from the `needs first` cell of other rows; for each concrete follow-up named in your PR body add one row and one prompt file (start it with the line `Read docs/coda/BRIEF.md.`, with the sections of the other prompts, inside the size cap that `controlla_coda.py` checks). Run `python3 tools/controlla_coda.py`. If your task is blocked or obsolete, say so in the PR body and still remove the row. Follow-ups that change existing output bytes without an opt-in carry `needs owner decision: <what>` in the `needs first` cell.

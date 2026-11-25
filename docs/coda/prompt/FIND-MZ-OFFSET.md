@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Standing rule of the owner: if something exists but was not used, it is poorly signalled or not intuitive. The request came from a lab report; the feature was already on main.
 
-**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `crates/mzlab-cli/src/mz_offset.rs`, `crates/mzlab-cli/src/dad_cmd.rs`.
+**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `crates/mzlab-cli/src/mz_offset.rs`, `crates/mzlab-cli/src/dad_cmd.rs`. Start with `grep -n 'offset' docs/agenti/INDICE.md`, then `grep -rn 'mz-offset' crates/mzlab-cli/src/catalog/related.rs crates/mzlab-cli/src/mz_offset.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `--mz-offset` exists on `trace xic`, `features` and `raw xic`; `dad delay` prints evidence. The running chat MZ-RT-CORRECTION changes behaviour here: wait for its PR to merge and cover what it adds. A mass error in an output (a peak off by 0.3 Da) should say which flag fixes it.
 

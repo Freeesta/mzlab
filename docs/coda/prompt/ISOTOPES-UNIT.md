@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Separate features for isotopes and spill-over inflate the table and give false transformation products.
 
-**Read first.** `docs/agenti/ion-groups.md` (`features.group`, `features.companions`), `docs/agenti/mzfeat-tp.md`, `crates/mzlab-feat/src/tp/`, the merged `raw isotopes`.
+**Read first.** `docs/agenti/ion-groups.md` (`features.group`, `features.companions`), `docs/agenti/mzfeat-tp.md`, `crates/mzlab-feat/src/tp/`, the merged `raw isotopes`. Start with `grep -n 'companion\|isotope' docs/agenti/INDICE.md`, then `grep -rn 'companions' crates/mzlab-feat/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `features.companions` knows +1 and +2 at unit mass; `raw isotopes` gives the counting verdict. An ion at M+1 with r < 0.5 is never an isotope (study rule). Check what `tp.generate` already filters.
 

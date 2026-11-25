@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** A follow-up of AU-6 (#3709): the tolerance is estimated, the warp is not.
 
-**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs`, `crates/mzlab-feat/src/rtwarp.rs`, `crates/mzlab-cli/src/flow_drift.rs`, the PR of the running chat MZ-RT-CORRECTION (RT alignment on an internal reference).
+**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs`, `crates/mzlab-feat/src/rtwarp.rs`, `crates/mzlab-cli/src/flow_drift.rs`, the PR of the running chat MZ-RT-CORRECTION (RT alignment on an internal reference). Start with `grep -n 'estimate' docs/agenti/INDICE.md`, then `grep -rn 'piecewise' crates/mzlab-feat/src/rtwarp.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `rt_warp` exists on `features.union`; a drift step exists. Reuse the anchor measurement of the MZ-RT-CORRECTION PR (must be merged first; stop and report if it is not).
 

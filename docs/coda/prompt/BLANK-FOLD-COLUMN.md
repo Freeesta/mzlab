@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Today the fold is only in the evidence list of dropped rows (follow-up of #3711).
 
-**Read first.** `crates/mzlab-feat/src/export/`, `crates/mzlab-feat/src/view.rs::blank_evidence`, `docs/agenti/export-data.md`.
+**Read first.** `crates/mzlab-feat/src/export/`, `crates/mzlab-feat/src/view.rs::blank_evidence`, `docs/agenti/export-data.md`. Start with `grep -n 'export' docs/agenti/INDICE.md`, then `grep -n 'fn blank_evidence' crates/mzlab-feat/src/view.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `counts.blank` has fold per dropped row only. The default export bytes must not change.
 

@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** At unit resolution one ion appears as two peaks; every downstream list is wrong by one ion.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §4 (`--bin nominal|0.1`), `crates/mzlab-cli/src/spectrum_cmd.rs`, `crates/mzlab-core/src/mzcal.rs`, `crates/mzlab-core/src/hrscanbin.rs`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §4 (`--bin nominal|0.1`), `crates/mzlab-cli/src/spectrum_cmd.rs`, `crates/mzlab-core/src/mzcal.rs`, `crates/mzlab-core/src/hrscanbin.rs`. Start with `grep -n 'spectrum get\|mzcal\|offset' docs/agenti/INDICE.md`, then `grep -rn 'hrscanbin' crates/mzlab-core/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** No `--bin` on `spectrum get` today. `--mz-offset DA|auto` exists on `trace xic`, `features` and `raw xic`; the binning must apply the offset first and log it. Check `grep -rn 'hrscanbin' crates --include=*.rs -l` for an existing binner.
 

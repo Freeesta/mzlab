@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** The step has a `polarity` parameter; the page has no way to run both (follow-up of #3710).
 
-**Read first.** `flow/lazy/flow-web-union.js`, `docs/agenti/flow-web.md`, `docs/agenti/quant-targets.md`.
+**Read first.** `flow/lazy/flow-web-union.js`, `docs/agenti/flow-web.md`, `docs/agenti/quant-targets.md`. Start with `grep -n 'flow-web' docs/agenti/INDICE.md`, then `grep -n 'union' flow/lazy/flow-web-union.js`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The step and its web runner are merged; `polarity: any|+|-` is a parameter.
 

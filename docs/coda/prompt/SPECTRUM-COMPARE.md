@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** An agent now compares fragment lists by hand and cannot say how much of the standard is explained.
 
-**Read first.** `docs/agenti/spectral-match.md` (the engine already scores spectra), `crates/mzlab-cli/src/msn_graph_compare.rs` (graph compare, a different command), the merged `--bin nominal` of NOMINAL-BIN, `crates/mzlab-cli/src/spectrum_cmd.rs`.
+**Read first.** `docs/agenti/spectral-match.md` (the engine already scores spectra), `crates/mzlab-cli/src/msn_graph_compare.rs` (graph compare, a different command), the merged `--bin nominal` of NOMINAL-BIN, `crates/mzlab-cli/src/spectrum_cmd.rs`. Start with `grep -n 'spectral matching' docs/agenti/INDICE.md`, then `grep -rn 'fn cosine' crates --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** A multi-library spectral matching engine exists (`libmatch/1`); reuse its cosine, do not write another. `spectrum compare` is a new subcommand name: at most 10 characters (`compare` is 7).
 

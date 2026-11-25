@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Poisson S/N only makes sense in ions. A wrong factor makes every counting verdict wrong in a systematic way.
 
-**Read first.** `crates/mzlab-core/src/ionstat.rs` and `rawxic*.rs` (AU-13: ion quantum, `sn_floor`, Currie L_C/L_D), `docs/agenti/raw-access.md`, `docs/studies/RAW_ACCESS_STUDY.md` (ion statistics, §4), `docs/agenti/method.md` (fill time and dwell are in `method/1`).
+**Read first.** `crates/mzlab-core/src/ionstat.rs` and `rawxic*.rs` (AU-13: ion quantum, `sn_floor`, Currie L_C/L_D), `docs/agenti/raw-access.md`, `docs/studies/RAW_ACCESS_STUDY.md` (ion statistics, §4), `docs/agenti/method.md` (fill time and dwell are in `method/1`). Start with `grep -n 'ionstat\|raw xic' docs/agenti/INDICE.md`, then `grep -rn 'sn_floor' crates/mzlab-core/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `raw xic` merged: it estimates the ion quantum from the data and reports counts. Reuse it; do not write a second estimator. What is missing: the factor per scan type from the method, and both scales in the exports.
 

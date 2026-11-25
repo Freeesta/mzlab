@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Standing rule of the owner: if something exists but was not used, it is poorly signalled or not intuitive. The request came from a lab report; the feature was already on main.
 
-**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/quant-targets.md`, `docs/agenti/raw-access.md`.
+**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/quant-targets.md`, `docs/agenti/raw-access.md`. Start with `grep -n 'quant targets\|raw xic\|sweep' docs/agenti/INDICE.md`, then `grep -n 'bulk\|sweep' crates/mzlab-cli/src/catalog/related.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** All four exist (`bulk` in `related.rs` already names some). The running chat CENTROID-MULTITARGET works on a multi-target call: read its PR first. Check that the single-mass commands (`peak auto-lr`, `trace xic` with one mass) say in their output or help which command does the whole list in one call.
 

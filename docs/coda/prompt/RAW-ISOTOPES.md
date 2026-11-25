@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** An agent needs a counting-error verdict on a formula proposal without writing a script.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §7, `docs/agenti/raw-access.md`, `crates/mzlab-core/src/rawxic.rs`, `crates/mzlab-core/src/ionpattern.rs`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §C and §7, `docs/agenti/raw-access.md`, `crates/mzlab-core/src/rawxic.rs`, `crates/mzlab-core/src/ionpattern.rs`. Start with `grep -n 'raw-access\|isotopes and elemental' docs/agenti/INDICE.md`, then `grep -n 'pub fn' crates/mzlab-core/src/ionpattern.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `raw info|cache|xic` merged. `raw scan` (row RAW-SCAN) gives the binned view this command wants.
 

@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Two places propose the same parameters with different words (follow-ups of #3709 and #3711).
 
-**Read first.** `docs/agenti/llm-params.md`, `crates/mzlab-llm/src/params_rules.rs` and `params_rules_tab.rs` (`R-blank-1` maps to `table.filter blank_ratio`), `docs/agenti/estimate.md`.
+**Read first.** `docs/agenti/llm-params.md`, `crates/mzlab-llm/src/params_rules.rs` and `params_rules_tab.rs` (`R-blank-1` maps to `table.filter blank_ratio`), `docs/agenti/estimate.md`. Start with `grep -n 'llm params\|llm-params' docs/agenti/INDICE.md`, then `grep -n 'R-blank' crates/mzlab-llm/src/params_rules.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** Both exist. `counts.blank` now also exists for the plain filter, so the R-blank-1 text may describe an older behaviour; read it against `crates/mzlab-feat/src/view.rs::blank_evidence`.
 

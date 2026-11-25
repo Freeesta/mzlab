@@ -17,6 +17,6 @@ description: How an mzLab DEV chat starts and finishes one task, from reading CL
 **Finish**
 1. `python3 tools/pre_pr.py` (`--full` forces the browser tests). Changed e2e only: `python3 tools/verifica.py --changed`.
 2. Merge `origin/main` only on a real conflict: `python3 tools/fondi_main.py`. Never rebase or force-push.
-3. If your task came from `docs/coda/CODA.md`, in the same PR delete your row and `docs/coda/prompt/<id>.md`, and add one row plus one prompt file per follow-up named in your PR body.
+3. If your task came from `docs/coda/CODA.md`, in the same PR delete your row and `docs/coda/prompt/<id>.md`, remove your id from other rows' `needs first`, and add one row plus one prompt file per follow-up named in your PR body.
 4. Push `claude/<topic>`, open the PR ready for review (not draft) filling `.github/pull_request_template.md`. Never merge it yourself; after opening it follow the `steward` skill.
 5. Report in one line: PR number, head SHA, CI status, what remains.

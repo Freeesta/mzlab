@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Standing rule of the owner: if something exists but was not used, it is poorly signalled or not intuitive. The request came from a lab report; the feature was already on main.
 
-**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/samples.md`, `mzlab-cli sample import|table|group`.
+**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/samples.md`, `mzlab-cli sample import|table|group`. Start with `grep -n 'sample file roles' docs/agenti/INDICE.md`, then `grep -n 'sample ' crates/mzlab-cli/src/catalog/related.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `sample table|import|group|list|select` exist and `samples/1` carries the roles. The running chat ROLES-IN-TP fixes how `tp.dig_lr` uses them: read its PR first and do not repeat it. Check whether `flow check` and the error of a step that lacks roles name `sample import`.
 

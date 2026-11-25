@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Standing rule of the owner: if something exists but was not used, it is poorly signalled or not intuitive. The request came from a lab report; the feature was already on main.
 
-**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/value-states.md`.
+**Read first.** `mzlab-cli commands --find WORDS --json` (`crates/mzlab-cli/src/catalog/find.rs`; task words, `see_also` and `bulk` in `catalog/related.rs`; tests `catalog/find_tests.rs`), the task table of `docs/agenti/for-agents.md`, the `hint` of `error/1` (`docs/agenti/cli-agenti.md`), help examples. The AGENT-DISCOVERY work is merged: reuse this mechanism, never build a second one. `docs/agenti/value-states.md`. Start with `grep -n 'value states' docs/agenti/INDICE.md`, then `grep -n 'peak table\|peak auto' crates/mzlab-cli/src/catalog/related.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `state` words exist in the concentration outputs, `peak auto-lr`, `peak table --columns state`, `chrom.transitions` and the Dig detail. The running chat DETECT-VS-FORCED works on the feature-table side: start after its PR is merged, read its diff, and do not repeat it.
 

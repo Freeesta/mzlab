@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** They are measured but proposed nowhere (`skipped` with a reason) (follow-up of #3709).
 
-**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs` (value table, `fwhm`), `mzlab-cli flow defaults features.detect`.
+**Read first.** `docs/agenti/estimate.md`, `crates/mzlab-core/src/estimates.rs` (value table, `fwhm`), `mzlab-cli flow defaults features.detect`. Start with `grep -n 'estimate' docs/agenti/INDICE.md`, then `grep -n 'fwhm\|dead' crates/mzlab-core/src/estimates.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The estimate lists these values; no step parameter carries them. Find which step parameters (peak width, minimum scans, gap) correspond; if none, say so and stop.
 

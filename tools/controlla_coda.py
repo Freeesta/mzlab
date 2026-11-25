@@ -1,6 +1,7 @@
 """Checks the roadmap queue in docs/coda/: CODA.md (one table row per task), BRIEF.md and docs/coda/prompt/<id>.md.
 
-Every row has an existing prompt file, no prompt file is an orphan, every prompt starts with the BRIEF line and stays small,
+Every row has an existing prompt file, no prompt file is an orphan, every prompt's first line is exactly the BRIEF line, it has the five sections (goal, read first, done means, out of scope,
+follow-ups) and stays small,
 ids are unique upper-case words of at most 24 characters, the `needs first` cell names only ids that are still rows (a chat
 that deletes its row deletes its id there too) or a running chat written `chat:<ID>` (a chat started with an inline prompt has no
 row; its PR deletes the token), and no document is over its byte cap. Standard library only.
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BRIEF_LINE = "Read docs/coda/BRIEF.md."
 MAX_CODA, MAX_BRIEF, MAX_PROMPT, MAX_ID = 25_600, 6_000, 3_500, 24
 ID_RE = re.compile(r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*")
+SECTIONS = ("**Goal.**", "**Read first.**", "**Done means.**", "**Out of scope.**", "**Follow-ups.**")
 OWNER = "needs owner decision:"
 CHAT = "chat:"
 
@@ -79,9 +81,12 @@ def peggiori(root: Path = ROOT) -> list[str]:
             bad.append(f"{rel}: orphan prompt, no row in CODA.md -> delete it or add the row")
         if p.stat().st_size > MAX_PROMPT:
             bad.append(f"{rel}: {p.stat().st_size} B over {MAX_PROMPT} B -> shorten it")
-        first = p.read_text(encoding="utf-8").split("\n", 1)[0].strip()
-        if not first.startswith(BRIEF_LINE):
-            bad.append(f"{rel}: must start with `{BRIEF_LINE}`")
+        body = p.read_text(encoding="utf-8")
+        if body.split("\n", 1)[0].strip() != BRIEF_LINE:
+            bad.append(f"{rel}: its first line must be exactly `{BRIEF_LINE}`")
+        for sec in SECTIONS:
+            if not re.search(rf"^{re.escape(sec)}", body, re.M):
+                bad.append(f"{rel}: missing the section {sec}")
     return bad
 
 

@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Reported: at nominal resolution one compound splits into several features and low-mass products are lost. The running chat PARENT-DUP-ROWS fixes the duplicate rows of the parent peak; this row is the preset and the low-mass floor, after it.
 
-**Read first.** `docs/agenti/mzfeat-lr.md` (the existing low-resolution chain: `Recipe::lr`, floor, min height), `docs/agenti/ion-groups.md` (`features.companions`), `crates/mzlab-feat/src/recipe_lr.rs`, and the PR of the chat PARENT-DUP-ROWS (merged first: read its diff; stop and report if it is not).
+**Read first.** `docs/agenti/mzfeat-lr.md` (the existing low-resolution chain: `Recipe::lr`, floor, min height), `docs/agenti/ion-groups.md` (`features.companions`), `crates/mzlab-feat/src/recipe_lr.rs`, and the PR of the chat PARENT-DUP-ROWS (merged first: read its diff; stop and report if it is not). Start with `grep -n 'unit resolution\|low-resolution\|mzfeat-lr' docs/agenti/INDICE.md`, then `grep -rn 'fn lr(' crates/mzlab-feat/src --include=*.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `Recipe::for_index` already picks a low-resolution recipe from the data; `features.companions` groups unit-mass companions. Find on a synthetic unit-resolution file (one parent, products below the floor) which parameters decide the split and the loss.
 

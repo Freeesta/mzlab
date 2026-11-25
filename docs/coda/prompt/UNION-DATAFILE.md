@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Which states count as a row of a series is a choice that needs its own log (follow-up of #3710).
 
-**Read first.** `docs/agenti/quant-targets.md`, `crates/mzlab-core/src/series_union/` (a test already uses a `datafile:a:area` header), `crates/mzlab-feat/src/union.rs`.
+**Read first.** `docs/agenti/quant-targets.md`, `crates/mzlab-core/src/series_union/` (a test already uses a `datafile:a:area` header), `crates/mzlab-feat/src/union.rs`. Start with `grep -n 'quant targets\|union' docs/agenti/INDICE.md`, then `grep -rn 'datafile' crates/mzlab-core/src/series_union --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `features.union@1` and `quant union` read series CSVs of `features` (merged).
 

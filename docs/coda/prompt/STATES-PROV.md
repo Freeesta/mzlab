@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** A statistic that mixes forced and detected values must say so (AU-3 follow-up of #3704 and #3705).
 
-**Read first.** `docs/agenti/value-states.md` ('Not yet'), `docs/agenti/stat.md`, `docs/agenti/calibration.md`, `crates/mzlab-feat/src/value_state.rs`.
+**Read first.** `docs/agenti/value-states.md` ('Not yet'), `docs/agenti/stat.md`, `docs/agenti/calibration.md`, `crates/mzlab-feat/src/value_state.rs`. Start with `grep -n 'value states\|statistics as steps' docs/agenti/INDICE.md`, then `grep -rn 'table.stats' crates/mzlab-feat/src --include=*.rs -l`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The state words and `state` columns in the concentration outputs are merged. The `prov/1` entry has no state list (verified: no `states` key under `crates/mzlab-feat/src/stat/`).
 

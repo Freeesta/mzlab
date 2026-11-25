@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** The kinetic campaign needs these three steps by hand today.
 
-**Read first.** `docs/studies/AGENT_USE_STUDY_2.md` §8 (the AU-8 recipe, kinetics from LR files), `docs/agenti/recipes.md` and `docs/recipes/kinetic-lr.mzflow.json`, `crates/mzlab-core/src/kinetics.rs`, `docs/agenti/calibration.md` (`quant curve`), `crates/mzlab-cli/src/workflow_kinetic_tests.rs`.
+**Read first.** `docs/studies/AGENT_USE_STUDY_2.md` §8 (the AU-8 recipe, kinetics from LR files), `docs/agenti/recipes.md` and `docs/recipes/kinetic-lr.mzflow.json`, `crates/mzlab-core/src/kinetics.rs`, `docs/agenti/calibration.md` (`quant curve`), `crates/mzlab-cli/src/workflow_kinetic_tests.rs`. Start with `grep -n 'calibration curve\|kinetic' docs/agenti/INDICE.md`, then `grep -n 'pub fn' crates/mzlab-core/src/kinetics.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** The recipe, `kinetics.rs` (first-order decay, AICc, bootstrap), `quant targets` and `quant.curve` are merged. Reuse them; do not duplicate. What is missing is only the glue for fixed windows, the UV normalisation (see `dad trace`) and the k with its uncertainty printed.
 

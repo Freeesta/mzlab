@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** The two polarities are separate tables; the neutral mass and the match are done by hand.
 
-**Read first.** `docs/agenti/ion-groups.md`, `docs/agenti/mzfeat.md`, `crates/mzlab-core/src/adduct_table.rs`, the `--polarity` flags of `features` and `quant union`.
+**Read first.** `docs/agenti/ion-groups.md`, `docs/agenti/mzfeat.md`, `crates/mzlab-core/src/adduct_table.rs`, the `--polarity` flags of `features` and `quant union`. Start with `grep -n 'union\|adduct' docs/agenti/INDICE.md`, then `grep -rn 'adduct' crates/mzlab-core/src/adduct_table.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** Adduct tables exist. `features.union` has a `polarity` parameter. There is no cross-polarity pairing step on main (check `grep -rn 'polarity' crates/mzlab-feat/src/steps --include=*.rs -l`).
 

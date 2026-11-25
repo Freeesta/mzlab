@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Today the evidence is only inside `view/1` (follow-up of #3711).
 
-**Read first.** `docs/agenti/mzfeat-table.md` (`counts.blank`), `crates/mzlab-feat/src/view.rs`, `crates/mzlab-cli/src/flow_out.rs`.
+**Read first.** `docs/agenti/mzfeat-table.md` (`counts.blank`), `crates/mzlab-feat/src/view.rs`, `crates/mzlab-cli/src/flow_out.rs`. Start with `grep -n 'mzfeat-table' docs/agenti/INDICE.md`, then `grep -n 'fn blank_evidence' crates/mzlab-feat/src/view.rs`.
 
 **Already on main (checked 25 Nov, re-check before coding).** `counts.blank` is written for the plain and the optioned blank filter.
 
