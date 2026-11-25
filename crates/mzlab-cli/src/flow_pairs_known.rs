@@ -45,6 +45,10 @@ const BY_DATA: &[(&str, &str)] = &[
         "error.badSamples",
     ),
     (
+        "features.union.table <- table with no row",
+        "err.union.empty",
+    ),
+    (
         "table.filter.table <- table of one sample",
         "error.badSamples",
     ),
