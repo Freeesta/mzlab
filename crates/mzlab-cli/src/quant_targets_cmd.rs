@@ -247,19 +247,57 @@ fn run_job(j: &Job) -> Result<(String, String)> {
         for h in &out.hints {
             eprintln!("{}", hint_line(h));
         }
-        Ok((if j.json { out.json() } else { out.csv }, out.log))
+        // the hints also go in the --json answer, beside the log and only when there are some: the log file stays the bytes of the site, whose
+        // .wasm has no hints (docs/agenti/quant-targets.md)
+        let table = if j.json { out.json() } else { out.csv };
+        Ok(match hints_json(&out.hints) {
+            Some(h) if j.json => (with_key(table, &h), out.log),
+            _ => (table, out.log),
+        })
     })
 }
 
-/// A hint as one stderr line: the catalogue text with its `{name}` words filled, then the key.
-fn hint_line(h: &mzlab_feat::quant_targets::Hint) -> String {
+/// `"hints":[{"key","params":{...},"text"}]` of the run, or `None` when the data pointed at no switch.
+fn hints_json(hints: &[mzlab_feat::quant_targets::Hint]) -> Option<String> {
+    if hints.is_empty() {
+        return None;
+    }
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("\"hints\":[");
+    for (i, h) in hints.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"key\":" } else { "{\"key\":" })
+            .str(h.key)
+            .raw(",\"params\":{");
+        for (k, (name, v)) in h.params.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).str(name).raw(":").str(v);
+        }
+        o.raw("},\"text\":").str(&hint_text(h)).raw("}");
+    }
+    Some(o.0 + "]")
+}
+
+/// `json` (an object) with the member `member` added at its end.
+fn with_key(mut json: String, member: &str) -> String {
+    if let Some(i) = json.rfind('}') {
+        json.insert_str(i, &format!(",{member}"));
+    }
+    json
+}
+
+/// The catalogue text of a hint with its `{name}` words filled.
+fn hint_text(h: &mzlab_feat::quant_targets::Hint) -> String {
     let mut t = crate::error_text::catalog_text(h.key)
         .unwrap_or_default()
         .to_string();
     for (k, v) in &h.params {
         t = t.replace(&format!("{{{k}}}"), v);
     }
-    format!("hint: {t} ({})", h.key)
+    t
+}
+
+/// A hint as one stderr line: its text, then the key.
+fn hint_line(h: &mzlab_feat::quant_targets::Hint) -> String {
+    format!("hint: {} ({})", hint_text(h), h.key)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

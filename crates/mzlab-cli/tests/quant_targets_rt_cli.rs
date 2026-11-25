@@ -100,7 +100,7 @@ fn rt_ref_moves_the_windows_and_writes_the_shift_and_its_evidence() {
 fn a_bad_rt_ref_is_usage_and_the_hints_name_the_switches_only_when_the_data_ask() {
     let d = drift_dir("hint");
     // an unknown id or a bad value is usage (exit 2) with the key on stderr
-    for bad in ["nope", "auto@x"] {
+    for bad in ["nope", "auto@x", "IS@b"] {
         let e = run(&d, &["--rt-ref", bad]);
         assert_eq!(e.status.code(), Some(2), "{bad}: {}", text(&e.stderr));
         assert!(text(&e.stderr).contains("err.quant.targets.param"));
@@ -121,10 +121,49 @@ fn a_bad_rt_ref_is_usage_and_the_hints_name_the_switches_only_when_the_data_ask(
         missed.contains("--offset auto") && missed.contains("note.quant.targets.offsetAuto"),
         "{missed}"
     );
+    // ... as one possible cause: the drift and the window are named too
+    assert!(
+        missed.contains("One possible cause")
+            && missed.contains("--rt-ref auto")
+            && missed.contains("rt_min"),
+        "{missed}"
+    );
     let measured = text(&run(&d, &["--da", "0.2", "--offset", "auto"]).stderr);
     assert!(
         !measured.contains("note.quant.targets.offsetAuto"),
         "{measured}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_hints_are_in_the_json_answer_and_never_in_the_log_file() {
+    let d = drift_dir("hintjson");
+    let on = run(&d, &["--json", "--log", "log.json"]);
+    assert_eq!(on.status.code(), Some(0), "{}", text(&on.stderr));
+    let json: serde_json::Value = serde_json::from_str(&text(&on.stdout)).unwrap();
+    assert_eq!(
+        json["hints"][0]["key"], "note.quant.targets.rtRef",
+        "{json}"
+    );
+    assert_eq!(json["hints"][0]["params"]["id"], "std");
+    assert!(json["hints"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("--rt-ref auto"));
+    // the log file is the log of the site, byte for byte: it carries no hint, and the answer's own `log` member is the same
+    let log = std::fs::read_to_string(d.join("log.json")).unwrap();
+    assert!(!log.contains("hints"), "{log}");
+    assert_eq!(
+        json["log"],
+        serde_json::from_str::<serde_json::Value>(&log).unwrap()
+    );
+    // with the switch on, or nothing to point at, the key is absent
+    let off = run(&d, &["--rt-ref", "auto", "--json"]);
+    assert!(
+        !text(&off.stdout).contains("\"hints\""),
+        "{}",
+        text(&off.stdout)
     );
     let _ = std::fs::remove_dir_all(&d);
 }

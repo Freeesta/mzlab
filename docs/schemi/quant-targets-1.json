@@ -271,6 +271,8 @@
                   "apex_rt",
                   "sn",
                   "search",
+                  "peaks_in_search",
+                  "runner_up",
                   "shift_min",
                   "status"
                 ],
@@ -303,17 +305,45 @@
                     "maxItems": 2,
                     "description": "RT window the apex was looked for in, min."
                   },
+                  "peaks_in_search": {
+                    "type": "integer",
+                    "description": "How many peaks the search window holds (0 in a blank, which is not measured)."
+                  },
+                  "runner_up": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "The second tallest peak of the search window, null when there is none: a rival of at least half the height (and over min_sn) makes the status ambiguous.",
+                    "required": [
+                      "apex_rt",
+                      "height_ratio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "apex_rt": {
+                        "type": "number"
+                      },
+                      "height_ratio": {
+                        "type": "number",
+                        "description": "Its height over the tallest peak."
+                      }
+                    }
+                  },
                   "shift_min": {
                     "type": "number",
-                    "description": "Applied to every window of the file; 0 when status is weak or not_found."
+                    "description": "Applied to every window of the file; 0 for every status but ok."
                   },
                   "status": {
                     "enum": [
                       "ok",
                       "edge",
+                      "ambiguous",
                       "weak",
-                      "not_found"
-                    ]
+                      "not_found",
+                      "blank"
+                    ],
+                    "description": "ok: applied. edge: the apex is on the border of the search window (a clipped peak). ambiguous: a second peak of at least half the height. weak: under the S/N, points or shape limits. not_found: no peak. blank: a blank file, not measured."
                   }
                 }
               }
@@ -346,6 +376,33 @@
         "warnings": {
           "type": "array",
           "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hints": {
+      "type": "array",
+      "description": "Only in the CLI answer and only when the data point at a switch (the site has none): the note.quant.targets.* keys of the language files with their words and the text.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params",
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "text": {
             "type": "string"
           }
         }

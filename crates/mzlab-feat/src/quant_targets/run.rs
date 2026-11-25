@@ -156,7 +156,18 @@ fn offsets<R: ReadAt>(
     Ok(out)
 }
 
-/// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too).
+/// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too). The one call
+/// of the module: the table and the reference row both go through it.
+#[inline(never)]
+pub(super) fn peak_in(
+    rt: &[f64],
+    y: &[f64],
+    (a, b): (f64, f64),
+    p: &Params,
+) -> (Option<Hit>, usize, usize, bool) {
+    tallest(rt, y, a, b, p.smooth_half, p.valley_pct)
+}
+
 fn integrate(
     rt: &[f64],
     y: &[f64],
@@ -164,8 +175,7 @@ fn integrate(
     p: &Params,
     shift: f64,
 ) -> (Option<Hit>, usize, usize, bool) {
-    let (a, b) = (t.rt_min + shift, t.rt_max + shift);
-    tallest(rt, y, a.max(0.0), b, p.smooth_half, p.valley_pct)
+    peak_in(rt, y, ((t.rt_min + shift).max(0.0), t.rt_max + shift), p)
 }
 
 /// The flags of a row from its hit (`in_blank` comes after every file).
@@ -194,12 +204,14 @@ fn one_file<R: ReadAt>(
     p: &Params,
     offs: &[GroupOffset],
     workers: usize,
-    rt_ref: Option<(usize, f64)>,
+    rt_ref: Option<(usize, f64, bool)>,
 ) -> Result<(Vec<Row>, Option<RtShift>)> {
     let mut routes = Routes::new(idx);
     let mut rows: Vec<Option<Row>> = vec![None; targets.len()];
     let rt_log = match rt_ref {
-        Some((i, expected)) => Some(measure(&mut routes, &targets[i], expected, offs, p)?),
+        Some((i, expected, blank)) => {
+            Some(measure(&mut routes, &targets[i], expected, offs, p, blank)?)
+        }
         None => None,
     };
     let shift = rt_log.as_ref().map_or(0.0, |r| r.shift);
@@ -363,11 +375,12 @@ impl Job {
             &self.p,
             &offs,
             self.workers,
-            self.rt_ref,
+            self.rt_ref.map(|(i, e)| (i, e, self.blank[k])),
         )?;
         match rt.as_ref().map(|r| r.status) {
             Some("weak" | "not_found") => warnings.push("warn.quant.targets.rtRefNotFound"),
             Some("edge") => warnings.push("warn.quant.targets.rtRefEdge"),
+            Some("ambiguous") => warnings.push("warn.quant.targets.rtRefAmbiguous"),
             _ => {}
         }
         if rows.iter().any(|x| x.flags.contains(&"no_scans")) {

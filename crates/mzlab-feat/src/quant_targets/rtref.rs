@@ -4,7 +4,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::round;
-use mzlab_core::rawxic::tallest;
+use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams, LrAutoPeak, Split};
 use mzlab_core::routes::Routes;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -12,7 +12,7 @@ use super::params::OffsetMode;
 use super::params::{Params, RtRef};
 #[cfg(not(target_arch = "wasm32"))]
 use super::run::Row;
-use super::run::{warn, Choice, GroupOffset};
+use super::run::{peak_in, warn, Choice, GroupOffset};
 use super::targets::{Role, Target};
 
 /// What the internal reference said in one file: where its apex was looked for, where it was found and the shift applied to every window.
@@ -21,10 +21,66 @@ pub(crate) struct RtShift {
     pub expected: f64,
     pub apex: Option<f64>,
     pub shift: f64,
-    /// `ok`, `edge` (apex on the border of the search window, applied), `weak` (a peak under the S/N or shape limits, not applied) or `not_found`.
+    /// `ok` (applied) or one of the outcomes that move nothing (shift 0): `edge` (apex on the border of the search window: a clipped peak),
+    /// `ambiguous` (a second peak of at least `RIVAL` of the tallest), `weak` (under the S/N, points or shape limits), `not_found` or `blank`
+    /// (a blank file: the reference is not measured there).
     pub status: &'static str,
     pub sn: Option<f64>,
     pub search: (f64, f64),
+    /// How many peaks the search window holds and the second tallest of them: its apex RT, its height over the tallest and its S/N.
+    pub peaks: usize,
+    pub runner_up: Option<(f64, f64, f64)>,
+}
+
+/// A second peak of the search window at least this fraction of the tallest (and over the S/N limit) makes the reference ambiguous: no shift.
+const RIVAL: f64 = 0.5;
+
+impl RtShift {
+    /// Nothing found yet: the search window is the reference window widened by `rt_span` (and by where it is expected), never before 0.
+    fn new(t: &Target, expected: f64, p: &Params) -> RtShift {
+        RtShift {
+            reference: t.id.clone(),
+            expected,
+            apex: None,
+            shift: 0.0,
+            status: "not_found",
+            sn: None,
+            search: (
+                round((t.rt_min.min(expected) - p.rt_span).max(0.0), 4),
+                round(t.rt_max.max(expected) + p.rt_span, 4),
+            ),
+            peaks: 0,
+            runner_up: None,
+        }
+    }
+}
+
+/// The second tallest peak of the search window (`lr_auto_integrate` with the settings of `tallest`): apex RT, height over the tallest, S/N.
+fn runner_up(rt: &[f64], y: &[f64], search: (f64, f64), p: &Params) -> Option<(f64, f64, f64)> {
+    let lp = LrAutoParams {
+        half: p.smooth_half,
+        valley: p.valley_pct / 100.0,
+        snr: 0.0,
+        min_pts: 2,
+        despike: true,
+        split: Split::Drop,
+    };
+    let r = lr_auto_integrate(rt, y, search.0, search.1, lp);
+    let (mut top, mut next): (Option<&LrAutoPeak>, Option<&LrAutoPeak>) = (None, None);
+    for pk in &r.peaks {
+        if top.is_none_or(|t| pk.height > t.height) {
+            next = top;
+            top = Some(pk);
+        } else if next.is_none_or(|n| pk.height > n.height) {
+            next = Some(pk);
+        }
+    }
+    let (top, next) = (top?, next?);
+    Some((
+        rt[next.apex],
+        round(next.height / top.height, 3),
+        round(next.sn, 2),
+    ))
 }
 
 /// A pointer to a switch the data suggests (`note.quant.targets.*` of the language files, `{name}` filled from `params`): said on stderr by the
@@ -92,20 +148,15 @@ pub(super) fn measure<R: ReadAt>(
     expected: f64,
     offs: &[GroupOffset],
     p: &Params,
+    blank: bool,
 ) -> Result<RtShift> {
-    let search = (
-        round((t.rt_min.min(expected) - p.rt_span).max(0.0), 4),
-        round(t.rt_max.max(expected) + p.rt_span, 4),
-    );
-    let mut out = RtShift {
-        reference: t.id.clone(),
-        expected,
-        apex: None,
-        shift: 0.0,
-        status: "not_found",
-        sn: None,
-        search,
-    };
+    let mut out = RtShift::new(t, expected, p);
+    // a blank is not measured (a noise peak could move its windows): the log says so and its windows stay
+    if blank {
+        out.status = "blank";
+        return Ok(out);
+    }
+    let search = out.search;
     routes.pol = t.polarity;
     routes.mz_off = offs
         .iter()
@@ -116,16 +167,27 @@ pub(super) fn measure<R: ReadAt>(
     if !m.rt.is_empty() {
         let rt: Vec<f64> = m.rt.iter().map(|&x| round(x, 4)).collect();
         let y: Vec<f64> = m.y[0].iter().map(|&v| round(v, 1)).collect();
-        let (hit, _, _, edge) = tallest(&rt, &y, search.0, search.1, p.smooth_half, p.valley_pct);
+        let (hit, peaks, _, edge) = peak_in(&rt, &y, search, p);
+        out.peaks = peaks;
+        if peaks >= 2 {
+            out.runner_up = runner_up(&rt, &y, search, p);
+        }
         if let Some(h) = hit {
             out.apex = Some(h.rt);
             out.sn = Some(h.sn);
-            if h.sn < p.min_sn || h.points < p.min_points || h.shape < p.min_shape {
-                out.status = "weak";
+            let rival = out
+                .runner_up
+                .is_some_and(|(_, ratio, sn)| ratio >= RIVAL && sn >= p.min_sn);
+            out.status = if h.sn < p.min_sn || h.points < p.min_points || h.shape < p.min_shape {
+                "weak"
+            } else if rival {
+                "ambiguous"
+            } else if edge {
+                "edge"
             } else {
-                out.status = if edge { "edge" } else { "ok" };
                 out.shift = round(h.rt - expected, 4);
-            }
+                "ok"
+            };
         }
     }
     drop(m);
@@ -144,7 +206,7 @@ pub(super) fn rt_reference(targets: &[Target], p: &Params) -> Result<Option<(usi
         },
         RtRef::Id { id, rt } => match targets.iter().position(|t| &t.id == id) {
             Some(i) => (i, *rt),
-            None => return Err(super::params::bad("rt_ref", &p.rt_ref_text())),
+            None => return Err(super::params::bad("rt_ref", &p.rt_ref_text)),
         },
     };
     let t = &targets[i];
@@ -165,28 +227,23 @@ pub(crate) fn rt_choices(
     if p.rt_ref != RtRef::Off {
         match rt_ref {
             Some((i, expected)) => {
-                let named = matches!(p.rt_ref, RtRef::Id { .. });
+                let given = matches!(p.rt_ref, RtRef::Id { .. });
                 choices.push(Choice {
                     key: "rt_reference",
                     value: targets[i].id.clone(),
-                    reason: if named {
-                        "the row named by rt_ref".into()
+                    reason: if given {
+                        "named by rt_ref"
                     } else {
-                        "first standard/parent row".into()
-                    },
+                        "first standard/parent row"
+                    }
+                    .into(),
                 });
-                let given = match &p.rt_ref {
-                    RtRef::Auto { rt } | RtRef::Id { rt, .. } => rt.is_some(),
-                    RtRef::Off => false,
-                };
                 choices.push(Choice {
                     key: "rt_expected",
                     value: format!("{expected}"),
-                    reason: if given {
-                        "given in rt_ref".into()
-                    } else {
-                        "centre of the reference window; every window moves by the apex found minus this".into()
-                    },
+                    reason:
+                        "RT the reference is expected at (given, else the centre of its window)"
+                            .into(),
                 });
             }
             None => {

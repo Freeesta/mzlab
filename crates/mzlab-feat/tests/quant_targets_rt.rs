@@ -123,7 +123,7 @@ fn rt_ref_moves_every_window_by_the_shift_of_the_internal_reference_and_logs_it(
         on.csv.replace("std@2.0", "auto")
     );
     assert!(
-        named.log.contains("\"reason\":\"given in rt_ref\""),
+        named.log.contains("\"reason\":\"named by rt_ref\""),
         "{}",
         named.log
     );
@@ -173,4 +173,96 @@ fn rt_ref_never_moves_windows_on_noise_or_without_a_reference() {
     }
     let e = go(NARROW, &[("rt_ref", "auto"), ("rt_span", "9")]).unwrap_err();
     assert_eq!(e.key, "err.quant.targets.param");
+}
+
+/// One synthetic file as the log of the reference row sees it, with `extra` ions added to the sample; `names` and `blank` as given.
+fn run_with(
+    ions: &[Ion],
+    names: &[&str],
+    p: &[(&str, &str)],
+) -> mzlab_feat::quant_targets::Outcome {
+    let bytes = mzml(ions, 7);
+    let names: Vec<String> = names.iter().map(|n| n.to_string()).collect();
+    let mut open = |_: usize| Ok(index_bytes(bytes.clone()));
+    run(&mut open, &names, NARROW.as_bytes(), &params(p)).unwrap()
+}
+
+#[test]
+fn a_second_peak_as_tall_as_the_reference_gives_no_shift_and_says_so() {
+    // the reference at 2.0 min with a rival of 80 % at 2.5 min: which one is the reference is the user's call
+    let mut two = drifted(0.0);
+    two.push(Ion(400.3, 2.5, 40000.0, 0.1));
+    let o = run_with(&two, &["a.mzML"], &[("rt_ref", "auto")]);
+    for needle in [
+        "\"status\":\"ambiguous\"",
+        "\"peaks_in_search\":2",
+        "\"runner_up\":{\"apex_rt\":2.5,\"height_ratio\":0.8",
+        "\"shift_min\":0",
+    ] {
+        assert!(o.log.contains(needle), "{needle}\n{}", o.log);
+    }
+    assert!(
+        o.warnings
+            .contains(&"warn.quant.targets.rtRefAmbiguous".to_string()),
+        "{:?}",
+        o.warnings
+    );
+    // a small side peak (20 %) is logged as the runner-up but does not stop the shift
+    let mut small = drifted(0.3);
+    small.push(Ion(400.3, 2.9, 10000.0, 0.1));
+    let o = run_with(&small, &["b.mzML"], &[("rt_ref", "auto")]);
+    assert!(o.log.contains("\"status\":\"ok\""), "{}", o.log);
+    assert!(o.log.contains("\"height_ratio\":0.2"), "{}", o.log);
+    // a clean reference has one peak and no runner-up
+    let o = run_with(&drifted(0.0), &["c.mzML"], &[("rt_ref", "auto")]);
+    assert!(
+        o.log.contains("\"peaks_in_search\":1,\"runner_up\":null"),
+        "{}",
+        o.log
+    );
+}
+
+#[test]
+fn an_apex_on_the_border_of_the_search_window_is_a_clipped_peak_and_moves_nothing() {
+    // the reference apex at 3.1 min, the last scan of its search window (0.9 to 3.1 min)
+    let mut clipped = drifted(0.0);
+    clipped[4] = Ion(400.3, 3.1, 50000.0, 0.1);
+    let o = run_with(&clipped, &["a.mzML"], &[("rt_ref", "auto")]);
+    assert!(o.log.contains("\"status\":\"edge\""), "{}", o.log);
+    assert!(o.log.contains("\"shift_min\":0"), "{}", o.log);
+    assert!(
+        o.warnings
+            .contains(&"warn.quant.targets.rtRefEdge".to_string()),
+        "{:?}",
+        o.warnings
+    );
+    // the same peak with a wider search holds its apex inside: it moves the windows
+    let o = run_with(
+        &clipped,
+        &["a.mzML"],
+        &[("rt_ref", "auto"), ("rt_span", "1.5")],
+    );
+    assert!(o.log.contains("\"status\":\"ok\""), "{}", o.log);
+}
+
+#[test]
+fn a_blank_is_not_measured_and_keeps_its_windows() {
+    let o = run_with(
+        &drifted(0.3),
+        &["sample_1.mzML", "blank_1.mzML"],
+        &[("rt_ref", "auto"), ("blank_pattern", "*blank*")],
+    );
+    let files: Vec<&str> = o.log.split("{\"file\":").skip(1).collect();
+    assert!(files[0].contains("\"status\":\"ok\""), "{}", files[0]);
+    assert!(
+        files[1].contains("\"status\":\"blank\"") && files[1].contains("\"shift_min\":0"),
+        "{}",
+        files[1]
+    );
+    // no warning for a blank: nothing was expected of it
+    assert!(
+        !o.warnings.iter().any(|w| w.contains("rtRef")),
+        "{:?}",
+        o.warnings
+    );
 }

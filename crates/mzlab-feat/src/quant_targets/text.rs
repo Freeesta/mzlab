@@ -99,7 +99,7 @@ fn params_json(o: &mut Out, p: &Params) {
     o.raw(",\"smooth_half\":").int(p.smooth_half as i64);
     o.raw(",\"valley\":").num(p.valley_pct);
     if p.rt_ref != RtRef::Off {
-        o.raw(",\"rt_ref\":").str(&p.rt_ref_text());
+        o.raw(",\"rt_ref\":").str(&p.rt_ref_text);
         o.raw(",\"rt_span\":").num(p.rt_span);
     }
     o.raw("}");
@@ -131,7 +131,18 @@ fn rt_json(o: &mut Out, r: &RtShift) {
         .num(r.search.0)
         .raw(",")
         .num(r.search.1);
-    o.raw("],\"shift_min\":").num(r.shift);
+    o.raw("],\"peaks_in_search\":").int(r.peaks as i64);
+    o.raw(",\"runner_up\":");
+    match r.runner_up {
+        Some((rt, ratio, _)) => o
+            .raw("{\"apex_rt\":")
+            .num(rt)
+            .raw(",\"height_ratio\":")
+            .num(ratio)
+            .raw("}"),
+        None => o.raw("null"),
+    };
+    o.raw(",\"shift_min\":").num(r.shift);
     o.raw(",\"status\":").str(r.status).raw("}");
 }
 
