@@ -118,7 +118,7 @@ fn refuse_growing(list: &[(String, PathBuf)]) -> Result<()> {
     mzlab_core::wiff::check_stable(&before, &sizes(list), ms)
 }
 
-/// Seconds since the newest `.wiff` / `.wiff.scan` member of the dataset at `path` was modified (`None` when the system does not say).
+/// Seconds since the newest `.wiff` / `.wiff.scan` member of the dataset at `path` was modified (0 for a time in the future; `None` when the system does not say).
 pub(crate) fn wiff_age_s(path: &Path) -> Option<u64> {
     let found = members(path).ok()?;
     found
@@ -127,8 +127,11 @@ pub(crate) fn wiff_age_s(path: &Path) -> Option<u64> {
             let n = n.to_lowercase();
             n.ends_with(".wiff") || n.ends_with(".wiff.scan")
         })
-        .filter_map(|(_, p)| std::fs::metadata(p).ok()?.modified().ok()?.elapsed().ok())
-        .map(|a| a.as_secs())
+        .filter_map(|(_, p)| {
+            let when = std::fs::metadata(p).ok()?.modified().ok()?;
+            // a time in the future (a clock set back, a file written by a machine ahead of this one) most plausibly means a file being written now: age 0
+            Some(when.elapsed().map_or(0, |a| a.as_secs()))
+        })
         .min()
 }
 

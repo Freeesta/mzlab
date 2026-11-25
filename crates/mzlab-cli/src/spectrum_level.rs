@@ -43,8 +43,11 @@ pub(super) fn start(s: &mut Sample, at: &At, given: Option<u8>) -> Result<(u8, O
         return Ok((l, None));
     };
     s.note += &format!(
-        "note: {} holds only MS level {l}: using it (--ms-level N overrides)\n",
-        s.name
+        "note: {}\n",
+        crate::error_text::warning(&crate::convert::Notice {
+            key: "warn.scan.levelOnly",
+            params: vec![("name", s.name.clone()), ("level", l.to_string())],
+        })
     );
     let list = levels
         .iter()

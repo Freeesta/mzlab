@@ -55,7 +55,33 @@
     },
     "evidence": {
       "type": "object",
-      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level), answer (the route's own members) and, only when --ms-level was absent and the file's only MS level is not 1, level_auto {ms_level, levels, why}."
+      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level), answer (the route's own members) and, only when --ms-level was absent and the file's only MS level is not 1, level_auto.",
+      "properties": {
+        "level_auto": {
+          "type": "object",
+          "description": "Present only when --ms-level was absent and the file's only MS level is not 1: the level that was used and why.",
+          "required": [
+            "ms_level",
+            "levels",
+            "why"
+          ],
+          "properties": {
+            "ms_level": {
+              "type": "integer"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "why": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
     }
   }
 }

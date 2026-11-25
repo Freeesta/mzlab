@@ -2,9 +2,8 @@
 
 use super::{pairs, run};
 
-/// Sets the modification time of both members of the pair `stem`.wiff in `d` to `secs_ago` seconds before now.
-fn age_pair(d: &std::path::Path, stem: &str, secs_ago: u64) {
-    let when = std::time::SystemTime::now() - std::time::Duration::from_secs(secs_ago);
+/// Sets the modification time of both members of the pair `stem`.wiff in `d` to `when`.
+fn touch_pair(d: &std::path::Path, stem: &str, when: std::time::SystemTime) {
     for n in [format!("{stem}.wiff"), format!("{stem}.wiff.scan")] {
         let f = std::fs::OpenOptions::new()
             .write(true)
@@ -12,6 +11,15 @@ fn age_pair(d: &std::path::Path, stem: &str, secs_ago: u64) {
             .unwrap();
         f.set_modified(when).unwrap();
     }
+}
+
+/// The same, `secs_ago` seconds before now.
+fn age_pair(d: &std::path::Path, stem: &str, secs_ago: u64) {
+    touch_pair(
+        d,
+        stem,
+        std::time::SystemTime::now() - std::time::Duration::from_secs(secs_ago),
+    );
 }
 
 fn at_in(d: &std::path::Path, n: &str) -> String {
@@ -77,9 +85,10 @@ fn a_pair_whose_scan_outruns_its_index_or_ends_before_it_is_flagged_with_its_evi
         2
     );
     assert!(
-        err.contains("still being written, exit 8")
-            && err.contains("2 samples")
-            && err.contains("2 more section"),
+        err.contains("may still be being written (exit 8)")
+            && err.contains("lists 2 samples")
+            && err.contains("2 more section")
+            && err.contains("(warn.wiff.unlisted.writing)"),
         "{err}"
     );
     let _ = std::fs::remove_dir_all(&d);
@@ -100,7 +109,9 @@ fn an_old_partial_copy_is_exit_1_and_the_table_form_warns_on_stderr() {
         "{out}"
     );
     assert!(
-        c.get("age_s").and_then(|v| v.f64()).unwrap() >= 3600.0 && err.contains("exit 1"),
+        c.get("age_s").and_then(|v| v.f64()).unwrap() >= 3600.0
+            && err.contains("(exit 1)")
+            && err.contains("warn.wiff.unlisted.idle"),
         "{out}{err}"
     );
     // the table form says it too
@@ -157,4 +168,55 @@ fn queued_empty_rows_do_not_hide_an_unindexed_section() {
     assert_eq!(c.get("status").and_then(|v| v.str()), Some("unlisted"));
     assert_eq!(c.get("sections_unlisted").and_then(|v| v.f64()), Some(1.0));
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// A modification time in the future (a clock set back, a machine ahead of this one) most plausibly means a file being written now: age 0, flagged as such, never
+/// "time unknown".
+#[test]
+fn a_member_dated_in_the_future_counts_as_just_written() {
+    let d = pairs("consistency_future");
+    let at = at_in(&d, "unindexed");
+    touch_pair(
+        &d,
+        "unindexed",
+        std::time::SystemTime::now() + std::time::Duration::from_secs(3600),
+    );
+    let (code, out, err) = run(&["sample", "list", &at, "--json"]);
+    assert_eq!(code, 8, "{err}");
+    let c = consistency(&out).expect("consistency");
+    assert_eq!(c.get("age_s").and_then(|v| v.f64()), Some(0.0), "{out}");
+    assert!(err.contains("warn.wiff.unlisted.writing"), "{err}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The warning is catalogue text, one key per finding and state: each key has its English text and its context line, and the text takes every parameter
+/// the notice gives (no `{name}` left, no parameter appended after the key).
+#[test]
+fn the_warnings_are_catalogue_text_with_their_context_and_every_parameter_used() {
+    use mzlab_core::wiff::completeness;
+    let contexto = include_str!("../../../mzlab/web/lang/contesto/errors-n-w.json");
+    let mut seen = Vec::new();
+    for (scan, end, listed, unlisted) in [(100, 120, 2, 0), (140, 120, 2, 3)] {
+        for age in [Some(2), Some(3600), None] {
+            let c = completeness((scan, end), 4096, listed, unlisted, age);
+            let n = crate::samples_check::consistency_notice("a b=c.wiff", &c);
+            assert!(
+                crate::error_text::catalog_text(n.key).is_some(),
+                "{}",
+                n.key
+            );
+            assert!(contexto.contains(&format!("\"{}\":", n.key)), "{}", n.key);
+            let t = crate::error_text::warning(&n);
+            assert!(
+                t.starts_with("a b=c.wiff: ")
+                    && !t.contains('{')
+                    && t.ends_with(&format!("({})", n.key)),
+                "{t}"
+            );
+            seen.push(n.key);
+        }
+    }
+    seen.sort_unstable();
+    seen.dedup();
+    assert_eq!(seen.len(), 6, "{seen:?}");
 }

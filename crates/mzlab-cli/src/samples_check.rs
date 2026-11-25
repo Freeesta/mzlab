@@ -51,27 +51,55 @@ pub(super) fn completeness(
     (!c.is_ok()).then_some(c)
 }
 
-/// The stderr warning for a pair that disagrees with itself: the finding, the numbers it rests on and the threshold, so the user decides what to do.
-pub(super) fn consistency_warning(file: &str, c: &mzlab_core::wiff::Completeness) -> String {
-    let what = if c.status == "short" {
-        format!(
-            "the .wiff.scan ({} bytes) ends before its index does ({} bytes): a copy cut short",
-            c.scan_bytes, c.indexed_end
-        )
+/// The catalogue keys of the warning, by finding (short, unlisted) and state of the pair (writing: modified within the limit, idle, unknown time).
+const KEYS: [[&str; 3]; 2] = [
+    [
+        "warn.wiff.short.writing",
+        "warn.wiff.short.idle",
+        "warn.wiff.short.unknown",
+    ],
+    [
+        "warn.wiff.unlisted.writing",
+        "warn.wiff.unlisted.idle",
+        "warn.wiff.unlisted.unknown",
+    ],
+];
+
+/// The notice for a pair that disagrees with itself: the finding, the numbers it rests on and the threshold, so the user decides what to do.
+pub(super) fn consistency_notice(
+    file: &str,
+    c: &mzlab_core::wiff::Completeness,
+) -> crate::convert::Notice {
+    let short = c.status == "short";
+    let state = match (c.recent(), c.age_s) {
+        (true, Some(_)) => 0,
+        (_, Some(_)) => 1,
+        _ => 2,
+    };
+    let mut params = vec![("file", file.to_string())];
+    if short {
+        params.push(("scan_bytes", c.scan_bytes.to_string()));
+        params.push(("indexed_end", c.indexed_end.to_string()));
     } else {
-        format!(
-            "the .wiff index lists {} samples but the .wiff.scan holds {} more section(s) after it: a copy made while the instrument was writing",
-            c.listed, c.unlisted
-        )
-    };
-    let when = match (c.recent(), c.age_s) {
-        (true, Some(a)) => format!("modified {a} s ago (under {} s): still being written, exit 8; list again when the acquisition has ended", mzlab_core::wiff::RECENT_S),
-        (_, Some(a)) => format!("modified {a} s ago (not under {} s): not growing now, exit 1; copy the pair again once the acquisition has ended", mzlab_core::wiff::RECENT_S),
-        _ => "modification time unknown: exit 1".into(),
-    };
+        params.push(("listed", c.listed.to_string()));
+        params.push(("unlisted", c.unlisted.to_string()));
+    }
+    params.push(("wiff_bytes", c.wiff_bytes.to_string()));
+    if let Some(age) = c.age_s.filter(|_| state < 2) {
+        params.push(("age_s", age.to_string()));
+        params.push(("recent_s", mzlab_core::wiff::RECENT_S.to_string()));
+    }
+    crate::convert::Notice {
+        key: KEYS[usize::from(!short)][state],
+        params,
+    }
+}
+
+/// The stderr line of `consistency_notice`.
+pub(super) fn consistency_warning(file: &str, c: &mzlab_core::wiff::Completeness) -> String {
     format!(
-        "warning: {file}: {what}; .wiff {} bytes; {when}; the listing on stdout is only what the index holds (`consistency` in --json)\n",
-        c.wiff_bytes
+        "warning: {}\n",
+        crate::error_text::warning(&consistency_notice(file, c))
     )
 }
 

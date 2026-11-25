@@ -1,6 +1,7 @@
 """`samples_list/1` of a SCIEX `.wiff` pair is the same bytes from the engine .wasm (`native_samples(.., true)`, through Node) and from `mzlab-cli sample list --json`,
 on every synthetic pair of tools/wiff_riferimento.py and on a pair of tools/wiff_grande.py (the app's native route is pinned to the same text by mzlab-desktop natives_tests.rs).
-Synthetic data only. python3 is part of the test (it fails without it); skipped only without cargo, wasm-bindgen or node."""
+Synthetic data only. python3 is part of the test (it fails without it). Skipped on a machine without cargo, wasm-bindgen or node; in CI (GITHUB_ACTIONS) those are
+required and a missing one fails. The app's listing alone adds `consistency` (the site has no file times) when a pair disagrees with itself: the test strips it and compares the rest."""
 import json
 import os
 import re
@@ -13,7 +14,16 @@ import pytest
 from cargo_util import build, cli_argv, run
 
 ROOT = Path(__file__).resolve().parents[1]
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there the wasm leg must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
+
+
+def test_the_tools_are_there_in_ci():
+    assert TOOLS or not CI, "cargo, wasm-bindgen and node must be installed in CI: this test would not run"
+
+
 LIST = """const w = require(process.argv[2]), fs = require("fs"), names = process.argv.slice(3), bs = names.map(n => fs.readFileSync(n));
 console.log(w.native_samples(names.map(n => n.split("/").pop()), new Float64Array(bs.map(b => b.length)), (i, o, n) => bs[i].subarray(o, o + n), true));"""
 

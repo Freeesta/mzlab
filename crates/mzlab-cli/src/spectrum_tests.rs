@@ -406,7 +406,12 @@ fn the_only_ms_level_of_a_file_is_the_default_and_the_choice_is_logged() {
     for at in [["--rt", "0.5"], ["--rt", "0.2,0.6"]] {
         let o = run(&["spectrum", "get", &f, at[0], at[1]]);
         assert_eq!(o.code, 0, "{}", o.stderr);
-        assert!(o.stderr.contains("only MS level 2"), "{}", o.stderr);
+        assert!(
+            o.stderr.contains("scans at MS level 2 only")
+                && o.stderr.contains("(warn.scan.levelOnly)"),
+            "{}",
+            o.stderr
+        );
         let auto = String::from_utf8(o.stdout).unwrap();
         let v = parse(auto.trim().as_bytes()).unwrap();
         assert_eq!(v.get("ms_level").unwrap().f64(), Some(2.0), "{auto}");

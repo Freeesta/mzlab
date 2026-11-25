@@ -160,15 +160,15 @@ const LIST_HELP: &str = "mzlab-cli sample list: what each file holds, sample by 
 
 usage: mzlab-cli sample list FILE... [--json] [--probe]
 
-  FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
+  FILE     a .wiff (its .wiff.scan beside it is read only past the indexed part, to compare the two), another vendor file or a .D / .raw folder
   --json   one sample-list/1 document on stdout, {\"schema\",\"files\":[samples_list/1 per FILE, in order]}; a file the reader refuses has its error/1 in its place (exit 1); without it, a table
   --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
            (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
 Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
 tic {apex_rt, apex, sum} (minutes), method (the .dam file), missing (index rows past the end of the data file), why (refused | inferred | empty),
-refused. Per file: format, bytes, scan {bytes, indexed_end}. No hashes, no log text, no operator. Nothing is written.
+refused. Per file: format, bytes, scan {bytes, indexed_end}, and only when the pair disagrees with itself consistency {status short|unlisted, scan_bytes, indexed_end, wiff_bytes, samples_listed, sections_unlisted, age_s, recent_s, still_writing}. No hashes, no log text, no operator. Nothing is written.
 Streams: data on stdout; progress (one line per file) and warnings on stderr.
-Exit codes: 0 listed; 1 a file or sample refused, or a cut .wiff.scan with --probe (the listing is still printed); 2 usage; 4 a file missing or unreadable.";
+Exit codes: 0 listed; 1 a file or sample refused, a cut .wiff.scan, or sections the index lacks in a pair not modified for 10 s; 2 usage; 4 a file missing or unreadable; 8 the same finding in a pair modified in the last 10 s (it may still be written). The listing is printed in every case.";
 
 struct Listed {
     json: String,
@@ -412,10 +412,10 @@ fn list_run(args: Vec<String>) -> Outcome {
                         f.display()
                     );
                 }
-                if l.cut {
+                if l.cut && l.mismatch.is_none() {
                     err += &format!("warning: {}: the .wiff.scan is shorter than the index says: a copy cut short\n", f.display());
                 }
-                if l.json.contains("\"status\":\"longer\"") {
+                if l.mismatch.is_none() && l.json.contains("\"status\":\"longer\"") {
                     err += &format!("warning: {}: the .wiff.scan holds bytes after the last indexed section (a copy made while acquiring, or padding)\n", f.display());
                 }
                 code = code.max(u8::from(l.refused || l.cut));

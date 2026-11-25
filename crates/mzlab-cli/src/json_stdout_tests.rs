@@ -1,6 +1,6 @@
 //! The stdout of a command run with `--json` is ONE JSON document, whatever the exit code: progress and warnings go to stderr, so a script can parse stdout
-//! as it is. A focused list (the catalog does not mark which commands take `--json`), on synthetic data, every case the commands answer differently:
-//! done, a warning, a refused file, a missing file and a pair that disagrees with itself.
+//! as it is. Two nets: a sweep derived from the catalog (every command that takes `--json`, given a missing file) and a hand-written list of successful runs
+//! on synthetic data (done, a warning, a refused file, a missing file, a pair that disagrees with itself).
 
 use std::path::Path;
 
@@ -101,4 +101,54 @@ fn stdout_of_every_json_command_is_one_json_document() {
         one_document(a);
     }
     let _ = std::fs::remove_dir_all(&i.dir);
+}
+
+/// The commands of the catalog that print JSON (`--json`, or by default): the table the sweep below is derived from, so a command added later is covered
+/// without an edit here.
+fn json_commands() -> Vec<&'static crate::cmd::Entry> {
+    crate::cmd::entries()
+        .filter(|e| crate::cmd::reads_json(e.name) || crate::cmd::json_by_default(e.name))
+        .collect()
+}
+
+/// Every command of the catalog that takes `--json`, given a file that does not exist: one document on stdout (an `error/1`, or the command's own answer),
+/// never progress text or an empty stdout. The cases above add the successful runs.
+#[test]
+fn every_catalog_json_command_answers_one_document_on_a_missing_file() {
+    let found = json_commands();
+    assert!(found.len() > 30, "the catalog lost its --json commands");
+    for e in found {
+        let mut a: Vec<&str> = e.name.split(' ').collect();
+        a.extend(["/no/such/file.wiff", "--json"]);
+        one_document(&a);
+    }
+}
+
+/// The successful runs listed by hand name commands that exist and print JSON: a command renamed or dropped from the catalog fails here, not silently.
+#[test]
+fn the_hand_written_cases_name_json_commands_of_the_catalog() {
+    let names: Vec<&str> = json_commands().iter().map(|e| e.name).collect();
+    for n in [
+        "sample list",
+        "sample select",
+        "file pair",
+        "file validate",
+        "file inventory",
+        "file list",
+        "file convert",
+        "flow steps",
+        "flow defaults",
+        "estimate",
+        "ion elements",
+        "dad peaks",
+        "peak table",
+        "spectrum get",
+        "spectrum list",
+        "commands",
+    ] {
+        assert!(
+            names.contains(&n),
+            "{n} is not a --json command of the catalog"
+        );
+    }
 }
