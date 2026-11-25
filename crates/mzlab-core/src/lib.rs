@@ -161,6 +161,7 @@ pub mod ionstat;
 pub mod rawinfo;
 pub mod rawxic;
 mod rawxic_judge;
+pub mod ionscale;
 mod rawxic_json;
 #[cfg(test)]
 mod peakq_reach_test;

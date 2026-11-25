@@ -17,7 +17,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 ## Queue
 | id | prompt file | needs first | notes |
 |---|---|---|---|
-| ION-COUNTS | `docs/coda/prompt/ION-COUNTS.md` | - | correctness: cps and ions per scan type, from the method; reuse `raw xic` ionstat |
+| ION-COUNTS-METHOD | `docs/coda/prompt/ION-COUNTS-METHOD.md` | - | correctness: read the fill time, dwell and Q1 scan values of `raw xic --ions` from the method itself, in the CLI, the app and the site |
+| ION-COUNTS-TRACE | `docs/coda/prompt/ION-COUNTS-TRACE.md` | - | opt-in ion-scale keys for `trace xic` and the peak outputs, with the factor of `ionscale` |
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | chat:MS2-SUM | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |

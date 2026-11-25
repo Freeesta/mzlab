@@ -77,6 +77,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("calibration curve with LOD and LOQ", "quant.curve"),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
+    (
+        "convert cps to ions with the dwell or fill time of the scan type",
+        "raw xic",
+    ),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.
