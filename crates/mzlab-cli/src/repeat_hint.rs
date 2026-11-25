@@ -75,7 +75,7 @@ pub fn tick(dir: &Path, parent: u32, rule: &Rule, now: u64) -> Option<u64> {
 
 /// Whether the `n`-th call says the hint.
 pub fn due(n: u64) -> bool {
-    n == FIRST || (n > FIRST && n % EVERY == 0)
+    n == FIRST || (n > FIRST && n.is_multiple_of(EVERY))
 }
 
 /// The terminal line of the hint for the `n`-th call of `rule`.

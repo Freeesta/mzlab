@@ -248,10 +248,11 @@ pub fn centroids_of<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Optio
 /// `r` for the centroids of the file when it is centroided: the channel defect and the floors come from the centroid points (a per-point floor of a
 /// profile file would cut the centroid areas), unless the recipe holds a value of its own. The same recipe is used to detect, to fill and to rebuild.
 pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe> {
-    if r.is_lr() && r.screen.centroid == Switch::Auto {
-        if let Some(c) = label_check(index).filter(|c| c.sparse) {
-            choose(&r, "centroid", "off", label_reason(&c));
-        }
+    if r.is_lr()
+        && r.screen.centroid == Switch::Auto
+        && let Some(c) = label_check(index).filter(|c| c.sparse)
+    {
+        choose(&r, "centroid", "off", label_reason(&c));
     }
     let Some(c) = centroids_of(index, &r)? else {
         return Ok(r);

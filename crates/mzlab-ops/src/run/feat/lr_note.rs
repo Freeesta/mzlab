@@ -58,18 +58,18 @@ fn screened<R: ReadAt>(mut n: Vec<Notice>, recipe: &Recipe, index: &mut Index<R>
     if n.is_empty() {
         return n;
     }
-    if recipe.screen.centroid == mzlab_feat::lrscreen::Switch::Auto {
-        if let Some(c) = mzlab_feat::lrscreen::label_check(index).filter(|c| c.sparse) {
-            return vec![Notice {
-                key: LABEL_MISMATCH,
-                params: vec![
-                    ("profile", c.profile),
-                    ("scans", c.scans),
-                    ("runs", c.runs_pct),
-                    ("fine", c.fine_pct),
-                ],
-            }];
-        }
+    if recipe.screen.centroid == mzlab_feat::lrscreen::Switch::Auto
+        && let Some(c) = mzlab_feat::lrscreen::label_check(index).filter(|c| c.sparse)
+    {
+        return vec![Notice {
+            key: LABEL_MISMATCH,
+            params: vec![
+                ("profile", c.profile),
+                ("scans", c.scans),
+                ("runs", c.runs_pct),
+                ("fine", c.fine_pct),
+            ],
+        }];
     }
     if mzlab_feat::lrscreen::centroid_wanted(index, recipe) {
         n.iter_mut().for_each(|x| x.key = CENTROIDED);
