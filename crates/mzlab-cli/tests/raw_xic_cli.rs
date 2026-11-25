@@ -132,6 +132,9 @@ fn weak_whole_counts_have_their_counts_and_the_rule_that_decided() {
     let rows = v["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 3);
     assert_eq!(rows[0]["verdict"], "peak", "{}", rows[0]);
+    // the value state beside the verdict (docs/agenti/value-states.md): peak detected, nothing absent
+    assert_eq!(rows[0]["state"], "detected", "{}", rows[0]);
+    assert_eq!(rows[2]["state"], "absent", "{}", rows[2]);
     assert!(rows[0]["counts_gross"].as_f64().unwrap() > 10.0);
     assert!(rows[0]["sn_floor"].as_f64().unwrap() >= 3.0);
     assert!(rows[0]["rule"].as_str().unwrap().ends_with("-> peak"));

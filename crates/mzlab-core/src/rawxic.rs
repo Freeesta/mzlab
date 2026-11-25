@@ -8,7 +8,7 @@ use crate::idxread::ReadAt;
 use crate::ionscale::{self, Facts, ScanKind};
 use crate::json::round;
 use crate::mzcal::Spec;
-use crate::peakq::quality;
+use crate::peakq::{half_width, quality};
 use crate::peakq_lrauto::{lr_auto_integrate, LrAutoParams, Split};
 use crate::rawxic_json::{ions_row_json, members_json, row_json};
 use crate::routes::{Query, Routes};
@@ -46,6 +46,12 @@ pub struct Hit {
     pub shape: f64,
     pub start_rt: f64,
     pub end_rt: f64,
+    /// The width numbers of the shape gates (`quant.targets` `min_half`, `max_fwhm`, `max_asym`): scans in an unbroken run at or over half the
+    /// height, full width at half maximum in seconds, right half over left half at 10 % of the height (1 = symmetric, `None` = the trace does
+    /// not come down inside the limits).
+    pub half_pts: usize,
+    pub fwhm_s: f64,
+    pub asym: Option<f64>,
 }
 
 /// The tallest peak of a trace between `x0` and `x1`, how many peaks the window holds, the half window used and whether the apex sits on the first
@@ -82,6 +88,7 @@ pub fn tallest(
         .collect();
     let edge = inside.first() == Some(&pk.apex) || inside.last() == Some(&pk.apex);
     let q = quality(rt, y, pk.lo, pk.hi, r.noise);
+    let (half_pts, fwhm) = half_width(rt, y, pk.lo, pk.hi);
     let hit = Hit {
         area: round(pk.area * SECONDS, 1),
         height: round(pk.height, 1),
@@ -91,6 +98,9 @@ pub fn tallest(
         shape: round(q.gaussian, 3),
         start_rt: rt[pk.lo],
         end_rt: rt[pk.hi],
+        half_pts,
+        fwhm_s: round(fwhm * SECONDS, 2),
+        asym: q.asymmetry.map(|a| round(a, 2)),
     };
     (Some(hit), r.peaks.len(), r.half, edge)
 }

@@ -28,6 +28,8 @@ pub(crate) fn row_json(
     o.raw(",\"rt_window\":").floats(&[rt.0, rt.1]);
     o.raw(",\"verdict\":")
         .str(j.verdict)
+        .raw(",\"state\":")
+        .str(crate::value_word::verdict_state(j.verdict))
         .raw(",\"rule\":")
         .str(&j.rule);
     let h = j.hit.as_ref();

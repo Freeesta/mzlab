@@ -144,6 +144,19 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
         "{}",
         bad.stderr
     );
+    // a parameter problem points to the measured values and to the limits, in `hint` and on stderr; the old advice stays first
+    let hint = str_of(&v, "hint");
+    assert!(
+        hint.starts_with("fix the plan in the Flow page or with --set; ")
+            && hint.contains("mzlab-cli estimate FILE... --emit-set PLAN.json")
+            && hint.contains("mzlab-cli flow defaults STEP"),
+        "{hint}"
+    );
+    assert!(
+        bad.stderr.contains(&format!("hint: {hint}\n")),
+        "{}",
+        bad.stderr
+    );
     // the flowcheck/1 report of the invalid plan rides in the error/1 as `report`
     let text = String::from_utf8(bad.stdout.clone()).unwrap();
     let report = text
@@ -339,6 +352,7 @@ fn errors_come_as_error_with_the_code_and_stderr_of_the_text_form() {
         str_of(e.get("problems").unwrap().at(0).unwrap(), "error_key"),
         "err.flow.param.range"
     );
+    assert!(str_of(&e, "hint").contains("mzlab-cli estimate"));
     assert!(!out.exists());
     let _ = std::fs::remove_dir_all(&dir);
 }

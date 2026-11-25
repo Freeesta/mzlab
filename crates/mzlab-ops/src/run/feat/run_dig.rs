@@ -14,6 +14,8 @@ pub struct DigInputs {
     pub files: String,
     pub who: String,
     pub registry: String,
+    /// The automatic choices of the pairing of the samples with the files (a sample left out, a role proposed from a name), for the log of the run.
+    pub notes: Vec<mzlab_core::samples::PairNote>,
 }
 
 /// The polarity the Dig looks in: the recipe's, else the sign of the parent adduct, else what the MS1 scans of the files say (a mix or no scans read as positive).
@@ -52,8 +54,14 @@ pub fn dig_inputs<I: ReadAt>(
             .str(n)
             .raw(",\"kind\":\"full\"}");
     }
-    let samples = mzlab_core::samples::order_like(samples.trim(), names)?;
-    files.raw("],\"samples\":").raw(&samples).raw("}");
+    let paired = mzlab_core::samples::order_for_roles(samples.trim(), names)?;
+    files.raw("],\"samples\":").raw(&paired.text);
+    // the choices of the pairing travel with the files, so the Dig (site, app and CLI alike) writes them into its result
+    let pairing = mzlab_core::samples::notes_json(&paired.notes);
+    if !pairing.is_empty() {
+        files.raw(",\"pairing\":").raw(&pairing);
+    }
+    files.raw("}");
     let adduct = if adduct == "[M+H]+" && polarity < 0 {
         "[M-H]-"
     } else {
@@ -69,5 +77,6 @@ pub fn dig_inputs<I: ReadAt>(
         files: files.0,
         who: who.0,
         registry: hypo.registry.to_json(),
+        notes: paired.notes,
     })
 }

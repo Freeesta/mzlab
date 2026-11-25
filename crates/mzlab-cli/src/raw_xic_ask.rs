@@ -23,7 +23,7 @@ pub(crate) struct XicAsk {
 }
 
 /// A query value with every byte but the unreserved ones percent-encoded (`auto:300@5` keeps its meaning through `Query::parse`).
-fn enc(v: &str) -> String {
+pub(crate) fn enc(v: &str) -> String {
     v.bytes()
         .map(|b| match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'.' | b'-' | b'_' => (b as char).to_string(),
