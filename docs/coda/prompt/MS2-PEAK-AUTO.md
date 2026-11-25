@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Agents pick the window by hand and get it wrong; a fixed window sums background and drops the apex.
 
-**Read first.** `crates/mzlab-cli/src/spectrum_cmd.rs`, the `--sum` of the row MS2-SUM (merged first), `docs/agenti/peak-info.md`, `crates/mzlab-core/src/ionstat.rs`, `docs/studies/RAW_ACCESS_STUDY_2.md` §4 (side windows `--side`, `--gap`).
+**Read first.** `crates/mzlab-cli/src/spectrum_cmd.rs`, the `--sum` of the running chat MS2-SUM (its PR must be merged first: check `spectrum get --help` on main, stop and report if `--sum` is absent), `docs/agenti/peak-info.md`, `crates/mzlab-core/src/ionstat.rs`, `docs/studies/RAW_ACCESS_STUDY_2.md` §4 (side windows `--side`, `--gap`).
 
 **Already on main (checked 25 Nov, re-check before coding).** Peak finding and FWHM exist for traces (`peak auto-lr`); side-window background exists in `raw xic`. Reuse them.
 

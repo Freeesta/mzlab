@@ -65,6 +65,13 @@ def test_a_dependency_on_a_removed_row_fails(tmp_path):
     assert any("not a row" in b for b in cc.peggiori(root))
 
 
+def test_a_running_chat_dependency_is_allowed_but_must_be_well_formed(tmp_path):
+    root = make(tmp_path, [row("AA", "chat:RUNNING-ONE, BB"), row("BB")], {"AA": OK, "BB": OK})
+    assert cc.peggiori(root) == []
+    root = make(tmp_path / "x", [row("AA", "chat:bad id")], {"AA": OK})
+    assert any("bad chat id" in b for b in cc.peggiori(root))
+
+
 def test_the_size_caps_fail(tmp_path):
     root = make(tmp_path, [row("AA")], {"AA": OK})
     (root / "docs/coda/BRIEF.md").write_text("x" * (cc.MAX_BRIEF + 1), encoding="utf-8")

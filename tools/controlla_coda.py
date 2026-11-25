@@ -2,7 +2,8 @@
 
 Every row has an existing prompt file, no prompt file is an orphan, every prompt starts with the BRIEF line and stays small,
 ids are unique upper-case words of at most 24 characters, the `needs first` cell names only ids that are still rows (a chat
-that deletes its row deletes its id there too), and no document is over its byte cap. Standard library only.
+that deletes its row deletes its id there too) or a running chat written `chat:<ID>` (a chat started with an inline prompt has no
+row; its PR deletes the token), and no document is over its byte cap. Standard library only.
 
     python3 tools/controlla_coda.py      # prints one FAIL line per problem, exit 1 if any
 """
@@ -17,6 +18,7 @@ BRIEF_LINE = "Read docs/coda/BRIEF.md."
 MAX_CODA, MAX_BRIEF, MAX_PROMPT, MAX_ID = 25_600, 6_000, 3_500, 24
 ID_RE = re.compile(r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*")
 OWNER = "needs owner decision:"
+CHAT = "chat:"
 
 
 def rows(text: str) -> list[tuple[int, list[str]]]:
@@ -63,7 +65,10 @@ def peggiori(root: Path = ROOT) -> list[str]:
             bad.append(f"{where}: {want} does not exist -> every row has a ready prompt")
         if needs != "-" and not needs.startswith(OWNER):
             for dep in (d.strip() for d in needs.split(",")):
-                if dep not in ids:
+                if dep.startswith(CHAT):
+                    if not ID_RE.fullmatch(dep[len(CHAT):]):
+                        bad.append(f"{where}: `needs first` of {rid} has a bad chat id `{dep}`")
+                elif dep not in ids:
                     bad.append(f"{where}: `needs first` of {rid} names `{dep}`, which is not a row -> remove it, or write `-`")
                 elif dep == rid:
                     bad.append(f"{where}: {rid} needs itself")
