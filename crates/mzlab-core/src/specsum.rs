@@ -2,11 +2,11 @@
 //! total counts (cps summed over scans) per scan type, the ions (counts x fill time, only when the fill time is known) and the ion quantum of the level
 //! (`ionstat::quantum`, the one of `raw info`). Read from the index only (the arrays of the section), so the site (the lazy `rawxic` `.wasm`), the app and
 //! the CLI answer the same bytes. Nothing is subtracted: the answer says so (`background.applied`). The scans are chosen here from the section's arrays
-//! (window, level, precursor), not by `select_scans`: its filters (`msn:` tree, channels) would add ~65 KB to the lazy `.wasm`, so a channel is not asked of this route.
+//! (window, level, precursor within 0.6 Da), not by `select_scans`: its filters (`msn:` tree, channels) would add ~65 KB to the lazy `.wasm`, so a channel is not asked of this route.
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
-use crate::iteminfo::hr_profile;
+use crate::idxread::Scan;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
 
@@ -28,74 +28,96 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let fill = match q.num("fill_ms")? {
             Some(t) if t > 0.0 && t.is_finite() => Some(t),
-            Some(t) => {
-                return Err(Error::new("err.spec.fill").with("value", t));
-            }
+            Some(_) => return Err(Error::new("err.spec.fill")),
             None => None,
         };
         let precursor = q.num("precursor")?;
-        // the same scans as `/api/spectrum`: the tolerance of the precursor is the one the spectrum route uses for the kind of file
-        let profile = self.idx.scans.iter().any(|s| s.level == level && s.profile);
-        let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
-        let prec = if !profile && hr.on {
-            Self::hr_cells(level, precursor, &hr).0
-        } else {
-            (precursor, 0.6)
-        };
+        // the precursor window of the nominal-mass spectrum (`/api/spectrum` widens it in ppm only for a high-resolution centroid file, which `--sum` never sends)
+        let prec = (precursor, 0.6);
         let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
-        let sel = self.pick(level, lo, hi, prec)?;
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
-        let (n, total, types) = self.tally(sel.as_ref())?;
+        let (n, total, types) = self.tally(level, (lo, hi), prec)?;
         Ok(Some(answer(level, fill, n, total, &types, &probe, quant)))
     }
 
-    /// The scans of a window of one level: the section and which of its scans are inside the window and near the precursor.
-    fn pick(
+    /// The scans of a window of one level (inside it and, for a product-ion level, near the precursor): how many, their counts, and the same per scan type
+    /// (in order of first appearance). Read from the arrays of the section and the scan table, borrowed.
+    fn tally(
         &mut self,
         level: u8,
-        lo: f64,
-        hi: f64,
+        (lo, hi): (f64, f64),
         (precursor, tol): (Option<f64>, f64),
-    ) -> Result<Option<(usize, Vec<bool>)>> {
-        let Some(si) = self.idx.section_of(level, self.pol) else {
-            return Ok(None);
-        };
-        let ar = self.idx.arrays(si)?.clone();
-        let want = if level > 1 { precursor } else { None };
-        let ok = (0..ar.rt.len())
-            .map(|j| {
-                let s = &self.idx.scans[ar.scan_ids[j] as usize];
-                ar.rt[j] >= lo
-                    && ar.rt[j] <= hi
-                    && want.is_none_or(|p| (s.prec(-1.0) - p).abs() <= tol)
-            })
-            .collect();
-        Ok(Some((si, ok)))
-    }
-
-    /// The scans of the selection: how many, their counts, and the same per scan type (in order of first appearance).
-    fn tally(&mut self, sel: Option<&(usize, Vec<bool>)>) -> Result<(usize, f64, Types)> {
+    ) -> Result<(usize, f64, Types)> {
         let mut types: Types = Vec::new();
         let (mut n, mut total) = (0usize, 0.0f64);
-        if let Some((si, ok)) = sel {
-            let ar = self.idx.arrays(*si)?.clone();
-            for j in (0..ar.rt.len()).filter(|&j| ok[j]) {
-                let key = self.idx.scans[ar.scan_ids[j] as usize].key();
-                let c = ar.sumint[j];
-                n += 1;
-                total += c;
-                match types.iter_mut().find(|t| t.0 == key) {
-                    Some(t) => {
-                        t.1 += 1;
-                        t.2 += c;
-                    }
-                    None => types.push((key, 1, c)),
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok((n, total, types));
+        };
+        let want = if level > 1 { precursor } else { None };
+        let (ar, scans) = self.idx.arrays_scans(si)?;
+        for j in 0..ar.rt.len() {
+            let s = &scans[ar.scan_ids[j] as usize];
+            if ar.rt[j] < lo
+                || ar.rt[j] > hi
+                || want.is_some_and(|p| (s.prec(-1.0) - p).abs() > tol)
+            {
+                continue;
+            }
+            let (key, c) = (scan_type(s), ar.sumint[j]);
+            n += 1;
+            total += c;
+            match types.iter_mut().find(|t| t.0 == key) {
+                Some(t) => {
+                    t.1 += 1;
+                    t.2 += c;
                 }
+                None => types.push((key, 1, c)),
             }
         }
         Ok((n, total, types))
     }
+}
+
+/// The type of a scan for the split of a sum, as `Scan::key` names it for the survey and the product-ion scans (the filter without its range, or analyzer and
+/// polarity, level and activation) but without that function's Unicode tables and MSn path, which weigh ~10 KB in the lazy `.wasm`: an MS3 scan is named by its
+/// level and last activation only. `specsum_tests` pins the two names equal for the survey and product-ion scans of the instrument families.
+pub(crate) fn scan_type(s: &Scan) -> String {
+    // ASCII only (the spaces of a filter are ASCII): no Unicode tables in the lazy `.wasm`
+    let f = s.filter.trim_end_matches(' ');
+    if s.level <= 1 {
+        let t = match f
+            .strip_suffix(']')
+            .and_then(|t| t.rfind('[').map(|p| &t[..p]))
+        {
+            Some(t) => t.trim_end_matches(' '),
+            None => f,
+        };
+        return if t.is_empty() { "ms1".into() } else { t.into() };
+    }
+    let mut o = String::new();
+    let mut w = f.split(' ').filter(|x| !x.is_empty());
+    if let (Some(a), Some(b)) = (w.next(), w.next()) {
+        if b == "+" || b == "-" {
+            o.push_str(a);
+            o.push(' ');
+            o.push_str(b);
+            o.push(' ');
+        }
+    }
+    o.push_str("ms");
+    o.push_str(&s.level.to_string());
+    let act = s
+        .act
+        .as_deref()
+        .filter(|a| !a.is_empty())
+        .or_else(|| s.path.as_ref().and_then(|p| p.last()).map(|l| l.1.as_str()))
+        .unwrap_or("");
+    if !act.is_empty() {
+        o.push_str(" @");
+        o.extend(act.chars().map(|c| c.to_ascii_lowercase()));
+    }
+    o
 }
 
 /// The answer text (see the module header for the keys).

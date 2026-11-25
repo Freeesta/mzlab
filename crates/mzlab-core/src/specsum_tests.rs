@@ -152,3 +152,46 @@ fn the_evidence_agrees_with_the_summed_spectrum_of_the_same_window() {
         .sum();
     assert!((ym * 25.0 - y).abs() < 1.0, "{ym} {y}");
 }
+
+/// The split of a sum names the scan types as `Scan::key` does (the survey and the product-ion scans of every instrument family), so the two lists agree.
+#[test]
+fn the_scan_type_of_the_split_is_the_key_of_the_scan() {
+    use crate::idxread::Scan;
+    let scan =
+        |level: u8, filter: &str, act: Option<&str>, path: Option<Vec<(f64, String, f64)>>| Scan {
+            level,
+            filter: filter.into(),
+            act: act.map(String::from),
+            path,
+            ..Default::default()
+        };
+    let scans = [
+        scan(1, "FTMS + p ESI Full ms [100.00-1000.00]", None, None),
+        scan(1, "Q1MS + ESI [50.0-500.0]  ", None, None),
+        scan(1, "", None, None),
+        scan(
+            2,
+            "ITMS + c ESI d Full ms2 364.20@cid35.00 [50.00-400.00]",
+            Some("CID"),
+            None,
+        ),
+        scan(
+            2,
+            "ITMS + c ESI d Full ms2 364.20@hcd30.00 [50.00-400.00]",
+            None,
+            Some(vec![(364.2, "hcd".into(), 30.0)]),
+        ),
+        scan(2, "", Some("HCD"), None),
+        scan(2, "", None, None),
+        scan(2, "+ EPI (364.2) CE (35)", Some("cid"), None),
+        scan(2, "- p ESI Full ms2 100.0", None, None),
+    ];
+    for s in &scans {
+        assert_eq!(
+            super::specsum::scan_type(s),
+            s.key(),
+            "filter {:?}",
+            s.filter
+        );
+    }
+}

@@ -54,12 +54,19 @@ impl ReadAt for JsReader {
     }
 }
 
+/// The routes over the index of `size` bytes read by `read`, `pol` as the engine's `set_polarity`; one copy for both exports (not inlined: it holds the index reader).
+#[inline(never)]
+fn open(size: f64, read: Function, pol: i32) -> Result<Routes<JsReader>, JsValue> {
+    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
+    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
+    Ok(r)
+}
+
 /// `api/rawxic?mz=LIST&rt=A,B[&da=..&ms_level=..&mz_offset=..&min_sn=..]` (`Routes::raw_xic_route`) over the `.mzidx` of `size` bytes read by `read`:
 /// `{members, "rows":[..]}`, the bytes `mzlab-cli raw xic` prints per sample; `pol` as the engine's `set_polarity` (0 = every section).
 #[wasm_bindgen]
 pub fn raw_xic(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
-    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
-    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
+    let mut r = open(size, read, pol)?;
     let out = r
         .raw_xic_route(&Query::parse(query))
         .map_err(|e| error_json(&e))?;
@@ -70,8 +77,7 @@ pub fn raw_xic(size: f64, read: Function, pol: i32, query: &str) -> Result<Strin
 /// over the `.mzidx` of `size` bytes read by `read`; `pol` as in `raw_xic`.
 #[wasm_bindgen]
 pub fn spec_sum(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
-    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
-    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
+    let mut r = open(size, read, pol)?;
     let out = r
         .spec_sum_route(&Query::parse(query))
         .map_err(|e| error_json(&e))?;
