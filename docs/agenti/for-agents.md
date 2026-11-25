@@ -9,12 +9,13 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | roles (blank, QC, standard, time) | `sample table FILE... > samples.json`; roles and names from a lab CSV: `sample import META.csv DIR --dry-run`, then without it; design: `sample design propose` |
 | profile or centroid, ion counts, m/z grid, mass offset of a file | `raw info FILE... [--offset-ion MZ@RT]` (`raw-info/1`); index cache first: `raw cache FILE... --cache DIR` |
 | is there a peak at this m/z and time, in each file (verdict, rule, ion counts, upper limit) | `raw xic FILE... --mz LIST --rt A,B` (`raw-xic/1`), `--set min_sn=,min_points=,alpha=` |
+| is this MS2 spectrum credible: how many scans and ions it rests on | `spectrum get FILE --rt A,B --ms-level 2 --sum [--fill-ms T]`: `evidence.sum` (scans, cps, ions, quantum); the mean of a window hints at it |
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
 | every peak of every channel of every file | `peak table FILE... --auto` (one call, all files); hand windows: `--windows` |
 | XICs of many ions, then their peaks | `trace xic FILE --mz M1,M2,... --da 0.3 --out F.json` per file, then `peak table --traces A.json --traces B.json --auto` |
 | a target list in every file; weak noise peaks forced in blanks or matrix (state `detected`/`forced`/`absent`, S/N and shape gates) | `quant targets --targets T FILE... --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --log log.json`; the log `decisions` lists the evidence of every forced row |
-| blank threshold, replicates, QC CV | Flow step `table.filter` (`blank_ratio`, `blank_subtract`, ...); by ratio: `table compare` |
+| blank threshold, replicates, QC CV; drop what a blank (carryover, contaminant, matrix blank) also shows | Flow step `table.filter` (`blank_ratio`, `blank_subtract`, ... `counts.blank` says how many it dropped); by ratio: `table compare`; one spectrum: `spectrum get --minus`; `features` says on stderr when file names look like blanks |
 | correlated ions, isotopes, adducts of one compound | Flow step `features.group`; one ion: `ion pattern`, `ion match` |
 | centroid profile spectra | Flow step `spectra.centroid` |
 | products of a parent, unit resolution (kinetics) | Flow step `tp.dig_lr`: ONE run over the whole series (every file in `index`); other settings: rerun the same `--out` with `--set` (cached) |

@@ -19,12 +19,11 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 |---|---|---|---|
 | ION-COUNTS | `docs/coda/prompt/ION-COUNTS.md` | - | correctness: cps and ions per scan type, from the method; reuse `raw xic` ionstat |
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
-| MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | chat:MS2-SUM | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
+| MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
 | FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | chat:ROLES-IN-TP | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
-| FIND-BLANK | `docs/coda/prompt/FIND-BLANK.md` | - | discoverability: blank subtraction, `counts.blank`, `spectrum get --minus` |
 | FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | RAW-SCAN | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
@@ -52,4 +51,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-SCAN | `docs/coda/prompt/RAW-SCAN.md` | - | AU-16: `raw scan` (study §4); new lazy module |
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
-| RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | chat:MS2-SUM | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
+| RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
+| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | needs owner decision: the index gains a fill-time column (index format version) | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states |
+| SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |

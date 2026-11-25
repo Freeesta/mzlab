@@ -6,9 +6,9 @@ Read docs/coda/BRIEF.md.
 
 **Why.** `trace xic` at level 2 sums every precursor.
 
-**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §8, `docs/agenti/raw-access.md`, `docs/agenti/data-channels.md` (`channels/1`), `crates/mzlab-cli/src/items_cmd.rs` (`ms2_exps`), the `--sum` of the running chat MS2-SUM (merged first). Start with `grep -n 'channels\|raw-access' docs/agenti/INDICE.md`, then `grep -n 'ms2_exps' crates/mzlab-cli/src/items_cmd.rs`.
+**Read first.** `docs/studies/RAW_ACCESS_STUDY_2.md` §8, `docs/agenti/raw-access.md`, `docs/agenti/data-channels.md` (`channels/1`), `crates/mzlab-cli/src/items_cmd.rs` (`ms2_exps`), the `--sum` of `spectrum get` (`crates/mzlab-core/src/specsum.rs`). Start with `grep -n 'channels\|raw-access' docs/agenti/INDICE.md`, then `grep -n 'ms2_exps' crates/mzlab-cli/src/items_cmd.rs`.
 
-**Already on main (checked 25 Nov, re-check before coding).** `channels/1` and `items/1` list precursors; `spectrum get --sum` (chat MS2-SUM) gives the summed spectrum. Do not duplicate it: `raw ms2 spectrum` calls the same code.
+**Already on main (checked 25 Nov, re-check before coding).** `channels/1` and `items/1` list precursors; `spectrum get --sum` (`/api/specsum`) gives the summed spectrum. Do not duplicate it: `raw ms2 spectrum` calls the same code.
 
 **Done means.** Schema `raw-ms2/1`; the neutral-loss list shared with `raw companions`; exit 5 with the nearest three precursors; parity CLI=app=wasm; synthetic file with two precursors. New site code goes in a new lazy module (pattern: `crates/mzlab-rawxic-wasm`, `tools/moduli/rawxic.toml`), never growing `raw` or `rotte` by more than 5 %.
 
