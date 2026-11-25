@@ -332,7 +332,9 @@ impl<R: ReadAt> Routes<R> {
             .map(|(k, s)| judge(k, s, n_p as f64, n_b, q, &ask.t))
             .collect();
         // highest net first; equal nets in mass order, so the answer is one
-        cells.sort_by(|x, y| y.net.total_cmp(&x.net).then(x.bin.cmp(&y.bin)));
+        crate::sortc::slice_by(&mut cells, |x, y| {
+            y.net.total_cmp(&x.net).then(x.bin.cmp(&y.bin))
+        });
         let count = |w: &str| cells.iter().filter(|c| c.verdict == Some(w)).count();
         let (peaks, traces) = (count("peak"), count("trace"));
         let n_bins = cells.len();
