@@ -1,5 +1,5 @@
 //! The label of a sample of a multi-sample file (`features --sample`): the column of the table. The sample name, never the file name, with the extension of
-//! its file kept so that every table cuts that and not a dot of the name; members whose names collide take `NAME (FILE #ID)`. Pure, so the Flow uses the same rule.
+//! its file kept so that every table cuts that and not a dot of the name; the characters `/ \ : * ? " < > | #` become `_` and the name is cut at 120 characters, as the site does; members whose names collide take `NAME (FILE #ID)`. Pure, so the Flow uses the same rule.
 
 /// One member of a series taken from a multi-sample file: its file name, sample id and sample name.
 pub(crate) struct Member<'a> {
@@ -27,16 +27,26 @@ fn with_extension(name: &str, file: &str) -> String {
     }
 }
 
+/// A sample name as a label: trimmed, the characters a file name cannot hold (and a path separator, which every reader of a table takes for a folder) become `_`, at
+/// most 120 characters: the rule of the site for the mzML of a sample (`wiffName` of `conversione.js`; `tests/test_label_parity.py` runs both on the same names).
+fn clean(name: &str) -> String {
+    name.trim()
+        .chars()
+        .map(|c| if "/\\:*?\"<>|#".contains(c) { '_' } else { c })
+        .take(120)
+        .collect()
+}
+
 /// The labels of `members` (one per member, in order) and whether each had to take the tie-break (`NAME (FILE #ID)`). An empty sample name is `FILE #ID`.
 pub(crate) fn labels(members: &[Member]) -> Vec<(String, bool)> {
     let plain: Vec<String> = members
         .iter()
         .map(|m| {
-            let n = m.sample.trim();
+            let n = clean(m.sample);
             if n.is_empty() {
                 format!("{} #{}", base(m.file), m.id)
             } else {
-                n.to_string()
+                n
             }
         })
         .collect();

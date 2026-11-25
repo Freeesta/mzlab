@@ -17,6 +17,7 @@
   "err.formula.parens": "{formula} = formula written by the user.",
   "err.adduct.unknown": "{adduct} = adduct name.",
   "err.iso.element": "{symbol} = element symbol.",
+  "err.compare.duplicateHint": "Hint line under err.compare.duplicate on the command line: the command that makes one column per sample and the one that lists the ids. Not shown in the browser.",
   "err.compare.duplicate": "Engine error message of table compare; {detail} = the column name that appears twice and how many columns have it. The text names the command that makes one column per sample.",
   "err.compare.input": "Engine error message; {detail} = the file and why it cannot be read.",
   "err.compare.overlap": "Engine error message; {detail} = the columns in both the reference and the blank.",

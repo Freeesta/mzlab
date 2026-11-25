@@ -1,7 +1,7 @@
 """`table.compare@1` in the `flowcompare` .wasm (mzlab-feat-wasm, feature `flow_compare`, through Node: `flow_compare`, the function the browser calls) gives the same bytes as
 `mzlab-cli table compare` on the same `.mzfeat` of the synthetic unit-resolution files of `tools/lr_synthetic.py` (with and without a samples file) and as the native step of a `flow run` on them.
 The golden file `tests/golden/compare_lr.json` is checked by `table_compare_cmd_tests.rs`. A table with one name on two columns (several samples of one file under the file name) is the same error
-`err.compare.duplicate` in the wasm and the CLI (`test_a_table_with_one_name_on_two_columns_is_the_same_error_in_the_wasm_and_the_cli`). Skipped on a machine without cargo, wasm-bindgen, node or numpy;
+`err.compare.duplicate` in the wasm and the CLI (`test_a_table_with_one_name_on_two_columns_is_the_same_error_document_in_the_wasm_the_cli_and_the_flow`). Skipped on a machine without cargo, wasm-bindgen, node or numpy;
 in CI (GITHUB_ACTIONS) a missing tool FAILS `test_the_tools_are_there_in_ci` and numpy is required, so the wasm leg never goes quiet."""
 import json
 import os
@@ -87,15 +87,37 @@ def test_an_error_has_the_same_key_in_the_wasm(work):
     assert got.startswith("ERROR") and "err.compare.selector" in got, got
 
 
-def test_a_table_with_one_name_on_two_columns_is_the_same_error_in_the_wasm_and_the_cli(work):
+def duplicate_table(work):
     # the blank column takes the name of the noise column (both names are 22 bytes, so the header keeps its length): what a table of
-    # several samples of one file under the file name looks like
+    # several samples of one file under the file name looks like. The names differ in case in the second table: the check ignores it, as the selectors do.
     b = (work / "run" / "gap.mzfeat").read_bytes()
     assert NAMES[1].encode() in b and len(NAMES[0]) == len(NAMES[1])
     table = work / "dup.mzfeat"
     table.write_bytes(b.replace(NAMES[1].encode(), NAMES[0].encode()))
-    got = wasm(work, table, params={"ref": "LR_bench-s1*", "blank": "nothing"})
-    assert got.startswith("ERROR") and "err.compare.duplicate" in got, got
+    upper = work / "dup_case.mzfeat"
+    upper.write_bytes(b.replace(NAMES[1].encode(), NAMES[0].upper().encode()))
+    return table, upper
+
+
+def test_a_table_with_one_name_on_two_columns_is_the_same_error_document_in_the_wasm_the_cli_and_the_flow(work):
+    table, upper = duplicate_table(work)
+    for t in (table, upper):
+        got = wasm(work, t, params={"ref": "LR_bench-s1*", "blank": "nothing"})
+        assert got.startswith("ERROR "), got
+        doc = json.loads(got.removeprefix("ERROR "))
+        assert doc["error_key"] == "err.compare.duplicate" and "is on 2 columns" in doc["params"]["detail"], got
+        # the CLI document is the same key and parameters (it adds the code, the rendered message, the hint and the command)
+        with pytest.raises(CommandError) as e:
+            cli("table", "compare", str(t), "--ref", "LR_bench-s1*", "--blank", "nothing", "--json")
+        assert e.value.returncode == 4
+        cli_doc = json.loads(e.value.stdout)
+        assert {k: cli_doc[k] for k in ("error_key", "params")} == doc, (got, e.value.stdout)
+        assert cli_doc["hint"] and cli_doc["hint"] in e.value.stderr and cli_doc["message"] not in cli_doc["hint"]
+        assert "features FILE --sample LIST" in cli_doc["hint"] and "sample list FILE" in cli_doc["hint"]
+    # the native executor of the step (flow_tablecmp.rs) fails with the same key
+    plan = {"format": "mzflow/2", "inputs": [{"name": "dup.mzfeat", "type": "table"}],
+            "steps": [{"id": "cmp", "step": "table.compare@1", "in": {"table": "file:dup.mzfeat"}, "params": {"ref": "LR_bench-s1*", "blank": "nothing"}}]}
+    (work / "dup_plan.json").write_text(json.dumps(plan), encoding="utf-8")
     with pytest.raises(CommandError) as e:
-        cli("table", "compare", str(table), "--ref", "LR_bench-s1*", "--blank", "nothing")
-    assert e.value.returncode == 4 and "err.compare.duplicate" in e.value.stderr and "features FILE --sample LIST" in e.value.stderr
+        cli("flow", "run", str(work / "dup_plan.json"), "--in", str(work), "--out", str(work / "dup_run"))
+    assert "err.compare.duplicate" in e.value.stdout + e.value.stderr, (e.value.stdout, e.value.stderr)

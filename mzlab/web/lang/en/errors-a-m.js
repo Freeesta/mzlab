@@ -42,6 +42,7 @@ I18N.add("en", {
   "err.compare.input": "The table or the samples file cannot be read: {detail}.",
   "err.compare.param": "A comparison setting is wrong: {detail}.",
   "err.compare.selector": "A selector matches no column: {detail}.",
+  "err.compare.duplicateHint": "Make the table again with mzlab-cli features FILE --sample LIST (one column per sample); mzlab-cli sample list FILE gives the ids.",
   "err.compare.duplicate": "Two columns have the same name, so no selector can tell them apart: {detail}. A table of several samples of one file needs one column per sample: make it again with mzlab-cli features FILE --sample LIST (the ids come from mzlab-cli sample list FILE).",
   "err.compare.overlap": "A column cannot be both reference and blank: {detail}.",
   "err.compare.samples": "A role: or time: selector needs the samples file: {detail}.",

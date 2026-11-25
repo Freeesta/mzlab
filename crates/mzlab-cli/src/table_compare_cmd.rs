@@ -178,7 +178,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match go() {
         Err(e) if e.key == "err.compare.duplicate" => Outcome::fail_error(&e).with_hint(
-            "make the table again with `mzlab-cli features FILE --sample LIST` (one column per sample; the ids: `mzlab-cli sample list FILE`)",
+            &crate::samples_import::say("err.compare.duplicateHint", &[]),
         ),
         Err(e) => crate::sample_select::fail(&e),
         Ok(t) => crate::emit(t, &j.out),

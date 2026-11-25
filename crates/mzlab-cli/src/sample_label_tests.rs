@@ -51,3 +51,22 @@ fn an_empty_name_falls_back_to_the_file_and_the_id() {
     let l = labels(&[m("a.wiff", 3, " ")]);
     assert_eq!(l[0].0, "a #3.wiff");
 }
+
+#[test]
+fn separators_become_underscores_and_an_at_sign_survives_the_member_label() {
+    let l = labels(&[
+        m("a.wiff", 1, "x/y"),
+        m("a.wiff", 2, "p\\q r"),
+        m("a.wiff", 3, "c@5"),
+    ]);
+    let names: Vec<&str> = l.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names, ["x_y.wiff", "p_q r.wiff", "c@5.wiff"]);
+    // the label of a member of the plan is `COLUMN@ID`: the last `@` followed by the id splits it, whatever the name holds
+    for (k, (column, _)) in l.iter().enumerate() {
+        let member = format!("{column}@{}", k + 1);
+        assert_eq!(
+            crate::flow_set::split_sample(&member),
+            (column.as_str(), Some(k as u32 + 1))
+        );
+    }
+}

@@ -308,3 +308,66 @@ fn quant_targets_says_that_it_integrates_the_first_sample_and_names_the_way_to_t
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_sample_names_give_the_roles_and_times_the_selectors_of_table_compare_read() {
+    // the roles and times of `sample import` / `sample table` are guessed from the names; the column of a sample is that name, so
+    // `role:blank` and `time:0` find the right columns (before, every column of the file carried the file name and no role could tell them apart)
+    let (dir, _) = pair("roles");
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
+    let made = Command::new("python3")
+        .arg(tools.join("wiff_grande.py"))
+        .arg(dir.join("named"))
+        .args(["--samples", "3", "--scans", "40", "--points", "50"])
+        .args(["--names", "Ctrl_0min,Treated_60min,Blank_1"])
+        .output()
+        .expect("python3 is needed by this test");
+    assert!(
+        made.status.success(),
+        "{}",
+        String::from_utf8_lossy(&made.stderr)
+    );
+    let wiff = dir.join("named/grande.wiff").display().to_string();
+    let o = run(&["features", &wiff, "--sample", "1,2,3"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let table = dir.join("t.csv");
+    std::fs::write(&table, &o.stdout).unwrap();
+    let h = header(&o);
+    let columns: Vec<String> = areas(&h)
+        .iter()
+        .map(|c| c.trim_start_matches("datafile:").to_string())
+        .collect();
+    assert_eq!(columns, ["Ctrl_0min", "Treated_60min", "Blank_1"]);
+    let rows: Vec<(String, String, String)> = columns
+        .iter()
+        .map(|n| (format!("{n}.wiff"), String::new(), String::new()))
+        .collect();
+    let samples = dir.join("samples.json");
+    std::fs::write(
+        &samples,
+        mzlab_core::samples::to_json(&mzlab_core::samples::propose(&rows)),
+    )
+    .unwrap();
+    let c = run(&[
+        "table",
+        "compare",
+        table.to_str().unwrap(),
+        "--samples",
+        samples.to_str().unwrap(),
+        "--ref",
+        "time:0",
+        "--blank",
+        "role:blank",
+        "--dry-run",
+    ]);
+    assert_eq!(c.code, 0, "{}", c.stderr);
+    let text = String::from_utf8_lossy(&c.stdout).into_owned();
+    for part in [
+        r#""reference":{"selector":"time:0","columns":[{"name":"Ctrl_0min","time_min":0,"time_origin":"samples"}]}"#,
+        r#""blank":{"selector":"role:blank","columns":[{"name":"Blank_1""#,
+        r#""treated":{"columns":[{"name":"Treated_60min","time_min":60,"time_origin":"samples"}]}"#,
+    ] {
+        assert!(text.contains(part), "{part} in {text}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

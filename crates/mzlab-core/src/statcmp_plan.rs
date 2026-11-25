@@ -206,12 +206,14 @@ fn params_of(o: &CmpOpts) -> R<(Params, Vec<Value>)> {
 
 pub(crate) fn plan_of(inp: &CmpIn, o: &CmpOpts) -> R<Plan> {
     let (par, mut choices) = params_of(o)?;
-    // two columns with one name cannot be told apart by any selector: the table was made from several samples of one file under the file name
-    if let Some((i, n)) = (0..inp.names.len()).find_map(|i| {
-        let n = inp.names[i].as_str();
-        (inp.names[..i].iter().any(|o| o == n)).then_some((i, n))
+    // two columns with one name (selectors ignore the case, so so does this) cannot be told apart by any selector: the table was made from several
+    // samples of one file under the file name
+    let low: Vec<String> = inp.names.iter().map(|n| n.to_lowercase()).collect();
+    if let Some((i, n)) = (0..low.len()).find_map(|i| {
+        let n = low[i].as_str();
+        (low[..i].iter().any(|o| o == n)).then_some((i, inp.names[i].as_str()))
     }) {
-        let all = inp.names.iter().filter(|o| o.as_str() == n).count();
+        let all = low.iter().filter(|o| **o == low[i]).count();
         let text = format!(
             "the name '{n}' is on {all} columns (the second is column {})",
             i + 1
