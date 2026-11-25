@@ -150,7 +150,7 @@ fn warp_params() -> Vec<Param> {
 
 /// `features.gapfill`: integrates the raw traces where a file has no feature (`gapfill`).
 pub(super) fn gapfill() -> Step {
-    let params = vec![
+    let mut params = vec![
         Param::number("floor", "Noise floor")
             .min(0.0)
             .default_num(20_000.0)
@@ -183,12 +183,8 @@ pub(super) fn gapfill() -> Step {
             .unit("scans")
             .doc("A trace longer than this is background and is not taken")
             .advanced(),
-        Param::choice("dedup", "Merge duplicate rows", &["auto", "off"])
-            .default_str("auto")
-            .doc("Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed")
-            .tip("Unit resolution only: merges rows within 0.6 Da whose areas correlate, keeping the taller one; areas are never summed.")
-            .advanced(),
     ];
+    params.extend(super::table_algo::dedup_params());
     Step {
         ins: vec![
             Port::new("table", DataType::Table, "Aligned feature table").lineage(),

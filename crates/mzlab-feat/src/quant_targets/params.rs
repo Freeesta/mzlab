@@ -36,6 +36,12 @@ pub struct Params {
     /// Fewest points and lowest Gaussian correlation (`peakq::quality`) of an acceptable shape.
     pub min_points: usize,
     pub min_shape: f64,
+    /// Shape gates on the width of the peak, all off (0) by default so the detected set does not move: scans in an unbroken run at or over half
+    /// the height (at least), full width at half maximum in seconds (at most), asymmetry at 10 % of the height as the larger of right/left and
+    /// left/right (at most, 1 = symmetric). A peak that misses one is `bad_shape`, its numbers kept.
+    pub min_half: usize,
+    pub max_fwhm: f64,
+    pub max_asym: f64,
     pub offset: OffsetMode,
     /// Comma list of case-insensitive globs over the file names: the blanks.
     pub blank_pattern: String,
@@ -57,6 +63,9 @@ impl Default for Params {
             min_sn: 3.0,
             min_points: 5,
             min_shape: 0.5,
+            min_half: 0,
+            max_fwhm: 0.0,
+            max_asym: 0.0,
             offset: OffsetMode::Fixed(0.0),
             blank_pattern: String::new(),
             ms_level: 1,
@@ -149,6 +158,13 @@ impl Params {
                 "min_shape" => {
                     p.min_shape = num()
                         .filter(|x| (0.0..=1.0).contains(x))
+                        .ok_or_else(|| bad(k, &t))?
+                }
+                "min_half" => p.min_half = count(0.0).ok_or_else(|| bad(k, &t))? as usize,
+                "max_fwhm" => p.max_fwhm = num().filter(|x| *x >= 0.0).ok_or_else(|| bad(k, &t))?,
+                "max_asym" => {
+                    p.max_asym = num()
+                        .filter(|x| *x == 0.0 || *x >= 1.0)
                         .ok_or_else(|| bad(k, &t))?
                 }
                 "offset" => p.offset = offset_of(&t)?,

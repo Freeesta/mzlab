@@ -18,13 +18,17 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | id | prompt file | needs first | notes |
 |---|---|---|---|
 | ION-COUNTS | `docs/coda/prompt/ION-COUNTS.md` | - | correctness: cps and ions per scan type, from the method; reuse `raw xic` ionstat |
-| FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
+| FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | - | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
+| FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
-| FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
+| FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | - | discoverability: value states already exist; find why they were not reached |
 | FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | - | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
-| FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
-| FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
+| FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | - | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
+| FIND-LOOP-XIC | `docs/coda/prompt/FIND-LOOP-XIC.md` | - | discoverability: loop hint for `trace xic` / `raw xic` called once per target; reuse `repeat_hint.rs` |
+| REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
+| LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
+| LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | - | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
 | NOMINAL-BIN | `docs/coda/prompt/NOMINAL-BIN.md` | - | `--bin nominal` for low-resolution profile data, honours `--mz-offset` |
@@ -34,6 +38,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | BLANK-CONTAMINANTS | `docs/coda/prompt/BLANK-CONTAMINANTS.md` | - | flag contaminant ions seen in blanks before an acquisition slot is spent; builds on AU-7 |
 | STATES-PROV | `docs/coda/prompt/STATES-PROV.md` | - | AU-3: `table.stats` and `quant.curve` name the states they used in `prov/1` |
 | NA-CELL-STATE | `docs/coda/prompt/NA-CELL-STATE.md` | needs owner decision: printing `NA` for `na` changes an existing cell value; opt-in step parameter or not | AU-3: aligned CSV `na` versus `absent`, Dig points, per-cell S/N |
+| SHAPE-GATES-OTHER | `docs/coda/prompt/SHAPE-GATES-OTHER.md` | - | the `quant targets` peak-shape gates (`min_half`, `max_fwhm`, `max_asym`) and the six-check decision log in `peak auto-lr`, `peak table --auto`, `chrom.transitions`, Dig and `raw xic` |
+| MZTAB-CELL-STATE | `docs/coda/prompt/MZTAB-CELL-STATE.md` | needs owner decision: a state column in `export.mztab` adds a column to an existing export; opt-in parameter or not | AU-3: per-cell value state in `export.mztab` (areas only today) |
 | BLANK-BAND | `docs/coda/prompt/BLANK-BAND.md` | - | AU-6: blank level per m/z band in `estimate`; `rotte` must not grow |
 | RT-DRIFT-PROPOSAL | `docs/coda/prompt/RT-DRIFT-PROPOSAL.md` | - | AU-6: `estimate` proposes `rt_warp=piecewise` from measured drift |
 | LLM-PARAMS-RULES | `docs/coda/prompt/LLM-PARAMS-RULES.md` | - | AU-6 and AU-7: merge the rules of `llm params` with `estimate`; fix the R-blank-1 text |
