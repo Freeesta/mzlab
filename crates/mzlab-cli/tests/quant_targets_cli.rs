@@ -421,3 +421,118 @@ fn areas_are_those_of_the_trace_xic_and_peak_auto_lr_commands() {
     );
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// Two batches of one sample, the second 0.3 min later, and a narrow window list whose `std` row is the internal reference.
+fn drift_dir(tag: &str) -> PathBuf {
+    let d = dir(tag);
+    let later: Vec<Ion> = sample()
+        .iter()
+        .map(|o| Ion(o.0, o.1 + 0.3, o.2, o.3))
+        .collect();
+    std::fs::write(d.join("runs/S_02.mzML"), mzml(&later, 3)).unwrap();
+    std::fs::write(
+        d.join("narrow.csv"),
+        "id,mz,rt_min,rt_max,polarity,role\nclean,200.0,4.8,5.2,+,\nstd,400.0,1.5,2.5,+,standard\n",
+    )
+    .unwrap();
+    d
+}
+
+#[test]
+fn rt_ref_follows_the_reference_across_batches_with_its_evidence_and_exit_codes() {
+    let d = drift_dir("rtref");
+    let run = |extra: &[&str]| {
+        let mut a = vec![
+            "--targets",
+            "narrow.csv",
+            "runs/S_01.mzML",
+            "runs/S_02.mzML",
+        ];
+        a.extend_from_slice(extra);
+        cli(&a, &d)
+    };
+    // off: the old header and a missed peak in the later batch
+    let off = run(&[]);
+    assert_eq!(off.status.code(), Some(0), "{}", text(&off.stderr));
+    let off = text(&off.stdout);
+    assert!(off.starts_with(&format!("{}\n", mzlab_feat::quant_targets::HEADER)));
+    assert!(
+        !off.lines()
+            .any(|l| l.starts_with("S_02.mzML,clean,") && l.contains(",ok,")),
+        "{off}"
+    );
+    // discoverability: the reference peaks 0.3 min apart between the batches, so stderr names the switch (and only then)
+    let hint = text(&run(&[]).stderr);
+    assert!(
+        hint.contains("hint: ")
+            && hint.contains("--rt-ref auto")
+            && hint.contains("note.quant.targets.rtRef"),
+        "{hint}"
+    );
+    assert!(hint.contains("0.3 min apart"), "{hint}");
+    assert!(!text(&run(&["--rt-ref", "auto"]).stderr).contains("note.quant.targets.rtRef"));
+    // a reference missed at offset 0 names --offset auto, which then measures it
+    let missed = text(&run(&["--da", "0.2"]).stderr);
+    assert!(
+        missed.contains("--offset auto") && missed.contains("note.quant.targets.offsetAuto"),
+        "{missed}"
+    );
+    assert!(!text(&run(&["--da", "0.2", "--offset", "auto"]).stderr)
+        .contains("note.quant.targets.offsetAuto"));
+    // on: the column, the moved window, the evidence on stderr-free stdout and in the log
+    let on = run(&["--rt-ref", "auto", "--log", "log.json"]);
+    assert_eq!(on.status.code(), Some(0), "{}", text(&on.stderr));
+    let csv = text(&on.stdout);
+    assert!(
+        csv.lines()
+            .next()
+            .unwrap()
+            .ends_with(",mz_offset_da,rt_shift_min"),
+        "{csv}"
+    );
+    let row = csv
+        .lines()
+        .find(|l| l.starts_with("S_02.mzML,clean,"))
+        .unwrap();
+    assert!(row.contains(",detected,"), "{row}");
+    let shift: f64 = row.rsplit(',').next().unwrap().parse().unwrap();
+    assert!((shift - 0.3).abs() < 0.03, "{row}");
+    let log: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(d.join("log.json")).unwrap()).unwrap();
+    let ev = &log["files"][1]["rt_ref"];
+    assert_eq!(
+        (ev["reference"].as_str(), ev["status"].as_str()),
+        (Some("std"), Some("ok")),
+        "{log}"
+    );
+    assert_eq!(
+        log["files"][0]["rt_ref"]["shift_min"]
+            .as_f64()
+            .map(f64::abs)
+            .map(|x| x < 0.03),
+        Some(true)
+    );
+    assert_eq!(log["params"]["rt_ref"], "auto");
+    // --json carries the same column, the dry run the parameter and no data
+    let j = run(&["--rt-ref", "std@2.0", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&text(&j.stdout)).unwrap();
+    assert!(json["rows"][0].get("rt_shift_min").is_some(), "{json}");
+    let plan = run(&["--rt-ref", "auto", "--dry-run"]);
+    assert_eq!(plan.status.code(), Some(0));
+    assert!(
+        text(&plan.stdout).contains("\"rt_ref\":\"auto\""),
+        "{}",
+        text(&plan.stdout)
+    );
+    // an unknown id or a bad value is usage (exit 2) with the key on stderr
+    for bad in ["nope", "auto@x"] {
+        let e = run(&["--rt-ref", bad]);
+        assert_eq!(e.status.code(), Some(2), "{bad}: {}", text(&e.stderr));
+        assert!(
+            text(&e.stderr).contains("err.quant.targets.param"),
+            "{}",
+            text(&e.stderr)
+        );
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}

@@ -15,6 +15,7 @@ use crate::Outcome;
 pub const HELP: &str = "mzlab-cli quant targets: every target of a table integrated in every file, one pass per file.
 
 usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS]
+                               [--rt-ref off|auto|ID[@RT]]
                                [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N] [--cache DIR]
 
   --targets FILE   CSV (id,mz,rt_min,rt_max[,polarity][,role]) or JSON ([{...}] or {\"targets\":[...]}); polarity + or - (empty: every scan),
@@ -25,6 +26,9 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
   --min-sn N       lowest S/N of a detected peak (default 3)
   --offset         m/z offset (observed - true): 0 (default), a number of Da (|D| <= 0.6), auto (measured per file and polarity on the first
                    standard/parent row; none: 0, logged) or auto:MZ[@RT] (measured on that ion)
+  --rt-ref         keep the RT windows on an internal reference when batches drift: off (default), auto (first standard/parent row) or a
+                   target id, each with @RT where it is expected (else its window centre); per file every window moves by the apex found
+                   minus that (never on a weak peak), written in the rt_shift_min column and the log; the search half-width is rt_span (0.6 min)
   --blank-pattern  comma list of case-insensitive globs over the file names: the blanks; a target detected in a blank flags the samples in_blank
   --set NAME=VALUE any parameter of the step quant.targets@1 (repeatable): min_points (5) and min_shape (0.5, Gaussian correlation) of an
                    acceptable shape, ms_level (1), smooth_half (0 = automatic per trace) and valley (10 %) of the peak auto-lr engine
@@ -52,11 +56,12 @@ struct Job {
 }
 
 /// The flags that are step parameters: flag, parameter name.
-const PARAMS: [(&str, &str); 4] = [
+const PARAMS: [(&str, &str); 5] = [
     ("--da", "da"),
     ("--min-sn", "min_sn"),
     ("--offset", "offset"),
     ("--blank-pattern", "blank_pattern"),
+    ("--rt-ref", "rt_ref"),
 ];
 
 fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
@@ -239,8 +244,22 @@ fn run_job(j: &Job) -> Result<(String, String)> {
                 crate::error_text::catalog_text(w).unwrap_or_default()
             );
         }
+        for h in &out.hints {
+            eprintln!("{}", hint_line(h));
+        }
         Ok((if j.json { out.json() } else { out.csv }, out.log))
     })
+}
+
+/// A hint as one stderr line: the catalogue text with its `{name}` words filled, then the key.
+fn hint_line(h: &mzlab_feat::quant_targets::Hint) -> String {
+    let mut t = crate::error_text::catalog_text(h.key)
+        .unwrap_or_default()
+        .to_string();
+    for (k, v) in &h.params {
+        t = t.replace(&format!("{{{k}}}"), v);
+    }
+    format!("hint: {t} ({})", h.key)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

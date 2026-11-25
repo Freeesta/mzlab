@@ -1,7 +1,9 @@
 """`quant.targets@1` in the `quanttargets` .wasm (mzlab-feat-wasm, feature `quant_targets`, through Node: `flow_quant_targets`, the function the browser
 calls over the .mzidx of OPFS) gives the same table and log bytes as `mzlab-cli quant targets` on the mzML files and as the native step of a `flow run`
-on the synthetic unit-resolution files of `tools/lr_synthetic.py`. Skipped without cargo, wasm-bindgen, node or numpy."""
+on the synthetic unit-resolution files of `tools/lr_synthetic.py`; also with the internal RT reference on (`rt_ref`). Skipped on a machine without cargo,
+wasm-bindgen, node or numpy; in CI (GITHUB_ACTIONS) a missing tool fails the run, never skips it."""
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -12,7 +14,10 @@ from cargo_util import build, cli, run, wasm_module
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there it must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
 
 NAMES = ["LR_bench-noise-s1.mzML", "LR_bench-blank-s1.mzML", "LR_bench-s1.mzML"]
 BLANK = "LR_bench-blank*"
@@ -28,7 +33,8 @@ catch (e) { process.stdout.write('ERROR ' + String(e)); }"""
 
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
-    pytest.importorskip("numpy")
+    if not CI:
+        pytest.importorskip("numpy")
     d = tmp_path_factory.mktemp("quant_targets")
     import lr_synthetic
     lr_synthetic.make(d, 1)
@@ -36,6 +42,9 @@ def work(tmp_path_factory):
     rows = ["id,mz,rt_min,rt_max"] + [f"c{c['id']},{c['mz']},{c['rt_s'] / 60 - 0.3:.3f},{c['rt_s'] / 60 + 0.3:.3f}" for c in truth["compounds"][:15]]
     rows.append("away,333.3,0.1,0.4")   # no peak there: an absent row
     (d / "targets.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    # the same list with its first row as the internal reference (role standard) for rt_ref
+    ref = ["id,mz,rt_min,rt_max,polarity,role"] + [r + (",,standard" if k == 0 else ",,") for k, r in enumerate(rows[1:])]
+    (d / "targets_ref.csv").write_text("\n".join(ref) + "\n", encoding="utf-8")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "quant_targets")))
     build("-p", "mzlab-cli")
     plan = {"format": "mzflow/2", "inputs": [{"name": n, "type": "raw"} for n in NAMES] + [{"name": "targets.csv", "type": "report"}],
@@ -69,3 +78,15 @@ def test_an_error_has_the_same_key_in_the_wasm(work):
     bad.write_text("id,mz\nx,1\n", encoding="utf-8")
     got = wasm(work, bad)
     assert isinstance(got, str) and got.startswith("ERROR") and "err.quant.targets.table" in got, got
+
+
+def test_rt_ref_gives_the_same_bytes_in_the_wasm_and_the_cli(work):
+    got = wasm(work, work / "targets_ref.csv", {**PARAMS, "rt_ref": "auto", "rt_span": 0.6})
+    assert not isinstance(got, str), got
+    log = work / "cli_rt.log.json"
+    table = cli("quant", "targets", "--targets", str(work / "targets_ref.csv"), *[str(work / n) for n in NAMES], "--blank-pattern", BLANK,
+                "--rt-ref", "auto", "--log", str(log)).stdout
+    assert got["csv"] == table
+    assert got["log"] == log.read_text(encoding="utf-8")
+    assert got["csv"].splitlines()[0].endswith(",mz_offset_da,rt_shift_min")
+    assert '"rt_ref":{"reference":"c' in got["log"] and '"key":"rt_reference"' in got["log"], got["log"][:2000]

@@ -8,7 +8,8 @@ use mzlab_core::mzcal::{Offset, Spec};
 use mzlab_core::rawxic::tallest;
 use mzlab_core::routes::Routes;
 
-use super::params::{OffsetMode, Params};
+use super::params::{OffsetMode, Params, RtRef};
+use super::rtref::{hints, measure, rt_choices, rt_reference, Hint, RtShift};
 use super::targets::{parse, Role, Target};
 use super::text;
 
@@ -28,6 +29,8 @@ pub(crate) struct Row {
     pub peaks: usize,
     pub half: usize,
     pub offset: f64,
+    /// Minutes the target's window was moved in this file (`rt_ref` on; 0 otherwise).
+    pub rt_shift: f64,
 }
 
 impl Row {
@@ -64,6 +67,7 @@ pub(crate) struct FileLog {
     pub blank: bool,
     pub offsets: Vec<GroupOffset>,
     pub detected: usize,
+    pub rt: Option<RtShift>,
 }
 
 /// An automatic choice of the run: what, the value taken, why.
@@ -80,15 +84,23 @@ pub struct Outcome {
     pub csv: String,
     pub log: String,
     pub warnings: Vec<String>,
+    pub hints: Vec<Hint>,
     rows: Vec<Row>,
     names: Vec<String>,
     targets: Vec<Target>,
+    rt_on: bool,
 }
 
 impl Outcome {
     /// The rows and the log as `quant-targets/1`.
     pub fn json(&self) -> String {
-        text::json(&self.rows, &self.names, &self.targets, &self.log)
+        text::json(
+            &self.rows,
+            &self.names,
+            &self.targets,
+            &self.log,
+            self.rt_on,
+        )
     }
 }
 
@@ -143,8 +155,15 @@ fn offsets<R: ReadAt>(
 }
 
 /// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too).
-fn integrate(rt: &[f64], y: &[f64], t: &Target, p: &Params) -> (Option<Hit>, usize, usize, bool) {
-    tallest(rt, y, t.rt_min, t.rt_max, p.smooth_half, p.valley_pct)
+fn integrate(
+    rt: &[f64],
+    y: &[f64],
+    t: &Target,
+    p: &Params,
+    shift: f64,
+) -> (Option<Hit>, usize, usize, bool) {
+    let (a, b) = (t.rt_min + shift, t.rt_max + shift);
+    tallest(rt, y, a.max(0.0), b, p.smooth_half, p.valley_pct)
 }
 
 /// The flags of a row from its hit (`in_blank` comes after every file).
@@ -173,9 +192,15 @@ fn one_file<R: ReadAt>(
     p: &Params,
     offs: &[GroupOffset],
     workers: usize,
-) -> Result<Vec<Row>> {
+    rt_ref: Option<(usize, f64)>,
+) -> Result<(Vec<Row>, Option<RtShift>)> {
     let mut routes = Routes::new(idx);
     let mut rows: Vec<Option<Row>> = vec![None; targets.len()];
+    let rt_log = match rt_ref {
+        Some((i, expected)) => Some(measure(&mut routes, &targets[i], expected, offs, p)?),
+        None => None,
+    };
+    let shift = rt_log.as_ref().map_or(0.0, |r| r.shift);
     for g in offs {
         routes.pol = g.polarity;
         routes.mz_off = g.offset.da;
@@ -202,10 +227,11 @@ fn one_file<R: ReadAt>(
                         peaks: 0,
                         half: 0,
                         offset: g.offset.da,
+                        rt_shift: shift,
                     }
                 } else {
                     let y: Vec<f64> = m.y[c].iter().map(|&v| round(v, 1)).collect();
-                    let (hit, peaks, half, edge) = integrate(&rt, &y, &targets[i], p);
+                    let (hit, peaks, half, edge) = integrate(&rt, &y, &targets[i], p, shift);
                     let flags = flags(&hit, edge, p);
                     Row {
                         file: k,
@@ -215,6 +241,7 @@ fn one_file<R: ReadAt>(
                         peaks,
                         half,
                         offset: g.offset.da,
+                        rt_shift: shift,
                     }
                 };
                 rows[i] = Some(row);
@@ -223,7 +250,7 @@ fn one_file<R: ReadAt>(
             routes.forget_sweep();
         }
     }
-    Ok(rows.into_iter().flatten().collect())
+    Ok((rows.into_iter().flatten().collect(), rt_log))
 }
 
 /// A run checked and ready: parameters, targets, file names with their blank flag, and the choices and warnings known before any file is read.
@@ -237,6 +264,8 @@ pub struct Job {
     choices: Vec<Choice>,
     warnings: Vec<String>,
     workers: usize,
+    /// The reference row of `rt_ref` and the RT it is expected at (`None`: off, or no reference row).
+    rt_ref: Option<(usize, f64)>,
 }
 
 /// The rows, the log entry and the warning keys of one file.
@@ -246,7 +275,7 @@ pub struct FilePass {
     warnings: Vec<&'static str>,
 }
 
-fn warn(w: &str, list: &mut Vec<String>) {
+pub(super) fn warn(w: &str, list: &mut Vec<String>) {
     if !list.iter().any(|x| x == w) {
         list.push(w.to_string());
     }
@@ -287,6 +316,8 @@ pub fn prepare(names: &[String], targets: &[u8], params: &[(String, Value)]) -> 
             });
         }
     }
+    let rt_ref = rt_reference(&targets, &p)?;
+    rt_choices(&targets, &p, rt_ref, &mut choices, &mut warnings);
     if p.smooth_half == 0 {
         choices.push(Choice {
             key: "smooth_half",
@@ -302,6 +333,7 @@ pub fn prepare(names: &[String], targets: &[u8], params: &[(String, Value)]) -> 
         choices,
         warnings,
         workers: 1,
+        rt_ref,
     })
 }
 
@@ -322,7 +354,20 @@ impl Job {
         let offs = offsets(&mut idx, &self.targets, &self.p)?;
         let mut warnings: Vec<&'static str> =
             offs.iter().filter_map(|g| g.offset.warning()).collect();
-        let rows = one_file(idx, k, &self.targets, &self.p, &offs, self.workers)?;
+        let (rows, rt) = one_file(
+            idx,
+            k,
+            &self.targets,
+            &self.p,
+            &offs,
+            self.workers,
+            self.rt_ref,
+        )?;
+        match rt.as_ref().map(|r| r.status) {
+            Some("weak" | "not_found") => warnings.push("warn.quant.targets.rtRefNotFound"),
+            Some("edge") => warnings.push("warn.quant.targets.rtRefEdge"),
+            _ => {}
+        }
         if rows.iter().any(|x| x.flags.contains(&"no_scans")) {
             warnings.push("warn.quant.targets.noScans");
         }
@@ -331,6 +376,7 @@ impl Job {
             blank: self.blank[k],
             offsets: offs,
             detected: rows.iter().filter(|x| x.detected()).count(),
+            rt,
         };
         Ok(FilePass {
             rows,
@@ -364,13 +410,21 @@ impl Job {
                 r.flags.push("in_blank");
             }
         }
+        let hints = hints(&self.p, &self.targets, &rows, &self.blank);
         Outcome {
-            csv: text::table(&rows, &self.names, &self.targets),
+            hints,
+            csv: text::table(
+                &rows,
+                &self.names,
+                &self.targets,
+                self.p.rt_ref != RtRef::Off,
+            ),
             log: text::log(&self.p, &files, &self.choices, &warnings),
             warnings,
             rows,
             names: self.names.clone(),
             targets: self.targets.clone(),
+            rt_on: self.p.rt_ref != RtRef::Off,
         }
     }
 }

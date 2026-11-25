@@ -3,11 +3,14 @@
 
 use mzlab_core::json::Out;
 
-use super::params::Params;
+use super::params::{Params, RtRef};
+use super::rtref::RtShift;
 use super::run::{Choice, FileLog, Row};
 use super::targets::{Role, Target};
 
 pub const HEADER: &str = "file,id,area,height,sn,rt,flag,state,points,shape,start_rt,end_rt,peaks_in_window,smooth_half,mz_offset_da";
+/// The extra last column when `rt_ref` is on: the minutes the window of that row was moved in its file (`rt` stays the measured apex).
+pub const HEADER_RT: &str = "rt_shift_min";
 
 /// A CSV cell: quoted when it holds a comma, a quote or a line break.
 fn cell(s: &str) -> String {
@@ -35,9 +38,13 @@ pub(crate) fn pol_key(p: Option<i8>) -> &'static str {
     }
 }
 
-pub(crate) fn table(rows: &[Row], names: &[String], targets: &[Target]) -> String {
+pub(crate) fn table(rows: &[Row], names: &[String], targets: &[Target], rt_on: bool) -> String {
     let mut s = String::with_capacity(64 * (rows.len() + 1));
     s.push_str(HEADER);
+    if rt_on {
+        s.push(',');
+        s.push_str(HEADER_RT);
+    }
     s.push('\n');
     for r in rows {
         let flag = if r.flags.is_empty() {
@@ -61,7 +68,7 @@ pub(crate) fn table(rows: &[Row], names: &[String], targets: &[Target]) -> Strin
             None => (",,,".to_string(), ",,,".to_string()),
         };
         s.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{}{}\n",
             cell(&names[r.file]),
             cell(&targets[r.target].id),
             nums,
@@ -70,7 +77,12 @@ pub(crate) fn table(rows: &[Row], names: &[String], targets: &[Target]) -> Strin
             points,
             r.peaks,
             r.half,
-            r.offset
+            r.offset,
+            if rt_on {
+                format!(",{}", r.rt_shift)
+            } else {
+                String::new()
+            }
         ));
     }
     s
@@ -85,7 +97,12 @@ fn params_json(o: &mut Out, p: &Params) {
     o.raw(",\"blank_pattern\":").str(&p.blank_pattern);
     o.raw(",\"ms_level\":").int(p.ms_level as i64);
     o.raw(",\"smooth_half\":").int(p.smooth_half as i64);
-    o.raw(",\"valley\":").num(p.valley_pct).raw("}");
+    o.raw(",\"valley\":").num(p.valley_pct);
+    if p.rt_ref != RtRef::Off {
+        o.raw(",\"rt_ref\":").str(&p.rt_ref_text());
+        o.raw(",\"rt_span\":").num(p.rt_span);
+    }
+    o.raw("}");
 }
 
 fn strings(o: &mut Out, list: &[String]) {
@@ -94,6 +111,28 @@ fn strings(o: &mut Out, list: &[String]) {
         o.raw(if i > 0 { "," } else { "" }).str(w);
     }
     o.raw("]");
+}
+
+/// The evidence of the internal reference in one file: where it was looked for, where it was found, the shift applied and why.
+fn rt_json(o: &mut Out, r: &RtShift) {
+    o.raw(",\"rt_ref\":{\"reference\":").str(&r.reference);
+    o.raw(",\"expected_rt\":").num(r.expected);
+    o.raw(",\"apex_rt\":");
+    match r.apex {
+        Some(a) => o.num(a),
+        None => o.raw("null"),
+    };
+    o.raw(",\"sn\":");
+    match r.sn {
+        Some(a) => o.num(a),
+        None => o.raw("null"),
+    };
+    o.raw(",\"search\":[")
+        .num(r.search.0)
+        .raw(",")
+        .num(r.search.1);
+    o.raw("],\"shift_min\":").num(r.shift);
+    o.raw(",\"status\":").str(r.status).raw("}");
 }
 
 pub(crate) fn log(
@@ -127,7 +166,11 @@ pub(crate) fn log(
                 .raw(&g.offset.evidence_json())
                 .raw("}");
         }
-        o.raw("],\"detected\":").int(f.detected as i64).raw("}");
+        o.raw("],\"detected\":").int(f.detected as i64);
+        if let Some(r) = &f.rt {
+            rt_json(&mut o, r);
+        }
+        o.raw("}");
     }
     o.raw("],\"choices\":[");
     for (i, c) in choices.iter().enumerate() {
@@ -185,7 +228,13 @@ pub(crate) fn plan(p: &Params, names: &[String], targets: &[Target]) -> String {
 
 /// The rows and the log of a run as `quant-targets/1`: one object per row with the header names as keys, built from the rows themselves (not
 /// from the CSV, so a file name or an id is written as it is), numbers written as in the table, empty cells `null`.
-pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str) -> String {
+pub(crate) fn json(
+    rows: &[Row],
+    names: &[String],
+    targets: &[Target],
+    log: &str,
+    rt_on: bool,
+) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"quant-targets/1\",\"rows\":[");
     for (i, r) in rows.iter().enumerate() {
@@ -228,9 +277,11 @@ pub(crate) fn json(rows: &[Row], names: &[String], targets: &[Target], log: &str
         }
         o.raw(",\"peaks_in_window\":").raw(&r.peaks.to_string());
         o.raw(",\"smooth_half\":").raw(&r.half.to_string());
-        o.raw(",\"mz_offset_da\":")
-            .raw(&format!("{}", r.offset))
-            .raw("}");
+        o.raw(",\"mz_offset_da\":").raw(&format!("{}", r.offset));
+        if rt_on {
+            o.raw(",\"rt_shift_min\":").raw(&format!("{}", r.rt_shift));
+        }
+        o.raw("}");
     }
     o.raw("],\"log\":")
         .raw(if log.is_empty() { "null" } else { log })

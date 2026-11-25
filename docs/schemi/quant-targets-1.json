@@ -128,6 +128,10 @@
           "mz_offset_da": {
             "type": "number",
             "description": "m/z offset (observed - true) applied to this trace, Da."
+          },
+          "rt_shift_min": {
+            "type": "number",
+            "description": "Only with rt_ref on: minutes the window of this row was moved in its file (the rt column stays the measured apex)."
           }
         }
       }
@@ -188,6 +192,14 @@
             },
             "valley": {
               "type": "number"
+            },
+            "rt_ref": {
+              "type": "string",
+              "description": "Only with rt_ref on: off, auto, ID or either with @RT."
+            },
+            "rt_span": {
+              "type": "number",
+              "description": "Only with rt_ref on: half-width added to the reference window, min."
             }
           }
         },
@@ -247,6 +259,61 @@
                       "type": "object",
                       "description": "The mzcal evidence of the offset (mode, ion, scans, apex, spread, S/N)."
                     }
+                  }
+                }
+              },
+              "rt_ref": {
+                "type": "object",
+                "description": "Only with rt_ref on: the evidence of the internal reference in this file.",
+                "required": [
+                  "reference",
+                  "expected_rt",
+                  "apex_rt",
+                  "sn",
+                  "search",
+                  "shift_min",
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "reference": {
+                    "type": "string"
+                  },
+                  "expected_rt": {
+                    "type": "number"
+                  },
+                  "apex_rt": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "sn": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "search": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "RT window the apex was looked for in, min."
+                  },
+                  "shift_min": {
+                    "type": "number",
+                    "description": "Applied to every window of the file; 0 when status is weak or not_found."
+                  },
+                  "status": {
+                    "enum": [
+                      "ok",
+                      "edge",
+                      "weak",
+                      "not_found"
+                    ]
                   }
                 }
               }

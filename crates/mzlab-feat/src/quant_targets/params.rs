@@ -16,6 +16,17 @@ pub enum OffsetMode {
     Ion(Spec),
 }
 
+/// The internal reference the retention-time windows follow from file to file (`rt_ref`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum RtRef {
+    /// The windows stay where the table puts them (default).
+    Off,
+    /// The first `standard`/`parent` row (any polarity); `rt` = the RT it is expected at, else the centre of its window.
+    Auto { rt: Option<f64> },
+    /// The row with this id.
+    Id { id: String, rt: Option<f64> },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Params {
     /// Half-window of every XIC, Da.
@@ -32,6 +43,9 @@ pub struct Params {
     /// Savitzky-Golay half window of the detection copy (points, 0 = automatic per trace) and valley depth in % (`peak auto-lr`).
     pub smooth_half: usize,
     pub valley_pct: f64,
+    pub rt_ref: RtRef,
+    /// Half-width, minutes, added to each side of the reference window where its apex is looked for (`rt_ref` on).
+    pub rt_span: f64,
 }
 
 impl Default for Params {
@@ -46,11 +60,13 @@ impl Default for Params {
             ms_level: 1,
             smooth_half: 0,
             valley_pct: 10.0,
+            rt_ref: RtRef::Off,
+            rt_span: 0.6,
         }
     }
 }
 
-fn bad(name: &str, v: &str) -> Error {
+pub(super) fn bad(name: &str, v: &str) -> Error {
     Error::new("err.quant.targets.param")
         .with("name", name.to_string())
         .with("value", v.to_string())
@@ -78,6 +94,38 @@ pub fn offset_of(t: &str) -> Result<OffsetMode> {
         Spec::Zero => OffsetMode::Fixed(0.0),
         Spec::Fixed(d) => OffsetMode::Fixed(d),
         s => OffsetMode::Ion(s),
+    })
+}
+
+/// The `rt_ref` text: empty or `off`; `auto[@RT]`; or a target id, optionally `ID@RT` (RT = where the reference is expected, minutes).
+pub fn rt_ref_of(t: &str, name: &str) -> Result<RtRef> {
+    let t = t.trim();
+    if t.is_empty() || t.eq_ignore_ascii_case("off") {
+        return Ok(RtRef::Off);
+    }
+    let (head, rt) = match t.rsplit_once('@') {
+        Some((h, r)) => (
+            h.trim(),
+            Some(
+                r.trim()
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|x| x.is_finite() && *x >= 0.0)
+                    .ok_or_else(|| bad(name, t))?,
+            ),
+        ),
+        None => (t, None),
+    };
+    if head.is_empty() {
+        return Err(bad(name, t));
+    }
+    Ok(if head.eq_ignore_ascii_case("auto") {
+        RtRef::Auto { rt }
+    } else {
+        RtRef::Id {
+            id: head.to_string(),
+            rt,
+        }
     })
 }
 
@@ -119,6 +167,12 @@ impl Params {
                         .filter(|x| (0.0..=100.0).contains(x))
                         .ok_or_else(|| bad(k, &t))?
                 }
+                "rt_ref" => p.rt_ref = rt_ref_of(&t, k)?,
+                "rt_span" => {
+                    p.rt_span = num()
+                        .filter(|x| (0.05..=5.0).contains(x))
+                        .ok_or_else(|| bad(k, &t))?
+                }
                 _ => return Err(bad(k, &t)),
             }
         }
@@ -131,6 +185,16 @@ impl Params {
             OffsetMode::Fixed(d) => format!("{d}"),
             OffsetMode::Auto => "auto".into(),
             OffsetMode::Ion(s) => s.to_string(),
+        }
+    }
+
+    /// The `rt_ref` as the text the parameter takes (`off`, `auto`, `auto@2.3`, `IS1`, `IS1@2.3`).
+    pub fn rt_ref_text(&self) -> String {
+        let at = |rt: &Option<f64>| rt.map_or(String::new(), |x| format!("@{x}"));
+        match &self.rt_ref {
+            RtRef::Off => "off".into(),
+            RtRef::Auto { rt } => format!("auto{}", at(rt)),
+            RtRef::Id { id, rt } => format!("{id}{}", at(rt)),
         }
     }
 
