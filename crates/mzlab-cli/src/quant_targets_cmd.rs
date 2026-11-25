@@ -269,7 +269,10 @@ fn hints_json(hints: &[mzlab_feat::quant_targets::Hint]) -> Option<String> {
             .str(h.key)
             .raw(",\"params\":{");
         for (k, (name, v)) in h.params.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).str(name).raw(":").str(v);
+            o.raw(if k > 0 { "," } else { "" })
+                .str(name)
+                .raw(":")
+                .str(v);
         }
         o.raw("},\"text\":").str(&hint_text(h)).raw("}");
     }
