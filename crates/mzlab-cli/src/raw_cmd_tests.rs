@@ -16,6 +16,15 @@ pub(crate) const MISSING: &[&[&str]] = &[
         "--cache",
         "/nonexistent/cache",
     ],
+    &[
+        "raw",
+        "xic",
+        "/nonexistent/x.mzML",
+        "--mz",
+        "250",
+        "--rt",
+        "1,2",
+    ],
 ];
 
 fn json(o: &crate::Outcome) -> mzlab_core::json::Value {

@@ -54,6 +54,9 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("raw cache", "mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries", crate::raw_cache_cmd::cache_run)
         .schema("raw-cache/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
+    Entry::new("raw xic", "mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time", crate::raw_xic_cmd::xic_run)
+        .schema("raw-xic/1")
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("sample vars", "mzlab-cli sample vars NAME...   how file names split into variables", |a| crate::samples_cmd::run(pre("vars", a))),
     Entry::new("sample group", "mzlab-cli sample group NAME...   the file names' group name", |a| crate::samples_cmd::run(pre("group", a))),
     Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr", |a| crate::samples_cmd::run(pre("table", a))),

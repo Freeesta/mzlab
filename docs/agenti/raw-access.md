@@ -1,8 +1,8 @@
-# `raw info`, `raw cache`: what a raw file holds, for an agent (`raw-info/1`, `raw-cache/1`)
+# `raw info`, `raw cache`, `raw xic`: what a raw file holds and whether a peak is there, for an agent (`raw-info/1`, `raw-cache/1`, `raw-xic/1`)
 
 The first slice of the raw access study (`docs/studies/RAW_ACCESS_STUDY.md`, `RAW_ACCESS_STUDY_2.md` §1-2). Code: `crates/mzlab-core/src/rawinfo.rs` (all logic,
-route `/api/rawinfo`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`, `raw_cmd_tests.rs`,
-`tests/test_raw_info_wasm.py` (the `raw` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
+route `/api/rawinfo`), `rawxic.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
+`rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
 
 ## `raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]`
 - Per file `file`, `container`, `sha256`, `size_bytes`, `samples` (the sample read: `--sample`, else the first, logged in `provenance.choices`); per sample, from the index only:
@@ -28,7 +28,17 @@ route `/api/rawinfo`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs
 - `--check` builds nothing: `reused` (a sound entry the next call reuses), `stale` (it would be rebuilt), `missing`; exit 1 unless all are reused (the document stays).
 - Needs `--cache DIR` or `MZLAB_CACHE` (exit 2 with the hint otherwise: nothing is written where it was not asked); a cache it cannot write: exit 6.
 
+## `raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]`
+- Per file and mass one row of `rows` (the first sample of each file; `file`, `sample`, then the route's row): `verdict` `peak`, `trace`, `nothing` or `no_data` with its `rule` (the test, its values and thresholds), `flags`
+  (`edge`, `no_quantum`, `no_background`, `one_side`, `offset_applied`). `area`, `height`, `sn`, `apex_rt`, `start_rt`, `end_rt`, `points`, `shape` are the cells of `quant targets` for the same file, mass and window (one integrator, `rawxic::tallest`).
+- Counts (ion-count data, `ion_quantum.cps` set): `counts_gross`, `counts_net`, `counts_sigma`, `background_per_scan`, `l_c`, `l_d` (Currie levels at `alpha`), `z_counts`, `sn_floor` (S/N with a one-ion floor: sigma per scan = q * max(1, sqrt(background in ions))).
+  `ul95_counts` and `ul95_area` bound a `nothing` row. Without a quantum the counts are null and the pipeline `sn` decides (`no_quantum`). `sn_estimator` names the S/N of `sn`.
+- Verdict: `peak` when N >= L_D, `sn_floor` >= `min_sn` and a run of `min_points` scans holds an ion; `trace` when only gross >= 2 and N >= L_C hold; else `nothing`; `no_data` when no scan is in the window. Nothing already measured changes: `sn` is the S/N of every other command.
+- `--set`: `min_sn` 3, `min_points` 3, `alpha` 0.05, `side_min` 0.3 min, `gap_min` 0.05 min (the background is read from the same trace beside the window); out of range: `err.raw.xic.param`, exit 2. `provenance.params` holds every value used, `provenance.choices` the sample, the quantum and the background.
+- `summary`: per mass the files answered, the rows per verdict, `max_sn_floor` with its file and the median `area` of the `peak` rows; always whole. `--limit` (default 50) caps `rows`: `n_total` and `truncated` say what was cut.
+- `--dry-run`: `raw-plan/1` with the query. Exit as `raw info`: 0, 1 a file could not be read (entry with `error`), 2 usage, 4 missing, 5 unknown sample, 6 `--out` not writable.
+
 ## Site, app, CLI
 - The page asks the route `/api/rawinfo?probe=N&offset_mz=M&offset_rt=T` of a slot: the site's worker sends it to the lazy `.wasm` `raw` (`mzlab-raw-wasm`, `rust-raw.js`,
-  over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.
+  over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw xic` is the route `/api/rawxic` of the same module; `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.
 - Choices kept where the study left them open: no change to any S/N (D1), a lazy module of its own (D2, as the study recommends: in the engine it was over the cap), no `.mzbin` (D3), the command family `raw` (D7).

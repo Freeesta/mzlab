@@ -5,8 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{round, Value};
 use mzlab_core::mzcal::{Offset, Spec};
-use mzlab_core::peakq::quality;
-use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams, Split};
+use mzlab_core::rawxic::tallest;
 use mzlab_core::routes::Routes;
 
 use super::params::{OffsetMode, Params};
@@ -16,21 +15,8 @@ use super::text;
 /// The most files a caller reads at once: past a few, one disk only seeks between the files, and the memory budget is shared by them.
 pub const MAX_WORKERS: usize = 8;
 
-/// Seconds per minute: the engine integrates counts x min, the table writes counts x s (`area_unit`).
-const SECONDS: f64 = 60.0;
-
-/// The tallest peak of one target in one file (raw trace, rounded like `trace xic`), or why there is none.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Hit {
-    pub area: f64,
-    pub height: f64,
-    pub sn: f64,
-    pub rt: f64,
-    pub points: usize,
-    pub shape: f64,
-    pub start_rt: f64,
-    pub end_rt: f64,
-}
+/// The tallest peak of one target in one file (raw trace, rounded like `trace xic`), or why there is none: the type `raw xic` shares.
+pub(crate) use mzlab_core::rawxic::Hit;
 
 /// One row of the long table.
 #[derive(Debug, Clone, PartialEq)]
@@ -156,44 +142,9 @@ fn offsets<R: ReadAt>(
     Ok(out)
 }
 
-/// The tallest peak of a trace between `x0` and `x1` and how many the window holds.
+/// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too).
 fn integrate(rt: &[f64], y: &[f64], t: &Target, p: &Params) -> (Option<Hit>, usize, usize, bool) {
-    let lp = LrAutoParams {
-        half: p.smooth_half,
-        valley: p.valley_pct / 100.0,
-        snr: 0.0,
-        min_pts: 2,
-        despike: true,
-        split: Split::Drop,
-    };
-    let r = lr_auto_integrate(rt, y, t.rt_min, t.rt_max, lp);
-    let mut best: Option<usize> = None;
-    for (k, pk) in r.peaks.iter().enumerate() {
-        if best.is_none_or(|b| pk.height > r.peaks[b].height) {
-            best = Some(k);
-        }
-    }
-    let Some(b) = best else {
-        return (None, 0, r.half, false);
-    };
-    let pk = r.peaks[b];
-    // the apex on the first or the last scan of the window: the peak may go on outside it
-    let inside: Vec<usize> = (0..rt.len())
-        .filter(|&i| rt[i] >= t.rt_min && rt[i] <= t.rt_max)
-        .collect();
-    let edge = inside.first() == Some(&pk.apex) || inside.last() == Some(&pk.apex);
-    let q = quality(rt, y, pk.lo, pk.hi, r.noise);
-    let hit = Hit {
-        area: round(pk.area * SECONDS, 1),
-        height: round(pk.height, 1),
-        sn: round(pk.sn, 2),
-        rt: rt[pk.apex],
-        points: pk.hi - pk.lo + 1,
-        shape: round(q.gaussian, 3),
-        start_rt: rt[pk.lo],
-        end_rt: rt[pk.hi],
-    };
-    (Some(hit), r.peaks.len(), r.half, edge)
+    tallest(rt, y, t.rt_min, t.rt_max, p.smooth_half, p.valley_pct)
 }
 
 /// The flags of a row from its hit (`in_blank` comes after every file).

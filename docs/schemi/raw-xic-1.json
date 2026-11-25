@@ -1,0 +1,542 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-xic/1",
+  "title": "raw-xic/1: is there a peak at this mass and time, in each file? `mzlab-cli raw xic`",
+  "description": "Per file and mass a verdict (peak, trace, nothing, no_data) with its rule and the numbers behind it: the `quant targets` peak (area, height, S/N, shape) and the ion counts (Poisson S/N with a one-ion floor, Currie critical and detection levels, an upper limit for nothing). `summary` is whole; `rows` is cut at `limit` (`n_total`, `truncated`). A `nothing` is an answer: exit 0. Code: crates/mzlab-core/src/rawxic.rs, crates/mzlab-cli/src/raw_xic_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "query",
+    "files",
+    "summary",
+    "rows",
+    "n_total",
+    "limit",
+    "truncated",
+    "warnings",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-xic/1"
+    },
+    "query": {
+      "type": "object"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "container",
+              "sha256",
+              "size_bytes",
+              "samples"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "container": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "ms_level",
+                    "n_scans",
+                    "scan_time_s",
+                    "ion_quantum",
+                    "mz_offset",
+                    "thresholds"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ms_level": {
+                      "type": "integer"
+                    },
+                    "n_scans": {
+                      "type": "integer"
+                    },
+                    "scan_time_s": {
+                      "type": "number"
+                    },
+                    "ion_quantum": {
+                      "type": "object"
+                    },
+                    "mz_offset": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "required": [
+                        "min_sn",
+                        "min_points",
+                        "alpha",
+                        "z_alpha",
+                        "side_min",
+                        "gap_min",
+                        "smooth_half",
+                        "valley_pct"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "error"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "error": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "mz",
+          "n_files",
+          "peak",
+          "trace",
+          "nothing",
+          "no_data",
+          "max_sn_floor",
+          "max_sn_floor_file",
+          "median_area"
+        ],
+        "properties": {
+          "mz": {
+            "type": "number"
+          },
+          "n_files": {
+            "type": "integer"
+          },
+          "peak": {
+            "type": "integer"
+          },
+          "trace": {
+            "type": "integer"
+          },
+          "nothing": {
+            "type": "integer"
+          },
+          "no_data": {
+            "type": "integer"
+          },
+          "max_sn_floor": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_sn_floor_file": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "median_area": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sample",
+          "mz",
+          "window",
+          "rt_window",
+          "verdict",
+          "rule",
+          "apex_rt",
+          "height",
+          "area",
+          "sn",
+          "sn_estimator",
+          "sn_floor",
+          "start_rt",
+          "end_rt",
+          "points",
+          "shape",
+          "counts_gross",
+          "counts_net",
+          "counts_sigma",
+          "l_c",
+          "l_d",
+          "z_counts",
+          "background_per_scan",
+          "ul95_counts",
+          "ul95_area",
+          "flags"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "sample": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "mz": {
+            "type": "number"
+          },
+          "window": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "m/z window, Da"
+          },
+          "rt_window": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "retention-time window, min"
+          },
+          "verdict": {
+            "enum": [
+              "peak",
+              "trace",
+              "nothing",
+              "no_data"
+            ],
+            "description": "peak: the ions pass the detection limit, the S/N on the one-ion floor and the run of scans; trace: ions above the critical level but not a peak; nothing: neither (see ul95_*); no_data: no scan in the window"
+          },
+          "rule": {
+            "type": "string",
+            "description": "every comparison behind the verdict with its values and thresholds"
+          },
+          "apex_rt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "area": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "counts x s, as `quant targets`"
+          },
+          "sn": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sn_estimator": {
+            "type": "string"
+          },
+          "sn_floor": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "height over one ion (or the root of the background counts per scan); null without an ion quantum or a peak"
+          },
+          "start_rt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "end_rt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "points": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "shape": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "counts_gross": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "counts_net": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "counts_sigma": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "l_c": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "l_d": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "z_counts": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "background_per_scan": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ul95_counts": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "95 % upper limit of the net counts; only for `nothing`"
+          },
+          "ul95_area": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "the same in counts x s (ion quantum x scan time)"
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "edge",
+                "no_quantum",
+                "no_background",
+                "one_side",
+                "offset_applied"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "n_total": {
+      "type": "integer"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "program",
+        "version",
+        "commit",
+        "engine",
+        "command",
+        "files",
+        "params",
+        "choices",
+        "cite"
+      ],
+      "properties": {
+        "program": {
+          "const": "mzLab"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "index_format",
+            "quantum"
+          ],
+          "properties": {
+            "index_format": {
+              "type": "integer"
+            },
+            "quantum": {
+              "const": "ionstat.quantum"
+            }
+          },
+          "additionalProperties": false
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "sha256",
+              "size",
+              "sample"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "value",
+              "why"
+            ],
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "value": {},
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cite": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

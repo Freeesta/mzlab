@@ -59,6 +59,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--match", "also list compatible"),
     ("--full", "every part + SHA-256"),
     ("--probe", "scans to read"),
+    ("--limit", "most rows, default 50"),
     ("--offset-ion", "known ion for the offset"),
     ("--rt", "window in min: A,B, or A if the usage says"),
     ("--ms-level", "MS level, default 1"),

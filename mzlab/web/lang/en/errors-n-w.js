@@ -207,6 +207,7 @@ I18N.add("en", {
   "warn.quant.targets.noReference": "Offset auto: the targets have no standard or parent row, so the offset is 0 (written in the log).",
   "warn.quant.targets.noScans": "Some files have no scan of that MS level and polarity (for example SIM or SRM stored only as chromatograms): their rows are flagged no_scans.",
   "err.raw.probe": "The probe takes a whole number of scans from 1 to {max}.",
+  "err.raw.xic.param": "The value «{value}» of {name} cannot be used: see the range in the help of raw xic.",
   "warn.raw.labelMismatch": "{file}: the scans are labelled {label}, but their points read as {data} ({runs_share} of the points in runs): a tool that trusts the label may smooth single ion counts or take a profile for peaks.",
   "warn.raw.noQuantum": "{file}: the intensities are not multiples of one ion (an analog detector or processed data), so ion counts do not apply to it."
 });

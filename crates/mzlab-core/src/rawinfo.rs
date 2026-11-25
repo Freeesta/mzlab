@@ -33,11 +33,15 @@ pub struct Probe {
     pub inten: Vec<f64>,
 }
 
-/// `Routes::handle` plus `/api/rawinfo`, which is outside the engine's dispatch so that the engine `.wasm` does not carry it: the app's routes.
+/// `Routes::handle` plus `/api/rawinfo` and `/api/rawxic`, which are outside the engine's dispatch so that the engine `.wasm` does not carry them:
+/// the app's routes.
 pub fn handle<R: ReadAt>(r: &mut Routes<R>, path: &str, q: &Query) -> Result<Option<String>> {
     if path == "/api/rawinfo" {
         // also for a file with chromatograms only (its scan members are empty)
         return r.raw_info_route(q);
+    }
+    if path == "/api/rawxic" {
+        return r.raw_xic_route(q);
     }
     r.handle(path, q)
 }

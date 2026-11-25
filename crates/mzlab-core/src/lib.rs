@@ -159,6 +159,7 @@ pub mod peakq_lrauto;
 pub mod value_word;
 pub mod ionstat;
 pub mod rawinfo;
+pub mod rawxic;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

@@ -1,8 +1,10 @@
 """`raw info` in the site: the lazy .wasm `raw` (mzlab-raw-wasm, through Node: `raw_info(size, read, pol, query)`, the call rust-raw.js makes for the
 route `/api/rawinfo` over the .mzidx of OPFS) gives the same members, byte for byte, as each sample of `mzlab-cli raw info` on the synthetic files of
 `tools/dati_sintetici.py` (full scan, profile, MS2, MRM, alternating polarity); the index is the entry `mzlab-cli raw cache` writes, and the desktop
-answers the same route (`crates/mzlab-desktop/tests/parity_routes.rs`). Skipped without cargo, wasm-bindgen, node or numpy."""
+answers the same route (`crates/mzlab-desktop/tests/parity_routes.rs`). Skipped on a machine without cargo, wasm-bindgen, node or numpy; in CI (GITHUB_ACTIONS)
+those are required and a missing one fails."""
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -14,7 +16,14 @@ from cargo_util import build, cli, run, wasm_module
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there it must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
+
+
+def test_the_tools_are_there_in_ci():
+    assert TOOLS or not CI, "cargo, wasm-bindgen and node must be installed in CI: this test would not run"
 
 NODE = """const [dir, idxPath, ...queries] = process.argv.slice(2);
 const { raw_info } = require(dir + '/mzlab_raw_wasm.js'), fs = require('fs');
@@ -27,7 +36,12 @@ ASKS = [([], "probe=64"), (["--probe", "8"], "probe=8"), (["--offset-ion", "364.
 
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
-    np = pytest.importorskip("numpy")
+    try:
+        import numpy as np
+    except ImportError:
+        if CI:
+            pytest.fail("numpy must be installed in CI: tools/dati_sintetici.py needs it")
+        pytest.skip("numpy not available")
     import dati_sintetici as d
     w = tmp_path_factory.mktemp("raw_info")
     r = np.random.default_rng(5)
