@@ -71,7 +71,10 @@ fn parameters_reach_the_engine_and_a_bad_one_is_refused() {
     let v = parse(m.doc.as_bytes()).unwrap();
     assert_eq!(v.get("dropped").unwrap().arr().len(), 2);
     let bad = vec![("da".to_string(), Value::Num(9.0))];
-    assert_eq!(union_text(&bad, &series()).unwrap_err().key, "err.union.param");
+    assert_eq!(
+        union_text(&bad, &series()).unwrap_err().key,
+        "err.union.param"
+    );
 }
 
 #[test]
@@ -95,12 +98,18 @@ fn the_golden_text_is_the_engine_text() {
         std::fs::write(dir.join("union.json"), &m.doc).unwrap();
     }
     let read = |n: &str| std::fs::read(dir.join(n)).unwrap();
-    let from_disk: Vec<(String, Vec<u8>)> = series()
-        .iter()
-        .map(|(n, _)| (n.clone(), read(n)))
-        .collect();
-    assert_eq!(from_disk, series(), "the committed tables are the synthetic ones of this test");
+    let from_disk: Vec<(String, Vec<u8>)> =
+        series().iter().map(|(n, _)| (n.clone(), read(n))).collect();
+    assert_eq!(
+        from_disk,
+        series(),
+        "the committed tables are the synthetic ones of this test"
+    );
     let got = union_text(&[], &from_disk).unwrap();
-    assert_eq!(got.csv.as_bytes(), read("union.csv"), "MZLAB_UPDATE_UNION=1 rewrites it");
+    assert_eq!(
+        got.csv.as_bytes(),
+        read("union.csv"),
+        "MZLAB_UPDATE_UNION=1 rewrites it"
+    );
     assert_eq!(got.doc.as_bytes(), read("union.json"));
 }

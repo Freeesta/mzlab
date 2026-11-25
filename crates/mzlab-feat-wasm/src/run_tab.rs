@@ -166,8 +166,10 @@ pub fn flow_union(
     let params = json_params(params_json).map_err(crate::js_err)?;
     let list = |t: &str| mzlab_core::json::parse(t.as_bytes()).map(|v| v.arr().to_vec());
     let (names, lens) = (
-        list(names_json).map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
-        list(lens_json).map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
+        list(names_json)
+            .map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
+        list(lens_json)
+            .map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
     );
     let mut at = 0usize;
     let mut series = Vec::new();

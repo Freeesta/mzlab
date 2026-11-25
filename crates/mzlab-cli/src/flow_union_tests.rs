@@ -34,8 +34,14 @@ fn table(rows: &[(f64, f64)], shift: f64) -> Vec<u8> {
 
 fn tables() -> [(&'static str, Vec<u8>); 2] {
     [
-        ("a.mzfeat", table(&[(301.0, 3.0), (402.2, 4.0), (512.1, 6.0)], 0.0)),
-        ("b.mzfeat", table(&[(301.1, 3.0), (402.2, 4.0), (230.0, 2.0)], 0.04)),
+        (
+            "a.mzfeat",
+            table(&[(301.0, 3.0), (402.2, 4.0), (512.1, 6.0)], 0.0),
+        ),
+        (
+            "b.mzfeat",
+            table(&[(301.1, 3.0), (402.2, 4.0), (230.0, 2.0)], 0.04),
+        ),
     ]
 }
 
@@ -101,7 +107,10 @@ fn the_plan_writes_the_bytes_of_the_browser_engine() {
     let v = parse(doc.as_bytes()).unwrap();
     assert_eq!(v.get("targets").unwrap().arr().len(), 4, "{doc}");
     assert_eq!(csv.lines().count(), 5, "{csv}");
-    assert!(csv.starts_with("id,mz,rt_min,rt_max,polarity,role\nU0001,"), "{csv}");
+    assert!(
+        csv.starts_with("id,mz,rt_min,rt_max,polarity,role\nU0001,"),
+        "{csv}"
+    );
     assert_eq!(run(&d, "{}").0, csv);
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -122,7 +131,10 @@ fn the_list_is_the_one_of_quant_union_on_the_csv_of_the_tables() {
     );
     assert_eq!(mzlab_core::series_union::route(&body).unwrap(), doc);
     assert_eq!(
-        parse(doc.as_bytes()).unwrap().get("csv").and_then(Value::str),
+        parse(doc.as_bytes())
+            .unwrap()
+            .get("csv")
+            .and_then(Value::str),
         Some(csv.as_str())
     );
     let _ = std::fs::remove_dir_all(&d);
@@ -134,7 +146,10 @@ fn set_parameters_reach_the_engine() {
     let (csv, doc, _) = run(&d, r#"{"min_series":2,"polarity":"+"}"#);
     assert_eq!(
         (csv.clone(), doc),
-        engine(&[("min_series", Value::Num(2.0)), ("polarity", Value::Str("+".into()))])
+        engine(&[
+            ("min_series", Value::Num(2.0)),
+            ("polarity", Value::Str("+".into()))
+        ])
     );
     // only the two merged targets are seen in both series; each is written once, with the polarity
     assert_eq!(csv.lines().count(), 3, "{csv}");
@@ -147,10 +162,18 @@ fn a_value_out_of_range_is_refused_by_the_check_and_by_the_engine() {
     let d = dir("bad");
     let e = crate::flow::run_plan(plan(r#"{"da":9}"#).as_bytes(), &d, &d.join("work"), 1, None)
         .unwrap_err();
-    assert!(e.params.iter().any(|(_, v)| v.contains("err.flow.param.range")), "{e:?}");
+    assert!(
+        e.params
+            .iter()
+            .any(|(_, v)| v.contains("err.flow.param.range")),
+        "{e:?}"
+    );
     // a page that skipped the check still gets the engine's own refusal
     let bad = mzlab_feat::flow_ms2::json_params(r#"{"da":9}"#).unwrap();
     let t = tables().map(|(n, b)| (n.to_string(), b));
-    assert_eq!(mzlab_feat::union::union_text(&bad, &t).unwrap_err().key, "err.union.param");
+    assert_eq!(
+        mzlab_feat::union::union_text(&bad, &t).unwrap_err().key,
+        "err.union.param"
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

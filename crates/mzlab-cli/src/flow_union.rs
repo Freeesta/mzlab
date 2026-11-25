@@ -16,7 +16,9 @@ fn union_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let tables = all_inputs(r, job, "table")
         .into_iter()
         .map(|p| {
-            let name = p.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned());
+            let name = p
+                .file_name()
+                .map_or(String::new(), |n| n.to_string_lossy().into_owned());
             Ok((name, std::fs::read(&p).map_err(io)?))
         })
         .collect::<Result<Vec<_>>>()?;
