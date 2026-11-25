@@ -42,6 +42,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -165,6 +166,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
@@ -288,6 +290,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr

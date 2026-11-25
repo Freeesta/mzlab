@@ -54,11 +54,12 @@ fn section(pol: i32) -> Vec<Value> {
         json!({"op": "idxopen", "slot": 0, "name": MIXED, "pol": pol}),
         route("/api/rawinfo", "?probe=16"),
         route("/api/rawxic", "?mz=241.3,300.7&rt=2.5,3.5&da=0.2"),
+        route("/api/rawscan", "?rt=2.5,3.5"),
     ]
 }
 
 #[test]
-fn raw_info_and_raw_xic_give_each_polarity_the_same_answer_in_the_app_and_in_the_wasm() {
+fn raw_info_xic_and_scan_give_each_polarity_the_same_answer_in_the_app_and_in_the_wasm() {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
         return;
     };
@@ -75,13 +76,19 @@ fn raw_info_and_raw_xic_give_each_polarity_the_same_answer_in_the_app_and_in_the
     let plan: Vec<Value> = [0, 1, -1, 0].into_iter().flat_map(section).collect();
     let idx = dir.path().join("idx").join(format!("{MIXED}.mzidx"));
     let wasm = run_wasm(&pkg, dir.path(), &idx, &file, &plan);
-    compare(&st, fid, &plan, &wasm, &[1, 2, 4, 5, 7, 8]);
+    compare(
+        &st,
+        fid,
+        &plan,
+        &wasm,
+        &[1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15],
+    );
     // each section answers for itself: `+` and `-` differ from each other, and the last (every section) is the first again
     let text = |k: usize| match from_wasm(&wasm[k]) {
         Got::Text(t) => t,
         other => panic!("step {k}: {other:?}"),
     };
-    let xic = |s: usize| text(3 * s + 2);
+    let xic = |s: usize| text(4 * s + 2);
     assert_ne!(xic(1), xic(2), "the two polarities gave one answer");
     assert_eq!(xic(0), xic(3));
     assert!(xic(1).contains("\"verdict\":\"peak\""), "{}", xic(1));

@@ -2,9 +2,7 @@
 //! A thin wrapper: the index of each file is built as the desktop app builds it, the recipe comes from `run::recipe_for` (the one behind the panel
 //! "Pipeline"), the steps are `run::detect` and `run::align`, and the CSV is the export "full" of the table (`core::table_file`), so the numbers are the ones of the page.
 
-use std::path::Path;
-
-use mzlab_core::error::{Error, Result};
+use mzlab_core::error::Error;
 
 mod argv;
 mod catalog;
@@ -238,6 +236,8 @@ mod quant_targets_cmd;
 mod quant_union_cmd;
 mod raw_cache_cmd;
 mod raw_cmd;
+mod raw_plan;
+mod raw_scan_cmd;
 mod raw_xic_cmd;
 mod renamed;
 pub mod repeat_hint;
@@ -265,15 +265,8 @@ fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file or dataset (a `.wiff` with
-/// its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) through the reader of the registry. `label` is the plan input (`NAME@ID` names the sample `ID`).
 pub(crate) use flow_pace::build_index_of;
-
-pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
-    build_index_of(path, "", idx, budget)
-}
-
-pub(crate) use idx_open::open;
+pub(crate) use idx_open::{build_index, open};
 
 pub use features_series::{features, features_full, features_of, features_plan_of};
 

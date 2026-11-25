@@ -51,7 +51,7 @@ pub fn stat_steps() -> Vec<Value> {
     out
 }
 
-/// `raw info` and `raw xic` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
+/// `raw info`, `raw xic` and `raw scan` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `/api/rawscan`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
 /// out of range; two masses (a peak and an empty one), changed thresholds, an m/z offset, a question with no time and a width out of range; then the
 /// slot reopened on the negative section and back on every section. The shared example holds positive scans only, so that negative section is the empty one; a
 /// file of alternating polarity (each section with its own answer) is `raw_pol.rs`. There is no `--sample` step: the app and the site answer a route over the
@@ -67,6 +67,14 @@ pub fn raw_steps() -> Vec<Value> {
         "?mz=241.3&rt=2.5,3.5&da=0",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawxic", "query": q}));
+    let scan = [
+        "?rt=2.5,3.5",
+        "?rt=2.5,3.5&bin=0.1&top=0&min_z=2&min_net=0.5",
+        "?rt=2.5,3.5&mz_range=200,300&mz_offset=0.3&side_min=0.2&gap_min=0.1",
+        "?rt=2.5",
+        "?rt=2.5,3.5&bin=0.2",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawscan", "query": q}));
     // `spectrum get --sum` evidence (`/api/specsum`): a window, with a fill time the user states, a fill time out of range and a question with no window
     let sum = [
         "?rt0=2.5&rt1=3.5&level=1",
@@ -79,10 +87,12 @@ pub fn raw_steps() -> Vec<Value> {
     let negative = [
         ("/api/rawinfo", "?probe=8"),
         ("/api/rawxic", "?mz=241.3&rt=2.5,3.5"),
+        ("/api/rawscan", "?rt=2.5,3.5"),
     ]
     .map(|(path, q)| json!({"op": "route", "slot": 0, "path": path, "query": q}));
     info.into_iter()
         .chain(xic)
+        .chain(scan)
         .chain(sum)
         .chain([pol(-1)])
         .chain(negative)

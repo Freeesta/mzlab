@@ -29,7 +29,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
 | LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
-| RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | RAW-SCAN | lost data: `raw isotopes` (AU-18, study §7) |
+| RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | - | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
 | NOMINAL-BIN | `docs/coda/prompt/NOMINAL-BIN.md` | - | `--bin nominal` for low-resolution profile data, honours `--mz-offset` |
 | SPECTRUM-COMPARE | `docs/coda/prompt/SPECTRUM-COMPARE.md` | NOMINAL-BIN | `spectrum compare A B`: cosine at the same CE with the matched ions |
@@ -60,7 +60,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | TP-LINK-NOTES | `docs/coda/prompt/TP-LINK-NOTES.md` | - | `tp.link` pairing notes in a result document (its output is a binary `.mzfeat`; no byte may change) |
 | ROLE-SHORT-NAMES | `docs/coda/prompt/ROLE-SHORT-NAMES.md` | - | short ambiguous names (`dk`, `dc`, a lone `D`) reported as possible roles, never guessed |
 | RAWXIC-PARITY | `docs/coda/prompt/RAWXIC-PARITY.md` | - | AU-13: equality with `trace xic` + `peak auto-lr` and `quant targets` on the wasm leg; app-leg `--sample` if the limit is not real |
-| RAW-SCAN | `docs/coda/prompt/RAW-SCAN.md` | - | AU-16: `raw scan` (study §4); new lazy module |
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
