@@ -378,8 +378,12 @@ fn the_state_words_and_shape_gates_of_quant_targets_are_found_from_the_task_and_
     );
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
-    let first = &v["matches"][0];
-    assert_eq!(first["name"], "quant targets", "{first}");
+    // The Flow step of the same function may rank just above its command (the bare word "blank" must keep the blank filter in the top five).
+    let top2 = &v["matches"].as_array().unwrap()[..2];
+    let first = top2
+        .iter()
+        .find(|m| m["name"] == "quant targets")
+        .unwrap_or_else(|| panic!("quant targets not in the first two: {top2:?}"));
     assert!(
         first["example"].as_str().unwrap().contains("min_half"),
         "{first}"
