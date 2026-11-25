@@ -406,3 +406,6 @@ fn the_help_of_sample_table_names_the_steps_that_read_its_roles() {
         "{help}"
     );
 }
+
+#[path = "samples_check_tests.rs"]
+mod check_tests;

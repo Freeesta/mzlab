@@ -9,7 +9,7 @@ mod chromatograms;
 mod container;
 pub use container::{container, container_at, container_within};
 mod growing;
-pub use growing::check_stable;
+pub use growing::{check_stable, completeness, unlisted_sections, Completeness, RECENT_S};
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_align;
