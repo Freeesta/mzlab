@@ -128,6 +128,60 @@ struct Answer {
     choices: Vec<String>,
 }
 
+/// The `files` entry of one file: what it is and, under `samples`, the members of the route.
+fn entry_json(
+    name: &str,
+    container: &str,
+    sha: &str,
+    size: Option<u64>,
+    sid: &str,
+    sname: &str,
+    members: &str,
+) -> String {
+    let mut o = Out::default();
+    o.raw("{\"file\":")
+        .str(name)
+        .raw(",\"container\":")
+        .str(container);
+    o.raw(",\"sha256\":")
+        .str(sha)
+        .raw(",\"size_bytes\":")
+        .raw(&size.map_or("null".into(), |n| n.to_string()));
+    o.raw(",\"samples\":[{\"id\":")
+        .raw(sid)
+        .raw(",\"name\":")
+        .str(sname)
+        .raw(",")
+        .raw(members)
+        .raw("}]}");
+    o.0
+}
+
+/// The automatic choices of one file: the sample taken when none was named and the ion quantum read from the probe.
+fn choices_of(name: &str, sid: &str, first: bool, members: &str, level: u8) -> Vec<String> {
+    let mut choices = Vec::new();
+    if first {
+        choices.push(choice(
+            "sample",
+            sid,
+            "the first sample of the file (--sample picks another)",
+        ));
+    }
+    let cps = parse(format!("{{{members}}}").as_bytes())
+        .ok()
+        .and_then(|v| {
+            v.get("ion_quantum")
+                .and_then(|q| q.get("cps"))
+                .and_then(|c| c.f64())
+        });
+    choices.push(choice(
+        &format!("ion_quantum {name}"),
+        &cps.map_or("null".into(), |c| c.to_string()),
+        &format!("the smallest positive intensity of {} probed scans of MS level {level} (null: not ion counts, the pipeline S/N decides)", mzlab_core::rawxic::PROBE),
+    ));
+    choices
+}
+
 fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
     extract::with_tmp("raw", |tmp| {
         let mut s = extract::open_sample(f, sample, tmp)?;
@@ -151,22 +205,15 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
             .iter()
             .find(|l| Some(l.0) == s.sample)
             .map_or(s.name.clone(), |l| l.1.clone());
-        let mut o = Out::default();
-        o.raw("{\"file\":")
-            .str(&s.name)
-            .raw(",\"container\":")
-            .str(&s.container);
-        o.raw(",\"sha256\":")
-            .str(&sha)
-            .raw(",\"size_bytes\":")
-            .raw(&size.map_or("null".into(), |n| n.to_string()));
-        o.raw(",\"samples\":[{\"id\":")
-            .raw(&sid)
-            .raw(",\"name\":")
-            .str(&sname)
-            .raw(",")
-            .raw(&out.members)
-            .raw("}]}");
+        let entry = entry_json(
+            &s.name,
+            &s.container,
+            &sha,
+            size,
+            &sid,
+            &sname,
+            &out.members,
+        );
         let rows = out
             .rows
             .iter()
@@ -174,30 +221,17 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
             .collect();
         let mut warnings = Vec::new();
         warnings_of(&s.name, s.sample, &out.members, &mut warnings);
-        let mut choices = Vec::new();
-        if sample.is_none() && s.sample.is_some() {
-            choices.push(choice(
-                "sample",
-                &sid,
-                "the first sample of the file (--sample picks another)",
-            ));
-        }
-        let cps = parse(format!("{{{}}}", out.members).as_bytes())
-            .ok()
-            .and_then(|v| {
-                v.get("ion_quantum")
-                    .and_then(|q| q.get("cps"))
-                    .and_then(|c| c.f64())
-            });
-        choices.push(choice(
-            &format!("ion_quantum {}", s.name),
-            &cps.map_or("null".into(), |c| c.to_string()),
-            &format!("the smallest positive intensity of {} probed scans of MS level {} (null: not ion counts, the pipeline S/N decides)", mzlab_core::rawxic::PROBE, a.ask.level),
-        ));
+        let choices = choices_of(
+            &s.name,
+            &sid,
+            sample.is_none() && s.sample.is_some(),
+            &out.members,
+            a.ask.level,
+        );
         let prov = prov_file(&s.name, &sha, size, s.sample);
         Ok((
             Answer {
-                entry: o.0,
+                entry,
                 rows,
                 prov,
                 warnings,
@@ -330,6 +364,78 @@ fn plan(p: &Parsed, a: &XicAsk) -> Outcome {
     crate::emit(text, &p.out())
 }
 
+/// What the files answered, in file order.
+#[derive(Default)]
+struct Gathered {
+    entries: Vec<String>,
+    per_file: Vec<(String, Vec<Value>)>,
+    provs: Vec<String>,
+    warnings: Vec<String>,
+    choices: Vec<String>,
+    rows: Vec<String>,
+    notes: String,
+    bad: bool,
+}
+
+/// Each file through `one`; a file that cannot be read keeps its place with an `error` entry, a whole-run failure ends the command.
+fn gather(p: &Parsed, a: &XicAsk) -> std::result::Result<Gathered, Outcome> {
+    let mut g = Gathered::default();
+    for f in &a.files {
+        let sample = p.sample(f).map_err(|m| Outcome::fail(&m))?;
+        match one(f, sample, a) {
+            Ok((ans, note)) => {
+                let parsed = ans
+                    .rows
+                    .iter()
+                    .filter_map(|r| parse(r.as_bytes()).ok())
+                    .collect();
+                g.per_file.push((name_of(f), parsed));
+                g.entries.push(ans.entry);
+                g.rows.extend(ans.rows);
+                g.provs.push(ans.prov);
+                g.warnings.extend(ans.warnings);
+                g.choices.extend(ans.choices);
+                g.notes += &note;
+            }
+            Err(e) if whole_run(&e) => return Err(crate::sample_select::fail(&e)),
+            Err(e) => {
+                g.bad = true;
+                g.entries.push(error_entry(f, &e, "raw xic"));
+            }
+        }
+    }
+    Ok(g)
+}
+
+/// The `raw-xic/1` document of what was gathered, capped at `--limit` rows.
+fn render(p: &Parsed, a: &XicAsk, command: &[String], mut g: Gathered) -> Outcome {
+    g.choices.push(choice(
+        "background",
+        "null",
+        "the scans of the same trace from W before the window to the gap before it and from the gap after it to W after (W = the window, at least side_min); the peak region or the window is judged",
+    ));
+    let (n_total, truncated) = (g.rows.len(), g.rows.len() > a.limit);
+    g.rows.truncate(a.limit);
+    let text = format!(
+        "{{\"schema\":\"raw-xic/1\",\"query\":{},\"files\":[{}],\"summary\":[{}],\"rows\":[{}],\"n_total\":{n_total},\"limit\":{},\"truncated\":{truncated},\"warnings\":[{}],{}}}\n",
+        params_json(p, a),
+        g.entries.join(","),
+        summary(&a.ask.mz, &g.per_file),
+        g.rows.join(","),
+        a.limit,
+        g.warnings.join(","),
+        provenance(command, &g.provs, &params_json(p, a), &g.choices)
+    );
+    let mut o = crate::emit(text, &p.out());
+    if o.code == 0 {
+        o.stderr = g.notes;
+        if g.bad {
+            o.code = crate::exit::DATA;
+        }
+    }
+    o
+}
+
 pub fn xic_run(args: Vec<String>) -> Outcome {
     let command: Vec<String> = ["mzlab-cli", "raw", "xic"]
         .iter()
@@ -363,61 +469,10 @@ pub fn xic_run(args: Vec<String>) -> Outcome {
     if p.flag("--dry-run") {
         return plan(&p, &a);
     }
-    let (mut entries, mut per_file, mut provs, mut warnings, mut choices) =
-        (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
-    let (mut rows, mut notes, mut bad) = (Vec::new(), String::new(), false);
-    for f in &a.files {
-        let sample = match p.sample(f) {
-            Ok(s) => s,
-            Err(m) => return Outcome::fail(&m),
-        };
-        match one(f, sample, &a) {
-            Ok((ans, note)) => {
-                let parsed = ans
-                    .rows
-                    .iter()
-                    .filter_map(|r| parse(r.as_bytes()).ok())
-                    .collect();
-                per_file.push((name_of(f), parsed));
-                entries.push(ans.entry);
-                rows.extend(ans.rows);
-                provs.push(ans.prov);
-                warnings.extend(ans.warnings);
-                choices.extend(ans.choices);
-                notes += &note;
-            }
-            Err(e) if whole_run(&e) => return crate::sample_select::fail(&e),
-            Err(e) => {
-                bad = true;
-                entries.push(error_entry(f, &e, "raw xic"));
-            }
-        }
+    match gather(&p, &a) {
+        Ok(g) => render(&p, &a, &command, g),
+        Err(o) => o,
     }
-    choices.push(choice(
-        "background",
-        "null",
-        "the scans of the same trace from W before the window to the gap before it and from the gap after it to W after (W = the window, at least side_min); the peak region or the window is judged",
-    ));
-    let (n_total, truncated) = (rows.len(), rows.len() > a.limit);
-    rows.truncate(a.limit);
-    let text = format!(
-        "{{\"schema\":\"raw-xic/1\",\"query\":{},\"files\":[{}],\"summary\":[{}],\"rows\":[{}],\"n_total\":{n_total},\"limit\":{},\"truncated\":{truncated},\"warnings\":[{}],{}}}\n",
-        params_json(&p, &a),
-        entries.join(","),
-        summary(&a.ask.mz, &per_file),
-        rows.join(","),
-        a.limit,
-        warnings.join(","),
-        provenance(&command, &provs, &params_json(&p, &a), &choices)
-    );
-    let mut o = crate::emit(text, &p.out());
-    if o.code == 0 {
-        o.stderr = notes;
-        if bad {
-            o.code = crate::exit::DATA;
-        }
-    }
-    o
 }
 
 #[cfg(test)]

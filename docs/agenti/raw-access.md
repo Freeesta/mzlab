@@ -1,7 +1,7 @@
 # `raw info`, `raw cache`, `raw xic`: what a raw file holds and whether a peak is there, for an agent (`raw-info/1`, `raw-cache/1`, `raw-xic/1`)
 
 The first slice of the raw access study (`docs/studies/RAW_ACCESS_STUDY.md`, `RAW_ACCESS_STUDY_2.md` §1-2). Code: `crates/mzlab-core/src/rawinfo.rs` (all logic,
-route `/api/rawinfo`), `rawxic.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
+route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `/api/rawxic`), `crates/mzlab-raw-wasm`, `crates/mzlab-cli/src/raw_cmd.rs`, `raw_cache_cmd.rs`, `raw_xic_cmd.rs`, `idx_cache.rs` (`peek`). Tests: `rawinfo_tests.rs`,
 `rawxic_tests.rs`, `raw_cmd_tests.rs`, `raw_xic_cmd_tests.rs`, `crates/mzlab-cli/tests/raw_xic_cli.rs` (equal to `quant targets`), `tests/test_raw_info_wasm.py`, `tests/test_raw_xic_wasm.py` (the `raw` `.wasm` vs the CLI, byte for byte), `crates/mzlab-desktop/tests/parity_routes.rs` (app vs `.wasm`).
 
 ## `raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]`
