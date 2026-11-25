@@ -3,6 +3,6 @@ pacchetto = "mzlab-rawxic-wasm"
 chiavi = { rawxic = 33 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 307200
-misura = 290128
-nota = "api/rawxic (`raw xic`: per m/z the quant-targets integrator plus ion-count verdicts over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first xic request; a module of its own because inside `raw` it took +72,726 B (+33.4 %, over the 5 % rule), Coordinator decision; first value is the CI-measured size of that build, to be replaced by the CI measure of this module, cap = measurement x 1.05 rounded up to 4 KiB"
+tetto = 212992
+misura = 201944
+nota = "api/rawxic (`raw xic`: per m/z the quant-targets integrator plus ion-count verdicts over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first xic request; a module of its own because inside `raw` it took 217,402 -> 290,128 B (+33.4 %, over the 5 % rule), Coordinator decision; 201,944 B after wasm-opt (CI size step, bb2eba8), cap = measurement x 1.05 rounded up to 4 KiB"
