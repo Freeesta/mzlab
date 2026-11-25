@@ -39,7 +39,9 @@ fn bad(name: &str, v: &str) -> Error {
 /// `factor`, `side_min`, `gap_min`, `min_sn`, `min_points` of a request; a value out of its range is refused.
 fn set_of(q: &Query) -> Result<Set> {
     let get = |name: &str, d: f64, lo: f64, hi: f64, open: bool| -> Result<f64> {
-        let v = q.num(name).map_err(|_| bad(name, q.get(name).unwrap_or("")))?;
+        let v = q
+            .num(name)
+            .map_err(|_| bad(name, q.get(name).unwrap_or("")))?;
         match v {
             None => Ok(d),
             Some(v) if v.is_finite() && v <= hi && (if open { v > lo } else { v >= lo }) => Ok(v),
@@ -106,7 +108,12 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The sum (not the mean) of a window per nominal mass, and the scans it holds; the lines of one nominal mass are merged as `/api/spectrum` does.
-    fn nominal_sum(&mut self, level: u8, (lo, hi): (f64, f64), precursor: Option<f64>) -> Result<(Vec<f64>, Vec<f64>, usize)> {
+    fn nominal_sum(
+        &mut self,
+        level: u8,
+        (lo, hi): (f64, f64),
+        precursor: Option<f64>,
+    ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
         let before = std::mem::replace(&mut self.msn.opts.sum, true);
         let b = self.binned(level, lo, hi, precursor, BIN, None);
         self.msn.opts.sum = before;
@@ -127,147 +134,278 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         };
         let (level, fill, precursor, p) = (q.level(), fill_of(q)?, q.num("precursor")?, set_of(q)?);
-        let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
+        let win = (rt0.min(rt1), rt0.max(rt1));
         let (rt, y) = self.level_trace(level, precursor)?;
+        let in_range = scans_in(&rt, win);
         let mut o = Out::default();
-        o.raw("{\"mode\":\"peak_auto\",\"ms_level\":").int(i64::from(level));
-        o.raw(&format!(
-            ",\"params\":{{\"factor\":{},\"side_min\":{},\"gap_min\":{},\"min_sn\":{},\"min_points\":{}}}",
-            p.factor, p.side, p.gap, p.min_sn, p.min_points
-        ));
-        o.raw(&format!(",\"search_min\":[{lo},{hi}]"));
-        let in_range = rt.iter().filter(|&&t| t >= lo && t <= hi).count();
-        o.raw(&format!(",\"trace\":{{\"n_scans\":{},\"n_scans_searched\":{in_range},\"basis\":\"summed intensity of every scan of the level{}\"}}", rt.len(), if level > 1 { " and precursor" } else { "" }));
-        let none = |o: &mut Out, verdict: &str, rule: &str, apex: &str| {
-            o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[],\"apex\":{apex},\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,"));
-            o.raw("\"spectrum\":false,\"n_scans\":").int(in_range as i64);
-            o.raw(",\"total_ions\":null,\"sum\":null,\"rule\":").str(rule).raw(",\"mz\":[],\"y\":[]}");
-        };
+        head(&mut o, level, win, &p, (rt.len(), in_range));
         if in_range == 0 {
-            none(&mut o, "no_data", &format!("no scan of MS level {level} between {lo} and {hi} min"), "null");
-            return Ok(Some(o.0));
+            let rule = format!(
+                "no scan of MS level {level} between {} and {} min",
+                win.0, win.1
+            );
+            return Ok(Some(without(o, "no_data", &rule, "null", in_range)));
         }
-        let (hit, _, _, edge) = tallest(&rt, &y, lo, hi, SMOOTH_HALF, VALLEY_PCT);
+        let (hit, _, _, edge) = tallest(&rt, &y, win.0, win.1, SMOOTH_HALF, VALLEY_PCT);
         let Some(hit) = hit else {
-            none(&mut o, "no_apex", "no peak in the search range of the chromatogram -> no_apex", "null");
-            return Ok(Some(o.0));
+            let rule = "no peak in the search range of the chromatogram -> no_apex";
+            return Ok(Some(without(o, "no_apex", rule, "null", in_range)));
         };
-        let (ok_sn, ok_pt) = (hit.sn >= p.min_sn, hit.points >= p.min_points);
         let apex_json = format!(
             "{{\"rt_min\":{},\"height\":{},\"sn\":{},\"points\":{},\"start_min\":{},\"end_min\":{}}}",
             hit.rt, hit.height, hit.sn, hit.points, hit.start_rt, hit.end_rt
         );
-        if !(ok_sn && ok_pt) {
-            let rule = format!(
-                "candidate at {} min: S/N {} {} min_sn {}; points {} {} min_points {} -> no_apex",
-                hit.rt,
-                hit.sn,
-                if ok_sn { ">=" } else { "<" },
-                p.min_sn,
-                hit.points,
-                if ok_pt { ">=" } else { "<" },
-                p.min_points
-            );
-            none(&mut o, "no_apex", &rule, &apex_json);
-            return Ok(Some(o.0));
+        if let Some(rule) = misses(&hit, &p) {
+            return Ok(Some(without(o, "no_apex", &rule, &apex_json, in_range)));
         }
-        // the width at half height above the baseline the integrator drew under the apex
-        let at = rt.iter().position(|&t| t == hit.rt).unwrap_or(0);
-        let half = y[at] - hit.height / 2.0;
-        let ((l, cut_l), (r, cut_r)) = half_width(&rt, &y, at, half);
-        let fwhm = r - l;
-        let mut flags: Vec<&str> = Vec::new();
-        if edge {
-            flags.push("edge");
-        }
-        if cut_l || cut_r {
-            flags.push("fwhm_cut");
-        }
-        let h = p.factor * fwhm / 2.0;
-        let (w0, w1) = (hit.rt - h, hit.rt + h);
-        // the sides start outside the peak the integrator found as well as outside the window, so a tail never counts as background
-        let (a0, a1) = (w0.min(hit.start_rt), w1.max(hit.end_rt));
-        let left = (a0 - p.gap - p.side, a0 - p.gap);
-        let right = (a1 + p.gap, a1 + p.gap + p.side);
-        let side_of = |s: (f64, f64)| {
-            let (mut n, mut tot) = (0usize, 0.0);
-            for i in 0..rt.len() {
-                if rt[i] >= s.0 && rt[i] <= s.1 {
-                    n += 1;
-                    tot += y[i];
-                }
-            }
-            (n, tot)
-        };
-        let (side_l, side_r) = (side_of(left), side_of(right));
+        let g = geometry(&rt, &y, &hit, edge, &p);
+        let side_l = side_of(&rt, &y, g.left);
+        let side_r = side_of(&rt, &y, g.right);
         let n_side = side_l.0 + side_r.0;
-        let cps = (n_side > 0).then(|| (side_l.1 + side_r.1) / n_side as f64);
-        if n_side == 0 {
-            flags.push("no_background");
-        } else if side_l.0 == 0 || side_r.0 == 0 {
-            flags.push("one_side");
-        }
-        let background = match cps {
-            Some(c) => format!("{{\"applied\":\"sides\",\"method\":{},\"n_side_scans\":{n_side},\"per_scan_cps\":{}}}", quote(METHOD), rd(c)),
-            None => "{\"applied\":\"none\",\"method\":null,\"n_side_scans\":0,\"per_scan_cps\":null}".to_string(),
-        };
-        let rule = format!(
-            "apex {} min: S/N {} >= min_sn {}; points {} >= min_points {} -> peak; FWHM {} min ({} .. {}); window {} x FWHM = {} .. {} min",
-            hit.rt, hit.sn, p.min_sn, hit.points, p.min_points, rd(fwhm), rd(l), rd(r), p.factor, rd(w0), rd(w1)
-        );
+        let background = background_json(n_side, side_l.1 + side_r.1);
+        let sum = self.sum_evidence(level, g.window, precursor, fill, &background)?;
         // a profile or high-resolution level: the window and the sides are given, no spectrum (the nominal-mass subtraction does not describe its lines)
         let scans = &self.idx.scans;
         let is_profile = scans.iter().filter(|s| s.level == level).any(|s| s.profile);
         let hr = hr_profile(scans, level == 1, true).on;
         let has_spectrum = !(is_profile || hr);
-        let verdict = if has_spectrum { "peak" } else { "window_only" };
-        o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[{}]", flags.iter().map(|f| format!("\"{f}\"")).collect::<Vec<_>>().join(",")));
-        o.raw(&format!(",\"apex\":{apex_json},\"fwhm_min\":{},\"half_height\":{},\"window_min\":[{},{}]", rd(fwhm), rd(half), rd(w0), rd(w1)));
-        let side_json = |s: (f64, f64), v: (usize, f64)| format!("{{\"window_min\":[{},{}],\"n_scans\":{}}}", rd(s.0), rd(s.1), v.0);
-        o.raw(&format!(",\"sides\":{{\"left\":{},\"right\":{},\"anchored_min\":[{},{}]}}", side_json(left, side_l), side_json(right, side_r), rd(a0), rd(a1)));
-        o.raw(",\"background\":").raw(&background);
-        let sum = self.sum_evidence(level, (w0, w1), precursor, fill, &background)?;
-        let (mut mz, mut yy, mut n_win) = (Vec::new(), Vec::new(), 0usize);
-        let verdict_rule = if !has_spectrum {
-            format!("{rule}; the level is {}: no spectrum made, take the window with spectrum get --rt A,B --sum", if is_profile { "profile" } else { "high resolution" })
+        let mut flags = g.flags.clone();
+        if n_side == 0 {
+            flags.push("no_background");
+        } else if side_l.0 == 0 || side_r.0 == 0 {
+            flags.push("one_side");
+        }
+        let mut rule = g.rule(&hit, &p);
+        let (mut mz, mut yy, mut n_win) = (Vec::new(), Vec::new(), scans_in(&rt, g.window));
+        if has_spectrum {
+            (mz, yy, n_win) = self.net_spectrum(level, &g, precursor, n_side)?;
         } else {
-            let (wm, wy, n) = self.nominal_sum(level, (w0, w1), precursor)?;
-            n_win = n;
-            let mut bg: BTreeMap<i64, f64> = BTreeMap::new();
-            for s in [left, right] {
-                let (sm, sy, _) = self.nominal_sum(level, s, precursor)?;
-                for (m, v) in sm.iter().zip(&sy) {
-                    *bg.entry(nominal(*m)).or_insert(0.0) += v;
-                }
-            }
-            let scale = if n_side > 0 { n as f64 / n_side as f64 } else { 0.0 };
-            for (m, v) in wm.iter().zip(&wy) {
-                // rounded as it is shown: a mass whose net is a rounding error of the flat background is not a line
-                let net = round(v - bg.get(&nominal(*m)).copied().unwrap_or(0.0) * scale, 1);
-                if net > 0.0 {
-                    mz.push(*m);
-                    yy.push(net);
-                }
-            }
-            rule
+            rule += &format!("; the level is {}: no spectrum made, take the window with spectrum get --rt A,B --sum", if is_profile { "profile" } else { "high resolution" });
+        }
+        let f = Found {
+            g: &g,
+            apex_json: &apex_json,
+            sides: (side_l, side_r),
+            background: &background,
+            sum: &sum,
+            flags: &flags,
+            rule: &rule,
+            has_spectrum,
+            n_win,
+            lines: (&mz, &yy),
         };
-        o.raw(",\"spectrum\":").raw(if has_spectrum { "true" } else { "false" });
-        o.raw(",\"n_scans\":").int(if has_spectrum { n_win as i64 } else { scans_in(&rt, (w0, w1)) as i64 });
-        // the ions the window rests on: counts x fill time, null until the fill time is stated or known (`evidence.sum.ions`)
-        o.raw(",\"total_ions\":").raw(&ions_of(&sum));
-        o.raw(",\"sum\":").raw(&sum);
-        // the lines last: a reader that wants the evidence alone cuts the answer at `,"mz":[`
-        o.raw(",\"rule\":").str(&verdict_rule).raw(",\"mz\":[");
-        for (i, v) in mz.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" }).num(round(*v, 3));
-        }
-        o.raw("],\"y\":[");
-        for (i, v) in yy.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
-        }
-        o.raw("]}");
-        Ok(Some(o.0))
+        Ok(Some(emit(o, &f)))
     }
+
+    /// The window's sum minus the mean of both sides scaled to the window's scans, per nominal mass, kept where the net (rounded as shown) is above zero;
+    /// with the scans of the window.
+    fn net_spectrum(
+        &mut self,
+        level: u8,
+        g: &Geometry,
+        precursor: Option<f64>,
+        n_side: usize,
+    ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
+        let (wm, wy, n) = self.nominal_sum(level, g.window, precursor)?;
+        let mut bg: BTreeMap<i64, f64> = BTreeMap::new();
+        for s in [g.left, g.right] {
+            let (sm, sy, _) = self.nominal_sum(level, s, precursor)?;
+            for (m, v) in sm.iter().zip(&sy) {
+                *bg.entry(nominal(*m)).or_insert(0.0) += v;
+            }
+        }
+        let scale = if n_side > 0 {
+            n as f64 / n_side as f64
+        } else {
+            0.0
+        };
+        let (mut mz, mut yy) = (Vec::new(), Vec::new());
+        for (m, v) in wm.iter().zip(&wy) {
+            // rounded as it is shown: a mass whose net is a rounding error of the flat background is not a line
+            let net = round(v - bg.get(&nominal(*m)).copied().unwrap_or(0.0) * scale, 1);
+            if net > 0.0 {
+                mz.push(*m);
+                yy.push(net);
+            }
+        }
+        Ok((mz, yy, n))
+    }
+}
+
+/// The start of every answer: the level, the parameters in force, the range searched and the chromatogram behind it.
+fn head(o: &mut Out, level: u8, (lo, hi): (f64, f64), p: &Set, (n, in_range): (usize, usize)) {
+    o.raw("{\"mode\":\"peak_auto\",\"ms_level\":")
+        .int(i64::from(level));
+    o.raw(&format!(
+        ",\"params\":{{\"factor\":{},\"side_min\":{},\"gap_min\":{},\"min_sn\":{},\"min_points\":{}}}",
+        p.factor, p.side, p.gap, p.min_sn, p.min_points
+    ));
+    o.raw(&format!(",\"search_min\":[{lo},{hi}]"));
+    let prec = if level > 1 { " and precursor" } else { "" };
+    o.raw(&format!(",\"trace\":{{\"n_scans\":{n},\"n_scans_searched\":{in_range},\"basis\":\"summed intensity of every scan of the level{prec}\"}}"));
+}
+
+/// Everything a `peak` or `window_only` answer reports.
+struct Found<'a> {
+    g: &'a Geometry,
+    apex_json: &'a str,
+    sides: ((usize, f64), (usize, f64)),
+    background: &'a str,
+    sum: &'a str,
+    flags: &'a [&'static str],
+    rule: &'a str,
+    has_spectrum: bool,
+    n_win: usize,
+    lines: (&'a [f64], &'a [f64]),
+}
+
+/// The rest of an answer that found a window: verdict, geometry, sides, background, sum and, last, the lines.
+fn emit(mut o: Out, f: &Found) -> String {
+    let (g, (side_l, side_r)) = (f.g, f.sides);
+    let flags: Vec<String> = f.flags.iter().map(|x| format!("\"{x}\"")).collect();
+    let verdict = if f.has_spectrum { "peak" } else { "window_only" };
+    o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[{}]", flags.join(",")));
+    o.raw(&format!(
+        ",\"apex\":{},\"fwhm_min\":{},\"half_height\":{},\"window_min\":[{},{}]",
+        f.apex_json,
+        rd(g.fwhm),
+        rd(g.half),
+        rd(g.window.0),
+        rd(g.window.1)
+    ));
+    let side_json = |s: (f64, f64), v: (usize, f64)| {
+        format!("{{\"window_min\":[{},{}],\"n_scans\":{}}}", rd(s.0), rd(s.1), v.0)
+    };
+    o.raw(&format!(
+        ",\"sides\":{{\"left\":{},\"right\":{},\"anchored_min\":[{},{}]}}",
+        side_json(g.left, side_l),
+        side_json(g.right, side_r),
+        rd(g.anchored.0),
+        rd(g.anchored.1)
+    ));
+    o.raw(",\"background\":").raw(f.background);
+    o.raw(",\"spectrum\":").raw(if f.has_spectrum { "true" } else { "false" });
+    o.raw(",\"n_scans\":").int(f.n_win as i64);
+    // the ions the window rests on: counts x fill time, null until the fill time is stated or known (`evidence.sum.ions`)
+    o.raw(",\"total_ions\":").raw(&ions_of(f.sum)).raw(",\"sum\":").raw(f.sum);
+    // the lines last: a reader that wants the evidence alone cuts the answer at `,"mz":[`
+    o.raw(",\"rule\":").str(f.rule);
+    lines(&mut o, f.lines.0, f.lines.1);
+    o.0
+}
+
+/// The rest of an answer that makes no spectrum: the verdict, its rule and the apex candidate (`null` when there is none).
+fn without(mut o: Out, verdict: &str, rule: &str, apex: &str, in_range: usize) -> String {
+    o.raw(&format!(",\"verdict\":\"{verdict}\",\"flags\":[],\"apex\":{apex},\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,"));
+    o.raw("\"spectrum\":false,\"n_scans\":")
+        .int(in_range as i64);
+    o.raw(",\"total_ions\":null,\"sum\":null,\"rule\":")
+        .str(rule)
+        .raw(",\"mz\":[],\"y\":[]}");
+    o.0
+}
+
+/// The rule that refuses a candidate apex under `min_sn` or `min_points`, `None` when it meets both.
+fn misses(hit: &crate::rawxic::Hit, p: &Set) -> Option<String> {
+    let (ok_sn, ok_pt) = (hit.sn >= p.min_sn, hit.points >= p.min_points);
+    if ok_sn && ok_pt {
+        return None;
+    }
+    let cmp = |ok: bool| if ok { ">=" } else { "<" };
+    Some(format!(
+        "candidate at {} min: S/N {} {} min_sn {}; points {} {} min_points {} -> no_apex",
+        hit.rt,
+        hit.sn,
+        cmp(ok_sn),
+        p.min_sn,
+        hit.points,
+        cmp(ok_pt),
+        p.min_points
+    ))
+}
+
+/// Where the window and the sides lie.
+struct Geometry {
+    fwhm: f64,
+    half: f64,
+    edges: (f64, f64),
+    window: (f64, f64),
+    anchored: (f64, f64),
+    left: (f64, f64),
+    right: (f64, f64),
+    flags: Vec<&'static str>,
+}
+
+impl Geometry {
+    /// The rule of a `peak`, every number next to its threshold.
+    fn rule(&self, hit: &crate::rawxic::Hit, p: &Set) -> String {
+        format!(
+            "apex {} min: S/N {} >= min_sn {}; points {} >= min_points {} -> peak; FWHM {} min ({} .. {}); window {} x FWHM = {} .. {} min",
+            hit.rt, hit.sn, p.min_sn, hit.points, p.min_points, rd(self.fwhm), rd(self.edges.0), rd(self.edges.1), p.factor, rd(self.window.0), rd(self.window.1)
+        )
+    }
+}
+
+/// The FWHM at the apex of `hit`, the window of `factor` x FWHM around it, and the sides: they start outside the peak the integrator found as well as outside the
+/// window, so a tail never counts as background.
+fn geometry(rt: &[f64], y: &[f64], hit: &crate::rawxic::Hit, edge: bool, p: &Set) -> Geometry {
+    // the width at half height above the baseline the integrator drew under the apex
+    let at = rt.iter().position(|&t| t == hit.rt).unwrap_or(0);
+    let half = y[at] - hit.height / 2.0;
+    let ((l, cut_l), (r, cut_r)) = half_width(rt, y, at, half);
+    let fwhm = r - l;
+    let mut flags: Vec<&'static str> = Vec::new();
+    if edge {
+        flags.push("edge");
+    }
+    if cut_l || cut_r {
+        flags.push("fwhm_cut");
+    }
+    let h = p.factor * fwhm / 2.0;
+    let window = (hit.rt - h, hit.rt + h);
+    let (a0, a1) = (window.0.min(hit.start_rt), window.1.max(hit.end_rt));
+    Geometry {
+        fwhm,
+        half,
+        edges: (l, r),
+        window,
+        anchored: (a0, a1),
+        left: (a0 - p.gap - p.side, a0 - p.gap),
+        right: (a1 + p.gap, a1 + p.gap + p.side),
+        flags,
+    }
+}
+
+/// The scans of a trace inside `s` and their summed intensity.
+fn side_of(rt: &[f64], y: &[f64], s: (f64, f64)) -> (usize, f64) {
+    let inside = (0..rt.len()).filter(|&i| rt[i] >= s.0 && rt[i] <= s.1);
+    inside.fold((0, 0.0), |(n, t), i| (n + 1, t + y[i]))
+}
+
+/// The `background` member: what was subtracted and its level in cps per scan (`none` when no side has a scan).
+fn background_json(n_side: usize, total: f64) -> String {
+    if n_side == 0 {
+        return "{\"applied\":\"none\",\"method\":null,\"n_side_scans\":0,\"per_scan_cps\":null}"
+            .to_string();
+    }
+    format!(
+        "{{\"applied\":\"sides\",\"method\":{},\"n_side_scans\":{n_side},\"per_scan_cps\":{}}}",
+        quote(METHOD),
+        rd(total / n_side as f64)
+    )
+}
+
+/// The lines of the spectrum, the last two members of the answer, and the closing brace.
+fn lines(o: &mut Out, mz: &[f64], y: &[f64]) {
+    o.raw(",\"mz\":[");
+    for (i, v) in mz.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 3));
+    }
+    o.raw("],\"y\":[");
+    for (i, v) in y.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
+    }
+    o.raw("]}");
 }
 
 fn scans_in(rt: &[f64], (lo, hi): (f64, f64)) -> usize {
