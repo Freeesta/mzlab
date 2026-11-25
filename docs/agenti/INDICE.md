@@ -33,6 +33,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | step by step (area: command line `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | command line `mzlab-cli features` (`crates/mzlab-cli`: feature table as CSV, same engine and recipe as the page; `features-notes/1` at `--notes` or beside `--out`) | `docs/agenti/cli.md` |
 | running the verification in the cloud container (Chromium, `--setup`, tests against the built site) | `docs/agenti/cloud-environment.md` |
+| roadmap queue of ready DEV tasks (`docs/coda/CODA.md`: one row and one prompt per task, `BRIEF.md` shared rules; a chat's PR removes its own row, `tools/controlla_coda.py`) | `docs/coda/CODA.md` |
 | Safari and iPadOS (WebKit): API × minimum version × fallback, 16.4 floor, `compat.js` fallbacks (`AbortSignal.any`, `createWritable`, clipboard, `accept`); Safari, iPad, iPhone memory (budget without `deviceMemory`, calm refusal, `estimate::check_reader`) | `docs/agenti/compat-safari.md` |
 | RT-λ (DAD) map: study of the panel — data flow, causes of subtraction/side strips/3D not working, formats (Agilent/Waters/SCIEX) and DAD→MS discard, design of the link with the MS, split into PRs | `docs/agenti/dad-mappa-studio.md` |
 | DAD (UV/Vis) detector of the `.wiff`: matrix, RT-λ map, UV spectrum, TWC/XWC (`xwc.js`), XWC integration, DAD on the MRM panel (`dad-mrm.js`) | `docs/agenti/dad.md` |

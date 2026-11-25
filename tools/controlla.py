@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
 import html_safe  # noqa: E402
 import safari_api  # noqa: E402
+import controlla_coda  # noqa: E402
 
 BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
@@ -272,7 +273,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--update writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--update" in sys.argv) + rules_frame("--update" in sys.argv) + rules_expected("--update" in sys.argv) + safari_api.controlla() + html_safe.peggiori(html_safe.misura(), json.loads(html_safe.BASE.read_text(encoding="utf-8")) if html_safe.BASE.exists() else {})
+    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--update" in sys.argv) + rules_frame("--update" in sys.argv) + rules_expected("--update" in sys.argv) + safari_api.controlla() + controlla_coda.peggiori() + html_safe.peggiori(html_safe.misura(), json.loads(html_safe.BASE.read_text(encoding="utf-8")) if html_safe.BASE.exists() else {})
     if "--update" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
