@@ -1,6 +1,6 @@
 uscita = "wasm-feat/filemethod"
 pacchetto = "mzlab-filemethod-wasm"
-chiavi = { filemethod = 34 }
+chiavi = { filemethod = 35 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 122880
