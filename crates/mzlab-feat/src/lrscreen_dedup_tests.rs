@@ -167,3 +167,83 @@ fn peaks_that_do_not_touch_stay_and_a_series_of_both_polarities_is_not_merged() 
     merge(&mut t, &r, false);
     assert_eq!(t.len(), 2);
 }
+
+/// Two rows 0.05 Da apart whose peaks (`wa`, `wb` min wide) sit at `rt_a` and `rt_b` in the files flagged in `have_b`; row a is in every file.
+fn pair(wa: f32, wb: f32, rt_a: f64, rt_b: f64, areas_b: [Option<f64>; 4]) -> Aligned {
+    let a = [9e4, 8e4, 1e5, 7e4].map(|x| Some((x, rt_a as f32, wa)));
+    let b = areas_b.map(|x| x.map(|x| (x, rt_b as f32, wb)));
+    peaks(&[(250.2, rt_a, a), (250.25, rt_b, b)])
+}
+
+fn merged_rows(mut t: Aligned) -> (usize, crate::lrscreen::Log) {
+    let mut r = recipe();
+    r.fill.rt_tol = 0.5;
+    merge(&mut t, &r, true);
+    (t.len(), r.screen.evidence.as_ref().unwrap().take())
+}
+
+#[test]
+fn touching_peaks_of_two_ions_at_the_same_mass_are_not_merged() {
+    let all = [Some(2e4); 4];
+    let (n, log) = merged_rows(pair(0.1, 0.1, 5.0, 5.1, all));
+    assert_eq!((n, log.near.len()), (2, 1));
+    assert!(log.near[0].overlap < 1e-4);
+}
+
+#[test]
+fn a_narrow_peak_inside_a_very_broad_one_is_another_ion() {
+    let all = [Some(2e4); 4];
+    let (n, log) = merged_rows(pair(0.8, 0.05, 5.0, 5.02, all));
+    assert_eq!(n, 2, "narrower share 1.0 but wider share 0.0625");
+    let g = &log.near[0];
+    assert!((g.overlap - 1.0).abs() < 1e-6 && (g.overlap_wide - 0.0625).abs() < 1e-6);
+    // the same pair as a cut shoulder (3x wider) is merged and both shares are logged
+    let (n, log) = merged_rows(pair(0.3, 0.1, 5.0, 5.02, all));
+    assert_eq!(n, 1);
+    assert!((log.merged[0].overlap_wide - 1.0 / 3.0).abs() < 1e-6);
+}
+
+#[test]
+fn rows_whose_areas_move_against_each_other_in_four_files_are_not_merged() {
+    let t = table(&[
+        (200.0, 5.0, [1e4, 2e4, 4e4, 8e4]),
+        (200.3, 5.0, [8e4, 4e4, 2e4, 1e4]),
+    ]);
+    let (n, log) = merged_rows(t);
+    assert_eq!(n, 2, "same peaks, but r <= -0.5 blocks the overlap rule");
+    assert!(log.near[0].r <= APART_R && log.near[0].overlap == 1.0);
+}
+
+#[test]
+fn a_partial_overlap_just_under_the_threshold_stays_and_just_over_merges() {
+    let all = [Some(2e4); 4];
+    let (n, log) = merged_rows(pair(0.1, 0.1, 5.0, 5.055, all));
+    assert_eq!(n, 2);
+    assert!((log.near[0].overlap - 0.45).abs() < 1e-3);
+    let (n, log) = merged_rows(pair(0.1, 0.1, 5.0, 5.045, all));
+    assert_eq!(n, 1);
+    assert!((log.merged[0].overlap - 0.55).abs() < 1e-3);
+}
+
+#[test]
+fn one_shared_file_is_not_enough_unless_the_series_is_one_file() {
+    let one = [None, Some(2e4), None, None];
+    let (n, log) = merged_rows(pair(0.3, 0.1, 5.0, 5.08, one));
+    assert_eq!((n, log.near[0].shared), (2, 1));
+    // a series of one file: the only file is the evidence there is
+    let mut t = Aligned {
+        n_files: 1,
+        ..Aligned::default()
+    };
+    for (mz, w, a) in [(250.2, 0.3f32, 9e4), (250.25, 0.1, 2e4)] {
+        t.mz.push(mz);
+        t.rt.push(5.0);
+        t.area.push(a);
+        t.height.push(a as f32);
+        t.apex_rt.push(5.0);
+        t.width.push(w);
+        t.state.push(crate::aligned::CELL_DETECTED);
+    }
+    let (n, log) = merged_rows(t);
+    assert_eq!((n, log.merged[0].shared), (1, 1));
+}

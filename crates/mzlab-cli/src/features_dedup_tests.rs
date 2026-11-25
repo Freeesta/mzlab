@@ -1,5 +1,5 @@
 //! `dedup` of `features` on a synthetic replicate series (`tools/lr_synthetic.py --replicates 4`, run into a temp dir; skipped without python3 and
-//! numpy, `MZLAB_GOLDEN_STRICT=1` fails instead): one peak cut in two rows is merged by the overlap rule with every number in `--report`, the
+//! numpy; `MZLAB_GOLDEN_STRICT`, `CI` or `GITHUB_ACTIONS` set fails instead): one peak cut in two rows is merged by the overlap rule with every number in `--report`, the
 //! threshold of `--params` undoes it, and the hint to that threshold is in the notes and the report.
 
 use std::path::PathBuf;
@@ -25,8 +25,11 @@ fn replicates(tag: &str) -> Option<(PathBuf, Vec<String>)> {
         .output()
         .is_ok_and(|o| o.status.success());
     if !ok {
+        // CI must run this test, never skip it
         assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            ["MZLAB_GOLDEN_STRICT", "CI", "GITHUB_ACTIONS"]
+                .iter()
+                .all(|k| std::env::var_os(k).is_none()),
             "python3 or numpy missing"
         );
         eprintln!("skipped: python3/numpy not available");
@@ -131,7 +134,11 @@ fn rows_left_close_are_in_the_report_and_the_hint_names_the_threshold() {
     for p in near {
         assert!(p.get("dmz_da").and_then(Value::f64).unwrap() <= 0.6);
         assert!(p.get("shared_files").is_some() && p.get("overlap").is_some());
+        assert!(p.get("overlap_wide").is_some());
     }
+    let total = report(&rep).get("near_total").and_then(Value::f64).unwrap();
+    assert!(total as usize >= near.len());
+    assert!(near.len() <= 20);
     let _ = std::fs::remove_dir_all(d);
 }
 
@@ -146,13 +153,17 @@ fn the_hint_is_the_catalogue_text_that_names_dedup_overlap() {
         drt_min: 0.05,
         r: f64::NAN,
         overlap: 0.4,
+        overlap_wide: 0.2,
         shared: 2,
     });
     let n = crate::par::features_report::near_notice(&log).unwrap();
     assert_eq!(n.key, "note.features.nearDup");
     let text = crate::error_text::warning(&n);
     assert!(
-        text.contains("dedup_overlap") && text.contains("250.200") && text.contains("1 pair"),
+        text.contains("dedup_overlap")
+            && text.contains("250.200")
+            && text.contains("1 pair")
+            && text.contains("different ions"),
         "{text}"
     );
 }

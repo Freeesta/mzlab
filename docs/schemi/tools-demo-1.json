@@ -1068,14 +1068,14 @@
                   {
                     "enum":["auto","off"],
                     "default":"auto",
-                    "description":"Unit resolution only: of two rows within 0.6 Da and the RT tolerance keeps the one with the higher maximum height when their areas correlate (r of at least 0.9 over 3 files) or their peaks overlap (see dedup_overlap); areas are never summed. Each merge is logged with its numbers"
+                    "description":"Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed"
                   },
                   {
                     "type":"number",
                     "minimum":0,
                     "maximum":1,
                     "default":0.5,
-                    "description":"Unit resolution only: rows within 0.6 Da and the RT tolerance whose peaks, in the files where both were detected, cover at least this share of the narrower one are one ion (a shoulder or broad top cut in two); 0 = off"
+                    "description":"Unit resolution only: rows within 0.6 Da and the RT tolerance whose peaks, in the files where both were detected, cover at least this share of the narrower one (and half of it of the wider one), in 2 files or the only file, are one ion (a shoulder or broad top cut in two); 0 = off"
                   },
                   {
                     "type":"number",

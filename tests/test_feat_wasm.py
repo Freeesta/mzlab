@@ -24,7 +24,10 @@ def run(*a):
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
     """The synthetic series, the native example and the .wasm (nodejs target), built once."""
-    pytest.importorskip("numpy")
+    if os.environ.get("CI"):
+        import numpy  # noqa: F401  (a missing numpy fails in CI instead of skipping the parity)
+    else:
+        pytest.importorskip("numpy")
     root = tmp_path_factory.mktemp("feat")
     ser = root / "ser"
     # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
@@ -421,3 +424,27 @@ def test_the_dedup_overlap_rule_gives_the_same_bytes_native_and_in_node(built, l
     off, _ = plain(root, lr_replicates, pkg, f"lr_dedup_ref_{tag}", '{"dedup_overlap": 0}')
     differs = (nat_dir / "series.mzfeat").read_bytes() != (off / "series.mzfeat").read_bytes()
     assert differs == (recipe != '{"dedup_overlap": 0}'), "the overlap rule must change the replicate table, and only when it is on"
+
+
+def state_counts(path):
+    """Cells of `series.mzfeat` by state (0 detected, 2 filled, 3 absent, ...): the `state` u8 array read from its header, so the gap fill is counted."""
+    raw = Path(path).read_bytes()
+    assert raw[:8] == b"MZFEAT01"
+    head = int.from_bytes(raw[8:16], "little")
+    arrays = json.loads(raw[16:16 + head])["arrays"]
+    a = next(x for x in arrays if x["name"] == "state")
+    cells = raw[16 + head + a["offset"]:16 + head + a["offset"] + a["count"]]
+    return {s: cells.count(s) for s in sorted(set(cells))}
+
+
+FILLED_CELLS = 337  # the .wasm once filled 58 of them (a lean index without the scan table)
+
+
+def test_the_gap_fill_of_a_centroiding_series_fills_as_many_cells_in_node_as_natively(built, lr_replicates):
+    """The browser fill reads the scan table of a series that is centroided (profile scans of a unit-resolution series): with the lean index it filled 58
+    cells where the app filled 337. The count of filled cells (state 2) is pinned, and is the same native and in node."""
+    root, _, pkg = built
+    nat_dir, wasm_dir = plain(root, lr_replicates, pkg, "lr_fill", "")
+    nat, got = state_counts(nat_dir / "series.mzfeat"), state_counts(wasm_dir / "series.mzfeat")
+    assert nat == got, (nat, got)
+    assert nat.get(2, 0) == FILLED_CELLS, nat

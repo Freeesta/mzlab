@@ -127,6 +127,8 @@ pub struct Merge {
     /// `correlation` (r at or above `MIN_R`) or `overlap` (overlap at or above `threshold`).
     pub rule: &'static str,
     pub overlap: f64,
+    /// Median share of the wider peak the two cover (the `overlap` rule needs half the threshold).
+    pub overlap_wide: f64,
     /// Files where both rows were detected / have an area, and the threshold of the rule that decided.
     pub shared: usize,
     pub threshold: f64,
@@ -143,6 +145,7 @@ pub struct Near {
     pub drt_min: f64,
     pub r: f64,
     pub overlap: f64,
+    pub overlap_wide: f64,
     pub shared: usize,
 }
 

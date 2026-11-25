@@ -186,12 +186,13 @@ fn merged_json(o: &mut Out, log: &Log) {
         o.raw(",\"dropped\":");
         row(o, g.dropped);
         o.raw(&format!(
-            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"rule\":\"{}\",\"overlap\":{},\"shared_files\":{},\"threshold\":{},\"height_kept\":{},\"height_dropped\":{}}}",
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"rule\":\"{}\",\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{},\"threshold\":{},\"height_kept\":{},\"height_dropped\":{}}}",
             num(g.dmz_da),
             num(g.drt_min),
             opt(g.r),
             g.rule,
             opt(g.overlap),
+            opt(g.overlap_wide),
             g.shared,
             num(g.threshold),
             num(g.height.0),
@@ -200,19 +201,23 @@ fn merged_json(o: &mut Out, log: &Log) {
     }
 }
 
-/// The `near` array: the pairs still within the dedup window that neither rule merged (the hint that `dedup_overlap` exists).
+/// Pairs listed in the `near` array of the report; `near_total` has the count of all of them.
+const NEAR_MAX: usize = 20;
+
+/// The `near` array: the pairs still within the dedup window that neither rule merged (the hint that `dedup_overlap` exists), the first `NEAR_MAX`.
 fn near_json(o: &mut Out, log: &Log) {
-    for (k, g) in log.near.iter().enumerate() {
+    for (k, g) in log.near.iter().take(NEAR_MAX).enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw("{\"a\":");
         row(o, g.a);
         o.raw(",\"b\":");
         row(o, g.b);
         o.raw(&format!(
-            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"overlap\":{},\"shared_files\":{}}}",
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{}}}",
             num(g.dmz_da),
             num(g.drt_min),
             opt(g.r),
             opt(g.overlap),
+            opt(g.overlap_wide),
             g.shared
         ));
     }
@@ -245,7 +250,7 @@ pub(crate) fn report_text(
     files_json(&mut o, recipe, &m, &log, rows);
     o.raw("],\"merged\":[");
     merged_json(&mut o, &log);
-    o.raw("],\"near\":[");
+    o.raw(&format!("],\"near_total\":{},\"near\":[", log.near.len()));
     near_json(&mut o, &log);
     o.raw("],\"choices\":[");
     let mut first = true;
