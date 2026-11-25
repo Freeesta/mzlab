@@ -1,6 +1,5 @@
-//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
-//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `sample list FILE...` is what the files hold, sample by
-//! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
+//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets from
+//! `api/samples/<op>`; names one per line from a file or stdin. `sample list FILE...`: what the files hold, from their index alone (`samples_list/1`).
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -17,6 +16,7 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
        mzlab-cli sample group NAME...
        mzlab-cli sample table [--names FILE|- | FILE...] [--text]
        mzlab-cli sample import META.csv (FILE|DIR)... [--dry-run] [--json]   (sample import --help)
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table TABLE.mzfeat] [--json]   (sample pair --help)
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
        mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
@@ -472,7 +472,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let (op, body) = match sub {
         Some("vars") => ("variables", variables_args(it.collect())),
         Some("table") => return crate::samples_table::run(it.collect()),
-        Some("import") => return crate::samples_import::run(it.collect()),
+        Some(w @ ("import" | "pair")) => return crate::samples_pair::route(w, it.collect()),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {

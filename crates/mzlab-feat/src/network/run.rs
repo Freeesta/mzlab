@@ -76,11 +76,13 @@ pub fn network_text<T: ReadAt, P: ReadAt>(
     if aligned.tp.is_empty() || aligned.tp.parent_row == NO_PARENT {
         return Err(Error::new("error.tpNoBlock"));
     }
+    let mut notes = Vec::new();
     let roles = if samples.trim().is_empty() {
         None
     } else {
         let names = crate::store::input_names(&table_meta);
         let p = mzlab_core::samples::order_for_roles(samples, &names)?;
+        notes = p.notes;
         Some(TpRoles::from_json(&p.text)?)
     };
     let tmax = strongest_times(&aligned, roles.as_ref());
@@ -124,5 +126,6 @@ pub fn network_text<T: ReadAt, P: ReadAt>(
         r.shifted = floats(vs.and_then(|s| s.get("shifted")));
         rows.push(r);
     }
-    Ok(build(&aligned.tp, &parent, &rows, &rules, params).to_json())
+    let net = build(&aligned.tp, &parent, &rows, &rules, params).to_json();
+    Ok(mzlab_core::samples::with_pairing(&net, &notes))
 }

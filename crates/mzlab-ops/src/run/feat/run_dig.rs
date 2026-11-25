@@ -55,7 +55,13 @@ pub fn dig_inputs<I: ReadAt>(
             .raw(",\"kind\":\"full\"}");
     }
     let paired = mzlab_core::samples::order_for_roles(samples.trim(), names)?;
-    files.raw("],\"samples\":").raw(&paired.text).raw("}");
+    files.raw("],\"samples\":").raw(&paired.text);
+    // the choices of the pairing travel with the files, so the Dig (site, app and CLI alike) writes them into its result
+    let pairing = mzlab_core::samples::notes_json(&paired.notes);
+    if !pairing.is_empty() {
+        files.raw(",\"pairing\":").raw(&pairing);
+    }
+    files.raw("}");
     let adduct = if adduct == "[M+H]+" && polarity < 0 {
         "[M-H]-"
     } else {

@@ -61,6 +61,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("sample group", "mzlab-cli sample group NAME...   the file names' group name", |a| crate::samples_cmd::run(pre("group", a))),
     Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr", |a| crate::samples_cmd::run(pre("table", a))),
     Entry::new("sample import", "mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV", |a| crate::samples_cmd::run(pre("import", a))).schema("sample-import/1").exits(&[0, 1, 2, 3, 4, 6]),
+    Entry::new("sample pair", "mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out", |a| crate::samples_cmd::run(pre("pair", a))).schema("sample-pair/1").exits(&[0, 1, 2, 3, 4]),
     Entry::new("sample list", "mzlab-cli sample list FILE...   what a file holds per sample", |a| crate::samples_cmd::run(pre("list", a))).schema("sample-list/1").exits(&[0, 1, 2, 4, 8]),
     Entry::new("sample select", "mzlab-cli sample select FILE --sample LIST   which samples LIST picks", |a| crate::samples_cmd::run(pre("select", a))).schema("sample-select/1").exits(&[0, 2, 4, 5]),
     Entry::new("sample design propose", "mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names", |a| crate::design_cmd::run(pre("propose", a)))

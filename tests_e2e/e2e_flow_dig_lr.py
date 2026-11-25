@@ -1,5 +1,5 @@
 """Flow «This browser» tp.dig_lr (flow/lazy/flow-web-tp.js `digInputs`, flow-live-jobs.js `tpDig`): over the five demo full-scan files (unit resolution) the browser makes the JSON of the Dig that
-`mzlab-cli flow run` makes of the same plan, byte for byte; a second run takes it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without, FAIL in CI where `CI` is set). The samples also list a standard and a dark control the plan does not align (left out, same bytes).
+`mzlab-cli flow run` makes of the same plan, byte for byte; a second run takes it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without, FAIL in CI where `CI` is set). The samples also list a standard and a dark control the table lacks (left out) and have no row for the last file (it takes the role of its name): the `pairing` of the result is in both JSONs, same bytes.
 Run from the repo root: python3 tests_e2e/e2e_flow_dig_lr.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -24,9 +24,9 @@ PARENT = json.dumps({"formula": "C14H13F4N3O2S"})
 def sample(n, t):
     return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": NAMES.index(n) + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
             "time_min": t, "kind": "t0" if t == 0 else "sample", "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
-# two more samples the plan does not align (a standard and a dark control): both legs leave them out, and the Dig is the same bytes
+# the samples list a standard and a dark control the table lacks (both legs leave them out) and no row for the last file (both legs give it the role of its name); the Dig, with its `pairing`, is the same bytes
 def other(n, kind): return dict(sample(NAMES[0], None), file=n + ".mzML", kind=kind, time=None, time_min=None, injection_order=len(NAMES) + 1)
-SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES, TIMES)] + [other("Std_5ppm", "std"), other("Smp_darkcontrol", "dark")], "schema": "samples/1"}, separators=(",", ":"))
+SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES[:-1], TIMES[:-1])] + [other("Std_5ppm", "std"), other("Smp_darkcontrol", "dark")], "schema": "samples/1"}, separators=(",", ":"))
 PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "parent.json", "sha256": "", "type": "structure"}],
         "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
                   {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
@@ -95,6 +95,8 @@ try:
             nat = (run / "out" / "dig.json").read_text()
             web = kept["dig.dig.json"]
             at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
+            pairing = json.loads(web).get("pairing", [])
+            assert sorted({(x["action"], x["file"]) for x in pairing}) == [("left_out", "Smp_darkcontrol.mzML"), ("left_out", "Std_5ppm.mzML"), ("proposed", "FullScan_t30.mzML")], pairing
             assert nat == web, ("first difference at", at, len(nat), len(web), nat[max(0, at - 150):at + 150], web[max(0, at - 150):at + 150])
         step("tp.dig_lr in the browser gives the JSON of the native flow run", first)
 

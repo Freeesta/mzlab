@@ -120,10 +120,16 @@ fn samples_the_table_does_not_carry_are_left_out_and_the_dig_runs() {
         std::fs::read_to_string(d.join("a/dig.json")).unwrap(),
         std::fs::read_to_string(d.join("b/dig.json")).unwrap(),
     );
+    // the first Dig says what it left out (its `pairing`); without that key it is the second one, byte for byte
+    let at = a.find(",\"pairing\":[").expect("the pairing of the dig");
+    let end = a[at..].find(']').unwrap() + at + 1;
+    let (note, rest) = (&a[at..end], format!("{}{}", &a[..at], &a[end..]));
+    assert!(note.contains("\"left_out\"") && note.contains("Smp_darkcontrol.mzML") && note.contains("Smp_std_5ppm.mzML"), "{note}");
+    assert!(!b.contains("\"pairing\""));
     assert!(
-        a == b,
+        rest == b,
         "the dig differs: {} bytes against {}",
-        a.len(),
+        rest.len(),
         b.len()
     );
     let _ = std::fs::remove_dir_all(&d);
@@ -140,6 +146,9 @@ fn a_file_with_no_sample_takes_the_role_of_its_name() {
     assert_eq!(role("Smp_darkcontrol.mzML"), Some("dark"), "{roles:?}");
     assert_eq!(role("Smp_std_5ppm.mzML"), Some("std"), "{roles:?}");
     assert_eq!(role("Smp_t0.mzML"), Some("t0"), "{roles:?}");
+    // the result says what it chose, with the evidence
+    let dig = std::fs::read_to_string(d.join("a/dig.json")).unwrap();
+    assert!(dig.contains("\"action\":\"proposed\",\"file\":\"Smp_darkcontrol.mzML\",\"role\":\"dark\",\"evidence\":\"darkcontrol\""), "{dig}");
     let _ = std::fs::remove_dir_all(&d);
 }
 

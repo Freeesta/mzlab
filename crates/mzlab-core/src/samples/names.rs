@@ -32,7 +32,7 @@ fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
     (stem, time, guess)
 }
 
-const CAL_WORDS: [&str; 6] = [
+pub(super) const CAL_WORDS: [&str; 6] = [
     "cal",
     "calib",
     "calibr",

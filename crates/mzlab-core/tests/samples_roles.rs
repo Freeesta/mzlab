@@ -198,3 +198,58 @@ fn the_pairing_for_roles_never_stops_on_a_difference() {
     // a document that is not a samples/1 is still refused
     assert!(order_for_roles("{\"schema\":\"x\"}", &more).is_err());
 }
+
+/// The lenient pairing edits the document as it was written, like the strict `order_like`: a field the model does not know stays, in the document and in each row.
+#[test]
+fn the_lenient_pairing_keeps_the_fields_it_does_not_know() {
+    use mzlab_core::json::parse;
+    use mzlab_core::samples::{order_for_roles, to_json};
+    let doc = to_json(&table(&["a_t0.mzML", "a_t10.mzML", "a_std.mzML"]))
+        .replacen('{', "{\"lab_note\":\"kept\",", 1)
+        .replacen("\"file\":", "\"free_text\":\"row\",\"file\":", 1);
+    let names: Vec<String> = ["a_t10.mzML", "a_t0.mzML", "a_dark.mzML"]
+        .map(String::from)
+        .to_vec();
+    let p = order_for_roles(&doc, &names).unwrap();
+    let v = parse(p.text.as_bytes()).unwrap();
+    assert_eq!(v.get("lab_note").and_then(|x| x.str()), Some("kept"));
+    let rows = v.get("samples").unwrap().arr();
+    let files: Vec<_> = rows
+        .iter()
+        .map(|r| r.get("file").and_then(|x| x.str()).unwrap())
+        .collect();
+    assert_eq!(files, ["a_t10.mzML", "a_t0.mzML", "a_dark.mzML"]);
+    let kept = rows
+        .iter()
+        .filter(|r| r.get("free_text").is_some())
+        .count();
+    assert_eq!(kept, 1, "the extra field of the row that is still there");
+    assert_eq!(rows[2].get("kind").and_then(|x| x.str()), Some("dark"));
+}
+
+/// The evidence of a proposal names the word that decided the role for every role a word gives, and the `pairing` array of a result has stable keys.
+#[test]
+fn the_pairing_array_has_stable_keys_and_evidence_for_every_word_role() {
+    use mzlab_core::samples::{notes_json, order_for_roles, to_json, with_pairing};
+    let doc = to_json(&table(&["a_t0.mzML"]));
+    let names: Vec<String> = ["a_t0.mzML", "a_infusion.mzML", "a_cal.mzML"]
+        .map(String::from)
+        .to_vec();
+    let p = order_for_roles(&doc, &names).unwrap();
+    let got: Vec<_> = p
+        .notes
+        .iter()
+        .map(|n| (n.role.as_str(), n.evidence.as_str()))
+        .collect();
+    assert_eq!(got, [("infusion", "infusion"), ("calibration", "cal")]);
+    assert_eq!(
+        notes_json(&p.notes),
+        "[{\"action\":\"proposed\",\"file\":\"a_infusion.mzML\",\"role\":\"infusion\",\"evidence\":\"infusion\"},{\"action\":\"proposed\",\"file\":\"a_cal.mzML\",\"role\":\"calibration\",\"evidence\":\"cal\"}]"
+    );
+    // no note: the result keeps its bytes; notes: the key goes at the end
+    assert_eq!(with_pairing("{\"a\":1}", &[]), "{\"a\":1}");
+    assert_eq!(
+        with_pairing("{\"a\":1}", &p.notes),
+        format!("{{\"a\":1,\"pairing\":{}}}", notes_json(&p.notes))
+    );
+}

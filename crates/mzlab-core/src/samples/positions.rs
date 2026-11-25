@@ -159,6 +159,8 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
     None
 }
 
+const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
+
 /// The word of `name` that gave `kind` (case kept, "" when none is found): the evidence of a role read from a name that has no `Sample` yet.
 pub(super) fn role_word(name: &str, kind: &str) -> String {
     let low: Vec<char> = name.to_lowercase().chars().collect();
@@ -167,6 +169,8 @@ pub(super) fn role_word(name: &str, kind: &str) -> String {
         "qc" => &["qc"],
         "blank" => &BLANK_WORDS,
         "std" => &STD_WORDS,
+        "infusion" => &INFUSION_WORDS,
+        "calibration" => &super::names::CAL_WORDS,
         _ => return String::new(),
     };
     // a name with capitals that change length has no span (as in `propose_explained`)
@@ -185,7 +189,7 @@ fn kind_span(
     by_time: Option<(usize, usize)>,
 ) -> Option<(usize, usize)> {
     let words: &[&str] = match c.kind.as_str() {
-        "infusion" => &["infusion", "infusione", "fia"],
+        "infusion" => &INFUSION_WORDS,
         // a dark word, else the lone `d` the role was read from (in the stem, after a condition)
         "dark" => {
             return word_span(low, &super::names::DARK_WORDS)
@@ -193,14 +197,7 @@ fn kind_span(
         }
         "qc" => &["qc"],
         "blank" => &BLANK_WORDS,
-        "calibration" => &[
-            "cal",
-            "calib",
-            "calibr",
-            "calibrazione",
-            "taratura",
-            "curva",
-        ],
+        "calibration" => &super::names::CAL_WORDS,
         "std" => &STD_WORDS,
         "t0" => return by_time,
         _ => return None,
