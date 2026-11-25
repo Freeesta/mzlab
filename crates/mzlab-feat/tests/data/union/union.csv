@@ -1,0 +1,5 @@
+id,mz,rt_min,rt_max,polarity,role
+U0001,230,1.94,2.14,,target
+U0002,301.05,2.9,3.14,,target
+U0003,402.2,3.9,4.14,,target
+U0004,512.1,5.9,6.1,,target

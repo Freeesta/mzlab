@@ -17,6 +17,7 @@ use crate::flow_stats_tests::{campioni_2, design, table};
 const CONSUMERS: &[&str] = &[
     "features.group",
     "features.companions",
+    "features.union",
     "table.kmd",
     "table.pca",
     "table.stats",
@@ -249,4 +250,10 @@ fn a_view_of_a_view_and_an_export_after_it_run() {
     let csv = String::from_utf8(run(&d, &steps).unwrap()).unwrap();
     assert!(csv.lines().count() >= 2, "{csv}");
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The page names the series of a view the same way (tests/test_flow_web_contract_js.py runs `tableOf` on the same text and expects this name).
+#[test]
+fn the_file_of_a_view_is_named_after_the_sha_of_its_text() {
+    assert_eq!(super::view_file_name("abc"), "view-ba7816bf8f01cfea.mzfeat");
 }

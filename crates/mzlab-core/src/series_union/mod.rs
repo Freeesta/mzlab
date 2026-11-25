@@ -25,22 +25,33 @@ pub fn route(input: &str) -> Result<String> {
         .filter(|t| !t.is_empty())
         .ok_or_else(|| Error::new("err.union.empty"))?;
     let params = Params::from_json(req.get("params"))?;
+    let named: Vec<(String, String)> = tables
+        .iter()
+        .map(|t| {
+            let text = |k| t.get(k).and_then(Value::str).unwrap_or("").to_string();
+            (text("name"), text("text"))
+        })
+        .collect();
+    run(&named, &params)
+}
+
+/// The same over tables already in memory, `(name, text)` each (an empty name becomes `seriesN`): what the Flow step calls after it wrote its
+/// `.mzfeat` tables as the CSV of `mzlab-cli features`.
+pub fn run(tables: &[(String, String)], params: &Params) -> Result<String> {
     let mut series = Vec::new();
-    for (k, t) in tables.iter().enumerate() {
-        let name = t.get("name").and_then(Value::str).unwrap_or("");
-        let text = t.get("text").and_then(Value::str).unwrap_or("");
+    for (k, (name, text)) in tables.iter().enumerate() {
         let name = if name.is_empty() {
             format!("series{}", k + 1)
         } else {
-            name.to_string()
+            name.clone()
         };
-        series.push(read::read(&name, text, &params)?);
+        series.push(read::read(&name, text, params)?);
     }
     if series.iter().all(|s| s.rows.is_empty()) {
         return Err(Error::new("err.union.empty"));
     }
-    let merged = merge::merge(&series, &params);
-    Ok(report::document(&series, &merged, &params))
+    let merged = merge::merge(&series, params);
+    Ok(report::document(&series, &merged, params))
 }
 
 #[cfg(test)]

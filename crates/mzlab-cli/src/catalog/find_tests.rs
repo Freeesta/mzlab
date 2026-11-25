@@ -55,6 +55,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "features.companions",
     ),
     (
+        "join the feature tables of several series into one target list",
+        "features.union",
+    ),
+    (
         "kinetics dig of the transformation products at unit resolution",
         "tp.dig_lr",
     ),

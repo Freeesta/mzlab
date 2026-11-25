@@ -87,7 +87,7 @@ impl Params {
                 }
                 "polarity" => {
                     p.polarity = match x.str().map(str::trim) {
-                        Some("") | None => None,
+                        Some("") | Some("any") | None => None,
                         Some("+") => Some(1),
                         Some("-") => Some(-1),
                         Some(s) => return Err(bad(k, s)),

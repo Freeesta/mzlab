@@ -182,6 +182,9 @@ mod flow_tablematch;
 mod flow_tablematch_tests;
 mod flow_template;
 mod flow_transitions;
+mod flow_union;
+#[cfg(test)]
+mod flow_union_tests;
 mod idx_cache;
 mod idx_open;
 pub mod insilico_pack;

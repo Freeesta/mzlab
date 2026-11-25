@@ -27,6 +27,7 @@
           "features.gapfill",
           "features.group",
           "features.table",
+          "features.union",
           "formula.ms1",
           "formula.ms2",
           "import.raw",
@@ -99,6 +100,7 @@
               "features.group@1",
               "features.ms2_link@1",
               "features.table@1",
+              "features.union@1",
               "formula.ms1@1",
               "formula.ms2@1",
               "import.raw@1",
@@ -1213,6 +1215,62 @@
                   {"type":"integer","minimum":1,"description":"Minimum points"},
                   {"type":"number","minimum":0,"description":"m/z tolerance"},
                   {"type":"number","minimum":0,"description":"RT tolerance"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.union@1"},
+              "name":{"enum":["da","rt_tol","rt_warp","rt_gap","min_series","pad","polarity"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0.001,
+                    "maximum":5,
+                    "default":0.5,
+                    "description":"Rows of different series are one target when their m/z differ by no more than this"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.001,
+                    "maximum":5,
+                    "default":0.1,
+                    "description":"... and their RT, after the map, by no more than this; the window of a row without one is its RT plus and minus this"
+                  },
+                  {
+                    "enum":["off","piecewise"],
+                    "default":"off",
+                    "description":"piecewise maps every other series onto the first from the rows both hold (fewer than 3 anchors: no map, logged)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.001,
+                    "maximum":5,
+                    "default":0.5,
+                    "description":"Widest RT gap between two rows that may serve as an anchor of the map"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":1000,
+                    "default":1,
+                    "description":"A target seen in fewer series is listed as dropped and not written; 1 keeps every row"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":5,
+                    "default":0,
+                    "description":"Minutes added on both sides of every window"
+                  },
+                  {
+                    "enum":["any","+","-"],
+                    "default":"any",
+                    "description":"The polarity of the rows (a table holds none): + or -, any = every scan; run one list per polarity"
+                  }
                 ]
               }
             },
@@ -3142,6 +3200,7 @@
                 "features.group@1",
                 "features.ms2_link@1",
                 "features.table@1",
+                "features.union@1",
                 "formula.ms1@1",
                 "formula.ms2@1",
                 "import.raw@1",

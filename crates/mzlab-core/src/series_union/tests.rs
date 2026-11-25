@@ -168,6 +168,19 @@ fn polarity_comes_from_the_table_or_the_parameter_and_rows_stay_apart() {
 }
 
 #[test]
+fn polarity_any_is_every_scan_like_no_polarity_and_a_wrong_word_is_refused() {
+    let t = [("s1", "id,mz,rt\na,200,3\n".to_string())];
+    let none = run(&t, "{}");
+    for any in [r#"{"polarity":"any"}"#, r#"{"polarity":""}"#] {
+        assert_eq!(run(&t, any).get("csv"), none.get("csv"), "{any}");
+    }
+    let bad = super::route(
+        r#"{"tables":[{"name":"s1","text":"id,mz,rt\na,200,3\n"}],"params":{"polarity":"both"}}"#,
+    );
+    assert_eq!(bad.unwrap_err().key, "err.union.param");
+}
+
+#[test]
 fn the_same_input_gives_the_same_bytes() {
     let t = [
         ("s1", table(10, 3, 300.0, 0.0)),

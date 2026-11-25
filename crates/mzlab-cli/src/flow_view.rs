@@ -61,15 +61,20 @@ fn view_text(path: &Path) -> Option<String> {
     view_origin(&text).is_ok().then_some(text)
 }
 
+/// The file name of the table of `view` in the run's folder; the page names the series of `features.union` the same way (`tableOf` of flow-live-jobs.js).
+pub(crate) fn view_file_name(view: &str) -> String {
+    format!(
+        "view-{}.mzfeat",
+        &mzlab_core::budget::sha256_hex(view.as_bytes())[..16]
+    )
+}
+
 /// The table of `view`, made once per view and kept as a file of the run.
 fn table_artifact(r: &FileRunner, view: &str) -> Result<Artifact> {
     let bad = || Error::new("err.flow.export.view");
     let (sha, _) = view_origin(view)?;
     let at = crate::flow_export::table_by_sha(r, &sha).ok_or_else(bad)?;
-    let out = r.work.join(format!(
-        "view-{}.mzfeat",
-        &mzlab_core::budget::sha256_hex(view.as_bytes())[..16]
-    ));
+    let out = r.work.join(view_file_name(view));
     if !out.exists() {
         // two steps may read the same view at once: each writes its own file and the rename is atomic
         let table = std::fs::read(&at).map_err(io)?;
