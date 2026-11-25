@@ -3,6 +3,7 @@
 //! (`peakq_lrauto::lr_auto_integrate`) and its shape through `peakq::quality`. `prepare` checks the run, `Job::file` is the pass over one file
 //! (independent, so callers may run files on threads) and `Job::finish` joins them in file order: the bytes do not depend on the schedule.
 
+mod gates;
 mod params;
 mod run;
 mod targets;

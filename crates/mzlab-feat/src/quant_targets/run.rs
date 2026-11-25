@@ -8,6 +8,7 @@ use mzlab_core::mzcal::{Offset, Spec};
 use mzlab_core::rawxic::tallest;
 use mzlab_core::routes::Routes;
 
+use super::gates;
 use super::params::{OffsetMode, Params};
 use super::targets::{parse, Role, Target};
 use super::text;
@@ -64,6 +65,8 @@ pub(crate) struct FileLog {
     pub blank: bool,
     pub offsets: Vec<GroupOffset>,
     pub detected: usize,
+    /// Rows with a peak that missed a check (state `forced`): their evidence is in the log `decisions`.
+    pub forced: usize,
 }
 
 /// An automatic choice of the run: what, the value taken, why.
@@ -152,12 +155,12 @@ fn flags(hit: &Option<Hit>, edge: bool, p: &Params) -> Vec<&'static str> {
     let Some(h) = hit else {
         return vec!["no_peak"];
     };
-    let mut f = Vec::new();
-    if h.sn < p.min_sn {
-        f.push("below_threshold");
-    }
-    if h.points < p.min_points || h.shape < p.min_shape {
-        f.push("bad_shape");
+    let mut f: Vec<&'static str> = Vec::new();
+    for c in gates::checks(h, p).iter().filter(|c| !c.pass) {
+        let w = gates::flag_of(c.name);
+        if !f.contains(&w) {
+            f.push(w);
+        }
     }
     if edge {
         f.push("edge");
@@ -331,6 +334,7 @@ impl Job {
             blank: self.blank[k],
             offsets: offs,
             detected: rows.iter().filter(|x| x.detected()).count(),
+            forced: rows.iter().filter(|x| x.state() == "forced").count(),
         };
         Ok(FilePass {
             rows,
@@ -359,6 +363,9 @@ impl Job {
                 in_blank[r.target] = true;
             }
         }
+        if rows.iter().any(|r| r.state() == "forced") {
+            warn("warn.quant.targets.forced", &mut warnings);
+        }
         for r in rows.iter_mut() {
             if in_blank[r.target] && !blank[r.file] && r.hit.is_some() {
                 r.flags.push("in_blank");
@@ -366,7 +373,15 @@ impl Job {
         }
         Outcome {
             csv: text::table(&rows, &self.names, &self.targets),
-            log: text::log(&self.p, &files, &self.choices, &warnings),
+            log: text::log(
+                &self.p,
+                &files,
+                &self.choices,
+                &warnings,
+                &rows,
+                &self.names,
+                &self.targets,
+            ),
             warnings,
             rows,
             names: self.names.clone(),

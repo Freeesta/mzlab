@@ -59,6 +59,9 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),
     r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect blank level set lines before a run", &["flow defaults", "features", "flow run"]),
+    r("quant targets", "target list every file integrate area snr state detected forced absent weak noise peaks blank matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["raw xic", "quant union", "quant.curve"])
+        .ex("mzlab-cli quant targets --targets T.csv A.mzML B.mzML --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --log log.json"),
+    r("quant.targets", "target list every file integrate area snr state detected forced absent weak noise peaks blank matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["quant targets", "features.union", "quant.curve"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
     r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
     r("trace xic", "extracted ion chromatogram eic xic many ions list mz", &["peak table", "trace chrom", "chrom.transitions"])

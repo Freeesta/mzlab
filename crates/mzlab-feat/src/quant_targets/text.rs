@@ -3,6 +3,7 @@
 
 use mzlab_core::json::Out;
 
+use super::gates;
 use super::params::Params;
 use super::run::{Choice, FileLog, Row};
 use super::targets::{Role, Target};
@@ -81,6 +82,9 @@ fn params_json(o: &mut Out, p: &Params) {
     o.raw(",\"min_sn\":").num(p.min_sn);
     o.raw(",\"min_points\":").int(p.min_points as i64);
     o.raw(",\"min_shape\":").num(p.min_shape);
+    o.raw(",\"min_half\":").int(p.min_half as i64);
+    o.raw(",\"max_fwhm\":").num(p.max_fwhm);
+    o.raw(",\"max_asym\":").num(p.max_asym);
     o.raw(",\"offset\":").str(&p.offset_text());
     o.raw(",\"blank_pattern\":").str(&p.blank_pattern);
     o.raw(",\"ms_level\":").int(p.ms_level as i64);
@@ -96,11 +100,46 @@ fn strings(o: &mut Out, list: &[String]) {
     o.raw("]");
 }
 
+/// The evidence of every peak that missed a check (state `forced`): the row, the flags it got and each check with its value and limit, so a
+/// threshold can be judged from the log without rerunning. A peak that passed everything is not listed (its numbers are in the table).
+fn decisions(o: &mut Out, p: &Params, rows: &[Row], names: &[String], targets: &[Target]) {
+    o.raw("[");
+    let mut first = true;
+    for r in rows.iter().filter(|r| r.state() == "forced") {
+        let Some(h) = &r.hit else { continue };
+        o.raw(if first { "{\"file\":" } else { ",{\"file\":" })
+            .str(&names[r.file]);
+        first = false;
+        o.raw(",\"id\":").str(&targets[r.target].id);
+        o.raw(",\"state\":").str(r.state());
+        o.raw(",\"flag\":").str(&r.flags.join(";"));
+        o.raw(",\"checks\":[");
+        for (i, c) in gates::checks(h, p).iter().enumerate() {
+            o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
+                .str(c.name);
+            o.raw(",\"value\":");
+            match c.value {
+                Some(v) => o.num(v),
+                None => o.raw("null"),
+            };
+            o.raw(",\"limit\":").num(c.limit);
+            o.raw(",\"op\":").str(if c.min { ">=" } else { "<=" });
+            o.raw(",\"pass\":")
+                .raw(if c.pass { "true}" } else { "false}" });
+        }
+        o.raw("]}");
+    }
+    o.raw("]");
+}
+
 pub(crate) fn log(
     p: &Params,
     files: &[FileLog],
     choices: &[Choice],
     warnings: &[String],
+    rows: &[Row],
+    names: &[String],
+    targets: &[Target],
 ) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"quant-targets-log/1\",\"params\":");
@@ -127,7 +166,8 @@ pub(crate) fn log(
                 .raw(&g.offset.evidence_json())
                 .raw("}");
         }
-        o.raw("],\"detected\":").int(f.detected as i64).raw("}");
+        o.raw("],\"detected\":").int(f.detected as i64);
+        o.raw(",\"forced\":").int(f.forced as i64).raw("}");
     }
     o.raw("],\"choices\":[");
     for (i, c) in choices.iter().enumerate() {
@@ -140,7 +180,9 @@ pub(crate) fn log(
             .str(&c.reason)
             .raw("}");
     }
-    o.raw("],\"warnings\":");
+    o.raw("],\"decisions\":");
+    decisions(&mut o, p, rows, names, targets);
+    o.raw(",\"warnings\":");
     strings(&mut o, warnings);
     o.raw("}");
     o.0

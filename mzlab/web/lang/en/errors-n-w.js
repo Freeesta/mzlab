@@ -205,6 +205,7 @@ I18N.add("en", {
   "err.union.param": "The value «{value}» of {name} cannot be used: see the range in the help of quant union.",
   "warn.quant.targets.noBlank": "No file name matches the blank pattern: no row is flagged in_blank.",
   "warn.quant.targets.noReference": "Offset auto: the targets have no standard or parent row, so the offset is 0 (written in the log).",
+  "warn.quant.targets.forced": "Some peaks are under a threshold or miss a shape check: their numbers are kept and their state is forced, never hidden. Raise min_sn, or set min_half, max_fwhm or max_asym, to decide what counts as detected; the log lists the evidence of each (decisions).",
   "warn.quant.targets.noScans": "Some files have no scan of that MS level and polarity (for example SIM or SRM stored only as chromatograms): their rows are flagged no_scans.",
   "err.raw.probe": "The probe takes a whole number of scans from 1 to {max}.",
   "err.raw.xic.many": "{count} masses are too many for one question: the most is {max}. Split the list.",

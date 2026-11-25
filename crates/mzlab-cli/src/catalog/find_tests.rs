@@ -75,6 +75,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    (
+        "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
+        "quant targets",
+    ),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
 ];
@@ -329,4 +333,29 @@ fn a_repeated_find_keeps_every_word() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["query"], serde_json::json!(["sim", "snr"]));
+}
+
+/// The state words and the shape gates of `quant targets` are findable: the search answers a task about weak peaks in blanks with the command, its
+/// example line names the gate, and its help shows both the state words and the gate parameters (a function nobody finds is not used).
+#[test]
+fn the_state_words_and_shape_gates_of_quant_targets_are_found_from_the_task_and_the_help() {
+    let o = crate::execute(
+        &[
+            "commands", "--find", "forced", "peaks", "in", "blanks", "shape", "gate", "--json",
+        ]
+        .map(String::from),
+    );
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    let first = &v["matches"][0];
+    assert_eq!(first["name"], "quant targets", "{first}");
+    assert!(
+        first["example"].as_str().unwrap().contains("min_half"),
+        "{first}"
+    );
+    let help = crate::execute(&["quant", "targets", "--help"].map(String::from));
+    let h = String::from_utf8_lossy(&help.stdout).into_owned();
+    for w in ["forced", "min_half", "max_fwhm", "max_asym", "decisions"] {
+        assert!(h.contains(w), "{w} not in the help");
+    }
 }
