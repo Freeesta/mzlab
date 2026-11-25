@@ -300,43 +300,16 @@ impl<R: ReadAt> Routes<R> {
         let q = crate::rawinfo::quantum_of(Some(&probe))
             .filter(|q| q.accepted)
             .map(|q| q.q);
-        let (a, b) = ask.rt;
-        let w = (b - a).max(ask.t.side_min);
-        let g = ask.t.gap_min;
         let mut sums: BTreeMap<i64, Sums> = BTreeMap::new();
-        let (mut tic_win, mut tic_side) = (Vec::new(), Vec::new());
-        let (mut n_p, mut n_left, mut n_right, mut n_level) = (0usize, 0usize, 0usize, 0usize);
+        let mut sc = Scans::default();
+        let mut n_level = 0;
         if let Some(si) = self.idx.section_of(level, self.pol) {
             let arr = self.idx.arrays(si)?.clone();
             n_level = arr.rt.len();
-            // 0 = a scan of the window, 1 = a scan of a side, MAX = not read
-            let mut lut = vec![u32::MAX; n_level];
-            for (i, &t) in arr.rt.iter().enumerate() {
-                let kept = mask.as_ref().is_none_or(|m| {
-                    arr.scan_ids
-                        .get(i)
-                        .and_then(|&k| m.get(k as usize))
-                        .copied()
-                        .unwrap_or(false)
-                });
-                if !kept {
-                    continue;
-                }
-                let y = arr.sumint.get(i).copied().unwrap_or(0.0);
-                if t >= a && t <= b {
-                    (lut[i], n_p) = (0, n_p + 1);
-                    tic_win.push(y);
-                } else if t >= a - w && t <= a - g {
-                    (lut[i], n_left) = (1, n_left + 1);
-                    tic_side.push(y);
-                } else if t >= b + g && t <= b + w {
-                    (lut[i], n_right) = (1, n_right + 1);
-                    tic_side.push(y);
-                }
-            }
-            if n_p > 0 {
+            sc = Scans::of(&arr, mask.as_deref(), ask);
+            if sc.n_win > 0 {
                 let (lo, hi) = ask.range.unwrap_or((f64::MIN, f64::MAX));
-                self.idx.each_peak_for(si, &lut, |c, mz, y| {
+                self.idx.each_peak_for(si, &sc.lut, |c, mz, y| {
                     let m = mz - off_da;
                     if m < lo || m > hi {
                         return;
@@ -350,6 +323,8 @@ impl<R: ReadAt> Routes<R> {
                 })?;
             }
         }
+        let (n_p, n_left, n_right) = (sc.n_win, sc.n_left, sc.n_right);
+        let (tic_win, tic_side) = (sc.tic_win, sc.tic_side);
         let n_b = (n_left + n_right) as f64;
         let mut cells: Vec<Cell> = sums
             .into_iter()
@@ -377,6 +352,54 @@ impl<R: ReadAt> Routes<R> {
             rows,
             n_bins,
         })
+    }
+}
+
+/// The scans of one section sorted into the window (class 0), the sides (class 1) and the rest (not read), with their TICs.
+#[derive(Default)]
+struct Scans {
+    lut: Vec<u32>,
+    n_win: usize,
+    n_left: usize,
+    n_right: usize,
+    tic_win: Vec<f64>,
+    tic_side: Vec<f64>,
+}
+
+impl Scans {
+    /// The sides are as wide as the window, at least `side_min`, and end `gap_min` away from it (as in `raw xic`).
+    fn of(arr: &crate::idxread::ScanArrays, mask: Option<&[bool]>, ask: &Ask) -> Scans {
+        let (a, b) = ask.rt;
+        let w = (b - a).max(ask.t.side_min);
+        let g = ask.t.gap_min;
+        let mut s = Scans {
+            lut: vec![u32::MAX; arr.rt.len()],
+            ..Default::default()
+        };
+        for (i, &t) in arr.rt.iter().enumerate() {
+            let kept = mask.is_none_or(|m| {
+                arr.scan_ids
+                    .get(i)
+                    .and_then(|&k| m.get(k as usize))
+                    .copied()
+                    .unwrap_or(false)
+            });
+            if !kept {
+                continue;
+            }
+            let y = arr.sumint.get(i).copied().unwrap_or(0.0);
+            if t >= a && t <= b {
+                (s.lut[i], s.n_win) = (0, s.n_win + 1);
+                s.tic_win.push(y);
+            } else if t >= a - w && t <= a - g {
+                (s.lut[i], s.n_left) = (1, s.n_left + 1);
+                s.tic_side.push(y);
+            } else if t >= b + g && t <= b + w {
+                (s.lut[i], s.n_right) = (1, s.n_right + 1);
+                s.tic_side.push(y);
+            }
+        }
+        s
     }
 }
 
