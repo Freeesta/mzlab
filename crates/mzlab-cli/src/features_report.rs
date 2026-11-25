@@ -14,6 +14,8 @@ use mzlab_ops::run::feat::lr_note::{note_of, Note};
 /// One member of the series: how it is called, what the index says and whether its profile scans are centroided.
 struct Member {
     name: String,
+    /// The column of the table (`sample_label`), only for a sample chosen with `--sample`.
+    column: Option<String>,
     note: Note,
     centroid: bool,
 }
@@ -23,11 +25,21 @@ fn members(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[Strin
         .enumerate()
         .filter_map(|(k, idx)| {
             let index = crate::open(idx).ok()?;
-            let name = match labels.get(k).filter(|l| !l.is_empty()) {
-                Some(l) => l.clone(),
-                None => files[k].display().to_string(),
+            // a chosen sample is `FILE@ID` (the identity) with its column apart; a label is `COLUMN@ID`
+            let (name, column) = match labels.get(k).map(|l| crate::flow_set::split_sample(l)) {
+                Some((c, Some(id))) => (
+                    format!(
+                        "{}@{id}",
+                        files[k]
+                            .file_name()
+                            .map_or(String::new(), |n| n.to_string_lossy().into_owned())
+                    ),
+                    Some(c.to_string()),
+                ),
+                _ => (files[k].display().to_string(), None),
             };
             Some(Member {
+                column,
                 centroid: centroid_wanted(&index, recipe),
                 note: note_of(recipe, &index),
                 name,
@@ -102,6 +114,7 @@ pub(crate) fn plan_text(
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"member\":")
             .str(&x.name);
+        column(&mut o, x);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroid\":{}",
             x.note.unit,
@@ -123,6 +136,13 @@ pub(crate) fn plan_text(
     Ok(o.0)
 }
 
+/// `,"column":"..."` of a member chosen with `--sample`: the label its column has in the table (a run without `--sample` keeps its bytes).
+fn column(o: &mut Out, x: &Member) {
+    if let Some(c) = &x.column {
+        o.raw(",\"column\":").str(c);
+    }
+}
+
 fn row(o: &mut Out, r: (f64, f64)) {
     o.raw(&format!("{{\"mz\":{},\"rt\":{}}}", num(r.0), num(r.1)));
 }
@@ -135,6 +155,7 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"member\":")
             .str(&x.name);
+        column(o, x);
         o.raw(&format!(
             ",\"unit\":{},\"profile_fraction\":{},\"centroided\":{},\"defect\":{},\"mz_shift_da\":{},\"recentred\":{},\"rows\":{}{}}}",
             x.note.unit,

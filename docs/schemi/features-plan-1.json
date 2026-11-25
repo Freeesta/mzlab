@@ -16,7 +16,8 @@
         "required": ["member", "unit", "profile_fraction", "centroid"],
         "additionalProperties": false,
         "properties": {
-          "member": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
+          "member": { "type": "string", "description": "the path as given, or FILE@ID for a sample selected with --sample" },
+          "column": { "type": "string", "description": "the label of the column of the table, the sample name (with the extension of its file; NAME (FILE #ID) when two names collide); present only for a sample selected with --sample" },
           "unit": { "type": "boolean" },
           "profile_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
           "centroid": { "type": "boolean", "description": "its profile scans would be centroided before detection" },
