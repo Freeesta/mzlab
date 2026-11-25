@@ -213,11 +213,21 @@ I18N.add("en", {
   "err.union.param": "The value «{value}» of {name} cannot be used: see the range in the help of quant union.",
   "warn.quant.targets.noBlank": "No file name matches the blank pattern: no row is flagged in_blank.",
   "warn.quant.targets.noReference": "Offset auto: the targets have no standard or parent row, so the offset is 0 (written in the log).",
+  "warn.quant.targets.noRtReference": "RT reference on: the targets have no standard or parent row, so no window is moved (written in the log).",
+  "warn.quant.targets.rtRefNotFound": "RT reference on: in some files the reference gave no usable peak (missing or under the S/N or shape limits), so their windows were not moved (the log has each file's evidence).",
+  "warn.quant.targets.rtRefEdge": "RT reference on: in some files the reference apex sits on the border of its search window (a clipped peak), so no shift was applied there: raise rt_span or name where it is expected with --rt-ref ID@RT (the log has the evidence).",
+  "warn.quant.targets.rtRefAmbiguous": "RT reference on: in some files the search window holds a second peak of at least half the height of the reference, so no shift was applied there: name where the reference is expected with --rt-ref ID@RT or narrow rt_span (the log has both apexes).",
+  "note.quant.targets.offsetAuto": "The reference row {id} was not detected in {count} of {files} files while the m/z offset is 0. One possible cause is the offset: --offset auto measures it in each file and polarity on that row. The others are a retention-time drift (--rt-ref auto) or a window that does not hold the peak (check rt_min, rt_max and --da).",
+  "note.quant.targets.rtRef": "The reference row {id} peaks between RT {min} and {max} min across files ({spread} min apart) while the windows stay fixed: --rt-ref auto moves the windows of each file by the shift of that row.",
   "warn.quant.targets.noScans": "Some files have no scan of that MS level and polarity (for example SIM or SRM stored only as chromatograms): their rows are flagged no_scans.",
   "err.raw.probe": "The probe takes a whole number of scans from 1 to {max}.",
   "err.raw.xic.many": "{count} masses are too many for one question: the most is {max}. Split the list.",
   "err.raw.xic.rows": "The answer for {file} is inconsistent ({detail}) and was not used.",
   "err.raw.xic.param": "The value «{value}» of {name} cannot be used: see the range in the help of raw xic.",
   "warn.raw.labelMismatch": "{file}: the scans are labelled {label}, but their points read as {data} ({runs_share} of the points in runs): a tool that trusts the label may smooth single ion counts or take a profile for peaks.",
-  "warn.raw.noQuantum": "{file}: the intensities are not multiples of one ion (an analog detector or processed data), so ion counts do not apply to it."
+  "warn.raw.noQuantum": "{file}: the intensities are not multiples of one ion (an analog detector or processed data), so ion counts do not apply to it.",
+  "err.spec.fill": "The fill time cannot be used: give a number of milliseconds above zero.",
+  "note.spec.sum.noFill": "The file does not give the fill time (ms) per scan, so the ions are not counted and the counts stay in cps summed over the scans; --fill-ms T states it.",
+  "note.spec.sum.noQuantum": "The intensities are not multiples of one ion (an analog detector or processed data), so the ions cannot be counted from the counts.",
+  "note.spec.mean.sumHint": "This is the mean of the scans; --sum adds them instead and states how many scans and ions the spectrum rests on."
 });

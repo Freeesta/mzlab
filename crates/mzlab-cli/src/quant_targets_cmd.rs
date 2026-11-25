@@ -15,6 +15,7 @@ use crate::Outcome;
 pub const HELP: &str = "mzlab-cli quant targets: every target of a table integrated in every file, one pass per file.
 
 usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS]
+                               [--rt-ref off|auto|ID[@RT]]
                                [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N] [--cache DIR]
 
   --targets FILE   CSV (id,mz,rt_min,rt_max[,polarity][,role]) or JSON ([{...}] or {\"targets\":[...]}); polarity + or - (empty: every scan),
@@ -25,6 +26,9 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
   --min-sn N       lowest S/N of a detected peak (default 3)
   --offset         m/z offset (observed - true): 0 (default), a number of Da (|D| <= 0.6), auto (measured per file and polarity on the first
                    standard/parent row; none: 0, logged) or auto:MZ[@RT] (measured on that ion)
+  --rt-ref         keep the RT windows on an internal reference when batches drift: off (default), auto (first standard/parent row) or a
+                   target id, each with @RT where it is expected (else its window centre); per file every window moves by the apex found
+                   minus that (never on a weak peak), written in the rt_shift_min column and the log; the search half-width is rt_span (0.6 min)
   --blank-pattern  comma list of case-insensitive globs over the file names: the blanks; a target detected in a blank flags the samples in_blank
   --set NAME=VALUE any parameter of the step quant.targets@1 (repeatable): min_points (5) and min_shape (0.5, Gaussian correlation) of an
                    acceptable shape, ms_level (1), smooth_half (0 = automatic per trace) and valley (10 %) of the peak auto-lr engine
@@ -52,11 +56,12 @@ struct Job {
 }
 
 /// The flags that are step parameters: flag, parameter name.
-const PARAMS: [(&str, &str); 4] = [
+const PARAMS: [(&str, &str); 5] = [
     ("--da", "da"),
     ("--min-sn", "min_sn"),
     ("--offset", "offset"),
     ("--blank-pattern", "blank_pattern"),
+    ("--rt-ref", "rt_ref"),
 ];
 
 fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
@@ -199,9 +204,31 @@ fn default_workers(files: usize) -> usize {
         .max(1)
 }
 
-fn run_job(j: &Job) -> Result<(String, String)> {
+/// One note per input that holds several samples: this command integrates the first sample of a file, so the note names the way to the others.
+fn first_sample_notes(paths: &[PathBuf]) -> String {
+    let mut out = String::new();
+    for p in paths {
+        let Some(count) = crate::sample_select::several(p) else {
+            continue;
+        };
+        out += &format!(
+            "note: {}\n",
+            crate::error_text::warning(&crate::convert::Notice {
+                key: "note.quant.firstSample",
+                params: vec![
+                    ("file", p.display().to_string()),
+                    ("count", count.to_string()),
+                ],
+            })
+        );
+    }
+    out
+}
+
+fn run_job(j: &Job, said: &mut String) -> Result<(String, String)> {
     let targets = read(&j.targets)?;
     let paths = files(&j.inputs)?;
+    *said = first_sample_notes(&paths);
     let names: Vec<String> = paths.iter().map(|p| name_of(p)).collect();
     if j.dry {
         return Ok((
@@ -239,8 +266,63 @@ fn run_job(j: &Job) -> Result<(String, String)> {
                 crate::error_text::catalog_text(w).unwrap_or_default()
             );
         }
-        Ok((if j.json { out.json() } else { out.csv }, out.log))
+        for h in &out.hints {
+            eprintln!("{}", hint_line(h));
+        }
+        // the hints also go in the --json answer, beside the log and only when there are some: the log file stays the bytes of the site, whose
+        // .wasm has no hints (docs/agenti/quant-targets.md)
+        let table = if j.json { out.json() } else { out.csv };
+        Ok(match hints_json(&out.hints) {
+            Some(h) if j.json => (with_key(table, &h), out.log),
+            _ => (table, out.log),
+        })
     })
+}
+
+/// `"hints":[{"key","params":{...},"text"}]` of the run, or `None` when the data pointed at no switch.
+fn hints_json(hints: &[mzlab_feat::quant_targets::Hint]) -> Option<String> {
+    if hints.is_empty() {
+        return None;
+    }
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("\"hints\":[");
+    for (i, h) in hints.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"key\":" } else { "{\"key\":" })
+            .str(h.key)
+            .raw(",\"params\":{");
+        for (k, (name, v)) in h.params.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" })
+                .str(name)
+                .raw(":")
+                .str(v);
+        }
+        o.raw("},\"text\":").str(&hint_text(h)).raw("}");
+    }
+    Some(o.0 + "]")
+}
+
+/// `json` (an object) with the member `member` added at its end.
+fn with_key(mut json: String, member: &str) -> String {
+    if let Some(i) = json.rfind('}') {
+        json.insert_str(i, &format!(",{member}"));
+    }
+    json
+}
+
+/// The catalogue text of a hint with its `{name}` words filled.
+fn hint_text(h: &mzlab_feat::quant_targets::Hint) -> String {
+    let mut t = crate::error_text::catalog_text(h.key)
+        .unwrap_or_default()
+        .to_string();
+    for (k, v) in &h.params {
+        t = t.replace(&format!("{{{k}}}"), v);
+    }
+    t
+}
+
+/// A hint as one stderr line: its text, then the key.
+fn hint_line(h: &mzlab_feat::quant_targets::Hint) -> String {
+    format!("hint: {} ({})", hint_text(h), h.key)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -249,7 +331,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let (table, log) = match run_job(&j) {
+    let mut said = String::new();
+    let (table, log) = match run_job(&j, &mut said) {
         Ok(t) => t,
         Err(e) => return crate::sample_select::fail(&e),
     };
@@ -260,5 +343,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
         );
     }
-    crate::emit(table, &j.out)
+    let mut done = crate::emit(table, &j.out);
+    done.stderr += &said;
+    done
 }

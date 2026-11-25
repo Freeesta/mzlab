@@ -158,10 +158,11 @@ fn detect_strong(
     let name = files[k]
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let name = if labels[k].is_empty() {
-        name
-    } else {
-        labels[k].clone()
+    // a sample chosen with `--sample` is named by its label (`COLUMN@ID`, the column of the table), any other file by its own name
+    let name = match crate::flow_set::split_sample(&labels[k]) {
+        (column, Some(_)) => column.to_string(),
+        _ if labels[k].is_empty() => name,
+        _ => labels[k].clone(),
     };
     let mut ix = open(&idxs[k])?;
     let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();

@@ -1,5 +1,5 @@
 // @ts-strict
-// `api/rawinfo` and `api/rawxic` in the worker of the engine (rust-worker.js, op "route"): the .wasm `raw` (crates/mzlab-raw-wasm; `rawxic`, crates/mzlab-rawxic-wasm, for `/api/rawxic`) of wasm-feat/manifest.json
+// `api/rawinfo`, `api/rawxic` and `api/specsum` in the worker of the engine (rust-worker.js, op "route"): the .wasm `raw` (crates/mzlab-raw-wasm; `rawxic`, crates/mzlab-rawxic-wasm, for `/api/rawxic` and `/api/specsum`) of wasm-feat/manifest.json
 // is fetched on the first request and reads the .mzidx of the file from OPFS itself; the members are those of `mzlab-cli raw info`, the rows those of `raw xic`.
 // The engine's .wasm has no room for it (docs/agenti/raw-access.md).
 
@@ -15,8 +15,8 @@ import * as ARCH from "./archivio.js";
 export async function rawInfo(m, { nameOf, polOf, readerFor }) {
   const name = nameOf(m.slot), blob = name ? await ARCH.get("idx", name + ".mzidx") : null;
   if (!blob || !name) return "";
-  const xic = m.path === "/api/rawxic";
+  const xic = m.path === "/api/rawxic" || m.path === "/api/specsum";
   const mod = await load(xic ? "rawxic" : "raw");
-  const ask = xic ? mod.raw_xic : mod.raw_info;
+  const ask = m.path === "/api/specsum" ? mod.spec_sum : xic ? mod.raw_xic : mod.raw_info;
   return ask(blob.size, readerFor(blob, ["idx", name + ".mzidx"]), polOf(m.slot), m.query || "");
 }

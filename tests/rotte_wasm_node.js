@@ -26,7 +26,7 @@ const run = s => {
   switch (s.op) {
     // the polarity of the slot (0 = every section) is the step's `pol`, as the app's `idxopen`: the engine and the raw modules read the same section
     case "idxopen": { slotPol = s.pol || 0; const r = e.open_index(s.slot, idx.length, rdIdx); e.set_polarity(s.slot, slotPol); return { s: r }; }
-    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawxic" ? xic().raw_xic(idx.length, rdIdx, slotPol, s.query || "") : e.route(s.slot, s.path, s.query || "") };
+    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawxic" ? xic().raw_xic(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/specsum" ? xic().spec_sum(idx.length, rdIdx, slotPol, s.query || "") : e.route(s.slot, s.path, s.query || "") };
     case "fileinfo": return { s: e.fileinfo(s.slot, s.name, mzml.length, rdMzml) };
     case "canali": return { s: e.canali(s.slot, s.name, mzml.length, rdMzml) };
     case "mrm": return { s: e.mrm(s.slot, mzml.length, rdMzml) };
