@@ -28,6 +28,8 @@ enum Kind {
     Profile,
     Centroid,
     HighRes,
+    /// The points of `Centroid` under a profile label.
+    Mislabelled,
 }
 
 /// One mzML of `SCANS` MS1 scans in `kind`, its m/z axis moved by `drift`.
@@ -61,7 +63,7 @@ fn mzml(kind: Kind, drift: f64) -> Vec<u8> {
                     .collect();
                 (grid, y)
             }
-            Kind::Centroid | Kind::HighRes => (
+            Kind::Centroid | Kind::HighRes | Kind::Mislabelled => (
                 heights.iter().map(|h| h.0).collect(),
                 heights.iter().map(|h| (h.1 + 20.0) as f32).collect(),
             ),
@@ -72,7 +74,7 @@ fn mzml(kind: Kind, drift: f64) -> Vec<u8> {
             level: 1,
             rt: 0.5 + 0.02 * i as f64,
             polarity: 1,
-            profile: kind == Kind::Profile,
+            profile: matches!(kind, Kind::Profile | Kind::Mislabelled),
             filter: if kind == Kind::HighRes {
                 "FTMS + p ESI Full ms [100.0000-400.0000]".into()
             } else {
@@ -430,4 +432,42 @@ fn a_report_or_a_csv_that_cannot_be_written_is_exit_6_and_the_csv_is_written_fir
     );
     assert_eq!(o.code, 6, "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_profile_label_on_centroid_points_is_not_centroided_again_and_the_report_gives_the_numbers() {
+    let (dir, files) = series("label", Kind::Mislabelled, true);
+    let (cdir, cfiles) = series("labelc", Kind::Centroid, true);
+    let path = dir.join("report.json");
+    let notes = dir.join("notes.json").display().to_string();
+    let wrong = run(
+        &files,
+        &["--report", &path.display().to_string(), "--notes", &notes],
+    );
+    // the rows of the file that says what it is (the profile label still sets the per-point floor, so areas differ a little): no centroiding pass
+    let (got, want) = (table(&wrong), table(&run(&cfiles, &[])));
+    assert_eq!(
+        got.len(),
+        want.len(),
+        "{} rows against {}",
+        got.len(),
+        want.len()
+    );
+    assert!(got.iter().zip(&want).all(|(a, b)| (a.0 - b.0).abs() < 0.05));
+    let doc = String::from_utf8(std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(
+        doc.matches("\"key\":\"centroid\"").count(),
+        files.len(),
+        "{}",
+        &doc[doc.find("choices").unwrap_or(0)..]
+    );
+    assert!(doc.contains("sparse ion counts"), "{doc}");
+    assert!(doc.contains("centroid skipped"), "{doc}");
+    let said = std::fs::read_to_string(&notes).unwrap();
+    assert!(said.contains("warn.features.profileLabel"), "{said}");
+    // the user decides: `on` centroids it anyway
+    let forced = run(&files, &["--centroid", "on"]);
+    assert_eq!(forced.code, 0, "{}", forced.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+    let _ = std::fs::remove_dir_all(&cdir);
 }

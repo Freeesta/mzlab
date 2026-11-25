@@ -129,9 +129,10 @@ DRIFT_SCANS = 60                                              # 1 s each
 OFFSETS = (0.19, 0.22, 0.24, 0.26, 0.29)                      # Da, the instrument offset of each sample of the offset series: +0.24 +- 0.05
 
 
-def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = DRIFTS, prefix: str = "drift") -> list[Path]:
+def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = DRIFTS, prefix: str = "drift", mislabel: bool = False) -> list[Path]:
     """`drifts` (`DRIFTS`) samples `<prefix>-s<k>.mzML` of the same ions (apex in RT from the seed, height 2e4 counts), each with its m/z axis moved by its drift: profile
-    scans on the 0.1 Da grid (Gaussian of FWHM 0.7 Da, Poisson counts) or one centroid per ion. The same seed gives the same bytes."""
+    scans on the 0.1 Da grid (Gaussian of FWHM 0.7 Da, Poisson counts) or one centroid per ion; `mislabel` writes those centroid points under a PROFILE label (MS:1000128, `+ p`),
+    as a reader that flags a whole instrument family does. The same seed gives the same bytes."""
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
     apex = rng.uniform(8.0, DRIFT_SCANS - 8.0, len(DRIFT_IONS))
@@ -156,7 +157,7 @@ def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = D
                 specs.append(_spec(s, t / 60.0, GRID[keep], counts[keep] * GAIN, profile=True, filt="+ p ESI Q1MS [100.000-400.000]"))
             else:
                 keep = amp > 0.2
-                specs.append(_spec(s, t / 60.0, np.round(m[keep], 4), np.round(amp[keep] * GAIN, 1), profile=False, filt="+ c ESI Q1MS [100.000-400.000]"))
+                specs.append(_spec(s, t / 60.0, np.round(m[keep], 4), np.round(amp[keep] * GAIN, 1), profile=mislabel, filt="+ p ESI Q1MS [100.000-400.000]" if mislabel else "+ c ESI Q1MS [100.000-400.000]"))
         path = out / f"{prefix}-s{k}.mzML"
         _write(path, specs, [])
         paths.append(path)
@@ -182,7 +183,7 @@ if __name__ == "__main__":
     ap.add_argument("out", type=Path)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--jitter", type=float, default=0.05, help="sigma of the per-scan mass jitter, Da")
-    ap.add_argument("--drift-series", choices=("profile", "centroid"), help="write the 8-sample drift series in this mode instead of the benchmark")
+    ap.add_argument("--drift-series", choices=("profile", "centroid", "mislabelled"), help="write the 8-sample drift series in this mode instead of the benchmark (mislabelled: centroid points under a profile label)")
     ap.add_argument("--offset-series", choices=("profile", "centroid"), help="write the 5-sample series with the instrument offsets `OFFSETS` (+0.24 +- 0.05 Da) in this mode")
     ap.add_argument("--replicates", type=int, metavar="N", help="write N replicates of the benchmark sample (`make_replicate_series`) instead of the benchmark")
     n = ap.parse_args()
@@ -191,6 +192,6 @@ if __name__ == "__main__":
     elif n.offset_series:
         files = make_drift_series(n.out, n.offset_series == "profile", n.seed, OFFSETS, "offs")
     else:
-        files = make_drift_series(n.out, n.drift_series == "profile", n.seed) if n.drift_series else make(n.out, n.seed, n.jitter)
+        files = make_drift_series(n.out, n.drift_series == "profile", n.seed, mislabel=n.drift_series == "mislabelled") if n.drift_series else make(n.out, n.seed, n.jitter)
     for f in files:
         print(f)

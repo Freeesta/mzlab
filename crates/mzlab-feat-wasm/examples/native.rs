@@ -1,6 +1,6 @@
 //! The pipeline of the bridge on files, natively (the recipe fits the first index: high or unit resolution, as the site chooses it): the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example native -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N]
+//!     cargo run --release -p mzlab-feat-wasm --example native -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N] [--notes]
 //!
 //! With `--budget-mb` the steps run as the browser runs them under that memory budget: outputs written at offsets to files (hashed on the way), the series
 //! read file by file, slabs and streams when the budget asks for them. The lines printed are the same as without it.
@@ -99,8 +99,18 @@ fn budgeted(
         last = (d, t);
     };
     let mut pace = mzlab_core::pace::Pace::new(&mut tell);
-    run::align_to_spilling(&mut stored, &budget, &r, None, |k| Ok(open(&files[k])), &mut s, None, None, &mut |d, t| pace.at(d, t))
-        .unwrap_or_else(|e| panic!("align: {e}"));
+    run::align_to_spilling(
+        &mut stored,
+        &budget,
+        &r,
+        None,
+        |k| Ok(open(&files[k])),
+        &mut s,
+        None,
+        None,
+        &mut |d, t| pace.at(d, t),
+    )
+    .unwrap_or_else(|e| panic!("align: {e}"));
     eprintln!("align steps {steps} last {} of {}", last.0, last.1);
     println!("series.mzfeat {}", s.finish().2);
     if parent.is_empty() {
@@ -133,6 +143,7 @@ fn main() {
         (String::new(), String::new(), f64::NAN, f64::NAN);
     let mut structure = String::new();
     let mut budget_mb = f64::NAN;
+    let mut notes = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         let mut next = || args.next().expect("value");
@@ -146,12 +157,15 @@ fn main() {
             "--parent-mz" => pmz = next().parse().expect("number"),
             "--parent-rt" => prt = next().parse().expect("number"),
             "--budget-mb" => budget_mb = next().parse().expect("number"),
+            "--notes" => notes = true,
             _ if out.is_empty() => out = a,
             _ => files.push(a),
         }
     }
     if budget_mb.is_finite() {
-        return budgeted(&files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt);
+        return budgeted(
+            &files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt,
+        );
     }
     let r = run::recipe_for(&recipe, &mut open(&files[0])).expect("recipe");
     let t0 = Instant::now();
@@ -162,6 +176,14 @@ fn main() {
         let rf = run::recipe_for(&recipe, &mut ix).expect("recipe");
         let b = run::detect(&mut ix, &base(p), &rf).expect("detect");
         println!("{}.mzfeatf {}", base(p), sha(&b));
+        if notes {
+            let n = mzlab_ops::run::feat::lr_note::note_of(&rf, &mut ix).notices;
+            println!(
+                "{}.notes {}",
+                base(p),
+                mzlab_ops::run::feat::lr_note::notices_text(&n)
+            );
+        }
         std::fs::write(Path::new(&out).join(format!("{}.mzfeatf", base(p))), &b).expect("write");
         stored.push(b);
     }

@@ -49,6 +49,51 @@ fn mzml(profiles: usize, n: usize) -> Vec<u8> {
     w.finish().unwrap()
 }
 
+/// A unit-resolution mzML of `n` scans all LABELLED profile whose points are isolated ion counts (nominal and half-integer masses, never a run): a
+/// centroid file under a wrong label. The ion at 152.2 elutes at the middle.
+fn mzml_mislabelled(n: usize) -> Vec<u8> {
+    let head = Header {
+        run: "q1".into(),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::with_options(Vec::new(), &head, Options::default()).unwrap();
+    w.open_spectra(n).unwrap();
+    for i in 0..n {
+        let h = 2e5 * (-0.5 * ((i as f64 - n as f64 / 2.0) / 4.0).powi(2)).exp();
+        let mut mz: Vec<f64> = (0..12)
+            .map(|k| 101.3 + 9.7 * k as f64 + 0.011 * i as f64)
+            .collect();
+        mz.push(152.2);
+        mz.sort_by(|a, b| a.total_cmp(b));
+        let y = mz
+            .iter()
+            .map(|&m| {
+                if (m - 152.2).abs() < 1e-9 {
+                    (h + 20.0) as f32
+                } else {
+                    20.0
+                }
+            })
+            .collect();
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("scan={}", i + 1),
+            level: 1,
+            rt: 0.5 + 0.02 * i as f64,
+            polarity: 1,
+            profile: true,
+            filter: "+ p ESI Q1MS [100.000-250.000]".into(),
+            precursor: None,
+            mz,
+            intensity: y,
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
 /// The file with `profiles` profile scans among 40, its index kept in a folder of its own, and what `features` makes of it in that folder.
 struct Case {
     dir: std::path::PathBuf,
@@ -64,19 +109,26 @@ impl Case {
     fn off(profiles: usize) -> Case {
         Case::with(profiles, mzlab_feat::lrscreen::Switch::Off)
     }
+    /// The mislabelled file (`mzml_mislabelled`) with the given `centroid` switch.
+    fn mislabelled(centroid: mzlab_feat::lrscreen::Switch) -> Case {
+        Case::build(mzml_mislabelled(40), centroid)
+    }
     fn with(profiles: usize, centroid: mzlab_feat::lrscreen::Switch) -> Case {
+        Case::build(mzml(profiles, 40), centroid)
+    }
+    fn build(bytes: Vec<u8>, centroid: mzlab_feat::lrscreen::Switch) -> Case {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!("mzlab_fnote_{k}_{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let (f, idx) = (dir.join("q1.mzML"), dir.join("0.mzidx"));
-        std::fs::write(&f, mzml(profiles, 40)).unwrap();
+        std::fs::write(&f, bytes).unwrap();
         crate::build_index_of(&f, "", &idx, mzlab_core::budget_auto::native_index_budget())
             .unwrap();
         let mut index = crate::open(&idx).unwrap();
         let mut recipe = Recipe::for_index(&mut index).unwrap();
         recipe.screen.centroid = centroid;
-        let note = note_of(&recipe, &index);
+        let note = note_of(&recipe, &mut index);
         Case { dir, note }
     }
     fn lines(&self) -> Vec<String> {
@@ -324,6 +376,28 @@ fn the_notes_of_a_file_and_the_flow_estimate_carry_the_same_notices() {
         estimate.contains(&format!("\"notices\":{notices}")),
         "{estimate}\n{notes}"
     );
+}
+
+#[test]
+fn a_profile_label_on_sparse_ion_counts_is_reported_with_the_numbers_and_not_centroided() {
+    use mzlab_feat::lrscreen::Switch;
+    let auto = Case::mislabelled(Switch::Auto);
+    let n = &auto.note.notices;
+    assert_eq!(n.len(), 1, "{n:?}");
+    assert_eq!(n[0].key, lr_note::LABEL_MISMATCH);
+    assert_eq!(n[0].params[..2], [("profile", 40), ("scans", 40)]);
+    let l = auto.lines();
+    assert!(
+        l[1].starts_with("warning: q1.mzML: 40 of 40 MS1 scans are labelled profile"),
+        "{}",
+        l[1]
+    );
+    assert!(l[1].ends_with("(warn.features.profileLabel)"), "{}", l[1]);
+    // the user's word wins: `on` centroids it as before and keeps the ordinary note
+    let on = Case::mislabelled(Switch::On);
+    assert_eq!(on.note.notices[0].key, lr_note::CENTROIDED);
+    // a real profile file is never taken for a mislabelled one
+    assert_eq!(Case::new(40).note.notices[0].key, lr_note::CENTROIDED);
 }
 
 #[test]
