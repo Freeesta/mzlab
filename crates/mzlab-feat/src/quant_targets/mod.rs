@@ -4,11 +4,13 @@
 //! (independent, so callers may run files on threads) and `Job::finish` joins them in file order: the bytes do not depend on the schedule.
 
 mod params;
+mod rtref;
 mod run;
 mod targets;
 mod text;
 
-pub use params::{OffsetMode, Params};
+pub use params::{OffsetMode, Params, RtRef};
+pub use rtref::Hint;
 pub use run::{plan, prepare, run, FilePass, Job, Outcome, MAX_WORKERS};
 pub use targets::{parse, Role, Target};
 pub use text::HEADER;
