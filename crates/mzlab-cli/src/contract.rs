@@ -46,6 +46,7 @@ pub(crate) const VERDICT: &[&str] = &[
     "raw scan",
     "sample list",
     "sample import",
+    "sample pair",
     "db ref-list",
     "llm eval",
     "db normative build",

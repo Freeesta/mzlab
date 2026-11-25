@@ -116,6 +116,7 @@ embed!(
     "runorder-1.json",
     "sample-import-1.json",
     "sample-list-1.json",
+    "sample-pair-1.json",
     "sample-select-1.json",
     "samples-1.json",
     "scanlist-1.json",

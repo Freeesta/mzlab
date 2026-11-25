@@ -21,7 +21,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | chat:PARENT-DUP-ROWS | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
-| FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | chat:ROLES-IN-TP | discoverability: sample roles and `sample import` |
+| FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | - | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
 | FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
@@ -49,6 +49,10 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RT-REF-OTHER-STEPS | `docs/coda/prompt/RT-REF-OTHER-STEPS.md` | - | an internal-reference RT mode (`rt_ref` of `quant.targets`) for `peak`, `trace xic` and the `features` alignment; reuse `quant_targets::rtref` |
 | MZ-OFFSET-POLARITY | `docs/coda/prompt/MZ-OFFSET-POLARITY.md` | - | per-polarity `--mz-offset` spec (`+:AUTO,-:AUTO`) for `trace xic` and `features`, as `quant targets --offset auto` already does per file and polarity |
 | DAD-DELAY-APPLY | `docs/coda/prompt/DAD-DELAY-APPLY.md` | - | opt-in PDA/UV detector delay applied at conversion from the `dad delay` estimate; `file convert` hints the command when UV and MS traces disagree |
+| ROLE-WORDS-CLI | `docs/coda/prompt/ROLE-WORDS-CLI.md` | - | `sample table --role dark=dc,dk` word list and the `model` op as a site op in a lazy module (`rotte` and `hr` are full) |
+| SAMPLE-PAIR-SITE | `docs/coda/prompt/SAMPLE-PAIR-SITE.md` | - | `sample pair` as a site op: the pairing notes before the run, same bytes as the CLI route |
+| TP-LINK-NOTES | `docs/coda/prompt/TP-LINK-NOTES.md` | - | `tp.link` pairing notes in a result document (its output is a binary `.mzfeat`; no byte may change) |
+| ROLE-SHORT-NAMES | `docs/coda/prompt/ROLE-SHORT-NAMES.md` | - | short ambiguous names (`dk`, `dc`, a lone `D`) reported as possible roles, never guessed |
 | RAWXIC-PARITY | `docs/coda/prompt/RAWXIC-PARITY.md` | - | AU-13: equality with `trace xic` + `peak auto-lr` and `quant targets` on the wasm leg; app-leg `--sample` if the limit is not real |
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
