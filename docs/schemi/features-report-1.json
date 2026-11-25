@@ -16,7 +16,8 @@
         "required": ["member", "unit", "profile_fraction", "centroided", "defect", "mz_shift_da", "recentred", "rows"],
         "additionalProperties": false,
         "properties": {
-          "member": { "type": "string", "description": "the path as given, or NAME@ID for a sample selected with --sample" },
+          "member": { "type": "string", "description": "the path as given, or FILE@ID for a sample selected with --sample" },
+          "column": { "type": "string", "description": "the label of the column of the table, the sample name (with the extension of its file; NAME (FILE #ID) when two names collide); present only for a sample selected with --sample" },
           "unit": { "type": "boolean", "description": "unit resolution (the 1 Da axis)" },
           "profile_fraction": { "type": "number", "minimum": 0, "maximum": 1, "description": "share of the MS1 scans in profile mode" },
           "centroided": { "type": "boolean", "description": "the profile scans were centroided before detection" },

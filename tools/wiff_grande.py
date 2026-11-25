@@ -1,9 +1,9 @@
 """A synthetic SCIEX .wiff + .wiff.scan pair of a realistic size, to measure the loading of the browser (tests_e2e/e2e_wiff_carico.py) without laboratory data.
 
-    python3 tools/wiff_grande.py OUT [--name grande] [--samples 6] [--scans 1300] [--points 1500] [--seed 7]
+    python3 tools/wiff_grande.py OUT [--name grande] [--samples 6] [--scans 1300] [--points 1500] [--seed 7] [--names A,B,C]
 
 Writes OUT/<name>.wiff and OUT/<name>.wiff.scan in the layout of the 3200 QTRAP (the encoder and the container of tools/wiff_riferimento.py): `--samples` samples of `--scans` full scans each,
-`--points` non-zero bins per scan (a chromatographic peak and noise; 3333 or more = every bin, a profile scan). With the defaults the .wiff.scan is about 20 MB, like a run of 20-60 min of the laboratory.
+`--names` the sample names the file records (`SampleDABE/DATA`, in order; none: the reader names a sample after the file), `--points` non-zero bins per scan (a chromatographic peak and noise; 3333 or more = every bin, a profile scan). With the defaults the .wiff.scan is about 20 MB, like a run of 20-60 min of the laboratory.
 """
 import argparse
 import math
@@ -25,6 +25,7 @@ def main():
     ap.add_argument("--scans", type=int, default=1300)
     ap.add_argument("--points", type=int, default=1500)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--names", default="")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -40,7 +41,8 @@ def main():
                 pts[2151 + j] = 5 + round(height * math.exp(-(j / 2.5) ** 2))
             pts = sorted(pts.items())
             blocks.append(("scan", pts, 2000.0 * k, float(sum(c for _, c in pts))))
-        w.sample(n, blocks, method)
+        names = a.names.split(",") if a.names else []
+        w.sample(n, blocks, method, data_name=names[n - 1] if n <= len(names) else None)
     w.save(out, a.name)
     print(f"{a.name}.wiff + .wiff.scan: {(out / (a.name + '.wiff.scan')).stat().st_size / 1e6:.1f} MB, {a.samples} samples x {a.scans} scans")
 

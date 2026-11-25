@@ -20,12 +20,11 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS | `docs/coda/prompt/ION-COUNTS.md` | - | correctness: cps and ions per scan type, from the method; reuse `raw xic` ionstat |
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | - | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
-| MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | chat:MS2-SUM | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
+| MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | chat:DETECT-VS-FORCED | discoverability: value states already exist; find why they were not reached |
 | FIND-SAMPLE-ROLES | `docs/coda/prompt/FIND-SAMPLE-ROLES.md` | chat:ROLES-IN-TP | discoverability: sample roles and `sample import` |
 | FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | chat:CENTROID-MULTITARGET | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
-| FIND-BLANK | `docs/coda/prompt/FIND-BLANK.md` | - | discoverability: blank subtraction, `counts.blank`, `spectrum get --minus` |
 | FIND-ESTIMATE | `docs/coda/prompt/FIND-ESTIMATE.md` | - | discoverability: `estimate`, `features.union`, `raw xic` as entry points |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | RAW-SCAN | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
@@ -45,6 +44,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | UNION-WEB-TESTS | `docs/coda/prompt/UNION-WEB-TESTS.md` | - | AU-4: cache-hit path of flow-web-companions, real `lr_union` answer shape, module sizes |
 | BLANK-SUMMARY | `docs/coda/prompt/BLANK-SUMMARY.md` | - | AU-7: CLI summary line of the blank filter |
 | BLANK-FOLD-COLUMN | `docs/coda/prompt/BLANK-FOLD-COLUMN.md` | - | AU-7: `blank_fold` as an opt-in per-row export column |
+| COLLISION-LABEL | `docs/coda/prompt/COLLISION-LABEL.md` | - | follow-up of #3717: one Rust label function (`NAME (FILESTEM #ID)`) behind site, app and CLI; decided, no owner step |
+| FIRST-SAMPLE-HINTS | `docs/coda/prompt/FIRST-SAMPLE-HINTS.md` | - | follow-up of #3717: `quant targets --sample`; hint naming `--sample` for `items`, `background`, `dad_ms`, `peak` |
 | RT-REF-HINTS-SITE | `docs/coda/prompt/RT-REF-HINTS-SITE.md` | - | show the `quant.targets` hints (`--rt-ref auto`, `--offset auto`) on the site; the `.wasm` has no room (+4.89 %), so move them to JS or a lazy module |
 | RT-REF-OTHER-STEPS | `docs/coda/prompt/RT-REF-OTHER-STEPS.md` | - | an internal-reference RT mode (`rt_ref` of `quant.targets`) for `peak`, `trace xic` and the `features` alignment; reuse `quant_targets::rtref` |
 | MZ-OFFSET-POLARITY | `docs/coda/prompt/MZ-OFFSET-POLARITY.md` | - | per-polarity `--mz-offset` spec (`+:AUTO,-:AUTO`) for `trace xic` and `features`, as `quant targets --offset auto` already does per file and polarity |
@@ -53,4 +54,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-SCAN | `docs/coda/prompt/RAW-SCAN.md` | - | AU-16: `raw scan` (study §4); new lazy module |
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
-| RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | chat:MS2-SUM | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
+| RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
+| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | needs owner decision: the index gains a fill-time column (index format version) | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states |
+| SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |

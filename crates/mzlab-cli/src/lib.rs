@@ -238,6 +238,7 @@ mod raw_cache_cmd;
 mod raw_cmd;
 mod raw_xic_cmd;
 mod renamed;
+mod sample_label;
 mod sample_select;
 mod samples_check;
 mod samples_cmd;

@@ -67,6 +67,14 @@ pub fn raw_steps() -> Vec<Value> {
         "?mz=241.3&rt=2.5,3.5&da=0",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawxic", "query": q}));
+    // `spectrum get --sum` evidence (`/api/specsum`): a window, with a fill time the user states, a fill time out of range and a question with no window
+    let sum = [
+        "?rt0=2.5&rt1=3.5&level=1",
+        "?rt0=2.5&rt1=3.5&level=1&fill_ms=20",
+        "?rt0=2.5&rt1=3.5&level=1&fill_ms=0",
+        "?level=1",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/specsum", "query": q}));
     let pol = |p: i32| json!({"op": "idxopen", "slot": 0, "name": super::NAME, "pol": p});
     let negative = [
         ("/api/rawinfo", "?probe=8"),
@@ -75,6 +83,7 @@ pub fn raw_steps() -> Vec<Value> {
     .map(|(path, q)| json!({"op": "route", "slot": 0, "path": path, "query": q}));
     info.into_iter()
         .chain(xic)
+        .chain(sum)
         .chain([pol(-1)])
         .chain(negative)
         .chain([pol(0)])
