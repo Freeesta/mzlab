@@ -1,0 +1,8 @@
+uscita = "wasm-feat/specpeak"
+pacchetto = "mzlab-specpeak-wasm"
+chiavi = { specpeak = 34 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 196608
+misura = 183557
+nota = "api/specpeak (`spectrum get --peak auto`: the apex of the product-ion chromatogram, the window of factor x FWHM, the two background sides and the background-subtracted spectrum over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first --peak auto request; a module of its own because inside `rawxic` it took 201,944 -> 235,295 B (+16.5 %, over the 10 % rule), Coordinator decision; 183,557 B after wasm-opt (local build), cap = measurement x 1.05 rounded up to 4 KiB"

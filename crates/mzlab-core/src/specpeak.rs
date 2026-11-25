@@ -1,7 +1,7 @@
 //! `/api/specpeak` (`spectrum get --peak auto`): the apex of the product-ion chromatogram of a level (and precursor), the window of `factor` x FWHM around it, the
 //! two side windows next to the peak, and the window's summed spectrum minus the mean spectrum of the sides, per nominal mass. Every choice is in the answer:
 //! the numbers behind the apex, the window, the sides, the background level and the rule of the verdict. Without an apex no spectrum is made (`no_apex`).
-//! Read from the index only, in the lazy `rawxic` `.wasm`, so the site, the app and the CLI answer the same bytes.
+//! Read from the index only, in the lazy `specpeak` `.wasm`, so the site, the app and the CLI answer the same bytes.
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;

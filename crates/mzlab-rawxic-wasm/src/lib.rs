@@ -83,15 +83,3 @@ pub fn spec_sum(size: f64, read: Function, pol: i32, query: &str) -> Result<Stri
         .map_err(|e| error_json(&e))?;
     Ok(out.unwrap_or_default())
 }
-
-/// `api/specpeak?rt0=A&rt1=B[&level=..&precursor=..&factor=..&side_min=..&gap_min=..&min_sn=..&min_points=..&fill_ms=..]` (`Routes::spec_peak_route`, the
-/// answer of `mzlab-cli spectrum get --peak auto`: the apex, the window, the sides, the background and the spectrum) over the `.mzidx` of `size` bytes read
-/// by `read`; `pol` as in `raw_xic`.
-#[wasm_bindgen]
-pub fn spec_peak(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
-    let mut r = open(size, read, pol)?;
-    let out = r
-        .spec_peak_route(&Query::parse(query))
-        .map_err(|e| error_json(&e))?;
-    Ok(out.unwrap_or_default())
-}

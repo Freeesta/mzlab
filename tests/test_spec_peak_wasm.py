@@ -1,4 +1,4 @@
-"""`spectrum get --peak auto` in the site: the lazy .wasm `rawxic` (mzlab-rawxic-wasm, through Node: `spec_peak(size, read, pol, query)`, the call rust-raw.js makes
+"""`spectrum get --peak auto` in the site: the lazy .wasm `specpeak` (mzlab-specpeak-wasm, through Node: `spec_peak(size, read, pol, query)`, the call rust-raw.js makes
 for the route `/api/specpeak` over the .mzidx of OPFS) gives the apex, the window, the sides, the background and the spectrum, byte for byte, as `mzlab-cli spectrum get
 --peak auto` prints them (`evidence.peak` is the wasm's answer up to its lines, the points are its lines), on the synthetic files of `tools/dati_sintetici.py` (full scan,
 profile, MS2: a peak, a window only, no apex); a value the route refuses has the same `error_key` in both. The desktop answers the same route
@@ -22,7 +22,7 @@ CI = bool(os.environ.get("GITHUB_ACTIONS"))
 pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
 
 NODE = """const [dir, idxPath, pol, ...queries] = process.argv.slice(2);
-const { spec_peak } = require(dir + '/mzlab_rawxic_wasm.js'), fs = require('fs');
+const { spec_peak } = require(dir + '/mzlab_specpeak_wasm.js'), fs = require('fs');
 const b = fs.readFileSync(idxPath), read = (off, len) => new Uint8Array(b.subarray(off, off + len));
 const out = queries.map(q => { try { return { s: spec_peak(b.length, read, Number(pol), q) }; } catch (x) { return { e: String(x) }; } });
 process.stdout.write(JSON.stringify(out));"""
@@ -56,7 +56,7 @@ def work(tmp_path_factory):
     d.full_scan(w / "FS.mzML", 3.0, r)
     d.full_scan_profile(w / "FS_profile.mzML", 3.0, r)
     d.ms2(w / "MS2.mzML", r, 15)
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-rawxic-wasm")))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-specpeak-wasm")))
     build("-p", "mzlab-cli")
     (w / "run.js").write_text(NODE, encoding="utf-8")
     return w
