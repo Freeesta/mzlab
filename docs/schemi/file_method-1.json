@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "file_method/1",
   "title": "file_method/1: tandem-MS method parameters per scan segment, `mzlab-cli file method`",
-  "description": "One document per sample. A parameter the file does not give is null and `unavailable` names the reason: not_decoded (the format holds it, mzLab does not read it yet), not_in_method (the method has no such parameter), not_in_file (the format has no field for it). `warnings` lists a mass in the file or sample name that is not within 1 m/z of any precursor: a notice, never a blocked result. Code: crates/mzlab-core/src/filemethod.rs, crates/mzlab-cli/src/method_cmd.rs.",
+  "description": "One document per sample. A parameter the file does not give is null and `unavailable` names the reason: not_in_method (the method has no such parameter), not_in_file (the format has no field for it), unknown (mzLab does not read it for this format and it is not established that the file holds it), damaged (a stream of the method that holds it is damaged and was not read; listed in `damaged`). `warnings` lists a mass in the file or sample name that is not within 1 m/z of any precursor: a notice, never a blocked result. Code: crates/mzlab-core/src/filemethod.rs, crates/mzlab-cli/src/method_cmd.rs.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,6 +13,7 @@
     "sample_name",
     "segments",
     "acquired",
+    "damaged",
     "unavailable",
     "warnings"
   ],
@@ -202,43 +203,64 @@
         }
       }
     },
+    "damaged": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["experiment", "part"],
+        "properties": {
+          "experiment": {
+            "type": "integer"
+          },
+          "part": {
+            "enum": ["experiment_header", "mass_range"]
+          }
+        }
+      }
+    },
     "unavailable": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "ce_eV": {
           "enum": [
-            "not_decoded",
             "not_in_method",
-            "not_in_file"
+            "not_in_file",
+            "unknown",
+            "damaged"
           ]
         },
         "ces_eV": {
           "enum": [
-            "not_decoded",
             "not_in_method",
-            "not_in_file"
+            "not_in_file",
+            "unknown",
+            "damaged"
           ]
         },
         "dp_V": {
           "enum": [
-            "not_decoded",
             "not_in_method",
-            "not_in_file"
+            "not_in_file",
+            "unknown",
+            "damaged"
           ]
         },
         "fill_time_ms": {
           "enum": [
-            "not_decoded",
             "not_in_method",
-            "not_in_file"
+            "not_in_file",
+            "unknown",
+            "damaged"
           ]
         },
         "q1_resolution": {
           "enum": [
-            "not_decoded",
             "not_in_method",
-            "not_in_file"
+            "not_in_file",
+            "unknown",
+            "damaged"
           ]
         }
       }

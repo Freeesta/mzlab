@@ -1,4 +1,4 @@
-//! The m/z a sample name carries (`Carbamazepine_237.1`) against the precursors the file holds: a warning with the numbers, never a blocked result.
+//! The m/z a sample name carries (`Analyte_237.1`) against the precursors the file holds: a warning with the numbers, never a blocked result.
 //! Heuristic by design (names are free text): a number counts as an m/z mark when it stands alone between separators, is not followed by a unit and is
 //! in the range of a precursor; the user reads the numbers and decides.
 
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn masses_are_found_between_separators_and_amounts_are_not() {
-        assert_eq!(mz_in_name("Carbamazepine_237.1"), vec![237.1]);
+        assert_eq!(mz_in_name("Analyte_237.1"), vec![237.1]);
         assert_eq!(mz_in_name("MS3_237-194.wiff"), vec![237.0, 194.0]);
         assert_eq!(mz_in_name("Std_mz253.1_rep2"), vec![253.1]);
         assert_eq!(

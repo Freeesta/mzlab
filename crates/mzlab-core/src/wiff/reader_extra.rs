@@ -45,14 +45,8 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
     if let Some(v) = e.ces {
         extra.params.push((CES_PARAM.into(), v.to_string()));
     }
-    // no CV term for a spread (the PSI-MS ramp terms are another thing); the declustering potential has one
-    #[cfg(feature = "precursori")]
-    if let Some(v) = e.dp {
-        extra.scan_params.push(
-            crate::mzmlwrite::CvPar::new("MS:1000875", "declustering potential", v)
-                .with_unit("UO:0000218", "volt"),
-        );
-    }
+    // no CV term for a spread (the PSI-MS ramp terms are another thing); the declustering potential has one (`MS:1000875`, written in every build)
+    extra.declustering = e.dp;
     if let Some(p) = e.parent {
         extra.params.push((PARENT_PARAM.into(), p.to_string()));
     }

@@ -63,7 +63,12 @@ pub enum Kind {
 pub struct Experiment {
     pub index: usize,
     pub kind: Kind,
+    /// The streams of the experiment that are damaged and so were not read (`DAMAGED_*`): counted and reported in `method/1`, never dropped silently.
+    pub damaged: Vec<&'static str>,
 }
+
+pub const DAMAGED_HEADER: &str = "experiment_header";
+pub const DAMAGED_RANGE: &str = "mass_range";
 
 #[derive(Debug, Clone, Default)]
 pub struct Pda {
@@ -211,15 +216,29 @@ fn scan_code(ole: &Ole, base: &str, i: usize) -> Option<u32> {
     })
 }
 
-/// The fixed m/z of a product-ion experiment (`ExperimentHeader` +42 f64, codes 9 and 11): the precursor the method isolates.
-fn fixed_mz(ole: &Ole, base: &str, i: usize) -> Option<f64> {
-    scan_code(ole, base, i).filter(|c| matches!(c, 9 | 11))?;
+/// The shortest `ExperimentHeader` that holds the scan-type code (+122, 4 bytes).
+const HEADER_MIN: usize = 126;
+
+/// The fixed m/z of a product-ion experiment (`ExperimentHeader` +42 f64, codes 9 and 11): the precursor the method isolates. `Some(None)`: no fixed
+/// precursor in this experiment; `None`: the header is too short, or the value is not a usable mass (damaged).
+fn fixed_mz(ole: &Ole, base: &str, i: usize) -> Option<Option<f64>> {
+    if !scan_code(ole, base, i).is_some_and(|c| matches!(c, 9 | 11)) {
+        return Some(None);
+    }
     let h = ole.read(&format!(
         "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
     ))?;
     let b: [u8; 8] = h.get(42..50)?.try_into().ok()?;
     let v = f64::from_le_bytes(b);
-    (v.is_finite() && v > 0.0).then(|| mass(v))
+    (v.is_finite() && v > 0.0).then(|| Some(mass(v)))
+}
+
+/// Whether the `ExperimentHeader` of experiment `i` is there but too short to hold what is read from it.
+fn header_cut(ole: &Ole, base: &str, i: usize) -> bool {
+    ole.read(&format!(
+        "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
+    ))
+    .is_some_and(|h| h.len() < HEADER_MIN)
 }
 
 fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
@@ -229,18 +248,36 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
         let Some(d) = ole.read(&key) else { break };
         // MRM (4) or SIM (Q1MI 1, Q3MI 3): a row of their table may have no name
         let is_mrm = scan_code(ole, base, i).is_some_and(|c| matches!(c, 1 | 3 | 4));
+        let mut damaged = Vec::new();
         let mut kind = match mass_range::announced(ole, base, i) {
-            Some(n) => mass_range::counted(&d, n, is_mrm),
+            Some(n) => {
+                let (kind, cut) = mass_range::counted(&d, n, is_mrm);
+                if cut {
+                    damaged.push(DAMAGED_RANGE);
+                }
+                kind
+            }
             None => guessed(&d, is_mrm),
         };
+        if header_cut(ole, base, i) {
+            damaged.push(DAMAGED_HEADER);
+        }
         if let Kind::Scan {
             precursor, code, ..
         } = &mut kind
         {
-            *precursor = fixed_mz(ole, base, i);
+            match fixed_mz(ole, base, i) {
+                Some(p) => *precursor = p,
+                None if !damaged.contains(&DAMAGED_HEADER) => damaged.push(DAMAGED_HEADER),
+                None => {}
+            }
             *code = scan_code(ole, base, i);
         }
-        out.push(Experiment { index: i, kind });
+        out.push(Experiment {
+            index: i,
+            kind,
+            damaged,
+        });
     }
     out
 }

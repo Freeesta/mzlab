@@ -90,14 +90,15 @@ pub(crate) fn open_all(
 /// The `items/1` text and the stderr notes: a mass in the file or sample name that no precursor has (the numbers, never a blocked result), and the
 /// pointer to `file method`.
 fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<(String, String)> {
-    let (items, _, sample_name) = open_all(file, tmp)?;
+    let (items, method, sample_name) = open_all(file, tmp)?;
     let doc = document(&items, no_points)?;
     let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut notes = String::new();
     if let Ok(v) = mzlab_core::json::parse(doc.as_bytes()) {
-        let precs = mzlab_core::filemethod::item_precursors(&v);
+        // the same precursor set as `file method` (the method's fixed precursors and the scans')
+        let precs = mzlab_core::filemethod::precursors_of(method.as_deref(), &v);
         let warns =
             mzlab_core::filemethod::name_warnings(&[name.as_str(), sample_name.as_str()], &precs);
         notes +=

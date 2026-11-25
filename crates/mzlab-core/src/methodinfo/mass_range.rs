@@ -76,10 +76,11 @@ pub(super) fn mass(x: f64) -> f64 {
     }
 }
 
-/// The experiment read by the counted grammar; a stream that does not hold the announced entries keeps no table (the `.wiff` reader refuses the sample).
-pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
+/// The experiment read by the counted grammar, and whether its stream is damaged (it does not hold the announced entries): a damaged stream keeps no
+/// table (the `.wiff` reader refuses the sample) and the method document reports it as `damaged`.
+pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> (Kind, bool) {
     let Ok(entries) = parse(d, n) else {
-        return if is_mrm {
+        let kind = if is_mrm {
             Kind::Mrm(Vec::new())
         } else {
             Kind::Scan {
@@ -91,6 +92,7 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
                 code: None,
             }
         };
+        return (kind, true);
     };
     let value = |e: &Entry, id: &str| {
         e.params
@@ -101,7 +103,7 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
     };
     if is_mrm {
         let p = |e: &Entry, id: &str| value(e, id).map(|v| round(v, 2));
-        return Kind::Mrm(
+        let rows = Kind::Mrm(
             entries
                 .iter()
                 .map(|e| Transition {
@@ -117,6 +119,7 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
                 })
                 .collect(),
         );
+        return (rows, false);
     }
     // distinct values of a parameter over the ranges, sorted
     let distinct = |id: &str| {
@@ -140,14 +143,15 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
         _ => (f64::NAN, f64::NAN),
     };
     let range = (10.0 <= a && a < b && b <= 3000.0).then(|| [round(a, 2), round(b, 2)]);
-    Kind::Scan {
+    let kind = Kind::Scan {
         range,
         ce,
         ces,
         dp,
         precursor: None,
         code: None,
-    }
+    };
+    (kind, false)
 }
 
 /// The `n` entries of `d`, or why the stream does not hold exactly `n` entries of the grammar (the text goes in the `detail` of the error).

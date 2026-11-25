@@ -31,3 +31,27 @@ def spread(out, writer, header, ion_spray, full, product):
     w.streams["SampleSubtree/Sample1/SampleDABE/DATA"] = b"".join(struct.pack("<H", 2 * len(t)) + t.encode("utf-16le") for t in ("Name_237.1", "a", "b", "1:A,1"))
     w.save(out, "dispersione")
     return {"precursor": 253.1, "ce": 35.0, "ces": 15.0, "dp": 60.0, "name_mz": 237.1}
+
+
+def damaged(out, writer, header, full, product):
+    """Three damaged methods, one file each: `cut_header.wiff` (the `ExperimentHeader` of the product-ion experiment ends before the scan-type code), `cut_range.wiff` (the `MassRangeEx` announces two ranges and holds one) and `bad_tag.wiff` (a parameter tag of odd length, the garbage a bad copy leaves)."""
+    blocks = [("scan", full if e == 0 else product, 1000.0 * c + 100.0 * e, 1.0) for c in range(2) for e in range(2)]
+
+    def head(code, prec, count=1, cut=None):
+        d = bytearray(header(code, prec))
+        d[176:180] = struct.pack("<I", count)
+        return bytes(d[:cut] if cut else d)
+
+    def make(name, headers, ranges):
+        method = {"Experiment0/ExperimentHeader": head(15, 30.0), "Experiment1/ExperimentHeader": headers,
+                  "Experiment0/MassRangeEx/MassRangeEx": counted_range([(100.0, 300.0, 0.06, (60.0, 10.0, 0.0, 0.0))]),
+                  "Experiment1/MassRangeEx/MassRangeEx": ranges}
+        w = writer()
+        w.sample(1, blocks, method)
+        w.save(out, name)
+
+    good = counted_range([(50.0, 300.0, 0.06, (60.0, 35.0, 0.0, 15.0))])
+    make("cut_header", head(11, 253.1, cut=100), good)
+    make("cut_range", head(11, 253.1, count=2), good)
+    make("bad_tag", head(11, 253.1), good.replace(struct.pack("<H", 4) + "CE".encode("utf-16le"), struct.pack("<H", 3) + "CE".encode("utf-16le")[:3] + b"\x00", 1))
+    return ["cut_header", "cut_range", "bad_tag"]

@@ -88,7 +88,7 @@ def test_the_wiff_converted_keeps_ce_ces_and_dp_and_says_what_it_does_not_decode
     doc = json.loads(wasm(work, converted(work))["s"])
     seg = next(s for s in doc["segments"] if s["ms_level"] == 2)
     assert (seg["precursor_mz"], seg["ce_eV"], seg["ces_eV"], seg["dp_V"]) == (253.1, 35, 15, 60)
-    assert doc["unavailable"] == {"fill_time_ms": "not_decoded", "q1_resolution": "not_decoded"}
+    assert doc["unavailable"] == {"fill_time_ms": "unknown", "q1_resolution": "unknown"}
     assert seg["fill_time_ms"] is None and seg["q1_resolution"] is None
 
 

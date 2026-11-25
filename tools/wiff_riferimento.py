@@ -220,6 +220,7 @@ def main():
     w.save(out, "prodotto")
     energia = energy(out)
     dispersione = wiff_dispersione.spread(out, Writer, header, ion_spray, FULL, PRODUCT)
+    wiff_dispersione.damaged(out, Writer, header, FULL, PRODUCT)
     unindexed(out)
     transizioni = transitions(out)
     programmati = scheduled(out)

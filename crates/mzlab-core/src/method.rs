@@ -208,6 +208,12 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
                 ("ce_eV", ce),
                 ("ces_eV", ces),
                 ("dp_V", dp),
+                // damaged streams of the experiment (counted here, never dropped silently)
+                (
+                    "damaged",
+                    (!e.damaged.is_empty())
+                        .then(|| V::Arr(e.damaged.iter().map(|d| V::s(*d)).collect())),
+                ),
                 ("parameters", Some(params(&m.compound))),
                 ("transitions", Some(transitions)),
             ])

@@ -20,8 +20,9 @@ usage: mzlab-cli file method FILE [--sample LIST] [--json] [--out PATH]
   --out PATH  write there instead of the standard output
 
 segments[]: experiment, scan, ms_level, precursor_mz, q3_mz, mz_range, ce_eV, ce_list_eV, ces_eV, dp_V, dwell_ms, fill_time_ms, q1_resolution.
-A parameter the file does not give is null and `unavailable` says why: not_decoded (the format holds it, mzLab does not read it yet), not_in_method
-(the method has no such parameter), not_in_file (the format has no field for it). `acquired` is what the scans hold (precursor, CE, scan count).
+A parameter the file does not give is null and `unavailable` says why: not_in_method (the method has no such parameter), not_in_file (the format
+has no field for it), unknown (not read for this format, not established that the file holds it), damaged (a damaged method stream, listed in `damaged[]`).
+`acquired` is what the scans hold (precursor, CE, scan count).
 warnings[] names a mass in the file or sample name that is not within 1 m/z of any precursor (also on the standard error); nothing is blocked.
 exit codes: 0 ok, 2 usage, 4 file unreadable, 5 unknown sample, 6 no usable data";
 

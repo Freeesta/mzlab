@@ -1,6 +1,6 @@
 //! `mzlab-cli file method` on the synthetic `.wiff` of `tools/wiff_riferimento.py` (`dispersione`: precursor 253.1, CE 35, CES 15, DP 60, a sample
 //! named for another mass): the parameters of the segments, null with a reason where the format has none, the name warning, the pinned exit codes
-//! and the hints that make the command findable. Without python3 the tests skip, `MZLAB_GOLDEN_STRICT=1` fails instead.
+//! and the hints that make the command findable. Without python3 the tests skip locally; `MZLAB_GOLDEN_STRICT=1`, `CI` or `GITHUB_ACTIONS` make that a failure.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -23,8 +23,11 @@ fn fixture() -> Option<PathBuf> {
     if made.is_ok_and(|o| o.status.success()) && wiff.exists() {
         return Some(wiff);
     }
+    // CI must run these tests: a missing python3 there is a failure, not a skip
     assert!(
-        std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+        ["MZLAB_GOLDEN_STRICT", "CI", "GITHUB_ACTIONS"]
+            .iter()
+            .all(|k| std::env::var(k).is_err()),
         "python3 not available"
     );
     eprintln!("skipped: python3 not available");
@@ -58,8 +61,8 @@ fn a_product_ion_experiment_gives_its_parameters_and_the_missing_ones_say_why() 
         seg.get("fill_time_ms").unwrap().is_null() && seg.get("q1_resolution").unwrap().is_null()
     );
     let u = v.get("unavailable").unwrap();
-    assert_eq!(u.get("fill_time_ms").unwrap().str(), Some("not_decoded"));
-    assert_eq!(u.get("q1_resolution").unwrap().str(), Some("not_decoded"));
+    assert_eq!(u.get("fill_time_ms").unwrap().str(), Some("unknown"));
+    assert_eq!(u.get("q1_resolution").unwrap().str(), Some("unknown"));
     assert!(u.get("ces_eV").is_none());
 }
 
@@ -143,4 +146,57 @@ fn the_command_is_listed_with_its_schema_and_is_found_by_its_tasks() {
     assert!(v.to_string().contains("file method"), "{v}");
     let s = run(&["schema", "file_method/1"]);
     assert_eq!(s.code, 0, "{}", s.stderr);
+}
+
+/// A damaged method stream is refused with a stable error (never a panic, never a silent drop) and, where the method document is still built, it is
+/// listed in `damaged` of the experiment, so the missing parameters are not read as "not in the method".
+#[test]
+fn damaged_method_streams_are_reported_and_never_panic() {
+    let Some(w) = fixture() else { return };
+    let dir = w.parent().unwrap();
+    for (name, key) in [
+        ("cut_header", "err.file.wiff"),
+        ("cut_range", "err.file.wiffMassRange"),
+        ("bad_tag", "err.file.wiffMassRange"),
+    ] {
+        let file = dir.join(format!("{name}.wiff"));
+        let o = run(&["file", "method", &file.to_string_lossy()]);
+        assert_eq!(o.code, 4, "{name}: {}", o.stderr);
+        assert!(o.stderr.contains(key), "{name}: {}", o.stderr);
+        let methods = mzlab_core::methodinfo::read_methods(std::fs::read(&file).unwrap(), name)
+            .unwrap_or_default();
+        let mut out = mzlab_core::json::Out::default();
+        if let Some(v) = methods
+            .first()
+            .and_then(|m| mzlab_core::method::ms_section(m, None))
+        {
+            v.write(&mut out);
+        }
+        let doc = out.0;
+        assert!(doc.contains("\"damaged\":[\""), "{name}: {doc}");
+    }
+}
+
+/// The converter writes the method parameters the format holds, in every build: CE (`MS:1000045`) of the precursor, the declustering potential as the
+/// PSI-MS term `MS:1000875` with its unit, and the collision energy spread as a userParam (PSI-MS has no term for it). This pins the bytes of the new params.
+#[test]
+fn the_converted_mzml_carries_ce_dp_and_the_spread() {
+    let Some(w) = fixture() else { return };
+    let out = w.parent().unwrap().join("converted");
+    let o = run(&["file", "convert", &w.to_string_lossy(), "--out", &out.to_string_lossy()]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let mzml = std::fs::read_dir(&out)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .find(|p| p.extension().is_some_and(|x| x == "mzML"))
+        .expect("an mzML");
+    let text = std::fs::read_to_string(mzml).unwrap();
+    assert!(
+        text.contains(r#"accession="MS:1000875" name="declustering potential" value="60" unitCvRef="UO" unitAccession="UO:0000218" unitName="volt""#),
+        "{}",
+        &text[..text.len().min(3000)]
+    );
+    assert!(text.contains(r#"name="collision energy spread (eV)" value="15""#));
+    assert!(text.contains(r#"accession="MS:1000045" name="collision energy" value="35""#));
 }

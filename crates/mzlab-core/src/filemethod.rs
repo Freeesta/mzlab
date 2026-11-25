@@ -1,8 +1,8 @@
 //! `file_method/1`: the tandem-MS method parameters per scan segment (precursor, collision energy, its spread, declustering potential, fill time, Q1 resolution)
 //! read from the `method/1` document of a sample and the `items/1` document of its scans, plus the check of the m/z a sample name carries against the precursors.
-//! A value the file does not hold is `null` and `unavailable` says why (`not_decoded`: the format holds it and mzLab does not read it yet; `not_in_method`: the
-//! method of this format has no such parameter for the segment; `not_in_file`: the format has no field for it). Pure functions of two JSON texts: site, app and CLI
-//! give the same bytes.
+//! A value the file does not hold is `null` and `unavailable` says why: `not_in_method` (the method of this format has no such parameter for the segment),
+//! `not_in_file` (the format has no field for it), `unknown` (mzLab does not read it for this format and it is not established that the file holds it) or
+//! `damaged` (a stream of the method that holds it is damaged and was not read; listed in `damaged`). Pure functions of two JSON texts: site, app and CLI give the same bytes.
 
 use crate::error::Result;
 use crate::json::{parse, Out, Value};
@@ -59,6 +59,21 @@ fn level_of(tag: &str) -> Option<i64> {
         .iter()
         .find(|m| m.tag == tag)
         .map(|m| i64::from(m.level))
+}
+
+/// The damaged streams a `method/1` document reports: (experiment index, part).
+fn damaged_parts(doc: &Value) -> Vec<(i64, String)> {
+    let periods = doc.get("ms").and_then(|m| m.get("periods")).map(Value::arr).unwrap_or_default();
+    let mut out = Vec::new();
+    for e in periods.iter().flat_map(|p| p.get("experiments").map(Value::arr).unwrap_or_default()) {
+        let index = e.get("index").and_then(Value::f64).map_or(-1, |x| x as i64);
+        for d in e.get("damaged").map(Value::arr).unwrap_or_default() {
+            if let Some(part) = d.str() {
+                out.push((index, part.to_string()));
+            }
+        }
+    }
+    out
 }
 
 /// The segments of a `method/1` document: one per transition of an MRM experiment, one per scan experiment.
@@ -178,10 +193,12 @@ fn present(s: &Segment, key: &str) -> bool {
     }
 }
 
-/// Why a parameter that no tandem segment holds is missing, from the format the method came from.
-fn reason(format: &str, key: &str) -> &'static str {
+/// Why a parameter that no tandem segment holds is missing, from the format the method came from. `damaged`: a stream of the method that holds it
+/// is damaged, so the absence says nothing about the file. `unknown`: mzLab does not read it for this format and it is not established that the file has it.
+fn reason(format: &str, key: &str, damaged: bool) -> &'static str {
     match (format, key) {
-        ("sciex-wiff", "fill_time_ms" | "q1_resolution") => "not_decoded",
+        (_, "ce_eV" | "ces_eV" | "dp_V") if damaged => "damaged",
+        ("sciex-wiff", "fill_time_ms" | "q1_resolution") => "unknown",
         ("sciex-wiff", _) => "not_in_method",
         _ => "not_in_file",
     }
@@ -269,15 +286,31 @@ fn write_acquired(o: &mut Out, items: &Value) {
 }
 
 /// The parameters no tandem segment holds, each with the reason.
-fn write_unavailable(o: &mut Out, segs: &[Segment], format: &str) {
+fn write_unavailable(o: &mut Out, segs: &[Segment], format: &str, damaged: bool) {
     let tandem: Vec<&Segment> = segs.iter().filter(|s| s.ms_level != Some(1)).collect();
     let mut sep = "";
     for key in KEYS {
         if !tandem.iter().any(|s| present(s, key)) {
-            o.raw(sep).str(key).raw(":").str(reason(format, key));
+            o.raw(sep).str(key).raw(":").str(reason(format, key, damaged));
             sep = ",";
         }
     }
+}
+
+/// The precursors a sample name is checked against: the fixed ones of the method and the ones of the scans, sorted and distinct. `file method` and
+/// `file items` both use this set, so they warn about the same names.
+fn name_precursors(segs: &[Segment], items: &Value) -> Vec<f64> {
+    let mut precs: Vec<f64> = segs.iter().filter_map(|s| s.precursor).filter(|p| *p > 0.0).collect();
+    precs.extend(item_precursors(items));
+    crate::sortc::by(&mut precs, f64::total_cmp);
+    precs.dedup();
+    precs
+}
+
+/// The precursors of a `method/1` text (`None`: no method) and an `items/1` document for the name check of `file items`.
+pub fn precursors_of(method: Option<&str>, items: &Value) -> Vec<f64> {
+    let segs = method.and_then(|m| parse(m.as_bytes()).ok()).map(|d| segments(&d)).unwrap_or_default();
+    name_precursors(&segs, items)
 }
 
 /// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text.
@@ -288,6 +321,7 @@ pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Resul
         None => None,
     };
     let segs = doc.as_ref().map(segments).unwrap_or_default();
+    let bad = doc.as_ref().map(damaged_parts).unwrap_or_default();
     let format = doc
         .as_ref()
         .and_then(|d| d.get("origin")?.get("format")?.str())
@@ -324,17 +358,14 @@ pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Resul
     }
     o.raw("],\"acquired\":[");
     write_acquired(&mut o, &items);
+    o.raw("],\"damaged\":[");
+    for (i, (index, part)) in bad.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"experiment\":").int(*index);
+        o.raw(",\"part\":").str(part).raw("}");
+    }
     o.raw("],\"unavailable\":{");
-    write_unavailable(&mut o, &segs, format);
-    // the name against the precursors: the method's and the scans'
-    let mut precs: Vec<f64> = segs
-        .iter()
-        .filter_map(|s| s.precursor)
-        .filter(|p| *p > 0.0)
-        .collect();
-    precs.extend(item_precursors(&items));
-    crate::sortc::by(&mut precs, f64::total_cmp);
-    precs.dedup();
+    write_unavailable(&mut o, &segs, format, !bad.is_empty());
+    let precs = name_precursors(&segs, &items);
     o.raw("},\"warnings\":[")
         .raw(&name_warnings(&[file, sample_name], &precs).join(","))
         .raw("]}");

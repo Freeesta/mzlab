@@ -197,6 +197,13 @@
                         "type": "number"
                       }
                     },
+                    "damaged": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["experiment_header", "mass_range"]
+                      }
+                    },
                     "parameters": {
                       "$ref": "#/$defs/parametri"
                     },
