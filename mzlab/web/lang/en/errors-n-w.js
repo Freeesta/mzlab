@@ -62,6 +62,7 @@ I18N.add("en", {
   "err.scan.none": "No scan in this file.",
   "err.spectrum.minus": "The engine cannot subtract the blank from this spectrum (a profile level its index cannot answer, or a bin of zero).",
   "err.scan.unknown": "Scan {id} does not exist in this file.",
+  "err.scan.level": "This file has scans at MS levels {levels} and none at level 1: choose one with {hint}.",
   "err.scan.mrm": "This file is MRM: it contains only transition chromatograms, no scans.",
   "err.scan.range": "Invalid scan range: i0 is greater than i1.",
   "err.scan.maxRequest": "At most {n} scans per request.",

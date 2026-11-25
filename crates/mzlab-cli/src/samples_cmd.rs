@@ -9,6 +9,7 @@ use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::readers::Limits;
 
+use crate::samples_check::{attach, completeness, consistency_warning, probe_json};
 use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split them (sample-vars/1), as JSON.
@@ -173,22 +174,8 @@ struct Listed {
     json: String,
     refused: bool,
     cut: bool,
-}
-
-/// `{"scan_bytes", "indexed_end", "status"}` of the data file of a pair, `n/a` for a format without one.
-fn probe_json(scan: Option<(u64, u64)>) -> (String, &'static str) {
-    let Some((bytes, end)) = scan else {
-        return ("{\"status\":\"n/a\"}".into(), "n/a");
-    };
-    let status = match bytes.cmp(&end) {
-        std::cmp::Ordering::Less => "short",
-        std::cmp::Ordering::Equal => "ok",
-        std::cmp::Ordering::Greater => "longer",
-    };
-    (
-        format!("{{\"scan_bytes\":{bytes},\"indexed_end\":{end},\"status\":\"{status}\"}}"),
-        status,
-    )
+    /// The `.wiff` index and the `.wiff.scan` disagree (`consistency` in the JSON); `still_writing` adds a member modified in the last `RECENT_S` seconds.
+    mismatch: Option<mzlab_core::wiff::Completeness>,
 }
 
 /// The `samples_list/1` of one file (a `.wiff` from its container and index alone), `Err((exit code, error))` when it cannot be listed.
@@ -209,6 +196,10 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
     let mut l = mzlab_lettori::open_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
     let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
     let mut json = mzlab_core::readers::list_samples(&mut *l);
+    let mismatch = completeness(path, &mut *l);
+    if let Some(c) = &mismatch {
+        attach(&mut json, c);
+    }
     let mut cut = false;
     if probe {
         let (p, status) = probe_json(l.listing().scan);
@@ -216,7 +207,12 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
         json.pop();
         json += &format!(",\"probe\":{p}}}");
     }
-    Ok(Listed { json, refused, cut })
+    Ok(Listed {
+        json,
+        refused,
+        cut,
+        mismatch,
+    })
 }
 
 fn mb(bytes: f64) -> String {
@@ -423,6 +419,10 @@ fn list_run(args: Vec<String>) -> Outcome {
                     err += &format!("warning: {}: the .wiff.scan holds bytes after the last indexed section (a copy made while acquiring, or padding)\n", f.display());
                 }
                 code = code.max(u8::from(l.refused || l.cut));
+                if let Some(c) = &l.mismatch {
+                    err += &consistency_warning(&f.display().to_string(), c);
+                    code = code.max(if c.recent() { crate::exit::GROWING } else { 1 });
+                }
             }
             Err((c, e)) if c == crate::exit::DATA => {
                 // a file the reader refuses is part of the answer: its error/1 takes its place among the listings

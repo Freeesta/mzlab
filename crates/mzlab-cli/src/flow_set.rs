@@ -81,8 +81,8 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
     Ok(out)
 }
 
-/// A member modified less than this many seconds ago may be a file an instrument is still writing: its size is read twice before the pair is opened.
-const RECENT_S: u64 = 10;
+/// A member modified less than `RECENT_S` seconds ago (`mzlab_core::wiff`) may be a file an instrument is still writing: its size is read twice before the pair is opened.
+use mzlab_core::wiff::RECENT_S;
 /// How long the two readings are apart (ms); `MZLAB_GROW_PROBE_MS` changes it, 0 turns the check off.
 const PROBE_MS: u64 = 400;
 
@@ -116,6 +116,29 @@ fn refuse_growing(list: &[(String, PathBuf)]) -> Result<()> {
     let before = sizes(list);
     std::thread::sleep(std::time::Duration::from_millis(ms));
     mzlab_core::wiff::check_stable(&before, &sizes(list), ms)
+}
+
+/// Seconds since the newest `.wiff` / `.wiff.scan` member of the dataset at `path` was modified (`None` when the system does not say).
+pub(crate) fn wiff_age_s(path: &Path) -> Option<u64> {
+    let found = members(path).ok()?;
+    found
+        .iter()
+        .filter(|(n, _)| {
+            let n = n.to_lowercase();
+            n.ends_with(".wiff") || n.ends_with(".wiff.scan")
+        })
+        .filter_map(|(_, p)| std::fs::metadata(p).ok()?.modified().ok()?.elapsed().ok())
+        .map(|a| a.as_secs())
+        .min()
+}
+
+/// The `.wiff.scan` member of the dataset at `path`, opened to read.
+pub(crate) fn scan_file(path: &Path) -> Option<File> {
+    let (_, p) = members(path)
+        .ok()?
+        .into_iter()
+        .find(|(n, _)| n.to_lowercase().ends_with(".wiff.scan"))?;
+    File::open(p).ok()
 }
 
 /// The `FileSet` of the dataset at `path`, its members opened on the disk.

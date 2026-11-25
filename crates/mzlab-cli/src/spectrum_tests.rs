@@ -368,3 +368,85 @@ fn a_blank_with_no_spectrum_to_subtract_from_is_exit_1_with_its_key() {
     assert!(e.contains("err.spectrum.minus"), "{e}");
     let _ = std::fs::remove_dir_all(d);
 }
+
+/// An mzML whose scans have the MS `levels` in turn (every 3 s, one product ion each), written in a new folder: (folder, path).
+fn levels_file(tag: &str, levels: &[u8]) -> (std::path::PathBuf, String) {
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let d = dir(tag);
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_spectra(levels.len()).unwrap();
+    for (i, &level) in levels.iter().enumerate() {
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("sample=1 period=1 cycle={} experiment=1", i + 1),
+            level,
+            rt: 0.05 * i as f64,
+            polarity: 1,
+            profile: false,
+            filter: format!("+ c ESI Full ms{level} 300.00 [50.000-400.000]"),
+            precursor: (level > 1).then_some(300.0),
+            mz: vec![100.0 + i as f64, 150.0],
+            intensity: vec![5000.0, 9000.0],
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let f = d.join("levels.mzML");
+    std::fs::write(&f, w.finish().unwrap()).unwrap();
+    (d, f.to_string_lossy().into_owned())
+}
+
+/// A file with a single MS level other than 1 (an enhanced product ion scan) answers without `--ms-level`: the level is the file's only one, and the choice is
+/// logged on stderr and in `evidence.level_auto`; `--ms-level 2` gives the same points with no auto-choice to log.
+#[test]
+fn the_only_ms_level_of_a_file_is_the_default_and_the_choice_is_logged() {
+    let (d, f) = levels_file("spec_one_level", &[2; 20]);
+    for at in [["--rt", "0.5"], ["--rt", "0.2,0.6"]] {
+        let o = run(&["spectrum", "get", &f, at[0], at[1]]);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        assert!(o.stderr.contains("only MS level 2"), "{}", o.stderr);
+        let auto = String::from_utf8(o.stdout).unwrap();
+        let v = parse(auto.trim().as_bytes()).unwrap();
+        assert_eq!(v.get("ms_level").unwrap().f64(), Some(2.0), "{auto}");
+        let l = v.get("evidence").unwrap().get("level_auto").unwrap();
+        assert_eq!(l.get("ms_level").unwrap().f64(), Some(2.0), "{auto}");
+        assert_eq!(l.get("levels").unwrap().arr().len(), 1, "{auto}");
+        assert!(!doc_points(&auto).is_empty(), "{auto}");
+        let given = run(&["spectrum", "get", &f, at[0], at[1], "--ms-level", "2"]);
+        assert_eq!(given.code, 0, "{}", given.stderr);
+        assert!(given.stderr.is_empty(), "{}", given.stderr);
+        let given = String::from_utf8(given.stdout).unwrap();
+        assert!(!given.contains("level_auto"), "{given}");
+        assert_eq!(doc_points(&auto), doc_points(&given));
+    }
+    let _ = std::fs::remove_dir_all(d);
+}
+
+/// Several levels and none of them 1: no guess; the error (exit 5, `err.scan.level`) names the levels and the flag to give, and the flag works. A file that
+/// has level 1 keeps it as the default, with nothing logged.
+#[test]
+fn several_levels_without_level_1_name_the_levels_and_suggest_the_flag() {
+    let (d, f) = levels_file("spec_levels", &[2, 3, 2, 3, 2, 3, 2, 3]);
+    let o = run(&["spectrum", "get", &f, "--rt", "0.1", "--json"]);
+    assert_eq!(o.code, 5, "{}", o.stderr);
+    let e = String::from_utf8(o.stdout).unwrap();
+    let v = parse(e.trim().as_bytes()).unwrap();
+    assert_eq!(v.get("error_key").unwrap().str(), Some("err.scan.level"));
+    let p = v.get("params").unwrap();
+    assert_eq!(p.get("levels").unwrap().str(), Some("2, 3"), "{e}");
+    assert_eq!(p.get("hint").unwrap().str(), Some("--ms-level 2"), "{e}");
+    assert_eq!(run(&["spectrum", "get", &f, "--rt", "0.1,0.3"]).code, 5);
+    assert_eq!(
+        run(&["spectrum", "get", &f, "--rt", "0.1", "--ms-level", "3"]).code,
+        0
+    );
+    // a scan given by number states its own level
+    assert_eq!(run(&["spectrum", "get", &f, "--scan", "2"]).code, 0);
+    let (d1, with1) = levels_file("spec_levels_1", &[1, 2, 1, 2]);
+    let o = run(&["spectrum", "get", &with1, "--rt", "0"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.is_empty() && !String::from_utf8_lossy(&o.stdout).contains("level_auto"));
+    let _ = (std::fs::remove_dir_all(d), std::fs::remove_dir_all(d1));
+}
