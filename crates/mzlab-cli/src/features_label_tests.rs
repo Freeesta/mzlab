@@ -220,12 +220,19 @@ fn a_table_with_one_name_on_two_columns_is_exit_4_and_names_the_command_that_fix
         let o = run(&a);
         assert_eq!(o.code, 4, "{}", o.stderr);
         assert!(o.stderr.contains("err.compare.duplicate"), "{}", o.stderr);
+        // the message and the hint are two lang keys, each on its own line
+        let hint = crate::error_text::catalog_text("err.compare.duplicateHint").unwrap();
         assert!(
-            o.stderr.contains("hint:")
-                && o.stderr.contains("features FILE --sample LIST")
-                && o.stderr.contains("sample list FILE"),
+            o.stderr.contains(&format!("hint: {hint}\n"))
+                && hint.contains("features FILE --sample LIST")
+                && hint.contains("sample list FILE"),
             "{}",
             o.stderr
+        );
+        let message = o.stderr.lines().find(|l| l.starts_with("error:")).unwrap();
+        assert!(
+            message.contains("the same name") && !message.contains(hint),
+            "{message}"
         );
     }
     let o = run(&[
@@ -236,8 +243,9 @@ fn a_table_with_one_name_on_two_columns_is_exit_4_and_names_the_command_that_fix
         text.contains(r#""error_key":"err.compare.duplicate""#) && text.contains(r#""code":4"#),
         "{text}"
     );
+    let hint = crate::error_text::catalog_text("err.compare.duplicateHint").unwrap();
     assert!(
-        text.contains("features FILE --sample LIST"),
+        text.contains(&format!(r#""hint":"{hint}""#)),
         "the hint of error/1: {text}"
     );
     let _ = std::fs::remove_dir_all(&dir);
