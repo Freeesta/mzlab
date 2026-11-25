@@ -49,3 +49,5 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | chat:MS2-SUM | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
+| FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
+| FILE-METHOD-WINDOW | `docs/coda/prompt/FILE-METHOD-WINDOW.md` | - | `file_method/1` in the site Method window and the name check beside the scan list of `sample list` |

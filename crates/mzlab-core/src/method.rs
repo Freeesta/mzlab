@@ -152,6 +152,27 @@ fn experiment_type(e: &crate::methodinfo::Experiment) -> Option<&'static str> {
     matches!(e.kind, Kind::Mrm(_)).then_some("MRM")
 }
 
+/// The `transitions` array of an MRM experiment.
+fn transitions_json(tr: &[crate::methodinfo::Transition]) -> V {
+    V::Arr(
+        tr.iter()
+            .filter_map(|t| {
+                obj(vec![
+                    ("q1", num(Some(t.q1))),
+                    ("q3", num(Some(t.q3))),
+                    ("dwell_ms", num(Some(t.dwell))),
+                    ("ce_eV", num(t.ce)),
+                    ("dp_V", num(t.dp)),
+                    ("ep_V", num(t.ep)),
+                    ("cep_V", num(t.cep)),
+                    ("cxp_V", num(t.cxp)),
+                    ("name", text(&t.name)),
+                ])
+            })
+            .collect(),
+    )
+}
+
 /// `ms`: the source and the experiments of a method (one period: the file does not say where a period ends). `source_type`: the kind of
 /// source as the instrument reported it (the log of a `.wiff`: «Turbo Spray»); a method alone does not say, so it is absent then.
 pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
@@ -160,26 +181,7 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
         .iter()
         .filter_map(|e| {
             let (mz, transitions) = match &e.kind {
-                Kind::Mrm(tr) => (
-                    None,
-                    V::Arr(
-                        tr.iter()
-                            .filter_map(|t| {
-                                obj(vec![
-                                    ("q1", num(Some(t.q1))),
-                                    ("q3", num(Some(t.q3))),
-                                    ("dwell_ms", num(Some(t.dwell))),
-                                    ("ce_eV", num(t.ce)),
-                                    ("dp_V", num(t.dp)),
-                                    ("ep_V", num(t.ep)),
-                                    ("cep_V", num(t.cep)),
-                                    ("cxp_V", num(t.cxp)),
-                                    ("name", text(&t.name)),
-                                ])
-                            })
-                            .collect(),
-                    ),
-                ),
+                Kind::Mrm(tr) => (None, transitions_json(tr)),
                 Kind::Scan { range, .. } => (
                     range.map(|r| V::Arr(vec![V::Num(r[0]), V::Num(r[1])])),
                     V::Arr(vec![]),
