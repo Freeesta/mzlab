@@ -82,10 +82,21 @@ fn a_split_peak_is_merged_with_its_numbers_and_the_threshold_undoes_it() {
         .arr()
         .iter()
         .all(|m| m.get("rule").and_then(Value::str) == Some("correlation")));
-    for m in merged.iter().filter(|m| m.get("rule").and_then(Value::str) == Some("overlap")) {
+    for m in merged
+        .iter()
+        .filter(|m| m.get("rule").and_then(Value::str) == Some("overlap"))
+    {
         for key in [
-            "kept", "dropped", "dmz_da", "drt_min", "r", "overlap", "shared_files", "threshold",
-            "height_kept", "height_dropped",
+            "kept",
+            "dropped",
+            "dmz_da",
+            "drt_min",
+            "r",
+            "overlap",
+            "shared_files",
+            "threshold",
+            "height_kept",
+            "height_dropped",
         ] {
             assert!(m.get(key).is_some(), "{key}");
         }
@@ -97,7 +108,9 @@ fn a_split_peak_is_merged_with_its_numbers_and_the_threshold_undoes_it() {
                 >= m.get("height_dropped").and_then(Value::f64).unwrap()
         );
     }
-    assert!(merged.iter().any(|m| m.get("rule").and_then(Value::str) == Some("overlap")));
+    assert!(merged
+        .iter()
+        .any(|m| m.get("rule").and_then(Value::str) == Some("overlap")));
     let _ = std::fs::remove_dir_all(d);
 }
 
@@ -111,7 +124,10 @@ fn rows_left_close_are_in_the_report_and_the_hint_names_the_threshold() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     let near = report(&rep);
     let near = near.get("near").unwrap().arr();
-    assert!(!near.is_empty(), "the replicates keep close rows of two ions");
+    assert!(
+        !near.is_empty(),
+        "the replicates keep close rows of two ions"
+    );
     for p in near {
         assert!(p.get("dmz_da").and_then(Value::f64).unwrap() <= 0.6);
         assert!(p.get("shared_files").is_some() && p.get("overlap").is_some());
@@ -135,5 +151,8 @@ fn the_hint_is_the_catalogue_text_that_names_dedup_overlap() {
     let n = crate::par::features_report::near_notice(&log).unwrap();
     assert_eq!(n.key, "note.features.nearDup");
     let text = crate::error_text::warning(&n);
-    assert!(text.contains("dedup_overlap") && text.contains("250.200") && text.contains("1 pair"), "{text}");
+    assert!(
+        text.contains("dedup_overlap") && text.contains("250.200") && text.contains("1 pair"),
+        "{text}"
+    );
 }
