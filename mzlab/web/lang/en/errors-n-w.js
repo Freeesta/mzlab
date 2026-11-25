@@ -212,7 +212,7 @@ I18N.add("en", {
   "err.raw.xic.param": "The value «{value}» of {name} cannot be used: see the range in the help of raw xic.",
   "warn.raw.labelMismatch": "{file}: the scans are labelled {label}, but their points read as {data} ({runs_share} of the points in runs): a tool that trusts the label may smooth single ion counts or take a profile for peaks.",
   "warn.raw.noQuantum": "{file}: the intensities are not multiples of one ion (an analog detector or processed data), so ion counts do not apply to it.",
-  "err.spec.fill": "The fill time «{value}» cannot be used: give a number of milliseconds above zero.",
+  "err.spec.fill": "The fill time cannot be used: give a number of milliseconds above zero.",
   "note.spec.sum.noFill": "The file does not give the fill time (ms) per scan, so the ions are not counted and the counts stay in cps summed over the scans; --fill-ms T states it.",
   "note.spec.sum.noQuantum": "The intensities are not multiples of one ion (an analog detector or processed data), so the ions cannot be counted from the counts.",
   "note.spec.mean.sumHint": "This is the mean of the scans; --sum adds them instead and states how many scans and ions the spectrum rests on."
