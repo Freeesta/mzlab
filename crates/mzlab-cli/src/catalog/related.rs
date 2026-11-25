@@ -75,7 +75,8 @@ pub(crate) static RELATED: &[Rel] = &[
         .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
     r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
-    r("spectrum get", "mass spectrum scan blank subtract", &["spectrum list", "spectra.centroid"]),
+    r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time", &["spectrum list", "raw xic", "spectra.centroid"])
+        .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),
     r("ion pattern", "isotope pattern chlorine bromine", &["features.group", "ion mz"]),
     r("ion match", "adduct neutral loss contaminant", &["features.group", "features.companions", "ion mz"]),
     r("mol draw", "draw depict structure picture image figure svg png cdxml ket molfile smiles 2d", &["structure.render", "tp.network", "mol export"])
