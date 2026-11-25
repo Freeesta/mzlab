@@ -88,7 +88,7 @@ fn overlap(t: &Aligned, a: usize, b: usize) -> Option<Cover> {
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    v.sort_by(f64::total_cmp);
+    mzlab_core::sortc::by(v, |a, b| a.total_cmp(b));
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
