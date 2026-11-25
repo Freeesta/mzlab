@@ -4,5 +4,5 @@ chiavi = { rotte = 19 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 1011712
-misura = 1006018
+misura = 1006885
 nota = "statistics, molecules, Data and Flow routes out of the engine, loaded on the first request of one of them"
