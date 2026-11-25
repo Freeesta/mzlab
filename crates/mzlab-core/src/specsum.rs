@@ -97,13 +97,11 @@ pub(crate) fn scan_type(s: &Scan) -> String {
     }
     let mut o = String::new();
     let mut w = f.split(' ').filter(|x| !x.is_empty());
-    if let (Some(a), Some(b)) = (w.next(), w.next()) {
-        if b == "+" || b == "-" {
-            o.push_str(a);
-            o.push(' ');
-            o.push_str(b);
-            o.push(' ');
-        }
+    if let (Some(a), Some(b @ ("+" | "-"))) = (w.next(), w.next()) {
+        o.push_str(a);
+        o.push(' ');
+        o.push_str(b);
+        o.push(' ');
     }
     o.push_str("ms");
     o.push_str(&s.level.to_string());
