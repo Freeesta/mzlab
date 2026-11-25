@@ -63,9 +63,16 @@ fn level_of(tag: &str) -> Option<i64> {
 
 /// The damaged streams a `method/1` document reports: (experiment index, part).
 fn damaged_parts(doc: &Value) -> Vec<(i64, String)> {
-    let periods = doc.get("ms").and_then(|m| m.get("periods")).map(Value::arr).unwrap_or_default();
+    let periods = doc
+        .get("ms")
+        .and_then(|m| m.get("periods"))
+        .map(Value::arr)
+        .unwrap_or_default();
     let mut out = Vec::new();
-    for e in periods.iter().flat_map(|p| p.get("experiments").map(Value::arr).unwrap_or_default()) {
+    for e in periods
+        .iter()
+        .flat_map(|p| p.get("experiments").map(Value::arr).unwrap_or_default())
+    {
         let index = e.get("index").and_then(Value::f64).map_or(-1, |x| x as i64);
         for d in e.get("damaged").map(Value::arr).unwrap_or_default() {
             if let Some(part) = d.str() {
@@ -291,7 +298,10 @@ fn write_unavailable(o: &mut Out, segs: &[Segment], format: &str, damaged: bool)
     let mut sep = "";
     for key in KEYS {
         if !tandem.iter().any(|s| present(s, key)) {
-            o.raw(sep).str(key).raw(":").str(reason(format, key, damaged));
+            o.raw(sep)
+                .str(key)
+                .raw(":")
+                .str(reason(format, key, damaged));
             sep = ",";
         }
     }
@@ -300,7 +310,11 @@ fn write_unavailable(o: &mut Out, segs: &[Segment], format: &str, damaged: bool)
 /// The precursors a sample name is checked against: the fixed ones of the method and the ones of the scans, sorted and distinct. `file method` and
 /// `file items` both use this set, so they warn about the same names.
 fn name_precursors(segs: &[Segment], items: &Value) -> Vec<f64> {
-    let mut precs: Vec<f64> = segs.iter().filter_map(|s| s.precursor).filter(|p| *p > 0.0).collect();
+    let mut precs: Vec<f64> = segs
+        .iter()
+        .filter_map(|s| s.precursor)
+        .filter(|p| *p > 0.0)
+        .collect();
     precs.extend(item_precursors(items));
     crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
@@ -309,7 +323,10 @@ fn name_precursors(segs: &[Segment], items: &Value) -> Vec<f64> {
 
 /// The precursors of a `method/1` text (`None`: no method) and an `items/1` document for the name check of `file items`.
 pub fn precursors_of(method: Option<&str>, items: &Value) -> Vec<f64> {
-    let segs = method.and_then(|m| parse(m.as_bytes()).ok()).map(|d| segments(&d)).unwrap_or_default();
+    let segs = method
+        .and_then(|m| parse(m.as_bytes()).ok())
+        .map(|d| segments(&d))
+        .unwrap_or_default();
     name_precursors(&segs, items)
 }
 
@@ -360,7 +377,9 @@ pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Resul
     write_acquired(&mut o, &items);
     o.raw("],\"damaged\":[");
     for (i, (index, part)) in bad.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"experiment\":").int(*index);
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"experiment\":")
+            .int(*index);
         o.raw(",\"part\":").str(part).raw("}");
     }
     o.raw("],\"unavailable\":{");

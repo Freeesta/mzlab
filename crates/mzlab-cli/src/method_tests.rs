@@ -183,7 +183,13 @@ fn damaged_method_streams_are_reported_and_never_panic() {
 fn the_converted_mzml_carries_ce_dp_and_the_spread() {
     let Some(w) = fixture() else { return };
     let out = w.parent().unwrap().join("converted");
-    let o = run(&["file", "convert", &w.to_string_lossy(), "--out", &out.to_string_lossy()]);
+    let o = run(&[
+        "file",
+        "convert",
+        &w.to_string_lossy(),
+        "--out",
+        &out.to_string_lossy(),
+    ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let mzml = std::fs::read_dir(&out)
         .unwrap()
