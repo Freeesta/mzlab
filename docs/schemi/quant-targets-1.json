@@ -128,6 +128,10 @@
           "mz_offset_da": {
             "type": "number",
             "description": "m/z offset (observed - true) applied to this trace, Da."
+          },
+          "rt_shift_min": {
+            "type": "number",
+            "description": "Only with rt_ref on: minutes the window of this row was moved in its file (the rt column stays the measured apex)."
           }
         }
       }
@@ -204,6 +208,14 @@
             },
             "valley": {
               "type": "number"
+            },
+            "rt_ref": {
+              "type": "string",
+              "description": "Only with rt_ref on: off, auto, ID or either with @RT."
+            },
+            "rt_span": {
+              "type": "number",
+              "description": "Only with rt_ref on: half-width added to the reference window, min."
             }
           }
         },
@@ -299,6 +311,91 @@
                   },
                   "half_pts_id": {
                     "type": "string"
+                  }
+                }
+              },
+              "rt_ref": {
+                "type": "object",
+                "description": "Only with rt_ref on: the evidence of the internal reference in this file.",
+                "required": [
+                  "reference",
+                  "expected_rt",
+                  "apex_rt",
+                  "sn",
+                  "search",
+                  "peaks_in_search",
+                  "runner_up",
+                  "shift_min",
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "reference": {
+                    "type": "string"
+                  },
+                  "expected_rt": {
+                    "type": "number"
+                  },
+                  "apex_rt": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "sn": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "search": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "RT window the apex was looked for in, min."
+                  },
+                  "peaks_in_search": {
+                    "type": "integer",
+                    "description": "How many peaks the search window holds (0 in a blank, which is not measured)."
+                  },
+                  "runner_up": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "description": "The second tallest peak of the search window, null when there is none: a rival of at least half the height (and over min_sn) makes the status ambiguous.",
+                    "required": [
+                      "apex_rt",
+                      "height_ratio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "apex_rt": {
+                        "type": "number"
+                      },
+                      "height_ratio": {
+                        "type": "number",
+                        "description": "Its height over the tallest peak."
+                      }
+                    }
+                  },
+                  "shift_min": {
+                    "type": "number",
+                    "description": "Applied to every window of the file; 0 for every status but ok."
+                  },
+                  "status": {
+                    "enum": [
+                      "ok",
+                      "edge",
+                      "ambiguous",
+                      "weak",
+                      "not_found",
+                      "blank"
+                    ],
+                    "description": "ok: applied. edge: the apex is on the border of the search window (a clipped peak). ambiguous: a second peak of at least half the height. weak: under the S/N, points or shape limits. not_found: no peak. blank: a blank file, not measured."
                   }
                 }
               }
@@ -414,6 +511,33 @@
         "warnings": {
           "type": "array",
           "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hints": {
+      "type": "array",
+      "description": "Only in the CLI answer and only when the data point at a switch (the site has none): the note.quant.targets.* keys of the language files with their words and the text.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params",
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "text": {
             "type": "string"
           }
         }

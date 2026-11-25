@@ -3,7 +3,8 @@
 //! off is still listed with its measured value and no limit, so a user can read what limit would have separated the peaks.
 
 use super::params::Params;
-use super::run::Hit;
+use super::run::{Hit, Row};
+use super::targets::Target;
 
 /// One check: what was measured, the limit, and whether the peak passed. `min` limits are `value >= limit`, the others `value <= limit`.
 /// `limit` is `None` for a shape gate that is off (the value is listed, nothing is judged).
@@ -65,4 +66,20 @@ pub(crate) fn checks(h: &Hit, p: &Params) -> Vec<Check> {
         max("fwhm_s", Some(h.fwhm_s), p.max_fwhm, p.max_fwhm > 0.0),
         max("asym", asym, p.max_asym, p.max_asym > 0.0),
     ]
+}
+
+/// The detected row with the smallest `key` of its peak: (target id, value). The first one wins a tie, so the log is stable.
+pub(crate) fn weakest(
+    rows: &[Row],
+    targets: &[Target],
+    key: impl Fn(&Hit) -> f64,
+) -> Option<(String, f64)> {
+    rows.iter()
+        .filter(|r| r.detected())
+        .filter_map(|r| r.hit.as_ref().map(|h| (r.target, key(h))))
+        .fold(None, |best: Option<(usize, f64)>, (t, v)| match best {
+            Some((_, b)) if b <= v => best,
+            _ => Some((t, v)),
+        })
+        .map(|(t, v)| (targets[t].id.clone(), v))
 }

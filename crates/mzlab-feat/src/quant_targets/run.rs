@@ -9,7 +9,10 @@ use mzlab_core::rawxic::tallest;
 use mzlab_core::routes::Routes;
 
 use super::gates;
-use super::params::{OffsetMode, Params};
+use super::params::{OffsetMode, Params, RtRef};
+#[cfg(not(target_arch = "wasm32"))]
+use super::rtref::hints;
+use super::rtref::{measure, rt_choices, rt_reference, Hint, RtShift};
 use super::targets::{parse, Role, Target};
 use super::text;
 
@@ -29,6 +32,8 @@ pub(crate) struct Row {
     pub peaks: usize,
     pub half: usize,
     pub offset: f64,
+    /// Minutes the target's window was moved in this file (`rt_ref` on; 0 otherwise).
+    pub rt_shift: f64,
 }
 
 impl Row {
@@ -70,6 +75,7 @@ pub(crate) struct FileLog {
     /// The weakest detected rows of the file (target id and value): how close the accepted peaks are to the thresholds.
     pub min_sn: Option<(String, f64)>,
     pub min_half: Option<(String, usize)>,
+    pub rt: Option<RtShift>,
 }
 
 /// An automatic choice of the run: what, the value taken, why.
@@ -86,15 +92,23 @@ pub struct Outcome {
     pub csv: String,
     pub log: String,
     pub warnings: Vec<String>,
+    pub hints: Vec<Hint>,
     rows: Vec<Row>,
     names: Vec<String>,
     targets: Vec<Target>,
+    rt_on: bool,
 }
 
 impl Outcome {
     /// The rows and the log as `quant-targets/1`.
     pub fn json(&self) -> String {
-        text::json(&self.rows, &self.names, &self.targets, &self.log)
+        text::json(
+            &self.rows,
+            &self.names,
+            &self.targets,
+            &self.log,
+            self.rt_on,
+        )
     }
 }
 
@@ -148,21 +162,26 @@ fn offsets<R: ReadAt>(
     Ok(out)
 }
 
-/// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too).
-fn integrate(rt: &[f64], y: &[f64], t: &Target, p: &Params) -> (Option<Hit>, usize, usize, bool) {
-    tallest(rt, y, t.rt_min, t.rt_max, p.smooth_half, p.valley_pct)
+/// The tallest peak of a trace between `x0` and `x1` and how many the window holds (`rawxic::tallest`, which `raw xic` calls too). The one call
+/// of the module: the table and the reference row both go through it.
+#[inline(never)]
+pub(super) fn peak_in(
+    rt: &[f64],
+    y: &[f64],
+    (a, b): (f64, f64),
+    p: &Params,
+) -> (Option<Hit>, usize, usize, bool) {
+    tallest(rt, y, a, b, p.smooth_half, p.valley_pct)
 }
 
-/// The detected row with the smallest `key` of its peak: (target id, value). The first one wins a tie, so the log is stable.
-fn weakest(rows: &[Row], targets: &[Target], key: impl Fn(&Hit) -> f64) -> Option<(String, f64)> {
-    rows.iter()
-        .filter(|r| r.detected())
-        .filter_map(|r| r.hit.as_ref().map(|h| (r.target, key(h))))
-        .fold(None, |best: Option<(usize, f64)>, (t, v)| match best {
-            Some((_, b)) if b <= v => best,
-            _ => Some((t, v)),
-        })
-        .map(|(t, v)| (targets[t].id.clone(), v))
+fn integrate(
+    rt: &[f64],
+    y: &[f64],
+    t: &Target,
+    p: &Params,
+    shift: f64,
+) -> (Option<Hit>, usize, usize, bool) {
+    peak_in(rt, y, ((t.rt_min + shift).max(0.0), t.rt_max + shift), p)
 }
 
 /// The flags of a row from its hit (`in_blank` comes after every file).
@@ -191,9 +210,17 @@ fn one_file<R: ReadAt>(
     p: &Params,
     offs: &[GroupOffset],
     workers: usize,
-) -> Result<Vec<Row>> {
+    rt_ref: Option<(usize, f64, bool)>,
+) -> Result<(Vec<Row>, Option<RtShift>)> {
     let mut routes = Routes::new(idx);
     let mut rows: Vec<Option<Row>> = vec![None; targets.len()];
+    let rt_log = match rt_ref {
+        Some((i, expected, blank)) => {
+            Some(measure(&mut routes, &targets[i], expected, offs, p, blank)?)
+        }
+        None => None,
+    };
+    let shift = rt_log.as_ref().map_or(0.0, |r| r.shift);
     for g in offs {
         routes.pol = g.polarity;
         routes.mz_off = g.offset.da;
@@ -220,10 +247,11 @@ fn one_file<R: ReadAt>(
                         peaks: 0,
                         half: 0,
                         offset: g.offset.da,
+                        rt_shift: shift,
                     }
                 } else {
                     let y: Vec<f64> = m.y[c].iter().map(|&v| round(v, 1)).collect();
-                    let (hit, peaks, half, edge) = integrate(&rt, &y, &targets[i], p);
+                    let (hit, peaks, half, edge) = integrate(&rt, &y, &targets[i], p, shift);
                     let flags = flags(&hit, edge, p);
                     Row {
                         file: k,
@@ -233,6 +261,7 @@ fn one_file<R: ReadAt>(
                         peaks,
                         half,
                         offset: g.offset.da,
+                        rt_shift: shift,
                     }
                 };
                 rows[i] = Some(row);
@@ -241,7 +270,7 @@ fn one_file<R: ReadAt>(
             routes.forget_sweep();
         }
     }
-    Ok(rows.into_iter().flatten().collect())
+    Ok((rows.into_iter().flatten().collect(), rt_log))
 }
 
 /// A run checked and ready: parameters, targets, file names with their blank flag, and the choices and warnings known before any file is read.
@@ -255,6 +284,8 @@ pub struct Job {
     choices: Vec<Choice>,
     warnings: Vec<String>,
     workers: usize,
+    /// The reference row of `rt_ref` and the RT it is expected at (`None`: off, or no reference row).
+    rt_ref: Option<(usize, f64)>,
 }
 
 /// The rows, the log entry and the warning keys of one file.
@@ -264,7 +295,7 @@ pub struct FilePass {
     warnings: Vec<&'static str>,
 }
 
-fn warn(w: &str, list: &mut Vec<String>) {
+pub(super) fn warn(w: &str, list: &mut Vec<String>) {
     if !list.iter().any(|x| x == w) {
         list.push(w.to_string());
     }
@@ -305,6 +336,8 @@ pub fn prepare(names: &[String], targets: &[u8], params: &[(String, Value)]) -> 
             });
         }
     }
+    let rt_ref = rt_reference(&targets, &p)?;
+    rt_choices(&targets, &p, rt_ref, &mut choices, &mut warnings);
     if p.smooth_half == 0 {
         choices.push(Choice {
             key: "smooth_half",
@@ -320,6 +353,7 @@ pub fn prepare(names: &[String], targets: &[u8], params: &[(String, Value)]) -> 
         choices,
         warnings,
         workers: 1,
+        rt_ref,
     })
 }
 
@@ -340,7 +374,21 @@ impl Job {
         let offs = offsets(&mut idx, &self.targets, &self.p)?;
         let mut warnings: Vec<&'static str> =
             offs.iter().filter_map(|g| g.offset.warning()).collect();
-        let rows = one_file(idx, k, &self.targets, &self.p, &offs, self.workers)?;
+        let (rows, rt) = one_file(
+            idx,
+            k,
+            &self.targets,
+            &self.p,
+            &offs,
+            self.workers,
+            self.rt_ref.map(|(i, e)| (i, e, self.blank[k])),
+        )?;
+        match rt.as_ref().map(|r| r.status) {
+            Some("weak" | "not_found") => warnings.push("warn.quant.targets.rtRefNotFound"),
+            Some("edge") => warnings.push("warn.quant.targets.rtRefEdge"),
+            Some("ambiguous") => warnings.push("warn.quant.targets.rtRefAmbiguous"),
+            _ => {}
+        }
         if rows.iter().any(|x| x.flags.contains(&"no_scans")) {
             warnings.push("warn.quant.targets.noScans");
         }
@@ -350,9 +398,10 @@ impl Job {
             offsets: offs,
             detected: rows.iter().filter(|x| x.detected()).count(),
             forced: rows.iter().filter(|x| x.state() == "forced").count(),
-            min_sn: weakest(&rows, &self.targets, |h| h.sn),
-            min_half: weakest(&rows, &self.targets, |h| h.half_pts as f64)
+            min_sn: gates::weakest(&rows, &self.targets, |h| h.sn),
+            min_half: gates::weakest(&rows, &self.targets, |h| h.half_pts as f64)
                 .map(|(id, v)| (id, v as usize)),
+            rt,
         };
         Ok(FilePass {
             rows,
@@ -389,8 +438,19 @@ impl Job {
                 r.flags.push("in_blank");
             }
         }
+        // stderr pointers of the CLI: the site has no stderr, so they stay out of the .wasm (wasm-caps.md)
+        #[cfg(not(target_arch = "wasm32"))]
+        let hints = hints(&self.p, &self.targets, &rows, &self.blank);
+        #[cfg(target_arch = "wasm32")]
+        let hints = Vec::new();
         Outcome {
-            csv: text::table(&rows, &self.names, &self.targets),
+            hints,
+            csv: text::table(
+                &rows,
+                &self.names,
+                &self.targets,
+                self.p.rt_ref != RtRef::Off,
+            ),
             log: text::log(
                 &self.p,
                 &files,
@@ -404,6 +464,7 @@ impl Job {
             rows,
             names: self.names.clone(),
             targets: self.targets.clone(),
+            rt_on: self.p.rt_ref != RtRef::Off,
         }
     }
 }

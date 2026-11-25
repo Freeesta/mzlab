@@ -79,6 +79,15 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
         "quant targets",
     ),
+    (
+        "retention times drift between batches, align on an internal standard",
+        "quant targets",
+    ),
+    (
+        "mass offset differs by polarity, measure it on the parent",
+        "quant targets",
+    ),
+    ("delay of the uv detector against the ms", "dad delay"),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
 ];

@@ -91,7 +91,7 @@ fn every_failure_code_is_one_error_document_under_json() {
 }
 
 #[test]
-fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_command_wraps_it() {
+fn wiff_inventory_and_verify_keep_their_document_at_exit_1_and_3() {
     // file inventory exits 3 (a sample refused), file verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
     let out =
         std::env::temp_dir().join(format!("mzlab_cli_contract_wiffref_{}", std::process::id()));
@@ -134,20 +134,42 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
         );
     }
     let _ = std::fs::remove_dir_all(out);
-    // sample list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
+}
+
+#[test]
+fn sample_list_keeps_its_document_at_exit_8_then_1_and_a_failed_select_is_one_error() {
+    // a .wiff.scan shorter than its index says
     let (dir, wiff_file) = wiff("verdict_samples");
     let cut = dir.join("cut");
     std::fs::create_dir_all(&cut).unwrap();
     std::fs::copy(&wiff_file, cut.join("grande.wiff")).unwrap();
     let data = std::fs::read(format!("{wiff_file}.scan")).unwrap();
     std::fs::write(cut.join("grande.wiff.scan"), &data[..data.len() - 500]).unwrap();
-    let o = run(&[
-        "sample",
-        "list",
-        cut.join("grande.wiff").to_str().unwrap(),
-        "--json",
-        "--probe",
-    ]);
+    let cut_wiff = cut.join("grande.wiff");
+    let list = || {
+        run(&[
+            "sample",
+            "list",
+            cut_wiff.to_str().unwrap(),
+            "--json",
+            "--probe",
+        ])
+    };
+    // written a moment ago it may still be growing: exit 8 with the same document; untouched for an hour it is a finished partial copy: exit 1
+    let o = list();
+    assert_eq!(o.code, 8, "{}", o.stderr);
+    assert!(
+        text(&o).contains("\"samples_list/1\"") && !text(&o).contains("\"schema\":\"error/1\"")
+    );
+    let hour_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+    for n in ["grande.wiff", "grande.wiff.scan"] {
+        let f = std::fs::OpenOptions::new()
+            .write(true)
+            .open(cut.join(n))
+            .unwrap();
+        f.set_modified(hour_ago).unwrap();
+    }
+    let o = list();
     assert_eq!(o.code, 1, "{}", o.stderr);
     let t = text(&o);
     assert!(

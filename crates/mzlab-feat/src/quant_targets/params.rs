@@ -16,6 +16,17 @@ pub enum OffsetMode {
     Ion(Spec),
 }
 
+/// The internal reference the retention-time windows follow from file to file (`rt_ref`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum RtRef {
+    /// The windows stay where the table puts them (default).
+    Off,
+    /// The first `standard`/`parent` row (any polarity); `rt` = the RT it is expected at, else the centre of its window.
+    Auto { rt: Option<f64> },
+    /// The row with this id.
+    Id { id: String, rt: Option<f64> },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Params {
     /// Half-window of every XIC, Da.
@@ -38,6 +49,11 @@ pub struct Params {
     /// Savitzky-Golay half window of the detection copy (points, 0 = automatic per trace) and valley depth in % (`peak auto-lr`).
     pub smooth_half: usize,
     pub valley_pct: f64,
+    pub rt_ref: RtRef,
+    /// The text of `rt_ref` as given (`auto`, `IS1@2.3`), for the log and the error.
+    pub rt_ref_text: String,
+    /// Half-width, minutes, added to each side of the reference window where its apex is looked for (`rt_ref` on).
+    pub rt_span: f64,
 }
 
 impl Default for Params {
@@ -55,11 +71,14 @@ impl Default for Params {
             ms_level: 1,
             smooth_half: 0,
             valley_pct: 10.0,
+            rt_ref: RtRef::Off,
+            rt_ref_text: "off".into(),
+            rt_span: 0.6,
         }
     }
 }
 
-fn bad(name: &str, v: &str) -> Error {
+pub(super) fn bad(name: &str, v: &str) -> Error {
     Error::new("err.quant.targets.param")
         .with("name", name.to_string())
         .with("value", v.to_string())
@@ -87,6 +106,36 @@ pub fn offset_of(t: &str) -> Result<OffsetMode> {
         Spec::Zero => OffsetMode::Fixed(0.0),
         Spec::Fixed(d) => OffsetMode::Fixed(d),
         s => OffsetMode::Ion(s),
+    })
+}
+
+/// The `rt_ref` text: empty or `off`; `auto[@RT]`; or a target id, optionally `ID@RT` (RT = where the reference is expected, minutes; an id that
+/// itself ends in `@` and a number cannot be named, the number is read as the RT).
+pub fn rt_ref_of(t: &str, name: &str) -> Result<RtRef> {
+    let t = t.trim();
+    if t.is_empty() || t.eq_ignore_ascii_case("off") {
+        return Ok(RtRef::Off);
+    }
+    // a tail that is not a number is part of the id (`IS@b` names the row `IS@b`, or is refused when no row has it)
+    let tail = t.bytes().rposition(|b| b == b'@').and_then(|i| {
+        let x = t[i + 1..].trim().parse::<f64>().ok()?;
+        Some((t[..i].trim(), x))
+    });
+    let (head, rt) = match tail {
+        Some((h, x)) if x.is_finite() && x >= 0.0 => (h, Some(x)),
+        Some(_) => return Err(bad(name, t)),
+        None => (t, None),
+    };
+    if head.is_empty() {
+        return Err(bad(name, t));
+    }
+    Ok(if head.eq_ignore_ascii_case("auto") {
+        RtRef::Auto { rt }
+    } else {
+        RtRef::Id {
+            id: head.to_string(),
+            rt,
+        }
     })
 }
 
@@ -133,6 +182,15 @@ impl Params {
                 "valley" => {
                     p.valley_pct = num()
                         .filter(|x| (0.0..=100.0).contains(x))
+                        .ok_or_else(|| bad(k, &t))?
+                }
+                "rt_ref" => {
+                    p.rt_ref = rt_ref_of(&t, k)?;
+                    p.rt_ref_text = t.trim().to_string();
+                }
+                "rt_span" => {
+                    p.rt_span = num()
+                        .filter(|x| (0.05..=5.0).contains(x))
                         .ok_or_else(|| bad(k, &t))?
                 }
                 _ => return Err(bad(k, &t)),
