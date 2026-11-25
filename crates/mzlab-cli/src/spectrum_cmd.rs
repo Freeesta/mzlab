@@ -10,11 +10,12 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, Parsed, Sample};
 use crate::Outcome;
 
+#[path = "spectrum_level.rs"]
+mod level;
 #[path = "spectrum_minus.rs"]
 mod minus;
 #[path = "spectrum_sum.rs"]
 mod sum;
-
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
 usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
@@ -26,7 +27,7 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
               spectrum rests on enough ions; no background is subtracted (`evidence.sum.background`); not with --minus or --id
   --fill-ms T the fill time of a scan in ms for --sum when the file does not give it (the ions are null without it; the user states it, it is never guessed)
   --scan NO   the scan with that number (`spectrum list` prints it as scan_no); its level and precursor are used; no such scan: exit 5
-  --ms-level N the level (default 1, or the level of --scan)
+  --ms-level N the level (default: the level of --scan; the file's only level; else 1, and a file without level 1 names its levels: exit 5)
   --id CHANNEL only the scans of an ms:<key> or dd:<level> channel `file channels` lists
   --sample ID the sample of a file with several (.wiff); default the first
   --minus FILE a blank: its mean spectrum is subtracted (the engine's `/api/spectrum` with a background: lines where the difference is above zero,
@@ -136,6 +137,16 @@ fn scalar_members(text: &str) -> Result<String> {
     Ok(ans.0)
 }
 
+/// The `scan` member of the evidence: the scan the request resolved to.
+fn scan_json(i: usize, sc: &mzlab_core::idxread::Scan) -> String {
+    format!(
+        "{{\"scan_id\":{i},\"scan_no\":{},\"rt_min\":{},\"ms_level\":{}}}",
+        sc.number(i),
+        extract::jnum(sc.rt),
+        sc.level
+    )
+}
+
 fn get_one(
     s: &mut Sample,
     at: &At,
@@ -145,7 +156,7 @@ fn get_one(
     minus: &mut Option<minus::Minus>,
     sum: &Option<sum::SumOpt>,
 ) -> Result<(String, String)> {
-    let mut level = level.unwrap_or(1);
+    let (mut level, auto) = level::start(s, at, level)?;
     let mut resolved = "null".to_string();
     let mut pairs: Vec<(&str, String)> = Vec::new();
     let sid = scan_index(s, at, level, chan)?;
@@ -159,12 +170,7 @@ fn get_one(
             if let (true, Some(p)) = (sc.level > 1, sc.precursor) {
                 pairs.push(("precursor", p.to_string()));
             }
-            resolved = format!(
-                "{{\"scan_id\":{i},\"scan_no\":{},\"rt_min\":{},\"ms_level\":{}}}",
-                sc.number(i),
-                extract::jnum(sc.rt),
-                sc.level
-            );
+            resolved = scan_json(i, sc);
             (sc.rt, sc.rt)
         }
         (None, At::Window(a, b)) => (*a, *b),
@@ -182,10 +188,9 @@ fn get_one(
         pairs.push(("channel", c.into()));
     }
     // the evidence of a sum reads the window as the spectrum does, before `mode` joins the query
-    let sum_ev = match sum {
-        Some(o) => Some(sum::evidence(s, &pairs, &o.fill_ms)?),
-        None => None,
-    };
+    let sum_ev = (sum.as_ref())
+        .map(|o| sum::evidence(s, &pairs, &o.fill_ms))
+        .transpose()?;
     if sum.is_some() {
         pairs.push(("mode", "sum".into()));
     }
@@ -211,7 +216,12 @@ fn get_one(
         return Ok((extract::points_csv("mz", "intensity", &pts), notes));
     }
     let tail = format!("{minus_ev}{extra}");
-    Ok((doc(s, level, &pts, &resolved, &pairs, &text, &tail)?, notes))
+    // the scan member also carries `level_auto` when the file's only level was chosen
+    let scan = format!(
+        "{resolved}{}",
+        auto.map_or(String::new(), |a| format!(",\"level_auto\":{a}"))
+    );
+    Ok((doc(s, level, &pts, &scan, &pairs, &text, &tail)?, notes))
 }
 
 /// The `spectrum/1` document: the points, and as evidence the rest of the route's answer (mode, scans averaged, first and last scan, merge).
@@ -481,9 +491,8 @@ pub fn list(args: Vec<String>) -> Outcome {
 }
 
 #[cfg(test)]
-#[path = "spectrum_tests.rs"]
-mod tests;
-
-#[cfg(test)]
 #[path = "spectrum_sum_tests.rs"]
 mod sum_tests;
+#[cfg(test)]
+#[path = "spectrum_tests.rs"]
+mod tests;
