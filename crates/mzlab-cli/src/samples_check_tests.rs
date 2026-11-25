@@ -14,6 +14,20 @@ fn age_pair(d: &std::path::Path, stem: &str, secs_ago: u64) {
     }
 }
 
+fn at_in(d: &std::path::Path, n: &str) -> String {
+    d.join(format!("{n}.wiff")).to_str().unwrap().to_string()
+}
+
+fn doc(out: &str) -> mzlab_core::json::Value {
+    mzlab_core::json::parse(out.as_bytes()).unwrap()
+}
+
+fn consistency(out: &str) -> Option<mzlab_core::json::Value> {
+    doc(out).get("files").unwrap().arr()[0]
+        .get("consistency")
+        .cloned()
+}
+
 /// A `.wiff` copied while the instrument was writing (the index lists the first samples, the `.wiff.scan` already holds more sections) is flagged with its
 /// evidence, never listed as if it were whole: `consistency` in the JSON (sizes, sections, age, threshold), a warning on stderr, exit 8 when a member was
 /// modified in the last `RECENT_S` seconds (still being written) and 1 when it was not (a finished but partial copy); the listing stays on stdout either way.
@@ -21,13 +35,7 @@ fn age_pair(d: &std::path::Path, stem: &str, secs_ago: u64) {
 fn a_pair_whose_scan_outruns_its_index_or_ends_before_it_is_flagged_with_its_evidence() {
     use mzlab_core::wiff::RECENT_S;
     let d = pairs("consistency");
-    let at = |n: &str| d.join(format!("{n}.wiff")).to_str().unwrap().to_string();
-    let doc = |out: &str| mzlab_core::json::parse(out.as_bytes()).unwrap();
-    let consistency = |out: &str| {
-        doc(out).get("files").unwrap().arr()[0]
-            .get("consistency")
-            .cloned()
-    };
+    let at = |n: &str| at_in(&d, n);
     // a whole pair carries no `consistency`: its bytes stay the ones of the site's listing
     age_pair(&d, "totale", 3600);
     let (code, out, err) = run(&["sample", "list", &at("totale"), "--json"]);
@@ -74,7 +82,14 @@ fn a_pair_whose_scan_outruns_its_index_or_ends_before_it_is_flagged_with_its_evi
             && err.contains("2 more section"),
         "{err}"
     );
-    // the same pair, not touched for an hour: a partial copy, exit 1, same evidence, no longer "still writing"
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The same pair untouched for an hour is a finished partial copy: exit 1, the same evidence, no longer "still writing".
+#[test]
+fn an_old_partial_copy_is_exit_1_and_the_table_form_warns_on_stderr() {
+    let d = pairs("consistency_old");
+    let at = |n: &str| at_in(&d, n);
     age_pair(&d, "unindexed", 3600);
     let (code, out, err) = run(&["sample", "list", &at("unindexed"), "--json"]);
     assert_eq!(code, 1, "{err}");
@@ -102,13 +117,7 @@ fn a_pair_whose_scan_outruns_its_index_or_ends_before_it_is_flagged_with_its_evi
 #[test]
 fn a_cut_scan_is_short_and_padding_is_not_an_alarm() {
     let d = pairs("consistency_short");
-    let at = |n: &str| d.join(format!("{n}.wiff")).to_str().unwrap().to_string();
-    let doc = |out: &str| mzlab_core::json::parse(out.as_bytes()).unwrap();
-    let consistency = |out: &str| {
-        doc(out).get("files").unwrap().arr()[0]
-            .get("consistency")
-            .cloned()
-    };
+    let at = |n: &str| at_in(&d, n);
     for (name, cut) in [("short", true), ("padded", false)] {
         std::fs::copy(d.join("totale.wiff"), d.join(format!("{name}.wiff"))).unwrap();
         let mut scan = std::fs::read(d.join("totale.wiff.scan")).unwrap();
