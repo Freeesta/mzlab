@@ -13,6 +13,7 @@ use crate::extract::{self, jstr, Parsed};
 use crate::raw_cmd::{
     choice, error_entry, missing, name_of, prov_file, provenance, warnings_of, whole_run,
 };
+use crate::raw_plan::plan_of;
 use crate::Outcome;
 
 pub const XIC_HELP: &str = "mzlab-cli raw xic: at each mass and time, is there a peak, in each file? JSON (raw-xic/1): per file and mass a `verdict` (peak, trace,
@@ -44,7 +45,7 @@ pub(crate) struct XicAsk {
 }
 
 /// A query value with every byte but the unreserved ones percent-encoded (`auto:300@5` keeps its meaning through `Query::parse`).
-fn enc(v: &str) -> String {
+pub(crate) fn enc(v: &str) -> String {
     v.bytes()
         .map(|b| match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'.' | b'-' | b'_' => (b as char).to_string(),
@@ -132,7 +133,7 @@ struct Answer {
 }
 
 /// The `files` entry of one file: what it is and, under `samples`, the members of the route.
-fn entry_json(
+pub(crate) fn entry_json(
     name: &str,
     container: &str,
     sha: &str,
@@ -161,7 +162,13 @@ fn entry_json(
 }
 
 /// The automatic choices of one file: the sample taken when none was named and the ion quantum read from the probe.
-fn choices_of(name: &str, sid: &str, first: bool, members: &str, level: u8) -> Vec<String> {
+pub(crate) fn choices_of(
+    name: &str,
+    sid: &str,
+    first: bool,
+    members: &str,
+    level: u8,
+) -> Vec<String> {
     let mut choices = Vec::new();
     if first {
         choices.push(choice(
@@ -336,37 +343,6 @@ fn params_json(p: &Parsed, a: &XicAsk) -> String {
     o.0
 }
 
-/// `raw-plan/1`: the resolved query and each file with its cache status; no peak is read.
-fn plan(p: &Parsed, a: &XicAsk) -> Outcome {
-    let dir = crate::idx_cache::dir();
-    let mut rows = Vec::new();
-    for f in &a.files {
-        let label = match p.sample(f) {
-            Ok(s) => s.map_or(String::new(), |id| format!("{}@{id}", name_of(f))),
-            Err(m) => return Outcome::fail(&m),
-        };
-        let cache = match &dir {
-            None => "none".to_string(),
-            Some(d) => match crate::idx_cache::peek(d, f, &label) {
-                Ok((st, _, _)) => st.to_string(),
-                Err(e) => return crate::sample_select::fail(&e),
-            },
-        };
-        let size = std::fs::metadata(f).ok().map(|m| m.len());
-        rows.push(format!(
-            "{{\"file\":{},\"size_bytes\":{},\"cache\":\"{cache}\"}}",
-            jstr(&name_of(f)),
-            size.map_or("null".into(), |n| n.to_string())
-        ));
-    }
-    let text = format!(
-        "{{\"schema\":\"raw-plan/1\",\"command\":\"raw xic\",\"query\":{},\"files\":[{}]}}\n",
-        params_json(p, a),
-        rows.join(",")
-    );
-    crate::emit(text, &p.out())
-}
-
 /// What the files answered, in file order.
 #[derive(Default)]
 struct Gathered {
@@ -486,7 +462,7 @@ pub fn xic_run(args: Vec<String>) -> Outcome {
         return crate::sample_select::fail(&e);
     }
     if p.flag("--dry-run") {
-        return plan(&p, &a);
+        return plan_of(&p, &a.files, "raw xic", &params_json(&p, &a));
     }
     match gather(&p, &a) {
         Ok(g) => render(&p, &a, &command, g),

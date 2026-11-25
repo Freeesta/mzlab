@@ -54,11 +54,12 @@ fn section(pol: i32) -> Vec<Value> {
         json!({"op": "idxopen", "slot": 0, "name": MIXED, "pol": pol}),
         route("/api/rawinfo", "?probe=16"),
         route("/api/rawxic", "?mz=241.3,300.7&rt=2.5,3.5&da=0.2"),
+        route("/api/rawscan", "?rt=2.5,3.5"),
     ]
 }
 
 #[test]
-fn raw_info_and_raw_xic_give_each_polarity_the_same_answer_in_the_app_and_in_the_wasm() {
+fn raw_info_xic_and_scan_give_each_polarity_the_same_answer_in_the_app_and_in_the_wasm() {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
         return;
     };

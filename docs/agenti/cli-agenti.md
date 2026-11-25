@@ -115,7 +115,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - text or CSV, `--json` gives the document:
 `table compare`, `quant targets|union`, `estimate`, `flow run|check|steps|defaults|verify|command`, `file list|pair|validate|pack|unpack|check-pack|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):
-`features`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
+`features`, `raw scan`, `peak split`, `mol export`, `db normative pack|listings|import-official`, `completions bash|zsh|fish`
 <!--/json-->
 - `features` has no `--json`; `--dry-run` prints `features-plan/1` (what would be centroided, nothing detected or written; exit 5 for an unknown `--sample`) and `--report PATH` writes `features-report/1` (what each file went through: `mzfeat-lr.md`). Its other machine-readable side channel is `features-notes/1` written at `--notes PATH`, or beside `--out` (`features-notes.json` in a folder, `NAME.notes.json` beside `NAME.csv`; one entry per file with the notices the stderr lines carry; `cli-passi.md`).
 - `--mz-offset DA|auto:MZ[@RT]` (`trace xic` and `features`; the convention and the estimate are in `mzfeat-lr.md`): a bad spec or |DA| > 0.6 is exit 2; `auto` finding no ion is exit 0 with `warn.mz.offset.notFound` on stderr and the evidence in the output; with `--dry-run` it reads the data of its estimate and the plan holds the evidence.

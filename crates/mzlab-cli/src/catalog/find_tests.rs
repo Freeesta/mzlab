@@ -75,6 +75,14 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    (
+        "what is in the spectrum of a time window that is not in the background",
+        "raw scan",
+    ),
+    (
+        "mean spectrum of a window minus its sides per m/z bin",
+        "raw scan",
+    ),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
 ];

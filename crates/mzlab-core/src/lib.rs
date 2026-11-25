@@ -162,6 +162,7 @@ pub mod rawinfo;
 pub mod rawxic;
 mod rawxic_judge;
 mod rawxic_json;
+pub mod rawscan;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]
