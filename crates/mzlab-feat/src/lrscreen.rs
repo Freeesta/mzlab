@@ -180,18 +180,78 @@ fn ms1_share<R: ReadAt>(index: &Index<R>) -> (usize, usize) {
     (ms1().filter(|s| s.profile).count(), ms1().count())
 }
 
-/// Whether `r` centroids this file before detecting: the unit axis, and `on`, or `auto` with at least half of the MS1 scans in profile mode.
-pub fn centroid_wanted<R: ReadAt>(index: &Index<R>, r: &Recipe) -> bool {
+/// What the points of a file labelled profile say about the label (`spectrum_type::Runs` on up to `PROBE` MS1 scans, the detector of `raw info`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LabelCheck {
+    /// MS1 scans labelled profile and all MS1 scans.
+    pub profile: usize,
+    pub scans: usize,
+    /// Scans probed, and the points and neighbour spacings they hold.
+    pub probed: usize,
+    pub points: usize,
+    pub spacings: usize,
+    /// Share of the probed points that sit in runs of a profile peak, and of the neighbour spacings of a fine grid, in whole percent.
+    pub runs_pct: usize,
+    pub fine_pct: usize,
+    /// The points are sparse ion counts (no run, no fine grid): centroids under a profile label.
+    pub sparse: bool,
+}
+
+/// The cut-offs behind `LabelCheck::sparse`, the ones of `raw info` (`spectrum_type`): whole numbers for the notice, the report and the log.
+pub struct Cuts {
+    /// Sparse below this share of the points in runs (percent); a fine grid from this share of the spacings (percent).
+    pub runs_pct: usize,
+    pub fine_pct: usize,
+    /// A run: at least this many points, no further apart than this (mDa) on average; a fine spacing: under this (mDa).
+    pub run_points: usize,
+    pub run_step_mda: usize,
+    pub fine_step_mda: usize,
+}
+
+pub fn cuts() -> Cuts {
+    use mzlab_core::spectrum_type as t;
+    let pct = |v: f64| (v * 100.0).round() as usize;
+    let mda = |v: f64| (v * 1000.0).round() as usize;
+    Cuts {
+        runs_pct: pct(t::SPARSE_BELOW),
+        fine_pct: pct(t::FINE_SHARE),
+        run_points: t::RUN_POINTS,
+        run_step_mda: mda(t::MAX_STEP),
+        fine_step_mda: mda(t::FINE_STEP),
+    }
+}
+
+/// The label of an MS1 level against its points: `None` unless at least half of its scans are labelled profile (a centroid label is never questioned).
+pub fn label_check<R: ReadAt>(index: &mut Index<R>) -> Option<LabelCheck> {
+    let (profile, scans) = ms1_share(index);
+    if !is_profile(profile, scans) {
+        return None;
+    }
+    let p = mzlab_core::rawinfo::probe_index(index, 1, None, mzlab_core::rawinfo::PROBE).ok()?;
+    let (_, _, runs) = mzlab_core::rawinfo::spectrum_type(Some(&p));
+    let pct = |v: Option<f64>| v.map_or(0, |v| (v * 100.0).round() as usize);
+    Some(LabelCheck {
+        profile,
+        scans,
+        probed: p.scans.len(),
+        points: runs.points(),
+        spacings: runs.spacings(),
+        runs_pct: pct(runs.runs_share()),
+        fine_pct: pct(runs.fine_share()),
+        sparse: runs.runs_share().is_some() && runs.sparse(),
+    })
+}
+
+/// Whether `r` centroids this file before detecting: the unit axis, and `on`, or `auto` with at least half of the MS1 scans labelled profile whose
+/// points are not sparse ion counts (the label alone never decides: centroiding counts that are centroids already costs time and counts).
+pub fn centroid_wanted<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> bool {
     if !r.is_lr() {
         return false;
     }
     match r.screen.centroid {
         Switch::Off => false,
         Switch::On => true,
-        Switch::Auto => {
-            let (p, n) = ms1_share(index);
-            is_profile(p, n)
-        }
+        Switch::Auto => label_check(index).is_some_and(|c| !c.sparse),
     }
 }
 
@@ -219,6 +279,12 @@ pub fn centroids_of<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Optio
 /// `r` for the centroids of the file when it is centroided: the channel defect and the floors come from the centroid points (a per-point floor of a
 /// profile file would cut the centroid areas), unless the recipe holds a value of its own. The same recipe is used to detect, to fill and to rebuild.
 pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe> {
+    if r.is_lr()
+        && r.screen.centroid == Switch::Auto
+        && let Some(c) = label_check(index).filter(|c| c.sparse)
+    {
+        choose(&r, "centroid", "off", label_reason(&c));
+    }
     let Some(c) = centroids_of(index, &r)? else {
         return Ok(r);
     };
@@ -239,6 +305,15 @@ pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe
         r.fill.floor = now.fill.floor;
     }
     Ok(r)
+}
+
+/// The reason logged when `auto` leaves a profile-labelled file as it is: the numbers, the cut-offs they were judged by, and what the user can do instead.
+pub fn label_reason(c: &LabelCheck) -> String {
+    let k = cuts();
+    format!(
+        "{} of {} MS1 scans are labelled profile but their points are sparse ion counts: of {} points in {} scans probed, {} % are in runs (at least {} points, {} mDa apart at most; sparse below {} %) and {} % of the {} spacings are under {} mDa (a fine grid from {} %); centroid skipped; centroid=on forces it, file convert --spectrum centroid relabels",
+        c.profile, c.scans, c.points, c.probed, c.runs_pct, k.run_points, k.run_step_mda, k.runs_pct, c.fine_pct, c.spacings, k.fine_step_mda, k.fine_pct
+    )
 }
 
 /// Adds a choice to the evidence of the recipe, if it has one.

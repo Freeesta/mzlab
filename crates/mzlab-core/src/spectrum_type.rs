@@ -10,20 +10,20 @@ use crate::readers_mzml::Peaks;
 /// Scans looked at to decide (equally spaced over the sample, as the estimate of the centroider does).
 const PROBE: usize = 64;
 /// Consecutive points of a run on a grid: a profile peak has at least this many, isolated counts almost never line up.
-const RUN_POINTS: usize = 4;
+pub const RUN_POINTS: usize = 4;
 /// Spacing of a point against the previous one inside a run: within this share of it.
 const RUN_TOL: f64 = 0.25;
 /// A run is a profile only when its points are closer than this (Da): a unit-resolution peak is about 0.7 Da wide, so a Q1 trace sampled every 0.5 Da is
 /// still a profile, but one sampled every 1 Da or more is a stick spectrum (nominal masses, isolated counts), however regular.
-const MAX_STEP: f64 = 0.6;
+pub const MAX_STEP: f64 = 0.6;
 /// Below this share of the points in runs a level is sparse.
-const SPARSE_BELOW: f64 = 0.5;
+pub const SPARSE_BELOW: f64 = 0.5;
 /// A neighbour spacing under this (Da) is a fine grid: peaks of two or three points of a high-resolution profile have no run but are never ion counts.
-const FINE_STEP: f64 = 0.05;
+pub const FINE_STEP: f64 = 0.05;
 /// A level where this share of the neighbour spacings is fine is a high-resolution profile: `auto` never touches it. Low on purpose: zero-suppressed
 /// profile peaks sit among many isolated single-bin hits whose coarse spacings dilute the share (a few real peaks per hundreds of hits still give about 1 %);
 /// unit-resolution ion counts have no spacing this fine to speak of.
-const FINE_SHARE: f64 = 0.02;
+pub const FINE_SHARE: f64 = 0.02;
 /// MS levels told apart (the higher ones count as the last).
 const LEVELS: usize = 32;
 
@@ -275,6 +275,13 @@ impl Runs {
     /// One more scan of points `mz` (ascending).
     pub fn add(&mut self, mz: &[f64]) {
         self.0.add(mz);
+    }
+    /// Points and neighbour spacings looked at.
+    pub fn points(&self) -> usize {
+        self.0.total
+    }
+    pub fn spacings(&self) -> usize {
+        self.0.gaps
     }
     /// Share of the points in runs (`None` without points).
     pub fn runs_share(&self) -> Option<f64> {
