@@ -27,7 +27,7 @@ usage: mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json]
   --out PATH    write there instead of the standard output
 
 Class (sorts and filters only, every row is kept): no_signal, blank_artefact, candidate, decreasing, unchanged; the first rule that matches decides (see `choices`).
-Exit codes: 0 ok; 2 usage (bad option, --json with --format csv, a column in both lists, a role: selector without --samples); 4 table or samples missing or unreadable; 5 selector matches no column; 6 --out cannot be written.";
+Exit codes: 0 ok; 2 usage (bad option, --json with --format csv, a column in both lists, a role: selector without --samples); 4 table or samples missing or unreadable, or two columns with one name; 5 selector matches no column; 6 --out cannot be written.";
 
 struct Job {
     table: std::path::PathBuf,
@@ -177,6 +177,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     };
     match go() {
+        Err(e) if e.key == "err.compare.duplicate" => Outcome::fail_error(&e).with_hint(
+            &crate::samples_import::say("err.compare.duplicateHint", &[]),
+        ),
         Err(e) => crate::sample_select::fail(&e),
         Ok(t) => crate::emit(t, &j.out),
     }
