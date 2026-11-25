@@ -26,6 +26,7 @@ mod tabui;
 mod tabui_draw;
 mod tabui_link;
 mod transitions;
+mod union;
 pub use transitions::{transitions, EXAMPLE_1};
 
 use mzlab_core::step::{core_steps, Step};
@@ -61,6 +62,7 @@ pub fn registry() -> Vec<Step> {
         table::drift(),
         group::group(),
         companions::companions(),
+        union::union(),
         stats::stats(),
         stats::pca(),
         stats::kmd(),

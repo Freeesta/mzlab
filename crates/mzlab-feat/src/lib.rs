@@ -157,6 +157,7 @@ mod trace_params;
 mod transf_base;
 pub mod trace_estimate;
 mod trace_text;
+pub mod union;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;

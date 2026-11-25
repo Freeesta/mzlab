@@ -1,5 +1,5 @@
 //! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`),
-//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`), `features.group` (`mzlab_feat::ionnet`), `features.companions` (`mzlab_feat::companions`) and `table.plausible` (`mzlab_feat::plausible::plausible_text`), the functions `flow run` calls.
+//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`), `features.group` (`mzlab_feat::ionnet`), `features.companions` (`mzlab_feat::companions`), `features.union` (`mzlab_feat::union`) and `table.plausible` (`mzlab_feat::plausible::plausible_text`), the functions `flow run` calls.
 //! Loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -150,5 +150,47 @@ impl Companioned {
         }
         o.raw("]");
         o.0
+    }
+}
+
+/// The target list and the `union/1` document of the series tables: `names_json` is a JSON array of the table names (`<id>.mzfeat`), `lens_json` one byte length per table and
+/// `tables` the `.mzfeat` bytes of all of them one after the other, in plan order; `params_json` is the step's parameters merged with its defaults.
+/// Errors are JSON `{"error_key","params"}` texts (`err.union.param`, `err.union.table`, `err.union.empty`).
+#[wasm_bindgen]
+pub fn flow_union(
+    params_json: &str,
+    names_json: &str,
+    lens_json: &str,
+    tables: &[u8],
+) -> std::result::Result<Joined, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    let list = |t: &str| mzlab_core::json::parse(t.as_bytes()).map(|v| v.arr().to_vec());
+    let (names, lens) = (
+        list(names_json).map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
+        list(lens_json).map_err(|_| crate::js_err(mzlab_core::error::Error::new("err.union.request")))?,
+    );
+    let mut at = 0usize;
+    let mut series = Vec::new();
+    for (n, l) in names.iter().zip(&lens) {
+        let end = at + l.f64().unwrap_or(0.0) as usize;
+        let bytes = tables.get(at..end).unwrap_or_default().to_vec();
+        series.push((n.str().unwrap_or("").to_string(), bytes));
+        at = end;
+    }
+    let m = mzlab_feat::union::union_text(&params, &series).map_err(crate::js_err)?;
+    Ok(Joined(m))
+}
+
+/// What `flow_union` made: the CSV target list and the `union/1` text, each taken once (not copied).
+#[wasm_bindgen]
+pub struct Joined(mzlab_feat::union::Made);
+
+#[wasm_bindgen]
+impl Joined {
+    pub fn take_csv(&mut self) -> String {
+        std::mem::take(&mut self.0.csv)
+    }
+    pub fn take_doc(&mut self) -> String {
+        std::mem::take(&mut self.0.doc)
     }
 }

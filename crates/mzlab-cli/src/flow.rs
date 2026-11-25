@@ -416,6 +416,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_drift::EXECUTORS)
         .chain(crate::flow_group::EXECUTORS)
         .chain(crate::flow_companions::EXECUTORS)
+        .chain(crate::flow_union::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

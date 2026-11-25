@@ -17,6 +17,7 @@ use crate::flow_stats_tests::{campioni_2, design, table};
 const CONSUMERS: &[&str] = &[
     "features.group",
     "features.companions",
+    "features.union",
     "table.kmd",
     "table.pca",
     "table.stats",

@@ -101,7 +101,7 @@ Acceptance tests:
 - A shift of 0.2 min applied to series 2 still merges with `rt_warp=piecewise`, and not with `off`; both are logged.
 - Union followed by `quant.targets` gives one table per polarity whose cells for series 1 equal the per-series targeted pass.
 
-Status: slice 1 of AU-4 is `mzlab-cli quant union` (the union rule of option C on the per-series feature CSVs, `rt_warp` off or piecewise, `union/1`, the app op `lr_union` and the site's `rotte` `.wasm`); the Flow step `features.union@1` is the open follow-up (`docs/agenti/quant-targets.md`).
+Status: slice 1 of AU-4 is `mzlab-cli quant union` (the union rule of option C on the per-series feature CSVs, `rt_warp` off or piecewise, `union/1`, the app op `lr_union` and the site's `rotte` `.wasm`); slice 2 is the Flow step `features.union@1` (one alignment per series in, the `quant.targets` list and `union/1` out, same engine on the site and in `flow run`); reading `datafile:` tables stays open (`docs/agenti/quant-targets.md`).
 
 ## 2. Value states end to end
 Today: `aligned.rs` has DETECTED, TARGETED, FILLED, ABSENT, NA; gap filling never counts a filled cell as detected; the CSV column `datafile:<F>:feature_state` prints DETECTED, FILLED, TARGETED (ESTIMATED with the MZmine option) and prints ABSENT and NA both as UNKNOWN; `peakchk` demotes a failed detection to FILLED; the targeted pass marks estimated peaks with a `qreason` bit (off by default).
