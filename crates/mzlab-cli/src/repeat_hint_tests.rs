@@ -10,30 +10,96 @@ fn args(a: &[&str]) -> Vec<String> {
     a.iter().map(|s| s.to_string()).collect()
 }
 
-#[test]
-fn the_hint_is_due_at_the_tenth_call_and_then_every_thousandth() {
-    let due_at: Vec<u64> = (1..=3000).filter(|&n| due(n)).collect();
-    assert_eq!(due_at, vec![10, 1000, 2000, 3000]);
+fn nows() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 #[test]
-fn a_parent_is_counted_apart_and_a_long_pause_starts_again() {
+fn the_hint_is_said_once_at_the_tenth_call_and_a_parent_is_counted_apart() {
     let d = dir("count");
-    let rule = &RULES[0];
-    let n: Vec<u64> = (0..12)
-        .map(|i| tick(&d, 7, rule, 100 + i).unwrap())
+    let (rule, now) = (&RULES[0], nows());
+    let ticks: Vec<Tick> = (0..14)
+        .map(|_| tick(&d, "7-1", rule, now).unwrap())
         .collect();
-    assert_eq!(n[9], FIRST);
+    let said: Vec<u64> = ticks.iter().filter(|t| t.say).map(|t| t.n).collect();
+    assert_eq!(said, vec![FIRST], "once, at the tenth call");
+    assert_eq!(ticks[13].n, 14);
     assert_eq!(
-        tick(&d, 8, rule, 120),
-        Some(1),
+        tick(&d, "8-1", rule, now).unwrap(),
+        Tick { n: 1, say: false },
         "another parent has its own count"
     );
-    assert_eq!(tick(&d, 7, &RULES[1], 120), Some(1), "another command too");
     assert_eq!(
-        tick(&d, 7, rule, 111 + GAP_S + 1),
-        Some(1),
-        "a long pause starts again"
+        tick(&d, "7-2", rule, now).unwrap().n,
+        1,
+        "a parent id reused after a restart has its own count"
+    );
+    assert_eq!(
+        tick(&d, "7-1", &RULES[1], now).unwrap().n,
+        1,
+        "another command too"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_long_pause_starts_again_and_old_state_is_swept() {
+    let d = dir("gap");
+    let (rule, now) = (&RULES[0], nows());
+    (0..12).for_each(|_| {
+        tick(&d, "7-1", rule, now).unwrap();
+    });
+    // the files of an old parent: untouched for more than STALE_S
+    let old = d.join("99-1-peak_auto-lr");
+    std::fs::write(&old, ".").unwrap();
+    let long = std::time::SystemTime::now() - std::time::Duration::from_secs(STALE_S + 60);
+    std::fs::File::options()
+        .write(true)
+        .open(&old)
+        .unwrap()
+        .set_modified(long)
+        .unwrap();
+    // the same parent, a little over GAP_S later: a new count, and the hint can be said again
+    let t = tick(&d, "7-1", rule, now + GAP_S + 5).unwrap();
+    assert_eq!(t, Tick { n: 1, say: false });
+    assert!(
+        !old.exists(),
+        "state untouched for a day is deleted when a count starts"
+    );
+    // the files are dated by the system clock: the next calls are made "now" again
+    (1..FIRST).for_each(|_| {
+        tick(&d, "7-1", rule, now).unwrap();
+    });
+    assert!(d.join("7-1-peak_auto-lr.said").exists());
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// `xargs -P`: calls from one parent at the same moment lose no count and exactly one of them says the hint.
+#[test]
+fn calls_in_parallel_are_all_counted_and_one_says_the_hint() {
+    let d = dir("par");
+    let now = nows();
+    let said: usize = (0..8)
+        .map(|_| {
+            let d = d.clone();
+            std::thread::spawn(move || {
+                (0..6)
+                    .filter(|_| tick(&d, "5-1", &RULES[0], now).unwrap().say)
+                    .count()
+            })
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .sum();
+    assert_eq!(said, 1);
+    assert_eq!(
+        tick(&d, "5-1", &RULES[0], now).unwrap().n,
+        49,
+        "48 calls counted, none lost"
     );
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -77,24 +143,27 @@ fn the_line_names_the_one_call_with_its_key_and_the_count() {
         l.contains("10 times") && l.contains("quant targets FILE... --targets TARGETS.csv"),
         "{l}"
     );
-    assert!(l.ends_with("(note.cli.repeat)"), "{l}");
-    assert!(line(&RULES[1], 10).contains("tp.dig_lr"));
+    assert!(l.ends_with("(note.cli.repeat.targets)"), "{l}");
+    let g = line(&RULES[1], 10);
+    assert!(
+        g.contains("tp.dig_lr") && g.ends_with("(note.cli.repeat.dig)"),
+        "{g}"
+    );
 }
 
-/// Every command a rule points at exists, so the hint never sends an agent to a name that is not there.
+/// Every command a hint names exists, so the hint never sends an agent to a name that is not there.
 #[test]
 fn the_calls_a_hint_names_exist() {
+    assert_eq!(
+        crate::execute(&args(&["quant", "targets", "--help"])).code,
+        0
+    );
     for r in RULES {
-        let first = r
-            .bulk
-            .split_whitespace()
-            .take(2)
-            .collect::<Vec<_>>()
-            .join(" ");
-        if first == "quant targets" {
-            assert!(crate::execute(&args(&["quant", "targets", "--help"])).code == 0);
-        }
         let o = crate::execute(&args(&["commands", "--find", r.find, "--json"]));
         assert_eq!(o.code, 0, "{}", o.stderr);
     }
+    // the words of each rule lead to the call it names
+    let found = |w: &str| crate::execute(&args(&["commands", "--find", w, "--json"])).stdout;
+    let t = String::from_utf8_lossy(&found(RULES[0].find)).into_owned();
+    assert!(t.contains("quant targets"), "{t}");
 }

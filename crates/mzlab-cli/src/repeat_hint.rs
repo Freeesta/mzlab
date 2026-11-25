@@ -1,22 +1,27 @@
 //! The hint of a loop of calls (AGENT-DISCOVERY): a command that has a one-call equivalent for many targets, started over and over by the same parent
-//! process (a script, a shell loop), says on stderr which one call does the whole list. The count lives in a small file per parent process in the temp
-//! folder; stdout and the exit code never change, and `MZLAB_NO_HINTS=1` silences it. Called by the binary (`main.rs`), never by `execute`.
+//! process (a script, a shell loop, `xargs -P`), says once on stderr which one call does the whole list. State is needed because only the count of calls
+//! of one parent tells a loop from a single call: one append-only file per parent and command in the temp folder (every call appends one byte, so
+//! parallel calls never lose a count) and a marker made with `create_new`, so the hint is said exactly once. The static routes (help, `related`,
+//! the task table) need no state and are the main ones; this is the nudge for a loop that never read them. Stdout and the exit code never change,
+//! `MZLAB_NO_HINTS=1` silences it. Called by the binary (`main.rs`), never by `execute`.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::convert::Notice;
 
-/// Calls from one parent after which the hint is said once, and again at every multiple of `EVERY`.
+/// Calls from one parent after which the hint is said, once.
 pub const FIRST: u64 = 10;
-pub const EVERY: u64 = 1000;
-/// A pause longer than this (seconds) between two calls starts the count again.
+/// A pause longer than this (seconds) between two calls starts the count again (a parent process id can be reused).
 pub const GAP_S: u64 = 600;
+/// State files untouched for this long (seconds) are deleted by the next call that starts a count.
+pub const STALE_S: u64 = 86_400;
 
 /// One looped command and the call that replaces the loop.
 pub struct Rule {
     pub command: &'static str,
-    /// What to run instead (without `mzlab-cli`).
-    pub bulk: &'static str,
+    /// The lang key of the hint (`mzlab/web/lang/en/`): the text names the one call that replaces the loop.
+    pub key: &'static str,
     /// Words for `commands --find`.
     pub find: &'static str,
 }
@@ -24,12 +29,12 @@ pub struct Rule {
 const RULES: &[Rule] = &[
     Rule {
         command: "peak auto-lr",
-        bulk: "quant targets FILE... --targets TARGETS.csv (an m/z and RT window per row, every file, area and S N, one call)",
+        key: "note.cli.repeat.targets",
         find: "many targets files area",
     },
     Rule {
         command: "tp.dig_lr",
-        bulk: "one flow run of one plan: tp.dig_lr digs the whole series in one run, every file in index (recipes.md)",
+        key: "note.cli.repeat.dig",
         find: "dig kinetics series",
     },
 ];
@@ -50,45 +55,85 @@ pub fn rule_of(args: &[String]) -> Option<&'static Rule> {
     }
 }
 
-/// Counts this call of `rule` made by `parent` at time `now` (seconds) in `dir`; the number of calls so far, or `None` when the state cannot be kept.
-pub fn tick(dir: &Path, parent: u32, rule: &Rule, now: u64) -> Option<u64> {
+/// One counted call.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Tick {
+    /// Calls so far (this one included).
+    pub n: u64,
+    /// This call says the hint: the count reached `FIRST` and no other call said it yet.
+    pub say: bool,
+}
+
+fn age(f: &Path, now: u64) -> Option<u64> {
+    let m = std::fs::metadata(f).ok()?.modified().ok()?;
+    let t = m.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
+    Some(now.saturating_sub(t))
+}
+
+/// Deletes the state files nobody touched for `STALE_S`.
+fn sweep(dir: &Path, now: u64) {
+    for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        if age(&e.path(), now).is_some_and(|a| a > STALE_S) {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
+
+/// Counts this call of `rule` made by the process `parent` (its id and start, see `parent_tag`) at time `now` (seconds) in `dir`; `None` when the state
+/// cannot be kept. The count is the length of an append-only file: every call writes one byte, so calls in parallel are all counted; a count above
+/// `FIRST` says the hint if this call is the one that creates the marker file.
+pub fn tick(dir: &Path, parent: &str, rule: &Rule, now: u64) -> Option<Tick> {
     std::fs::create_dir_all(dir).ok()?;
-    let file = dir.join(format!(
-        "{parent}-{}",
-        rule.command.replace([' ', '.'], "_")
-    ));
-    let (n, last) = std::fs::read_to_string(&file)
-        .ok()
-        .and_then(|t| {
-            let mut w = t.split_whitespace().map(|w| w.parse::<u64>().ok());
-            Some((w.next()??, w.next()??))
-        })
-        .unwrap_or((0, now));
-    let n = if now.saturating_sub(last) > GAP_S {
-        1
-    } else {
-        n + 1
-    };
-    std::fs::write(&file, format!("{n} {now}")).ok()?;
-    Some(n)
+    let base = format!("{parent}-{}", rule.command.replace([' ', '.'], "_"));
+    let (count, said) = (dir.join(&base), dir.join(format!("{base}.said")));
+    if age(&count, now).is_some_and(|a| a > GAP_S) {
+        let _ = std::fs::remove_file(&count);
+        let _ = std::fs::remove_file(&said);
+    }
+    if !count.exists() {
+        sweep(dir, now);
+    }
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&count)
+        .ok()?;
+    f.write_all(b".").ok()?;
+    let n = f.metadata().ok()?.len();
+    let say = n >= FIRST
+        && std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&said)
+            .is_ok();
+    Some(Tick { n, say })
 }
 
-/// Whether the `n`-th call says the hint.
-pub fn due(n: u64) -> bool {
-    n == FIRST || (n > FIRST && n.is_multiple_of(EVERY))
-}
-
-/// The terminal line of the hint for the `n`-th call of `rule`.
+/// The terminal line of the hint for the `n`-th call of `rule`: its lang key's text, with the key at the end.
 pub fn line(rule: &Rule, n: u64) -> String {
     crate::error_text::warning(&Notice {
-        key: "note.cli.repeat",
+        key: rule.key,
         params: vec![
             ("command", rule.command.to_string()),
             ("count", n.to_string()),
-            ("bulk", rule.bulk.to_string()),
             ("find", rule.find.to_string()),
         ],
     })
+}
+
+/// The parent process as a name for its state: the id and, where the system tells it, the moment it started, so that a later process that gets the
+/// same id has a count of its own.
+#[cfg(unix)]
+fn parent_tag() -> String {
+    let id = std::os::unix::process::parent_id();
+    let started = std::fs::read_to_string(format!("/proc/{id}/stat"))
+        .ok()
+        .and_then(|t| {
+            let (_, rest) = t.rsplit_once(')')?;
+            rest.split_whitespace().nth(19).map(String::from)
+        })
+        .unwrap_or_else(|| "0".into());
+    format!("{id}-{started}")
 }
 
 fn state_dir() -> PathBuf {
@@ -109,8 +154,8 @@ pub fn hint(args: &[String]) -> Option<String> {
             .duration_since(std::time::UNIX_EPOCH)
             .ok()?
             .as_secs();
-        let n = tick(&state_dir(), std::os::unix::process::parent_id(), rule, now)?;
-        due(n).then(|| format!("{}\n", line(rule, n)))
+        let t = tick(&state_dir(), &parent_tag(), rule, now)?;
+        t.say.then(|| format!("{}\n", line(rule, t.n)))
     }
     #[cfg(not(unix))]
     {

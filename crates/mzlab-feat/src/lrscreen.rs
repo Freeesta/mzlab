@@ -186,11 +186,39 @@ pub struct LabelCheck {
     /// MS1 scans labelled profile and all MS1 scans.
     pub profile: usize,
     pub scans: usize,
+    /// Scans probed, and the points and neighbour spacings they hold.
+    pub probed: usize,
+    pub points: usize,
+    pub spacings: usize,
     /// Share of the probed points that sit in runs of a profile peak, and of the neighbour spacings of a fine grid, in whole percent.
     pub runs_pct: usize,
     pub fine_pct: usize,
     /// The points are sparse ion counts (no run, no fine grid): centroids under a profile label.
     pub sparse: bool,
+}
+
+/// The cut-offs behind `LabelCheck::sparse`, the ones of `raw info` (`spectrum_type`): whole numbers for the notice, the report and the log.
+pub struct Cuts {
+    /// Sparse below this share of the points in runs (percent); a fine grid from this share of the spacings (percent).
+    pub runs_pct: usize,
+    pub fine_pct: usize,
+    /// A run: at least this many points, no further apart than this (mDa) on average; a fine spacing: under this (mDa).
+    pub run_points: usize,
+    pub run_step_mda: usize,
+    pub fine_step_mda: usize,
+}
+
+pub fn cuts() -> Cuts {
+    use mzlab_core::spectrum_type as t;
+    let pct = |v: f64| (v * 100.0).round() as usize;
+    let mda = |v: f64| (v * 1000.0).round() as usize;
+    Cuts {
+        runs_pct: pct(t::SPARSE_BELOW),
+        fine_pct: pct(t::FINE_SHARE),
+        run_points: t::RUN_POINTS,
+        run_step_mda: mda(t::MAX_STEP),
+        fine_step_mda: mda(t::FINE_STEP),
+    }
 }
 
 /// The label of an MS1 level against its points: `None` unless at least half of its scans are labelled profile (a centroid label is never questioned).
@@ -205,6 +233,9 @@ pub fn label_check<R: ReadAt>(index: &mut Index<R>) -> Option<LabelCheck> {
     Some(LabelCheck {
         profile,
         scans,
+        probed: p.scans.len(),
+        points: runs.points(),
+        spacings: runs.spacings(),
         runs_pct: pct(runs.runs_share()),
         fine_pct: pct(runs.fine_share()),
         sparse: runs.runs_share().is_some() && runs.sparse(),
@@ -276,11 +307,12 @@ pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe
     Ok(r)
 }
 
-/// The reason logged when `auto` leaves a profile-labelled file as it is: the numbers, and what the user can do instead.
+/// The reason logged when `auto` leaves a profile-labelled file as it is: the numbers, the cut-offs they were judged by, and what the user can do instead.
 pub fn label_reason(c: &LabelCheck) -> String {
+    let k = cuts();
     format!(
-        "{} of {} MS1 scans are labelled profile but their points are sparse ion counts ({} % in runs, {} % on a fine grid): centroid skipped; centroid=on forces it, file convert --spectrum centroid relabels",
-        c.profile, c.scans, c.runs_pct, c.fine_pct
+        "{} of {} MS1 scans are labelled profile but their points are sparse ion counts: of {} points in {} scans probed, {} % are in runs (at least {} points, {} mDa apart at most; sparse below {} %) and {} % of the {} spacings are under {} mDa (a fine grid from {} %); centroid skipped; centroid=on forces it, file convert --spectrum centroid relabels",
+        c.profile, c.scans, c.points, c.probed, c.runs_pct, k.run_points, k.run_step_mda, k.runs_pct, c.fine_pct, c.spacings, k.fine_step_mda, k.fine_pct
     )
 }
 

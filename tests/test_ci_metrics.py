@@ -174,13 +174,31 @@ def test_wasm_sizes(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
     m = w.misura(tmp_path)
-    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1728512}
+    # the cap is the one of tools/moduli/hr.toml, whatever it is: a cap raise there never breaks this test
+    import moduli
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": moduli.load_manifests()["hr"]["tetto"]}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("wasm-dimensioni.json", json.dumps(m))
     api = lambda p: {"artifacts": [{"id": 7, "name": "wasm-dimensioni"}]}  # noqa: E731
     r = s.dati_ci.wasm_rows(RUN["workflow_run"], {"sha": "abc"}, api, lambda p: buf.getvalue())[0]
     assert r["byte_totali"] == 1000 and r["margin_min_pct"] > 99
+
+
+def test_wasm_caps_follow_the_manifests(tmp_path, monkeypatch):
+    """The cap written next to a size is the `tetto` of the module's manifest: another value in the manifest gives another cap, a folder without one gives null."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import ci_wasm_dimensioni as w
+    import moduli
+    for folder in ("wasm-feat/hr", "wasm-feat/nocap"):
+        (tmp_path / folder).mkdir(parents=True)
+        (tmp_path / folder / "x.wasm").write_bytes(b"0" * 10)
+    real = moduli.load_manifests()
+    for tetto in (4096, 123456):
+        monkeypatch.setattr(moduli, "load_manifests", lambda t=tetto: {**real, "hr": {**real["hr"], "tetto": t}})
+        m = w.misura(tmp_path)
+        assert m["wasm-feat/hr/x.wasm"]["tetto"] == tetto
+        assert m["wasm-feat/nocap/x.wasm"]["tetto"] is None
 
 
 def test_recent_cursor_load_compact_export(tmp_path):

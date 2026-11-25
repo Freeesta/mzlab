@@ -30,4 +30,18 @@ mod export {
         mzlab_ops::run::feat::estimate::detect_estimate_json(&mut ix, &r, budget_mb)
             .map_err(crate::js_err)
     }
+
+    /// The notices of one index under `recipe` (the unit-resolution label check among them), as `estimates/1` and the CLI notes file say them: JSON `[{"key","params"}]`.
+    #[wasm_bindgen]
+    pub fn detect_notes(
+        read: js_sys::Function,
+        size: f64,
+        recipe: &str,
+    ) -> std::result::Result<String, JsValue> {
+        let mut ix = crate::open_one(&read, 0, size).map_err(crate::js_err)?;
+        let r = crate::run::recipe_for(recipe, &mut ix).map_err(crate::js_err)?;
+        Ok(mzlab_ops::run::feat::lr_note::notices_text(
+            &mzlab_ops::run::feat::lr_note::note_of(&r, &mut ix).notices,
+        ))
+    }
 }

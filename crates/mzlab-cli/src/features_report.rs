@@ -47,6 +47,9 @@ fn label_of(x: &Member) -> Option<LabelCheck> {
     Some(LabelCheck {
         profile: p("profile")?,
         scans: p("scans")?,
+        probed: p("probed")?,
+        points: p("points")?,
+        spacings: p("spacings")?,
         runs_pct: p("runs")?,
         fine_pct: p("fine")?,
         sparse: true,
@@ -180,6 +183,50 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
     }
 }
 
+/// The `choices` array of the report: the axis, the centroid switch of each unit-resolution file and what the screening logged by itself.
+fn choices_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log) {
+    o.raw("],\"choices\":[");
+    let mut first = true;
+    let mut choice = |o: &mut Out, key: &str, value: &str, reason: &str| {
+        o.raw(if first { "" } else { "," })
+            .raw("{\"key\":")
+            .str(key)
+            .raw(",\"value\":")
+            .str(value);
+        o.raw(",\"reason\":").str(reason).raw("}");
+        first = false;
+    };
+    if let Some(x) = m.first() {
+        let why = if x.note.unit {
+            format!(
+                "{} is unit resolution: 1 Da channels centred on n{:+.3}",
+                x.name,
+                defect_of(recipe)
+            )
+        } else {
+            format!("{} is high resolution", x.name)
+        };
+        choice(o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
+    }
+    for x in m.iter().filter(|x| x.note.unit) {
+        let why = centroid_why(x);
+        choice(o, "centroid", if x.centroid { "on" } else { "off" }, &why);
+    }
+    // the label-check choice of a file is already said with that file's own numbers above: dropped per file, by its exact reason
+    let said: Vec<String> = m
+        .iter()
+        .filter_map(label_of)
+        .map(|c| label_reason(&c))
+        .collect();
+    for c in log
+        .choices
+        .iter()
+        .filter(|c| !(c.key == "centroid" && said.contains(&c.reason)))
+    {
+        choice(o, &c.key, &c.value, &c.reason);
+    }
+}
+
 /// `features-report/1`: `rows` = features detected in each member; the evidence of the recipe holds the shifts, the merged rows and the choices.
 pub(crate) fn report_text(
     recipe: &Recipe,
@@ -215,45 +262,7 @@ pub(crate) fn report_text(
             num(g.r)
         ));
     }
-    o.raw("],\"choices\":[");
-    let mut first = true;
-    let mut choice = |o: &mut Out, key: &str, value: &str, reason: &str| {
-        o.raw(if first { "" } else { "," })
-            .raw("{\"key\":")
-            .str(key)
-            .raw(",\"value\":")
-            .str(value);
-        o.raw(",\"reason\":").str(reason).raw("}");
-        first = false;
-    };
-    if let Some(x) = m.first() {
-        let why = if x.note.unit {
-            format!(
-                "{} is unit resolution: 1 Da channels centred on n{:+.3}",
-                x.name,
-                defect_of(recipe)
-            )
-        } else {
-            format!("{} is high resolution", x.name)
-        };
-        choice(&mut o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
-    }
-    for x in m.iter().filter(|x| x.note.unit) {
-        let why = centroid_why(x);
-        choice(
-            &mut o,
-            "centroid",
-            if x.centroid { "on" } else { "off" },
-            &why,
-        );
-    }
-    for c in log
-        .choices
-        .iter()
-        .filter(|c| !(c.key == "centroid" && m.iter().any(|x| label_of(x).is_some())))
-    {
-        choice(&mut o, &c.key, &c.value, &c.reason);
-    }
+    choices_json(&mut o, recipe, &m, &log);
     o.raw("]}\n");
     o.0
 }
