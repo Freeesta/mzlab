@@ -116,5 +116,9 @@
   "err.raw.xic.rows": "Data error (exit 1) of raw xic for one file: the rows the engine returned do not match the masses asked or cannot be read; {file} = the file, {detail} = what differs.",
   "err.raw.xic.param": "Usage error of raw xic and of api/rawxic: a parameter value out of range or missing; {name} = the parameter (mz, rt, da, ms_level, min_sn, min_points, alpha, side_min, gap_min), {value} = the text given.",
   "warn.raw.labelMismatch": "raw info warning: the spectrum type the file declares is not what the probed data show. {file} = the file name, {label} = the declared type (profile, centroid, mixed), {data} = the type the data show, {runs_share} = the share of points in continuous runs (0-1).",
-  "warn.raw.noQuantum": "raw info warning: the probed intensities have no ion quantum (an analog detector or processed data), so ions cannot be counted. {file} = the file name."
+  "warn.raw.noQuantum": "raw info warning: the probed intensities have no ion quantum (an analog detector or processed data), so ions cannot be counted. {file} = the file name.",
+  "err.spec.fill": "Usage error of spectrum get --sum --fill-ms and of api/specsum: the fill time is not a positive number (no placeholder: the route does not carry the value).",
+  "note.spec.sum.noFill": "spectrum get --sum note (stderr and the evidence): the file has no fill time per scan, so ions is null and counts are cps summed over scans; no placeholders.",
+  "note.spec.sum.noQuantum": "spectrum get --sum note: the probed intensities have no ion quantum, so ions_by_quantum is null; no placeholders.",
+  "note.spec.mean.sumHint": "spectrum get hint (stderr) in the mean mode of a window: --sum is the way to add the scans and see their number and ions; no placeholders."
 }

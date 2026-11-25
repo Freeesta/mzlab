@@ -43,6 +43,9 @@ pub fn handle<R: ReadAt>(r: &mut Routes<R>, path: &str, q: &Query) -> Result<Opt
     if path == "/api/rawxic" {
         return r.raw_xic_route(q);
     }
+    if path == "/api/specsum" {
+        return r.spec_sum_route(q);
+    }
     r.handle(path, q)
 }
 
