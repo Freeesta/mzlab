@@ -1,7 +1,8 @@
 """The pipeline of mzFinder in WebAssembly (crates/mzlab-feat-wasm) gives the same bytes as the native engine: the `.mzfeatf` of every file, the `.mzfeat` of the
 series and the one with the graph of the proofs have the same SHA-256 whether the example `native` or the `.wasm` (through Node) makes them. The series is the
-synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy, except in CI (`CI` set), where a missing tool is a failure: the parity of the site and the app must not pass by not running."""
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ import pytest
 from cargo_util import build, cli, wasm_module
 
 ROOT = Path(__file__).resolve().parents[1]
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")) and not os.environ.get("CI"), reason="cargo, wasm-bindgen or node not available")
 PARENT = ["--parent", "C21H32N2O2", "--rules", str(ROOT / "TP_Mine/data/regole_tp_3.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
 
 
@@ -393,3 +394,30 @@ def test_the_mz_offset_gives_the_same_bytes_native_and_in_node(built, lr_offsets
         assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
     base, _ = plain(root, lr_offsets, pkg, f"lr_off_none_{tag}", "")
     assert (nat_dir / "series.mzfeat").read_bytes() != (base / "series.mzfeat").read_bytes()
+
+
+@pytest.fixture(scope="module")
+def lr_replicates(built):
+    """The 4 noise replicates of tools/lr_synthetic.py (a strong ion cut in two rows in some of them), indexed by the CLI."""
+    root, _, _ = built
+    d = root / "lr_replicates"
+    run("python3", "tools/lr_synthetic.py", str(d), "--replicates", "4")
+    files = sorted(str(p) for p in d.glob("rep-s*.mzML"))
+    listed = json.loads(cli("file", "index", "--cache", str(root / "lr_cache"), *files).stdout)["files"]
+    out = [str(root / "lr_cache" / f["key"]) for f in listed]
+    assert len(out) == 4
+    return out
+
+
+@pytest.mark.parametrize("recipe,tag", [("", "default"), ('{"dedup_overlap": 0.3}', "loose"), ('{"dedup_overlap": 0}', "off")])
+def test_the_dedup_overlap_rule_gives_the_same_bytes_native_and_in_node(built, lr_replicates, recipe, tag):
+    """`dedup_overlap` of `features.gapfill` (merge of one peak cut in two rows by their overlap in the files where both were detected, 0 = rule off) acts
+    in the .wasm as natively: every `.mzfeatf` and the `series.mzfeat` have the same bytes, and the default table differs from the one without the rule (the
+    key reaches the .wasm). The same CLI table is checked by `features_dedup_tests.rs`."""
+    root, _, pkg = built
+    nat_dir, wasm_dir = plain(root, lr_replicates, pkg, f"lr_dedup_{tag}", recipe)
+    for f in sorted(p.name for p in nat_dir.iterdir()):
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    off, _ = plain(root, lr_replicates, pkg, f"lr_dedup_ref_{tag}", '{"dedup_overlap": 0}')
+    differs = (nat_dir / "series.mzfeat").read_bytes() != (off / "series.mzfeat").read_bytes()
+    assert differs == (recipe != '{"dedup_overlap": 0}'), "the overlap rule must change the replicate table, and only when it is on"

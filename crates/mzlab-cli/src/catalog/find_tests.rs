@@ -26,6 +26,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("non-targeted feature table of all files", "features"),
     (
+        "the same peak appears as two duplicate rows, a shoulder merged",
+        "features.gapfill",
+    ),
+    (
         "one target list from the feature tables of several series",
         "quant union",
     ),

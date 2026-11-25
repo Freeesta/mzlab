@@ -50,6 +50,8 @@ mod estimate_cmd_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]
+mod features_dedup_tests;
+#[cfg(test)]
 mod features_lr_tests;
 mod features_series;
 mod file_index_cmd;

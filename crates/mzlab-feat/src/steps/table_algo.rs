@@ -12,6 +12,24 @@ pub(super) fn mz_offset_param() -> Param {
         .advanced()
 }
 
+/// `dedup` and `dedup_overlap` of `features.gapfill` (`lrscreen_dedup.rs`): the two rules that merge the rows of one ion and the threshold of the second.
+pub(super) fn dedup_params() -> [Param; 2] {
+    [
+        Param::choice("dedup", "Merge duplicate rows", &["auto", "off"])
+            .default_str("auto")
+            .doc("Unit resolution only: of two rows within 0.6 Da and the RT tolerance keeps the one with the higher maximum height when their areas correlate (r of at least 0.9 over 3 files) or their peaks overlap (see dedup_overlap); areas are never summed. Each merge is logged with its numbers")
+            .tip("Unit resolution only: merges rows within 0.6 Da whose areas correlate or whose peaks overlap, keeping the taller one; areas are never summed.")
+            .advanced(),
+        Param::number("dedup_overlap", "Overlap to merge")
+            .min(0.0)
+            .max(1.0)
+            .default_num(0.5)
+            .doc("Unit resolution only: rows within 0.6 Da and the RT tolerance whose peaks, in the files where both were detected, cover at least this share of the narrower one are one ion (a shoulder or broad top cut in two); 0 = off")
+            .tip("Unit resolution only: share of the narrower peak two close rows must cover to be merged; 0 keeps every row.")
+            .advanced(),
+    ]
+}
+
 fn mzmine3() -> Reference {
     Reference {
         doi: "10.1038/s41587-023-01690-2",

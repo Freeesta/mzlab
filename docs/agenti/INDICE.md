@@ -115,7 +115,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | broad bands (`broad.rs`), targeted pass options (`target.rs`: estimated peaks, /\ shape check, merging overlapping rows), RT correction and alignment (`rtmap.rs`, `rtwarp.rs`), kinetics as evidence (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
 | layering of `crates/mzlab-feat` modules (base modules, feature gates, rules for a new dependency edge) | `docs/agenti/mzfeat-cycles.md` |
-| low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
+| low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`; duplicate rows: `dedup`, `dedup_overlap`, `near`) | `docs/agenti/mzfeat-lr.md` |
 | Feature table in the Pipeline (steps 5-6: QC, filter bar, `PIPET` with `TPTAB` and expanded row `TPRIGA`) | `docs/agenti/mzfeat-table-view.md` |
 | table, ids and samples (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-table.md` |
 | tests and measurements (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tests.md` |

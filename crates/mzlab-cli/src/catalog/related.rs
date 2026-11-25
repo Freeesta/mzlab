@@ -57,7 +57,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample list", "sample names wiff", &["sample select", "file convert"]),
     r("sample table", "roles blank qc standard control time point names", &["sample import", "sample design propose", "table.filter"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
-    r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),
+    r("features", "non-targeted untargeted feature table csv peak picking all files duplicate rows near duplicates same peak twice", &["features.table", "features.gapfill", "flow run"])
+        .ex("mzlab-cli features a.mzML b.mzML --report report.json --out table.csv"),
     r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect blank level set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
     r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
@@ -89,6 +90,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
+    r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])
+        .ex("mzlab-cli flow run plan.json --in files/ --out out/ --set gapfill1.dedup_overlap=0"),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),
     r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution one ion noise floor", &["tp.generate", "table compare", "peak noise"])
         .bulk("one run digs the whole series: every file in index, one table; other settings: rerun in the same --out with --set (cached)"),

@@ -4,7 +4,7 @@
   "title": "features-report/1: what `mzlab-cli features` did by itself on a series, written at `--report PATH`",
   "description": "The recipe line, one entry per input member (unit resolution, profile share, whether its profile scans were centroided, the channel defect, the m/z shift measured against the series and whether it was subtracted, the features detected), the rows merged as duplicates and every automatic choice with its reason. stdout (the CSV) is the same with or without `--report`. Code: crates/mzlab-cli/src/features_report.rs, crates/mzlab-feat/src/lrscreen*.rs.",
   "type": "object",
-  "required": ["schema", "recipe", "files", "merged", "choices"],
+  "required": ["schema", "recipe", "files", "merged", "near", "choices"],
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "features-report/1" },
@@ -34,14 +34,38 @@
       "description": "rows dropped as the same ion as a taller row (`dedup`)",
       "items": {
         "type": "object",
-        "required": ["kept", "dropped", "dmz_da", "drt_min", "r"],
+        "required": ["kept", "dropped", "dmz_da", "drt_min", "r", "rule", "overlap", "shared_files", "threshold", "height_kept", "height_dropped"],
         "additionalProperties": false,
         "properties": {
           "kept": { "$ref": "#/$defs/row" },
           "dropped": { "$ref": "#/$defs/row" },
           "dmz_da": { "type": "number" },
           "drt_min": { "type": "number" },
-          "r": { "type": "number", "description": "Pearson r of the area vectors of the two rows" }
+          "r": { "type": ["number", "null"], "description": "Pearson r of the area vectors of the two rows (null below 3 common files)" },
+          "rule": { "enum": ["correlation", "overlap"], "description": "the rule that merged them: r at or above `threshold`, or the peak overlap at or above `threshold` (`--set gapfill.dedup_overlap=0` turns the second off)" },
+          "overlap": { "type": ["number", "null"], "description": "median share of the narrower peak the two rows cover, over the files where both were detected (null: none)" },
+          "shared_files": { "type": "integer", "minimum": 0, "description": "files where both rows have a detected peak (rule overlap) or an area (rule correlation)" },
+          "threshold": { "type": "number", "description": "threshold of the rule that decided" },
+          "height_kept": { "type": "number", "description": "highest cell height of the kept row" },
+          "height_dropped": { "type": "number", "description": "highest cell height of the dropped row" }
+        }
+      }
+    },
+    "near": {
+      "type": "array",
+      "description": "pairs of rows still within 0.6 Da and the RT tolerance that no rule merged: the numbers to read before setting `dedup_overlap`",
+      "items": {
+        "type": "object",
+        "required": ["a", "b", "dmz_da", "drt_min", "r", "overlap", "shared_files"],
+        "additionalProperties": false,
+        "properties": {
+          "a": { "$ref": "#/$defs/row" },
+          "b": { "$ref": "#/$defs/row" },
+          "dmz_da": { "type": "number" },
+          "drt_min": { "type": "number" },
+          "r": { "type": ["number", "null"] },
+          "overlap": { "type": ["number", "null"] },
+          "shared_files": { "type": "integer", "minimum": 0 }
         }
       }
     },
