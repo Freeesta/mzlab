@@ -33,7 +33,8 @@ struct Segment {
 }
 
 fn nums(v: Option<&Value>) -> Vec<f64> {
-    v.map(|v| v.arr().iter().filter_map(Value::f64).collect()).unwrap_or_default()
+    v.map(|v| v.arr().iter().filter_map(Value::f64).collect())
+        .unwrap_or_default()
 }
 
 fn one(v: &[f64]) -> Option<f64> {
@@ -45,19 +46,38 @@ fn one(v: &[f64]) -> Option<f64> {
 
 /// The value of the parameter `id` of an experiment (`parameters[{id, value}]`).
 fn param(e: &Value, id: &str) -> Option<f64> {
-    e.get("parameters")?.arr().iter().find(|p| p.get("id").and_then(Value::str) == Some(id))?.get("value")?.f64()
+    e.get("parameters")?
+        .arr()
+        .iter()
+        .find(|p| p.get("id").and_then(Value::str) == Some(id))?
+        .get("value")?
+        .f64()
 }
 
 fn level_of(tag: &str) -> Option<i64> {
-    crate::wiff::modes::MODI.iter().find(|m| m.tag == tag).map(|m| i64::from(m.level))
+    crate::wiff::modes::MODI
+        .iter()
+        .find(|m| m.tag == tag)
+        .map(|m| i64::from(m.level))
 }
 
 /// The segments of a `method/1` document: one per transition of an MRM experiment, one per scan experiment.
 fn segments(doc: &Value) -> Vec<Segment> {
-    let from_mzml = doc.get("origin").and_then(|o| o.get("format")).and_then(Value::str) == Some("mzml");
+    let from_mzml = doc
+        .get("origin")
+        .and_then(|o| o.get("format"))
+        .and_then(Value::str)
+        == Some("mzml");
     let mut out = Vec::new();
-    let periods = doc.get("ms").and_then(|m| m.get("periods")).map(Value::arr).unwrap_or_default();
-    for e in periods.iter().flat_map(|p| p.get("experiments").map(Value::arr).unwrap_or_default()) {
+    let periods = doc
+        .get("ms")
+        .and_then(|m| m.get("periods"))
+        .map(Value::arr)
+        .unwrap_or_default();
+    for e in periods
+        .iter()
+        .flat_map(|p| p.get("experiments").map(Value::arr).unwrap_or_default())
+    {
         let index = e.get("index").and_then(Value::f64).map(|x| x as i64);
         let transitions = e.get("transitions").map(Value::arr).unwrap_or_default();
         for t in transitions {
@@ -80,7 +100,11 @@ fn segments(doc: &Value) -> Vec<Segment> {
         let scan = e.get("scan_type").and_then(Value::str).map(String::from);
         let mut s = Segment {
             experiment: index,
-            ms_level: if from_mzml { index } else { scan.as_deref().and_then(level_of) },
+            ms_level: if from_mzml {
+                index
+            } else {
+                scan.as_deref().and_then(level_of)
+            },
             precursor: e.get("precursor_mz").and_then(Value::f64),
             range: nums(e.get("mz")).get(..2).map(|r| [r[0], r[1]]),
             ce: nums(e.get("ce_eV")),
@@ -123,14 +147,25 @@ fn write_segment(o: &mut Out, s: &Segment) {
         Some(t) => o.str(t),
         None => o.raw("null"),
     };
-    o.raw(",\"precursor_mz\":").opt(s.precursor).raw(",\"q3_mz\":").opt(s.q3).raw(",\"mz_range\":");
+    o.raw(",\"precursor_mz\":")
+        .opt(s.precursor)
+        .raw(",\"q3_mz\":")
+        .opt(s.q3)
+        .raw(",\"mz_range\":");
     match s.range {
         Some(r) => o.floats(&r),
         None => o.raw("null"),
     };
-    o.raw(",\"ce_eV\":").opt(one(&s.ce)).raw(",\"ce_list_eV\":").floats(&s.ce);
+    o.raw(",\"ce_eV\":")
+        .opt(one(&s.ce))
+        .raw(",\"ce_list_eV\":")
+        .floats(&s.ce);
     o.raw(",\"ces_eV\":").opt(s.ces).raw(",\"dp_V\":").opt(s.dp);
-    o.raw(",\"dwell_ms\":").opt(s.dwell).raw(",\"fill_time_ms\":").opt(s.fill).raw(",\"q1_resolution\":null}");
+    o.raw(",\"dwell_ms\":")
+        .opt(s.dwell)
+        .raw(",\"fill_time_ms\":")
+        .opt(s.fill)
+        .raw(",\"q1_resolution\":null}");
 }
 
 fn present(s: &Segment, key: &str) -> bool {
@@ -154,9 +189,21 @@ fn reason(format: &str, key: &str) -> &'static str {
 
 /// A name that carries a mass the precursors do not have: the numbers of the warning, in the same object `file items` and `file method` write.
 pub fn write_name_warning(o: &mut Out, name: &str, m: &crate::namemz::Mismatch) {
-    o.raw("{\"key\":").str(WARN_NAME_MZ).raw(",\"name\":").str(name).raw(",\"name_mz\":").floats(&m.name_mz);
-    o.raw(",\"nearest_name_mz\":").num(m.nearest_name_mz).raw(",\"nearest_precursor\":").num(m.nearest_precursor);
-    o.raw(",\"delta_mz\":").num(m.delta).raw(",\"tolerance_mz\":").num(NAME_TOL_MZ).raw("}");
+    o.raw("{\"key\":")
+        .str(WARN_NAME_MZ)
+        .raw(",\"name\":")
+        .str(name)
+        .raw(",\"name_mz\":")
+        .floats(&m.name_mz);
+    o.raw(",\"nearest_name_mz\":")
+        .num(m.nearest_name_mz)
+        .raw(",\"nearest_precursor\":")
+        .num(m.nearest_precursor);
+    o.raw(",\"delta_mz\":")
+        .num(m.delta)
+        .raw(",\"tolerance_mz\":")
+        .num(NAME_TOL_MZ)
+        .raw("}");
 }
 
 /// The warnings of `names` (a file name, a sample name) against `precursors`, one per distinct name that carries a mass the precursors do not hold.
@@ -192,55 +239,37 @@ pub fn item_precursors(items: &Value) -> Vec<f64> {
     v
 }
 
-/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text.
-pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
-    let items = parse(items.as_bytes())?;
-    let doc = match method {
-        Some(m) => Some(parse(m.as_bytes())?),
-        None => None,
-    };
-    let segs = doc.as_ref().map(segments).unwrap_or_default();
-    let format = doc.as_ref().and_then(|d| d.get("origin")?.get("format")?.str()).unwrap_or("");
-    let sample_name = doc.as_ref().and_then(|d| d.get("sample")?.get("name")?.str()).unwrap_or("");
-    let file = items.get("items").and_then(|i| i.at(0)).and_then(|i| i.get("info")?.get("file")?.str()).unwrap_or("");
-    // the part tag of an item (`x.wiff#MS1`) is not part of the file name
-    let file = file.split('#').next().unwrap_or(file);
-    let mut o = Out::default();
-    o.raw("{\"schema\":").str(SCHEMA).raw(",\"file\":").str(file).raw(",\"sample\":");
-    match sample {
-        Some(id) => o.int(i64::from(id)),
-        None => o.raw("null"),
-    };
-    o.raw(",\"format\":");
-    if format.is_empty() {
+fn nullable(o: &mut Out, text: &str) {
+    if text.is_empty() {
         o.raw("null");
     } else {
-        o.str(format);
+        o.str(text);
     }
-    o.raw(",\"sample_name\":");
-    if sample_name.is_empty() {
-        o.raw("null");
-    } else {
-        o.str(sample_name);
-    }
-    o.raw(",\"segments\":[");
-    for (i, s) in segs.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" });
-        write_segment(&mut o, s);
-    }
-    // what the scans hold: the precursors the data were acquired with (a dependent scan picks its own; the method holds a fixed one at most)
-    o.raw("],\"acquired\":[");
+}
+
+/// What the scans hold: the precursors the data were acquired with (a dependent scan picks its own; the method holds a fixed one at most).
+fn write_acquired(o: &mut Out, items: &Value) {
     let mut first = true;
     for item in items.get("items").map(Value::arr).unwrap_or_default() {
-        let Some(info) = item.get("info") else { continue };
+        let Some(info) = item.get("info") else {
+            continue;
+        };
         for e in info.get("ms2_exps").map(Value::arr).unwrap_or_default() {
             o.raw(if first { "" } else { "," });
             first = false;
-            o.raw("{\"precursor_mz\":").opt(e.get("prec").and_then(Value::f64)).raw(",\"ce_eV\":").opt(e.get("ce").and_then(Value::f64));
-            o.raw(",\"scans\":").opt(e.get("n").and_then(Value::f64)).raw("}");
+            o.raw("{\"precursor_mz\":")
+                .opt(e.get("prec").and_then(Value::f64))
+                .raw(",\"ce_eV\":")
+                .opt(e.get("ce").and_then(Value::f64));
+            o.raw(",\"scans\":")
+                .opt(e.get("n").and_then(Value::f64))
+                .raw("}");
         }
     }
-    o.raw("],\"unavailable\":{");
+}
+
+/// The parameters no tandem segment holds, each with the reason.
+fn write_unavailable(o: &mut Out, segs: &[Segment], format: &str) {
     let tandem: Vec<&Segment> = segs.iter().filter(|s| s.ms_level != Some(1)).collect();
     let mut sep = "";
     for key in KEYS {
@@ -249,12 +278,66 @@ pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Resul
             sep = ",";
         }
     }
+}
+
+/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text.
+pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
+    let items = parse(items.as_bytes())?;
+    let doc = match method {
+        Some(m) => Some(parse(m.as_bytes())?),
+        None => None,
+    };
+    let segs = doc.as_ref().map(segments).unwrap_or_default();
+    let format = doc
+        .as_ref()
+        .and_then(|d| d.get("origin")?.get("format")?.str())
+        .unwrap_or("");
+    let sample_name = doc
+        .as_ref()
+        .and_then(|d| d.get("sample")?.get("name")?.str())
+        .unwrap_or("");
+    let file = items
+        .get("items")
+        .and_then(|i| i.at(0))
+        .and_then(|i| i.get("info")?.get("file")?.str())
+        .unwrap_or("");
+    // the part tag of an item (`x.wiff#MS1`) is not part of the file name
+    let file = file.split('#').next().unwrap_or(file);
+    let mut o = Out::default();
+    o.raw("{\"schema\":")
+        .str(SCHEMA)
+        .raw(",\"file\":")
+        .str(file)
+        .raw(",\"sample\":");
+    match sample {
+        Some(id) => o.int(i64::from(id)),
+        None => o.raw("null"),
+    };
+    o.raw(",\"format\":");
+    nullable(&mut o, format);
+    o.raw(",\"sample_name\":");
+    nullable(&mut o, sample_name);
+    o.raw(",\"segments\":[");
+    for (i, s) in segs.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" });
+        write_segment(&mut o, s);
+    }
+    o.raw("],\"acquired\":[");
+    write_acquired(&mut o, &items);
+    o.raw("],\"unavailable\":{");
+    write_unavailable(&mut o, &segs, format);
     // the name against the precursors: the method's and the scans'
-    let mut precs: Vec<f64> = segs.iter().filter_map(|s| s.precursor).filter(|p| *p > 0.0).collect();
+    let mut precs: Vec<f64> = segs
+        .iter()
+        .filter_map(|s| s.precursor)
+        .filter(|p| *p > 0.0)
+        .collect();
     precs.extend(item_precursors(&items));
     crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
-    o.raw("},\"warnings\":[").raw(&name_warnings(&[file, sample_name], &precs).join(",")).raw("]}");
+    o.raw("},\"warnings\":[")
+        .raw(&name_warnings(&[file, sample_name], &precs).join(","))
+        .raw("]}");
     Ok(o.0)
 }
 

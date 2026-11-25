@@ -16,11 +16,17 @@ fn fixture() -> Option<PathBuf> {
         return Some(wiff);
     }
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
-    let made = Command::new("python3").arg(tools.join("wiff_riferimento.py")).arg(&dir).output();
+    let made = Command::new("python3")
+        .arg(tools.join("wiff_riferimento.py"))
+        .arg(&dir)
+        .output();
     if made.is_ok_and(|o| o.status.success()) && wiff.exists() {
         return Some(wiff);
     }
-    assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
+    assert!(
+        std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+        "python3 not available"
+    );
     eprintln!("skipped: python3 not available");
     None
 }
@@ -36,10 +42,21 @@ fn a_product_ion_experiment_gives_its_parameters_and_the_missing_ones_say_why() 
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = parse(&o.stdout).unwrap();
     assert_eq!(v.get("schema").unwrap().str(), Some("file_method/1"));
-    let seg = v.get("segments").unwrap().arr().iter().find(|s| s.get("ms_level").and_then(Value::f64) == Some(2.0)).unwrap();
+    let seg = v
+        .get("segments")
+        .unwrap()
+        .arr()
+        .iter()
+        .find(|s| s.get("ms_level").and_then(Value::f64) == Some(2.0))
+        .unwrap();
     let f = |k: &str| seg.get(k).unwrap().f64();
-    assert_eq!((f("precursor_mz"), f("ce_eV"), f("ces_eV"), f("dp_V")), (Some(253.1), Some(35.0), Some(15.0), Some(60.0)));
-    assert!(seg.get("fill_time_ms").unwrap().is_null() && seg.get("q1_resolution").unwrap().is_null());
+    assert_eq!(
+        (f("precursor_mz"), f("ce_eV"), f("ces_eV"), f("dp_V")),
+        (Some(253.1), Some(35.0), Some(15.0), Some(60.0))
+    );
+    assert!(
+        seg.get("fill_time_ms").unwrap().is_null() && seg.get("q1_resolution").unwrap().is_null()
+    );
     let u = v.get("unavailable").unwrap();
     assert_eq!(u.get("fill_time_ms").unwrap().str(), Some("not_decoded"));
     assert_eq!(u.get("q1_resolution").unwrap().str(), Some("not_decoded"));
@@ -54,21 +71,44 @@ fn a_name_mass_that_is_not_the_precursor_is_a_warning_with_the_numbers_and_nothi
     let v = parse(&o.stdout).unwrap();
     let k = &v.get("warnings").unwrap().arr()[0];
     assert_eq!(k.get("key").unwrap().str(), Some("warn.file.nameMz"));
-    assert_eq!((k.get("nearest_name_mz").unwrap().f64(), k.get("nearest_precursor").unwrap().f64()), (Some(237.1), Some(253.1)));
-    assert!(o.stderr.contains("237.1") && o.stderr.contains("253.1") && o.stderr.contains("(warn.file.nameMz)"), "{}", o.stderr);
+    assert_eq!(
+        (
+            k.get("nearest_name_mz").unwrap().f64(),
+            k.get("nearest_precursor").unwrap().f64()
+        ),
+        (Some(237.1), Some(253.1))
+    );
+    assert!(
+        o.stderr.contains("237.1")
+            && o.stderr.contains("253.1")
+            && o.stderr.contains("(warn.file.nameMz)"),
+        "{}",
+        o.stderr
+    );
     // file items says it too, and points at file method
     let it = run(&["file", "items", &w.to_string_lossy(), "--no-points"]);
     assert_eq!(it.code, 0, "{}", it.stderr);
     assert!(it.stderr.contains("(warn.file.nameMz)"), "{}", it.stderr);
-    assert!(it.stderr.contains("hint:") && it.stderr.contains("file method"), "{}", it.stderr);
-    assert!(parse(&it.stdout).is_ok(), "stdout stays the items/1 document");
+    assert!(
+        it.stderr.contains("hint:") && it.stderr.contains("file method"),
+        "{}",
+        it.stderr
+    );
+    assert!(
+        parse(&it.stdout).is_ok(),
+        "stdout stays the items/1 document"
+    );
 }
 
 #[test]
 fn sample_list_and_file_items_point_at_file_method() {
     let Some(w) = fixture() else { return };
     let l = run(&["sample", "list", &w.to_string_lossy(), "--json"]);
-    assert!(l.stderr.contains("hint:") && l.stderr.contains("file method"), "{}", l.stderr);
+    assert!(
+        l.stderr.contains("hint:") && l.stderr.contains("file method"),
+        "{}",
+        l.stderr
+    );
 }
 
 #[test]
@@ -90,7 +130,14 @@ fn exit_codes_are_pinned() {
 
 #[test]
 fn the_command_is_listed_with_its_schema_and_is_found_by_its_tasks() {
-    let o = run(&["commands", "--find", "collision", "energy", "spread", "--json"]);
+    let o = run(&[
+        "commands",
+        "--find",
+        "collision",
+        "energy",
+        "spread",
+        "--json",
+    ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert!(v.to_string().contains("file method"), "{v}");

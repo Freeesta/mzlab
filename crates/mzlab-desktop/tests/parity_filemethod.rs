@@ -30,15 +30,31 @@ fn the_app_gives_the_bytes_of_file_method() {
     let items = cli(&["file", "items", &path, "--no-points"]);
     let bytes = std::fs::read(&file).unwrap();
     let mut m = mzlab_core::mzmlhead::Mzml::new(bytes.clone(), bytes.len() as u64);
-    let method = m.method("Std_237.1.mzML", mzlab_core::method_fit::DOC_MAX as u64).unwrap().unwrap_or_default();
+    let method = m
+        .method("Std_237.1.mzML", mzlab_core::method_fit::DOC_MAX as u64)
+        .unwrap()
+        .unwrap_or_default();
     let st = State::new();
     st.set_data_folder(dir.path().join("app"));
-    let got = match st.rpc("filemethod", &json!({"sample": null, "method": method, "items": items.trim_end()}), &[]).unwrap() {
+    let got = match st
+        .rpc(
+            "filemethod",
+            &json!({"sample": null, "method": method, "items": items.trim_end()}),
+            &[],
+        )
+        .unwrap()
+    {
         Answer::Text(t) => t,
         Answer::Bytes(_) => panic!("bytes"),
     };
     assert_eq!(got + "\n", want);
     assert!(want.contains("\"key\":\"warn.file.nameMz\""), "{want}");
     // a bad items text is the engine's error, not a panic
-    assert!(st.rpc("filemethod", &json!({"sample": null, "method": "", "items": "{"}), &[]).is_err());
+    assert!(st
+        .rpc(
+            "filemethod",
+            &json!({"sample": null, "method": "", "items": "{"}),
+            &[]
+        )
+        .is_err());
 }

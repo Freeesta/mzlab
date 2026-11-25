@@ -13,7 +13,8 @@ pub struct Mismatch {
 
 /// Words that follow a number in a name when it is an amount, a time or a count and not a mass.
 const UNITS: [&str; 21] = [
-    "ng", "ug", "mg", "pg", "g", "ppb", "ppm", "ppt", "um", "nm", "mm", "pm", "ul", "ml", "l", "min", "h", "s", "v", "ev", "da",
+    "ng", "ug", "mg", "pg", "g", "ppb", "ppm", "ppt", "um", "nm", "mm", "pm", "ul", "ml", "l",
+    "min", "h", "s", "v", "ev", "da",
 ];
 
 /// The name without its file extension and the part tag of an item (`x.wiff#MS2`), a decimal point is not an extension.
@@ -36,15 +37,32 @@ pub fn mz_in_name(name: &str) -> Vec<f64> {
             continue;
         }
         let from = i;
-        while i < s.len() && (s[i].is_ascii_digit() || (s[i] == '.' && s.get(i + 1).is_some_and(char::is_ascii_digit))) {
+        while i < s.len()
+            && (s[i].is_ascii_digit()
+                || (s[i] == '.' && s.get(i + 1).is_some_and(char::is_ascii_digit)))
+        {
             i += 1;
         }
         let text: String = s[from..i].iter().collect();
-        let before: String = s[from.saturating_sub(2)..from].iter().collect::<String>().to_lowercase();
+        let before: String = s[from.saturating_sub(2)..from]
+            .iter()
+            .collect::<String>()
+            .to_lowercase();
         let stuck = from > 0 && s[from - 1].is_ascii_alphabetic() && !before.ends_with("mz");
-        let after: String = s[i..].iter().take_while(|c| !matches!(c, '_' | '-' | ' ')).collect::<String>().to_lowercase();
-        let unit = !after.is_empty() && (after.starts_with('%') || UNITS.contains(&after.trim_end_matches(|c: char| c.is_ascii_digit())));
-        let next_word: String = s[i..].iter().skip_while(|c| matches!(c, '_' | '-' | ' ')).take_while(|c| c.is_ascii_alphabetic()).collect::<String>().to_lowercase();
+        let after: String = s[i..]
+            .iter()
+            .take_while(|c| !matches!(c, '_' | '-' | ' '))
+            .collect::<String>()
+            .to_lowercase();
+        let unit = !after.is_empty()
+            && (after.starts_with('%')
+                || UNITS.contains(&after.trim_end_matches(|c: char| c.is_ascii_digit())));
+        let next_word: String = s[i..]
+            .iter()
+            .skip_while(|c| matches!(c, '_' | '-' | ' '))
+            .take_while(|c| c.is_ascii_alphabetic())
+            .collect::<String>()
+            .to_lowercase();
         let amount = after.is_empty() && UNITS.contains(&next_word.as_str());
         if stuck || unit || amount {
             continue;
@@ -52,7 +70,11 @@ pub fn mz_in_name(name: &str) -> Vec<f64> {
         let Ok(v) = text.parse::<f64>() else { continue };
         let ok = match text.split_once('.') {
             Some((_, d)) => (1..=4).contains(&d.len()) && (50.0..=2500.0).contains(&v),
-            None => (3..=4).contains(&text.len()) && (100.0..=2500.0).contains(&v) && !(1990.0..=2100.0).contains(&v),
+            None => {
+                (3..=4).contains(&text.len())
+                    && (100.0..=2500.0).contains(&v)
+                    && !(1990.0..=2100.0).contains(&v)
+            }
         };
         if ok {
             out.push(v);
@@ -91,18 +113,38 @@ mod tests {
         assert_eq!(mz_in_name("Carbamazepine_237.1"), vec![237.1]);
         assert_eq!(mz_in_name("MS3_237-194.wiff"), vec![237.0, 194.0]);
         assert_eq!(mz_in_name("Std_mz253.1_rep2"), vec![253.1]);
-        assert_eq!(mz_in_name("QC_100_ng_2024"), Vec::<f64>::new(), "an amount and a year");
+        assert_eq!(
+            mz_in_name("QC_100_ng_2024"),
+            Vec::<f64>::new(),
+            "an amount and a year"
+        );
         assert_eq!(mz_in_name("CE35_DP60_5ppb_20240115"), Vec::<f64>::new());
-        assert_eq!(mz_in_name("x_237.1.mzML"), vec![237.1], "the extension is not a decimal part");
+        assert_eq!(
+            mz_in_name("x_237.1.mzML"),
+            vec![237.1],
+            "the extension is not a decimal part"
+        );
     }
 
     #[test]
     fn a_mismatch_reports_the_closest_pair_and_a_match_reports_nothing() {
         let m = mismatch("Name_237.1", &[253.1, 300.0], 1.0).unwrap();
-        assert_eq!((m.nearest_name_mz, m.nearest_precursor, m.delta), (237.1, 253.1, 16.0));
+        assert_eq!(
+            (m.nearest_name_mz, m.nearest_precursor, m.delta),
+            (237.1, 253.1, 16.0)
+        );
         assert!(mismatch("Name_253", &[253.1], 1.0).is_none());
-        assert!(mismatch("Name_237.1", &[], 1.0).is_none(), "no precursor, nothing to compare");
-        assert!(mismatch("Name", &[253.1], 1.0).is_none(), "no mass in the name");
-        assert!(mismatch("MS3_237-194", &[194.1], 1.0).is_none(), "one of the masses is enough");
+        assert!(
+            mismatch("Name_237.1", &[], 1.0).is_none(),
+            "no precursor, nothing to compare"
+        );
+        assert!(
+            mismatch("Name", &[253.1], 1.0).is_none(),
+            "no mass in the name"
+        );
+        assert!(
+            mismatch("MS3_237-194", &[194.1], 1.0).is_none(),
+            "one of the masses is enough"
+        );
     }
 }

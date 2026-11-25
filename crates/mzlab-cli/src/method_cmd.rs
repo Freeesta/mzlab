@@ -41,7 +41,10 @@ fn parse_args(args: Vec<String>) -> std::result::Result<Option<Request>, String>
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
             "--sample" => {
                 let v = it.next().ok_or("--sample needs a sample id or list")?;
-                sample = Some(crate::sample_select::parse(&v).map_err(|e| crate::error_text::human_error(&e))?)
+                sample = Some(
+                    crate::sample_select::parse(&v)
+                        .map_err(|e| crate::error_text::human_error(&e))?,
+                )
             }
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
@@ -49,17 +52,30 @@ fn parse_args(args: Vec<String>) -> std::result::Result<Option<Request>, String>
         }
     }
     if sample.is_some() && file.as_ref().is_some_and(|f| crate::extract::is_mzml(f)) {
-        return Err("--sample is for a file of several samples (.wiff, ...), an mzML holds one".into());
+        return Err(
+            "--sample is for a file of several samples (.wiff, ...), an mzML holds one".into(),
+        );
     }
-    Ok(Some(Request { file: file.ok_or("method needs a file")?, sample, out }))
+    Ok(Some(Request {
+        file: file.ok_or("method needs a file")?,
+        sample,
+        out,
+    }))
 }
 
 /// The document of one sample and the line of its name warnings for stderr.
 fn read(c: &Request, id: Option<u32>, tmp: &std::path::Path) -> Result<(String, String)> {
     let mut s = crate::extract::open_sample(&c.file, id, tmp)?;
-    let items = mzlab_core::lr::open_items(&mut s.routes.idx, &mut s.mzml, &s.name, &mzlab_core::lr::Sample::default())?;
+    let items = mzlab_core::lr::open_items(
+        &mut s.routes.idx,
+        &mut s.mzml,
+        &s.name,
+        &mzlab_core::lr::Sample::default(),
+    )?;
     let items = crate::items_cmd::document(&items, true)?;
-    let method = s.mzml.method(&s.name, mzlab_core::method_fit::DOC_MAX as u64)?;
+    let method = s
+        .mzml
+        .method(&s.name, mzlab_core::method_fit::DOC_MAX as u64)?;
     let doc = mzlab_core::filemethod::document(s.sample, method.as_deref(), &items)?;
     Ok((doc.clone(), s.note + &warning_lines(&doc)))
 }
@@ -71,7 +87,9 @@ pub(crate) fn hint_line(file: &str, more: &str) -> String {
 
 /// The warnings of a document as terminal lines (catalogue text with the numbers).
 pub(crate) fn warning_lines(doc: &str) -> String {
-    let Ok(v) = parse(doc.as_bytes()) else { return String::new() };
+    let Ok(v) = parse(doc.as_bytes()) else {
+        return String::new();
+    };
     let num = |w: &Value, k: &str| w.get(k).and_then(Value::f64).map_or(String::new(), fmt_g);
     v.get("warnings")
         .map(Value::arr)
@@ -80,7 +98,10 @@ pub(crate) fn warning_lines(doc: &str) -> String {
         .map(|w| {
             let key = w.get("key").and_then(Value::str).unwrap_or("");
             let par = vec![
-                ("name".to_string(), w.get("name").and_then(Value::str).unwrap_or("").to_string()),
+                (
+                    "name".to_string(),
+                    w.get("name").and_then(Value::str).unwrap_or("").to_string(),
+                ),
                 ("name_mz".to_string(), num(w, "nearest_name_mz")),
                 ("precursor".to_string(), num(w, "nearest_precursor")),
                 ("delta".to_string(), num(w, "delta_mz")),
@@ -101,7 +122,10 @@ pub fn run(args: Vec<String>) -> Outcome {
         let mzml = crate::extract::is_mzml(&c.file);
         // the whole list is checked before the first sample is read: no partial answer for a list with a wrong id
         let ids: Vec<Option<u32>> = match &c.sample {
-            Some(w) if !mzml => crate::sample_select::resolve(&c.file, w)?.into_iter().map(Some).collect(),
+            Some(w) if !mzml => crate::sample_select::resolve(&c.file, w)?
+                .into_iter()
+                .map(Some)
+                .collect(),
             _ => vec![None],
         };
         let (mut text, mut notes) = (Vec::new(), String::new());

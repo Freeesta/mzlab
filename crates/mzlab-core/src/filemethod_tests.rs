@@ -15,7 +15,10 @@ fn a_product_ion_segment_lists_its_parameters_and_the_missing_ones_say_why() {
     let u = d.get("unavailable").unwrap();
     assert_eq!(u.get("fill_time_ms").unwrap().str(), Some("not_decoded"));
     assert_eq!(u.get("q1_resolution").unwrap().str(), Some("not_decoded"));
-    assert!(u.get("ce_eV").is_none(), "a parameter the method holds is not listed");
+    assert!(
+        u.get("ce_eV").is_none(),
+        "a parameter the method holds is not listed"
+    );
 }
 
 #[test]
@@ -33,15 +36,41 @@ fn a_file_without_a_method_still_answers_with_null_and_a_reason() {
     let d = parse(document(Some(1), None, ITEMS).unwrap().as_bytes()).unwrap();
     assert!(d.get("format").unwrap().is_null());
     assert_eq!(d.get("segments").unwrap().arr().len(), 0);
-    assert_eq!(d.get("unavailable").unwrap().get("ce_eV").unwrap().str(), Some("not_in_file"));
-    assert_eq!(d.get("acquired").unwrap().at(0).unwrap().get("precursor_mz").unwrap().f64(), Some(253.1));
+    assert_eq!(
+        d.get("unavailable").unwrap().get("ce_eV").unwrap().str(),
+        Some("not_in_file")
+    );
+    assert_eq!(
+        d.get("acquired")
+            .unwrap()
+            .at(0)
+            .unwrap()
+            .get("precursor_mz")
+            .unwrap()
+            .f64(),
+        Some(253.1)
+    );
 }
 
 #[test]
 fn an_mrm_experiment_gives_one_segment_per_transition() {
     let m = r#"{"schema":"method/1","origin":{"format":"sciex-wiff"},"ms":{"periods":[{"experiments":[{"index":0,"transitions":[{"q1":237.1,"q3":194.1,"ce_eV":25,"dp_V":60,"dwell_ms":50,"name":"a"},{"q1":237.1,"q3":179.1,"ce_eV":35,"dp_V":60,"dwell_ms":50,"name":"b"}]}]}]}}"#;
-    let d = parse(document(None, Some(m), r#"{"items":[]}"#).unwrap().as_bytes()).unwrap();
+    let d = parse(
+        document(None, Some(m), r#"{"items":[]}"#)
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap();
     assert_eq!(d.get("segments").unwrap().arr().len(), 2);
-    assert_eq!(d.get("segments").unwrap().at(1).unwrap().get("q3_mz").unwrap().f64(), Some(179.1));
+    assert_eq!(
+        d.get("segments")
+            .unwrap()
+            .at(1)
+            .unwrap()
+            .get("q3_mz")
+            .unwrap()
+            .f64(),
+        Some(179.1)
+    );
     assert!(d.get("warnings").unwrap().arr().is_empty());
 }

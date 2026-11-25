@@ -45,7 +45,10 @@ pub(crate) fn io(e: std::io::Error) -> Error {
 
 /// The items a file opens as and the `method/1` document it carries (`None`: none, or too large to read from the header).
 /// The third member is the name of the sample read (empty for an mzML).
-pub(crate) fn open_all(file: &PathBuf, tmp: &std::path::Path) -> Result<(Vec<mzlab_core::lr::OpenItem>, Option<String>, String)> {
+pub(crate) fn open_all(
+    file: &PathBuf,
+    tmp: &std::path::Path,
+) -> Result<(Vec<mzlab_core::lr::OpenItem>, Option<String>, String)> {
     let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -72,7 +75,10 @@ pub(crate) fn open_all(file: &PathBuf, tmp: &std::path::Path) -> Result<(Vec<mzl
         crate::flow_set::file_set(file)?,
         &mzlab_core::readers::Limits::desktop(),
     )?;
-    let sample_name = l.samples().first().map_or(String::new(), |s| s.name.clone());
+    let sample_name = l
+        .samples()
+        .first()
+        .map_or(String::new(), |s| s.name.clone());
     let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), 0)?;
     let size = shell.len() as u64;
     let mut m = Mzml::new(shell, size);
@@ -86,12 +92,16 @@ pub(crate) fn open_all(file: &PathBuf, tmp: &std::path::Path) -> Result<(Vec<mzl
 fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<(String, String)> {
     let (items, _, sample_name) = open_all(file, tmp)?;
     let doc = document(&items, no_points)?;
-    let name = file.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let name = file
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut notes = String::new();
     if let Ok(v) = mzlab_core::json::parse(doc.as_bytes()) {
         let precs = mzlab_core::filemethod::item_precursors(&v);
-        let warns = mzlab_core::filemethod::name_warnings(&[name.as_str(), sample_name.as_str()], &precs);
-        notes += &crate::method_cmd::warning_lines(&format!("{{\"warnings\":[{}]}}", warns.join(",")));
+        let warns =
+            mzlab_core::filemethod::name_warnings(&[name.as_str(), sample_name.as_str()], &precs);
+        notes +=
+            &crate::method_cmd::warning_lines(&format!("{{\"warnings\":[{}]}}", warns.join(",")));
     }
     notes += &crate::method_cmd::hint_line(&file.display().to_string(), "");
     Ok((doc, notes))

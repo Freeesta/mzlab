@@ -121,7 +121,11 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
     // distinct values of a parameter over the ranges, sorted
     let distinct = |id: &str| {
         let mut v: Vec<f64> = Vec::new();
-        for x in entries.iter().filter_map(|e| value(e, id)).map(|v| round(v, 2)) {
+        for x in entries
+            .iter()
+            .filter_map(|e| value(e, id))
+            .map(|v| round(v, 2))
+        {
             if !v.contains(&x) {
                 v.push(x);
             }

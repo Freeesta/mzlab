@@ -16,7 +16,11 @@ pub fn version() -> String {
 #[wasm_bindgen(start)]
 pub fn start() {
     std::panic::set_hook(Box::new(|info| {
-        let _ = js_sys::Reflect::set(&js_sys::global(), &"__mzlabPanic".into(), &info.to_string().into());
+        let _ = js_sys::Reflect::set(
+            &js_sys::global(),
+            &"__mzlabPanic".into(),
+            &info.to_string().into(),
+        );
     }));
 }
 

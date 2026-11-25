@@ -233,7 +233,10 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
             Some(n) => mass_range::counted(&d, n, is_mrm),
             None => guessed(&d, is_mrm),
         };
-        if let Kind::Scan { precursor, code, .. } = &mut kind {
+        if let Kind::Scan {
+            precursor, code, ..
+        } = &mut kind
+        {
             *precursor = fixed_mz(ole, base, i);
             *code = scan_code(ole, base, i);
         }
