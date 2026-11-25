@@ -37,6 +37,8 @@ mod design_cmd;
 mod emit;
 pub mod error_text;
 #[cfg(test)]
+mod json_stdout_tests;
+#[cfg(test)]
 mod steps_compact_tests;
 pub(crate) use emit::emit;
 #[cfg(test)]
@@ -236,6 +238,7 @@ mod raw_xic_cmd;
 mod renamed;
 mod sample_label;
 mod sample_select;
+mod samples_check;
 mod samples_cmd;
 mod samples_import;
 mod samples_table;

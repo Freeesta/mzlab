@@ -50,6 +50,7 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.compare.selector",
     "err.canali.unknown",
     "err.scan.unknown",
+    "err.scan.level",
     "err.msn.node",
     "err.mol.draw.not_found",
     "err.mol.draw.not_found_bare",
