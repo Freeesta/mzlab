@@ -37,6 +37,30 @@ pub(crate) fn lines(name: &str, n: &Note) -> Vec<String> {
     out
 }
 
+/// The stderr line for a series that holds blanks (roles read from the file names as `sample table` reads them): the table keeps a blank as one more column,
+/// so the features seen in it stay until `table.filter` or `table compare` drops or flags them. None without a blank or with nothing but blanks.
+pub(crate) fn blank_hint(names: &[String]) -> Option<String> {
+    let blanks: Vec<&str> = names
+        .iter()
+        .map(|n| {
+            Path::new(n)
+                .file_name()
+                .and_then(|f| f.to_str())
+                .unwrap_or(n)
+        })
+        .filter(|n| mzlab_core::samples::table_kind_of_name(n) == "blank")
+        .collect();
+    if blanks.is_empty() || blanks.len() == names.len() {
+        return None;
+    }
+    Some(format!(
+        "hint: {} of {} files look like blanks ({}); the table keeps their features. To drop what a blank also shows: Flow step table.filter blank_ratio (mzlab-cli commands --find subtract blank), or flag it with mzlab-cli table compare TABLE --ref SEL --blank SEL",
+        blanks.len(),
+        names.len(),
+        blanks.join(", ")
+    ))
+}
+
 /// The `features-notes/1` text: one entry per file of the series, in the order given: its name, the axis of the recipe (one for the series), its
 /// unit-resolution numbers, the scans counted on that file and its `notices` (key and parameters, the members `estimates/1` carries), the same facts as
 /// the stderr lines.
@@ -82,6 +106,10 @@ pub(crate) fn report(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], label
             eprintln!("{l}");
         }
         notes.push((name, note));
+    }
+    let names: Vec<String> = notes.iter().map(|(n, _)| n.clone()).collect();
+    if let Some(h) = blank_hint(&names) {
+        eprintln!("{h}");
     }
     let _ = std::fs::write(notes_path(&idxs[0]), notes_text(&notes));
 }

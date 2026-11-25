@@ -60,6 +60,19 @@ fn next_marker(scan: &mut dyn ReadAt, scan_len: u64, from: u64, above: u32) -> u
     scan_len
 }
 
+/// How many sections the `.wiff.scan` holds from `from` on (the end of the indexed part) whose number is above `above` (the highest the index lists): the samples a
+/// copy made while acquiring carries without a table row. Only the markers are counted; nothing is rebuilt.
+pub(super) fn count_after(scan: &mut dyn ReadAt, scan_len: u64, from: u64, above: u32) -> usize {
+    let (mut at, mut above, mut n) = (from, above, 0);
+    loop {
+        let m = next_marker(scan, scan_len, at, above);
+        let Some(id) = marker_at(scan, scan_len, m) else {
+            return n;
+        };
+        (n, above, at) = (n + 1, id, m + 12);
+    }
+}
+
 /// The block size of the indexed sample `w` when its layout lets a later section be read: one fixed size (a multiple of 4: f32 per transition), MRM only.
 fn block_size(w: &Wiff) -> Option<u64> {
     let size = u64::from(w.records.first()?.size);

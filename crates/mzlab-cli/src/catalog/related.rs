@@ -52,7 +52,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
-    r("raw xic", "peak trace nothing detected absent present at this mass time ions counts poisson detection limit upper limit blank carryover", &["quant targets", "trace xic", "raw info"]),
+    r("raw xic", "peak trace nothing detected absent present at this mass time ions counts poisson detection limit upper limit carryover", &["quant targets", "trace xic", "raw info"]),
     r("file channels", "sim srm mrm channel list transitions", &["trace chrom", "peak table"]),
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
         .ex("mzlab-cli file convert run.wiff --out mzml/ --json"),
@@ -60,12 +60,13 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample table", "roles blank qc standard control time point names", &["sample import", "sample design propose", "table.filter"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate", &["sample table", "sample design propose"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "flow run"]),
-    r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect blank level set lines before a run", &["flow defaults", "features", "flow run"]),
-    r("quant targets", "many targets list m/z retention time windows every file one call area snr integrate loop thousands of calls full scan low resolution xic table", &["raw xic", "quant union", "peak table"])
-        .ex("mzlab-cli quant targets a.mzML b.mzML --targets targets.csv --json"),
+    r("estimate", "estimate parameters from the data noise floor minimum height fwhm rt tolerance mass defect background level set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
-    r("table compare", "blank reference ratio subtraction candidate products", &["table.filter", "tp.dig_lr"]),
-    r("trace xic", "extracted ion chromatogram eic xic many ions list mz", &["peak table", "trace chrom", "chrom.transitions"])
+    r("quant targets", "target list windows many files batches internal standard reference rt drift shift align retention time correction mass offset per polarity negative positive calibration error many targets every file one call area snr integrate loop thousands of calls full scan low resolution xic table", &["trace xic", "quant union", "raw xic", "peak table", "dad delay"])
+        .ex("mzlab-cli quant targets --targets t.csv runs/ --offset auto --rt-ref auto"),
+    r("dad delay", "delay lag detector pda uv dad ms offset flow cell tubing synchronise align uv to ms time correction", &["dad peaks", "dad ms-at", "file convert"]),
+    r("table compare", "blank reference ratio subtraction candidate products background contaminant carryover matrix blank", &["table.filter", "tp.dig_lr"]),
+    r("trace xic", "extracted ion chromatogram eic xic many ions list mz mass offset calibration error polarity", &["peak table", "trace chrom", "chrom.transitions", "quant targets"])
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
@@ -88,7 +89,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("flow defaults", "default parameter value limit unit set key off when empty what can i change", &["flow steps", "flow check"]),
     r("commands", "find search help catalog task", &["schema", "flow steps"]),
     r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
-    r("table.filter", "blank subtraction threshold background remove filter qc cv replicate", &["table compare", "features.align"]),
+    r("table.filter", "blank subtraction subtract threshold background ions remove drop ions also in the blank sample carryover contaminant matrix blank ratio filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),

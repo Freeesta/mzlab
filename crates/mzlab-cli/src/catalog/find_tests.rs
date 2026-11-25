@@ -75,8 +75,27 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    (
+        "retention times drift between batches, align on an internal standard",
+        "quant targets",
+    ),
+    (
+        "mass offset differs by polarity, measure it on the parent",
+        "quant targets",
+    ),
+    ("delay of the uv detector against the ms", "dad delay"),
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
+    (
+        "remove ions that are also in the blank sample",
+        "table.filter",
+    ),
+    (
+        "background ions and carryover in the matrix blank",
+        "table.filter",
+    ),
+    ("contaminant ions of the matrix blank", "table compare"),
+    ("subtract the blank spectrum from a sample", "spectrum get"),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.
@@ -98,6 +117,14 @@ fn every_audit_task_finds_its_command_or_step_among_the_first_three() {
             got.iter().any(|g| g == want),
             "{task:?}: {want} not in {got:?}"
         );
+    }
+}
+
+#[test]
+fn the_bare_word_blank_lists_the_blank_filter_and_the_blank_ratio() {
+    let got = top("blank", 5);
+    for want in ["table.filter", "table compare"] {
+        assert!(got.iter().any(|g| g == want), "{want} not in {got:?}");
     }
 }
 

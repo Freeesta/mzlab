@@ -3,7 +3,8 @@
 //! of one parent tells a loop from a single call: one append-only file per parent and command in the temp folder (every call appends one byte, so
 //! parallel calls never lose a count) and a marker made with `create_new`, so the hint is said exactly once. The static routes (help, `related`,
 //! the task table) need no state and are the main ones; this is the nudge for a loop that never read them. Stdout and the exit code never change,
-//! `MZLAB_NO_HINTS=1` silences it. Called by the binary (`main.rs`), never by `execute`.
+//! `MZLAB_NO_HINTS` set to any value silences it. Unix only (the parent is
+//! tagged by its id and `/proc` start time; elsewhere there is no hint). Called by the binary (`main.rs`), never by `execute`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
