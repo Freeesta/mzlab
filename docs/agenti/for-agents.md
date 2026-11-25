@@ -9,6 +9,8 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | roles (blank, QC, standard, dark control, time) | `sample table FILE... > samples.json` (`tp.dig_lr`/`tp.link` take the role of a file's name when the samples lack it, logged on stderr; preview them with `sample pair samples.json FILE...`); roles and names from a lab CSV: `sample import META.csv DIR --dry-run`, then without it; design: `sample design propose` |
 | profile or centroid, ion counts, m/z grid, mass offset of a file | `raw info FILE... [--offset-ion MZ@RT]` (`raw-info/1`); index cache first: `raw cache FILE... --cache DIR` |
 | is there a peak at this m/z and time, in each file (verdict, rule, ion counts, upper limit) | `raw xic FILE... --mz LIST --rt A,B` (`raw-xic/1`), `--set min_sn=,min_points=,alpha=` |
+| which noise floor, minimum height, ppm or RT tolerance fit my files (before choosing a threshold) | `estimate FILE... --axis da\|ppm --emit-set PLAN.json` (`estimate/1`: median, range, evidence, the `--set` lines); limits: `flow defaults STEP` |
+| one target list from the feature tables of several series (conditions, replicates, polarities) | `quant union` or Flow step `features.union` (`union/1`); then `quant targets` over every file |
 | is this MS2 spectrum credible: how many scans and ions it rests on | `spectrum get FILE --rt A,B --ms-level 2 --sum [--fill-ms T]`: `evidence.sum` (scans, cps, ions, quantum); the mean of a window hints at it |
 | non-targeted feature table | `features FILE... --out table.csv`, or a plan `index.mzidx` → `features.detect` → `features.align` → `features.gapfill` |
 | target list of SIM ions / SRM transitions, area and S/N in every file | Flow step `chrom.transitions` (parameter `transitions` = CSV `name;q1;q3;...`) |
