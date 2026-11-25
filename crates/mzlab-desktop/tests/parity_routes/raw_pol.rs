@@ -76,7 +76,13 @@ fn raw_info_xic_and_scan_give_each_polarity_the_same_answer_in_the_app_and_in_th
     let plan: Vec<Value> = [0, 1, -1, 0].into_iter().flat_map(section).collect();
     let idx = dir.path().join("idx").join(format!("{MIXED}.mzidx"));
     let wasm = run_wasm(&pkg, dir.path(), &idx, &file, &plan);
-    compare(&st, fid, &plan, &wasm, &[1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15]);
+    compare(
+        &st,
+        fid,
+        &plan,
+        &wasm,
+        &[1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15],
+    );
     // each section answers for itself: `+` and `-` differ from each other, and the last (every section) is the first again
     let text = |k: usize| match from_wasm(&wasm[k]) {
         Got::Text(t) => t,
