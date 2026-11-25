@@ -38,6 +38,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("non-targeted feature table of all files", "features"),
     (
+        "the same peak appears as two duplicate rows, a shoulder merged",
+        "features.gapfill",
+    ),
+    (
         "one target list from the feature tables of several series",
         "quant union",
     ),
@@ -415,4 +419,58 @@ fn the_state_words_and_shape_gates_of_quant_targets_are_found_from_the_task_and_
     for w in ["forced", "min_half", "max_fwhm", "max_asym", "decisions"] {
         assert!(h.contains(w), "{w} not in the help");
     }
+}
+
+/// The target-list route is found by the words of the loop that missed it (thousands of `peak auto-lr` calls), and `peak auto-lr` points at it.
+#[test]
+fn a_list_of_targets_over_many_files_finds_quant_targets_and_the_looped_command_points_at_it() {
+    let find = |words: &[&str]| {
+        let mut a = vec!["commands".to_string(), "--find".into()];
+        a.extend(words.iter().map(|s| s.to_string()));
+        a.push("--json".into());
+        let o = crate::execute(&a);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        serde_json::from_slice::<serde_json::Value>(&o.stdout).unwrap()
+    };
+    let v = find(&[
+        "integrate",
+        "many",
+        "targets",
+        "m/z",
+        "RT",
+        "windows",
+        "every",
+        "file",
+    ]);
+    assert_eq!(v["matches"][0]["name"], "quant targets", "{v}");
+    let lr = find(&["peak", "auto-lr"]);
+    let row = lr["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["name"] == "peak auto-lr")
+        .unwrap();
+    assert!(
+        row["bulk"]
+            .as_str()
+            .unwrap()
+            .starts_with("mzlab-cli quant targets FILE..."),
+        "{row}"
+    );
+    assert!(
+        row["see_also"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|x| x == "quant targets"),
+        "{row}"
+    );
+    let help = String::from_utf8(
+        crate::execute(&["peak".to_string(), "auto-lr".into(), "--help".into()]).stdout,
+    )
+    .unwrap();
+    assert!(
+        help.contains("quant targets FILE... --targets T.csv"),
+        "{help}"
+    );
 }

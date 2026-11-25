@@ -42,6 +42,8 @@ impl Rel {
     }
 }
 
+const LR_BULK: &str = "mzlab-cli quant targets FILE... --targets T.csv: every m/z + RT window of a list in every full-scan file, area and S/N, one call; SIM/SRM channels: peak table FILE... --auto";
+
 const PEAK_BULK: &str = "mzlab-cli peak table FILE... --auto: every peak of every channel of every file in one call; a target list: step chrom.transitions";
 
 pub(crate) static RELATED: &[Rel] = &[
@@ -58,11 +60,12 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample table", "roles blank qc standard control dark time point names samples.json tp.dig_lr tp.link not recognised", &["sample import", "sample pair", "sample design propose", "tp.dig_lr"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate samples.json tp.dig_lr", &["sample table", "sample pair", "tp.dig_lr"]),
     r("sample pair", "roles of a table check preview which files left out proposed from the name dark control standard samples.json tp.dig_lr tp.link tp.network pairing", &["sample table", "sample import", "tp.dig_lr"]),
-    r("features", "non-targeted untargeted feature table csv peak picking all files", &["features.table", "features.detect", "estimate", "flow run"]),
+    r("features", "non-targeted untargeted feature table csv peak picking all files duplicate rows near duplicates same peak twice", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
+        .ex("mzlab-cli features a.mzML b.mzML --report report.json --out table.csv"),
     r("estimate", "estimate parameters from the data noise floor minimum height threshold snr fwhm peak width rt tolerance mz tolerance ppm da mass defect background level measured values set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant.targets", "target list every file integrate area snr state detected forced absent weak noise signals controls matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["quant targets", "features.union", "quant.curve"]),
     r("quant union", "one target list for many series conditions replicates polarities join merge feature tables campaign across series", &["quant targets", "features"]),
-    r("quant targets", "target list windows many files batches internal standard reference rt drift shift align retention time correction mass offset per polarity negative positive calibration error state detected forced absent weak noise signals controls matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["trace xic", "quant union", "raw xic", "dad delay", "quant.curve"])
+    r("quant targets", "target list windows many files batches internal standard reference rt drift shift align retention time correction mass offset per polarity negative positive calibration error many targets every file one call area snr integrate loop thousands of calls full scan low resolution xic table state detected forced absent weak noise signals controls matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["trace xic", "quant union", "raw xic", "peak table", "dad delay"])
         .ex("mzlab-cli quant targets --targets T.csv A.mzML B.mzML --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --rt-ref auto --log log.json"),
     r("dad delay", "delay lag detector pda uv dad ms offset flow cell tubing synchronise align uv to ms time correction", &["dad peaks", "dad ms-at", "file convert"]),
     r("table compare", "blank reference ratio subtraction candidate products background contaminant carryover matrix blank", &["table.filter", "tp.dig_lr"]),
@@ -70,7 +73,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
-    r("peak auto-lr", "integrate peaks one trace sim mrm area snr", &["peak table", "chrom.transitions", "trace chrom"]).bulk(PEAK_BULK),
+    r("peak auto-lr", "integrate peaks one trace sim mrm area snr", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
     r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
         .bulk("mzlab-cli features FILE... --out table.csv: every high-resolution peak of many files in one call (peak table --auto is the low-resolution engine)"),
     r("peak area", "integrate one peak area", &["peak table"])
@@ -95,6 +98,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
+    r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])
+        .ex("mzlab-cli flow run plan.json --in files/ --out out/ --set gapfill1.dedup_overlap=0"),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),
     r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution one ion noise floor roles dark control standard samples.json", &["sample table", "sample pair", "sample import", "tp.generate", "table compare"])
         .bulk("one run digs the whole series: every file in index, one table; other settings: rerun in the same --out with --set (cached)"),

@@ -52,7 +52,11 @@ mod estimate_cmd_tests;
 pub mod exit;
 mod extract;
 #[cfg(test)]
+mod features_dedup_tests;
+#[cfg(test)]
 mod features_lr_tests;
+#[cfg(test)]
+mod features_profile_label_tests;
 mod features_series;
 mod file_index_cmd;
 mod file_info_cmd;
@@ -236,6 +240,7 @@ mod raw_cache_cmd;
 mod raw_cmd;
 mod raw_xic_cmd;
 mod renamed;
+pub mod repeat_hint;
 mod sample_label;
 mod sample_select;
 mod samples_check;
