@@ -305,8 +305,12 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
   --dry-run          print features-plan/1 (members, unit/profile/centroid decision of each, recipe) and write nothing
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
-  --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\"}
-  --help             this text";
+  --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\", \"dedup_overlap\"}
+  --help             this text
+
+one peak split in two rows (a shoulder, a broad top)? unit resolution merges them when their peaks overlap by 0.5 of the narrower one; each merge is in the --report
+(merged: rule, overlap, r, heights) and rows left close are in near. To change it: {\"dedup_overlap\": 0.3} in --params (0 = no overlap merge, as before);
+in a Flow plan --set gapfill1.dedup_overlap=0.3";
 
 /// `mzlab-cli`, `--help`/`-h` and `--version`/`-V`: the answers that name no command.
 pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {

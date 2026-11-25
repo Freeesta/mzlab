@@ -11,6 +11,8 @@ use mzlab_feat::lrscreen::{centroid_wanted, label_reason, LabelCheck, Log};
 use mzlab_feat::recipe::Recipe;
 use mzlab_ops::run::feat::lr_note::{self, note_of, Note};
 
+use crate::convert::Notice;
+
 /// One member of the series: how it is called, what the index says and whether its profile scans are centroided.
 struct Member {
     name: String,
@@ -81,6 +83,30 @@ fn centroid_why(x: &Member) -> String {
 
 fn num(x: f64) -> String {
     value_text(&Value::Num(x))
+}
+
+/// The note that rows are still close after the duplicate merge, with the first pair's numbers: the hint that `dedup_overlap` exists.
+pub(crate) fn near_notice(log: &Log) -> Option<Notice> {
+    let n = log.near.first()?;
+    Some(Notice {
+        key: "note.features.nearDup",
+        params: vec![
+            ("n", log.near.len().to_string()),
+            ("mz_a", format!("{:.3}", n.a.0)),
+            ("mz_b", format!("{:.3}", n.b.0)),
+            ("rt_a", format!("{:.2}", n.a.1)),
+            ("rt_b", format!("{:.2}", n.b.1)),
+        ],
+    })
+}
+
+/// A number that may be missing (NaN): `null` then.
+fn opt(x: f64) -> String {
+    if x.is_finite() {
+        num(x)
+    } else {
+        "null".into()
+    }
 }
 
 fn share(n: &Note) -> f64 {
@@ -204,6 +230,51 @@ fn files_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log, rows: &[usi
     }
 }
 
+/// The `merged` array of the report: every row `dedup` dropped, with the rule, its threshold and both rows' numbers.
+fn merged_json(o: &mut Out, log: &Log) {
+    for (k, g) in log.merged.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).raw("{\"kept\":");
+        row(o, g.kept);
+        o.raw(",\"dropped\":");
+        row(o, g.dropped);
+        o.raw(&format!(
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"rule\":\"{}\",\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{},\"threshold\":{},\"height_kept\":{},\"height_dropped\":{}}}",
+            num(g.dmz_da),
+            num(g.drt_min),
+            opt(g.r),
+            g.rule,
+            opt(g.overlap),
+            opt(g.overlap_wide),
+            g.shared,
+            num(g.threshold),
+            num(g.height.0),
+            num(g.height.1)
+        ));
+    }
+}
+
+/// Pairs listed in the `near` array of the report; `near_total` has the count of all of them.
+const NEAR_MAX: usize = 20;
+
+/// The `near` array: the pairs still within the dedup window that neither rule merged (the hint that `dedup_overlap` exists), the first `NEAR_MAX`.
+fn near_json(o: &mut Out, log: &Log) {
+    for (k, g) in log.near.iter().take(NEAR_MAX).enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).raw("{\"a\":");
+        row(o, g.a);
+        o.raw(",\"b\":");
+        row(o, g.b);
+        o.raw(&format!(
+            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{},\"overlap\":{},\"overlap_wide\":{},\"shared_files\":{}}}",
+            num(g.dmz_da),
+            num(g.drt_min),
+            opt(g.r),
+            opt(g.overlap),
+            opt(g.overlap_wide),
+            g.shared
+        ));
+    }
+}
+
 /// The `choices` array of the report: the axis, the centroid switch of each unit-resolution file and what the screening logged by itself.
 fn choices_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log) {
     o.raw("],\"choices\":[");
@@ -266,23 +337,17 @@ pub(crate) fn report_text(
     for (x, f) in m.iter().zip(&log.offsets) {
         eprint!("{}", crate::mz_offset::lines(&x.name, f));
     }
+    if let Some(n) = near_notice(&log) {
+        eprintln!("note: {}", crate::error_text::warning(&n));
+    }
     let mut o = Out::default();
     o.raw("{\"schema\":\"features-report/1\",\"recipe\":")
         .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
     files_json(&mut o, recipe, &m, &log, rows);
     o.raw("],\"merged\":[");
-    for (k, g) in log.merged.iter().enumerate() {
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"kept\":");
-        row(&mut o, g.kept);
-        o.raw(",\"dropped\":");
-        row(&mut o, g.dropped);
-        o.raw(&format!(
-            ",\"dmz_da\":{},\"drt_min\":{},\"r\":{}}}",
-            num(g.dmz_da),
-            num(g.drt_min),
-            num(g.r)
-        ));
-    }
+    merged_json(&mut o, &log);
+    o.raw(&format!("],\"near_total\":{},\"near\":[", log.near.len()));
+    near_json(&mut o, &log);
     choices_json(&mut o, recipe, &m, &log);
     o.raw("]}\n");
     o.0

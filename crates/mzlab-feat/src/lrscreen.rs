@@ -45,6 +45,9 @@ pub struct Screen {
     pub centroid: Switch,
     pub recenter: Switch,
     pub dedup: Switch,
+    /// `dedup_overlap` of `features.gapfill`: the least share of the narrower peak two rows must overlap in a file where both were detected for the
+    /// `overlap` rule to merge them; `None` is the default (`lrscreen_dedup::DEFAULT_OVERLAP`), 0 turns the rule off.
+    pub dedup_overlap: Option<f64>,
     /// Set by `adjusted` when `centroid` acts on the file or the series the recipe was made for (profile scans centroided). Only then does `auto` enter the
     /// text: a file that is centroided already keeps the recipe text, and so the bytes, it had before the switch existed.
     pub centroided: bool,
@@ -57,6 +60,19 @@ pub struct Screen {
 }
 
 impl Screen {
+    /// The switches (`read`) and the number `dedup_overlap` of the params object `v`; a value outside 0..=1 or a missing key keeps the threshold.
+    pub fn read_json(&mut self, v: &mzlab_core::json::Value) {
+        use mzlab_core::json::Value;
+        self.read(|k| v.get(k).and_then(Value::str));
+        if let Some(x) = v
+            .get("dedup_overlap")
+            .and_then(Value::f64)
+            .filter(|x| (0.0..=1.0).contains(x))
+        {
+            self.dedup_overlap = Some(x);
+        }
+    }
+
     /// The switches `get` names (`centroid`, `recenter`, `dedup`) as texts; an unknown text or a missing key keeps the switch. Only `centroid` has `on`.
     pub fn read<'a>(&mut self, get: impl Fn(&str) -> Option<&'a str>) {
         let pick = |k: &str, on: bool, now: Switch| {
@@ -99,7 +115,8 @@ pub struct Shift {
     pub applied: bool,
 }
 
-/// A row dropped because it is the same ion as the one kept: (m/z, RT) of each, the distances and the Pearson r of their areas.
+/// A row dropped because it is the same ion as the one kept: (m/z, RT) of each, the distances and the evidence of the rule that merged them. `r` (Pearson
+/// r of the areas) and `overlap` (median share of the narrower peak the two cover, over the files where both were detected) are NaN when not computable.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Merge {
     pub kept: (f64, f64),
@@ -107,6 +124,29 @@ pub struct Merge {
     pub dmz_da: f64,
     pub drt_min: f64,
     pub r: f64,
+    /// `correlation` (r at or above `MIN_R`) or `overlap` (overlap at or above `threshold`).
+    pub rule: &'static str,
+    pub overlap: f64,
+    /// Median share of the wider peak the two cover (the `overlap` rule needs half the threshold).
+    pub overlap_wide: f64,
+    /// Files where both rows were detected / have an area, and the threshold of the rule that decided.
+    pub shared: usize,
+    pub threshold: f64,
+    /// Highest cell height of the kept and the dropped row.
+    pub height: (f64, f64),
+}
+
+/// Two rows left within the dedup window: the numbers `dedup` saw and why neither rule merged them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Near {
+    pub a: (f64, f64),
+    pub b: (f64, f64),
+    pub dmz_da: f64,
+    pub drt_min: f64,
+    pub r: f64,
+    pub overlap: f64,
+    pub overlap_wide: f64,
+    pub shared: usize,
 }
 
 #[derive(Debug, Default)]
@@ -116,6 +156,8 @@ pub struct Log {
     /// The m/z offset of each file (`mz_offset` of `features.align`), in the order of the files.
     pub offsets: Vec<mzlab_core::mzcal::Offset>,
     pub merged: Vec<Merge>,
+    /// Pairs of rows still within the dedup window after the merges (the hint that `dedup_overlap` exists).
+    pub near: Vec<Near>,
     pub choices: Vec<Choice>,
 }
 
