@@ -325,3 +325,25 @@ fn the_notes_of_a_file_and_the_flow_estimate_carry_the_same_notices() {
         "{estimate}\n{notes}"
     );
 }
+
+#[test]
+fn a_series_with_a_blank_gets_the_hint_naming_the_filter() {
+    let names: Vec<String> = ["dir/blank1.mzML", "dir/s1.mzML", "dir/s2.mzML"]
+        .map(String::from)
+        .to_vec();
+    let h = blank_hint(&names).expect("hint");
+    assert!(h.contains("1 of 3") && h.contains("blank1.mzML"), "{h}");
+    assert!(
+        h.contains("table.filter blank_ratio") && h.contains("table compare"),
+        "{h}"
+    );
+}
+
+#[test]
+fn no_blank_or_only_blanks_gets_no_hint() {
+    let v = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    assert!(blank_hint(&v(&["s1.mzML", "s2.mzML"])).is_none());
+    assert!(blank_hint(&v(&["blank1.mzML", "blank2.mzML"])).is_none());
+    // a folder called blank does not make its files blanks
+    assert!(blank_hint(&v(&["blank_runs/s1.mzML", "blank_runs/s2.mzML"])).is_none());
+}
