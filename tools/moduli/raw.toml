@@ -4,5 +4,5 @@ chiavi = { raw = 32 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 229376
-misura = 218481
+misura = 218514
 nota = "api/rawinfo (`raw info`: polarity, scans per level, m/z grid, ion quantum, spectrum type, offset over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first request; inside the engine it took +29.9 KB (+1.28 %, over its cap); CI-measured 218,481 B after wasm-opt (a local build gave 217,402 B: the +0.5 % is CI against that local build); the cap 229,376 was set from the earlier 217,402 B measure (x 1.05 rounded up to 4 KiB, owner decision) and is kept: it is still above the CI figure"
