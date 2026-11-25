@@ -1,5 +1,5 @@
-"""features.union@1: the flowtab .wasm (`flow_union`, through Node) gives the bytes of `mzlab-cli flow run` on the two synthetic tables committed under
-crates/mzlab-feat/tests/data/union (the golden of the engine test), for the defaults and two sets of parameters, and the same error key.
+"""features.union@1 in the browser: `flow_series_csv` of the flowtab .wasm for each table, then `union_tables` of the rotte .wasm (through Node, as flow-web-union.js does) give the bytes of
+`mzlab-cli flow run` on the two synthetic tables committed under crates/mzlab-feat/tests/data/union (the golden of the engine test), for the defaults and two sets of parameters, and the same error key.
 Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
@@ -19,11 +19,12 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 def pkg(tmp_path_factory):
     d = tmp_path_factory.mktemp("flowtab")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "flow_tab")))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "rotte"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-rotte-wasm")))
     return d
 
 
 def wasm(pkg, params):
-    out = run("node", str(ROOT / "tests" / "flowtab_union_node.js"), str(pkg / "pkg"), json.dumps(params), *[str(DATA / t) for t in TABLES]).stdout
+    out = run("node", str(ROOT / "tests" / "flowtab_union_node.js"), str(pkg / "pkg"), str(pkg / "rotte"), json.dumps(params), *[str(DATA / t) for t in TABLES]).stdout
     return json.loads(out)
 
 
