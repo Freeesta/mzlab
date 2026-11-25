@@ -63,7 +63,9 @@ pub struct Counts {
     pub n_side: usize,
     /// The longest run of consecutive scans of the region with at least one ion.
     pub run: usize,
-    pub ul95: f64,
+    /// Upper limit of the net counts at confidence 1 - `alpha` (the thresholds' `alpha`, named in the row as `ul_alpha`).
+    pub ul: f64,
+    pub alpha: f64,
     pub sn_floor: Option<f64>,
 }
 
@@ -142,7 +144,8 @@ fn count_stats(
         n_region: region.len(),
         n_side: sides.len(),
         run,
-        ul95: l_d.max(net.max(0.0) + z * sd),
+        ul: l_d.max(net.max(0.0) + z * sd),
+        alpha: t.alpha,
         sn_floor: hit.map(|h| h.height / (q * lambda.sqrt().max(1.0))),
     }
 }

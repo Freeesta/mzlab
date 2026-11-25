@@ -1,7 +1,7 @@
 //! `raw xic` (`/api/rawxic`, `docs/agenti/raw-access.md`): at this mass and time, is there a peak? Per m/z the trace of the window goes through the
 //! `quant targets` integrator (`tallest`: the same area, height, S/N, shape), then through the ion counts of the file (`ionstat::quantum`, Currie
 //! levels, the one-ion floor) to a verdict `peak`, `trace`, `nothing` or `no_data` that carries its rule. The verdict never changes a number.
-//! The CLI, the app (`Routes::raw_xic_route`) and the site (the lazy `.wasm` `raw`) answer through here, so the bytes are one.
+//! The CLI, the app (`Routes::raw_xic_route`) and the site (the lazy `.wasm` `rawxic`) answer through here, so the bytes are one.
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -25,6 +25,8 @@ pub const GAP_MIN: f64 = 0.05;
 /// Savitzky-Golay half window (0 = automatic) and valley depth (%) of the integrator: the defaults of `quant targets`.
 pub const SMOOTH_HALF: usize = 0;
 pub const VALLEY_PCT: f64 = 10.0;
+/// Most masses one question may hold: a longer list is refused (`err.raw.xic.many`), never cut, so a row is never missing without a word.
+pub const MAX_MASSES: usize = 1000;
 /// Scans probed for the ion quantum of the level.
 pub const PROBE: usize = 64;
 /// The estimator behind `sn` (`peakq_lrauto`), named next to the number.
@@ -159,6 +161,11 @@ impl Ask {
                 .collect()
         };
         let mz = list("mz")?;
+        if mz.len() > MAX_MASSES {
+            return Err(Error::new("err.raw.xic.many")
+                .with("count", mz.len())
+                .with("max", MAX_MASSES));
+        }
         let rt = q.some("rt").ok_or_else(|| bad("rt", ""))?;
         let w: Vec<f64> = rt
             .split(',')

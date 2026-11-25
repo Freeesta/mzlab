@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::error::Result;
+use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::rawxic::Ask;
 use mzlab_core::routes::Query;
@@ -54,17 +54,18 @@ fn enc(v: &str) -> String {
 }
 
 /// `--set a=1,b=2` (repeatable) as pairs; a name outside `SET_KEYS` is refused.
-fn set_of(p: &Parsed) -> std::result::Result<Vec<(String, String)>, String> {
+fn set_of(p: &Parsed) -> std::result::Result<Vec<(String, String)>, Error> {
     let mut out: Vec<(String, String)> = Vec::new();
     for v in p.all("--set") {
         for item in v.split(',').map(str::trim).filter(|s| !s.is_empty()) {
             let (k, val) = item
                 .split_once('=')
                 .filter(|(k, _)| SET_KEYS.contains(k))
-                .ok_or(format!(
-                    "--set takes NAME=VALUE with NAME one of {}: {item}",
-                    SET_KEYS.join(", ")
-                ))?;
+                .ok_or_else(|| {
+                    Error::new("err.cli.rawxic.set")
+                        .with("item", item)
+                        .with("names", SET_KEYS.join(", "))
+                })?;
             out.retain(|(n, _)| n != k);
             out.push((k.to_string(), val.to_string()));
         }
@@ -72,15 +73,17 @@ fn set_of(p: &Parsed) -> std::result::Result<Vec<(String, String)>, String> {
     Ok(out)
 }
 
-fn xic_ask_of(p: &Parsed) -> std::result::Result<XicAsk, String> {
+fn xic_ask_of(p: &Parsed) -> std::result::Result<XicAsk, Error> {
     let files: Vec<PathBuf> = p.pos.iter().map(PathBuf::from).collect();
     if files.is_empty() {
-        return Err("raw xic needs a file".into());
+        return Err(Error::new("err.cli.rawxic.needsFile"));
     }
     let mz = p
         .get("--mz")
-        .ok_or("raw xic needs --mz LIST (masses, comma separated)")?;
-    let rt = p.get("--rt").ok_or("raw xic needs --rt A,B (minutes)")?;
+        .ok_or_else(|| Error::new("err.cli.rawxic.needsMz"))?;
+    let rt = p
+        .get("--rt")
+        .ok_or_else(|| Error::new("err.cli.rawxic.needsRt"))?;
     let set = set_of(p)?;
     let mut query = format!("mz={}&rt={}", enc(mz), enc(rt));
     for (flag, key) in [
@@ -101,16 +104,16 @@ fn xic_ask_of(p: &Parsed) -> std::result::Result<XicAsk, String> {
             .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
-            .ok_or("--limit needs a whole number of rows, 1 or more")?,
+            .ok_or_else(|| Error::new("err.cli.rawxic.limit").with("value", v))?,
     };
     let pol = match p.get("--polarity") {
         None => None,
         Some("+") => Some(1),
         Some("-") => Some(-1),
-        Some(_) => return Err("--polarity takes + or -".into()),
+        Some(v) => return Err(Error::new("err.cli.rawxic.polarity").with("value", v)),
     };
     // the route reads the same text, so a value the site would refuse is refused here before any file is opened
-    let ask = Ask::of(&Query::parse(&query)).map_err(|e| crate::error_text::human_error(&e))?;
+    let ask = Ask::of(&Query::parse(&query))?;
     Ok(XicAsk {
         files,
         ask,
@@ -377,6 +380,11 @@ struct Gathered {
     bad: bool,
 }
 
+/// A failure of this command itself (never of the data): `err.run.internal`.
+fn internal(why: &str) -> Outcome {
+    Outcome::fail_error(&Error::new("err.run.internal").with("detail", why))
+}
+
 /// Each file through `one`; a file that cannot be read keeps its place with an `error` entry, a whole-run failure ends the command.
 fn gather(p: &Parsed, a: &XicAsk) -> std::result::Result<Gathered, Outcome> {
     let mut g = Gathered::default();
@@ -384,11 +392,20 @@ fn gather(p: &Parsed, a: &XicAsk) -> std::result::Result<Gathered, Outcome> {
         let sample = p.sample(f).map_err(|m| Outcome::fail(&m))?;
         match one(f, sample, a) {
             Ok((ans, note)) => {
-                let parsed = ans
+                // a row the summary cannot read, or a file with fewer rows than masses, would shift the summary: refuse instead
+                let parsed: Vec<Value> = ans
                     .rows
                     .iter()
-                    .filter_map(|r| parse(r.as_bytes()).ok())
-                    .collect();
+                    .map(|r| parse(r.as_bytes()).map_err(|e| internal(&format!("{e:?}"))))
+                    .collect::<std::result::Result<_, _>>()?;
+                if parsed.len() != a.ask.mz.len() {
+                    return Err(internal(&format!(
+                        "{} rows for {} masses in {}",
+                        parsed.len(),
+                        a.ask.mz.len(),
+                        name_of(f)
+                    )));
+                }
                 g.per_file.push((name_of(f), parsed));
                 g.entries.push(ans.entry);
                 g.rows.extend(ans.rows);
@@ -461,7 +478,7 @@ pub fn xic_run(args: Vec<String>) -> Outcome {
     };
     let a = match xic_ask_of(&p) {
         Ok(a) => a,
-        Err(e) => return Outcome::fail(&e),
+        Err(e) => return Outcome::fail_error(&e),
     };
     if let Some(e) = missing(&a.files) {
         return crate::sample_select::fail(&e);

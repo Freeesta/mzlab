@@ -219,8 +219,9 @@
           "l_d",
           "z_counts",
           "background_per_scan",
-          "ul95_counts",
-          "ul95_area",
+          "ul_alpha",
+          "ul_counts",
+          "ul_area",
           "flags"
         ],
         "properties": {
@@ -261,7 +262,7 @@
               "nothing",
               "no_data"
             ],
-            "description": "peak: the ions pass the detection limit, the S/N on the one-ion floor and the run of scans; trace: ions above the critical level but not a peak; nothing: neither (see ul95_*); no_data: no scan in the window"
+            "description": "peak: the ions pass the detection limit, the S/N on the one-ion floor and the run of scans; trace: ions above the critical level but not a peak; nothing: neither (see ul_*); no_data: no scan in the window"
           },
           "rule": {
             "type": "string",
@@ -368,14 +369,21 @@
               "null"
             ]
           },
-          "ul95_counts": {
+          "ul_alpha": {
             "type": [
               "number",
               "null"
             ],
-            "description": "95 % upper limit of the net counts; only for `nothing`"
+            "description": "the one-sided error behind ul_counts and ul_area (`--set alpha`): the upper limit has confidence 1 - ul_alpha; only for `nothing`"
           },
-          "ul95_area": {
+          "ul_counts": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "upper limit of the net counts at confidence 1 - ul_alpha; only for `nothing`"
+          },
+          "ul_area": {
             "type": [
               "number",
               "null"

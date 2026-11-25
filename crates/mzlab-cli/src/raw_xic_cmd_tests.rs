@@ -36,7 +36,9 @@ fn a_peak_and_an_empty_mass_get_their_verdicts_with_the_rule_and_the_summary() {
                 .ends_with("-> peak")
     );
     assert_eq!(rows[1].get("verdict").unwrap().str(), Some("nothing"));
-    assert!(rows[1].get("ul95_counts").is_some());
+    assert!(rows[1].get("ul_counts").is_some());
+    // no ion quantum in this fixture: no counts, so no upper limit and no level for it (the values are pinned on the route's own test)
+    assert_eq!(rows[1].get("ul_alpha"), Some(&Value::Null));
     assert_eq!(
         rows[0].get("flags").unwrap().arr()[0].str(),
         Some("no_quantum")
@@ -184,5 +186,43 @@ fn an_unreadable_file_keeps_the_document_with_its_error_and_exit_1() {
     assert!(files[0].get("samples").is_some());
     assert!(files[1].get("error").is_some());
     assert_eq!(v.get("rows").unwrap().arr().len(), 1);
+    let _ = std::fs::remove_dir_all(d);
+}
+
+/// Every usage error of this command is an `err.cli.rawxic.*` key (the text lives in `lang/en`), pinned with its exit code 2 and the `error/1` document.
+#[test]
+fn usage_errors_carry_their_keys() {
+    let (d, f) = mzml_file("xickeys");
+    let base = ["raw", "xic", f.as_str()];
+    for (rest, key) in [
+        (vec!["--rt", "1,2"], "err.cli.rawxic.needsMz"),
+        (vec!["--mz", "241.3"], "err.cli.rawxic.needsRt"),
+        (
+            vec!["--mz", "241.3", "--rt", "1,2", "--set", "bogus=1"],
+            "err.cli.rawxic.set",
+        ),
+        (
+            vec!["--mz", "241.3", "--rt", "1,2", "--limit", "0"],
+            "err.cli.rawxic.limit",
+        ),
+        (
+            vec!["--mz", "241.3", "--rt", "1,2", "--polarity", "x"],
+            "err.cli.rawxic.polarity",
+        ),
+        (vec!["--mz", "241.3", "--rt", "2,1"], "err.raw.xic.param"),
+    ] {
+        let mut a = base.to_vec();
+        a.extend(rest.iter().copied());
+        let o = run(&a);
+        assert_eq!(o.code, 2, "{key}");
+        assert!(o.stderr.contains(key), "{key}: {}", o.stderr);
+        assert_eq!(json(&o).get("error_key").unwrap().str(), Some(key));
+    }
+    let o = run(&["raw", "xic", "--mz", "1", "--rt", "1,2"]);
+    assert_eq!(o.code, 2);
+    assert_eq!(
+        json(&o).get("error_key").unwrap().str(),
+        Some("err.cli.rawxic.needsFile")
+    );
     let _ = std::fs::remove_dir_all(d);
 }

@@ -65,10 +65,12 @@ pub(crate) fn row_json(
         opt3(&mut o, v);
     }
     // the upper limit says how much could hide under a verdict of nothing
-    let ul = c.filter(|_| j.verdict == "nothing").map(|c| c.ul95);
-    o.raw(",\"ul95_counts\":");
+    let ul = c.filter(|_| j.verdict == "nothing").map(|c| c.ul);
+    o.raw(",\"ul_alpha\":");
+    o.opt(c.filter(|_| ul.is_some()).map(|c| c.alpha));
+    o.raw(",\"ul_counts\":");
     opt3(&mut o, ul);
-    o.raw(",\"ul95_area\":");
+    o.raw(",\"ul_area\":");
     opt3(&mut o, ul.zip(q).map(|(u, q)| u * q * dt_s));
     o.raw(",\"flags\":[");
     let mut flags: Vec<&str> = j.flags.clone();

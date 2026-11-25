@@ -102,7 +102,9 @@ fn a_peak_row_has_the_numbers_of_quant_targets() {
         &d,
     );
     let r = &doc(&o)["rows"][0];
-    assert!(q["area"].is_null() || r["verdict"] != "peak");
+    assert!(q["area"].is_null(), "quant targets: {}", q["area"]);
+    assert!(r["area"].is_null(), "raw xic: {}", r["area"]);
+    assert_eq!(r["verdict"], "nothing");
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -134,8 +136,8 @@ fn weak_whole_counts_have_their_counts_and_the_rule_that_decided() {
     assert!(rows[0]["sn_floor"].as_f64().unwrap() >= 3.0);
     assert!(rows[0]["rule"].as_str().unwrap().ends_with("-> peak"));
     assert_eq!(rows[2]["verdict"], "nothing", "{}", rows[2]);
-    assert!(rows[2]["ul95_counts"].as_f64().unwrap() > 0.0);
-    assert!(rows[2]["ul95_area"].as_f64().is_some());
+    assert!(rows[2]["ul_counts"].as_f64().unwrap() > 0.0);
+    assert!(rows[2]["ul_area"].as_f64().is_some());
     assert!(v["files"][0]["samples"][0]["ion_quantum"]["cps"]
         .as_f64()
         .is_some());
@@ -249,5 +251,51 @@ fn the_dry_run_reads_nothing_and_the_json_flag_changes_no_byte() {
     assert_eq!(cli(&j, &d).stdout, plain.stdout);
     // the same question twice gives the same bytes
     assert_eq!(cli(&ok, &d).stdout, plain.stdout);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Exit 5: a `.wiff` of two samples (`tools/wiff_riferimento.py`) has no sample 9; the answer is the `error/1` of `err.sample.unknown` with the ids that exist,
+/// and `--sample 1` and `--sample 2` each read their own sample. Skipped without python3 (never in CI).
+#[test]
+fn an_unknown_sample_of_a_multi_sample_file_is_exit_5() {
+    let d = std::env::temp_dir().join(format!("mzlab_raw_xic_wiff_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
+    let made = Command::new("python3")
+        .arg(tools.join("wiff_riferimento.py"))
+        .arg(&d)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err()
+                && std::env::var("GITHUB_ACTIONS").is_err(),
+            "python3 not available"
+        );
+        eprintln!("skipped: python3 not available");
+        return;
+    }
+    let ask = |sample: &str| {
+        cli(
+            &[
+                "raw", "xic", "two.wiff", "--mz", "200", "--rt", "1,2", "--sample", sample,
+            ],
+            &d,
+        )
+    };
+    let bad = ask("9");
+    assert_eq!(code(&bad), 5, "{}", String::from_utf8_lossy(&bad.stderr));
+    let v = doc(&bad);
+    assert_eq!(v["schema"], "error/1");
+    assert_eq!(v["error_key"], "err.sample.unknown");
+    assert_eq!(v["params"]["ids"], "1, 2");
+    for id in ["1", "2"] {
+        let o = ask(id);
+        assert!(
+            code(&o) <= 1,
+            "{id}: {}",
+            String::from_utf8_lossy(&o.stderr)
+        );
+        assert_eq!(doc(&o)["query"]["sample"], id);
+    }
     let _ = std::fs::remove_dir_all(&d);
 }

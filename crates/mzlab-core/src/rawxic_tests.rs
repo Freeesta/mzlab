@@ -100,7 +100,7 @@ fn nothing_carries_an_upper_limit_and_no_scan_in_the_window_is_no_data() {
     let (rt, y) = trace(|_| 0.0);
     let j = judge(&rt, &y, WIN, Some(Q), &Thresholds::default());
     let c = j.counts.unwrap();
-    assert!((c.ul95 - 3.0).abs() < 0.01, "{}", c.ul95);
+    assert!((c.ul - 3.0).abs() < 0.01, "{}", c.ul);
     let j = judge(&rt, &y, (9.0, 9.5), Some(Q), &Thresholds::default());
     assert_eq!((j.verdict, j.counts), ("no_data", None));
     assert!(j.rule.contains("no scan"), "{}", j.rule);
@@ -223,8 +223,19 @@ fn the_route_gives_a_peak_a_background_ion_and_an_empty_mass() {
     }
     assert_eq!(p.get("sn_estimator").unwrap().str(), Some(SN_ESTIMATOR));
     assert!(
-        rows[1].get("ul95_counts").unwrap().f64().is_some()
-            && p.get("ul95_counts").unwrap().f64().is_none()
+        rows[1].get("ul_counts").unwrap().f64().is_some()
+            && p.get("ul_counts").unwrap().f64().is_none()
+    );
+    // the upper limit names the level it was computed at: the default alpha, and the one asked for
+    assert_eq!(rows[1].get("ul_alpha").unwrap().f64(), Some(0.05));
+    assert_eq!(p.get("ul_alpha"), Some(&crate::json::Value::Null));
+    let w = route("mz=250.3,260&rt=2.5,3.0&alpha=0.01").unwrap();
+    assert_eq!(
+        w.get("rows").unwrap().arr()[1]
+            .get("ul_alpha")
+            .unwrap()
+            .f64(),
+        Some(0.01)
     );
     assert_eq!(
         v.get("ion_quantum").unwrap().get("cps").unwrap().f64(),
@@ -268,6 +279,21 @@ fn a_level_without_scans_is_no_data_and_bad_asks_are_refused_with_their_key() {
         route("mz=250&rt=2,3&mz_offset=abc").unwrap_err().key,
         "err.mz.offset.spec"
     );
+}
+
+/// A list longer than `MAX_MASSES` is refused with its count and the limit, never cut; the list of exactly `MAX_MASSES` is answered whole.
+#[test]
+fn too_many_masses_are_refused_not_cut() {
+    let list = |n: usize| {
+        (0..n)
+            .map(|i| format!("{}", 200 + i))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let e = route(&format!("mz={}&rt=2,3", list(super::MAX_MASSES + 1))).unwrap_err();
+    assert_eq!(e.key, "err.raw.xic.many");
+    let ok = route(&format!("mz={}&rt=2,3", list(super::MAX_MASSES))).unwrap();
+    assert_eq!(ok.get("rows").unwrap().arr().len(), super::MAX_MASSES);
 }
 
 #[test]
