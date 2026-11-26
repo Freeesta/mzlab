@@ -6,14 +6,16 @@ use js_sys::Function;
 use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Out};
 use mzlab_feat::flow_ms2::json_params;
+use mzlab_feat::quant_targets::Hint;
 use wasm_bindgen::prelude::*;
 
-/// What a `quant.targets` run made: the long table (CSV), the `quant-targets-log/1` log and the warning keys.
+/// What a `quant.targets` run made: the long table (CSV), the `quant-targets-log/1` log, the warning keys and the hints.
 #[wasm_bindgen]
 pub struct QuantTargets {
     csv: String,
     log: String,
     warnings: Vec<String>,
+    hints: Vec<Hint>,
 }
 
 #[wasm_bindgen]
@@ -32,6 +34,27 @@ impl QuantTargets {
         o.raw("[");
         for (i, w) in self.warnings.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(w);
+        }
+        o.raw("]");
+        o.0
+    }
+
+    /// The hints (`--offset auto`, `--rt-ref auto` when the data ask for them) as `[{"key","params":{name: text}}]`: the `key` and `params` of the
+    /// `hints` of `mzlab-cli quant targets --json`; `[]` when the data point at no switch. Never part of the table or the log.
+    pub fn hints(&self) -> String {
+        let mut o = Out::default();
+        o.raw("[");
+        for (i, h) in self.hints.iter().enumerate() {
+            o.raw(if i > 0 { ",{\"key\":" } else { "{\"key\":" })
+                .str(h.key)
+                .raw(",\"params\":{");
+            for (k, (name, v)) in h.params.iter().enumerate() {
+                o.raw(if k > 0 { "," } else { "" })
+                    .str(name)
+                    .raw(":")
+                    .str(v);
+            }
+            o.raw("}}");
         }
         o.raw("]");
         o.0
@@ -68,5 +91,6 @@ pub fn flow_quant_targets(
         csv: out.csv,
         log: out.log,
         warnings: out.warnings,
+        hints: out.hints,
     })
 }

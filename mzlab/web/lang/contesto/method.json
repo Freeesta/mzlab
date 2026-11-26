@@ -14,5 +14,15 @@
   "method.doc.solvent": "Label of the row of an LC pump solvent in the recorded method; {ch} = channel (A, B...).",
   "method.m.error": "Error reading a .m method in the Method window; {name} = folder, {message} = reason.",
   "method.reg.go": "Accessible name of the button of an error-log entry in the method window: moves the cursor to its time; {t} = time in minutes.",
-  "method.doc.notes": "Title of the list, at the top of the method section in the Method window, of the method/1.warnings entries (parts not decoded, missing, truncated)."
+  "method.doc.notes": "Title of the list, at the top of the method section in the Method window, of the method/1.warnings entries (parts not decoded, missing, truncated).",
+  "method.file.damaged.experiment_header": "Line under Tandem-MS parameters by segment in the Method window: the header of experiment {experiment} of the method is damaged and was not read.",
+  "method.file.damaged.mass_range": "Line under Tandem-MS parameters by segment in the Method window: the mass range of experiment {experiment} of the method is damaged and was not read.",
+  "method.file.val.eV": "Cell of the tandem-MS segment table in the Method window: an energy in electronvolts; {v} = number.",
+  "method.file.val.V": "Cell of the tandem-MS segment table in the Method window: a voltage in volts; {v} = number.",
+  "method.file.val.ms": "Cell of the tandem-MS segment table in the Method window: a time in milliseconds; {v} = number.",
+  "method.file.product": "Precursor and product m/z of an MRM transition in the segment table of the Method window; {q1} = precursor, {q3} = product.",
+  "method.file.range": "Scanned m/z range in the segment table of the Method window; {lo} = low, {hi} = high.",
+  "method.file.msLevel": "MS level in the scan column of the segment table of the Method window; {n} = level.",
+  "method.file.sep": "Separator between the scan type, MS level and name in one cell of the segment table of the Method window.",
+  "method.file.listSep": "Separator between several collision energies in one cell of the segment table of the Method window."
 }

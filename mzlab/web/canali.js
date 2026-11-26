@@ -133,6 +133,8 @@
   /** the label of the row for screen readers @param {Nodo} n */
   /** @param {Nodo} n @param {string} et */
   const rowLabelOf = (n, et) => n.n ? T("canali.row", { et, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : et;
+  /** the key a row has in p._look and on its trace (tk): a transition / SIM ion its own key, any other channel its group @param {Nodo} n @param {any} [_o] */
+  const key = (/** @type {Nodo} */ n, /** @type {boolean} */ _o) => isTr(n) ? nodeKey(n) : n.group;
   /** the rows of the tree (a collapsed parent hides its descendants); a SIM picker (sim) shows the m/z alone, the rest in the hover text
    * @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles @param {boolean} [sim] */
   function rows(p, tree, sel, onlySrm, nfiles, sim = false) {
@@ -147,7 +149,7 @@
       const t = sim ? (n.n ? T("canali.row", { et: n.label, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : n.label) : tip(n);
       const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"></span></span>` : `<span class="can-ck" aria-hidden="true"></span>`;
       const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-group="${EH(n.group)}" ${sim ? ` aria-label="${EH(rowLabelOf(n, et))}"` : n.n ? ` aria-description="${EH(T("canali.row.desc", { n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }))}"` : ""}${t ? ` title="${EH(t)}"` : ""}>` +
-        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}<span class="can-et">${EH(et)}</span></span>`;
+        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}${key(n, onlySrm) in (p._look || {}) || onlySrm ? SIMUI.swatch(p, key(n, onlySrm), sel.has(n.group)) : ""}<span class="can-et">${EH(et)}</span></span>`;
       if (sim) return head + `</div>`;
       return head + `<span class="can-sg" aria-hidden="true"${sgTitle(n.code)}>${EH(sgShort(n.code))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt_start_min.toFixed(1)}–${+n.rt_end_min.toFixed(1)}` : ""}</span>` +
         (many ? `<span class="can-fl" aria-hidden="true" title="${EH(T("canali.files.title"))}">${n.files}</span>` : "") + `</div>`;
@@ -271,6 +273,9 @@
         p._canFocus = group || kind;
         act(only && !(/** @type {HTMLElement} */ (e.target)).closest(".can-hit") && !e.ctrlKey && !e.metaKey);
       };
+      // the row under the mouse or the focus: its trace is drawn on, the others fade (a row of another kind has no trace here)
+      const node = tree.find(n => n.group === group), hk = node && window.SIMUI ? key(node, only) : null;
+      if (hk != null) { row.onpointerenter = row.onfocus = () => SIMUI.lit(p, hk); row.onpointerleave = row.onblur = () => SIMUI.lit(p, null); }
       row.onkeydown = e => {
         // the tree owns its keys: the page-wide handlers (Space = play the scans, arrows = step them) must not see them
         if (/^(Arrow(Up|Down|Left|Right)|Home|End| |Enter)$/.test(e.key)) e.stopPropagation();
@@ -302,20 +307,30 @@
   async function series(p, files) {
     const list = chosen(p).filter((/** @type {string} */ o) => !(p.kind === "bpc" && o === "tic")), miss = [];
     await Promise.all(files.map((/** @type {any} */ f) => canali(f.k).catch(() => null)));
-    const one = list.length === 1, out = [];
+    const one = list.length === 1, out = [], sims = window.SIMUI ? SIMUI : null, tr = albero(files).filter(isTr), grpKey = new Map(tr.map(n => [n.group, nodeKey(n)])), allSr = tr.map(nodeKey);
+    // SIM / SRM: the colour is that of the ion, by its place among ALL the ions of the panel (SIMUI.style); the other channels keep a slot of the panel (the first ticked takes the first colour)
+    const ions = sims ? sims.ions(p).map((/** @type {any} */ x) => x.key) : [], keys = ions.length && allSr.every(k => ions.includes(k)) ? ions : allSr;
+    const slots = /** @type {Map<string, number>} */ (p._slot ||= new Map()), slot = (/** @type {string} */ g) => { if (!slots.has(g)) slots.set(g, slots.size); return /** @type {number} */ (slots.get(g)); };
+    const sty = (/** @type {any} */ f, /** @type {number} */ fi, /** @type {string} */ g, /** @type {number | undefined} */ rank = undefined) => {
+      const k = grpKey.get(g);
+      if (k != null && sims) return sims.style(f, keys.indexOf(k), keys.length, rank);
+      return { color: one ? f.color : PAL[slot(g) % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
+    };
+    // the line of every row of the picker, written once here from the same call as the traces (the swatches of the rows read it)
+    const look = /** @type {Record<string, any>} */ ({}), first = files[0];
+    if (first && sims) [...new Set([...tr.map(n => n.group), ...list, ...slots.keys()])].forEach(g => { look[grpKey.get(g) ?? g] = sims.lookOf(sty(first, 0, g, 0), grpKey.has(g) ? keys.length : one ? 1 : 2, files.length); });
     for (let ci = 0; ci < list.length; ci++) {
       const group = list[ci];
       const got = await Promise.all(files.map(async (/** @type {any} */ f, /** @type {number} */ fi) => {
         const c = find(f.k, group);
         if (!c) { miss.push({ f, group }); return null; }
         const t = await traccia(f.k, c, { kind: p.kind, mz0: p.mz0, mz1: p.mz1 }); if (!t || !t.rt.length) return null;
-        const et = c.label;
-        // SIM / SRM channels: colour = sample, dash = channel (SIMUI.style); other channels: colour = channel, dash = file
-        const sr = c.family === "sim" || c.family === "srm", st = sr && window.SIMUI ? SIMUI.style(f, ci, list.length, files.length) : { color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
-        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${group}`, ion: et, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
+        const et = c.label, sr = c.family === "sim" || c.family === "srm", st = sty(f, fi, group);
+        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${group}`, ion: et, tk: grpKey.get(group) ?? group, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
       }));
       got.forEach(s => { if (s) out.push(s); });
     }
+    if (sims && sims.keep(p, look)) ctl(p);
     p._canMiss = miss.map(m => ({ f: m.f, label: (albero(files).find(n => n.group === m.group) || { label: m.group }).label, one }));
     return out;
   }

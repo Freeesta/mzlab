@@ -7,12 +7,8 @@ use mzlab_core::json::round;
 use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams, LrAutoPeak, Split};
 use mzlab_core::routes::Routes;
 
-#[cfg(not(target_arch = "wasm32"))]
-use super::params::OffsetMode;
-use super::params::{Params, RtRef};
-#[cfg(not(target_arch = "wasm32"))]
-use super::run::Row;
-use super::run::{peak_in, warn, Choice, GroupOffset};
+use super::params::{OffsetMode, Params, RtRef};
+use super::run::{peak_in, warn, Choice, GroupOffset, Row};
 use super::targets::{Role, Target};
 
 /// What the internal reference said in one file: where its apex was looked for, where it was found and the shift applied to every window.
@@ -84,7 +80,7 @@ fn runner_up(rt: &[f64], y: &[f64], search: (f64, f64), p: &Params) -> Option<(f
 }
 
 /// A pointer to a switch the data suggests (`note.quant.targets.*` of the language files, `{name}` filled from `params`): said on stderr by the
-/// CLI, never written in the table or the log, so no byte of an existing output depends on it.
+/// CLI and shown on the card of the Flow step, never written in the table or the log, so no byte of an existing output depends on it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hint {
     pub key: &'static str,
@@ -93,7 +89,6 @@ pub struct Hint {
 
 /// The switches the evidence of the reference row points to: the offset at 0 while the reference is missed (`--offset auto`), and a reference
 /// whose apex moves 0.1 min or more between files while the windows stay (`--rt-ref auto`). Blank files do not count.
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn hints(p: &Params, targets: &[Target], rows: &[Row], blank: &[bool]) -> Vec<Hint> {
     let mut out = Vec::new();
     let Some(r) = targets.iter().position(|t| t.role == Role::Reference) else {

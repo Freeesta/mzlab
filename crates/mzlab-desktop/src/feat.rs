@@ -413,6 +413,7 @@ impl State {
             "feat/polpair" => self.feat_polpair(p),
             "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
             "feat/preview" => self.feat_preview(p),
+            "feat/estimate" => self.feat_estimate(p),
             "feat/family" => self.feat_family(p),
             "feat/files" => self.feat_files(),
             "feat/import" => self.op_import(p),
