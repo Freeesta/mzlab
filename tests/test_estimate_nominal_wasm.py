@@ -51,3 +51,19 @@ def test_the_wasm_and_the_cli_write_the_same_nominal_member(built):
     # the cuts are parameters of the step: the browser runner passes them and the member prints them
     cut = json.loads(run("node", str(ROOT / "tests" / "estimate_wasm_node.js"), str(pkg), str(idx), file.name, json.dumps({"hint_between": 0.9, "hint_split": 0.9})))
     assert (cut["nominal"]["cut_between"], cut["nominal"]["cut_split"]) == (0.9, 0.9)
+
+
+def test_the_numbers_the_panel_shows_are_those_of_estimate_json(built):
+    """The Pipeline panel's line (`PIPEFORM.nominalHint`) reads the member the `.wasm` wrote and carries the numbers of the CLI's member: counts and heights as they are, the shares as percent with one decimal."""
+    file, idx, pkg = built
+    text = run("node", str(ROOT / "tests" / "estimate_wasm_node.js"), str(pkg), str(idx), file.name)
+    shown = json.loads(subprocess.run(["node", str(ROOT / "tests" / "nominal_hint_node.js")], input=text, cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout)
+    n = json.loads(cli("estimate", str(file), "--json").stdout)["files"][0]["nominal"]
+    assert n["hint"] is True
+    pct = lambda x: int(x * 1000 + 0.5) / 10
+    want = {"rows": n["rows"], "between": n["between"], "between_pct": pct(n["between_share"]), "height_now": n["height_now"], "height_nominal": n["height_nominal"], "split": n["split"],
+            "split_pct": pct(n["split_share"]), "reach_now": n["reach_now"], "reach_nominal": n["reach_nominal"], "cut_between_pct": pct(n["cut_between"]), "cut_split_pct": pct(n["cut_split"])}
+    assert shown == want
+    # no line without the signature: a cut above both shares turns the member's hint off
+    quiet = run("node", str(ROOT / "tests" / "estimate_wasm_node.js"), str(pkg), str(idx), file.name, json.dumps({"hint_between": 0.9, "hint_split": 0.9}))
+    assert subprocess.run(["node", str(ROOT / "tests" / "nominal_hint_node.js")], input=quiet, cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout == "null"

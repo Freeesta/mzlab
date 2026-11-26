@@ -340,6 +340,22 @@ fn preview_and_version_routes_equal_the_wasm_functions() {
 }
 
 #[test]
+fn estimate_route_equals_estimate_of_on_the_same_index() {
+    use mzlab_ops::run::feat::run_estimate::estimate_of;
+    let e = setup();
+    for params in ["{}", r#"{"hint_between":0.9}"#] {
+        let mut ix = open(&e.paths[0]);
+        let given = mzlab_feat::flow_ms2::json_params(params).unwrap();
+        let (direct, _) = estimate_of(&mut ix, NAMES[0], &given).unwrap();
+        assert_eq!(
+            e.r("feat/estimate", json!({"name": NAMES[0], "params": params})),
+            direct,
+            "params {params}"
+        );
+    }
+}
+
+#[test]
 fn files_route_lists_the_indexed_files() {
     let e = setup();
     let mut want: Vec<&str> = NAMES.to_vec();
