@@ -166,7 +166,7 @@ try:
             preview("sig_file.mzidx"); pg.wait_for_selector("#pipe-nominal-hint:not([hidden])", timeout=60000)
             preview("hr_file.mzidx"); assert pg.locator("#pipe-nominal-hint").is_hidden()
         step("a unit file under the cuts and a high-resolution file show no line; the previous file's line is gone", no_hint_without_signature)
-    b.close()
+        b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
 for s in steps: print(s)
