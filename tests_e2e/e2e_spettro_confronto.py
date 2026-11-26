@@ -59,11 +59,15 @@ def parameters(pg):
     w = pg.inner_text("#spcmp-out"); assert "tolerance 1 Da" in w and "20 eV" in w and "differ" not in w, w
     assert pg.evaluate("document.querySelectorAll('#spcmp-out .warn').length") == 0
 def side_offset(pg, s, text):
-    pg.select_option(f"#spcmp [data-s={s}] [data-f=file]", label="Shifted_c" if s == "b" else "Sample_a")
+    want = "Shifted_c" if s == "b" else "Sample_a"                                           # the option text may carry the extension
+    v = pg.evaluate(f"[...document.querySelectorAll('#spcmp [data-s={s}] [data-f=file] option')].find(o => o.textContent.includes('{want}')).value")
+    pg.select_option(f"#spcmp [data-s={s}] [data-f=file]", value=v)
     pg.fill(f"#spcmp [data-s={s}] [data-f=off]", text)
 def offsets(pg):
     """The offset of a side goes to its route (`mzoff=`) and comes back as evidence: none leaves the query and the cosine as they were; 0.55 aligns the bins; auto measures it."""
-    urls = []; pg.on("request", lambda r: urls.append(r.url) if "api/spectrum" in r.url else None)
+    # the route is answered in the page (no network request to see): record the queries the card hands to fetch
+    pg.evaluate("(() => { window.__q = []; const f0 = window.fetch; window.fetch = function (u, init) { if (typeof u === 'string' && u.includes('api/spectrum')) window.__q.push(u); return f0.call(window, u, init); }; })()")
+    queries = lambda: pg.evaluate("window.__q")
     for s in "ab":
         pg.fill(f"#spcmp [data-s={s}] [data-f=rt0]", "0.9"); pg.fill(f"#spcmp [data-s={s}] [data-f=rt1]", "1.3")
     side_offset(pg, "a", ""); side_offset(pg, "b", "")
@@ -72,10 +76,10 @@ def offsets(pg):
         pg.evaluate("document.querySelector('#spcmp-out').innerHTML = ''"); pg.click("#spcmp-go")
         wait_for_js(pg, "document.querySelector('#spcmp-out .cos')", 60000)
         t = pg.inner_text("#spcmp-out .cos"); assert want in t, (want, t)
-    run_cos("0.6207"); assert urls and not any("mzoff" in u for u in urls), urls                # no offset: the query and the bins are the ones of before
+    run_cos("0.6207"); assert queries() and not any("mzoff" in u for u in queries()), queries()                # no offset: the query and the bins are the ones of before
     assert "0 Da" in pg.inner_text("#spcmp-offs"), pg.inner_text("#spcmp-offs")                # the evidence is there for 0 too
-    urls.clear(); pg.fill("#spcmp [data-s=b] [data-f=off]", "0.55"); run_cos("1.0000")
-    assert sum("mzoff=0.55" in u for u in urls) == 1, urls                                       # only side B asked for it
+    pg.evaluate("window.__q = []"); pg.fill("#spcmp [data-s=b] [data-f=off]", "0.55"); run_cos("1.0000")
+    assert sum("mzoff=0.55" in u for u in queries()) == 1, queries()                                       # only side B asked for it
     ev = pg.inner_text("#spcmp-offs"); assert "0.55 Da" in ev and "B" in ev, ev
     pg.fill("#spcmp [data-s=b] [data-f=off]", "auto:200@0.5"); run_cos("1.0000")
     ev = pg.inner_text("#spcmp-offs"); assert "0.55 Da" in ev and "m/z 200" in ev and "found" in ev and "3 scans" in ev, ev   # auto: the ion, the scans, the status
@@ -83,7 +87,7 @@ def offsets(pg):
     ev = pg.inner_text("#spcmp-offs"); assert "not found" in ev and "no offset was applied" in ev, ev   # an ion not found says so, with the engine's warning, and applies 0
     pg.fill("#spcmp [data-s=b] [data-f=off]", "x1"); pg.click("#spcmp-go")
     wait_for_js(pg, "document.querySelector('#spcmp-msg').classList.contains('err') && document.querySelector('#spcmp-msg').textContent.trim() !== ''", 60000)
-    assert "x1" in pg.inner_text("#spcmp-msg"), "the route's refusal of a bad offset reaches the card"
+    m = pg.inner_text("#spcmp-msg"); assert "x1" in m, ("the route refusal of a bad offset reaches the card", m)
     pg.fill("#spcmp [data-s=b] [data-f=off]", "")
 def empty(pg):
     """A window with no scan is an error the card says, not a blank card."""

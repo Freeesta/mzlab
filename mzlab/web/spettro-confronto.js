@@ -46,7 +46,7 @@ async function sideOf(x) {
   const query = `k=${x.f.k}&rt0=${x.a}&rt1=${x.b}&level=2&precursor=${x.prec}&rebin=nominal${x.off ? "&mzoff=" + encodeURIComponent(x.off) : ""}`;
   const body = await (await fetch("api/spectrum?" + query)).text();
   let j = null; try { j = JSON.parse(body); } catch (_) { /* not JSON: the engine is asked below and says so */ }
-  if (j && j.error) throw W_.I18N.err(j);
+  if (j && (j.error || j.error_key)) throw W_.I18N.err(j);
   return `{"name":${JSON.stringify(x.f.label || x.f.file)},"query":${JSON.stringify(query)},"precursor":${x.prec},"ce_values":${JSON.stringify(cesOf(x.f, x.prec))},"spectrum":${body}}`;
 }
 
