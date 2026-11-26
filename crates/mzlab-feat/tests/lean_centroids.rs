@@ -12,7 +12,14 @@ use mzlab_feat::recipe::Recipe;
 
 /// 40 MS1 scans, each a profile of three Gaussian peaks of width 0.35 Da on a 0.1 Da grid (labelled profile, so the screen centroids it).
 fn profile_index(label_profile: bool) -> Vec<u8> {
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "lean".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "lean".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(40).unwrap();
     for i in 0..40 {
         let grid: Vec<f64> = (0..300).map(|b| 200.0 + b as f64 * 0.1).collect();
@@ -21,7 +28,10 @@ fn profile_index(label_profile: bool) -> Vec<u8> {
             .map(|&m| {
                 [(210.0, 9.0e4), (221.0, 4.0e4), (228.0, 2.0e4)]
                     .iter()
-                    .map(|&(c, a): &(f64, f64)| a * (-((m - c) * (m - c)) / (2.0 * 0.15 * 0.15)).exp() * (1.0 + 0.01 * (i % 5) as f64))
+                    .map(|&(c, a): &(f64, f64)| {
+                        a * (-((m - c) * (m - c)) / (2.0 * 0.15 * 0.15)).exp()
+                            * (1.0 + 0.01 * (i % 5) as f64)
+                    })
                     .sum::<f64>() as f32
             })
             .collect();
@@ -64,17 +74,26 @@ fn a_lean_index_is_centroided_on_the_decision_as_the_whole_index_is() {
     let n = b.len() as u64;
     let mut r = Recipe::lr(0.1, 3e3, 7e3);
     let mut whole = Index::open(b.clone(), n).unwrap();
-    assert!(centroid_wanted(&mut whole, &r), "the series is profile, not sparse counts");
+    assert!(
+        centroid_wanted(&mut whole, &r),
+        "the series is profile, not sparse counts"
+    );
     let mut from_whole = centroids_of(&mut whole, &r).unwrap().expect("centroids");
 
     let mut lean = Index::open_lean(b.clone(), n).unwrap();
     // without the scan table the lean index cannot decide: it reads as not profile
     assert!(!centroid_wanted(&mut lean, &r));
     r.screen.centroid_files = vec![true];
-    let mut from_lean = centroids_of_file(&mut lean, &r, 0).unwrap().expect("centroids from the lean index");
+    let mut from_lean = centroids_of_file(&mut lean, &r, 0)
+        .unwrap()
+        .expect("centroids from the lean index");
     assert_eq!(from_whole.fwhm, from_lean.fwhm);
     let (pw, pl) = (peaks(&mut from_whole.index), peaks(&mut from_lean.index));
-    assert!(!pw.is_empty() && pw.len() < 40 * 300 / 10, "reduced to centroids: {}", pw.len());
+    assert!(
+        !pw.is_empty() && pw.len() < 40 * 300 / 10,
+        "reduced to centroids: {}",
+        pw.len()
+    );
     assert_eq!(pw, pl);
 }
 

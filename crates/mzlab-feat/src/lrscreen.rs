@@ -316,7 +316,11 @@ pub fn centroids_of<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Optio
 
 /// `centroids_of` for file `k` of a series: the decision kept in `Screen::centroid_files` when there is one (so an index opened lean, with no scan table
 /// to decide on, gets the answer of the whole one), and the scan table loaded now for the file that is centroided.
-pub fn centroids_of_file<R: ReadAt>(index: &mut Index<R>, r: &Recipe, k: usize) -> Result<Option<Centroids>> {
+pub fn centroids_of_file<R: ReadAt>(
+    index: &mut Index<R>,
+    r: &Recipe,
+    k: usize,
+) -> Result<Option<Centroids>> {
     let Some(&wanted) = r.screen.centroid_files.get(k) else {
         return centroids_of(index, r);
     };

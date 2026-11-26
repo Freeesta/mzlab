@@ -14,9 +14,7 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_family = "wasm")]
 use crate::blocks_of;
 use crate::run::recipe_for;
-use crate::{
-    js_err, open_one, progress_js, run, spill_js, to_sink, JsSink, JsStored,
-};
+use crate::{js_err, open_one, progress_js, run, spill_js, to_sink, JsSink, JsStored};
 
 /// The recipe `text` on the first of the indexes `sizes` (read with `read(k, offset, length)`) and the facts of every file, or the refusal of a
 /// series that mixes polarities or resolutions. One index is open at a time, each with the block budget of a file open alone: its facts, its kind and
@@ -32,9 +30,9 @@ pub fn series_recipe(
     let mut ix = open_one(read, 0, sizes[0])?;
     let mut r = recipe_for(text, &mut ix)?;
     let (mut facts, mut kinds, mut wanted) = (Vec::new(), Vec::new(), Vec::new());
-    for k in 0..sizes.len() {
+    for (k, &size) in sizes.iter().enumerate() {
         if k > 0 {
-            ix = open_one(read, k, sizes[k])?;
+            ix = open_one(read, k, size)?;
         }
         let f = file_facts(&ix);
         let name = ix.source.get("name").and_then(|v| v.str()).unwrap_or("");
