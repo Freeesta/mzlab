@@ -3,6 +3,6 @@ pacchetto = "mzlab-ionfacts-wasm"
 chiavi = { ionfacts = 37 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 122880
-misura = 110000
-nota = "ion-scale method values of `raw xic --ions` (`ionfacts::read_json`: the dwell of the method/1 of a file, with the experiment it comes from) for api/rawxic; lazy, loaded by rust-filemethod.js at the first `--ions` request; a module of its own because inside `filemethod` it grew that module +9,176 B (+7.8 %, over the 5 % rule) and its 118,268 B cap is unchanged; size to be replaced by the CI size step (NEW module so no base)"
+tetto = 86016
+misura = 81421
+nota = "ion-scale method values of `raw xic --ions` (`ionfacts::read_json`: the dwell of the method/1 of a file, with the experiment it comes from) for api/rawxic; lazy, loaded by rust-filemethod.js at the first `--ions` request; a module of its own because inside `filemethod` it grew that module +9,176 B (+7.8 %, over the 5 % rule) and its 118,268 B cap is unchanged; 81,421 B after wasm-opt (CI size step, NEW module so no base), cap = measurement x 1.05 rounded up to 4 KiB"
