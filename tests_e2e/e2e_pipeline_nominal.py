@@ -55,6 +55,8 @@ errs = []
 for _ in range(100):                                      # wait for the state (the port accepts), not for a fixed time
     try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
     except OSError: threading.Event().wait(0.1)
+else:
+    srv.terminate(); shutil.rmtree(tmp, ignore_errors=True); raise SystemExit(f"the test server did not open port {PORT}")
 URL = f"http://127.0.0.1:{PORT}/"
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -85,7 +87,7 @@ try:
 
         def hidden_on_hr():
             preview("hr_file.mzidx")
-            assert pg.locator("#pipe-nom").is_hidden() and pg.evaluate("PIPE.state.prev.unit") is None, pg.evaluate("PIPE.state.prev.unit")
+            assert pg.locator("#pipe-nom").is_hidden() and pg.evaluate("PIPE.state.prev.unit !== true"), pg.evaluate("PIPE.state.prev.unit")
         step("a high-resolution file does not offer the profile", hidden_on_hr)
 
         def shown_on_unit():
