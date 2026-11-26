@@ -5,7 +5,7 @@ use super::Entry;
 pub(crate) static TABLE: &[Entry] = &[
     Entry::new("peak auto", "mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak", crate::peaks_auto_cmd::run).schema("peak-auto/1"),
     Entry::new("peak auto-lr", "mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace", crate::peaks_auto_lr_cmd::run).schema("peak-auto-lr/1"),
-    Entry::new("peak noise", "mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N; --ions: ion scale too", crate::peak_noise_cmd::run).schema("noise-floor/1").exits(&[0, 1, 2, 4]),
+    Entry::new("peak noise", "mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N", crate::peak_noise_cmd::run).schema("noise-floor/1").exits(&[0, 1, 2, 4]),
     Entry::new("peak edges", "mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak", crate::peaks_edges_cmd::run),
     Entry::new("peak area", "mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line", crate::plain::peak_area_cmd::run),
     Entry::new("peak window", "mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)", crate::plain::peak_window_cmd::run),

@@ -9,6 +9,10 @@ use super::related;
 use crate::cmd::entries;
 use crate::Outcome;
 
+#[cfg(test)]
+#[path = "find_ions_tests.rs"]
+mod ions_tests;
+
 /// How many matches the answer lists at most.
 const TOP: usize = 5;
 
@@ -257,10 +261,6 @@ mod states_tests;
 #[cfg(test)]
 #[path = "find_multi_tests.rs"]
 mod multi_tests;
-
-#[cfg(test)]
-#[path = "find_ions_tests.rs"]
-mod ions_tests;
 
 #[cfg(test)]
 #[path = "find_nominal_tests.rs"]
