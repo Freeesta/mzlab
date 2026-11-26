@@ -14,7 +14,7 @@
 const COMMANDS_TAB = [
   { id: "view.zoom", name: "history.zoom", module: "eventi.js", where: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js", "zoom-reset.js"], fields: ["zoom", "zoomY", "lock"],
     params: "m/z or RT interval, intensity interval", key: "wheel, Backspace, double click, Shift+drag", merge: "a burst of wheel steps, a drag and a pan are one step", undo: "snapshot" },
-  { id: "peaks.integration", name: "history.int", module: "picchi.js", where: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "panels-undo.js", "integra-estremi.js", "integra-valli.js", "integra-tutti.js"], fields: ["ints", "isel"],
+  { id: "peaks.integration", name: "history.int", module: "picchi.js", where: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "panels-undo.js", "integra-estremi.js", "integra-valli.js", "integra-tutti.js", "integra-clic.js"], fields: ["ints", "isel"],
     params: "limits of the integrated peak", key: "I, Del", merge: "an edge drag is one step", undo: "snapshot" },
   { id: "panel.fields", name: "history.fields", module: "grafici.js", where: ["grafici.js", "pannelli.js", "fondo-spettro.js", "fondo-piatto.js", "sottrazione.js", "mappa.js", "barra.js"], fields: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
     params: "blank, background, smoothing, correction, reference", key: "", merge: "", undo: "snapshot" },

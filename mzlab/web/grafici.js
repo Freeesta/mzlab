@@ -443,7 +443,7 @@ async function drawLines(p) {
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     if (ESP.mrm(p)) { if (it.fol && window.SEGUE) SEGUE.dots(g, X, Y, U, s, it); if (it.splits && window.INTVALLI && !it.fol) INTVALLI.paint(p, g, X, Y, U, s, it); } else for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }      // SIM/MRM: no bars, the two anchors are buttons (integra-estremi.js); a follower gets two dashed rings
     AREALBL.draw(p, g, X, Y, U, s, it, r, sr);
-  }
+  } if (typeof AREALBL !== "undefined") AREALBL.flush(p, g);
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });

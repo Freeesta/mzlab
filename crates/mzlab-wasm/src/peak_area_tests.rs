@@ -105,3 +105,27 @@ fn noise_floor_is_the_core_text() {
         "E{\"key\":\"err.noise.noBackground\"}"
     );
 }
+
+#[test]
+fn lr_click_is_the_core_text() {
+    use mzlab_core::peakq_click::{lr_click, ClickGuard};
+    use mzlab_core::peakq_lr::LrParams;
+    let (rt, y) = trace();
+    let want = lr_click(
+        &rt,
+        &y,
+        2.02,
+        true,
+        &LrParams::default(),
+        &ClickGuard::default(),
+    )
+    .to_json();
+    let d = LrParams::default();
+    let params = [d.win, d.edge_frac, d.sn_min, d.multi, d.tail];
+    assert_eq!(
+        super::lr_click(&rt, &y, 2.02, true, &params, &[5.0, 3.0, 0.25, 0.0]),
+        want
+    );
+    assert!(want.starts_with("{\"ok\":true,\"edges\":["), "{want}");
+    assert_eq!(super::lr_click(&rt, &y, 2.02, true, &params, &[5.0]), "");
+}

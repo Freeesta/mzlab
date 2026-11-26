@@ -26,7 +26,7 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 /** @type {Record<string, number>} */
 // bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
 // 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0, lrSmooth: 0, lrValley: 10, lrSn: 5, lrSplit: 0 };      // lr*: integra-tutti.js, = LrAutoParams::default
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, minPts: 5, minSn: 3, bmode: 0, lrSmooth: 0, lrValley: 10, lrSn: 5, lrSplit: 0 };      // lr*: integra-tutti.js, = LrAutoParams::default
 const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("peaks")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 const BMODES = ["zero", "edges", "line"];
 function pkSave() { try { localStorage.setItem(NOMI.KEY("peaks"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
@@ -142,19 +142,27 @@ async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
   add.forEach((/** @type {number[]} */ w) => p.ints.push(intRec(p, s, w[0], w[1], [w[0], w[2], w[1], w[3]])));
   draw(p);
 }
-// automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
-async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x) {
+// the window of a click at x with the engine's edges [l, r]: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
+function clickWin(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x, /** @type {number} */ l, /** @type {number} */ r) {
+  const c = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key);
+  const on = c.find((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS); if (on) { if (on.id === p._intCur && Date.now() - p._intT < 4000) { p.isel = on.id; draw(p); } else nearMsg(I18N.t("int.clash")); return null; }     // the peak just made or edited is not "another one": a click on it only selects it
+  p._intCur = null; c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
+  return r - l < 1e-6 ? null : [l, r];
+}
+// one click at time x on the trace s (integra-clic.js): the peak whose apex is nearest, refused with its evidence when it is junk (force keeps it)
+async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x, force = false) {
   if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
-  const ed = await autoEdges(s, x);
-  if (!ed) { nearMsg(I18N.t("int.belowSn")); return; }
-  let [l, r] = ed;
-  {
-    const c = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key);
-    const on = c.find((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS); if (on) { if (on.id === p._intCur && Date.now() - p._intT < 4000) { p.isel = on.id; draw(p); } else nearMsg(I18N.t("int.clash")); return; }     // the peak just made or edited is not "another one": a click on it only selects it
-    p._intCur = null; c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
-    if (r - l < 1e-6) return;
-  }
-  addInt(p, s, l, r);
+  if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js");
+  const r = await INTCLICK.ask(s, x, force); if (!r) { nearMsg(I18N.t("int.autoOff")); return; }
+  if (!r.ok) { INTCLICK.refuse(p, s, r); return; }
+  const w = clickWin(p, s, x, r.edges[0], r.edges[1]);
+  if (w && addInt(p, s, w[0], w[1])) INTCLICK.done(p, s, r);
+}
+// the click of the page (integra-clic.js): the trace nearest the pointer, or all the visible ones when the panel says so; shift = keep a refused window
+const INTCLICK_ALL = async (/** @type {Bag} */ p, /** @type {number} */ x) => { if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js"); return INTCLICK.atRt(p, x); };
+async function intClick(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {number | null | undefined} */ py, force = false, mouse = false) {
+  if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js");
+  return INTCLICK.go(p, x, py, force, mouse);
 }
 // integration whose filled area contains the pixel (used to select it with a click)
 function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number} */ py) {
@@ -168,11 +176,11 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
 }
 // dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:", lrSmooth: "0:99 i", lrValley: "0:100", lrSn: "0:" });
+  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:", minPts: "0:99 i", minSn: "0:", lrSmooth: "0:99 i", lrValley: "0:100", lrSn: "0:" });
   const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" data-num="${B[k]}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}${sec("lrall", ["lrSmooth", "lrValley", "lrSn"]).replace("</fieldset>", `<label class="pk-row"><span>${I18N.t("pk.lrSplit")}</span><select data-pk="lrSplit">${[0, 1].map(v => `<option value="${v}"${PK.lrSplit === v ? " selected" : ""}>${I18N.t(`pk.split.${v}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.lrSplit.h")}</span></label></fieldset>`)}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}<div class="pk-stack">${sec("hr", ["hrSmooth", "hrSn"])}${sec("guard", ["minPts", "minSn"])}</div>${sec("lrall", ["lrSmooth", "lrValley", "lrSn"]).replace("</fieldset>", `<label class="pk-row"><span>${I18N.t("pk.lrSplit")}</span><select data-pk="lrSplit">${[0, 1].map(v => `<option value="${v}"${PK.lrSplit === v ? " selected" : ""}>${I18N.t(`pk.split.${v}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.lrSplit.h")}</span></label></fieldset>`)}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMMANDS.run("peaks.settings", COMMANDS.GLOBAL, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
@@ -192,7 +200,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
-  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } }, { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []));
+  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (guardInt(p)) intClick(p, x, py); } }, { label: I18N.t("int.menu.force"), icon: IC_AUTO, fn: () => { if (guardInt(p)) intClick(p, x, py, true); } }, ...(a && a.sr && a.sr.length > 1 ? [{ label: I18N.t("int.menu.atrt"), icon: IC_AUTO, fn: () => { if (guardInt(p)) INTCLICK_ALL(p, x); } }] : []), { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []));
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }

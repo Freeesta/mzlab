@@ -28,6 +28,8 @@ pub struct LrParams {
     /// Region (min) the noise is measured in when `noise` is `Manual`.
     pub nr0: f64,
     pub nr1: f64,
+    /// Half width (min) of the stretch around the click searched for the coarse apex; a click on a peak narrows it to the apex it already chose.
+    pub apex_win: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,6 +53,7 @@ impl Default for LrParams {
             constrain: 0.0,
             nr0: 0.0,
             nr1: 0.0,
+            apex_win: 0.25,
         }
     }
 }
@@ -91,6 +94,7 @@ impl LrParams {
             constrain: p[8],
             nr0: p[9],
             nr1: p[10],
+            ..Default::default()
         })
     }
 }
@@ -205,8 +209,8 @@ fn apex_and_window(
 ) -> (usize, usize) {
     let nn = y.len();
     let co = sg_filter(y, round(0.03 / dt / 2.0).max(2.0) as usize, false);
-    let lo = near_idx(xs, x - 0.25).saturating_sub(a0).min(nn - 1);
-    let hi = near_idx(xs, x + 0.25).saturating_sub(a0).min(nn - 1);
+    let lo = near_idx(xs, x - pk.apex_win).saturating_sub(a0).min(nn - 1);
+    let hi = near_idx(xs, x + pk.apex_win).saturating_sub(a0).min(nn - 1);
     let mut m0 = lo;
     for j in lo..=hi {
         if co[j] > co[m0] {
@@ -256,7 +260,7 @@ fn noise_of(res: &[f64], xs: &[f64], ys: &[f64], pk: &LrParams) -> (f64, bool) {
 
 /// sqrt(1 - c0) of the quadratic Savitzky-Golay smoothing of half window `m`: the SD of the residual of white noise over its sigma
 /// (sum of the squared weights = c0, the central weight).
-fn residual_shrink(m: usize) -> f64 {
+pub(crate) fn residual_shrink(m: usize) -> f64 {
     let mf = m as f64;
     let c0 = 3.0 * (3.0 * mf * mf + 3.0 * mf - 1.0)
         / ((2.0 * mf - 1.0) * (2.0 * mf + 1.0) * (2.0 * mf + 3.0));
@@ -296,6 +300,33 @@ fn walk(
     j
 }
 
+/// The two edges (time) of the peak with apex `k` of the smoothed trace `sm` (slope `d`, indices from `a0`): `lim` the level to fall under, `m` the half window.
+#[allow(clippy::too_many_arguments)]
+fn ends(
+    sm: &[f64],
+    d: &[f64],
+    k: usize,
+    a0: usize,
+    xs: &[f64],
+    lim: f64,
+    m: usize,
+    noise: f64,
+    dt: f64,
+    pk: &LrParams,
+) -> (f64, f64) {
+    let need = round(m as f64 * pk.multi / 100.0).max(2.0) as i64;
+    let dth = noise / (m as f64).max(1.0) * 0.3;
+    let maxw = round(pk.tail / dt);
+    let nn = sm.len() as i64;
+    let lo = walk(sm, d, k, -1, lim, need, dth, maxw)
+        .min(k as i64)
+        .max(0);
+    let hi = walk(sm, d, k, 1, lim, need, dth, maxw)
+        .max(k as i64)
+        .min(nn - 1);
+    (xs[a0 + lo as usize], xs[a0 + hi as usize])
+}
+
 /// Limits (min) of the peak at time `x` on the trace `xs`/`ys`, or `None` when its S/N is under `sn_min`. `reference` is the base width of the
 /// peaks already integrated (0 = none); `mrm` marks a transition trace (a lower edge fraction on strong peaks, as for a very tall one).
 pub fn lr_edges(
@@ -306,11 +337,44 @@ pub fn lr_edges(
     mrm: bool,
     pk: &LrParams,
 ) -> Option<(f64, f64)> {
+    lr_edges_detail(xs, ys, x, reference, mrm, pk).map(|d| (d.e0, d.e1))
+}
+
+/// The edges of `lr_edges` with what the click guard needs: the smoothed height of the peak over its base and the noise sigma of the raw trace.
+#[derive(Clone, Copy, Debug)]
+pub struct Edges {
+    pub e0: f64,
+    pub e1: f64,
+    pub height: f64,
+    pub noise: f64,
+}
+
+impl Edges {
+    /// A window of one point, no evidence (a trace too short to measure).
+    fn at(t: f64) -> Edges {
+        Edges {
+            e0: t,
+            e1: t,
+            height: 0.0,
+            noise: 0.0,
+        }
+    }
+}
+
+/// `lr_edges` with its evidence (`Edges`); the same numbers, `lr_edges` is this without them.
+pub fn lr_edges_detail(
+    xs: &[f64],
+    ys: &[f64],
+    x: f64,
+    reference: f64,
+    mrm: bool,
+    pk: &LrParams,
+) -> Option<Edges> {
     let n = xs.len().min(ys.len());
     let (xs, ys) = (&xs[..n], &ys[..n]);
     let ic = near_idx(xs, x);
     if n < 9 {
-        return Some((xs[ic], xs[ic]));
+        return Some(Edges::at(xs[ic]));
     }
     let (hi_i, lo_i) = ((n - 1).min(ic + 50), ic.saturating_sub(50));
     let step = (xs[hi_i] - xs[lo_i])
@@ -359,18 +423,14 @@ pub fn lr_edges(
     if pk.sn_min > 0.0 && h < pk.sn_min * sn_noise {
         return None;
     }
-    let need = round(m as f64 * pk.multi / 100.0).max(2.0) as i64;
-    let dth = noise / (m as f64).max(1.0) * 0.3;
-    let maxw = round(pk.tail / dt);
-    let e0 = xs[a0
-        + walk(&sm, &d, k, -1, lim, need, dth, maxw)
-            .min(k as i64)
-            .max(0) as usize];
-    let e1 = xs[a0
-        + walk(&sm, &d, k, 1, lim, need, dth, maxw)
-            .max(k as i64)
-            .min(nn as i64 - 1) as usize];
-    Some(constrain(e0, e1, xs[a0 + k], reference, pk))
+    let (e0, e1) = ends(&sm, &d, k, a0, xs, lim, m, noise, dt, pk);
+    let (e0, e1) = constrain(e0, e1, xs[a0 + k], reference, pk);
+    Some(Edges {
+        e0,
+        e1,
+        height: h,
+        noise: sn_noise,
+    })
 }
 
 /// «Constrain the width»: the base width stays within +- `constrain` % of the reference peak, keeping the apex at the same relative position.
