@@ -101,7 +101,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--minus-sample", "sample of the blank"),
     ("--minus-rt", "blank window, min"),
     ("--fill-ms", "fill time per scan, ms"),
-    ("--bin", "mass bins: nominal (around integers) or 0.1"),
+    ("--bin", "nominal mass bins"),
     ("--sum", "add the scans of the window"),
     ("--format", "output format; values: usage line"),
     ("--formula", "start ion formula"),
