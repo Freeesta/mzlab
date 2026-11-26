@@ -19,6 +19,7 @@ pub(super) fn grid_touch_param() -> Param {
         .default_num(LR_TOUCH)
         .unit("Da")
         .doc("Unit axis only: two rows of the two grids at one retention time are one ion when their centroids are within this distance; a scattering centroid splits an ion above the default")
+        .tip("Rows of the two grids within this distance are one ion; raise it if centroids scatter.")
         .advanced()
 }
 
