@@ -27,6 +27,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "dark control not recognised in the transformation product screening",
         "sample table",
     ),
+    ("which file is which: the dark control, blank, standard", "sample table"),
     (
         "tp.dig_lr fails when the plan contains a standard: set the roles from a csv",
         "sample import",

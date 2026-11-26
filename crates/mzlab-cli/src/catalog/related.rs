@@ -60,7 +60,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
         .ex("mzlab-cli file convert run.wiff --out mzml/ --json"),
     r("sample list", "sample names wiff", &["sample select", "file convert", "file method"]),
-    r("sample table", "roles blank qc standard control dark time point names samples.json tp.dig_lr tp.link not recognised", &["sample import", "sample pair", "sample design propose", "tp.dig_lr"]),
+    r("sample table", "roles blank qc standard control dark time point names which file is which identify role of each file samples.json tp.dig_lr tp.link not recognised", &["sample import", "sample pair", "sample design propose", "tp.dig_lr"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate samples.json tp.dig_lr", &["sample table", "sample pair", "tp.dig_lr"]),
     r("sample pair", "roles of a table check preview which files left out proposed from the name dark control standard samples.json tp.dig_lr tp.link tp.network pairing", &["sample table", "sample import", "tp.dig_lr"]),
     r("features", "non-targeted untargeted feature table csv peak picking all files duplicate rows near duplicates same peak twice", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
