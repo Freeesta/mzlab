@@ -20,7 +20,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-PEAK-TABLE | `docs/coda/prompt/ION-COUNTS-PEAK-TABLE.md` | - | opt-in ion-scale columns for `peak table` (area, height, noise and S/N in ions), with the factor of `ionscale` per file |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
-| FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
+| FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
 | LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
@@ -34,9 +34,9 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | BLANK-CONTAMINANTS | `docs/coda/prompt/BLANK-CONTAMINANTS.md` | - | flag contaminant ions seen in blanks before an acquisition slot is spent; builds on AU-7 |
 | STATES-PROV | `docs/coda/prompt/STATES-PROV.md` | - | AU-3: `table.stats` and `quant.curve` name the states they used in `prov/1` |
-| NA-CELL-STATE | `docs/coda/prompt/NA-CELL-STATE.md` | needs owner decision: printing `NA` for `na` changes an existing cell value; opt-in step parameter or not | AU-3: aligned CSV `na` versus `absent`, Dig points, per-cell S/N |
+| NA-CELL-STATE | `docs/coda/prompt/NA-CELL-STATE.md` | - | AU-3: aligned CSV `na` versus `absent`, Dig points; decided 26 Nov: opt-in step parameter prints `NA`, default bytes unchanged; per-cell S/N not decided |
 | SHAPE-GATES-OTHER | `docs/coda/prompt/SHAPE-GATES-OTHER.md` | - | the `quant targets` peak-shape gates (`min_half`, `max_fwhm`, `max_asym`) and the six-check decision log in `peak auto-lr`, `peak table --auto`, `chrom.transitions`, Dig and `raw xic` |
-| MZTAB-CELL-STATE | `docs/coda/prompt/MZTAB-CELL-STATE.md` | needs owner decision: a state column in `export.mztab` adds a column to an existing export; opt-in parameter or not | AU-3: per-cell value state in `export.mztab` (areas only today) |
+| MZTAB-CELL-STATE | `docs/coda/prompt/MZTAB-CELL-STATE.md` | - | AU-3: per-cell value state in `export.mztab` (areas only today); decided 26 Nov: opt-in parameter, default bytes unchanged |
 | BLANK-BAND | `docs/coda/prompt/BLANK-BAND.md` | - | AU-6: blank level per m/z band in `estimate`; `rotte` must not grow |
 | RT-DRIFT-PROPOSAL | `docs/coda/prompt/RT-DRIFT-PROPOSAL.md` | - | AU-6: `estimate` proposes `rt_warp=piecewise` from measured drift |
 | LLM-PARAMS-RULES | `docs/coda/prompt/LLM-PARAMS-RULES.md` | - | AU-6 and AU-7: merge the rules of `llm params` with `estimate`; fix the R-blank-1 text |
@@ -58,7 +58,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
-| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | needs owner decision: the index gains a fill-time column (index format version) | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states |
+| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | - | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states; decided 26 Nov: new index format version with a fill-time column, old indexes readable plus a rebuild hint |
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
 | FILE-METHOD-SITE-NAMES | `docs/coda/prompt/FILE-METHOD-SITE-NAMES.md` | - | the name/precursor check of `sample list` beside the scan list of the site, with the numbers of `warn.file.nameMz` |
