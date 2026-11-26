@@ -3,7 +3,7 @@
 
 use mzlab_core::error::Result;
 use mzlab_core::ionfacts::Read;
-use mzlab_core::ionscale::Facts;
+use mzlab_core::ionscale::{Facts, ScanKind};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::rawxic::Ask;
 
@@ -17,9 +17,14 @@ pub(crate) const FACT_KEYS: &[&str] = &[
 
 /// `query.ions`: the scan type named (null: read from the scans) and every method value, only with the opt-in so the bytes without it are unchanged.
 pub(crate) fn params_member(o: &mut Out, k: &Ask) {
-    let Some((kind, f)) = &k.ions else {
-        return;
-    };
+    if let Some(i) = &k.ions {
+        member(o, i);
+    }
+}
+
+/// The `ions` member of a question: the scan type named and every method value (also the plan of `trace xic --ions`).
+pub(crate) fn member(o: &mut Out, ions: &(Option<ScanKind>, Facts)) {
+    let (kind, f) = ions;
     o.raw(",\"ions\":{\"scan_type\":")
         .raw(&kind.map_or("null".into(), |k| jstr(k.name())));
     for (n, v) in [
@@ -55,9 +60,20 @@ pub(crate) fn with_method(
     name: &str,
 ) -> (Ask, Vec<String>) {
     let mut ask = ask.clone();
-    let Some((kind, set)) = ask.ions.as_mut() else {
+    let Some(ions) = ask.ions.as_mut() else {
         return (ask, Vec::new());
     };
+    let log = fill_from_method(ions, method, name);
+    (ask, log)
+}
+
+/// `with_method` over the ion-scale values alone, so a command with no `Ask` (`trace xic --ions`) reads the method the same way.
+pub(crate) fn fill_from_method(
+    ions: &mut (Option<ScanKind>, Facts),
+    method: &Result<Option<String>>,
+    name: &str,
+) -> Vec<String> {
+    let (kind, set) = ions;
     let what = format!("ion_method {name}");
     let text = match method {
         Ok(t) => t.as_deref().filter(|m| !m.is_empty()),
@@ -66,7 +82,7 @@ pub(crate) fn with_method(
                 "reading the method of the file failed ({}); the values are --set or the data estimate",
                 e.key
             );
-            return (ask, vec![choice(&what, "null", &why)]);
+            return vec![choice(&what, "null", &why)];
         }
     };
     let doc = text.map(|m| parse(m.as_bytes()));
@@ -74,12 +90,12 @@ pub(crate) fn with_method(
         Some(Ok(d)) => Facts::from_method(&d, *kind),
         Some(Err(_)) => {
             let why = "the method of the file could not be read; the values are --set or the data estimate";
-            return (ask.clone(), vec![choice(&what, "null", why)]);
+            return vec![choice(&what, "null", why)];
         }
         None => {
             let why =
                 "the file carries no method/1 document; the values are --set or the data estimate";
-            return (ask.clone(), vec![choice(&what, "null", why)]);
+            return vec![choice(&what, "null", why)];
         }
     };
     let mut log = Vec::new();
@@ -88,9 +104,9 @@ pub(crate) fn with_method(
         log.push(choice(&what, "null", why));
     }
     for r in read {
-        let given = slot(set, r.field).and_then(|s| *s);
+        let given = slot(&mut *set, r.field).and_then(|s| *s);
         let used = given.or(r.value);
-        if let (None, Some(v), Some(s)) = (given, r.value, slot(set, r.field)) {
+        if let (None, Some(v), Some(s)) = (given, r.value, slot(&mut *set, r.field)) {
             *s = Some(v);
         }
         let why = match (given, r.value) {
@@ -106,7 +122,7 @@ pub(crate) fn with_method(
             &why,
         ));
     }
-    (ask, log)
+    log
 }
 
 /// The log line of the ion scale of one file: the factor, its source and the fields or the data estimate behind it.

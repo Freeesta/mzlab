@@ -27,6 +27,23 @@ const { raw_xic } = require(dir + '/mzlab_rawxic_wasm.js'), fs = require('fs');
 const b = fs.readFileSync(idxPath), read = (off, len) => new Uint8Array(b.subarray(off, off + len));
 const out = queries.map(q => { try { return { s: raw_xic(b.length, read, Number(pol), q) }; } catch (x) { return { e: String(x) }; } });
 process.stdout.write(JSON.stringify(out));"""
+# `/api/xicions` (`trace xic --ions`): the same call through `xic_ions`, the route of the ion scale of a trace
+NODE_TRACE = NODE.replace("raw_xic", "xic_ions")
+# the CLI flags of `trace xic` and the route query of the same question (`tol` is the half-window in Da of each ion)
+TRACE_ASKS = [
+    (["--mz", "229.1,305.3", "--da", "0.3", "--ions", "--scan-type", "sim", "--set", "dwell_ms=5"], "mz=229.1,305.3&tol=0.3,0.3&ions=1&scan_type=sim&dwell_ms=5"),
+    (["--mz", "229.1", "--da", "0.3", "--ions", "--scan-type", "q1", "--set", "scan_s=2", "--set", "step_da=0.1", "--set", "mass_lo=100", "--set", "mass_hi=200"], "mz=229.1&tol=0.3&ions=1&scan_type=q1&scan_s=2&step_da=0.1&mass_lo=100&mass_hi=200"),
+    (["--mz", "229.1", "--da", "0.3", "--smooth", "3", "--ions", "--scan-type", "sim", "--set", "dwell_ms=5"], "mz=229.1&tol=0.3&smooth=3&ions=1&scan_type=sim&dwell_ms=5"),
+    # no method time: the data estimate when the quantum is accepted, else no factor (the ions arrays are null)
+    (["--mz", "229.1", "--da", "0.3", "--ions"], "mz=229.1&tol=0.3&ions=1"),
+]
+TRACE_BAD = [
+    ("mz=229.1&tol=0.3", "err.raw.xic.param"),  # no ions=1: the route exists for the ion scale
+    ("mz=229.1&tol=0.3,0.3&ions=1", "err.raw.xic.param"),  # one half-window per ion
+    ("mz=229.1&tol=0.3&ions=1&scan_type=ms", "err.raw.xic.param"),
+    ("mz=229.1&tol=0.3&ions=1&fill_ms=-1", "err.raw.xic.param"),
+    ("mz=229.1&tol=0.3&ions=1&smooth=4", "err.raw.xic.param"),
+]
 # the CLI flags and the route query of the same question
 ASKS = [
     (["--mz", "229.1", "--rt", "6,8", "--da", "0.3"], "mz=229.1&rt=6,8&da=0.3"),
@@ -74,15 +91,16 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-rawxic-wasm")))
     build("-p", "mzlab-cli")
     (w / "run.js").write_text(NODE, encoding="utf-8")
+    (w / "run_trace.js").write_text(NODE_TRACE, encoding="utf-8")
     return w
 
 
-def answers(work, name, queries, pol=0, sample=None):
+def answers(work, name, queries, pol=0, sample=None, script="run.js"):
     """The wasm's answers to `queries` over the index of `name` (of its sample `--sample`), with the polarity `pol` the engine's `set_polarity` takes."""
     f, cache = work / name, work / "cache"
     extra = ["--sample", sample] if sample else []
     key = json.loads(cli("raw", "cache", str(f), "--cache", str(cache), *extra).stdout)["files"][0]["key"]
-    return json.loads(subprocess.run(["node", str(work / "run.js"), str(work / "pkg"), str(cache / key), str(pol), *queries], capture_output=True, encoding="utf-8", check=True).stdout)
+    return json.loads(subprocess.run(["node", str(work / script), str(work / "pkg"), str(cache / key), str(pol), *queries], capture_output=True, encoding="utf-8", check=True).stdout)
 
 
 def same_bytes(name, flags, query, got, doc):
@@ -131,3 +149,44 @@ def test_a_refused_question_has_the_same_error_key(work):
         r = cli("raw", "xic", str(work / "FS.mzML"), *flags, runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
         doc = json.loads(r.stdout)
         assert r.returncode == 2 and doc["schema"] == "error/1" and doc["error_key"] == key, r.stdout[:300]
+
+
+def trace_same_bytes(name, flags, query, got, doc):
+    """The route's factor, the log of its choice and the ions of each ion are inside the CLI `trace xic --ions` document, byte for byte."""
+    assert "s" in got, f"{name} {query}: {got}"
+    route = got["s"]
+    scale = route[len('{"ion_scale":'):route.index(',"ion_scale_choice":')]
+    choice = route[route.index(',"ion_scale_choice":') + 20:route.index(',"traces":[')]
+    assert f'"ion_scale":{scale}' in doc and f'"ion_scale_choice":{choice}' in doc, f"{name} {flags}:\nwasm {route[:400]}\ncli  {doc[:800]}"
+    for t, piece in zip(json.loads(route)["traces"], route[route.index('"traces":[') + 10:-2].split(',{"mz":')):
+        if t["ions"] is None:
+            continue
+        ions = piece[piece.index('"ions":[') + 8:piece.index("]")]
+        assert f'"ions":[{ions}]' in doc, f"{name} {flags}:\nwasm {ions[:200]}"
+
+
+@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "POL.mzML"])
+def test_the_wasm_ions_route_is_inside_the_cli_trace_xic(work, name):
+    for (flags, query), got in zip(TRACE_ASKS, answers(work, name, [q for _, q in TRACE_ASKS], script="run_trace.js")):
+        doc = cli("trace", "xic", str(work / name), *flags).stdout
+        trace_same_bytes(name, flags, query, got, doc)
+    # the CLI and the wasm answer the same `ion_scale` for the same question, also as the columns of the CSV
+    flags, query = TRACE_ASKS[0]
+    got = answers(work, name, [query], script="run_trace.js")[0]["s"]
+    rows = cli("trace", "xic", str(work / name), *flags, "--format", "csv").stdout.splitlines()
+    head = rows[0].split(",")
+    for t in json.loads(got)["traces"]:
+        if t["ions"] is None:
+            assert not any(h.startswith("ions:") for h in head)
+            continue
+        col = head.index(f"ions:{t['mz']:g}")
+        assert [float(r.split(",")[col]) for r in rows[1:]] == t["ions"]
+
+
+def test_a_refused_ions_question_has_an_error_key(work):
+    for (query, key), got in zip(TRACE_BAD, answers(work, "FS.mzML", [q for q, _ in TRACE_BAD], script="run_trace.js")):
+        assert json.loads(got["e"])["error_key"] == key, got
+    # the CLI refuses a method value without --ions with its own usage key, an unknown scan type or a bad number with exit 2
+    for flags in (["--set", "fill_ms=3"], ["--ions", "--scan-type", "ms"], ["--ions", "--set", "fill_ms=-1"]):
+        r = cli("trace", "xic", str(work / "FS.mzML"), "--mz", "229.1", "--da", "0.3", *flags, runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
+        assert r.returncode == 2, (flags, r.stdout[:300])

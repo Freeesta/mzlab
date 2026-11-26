@@ -319,14 +319,14 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 .examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "quant targets",
-    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset, RT windows",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")
 .exits(&[0, 2, 4, 6]),
 Entry::new(
     "quant union",
-    "mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of several series as one target list",
+    "mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of series as one target list",
     crate::quant_union_cmd::run,
 )
 .schema("union/1")

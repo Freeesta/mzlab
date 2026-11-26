@@ -154,6 +154,19 @@
     "mz_offset": {
       "type": "object",
       "description": "The offset's mode and evidence, as in trace/1."
+    },
+    "ions": {
+      "type": "object",
+      "description": "Only with --ions: the scan type named (null: read from the scans) and every method value given with --set (null when absent).",
+      "properties": {
+        "scan_type": { "type": ["string", "null"] },
+        "fill_ms": { "type": ["number", "null"] },
+        "dwell_ms": { "type": ["number", "null"] },
+        "scan_s": { "type": ["number", "null"] },
+        "step_da": { "type": ["number", "null"] },
+        "mass_lo": { "type": ["number", "null"] },
+        "mass_hi": { "type": ["number", "null"] }
+      }
     }
   }
 }

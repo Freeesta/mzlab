@@ -19,6 +19,6 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("mol export", "mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf", crate::plain::mol_export_cmd::run).exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol open", "mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file", crate::plain::mol_open_cmd::run).schema("open/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol cut", "mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut", crate::mol_cut_cmd::run).schema("cut/1").exits(&[0, 1, 2, 4, 6]),
-    Entry::new("mol mech", "mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed", crate::plain::mol_mech_cmd::run).schema("mechanism/1").exits(&[0, 1, 2, 4, 6]),
+    Entry::new("mol mech", "mzlab-cli mol mech REQUEST.json|-   whether a mechanism's curved arrows are well formed", crate::plain::mol_mech_cmd::run).schema("mechanism/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("mol search", "mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures", crate::mol_search_cmd::run).exits(&[0, 1, 2, 4, 6]),
 ];
