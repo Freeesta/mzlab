@@ -1,0 +1,87 @@
+# Rolling desktop app of main: builds the installers by calling desktop.yml (the bundles release.yml ships: macOS universal .dmg, Windows .exe, Linux AppImage and .deb)
+# and attaches them to the pre-release `app-prebuilt`, so the app is always one download away without waiting for a version.
+# NOT a release: a pre-release never reaches releases/latest (the app's update notice and release.yml ignore it), there is no `v*` tag, nothing is signed
+# or notarised (Apple signing is the owner's later decision) and no secret is used. Its notes name the commit and say how to open an unsigned app: docs/download-app.md.
+# Runs when the engine, the page or the bundle changed (crates/, mzlab/web/, the lock, the toolchain), and by hand. A newer push cancels the build in progress.
+name: app-main
+
+on:
+  push:
+    branches: [main, claude/app-rolling]   # TEMPORARY: the second branch is only for the test run of the PR, removed before the PR is merged
+    paths:
+      - "crates/**"
+      - "mzlab/web/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "tools/build_site.py"
+      - "tools/prepara_sito.py"
+      - "tools/note_app_main.py"
+      - "docs/download-app.md"
+      - ".github/workflows/app-main.yml"
+      - ".github/workflows/desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# a newer push replaces a build in progress (the pre-release holds only the newest app); the publish job is not cancellable midway in a harmful way:
+# its uploads use --clobber and the notes are written last
+concurrency:
+  group: app-main
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: installers (desktop.yml)
+    uses: ./.github/workflows/desktop.yml
+
+  # The only job with write access: it runs on main only, executes no binary of the build and uses the job's own GITHUB_TOKEN.
+  publish:
+    name: pre-release app-prebuilt
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/app-rolling'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: app-prebuilt
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: mzlab-desktop-*
+          path: pezzi
+      - name: Give the files their fixed names (tools/note_app_main.py is the one list) and write SHA256SUMS
+        run: |
+          mkdir out
+          python3 tools/note_app_main.py --names | while IFS='|' read -r art glob name; do
+            f=$(ls pezzi/"$art"/$glob 2>/dev/null | head -n 1)
+            [ -n "$f" ] || { echo "::error::no $glob in the artifact $art"; exit 1; }
+            cp "$f" "out/$name"
+          done
+          (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+      - name: Notes (commit, dates, how to open an unsigned app)
+        run: |
+          python3 tools/note_app_main.py --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" \
+            --commit-date "$(git show -s --format=%cs "$GITHUB_SHA")" --built "$(date -u +%Y-%m-%dT%H:%MZ)" > NOTES.md
+          cat NOTES.md
+      - name: Create the pre-release once; keep it a pre-release, never "latest", with the title and the notes of this commit
+        run: |
+          title="mzLab app built from main (NOT a release)"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --latest=false --title "$title" --notes-file NOTES.md
+      - name: Upload the new files (the old ones of the same name are replaced), then remove any other asset, then write the notes
+        run: |
+          gh release upload "$TAG" out/* --clobber --repo "$GITHUB_REPOSITORY"
+          keep=$(ls out)
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | while read -r n; do
+            echo "$keep" | grep -qxF "$n" || { echo "delete $n"; gh release delete-asset "$TAG" "$n" --yes --repo "$GITHUB_REPOSITORY"; }
+          done
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+            --title "mzLab app built from main (NOT a release)" --notes-file NOTES.md

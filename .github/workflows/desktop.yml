@@ -1,15 +1,13 @@
 # Desktop app (crates/mzlab-desktop, Tauri v2): builds the installers on macOS (universal), Windows and Linux (AppImage, deb) and keeps them as artifacts of the run.
 # The installers are never committed and never published in the site. Unsigned: no Apple/Microsoft account is used here.
-# Runs by hand (workflow_dispatch), when crates/mzlab-desktop/** changes and every night (a Cargo.lock change alone is caught by the nightly run).
-# Pull requests build the Linux installer only; macOS and Windows run on main, nightly and releases. Not a required check of the protected main branch.
+# Runs by hand (workflow_dispatch), every night, in pull requests that touch crates/mzlab-desktop/** and when called: by release.yml for a tag and by app-main.yml
+# for every change of main (that one publishes the rolling pre-release `app-prebuilt`; there is no push trigger here, so the two cannot cancel each other).
+# Pull requests build the Linux installer only; macOS and Windows run on main (app-main.yml), nightly and releases. Not a required check of the protected main branch.
 name: desktop
 
 on:
   workflow_dispatch:
   workflow_call:                      # release.yml builds the installers of a tag by calling this workflow
-  push:
-    branches: [main]
-    paths: ["crates/mzlab-desktop/**", ".github/workflows/desktop.yml"]
   pull_request:
     paths: ["crates/mzlab-desktop/**", ".github/workflows/desktop.yml"]
   schedule:
@@ -74,7 +72,7 @@ jobs:
       - name: mzFinder in the page of the desktop (native routes, no Pyodide, no wasm-feat/)
         run: python crates/mzlab-desktop/tests/e2e_shim_finder.py
 
-  # Pull requests build the Linux installer only (macOS universal ~43 min and Windows ~27 min run on main, nightly and releases).
+  # Pull requests build the Linux installer only (macOS universal ~43 min and Windows ~27 min run on main via app-main.yml, nightly and releases).
   plan:
     name: plan
     runs-on: ubuntu-latest
