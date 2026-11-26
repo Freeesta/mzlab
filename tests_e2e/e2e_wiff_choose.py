@@ -131,6 +131,10 @@ try:
             assert cells[0]["t"][1:3] == ["MS", "5"] and cells[1]["t"][1:3] == ["SIM", "7"], cells
             assert cells[2]["t"][2] == "empty" and cells[2]["t"][1] == "", cells
             assert pg.inner_text("#wiffchoose .wc-sel") == "2 of 3 ticked" and pg.evaluate("document.querySelector('#wiffchoose tbody tr.wc-empty') !== null")
+            shot = os.environ.get("MZLAB_SHOTS")
+            if shot:
+                Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-kinds.png"))
+                pg.set_viewport_size({"width": 390, "height": 780}); pg.screenshot(path=str(Path(shot) / "wiff-choose-kinds-phone.png")); pg.set_viewport_size({"width": 1300, "height": 900})
             pg.keyboard.press("Enter"); settle(pg)     # focus starts on Open selected, and Enter opens
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 2", timeout=120000)
             assert rows(pg) == n + 2, (n, rows(pg))
