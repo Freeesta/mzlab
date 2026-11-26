@@ -26,7 +26,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-OFFSET | `docs/coda/prompt/SPECTRUM-COMPARE-OFFSET.md` | - | site card of `spectrum compare`: an m/z offset per side (fixed or `auto`), as the CLI flags |
 | SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
