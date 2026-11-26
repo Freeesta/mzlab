@@ -83,7 +83,8 @@ pub(super) fn emit(mut o: Out, f: &Found) -> String {
         rd(g.anchored.1)
     ));
     o.raw(",\"background\":").raw(f.background);
-    o.raw(",\"cell\":").raw(&f.cells.map_or("null".to_string(), Cells::json));
+    o.raw(",\"cell\":")
+        .raw(&f.cells.map_or("null".to_string(), Cells::json));
     o.raw(",\"spectrum\":")
         .raw(if f.cells.is_some() { "true" } else { "false" });
     o.raw(",\"n_scans\":").int(f.n_win as i64);
@@ -108,7 +109,9 @@ pub(super) fn without(
 ) -> String {
     o.raw(",\"verdict\":\"").raw(verdict);
     o.raw("\",\"flags\":[],\"apex\":").raw(apex);
-    o.raw(",\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,\"cell\":null,");
+    o.raw(
+        ",\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,\"cell\":null,",
+    );
     o.raw("\"spectrum\":false,\"n_scans\":")
         .int(in_range as i64);
     o.raw(",\"total_ions\":null,\"sum\":null,\"rule\":")

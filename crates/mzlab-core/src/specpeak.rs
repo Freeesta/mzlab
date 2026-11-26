@@ -41,7 +41,9 @@ impl Cells {
         match self {
             Cells::Nominal => (m / BIN).floor() as i64,
             Cells::Profile(step) => (m / step).round_ties_even() as i64,
-            Cells::Hr(_) => (libm::log(m.max(1e-9)) / libm::log1p(HR_CELL_PPM * 1e-6)).floor() as i64,
+            Cells::Hr(_) => {
+                (libm::log(m.max(1e-9)) / libm::log1p(HR_CELL_PPM * 1e-6)).floor() as i64
+            }
         }
     }
 
@@ -56,7 +58,11 @@ impl Cells {
 
     /// The decimals of the m/z of the lines shown.
     fn decimals(self) -> usize {
-        if matches!(self, Cells::Nominal) { 3 } else { 4 }
+        if matches!(self, Cells::Nominal) {
+            3
+        } else {
+            4
+        }
     }
 }
 
@@ -102,7 +108,9 @@ fn set_of(q: &Query) -> Result<Set> {
         gap: param(q, "gap_min", GAP_MIN, (0.0, 1e4), false)?,
         min_sn: param(q, "min_sn", MIN_SN, (0.0, 1e6), false)?,
         min_points: n as usize,
-        tol_ppm: q.num("tol_ppm").map_err(|_| bad("tol_ppm", q.get("tol_ppm").unwrap_or("")))?
+        tol_ppm: q
+            .num("tol_ppm")
+            .map_err(|_| bad("tol_ppm", q.get("tol_ppm").unwrap_or("")))?
             .map(|v| param(q, "tol_ppm", v, (0.0, 1e4), true))
             .transpose()?,
     })
@@ -226,7 +234,11 @@ impl<R: ReadAt> Routes<R> {
                 None => hr.on.then_some(Cells::Hr(tol)),
             });
         }
-        Ok(Some(if hr.on { Cells::Hr(tol) } else { Cells::Nominal }))
+        Ok(Some(if hr.on {
+            Cells::Hr(tol)
+        } else {
+            Cells::Nominal
+        }))
     }
 
     /// `/api/specpeak?rt0=A&rt1=B[&level=N][&precursor=P][&factor=2&side_min=0.3&gap_min=0.05&min_sn=3&min_points=3][&fill_ms=T]`: `rt0`..`rt1` is where the
@@ -319,7 +331,10 @@ impl<R: ReadAt> Routes<R> {
         let (mut mz, mut yy) = (Vec::new(), Vec::new());
         for (m, v) in wm.iter().zip(&wy) {
             // rounded as it is shown: a mass whose net is a rounding error of the flat background is not a line
-            let net = round(v - (at(&sides[0], *m, cells) + at(&sides[1], *m, cells)) * scale, 1);
+            let net = round(
+                v - (at(&sides[0], *m, cells) + at(&sides[1], *m, cells)) * scale,
+                1,
+            );
             if net > 0.0 {
                 mz.push(*m);
                 yy.push(net);
@@ -359,12 +374,19 @@ fn per_nominal(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
 fn at(side: &[(f64, f64)], m: f64, cells: Cells) -> f64 {
     if let Cells::Hr(ppm) = cells {
         let w = m * ppm * 1e-6;
-        let (lo, hi) = (side.partition_point(|p| p.0 < m - w), side.partition_point(|p| p.0 <= m + w));
-        return side[lo.min(hi)..hi].iter().fold(0.0, |a, p| f64::max(a, p.1));
+        let (lo, hi) = (
+            side.partition_point(|p| p.0 < m - w),
+            side.partition_point(|p| p.0 <= m + w),
+        );
+        return side[lo.min(hi)..hi]
+            .iter()
+            .fold(0.0, |a, p| f64::max(a, p.1));
     }
     let k = cells.key(m);
     let i = side.partition_point(|p| cells.key(p.0) < k);
-    side.get(i).filter(|p| cells.key(p.0) == k).map_or(0.0, |p| p.1)
+    side.get(i)
+        .filter(|p| cells.key(p.0) == k)
+        .map_or(0.0, |p| p.1)
 }
 
 /// The rule that refuses a candidate apex under `min_sn` or `min_points`, `None` when it meets both.

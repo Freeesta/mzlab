@@ -216,16 +216,6 @@ fn bad_requests_are_usage_errors_exit_2() {
             "--fill-ms",
             "0",
         ],
-        vec![
-            "--rt",
-            "2,6",
-            "--ms-level",
-            "2",
-            "--peak",
-            "auto",
-            "--set",
-            "tol_ppm=0",
-        ],
         vec!["--rt", "2,6", "--ms-level", "2", "--set", "factor=3"],
         vec!["--rt", "2,6", "--ms-level", "2", "--precursor", "250.3"],
     ] {
@@ -238,7 +228,14 @@ fn bad_requests_are_usage_errors_exit_2() {
 #[test]
 fn a_high_resolution_level_names_its_cell_and_takes_a_tolerance() {
     let d = dir("peak_hr");
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "r".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(300).unwrap();
     for i in 0..300 {
         let rt = 1.0 + i as f64 * 0.02;
@@ -266,12 +263,29 @@ fn a_high_resolution_level_names_its_cell_and_takes_a_tolerance() {
         a.extend(ARGS);
         a.extend(extra);
         let (v, _, _) = ok(&a);
-        (v.get("evidence").unwrap().get("peak").unwrap().clone(), v.get("points").unwrap().arr().len())
+        (
+            v.get("evidence").unwrap().get("peak").unwrap().clone(),
+            v.get("points").unwrap().arr().len(),
+        )
     };
     let ((p, n), (q, _)) = (peak(&[]), peak(&["--set", "tol_ppm=10"]));
-    let tol = |v: &Value| v.get("cell").unwrap().get("tol_ppm").unwrap().f64().unwrap();
+    let tol = |v: &Value| {
+        v.get("cell")
+            .unwrap()
+            .get("tol_ppm")
+            .unwrap()
+            .f64()
+            .unwrap()
+    };
     assert_eq!(p.get("verdict").unwrap().str(), Some("peak"));
-    assert_eq!(p.get("cell").unwrap().get("kind").unwrap().str(), Some("hr_log"));
+    assert_eq!(
+        p.get("cell").unwrap().get("kind").unwrap().str(),
+        Some("hr_log")
+    );
     assert_eq!((tol(&p), tol(&q), n), (5.0, 10.0, 1));
+    let mut bad = vec!["spectrum", "get", f.as_str()];
+    bad.extend(ARGS);
+    bad.extend(["--set", "tol_ppm=0"]);
+    assert_eq!(run(&bad).code, 2);
     let _ = std::fs::remove_dir_all(d);
 }

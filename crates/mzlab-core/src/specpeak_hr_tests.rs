@@ -25,7 +25,14 @@ const NEIGHBOUR: f64 = 200.0;
 /// 300 product-ion scans (precursor 250.3) every 0.01 min. `profile`: points every 0.02 from 100.00 to 100.60 (the ion rises at 100.30) and the flat band
 /// 150.00 .. 150.60; else three centroid lines: the ion at 100.3 (rises with the peak), its flat neighbour and a flat line at 150.3.
 fn routes(profile: bool) -> Routes<Vec<u8>> {
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "r".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(300).unwrap();
     for i in 0..300 {
         let rt = 0.5 + i as f64 * 0.01;
@@ -37,7 +44,10 @@ fn routes(profile: bool) -> Routes<Vec<u8>> {
                 .map(|m| (m, BG + if (m - 100.3).abs() < 0.03 { rise } else { 0.0 }))
                 .unzip()
         } else {
-            (vec![100.3, 100.3 * (1.0 + 8e-6), 150.3], vec![BG + rise, NEIGHBOUR, BG])
+            (
+                vec![100.3, 100.3 * (1.0 + 8e-6), 150.3],
+                vec![BG + rise, NEIGHBOUR, BG],
+            )
         };
         let s = Spectrum {
             index: i,
@@ -46,7 +56,11 @@ fn routes(profile: bool) -> Routes<Vec<u8>> {
             rt,
             polarity: 1,
             profile,
-            filter: if profile { String::new() } else { FILTER.into() },
+            filter: if profile {
+                String::new()
+            } else {
+                FILTER.into()
+            },
             precursor: Some(250.3),
             mz,
             intensity: y.iter().map(|v| *v as f32).collect(),
@@ -58,18 +72,31 @@ fn routes(profile: bool) -> Routes<Vec<u8>> {
     let b = w.finish().unwrap();
     let mut src = b.clone();
     let p = crate::upload::prepare(&mut src, b.len() as u64, "r.mzML").unwrap();
-    let idx = crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20).unwrap().0;
+    let idx = crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20)
+        .unwrap()
+        .0;
     let n = idx.len() as u64;
     Routes::new(Index::open(idx, n).unwrap())
 }
 
 fn ask(r: &mut Routes<Vec<u8>>, extra: &str) -> Value {
     let q = format!("rt0=1&rt1=3&level=2&precursor=250.3{extra}");
-    parse(crate::rawinfo::handle(r, "/api/specpeak", &Query::parse(&q)).unwrap().unwrap().as_bytes()).unwrap()
+    parse(
+        crate::rawinfo::handle(r, "/api/specpeak", &Query::parse(&q))
+            .unwrap()
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap()
 }
 
 fn lines(v: &Value, k: &str) -> Vec<f64> {
-    v.get(k).unwrap().arr().iter().map(|x| x.f64().unwrap()).collect()
+    v.get(k)
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|x| x.f64().unwrap())
+        .collect()
 }
 
 fn cell<'a>(v: &'a Value, k: &str) -> &'a Value {
@@ -86,11 +113,18 @@ fn a_high_resolution_level_gives_the_net_line_and_not_the_flat_one() {
     assert!((mz[0] - 100.3).abs() < 1e-3);
     let w = v.get("window_min").unwrap().arr();
     let (a, b) = (w[0].f64().unwrap(), w[1].f64().unwrap());
-    let want: f64 = (0..300).map(|i| 0.5 + i as f64 * 0.01).filter(|t| *t >= a && *t <= b).map(gauss).sum();
+    let want: f64 = (0..300)
+        .map(|i| 0.5 + i as f64 * 0.01)
+        .filter(|t| *t >= a && *t <= b)
+        .map(gauss)
+        .sum();
     assert!((y[0] - want).abs() < 0.01 * want, "{} against {want}", y[0]);
     assert_eq!(cell(&v, "kind").str(), Some("hr_log"));
     assert_eq!(cell(&v, "tol_ppm").f64(), Some(5.0));
-    assert_eq!(v.get("params").unwrap().get("tol_ppm").unwrap().f64(), Some(5.0));
+    assert_eq!(
+        v.get("params").unwrap().get("tol_ppm").unwrap().f64(),
+        Some(5.0)
+    );
 }
 
 #[test]
@@ -101,8 +135,16 @@ fn the_tolerance_is_a_parameter_and_decides_what_the_sides_cancel() {
     // within 10 ppm the strong neighbour of the sides is taken off the ion in every scan of the window
     let n = tight.get("n_scans").unwrap().f64().unwrap();
     let drop = lines(&tight, "y")[0] - lines(&wide, "y")[0];
-    assert!((drop - (NEIGHBOUR - BG) * n).abs() < 1.0, "{drop} for {n} scans");
-    let e = crate::rawinfo::handle(&mut r, "/api/specpeak", &Query::parse("rt0=1&rt1=3&level=2&precursor=250.3&tol_ppm=0")).unwrap_err();
+    assert!(
+        (drop - (NEIGHBOUR - BG) * n).abs() < 1.0,
+        "{drop} for {n} scans"
+    );
+    let e = crate::rawinfo::handle(
+        &mut r,
+        "/api/specpeak",
+        &Query::parse("rt0=1&rt1=3&level=2&precursor=250.3&tol_ppm=0"),
+    )
+    .unwrap_err();
     assert_eq!(e.key, "err.spec.peak");
 }
 
@@ -115,6 +157,9 @@ fn a_profile_level_gives_the_net_points_by_cell_and_not_the_flat_band() {
     assert!((cell(&v, "step_da").f64().unwrap() - 0.02).abs() < 1e-9);
     let mz = lines(&v, "mz");
     // only the points of the ion carry a net; the flat points of both bands cancel against the sides
-    assert!(!mz.is_empty() && mz.iter().all(|m| (m - 100.3).abs() < 0.04), "{mz:?}");
+    assert!(
+        !mz.is_empty() && mz.iter().all(|m| (m - 100.3).abs() < 0.04),
+        "{mz:?}"
+    );
     assert!(lines(&v, "y").iter().all(|y| *y > 0.0));
 }
