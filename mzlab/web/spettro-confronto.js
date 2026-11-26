@@ -67,13 +67,13 @@ function show(doc) {
   const warns = doc.warnings.map((/** @type {any} */ w) => `<li class="warn">${EHt(t(w.key, Object.fromEntries(Object.entries(w).map(([k, v]) => [k, words(v)]))))}</li>`).join("");
   const sideRow = (/** @type {string} */ s) => { const x = side(s); return `<tr><th scope="row">${s.toUpperCase()}</th><td>${EHt(x.name)}</td><td class="num">${x.precursor == null ? "" : text(x.precursor)}</td><td class="num">${x.ce == null ? EHt(words(x.ce_values)) : text(x.ce)}</td>
     <td class="num">${x.scans ?? ""}</td><td class="num">${x.n_bins}</td><td class="num">${(x.explained * 100).toFixed(1)} %</td></tr>`; };
-  const un = (/** @type {any[]} */ rows) => rows.length ? `<div class="tbl"><table><tr><th class="num">m/z</th><th class="num">${t("spcmp.col.int")}</th></tr>${rows.map(r => `<tr><td class="num">${text(r.mz)}</td><td class="num">${text(r.y)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`;
+  const un = (/** @type {any[]} */ rows) => rows.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mz")}</th><th class="num">${t("spcmp.col.int")}</th></tr>${rows.map(r => `<tr><td class="num">${text(r.mz)}</td><td class="num">${text(r.y)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`;
   const p = doc.params, dflt = (/** @type {string} */ k) => (p.default.includes(k) ? ` (${t("spcmp.default")})` : "");
   return `<div class="cos" role="status">${t("spcmp.cosine")} ${doc.cosine.toFixed(4)}</div>
     <p class="sm">${t("spcmp.summary", { n: doc.n_matched, tol: text(p.tol), ce: text(p.ce_tol) })} <span class="muted">${EHt(dflt("tol") + dflt("ce_tol"))}</span></p>
     ${warns ? `<ul>${warns}</ul>` : ""}
-    <div class="tbl"><table><caption class="sr-only">${t("spcmp.sides")}</caption><tr><th></th><th>${t("spcmp.col.file")}</th><th class="num">${t("spcmp.col.prec")}</th><th class="num">CE (eV)</th><th class="num">${t("spcmp.col.scans")}</th><th class="num">${t("spcmp.col.bins")}</th><th class="num">${t("spcmp.col.explained")}</th></tr>${sideRow("a")}${sideRow("b")}</table></div>
-    <h4>${t("spcmp.matched")}</h4>${doc.matched.length ? `<div class="tbl"><table><tr><th class="num">m/z A</th><th class="num">m/z B</th><th class="num">${t("spcmp.col.intA")}</th><th class="num">${t("spcmp.col.intB")}</th></tr>${doc.matched.map((/** @type {any} */ m) => `<tr><td class="num">${text(m.mz_a)}</td><td class="num">${text(m.mz_b)}</td><td class="num">${text(m.a)}</td><td class="num">${text(m.b)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`}
+    <div class="tbl"><table><caption class="sr-only">${t("spcmp.sides")}</caption><tr><th></th><th>${t("spcmp.col.file")}</th><th class="num">${t("spcmp.col.prec")}</th><th class="num">${t("spcmp.col.ce")}</th><th class="num">${t("spcmp.col.scans")}</th><th class="num">${t("spcmp.col.bins")}</th><th class="num">${t("spcmp.col.explained")}</th></tr>${sideRow("a")}${sideRow("b")}</table></div>
+    <h4>${t("spcmp.matched")}</h4>${doc.matched.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mzA")}</th><th class="num">${t("spcmp.col.mzB")}</th><th class="num">${t("spcmp.col.intA")}</th><th class="num">${t("spcmp.col.intB")}</th></tr>${doc.matched.map((/** @type {any} */ m) => `<tr><td class="num">${text(m.mz_a)}</td><td class="num">${text(m.mz_b)}</td><td class="num">${text(m.a)}</td><td class="num">${text(m.b)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`}
     <div class="lists"><div><h4>${t("spcmp.onlyA")}</h4>${un(doc.only_a)}</div><div><h4>${t("spcmp.onlyB")}</h4>${un(doc.only_b)}</div></div>`;
 }
 
@@ -91,10 +91,10 @@ function open(p) {
   const sideHtml = (s, f) => h`<fieldset data-s="${s}"><legend>${s === "a" ? t("spcmp.side.a") : t("spcmp.side.b")}</legend>
       <label>${t("spcmp.file")} <select data-f="file">${files.map((/** @type {any} */ x) => raw(h`<option value="${x.k}"${x === f ? " selected" : ""}>${x.label || x.file}</option>`))}</select></label>
       <label>${t("spcmp.prec")} <select data-f="prec"></select></label>
-      <label>${t("spcmp.time")} <input data-f="rt0" data-num="0:" value="${+from.toFixed(4)}" aria-label="${t("spcmp.time.from")}"> – <input data-f="rt1" data-num="0:" value="${+to.toFixed(4)}" aria-label="${t("spcmp.time.to")}"> min</label></fieldset>`;
+      <label>${t("spcmp.time")} <input data-f="rt0" data-num="0:" value="${+from.toFixed(4)}" aria-label="${t("spcmp.time.from")}"> – <input data-f="rt1" data-num="0:" value="${+to.toFixed(4)}" aria-label="${t("spcmp.time.to")}"> ${t("spcmp.unit.min")}</label></fieldset>`;
   dlg.innerHTML = h`<div style="display:flex;align-items:center"><h3 id="spcmp-h" style="margin:0;flex:1">${t("spcmp.title")}</h3><button type="button" class="x" id="spcmp-x" aria-label="${t("common.close")}" title="${t("common.close")}">&times;</button></div>
     <div class="sides">${raw(sideHtml("a", own))}${raw(sideHtml("b", other))}</div>
-    <div class="qbar"><label>${t("spcmp.tol")} <input id="spcmp-tol" data-num="0: v" placeholder="0" title="${t("spcmp.tol.tip")}"> Da</label><label>${t("spcmp.ceTol")} <input id="spcmp-cetol" data-num="0: v" placeholder="0.5" title="${t("spcmp.ceTol.tip")}"> eV</label>
+    <div class="qbar"><label>${t("spcmp.tol")} <input id="spcmp-tol" data-num="0: v" placeholder="0" title="${t("spcmp.tol.tip")}"> ${t("spcmp.unit.da")}</label><label>${t("spcmp.ceTol")} <input id="spcmp-cetol" data-num="0: v" placeholder="0.5" title="${t("spcmp.ceTol.tip")}"> ${t("spcmp.unit.ev")}</label>
       <button type="button" id="spcmp-go">${t("spcmp.go")}</button></div><div id="spcmp-msg" class="sm muted" aria-live="polite"></div><div id="spcmp-out"></div>`;
   // the precursors of the chosen file, the one nearest to the wanted m/z selected
   const fill = (/** @type {string} */ s, /** @type {number | null} */ want) => {

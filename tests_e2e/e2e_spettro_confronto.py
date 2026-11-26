@@ -74,6 +74,7 @@ def narrow(pg):
     pg.evaluate(f"loadScript('m:spettro-confronto.js').then(() => SPCMP.open({SP2}))"); wait_for_js(pg, "document.querySelector('#spcmp') && document.querySelector('#spcmp').open")
     compare(pg)
     assert pg.evaluate("document.querySelector('#spcmp').getBoundingClientRect().right <= window.innerWidth + 1"), "the card is wider than the page"
+    assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal page scroll"
 step("phone width: the card fits", lambda: run(8932, "/tmp/wd_spc2", narrow, {"width": 390, "height": 800}))
 bad = [s for s in steps if s[1] != "ok"]
 for s in steps: print(s)
