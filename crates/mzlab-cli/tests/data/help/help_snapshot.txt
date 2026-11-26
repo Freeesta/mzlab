@@ -85,6 +85,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib search ...   search the library of MSn trees
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
+       mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--bin nominal] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--dry-run] [--out PATH]   do M+1 and M+2 fit the formula, within counting error
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
@@ -211,6 +212,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib search ...   search the library of MSn trees
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
+       mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--bin nominal] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--dry-run] [--out PATH]   do M+1 and M+2 fit the formula, within counting error
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
@@ -337,6 +339,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib search ...   search the library of MSn trees
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
+       mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--bin nominal] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--dry-run] [--out PATH]   do M+1 and M+2 fit the formula, within counting error
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts

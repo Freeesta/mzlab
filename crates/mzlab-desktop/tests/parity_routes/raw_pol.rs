@@ -55,6 +55,7 @@ fn section(pol: i32) -> Vec<Value> {
         route("/api/rawinfo", "?probe=16"),
         route("/api/rawxic", "?mz=241.3,300.7&rt=2.5,3.5&da=0.2"),
         route("/api/rawscan", "?rt=2.5,3.5"),
+        route("/api/rawiso", "?mz=241&rt=2.5,3.5"),
     ]
 }
 

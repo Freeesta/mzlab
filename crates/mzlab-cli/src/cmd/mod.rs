@@ -75,6 +75,7 @@ const JSON_DEFAULT: &[&str] = &[
     "raw cache",
     "raw xic",
     "raw scan",
+    "raw isotopes",
     "file inventory",
     "trace chrom",
     "trace xic",

@@ -1,8 +1,11 @@
-//! The `ion` group (masses, isotope patterns, what a number matches, the periodic table) and the `mol` group (drawn structures).
+//! The `ion` group (masses, isotope patterns, what a number matches, the periodic table) and `raw isotopes` (a pattern checked against a peak; kept here, not with the other `raw` rows, for the length of that table) and the `mol` group (drawn structures).
 
 use super::Entry;
 
 pub(crate) static TABLE: &[Entry] = &[
+    Entry::new("raw isotopes", "mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--bin nominal] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--dry-run] [--out PATH]   do M+1 and M+2 fit the formula, within counting error", crate::raw_iso_cmd::iso_run)
+        .schema("raw-isotopes/1")
+        .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run).examples(&["mzlab-cli ion mz \"C6H12O6\" --adduct +H"]).schema("ion_mz/1").exits(&[0, 1, 2, 6]),
     Entry::new("ion pattern", "mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion", crate::ion_pattern_cmd::run).schema("ion_pattern/1").exits(&[0, 1, 2, 6]),
     Entry::new("ion match", "mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts", crate::plain::match_mz_cmd::run).schema("mz-match/1").exits(&[0, 2, 4, 6]),

@@ -1,0 +1,741 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-isotopes/1",
+  "title": "raw-isotopes/1: do M+1 and M+2 fit this formula, within counting error? `mzlab-cli raw isotopes`",
+  "description": "Per file the net ion counts of the bins M, M+1 and M+2 over the peak region of M (the sides subtracted), the observed ratios R1 = N1/N0 and R2 = N2/N0 with their delta-method sigma, and with `--formula` the expected pattern of `ion pattern` with a z score and a verdict per ratio (consistent, inconsistent, undetermined with its reason); without a formula the carbon range from R1 and the M+2 hint, as evidence only. `interference` holds the correlation of M+1 and M+2 with M over the region. Every key of a result is present; a value that does not apply is null. An `inconsistent` or `undetermined` verdict is an answer: exit 0. Code: crates/mzlab-core/src/rawiso.rs, crates/mzlab-cli/src/raw_iso_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "query",
+    "files",
+    "results",
+    "warnings",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-isotopes/1"
+    },
+    "query": {
+      "type": "object"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "container",
+              "sha256",
+              "size_bytes",
+              "samples"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "container": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "ms_level",
+                    "n_level_scans",
+                    "ion_quantum",
+                    "counts",
+                    "mz_offset",
+                    "thresholds"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ms_level": {
+                      "type": "integer"
+                    },
+                    "n_level_scans": {
+                      "type": "integer"
+                    },
+                    "ion_quantum": {
+                      "type": "object"
+                    },
+                    "counts": {
+                      "type": "boolean",
+                      "description": "true when the ion quantum is accepted, so counts, sigma and verdicts are given"
+                    },
+                    "mz_offset": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "required": [
+                        "min_counts",
+                        "z_ok",
+                        "z_bad",
+                        "c13_pct",
+                        "carbon_k",
+                        "m2_ratio",
+                        "m2_k",
+                        "min_r",
+                        "min_sn",
+                        "min_points",
+                        "alpha",
+                        "side_min",
+                        "gap_min"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "error"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "error": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "program",
+        "version",
+        "commit",
+        "engine",
+        "command",
+        "files",
+        "params",
+        "choices",
+        "cite"
+      ],
+      "properties": {
+        "program": {
+          "const": "mzLab"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "index_format",
+            "quantum"
+          ],
+          "properties": {
+            "index_format": {
+              "type": "integer"
+            },
+            "quantum": {
+              "const": "ionstat.quantum"
+            }
+          },
+          "additionalProperties": false
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "sha256",
+              "size",
+              "sample"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "value",
+              "why"
+            ],
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "value": {},
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cite": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sample",
+          "mz",
+          "rt_window",
+          "m",
+          "region",
+          "ions",
+          "observed",
+          "expected",
+          "tests",
+          "carbon_range",
+          "m2_hint",
+          "interference",
+          "flags"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "sample": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "mz": {
+            "type": "number"
+          },
+          "rt_window": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "m": {
+            "type": "object",
+            "required": [
+              "verdict",
+              "rule"
+            ],
+            "properties": {
+              "verdict": {
+                "enum": [
+                  "peak",
+                  "trace",
+                  "nothing",
+                  "no_data"
+                ]
+              },
+              "rule": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "description": "the verdict of `raw xic` for M in the window: the evidence that the region is a peak"
+          },
+          "region": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "source",
+              "start_rt",
+              "end_rt",
+              "apex_rt",
+              "n_scans",
+              "n_left_scans",
+              "n_right_scans"
+            ],
+            "properties": {
+              "source": {
+                "enum": [
+                  "peak",
+                  "window"
+                ]
+              },
+              "start_rt": {
+                "type": "number"
+              },
+              "end_rt": {
+                "type": "number"
+              },
+              "apex_rt": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "n_scans": {
+                "type": "integer"
+              },
+              "n_left_scans": {
+                "type": "integer"
+              },
+              "n_right_scans": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          },
+          "ions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "offset",
+                "mz_bin",
+                "window",
+                "gross",
+                "net",
+                "sigma",
+                "background_per_scan"
+              ],
+              "properties": {
+                "offset": {
+                  "enum": [
+                    0,
+                    1,
+                    2
+                  ]
+                },
+                "mz_bin": {
+                  "type": "number"
+                },
+                "window": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "gross": {
+                  "type": "number"
+                },
+                "net": {
+                  "type": "number"
+                },
+                "sigma": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "background_per_scan": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            },
+            "maxItems": 3,
+            "description": "M, M+1, M+2 in this order; empty when the window holds no scan"
+          },
+          "observed": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "r1",
+              "r2"
+            ],
+            "properties": {
+              "r1": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "r",
+                  "sigma"
+                ],
+                "properties": {
+                  "r": {
+                    "type": "number"
+                  },
+                  "sigma": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "r2": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "r",
+                  "sigma"
+                ],
+                "properties": {
+                  "r": {
+                    "type": "number"
+                  },
+                  "sigma": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "expected": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "formula",
+              "adduct",
+              "mz",
+              "r1",
+              "r2",
+              "pattern"
+            ],
+            "properties": {
+              "formula": {
+                "type": "string"
+              },
+              "adduct": {
+                "type": "string"
+              },
+              "mz": {
+                "type": "number"
+              },
+              "r1": {
+                "type": "number"
+              },
+              "r2": {
+                "type": "number"
+              },
+              "pattern": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "off",
+                    "mz",
+                    "abundance_pct"
+                  ],
+                  "properties": {
+                    "off": {
+                      "type": "integer"
+                    },
+                    "mz": {
+                      "type": "number"
+                    },
+                    "abundance_pct": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "tests": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "r1",
+              "r2"
+            ],
+            "properties": {
+              "r1": {
+                "type": "object",
+                "required": [
+                  "z",
+                  "verdict",
+                  "reason"
+                ],
+                "properties": {
+                  "z": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "verdict": {
+                    "enum": [
+                      "consistent",
+                      "inconsistent",
+                      "undetermined"
+                    ]
+                  },
+                  "reason": {
+                    "enum": [
+                      "within_counting_error",
+                      "outside_counting_error",
+                      "between_limits",
+                      "too_few_counts",
+                      "no_quantum",
+                      "no_m",
+                      "no_sigma"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "r2": {
+                "type": "object",
+                "required": [
+                  "z",
+                  "verdict",
+                  "reason"
+                ],
+                "properties": {
+                  "z": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "verdict": {
+                    "enum": [
+                      "consistent",
+                      "inconsistent",
+                      "undetermined"
+                    ]
+                  },
+                  "reason": {
+                    "enum": [
+                      "within_counting_error",
+                      "outside_counting_error",
+                      "between_limits",
+                      "too_few_counts",
+                      "no_quantum",
+                      "no_m",
+                      "no_sigma"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "carbon_range": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "best",
+              "min",
+              "max",
+              "c13_pct",
+              "k_sigma"
+            ],
+            "properties": {
+              "best": {
+                "type": "number"
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "c13_pct": {
+                "type": "number"
+              },
+              "k_sigma": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "m2_hint": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "hint",
+              "rule"
+            ],
+            "properties": {
+              "hint": {
+                "enum": [
+                  "cl_br_s_possible",
+                  "none"
+                ]
+              },
+              "rule": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "interference": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "r_m1",
+              "r_m2",
+              "n_points",
+              "min_r",
+              "possible"
+            ],
+            "properties": {
+              "r_m1": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "r_m2": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "n_points": {
+                "type": "integer"
+              },
+              "min_r": {
+                "type": "number"
+              },
+              "possible": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "no_data",
+                "no_peak_region",
+                "no_background",
+                "formula_mz_mismatch",
+                "no_expected_m",
+                "too_few_counts",
+                "edge",
+                "no_quantum",
+                "one_side"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "one result per file that answered, in input order"
+    }
+  },
+  "additionalProperties": false
+}

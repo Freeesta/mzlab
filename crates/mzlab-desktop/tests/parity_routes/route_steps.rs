@@ -51,7 +51,22 @@ pub fn stat_steps() -> Vec<Value> {
     out
 }
 
-/// `raw info`, `raw xic` and `raw scan` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `/api/rawscan`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
+/// `raw isotopes` (`/api/rawiso`): the counts alone, with a formula and an adduct, changed thresholds, an offset, a mass with no peak, a question with no mass and a refused adduct.
+fn iso_steps() -> Vec<Value> {
+    [
+        "?mz=241&rt=2.5,3.5",
+        "?mz=241&rt=2.5,3.5&formula=C6H12O6&adduct=[M%2BH]%2B",
+        "?mz=241&rt=2.5,3.5&formula=C6H12O6&min_counts=50&z_ok=1.5&z_bad=4&carbon_k=3",
+        "?mz=241&rt=2.5,3.5&mz_offset=0.3",
+        "?mz=900&rt=2.5,3.5",
+        "?rt=2.5,3.5",
+        "?mz=241&rt=2.5,3.5&adduct=[M%2BH]%2B",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawiso", "query": q}))
+    .to_vec()
+}
+
+/// `raw info`, `raw xic`, `raw scan` and `raw isotopes` on the index of slot 0 (`/api/rawinfo`, `/api/rawxic`, `/api/rawscan`, `/api/rawiso`, `docs/agenti/raw-access.md`): a short probe, a measured offset, a probe
 /// out of range; two masses (a peak and an empty one), changed thresholds, an m/z offset, a question with no time and a width out of range; then the
 /// slot reopened on the negative section and back on every section. The shared example holds positive scans only, so that negative section is the empty one; a
 /// file of alternating polarity (each section with its own answer) is `raw_pol.rs`. There is no `--sample` step: the app and the site answer a route over the
@@ -111,12 +126,14 @@ pub fn raw_steps() -> Vec<Value> {
         ("/api/rawxic", "?mz=241.3&rt=2.5,3.5"),
         ("/api/xicions", "?mz=241.3&tol=0.5&ions=1"),
         ("/api/rawscan", "?rt=2.5,3.5"),
+        ("/api/rawiso", "?mz=241&rt=2.5,3.5"),
     ]
     .map(|(path, q)| json!({"op": "route", "slot": 0, "path": path, "query": q}));
     info.into_iter()
         .chain(xic)
         .chain(xicions)
         .chain(scan)
+        .chain(iso_steps())
         .chain(sum)
         .chain(peak)
         .chain([pol(-1)])

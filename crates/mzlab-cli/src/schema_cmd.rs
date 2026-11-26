@@ -68,6 +68,7 @@ embed!(
     "items-1.json",
     "raw-cache-1.json",
     "raw-info-1.json",
+    "raw-isotopes-1.json",
     "raw-plan-1.json",
     "raw-scan-1.json",
     "raw-xic-1.json",

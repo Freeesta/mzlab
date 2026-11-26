@@ -110,4 +110,4 @@ The size limit (2000 atoms) is checked before any layout work. The cleaning step
 
 ## Sizes
 molkit `.wasm` (`tools/moduli/molkit.toml`, cap 560000, recorded value 369440 on the CI toolchain): the patch language adds 32318 bytes to a build that already holds the KET and CDXML writers (+7.3 %; 440233 to 472551 bytes after wasm-opt -O3, raw 953686 to 1034960, one base commit and one local build); the writers' own share is about 8.2 KB, inside the 440233.
-The patch code avoids the standard sort, BTree and float-formatting code, which cost 8 kB and 23 kB more. Catalog `mzlab-cli commands --json` is 32641 bytes (guard 33000 in `catalog_tests.rs`).
+The patch code avoids the standard sort, BTree and float-formatting code, which cost 8 kB and 23 kB more. Catalog `mzlab-cli commands --json` is 33598 bytes (guard 34000 in `catalog_tests.rs`).

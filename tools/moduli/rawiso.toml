@@ -1,0 +1,7 @@
+uscita = "wasm-feat/rawiso"
+pacchetto = "mzlab-rawiso-wasm"
+chiavi = { rawiso = 38 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 258048
+nota = "api/rawiso (`raw isotopes`: the net counts of M, M+1 and M+2 over the peak region of an m/z and a window, the observed ratios with counting sigma, and the z scores against the pattern of a formula, over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first isotopes request; a module of its own (new lazy module, owner decision NEW line); cap estimated at 1.032 x rawscan (unoptimised .wasm 822,494 B vs 796,863 B) x 1.05 rounded up to 4 KiB until the CI size step measures it"

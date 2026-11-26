@@ -110,6 +110,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "mean spectrum of a window minus its sides per m/z bin",
         "raw scan",
     ),
+    ("does M+1 and M+2 fit this formula within counting error", "raw isotopes"),
     (
         "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
         "quant targets",

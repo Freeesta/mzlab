@@ -15,6 +15,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type read from the method of the file", &["quant targets", "trace xic", "raw info"])
         .bulk("mzlab-cli raw xic FILE... --mz M1,M2,... --rt A,B: every mass in every file, one call; a list with an RT window per row: quant targets"),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
+    r("raw isotopes", "isotope pattern ratio m+1 m+2 carbon count formula check counting error sigma z score chlorine bromine sulfur interference coelution agrees with the formula 13c", &["ion pattern", "raw xic", "raw scan"]),
     r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
         .ex("mzlab-cli file method run.wiff --sample 1"),
     r("file channels", "sim srm mrm channel list transitions", &["trace chrom", "peak table"]),

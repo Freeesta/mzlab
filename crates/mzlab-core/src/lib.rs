@@ -176,6 +176,8 @@ mod specpeak_tests;
 mod specsum_tests;
 mod rawxic_json;
 pub mod rawscan;
+pub mod rawiso;
+mod rawiso_json;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]
