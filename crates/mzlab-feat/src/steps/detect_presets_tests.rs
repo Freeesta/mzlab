@@ -1,9 +1,9 @@
 //! The presets of `features.detect` hold the constants of the profiles and the descriptor writes the recipe `Recipe::nominal` writes.
 
-use crate::steps::registry;
 use crate::recipe::Recipe;
 use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_SNR};
 use crate::steps::recipe_map;
+use crate::steps::registry;
 use mzlab_core::step::find;
 
 /// The two presets of `features.detect` hold the constants of the two profiles (`Params::default`, `LR_FLOOR`, `LR_MIN_HEIGHT`).
