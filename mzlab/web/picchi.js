@@ -149,20 +149,21 @@ function clickWin(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number}
   p._intCur = null; c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
   return r - l < 1e-6 ? null : [l, r];
 }
+/** The module of the click (integra-clic.js), loaded on first use. */
+const intClickMod = async () => { const W = /** @type {any} */ (window); if (!W.INTCLICK) await loadScript("m:integra-clic.js"); return W.INTCLICK; };
 // one click at time x on the trace s (integra-clic.js): the peak whose apex is nearest, refused with its evidence when it is junk (force keeps it)
 async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x, force = false) {
   if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
-  if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js");
-  const r = await INTCLICK.ask(s, x, force); if (!r) { nearMsg(I18N.t("int.autoOff")); return; }
-  if (!r.ok) { INTCLICK.refuse(p, s, r); return; }
+  const IC = await intClickMod();
+  const r = await IC.ask(s, x, force); if (!r) { nearMsg(I18N.t("int.autoOff")); return; }
+  if (!r.ok) { IC.refuse(p, s, r); return; }
   const w = clickWin(p, s, x, r.edges[0], r.edges[1]);
-  if (w && addInt(p, s, w[0], w[1])) INTCLICK.done(p, s, r);
+  if (w && addInt(p, s, w[0], w[1])) IC.done(p, s, r);
 }
 // the click of the page (integra-clic.js): the trace nearest the pointer, or all the visible ones when the panel says so; shift = keep a refused window
-const INTCLICK_ALL = async (/** @type {Bag} */ p, /** @type {number} */ x) => { if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js"); return INTCLICK.atRt(p, x); };
+const INTCLICK_ALL = async (/** @type {Bag} */ p, /** @type {number} */ x) => (await intClickMod()).atRt(p, x);
 async function intClick(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {number | null | undefined} */ py, force = false, mouse = false) {
-  if (typeof INTCLICK === "undefined") await loadScript("m:integra-clic.js");
-  return INTCLICK.go(p, x, py, force, mouse);
+  return (await intClickMod()).go(p, x, py, force, mouse);
 }
 // integration whose filled area contains the pixel (used to select it with a click)
 function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number} */ py) {
