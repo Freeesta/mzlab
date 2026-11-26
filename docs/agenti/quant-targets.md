@@ -1,6 +1,8 @@
 # Target list over many files (`quant.targets@1`, `mzlab-cli quant targets`, `quant union`)
 
-`quant targets` integrates the first sample of a multi-sample `.wiff`; stderr says so (`note.quant.firstSample`, with `convert --sample LIST` and `sample list` as the way to the others). `--sample` on `quant targets` is not there yet.
+`quant targets --sample LIST` integrates the chosen samples of a multi-sample `.wiff` (code `sample_select/sample_members.rs`, shared with `features`): one table file per sample, named by the label rule (`mzlab_core::readers::label`: sample name plus the file's extension, `NAME (FILE #ID).ext` on a tie), indexes built per sample as the Flow does for inputs `FILE@ID`.
+`--dry-run` and `--json` add `members` (`name`, `member` = `FILE@ID`, `sample_id`, `sample`, `label` own|tie|numbered; schemas `quant-targets-plan-1.json`, `quant-targets-1.json`); stderr has one `note.features.column*` line per sample; the log keeps the bytes of the site.
+Without `--sample` the first sample is used and stderr says so (`note.quant.firstSample`, naming `--sample LIST` and `sample list`). Exit 5 for an id the file does not have, 2 for a bad list or when no input holds several samples. Parity: `tests/test_quant_targets_sample_wasm.py` (CLI = `flow run` over `FILE@ID` = wasm, table and log).
 Files: `crates/mzlab-feat/src/quant_targets/` (`targets.rs` table, `params.rs`, `run.rs` engine, `text.rs` table/log/plan/JSON), `crates/mzlab-cli/src/quant_targets_cmd.rs` (CLI), `flow_quant_targets.rs` (descriptor + executor), `crates/mzlab-feat-wasm/src/run_quant.rs` + `flow/lazy/flow-web-quanttargets.js` (browser).
 Tests: `crates/mzlab-feat/tests/quant_targets.rs`, `crates/mzlab-cli/tests/quant_targets_cli.rs`, `src/flow_quant_targets_tests.rs`, `tests/test_quant_targets_wasm.py` (wasm = CLI = flow run, byte for byte), `tests_e2e/e2e_flow_quant_targets.py`; synthetic mzML in `crates/mzlab-feat/tests/common_quant/`.
 
