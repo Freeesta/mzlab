@@ -21,8 +21,8 @@ Checked on main with `tools/indice.py`, `docs/agenti/INDICE.md` and `mzlab-cli c
 | feature table (filter, sort, columns) | `TPTAB` (`TP_Mine/js/42_tp_table.js`): sortable headers, chips, columns menu, pinned and virtual rows, CSV/Excel of the view; `PIPET` (`37_feature_table.js`) | no `origin` column (A/B/C); kinetic class not one column |
 | per-feature detail view | `TPRIGA` (`TP_Mine/js/44_tp_riga.js`): tabs overview (XIC of all files coloured by time, blank/dark dashed, MS1/MS2/mirror), samples, identity, quality, structure; model `row/2`, `row_traces/2` (`crates/mzlab-feat/src/row.rs`) | slots for kinetics, UV-Vis, isotopes/adducts not in it; **no CLI route for `row/2`** (wasm `table_row` and desktop only) |
 | parent: SMILES / InChI / drawing -> formula, mass, adducts, isotopes | `mol draw`, `mol measure` (logP "Prev."), `ion mz`, `ion pattern`, adduct calculator (`calc-addotti.js`), Draw tab (Ketcher) and mzDraw; recipes take `parent.json` with a formula | no parent card as one Flow input; pKa only from a table of typical values; reference MS2 of the parent not linked at the start |
-| file metadata grid, roles, from names, CSV | metadata grid (`flow/lazy/flow-meta-grid.js`, `samples/1`): roles sample, t0, blank, dark, std, qc...; time from names (`samples/names.rs`); CSV/XLSX import; `sample table/import/group` | roles dedicated MS2, SIM, PDA are not roles (they are file kinds); pre-flight `noT0`, `noBlank` exist in `samples/validate.rs`: check they reach the grid |
-| QTRAP 3200 reading | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`), DAD channels | - |
+| file metadata grid, roles, from names, CSV | metadata grid (`flow/lazy/flow-meta-grid.js`, `samples/1`): roles sample, t0, blank, dark, std, qc...; time from names (`samples/names.rs`); CSV/XLSX import; `sample table/import/group` | pre-flight warnings exist and show in the grid, never blocking (`samples/validate.rs`: `noT0`, `noBlank`, `noDark`, `onePoint`); dedicated MS2, SIM and PDA files are file kinds, not roles |
+| QTRAP 3200 reading | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`), DAD channels; step presets `lr` and `hr` of `features.detect`, tolerances from `features.estimate` | no preset named after an instrument |
 | HR reading: mzML, Thermo `.raw` | mzML/mzXML read everywhere; **Thermo `.raw` read natively** (`crates/mzlab-core/src/rawreader.rs`, vendored `opentfraw`), only for the file versions checked on real files (57, 63, 64, 66); others refused with `err.file.rawVersion` | the owner's Orbitrap versions must be checked (format facts only) |
 | engine A, direct untargeted | `features.estimate/detect/align/gapfill`, `table.filter`, `features.group` (HR ion network, neutral mass), `features.companions` (unit mass: isotopes, NH4/Na/K, in-source losses); `features` CLI | ESI- companions list open; tolerances already printed |
 | engine B, kinetic classification | `table compare` (vs T0 and blank: ratios, log2FC, rho, classes, never deletes); kinetic forms by AICc: formation, rise-and-fall, flat, decay (`crates/mzlab-feat/src/kinetic/`); LR Dig labels per condition (`tp.dig_lr`) | the owner's class names in one column; **treated / dark ratio** (dark is pooled with blank in the Dig); tmax and t1/2 per row printed |
@@ -43,7 +43,7 @@ Checked on main with `tools/indice.py`, `docs/agenti/INDICE.md` and `mzlab-cli c
 | audit log user / auto / agent | `logOp` `{op, t}`; `auto:` lines of `sample table`; "by assistant" undo entries; `llm` block in `prov/1` | **no `actor` field** |
 | feature card, one page, provenance footer | report `mzreport/1` (HTML with SHA-256), MSn figure SVG/HTML/PNG, `prov/1` | no single-feature card export |
 | workflow saved as a template | `mzflow/2` plans, templates in `flow-names.js`, `docs/recipes/kinetic-lr.mzflow.json` | a TP template with parent and metadata inputs |
-| phone width | on a phone the app does not load: one card "You are on a smartphone" (`telefono-scheda.js`); Flow warns "made for computers" | a read-only phone view, if wanted (decision) |
+| phone width | on a phone the app does not load: one card "You are on a smartphone" (`telefono-scheda.js`); Flow warns "made for computers" | a read-only phone view (PHONE-VIEWER) |
 | MZmine table import | `features` writes the MZmine "full" CSV; `table compare` reads a CSV table | import of an MZmine table as a list entry: to check |
 
 ## 3. The concept in one picture
@@ -64,38 +64,56 @@ The owner's spec put engine C in v2. Two facts change that: the suspect half of 
 | phase | the user can | built from |
 |---|---|---|
 | 0 see | open any table of a run in a list, open a row in a fixed-slot feature view | existing outputs only (rows FLOW-TABLE-LIST, TABLE-ROW-CLI, FEATURE-DETAIL) |
-| 1 start | fill a parent card and the metadata grid with non-blocking warnings | `mol`, `ion`, `samples/1` (PARENT-CARD, PREFLIGHT-GRID) |
-| 2 detect | run A, B and C (rules 1-2 steps) as blocks; each adds a table to the list; one union table with the origin of each row | existing steps + KINETIC-CLASS, ROW-ORIGIN |
+| 1 start | fill a parent card; the metadata grid with its warnings exists | `mol`, `ion`, `samples/1` (PARENT-CARD, INSTRUMENT-PRESETS) |
+| 2 detect | run A, B and C (the rules that exist, 1-2 steps) as blocks; each adds a table to the list; one union table with the origin of each row | existing steps + KINETIC-CLASS, ROW-ORIGIN |
 | 3 workbench | fill the kinetics, UV and MS2 slots; link MS2 files by hand; see the three pillars | FEATURE-KINETICS, FEATURE-UV, MS2-LINK-FILES, LINK-PILLARS |
 | 4 identify | draw or accept a structure, set the level; ask the assistant for 1-3 proposals | Draw, `tp.review`, AI-FEATURE-PROPOSAL, AUDIT-ACTOR |
 | 5 close | export one card per feature, save the workflow as a template | FEATURE-CARD-EXPORT, TP-TEMPLATE |
-| later | 3 generations and BioTransformer, ECOSAR, 2 parents, biotic | SUSPECT-GEN3, BIOTRANSFORMER-IO |
+| v2 | 3 generations and editable rules, BioTransformer and ECOSAR by file exchange, a phone viewer, 2 parents, biotic | SUSPECT-GEN3, BIOTRANSFORMER-IO, ECOSAR-IO, PHONE-VIEWER |
 
-## 5. Slices (rows of `docs/coda/CODA.md`)
-Each slice is one chat and one PR, with parity site = app = CLI and a CLI route for agents. Order: the owner sees something first, engines after.
+## 5. Slices (rows of `docs/coda/CODA.md`, each with a prompt in `docs/coda/prompt/`)
+Each slice is one chat and one PR, with parity site = app = CLI and a CLI route for agents. Order: the owner sees something first, engines after. The CLI routes of one feature share the `table` family (`table row`, `table slots`, `table kinetics`, `table uv`, `table card`) so that an agent finds them together.
 
-1. **TABLE-ROW-CLI** - `row/2` and `row_traces/2` of one row from the CLI (the site already has them): the base of every slot and of the agent route.
-2. **FLOW-TABLE-LIST** - the list of feature tables on the right of the Flow, from the run outputs; Rust gives the list facts; CLI twin over a run folder.
-3. **FEATURE-DETAIL** - the feature view with fixed slots over `row/2`; an empty slot names the block or command that fills it (`feature-slots/1` in Rust).
-4. **PREFLIGHT-GRID** - the `noT0` / `noBlank` warnings of `samples/validate.rs` in the metadata grid, non-blocking (may be a discoverability task).
-5. **PARENT-CARD** - one Flow input: structure -> formula, exact mass, adducts per polarity, isotope pattern, logP (prediction), reference MS2 file.
-6. **KINETIC-CLASS** - one class column and the ratios Max/T0, Max/blank, treated/dark, tmax, t1/2; classes sort, never delete.
-7. **FEATURE-KINETICS** - the kinetics slot: area and height per condition, normalised, `absent` and `na` drawn differently.
-8. **ROW-ORIGIN** - the origin (A, B, C, several) of each row of the union table.
-9. **FEATURE-UV** - the UV-Vis slot: spectrum at the apex, difference spectrum, co-elution flag.
-10. **MS2-LINK-FILES** - link MS2 from DDA or dedicated files by m/z + RT window, manual link and unlink, each with provenance.
-11. **LINK-PILLARS** - the three pillars side by side for one row: MS2 vs parent with neutral losses, RT-shift direction, kinetic coherence.
-12. **AUDIT-ACTOR** - `actor` user / auto / agent in the decision log; an agent never overwrites a user decision.
-13. **FEATURE-CARD-EXPORT** - one card per feature with a provenance footer listing the exact source files.
-14. **TP-TEMPLATE**, **AI-FEATURE-PROPOSAL**, **SUSPECT-GEN3**, **BIOTRANSFORMER-IO**, **INSTRUMENT-PRESETS**, **PHONE-VIEWER**, **RAW-VERSIONS** - after the owner's decisions in §6.
+| # | id | the user gets | needs first |
+|---|---|---|---|
+| 1 | TABLE-ROW-CLI | `table row`: `row/2` and `row_traces/2` of one row from the CLI (the site already has them) | - |
+| 2 | FLOW-TABLE-LIST | the list of feature tables on the right of the Flow; `flow tables` over a run folder | - |
+| 3 | FEATURE-DETAIL | the feature view with fixed slots; `feature-slots/1` says per slot what fills it | 1 |
+| 4 | PARENT-CARD | one Flow input: structure -> formula, mass, adducts per polarity, isotopes, logP and pKa as predictions, reference MS2 | - |
+| 5 | KINETIC-CLASS | step `table.kinetic_class`: class column and Max/T0, Max/blank, treated/dark, tmax, t1/2 | - |
+| 6 | FEATURE-KINETICS | the kinetics slot: area and height per condition, mean and SD bars with the replicate points | 3 |
+| 7 | ROW-ORIGIN | the origin of each row of the union table | - |
+| 8 | FEATURE-UV | the UV-Vis slot: spectrum at the apex, difference spectrum, co-elution list | 3 |
+| 9 | MS2-LINK-FILES | an executor for `features.ms2_link`: DDA and dedicated MS2 files, manual link and unlink, provenance | - |
+| 10 | LINK-PILLARS | step `tp.pillars`: the three pillars of one row side by side | 5 |
+| 11 | FEATURE-CARD-EXPORT | `table card`: one HTML page per feature with SVG charts and a provenance footer | 3 |
+| 12 | INSTRUMENT-PRESETS | presets named after the instrument (unit +-0.5 Da, Orbitrap +-5 ppm) | - |
+| 13 | POLPAIR-CLI | a CLI route for the wasm `cross_polarity` (`polpair/1`, HR) | - |
+| 14 | AUDIT-ACTOR | `actor` user / auto / agent in the decision log; an agent never overwrites a user decision | owner: saved bytes change |
+| 15 | TP-TEMPLATE | a TP template: parent, files, metadata, A, B, C, union, pillars | 4, 7 |
+| 16 | AI-FEATURE-PROPOSAL | the assistant proposes 1-3 structures for one feature from its text card | 11, 14 |
+| 17 | PHONE-VIEWER | a read-only phone view of the tables and of one feature | 2, 3 |
+| 18 | SUSPECT-GEN3 | `tp.generate` up to 3 generations with an editable rule list | - |
+| 19 | BIOTRANSFORMER-IO | BioTransformer by file exchange: export the parent, import its products as hypotheses | - |
+| 20 | ECOSAR-IO | ECOSAR by file exchange: export the accepted structures, import the predictions as a column | - |
+| 21 | RAW-VERSIONS | Thermo `.raw` versions beyond 57, 63, 64, 66 | owner: version facts |
 
-## 6. Decisions the owner still has to take (asked one at a time in the PR chat)
-1. Thermo `.raw`: it is read today for four file versions. Which versions do your files have? (format facts only)
-2. BioTransformer and ECOSAR: run on your computer, or exchange files (export a list, import the result)?
-3. The feature card: which formats (HTML page, SVG, PDF, PNG)?
-4. Default settings per instrument: QTRAP +-0.5 Da, Orbitrap +-5 ppm, or other values?
-5. pKa and logP of the parent in the first version: predictions shown as such, or left out?
-6. Replicates in the kinetics: mean with bars, or every replicate as its own curve?
-7. The assistant: a model on your computer only, or may the text card of one feature be sent to a remote model?
-8. On a phone: nothing (as today), or a read-only view of tables and cards?
-9. The kinetic class names and the ratio limits (shown as `--set` parameters with their defaults).
+Engine B is a classification layer: it marks the rows that A and C find and never adds or removes a row; ROW-ORIGIN therefore writes the engines that found a row (A, C or both) and KINETIC-CLASS the class. Rows 1-3 are the first thing the owner can use: they show what already exists.
+
+## 6. Decisions
+Asked to the owner one at a time in the PR chat; when the owner left the rest to the study, the study chose and marked it so. Every choice below is a default the user can change.
+
+| question | decision | by |
+|---|---|---|
+| start screen | scheme in the centre, feature tables on the right, parent and files on the left, log at the bottom (screens A) | owner |
+| engine C in v1 | the base C (rules that exist, 1-2 steps, targeted XIC) is v1; 3 generations, editable rules and BioTransformer are v2 | owner |
+| phone | read-only: table list and one feature, one slot at a time; no runs, no editing (v2) | owner |
+| replicates in kinetics | mean with SD bars, the replicate points drawn on top; n printed per point | owner |
+| card export | HTML page plus SVG charts first (print to PDF from the browser); PDF and PNG later | owner |
+| assistant privacy | only the text card of one feature, shown to the user first and sent by the user to a remote model; never raw files | owner |
+| Thermo `.raw` | read today for versions 57, 63, 64, 66; other versions wait for the owner's version facts (RAW-VERSIONS) | open |
+| BioTransformer and ECOSAR | file exchange (export a list, import the result); nothing bundled, no licence taken, no network call from mzLab | study |
+| instrument presets | unit resolution +-0.5 Da and Orbitrap +-5 ppm as named presets; `features.estimate` may propose other values, logged as `auto` | study |
+| pKa and logP in v1 | logP from `mol measure` and pKa from the typical-value table, both labelled "prediction"; no computed pKa | study |
+| kinetic class names | bell (rise and fall), rising (formation or plateau), decreasing (decay or present at T0), background (flat or as high in controls); thresholds are `--set` parameters whose defaults come from the existing engines | study |
+| actor in the log | proposed (AUDIT-ACTOR); it changes the bytes of saved decision files, so the row waits for the owner | open |

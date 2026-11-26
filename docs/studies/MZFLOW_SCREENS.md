@@ -85,9 +85,10 @@ Reuses `TPTAB` (`TP_Mine/js/42_tp_table.js`: sort, chips, column menu, virtual r
 - Reuses `TPRIGA` (`TP_Mine/js/44_tp_riga.js`: XIC coloured by time with blank and dark dashed, MS1/MS2/mirror, samples), `TPSTRUCT` and `TPMOL` (structure drawn on the parent), `TPDEC` (level and note), `uv-spettro.js`, the mirror of `libreria.js`, `tdati.js` (data table of every chart, key T).
 - Fixed order of slots; an empty slot says which block or CLI command fills it (FEATURE-DETAIL, `feature-slots/1`). It never shows a made-up value.
 - `absent` (no peak) is a point at 0 with a hollow mark; `na` (time not acquired or file does not cover the window) is a gap in the line, never 0.
+- Kinetics: replicates as the mean with SD bars and the replicate points drawn on top, `n` per point in the data table (owner's choice); area and height side by side, each normalised to its own maximum.
 
-## E. Phone width (decision 8 of the study)
-Today a phone gets only the card "You are on a smartphone" (`telefono-scheda.js`). If the owner wants a read-only view, it would be:
+## E. Phone width (owner: read-only, v2, row PHONE-VIEWER)
+Today a phone gets only the card "You are on a smartphone" (`telefono-scheda.js`). The read-only view adds a second button "View tables" there:
 ```
 +------------------------+
 | P photolysis    [=]    |
