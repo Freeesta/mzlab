@@ -22,7 +22,8 @@ const HELP = {
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
-  "header": ["", I18N.t("help.header.body")],
+  // the build line: version, short commit and commit date (a build of main says which main it is)
+  "header": ["", I18N.t("help.header.body") + `<p style="margin:8px 0 0" class="muted">${I18N.t("help.header.build", { version: window.MZLAB_VERSION || "?", commit: (window.MZLAB_COMMIT || "dev").slice(0, 12), date: window.MZLAB_DATE || "?" })}<br><a href="https://github.com/Freeesta/mzlab/releases/tag/app-prebuilt" target="_blank" rel="noopener">${I18N.t("help.header.app")}</a></p>`],
 };
 
 (() => {

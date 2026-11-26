@@ -212,6 +212,16 @@ def seal_sw(out: Path) -> None:
     (out / "sw.js").write_text(sealed, encoding="utf-8")
 
 
+def git_commit_date() -> str:
+    """The commit date of HEAD as YYYY-MM-DD (not the clock: the same commit gives the same site), or "" outside a checkout."""
+    try:
+        import subprocess
+        d = subprocess.run(["git", "show", "-s", "--format=%cs", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+    except Exception:
+        d = ""
+    return d if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) else ""
+
+
 def git_commit() -> str:
     """The full 40-character commit of HEAD, or "dev" outside a checkout."""
     try:
@@ -330,7 +340,7 @@ def main() -> None:
     commit = git_commit()
     ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "__init__.py").read_text(encoding="utf-8"))
     ver = ver_match.group(1) if ver_match else "0.1.0"
-    (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
+    (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\nwindow.MZLAB_DATE = "{git_commit_date()}";\n', encoding="utf-8")
     pack_mzfinder(static)
     # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
     shutil.copy2(ROOT / "docs" / "schemi" / "tools-1.json", static / "llm" / "tools-1.json")

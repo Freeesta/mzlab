@@ -7,6 +7,7 @@ Before putting the tag `vX.Y.Z`: move the entries of «Unreleased» below into t
 ## [Unreleased]
 
 ### Added
+- Desktop app, always up to date: every change of `main` that touches the engine, the page or the bundle rebuilds the app for Mac, Windows and Linux and replaces the files of the pre-release `app-prebuilt` (never a release, unsigned); its notes name the commit and the date, the About box of the app shows them too, with a link to the download. Steps to open an unsigned app on a Mac: `docs/download-app.md`.
 - Desktop app: a double click on an `.mzML` or Thermo `.raw` file opens it in the Data view (file associations of the installers); with the app already open the file goes into the same window, no second copy starts. Agilent `.D`, Bruker `.d` and Waters `.raw` folders cannot be associated: drag them onto the window or use «Open».
 - Desktop app: when a file is opened this way, every other time the app asks whether to make mzLab the default app for these files (with the steps for Windows, Mac and Linux) until you answer «Yes» or «Don't ask again»; Settings → «Default app» asks again.
 - Command line: `tools/install.sh` installs the prebuilt `mzlab-cli` of the latest release on Linux (x86_64, aarch64) and macOS (Apple silicon) in one line, checked against `SHA256SUMS`, without sudo: `curl -fsSL https://raw.githubusercontent.com/Freeesta/mzlab/main/tools/install.sh | sh`.
