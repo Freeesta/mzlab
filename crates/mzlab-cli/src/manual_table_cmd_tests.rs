@@ -365,3 +365,19 @@ fn help_lists_the_header_columns_in_order() {
     }
     assert!(!h.contains("--set"), "peak table has no --set");
 }
+
+/// A table of windows says on stderr where the state word is (`--columns state`); with the column asked for, and in `--auto` (which has it), no hint.
+#[test]
+fn a_table_of_windows_without_the_state_column_names_it_on_stderr() {
+    let Some(d) = fixture("state_hint") else {
+        return;
+    };
+    let wiff = d.join("sim3.wiff");
+    let w = windows(&d, WINDOWS);
+    let o = table(&[&wiff], &["--windows", &w]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.contains("--columns state"), "{}", o.stderr);
+    let o = table(&[&wiff], &["--windows", &w, "--columns", "state"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(!o.stderr.contains("hint:"), "{}", o.stderr);
+}

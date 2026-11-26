@@ -51,7 +51,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list", "file method"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache", "trace xic"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
-    r("raw xic", "offset calibrate mz-offset peak trace nothing detected absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type read from the method of the file", &["quant targets", "trace xic", "raw info"]),
+    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type read from the method of the file", &["quant targets", "trace xic", "raw info"]),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
     r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
         .ex("mzlab-cli file method run.wiff --sample 1"),
@@ -62,7 +62,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample table", "roles blank qc standard control dark time point names which file is which identify role of each file samples.json tp.dig_lr tp.link not recognised", &["sample import", "sample pair", "sample design propose", "tp.dig_lr"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate samples.json tp.dig_lr", &["sample table", "sample pair", "tp.dig_lr"]),
     r("sample pair", "roles of a table check preview which files left out proposed from the name dark control standard samples.json tp.dig_lr tp.link tp.network pairing", &["sample table", "sample import", "tp.dig_lr"]),
-    r("features", "non-targeted untargeted feature table csv peak picking all files shift offset calibrate calibration correct mz-offset duplicate rows near duplicates same peak twice", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
+    r("features", "non-targeted untargeted feature table csv peak picking all files shift offset calibrate calibration correct mz-offset duplicate rows near duplicates same peak twice products lost nominal resolution triple quadrupole qtrap profile preset", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
         .ex("mzlab-cli features a.mzML b.mzML --report report.json --out table.csv"),
     r("estimate", "estimate parameters from the data noise floor minimum height threshold snr fwhm peak width rt tolerance mz tolerance ppm da mass defect background level measured values set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant.targets", "target list every file integrate area snr state detected forced absent weak noise signals controls matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["quant targets", "features.union", "quant.curve"]),
@@ -75,14 +75,14 @@ pub(crate) static RELATED: &[Rel] = &[
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
-    r("peak auto-lr", "integrate peaks one trace sim mrm area snr", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
+    r("peak auto-lr", "integrate peaks one trace sim mrm area snr state detected absent", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
     r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
         .bulk("mzlab-cli features FILE... --out table.csv: every high-resolution peak of many files in one call (peak table --auto is the low-resolution engine)"),
     r("peak area", "integrate one peak area", &["peak table"])
         .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
-    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
+    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows state forced detected versus integrated absent column", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
-    r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass", &["spectrum list", "raw xic", "spectra.centroid"])
+    r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass peak apex fwhm background sides", &["spectrum list", "raw xic", "spectra.centroid"])
         .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),
     r("spectrum compare", "compare two ms2 spectra cosine similarity match sample against standard reference library fragments matched ions explained unmatched collision energy same ce product ion spectrum identity confirm", &["spectrum get", "spectrum list", "spectra.match"]).ex("mzlab-cli spectrum compare sample.mzML std.mzML --a-rt 6.2 --b-rt 6.3 --a-precursor 253.1"),
     r("ion pattern", "isotope pattern chlorine bromine", &["features.group", "ion mz"]),
@@ -95,12 +95,13 @@ pub(crate) static RELATED: &[Rel] = &[
     r("flow steps", "plan template step parameters", &["flow defaults", "flow check", "flow run"]),
     r("flow defaults", "default parameter value limit unit set key off when empty what can i change", &["flow steps", "flow check", "estimate"]),
     r("commands", "find search help catalog task", &["schema", "flow steps"]),
-    r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
+    r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr state detected absent channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
     r("table.filter", "blank subtraction subtract threshold background ions remove drop ions also in the blank sample carryover contaminant matrix blank ratio filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
+    r("features.detect", "products lost below the height one ion split in two rows nominal resolution triple quadrupole qtrap profile preset floor grid", &["features", "features.align"]).ex("mzlab-cli flow run plan.json --in files/ --out out/ --set detect.preset=nominal"),
     r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])
         .ex("mzlab-cli flow run plan.json --in files/ --out out/ --set gapfill1.dedup_overlap=0"),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),

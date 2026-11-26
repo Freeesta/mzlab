@@ -9,9 +9,10 @@ const { Engine } = wasm;
 let rotteMod; const rotte = () => rotteMod || (rotteMod = require(path.join(process.argv[2], "mzlab_rotte_wasm.js")));
 // api/tic_background lives in the lazy module `ticfondo` (crates/mzlab-ticfondo-wasm), which opens the index itself
 let ticMod; const tic = () => ticMod || (ticMod = require(path.join(process.argv[2], "mzlab_ticfondo_wasm.js")));
-// api/rawinfo lives in the lazy module `raw` (crates/mzlab-raw-wasm), api/rawxic in `rawxic` (crates/mzlab-rawxic-wasm), api/rawscan in `rawscan` (crates/mzlab-rawscan-wasm): rust-worker.js sends each route to its module, so does this runner
-let rawMod, xicMod, scanMod; const raw = () => rawMod || (rawMod = require(path.join(process.argv[2], "mzlab_raw_wasm.js")));
+// api/rawinfo lives in the lazy module `raw` (crates/mzlab-raw-wasm), api/rawxic in `rawxic` (crates/mzlab-rawxic-wasm), api/rawscan in `rawscan` (crates/mzlab-rawscan-wasm), api/specpeak in `specpeak` (crates/mzlab-specpeak-wasm): rust-worker.js sends each route to its module, so does this runner
+let rawMod, xicMod, scanMod, peakMod; const raw = () => rawMod || (rawMod = require(path.join(process.argv[2], "mzlab_raw_wasm.js")));
 const xic = () => xicMod || (xicMod = require(path.join(process.argv[2], "mzlab_rawxic_wasm.js")));
+const peak = () => peakMod || (peakMod = require(path.join(process.argv[2], "mzlab_specpeak_wasm.js")));   // api/specpeak: the lazy module `specpeak` (crates/mzlab-specpeak-wasm)
 const scan = () => scanMod || (scanMod = require(path.join(process.argv[2], "mzlab_rawscan_wasm.js")));
 let slotPol = 0;
 const idx = fs.readFileSync(process.argv[3]), mzml = fs.readFileSync(process.argv[4]);
@@ -27,7 +28,7 @@ const run = s => {
   switch (s.op) {
     // the polarity of the slot (0 = every section) is the step's `pol`, as the app's `idxopen`: the engine and the raw modules read the same section
     case "idxopen": { slotPol = s.pol || 0; const r = e.open_index(s.slot, idx.length, rdIdx); e.set_polarity(s.slot, slotPol); return { s: r }; }
-    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawxic" ? xic().raw_xic(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/specsum" ? xic().spec_sum(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawscan" ? scan().raw_scan(idx.length, rdIdx, slotPol, s.query || "") : e.route(s.slot, s.path, s.query || "") };
+    case "route": return { s: s.path === "/api/rawinfo" ? raw().raw_info(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawxic" ? xic().raw_xic(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/specsum" ? xic().spec_sum(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/rawscan" ? scan().raw_scan(idx.length, rdIdx, slotPol, s.query || "") : s.path === "/api/specpeak" ? peak().spec_peak(idx.length, rdIdx, slotPol, s.query || "") : e.route(s.slot, s.path, s.query || "") };
     case "fileinfo": return { s: e.fileinfo(s.slot, s.name, mzml.length, rdMzml) };
     case "canali": return { s: e.canali(s.slot, s.name, mzml.length, rdMzml) };
     case "mrm": return { s: e.mrm(s.slot, mzml.length, rdMzml) };

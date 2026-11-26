@@ -1,0 +1,75 @@
+//! wasm-bindgen bridge of `api/specpeak` (`mzlab_core::specpeak`, `docs/agenti/data-channels.md`): the apex of a product-ion chromatogram, the window of `factor` x
+//! FWHM, the two background sides and the background-subtracted spectrum, from the `.mzidx` of a sample (the bytes of `mzlab-cli spectrum get --peak auto`). A `.wasm`
+//! of its own so that `rawxic` keeps its size; fetched by the worker of the engine on the first request (`load("specpeak")` of `mzlab/web/rust-raw.js`). Errors are JSON `{"error_key", "params"}` strings.
+#![forbid(unsafe_code)]
+use js_sys::{Function, Uint8Array};
+use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::routes::{Query, Routes};
+use wasm_bindgen::prelude::*;
+
+/// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
+const BRIDGE: &str = "specpeak/1";
+
+fn error_json(e: &mzlab_core::Error) -> JsValue {
+    JsValue::from_str(&e.to_json())
+}
+
+#[wasm_bindgen]
+pub fn version() -> String {
+    BRIDGE.to_string()
+}
+
+/// The message of a panic goes to a global of the worker (`__mzlabPanic`) before the abort, as in the engine.
+#[wasm_bindgen(start)]
+pub fn start() {
+    std::panic::set_hook(Box::new(|info| {
+        let _ = js_sys::Reflect::set(
+            &js_sys::global(),
+            &"__mzlabPanic".into(),
+            &info.to_string().into(),
+        );
+    }));
+}
+
+/// Bytes of an index file asked to JS: `read(offset, length) -> Uint8Array` (the reader of `raw`, kept here so that neither module links the other).
+struct JsReader(Function);
+
+impl ReadAt for JsReader {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let bad = || mzlab_core::idxread::read_error(off, buf.len());
+        let v = self
+            .0
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| bad())?;
+        let a: Uint8Array = v.dyn_into().map_err(|_| bad())?;
+        if a.length() as usize != buf.len() {
+            return Err(bad());
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
+}
+
+/// The routes over the index of `size` bytes read by `read`, `pol` as the engine's `set_polarity`; one copy for the export (not inlined: it holds the index reader).
+#[inline(never)]
+fn open(size: f64, read: Function, pol: i32) -> Result<Routes<JsReader>, JsValue> {
+    let mut r = Routes::new(Index::open(JsReader(read), size as u64).map_err(|e| error_json(&e))?);
+    r.pol = [1, -1].contains(&pol).then_some(pol as i8);
+    Ok(r)
+}
+
+/// `api/specpeak?rt0=A&rt1=B[&level=..&precursor=..&factor=..&side_min=..&gap_min=..&min_sn=..&min_points=..&fill_ms=..]` (`Routes::spec_peak_route`, the
+/// answer of `mzlab-cli spectrum get --peak auto`: the apex, the window, the sides, the background and the spectrum) over the `.mzidx` of `size` bytes read
+/// by `read`; `pol` as in `raw_xic`.
+#[wasm_bindgen]
+pub fn spec_peak(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
+    let mut r = open(size, read, pol)?;
+    let out = r
+        .spec_peak_route(&Query::parse(query))
+        .map_err(|e| error_json(&e))?;
+    Ok(out.unwrap_or_default())
+}

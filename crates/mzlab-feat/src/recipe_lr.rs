@@ -17,6 +17,11 @@ pub const LR_MIN_HEIGHT: f64 = 7e3;
 /// peak is sharp, so it is a choice of the user (`min_width` of `features.detect`).
 pub const LR_MIN_WIDTH: f64 = 0.0;
 pub const LR_MIN_SNR: f64 = 3.0;
+/// The `nominal` preset of `features.detect`: low-mass products of a triple quadrupole sit at a few thousand counts per second, under the `lr` height, and the centroid of
+/// an ion scatters by 0.1-0.2 Da, past the default reach of the grid merge. Floor and height are a third and 0.36 of the `lr` ones; a lower floor lets noise rows in.
+pub const NOMINAL_FLOOR: f64 = 1e3;
+pub const NOMINAL_MIN_HEIGHT: f64 = 2.5e3;
+pub const NOMINAL_GRID_TOUCH: f64 = 0.25;
 /// Width of the bins of the comparison of two MS2 spectra at unit resolution, m/z.
 const LR_MS2_BIN: f64 = 0.5;
 
@@ -65,6 +70,20 @@ impl Recipe {
         r.fill.ppm = da(LR_TOL);
         r.fill.floor = floor;
         r
+    }
+
+    /// The `nominal` profile on a unit-axis recipe (the values of the preset `nominal` of `features.detect`; a test keeps the two equal): a lower floor and height for low-mass
+    /// products and a wider grid merge. A high-resolution recipe is left alone and `false` says so; `preset` keeps the ask either way, for the report.
+    pub fn nominal(&mut self) -> bool {
+        self.preset = Some("nominal");
+        if !self.detect.axis.is_da() {
+            return false;
+        }
+        self.detect.floor = NOMINAL_FLOOR;
+        self.detect.min_height = NOMINAL_MIN_HEIGHT;
+        self.detect.min_snr = LR_MIN_SNR;
+        self.detect.grid_touch = NOMINAL_GRID_TOUCH;
+        true
     }
 
     /// The recipe the data of an index need: the default one at high resolution, the unit profile (mass defect measured here) otherwise.

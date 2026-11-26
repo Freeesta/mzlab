@@ -167,6 +167,9 @@ mod rawxic_judge;
 pub mod ionscale;
 pub mod ionfacts;
 mod specsum;
+mod specpeak;
+#[cfg(test)]
+mod specpeak_tests;
 #[cfg(test)]
 mod specsum_tests;
 mod rawxic_json;

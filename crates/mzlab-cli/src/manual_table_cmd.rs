@@ -346,6 +346,10 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         o.raw("}");
         o.0
     };
+    if !c.columns.iter().any(|n| n == "state") {
+        // an area is integrated wherever the window is put: the word says which of them found a peak (detected, forced, absent)
+        *warn += "hint: add --columns state to say per row whether the window was placed by you (forced), found by the engine (detected) or holds no peak (absent); the engine's own peaks: --auto\n";
+    }
     let csv = mzlab_core::manint::table_text(&files, &windows, c.sums)?;
     Ok(if c.json { csv_to_json(&csv) } else { csv })
 }

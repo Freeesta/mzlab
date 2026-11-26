@@ -35,6 +35,7 @@ pub(crate) mod flow_indexes;
 pub(crate) mod flow_indexes_tests;
 
 use crate::flow::{io, FileRunner, Lineage, Made};
+use crate::flow_made::named_preset;
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};
 use flow_indexes::Indexes;
 
@@ -141,7 +142,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     );
     Ok(Made {
         estimates,
-        preset: recipe.detect.axis.is_da().then_some("lr"),
+        preset: named_preset(job, recipe.detect.axis.is_da().then_some("lr")),
         ..Made::new("peaks", a)
     })
 }

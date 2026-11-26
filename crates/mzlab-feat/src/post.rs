@@ -5,7 +5,7 @@ use crate::quality::REASON_BROAD;
 use crate::sortc;
 use mzlab_core::error::Result;
 
-use crate::axis::{MassAxis, LR_TOUCH};
+use crate::axis::MassAxis;
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE};
 use crate::trace_base::reserve;
 
@@ -28,7 +28,7 @@ pub(crate) struct Row {
 }
 
 /// Rows of the features seen on both grids: the one with more points stays (`_merge_grids`); with `overlap` > 0 also two traces whose scans overlap by that share of the shorter one. Returns the keep mask.
-fn merge_grids(f: &[Row], axis: MassAxis, overlap: f64) -> Result<Vec<bool>> {
+fn merge_grids(f: &[Row], axis: MassAxis, overlap: f64, touch: f64) -> Result<Vec<bool>> {
     let (rt_tol, ppm, slack) = (0.05f64, 5e-6f64, 0.02f64);
     let n = f.len();
     let mut keep = Vec::new();
@@ -47,7 +47,7 @@ fn merge_grids(f: &[Row], axis: MassAxis, overlap: f64) -> Result<Vec<bool>> {
         for t in 0..n - j {
             let (yi, xi) = (o[t] as usize, o[t + j] as usize);
             let (x, y) = (&f[xi], &f[yi]);
-            let reach = if axis.is_da() { LR_TOUCH } else { x.mz * ppm };
+            let reach = if axis.is_da() { touch } else { x.mz * ppm };
             let near = (x.mz - y.mz).abs() <= reach && x.grid != y.grid;
             if !near {
                 continue;
@@ -132,13 +132,13 @@ pub(crate) fn finish(
     rows: [Vec<Row>; 2],
     dt: f64,
     axis: MassAxis,
-    overlap: f64,
+    (overlap, touch): (f64, f64),
 ) -> Result<FileFeatures> {
     let [r0, r1] = rows;
     let mut f = r0;
     reserve(&mut f, r1.len())?;
     f.extend(r1);
-    let keep = merge_grids(&f, axis, overlap)?;
+    let keep = merge_grids(&f, axis, overlap, touch)?;
     let mut k = keep.iter();
     f.retain(|_| *k.next().unwrap());
     // no Fourier-transform side lobes at unit resolution

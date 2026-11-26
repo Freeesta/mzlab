@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-specpeak-wasm"
+description = "wasm-bindgen bridge of api/specpeak (mzlab_core::specpeak: the apex, window, sides and background-subtracted spectrum of spectrum get --peak auto, read from the .mzidx); a .wasm of its own, loaded by the worker of the engine on the first request"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+# the same features as the other lazy modules, so a build of all in one cargo run unifies nothing new
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["mappa-dad", "isotopi-tutti"] }
+wasm-bindgen = "0.2"
