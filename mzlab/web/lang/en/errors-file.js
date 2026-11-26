@@ -78,5 +78,6 @@ I18N.add("en", {
   "warn.file.damaged": "Some spectra of the file do not decode (their data are damaged): they are left out with no points and counted, the rest is read and written. Check the copy of the file.",
   "warn.file.brukerCutBin": "The analysis.tdf_bin (or analysis.tsf_bin) file of this .d folder ends before some of the frames analysis.tdf lists: the spectra of the whole frames are read and written, those of the frames past its end are missing. Copy the whole .d folder again.",
   "warn.file.memberMissing": "A data file of the folder is missing (for example _FUNC002.DAT): the scans its index lists are not read, the rest is read and written. Check the copy of the folder.",
-  "warn.file.recordWidth": "A function of the folder stores its points in a record size mzLab does not decode: its scans are not read, the rest is read and written."
+  "warn.file.recordWidth": "A function of the folder stores its points in a record size mzLab does not decode: its scans are not read, the rest is read and written.",
+  "warn.file.nameMz": "The name {name} carries the mass {name_mz}, but the nearest precursor of the file is {precursor} (difference {delta} m/z). A name is free text and nothing is blocked: check that the name belongs to this file."
 });

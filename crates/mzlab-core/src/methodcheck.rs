@@ -216,7 +216,7 @@ mod tests {
     #[test]
     fn a_negative_mode_energy_matches_its_magnitude() {
         let t = Transition { q1: 364.1, q3: 194.1, dwell: 25.0, ce: Some(-20.0), ..Default::default() };
-        let lab = Method { name: String::new(), sample: None, source: vec![], compound: vec![], file: vec![], experiments: vec![Experiment { index: 0, kind: Kind::Mrm(vec![t]) }], lc: None };
+        let lab = Method { name: String::new(), sample: None, source: vec![], compound: vec![], file: vec![], experiments: vec![Experiment { index: 0, kind: Kind::Mrm(vec![t]), damaged: vec![] }], lc: None };
         let status = |ce: f64| {
             let data = crate::json::parse(format!(r#"{{"kind":"mrm","transitions":[{{"q1":364.1,"q3":194.1,"ce":{ce},"dwell":0.025}}]}}"#).as_bytes()).unwrap();
             check_against(&data, &lab)[1].status

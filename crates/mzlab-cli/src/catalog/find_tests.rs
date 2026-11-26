@@ -8,12 +8,32 @@ use crate::catalog::related::RELATED;
 pub(crate) const TASKS: &[(&str, &str)] = &[
     ("inventory of a folder of raw files", "file list"),
     (
+        "collision energy spread and declustering potential of a tandem file",
+        "file method",
+    ),
+    (
+        "sample name mass differs from the method precursor",
+        "file method",
+    ),
+    (
         "convert wiff files to mzML with their sample names",
         "file convert",
     ),
     (
         "assign roles blank qc standard to the samples",
         "sample table",
+    ),
+    (
+        "dark control not recognised in the transformation product screening",
+        "sample table",
+    ),
+    (
+        "tp.dig_lr fails when the plan contains a standard: set the roles from a csv",
+        "sample import",
+    ),
+    (
+        "preview which files are left out and which get a role from their name, check the roles of a table before the run",
+        "sample pair",
     ),
     (
         "what are the default parameters of a flow step",
@@ -25,6 +45,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "sample import",
     ),
     ("non-targeted feature table of all files", "features"),
+    (
+        "the same peak appears as two duplicate rows, a shoulder merged",
+        "features.gapfill",
+    ),
     (
         "one target list from the feature tables of several series",
         "quant union",
@@ -80,6 +104,18 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("record the provenance of a run", "flow record"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
     (
+        "what is in the spectrum of a time window that is not in the background",
+        "raw scan",
+    ),
+    (
+        "mean spectrum of a window minus its sides per m/z bin",
+        "raw scan",
+    ),
+    (
+        "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
+        "quant targets",
+    ),
+    (
         "retention times drift between batches, align on an internal standard",
         "quant targets",
     ),
@@ -91,6 +127,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
     (
+        "convert cps to ions with the dwell or fill time of the scan type",
+        "raw xic",
+    ),
+    (
         "remove ions that are also in the blank sample",
         "table.filter",
     ),
@@ -100,6 +140,16 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ),
     ("contaminant ions of the matrix blank", "table compare"),
     ("subtract the blank spectrum from a sample", "spectrum get"),
+    // the words of a user who does not know the measured-parameters, union and verdict commands exist
+    ("which parameters", "estimate"),
+    ("noise floor", "estimate"),
+    ("what threshold", "estimate"),
+    ("ppm", "estimate"),
+    ("what ppm tolerance fits my files", "estimate"),
+    ("targets from many series", "quant union"),
+    ("targets from many series", "features.union"),
+    ("is there a peak at this mass", "raw xic"),
+    ("how many ions", "raw xic"),
     (
         "sum a profile fragment split between two integers into one nominal mass bin",
         "spectrum get",
@@ -364,4 +414,87 @@ fn a_repeated_find_keeps_every_word() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["query"], serde_json::json!(["sim", "snr"]));
+}
+
+/// The state words and the shape gates of `quant targets` are findable: the search answers a task about weak peaks in blanks with the command, its
+/// example line names the gate, and its help shows both the state words and the gate parameters (a function nobody finds is not used).
+#[test]
+fn the_state_words_and_shape_gates_of_quant_targets_are_found_from_the_task_and_the_help() {
+    let o = crate::execute(
+        &[
+            "commands", "--find", "forced", "peaks", "in", "blanks", "shape", "gate", "--json",
+        ]
+        .map(String::from),
+    );
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    // The Flow step of the same function may rank just above its command (the bare word "blank" must keep the blank filter in the top five).
+    let top2 = &v["matches"].as_array().unwrap()[..2];
+    let first = top2
+        .iter()
+        .find(|m| m["name"] == "quant targets")
+        .unwrap_or_else(|| panic!("quant targets not in the first two: {top2:?}"));
+    assert!(
+        first["example"].as_str().unwrap().contains("min_half"),
+        "{first}"
+    );
+    let help = crate::execute(&["quant", "targets", "--help"].map(String::from));
+    let h = String::from_utf8_lossy(&help.stdout).into_owned();
+    for w in ["forced", "min_half", "max_fwhm", "max_asym", "decisions"] {
+        assert!(h.contains(w), "{w} not in the help");
+    }
+}
+
+/// The target-list route is found by the words of the loop that missed it (thousands of `peak auto-lr` calls), and `peak auto-lr` points at it.
+#[test]
+fn a_list_of_targets_over_many_files_finds_quant_targets_and_the_looped_command_points_at_it() {
+    let find = |words: &[&str]| {
+        let mut a = vec!["commands".to_string(), "--find".into()];
+        a.extend(words.iter().map(|s| s.to_string()));
+        a.push("--json".into());
+        let o = crate::execute(&a);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        serde_json::from_slice::<serde_json::Value>(&o.stdout).unwrap()
+    };
+    let v = find(&[
+        "integrate",
+        "many",
+        "targets",
+        "m/z",
+        "RT",
+        "windows",
+        "every",
+        "file",
+    ]);
+    assert_eq!(v["matches"][0]["name"], "quant targets", "{v}");
+    let lr = find(&["peak", "auto-lr"]);
+    let row = lr["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["name"] == "peak auto-lr")
+        .unwrap();
+    assert!(
+        row["bulk"]
+            .as_str()
+            .unwrap()
+            .starts_with("mzlab-cli quant targets FILE..."),
+        "{row}"
+    );
+    assert!(
+        row["see_also"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|x| x == "quant targets"),
+        "{row}"
+    );
+    let help = String::from_utf8(
+        crate::execute(&["peak".to_string(), "auto-lr".into(), "--help".into()]).stdout,
+    )
+    .unwrap();
+    assert!(
+        help.contains("quant targets FILE... --targets T.csv"),
+        "{help}"
+    );
 }

@@ -72,3 +72,9 @@ pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
 #[cfg(test)]
 #[path = "idx_open_tests.rs"]
 mod tests;
+
+/// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file or dataset (a `.wiff` with
+/// its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) through the reader of the registry (`flow_pace::build_index_of`, which takes the sample label too).
+pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
+    crate::flow_pace::build_index_of(path, "", idx, budget)
+}

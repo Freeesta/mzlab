@@ -149,7 +149,7 @@ fn apply_params(r: &mut Recipe, v: &Value) {
     if let Some(b) = v.get("fill").and_then(Value::bool) {
         r.fill_gaps = b;
     }
-    r.screen.read(|k| v.get(k).and_then(Value::str));
+    r.screen.read_json(v);
     r.ms2.consensus = v.get("ms2_spectrum").and_then(Value::str) == Some("consensus");
     r.ms2.background = v.get("ms2_background").and_then(Value::bool) == Some(true);
 }

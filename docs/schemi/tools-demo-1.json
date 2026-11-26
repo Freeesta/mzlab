@@ -1030,6 +1030,7 @@
                   "max_gap",
                   "long_trace",
                   "dedup",
+                  "dedup_overlap",
                   "intensity_tol",
                   "abs_da"
                 ]
@@ -1068,6 +1069,13 @@
                     "enum":["auto","off"],
                     "default":"auto",
                     "description":"Unit resolution only: of two rows within 0.6 Da and the RT tolerance whose areas correlate (r of at least 0.9 over 3 files) keeps the one with the higher maximum height; areas are never summed"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Unit resolution only: rows within 0.6 Da and the RT tolerance whose peaks, in the files where both were detected, cover at least this share of the narrower one (and half of it of the wider one), in 2 files or the only file, are one ion (a shoulder or broad top cut in two); 0 = off"
                   },
                   {
                     "type":"number",
@@ -1588,6 +1596,9 @@
                   "min_sn",
                   "min_points",
                   "min_shape",
+                  "min_half",
+                  "max_fwhm",
+                  "max_asym",
                   "offset",
                   "rt_ref",
                   "rt_span",
@@ -1624,6 +1635,24 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak with fewer scans in an unbroken run at or over half its height is flagged bad_shape; 0 = off. Noise blips are one or two scans wide"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak wider than this at half height is flagged bad_shape; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A peak whose right/left (or left/right) width at 10 % of the height is over this is flagged bad_shape; 1 or more, 0 = off"
                   },
                   {
                     "type":"string",

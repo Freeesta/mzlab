@@ -27,6 +27,34 @@ pub(super) fn stem(name: &str) -> &str {
     s
 }
 
+/// Which sample (by index of `files`) each table name takes (`usize::MAX` = none) and which samples were taken: the exact names first, so that `S1` never
+/// takes the place of `S1.5`, then the names without the extensions of `EXT`.
+pub(super) fn pair(files: &[String], names: &[String]) -> (Vec<usize>, Vec<bool>) {
+    let mut used = vec![false; files.len()];
+    let mut pick = vec![usize::MAX; names.len()];
+    for exact in [true, false] {
+        for (i, n) in names.iter().enumerate() {
+            if pick[i] != usize::MAX {
+                continue;
+            }
+            let n = base(n);
+            let hit = (0..files.len()).find(|&k| {
+                !used[k]
+                    && if exact {
+                        files[k] == n
+                    } else {
+                        stem(&files[k]) == stem(n)
+                    }
+            });
+            if let Some(k) = hit {
+                used[k] = true;
+                pick[i] = k;
+            }
+        }
+    }
+    (pick, used)
+}
+
 /// `text` with its files in the order of `names` (the files of the table, with or without folders and the extensions of `EXT`); the other fields are kept.
 /// The same text when the order is already that one, or when `names` is empty or has an empty name (a table that does not record its files).
 /// A name with no sample, or a sample naming no file of the table, is `error.badSamples` with the name in `file`.
@@ -43,29 +71,7 @@ pub fn order_like(text: &str, names: &[String]) -> Result<String> {
     };
     let file = |v: &Value| base(v.get("file").and_then(|x| x.str()).unwrap_or("")).to_string();
     let files: Vec<String> = rows.iter().map(file).collect();
-    let mut used = vec![false; rows.len()];
-    let mut pick = vec![usize::MAX; names.len()];
-    // the exact names first, so that `S1` never takes the place of `S1.5`
-    for exact in [true, false] {
-        for (i, n) in names.iter().enumerate() {
-            if pick[i] != usize::MAX {
-                continue;
-            }
-            let n = base(n);
-            let hit = (0..rows.len()).find(|&k| {
-                !used[k]
-                    && if exact {
-                        files[k] == n
-                    } else {
-                        stem(&files[k]) == stem(n)
-                    }
-            });
-            if let Some(k) = hit {
-                used[k] = true;
-                pick[i] = k;
-            }
-        }
-    }
+    let (pick, used) = pair(&files, names);
     if let Some(i) = pick.iter().position(|&k| k == usize::MAX) {
         return Err(bad().with("file", base(&names[i])));
     }

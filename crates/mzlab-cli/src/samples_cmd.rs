@@ -1,6 +1,5 @@
-//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
-//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `sample list FILE...` is what the files hold, sample by
-//! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
+//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets from
+//! `api/samples/<op>`; names one per line from a file or stdin. `sample list FILE...`: what the files hold, from their index alone (`samples_list/1`).
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -18,6 +17,7 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
        mzlab-cli sample group NAME...
        mzlab-cli sample table [--names FILE|- | FILE...] [--text]
        mzlab-cli sample import META.csv (FILE|DIR)... [--dry-run] [--json]   (sample import --help)
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table TABLE.mzfeat] [--json]   (sample pair --help)
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
        mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
@@ -32,7 +32,8 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
   --text          with table: a plain table (file, role, time_min, series, replicate) in place of the JSON
   Every role and time the names decide is logged on stderr (`auto: NAME kind=dark \"BLKD\" ...`: the field, its value and the part of the name that decided it);
   the user overrides one by editing `kind` (or `time`) of the samples/1 before the next step. A dark control (`COND-D`, `H2O2D`) and a dark matrix blank
-  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.";
+  (`BLKD`) are role `dark`, never `t0`; `Wash` is a `blank` of `blank_kind` `wash`; `std`, `blk`/`blank`, `QC` are read by name.
+example: mzlab-cli sample table s/*.mzML > samples.json, then the `samples` input of tp.dig_lr or tp.link (a file the samples lack takes the role of its name, logged).";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -110,8 +111,7 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
-/// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
+/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 pub(crate) fn table(args: Vec<String>) -> Result<String, String> {
     let mut src = None;
     let mut paths = Vec::new();
@@ -406,6 +406,7 @@ fn list_run(args: Vec<String>) -> Outcome {
                 } else {
                     table += &list_table(&l.json, &f.display().to_string());
                 }
+                err += &crate::method_cmd::hint_line(&f.display().to_string(), " --sample ID");
                 if l.refused {
                     err += &format!(
                         "warning: {}: a sample is refused (see its `refused`)\n",
@@ -471,7 +472,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let (op, body) = match sub {
         Some("vars") => ("variables", variables_args(it.collect())),
         Some("table") => return crate::samples_table::run(it.collect()),
-        Some("import") => return crate::samples_import::run(it.collect()),
+        Some(w @ ("import" | "pair")) => return crate::samples_pair::route(w, it.collect()),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {

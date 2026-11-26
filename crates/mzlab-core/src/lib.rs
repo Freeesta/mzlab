@@ -111,8 +111,10 @@ pub mod msntree_build;
 pub mod msngraph;
 pub mod msnroute;
 pub mod msntree;
+pub mod filemethod;
 pub mod methodcheck;
 pub mod methodinfo;
+pub mod namemz;
 pub mod methodjson;
 pub mod readers;
 pub mod transport;
@@ -162,10 +164,12 @@ pub mod ionstat;
 pub mod rawinfo;
 pub mod rawxic;
 mod rawxic_judge;
+pub mod ionscale;
 mod specsum;
 #[cfg(test)]
 mod specsum_tests;
 mod rawxic_json;
+pub mod rawscan;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]
