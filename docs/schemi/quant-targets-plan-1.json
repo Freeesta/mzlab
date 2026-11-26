@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quant-targets-plan/1",
+  "title": "quant-targets-plan/1: what `mzlab-cli quant targets --dry-run` would do, printed on stdout (no data is read)",
+  "description": "The parameters in force, the files (named as their rows will be) with their blank flag, the targets and the number of rows. With --sample, `members` says which sample of which file each name is. Code: crates/mzlab-feat/src/quant_targets/text.rs, crates/mzlab-cli/src/quant_targets_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "params",
+    "files",
+    "targets",
+    "rows"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "quant-targets-plan/1"
+    },
+    "params": {
+      "type": "object",
+      "description": "The same parameters as quant-targets-log/1 `params`, defaults printed."
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "blank"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "blank": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mz",
+          "rt_min",
+          "rt_max",
+          "polarity",
+          "role"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mz": {
+            "type": "number"
+          },
+          "rt_min": {
+            "type": "number"
+          },
+          "rt_max": {
+            "type": "number"
+          },
+          "polarity": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "target",
+              "reference"
+            ]
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "files x targets"
+    },
+    "members": {
+      "type": "array",
+      "description": "Only with --sample: one entry per sample chosen of a file with several, in table order. `name` is the file name its rows carry (the label rule of features --sample: the sample name with the extension of its file, NAME (FILE #ID) when two names collide), `member` is FILE@ID, `label` how the name was made. The same words are on stderr (note.features.column*).",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "member",
+          "sample_id",
+          "sample",
+          "label"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "member": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sample": {
+            "type": "string",
+            "description": "The sample name the file gives."
+          },
+          "label": {
+            "enum": [
+              "own",
+              "tie",
+              "numbered"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

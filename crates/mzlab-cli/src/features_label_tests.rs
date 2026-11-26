@@ -295,31 +295,6 @@ fn flow_inputs_naming_samples_get_the_same_columns() {
 }
 
 #[test]
-fn quant_targets_says_that_it_integrates_the_first_sample_and_names_the_way_to_the_others() {
-    let (dir, wiff) = pair("quant");
-    let targets = dir.join("targets.csv");
-    std::fs::write(&targets, "id,mz,rt_min,rt_max\nT1,229.1,0.2,1.0\n").unwrap();
-    let o = run(&[
-        "quant",
-        "targets",
-        "--targets",
-        targets.to_str().unwrap(),
-        &wiff,
-        "--dry-run",
-    ]);
-    assert_eq!(o.code, 0, "{}", o.stderr);
-    assert!(
-        o.stderr.contains("(note.quant.firstSample)")
-            && o.stderr.contains("convert")
-            && o.stderr.contains("--sample LIST")
-            && o.stderr.contains("sample list"),
-        "{}",
-        o.stderr
-    );
-    let _ = std::fs::remove_dir_all(&dir);
-}
-
-#[test]
 fn the_sample_names_give_the_roles_and_times_the_selectors_of_table_compare_read() {
     // the roles and times of `sample import` / `sample table` are guessed from the names; the column of a sample is that name, so
     // `role:blank` and `time:0` find the right columns (before, every column of the file carried the file name and no role could tell them apart)
