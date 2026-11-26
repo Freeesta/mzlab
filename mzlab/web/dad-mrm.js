@@ -18,7 +18,7 @@ const lineOf = f => ({ c: f.color, d: [2, 3] });
 const keyOf2 = (/** @type {any} */ f) => `twc|${f.k}`;
 /** the entries of the legend for the curves on the right axis: a swatch with the curve's colour and dash (hollow and dimmed once hidden by a click, like the other entries), hover or focus lights the curve @param {any} p */
 const keyHtml = p => curves(p).map(({ f }) => { const k = keyOf2(f), off = !!(p.hid && p.hid[k]); return `<span class="tg${off ? " off" : ""}" data-h="${EH(k)}" data-lk="${EH(k)}" tabindex="0" role="button" aria-pressed="${!off}">${SIMUI.swatchOf(lineOf(f), !off)}${EH(T("tdati.col.twc") + " · " + f.label)}</span>`; }).join("");
-g.TWCKEY = { html: keyHtml };
+/** @type {any} */ (window).TWCKEY = { html: keyHtml };
 
 /** @param {any} p */
 function ensure(p) {

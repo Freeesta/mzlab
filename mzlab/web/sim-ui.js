@@ -103,8 +103,12 @@
     const n = ts.length; if (!sf.length) return;
     keep(p, { ...Object.fromEntries(ts.map((t, ti) => ["t" + t.id, lookOf(style(sf[0], ti, n, 0), n, sf.length)])), ...Object.fromEntries(sf.map((f, fi) => ["f" + f.k, { c: n > 1 ? "var(--muted)" : f.color, d: style(f, 0, n, fi).dash }])) });
   }
-  /** the line of every MS2 transition (place among ALL listed, never among the drawn); true when it changed (the select must be written again) @param {any} p @param {string[]} keys @param {any[]} mf the files @returns {boolean} */
-  const ms2Look = (p, keys, mf) => !!mf.length && keep(p, Object.fromEntries(keys.map((k, i) => [k, lookOf(style(mf[0], i, keys.length, 0), keys.length, mf.length)])));
+  /** the line of every MS2 transition (place among ALL listed, never among the drawn); true when it or the set drawn changed (the select and its key must be written again)
+   * @param {any} p @param {string[]} keys @param {any[]} mf the files @param {number} max cap of «every transition» @returns {boolean} */
+  function ms2Look(p, keys, mf, max) {
+    const sh = ms2Shown(p, max).join("|"), moved = sh !== p._shS; p._shS = sh;
+    return (!!mf.length && keep(p, Object.fromEntries(keys.map((k, i) => [k, lookOf(style(mf[0], i, keys.length, 0), keys.length, mf.length)])))) || moved;
+  }
   /** the transitions the MS2 select draws now: one, every one up to max, or none @param {any} p @param {number} max @returns {string[]} */
   const ms2Shown = (p, max) => !p.tr ? [] : p.tr === "__all" ? (p._trs || []).slice(0, max).map((/** @type {any} */ t) => t.key) : [p.tr];
   /** the square before the text of an option of the select, filled while its trace is drawn @param {any} p @param {string} key @param {number} max */

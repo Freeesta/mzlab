@@ -70,7 +70,7 @@ async function ms2trSeries(p) {
   data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
   const full = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3), list = full.slice(0, MS2TR_MAX * 4), more = full.length - list.length;
   if (more !== (p._trsMore || 0) || JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; p._trsMore = more; ctl(p); }
-  if (SIMUI.ms2Look(p, list.map(t => t.key), mf)) ctl(p); if (!p.tr) return null;      // the line of every transition, computed once here with SIMUI.style; the key of the select reads it
+  if (SIMUI.ms2Look(p, list.map(t => t.key), mf, MS2TR_MAX)) ctl(p); if (!p.tr) return null;      // the line of every transition, computed once here with SIMUI.style; the key of the select reads it
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
   const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
     x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, tk: t.key, time: f.time, color: SIMUI.style(f, list.indexOf(t), list.length, fi).color,

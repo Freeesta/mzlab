@@ -12,6 +12,12 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
+def chip(pg, sel):
+    """a legend of many entries is a chip that opens the list: open it before an action on an entry"""
+    if pg.locator(sel + " .leg .lgc").count() and pg.get_attribute(sel + " .leg .lgc", "aria-expanded") != "true": pg.click(sel + " .leg .lgc")
+def away(pg, P):
+    """the pointer leaves the legend and the drawing is at rest: the picture taken next is the one without a highlight"""
+    pg.mouse.move(5, 5); wait_for_js(pg, "%s._hl == null" % P, timeout=10000); frames(pg, 4)
 def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 
 D = Path(tempfile.mkdtemp(prefix="trace_key_panels_"))
@@ -76,13 +82,13 @@ try:
         wait_for_js(pg2, "document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=60000)
         pg2.click("text=Load data"); ready(pg2); open_kind(pg2, "full")
         XP = "E.panels.find(q => q.type === 'xic')"
-        pg2.evaluate("openXic(null, { mz: 229.1 })"); wait_for_js(pg2, "!!%s && !!%s._a" % (XP, XP), timeout=60000)
-        pg2.evaluate("(() => { const p = %s; addTrace(p, 305.0); addTrace(p, 150.1); ctl(p); draw(p); })()" % XP)
-        wait_for_js(pg2, "%s._a.sr.length >= 6" % XP, timeout=60000)
+        pg2.evaluate("openXic(null)"); pg2.fill("#xic-mz", "229.1"); pg2.click("#xic-go"); ready(pg2); wait_for_js(pg2, "!!%s && !!%s._a" % (XP, XP), timeout=60000)
+        pg2.evaluate("(() => { const p = %s; addTrace(p, 305.0); E.files.forEach(f => { f.vis = true; }); renderFileList(); ctl(p); draw(p); })()" % XP)
+        wait_for_js(pg2, "%s._a.sr.length >= 4" % XP, timeout=60000)
         LEG = "(() => { const p = %s, n = %s; return { rows: [...p.leg.querySelectorAll('[data-lk]')].map(e => { const s = e.querySelector('.trsw'); return { k: e.dataset.lk, c: s && getComputedStyle(s).color && n(getComputedStyle(s).color), d: s && s.dataset.td, off: !!s && s.classList.contains('off') }; }), tr: p._a.sr.map(s => ({ k: s.tk, f: s.tf, c: n(s.color), d: s.dash.join(',') })) }; })()" % (XP, NORM)
 
         def xic_leg():
-            d = pg2.evaluate(LEG); need(len(d["rows"]) >= 5, d)
+            d = pg2.evaluate(LEG); need(len(d["rows"]) == 4, d)    # 2 traces + 2 files: up to 4 entries the legend is not a chip
             for t in d["tr"]:
                 row = next((x for x in d["rows"] if x["k"] == t["k"]), None)
                 need(row is not None and row["c"] == t["c"], "trace entry %s vs trace %s" % (row, t))
@@ -92,14 +98,15 @@ try:
         step("XIC legend: a trace entry has the colour of its trace; the files differ in dash", xic_leg)
 
         def xic_off():
-            pg2.locator("%s" % ".leg .tg[data-lk^=t]").first.click(); frames(pg2, 3)
+            PN = ".pnl:has(.leg .tg[data-lk^=t])"
+            chip(pg2, PN); pg2.locator(".leg .tg[data-lk^=t]").first.click(); frames(pg2, 3)
             d = pg2.evaluate(LEG); need(sum(x["off"] for x in d["rows"] if x["k"].startswith("t")) == 1, d["rows"])
-            pg2.locator("%s" % ".leg .tg[data-lk^=t]").first.click(); frames(pg2, 3)
+            chip(pg2, PN); pg2.locator(".leg .tg[data-lk^=t]").first.click(); frames(pg2, 3)
         step("XIC legend: a hidden trace shows a hollow dimmed swatch", xic_off)
 
         def xic_hover():
-            before = pg2.evaluate("%s.cv.toDataURL()" % XP)
-            pg2.locator(".leg .tg[data-lk^=t]").nth(1).hover()
+            away(pg2, XP); before = pg2.evaluate("%s.cv.toDataURL()" % XP)
+            chip(pg2, ".pnl:has(.leg .tg[data-lk^=t])"); pg2.locator(".leg .tg[data-lk^=t]").nth(1).hover()
             wait_for_js(pg2, "%s._hl != null" % XP, timeout=10000); frames(pg2, 3)
             need(pg2.evaluate("%s.cv.toDataURL()" % XP) != before, "hovering an entry did not change the drawing")
             pg2.mouse.move(5, 5); wait_for_js(pg2, "%s._hl == null" % XP, timeout=10000); frames(pg2, 3)
@@ -128,7 +135,7 @@ try:
         step("DAD curves: hiding the curve gives a hollow dimmed swatch", twc_off)
 
         def twc_hover():
-            before = pg3.evaluate("%s.cv.toDataURL()" % MR)
+            away(pg3, MR); before = pg3.evaluate("%s.cv.toDataURL()" % MR)
             pg3.locator(".leg [data-lk^=twc]").first.hover()
             wait_for_js(pg3, "%s._hl != null" % MR, timeout=10000); frames(pg3, 3)
             need(pg3.evaluate("%s.cv.toDataURL()" % MR) != before, "hover did not change the drawing")
