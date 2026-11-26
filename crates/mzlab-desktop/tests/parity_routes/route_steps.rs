@@ -65,6 +65,10 @@ pub fn raw_steps() -> Vec<Value> {
         "?mz=241.0&rt=2.5,3.5&da=0.2&mz_offset=0.3",
         "?mz=241.3",
         "?mz=241.3&rt=2.5,3.5&da=0",
+        // the opt-in ion scale: the data estimate, a method dwell for a named scan type, a type that does not exist
+        "?mz=241.3&rt=2.5,3.5&ions=1",
+        "?mz=241.3&rt=2.5,3.5&ions=1&scan_type=sim&dwell_ms=5",
+        "?mz=241.3&rt=2.5,3.5&ions=1&scan_type=ms",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawxic", "query": q}));
     let scan = [

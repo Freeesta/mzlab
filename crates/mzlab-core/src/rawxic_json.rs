@@ -1,5 +1,6 @@
 //! One row of `raw xic` as JSON (`rawxic`): the mass, its windows, the verdict with its rule and every number behind it.
 
+use crate::ionscale::Factor;
 use crate::json::{round, Out};
 use crate::mzcal::Offset;
 use crate::rawinfo::{quantum_json, Probe};
@@ -93,6 +94,8 @@ pub(crate) fn members_json(
     dt_s: f64,
     probe: &Probe,
     off: Option<&Offset>,
+    // opt-in (`ions=1`): the factor (None: no method time and no quantum), the scan type and whether the caller named it
+    scale: Option<(Option<&Factor>, crate::ionscale::ScanKind, bool)>,
 ) -> String {
     let mut o = Out::default();
     o.raw("\"ms_level\":")
@@ -131,5 +134,60 @@ pub(crate) fn members_json(
         .raw(",\"valley_pct\":")
         .num(VALLEY_PCT)
         .raw("}");
+    if let Some((f, kind, named)) = scale {
+        o.raw(",\"ion_scale\":");
+        match f {
+            Some(f) => o.raw(&f.json()),
+            None => o.raw("null"),
+        };
+        o.raw(",\"ion_scale_choice\":")
+            .raw(&scale_choice(f, kind, named));
+    }
+    o.0
+}
+
+/// The log of the automatic choice behind `ion_scale`: how the scan type was found and which evidence gave the factor.
+fn scale_choice(f: Option<&Factor>, kind: crate::ionscale::ScanKind, named: bool) -> String {
+    let mut o = Out::default();
+    o.raw("{\"scan_type\":").str(kind.name());
+    o.raw(",\"scan_type_from\":").str(if named {
+        "scan_type given"
+    } else {
+        "the scans of the level"
+    });
+    o.raw(",\"evidence\":");
+    match f {
+        None => o.str(&format!("none: the {} scans need {} from the method and no ion quantum was accepted, the ions_* keys are absent", kind.name(), kind.needs())),
+        Some(f) => match (f.source, f.missing) {
+            (crate::ionscale::Source::Method, _) => o.str("method field(s) of the call; the data estimate is next to it"),
+            (_, Some(m)) => o.str(&format!("data estimate 1 / ion quantum: the method gave no {m}")),
+            _ => o.str("data estimate 1 / ion quantum"),
+        },
+    };
+    o.raw("}");
+    o.0
+}
+
+/// The ion-scale keys appended to a row (`ions=1`): the counts of the same judge at q = 1 / (ions per cps), both scales side by side.
+pub(crate) fn ions_row_json(j: &Judged, seconds: f64) -> String {
+    let mut o = Out::default();
+    let c = j.counts.as_ref();
+    for (k, v) in [
+        ("ions_gross", c.map(|c| c.gross)),
+        ("ions_net", c.map(|c| c.net)),
+        ("ions_sigma", c.map(|c| c.sigma)),
+        ("ions_background_per_scan", c.map(|c| c.background)),
+        ("ions_l_c", c.map(|c| c.l_c)),
+        ("ions_l_d", c.map(|c| c.l_d)),
+        ("ions_z", c.map(|c| c.z)),
+        ("sn_ions", c.and_then(|c| c.sn_floor)),
+        ("cps_net", c.map(|c| c.net / seconds)),
+        ("cps_l_d", c.map(|c| c.l_d / seconds)),
+    ] {
+        o.raw(",\"").raw(k).raw("\":");
+        opt3(&mut o, v);
+    }
+    o.raw(",\"verdict_ions\":").str(j.verdict);
+    o.raw("}");
     o.0
 }

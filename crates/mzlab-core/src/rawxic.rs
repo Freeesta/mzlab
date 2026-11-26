@@ -5,11 +5,12 @@
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
+use crate::ionscale::{self, Facts, ScanKind};
 use crate::json::round;
 use crate::mzcal::Spec;
 use crate::peakq::{half_width, quality};
 use crate::peakq_lrauto::{lr_auto_integrate, LrAutoParams, Split};
-use crate::rawxic_json::{members_json, row_json};
+use crate::rawxic_json::{ions_row_json, members_json, row_json};
 use crate::routes::{Query, Routes};
 
 use crate::rawxic_judge::step_seconds;
@@ -132,6 +133,40 @@ fn bad(name: &str, v: &str) -> Error {
         .with("value", v.to_string())
 }
 
+/// `ions=1[&scan_type=..][&fill_ms=..&dwell_ms=..&scan_s=..&step_da=..&mass_lo=..&mass_hi=..]`: the opt-in ion scale; `0` or no `ions` is off, any
+/// other value, an unknown scan type or a time that is not positive is refused.
+fn ions_of(
+    q: &Query,
+    num: impl Fn(&str) -> Result<Option<f64>>,
+) -> Result<Option<(Option<ScanKind>, Facts)>> {
+    match q.some("ions") {
+        None | Some("0") => Ok(None),
+        Some("1") => {
+            let kind = match q.some("scan_type") {
+                None => None,
+                Some(v) => Some(ScanKind::parse(v).ok_or_else(|| bad("scan_type", v))?),
+            };
+            let fact = |k: &str| -> Result<Option<f64>> {
+                match num(k)? {
+                    Some(x) if x > 0.0 => Ok(Some(x)),
+                    None => Ok(None),
+                    Some(x) => Err(bad(k, &x.to_string())),
+                }
+            };
+            let f = Facts {
+                fill_ms: fact("fill_ms")?,
+                dwell_ms: fact("dwell_ms")?,
+                scan_s: fact("scan_s")?,
+                step_da: fact("step_da")?,
+                mass_lo: fact("mass_lo")?,
+                mass_hi: fact("mass_hi")?,
+            };
+            Ok(Some((kind, f)))
+        }
+        Some(v) => Err(bad("ions", v)),
+    }
+}
+
 /// The question of `raw xic` as the route reads it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ask {
@@ -141,6 +176,8 @@ pub struct Ask {
     pub level: u8,
     pub offset: Option<Spec>,
     pub t: Thresholds,
+    /// `ions=1`: the opt-in ion scale (`ionscale`): the scan type (`scan_type=ems|epi|q1|sim|other`, else read from the scans) and the method facts.
+    pub ions: Option<(Option<ScanKind>, Facts)>,
 }
 
 impl Ask {
@@ -196,6 +233,7 @@ impl Ask {
             Some(x) if x >= 1.0 && x <= hi && x.fract() == 0.0 => Ok(x as usize),
             Some(x) => Err(bad(k, &x.to_string())),
         };
+        let ions = ions_of(q, num)?;
         Ok(Ask {
             mz,
             da: range("da", num("da")?, 0.5, 0.001, 5.0)?,
@@ -209,7 +247,19 @@ impl Ask {
                 side_min: range("side_min", num("side_min")?, d.side_min, 0.0, 1e4)?,
                 gap_min: range("gap_min", num("gap_min")?, d.gap_min, 0.0, 1e4)?,
             },
+            ions,
         })
+    }
+}
+
+/// The verdict of a level the file has no scan of.
+fn no_level(level: u8) -> Judged {
+    Judged {
+        verdict: "no_data",
+        rule: format!("no scan of MS level {level} in the file"),
+        hit: None,
+        counts: None,
+        flags: Vec::new(),
     }
 }
 
@@ -238,6 +288,33 @@ impl<R: ReadAt> Routes<R> {
         r
     }
 
+    /// The scan type of the scans of `level` in this sample (`ScanKind::of`).
+    fn scan_kind(&mut self, level: u8) -> ScanKind {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return ScanKind::Other;
+        };
+        let Ok(ids) = self.idx.arrays(si).map(|a| a.scan_ids.clone()) else {
+            return ScanKind::Other;
+        };
+        let scans = &self.idx.scans;
+        ScanKind::of(
+            ids.iter()
+                .filter_map(|&k| scans.get(k as usize))
+                .map(|s| (s.scan_type(), s.filter.as_str())),
+        )
+    }
+
+    /// The factor of `ions=1` with the scan type used and whether the caller named it; `None` without the opt-in.
+    fn ion_scale(
+        &mut self,
+        ask: &Ask,
+        q: Option<f64>,
+    ) -> Option<(Option<ionscale::Factor>, ScanKind, bool)> {
+        let (named, facts) = ask.ions?;
+        let kind = named.unwrap_or_else(|| self.scan_kind(ask.level));
+        Some((ionscale::factor(kind, &facts, q), kind, named.is_some()))
+    }
+
     fn raw_xic_at(&mut self, ask: &Ask) -> Result<XicOut> {
         let off = ask
             .offset
@@ -251,6 +328,8 @@ impl<R: ReadAt> Routes<R> {
         let probe = self.probe(ask.level, PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe));
         let q = quant.filter(|q| q.accepted).map(|q| q.q);
+        let scale = self.ion_scale(ask, q);
+        let seconds = scale.as_ref().and_then(|s| s.0.as_ref()).map(|f| f.seconds);
         let n = self.xic_len(ask.level);
         let mut rows: Vec<Option<String>> = vec![None; ask.mz.len()];
         let mut dt_s = 0.0;
@@ -279,23 +358,30 @@ impl<R: ReadAt> Routes<R> {
                     m.y[c].iter().map(|&v| round(v, 1)).collect()
                 });
                 let j = if rt.is_empty() {
-                    Judged {
-                        verdict: "no_data",
-                        rule: format!("no scan of MS level {} in the file", ask.level),
-                        hit: None,
-                        counts: None,
-                        flags: Vec::new(),
-                    }
+                    no_level(ask.level)
                 } else {
                     judge(&rt, &y, ask.rt, q, &ask.t)
                 };
-                rows[i] = Some(row_json(ask.mz[i], ask.da, ask.rt, &j, dt_s, q, applied));
+                let mut row = row_json(ask.mz[i], ask.da, ask.rt, &j, dt_s, q, applied);
+                if let (Some(sec), false) = (seconds, rt.is_empty()) {
+                    // the same judge on the ion scale of the method: only the ions_* keys are added, nothing above changes
+                    row.pop();
+                    row += &ions_row_json(&judge(&rt, &y, ask.rt, Some(1.0 / sec), &ask.t), sec);
+                }
+                rows[i] = Some(row);
             }
             drop(m);
             self.forget_sweep();
         }
         Ok(XicOut {
-            members: members_json(ask, n, dt_s, &probe, off.as_ref()),
+            members: members_json(
+                ask,
+                n,
+                dt_s,
+                &probe,
+                off.as_ref(),
+                scale.as_ref().map(|s| (s.0.as_ref(), s.1, s.2)),
+            ),
             rows: rows.into_iter().flatten().collect(),
         })
     }
@@ -304,3 +390,7 @@ impl<R: ReadAt> Routes<R> {
 #[cfg(test)]
 #[path = "rawxic_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "rawxic_ions_tests.rs"]
+mod ions_tests;

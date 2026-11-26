@@ -127,6 +127,10 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
     (
+        "convert cps to ions with the dwell or fill time of the scan type",
+        "raw xic",
+    ),
+    (
         "remove ions that are also in the blank sample",
         "table.filter",
     ),

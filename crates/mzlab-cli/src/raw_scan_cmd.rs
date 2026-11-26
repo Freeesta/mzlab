@@ -12,7 +12,8 @@ use mzlab_core::routes::Query;
 use crate::extract::{self, jstr, Parsed};
 use crate::raw_cmd::{choice, error_entry, missing, prov_file, provenance, warnings_of, whole_run};
 use crate::raw_plan::plan_of;
-use crate::raw_xic_cmd::{choices_of, enc, entry_json};
+use crate::raw_xic_ask::enc;
+use crate::raw_xic_cmd::{choices_of, entry_json};
 use crate::Outcome;
 
 pub const SCAN_HELP: &str = "mzlab-cli raw scan: what is in the mean spectrum of a time window that is not in the background beside it, per bin. JSON (raw-scan/1):
@@ -225,6 +226,7 @@ fn one(f: &Path, sample: Option<u32>, a: &ScanAsk, full: bool) -> Result<(Answer
             sample.is_none() && s.sample.is_some(),
             &out.members,
             level,
+            false,
         );
         let prov = prov_file(&s.name, &sha, size, s.sample);
         Ok((

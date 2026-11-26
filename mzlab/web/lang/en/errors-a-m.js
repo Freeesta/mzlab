@@ -93,6 +93,7 @@ I18N.add("en", {
   "err.cli.rawxic.needsMz": "raw xic needs --mz LIST: the masses to look at, comma separated.",
   "err.cli.rawxic.needsRt": "raw xic needs --rt A,B: the time window in minutes.",
   "err.cli.rawxic.set": "--set takes NAME=VALUE with NAME one of {names}, not \u201c{item}\u201d.",
+  "err.cli.rawxic.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.rawxic.limit": "--limit takes a whole number of rows, 1 or more, not \u201c{value}\u201d.",
   "err.cli.rawxic.polarity": "--polarity takes + or -, not \u201c{value}\u201d.",
   "err.cli.design.samplesAndFiles": "--samples and FILE paths do not go together: give one or the other.",

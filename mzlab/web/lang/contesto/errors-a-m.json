@@ -142,6 +142,7 @@
   "err.cli.rawxic.needsMz": "CLI usage error of raw xic: --mz was not given.",
   "err.cli.rawxic.needsRt": "CLI usage error of raw xic: --rt was not given.",
   "err.cli.rawxic.set": "CLI usage error of raw xic --set; {item} = the item given, {names} = the names --set accepts.",
+  "err.cli.rawxic.needsIons": "CLI usage error of raw xic: a method value of the ion scale or --scan-type was given without --ions.",
   "err.cli.rawxic.limit": "CLI usage error of raw xic --limit; {value} = the word given after --limit.",
   "err.cli.rawxic.polarity": "CLI usage error of raw xic --polarity; {value} = the word given after --polarity.",
   "err.cli.estimate.needsFile": "CLI usage error of estimate: no file was given.",
