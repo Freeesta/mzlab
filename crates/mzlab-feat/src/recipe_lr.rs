@@ -73,8 +73,9 @@ impl Recipe {
     }
 
     /// The `nominal` profile on a unit-axis recipe (the values of the preset `nominal` of `features.detect`; a test keeps the two equal): a lower floor and height for low-mass
-    /// products and a wider grid merge. A high-resolution recipe is left alone and `false` says so.
+    /// products and a wider grid merge. A high-resolution recipe is left alone and `false` says so; `preset` keeps the ask either way, for the report.
     pub fn nominal(&mut self) -> bool {
+        self.preset = Some("nominal");
         if !self.detect.axis.is_da() {
             return false;
         }

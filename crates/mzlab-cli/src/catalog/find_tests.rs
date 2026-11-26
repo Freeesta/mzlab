@@ -11,9 +11,18 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "collision energy spread and declustering potential of a tandem file",
         "file method",
     ),
-    ("sample name mass differs from the method precursor", "file method"),
-    ("convert wiff files to mzML with their sample names", "file convert"),
-    ("assign roles blank qc standard to the samples", "sample table"),
+    (
+        "sample name mass differs from the method precursor",
+        "file method",
+    ),
+    (
+        "convert wiff files to mzML with their sample names",
+        "file convert",
+    ),
+    (
+        "assign roles blank qc standard to the samples",
+        "sample table",
+    ),
     (
         "dark control not recognised in the transformation product screening",
         "sample table",
@@ -41,7 +50,6 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "the same peak appears as two duplicate rows, a shoulder merged",
         "features.gapfill",
     ),
-    ("products are lost at nominal resolution on a triple quadrupole", "features.detect"),
     (
         "one target list from the feature tables of several series",
         "quant union",
