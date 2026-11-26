@@ -257,3 +257,7 @@ mod states_tests;
 #[cfg(test)]
 #[path = "find_multi_tests.rs"]
 mod multi_tests;
+
+#[cfg(test)]
+#[path = "find_nominal_tests.rs"]
+mod nominal_tests;

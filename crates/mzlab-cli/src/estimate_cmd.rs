@@ -70,6 +70,29 @@ fn set_lines(doc: &Value) -> String {
         .collect()
 }
 
+/// The hints of the answer (`hints`: the `nominal` profile), one line each with the numbers; `lead` is what the line starts with. Nothing here is applied.
+fn hint_lines(doc: &Value, lead: &str) -> String {
+    doc.get("hints")
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .map(|h| {
+            let n = |k: &str| h.get(k).map(value_text).unwrap_or_default();
+            let pct = |k: &str| {
+                let x = h.get(k).and_then(Value::f64).unwrap_or(0.0);
+                value_text(&Value::Num((x * 1000.0).round() / 10.0))
+            };
+            format!(
+                "{lead}--set {}   # hint, not applied: nominal-resolution signature in {} of {} file(s), {}% of candidate rows between the nominal and the lr height, {}% of them one ion split across the grids\n",
+                h.get("set").and_then(Value::str).unwrap_or(""),
+                n("files"),
+                n("of"),
+                pct("between_share"),
+                pct("split_share")
+            )
+        })
+        .collect()
+}
+
 /// The values and the proposals as an aligned table.
 fn table(doc: &Value) -> String {
     let n = |v: &Value, k: &str| v.get(k).filter(|x| !x.is_null()).map(value_text);
@@ -89,6 +112,11 @@ fn table(doc: &Value) -> String {
     if !lines.is_empty() {
         out += "\nwould set (pass with --set; --emit-set PLAN.json names your instances):\n";
         out += &lines;
+    }
+    let hints = hint_lines(doc, "");
+    if !hints.is_empty() {
+        out += "\nhint (nothing is applied; pass it with --set to use it):\n";
+        out += &hints;
     }
     out
 }
@@ -252,7 +280,7 @@ fn answer(
     let out = if as_json {
         with_citation(&answer)
     } else if p.get("--emit-set").is_some() {
-        set_lines(&doc)
+        set_lines(&doc) + &hint_lines(&doc, "# ")
     } else {
         table(&doc)
     };
