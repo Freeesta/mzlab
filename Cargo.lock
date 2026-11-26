@@ -2490,6 +2490,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-ionfacts-wasm"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-lettori"
 version = "1.0.0"
 dependencies = [

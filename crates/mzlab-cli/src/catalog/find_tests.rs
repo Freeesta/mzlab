@@ -126,7 +126,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
     (
-        "convert cps to ions with the dwell or fill time of the scan type",
+        "convert cps to ions with the dwell or fill time of the scan type read from the method of the file",
         "raw xic",
     ),
     (

@@ -284,6 +284,8 @@ jobs:
   # The e2e smoke tests (tools/verifica.py --smoke: SMOKE) against the local Python server.
   # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/).
   # Two shards: one job did install (up to 5.5 min of apt) + cold site build + the whole round in 20 min, and the round alone took 15-19 min (main run 44482519858 was cut at the cap).
+  # Each shard builds the whole site itself (1.9 min when the cache of main matches, 9-14 min when a crate changed or the cache was evicted: the compile of ~20 .wasm on 2 cores), so the cap is 30 min.
+  # Shard 1 has the slow install (apt, up to 4 min) and saves the cache; the wasm-opt size step (2.5-3 min) runs on shard 2, so the two shards end within a minute or two of each other.
   browser-shard:
     name: browser shard ${{ matrix.parte }}/2
     strategy:
@@ -291,7 +293,7 @@ jobs:
       matrix:
         parte: [1, 2]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -379,16 +381,16 @@ jobs:
         run: python tools/verifica.py --browser chromium --smoke --part ${{ matrix.parte }}/2
       # the site above has no feature modules (tools/prepara_sito.py does not build them): build molkit, flowcompare and quanttargets with wasm-opt (tools/build_misura_ci.sh) so the size step below measures them; strict: no wasm-opt, no unoptimised figure
       - name: Build molkit, flowcompare and quanttargets with wasm-opt (for the size step)
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 2 }}
         env:
           MZLAB_WASM_OPT_STRICT: "1"
         run: tools/build_misura_ci.sh molkit flowcompare quanttargets
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 2 }}
         run: python3 tools/ci_wasm_dimensioni.py site wasm-dimensioni.json
       - name: Size of the .wasm (artifact)
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 1 && hashFiles('wasm-dimensioni.json') != '' }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == 2 && hashFiles('wasm-dimensioni.json') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wasm-dimensioni

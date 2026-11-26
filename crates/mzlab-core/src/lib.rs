@@ -165,6 +165,7 @@ pub mod rawinfo;
 pub mod rawxic;
 mod rawxic_judge;
 pub mod ionscale;
+pub mod ionfacts;
 mod specsum;
 mod specpeak;
 #[cfg(test)]

@@ -17,8 +17,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 ## Queue
 | id | prompt file | needs first | notes |
 |---|---|---|---|
-| ION-COUNTS-METHOD | `docs/coda/prompt/ION-COUNTS-METHOD.md` | - | correctness: read the fill time, dwell and Q1 scan values of `raw xic --ions` from the method itself, in the CLI, the app and the site |
 | ION-COUNTS-TRACE | `docs/coda/prompt/ION-COUNTS-TRACE.md` | - | opt-in ion-scale keys for `trace xic` and the peak outputs, with the factor of `ionscale` |
+| ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
 | NOMINAL-HINT | `docs/coda/prompt/NOMINAL-HINT.md` | - | `features.estimate` and `features --report` name the nominal-resolution signature (many rows under the `lr` height, one ion split across the two grids) as a hint with its numbers; the profile stays the user's choice |
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
