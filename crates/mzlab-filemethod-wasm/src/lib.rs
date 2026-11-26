@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of `file method` (`mzlab_core::filemethod`): the `file_method/1` document of a sample from the `method/1` text and the `items/1`
-//! text the page already holds. A `.wasm` of its own so that no other module grows; fetched on the first request (`load("filemethod")` of
+//! text the page already holds, and the ion-scale values of `raw xic --ions` from the same `method/1` text. A `.wasm` of its own so that no other module grows; fetched on the first request (`load("filemethod")` of
 //! `mzlab/web/rust-filemethod.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use wasm_bindgen::prelude::*;
@@ -30,4 +30,11 @@ pub fn file_method(sample: i32, method: &str, items: &str) -> Result<String, JsV
     let id = u32::try_from(sample).ok();
     let m = (!method.is_empty()).then_some(method);
     mzlab_core::filemethod::document(id, m, items).map_err(|e| JsValue::from_str(&e.to_json()))
+}
+
+/// The ion-scale method values of `method` (the `method/1` text, empty when the file carries none) for `scan_type` (`""`: every kind): the
+/// `{"query","read"}` document of `mzlab_core::ionfacts::read_json`, whose `query` the page appends to `api/rawxic` (`ions=1`).
+#[wasm_bindgen]
+pub fn ion_facts(method: &str, scan_type: &str) -> Result<String, JsValue> {
+    mzlab_core::ionfacts::read_json(method, scan_type).map_err(|e| JsValue::from_str(&e.to_json()))
 }
