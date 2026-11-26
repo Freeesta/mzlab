@@ -132,7 +132,7 @@
   "err.raw.xic.param": "Usage error of raw xic and of api/rawxic: a parameter value out of range or missing; {name} = the parameter (mz, rt, da, ms_level, min_sn, min_points, alpha, side_min, gap_min), {value} = the text given.",
   "warn.raw.labelMismatch": "raw info warning: the spectrum type the file declares is not what the probed data show. {file} = the file name, {label} = the declared type (profile, centroid, mixed), {data} = the type the data show, {runs_share} = the share of points in continuous runs (0-1).",
   "warn.raw.noQuantum": "raw info warning: the probed intensities have no ion quantum (an analog detector or processed data), so ions cannot be counted. {file} = the file name.",
-  "err.spec.peak": "Usage error of spectrum get --peak auto --set and of api/specpeak: a parameter value out of range or not a number; {name} = the parameter (factor, side_min, gap_min, min_sn, min_points), {value} = the text given.",
+  "err.spec.peak": "Usage error of spectrum get --peak auto --set and of api/specpeak: a parameter value out of range or not a number; {name} = the parameter (factor, side_min, gap_min, min_sn, min_points, tol_ppm), {value} = the text given.",
   "warn.raw.oneSide": "raw scan warning: the window has scans on one side only; {file} = the file, {side} = the side that has scans (left, right, or none for neither).",
   "err.spec.fill": "Usage error of spectrum get --sum --fill-ms and of api/specsum: the fill time is not a positive number (no placeholder: the route does not carry the value).",
   "note.spec.sum.noFill": "spectrum get --sum note (stderr and the evidence): the file has no fill time per scan, so ions is null and counts are cps summed over scans; no placeholders.",

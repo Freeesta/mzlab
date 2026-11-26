@@ -102,6 +102,8 @@ pub fn raw_steps() -> Vec<Value> {
         "?rt0=1&rt1=5&level=1&factor=3&side_min=0.2&gap_min=0.1&fill_ms=20",
         "?rt0=1&rt1=5&level=1&min_sn=1000000",
         "?rt0=1&rt1=5&level=1&factor=0",
+        "?rt0=1&rt1=5&level=1&tol_ppm=10",
+        "?rt0=1&rt1=5&level=1&tol_ppm=0",
         "?level=1",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/specpeak", "query": q}));

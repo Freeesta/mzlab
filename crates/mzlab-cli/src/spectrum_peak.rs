@@ -7,8 +7,15 @@ use mzlab_core::error::{Error, Result};
 use crate::extract::{self, Parsed, Sample};
 use crate::spectrum_cmd::{query, At};
 
-/// The names `--set` takes here: the window factor, the side width and gap (min) and the thresholds of the apex.
-const SET_KEYS: &[&str] = &["factor", "side_min", "gap_min", "min_sn", "min_points"];
+/// The names `--set` takes here: the window factor, the side width and gap (min) and the thresholds of the apex and, at a high-resolution level, the match in ppm.
+const SET_KEYS: &[&str] = &[
+    "factor",
+    "side_min",
+    "gap_min",
+    "min_sn",
+    "min_points",
+    "tol_ppm",
+];
 
 /// `--peak auto` of a request: the `--set` pairs, the precursor and the fill time as given.
 pub(crate) struct PeakOpt {

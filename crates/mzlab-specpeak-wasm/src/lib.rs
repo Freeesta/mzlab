@@ -62,7 +62,7 @@ fn open(size: f64, read: Function, pol: i32) -> Result<Routes<JsReader>, JsValue
     Ok(r)
 }
 
-/// `api/specpeak?rt0=A&rt1=B[&level=..&precursor=..&factor=..&side_min=..&gap_min=..&min_sn=..&min_points=..&fill_ms=..]` (`Routes::spec_peak_route`, the
+/// `api/specpeak?rt0=A&rt1=B[&level=..&precursor=..&factor=..&side_min=..&gap_min=..&min_sn=..&min_points=..&tol_ppm=..&fill_ms=..]` (`Routes::spec_peak_route`, the
 /// answer of `mzlab-cli spectrum get --peak auto`: the apex, the window, the sides, the background and the spectrum) over the `.mzidx` of `size` bytes read
 /// by `read`; `pol` as in `raw_xic`.
 #[wasm_bindgen]
