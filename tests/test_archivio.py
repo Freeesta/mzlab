@@ -11,7 +11,7 @@ globalThis.self = globalThis;
 const nav = o => Object.defineProperty(globalThis, "navigator", {{ value: o, configurable: true }});
 import * as A from {(WEB / "archivio.js").as_uri()!r};
 import {{ limpia, HOUR, WEEK }} from {(WEB / "pulizia.js").as_uri()!r};
-const out = async f => {{ console.log(JSON.stringify(await f())); process.exit(0); }};
+const out = async f => {{ const keep = setInterval(() => {{}}, 100); console.log(JSON.stringify(await f())); clearInterval(keep); process.exit(0); }};  // AbortSignal.timeout does not keep node alive
 """
 
 
@@ -25,7 +25,7 @@ def test_a_file_held_by_another_tab_for_more_than_two_seconds_is_an_error_with_a
     got = run("""
   let held = null;
   nav({ locks: { request: (key, opt, fn) => new Promise((ok, no) => {
-    if (key.endsWith("busy")) { opt.signal.addEventListener("abort", () => no(Object.assign(new Error("a"), { name: "AbortError" }))); return; }
+    if (key.endsWith("busy")) { opt.signal.addEventListener("abort", () => no(opt.signal.reason)); return; }
     Promise.resolve(fn()).then(ok, no); }) } });
   await out(async () => {
     const ok = await A.locked("files", "free", async () => 7);
@@ -34,6 +34,14 @@ def test_a_file_held_by_another_tab_for_more_than_two_seconds_is_an_error_with_a
     return [ok, err, Date.now() - t0 >= 1900];
   });""")
     assert got == [7, {"error_key": "error.fileInUse", "params": {"file": "busy"}}, True]
+
+
+def test_the_wait_still_ends_in_the_error_key_where_abort_signal_timeout_is_missing():
+    got = run("""
+  delete AbortSignal.timeout;
+  nav({ locks: { request: (key, opt) => new Promise((ok, no) => opt.signal.addEventListener("abort", () => no(Object.assign(new Error("a"), { name: "AbortError" })))) } });
+  await out(async () => { try { await A.locked("files", "busy", async () => 1); } catch (e) { return JSON.parse(e); } });""")
+    assert got == {"error_key": "error.fileInUse", "params": {"file": "busy"}}
 
 
 def test_room_is_checked_before_a_big_write_and_persist_is_asked_once():

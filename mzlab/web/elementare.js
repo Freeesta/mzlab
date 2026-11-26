@@ -83,7 +83,7 @@ const ELEM = (() => {
     sp.fm = (sp.fm || []).filter(z => Math.abs(z.m - m) > 1e-4).concat({ m, text: r.formula });
     draw(sp); nearMsg(t("cx.applied", { f: r.formula }));
   }
-  const copyText = async s => { try { await navigator.clipboard.writeText(s); } catch (e) { const a = document.createElement("textarea"); a.value = s; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e2) { /* no clipboard */ } a.remove(); } };
+  const copyText = async s => { try { await clipboardCopy({ "text/plain": s }); } catch (e) { /* no clipboard */ } };
 
   // ---------------------------------------------------------------- the compact panel of the drawer
   let pending = null;

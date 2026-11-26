@@ -54,7 +54,7 @@ export function segnala(e, where = "") {
     x.type = "button"; x.className = "errx"; x.style.minHeight = "24px";
     cp.onclick = async () => {
       const t = header() + "\n\n" + details.join("\n\n");
-      try { await navigator.clipboard.writeText(t); cp.textContent = tr("errori.copied"); }
+      try { await clipboardCopy({ "text/plain": t }); cp.textContent = tr("errori.copied"); }
       catch (_) { window.prompt(tr("errori.copy"), t); }
     };
     x.onclick = () => { /** @type {HTMLElement} */ (box).remove(); count = 0; };

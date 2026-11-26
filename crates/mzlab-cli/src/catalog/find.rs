@@ -1,5 +1,5 @@
 //! `mzlab-cli commands --find WORDS... [--json]`: the commands and Flow steps that do a task, ranked by the words of their name, the task
-//! words of `related.rs`, their summary (a step's title) and a step's doc. Each match carries a one-line example, `see_also` and, where a
+//! words of `related_rows.rs`, their summary (a step's title) and a step's doc. Each match carries a one-line example, `see_also` and, where a
 //! loop of calls has a one-call equivalent, `bulk`. Plain word matching, no network, the same answer on every run (`commands-find/1`).
 
 use mzlab_core::json::Value;
@@ -253,3 +253,7 @@ mod offset_tests;
 #[cfg(test)]
 #[path = "find_states_tests.rs"]
 mod states_tests;
+
+#[cfg(test)]
+#[path = "find_multi_tests.rs"]
+mod multi_tests;

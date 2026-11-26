@@ -78,13 +78,12 @@ ${sg ? `<label for="sug-doing" class="bg-l" data-i18n="sug.doing"></label><texta
   for (const id of ["what", "doing"]) { const el = q(f, `#${p}-${id}`); if (el) el.addEventListener("input", () => aggiorna(kind)); }
   q(f, `#${p}-copy`).onclick = async () => {
     const st = q(f, `#${p}-st`);
-    try { await navigator.clipboard.writeText(f.corpo); st.textContent = t("bug.copied"); }
+    try { await clipboardCopy({ "text/plain": f.corpo }); st.textContent = t("bug.copied"); }
     catch (_) { st.textContent = t("bug.copyFail"); }
   };
   q(f, `#${p}-mail`).onclick = () => { const a = document.createElement("a"); a.href = mailUrl(kind).url; a.click(); };
   q(f, `#${p}-dl`).onclick = () => {
-    const a = document.createElement("a"), u = URL.createObjectURL(new Blob([json(kind)], { type: "application/json" }));
-    a.href = u; a.download = `mzlab-${sg ? "suggestion" : "bug-report"}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+    saveBlob(new Blob([json(kind)], { type: "application/json" }), `mzlab-${sg ? "suggestion" : "bug-report"}.json`);
     q(f, `#${p}-st`).textContent = t("bug.downloaded");
   };
   await raccogli(kind);

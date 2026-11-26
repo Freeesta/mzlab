@@ -90,7 +90,7 @@ const DIAG = {
   cabla(root, d, version, t) {
     const b = root.querySelector('[data-a=diagdet]'), box = root.querySelector(".diagbox"), c = root.querySelector('[data-a=diagcopy]');
     if (b) b.onclick = () => { const o = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", String(!o)); box.hidden = o; };
-    if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(DIAG.testo(typeof d === "function" ? d() : d, version)); c.textContent = t("diag.copied"); } catch (_) { c.textContent = t("diag.copyFail"); } };
+    if (c) c.onclick = async () => { try { await clipboardCopy({ "text/plain": DIAG.testo(typeof d === "function" ? d() : d, version) }); c.textContent = t("diag.copied"); } catch (_) { c.textContent = t("diag.copyFail"); } };
   },
 };
 

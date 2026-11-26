@@ -145,3 +145,76 @@ fn calls_started_together_say_the_hint_exactly_once() {
     assert_eq!(said, 1);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// One-mass `trace xic` and `raw xic` are looped commands too: the tenth call from one parent names `--mz LIST` / `--sweep`, a list is never counted,
+/// stdout and the exit code are the same with the hint, and `MZLAB_NO_HINTS` silences it. A missing file keeps the calls fast (exit 4, same bytes).
+#[test]
+fn the_tenth_one_mass_xic_call_says_the_list_route_and_changes_nothing_else() {
+    let d = std::env::temp_dir().join(format!("mzlab_repeat_xic_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    let run = |state: &str, args: &[&str], silent: bool| {
+        let mut c = Command::new(env!("CARGO_BIN_EXE_mzlab-cli"));
+        c.args(args)
+            .env("MZLAB_STATE_DIR", d.join(state))
+            .env_remove("MZLAB_NO_HINTS");
+        if silent {
+            c.env("MZLAB_NO_HINTS", "1");
+        }
+        let o = c.output().unwrap();
+        (
+            o.stdout,
+            String::from_utf8_lossy(&o.stderr).into_owned(),
+            o.status.code().unwrap_or(-1),
+        )
+    };
+    let cases: [(&str, &[&str], &str, &str); 2] = [
+        (
+            "trace",
+            &["trace", "xic", "none.mzML", "--mz", "364.4", "--da", "0.3"],
+            "--sweep LO:HI:STEP",
+            "note.cli.repeat.xic",
+        ),
+        (
+            "raw",
+            &["raw", "xic", "none.mzML", "--mz", "364.4", "--rt", "1,2"],
+            "raw xic FILE... --mz M1,M2,...",
+            "note.cli.repeat.rawxic",
+        ),
+    ];
+    for (state, args, names, key) in cases {
+        let first = run(state, args, false);
+        assert_eq!(first.2, 4, "{}", first.1);
+        for k in 2..=9 {
+            let o = run(state, args, false);
+            assert!(!o.1.contains("note.cli.repeat"), "call {k}: {}", o.1);
+        }
+        let tenth = run(state, args, false);
+        assert_eq!((tenth.2, &tenth.0), (first.2, &first.0));
+        assert!(
+            tenth.1.contains(names) && tenth.1.contains(key),
+            "{}",
+            tenth.1
+        );
+        assert!(!run(state, args, false).1.contains("note.cli.repeat"));
+        let said: Vec<String> = (0..12)
+            .map(|_| run(&format!("{state}_off"), args, true).1)
+            .collect();
+        assert!(said.iter().all(|s| !s.contains("note.cli.repeat")));
+    }
+    // a list is already the one call: never counted
+    let list = [
+        "trace",
+        "xic",
+        "none.mzML",
+        "--mz",
+        "364.4,194.2",
+        "--da",
+        "0.3",
+    ];
+    let said: Vec<String> = (0..12).map(|_| run("list", &list, false).1).collect();
+    assert!(
+        said.iter().all(|s| !s.contains("note.cli.repeat")),
+        "{said:?}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}

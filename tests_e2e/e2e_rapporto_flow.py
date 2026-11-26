@@ -26,9 +26,9 @@ def run_doc(n_steps=3, n_params=2, rows=4):
                               "groups": [{"kind": "sample", "group": "g", "time_min": 0, "file": 2, "rows": 4, "median_cv": 0.12}], "standard_cv": None, "discarded": [{"rule": "blank", "rows": 1}]}}}
 
 HOST = """<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><title>host</title><style>:root{--ink:#1a1a1a;--line:#999;--accent:#0072B2;--bad:#D55E00}body{background:#fff;margin:0}</style></head>
-<body><main id="m"></main><script src="rapporto-flow.js"></script></body></html>"""
+<body><main id="m"></main><script src="ordine.js"></script><script src="rapporto-flow.js"></script></body></html>"""
 tmp = Path(tempfile.mkdtemp(prefix="rf_"))
-shutil.copy(ROOT / "mzlab/web/rapporto-flow.js", tmp / "rapporto-flow.js"); (tmp / "index.html").write_text(HOST)
+shutil.copy(ROOT / "mzlab/web/rapporto-flow.js", tmp / "rapporto-flow.js"); shutil.copy(ROOT / "mzlab/web/ordine.js", tmp / "ordine.js"); (tmp / "index.html").write_text(HOST)      # saveBlob lives in ordine.js, loaded before it in the page
 port = free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).with_name("servi.py")), str(port), str(tmp)], cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 try:

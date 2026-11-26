@@ -55,7 +55,7 @@ export function copyCommand(g, text) {
   const back = d.activeElement, t = d.createElement("textarea");
   t.value = text; t.setAttribute("readonly", ""); t.setAttribute("aria-hidden", "true");
   t.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px";
-  d.body.appendChild(t); t.select();
+  (d.querySelector("dialog[open]") || d.body).appendChild(t); t.select();      // inside an open modal: the rest of the page is inert
   let ok = false; try { ok = !!d.execCommand("copy"); } catch (_) { ok = false; }
   t.remove(); if (back && typeof back.focus === "function") try { back.focus({ preventScroll: true }); } catch (_) { /* gone */ }
   return ok;
@@ -79,7 +79,7 @@ export function freeAccept(g, i) {
 export function copyNow(g, parts) {
   const cb = g.navigator && g.navigator.clipboard;
   if (!cb) return Promise.reject(new g.DOMException("no clipboard in this browser", "NotAllowedError"));
-  const plain = () => Promise.resolve(parts["text/plain"]).then(t => cb.writeText(String(t)));
+  const plain = () => Promise.resolve(parts["text/plain"]).then(t => cb.writeText(String(t)).catch((/** @type {any} */ e) => { if (copyCommand(g, String(t))) return; throw e; }));      // own fallback: also when the clipboard object is not the wrapped one
   if (typeof g.ClipboardItem !== "function" || typeof cb.write !== "function") return "text/plain" in parts ? plain() : Promise.reject(new g.DOMException("no ClipboardItem", "NotAllowedError"));
   /** @type {Promise<void>} */ let w;
   try {

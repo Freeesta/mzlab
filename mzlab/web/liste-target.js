@@ -260,10 +260,7 @@ const LISTE_TARGET = (function() {
     if (!btn) return;
     btn.onclick = () => {
       const csv = (CORE.csvExport || csvExport)(getMatches());
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const u = URL.createObjectURL(blob), a = document.createElement("a");
-      a.href = u; a.download = `target_screening_${Date.now()}.csv`;
-      document.body.appendChild(a); a.click(); a.remove();
+      saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `target_screening_${Date.now()}.csv`);
     };
   }
 

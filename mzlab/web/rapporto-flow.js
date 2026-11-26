@@ -155,9 +155,7 @@ window.RAPPORTO_FLOW = (() => {
 
   /** @param {Corsa} corsa */
   function download(corsa) {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(corsa, null, 1) + "\n"], { type: "application/json" }));
-    const a = document.createElement("a"); a.href = url; a.download = "report.json"; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveBlob(new Blob([JSON.stringify(corsa, null, 1) + "\n"], { type: "application/json" }), "report.json");
   }
 
   return { render, SECTIONS: SECTIONS.map(s => s[0]) };

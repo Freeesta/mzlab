@@ -52,7 +52,7 @@ export function ctxShow(/** @type {any} */ m, /** @type {number} */ x, /** @type
 // Copies to the clipboard and tells the truth: «Copied» only when the browser accepted it, otherwise «Copy failed» (never an unhandled rejection).
 export async function copyText(/** @type {string} */ text, /** @type {string} */ okKey = "draw.copy.done") {
   let ok = false;
-  try { await navigator.clipboard.writeText(text); ok = true; } catch (_) { /* clipboard refused or missing */ }
+  try { await clipboardCopy({ "text/plain": text }); ok = true; } catch (_) { /* clipboard refused or missing */ }
   if (window.toast) toast(I18N.t(ok ? okKey : "draw.copy.fail"));
   return ok;
 }

@@ -167,3 +167,45 @@ fn the_calls_a_hint_names_exist() {
     let t = String::from_utf8_lossy(&found(RULES[0].find)).into_owned();
     assert!(t.contains("quant targets"), "{t}");
 }
+
+/// A loop of one-mass `trace xic` / `raw xic` calls is counted; a list or a sweep is already the one call and never is.
+#[test]
+fn a_looped_single_mass_xic_has_a_rule_and_a_list_or_sweep_has_none() {
+    let cmd = |a: &[&str]| rule_of(&args(a)).map(|r| r.command);
+    assert_eq!(
+        cmd(&["trace", "xic", "a.mzML", "--mz", "364.4", "--da", "0.3"]),
+        Some("trace xic")
+    );
+    assert_eq!(
+        cmd(&["trace", "xic", "a.mzML", "--mz=364.4", "--da", "0.3"]),
+        Some("trace xic")
+    );
+    assert_eq!(
+        cmd(&["raw", "xic", "a.mzML", "--mz", "364.4", "--rt", "1,2"]),
+        Some("raw xic")
+    );
+    for a in [
+        &[
+            "trace",
+            "xic",
+            "a.mzML",
+            "--mz",
+            "364.4,194.2",
+            "--da",
+            "0.3",
+        ][..],
+        &["trace", "xic", "a.mzML", "--sweep", "100:500:0.5"],
+        &["raw", "xic", "a.mzML", "--mz", "364.4,194.2", "--rt", "1,2"],
+    ] {
+        assert_eq!(cmd(a), None, "{a:?}");
+    }
+    let (t, r) = (line(&RULES[2], 10), line(&RULES[3], 10));
+    assert!(
+        t.contains("--sweep LO:HI:STEP") && t.ends_with("(note.cli.repeat.xic)"),
+        "{t}"
+    );
+    assert!(
+        r.contains("raw xic FILE... --mz M1,M2,...") && r.ends_with("(note.cli.repeat.rawxic)"),
+        "{r}"
+    );
+}

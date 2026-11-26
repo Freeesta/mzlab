@@ -280,7 +280,7 @@ async function nbSync() {
   if (!nbEverLoaded) return;
   try {
     const r = nbClean(await (await fetch("api/notebook")).json()); nbRemote = r;
-    for (const k of Object.keys(r)) if (JSON.stringify(NB[k]) === JSON.stringify(nbBase[k]) && k !== "ui" && k !== "session") { NB[k] = r[k]; nbBase[k] = JSON.parse(JSON.stringify(r[k])); }
+    for (const k of Object.keys(r)) if (JSON.stringify(NB[k]) === JSON.stringify(nbBase[k]) && k !== "ui" && k !== "session") { NB[k] = r[k]; nbBase[k] = structuredClone(r[k]); }
   } catch (_) { /* offline engine: nothing to refresh */ }
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") nbSync(); });
