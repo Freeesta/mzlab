@@ -1,0 +1,4 @@
+{
+  "spcmp.error": "Message of the card that compares two MS2 spectra when the spectrum or the comparison fails; {message} = the engine's text.",
+  "spcmp.summary": "Line under the cosine of the card that compares two MS2 spectra; {n} = number of matched bins, {tol} = tolerance between bin centres in Da, {ce} = collision energy tolerance in eV."
+}
