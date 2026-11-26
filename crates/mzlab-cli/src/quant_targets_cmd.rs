@@ -15,7 +15,7 @@ use crate::Outcome;
 pub const HELP: &str = "mzlab-cli quant targets: every target of a table integrated in every file, one pass per file.
 
 usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS]
-                               [--rt-ref off|auto|ID[@RT]]
+                               [--rt-ref off|auto|ID[@RT]] [--sample LIST]
                                [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N] [--cache DIR]
 
   --targets FILE   CSV (id,mz,rt_min,rt_max[,polarity][,role]) or JSON ([{...}] or {\"targets\":[...]}); polarity + or - (empty: every scan),
@@ -29,6 +29,9 @@ usage: mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--
   --rt-ref         keep the RT windows on an internal reference when batches drift: off (default), auto (first standard/parent row) or a
                    target id, each with @RT where it is expected (else its window centre); per file every window moves by the apex found
                    minus that (never on a weak peak), written in the rt_shift_min column and the log; the search half-width is rt_span (0.6 min)
+  --sample LIST    the samples to integrate of every input with several (a .wiff): ids as `sample list` gives them, `1,3,5` or `2-4`; each becomes one
+                   file of the table, named by its sample name (the file name only breaks a tie; stderr says how each name was made, --dry-run and
+                   --json carry `members`: name, FILE@ID, sample id). Without it such an input is its first sample and stderr says so
   --blank-pattern  comma list of case-insensitive globs over the file names: the blanks; a target detected in a blank flags the samples in_blank
   --set NAME=VALUE any parameter of the step quant.targets@1 (repeatable): min_points (5) and min_shape (0.5, Gaussian correlation) of an
                    acceptable shape; shape gates, off at 0: min_half (scans at or over half the height), max_fwhm (s), max_asym (1 = symmetric);
@@ -46,7 +49,7 @@ the rejected rows stay (state forced, numbers kept) and --log decisions says whi
 Every row is written: area counts x s, height counts, rt min. State: detected (S/N >= --min-sn and an acceptable shape),
 forced (a peak under a threshold, numbers kept and flagged) or absent (no peak, no scan). Flags (;-joined, ok when none): no_scans (no scan of that level and polarity),
 no_peak, below_threshold (S/N under --min-sn, numbers kept), bad_shape, edge (apex on the first or last scan of the window), in_blank.
-Exit codes: 0 ok; 2 usage (bad option or parameter); 4 targets table or a file missing or unreadable; 6 --out or --log cannot be written.";
+Exit codes: 0 ok; 2 usage (bad option or parameter); 4 targets table or a file missing or unreadable; 5 a --sample id the file does not have; 6 --out or --log cannot be written.";
 
 struct Job {
     targets: PathBuf,
@@ -57,6 +60,8 @@ struct Job {
     dry: bool,
     out: Option<PathBuf>,
     workers: Option<usize>,
+    /// `--sample`: the ids to take of every input with several samples
+    sample: Option<Vec<u32>>,
 }
 
 /// The flags that are step parameters: flag, parameter name.
@@ -78,6 +83,7 @@ fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
         "--format",
         "--out",
         "--workers",
+        "--sample",
     ]);
     let Some(p) = extract::parse(args, &valued, &["--dry-run"])? else {
         return Ok(None);
@@ -116,7 +122,14 @@ fn job(args: Vec<String>) -> std::result::Result<Option<Job>, String> {
                 ))?,
         ),
     };
+    let sample = match p.get("--sample") {
+        None => None,
+        Some(v) => {
+            Some(crate::sample_select::parse(v).map_err(|e| crate::error_text::human_error(&e))?)
+        }
+    };
     Ok(Some(Job {
+        sample,
         workers,
         targets: targets.into(),
         inputs: p.pos.iter().map(PathBuf::from).collect(),
@@ -208,37 +221,92 @@ fn default_workers(files: usize) -> usize {
         .max(1)
 }
 
-/// One note per input that holds several samples: this command integrates the first sample of a file, so the note names the way to the others.
-fn first_sample_notes(paths: &[PathBuf]) -> String {
-    let mut out = String::new();
-    for p in paths {
-        let Some(count) = crate::sample_select::several(p) else {
-            continue;
-        };
-        out += &format!(
-            "note: {}\n",
-            crate::error_text::warning(&crate::convert::Notice {
-                key: "note.quant.firstSample",
-                params: vec![
-                    ("file", p.display().to_string()),
-                    ("count", count.to_string()),
-                ],
+/// A file of the run: its dataset, the label that picks its sample (empty: the first or only one) and the name its rows carry.
+struct Item {
+    path: PathBuf,
+    label: String,
+    name: String,
+}
+
+/// The items of the run, the `members` of the answer (empty without `--sample`) and the stderr notes. Without `--sample` an input that holds several samples
+/// is its first and a note names the way to the others; with it each chosen sample is an item named by `sample_members` (the label rule of `features`).
+fn items(paths: &[PathBuf], sample: &Option<Vec<u32>>) -> Result<(Vec<Item>, String, String)> {
+    let Some(want) = sample else {
+        let notes = paths
+            .iter()
+            .map(|p| crate::sample_select::members::first_sample_note(p, "note.quant.firstSample"))
+            .collect();
+        let items = paths
+            .iter()
+            .map(|p| Item {
+                path: p.clone(),
+                label: String::new(),
+                name: name_of(p),
             })
-        );
+            .collect();
+        return Ok((items, String::new(), notes));
+    };
+    let picked = crate::sample_select::members::expand(paths, want)?;
+    let notes = crate::sample_select::members::notes(&picked);
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("\"members\":[");
+    let mut first = true;
+    for m in picked.iter().filter(|m| m.id.is_some()) {
+        let id = m.id.unwrap_or(0);
+        o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
+            .str(&m.column)
+            .raw(",\"member\":")
+            .str(&format!("{}@{id}", name_of(&m.path)))
+            .raw(&format!(",\"sample_id\":{id},\"sample\":"))
+            .str(&m.sample)
+            .raw(",\"label\":")
+            .str(match m.kind {
+                crate::sample_label::Kind::Own => "own",
+                crate::sample_label::Kind::Tie => "tie",
+                crate::sample_label::Kind::Numbered => "numbered",
+            })
+            .raw("}");
+        first = false;
     }
-    out
+    o.raw("]");
+    let items: Vec<Item> = picked
+        .into_iter()
+        .map(|m| Item {
+            name: if m.id.is_some() {
+                m.column
+            } else {
+                name_of(&m.path)
+            },
+            path: m.path,
+            label: m.label,
+        })
+        .collect();
+    // a column and the name of another input may still be one name
+    let mut seen: Vec<&str> = Vec::new();
+    for i in &items {
+        if seen.contains(&i.name.as_str()) {
+            return Err(Error::new("err.cli.input.twice").with("input", i.name.clone()));
+        }
+        seen.push(&i.name);
+    }
+    Ok((items, o.0, notes))
 }
 
 fn run_job(j: &Job, said: &mut String) -> Result<(String, String)> {
     let targets = read(&j.targets)?;
-    let paths = files(&j.inputs)?;
-    *said = first_sample_notes(&paths);
-    let names: Vec<String> = paths.iter().map(|p| name_of(p)).collect();
+    let found = files(&j.inputs)?;
+    let (items, members, notes) = items(&found, &j.sample)?;
+    *said = notes;
+    let names: Vec<String> = items.iter().map(|i| i.name.clone()).collect();
+    let paths: Vec<&Item> = items.iter().collect();
     if j.dry {
-        return Ok((
-            mzlab_feat::quant_targets::plan(&names, &targets, &j.params)?,
-            String::new(),
-        ));
+        let plan = mzlab_feat::quant_targets::plan(&names, &targets, &j.params)?;
+        let plan = if members.is_empty() {
+            plan
+        } else {
+            with_key(plan, &members)
+        };
+        return Ok((plan, String::new()));
     }
     // parameters and table are checked before any index is built
     let n = paths.len();
@@ -252,13 +320,14 @@ fn run_job(j: &Job, said: &mut String) -> Result<(String, String)> {
     extract::with_tmp("quant", |tmp| {
         // each file is one pass on its own thread: its index (built here unless given), then every target; the passes are joined in file order
         let passes = crate::par::par_map_with(workers, n, |k| {
-            let p = &paths[k];
+            let it = paths[k];
+            let p = &it.path;
             eprintln!("[{}/{n}] {}", k + 1, names[k]);
             if is_index(p) {
                 return job.file(k, crate::flow_base::open(p)?);
             }
             let idx = tmp.join(format!("{k}.mzidx"));
-            crate::flow_pace::build_index_of(p, "", &idx, budget)?;
+            crate::flow_pace::build_index_of(p, &it.label, &idx, budget)?;
             let pass = job.file(k, crate::flow_base::open(&idx)?);
             let _ = std::fs::remove_file(&idx);
             pass
@@ -275,7 +344,10 @@ fn run_job(j: &Job, said: &mut String) -> Result<(String, String)> {
         }
         // the hints also go in the --json answer, beside the log and only when there are some: the log file stays the bytes of the site, whose
         // .wasm has no hints (docs/agenti/quant-targets.md)
-        let table = if j.json { out.json() } else { out.csv };
+        let mut table = if j.json { out.json() } else { out.csv };
+        if j.json && !members.is_empty() {
+            table = with_key(table, &members);
+        }
         Ok(match hints_json(&out.hints) {
             Some(h) if j.json => (with_key(table, &h), out.log),
             _ => (table, out.log),

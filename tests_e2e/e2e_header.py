@@ -20,11 +20,16 @@ try:
             b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "About mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
-            ps = pg.locator("#helppop p"); assert ps.count() == 3, ps.count()
+            ps = pg.locator("#helppop p"); assert ps.count() == 4, ps.count()
             assert "{" not in pg.inner_text("#helppop") and ps.first.inner_text() == pg.evaluate("APP_NAME") + " is a free, open-source tool. It never uploads your personal data or files.", "the name of the program fills {app}"
             assert ps.nth(1).inner_text() == "This version is still a work in progress."
             assert ps.nth(2).inner_text() == "Suggestions and corrections: fedecrista@gmail.com."
-            assert pg.locator("#helppop a").count() == 1 and pg.get_attribute("#helppop a", "href") == "mailto:fedecrista@gmail.com"
+            assert pg.locator("#helppop a").count() == 2 and pg.get_attribute("#helppop a >> nth=0", "href") == "mailto:fedecrista@gmail.com"
+            # the build line (version, commit, date) and the link to the rolling app download
+            assert ps.nth(3).inner_text().startswith("Version ") and "commit" in ps.nth(3).inner_text() and "{" not in ps.nth(3).inner_text()
+            assert pg.get_attribute("#helppop a >> nth=1", "href") == "https://github.com/Freeesta/mzlab/releases/tag/app-prebuilt"
+            g = pg.evaluate("(() => { const p = document.querySelector('#helppop'), q = p.querySelector('p'); return [q.getBoundingClientRect().top - p.getBoundingClientRect().top, parseFloat(getComputedStyle(p).paddingTop) + parseFloat(getComputedStyle(p).borderTopWidth)]; })()")
+            assert abs(g[0] - g[1]) <= 3, ("gap above the first paragraph", g)
             pg.keyboard.press("Escape")
         step("the header info button opens the box with the mailto link", info)
         def centred():
