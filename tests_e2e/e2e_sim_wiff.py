@@ -286,7 +286,7 @@ try:
             wait_for_js(pg, "E.panels.find(q => q.type === 'mrm' && q._a)._a.sr.length === 4", timeout=30000)
             h = pg.evaluate("(() => { const a = E.panels.find(q => q.type === 'mrm' && q._a)._a; return [a.sr[0].ion, a.sr.length, a.hov(a.W / 2, a.H / 2).html]; })()")
             ion, n, html = h
-            assert n == 4 and html.count(ion) == 1 and html.startswith("<b>") and f" · {ion}</b>" in html and html.count("<div>") == 4, h
+            assert n == 4 and html.count(ion) == 1 and html.startswith("<b>") and f" · {ion}</b>" in html and html.count("<div") == 4 and html.count(" class=\"top\"") == 1, h
             all_ions(pg)
         step("one channel over several samples: the hover text names the channel once", hover_once)
         def split():
