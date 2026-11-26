@@ -22,7 +22,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FEATURES-NOMINAL | `docs/coda/prompt/FEATURES-NOMINAL.md` | - | a `features` profile for nominal-resolution triple-quad or QTRAP data; low-mass products kept |
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
 | MS2-PEAK-HR | `docs/coda/prompt/MS2-PEAK-HR.md` | - | lost data: `spectrum get --peak auto` on profile and high-resolution levels (now `window_only`, no spectrum) |
-| FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | - | discoverability: value states already exist; find why they were not reached |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | - | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
 | FIND-LOOP-XIC | `docs/coda/prompt/FIND-LOOP-XIC.md` | - | discoverability: loop hint for `trace xic` / `raw xic` called once per target; reuse `repeat_hint.rs` |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
