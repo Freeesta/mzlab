@@ -171,11 +171,16 @@ pub mod ionfacts;
 mod specsum;
 mod specpeak;
 #[cfg(test)]
+mod specpeak_hr_tests;
+#[cfg(test)]
 mod specpeak_tests;
 #[cfg(test)]
 mod specsum_tests;
 mod rawxic_json;
 pub mod rawscan;
+pub mod rawiso;
+mod rawiso_found;
+mod rawiso_json;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

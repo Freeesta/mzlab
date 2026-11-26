@@ -84,17 +84,17 @@ fn run_with(shell: &str, args: Vec<String>) -> Outcome {
 pub(crate) static TABLE: &[Entry] = &[
     Entry::new(
         "completions bash",
-        "mzlab-cli completions bash   the bash completion script, on stdout",
+        "mzlab-cli completions bash   bash completion script on stdout",
         |a| run_with("bash", a),
     ),
     Entry::new(
         "completions zsh",
-        "mzlab-cli completions zsh   the zsh completion script, on stdout",
+        "mzlab-cli completions zsh   zsh completion script on stdout",
         |a| run_with("zsh", a),
     ),
     Entry::new(
         "completions fish",
-        "mzlab-cli completions fish   the fish completion script, on stdout",
+        "mzlab-cli completions fish   fish completion script on stdout",
         |a| run_with("fish", a),
     ),
 ];

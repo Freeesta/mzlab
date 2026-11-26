@@ -307,7 +307,7 @@ fn out_failure(to: &std::path::Path, e: &std::io::Error) -> Outcome {
 
 pub(crate) static TABLE: &[Entry] = &[Entry::new(
     "features",
-    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV",
+    "mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV",
     run,
 ), Entry::new(
     "table compare",
@@ -326,7 +326,7 @@ Entry::new(
 .exits(&[0, 2, 4, 6]),
 Entry::new(
     "quant union",
-    "mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of series as one target list",
+    "mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list",
     crate::quant_union_cmd::run,
 )
 .schema("union/1")

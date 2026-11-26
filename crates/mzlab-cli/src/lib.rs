@@ -241,6 +241,7 @@ mod quant_targets_cmd;
 mod quant_union_cmd;
 mod raw_cache_cmd;
 mod raw_cmd;
+mod raw_iso_cmd;
 mod raw_plan;
 mod raw_scan_cmd;
 mod raw_xic_ask;
@@ -271,7 +272,6 @@ mod wiff_cmd;
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
-
 pub(crate) use flow_pace::build_index_of;
 pub(crate) use idx_open::{build_index, open};
 

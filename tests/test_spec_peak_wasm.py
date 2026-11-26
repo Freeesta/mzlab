@@ -1,7 +1,7 @@
 """`spectrum get --peak auto` in the site: the lazy .wasm `specpeak` (mzlab-specpeak-wasm, through Node: `spec_peak(size, read, pol, query)`, the call rust-raw.js makes
 for the route `/api/specpeak` over the .mzidx of OPFS) gives the apex, the window, the sides, the background and the spectrum, byte for byte, as `mzlab-cli spectrum get
 --peak auto` prints them (`evidence.peak` is the wasm's answer up to its lines, the points are its lines), on the synthetic files of `tools/dati_sintetici.py` (full scan,
-profile, MS2: a peak, a window only, no apex); a value the route refuses has the same `error_key` in both. The desktop answers the same route
+profile, MS2, high-resolution centroid and profile: a peak, no apex); a value the route refuses has the same `error_key` in both. The desktop answers the same route
 (`crates/mzlab-desktop/tests/parity_routes/route_steps.rs`, app against `.wasm`). Skipped on a machine without cargo, wasm-bindgen, node or numpy; in CI
 (GITHUB_ACTIONS) those are required and a missing one FAILS (`test_the_tools_are_there_in_ci`). Run by the `rest` shards of test.yml."""
 import json
@@ -35,6 +35,10 @@ ASKS = [
     ("MS2.mzML", ["--rt", "12,17", "--ms-level", "2", "--precursor", "305.0", "--fill-ms", "50"], "rt0=12&rt1=17&level=2&precursor=305.0&fill_ms=50"),
     ("MS2.mzML", ["--rt", "15,18", "--ms-level", "2", "--precursor", "229.1"], "rt0=15&rt1=18&level=2&precursor=229.1"),
     ("MS2.mzML", ["--rt", "100,101", "--ms-level", "2"], "rt0=100&rt1=101&level=2"),
+    # high resolution: a centroid level (the match is in ppm, the level's own by default) and a profile level whose spacing the index lacks
+    ("HR.mzML", ["--rt", "13,15.6"], "rt0=13&rt1=15.6&level=1"),
+    ("HR.mzML", ["--rt", "13,15.6", "--set", "tol_ppm=10"], "rt0=13&rt1=15.6&level=1&tol_ppm=10"),
+    ("HR_profile.mzML", ["--rt", "13,15.6"], "rt0=13&rt1=15.6&level=1"),
 ]
 
 
@@ -56,6 +60,8 @@ def work(tmp_path_factory):
     d.full_scan(w / "FS.mzML", 3.0, r)
     d.full_scan_profile(w / "FS_profile.mzML", 3.0, r)
     d.ms2(w / "MS2.mzML", r, 15)
+    d.hr_dda(w / "HR.mzML", np.random.default_rng(7))
+    d.hr_dda(w / "HR_profile.mzML", np.random.default_rng(7), profile=True)
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-specpeak-wasm")))
     build("-p", "mzlab-cli")
     (w / "run.js").write_text(NODE, encoding="utf-8")
@@ -69,7 +75,7 @@ def answers(work, name, queries):
     return json.loads(subprocess.run(["node", str(work / "run.js"), str(work / "pkg"), str(cache / key), "0", *queries], capture_output=True, encoding="utf-8", check=True).stdout)
 
 
-@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML"])
+@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "HR.mzML", "HR_profile.mzML"])
 def test_the_wasm_answer_is_the_cli_evidence_and_points_byte_for_byte(work, name):
     asks = [a for a in ASKS if a[0] == name]
     for (_, flags, query), got in zip(asks, answers(work, name, [q for _, _, q in asks])):
@@ -85,8 +91,8 @@ def test_the_wasm_answer_is_the_cli_evidence_and_points_byte_for_byte(work, name
 
 
 def test_a_refused_value_has_the_same_error_key(work):
-    (got,) = answers(work, "MS2.mzML", ["rt0=5&rt1=9&level=2&factor=0"])
-    assert json.loads(got["e"])["error_key"] == "err.spec.peak", got
+    (got, tol) = answers(work, "MS2.mzML", ["rt0=5&rt1=9&level=2&factor=0", "rt0=5&rt1=9&level=2&tol_ppm=0"])
+    assert json.loads(got["e"])["error_key"] == json.loads(tol["e"])["error_key"] == "err.spec.peak", got
     r = cli("spectrum", "get", str(work / "MS2.mzML"), "--rt", "5,9", "--ms-level", "2", "--peak", "auto", "--set", "factor=0", runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
     doc = json.loads(r.stdout)
     assert r.returncode == 2 and doc["schema"] == "error/1" and doc["error_key"] == "err.spec.peak", r.stdout[:300]

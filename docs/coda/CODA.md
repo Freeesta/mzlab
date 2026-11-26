@@ -21,13 +21,13 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
-| MS2-PEAK-HR | `docs/coda/prompt/MS2-PEAK-HR.md` | - | lost data: `spectrum get --peak auto` on profile and high-resolution levels (now `window_only`, no spectrum) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
 | LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
-| RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | - | lost data: `raw isotopes` (AU-18, study §7) |
-| ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-SITE | `docs/coda/prompt/SPECTRUM-COMPARE-SITE.md` | - | site: a card that compares two selected MS2 scans with `spectrum_compare` (`librerie`) and shows the matched ions |
+| RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
+| ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
+| SPECTRUM-COMPARE-OFFSET | `docs/coda/prompt/SPECTRUM-COMPARE-OFFSET.md` | - | site card of `spectrum compare`: an m/z offset per side (fixed or `auto`), as the CLI flags |
+| SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
@@ -63,3 +63,4 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
 | FILE-METHOD-WINDOW | `docs/coda/prompt/FILE-METHOD-WINDOW.md` | - | `file_method/1` in the site Method window and the name check beside the scan list of `sample list` |
+| MS2-PEAK-HR-NOISE | `docs/coda/prompt/MS2-PEAK-HR-NOISE.md` | - | `spectrum get --peak auto` at a high-resolution level keeps every unmatched noise line above zero (about 1,600 lines on a synthetic Orbitrap parent peak); a net-intensity floor as a `--set` parameter with its default printed |
