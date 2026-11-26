@@ -53,6 +53,8 @@ pub struct Recipe {
     /// Unit-resolution screening switches (`centroid`, `recenter`, `dedup`) and the collector of what they did; they add to the text only on the unit
     /// axis and only when not `off`.
     pub screen: crate::lrscreen::Screen,
+    /// The named profile the user asked for (`nominal`, even when a high-resolution recipe left it unapplied); not part of the text, only reported.
+    pub preset: Option<&'static str>,
 }
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
@@ -99,6 +101,7 @@ impl Default for Recipe {
             join: None,
             peak_finder: None,
             screen: crate::lrscreen::Screen::default(),
+            preset: None,
         }
     }
 }

@@ -289,6 +289,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
         ("features.detect", "area_from" | "stitch") => set_trace_choice(r, step, k, v)?,
         ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
+        ("features.detect", "grid_touch") => r.detect.grid_touch = num()?,
         ("features.detect", _) if recipe_iso::owns(k) => recipe_iso::set(r, step, k, v)?,
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
         _ if recipe_algo::owns(step, k) => recipe_algo::set(r, step, k, v)?,
@@ -395,6 +396,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("stitch", choice(r.detect.stitch_wide, "wide", "strict")),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
+                ("grid_touch", n(r.detect.grid_touch)),
                 ("centroid", Value::Str(r.screen.centroid.name().into())),
             ];
             push_peak(&r.detect.peak, &mut v);

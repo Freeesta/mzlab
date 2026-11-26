@@ -787,6 +787,7 @@
                   "stitch",
                   "min_width",
                   "min_snr",
+                  "grid_touch",
                   "centroid",
                   "isotopes",
                   "iso_ppm",
@@ -818,7 +819,7 @@
               "value":{
                 "anyOf":[
                   {"enum":["masstrace","centwave","adap_localmin","threshold"]},
-                  {"enum":["hr","lr"]},
+                  {"enum":["hr","lr","nominal"]},
                   {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
                   {
                     "type":"number",
@@ -881,6 +882,13 @@
                     "minimum":0,
                     "default":0,
                     "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":0.5,
+                    "default":0.1,
+                    "description":"Unit axis only: two rows of the two grids at one retention time are one ion when their centroids are within this distance; a scattering centroid splits an ion above the default"
                   },
                   {
                     "enum":["auto","on","off"],

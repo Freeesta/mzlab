@@ -25,6 +25,9 @@ impl std::fmt::Debug for Params {
         if self.min_width != 0.0 {
             d.field("min_width", &self.min_width);
         }
+        if self.grid_touch != crate::axis::LR_TOUCH {
+            d.field("grid_touch", &self.grid_touch);
+        }
         if self.min_snr != 0.0 {
             d.field("min_snr", &self.min_snr);
         }

@@ -54,6 +54,8 @@ mod features_dedup_tests;
 #[cfg(test)]
 mod features_lr_tests;
 #[cfg(test)]
+mod features_nominal_tests;
+#[cfg(test)]
 mod features_profile_label_tests;
 mod features_series;
 mod file_index_cmd;
@@ -149,6 +151,8 @@ mod flow_nature;
 #[cfg(test)]
 mod flow_neglr_tests;
 mod flow_network;
+#[cfg(test)]
+pub(crate) mod flow_nominal_tests;
 mod flow_out;
 mod flow_pace;
 #[cfg(test)]
