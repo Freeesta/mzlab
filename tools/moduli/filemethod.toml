@@ -4,5 +4,5 @@ chiavi = { filemethod = 35 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 122880
-misura = 115791
-nota = "file method (`file_method/1`: precursor, CE, CES, DP, fill time and Q1 resolution per scan segment, name/precursor check) from the method/1 and items/1 texts the page holds; lazy, a module of its own so that motore and rotte (cap nearly full) do not grow; 115,791 B after wasm-opt (CI size step, NEW module so no base), cap = measurement x 1.05 rounded up to 4 KiB"
+misura = 118268
+nota = "file method (`file_method/1`: precursor, CE, CES, DP, fill time and Q1 resolution per scan segment, name/precursor check) from the method/1 and items/1 texts the page holds; lazy, a module of its own so that motore and rotte (cap nearly full) do not grow; 118,268 B after wasm-opt (CI size step, NEW module so no base), cap = measurement x 1.05 rounded up to 4 KiB"
