@@ -58,6 +58,11 @@ function withFamily(pool) {
   pool.family = (/** @type {{ name: string }} */ file, /** @type {any} */ recipe) => json("feat/family", { name: nameOf(file.name), recipe: recipeText(recipe) });
   return pool;
 }
+/** the `estimates/1` of one file as `features.estimate` writes it, with its `nominal` member (`feat/estimate`, the `flow_estimate` of the `.wasm`) @param {any} pool */
+function withEstimate(pool) {
+  pool.estimate = (/** @type {{ name: string }} */ file, /** @type {string} */ params) => json("feat/estimate", { name: nameOf(file.name), params: params || "{}" });
+  return pool;
+}
 /** @param {{ notify?: (key: string, params?: any) => void }} [opts] */
 export function createDesktopPool(opts = {}) {
   const pool = {
@@ -176,5 +181,5 @@ export function createDesktopPool(opts = {}) {
     cancel() {},
     resume() {},
   };
-  return withFamily(withPolpair(pool));
+  return withEstimate(withFamily(withPolpair(pool)));
 }

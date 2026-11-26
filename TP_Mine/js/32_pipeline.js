@@ -125,7 +125,7 @@
     if (!n) return;
     if (on) { st.nom = { floor: f.value, auto: st.auto.floor, hmin: h.value }; f.value = n.params.floor; h.value = n.params.min_height; st.auto.floor = false; $("#pipe-floor-why").textContent = "set by the profile"; }
     else if (st.nom) { f.value = st.nom.floor; h.value = st.nom.hmin; st.auto.floor = st.nom.auto; st.nom = null; if (st.prev) suggest(st.prev); }
-    sync();
+    sync(); showHint();
   }
 
   // ------------------------------------------------------------ charts (SVG, the data in a table through TDATI)
@@ -191,6 +191,25 @@
     if (!box) return;
     if (!unit && $("#pipe-nominal").checked) { $("#pipe-nominal").checked = false; nominalSwitch(false); }
     box.hidden = !unit;
+    showHint();
+  }
+  /** the line under the profile choice: the numbers of the `nominal` member of `estimates/1` for the file previewed, only when it says `hint` and the profile is not already on; nothing is applied */
+  async function nominalLine(pool, name) {
+    const box = $("#pipe-nominal-hint");
+    if (!box) return;
+    st.nomHint = null; box.hidden = true;
+    try {
+      const file = { name, path: "mzlab/idx/" + name };
+      const e = pool.estimate ? await pool.estimate(file, "{}") : JSON.parse(await pool.ident("feat", "flow_estimate", { path: file.path, name, params: "{}" })), p = PF().nominalHint(e && e.nominal);   // the app: `feat/estimate`; the site: the `flow_estimate` of the `.wasm` that `features.estimate` runs
+      if (p) st.nomHint = p;
+    } catch (_) { /* the hint is an extra: a file it cannot read keeps the profile switch without it */ }
+    showHint();
+  }
+  function showHint() {
+    const box = $("#pipe-nominal-hint");
+    if (!box) return;
+    const on = st.nomHint && !$("#pipe-nom").hidden && !$("#pipe-nominal").checked;
+    box.hidden = !on; box.textContent = on ? /** @type {any} */ (window).I18N.t("pipe.nominal.hint", st.nomHint) : "";
   }
   async function preview() {
     if (st.busy) return;
@@ -199,7 +218,8 @@
     st.busy = true; say("Reading the file...");
     try {
       const pool = await getPool(), p = await pool.preview({ name, path: "mzlab/idx/" + name }, recipe(values()));
-      st.prev = p; showNominal(p.unit === true); suggest(p); render(p); say("");
+      st.prev = p; st.nomHint = null; showNominal(p.unit === true); suggest(p); render(p); say("");
+      if (p.unit === true) await nominalLine(pool, name); else { st.nomHint = null; showHint(); }
     } catch (e) { say(msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || "")), true); }
     st.busy = false;
   }

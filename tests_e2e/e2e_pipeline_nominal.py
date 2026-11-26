@@ -22,6 +22,7 @@ try:
 except ImportError:
     print("SKIP numpy is needed for the synthetic series"); sys.exit(0)
 from cargo_util import cli
+import math
 
 tmp = Path(tempfile.mkdtemp(prefix="pipenominal_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
@@ -46,6 +47,14 @@ subprocess.run([sys.executable, "tools/lr_synthetic.py", str(lr), "--drift-serie
 mzml = sorted(lr.glob("drift-s*.mzML"))[:2]
 listed = json.loads(cli("file", "index", "--cache", str(tmp / "cache"), *map(str, mzml)).stdout)["files"]
 shutil.copy2(tmp / "cache" / listed[0]["key"], data / "lr_file.mzidx")
+# a unit-resolution series that shows the signature (jittered grids, low-mass products under the `lr` height): its `nominal` member comes from the CLI, the page must show the same numbers
+ser = tmp / "ser"
+subprocess.run([sys.executable, "tools/lr_synthetic.py", str(ser), "--jitter", "0.3"], cwd=ROOT, check=True, capture_output=True)
+SIG = sorted(ser.glob("LR_bench-s*.mzML"))[0]
+sig_key = json.loads(cli("file", "index", "--cache", str(tmp / "cache"), str(SIG)).stdout)["files"][0]["key"]
+shutil.copy2(tmp / "cache" / sig_key, data / "sig_file.mzidx")
+CLI_NOMINAL = json.loads(cli("estimate", str(SIG), "--json").stdout)["files"][0]["nominal"]
+CLI_QUIET = json.loads(cli("estimate", str(mzml[0]), "--json").stdout)["files"][0]["nominal"]
 STEPS = json.loads((ROOT / "docs/schemi/steps-1.json").read_text(encoding="utf-8"))
 NOM = next(s for s in STEPS if s["id"] == "features.detect")["presets"]["nominal"]
 
@@ -71,9 +80,9 @@ try:
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("window.PIPE && window.UNTUI", timeout=120000)
-        pg.evaluate(PUT, ["hr_file.mzidx", "lr_file.mzidx"])
+        pg.evaluate(PUT, ["hr_file.mzidx", "lr_file.mzidx", "sig_file.mzidx"])
         pg.evaluate("PIPE.open()"); pg.wait_for_selector("#pipe[open]")
-        pg.wait_for_function("document.querySelectorAll('#pipe-file option').length === 2", timeout=60000)
+        pg.wait_for_function("document.querySelectorAll('#pipe-file option').length === 3", timeout=60000)
 
         def preview(name):
             pg.select_option("#pipe-file", name); pg.click("#pipe-go")
@@ -131,6 +140,32 @@ try:
             assert pg.locator("#pipe-nom").is_hidden() and not pg.is_checked("#pipe-nominal")
             assert "preset" not in json.loads(pg.evaluate("PIPE.recipe(PIPE.values())")) and float(pg.input_value("#pipe-hmin")) == 2e5
         step("previewing a high-resolution file switches the profile off and hides it", hr_file_clears_it)
+        def pct(x): return math.floor(x * 1000 + 0.5) / 10
+        def num(x): return str(int(x)) if float(x) == int(x) else str(x)
+
+        def hint_numbers_equal_the_cli():
+            assert CLI_NOMINAL["hint"] is True and CLI_QUIET["hint"] is False, (CLI_NOMINAL, CLI_QUIET)
+            preview("sig_file.mzidx")
+            pg.wait_for_selector("#pipe-nominal-hint:not([hidden])", timeout=60000)
+            t = pg.inner_text("#pipe-nominal-hint"); n = CLI_NOMINAL
+            assert not pg.is_checked("#pipe-nominal")                                  # shown, never applied
+            for v in (n["rows"], n["between"], pct(n["between_share"]), n["height_now"], n["height_nominal"], n["split"], pct(n["split_share"]), n["reach_now"], n["reach_nominal"], pct(n["cut_between"]), pct(n["cut_split"])):
+                assert num(v) in t, (v, t)
+            assert "nothing is applied by itself" in t and "{" not in t, t
+            assert pg.get_attribute("#pipe-nominal-hint", "role") == "status"
+        step("a unit-resolution file with the signature says so beside the profile, with the numbers of `estimate --json`", hint_numbers_equal_the_cli)
+
+        def hint_follows_the_switch():
+            pg.check("#pipe-nominal"); assert pg.locator("#pipe-nominal-hint").is_hidden()
+            pg.uncheck("#pipe-nominal"); assert pg.locator("#pipe-nominal-hint").is_visible()
+        step("switching the profile on removes the line, off brings it back", hint_follows_the_switch)
+
+        def no_hint_without_signature():
+            preview("lr_file.mzidx")
+            assert pg.locator("#pipe-nom").is_visible() and pg.locator("#pipe-nominal-hint").is_hidden() and pg.inner_text("#pipe-nominal-hint") == ""
+            preview("sig_file.mzidx"); pg.wait_for_selector("#pipe-nominal-hint:not([hidden])", timeout=60000)
+            preview("hr_file.mzidx"); assert pg.locator("#pipe-nominal-hint").is_hidden()
+        step("a unit file under the cuts and a high-resolution file show no line; the previous file's line is gone", no_hint_without_signature)
     b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

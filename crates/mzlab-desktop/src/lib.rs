@@ -14,6 +14,7 @@ pub mod download_sources;
 pub mod engine;
 mod feat;
 mod feat_attributio;
+mod feat_estimate;
 mod feat_finder;
 mod feat_graph;
 mod feat_import;

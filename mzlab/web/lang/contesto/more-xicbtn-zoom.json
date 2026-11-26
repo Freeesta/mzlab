@@ -1,4 +1,5 @@
 {
+  "pipe.nominal.hint": "Line under the nominal-profile choice in the Pipeline panel (mzFinder), shown for a unit-resolution file whose estimate carries the nominal signature; {rows} = candidate rows, {between} and {between_pct} = rows (and percent) between the two heights, {height_nominal} and {height_now} = the heights compared, {split} and {split_pct} = ions split across the grids, {reach_now} and {reach_nominal} = the reaches in Da, {cut_between_pct} and {cut_split_pct} = the cuts in percent. A calm pointer, never a warning: nothing is applied by itself.",
   "xicbtn.n": "Tooltip of the XIC button with several overlaid files; {n} = number of files.",
   "zoom.mz": "Text on the zoomed chart; {lo} and {hi} = ends in m/z.",
   "zoom.rt": "Text on the zoomed chart; {lo} and {hi} = ends in minutes.",
