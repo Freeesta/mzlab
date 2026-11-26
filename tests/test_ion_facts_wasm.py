@@ -1,4 +1,4 @@
-"""The ion-scale method values in the site: the lazy .wasm `filemethod` (mzlab-filemethod-wasm, through Node: `ion_facts(method, scan_type)`, the call
+"""The ion-scale method values in the site: the lazy .wasm `ionfacts` (mzlab-ionfacts-wasm, through Node: `ion_facts(method, scan_type)`, the call
 rust-filemethod.js makes with the `method/1` text the page holds) gives the document the app answers (op `ionfacts`) and the value and place that
 `mzlab-cli raw xic --ions` logs in `provenance.choices` for the same file. A synthetic mzML carries a `method/1` whose transitions have a 5 ms dwell in its `<run>`.
 Skipped on a machine without cargo, wasm-bindgen or node; in CI (GITHUB_ACTIONS) those are required and a missing one fails. Run by the `rest` shards of test.yml."""
@@ -23,7 +23,7 @@ CI = bool(os.environ.get("GITHUB_ACTIONS"))
 pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
 
 NODE = """const [dir, methodPath, scanType] = process.argv.slice(2);
-const { ion_facts } = require(dir + '/mzlab_filemethod_wasm.js'), fs = require('fs');
+const { ion_facts } = require(dir + '/mzlab_ionfacts_wasm.js'), fs = require('fs');
 const text = p => p === '-' ? '' : fs.readFileSync(p, 'utf8');
 let out; try { out = { s: ion_facts(text(methodPath), scanType) }; } catch (x) { out = { e: String(x) }; }
 process.stdout.write(JSON.stringify(out));"""
@@ -52,7 +52,7 @@ def work(tmp_path_factory):
     # the document sits in the <run>, where the converter writes it
     (w / "a.mzML").write_text(re.sub(r"(<run [^>]*>)", lambda m: m.group(1) + user, text, count=1), encoding="utf-8")
     build("-p", "mzlab-cli")
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-filemethod-wasm")))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-ionfacts-wasm")))
     (w / "run.js").write_text(NODE, encoding="utf-8")
     (w / "m.json").write_text(METHOD, encoding="utf-8")
     return w
