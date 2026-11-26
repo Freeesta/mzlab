@@ -57,20 +57,57 @@
   function ions(p) {
     /** @type {Map<string, Ione>} */ const m = new Map();
     (panelTr(p) ? filesOf(p) : !tabTr(p) ? [] : E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
-    // transitions of one precursor keep the file order but the quantifier comes first (its name, from the method, starts with «Quant»)
-    const rank = (/** @type {Ione} */ x) => /^quant/i.test(x.name) ? 0 : 1, q1 = (/** @type {Ione} */ x) => x.key.split(">")[0], l = [...m.values()], first = new Map(/** @type {[string, number][]} */ (l.map((x, i) => [q1(x), i])).reverse());
+    return sortIons([...m.values()]);
+  }
+  /** transitions of one precursor keep the order they come in but the quantifier comes first (its name, from the method, starts with «Quant»); the order of the list AND the place of an ion in the palette @param {Ione[]} l */
+  function sortIons(l) {
+    const rank = (/** @type {Ione} */ x) => /^quant/i.test(x.name) ? 0 : 1, q1 = (/** @type {Ione} */ x) => x.key.split(">")[0], first = new Map(/** @type {[string, number][]} */ (l.map((x, i) => [q1(x), i])).reverse());
     return l.map((x, i) => ({ x, i })).sort((a, b) => (first.get(q1(a.x)) ?? 0) - (first.get(q1(b.x)) ?? 0) || rank(a.x) - rank(b.x) || a.i - b.i).map(o => o.x);
   }
-  /** colour and line style of a trace of an MRM / SIM overlay: colour = the sample (its square in the file list), so overlaid samples compare at a glance;
-   * channels of one sample differ by dash. A lone sample with more channels than dash patterns keeps one palette colour per channel (dashes would repeat).
-   * @param {any} f the file @param {number} ci place of the channel among those plotted @param {number} nCh channels plotted @param {number} nFiles files plotted */
-  function style(f, ci, nCh, nFiles) {
-    if (nFiles === 1 && nCh > DASHES.length) return { color: PAL[ci % PAL.length], dash: [] };
-    return { color: f.color, dash: nCh === 1 ? fdash(f) : DASHES[ci % DASHES.length] };
+  /** the place of a file among the files of transitions of the session, by its key (never by the order of the file list, so moving a file does not change its dash) @param {any} f */
+  const rankOf = f => Math.max(0, E.files.filter((/** @type {any} */ x) => isTr(x) && !x.gone).map((/** @type {any} */ x) => x.k).sort((a, b) => a - b).indexOf(f.k));
+  /** colour and line style of a trace of an MRM / SIM overlay. Rule: every ion has ITS OWN colour, PAL[place % PAL.length], where the place is that of the ion among ALL ions of the panel
+   * (sortIons order), never among the ticked ones, so ticking, unticking, stacking or moving a file never recolours a trace. Samples are told apart by dash (the sample's rank picks the pattern, the first is solid) and
+   * each round of the palette (ion 12, 13... take the colours again) shifts the pattern by one, so (colour, dash) stays distinct for 48 ions. A lone ion keeps the colour of its sample.
+   * @param {any} f the file @param {number} ci place of the ion among all of the panel @param {number} nCh ions of the panel @param {number} [rank] sample rank (0 = the swatch of the list: the solid line) */
+  function style(f, ci, nCh, rank = rankOf(f)) {
+    if (nCh <= 1) return { color: f.color, dash: fdash(f) };
+    return { color: PAL[ci % PAL.length], dash: DASHES[(rank + Math.floor(ci / PAL.length)) % DASHES.length] };
+  }
+
+  /** CSS background of a trace sample: the colour, or the dash pattern of the trace in that colour (as the legend draws it) @param {string} c @param {number[]} d */
+  const paint = (c, d) => d && d.length ? `repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)` : c;
+  /** the line of every channel of a panel as the drawing used it, key -> { c: colour or null (a lone ion of several samples), d: dash }. The drawing writes it from the
+   * same style() call as the traces and the lists read it, so a row and its trace cannot differ. True when it changed (the lists must be written again) @param {any} p @param {Record<string, any>} look */
+  const keep = (p, look) => { const a = JSON.stringify(look); if (a === p._lookS) return false; p._look = look; p._lookS = a; return true; };
+  /** the line of an ion, in the form keep() stores it: its colour (null for a lone ion plotted for several samples: the colour is then the sample's) and the dash of the first sample @param {{ color: string, dash: number[] }} st @param {number} nCh @param {number} nFiles */
+  const lookOf = (st, nCh, nFiles) => ({ c: nCh > 1 || nFiles === 1 ? st.color : null, d: st.dash });
+  /** the swatch of a row of a list: the line of its trace, dimmed while the row is unticked; the text stays beside it (colour is never the only mark). Nothing known (a channel never drawn): an empty box of the same width
+   * @param {any} p @param {string} key @param {boolean} on */
+  function swatch(p, key, on) {
+    const l = p._look && p._look[key];
+    if (!l) return `<span class="trsw none" aria-hidden="true"></span>`;
+    const c = l.c || "currentColor";
+    return `<span class="trsw${on ? "" : " off"}" aria-hidden="true" data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="color:${EH(c)};background:${EH(paint(c, l.d))}"></span>`;
+  }
+  /** a row of a list or a trace under the mouse or the focus: its trace is drawn on, the others fade (cleared with null); one redraw per frame @param {any} p @param {string | null} key */
+  function lit(p, key) {
+    if ((p._hl ?? null) === key) return;
+    p._hl = key; if (p._hlQ) return; p._hlQ = 1;
+    FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
   }
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
   const picked = (p, all) => { if (!panelTr(p)) return []; const tr = mrmSel(p.tr, all.map(x => x.key)); return !tr ? all.map(x => x.key) : (Array.isArray(tr) ? tr : [tr]); };
+
+  /** the swatch of a row of the «Extract ion ›» submenu, as a CSS background: the line the panel drew for that ion (p._look); a panel that does not draw it yet (a chromatogram that would open an MRM panel) gets the line the panel will draw, from the same style() call with the place of the ion in this list
+   * @param {any} p @param {string} key @param {number} i place of the ion @param {number} n ions of the list */
+  function lookFor(p, key, i, n) {
+    let l = panelTr(p) && p._look && p._look[key];
+    if (!l) { const fs = E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone); if (!fs.length) return undefined; l = lookOf(style(fs[0], i, n, 0), n, fs.length); }
+    return l;
+  }
+  const swatchCss = (/** @type {any} */ p, /** @type {string} */ key, /** @type {number} */ i, /** @type {number} */ n) => { const l = lookFor(p, key, i, n); return l ? paint(l.c || "currentColor", l.d) : undefined; };
 
   /** the entries of the «Extract ion ›» submenu: «All», then one per ion; click = only this one, Ctrl/⌘+click adds or removes it, Shift+click takes the range
    * from the last one clicked @param {any} c the context of the menu @returns {any[]} */
@@ -82,6 +119,7 @@
     };
     const out = [{ name: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, run: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({
+      color: swatchCss(p, x.key, i, all.length), tone: (lookFor(p, x.key, i, all.length) || {}).c || "", hover: (/** @type {boolean} */ on) => lit(p, on ? x.key : null),
       name: x.name ? `${label(x.key)} ${x.name}` : label(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
       run: (/** @type {MouseEvent | undefined} */ ev) => {
@@ -140,5 +178,5 @@
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, lit };
 })();
