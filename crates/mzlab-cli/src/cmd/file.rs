@@ -98,7 +98,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --minus a blank", crate::spectrum_cmd::get)
         .schema("spectrum/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
-    Entry::new("spectrum compare", "mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--set tol=DA]   MS2 cosine at nominal mass", crate::spectrum_cmd::compare)
+    Entry::new("spectrum compare", "mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--a-mz-offset OFF] [--b-mz-offset OFF] [--set tol=DA]   MS2 cosine at nominal mass", crate::spectrum_cmd::compare)
         .schema("spectrum-compare/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("spectrum list", "mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC)", crate::spectrum_cmd::list)

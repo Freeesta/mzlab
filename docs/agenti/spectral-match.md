@@ -48,5 +48,6 @@ Synthetic library of `identity_bench.rs` (precursors 100–900, 5–40 peaks fro
 ## 6. Two spectra against each other
 `spectrum compare FILE [FILE_B]` (`spectrum-compare/1`, `mzlab-lib/src/speccmp.rs`) scores one sample MS2 against one standard MS2 without a library.
 - Both are the nominal-mass bins of `/api/spectrum?rebin=nominal`, matched with `scores::match_peaks` (`--set tol=DA`, default 0 = the same bin) and scored with `scores::cosine_from_pairs`.
+- `--a-mz-offset` / `--b-mz-offset` (`DA` or `auto:MZ[@RT]`, as `spectrum get --bin nominal --mz-offset`) go to the route as `mzoff=`: each side's offset is taken off before its bins, so a sample and a standard of different calibrations share bins. Each side block of the document carries `mz_offset_da` and `mz_offset` (the route's evidence, `auto` included); stderr logs them per side.
 - The document lists the matched ions with both intensities, the ions each side lacks and the collision energy of each (a warning when they differ by more than `ce_tol`, default 0.5 eV).
 - The CLI, the app (`speccompare` op) and the site (`spectrum_compare` in `librerie`) call the same function on the two route answers.

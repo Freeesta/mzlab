@@ -46,7 +46,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass peak apex fwhm background sides", &["spectrum list", "raw xic", "spectra.centroid"])
         .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),
-    r("spectrum compare", "compare two ms2 spectra cosine similarity match sample against standard reference library fragments matched ions explained unmatched collision energy same ce product ion spectrum identity confirm", &["spectrum get", "spectrum list", "spectra.match"]).ex("mzlab-cli spectrum compare sample.mzML std.mzML --a-rt 6.2 --b-rt 6.3 --a-precursor 253.1"),
+    r("spectrum compare", "compare two ms2 spectra cosine similarity match sample against standard reference library fragments matched ions explained unmatched collision energy same ce product ion spectrum identity confirm calibration", &["spectrum get", "spectrum list", "spectra.match"]).ex("mzlab-cli spectrum compare sample.mzML std.mzML --a-rt 6.2 --b-rt 6.3 --a-precursor 253.1"),
     r("ion pattern", "isotope pattern chlorine bromine", &["features.group", "ion mz"]),
     r("ion match", "adduct neutral loss contaminant", &["features.group", "features.companions", "ion mz"]),
     r("mol draw", "draw depict structure picture image figure svg png cdxml ket molfile smiles 2d", &["structure.render", "tp.network", "mol export"])

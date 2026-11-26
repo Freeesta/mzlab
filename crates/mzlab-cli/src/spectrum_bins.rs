@@ -52,10 +52,9 @@ fn member(v: &Value, key: &str) -> String {
     o.0
 }
 
-/// The stderr lines: the rule, the offset that was taken off and how it was found, and the warning of an estimate that did not go cleanly.
-fn notes(name: &str, v: &Value) -> String {
-    let rule = v.get("rule").and_then(Value::str).unwrap_or("");
-    let width = v.get("width_da").and_then(Value::f64).unwrap_or(0.0);
+/// The offset lines of a document that carries `mz_offset_da` and `mz_offset` (the route's answer, or a side of `spectrum compare`): what was taken off
+/// and how it was found, and the warning of an estimate that did not go cleanly.
+pub(crate) fn offset_lines(name: &str, v: &Value) -> String {
     let da = v.get("mz_offset_da").and_then(Value::f64).unwrap_or(0.0);
     let ev = v.get("mz_offset");
     let num = |k: &str| {
@@ -80,12 +79,7 @@ fn notes(name: &str, v: &Value) -> String {
         (Some(_), _) => "fixed".into(),
         _ => "none given".into(),
     };
-    let mut s = format!(
-        "note: bins {rule}: half-open [bin - {}, bin + {}) on the m/z minus the offset\n",
-        width / 2.0,
-        width / 2.0
-    );
-    s += &format!("mz offset {name}: {da:+} Da ({how})\n");
+    let mut s = format!("mz offset {name}: {da:+} Da ({how})\n");
     let key = match status {
         "not_found" => Some("warn.mz.offset.notFound"),
         "wide" => Some("warn.mz.offset.wide"),
@@ -98,6 +92,18 @@ fn notes(name: &str, v: &Value) -> String {
         );
     }
     s
+}
+
+/// The stderr lines: the rule, the offset that was taken off and how it was found, and the warning of an estimate that did not go cleanly.
+fn notes(name: &str, v: &Value) -> String {
+    let rule = v.get("rule").and_then(Value::str).unwrap_or("");
+    let width = v.get("width_da").and_then(Value::f64).unwrap_or(0.0);
+    format!(
+        "note: bins {rule}: half-open [bin - {}, bin + {}) on the m/z minus the offset\n{}",
+        width / 2.0,
+        width / 2.0,
+        offset_lines(name, v)
+    )
 }
 
 /// One spectrum as bins: the document or CSV, and the lines for the terminal.
