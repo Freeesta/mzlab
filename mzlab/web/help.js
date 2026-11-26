@@ -38,7 +38,7 @@ const HELP = {
     const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[ESP.didattica(mk[1])].name, QMODI.html(ESP.didattica(mk[1]))] : HELP[key]; if (!h) return;
     pop.classList.toggle("wide", !!mk); pop.classList.remove("guide"); pop.classList.toggle("nt", !h[0]);
     // no title for the "Informazioni" box (key header)
-    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;
+    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}" aria-label="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;
     pop.querySelector(".x").onclick = close;
     pop.hidden = false; cur = b;
     const r = b.getBoundingClientRect(), w = pop.offsetWidth, hgt = pop.offsetHeight;
