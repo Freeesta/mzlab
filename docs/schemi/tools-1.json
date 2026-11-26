@@ -1102,14 +1102,14 @@
                     "minimum":0,
                     "maximum":1,
                     "default":0.1,
-                    "description":"Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows lies between the nominal height and the height in force"
+                    "description":"Unit axis only: names the nominal profile when this share of rows lies between the two heights."
                   },
                   {
                     "type":"number",
                     "minimum":0,
                     "maximum":1,
                     "default":0.05,
-                    "description":"Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows is one ion in two rows that the grid reach of the profile would merge"
+                    "description":"Unit axis only: names the nominal profile when this share of rows is one ion split across the two grids."
                   }
                 ]
               }

@@ -49,13 +49,13 @@ pub(super) fn estimate() -> Step {
                 .min(0.0)
                 .max(1.0)
                 .default_num(crate::nominal_hint::CUT_BETWEEN)
-                .doc("Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows lies between the nominal height and the height in force")
+                .doc("Unit axis only: names the nominal profile when this share of rows lies between the two heights.")
                 .advanced(),
             Param::number("hint_split", "Nominal hint: ions split across grids")
                 .min(0.0)
                 .max(1.0)
                 .default_num(crate::nominal_hint::CUT_SPLIT)
-                .doc("Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows is one ion in two rows that the grid reach of the profile would merge")
+                .doc("Unit axis only: names the nominal profile when this share of rows is one ion split across the two grids.")
                 .advanced(),
         ],
         runs_in: feat_runs_in(),
