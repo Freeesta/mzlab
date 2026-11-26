@@ -65,8 +65,8 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - A release carries `mzlab-cli` (profile `cli`) under fixed names, so `releases/latest/download/NAME` works: `mzlab-cli-linux-x86_64`, `mzlab-cli-linux-aarch64` (static musl, any distro), `mzlab-cli-macos-aarch64` (Apple silicon), all in `SHA256SUMS`. The macOS binary is **unsigned and not notarized**; fetched with `curl` it has no quarantine flag and runs. A draft release is not reachable at `releases/latest` (404).
 - Install: `curl -fsSL https://raw.githubusercontent.com/Freeesta/mzlab/main/tools/install.sh | sh` (POSIX sh, no sudo): picks the OS/CPU binary, checks `SHA256SUMS` before installing to `~/.local/bin` (`--dir DIR`), prints path and `--version`; `--version X.Y.Z` pins a release, `--dry-run` only prints the URLs. Exit: 2 usage, 3 unsupported platform, 4 no curl/wget/SHA-256 tool, 5 no asset or no published release, 6 download, 7 checksum, 8 install.
 - By hand: fetch `mzlab-cli-<os>-<arch>` and `SHA256SUMS` from `https://github.com/Freeesta/mzlab/releases/latest/download/`, then `sha256sum --ignore-missing -c SHA256SUMS` (macOS: `shasum -a 256`), `chmod +x`.
-- Before a release is published, a dry run of `release` (Actions, version empty) keeps the same binaries as artifacts `mzlab-cli-*`, each with a `.sha256` (`release.md`).
-- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`); the Linux x86_64 one is also compared byte for byte with a native glibc build on a synthetic file.
+- No Rust: `python3 tools/cli_prebuilt.py [--commit SHA] [--json]` fetches and checks the Linux x86_64 build of a commit of main (default newest) into `target/cli-prebuilt/`; main, never your branch (`release.md`).
+- Every build is smoke-tested on a runner of its own architecture (`tools/cli_smoke.py`); the Linux x86_64 one is also compared byte for byte with a native glibc build.
 
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
