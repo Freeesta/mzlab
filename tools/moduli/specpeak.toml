@@ -3,6 +3,6 @@ pacchetto = "mzlab-specpeak-wasm"
 chiavi = { specpeak = 36 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 196608
-misura = 184193
-nota = "api/specpeak (`spectrum get --peak auto`: the apex of the product-ion chromatogram, the window of factor x FWHM, the two background sides and the background-subtracted spectrum over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first --peak auto request; a module of its own because inside `rawxic` it took 201,944 -> 235,295 B (+16.5 %, over the 10 % rule), Coordinator decision; 184,193 B after wasm-opt (CI size step), cap = measurement x 1.05 rounded up to 4 KiB"
+tetto = 204800
+misura = 196226
+nota = "api/specpeak (`spectrum get --peak auto`: the apex of the product-ion chromatogram, the window of factor x FWHM, the two background sides and the background-subtracted spectrum over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first --peak auto request; a module of its own because inside `rawxic` it took 201,944 -> 235,295 B (+16.5 %, over the 10 % rule), Coordinator decision; 196,226 B after wasm-opt (CI size step, PR MS2-PEAK-HR: 184,193 -> 196,226, +6.5 %, net spectrum at profile and high-resolution levels), cap 196,608 -> 204,800 (+4.2 %, owner decision)"

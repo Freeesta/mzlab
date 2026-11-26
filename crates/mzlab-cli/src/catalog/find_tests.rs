@@ -69,6 +69,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("extract ion chromatograms of a list of m/z", "trace xic"),
     ("sum the scans of an MS2 window and count the ions it rests on", "spectrum get"),
     ("spectrum of a product-ion peak, background of both sides off", "spectrum get"),
+    ("net high-resolution or profile spectrum of a product-ion peak, ppm match against the sides", "spectrum get"),
     (
         "blank subtraction threshold on the feature table",
         "table.filter",
