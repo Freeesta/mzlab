@@ -62,7 +62,7 @@ async function analogSeries(p) {
   return r.filter(s => s.x.length);
 }
 // MS2 transitions (unit resolution), like the MRM ones, grouped by precursor in the menu (pairs beyond the cap are counted there, not dropped silently): listed from the scans; a pair's chromatogram is the fragment window in its precursor's scans
-const MS2TR_MAX = 12, ms2trOptions = (/** @type {any} */ p) => [...(p._trs || []).reduce((/** @type {Map<number, any[]>} */ m, /** @type {any} */ t) => m.set(t.q1, [...(m.get(t.q1) || []), t]), new Map())].map(([q1, l]) => `<optgroup label="${EH(I18N.t("ctl.ms2tr.grp", { q1 }))}">${l.map((/** @type {any} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</optgroup>`).join("") + (p._trsMore > 0 ? `<option disabled>${EH(I18N.t("ctl.ms2tr.more", { n: p._trsMore }))}</option>` : "");
+const MS2TR_MAX = 12, ms2trOptions = (/** @type {any} */ p) => [...(p._trs || []).reduce((/** @type {Map<number, any[]>} */ m, /** @type {any} */ t) => m.set(t.q1, [...(m.get(t.q1) || []), t]), new Map())].map(([q1, l]) => `<optgroup label="${EH(I18N.t("ctl.ms2tr.grp", { q1 }))}">${l.map((/** @type {any} */ t) => `<option value="${EH(t.key)}"${SIMUI.ms2Tone(p, t.key, MS2TR_MAX)} ${p.tr === t.key ? "selected" : ""}>${SIMUI.ms2Mark(p, t.key, MS2TR_MAX)} ${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</optgroup>`).join("") + (p._trsMore > 0 ? `<option disabled>${EH(I18N.t("ctl.ms2tr.more", { n: p._trsMore }))}</option>` : "");
 async function ms2trSeries(p) {
   const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
   const data = await Promise.all(mf.map(f => getMs2Tr(f.k, f.lv).then(tr => ({ f, tr }))));
@@ -70,11 +70,11 @@ async function ms2trSeries(p) {
   data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
   const full = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3), list = full.slice(0, MS2TR_MAX * 4), more = full.length - list.length;
   if (more !== (p._trsMore || 0) || JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; p._trsMore = more; ctl(p); }
-  if (!p.tr) return null;
+  if (SIMUI.ms2Look(p, list.map(t => t.key), mf)) ctl(p); if (!p.tr) return null;      // the line of every transition, computed once here with SIMUI.style; the key of the select reads it
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
   const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
-    x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, time: f.time, color: PAL[list.indexOf(t) % PAL.length],
-    dash: fi > 0 ? DASHES[fi % 4] : [], name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
+    x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, tk: t.key, time: f.time, color: SIMUI.style(f, list.indexOf(t), list.length, fi).color,
+    dash: SIMUI.style(f, list.indexOf(t), list.length, fi).dash, name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
   return out.filter(s => s.x.length);
 }
 async function rawSeries(p) {
@@ -94,10 +94,10 @@ async function rawSeries(p) {
   }
   const files = shownFor(p);
   if (p.type === "xic") {
-    const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.channel) : null).then(d => ({
-      x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
-      color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
+    const ts = p.traces, out = [], sf = scanFiles(files); SIMUI.xicLook(p, ts, sf);      // the line of every trace and file of the legend, from the same style() call as the drawing
+    sf.forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.channel) : null).then(d => ({
+      x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, tk: "t" + t.id, tf: "f" + f.k, time: f.time,
+      color: SIMUI.style(f, ti, ts.length, fi).color, dash: SIMUI.style(f, ti, ts.length, fi).dash,
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
     return Promise.all(out);
   }
@@ -267,14 +267,14 @@ function legend(p, all, note = "") {
   if (p.type === "xic") {
     // one trace: the trace is in the title of the panel and the legend lists only the files; several traces: two levels, the traces in bold, then the files
     const files = scanFiles(shownFor(p)), one = p.traces.length === 1;
-    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}" tabindex="0" role="button" title="${I18N.t("leg.ion.hint")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
-    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
-      : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
+    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}" tabindex="0" role="button" data-lk="t${t.id}">${SIMUI.swatch(p, "t" + t.id, !p.hid["t" + t.mz])}</span><b data-t="${t.id}" tabindex="0" role="button" title="${I18N.t("leg.ion.hint")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
+    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}" tabindex="0" role="button" data-lk="f${f.k}">${SIMUI.swatch(p, "f" + f.k, !p.hid["x|" + f.k + "|" + p.traces[0].mz])}${EH(f.label)}${legPol(f)}</span>`
+      : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" tabindex="0" role="button" data-lk="f${f.k}" title="${I18N.t("leg.fileAll.title")}">${SIMUI.swatch(p, "f" + f.k, !p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMMANDS.run("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}">${raw(dsw(s.color, s.dash))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
-  if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
+  if (window.TWCKEY && p.overlay === "twc") p.leg.insertAdjacentHTML("beforeend", TWCKEY.html(p)); SIMUI.wireLit(p, p.leg, "[data-lk]"); if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMMANDS.run("xic.traces", p, () => { t.label = v; }); draw(p); } });
@@ -400,7 +400,7 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    const lit = !EXPORTING && p._hl != null && s.tk != null && sr.some(q => q.tk === p._hl), faded = lit && s.tk !== p._hl;      // a row of a list under the mouse: its trace is drawn on, the others fade
+    const lit = !EXPORTING && p._hl != null && sr.some(q => q.tk === p._hl || q.tf === p._hl), faded = lit && s.tk !== p._hl && s.tf !== p._hl;      // a row of a list under the mouse: its trace is drawn on, the others fade
     if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX() + (lit && !faded ? 1.5 : 0); g.setLineDash(s.dash); g.beginPath();
     const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
     g.stroke(); g.globalAlpha = 1;

@@ -13,6 +13,13 @@ const fz1 = () => (typeof fz === "function" ? fz() : 1);
 const TWC = new Map();
 const keyOf = (/** @type {any} */ f) => `${f.k}|${f.file}`;
 
+/** the line of the TWC curve of a file: the drawing and its legend key (TWCKEY.html) both read it, so they cannot differ @param {any} f */
+const lineOf = f => ({ c: f.color, d: [2, 3] });
+const keyOf2 = (/** @type {any} */ f) => `twc|${f.k}`;
+/** the entries of the legend for the curves on the right axis: a swatch with the curve's colour and dash (hollow and dimmed once hidden by a click, like the other entries), hover or focus lights the curve @param {any} p */
+const keyHtml = p => curves(p).map(({ f }) => { const k = keyOf2(f), off = !!(p.hid && p.hid[k]); return `<span class="tg${off ? " off" : ""}" data-h="${EH(k)}" data-lk="${EH(k)}" tabindex="0" role="button" aria-pressed="${!off}">${SIMUI.swatchOf(lineOf(f), !off)}${EH(T("tdati.col.twc") + " · " + f.label)}</span>`; }).join("");
+g.TWCKEY = { html: keyHtml };
+
 /** @param {any} p */
 function ensure(p) {
   dadOf(p).forEach(f => {
@@ -42,7 +49,8 @@ function draw(p, c, a) {
   for (const v of nice(0, top, 5)) { c.beginPath(); c.moveTo(W - M.r, Math.round(Y(v)) + .5); c.lineTo(W - M.r + 4, Math.round(Y(v)) + .5); c.stroke(); c.fillText(String(+v.toFixed(1)), W - M.r + 7, Y(v) + 3.5 * z); }
   { const G = GRADIENTE, fp = 12 * z, ttl = G.rightLayout(ticks(top), fp); c.save(); c.translate(W - M.r + ttl.titleX, (M.t + H - M.b) / 2); c.rotate(Math.PI / 2); c.textAlign = "center"; c.fillText(G.fitTitle(T("tdati.col.twc"), ph, fp), 0, 0); c.restore(); }
   c.beginPath(); c.rect(M.l, M.t, W - M.l - M.r, ph); c.clip();
-  cs.forEach(({ f, d }) => { c.strokeStyle = f.color; c.lineWidth = 1.6; c.setLineDash([2, 3]); c.beginPath(); d.rt.forEach((/** @type {number} */ t, /** @type {number} */ i) => (i ? c.lineTo(X(t + sh), Y(d.y[i])) : c.moveTo(X(t + sh), Y(d.y[i])))); c.stroke(); });
+  const hl = p._hl != null && cs.some(({ f }) => keyOf2(f) === p._hl) ? p._hl : null;      // a legend entry under the mouse: its curve is drawn on, the others fade
+  cs.forEach(({ f, d }) => { const k = keyOf2(f); if (p.hid && p.hid[k]) return; const L = lineOf(f); c.strokeStyle = L.c; c.globalAlpha = hl && hl !== k ? 0.25 : 1; c.lineWidth = hl === k ? 3 : 1.6; c.setLineDash(L.d); c.beginPath(); d.rt.forEach((/** @type {number} */ t, /** @type {number} */ i) => (i ? c.lineTo(X(t + sh), Y(d.y[i])) : c.moveTo(X(t + sh), Y(d.y[i])))); c.stroke(); });
   c.restore();
   a.twc = true;
 }

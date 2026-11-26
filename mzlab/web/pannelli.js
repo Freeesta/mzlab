@@ -732,7 +732,7 @@ function ctl(/** @type {Pannello} */ p) {
   const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}${window.ZRESET?.btn(p) ?? ""}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
   const uvCx = { hasScan: false, hasPda, an: anKinds, reg: false }, uvAny = hasPda || anKinds.length > 0;
   const kindSel = ms2c && uvAny ? CANALI.html(p, { ...uvCx, ms2: true }) : ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
-  const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${ms2trOptions(p)}</select>` : "";
+  const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${ms2trOptions(p)}</select>${SIMUI.ms2Key(p, MS2TR_MAX)}` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p, mrmP && uvAny ? uvCx : undefined) ?? "";
   if (p.type === "chrom") c.innerHTML = `${kindSel || `${CANALI.html(p, { hasScan, hasPda, an: anKinds, reg: !!(window.REGISTRO && REGISTRO.has(TF)) })}${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}<span class="ibkslot"></span>${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some((/** @type {MzFile} */ x) => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
@@ -807,6 +807,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "snipw") x.onchange = () => { pushFields(p, "history.background"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
+  if (p.type === "chrom") SIMUI.wireLit(p, c, ".trkey [data-lk], select[data-o=tr]");
   window.CANALI?.wire(p, c);
   if (window.REGISTRO && p.kind === "reg") REGISTRO.wire(p, c);  // registro-serie.js: the search box of the channels
   syncTb(p);

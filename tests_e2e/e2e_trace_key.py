@@ -146,7 +146,14 @@ try:
             need(pg.evaluate("E.files[0].label") != first, "the file did not move in the list")
             show(pg, [0, 1], 2 * N3, 2)
             need(check(read(pg), N3, 2) == base, "moving a file in the list recoloured an ion")
-        step("moving a file in the list does not recolour an ion", reorder)
+            # the ion list is kept (it was keyed by the file's position) and so is the «Extract ion ›» entry of the menu
+            need(pg.evaluate("SIMUI.ions(%s).length" % P) == N3, "the ion list is empty after the move")
+            pg.evaluate("%s.cv.scrollIntoView({ block: 'center' })" % P); frames(pg, 2)
+            b = pg.evaluate("(() => { const b = %s.cv.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()" % P)
+            pg.mouse.click(b[0], b[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
+            need(pg.locator("#ctx .hsub").count() == 1, "the «Extract ion ›» entry disappeared after the move")
+            pg.keyboard.press("Escape")
+        step("moving a file in the list does not recolour an ion and keeps the ion list and its menu entry", reorder)
 
         def palette():
             o = pg.evaluate("(() => { const f = { color: '#123456', k: 0 }, r = {}; for (const n of [2, 3, 4, 7, 17, 48]) { r[n] = []; for (let i = 0; i < n; i++) { const st = SIMUI.style(f, i, n, 0); r[n].push([st.color, st.dash.join(',')]); } } return { r, pal: PAL.slice() }; })()")
