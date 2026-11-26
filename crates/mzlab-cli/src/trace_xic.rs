@@ -7,12 +7,16 @@ use mzlab_core::mzcal::{Offset, Spec};
 
 use crate::extract::{self, Parsed};
 use crate::trace_cmd::{self, Answer};
+use ions::IonAsk;
+#[path = "trace_xic_ions.rs"]
+mod ions;
 use crate::Outcome;
 
 pub const HELP_XIC: &str = "mzlab-cli trace xic: the extracted ion chromatogram of one m/z or of a list, as JSON (trace/1, trace-set/1) or CSV, the answers of the page's api/xic.
 
 usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol P[ppm]|D[da]] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-]
                            [--mz-offset DA|auto:MZ[@RT]] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]
+                           [--ions [--scan-type ems|epi|q1|sim|other] [--set fill_ms|dwell_ms|scan_s|step_da|mass_lo|mass_hi=V...]]
 
   --mz LIST   the ions' m/z, one or several separated by commas; one gives trace/1, several give trace-set/1 (a trace/1 per ion, in the order given)
   --sweep S   LO:HI:STEP, the centres LO+i*STEP (at most 20000): the bytes of --mz with that list, in one call; --tol defaults to STEP/2 da
@@ -25,6 +29,9 @@ usage: mzlab-cli trace xic FILE (--mz M[,M...] | --sweep LO:HI:STEP) [--ppm P | 
   --sample ID the sample of a file with several (.wiff); default the first
   --format F  json (default) or csv: rt_min,intensity for one m/z, rt_min then one xic:<mz> column per ion for several (they share the scans)
   --out PATH  write there instead of the standard output
+  --ions      opt-in second scale: each trace gets the member \"ions\" (CSV: column ions, or ions:<mz> after xic:<mz>), ions = cps x the seconds one point accumulates
+              ions (fill_ms ems/epi, dwell_ms sim, scan_s*step_da/(mass_hi-mass_lo) q1; else 1 / the ion quantum of the data); evidence.ion_scale and ion_scale_choice say where
+              it came from, stderr too; --scan-type names the scan type (else read from the scans), --set the method values (a transition dwell is read from method/1); no factor: cps only
   --dry-run   print the extraction that would run (xicplan/1: ions, window in Da, level, smoothing, sweep) and read nothing (auto: only the data of the estimate); a missing file is still exit 4
 
 One call per file answers every ion of a list (--mz M1,M2,... or --sweep), never one call per ion; their peaks in every file in one call:
@@ -50,6 +57,7 @@ struct Job {
     /// `--sweep` as `(lo, hi, step)` and whether the half-window is the default STEP/2.
     sweep: Option<((f64, f64, f64), bool)>,
     off: mzlab_core::mzcal::Spec,
+    ions: Option<IonAsk>,
 }
 
 impl Job {
@@ -162,8 +170,10 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
             "--sample",
             "--format",
             "--out",
+            "--scan-type",
+            "--set",
         ],
-        &["--dry-run"],
+        &["--dry-run", "--ions"],
     )?
     else {
         return Ok(Err(HELP_XIC));
@@ -202,7 +212,9 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
         Some("5") => Some(5),
         Some(_) => return Err("--smooth takes 3 or 5".into()),
     };
+    let ions = ions::parse_flags(&p)?;
     Ok(Ok(Job {
+        ions,
         sample: p.sample(&file)?,
         win: p.window()?,
         csv: p.csv()?,
@@ -269,8 +281,13 @@ fn plan(j: &Job, off: &mzlab_core::mzcal::Offset) -> String {
             j.mz.len() * 8
         )
     });
+    let ions = j.ions.as_ref().map_or(String::new(), |i| {
+        let mut o = mzlab_core::json::Out::default();
+        crate::raw_xic_ions::member(&mut o, i);
+        o.0
+    });
     format!(
-        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{}{sweep}{}{},\"traces\":[{list}]}}",
+        "{{\"schema\":\"xicplan/1\",\"dry_run\":true,\"file\":{},\"sample\":{},\"ms_level\":{},\"polarity\":{},\"smooth\":{},\"rt_window_min\":{win},\"format\":\"{}\",\"output\":{},\"n_traces\":{}{sweep}{}{}{ions},\"traces\":[{list}]}}",
         extract::jstr(&name),
         j.sample.map_or("null".to_string(), |s| s.to_string()),
         j.level,
@@ -316,6 +333,56 @@ fn wide_csv(docs: &[(String, Vec<(&str, &str)>)]) -> Result<String> {
     Ok(s)
 }
 
+/// The one document of a run: the trace, the set or the wide CSV of the answers, with the ions of the opt-in beside each trace.
+fn assemble(
+    j: &Job,
+    s: &extract::Sample,
+    mut answers: Vec<(f64, Answer)>,
+    split: Option<&ions::Split>,
+) -> Result<String> {
+    let id = |mz: f64| format!("xic:{}", extract::jnum(mz));
+    // the ions of trace k, absent without `--ions` or without a factor
+    let ions_of = |k: usize| split.and_then(|sp| sp.ions[k].as_deref());
+    let text = match (answers.len(), j.csv) {
+        (1, _) => {
+            let (mz, a) = answers.remove(0);
+            trace_cmd::render_with(a, s, j.win, j.csv, &id(mz), ions_of(0))?
+        }
+        (_, false) => {
+            let mut docs = Vec::new();
+            for (k, (mz, a)) in answers.into_iter().enumerate() {
+                let d = trace_cmd::render_with(a, s, j.win, false, &id(mz), ions_of(k))?;
+                docs.push(d);
+            }
+            format!(
+                "{{\"schema\":\"trace-set/1\",{},\"n_traces\":{},\"traces\":[{}]}}",
+                trace_cmd::tail(&s.name, s),
+                docs.len(),
+                docs.join(",")
+            )
+        }
+        (_, true) => {
+            let mut cols = Vec::new();
+            for (k, (mz, a)) in answers.iter().enumerate() {
+                let x = extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
+                let y = extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
+                cols.push((id(*mz), extract::pairs(&x, &y, j.win)));
+                if let Some(i) = ions_of(k) {
+                    if i.len() != x.len() {
+                        return Err(Error::new("error.badIndex"));
+                    }
+                    cols.push((
+                        format!("ions:{}", extract::jnum(*mz)),
+                        extract::pairs(&x, i, j.win),
+                    ));
+                }
+            }
+            wide_csv(&cols)?
+        }
+    };
+    Ok(text)
+}
+
 /// The documents of a run: one extraction of every ion (one call for a sweep), each with its evidence, then the one document, the set or the wide CSV.
 fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
     let mut s = extract::open_sample(&j.file, j.sample, tmp)?;
@@ -339,6 +406,16 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
         v
     }
     .into_iter();
+    let asked = match &j.ions {
+        Some(i) => Some(ions::ask(
+            &mut s, &j.mz, &tols, j.level, j.pol, j.smooth, i,
+        )?),
+        None => None,
+    };
+    let split = asked.as_ref().map(|(t, _)| ions::split(t)).transpose()?;
+    if let Some(sp) = &split {
+        s.note += &ions::note(sp);
+    }
     for &mz in &j.mz {
         let mut a = found.next().ok_or(Error::new("error.badIndex"))?;
         if let Some(p) = j.ppm {
@@ -346,6 +423,9 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
         }
         if !off.members().is_empty() {
             a.evidence += &format!(",{}", off.members());
+        }
+        if let (Some(sp), Some((_, log))) = (&split, &asked) {
+            a.evidence += &ions::evidence(sp, log);
         }
         if let Some(why) = emptiness(&a, j.win)? {
             a.evidence += &format!(",\"empty\":true,\"empty_reason\":\"{why}\"");
@@ -361,35 +441,7 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
         }
         answers.push((mz, a));
     }
-    let id = |mz: f64| format!("xic:{}", extract::jnum(mz));
-    let text = match (answers.len(), j.csv) {
-        (1, _) => {
-            let (mz, a) = answers.remove(0);
-            trace_cmd::render(a, &s, j.win, j.csv, &id(mz))?
-        }
-        (_, false) => {
-            let mut docs = Vec::new();
-            for (mz, a) in answers {
-                let d = trace_cmd::render(a, &s, j.win, false, &id(mz))?;
-                docs.push(d);
-            }
-            format!(
-                "{{\"schema\":\"trace-set/1\",{},\"n_traces\":{},\"traces\":[{}]}}",
-                trace_cmd::tail(&s.name, &s),
-                docs.len(),
-                docs.join(",")
-            )
-        }
-        (_, true) => {
-            let mut cols = Vec::new();
-            for (mz, a) in &answers {
-                let x = extract::tokens(&a.text, "rt").ok_or(Error::new("error.badIndex"))?;
-                let y = extract::tokens(&a.text, "y").ok_or(Error::new("error.badIndex"))?;
-                cols.push((id(*mz), extract::pairs(&x, &y, j.win)));
-            }
-            wide_csv(&cols)?
-        }
-    };
+    let text = assemble(j, &s, answers, split.as_ref())?;
     Ok((text, s.note.clone()))
 }
 

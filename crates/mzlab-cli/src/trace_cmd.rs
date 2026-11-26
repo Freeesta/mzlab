@@ -51,6 +51,19 @@ pub(crate) fn render(
     csv: bool,
     id: &str,
 ) -> Result<String> {
+    render_with(a, s, win, csv, id, None)
+}
+
+/// `render` with the ion-scale tokens of the trace (`trace xic --ions`, the `ions` of `/api/xicions`, one per point of the answer): they are cut by the
+/// same window as the points and written as the `ions` member after `points`, or as a third CSV column.
+pub(crate) fn render_with(
+    a: Answer,
+    s: &Sample,
+    win: Option<(f64, f64)>,
+    csv: bool,
+    id: &str,
+    ions: Option<&[&str]>,
+) -> Result<String> {
     if a.schema == "uvband/1" {
         if csv {
             // the band is a document of its own (uvband/1): no rt,intensity table to print
@@ -70,8 +83,21 @@ pub(crate) fn render(
         .ok_or_else(bad)?;
     let y = extract::tokens(&a.text, "y").ok_or_else(bad)?;
     let pts = extract::pairs(&x, &y, win);
+    let cut: Vec<&str> = match ions {
+        // a trace and its ions are one question: a length that differs is a broken answer, not a trace to print
+        Some(i) if i.len() != x.len() => return Err(bad()),
+        Some(i) => extract::pairs(&x, i, win).iter().map(|p| p.1).collect(),
+        None => Vec::new(),
+    };
     if csv {
-        return Ok(extract::points_csv("rt_min", "intensity", &pts));
+        if ions.is_none() {
+            return Ok(extract::points_csv("rt_min", "intensity", &pts));
+        }
+        let mut t = String::from("rt_min,intensity,ions\n");
+        for (p, i) in pts.iter().zip(&cut) {
+            t += &format!("{},{},{i}\n", p.0, p.1);
+        }
+        return Ok(t);
     }
     let head = format!(
         "\"id\":{},{},\"x_unit\":\"min\",\"y_unit\":{}",
@@ -87,7 +113,13 @@ pub(crate) fn render(
         a.evidence,
         x.len()
     );
-    Ok(extract::points_doc(a.schema, &head, &pts, &ev))
+    // the ions array follows the points; it goes in the tail, so a trace without the opt-in keeps its bytes
+    let tail = if ions.is_some() {
+        format!("\"ions\":[{}],{ev}", cut.join(","))
+    } else {
+        ev
+    };
+    Ok(extract::points_doc(a.schema, &head, &pts, &tail))
 }
 
 fn rounded_trace(t: &[f64], y: &[f64]) -> String {

@@ -356,7 +356,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("commands --json PATH... gives each in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("no flag help or type: flag_help, flag_type (else string); no flag required: written outside [ ] ( ) in the synopsis; no flag repeat: its value ends `...`; no flag enum: the `a|b` of its synopsis value; no arg kind: path, or `...` (rest); no args: the synopsis operands, when all are paths ([ ] ( ) = optional; end `...` = repeat); no stdin: true if an argument is `NAME|-`; no flags: none; an arg is required unless `optional`; --json and an optional --out: synopsis only"))
+            .put("flag_help_note", text("a member left out: flag help and type = flag_help, flag_type (else string); required = written outside [ ] ( ); repeat = value ends `...`; enum = the `a|b` of the synopsis value; arg kind = path, or `...` (rest); args = the synopsis operands when all are paths ([ ] ( ) optional, `...` repeat); stdin = an argument `NAME|-`; flags = none; an arg is required unless `optional`; --json and an optional --out: synopsis only"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 a `flow ` path or VERDICT; +4 a path or rest argument or a path flag but --out; +5 --sample, --id or a `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));

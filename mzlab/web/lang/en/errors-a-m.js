@@ -96,6 +96,7 @@ I18N.add("en", {
   "err.cli.rawxic.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.rawxic.limit": "--limit takes a whole number of rows, 1 or more, not \u201c{value}\u201d.",
   "err.cli.rawxic.polarity": "--polarity takes + or -, not \u201c{value}\u201d.",
+  "err.cli.tracexic.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.design.samplesAndFiles": "--samples and FILE paths do not go together: give one or the other.",
   "err.cli.design.needsInput": "sample design {op} needs --samples SAMPLES.json or one or more FILE paths.",
   "err.cli.design.oneFile": "sample design {op} takes one DESIGN.json.",

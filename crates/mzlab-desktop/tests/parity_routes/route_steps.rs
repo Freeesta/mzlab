@@ -71,6 +71,15 @@ pub fn raw_steps() -> Vec<Value> {
         "?mz=241.3&rt=2.5,3.5&ions=1&scan_type=ms",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawxic", "query": q}));
+    // `trace xic --ions` (`/api/xicions`): the data estimate, a method dwell and a fill time for a named scan type, smoothing, an offset, a question without the opt-in
+    let xicions = [
+        "?mz=241.3,300.7&tol=0.5,0.5&ions=1",
+        "?mz=241.3&tol=0.5&ions=1&scan_type=sim&dwell_ms=5",
+        "?mz=241.3&tol=0.5&ions=1&scan_type=ems&fill_ms=5&smooth=3",
+        "?mz=241.0&tol=0.2&ions=1&mz_offset=0.3",
+        "?mz=241.3&tol=0.5",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/xicions", "query": q}));
     let scan = [
         "?rt=2.5,3.5",
         "?rt=2.5,3.5&bin=0.1&top=0&min_z=2&min_net=0.5",
@@ -100,11 +109,13 @@ pub fn raw_steps() -> Vec<Value> {
     let negative = [
         ("/api/rawinfo", "?probe=8"),
         ("/api/rawxic", "?mz=241.3&rt=2.5,3.5"),
+        ("/api/xicions", "?mz=241.3&tol=0.5&ions=1"),
         ("/api/rawscan", "?rt=2.5,3.5"),
     ]
     .map(|(path, q)| json!({"op": "route", "slot": 0, "path": path, "query": q}));
     info.into_iter()
         .chain(xic)
+        .chain(xicions)
         .chain(scan)
         .chain(sum)
         .chain(peak)
