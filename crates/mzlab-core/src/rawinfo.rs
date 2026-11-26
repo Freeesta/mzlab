@@ -33,7 +33,7 @@ pub struct Probe {
     pub inten: Vec<f64>,
 }
 
-/// `Routes::handle` plus `/api/rawinfo`, `/api/rawxic`, `/api/xicions` and `/api/rawscan`, which are outside the engine's dispatch so that the engine `.wasm` does not carry them:
+/// `Routes::handle` plus `/api/rawinfo`, `/api/rawxic`, `/api/xicions`, `/api/rawscan` and `/api/rawiso`, which are outside the engine's dispatch so that the engine `.wasm` does not carry them:
 /// the app's routes.
 pub fn handle<R: ReadAt>(r: &mut Routes<R>, path: &str, q: &Query) -> Result<Option<String>> {
     if path == "/api/rawinfo" {
@@ -48,6 +48,9 @@ pub fn handle<R: ReadAt>(r: &mut Routes<R>, path: &str, q: &Query) -> Result<Opt
     }
     if path == "/api/rawscan" {
         return r.raw_scan_route(q);
+    }
+    if path == "/api/rawiso" {
+        return r.raw_isotopes_route(q);
     }
     if path == "/api/specsum" {
         return r.spec_sum_route(q);

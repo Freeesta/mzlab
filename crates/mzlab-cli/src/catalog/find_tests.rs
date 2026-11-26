@@ -11,10 +11,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "collision energy spread and declustering potential of a tandem file",
         "file method",
     ),
-    (
-        "sample name mass differs from the method precursor",
-        "file method",
-    ),
+    ("sample name differs from the method precursor", "file method"),
     (
         "convert wiff files to mzML with their sample names",
         "file convert",
@@ -111,6 +108,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "mean spectrum of a window minus its sides per m/z bin",
         "raw scan",
     ),
+    ("does M+1 and M+2 fit this formula within counting error", "raw isotopes"),
     (
         "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
         "quant targets",

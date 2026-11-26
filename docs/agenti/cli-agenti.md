@@ -110,7 +110,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 `--json` is accepted by every command; the generated list says what it does for each (`python3 tools/cli_doc.py`, from the tables the contract reads):
 <!--json-->
 - JSON already (`--json` only makes a failure an `error/1`):
-`flow report|record`, `file info|index|inventory|verify|items|method|channels`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`
+`flow report|record`, `file info|index|inventory|verify|items|method|channels`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `raw isotopes`
 `ion mz|pattern|match`, `mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
 `table compare`, `quant targets|union`, `estimate`, `flow run|check|steps|defaults|verify|command`, `file list|pair|validate|pack|unpack|check-pack|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
