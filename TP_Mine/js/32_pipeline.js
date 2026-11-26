@@ -85,6 +85,7 @@
     if ($("#pipe-engine")) { $("#pipe-engine").value = "finder"; engineChanged(); }
     if (typeof p.fill === "boolean") $("#pipe-fill").checked = p.fill;
     st.auto.floor = p.floor == null; if (p.floor != null) { $("#pipe-floor").value = p.floor; $("#pipe-floor-why").textContent = "chosen"; }
+    if ($("#pipe-nominal")) { const on = p.preset === "nominal"; if (on !== $("#pipe-nominal").checked) { $("#pipe-nominal").checked = on; nominalSwitch(on); } if (on) $("#pipe-nom").hidden = false; }
     sync();
   }
   /** values of the six parameters (+ Advanced) from the form; `floor` is left out while it is the estimated one */
@@ -112,7 +113,20 @@
   }
   function engineChanged() { const u = untOn(); $("#pipe-unt").hidden = !u; $("#pipe-fin").hidden = u; $("#pipe-go").disabled = u; }
   const recipe = v => { if (untOn()) return JSON.stringify(untValues()); const o = { polarity: v.polarity, mode: v.mode, ppm: v.ppm, min_height: v.min_height, min_points: v.min_points, rt_tol: v.rt_tol, fill: v.fill };
-    if (!st.auto.floor && v.floor > 0) o.floor = v.floor; return JSON.stringify(o); };
+    const nom = nominalOn() && PF().nominal(steps()), same = (a, b) => +a === +b;
+    if (!st.auto.floor && v.floor > 0 && !(nom && same(v.floor, nom.params.floor))) o.floor = v.floor;
+    if (nom) { o.preset = "nominal"; if (same(v.min_height, nom.params.min_height)) delete o.min_height; }     // the profile writes these two: the recipe leaves them to it, so the page and `--params '{"preset":"nominal"}'` give the same bytes
+    return JSON.stringify(o); };
+  const PF = () => /** @type {any} */ (window).PIPEFORM, steps = () => PF().load(window.QTOOLS.ctx.files);
+  const nominalOn = () => { const c = $("#pipe-nominal"); return !!c && c.checked && !$("#pipe-nom").hidden; };
+  /** the profile is offered only for a file measured at unit resolution (`unit` of the preview); switching it on shows its numbers in the two fields it writes, switching it off puts back what was there */
+  function nominalSwitch(on) {
+    const n = PF().nominal(steps()), f = $("#pipe-floor"), h = $("#pipe-hmin");
+    if (!n) return;
+    if (on) { st.nom = { floor: f.value, auto: st.auto.floor, hmin: h.value }; f.value = n.params.floor; h.value = n.params.min_height; st.auto.floor = false; $("#pipe-floor-why").textContent = "set by the profile"; }
+    else if (st.nom) { f.value = st.nom.floor; h.value = st.nom.hmin; st.auto.floor = st.nom.auto; st.nom = null; if (st.prev) suggest(st.prev); }
+    sync();
+  }
 
   // ------------------------------------------------------------ charts (SVG, the data in a table through TDATI)
   const W = 320, H = 150, M = { l: 34, r: 8, t: 8, b: 22 };
@@ -171,6 +185,13 @@
     $("#pipe-floor-why").textContent = st.auto.floor ? (p.noise ? "estimated from the histogram (see below)" : "default") : "chosen";
     sync();
   }
+  /** the switch of the profile follows the file previewed: gone (and off) on a high-resolution file */
+  function showNominal(unit) {
+    const box = $("#pipe-nom");
+    if (!box) return;
+    if (!unit && $("#pipe-nominal").checked) { $("#pipe-nominal").checked = false; nominalSwitch(false); }
+    box.hidden = !unit;
+  }
   async function preview() {
     if (st.busy) return;
     const name = $("#pipe-file").value;
@@ -178,7 +199,7 @@
     st.busy = true; say("Reading the file...");
     try {
       const pool = await getPool(), p = await pool.preview({ name, path: "mzlab/idx/" + name }, recipe(values()));
-      st.prev = p; suggest(p); render(p); say("");
+      st.prev = p; showNominal(p.unit === true); suggest(p); render(p); say("");
     } catch (e) { say(msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || "")), true); }
     st.busy = false;
   }
@@ -198,12 +219,14 @@
       ${admin() ? `<div class="row"><label>Engine <select id="pipe-engine" aria-label="Engine of the pipeline"><option value="finder">mzFinder</option><option value="untargeted">mzmine-like (Attributio)</option></select></label></div>` : ""}
       <div id="pipe-unt" hidden><div class="par">${UNT.map(([id, , , label, d]) => field("u-" + id, label, d, 'min="0"')).join("")}</div></div>
       <div id="pipe-fin" class="par">${form.main}</div>
+      ${PF().nominalHtml(steps)}
       <details><summary>More</summary><div class="par">${form.more}</div></details>
       <div id="pipe-proof"></div><div class="charts" id="pipe-hist"><div class="ch a"></div><div class="ch b"></div></div><div class="charts" id="pipe-ex"></div><div id="pipe-run"></div>`;
     $("#pipe-x").onclick = () => dlg.close();
     if ($("#pipe-engine")) $("#pipe-engine").onchange = engineChanged;
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
     pform = /** @type {any} */ (window).PIPEFORM.mount(dlg, form.rs, { atDefault: id => (id === "floor" ? st.auto.floor : undefined), onReset });
+    if ($("#pipe-nominal")) $("#pipe-nominal").onchange = () => nominalSwitch($("#pipe-nominal").checked);
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
     if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: true, table: true }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
