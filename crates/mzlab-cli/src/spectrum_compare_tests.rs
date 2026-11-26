@@ -216,6 +216,91 @@ fn a_window_with_two_precursors_needs_the_precursor_and_says_which() {
 }
 
 #[test]
+fn a_shifted_side_matches_the_unshifted_one_once_its_offset_is_taken_off() {
+    // ions at 100.3.. (bin 100); the second side is read 0.4 Da high, so its ions fall into the next bins
+    let ions = [(100.3, 4.0), (101.3, 9.0), (102.3, 16.0)];
+    let shifted: Vec<(f64, f32)> = ions.iter().map(|(m, y)| (m + 0.4, *y)).collect();
+    let (d1, a) = mzml("cmp_off_a", "a.mzML", &sample(253.1, 35.0, &ions));
+    let (d2, b) = mzml("cmp_off_b", "b.mzML", &sample(253.1, 35.0, &shifted));
+    let cosine = |extra: &[&str]| {
+        let mut args = vec!["spectrum", "compare", &a, &b, "--a-rt", "1", "--b-rt", "1"];
+        args.extend_from_slice(extra);
+        doc(&args)
+    };
+    let cos = |v: &Value| v.get("cosine").and_then(Value::f64).unwrap();
+    let (plain, plain_err) = cosine(&[]);
+    let (fixed, err) = cosine(&["--b-mz-offset", "0.4"]);
+    // the unshifted pair: the same ions on both sides
+    let (same, _) = doc(&["spectrum", "compare", &a, &a, "--a-rt", "1", "--b-rt", "1"]);
+    assert_eq!(cos(&same), 1.0);
+    assert!(cos(&plain) < 0.9, "{}", cos(&plain));
+    assert_eq!(cos(&fixed), cos(&same));
+    // each side's block carries the offset used; the side that was not asked states 0
+    let da = |v: &Value, side: &str| {
+        v.get(side)
+            .unwrap()
+            .get("mz_offset_da")
+            .and_then(Value::f64)
+    };
+    assert_eq!((da(&fixed, "a"), da(&fixed, "b")), (Some(0.0), Some(0.4)));
+    assert!(fixed
+        .get("b")
+        .unwrap()
+        .get("query")
+        .unwrap()
+        .str()
+        .unwrap()
+        .contains("mzoff=0.4"));
+    assert!(
+        err.contains("mz offset b (b.mzML): +0.4 Da (fixed)"),
+        "{err}"
+    );
+    assert!(!err.contains("mz offset a"), "{err}");
+    assert!(!plain_err.contains("mz offset"), "{plain_err}");
+    // both flags together: each side is logged with its own offset
+    let (_, both_err) = cosine(&["--a-mz-offset", "0.1", "--b-mz-offset", "0.4"]);
+    assert!(
+        both_err.contains("mz offset a (a.mzML): +0.1 Da (fixed)")
+            && both_err.contains("mz offset b (b.mzML): +0.4 Da (fixed)"),
+        "{both_err}"
+    );
+    for d in [d1, d2] {
+        let _ = std::fs::remove_dir_all(d);
+    }
+}
+
+#[test]
+fn an_auto_offset_that_finds_no_ion_is_logged_on_its_side() {
+    let (d, f) = mzml(
+        "cmp_off_auto",
+        "s.mzML",
+        &sample(253.1, 35.0, &[(100.0, 4.0)]),
+    );
+    let (v, err) = doc(&[
+        "spectrum",
+        "compare",
+        &f,
+        "--a-rt",
+        "1",
+        "--b-rt",
+        "1",
+        "--a-mz-offset",
+        "auto:300",
+    ]);
+    let a = v.get("a").unwrap();
+    assert_eq!(a.get("mz_offset_da").and_then(Value::f64), Some(0.0));
+    assert_eq!(
+        a.get("mz_offset").unwrap().get("status").unwrap().str(),
+        Some("not_found")
+    );
+    assert!(
+        err.contains("(auto on 300, not found)") && err.contains("warn.mz.offset.notFound"),
+        "{err}"
+    );
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
 fn usage_errors_exit_2_and_a_missing_scan_exits_5() {
     let (d, f) = mzml("cmp_use", "s.mzML", &sample(253.1, 35.0, &[(100.0, 4.0)]));
     assert_eq!(run(&["spectrum", "compare", &f, "--a-rt", "1"]).code, 2);
@@ -231,6 +316,16 @@ fn usage_errors_exit_2_and_a_missing_scan_exits_5() {
         run(&["spectrum", "compare", &f, "--a-rt", "1", "--b-rt", "1", "--set", "tol=-1"]).code,
         2
     );
+    // an offset that is not a number or auto:MZ[@RT] is a usage error, on either side
+    for flag in ["--a-mz-offset", "--b-mz-offset"] {
+        for bad in ["x", "auto:", "auto:-5"] {
+            let o = run(&[
+                "spectrum", "compare", &f, "--a-rt", "1", "--b-rt", "1", flag, bad,
+            ]);
+            assert_eq!(o.code, 2, "{flag} {bad}: {}", o.stderr);
+            assert!(o.stderr.contains(flag), "{}", o.stderr);
+        }
+    }
     assert_eq!(
         run(&["spectrum", "compare", &f, "--a-scan", "99", "--b-rt", "1"]).code,
         5

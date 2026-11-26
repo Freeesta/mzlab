@@ -91,12 +91,14 @@
   "$defs": {
     "side": {
       "type": "object",
-      "required": ["name", "query", "scans", "precursor", "ce", "ce_values", "n_bins", "dropped_bins", "total", "matched", "explained"],
+      "required": ["name", "query", "scans", "mz_offset_da", "mz_offset", "precursor", "ce", "ce_values", "n_bins", "dropped_bins", "total", "matched", "explained"],
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "description": "The file." },
         "query": { "type": ["string", "null"], "description": "The `/api/spectrum` query that selected the scans." },
         "scans": { "type": ["number", "null"], "description": "Scans the route averaged." },
+        "mz_offset_da": { "type": "number", "description": "The m/z offset taken off before the bins, Da (0 when none was given); `--a-mz-offset` / `--b-mz-offset`." },
+        "mz_offset": { "type": ["object", "null"], "description": "How the offset was found, as the route states it: `mode` fixed or auto; auto adds ion_mz, rt_min, status (found, wide, not_found), n_scans, apex_rt_min, apex_intensity, spread_da, snr." },
         "precursor": { "type": ["number", "null"] },
         "ce": { "type": ["number", "null"], "description": "The collision energy, eV; null when the scans carry none or several." },
         "ce_values": { "type": "array", "items": { "type": "number" }, "description": "The distinct collision energies of the scans." },

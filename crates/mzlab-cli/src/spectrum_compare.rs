@@ -12,11 +12,14 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli spectrum compare: the cosine of two MS2 spectra at nominal mass, with the matched ions (spectrum-compare/1).
 
-usage: mzlab-cli spectrum compare A [B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--a-sample ID] [--b-sample ID] [--ms-level N] [--set tol=DA,ce_tol=EV] [--out PATH]
+usage: mzlab-cli spectrum compare A [B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--a-mz-offset DA|auto:MZ[@RT]] [--b-mz-offset DA|auto:MZ[@RT]] [--a-sample ID] [--b-sample ID] [--ms-level N] [--set tol=DA,ce_tol=EV] [--out PATH]
 
   A [B]        the files of the two spectra (B defaults to A: two selections of one file); unit-resolution data, each spectrum cut into nominal bins
   --a-rt       the scan nearest to MIN (minutes), or the mean of the scans between A and B; --a-scan: the scan with that number
   --a-precursor MZ  only the scans of that precursor (within 0.6 Da); a window or a time that holds several precursors needs it (exit 5)
+  --a-mz-offset DA|auto:MZ[@RT]  the m/z offset taken off side A before its nominal bins (as `spectrum get --bin nominal --mz-offset`); --b-mz-offset likewise.
+               A sample and a standard measured with different calibrations then land in the same bins; each side's offset and how `auto` found it are in
+               its block of the document and on stderr
   --ms-level N the level of both (default 2)
   --set        tol (Da between two bin centres, default 0 = the same bin) and ce_tol (eV, default 0.5: the collision energies that differ by more give
                a warning); the parameters and the defaults used are in the document
@@ -31,6 +34,8 @@ struct Pick {
     sample: Option<u32>,
     at: At,
     precursor: Option<f64>,
+    /// `--a-mz-offset` / `--b-mz-offset` as given (the route's `mzoff=`).
+    offset: Option<String>,
 }
 
 fn pick(p: &Parsed, side: &str, files: &[String]) -> std::result::Result<Pick, String> {
@@ -75,12 +80,17 @@ fn pick(p: &Parsed, side: &str, files: &[String]) -> std::result::Result<Pick, S
                 .ok_or(format!("{} needs an m/z", flag("precursor")))
         })
         .transpose()?;
+    let offset = p.get(&flag("mz-offset")).map(String::from);
+    if let Some(o) = &offset {
+        crate::mz_offset::check(o).map_err(|e| format!("{}: {e}", flag("mz-offset")))?;
+    }
     let sample = p.sample_of(&flag("sample"), &file)?;
     Ok(Pick {
         file,
         sample,
         at,
         precursor,
+        offset,
     })
 }
 
@@ -175,6 +185,9 @@ fn side(s: &mut Sample, pk: &Pick, level: u8) -> Result<String> {
         _ => {}
     }
     pairs.push(("rebin", "nominal".into()));
+    if let Some(o) = &pk.offset {
+        pairs.push(("mzoff", o.clone()));
+    }
     let text = s
         .routes
         .handle("/api/spectrum", &query(&pairs))?
@@ -217,6 +230,8 @@ pub fn compare(args: Vec<String>) -> Outcome {
             "--b-scan",
             "--b-precursor",
             "--b-sample",
+            "--a-mz-offset",
+            "--b-mz-offset",
             "--ms-level",
             "--set",
             "--out",
@@ -291,6 +306,20 @@ fn notes(doc: &str) -> String {
         num(&v, "n_matched"),
         v.get("params").map_or(0.0, |p| num(p, "tol"))
     );
+    for side in ["a", "b"] {
+        if let Some(x) = v.get(side) {
+            let da = x.get("mz_offset_da").and_then(Value::f64).unwrap_or(0.0);
+            let auto = x
+                .get("mz_offset")
+                .and_then(|e| e.get("mode"))
+                .and_then(Value::str)
+                == Some("auto");
+            if da != 0.0 || auto {
+                let name = x.get("name").and_then(Value::str).unwrap_or("");
+                s += &super::bins::offset_lines(&format!("{side} ({name})"), x);
+            }
+        }
+    }
     for w in v.get("warnings").map_or(&[][..], Value::arr) {
         let key = w.get("key").and_then(Value::str).unwrap_or("");
         let par = w

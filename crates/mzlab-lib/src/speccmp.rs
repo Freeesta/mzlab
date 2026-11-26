@@ -3,7 +3,7 @@
 
 use crate::scores::{cosine_from_pairs, match_peaks};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{parse, round, Out, Value};
+use mzlab_core::json::{parse, round, write_value, Out, Value};
 
 /// Default tolerance between two bin centres, Da: 0 = the same bin.
 pub const TOL_DA: f64 = 0.0;
@@ -29,6 +29,9 @@ struct Side {
     /// The route query that selected the scans, as the caller sent it, and the number of scans the route averaged.
     query: Option<String>,
     scans: Option<f64>,
+    /// The m/z offset the route took off before the bins (Da) and its evidence (`{"mode":..}` as the route states it, JSON text).
+    offset_da: f64,
+    offset: String,
 }
 
 impl Side {
@@ -77,6 +80,11 @@ fn side_of(v: &Value, label: &str) -> Result<Side> {
     }
     let keep: Vec<usize> = (0..y.len()).filter(|&i| y[i] > 0.0).collect();
     let pick = |a: &[f64]| keep.iter().map(|&i| a[i]).collect::<Vec<f64>>();
+    let offset = sp.get("mz_offset").map_or("null".to_string(), |e| {
+        let mut o = Out::default();
+        write_value(&mut o, e);
+        o.0
+    });
     let ces = match v.get("ce_values") {
         Some(_) => nums(v, "ce_values", label)?,
         None => Vec::new(),
@@ -90,6 +98,8 @@ fn side_of(v: &Value, label: &str) -> Result<Side> {
         precursor: v.get("precursor").and_then(Value::f64),
         query: v.get("query").and_then(Value::str).map(String::from),
         scans: sp.get("scans").and_then(Value::f64),
+        offset_da: sp.get("mz_offset_da").and_then(Value::f64).unwrap_or(0.0),
+        offset,
         ces,
         dropped: y.len() - keep.len(),
         bin: pick(&bin),
@@ -133,6 +143,10 @@ fn side_json(o: &mut Out, s: &Side, matched: f64) {
     };
     o.raw(",\"scans\":")
         .opt(s.scans)
+        .raw(",\"mz_offset_da\":")
+        .num(s.offset_da)
+        .raw(",\"mz_offset\":")
+        .raw(&s.offset)
         .raw(",\"precursor\":")
         .opt(s.precursor);
     o.raw(",\"ce\":")
