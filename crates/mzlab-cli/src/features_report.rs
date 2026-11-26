@@ -299,6 +299,28 @@ fn choices_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log) {
             format!("{} is high resolution", x.name)
         };
         choice(o, "axis", if x.note.unit { "Da" } else { "ppm" }, &why);
+        if recipe.preset == Some("nominal") && !x.note.unit {
+            let why = format!("preset nominal ignored: {} is high resolution, the profile applies to the unit axis only", x.name);
+            choice(o, "preset", "ignored", &why);
+        }
+        if x.note.unit {
+            // the profile the unit-resolution recipe runs with: `lr` from the data, `nominal` when the user asked for it with the numbers it writes
+            let d = &recipe.detect;
+            let nominal = recipe.preset == Some("nominal");
+            let why = format!(
+                "floor {}, min_height {}, min_snr {}, grid_touch {} Da{}",
+                d.floor,
+                d.min_height,
+                d.min_snr,
+                d.grid_touch,
+                if nominal {
+                    "; asked for with {\"preset\": \"nominal\"}"
+                } else {
+                    "; low-mass products under min_height are dropped and a scattering centroid can split one ion: {\"preset\": \"nominal\"} lowers floor and height and widens the grid merge"
+                }
+            );
+            choice(o, "profile", if nominal { "nominal" } else { "lr" }, &why);
+        }
     }
     for x in m.iter().filter(|x| x.note.unit) {
         let why = centroid_why(x);

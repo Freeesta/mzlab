@@ -15,8 +15,8 @@ const HELP: &str = "mzlab-cli flow defaults: the parameters of one Flow step wit
 
 usage: mzlab-cli flow defaults STEP[@VERSION] [--json]
 
-  (no option)       one line per parameter: the `--set` key, type, default (`off` or `estimated` when it has none), limits, unit
-  --json            step-params/1: per parameter name, set_key, type, default, when_empty, minimum, maximum, enum, unit, algorithm, advanced, description
+  (no option)       one line per parameter: the `--set` key, type, default (`off` or `estimated` when it has none), limits, unit; then one line per preset with every value it writes
+  --json            step-params/1: per parameter name, set_key, type, default, when_empty, minimum, maximum, enum, unit, algorithm, advanced, description; `presets` (id, set_key, title, params, evidence) when the step has them
   --help            this text
 
 without @VERSION the highest version. A parameter with default null and when_empty `off` is a rule that is not applied until you set it;
@@ -91,11 +91,34 @@ fn text_lines(doc: &Value) -> String {
         width(|r| r.1.len()),
         width(|r| r.2.len()),
     );
-    rows.iter()
+    let mut out: String = rows
+        .iter()
         .map(|r| {
             format!("{:<w0$}  {:<w1$}  {:<w2$}  {}\n", r.0, r.1, r.2, r.3).replace("  \n", "\n")
         })
-        .collect()
+        .collect();
+    // one line per preset: the `--set` that selects it and every value it writes
+    for p in doc.get("presets").map_or(&[][..], Value::arr) {
+        let field = |k: &str| p.get(k).and_then(Value::str).unwrap_or("");
+        let set = |v: &Value| {
+            let key = v.get("set_key").and_then(Value::str).unwrap_or("");
+            format!("{key}={}", v.get("value").map(write).unwrap_or_default())
+        };
+        let values: Vec<String> = p
+            .get("params")
+            .map_or(&[][..], Value::arr)
+            .iter()
+            .map(set)
+            .collect();
+        out.push_str(&format!(
+            "preset {}: --set {}={} writes {}\n",
+            field("id"),
+            field("set_key"),
+            field("id"),
+            values.join(" ")
+        ));
+    }
+    out
 }
 
 /// `mzlab-cli flow defaults ARGS...` (the arguments after `defaults`).

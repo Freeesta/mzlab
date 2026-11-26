@@ -24,7 +24,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("sample table", "roles blank qc standard control dark time point names which file is which identify role of each file samples.json tp.dig_lr tp.link not recognised", &["sample import", "sample pair", "sample design propose", "tp.dig_lr"]),
     r("sample import", "metadata csv tsv sample names roles group blank dark wash qc standard from a spreadsheet unmatched duplicate samples.json tp.dig_lr", &["sample table", "sample pair", "tp.dig_lr"]),
     r("sample pair", "roles of a table check preview which files left out proposed from the name dark control standard samples.json tp.dig_lr tp.link tp.network pairing", &["sample table", "sample import", "tp.dig_lr"]),
-    r("features", "non-targeted untargeted feature table csv peak picking all files shift offset calibrate calibration correct mz-offset duplicate rows near duplicates same peak twice", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
+    r("features", "non-targeted untargeted feature table csv peak picking all files shift offset calibrate calibration correct mz-offset duplicate rows near duplicates same peak twice products lost nominal resolution triple quadrupole qtrap profile preset", &["features.table", "features.gapfill", "features.detect", "estimate", "flow run"])
         .ex("mzlab-cli features a.mzML b.mzML --report report.json --out table.csv"),
     r("estimate", "estimate parameters from the data noise floor minimum height threshold snr fwhm peak width rt tolerance mz tolerance ppm da mass defect background level measured values set lines before a run", &["flow defaults", "features", "flow run"]),
     r("quant.targets", "target list every file integrate area snr state detected forced absent weak noise signals controls matrix false positives threshold shape gate half height width symmetry min_half max_fwhm max_asym", &["quant targets", "features.union", "quant.curve"]),
@@ -63,6 +63,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list all targets many masses every ion many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
+    r("features.detect", "products lost below the height one ion split in two rows nominal resolution triple quadrupole qtrap profile preset floor grid", &["features", "features.align"]).ex("mzlab-cli flow run plan.json --in files/ --out out/ --set detect.preset=nominal"),
     r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])
         .ex("mzlab-cli flow run plan.json --in files/ --out out/ --set gapfill1.dedup_overlap=0"),
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),

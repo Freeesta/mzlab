@@ -1,12 +1,12 @@
 //! `features.estimate`, `features.detect` and `features.ms2_link`: the parameters of `trace::Params`, `params::estimate` and `ms2::Ms2Params`.
 
 use mzlab_core::step::{
-    Algorithm, Applicability, DataType, Facets, Param, Port, Preset, Reference, RunsIn, Status,
-    Step,
+    Algorithm, Applicability, DataType, Facets, Param, Port, Reference, RunsIn, Status, Step,
 };
 
 use mzlab_core::json::Value;
 
+use super::detect_presets::{grid_touch_param, presets};
 use super::{FEAT_CEILING, FEAT_WASM};
 
 fn feat_runs_in() -> RunsIn {
@@ -132,7 +132,7 @@ pub(super) fn detect() -> Step {
         algorithms: algorithms(),
         default_algorithm: Some("masstrace"),
         per_item: true,
-        presets: vec![preset_hr(), preset_lr()],
+        presets: presets(),
         default_preset: Some("hr"),
         ..Step::core(
             "features.detect",
@@ -230,7 +230,7 @@ fn trace_choices() -> Vec<Param> {
     ]
 }
 
-/// The two gates against noise rows (`lrnoise`): the S/N gate is on by default only in the unit profile, the width gate is a choice.
+/// The two gates against noise rows (`lrnoise`), the S/N gate on by default only in the unit profile, and the reach of the unit-axis grid merge.
 fn noise_gates() -> Vec<Param> {
     vec![
         Param::number("min_width", "Minimum width")
@@ -244,46 +244,8 @@ fn noise_gates() -> Vec<Param> {
             .doc("A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off")
             .tip("Drops features below this S/N (apex over the flank median, divided by 1.4826 MAD of the raw flanks).")
             .advanced(),
+        grid_touch_param(),
     ]
-}
-
-fn preset_hr() -> Preset {
-    Preset {
-        id: "hr",
-        title: "High resolution",
-        when: Facets {
-            resolution: vec!["hr"],
-            ..Facets::default()
-        },
-        params: vec![
-            ("axis", text("ppm")),
-            ("floor", num(20_000.0)),
-            ("min_height", num(200_000.0)),
-        ],
-        evidence: "defaults of trace::Params",
-        algorithm: Some("masstrace"),
-    }
-}
-
-fn preset_lr() -> Preset {
-    Preset {
-        id: "lr",
-        title: "Unit resolution",
-        when: Facets {
-            resolution: vec!["lr"],
-            ..Facets::default()
-        },
-        params: vec![
-            ("axis", text("Da")),
-            ("floor", num(3_000.0)),
-            ("min_height", num(7_000.0)),
-            ("min_snr", num(3.0)),
-            ("area_from", text("channel")),
-            ("stitch", text("strict")),
-        ],
-        evidence: "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
-        algorithm: Some("masstrace"),
-    }
 }
 
 fn algorithms() -> Vec<Algorithm> {
@@ -468,11 +430,11 @@ pub(super) fn ms2_link() -> Step {
     }
 }
 
-fn num(v: f64) -> Value {
+pub(super) fn num(v: f64) -> Value {
     Value::Num(v)
 }
 
-fn text(v: &str) -> Value {
+pub(super) fn text(v: &str) -> Value {
     Value::Str(v.to_string())
 }
 

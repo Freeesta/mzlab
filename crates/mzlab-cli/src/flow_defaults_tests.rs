@@ -154,3 +154,38 @@ fn usage_errors_exit_2_and_the_text_form_has_one_line_per_parameter() {
         "{text}"
     );
 }
+
+/// A step with named presets lists every value each one writes, as the `--set` key and the value, in the text and in the JSON; a step with none has no `presets` member.
+#[test]
+fn the_presets_of_a_step_are_listed_with_every_value_they_write() {
+    let d = doc("features.detect");
+    let presets = d.get("presets").map(Value::arr).expect("presets");
+    let ids: Vec<&str> = presets.iter().filter_map(|p| p.get("id")?.str()).collect();
+    assert_eq!(ids, ["hr", "lr", "nominal"]);
+    let nominal = &presets[2];
+    assert_eq!(
+        nominal.get("set_key").and_then(Value::str),
+        Some("detect.preset")
+    );
+    let value = |key: &str| {
+        nominal
+            .get("params")?
+            .arr()
+            .iter()
+            .find(|p| p.get("set_key").and_then(Value::str) == Some(key))?
+            .get("value")?
+            .f64()
+    };
+    assert_eq!(value("detect.floor"), Some(1000.0));
+    assert_eq!(value("detect.min_height"), Some(2500.0));
+    assert_eq!(value("detect.grid_touch"), Some(0.25));
+    let text = String::from_utf8(run(&["flow", "defaults", "features.detect"]).stdout).unwrap();
+    assert!(
+        text.lines().any(
+            |l| l.starts_with("preset nominal: --set detect.preset=nominal writes")
+                && l.contains("detect.grid_touch=0.25")
+        ),
+        "{text}"
+    );
+    assert!(doc("features.align").get("presets").is_none());
+}
