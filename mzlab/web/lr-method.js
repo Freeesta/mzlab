@@ -25,7 +25,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (!its) return json({ warnings: [] });
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
-    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient", "/api/pdasub"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec" && path !== "/api/uvpropose") return undefined;
+    if (!["/api/method", "/api/metodo", "/api/filemethod", "/api/analog", "/api/registro", "/api/delay", "/api/gradient", "/api/pdasub"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec" && path !== "/api/uvpropose") return undefined;
     const it = item(q), name = it && it.file;
     if (path === "/api/pdasub") {
       // file k minus the DAD of file `ref` (k of the other item); view = map | spectrum | trace, a/b = rt0/rt1 or nm0/nm1
@@ -45,6 +45,12 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
       // method/1 of the item (docs/agenti/method.md)
       if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));
+      // file_method/1 of the item (`mzlab-cli file method`): its method/1 and the precursors of its scans, in the lazy .wasm `filemethod`
+      if (path === "/api/filemethod") {
+        const m = JSON.parse((await rpc({ op: "lr_metodo", name })).info).method, base = name.split("#")[0];
+        const its = (items() || []).filter(x => x.file.split("#")[0] === base).map(x => ({ info: { file: x.file, ms2_exps: x.ms2_exps || [] }, hr: !!x.hr }));
+        return raw(await rpc({ op: "filemethod", sample: null, method: m ? JSON.stringify(m) : "", items: JSON.stringify({ schema: "items/1", items: its }) }));
+      }
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}
       if (path === "/api/registro") return raw(await rpc({ op: "natregistro", name, serie: q.get("id") || "" }));

@@ -72,7 +72,9 @@ const METODO_DOC = (() => {
     try { d = ((await J("api/metodo?k=" + f.k)) || {}).method; } catch (_) { d = null; }
     if (!d) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.doc.none"))}</div></section>`;
     const rows = head(d) + ms(d);
-    return `<section class="msec">${title}${notes(d)}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;
+    // the parameters by segment (file_method/1): a lazy module, never a reason to lose the rest of the section
+    const seg = await loadScript("m:metodo-file.js").then(() => /** @type {any} */ (window).METODO_FILE.html(f), () => "");
+    return `<section class="msec">${title}${notes(d)}${seg}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;
   }
   return { html, bind: METODO_INCL.bind };
 })();
