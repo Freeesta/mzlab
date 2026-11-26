@@ -44,7 +44,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | FEATURE-DETAIL | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
 | INSTRUMENT-PRESETS | `docs/coda/prompt/INSTRUMENT-PRESETS.md` | - | mzflow 12: detection presets named after the instrument (+-0.5 Da, +-5 ppm) |
 | POLPAIR-CLI | `docs/coda/prompt/POLPAIR-CLI.md` | - | mzflow 13: CLI and app route for the wasm `cross_polarity` (`polpair/1`) |
-| AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | needs owner decision: the `actor` field changes the bytes of saved decision files | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
+| AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
 | TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
 | AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
 | PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FLOW-TABLE-LIST, FEATURE-DETAIL | mzflow 17 (v2): a read-only phone view of tables and one feature |

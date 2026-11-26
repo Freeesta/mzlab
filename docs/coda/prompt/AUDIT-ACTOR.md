@@ -6,6 +6,8 @@ Read docs/coda/BRIEF.md.
 
 **Why.** mzflow study: the owner builds a TP feature table step by step and sees each step. Study: `docs/studies/MZFLOW_STUDY.md` (row 14 of §5, §6 decisions) and `docs/studies/MZFLOW_SCREENS.md` §A (log line).
 
+**Owner decision (26 Nov).** The owner accepts that the bytes of saved decision files change; old files stay readable.
+
 **Read first.** `docs/agenti/llm.md`, `llm-choices.md`, `tp.review` code, `feature_decisions.csv` writer, `logOp` in the site, `prov/1` `llm` block.
 
 **Already on main (checked 26 Nov, re-check before coding).** Assistant actions are marked separately; no common actor field.

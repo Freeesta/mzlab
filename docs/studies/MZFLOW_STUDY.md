@@ -89,7 +89,7 @@ Each slice is one chat and one PR, with parity site = app = CLI and a CLI route 
 | 11 | FEATURE-CARD-EXPORT | `table card`: one HTML page per feature with SVG charts and a provenance footer | 3 |
 | 12 | INSTRUMENT-PRESETS | presets named after the instrument (unit +-0.5 Da, Orbitrap +-5 ppm) | - |
 | 13 | POLPAIR-CLI | a CLI route for the wasm `cross_polarity` (`polpair/1`, HR) | - |
-| 14 | AUDIT-ACTOR | `actor` user / auto / agent in the decision log; an agent never overwrites a user decision | owner: saved bytes change |
+| 14 | AUDIT-ACTOR | `actor` user / auto / agent in the decision log; an agent never overwrites a user decision | - |
 | 15 | TP-TEMPLATE | a TP template: parent, files, metadata, A, B, C, union, pillars | 4, 7 |
 | 16 | AI-FEATURE-PROPOSAL | the assistant proposes 1-3 structures for one feature from its text card | 11, 14 |
 | 17 | PHONE-VIEWER | a read-only phone view of the tables and of one feature | 2, 3 |
@@ -116,4 +116,4 @@ Asked to the owner one at a time in the PR chat; when the owner left the rest to
 | instrument presets | unit resolution +-0.5 Da and Orbitrap +-5 ppm as named presets; `features.estimate` may propose other values, logged as `auto` | study |
 | pKa and logP in v1 | logP from `mol measure` and pKa from the typical-value table, both labelled "prediction"; no computed pKa | study |
 | kinetic class names | bell (rise and fall), rising (formation or plateau), decreasing (decay or present at T0), background (flat or as high in controls); thresholds are `--set` parameters whose defaults come from the existing engines | study |
-| actor in the log | proposed (AUDIT-ACTOR); it changes the bytes of saved decision files, so the row waits for the owner | open |
+| actor in the log | `actor` user / auto / agent in every saved decision and automatic choice; the owner accepts that the bytes of saved decision files change (AUDIT-ACTOR) | owner |
