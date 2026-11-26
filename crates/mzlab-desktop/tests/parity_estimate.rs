@@ -18,6 +18,15 @@ fn file(name: &str, axis: &str, polarity: i32, k: f64) -> Value {
         "defect":0.24})
 }
 
+/// `file` of a unit-axis series that shows the signature of the nominal profile (`hint`) or has its numbers without it.
+fn nominal_file(name: &str, hint: bool, k: f64) -> Value {
+    let mut f = file(name, "Da", 1, k);
+    f["nominal"] = json!({"rows":14,"between":if hint {6} else {0},"between_share":if hint {0.428571} else {0.0},
+        "height_now":7000.0,"height_nominal":2500.0,"split":if hint {2} else {0},"split_share":if hint {0.142857} else {0.0},
+        "reach_now":0.1,"reach_nominal":0.25,"cut_between":0.1,"cut_split":0.05,"hint":hint});
+    f
+}
+
 fn plan() -> Value {
     json!({"format":"mzflow/2","steps":[
         {"id":"det","step":"features.detect@1","params":{"min_height":5000}},
@@ -38,6 +47,12 @@ fn bodies() -> Vec<String> {
     let ppm: Vec<Value> = (0..4)
         .map(|i| file(&format!("p{i}.mzML"), "ppm", 1, 1.0 + i as f64 / 10.0))
         .collect();
+    let seen: Vec<Value> = (0..3)
+        .map(|i| nominal_file(&format!("n{i}.mzML"), i != 2, 1.0))
+        .collect();
+    let none: Vec<Value> = (0..3)
+        .map(|i| nominal_file(&format!("t{i}.mzML"), false, 1.0))
+        .collect();
     let mut all: Vec<String> = vec![
         json!({"files": three, "plan": plan()}),
         json!({"files": three, "plan": null}),
@@ -46,6 +61,10 @@ fn bodies() -> Vec<String> {
         json!({"files": ppm, "plan": plan()}),
         json!({"files": [three[0].clone()], "plan": plan()}),
         json!({"files": [{"file":"bad.mzML","error":{}}]}),
+        // the nominal hint: two of three files show it, with and without a plan, and none does
+        json!({"files": seen, "plan": plan()}),
+        json!({"files": seen, "plan": null}),
+        json!({"files": none, "plan": plan()}),
     ]
     .into_iter()
     .map(|v| v.to_string())
@@ -75,7 +94,7 @@ fn the_app_gives_the_answer_of_the_core_and_the_same_error_keys() {
         assert_eq!(on_app(&st, &body), core, "{}", &body[..body.len().min(60)]);
         ok += core.is_ok() as usize;
     }
-    assert_eq!(ok, bodies().len() - 3, "seven answers and three errors");
+    assert_eq!(ok, bodies().len() - 3, "ten answers and three errors");
 }
 
 #[test]
@@ -126,4 +145,41 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         .as_str()
         .unwrap()
         .contains("\"schema\":\"estimate/1\""));
+}
+
+#[test]
+fn the_nominal_hint_is_named_where_files_show_it_and_never_among_the_proposals() {
+    let seen: Vec<Value> = (0..3)
+        .map(|i| nominal_file(&format!("n{i}.mzML"), i != 2, 1.0))
+        .collect();
+    let st = State::new();
+    let body = json!({"files": seen, "plan": plan()}).to_string();
+    let doc: Value = serde_json::from_str(&on_app(&st, &body).unwrap()).unwrap();
+    let hints = doc["hints"].as_array().unwrap();
+    assert_eq!(
+        hints.len(),
+        1,
+        "one instance of features.detect in the plan"
+    );
+    assert_eq!(hints[0]["set"], "det.preset=nominal");
+    assert_eq!(
+        (hints[0]["files"].clone(), hints[0]["of"].clone()),
+        (json!(2), json!(3))
+    );
+    assert!(doc["params"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|p| p["param"] != "preset"));
+    assert!(doc["notes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|n| n["key"] == "note.estimate.nominal"));
+    let none: Vec<Value> = (0..3)
+        .map(|i| nominal_file(&format!("t{i}.mzML"), false, 1.0))
+        .collect();
+    let body = json!({"files": none, "plan": null}).to_string();
+    let doc: Value = serde_json::from_str(&on_app(&st, &body).unwrap()).unwrap();
+    assert!(doc["hints"].as_array().unwrap().is_empty());
 }

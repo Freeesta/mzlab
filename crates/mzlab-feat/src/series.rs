@@ -63,7 +63,7 @@ fn find_screened<R: ReadAt>(
         mz_shift: r.screen.offsets.get(k),
         ..r.fill
     };
-    if let Some(mut c) = centroids_of(index, r)? {
+    if let Some(mut c) = crate::lrscreen::centroids_of_file(index, r, k)? {
         return fill_find(&mut c.index, al, k, map, &r.detect, &fill);
     }
     fill_find(index, al, k, map, &r.detect, &fill)

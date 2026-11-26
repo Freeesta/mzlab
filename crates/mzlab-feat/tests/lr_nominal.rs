@@ -29,6 +29,17 @@ impl Lcg {
 }
 
 fn file(comps: &[(f64, f64, f64, f64)], seed: u64, jit: f64, inoise: f64) -> Vec<u8> {
+    file_with(comps, seed, jit, inoise, 40)
+}
+
+/// `file` with `noise` random peaks per scan (the signature tests count rows, so they take none).
+fn file_with(
+    comps: &[(f64, f64, f64, f64)],
+    seed: u64,
+    jit: f64,
+    inoise: f64,
+    noise: usize,
+) -> Vec<u8> {
     let mut rng = Lcg(seed);
     let mut w = MzmlWriter::new(
         Vec::new(),
@@ -42,7 +53,7 @@ fn file(comps: &[(f64, f64, f64, f64)], seed: u64, jit: f64, inoise: f64) -> Vec
     w.open_spectra(n).unwrap();
     for i in 0..n {
         let rt = 0.5 + 0.05 * i as f64;
-        let mut peaks: Vec<(f64, f32)> = (0..40)
+        let mut peaks: Vec<(f64, f32)> = (0..noise)
             .map(|_| {
                 (
                     60.0 + 340.0 * rng.next(),
@@ -164,4 +175,49 @@ fn the_default_recipe_text_does_not_name_the_reach_and_a_changed_one_does() {
     let lr = recipe(&idx, None);
     assert!(!format!("{:?}", lr.detect).contains("grid_touch"));
     assert!(format!("{:?}", recipe(&idx, Some("nominal")).detect).contains("grid_touch"));
+}
+
+/// The signature of a file without random peaks, under the `lr` recipe or, with `nominal`, under the profile.
+fn signature(
+    comps: &[(f64, f64, f64, f64)],
+    jit: f64,
+    nominal: bool,
+) -> Option<mzlab_feat::nominal_hint::Signature> {
+    let idx = file_with(comps, 5, jit, 0.04, 0);
+    let mut ix = Index::open(idx.clone(), idx.len() as u64).unwrap();
+    let mut r = Recipe::for_index(&mut ix).unwrap();
+    if nominal {
+        r.nominal();
+    }
+    mzlab_feat::nominal_hint::signature(&mut ix, &r, Default::default()).unwrap()
+}
+
+#[test]
+fn low_mass_products_between_the_two_heights_give_the_signature() {
+    let s = signature(&COMPS, 0.06, false).unwrap();
+    // the products at 91.05 (5e3) and 77.04 (3.5e3) lie between 2.5e3 and the lr height of 7e3
+    assert_eq!(s.between, 2, "{s:?}");
+    assert_eq!(s.rows, 6, "{s:?}");
+    assert_eq!((s.height_nominal, s.height_now), (2.5e3, 7e3));
+    assert!(s.between_share() > s.cuts.between && s.hint());
+}
+
+#[test]
+fn an_ion_split_across_the_grids_gives_the_signature_and_a_tidy_one_does_not() {
+    let scattering = signature(&COMPS, 0.4, false).unwrap();
+    assert!(scattering.split >= 1, "{scattering:?}");
+    assert_eq!(
+        (scattering.reach_now, scattering.reach_nominal),
+        (0.1, 0.25)
+    );
+    // without products under the lr height and with a steady centroid there is nothing to name
+    let tidy: Vec<_> = COMPS[..3].to_vec();
+    let s = signature(&tidy, 0.02, false).unwrap();
+    assert_eq!((s.between, s.split), (0, 0), "{s:?}");
+    assert!(!s.hint());
+}
+
+#[test]
+fn the_profile_in_force_has_no_signature_to_name() {
+    assert!(signature(&COMPS, 0.06, true).is_none());
 }

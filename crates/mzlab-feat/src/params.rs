@@ -194,6 +194,8 @@ pub struct Estimate {
     pub dead: Option<f64>,
     /// Unit axis only: the mass defect of the file (fractional part of m/z where the strong peaks pile up).
     pub defect: Option<f64>,
+    /// The file was measured on the 1 Da axis (unit resolution): the panel offers the `nominal` profile only then.
+    pub unit: bool,
 }
 
 /// Peaks read for the histogram of the intensities at most (in pieces of `PIECE` peaks spread over the whole m/z range).
@@ -275,6 +277,7 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
         da_n: 0,
         dead: None,
         defect: None,
+        unit: p.axis.is_da(),
     };
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(empty);
@@ -319,6 +322,7 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
             MassAxis::Da { .. } => estimate_defect(index, si, p.floor)?,
             MassAxis::Ppm => None,
         },
+        unit,
     })
 }
 
@@ -412,7 +416,7 @@ fn example_json(o: &mut Out, e: &Example) {
     o.raw(",\"y\":").rounded(&e.y, 0).raw("}");
 }
 
-/// The preview as JSON: `{n, heights, intensities, noise, ppm, fwhm, examples}`; every estimate carries the numbers it comes from.
+/// The preview as JSON: `{n, heights, intensities, noise, ppm, fwhm, examples}` (+ `defect`, and `unit: true` on the 1 Da axis); every estimate carries the numbers it comes from.
 pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> String {
     let mut o = Out::default();
     o.raw("{\"n\":").int(f.len() as i64).raw(",\"heights\":");
@@ -467,6 +471,7 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
     if let Some(d) = est.defect {
         o.raw(",\"defect\":").num(d);
     }
+    o.raw(if est.unit { ",\"unit\":true" } else { "" });
     o.raw("}");
     o.0
 }
