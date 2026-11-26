@@ -10,7 +10,9 @@ const t = (k, p) => I18N.t(k, p);
 const n = (/** @type {any} */ v) => (v == null ? "" : String(+(+v).toFixed(4)));
 const num = (/** @type {string} */ s) => `<td class="num">${s}</td>`;
 const NUMERIC = ["ce_eV", "ces_eV", "dp_V", "fill_time_ms", "q1_resolution"];
-const UNIT = /** @type {Record<string, string>} */ ({ ce_eV: " eV", ces_eV: " eV", dp_V: " V", fill_time_ms: " ms", q1_resolution: "" });
+// a value with its unit, as one catalogue text each ("{v} eV"): the unit is part of the wording
+const WITH_UNIT = /** @type {Record<string, (v: string) => string>} */ ({ ce_eV: v => t("method.file.val.eV", { v }), ces_eV: v => t("method.file.val.eV", { v }),
+  dp_V: v => t("method.file.val.V", { v }), fill_time_ms: v => t("method.file.val.ms", { v }), q1_resolution: v => v });
 
 // the reasons of `unavailable` (file_method/1), one literal key each
 const REASON = /** @type {Record<string, () => string>} */ ({ not_in_method: () => t("method.file.why.not_in_method"), not_in_file: () => t("method.file.why.not_in_file"),
@@ -19,8 +21,8 @@ const REASON = /** @type {Record<string, () => string>} */ ({ not_in_method: () 
 /** the cell of a parameter: its value, or why the file has none */
 function cell(/** @type {Segment} */ s, /** @type {string} */ key, /** @type {Record<string, string>} */ why) {
   const v = /** @type {any} */ (s)[key];
-  if (v != null) return num(EH(n(v) + UNIT[key]));
-  if (key === "ce_eV" && s.ce_list_eV.length > 1) return num(EH(s.ce_list_eV.map(n).join(", ") + " eV"));
+  if (v != null) return num(EH(WITH_UNIT[key](n(v))));
+  if (key === "ce_eV" && s.ce_list_eV.length > 1) return num(EH(t("method.file.val.eV", { v: s.ce_list_eV.map(n).join(t("method.file.listSep")) })));
   const r = why[key] ? REASON[why[key]]() : t("method.file.unset");
   return `<td class="muted sm">${EH(r)}</td>`;
 }
@@ -32,8 +34,8 @@ function segments(/** @type {any} */ d) {
   const heads = ["method.file.exp", "method.file.scan", "method.file.precursor", "method.file.ce", "method.file.ces", "method.file.dp", "method.file.fill", "method.file.q1res"];
   const th = heads.map((h, i) => `<th scope="col"${i > 1 ? ' class="num"' : ""}>${EH(t(h))}</th>`).join("");
   const rows = segs.map(s => {
-    const prec = s.precursor_mz != null ? n(s.precursor_mz) + (s.q3_mz != null ? ` → ${n(s.q3_mz)}` : "") : s.mz_range ? `${n(s.mz_range[0])}–${n(s.mz_range[1])}` : "";
-    const scan = [s.scan, s.ms_level != null ? "MS" + s.ms_level : "", s.name].filter(x => x).join(" · ");
+    const prec = s.precursor_mz != null ? (s.q3_mz != null ? t("method.file.product", { q1: n(s.precursor_mz), q3: n(s.q3_mz) }) : n(s.precursor_mz)) : s.mz_range ? t("method.file.range", { lo: n(s.mz_range[0]), hi: n(s.mz_range[1]) }) : "";
+    const scan = [s.scan, s.ms_level != null ? t("method.file.msLevel", { n: s.ms_level }) : "", s.name].filter(x => x).join(t("method.file.sep"));
     return `<tr><td>${EH(String(s.experiment ?? ""))}</td><td>${EH(scan)}</td>${num(EH(prec))}${NUMERIC.map(k => cell(s, k, why)).join("")}</tr>`;
   }).join("");
   return `<table data-mfile="segments"><caption class="sm muted" style="text-align:left">${EH(t("method.file.segments"))}</caption><tr>${th}</tr>${rows}</table>`;
@@ -42,14 +44,14 @@ function segments(/** @type {any} */ d) {
 function acquired(/** @type {any} */ d) {
   const a = /** @type {any[]} */ (d.acquired || []);
   if (!a.length) return "";
-  const rows = a.map(r => `<tr>${num(EH(n(r.precursor_mz)))}${num(EH(r.ce_eV != null ? n(r.ce_eV) + " eV" : ""))}${num(EH(n(r.scans)))}</tr>`).join("");
+  const rows = a.map(r => `<tr>${num(EH(n(r.precursor_mz)))}${num(EH(r.ce_eV != null ? t("method.file.val.eV", { v: n(r.ce_eV) }) : ""))}${num(EH(n(r.scans)))}</tr>`).join("");
   return `<table data-mfile="acquired"><caption class="sm muted" style="text-align:left">${EH(t("method.file.acquired"))}</caption><tr><th scope="col" class="num">${EH(t("method.file.precursor"))}</th><th scope="col" class="num">${EH(t("method.file.ce"))}</th><th scope="col" class="num">${EH(t("method.file.scans"))}</th></tr>${rows}</table>`;
 }
 
 function notes(/** @type {any} */ d) {
   const bad = /** @type {any[]} */ (d.damaged || []).map(x => (x.part === "mass_range" ? t("method.file.damaged.mass_range", { experiment: x.experiment }) : t("method.file.damaged.experiment_header", { experiment: x.experiment })));
   const warn = /** @type {any[]} */ (d.warnings || []).map(w => w.key === "warn.file.nameMz"
-    ? t(w.key, { name: w.name, name_mz: n(w.nearest_name_mz), precursor: n(w.nearest_precursor), delta: n(w.delta_mz) }) : String(w.key));
+    ? t(w.key, { name: w.name, name_mz: n(w.nearest_name_mz), precursor: n(w.nearest_precursor), delta: n(w.delta_mz) }) : t("method.file.warnOther"));
   const all = bad.concat(warn);
   return all.length ? `<ul class="sm" role="note" data-mfile="notes" style="margin:4px 0 8px">${all.map(x => `<li>${EH(x)}</li>`).join("")}</ul>` : "";
 }
