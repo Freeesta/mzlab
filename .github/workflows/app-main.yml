@@ -61,7 +61,8 @@ jobs:
         run: |
           mkdir out
           python3 tools/note_app_main.py --names | while IFS='|' read -r art glob name; do
-            f=$(ls pezzi/"$art"/$glob 2>/dev/null | head -n 1)
+            # a single upload path is flat, two paths (Linux) keep their folders: search the whole artifact
+            f=$(find pezzi/"$art" -type f -name "$glob" | sort | head -n 1)
             [ -n "$f" ] || { echo "::error::no $glob in the artifact $art"; exit 1; }
             cp "$f" "out/$name"
           done
