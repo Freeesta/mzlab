@@ -25,6 +25,8 @@ try:
             assert ps.nth(1).inner_text() == "This version is still a work in progress."
             assert ps.nth(2).inner_text() == "Suggestions and corrections: fedecrista@gmail.com."
             assert pg.locator("#helppop a").count() == 1 and pg.get_attribute("#helppop a", "href") == "mailto:fedecrista@gmail.com"
+            g = pg.evaluate("(() => { const p = document.querySelector('#helppop'), q = p.querySelector('p'); return [q.getBoundingClientRect().top - p.getBoundingClientRect().top, parseFloat(getComputedStyle(p).paddingTop) + parseFloat(getComputedStyle(p).borderTopWidth)]; })()")
+            assert abs(g[0] - g[1]) <= 3, ("gap above the first paragraph", g)
             pg.keyboard.press("Escape")
         step("the header info button opens the box with the mailto link", info)
         def centred():

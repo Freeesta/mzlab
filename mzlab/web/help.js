@@ -36,7 +36,7 @@ const HELP = {
     if (cur === b) return close();
     const key = /** @type {string} */ (b.dataset.help), mk = /^modo-(full|ms2|mrm)$/.exec(key);
     const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[ESP.didattica(mk[1])].name, QMODI.html(ESP.didattica(mk[1]))] : HELP[key]; if (!h) return;
-    pop.classList.toggle("wide", !!mk); pop.classList.remove("guide");
+    pop.classList.toggle("wide", !!mk); pop.classList.remove("guide"); pop.classList.toggle("nt", !h[0]);
     // no title for the "Informazioni" box (key header)
     pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;
     pop.querySelector(".x").onclick = close;
