@@ -11,10 +11,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "collision energy spread and declustering potential of a tandem file",
         "file method",
     ),
-    (
-        "sample name mass differs from the method precursor",
-        "file method",
-    ),
+    ("sample name differs from the method precursor", "file method"),
     (
         "convert wiff files to mzML with their sample names",
         "file convert",
