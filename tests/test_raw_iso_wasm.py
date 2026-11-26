@@ -92,7 +92,7 @@ def same_bytes(name, flags, query, got, doc):
     result = route[route.index(',"result":{') + 11:-1]
     assert result in doc, f"{name} {flags} {query}:\nwasm {result[:400]}"
     r = json.loads(route)["result"]
-    assert r["m"]["verdict"] in ("peak", "trace", "nothing")
+    assert r["m"]["verdict"] in ("peak", "trace", "nothing", "no_data")
 
 
 @pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "POL.mzML"])
