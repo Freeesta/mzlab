@@ -2,11 +2,9 @@
 CES 15, DP 60, a sample named for 237.1) is opened; /api/filemethod gives the document, the window lists the segment with its values, says why fill time and Q1 resolution are
 missing and shows the name/precursor warning with its numbers, and nothing is blocked. Needs the site and the .wasm (python tools/build_site.py)."""
 # covers: mzlab/web/metodo-file.js, mzlab/web/metodo-doc.js, mzlab/web/lr-method.js
-import shutil, subprocess, sys, tempfile, time
+import shutil, subprocess, sys, tempfile
 from pathlib import Path
-from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
-PORT = free_port()
+from lib import *
 errs = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
@@ -17,17 +15,13 @@ if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" 
 
 D = Path(tempfile.mkdtemp(prefix="metodo_file_e2e_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(D)], check=True, capture_output=True)
-srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+R = Run()
 JSON = """async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }"""
 
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None)
-        c = b.new_context(viewport={"width": 1500, "height": 1200}); c.set_default_timeout(120000)
-        pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
-        pg.goto(f"http://127.0.0.1:{PORT}/")
+        pg = R.page(p); pg.set_default_timeout(120000); pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(f"http://127.0.0.1:{R.port}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
         pg.set_input_files("#pick", [str(D / "dispersione.wiff"), str(D / "dispersione.wiff.scan")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
@@ -56,7 +50,6 @@ try:
         def noerr():
             assert not errs, errs
         step("no page error", noerr)
-        b.close()
 finally:
-    srv.terminate()
+    R.close()
     shutil.rmtree(D, ignore_errors=True)
