@@ -1,7 +1,7 @@
 //! The parameters of the detection of the ion traces (`trace::Params`) and of the peak models they name (`Peak`, `CentWave`), apart from the code
 //! that runs them so that `channels`, `quality` and `centwave` read them without depending on `trace`. `trace` and `centwave` re-export them.
 
-use crate::axis::MassAxis;
+use crate::axis::{MassAxis, LR_TOUCH};
 use crate::broad::BroadParams;
 use crate::trace_base::{BYTES_PER_PEAK, FLOOR, MIN_HEIGHT, SLAB_PEAKS};
 
@@ -28,6 +28,8 @@ pub struct Params {
     pub min_width: f64,
     /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
     pub min_snr: f64,
+    /// Unit axis: two rows of the two grids are one ion when their centroids are within this many Da and their peaks coincide (`post::merge_grids`); a wandering centroid splits an ion above 0.1.
+    pub grid_touch: f64,
     /// Axis of the channels of m/z (`Da` = unit resolution).
     pub axis: MassAxis,
     /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
@@ -49,6 +51,7 @@ impl Default for Params {
             stitch_wide: false,
             min_width: 0.0,
             min_snr: 0.0,
+            grid_touch: LR_TOUCH,
             axis: MassAxis::Ppm,
             budget: SLAB_PEAKS * BYTES_PER_PEAK,
             peak: Peak::Minima,

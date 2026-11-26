@@ -50,6 +50,31 @@ fn entries(out: &mut Vec<Value>, instance: &str, algorithm: Option<&str>, schema
     }
 }
 
+/// The named presets of the step: `set_key` selects one, `params` are the values it writes (the `--set` key and the value), `evidence` says why those values.
+fn presets(instance: &str, list: Option<&Value>) -> Vec<Value> {
+    let get = |p: &Value, k: &str| p.get(k).cloned().unwrap_or(Value::Null);
+    let mut out = Vec::new();
+    for (id, p) in list.map_or(&[][..], Value::entries) {
+        let values = p.get("params").map_or(&[][..], Value::entries);
+        let values = values.iter().map(|(k, v)| {
+            Obj::new()
+                .put("set_key", text(&format!("{instance}.{k}")))
+                .put("value", v.clone())
+                .done()
+        });
+        out.push(
+            Obj::new()
+                .put("id", text(id))
+                .put("set_key", text(&format!("{instance}.preset")))
+                .put("title", get(p, "title"))
+                .put("params", Value::Arr(values.collect()))
+                .put("evidence", get(p, "evidence"))
+                .done(),
+        );
+    }
+    out
+}
+
 /// `step-params/1` of a `step/1` object: every parameter of the step, then those of each algorithm, with the key `--set` takes. The instance name is
 /// the last part of the step id, as in `flow steps --template`.
 pub fn route(input: &str) -> Result<String> {
@@ -67,13 +92,17 @@ pub fn route(input: &str) -> Result<String> {
         let algo = a.get("id").and_then(Value::str);
         entries(&mut list, instance, algo, a.get("params"));
     }
-    let doc = Obj::new()
+    let mut doc = Obj::new()
         .put("schema", text("step-params/1"))
         .put("step", text(id))
         .n("version", version)
         .put("title", step.get("title").cloned().unwrap_or(Value::Null))
         .put("instance", text(instance))
-        .put("params", Value::Arr(list))
-        .done();
+        .put("params", Value::Arr(list));
+    let presets = presets(instance, step.get("presets"));
+    if !presets.is_empty() {
+        doc = doc.put("presets", Value::Arr(presets));
+    }
+    let doc = doc.done();
     Ok(write(&doc) + "\n")
 }

@@ -128,7 +128,7 @@ pub fn detect_with<R: ReadAt>(
     each_slab(index, si, p, rt.len(), progress, &mut |slab| {
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
-    finish(rows, dt, p.axis, p.merge_overlap)
+    finish(rows, dt, p.axis, (p.merge_overlap, p.grid_touch))
 }
 
 /// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of
