@@ -62,11 +62,35 @@
     return l.map((x, i) => ({ x, i })).sort((a, b) => (first.get(q1(a.x)) ?? 0) - (first.get(q1(b.x)) ?? 0) || rank(a.x) - rank(b.x) || a.i - b.i).map(o => o.x);
   }
   /** colour and line style of a trace of an MRM / SIM overlay: colour = the sample (its square in the file list), so overlaid samples compare at a glance;
-   * channels of one sample differ by dash. A lone sample with more channels than dash patterns keeps one palette colour per channel (dashes would repeat).
-   * @param {any} f the file @param {number} ci place of the channel among those plotted @param {number} nCh channels plotted @param {number} nFiles files plotted */
+   * channels of one sample differ by dash. A lone sample with more channels than dash patterns keeps one palette colour per channel (dashes would repeat);
+   * past the palette length the colours repeat in the same order, one dash pattern further each round. ci is the place of the channel among ALL those of the
+   * panel, never among the ticked ones: ticking or unticking a channel does not recolour the others.
+   * @param {any} f the file @param {number} ci place of the channel among all of the panel @param {number} nCh channels of the panel @param {number} nFiles files plotted */
   function style(f, ci, nCh, nFiles) {
-    if (nFiles === 1 && nCh > DASHES.length) return { color: PAL[ci % PAL.length], dash: [] };
-    return { color: f.color, dash: nCh === 1 ? fdash(f) : DASHES[ci % DASHES.length] };
+    if (nFiles === 1 && nCh > DASHES.length) return { color: PAL[ci % PAL.length], dash: DASHES[Math.floor(ci / PAL.length) % DASHES.length], own: true };
+    return { color: f.color, dash: nCh === 1 ? fdash(f) : DASHES[ci % DASHES.length], own: false };
+  }
+
+  /** CSS background of a trace sample: the colour, or the dash pattern of the trace in that colour (as the legend draws it) @param {string} c @param {number[]} d */
+  const paint = (c, d) => d && d.length ? `repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)` : c;
+  /** the line of every channel of a panel as the drawing used it, key -> { c: colour or null (several samples: the colour is the sample's), d: dash }. The drawing writes it from the
+   * same style() call as the traces and the lists read it, so a row and its trace cannot differ. True when it changed (the lists must be written again) @param {any} p @param {Record<string, any>} look */
+  const keep = (p, look) => { const a = JSON.stringify(look); if (a === p._lookS) return false; p._look = look; p._lookS = a; return true; };
+  /** the line of a channel, in the form keep() stores it @param {{ color: string, dash: number[], own: boolean }} st @param {number} nFiles */
+  const lookOf = (st, nFiles) => ({ c: st.own || nFiles === 1 ? st.color : null, d: st.dash });
+  /** the swatch of a row of a list: the line of its trace, dimmed while the row is unticked; the text stays beside it (colour is never the only mark). Nothing known (a channel never drawn): an empty box of the same width
+   * @param {any} p @param {string} key @param {boolean} on */
+  function swatch(p, key, on) {
+    const l = p._look && p._look[key];
+    if (!l) return `<span class="trsw none" aria-hidden="true"></span>`;
+    const c = l.c || "currentColor";
+    return `<span class="trsw${on ? "" : " off"}" aria-hidden="true" data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="color:${EH(c)};background:${EH(paint(c, l.d))}"></span>`;
+  }
+  /** a row of a list or a trace under the mouse or the focus: its trace is drawn on, the others fade (cleared with null); one redraw per frame @param {any} p @param {string | null} key */
+  function lit(p, key) {
+    if ((p._hl ?? null) === key) return;
+    p._hl = key; if (p._hlQ) return; p._hlQ = 1;
+    FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
   }
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
@@ -82,6 +106,7 @@
     };
     const out = [{ name: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, run: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({
+      color: panelTr(p) && p._look && p._look[x.key] ? paint(p._look[x.key].c || "currentColor", p._look[x.key].d) : undefined, hover: (/** @type {boolean} */ on) => { if (panelTr(p)) lit(p, on ? x.key : null); },
       name: x.name ? `${label(x.key)} ${x.name}` : label(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
       run: (/** @type {MouseEvent | undefined} */ ev) => {
@@ -140,5 +165,5 @@
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey, paint, keep, lookOf, swatch, lit };
 })();

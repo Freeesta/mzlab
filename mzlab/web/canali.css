@@ -27,3 +27,8 @@
 .can-hit{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;margin:0 -5px;cursor:pointer}
 .can-tb{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 4px 6px}.can-all,.can-none{min-height:24px;min-width:24px}
 .can-pop.can-sim{min-width:280px;max-width:min(360px,92vw)}.can-pop.can-sim .can-hd,.can-pop.can-sim .can-row{grid-template-columns:1fr}
+/* the key of a trace beside its row: the line as drawn (colour, dash); a row that is off shows it hollow and dimmed. The text stays: colour is never the only mark */
+.trsw{display:inline-block;flex:none;width:18px;height:8px;border-radius:2px;margin:0 2px;forced-color-adjust:none}
+.trsw.none{background:none}
+.trsw.off{background:none!important;box-shadow:inset 0 0 0 1.5px currentColor;opacity:.6}
+#ctx .sw.off{background:none!important;box-shadow:inset 0 0 0 1.5px currentColor;opacity:.6}

@@ -13,7 +13,8 @@ window.MENUSUB = {
       sm.innerHTML = "";
       it.sub().forEach((/** @type {Bag} */ r) => {
         const e = document.createElement("div"); e.tabIndex = -1; e.setAttribute("role", "menuitemcheckbox"); e.setAttribute("aria-checked", String(!!r.check)); e.setAttribute("aria-label", r.aria || r.name);
-        if (r.color) { const sw = document.createElement("span"); sw.className = "sw"; sw.setAttribute("aria-hidden", "true"); sw.style.background = r.color; e.appendChild(sw); }
+        if (r.color) { const sw = document.createElement("span"); sw.className = r.check ? "sw" : "sw off"; sw.setAttribute("aria-hidden", "true"); sw.style.background = r.color; e.appendChild(sw); }
+        if (r.hover) { const on = (/** @type {boolean} */ v) => () => r.hover(v); e.onmouseenter = e.onfocus = on(true); e.onmouseleave = e.onblur = on(false); }
         e.appendChild(document.createTextNode(r.name));
         if (r.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; e.appendChild(ck); }
         e.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); const keep = r.keep && r.keep(ev); r.run(ev); if (keep) { fill(); const i = rowsOf().findIndex(x => x.getAttribute("aria-label") === (r.aria || r.name)); if (i >= 0) /** @type {HTMLElement} */ (rowsOf()[i]).focus(); } else m.hidden = true; };
@@ -23,7 +24,7 @@ window.MENUSUB = {
     const open = (/** @type {boolean} */ v) => {
       if (v === !sm.hidden) return;
       if (v) { fill(); sm.hidden = false; sm.style.left = ""; sm.style.right = ""; if (sm.getBoundingClientRect().right > innerWidth - 4) { sm.style.left = "auto"; sm.style.right = "100%"; } }
-      else sm.hidden = true;
+      else { sm.hidden = true; it.sub().forEach((/** @type {Bag} */ r) => r.hover && r.hover(false)); }
       d.setAttribute("aria-expanded", String(v));
     };
     d.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); if (/** @type {HTMLElement} */ (ev.target).closest(".ctxsub")) return; open(!!sm.hidden); if (!sm.hidden && ev.detail === 0) { const f = /** @type {HTMLElement | undefined} */ (rowsOf()[0]); if (f) f.focus(); } };

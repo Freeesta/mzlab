@@ -152,7 +152,7 @@ try:
             need(pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].some(e => /Extract ion/.test(e.textContent))"), "entry")
             need(not pg.evaluate("[...document.querySelectorAll('#ctx div')].some(e => e.dataset.azione === 'chrom.xic')"), "XIC still there")
             pg.hover("#ctx .hsub"); need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub:not([hidden]) [role=menuitemcheckbox]').length") == N + 1, "rows")
-            need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub .sw').length") == 0, "an ion swatch: colour belongs to the sample")
+            need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub .sw').length") == N, "one swatch per ion (the line of its trace; tests_e2e/e2e_trace_key.py checks the colours)")
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(2).click()
             need(pg.evaluate("E.panels.find(p => p.type === 'mrm').tr.length") == 1, pg.evaluate("E.panels.find(p => p.type === 'mrm').tr"))
         step("the chromatogram menu extracts one ion with a click", submenu)

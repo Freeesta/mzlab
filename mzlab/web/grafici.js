@@ -106,14 +106,16 @@ async function rawSeries(p) {
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
-  if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
-  const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key), shown = list.filter(l => want(l.key)).map(l => l.key);
+  const idx = new Map(list.map((l, i) => [l.key, i])), styOf = (/** @type {any} */ f, /** @type {string} */ key) => window.SIMUI ? SIMUI.style(f, idx.get(key) ?? 0, list.length, mf.length) : { color: f.color, dash: fdash(f), own: false };   // the place among ALL ions: ticking one never recolours another
+  const lookNew = window.SIMUI && mf.length ? SIMUI.keep(p, Object.fromEntries(list.map(l => [l.key, SIMUI.lookOf(styOf(mf[0], l.key), mf.length)]))) : false;   // the lists beside the chart read this: one colour per ion, computed here once
+  if (JSON.stringify(list) !== JSON.stringify(p._trs) || lookNew) { p._trs = list; ctl(p); }
+  const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);
   const lab = key => window.SIMUI ? SIMUI.label(key) : key;
   data.forEach(({ f, tr }) => tr.forEach(t => {
     const key = trKey(t); if (!want(key)) return;
     // colour = sample (as in the file list), dash = channel (sim-ui.js style)
-    const ci = shown.indexOf(key), st = window.SIMUI ? SIMUI.style(f, ci, shown.length, mf.length) : { color: f.color, dash: fdash(f) };
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: st.color, dash: st.dash,
+    const st = styOf(f, key);
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, tk: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: st.color, dash: st.dash,
       name: mf.length > 1 ? `${f.label} · ${lab(key)}` : `${lab(key)} ${t.name || ""}`.trim(), tid_label: `${lab(key)} ${t.name || ""}`.trim() });
   }));
   return out;
@@ -398,9 +400,10 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    if (window.SIMUI) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const lit = !EXPORTING && p._hl != null && s.tk != null && sr.some(q => q.tk === p._hl), faded = lit && s.tk !== p._hl;      // a row of a list under the mouse: its trace is drawn on, the others fade
+    if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX() + (lit && !faded ? 1.5 : 0); g.setLineDash(s.dash); g.beginPath();
     const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
-    g.stroke();
+    g.stroke(); g.globalAlpha = 1;
   }
   g.restore(); g.setLineDash([]);
   p._a.tri = [];
