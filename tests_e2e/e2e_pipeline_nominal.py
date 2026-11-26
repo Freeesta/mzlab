@@ -3,7 +3,7 @@ values it writes read from the step descriptor, a recipe text that carries `"pre
 test tests/test_feat_nominal_wasm.py compares with the CLI). Builds the site and the mzFinder .wasm like e2e_pipeline.py; needs cargo, wasm-bindgen and numpy (SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_pipeline_nominal.py"""
 # covers: TP_Mine/
-import json, os, shutil, subprocess, sys, tempfile, time
+import json, os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -51,7 +51,10 @@ NOM = next(s for s in STEPS if s["id"] == "features.detect")["presets"]["nominal
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+errs = []
+for _ in range(100):                                      # wait for the state (the port accepts), not for a fixed time
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError: threading.Event().wait(0.1)
 URL = f"http://127.0.0.1:{PORT}/"
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
