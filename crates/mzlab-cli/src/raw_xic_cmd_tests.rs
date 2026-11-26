@@ -257,3 +257,14 @@ fn inconsistent_rows_fail_the_file_loud_with_a_data_error() {
         assert!(!super::whole_run(&e), "{what}");
     }
 }
+
+#[test]
+fn nothing_at_any_mass_names_the_offset_flag_unless_one_was_given() {
+    let (d, f) = mzml_file("xicoffhint");
+    let hint = |a: &[&str]| run(&[&["raw", "xic", &f, "--rt", "2.5,3.5"], a].concat()).stderr;
+    assert!(hint(&["--mz", "9999"]).contains("--mz-offset auto:MZ[@RT]"));
+    assert!(!hint(&["--mz", "9999", "--mz-offset", "0.1"]).contains("hint:"));
+    // a peak found: no hint
+    assert!(!hint(&["--mz", "241.3"]).contains("hint:"));
+    let _ = std::fs::remove_dir_all(d);
+}

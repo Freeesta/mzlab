@@ -23,7 +23,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
 | MS2-PEAK-AUTO | `docs/coda/prompt/MS2-PEAK-AUTO.md` | - | lost data: `--peak auto` apex, 2 x FWHM, two-sided background |
 | FIND-VALUE-STATES | `docs/coda/prompt/FIND-VALUE-STATES.md` | - | discoverability: value states already exist; find why they were not reached |
-| FIND-MZ-OFFSET | `docs/coda/prompt/FIND-MZ-OFFSET.md` | - | discoverability: `--mz-offset auto`, `dad delay` |
 | FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | - | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
 | FIND-LOOP-XIC | `docs/coda/prompt/FIND-LOOP-XIC.md` | - | discoverability: loop hint for `trace xic` / `raw xic` called once per target; reuse `repeat_hint.rs` |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |

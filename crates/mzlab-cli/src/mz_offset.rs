@@ -35,3 +35,15 @@ pub(crate) fn lines(name: &str, o: &Offset) -> String {
     }
     s
 }
+
+/// The one-line hint of a result that is empty with no offset given: a shifted m/z axis looks like an absent ion.
+pub(crate) const SHIFT_HINT: &str = "if the ion should be there, the m/z axis may be shifted: --mz-offset auto:MZ[@RT] measures the offset on a known ion, --mz-offset DA applies one";
+
+/// The stderr line of `raw xic`: nothing at any mass and no `--mz-offset` given (else nothing).
+pub(crate) fn nothing_hint(given: bool, rows: &[String]) -> String {
+    let all = !rows.is_empty() && rows.iter().all(|r| r.contains("\"verdict\":\"nothing\""));
+    if given || !all {
+        return String::new();
+    }
+    format!("hint: nothing found at any mass; {SHIFT_HINT}\n")
+}
