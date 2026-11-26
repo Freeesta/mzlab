@@ -209,7 +209,7 @@
     const box = $("#pipe-nominal-hint");
     if (!box) return;
     const on = st.nomHint && !$("#pipe-nom").hidden && !$("#pipe-nominal").checked;
-    box.hidden = !on; box.textContent = on ? /** @type {any} */ (window).I18N.t("pipe.nominal.hint", st.nomHint) : "";
+    box.hidden = !on; box.textContent = on ? msg("tpmine.pipe.nominal.hint", st.nomHint) : "";
   }
   async function preview() {
     if (st.busy) return;

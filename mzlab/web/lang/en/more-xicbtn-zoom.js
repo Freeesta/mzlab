@@ -25,6 +25,5 @@ I18N.add("en", {
   "xicdlg.go": "Extract",
   "corr.from.file": "From a file",
   "corr.from.bg": "From the background",
-  "pipe.nominal.hint": "Unit-resolution signature: {between} of {rows} candidate rows ({between_pct}%, cut {cut_between_pct}%) lie between height {height_nominal} (this profile) and {height_now} (in force), and {split} ({split_pct}%, cut {cut_split_pct}%) are one ion split across the grids at a reach of {reach_now} Da that {reach_nominal} Da would merge. Tick the profile to apply it; nothing is applied by itself.",
   "int.base.floor": "A baseline never goes below zero: the point was put on the zero line"
 });

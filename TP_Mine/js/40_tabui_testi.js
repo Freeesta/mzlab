@@ -144,6 +144,7 @@
     "tpmine.feat.degraded": "Table without proofs: not enough memory for the proofs on {files} files (phase {phase}, about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
     "tpmine.feat.restarted": "A worker of the pipeline stopped and was restarted: the step runs again.",
     "tpmine.feat.cancelled": "The pipeline was stopped.",
+    "tpmine.pipe.nominal.hint": "Unit-resolution signature: {between} of {rows} candidate rows ({between_pct}%, cut {cut_between_pct}%) lie between height {height_nominal} (this profile) and {height_now} (in force), and {split} ({split_pct}%, cut {cut_split_pct}%) are one ion split across the grids at a reach of {reach_now} Da that {reach_nominal} Da would merge. Tick the profile to apply it; nothing is applied by itself.",
     "tpmine.centroided": "{name} was in profile: Tabui works on centroids and used a centroided copy.",
   };
   /** English text of a key of the engine or of the pipeline; an unknown key shows the message of the engine, or the key itself @param {string} key @param {Record<string, any>} [params] */
