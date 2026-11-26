@@ -72,9 +72,9 @@ async function ms2trSeries(p) {
   if (more !== (p._trsMore || 0) || JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; p._trsMore = more; ctl(p); }
   if (SIMUI.ms2Look(p, list.map(t => t.key), mf, MS2TR_MAX)) ctl(p); if (!p.tr) return null;      // the line of every transition, computed once here with SIMUI.style; the key of the select reads it
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
-  const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
-    x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, tk: t.key, time: f.time, color: SIMUI.style(f, list.indexOf(t), list.length, fi).color,
-    dash: SIMUI.style(f, list.indexOf(t), list.length, fi).dash, name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
+  const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => (st => ({
+    x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, tk: t.key, time: f.time, color: st.color,
+    dash: st.dash, name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key }))(SIMUI.style(f, list.indexOf(t), list.length, fi))))));
   return out.filter(s => s.x.length);
 }
 async function rawSeries(p) {
@@ -95,10 +95,10 @@ async function rawSeries(p) {
   const files = shownFor(p);
   if (p.type === "xic") {
     const ts = p.traces, out = [], sf = scanFiles(files); SIMUI.xicLook(p, ts, sf);      // the line of every trace and file of the legend, from the same style() call as the drawing
-    sf.forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.channel) : null).then(d => ({
+    sf.forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.channel) : null).then(d => (st => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, tk: "t" + t.id, tf: "f" + f.k, time: f.time,
-      color: SIMUI.style(f, ti, ts.length, fi).color, dash: SIMUI.style(f, ti, ts.length, fi).dash,
-      name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
+      color: st.color, dash: st.dash,
+      name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label }))(SIMUI.style(f, ti, ts.length, fi))))));
     return Promise.all(out);
   }
   // MRM
@@ -401,7 +401,7 @@ async function drawLines(p) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
     const lit = !EXPORTING && p._hl != null && sr.some(q => q.tk === p._hl || q.tf === p._hl), faded = lit && s.tk !== p._hl && s.tf !== p._hl;      // a row of a list under the mouse: its trace is drawn on, the others fade
-    if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX() + (lit && !faded ? 1.5 : !EXPORTING && p._top === s.name ? 1 : 0); g.setLineDash(s.dash); g.beginPath();
+    if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX() + (lit && !faded ? 1.5 : !EXPORTING && p._top != null && sr.indexOf(s) === p._top ? 1 : 0); g.setLineDash(s.dash); g.beginPath();
     const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
     g.stroke(); g.globalAlpha = 1;
   }
@@ -453,7 +453,7 @@ async function drawLines(p) {
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v), ch = sr.length > 1 ? " · " + sr[0].name.split(" · ").pop() : "", one = ch && sr.every(s => s.name.endsWith(ch) && s.name !== ch.slice(3)), nm = s => one ? s.name.slice(0, -ch.length) : s.name;      // one channel over several samples: named once, in the first line
-    return { px, rt: x, html: `${window.SIMUI ? SIMUI.top(p, rows[0] ? rows[0].s.name : null) : ""}<b>${I18N.t("hov.time", { v: x.toFixed(2) })}${one ? EH(ch) : ""}</b>` + rows.slice(0, 8).map((r, k) => `<div${k ? "" : ` class="top" style="--tc:${EH(r.s.color)}"`}><i style="background:${r.s.color}"></i>${EH(nm(r.s).length > 30 ? nm(r.s).slice(0, 29) + "…" : nm(r.s))} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `${window.SIMUI ? SIMUI.top(p, rows[0] ? sr.indexOf(rows[0].s) : null) : ""}<b>${I18N.t("hov.time", { v: x.toFixed(2) })}${one ? EH(ch) : ""}</b>` + rows.slice(0, 8).map((r, k) => `<div${k ? "" : ` class="top" data-i="${sr.indexOf(r.s)}" style="--tc:${EH(r.s.color)}"`}><i style="background:${r.s.color}"></i>${EH(nm(r.s).length > 30 ? nm(r.s).slice(0, 29) + "…" : nm(r.s))} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }

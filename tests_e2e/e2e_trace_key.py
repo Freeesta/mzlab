@@ -3,11 +3,12 @@ of the panel in the palette), the samples are told apart by dash; the checkbox o
 trace, read from the one `p._look` the drawing writes from the same SIMUI.style() call as the traces; hollow and dimmed while the row is off; ticking, unticking, stacking, overlaying and moving a file
 never recolour a trace; hover or focus of a row lights its trace. Checked on 7 ions x 1 and 2 samples (sim3), 4 ions x 2 samples (sim), 3 ions x 4 samples (listab) and the palette order of 2..48 ions.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key.py"""
-# covers: mzlab/web/sim-ui.js, mzlab/web/canali.js, mzlab/web/canali.css, mzlab/web/menu-sotto.js, mzlab/web/grafici.js, tools/wiff_sim.py
+# covers: tests_e2e/trace_tip.py, mzlab/web/sim-ui.js, mzlab/web/canali.js, mzlab/web/canali.css, mzlab/web/menu-sotto.js, mzlab/web/grafici.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from trace_tip import top_row, picker_fixture, picker_focus
 
 steps = []
 def step(name, fn):
@@ -110,6 +111,25 @@ try:
             show(pg, [0, 1], 2 * N3, 2)
             need(check(read(pg), N3, 2) == base, "a second sample changed the colour of an ion")
         step("2 samples x 7 ions: the ion keeps its colour, the samples differ by dash, the swatch is the ion's colour", two_samples)
+
+        step("SIM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg, P, "SIM"))
+
+        def contrast():
+            n = picker_fixture(pg, "palette")
+            popup(); d = picker_focus(pg, P, "picker"); need(d["w"] >= 2, d)
+            pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 2)
+        step("picker checkbox: every palette colour keeps 3:1 (box ring, tick, dash cue when ticked), a dashed trace shows its dash, keyboard focus ring on the row", contrast)
+
+        def phone():
+            pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 4)
+            popup()
+            rows = pg.evaluate("[...%s.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const k = r.querySelector('.can-ck[data-tc]'), h = r.querySelector('.can-hit').getBoundingClientRect(), b = r.getBoundingClientRect(); return { ck: !!k, sep: !!r.querySelector('.trsw'), w: h.width, h: h.height, rh: b.height }; })" % P)
+            need(len(rows) == N3 and all(x["ck"] and not x["sep"] and x["w"] >= 24 and x["h"] >= 24 for x in rows), "390 px: every row needs a coloured checkbox and a 24 px target: %s" % rows)
+            picker_fixture(pg, "390 px"); picker_focus(pg, P, "390 px")
+            pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 3)
+            top_row(pg, P, "SIM 390 px")
+            pg.set_viewport_size({"width": 1280, "height": 900}); frames(pg, 3)
+        step("390 px: the checkbox is the key (coloured, no separate swatch, 24 px target), focus ring and tooltip highlight hold", phone)
 
         def submenus():
             show(pg, [0], N3, 1)

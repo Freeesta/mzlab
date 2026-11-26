@@ -97,16 +97,17 @@
     FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
   }
 
-  /** the checkbox of a picker row carries the line of its trace: the box border (unticked) or fill (ticked) is the colour, a dashed border marks a dashed trace; "" for a channel never drawn
+  /** the checkbox of a picker row carries the line of its trace: the box border (unticked) or fill (ticked) is the colour, a dashed border marks a dashed trace, a light colour is flagged (data-lt) so the tick is dark; "" for a channel never drawn
    * @param {any} p @param {string} key */
   function ckLook(p, key) {
     const l = p._look && p._look[key]; if (!l) return "";
-    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="--tk:${EH(l.c || "currentColor")}"`;
+    const m = /^#([0-9a-f]{6})$/i.exec(l.c || ""), lum = m ? [0, 2, 4].map((i, k) => { const v = parseInt(m[1].slice(i, i + 2), 16) / 255; return (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][k]; }).reduce((a, b) => a + b) : 0;
+    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}"${lum > 0.179 ? " data-lt" : ""} style="--tk:${EH(l.c || "currentColor")}"`;      // a light fill (WCAG luminance above 0.179) takes a dark tick
   }
-  /** the tallest trace under the mouse (its tooltip row is the first): drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {string | null} name */
-  function top(p, name) {
-    if ((p._top ?? null) === name) return "";
-    p._top = name; if (p._hlQ) return ""; p._hlQ = 1;
+  /** the tallest trace under the mouse (its tooltip row is the first), by its place among the series of the drawing: drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {number | null} idx */
+  function top(p, idx) {
+    if ((p._top ?? null) === idx) return "";
+    p._top = idx; if (p._hlQ) return ""; p._hlQ = 1;
     FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
     return "";
   }
@@ -126,7 +127,7 @@
   /** the transitions the MS2 select draws now: one, every one up to max, or none @param {any} p @param {number} max @returns {string[]} */
   const ms2Shown = (p, max) => !p.tr ? [] : p.tr === "__all" ? (p._trs || []).slice(0, max).map((/** @type {any} */ t) => t.key) : [p.tr];
   /** the square before the text of an option of the select, filled while its trace is drawn @param {any} p @param {string} key @param {number} max */
-  const ms2Mark = (p, key, max) => ms2Shown(p, max).includes(key) ? "\u25A0" : "\u25A1";
+  const ms2Mark = (p, key, max) => I18N.t(ms2Shown(p, max).includes(key) ? "ctl.ms2tr.mark.on" : "ctl.ms2tr.mark.off");
   /** the colour of that square (the trace's, dimmed while it is not drawn) as a style attribute; nothing while no colour is known @param {any} p @param {string} key @param {number} max */
   const ms2Tone = (p, key, max) => { const c = p._look && p._look[key] && p._look[key].c; return c ? ` style="color:${ms2Shown(p, max).includes(key) ? EH(c) : `color-mix(in srgb, ${EH(c)} 55%, transparent)`}"` : ""; };
   /** the key beside the MS2 select: one swatch per transition drawn, from the same p._look @param {any} p @param {number} max */

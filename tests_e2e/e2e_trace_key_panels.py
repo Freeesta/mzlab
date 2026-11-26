@@ -2,11 +2,12 @@
 the MS2 transition select (a swatch strip beside it and a square on each option), the legend of the XIC list (traces and files) and the DAD curves on an MRM panel. Rule under test:
 a swatch has the colour and dash of its trace, read from the one `p._look` (or the one line function of dad-mrm.js) the drawing uses, hollow and dimmed while the trace is off, and
 hover or focus of a swatch draws its trace on and fades the others; the first (tallest) row of the chromatogram hover tooltip is tinted in its trace colour. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key_panels.py"""
-# covers: mzlab/web/grafici.js, mzlab/web/pannelli.js, mzlab/web/dad-mrm.js, mzlab/web/sim-ui.js, mzlab/web/canali.css, tools/wiff_dad_mrm.py
+# covers: tests_e2e/trace_tip.py, mzlab/web/grafici.js, mzlab/web/pannelli.js, mzlab/web/dad-mrm.js, mzlab/web/sim-ui.js, mzlab/web/canali.css, tools/wiff_dad_mrm.py
 import subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from trace_tip import top_row
 
 steps = []
 def step(name, fn):
@@ -97,19 +98,7 @@ try:
             need(all(not x["off"] for x in d["rows"]), d["rows"])
         step("XIC legend: a trace entry has the colour of its trace; the files differ in dash", xic_leg)
 
-        def top_row():
-            """the tooltip row with the largest height carries the highlight class and the tint of its trace; the trace is drawn thicker only while the pointer is over the chart"""
-            away(pg2, XP)
-            box = pg2.evaluate("(() => { const r = %s.cv.getBoundingClientRect(), a = %s._a; return { x: r.left + a.X((a.x0 + a.x1) / 2), y: r.top + (r.height - 10) / 2 }; })()" % (XP, XP))
-            pg2.mouse.move(box["x"], box["y"]); wait_for_js(pg2, "!!%s.tip && !%s.tip.hidden && %s.tip.querySelector('div.top')" % (XP, XP, XP), timeout=10000)
-            d = pg2.evaluate("""(() => { const p = %s, n = %s, rows = [...p.tip.querySelectorAll('div')].filter(d => d.querySelector('i')), top = rows[0];
-              return { n: rows.length, tops: p.tip.querySelectorAll('div.top').length, first: top.classList.contains('top'), tint: getComputedStyle(top).backgroundColor, ink: n(top.querySelector('i').style.backgroundColor),
-                vals: rows.map(r => r.querySelector('b').textContent), lit: p._top, name: top.textContent }; })()""" % (XP, NORM))
-            need(d["n"] >= 2 and d["tops"] == 1 and d["first"], "exactly the first row is the top row: %s" % d)
-            need(d["tint"] not in ("rgba(0, 0, 0, 0)", "transparent"), "the top row has no tint: %s" % d)
-            need(d["lit"] and d["name"].startswith(d["lit"][:10].strip()), "the thick trace is the one of the top row: %s" % d)
-            pg2.mouse.move(5, 5); wait_for_js(pg2, "%s._top == null" % XP, timeout=10000)
-        step("hover tooltip: the tallest trace row is highlighted and its trace drawn a touch thicker, both cleared on leaving", top_row)
+        step("XIC hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg2, XP, "XIC"))
 
         def xic_off():
             PN = ".pnl:has(.leg .tg[data-lk^=t])"
@@ -155,6 +144,11 @@ try:
             need(pg3.evaluate("%s.cv.toDataURL()" % MR) != before, "hover did not change the drawing")
             pg3.mouse.move(5, 5); wait_for_js(pg3, "%s._hl == null" % MR, timeout=10000); frames(pg3, 3)
         step("DAD curves: hover of the entry lights the curve", twc_hover)
+
+        def mrm_tip():
+            pg3.evaluate("(() => { const p = %s; p.overlay = null; draw(p); })()" % MR); frames(pg3, 4)
+            top_row(pg3, MR, "MRM")
+        step("MRM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", mrm_tip)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
