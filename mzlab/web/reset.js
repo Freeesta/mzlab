@@ -6,7 +6,8 @@
 // preferences, language, theme and the saved libraries stay), both offered by the question of ask(); also "cold" (below) and "engine" (engine-recupera.js: only the app caches and the worker, nothing the user stored). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
 const RESET = (function () {
   "use strict";
-  const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
+  const sleep = (/** @type {number} */ ms) => new Promise(r => setTimeout(r, ms));
+  const wait = (p, ms = 4000) => Promise.race([p, sleep(ms)]).catch(() => {});
   // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_OPFS = ["librerie"];
   const OPFS_MS = 10000;
@@ -36,7 +37,7 @@ const RESET = (function () {
           if (nm !== "NoModificationAllowedError") { rep.errors.push("opfs " + n + ": " + nm); return; }
         }
         if (performance.now() - t0 >= limit) { rep.errors.push("opfs " + n + ": timeout"); return; }
-        await new Promise(r => setTimeout(r, 250));
+        await sleep(250);
       }
     }));
   }
