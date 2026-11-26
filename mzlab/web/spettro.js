@@ -205,7 +205,7 @@ function scanLine(p, data, d0) {
   /** @param {any} o */
   const reg = o => AZIONI.register({ views: S, ...o });
   reg({ id: "spec.copy", group: "value", available: /** @param {any} c */ c => c.has,
-    name: () => T("ctx.spec.copy"), aria: /** @param {any} c */ c => T("ctx.spec.copy.aria", { mz: c.lab }), run: /** @param {any} c */ c => { try { navigator.clipboard.writeText(c.lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } });
+    name: () => T("ctx.spec.copy"), aria: /** @param {any} c */ c => T("ctx.spec.copy.aria", { mz: c.lab }), run: /** @param {any} c */ c => { clipboardCopy({ "text/plain": c.lab }).catch(() => { /* clipboard unavailable */ }); } });
   // low resolution: the product-ion spectrum of a precursor peak of the Full Scan
   reg({ id: "spec.extractMs2", group: "xic", visible: /** @param {any} c */ c => c.p.level === 1 && !c.a?.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, available: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), name: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
     run: /** @param {any} c */ c => { const e2 = ms2OfPeak(c.p, c.m); if (e2) extractMs2(c.p, e2); } });

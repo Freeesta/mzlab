@@ -314,7 +314,12 @@ fn notes(doc: &str) -> String {
                 .and_then(|e| e.get("mode"))
                 .and_then(Value::str)
                 == Some("auto");
-            if da != 0.0 || auto {
+            // an offset that was asked for is logged even when it is 0 (the route query carries `mzoff=`)
+            let asked = x
+                .get("query")
+                .and_then(Value::str)
+                .is_some_and(|q| q.contains("mzoff="));
+            if da != 0.0 || auto || asked {
                 let name = x.get("name").and_then(Value::str).unwrap_or("");
                 s += &super::bins::offset_lines(&format!("{side} ({name})"), x);
             }

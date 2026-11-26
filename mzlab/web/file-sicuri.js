@@ -87,7 +87,7 @@ const FILESICURI = (() => {
   function assignKnown(target, src) {
     if (!src || typeof src !== "object" || Array.isArray(src)) return target;
     for (const k of Object.keys(src)) {
-      if (BAD_KEYS.has(k) || !Object.prototype.hasOwnProperty.call(target, k)) continue;
+      if (BAD_KEYS.has(k) || !Object.hasOwn(target, k)) continue;
       const v = src[k], t = target[k];
       if (typeof v !== typeof t) continue;
       if (typeof v === "number" && !Number.isFinite(v)) continue;

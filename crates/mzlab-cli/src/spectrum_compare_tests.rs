@@ -257,6 +257,13 @@ fn a_shifted_side_matches_the_unshifted_one_once_its_offset_is_taken_off() {
     );
     assert!(!err.contains("mz offset a"), "{err}");
     assert!(!plain_err.contains("mz offset"), "{plain_err}");
+    // an explicit 0 is logged too; a side with no flag stays silent
+    let (_, zero_err) = cosine(&["--b-mz-offset", "0"]);
+    assert!(
+        zero_err.contains("mz offset b (b.mzML): +0 Da (no offset)")
+            && !zero_err.contains("mz offset a"),
+        "{zero_err}"
+    );
     // both flags together: each side is logged with its own offset
     let (_, both_err) = cosine(&["--a-mz-offset", "0.1", "--b-mz-offset", "0.4"]);
     assert!(

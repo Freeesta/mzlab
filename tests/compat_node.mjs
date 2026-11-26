@@ -15,7 +15,7 @@ function el(tag, attrs = {}) {
   };
 }
 function fakeDoc(copyOk) {
-  const d = { listeners: [], body: { appendChild(t) { d.last = t; } }, activeElement: el("button"), createElement: t => el(t),
+  const d = { listeners: [], body: { appendChild(t) { d.last = t; } }, dialog: null, querySelector: q => (q === "dialog[open]" ? d.dialog : null), activeElement: el("button"), createElement: t => el(t),
     execCommand: c => { d.copied = c === "copy" ? d.last.value : null; return copyOk; }, addEventListener: (t, f, c) => d.listeners.push([t, f, c]) };
   return d;
 }
@@ -91,6 +91,13 @@ await check("clipboard: a refused writeText falls back to the copy command", asy
   installa(g); await g.navigator.clipboard.writeText("m/z 301.1");
   return d.copied === "m/z 301.1" && d.last.removed === true && back.focused === true;
 });
+await check("clipboard: the copy command textarea goes inside an open modal dialog", async () => {
+  const d = fakeDoc(true); let inDialog = null; d.dialog = { appendChild(t) { inDialog = t; d.last = t; } };
+  const g = { document: d, navigator: { clipboard: { writeText: () => Promise.reject(new Error("no")) } } };
+  installa(g); await g.navigator.clipboard.writeText("in dialog");
+  return d.copied === "in dialog" && inDialog === d.last;
+});
+
 await check("clipboard: both refused -> the original error; accepted -> no copy command", async () => {
   const d = fakeDoc(false), err = Object.assign(new Error("no"), { name: "NotAllowedError" });
   const g = { document: d, navigator: { clipboard: { writeText: () => Promise.reject(err) } } };

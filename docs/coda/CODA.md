@@ -17,15 +17,13 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 ## Queue
 | id | prompt file | needs first | notes |
 |---|---|---|---|
-| ION-COUNTS-METHOD | `docs/coda/prompt/ION-COUNTS-METHOD.md` | - | correctness: read the fill time, dwell and Q1 scan values of `raw xic --ions` from the method itself, in the CLI, the app and the site |
 | ION-COUNTS-TRACE | `docs/coda/prompt/ION-COUNTS-TRACE.md` | - | opt-in ion-scale keys for `trace xic` and the peak outputs, with the factor of `ionscale` |
+| ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | NOMINAL-PANEL | `docs/coda/prompt/NOMINAL-PANEL.md` | - | the Pipeline panel of the site offers the `nominal` profile of `features.detect` (a choice beside the unit-resolution switches); the recipe text carries `{"preset":"nominal"}` and the page, app and CLI give the same bytes |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
 | NOMINAL-HINT | `docs/coda/prompt/NOMINAL-HINT.md` | - | `features.estimate` and `features --report` name the nominal-resolution signature (many rows under the `lr` height, one ion split across the two grids) as a hint with its numbers; the profile stays the user's choice |
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
 | MS2-PEAK-HR | `docs/coda/prompt/MS2-PEAK-HR.md` | - | lost data: `spectrum get --peak auto` on profile and high-resolution levels (now `window_only`, no spectrum) |
-| FIND-MULTI-MASS | `docs/coda/prompt/FIND-MULTI-MASS.md` | - | discoverability: `--sweep`, many-mass `trace xic`, `raw xic`, `quant targets` |
-| FIND-LOOP-XIC | `docs/coda/prompt/FIND-LOOP-XIC.md` | - | discoverability: loop hint for `trace xic` / `raw xic` called once per target; reuse `repeat_hint.rs` |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
 | LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
@@ -68,5 +66,3 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
 | FILE-METHOD-WINDOW | `docs/coda/prompt/FILE-METHOD-WINDOW.md` | - | `file_method/1` in the site Method window and the name check beside the scan list of `sample list` |
-| CLIP-SAVE-UNIFY | `docs/coda/prompt/CLIP-SAVE-UNIFY.md` | - | web study: one copy path (`clipboardCopy`) and one download path (`saveBlob`) in the site JS, about 20 lines; copies without a Safari fallback gain one |
-| NATIVE-SWAPS-SMALL | `docs/coda/prompt/NATIVE-SWAPS-SMALL.md` | - | web study: `structuredClone`, `AbortSignal.timeout`, `Object.hasOwn` and one `wait` in place of hand-written code, about 10 lines, all inside the Safari floor |

@@ -27,8 +27,8 @@ usage: mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--p
   --set       min_sn=3 (S/N on the one-ion floor), min_points=3 (scans in a row with an ion), alpha=0.05 (error of the Currie levels),
               side_min=0.3 (shortest side window, min), gap_min=0.05 (gap to a side, min); every value used is in `provenance.params`
   --ions      opt-in: both scales, cps and ions. Each row gains `ions_*`, `cps_net`, `sn_ions`, `verdict_ions`, each sample an `ion_scale` (ions per cps and where it
-              comes from: the method fields given with --set, else 1 / ion quantum) and its `ion_scale_choice`. --scan-type names the scan type (default: read from the scans)
-  --set       (with --ions) fill_ms (ems, epi), dwell_ms (sim), scan_s + step_da + mass_lo + mass_hi (q1): the method values of the scan type; without them the data estimate is used
+              comes from: the method values given with --set, else those the file's method names (dwell of a SIM/MRM transition), else 1 / ion quantum) and its `ion_scale_choice`. --scan-type names the scan type (default: read from the scans)
+  --set       (with --ions) fill_ms (ems, epi), dwell_ms (sim), scan_s + step_da + mass_lo + mass_hi (q1): the method values of the scan type; a value given wins over the file's method; without any the data estimate is used
   --limit N   most rows printed (default 50); `n_total` and `truncated` say what was cut, `summary` is always whole
   --dry-run   the resolved query and each file with its cache status (raw-plan/1); reads no peak
 exit 0 answered (any verdict, `nothing` too), 1 a file could not be read or its rows are inconsistent (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out not writable";
@@ -110,7 +110,15 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
     extract::with_tmp("raw", |tmp| {
         let mut s = extract::open_sample(f, sample, tmp)?;
         s.routes.pol = a.pol;
-        let out = s.routes.raw_xic(&a.ask)?;
+        // the method of the file fills the ion-scale values `--set` left out (`--ions` only)
+        let method = if a.ask.ions.is_some() {
+            s.mzml
+                .method(&s.name, mzlab_core::method_fit::DOC_MAX as u64)
+        } else {
+            Ok(None)
+        };
+        let (ask, method_choices) = crate::raw_xic_ions::with_method(&a.ask, &method, &s.name);
+        let out = s.routes.raw_xic(&ask)?;
         let sha = s
             .routes
             .idx
@@ -145,7 +153,7 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
             .collect();
         let mut warnings = Vec::new();
         warnings_of(&s.name, s.sample, &out.members, &mut warnings);
-        let choices = choices_of(
+        let mut choices = choices_of(
             &s.name,
             &sid,
             sample.is_none() && s.sample.is_some(),
@@ -153,6 +161,7 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
             a.ask.level,
             a.ask.ions.is_some(),
         );
+        choices.extend(method_choices);
         let prov = prov_file(&s.name, &sha, size, s.sample);
         Ok((
             Answer {

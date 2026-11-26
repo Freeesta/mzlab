@@ -55,7 +55,7 @@ Verdict: **do-now** (inside the floor, tested, small risk), **do-later** (needs 
 ### Do-now
 Each do-now candidate: where and what it does today, the replacement, support, risk, covering tests, estimated lines removed.
 
-**CLIP-SAVE-UNIFY** (about 20 lines)
+**CLIP-SAVE-UNIFY** (about 20 lines) - done: every copy goes through `clipboardCopy`, every Blob download through `saveBlob`; only the boot-failure page (`avvio-progressivo.js`, runs before `compat.js`) keeps its own `writeText`.
 - Today: `elementare.js` (`copyText`), `perf.js` (`#perf-copy`), `tdati.js` (copy button) and `area-copia.js` (`legacy`, `put`) each re-implement the textarea + `execCommand("copy")` fallback that `compat.js` `clipboardCopy` already has. Ten more files call `navigator.clipboard.writeText` with no fallback (the Safari gesture rule is in `compat-safari.md`). `bug-report.js`, `liste-target.js` and `rapporto-flow.js` re-implement the `saveBlob` of `ordine.js` (anchor, object URL, revoke).
 - Replacement: `clipboardCopy` for every copy, `saveBlob` for every Blob download. Both are already used by 11 files; no new platform feature.
 - Risk: low; the order must stay (async API inside the gesture, then the textarea).

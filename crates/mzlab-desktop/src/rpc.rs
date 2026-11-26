@@ -277,6 +277,7 @@ impl State {
                 Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?), None => text(""),
             },
             "filemethod" => text(mzlab_core::filemethod::document(p["sample"].as_u64().map(|x| x as u32), Some(s("method")).filter(|m| !m.is_empty()), s("items"))?),
+            "ionfacts" => text(mzlab_core::ionfacts::read_json(s("method"), s("scan_type"))?),
             "speccompare" => text(mzlab_lib::speccmp::compare_text(s("params"), s("sides"))?),
             "ticbg" => opt(mzlab_core::ticbg_route::route_files(&mut eng.idx, u("slot"), p["blank"].as_i64().unwrap_or(-1), &q())?),
             "map" => {
