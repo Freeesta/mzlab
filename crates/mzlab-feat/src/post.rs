@@ -28,7 +28,12 @@ pub(crate) struct Row {
 }
 
 /// Rows of the features seen on both grids: the one with more points stays (`_merge_grids`); with `overlap` > 0 also two traces whose scans overlap by that share of the shorter one. Returns the keep mask.
-fn merge_grids(f: &[Row], axis: MassAxis, overlap: f64, touch: f64) -> Result<Vec<bool>> {
+pub(crate) fn merge_grids(
+    f: &[Row],
+    axis: MassAxis,
+    overlap: f64,
+    touch: f64,
+) -> Result<Vec<bool>> {
     let (rt_tol, ppm, slack) = (0.05f64, 5e-6f64, 0.02f64);
     let n = f.len();
     let mut keep = Vec::new();

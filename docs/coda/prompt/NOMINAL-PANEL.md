@@ -12,6 +12,6 @@ Read docs/coda/BRIEF.md.
 
 **Done means.** 1. A control in the panel (a `lang/` label and hint), shown for unit-resolution files only, that writes the `preset` key. 2. An e2e test in `tests_e2e/` and a byte test that the page recipe equals the CLI run (extend `tests/test_feat_nominal_wasm.py`). 3. The text says which values the profile writes (from `flow defaults features.detect`).
 
-**Out of scope.** Choosing the profile from the data (row NOMINAL-HINT); changing the HR defaults.
+**Out of scope.** Choosing the profile from the data (`features.estimate` names it with its numbers and never applies it); changing the HR defaults.
 
 **Follow-ups.** Closing step of the brief: delete your row and this file; name each concrete follow-up in the PR body and add its row and prompt.

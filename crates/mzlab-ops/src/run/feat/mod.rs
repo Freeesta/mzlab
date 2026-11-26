@@ -10,6 +10,8 @@ pub mod family;
 pub mod interp;
 #[cfg(feature = "detect")]
 pub mod lr_note;
+#[cfg(feature = "detect")]
+pub mod nominal_note;
 pub mod run;
 #[cfg(feature = "detect")]
 pub mod run_estimate;

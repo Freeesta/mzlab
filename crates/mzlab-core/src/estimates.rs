@@ -8,6 +8,9 @@ use crate::flow::value_text;
 use crate::json::{self, Value};
 use crate::jsonb::{int, msg, num, opt, text, write, Obj};
 
+#[path = "estimates_hint.rs"]
+mod hint;
+
 /// Fewer files than this: the median rests on little data and a note says so (nothing is refused).
 pub const FEW_FILES: usize = 3;
 /// Significant figures of a proposed value in a `--set` line (the median is kept whole in the evidence).
@@ -433,7 +436,7 @@ pub fn route(body: &str) -> Result<String> {
     let group = majority(&files);
     let (taken, left_out, no_estimate) = split_group(&files, group.as_ref());
     let (gp, ga) = group.unwrap_or((0.0, String::new()));
-    let (choices, notes) = choices_notes(left_out.len(), taken.len(), gp, &ga);
+    let (choices, mut notes) = choices_notes(left_out.len(), taken.len(), gp, &ga);
     let (mut values, mut found) = (Vec::new(), Vec::new());
     for m in MEASURES {
         let (entry, f) = value_of(m, &taken);
@@ -442,6 +445,8 @@ pub fn route(body: &str) -> Result<String> {
     }
     let plan = v.get("plan").filter(|p| !p.is_null());
     let (params, skipped) = proposals(&found, plan, (gp, &ga));
+    let (hints, hint_notes) = hint::nominal_hints(&taken, plan);
+    notes.extend(hint_notes);
     let summary = Obj::new()
         .i("files", files.len() as i64)
         .i("estimated", taken.len() as i64)
@@ -457,6 +462,7 @@ pub fn route(body: &str) -> Result<String> {
         .put("values", Value::Arr(values))
         .put("params", Value::Arr(params))
         .put("skipped", Value::Arr(skipped))
+        .put("hints", Value::Arr(hints))
         .put("left_out", Value::Arr(left_out))
         .put("choices", Value::Arr(choices))
         .put("notes", Value::Arr(notes))

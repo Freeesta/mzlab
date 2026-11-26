@@ -283,6 +283,7 @@ I18N.add("en", {
   "warn.centroid.merged": "Some centroids are wider than one peak at their m/z (more than 1.12 times the width of the file there): two close peaks may have been read as one. This is a notice, not an identification: look at the profile scan before trusting that m/z.",
   "warn.estimate.mixed": "{left_out} file(s) differ in polarity or axis from the group most files share, so they are left out of the values (listed in left_out). Measure them in a separate call to see their own values.",
   "note.estimate.fewFiles": "The values come from {files} file(s); a median over fewer than 3 files says little about the spread between files. Nothing is refused.",
+  "note.estimate.nominal": "{files} of {of} file(s) look like nominal-resolution data: about {between_pct}% of the candidate rows lie between the nominal and the lr height, and about {split_pct}% are one ion split across the two grids. Passing detect.preset=nominal would keep and merge them; nothing is applied by itself.",
   "note.features.column": "Column {column} is sample {id} ({sample}) of {file}: a sample of a file with several is named by its own name, with the extension of the file.",
   "note.features.columnTie": "Column {column} is sample {id} ({sample}) of {file}: two samples have the same name, so the column also carries the file and the sample id.",
   "note.features.columnNumbered": "Column {column} is sample {id} ({sample}) of {file}: another column has the same name (the same sample twice, or two files of one name), so this one is numbered [2], [3], ... in the order given.",
