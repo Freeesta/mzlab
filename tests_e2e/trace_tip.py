@@ -38,7 +38,7 @@ def top_row(pg, P, label):
     rest = _record(pg, P, lambda: pg.evaluate("draw(%s)" % P))
     need(len(rest) > 2, "%s: no stroke recorded at rest" % label)
     pg.evaluate("%s.cv.scrollIntoView({ block: 'center' })" % P); frames(pg, 2)
-    pos = pg.evaluate("(() => { const p = %s, r = p.cv.getBoundingClientRect(), a = p._a; return { x: r.left + a.X((a.x0 + a.x1) / 2), y: r.top + (a.H - 10) / 2 }; })()" % P)
+    pos = pg.evaluate("(() => { const p = %s, r = p.cv.getBoundingClientRect(), a = p._a; const s = a.sr[0], k = Math.max(0, Math.min(s.x.length - 2, s.x.findIndex(v => v >= (a.x0 + a.x1) / 2))); return { x: r.left + a.X(s.x[k] + 0.25 * (s.x[k + 1] - s.x[k])), y: r.top + (a.H - 10) / 2 }; })()" % P)   # a quarter of a step past a sample: no tie between two samples, whatever the grid
     def hover():
         pg.mouse.move(pos["x"] - 3, pos["y"]); pg.mouse.move(pos["x"], pos["y"])
         wait_for_js(pg, "!!%s.tip && !%s.tip.hidden && !!%s.tip.querySelector('div.top')" % (P, P, P), timeout=10000)
