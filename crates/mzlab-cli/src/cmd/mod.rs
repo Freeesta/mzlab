@@ -80,6 +80,7 @@ const JSON_DEFAULT: &[&str] = &[
     "trace xic",
     "spectrum get",
     "spectrum list",
+    "spectrum compare",
     "file verify",
     "spectrum dda-window",
     "ion pattern",

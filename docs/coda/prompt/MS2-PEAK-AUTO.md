@@ -12,6 +12,6 @@ Read docs/coda/BRIEF.md.
 
 **Done means.** 1. `--peak auto` with `--set` for the window factor (default 2), the side width and the gap; the output names the apex time, FWHM, window, side windows and the background level, and keeps `n_scans` and `total_ions`. 2. When no apex is found, no spectrum is invented: a verdict with the evidence. 3. Synthetic test with a known apex and a flat background. Parity site=app=CLI.
 
-**Out of scope.** Compare two spectra (row SPECTRUM-COMPARE).
+**Out of scope.** Compare two spectra (`spectrum compare`, on main).
 
 **Follow-ups.** Closing step of the brief: delete your row and this file; name each concrete follow-up in the PR body and add its row and prompt.

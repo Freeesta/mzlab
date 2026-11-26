@@ -12,6 +12,8 @@ use crate::Outcome;
 
 #[path = "spectrum_bins.rs"]
 mod bins;
+#[path = "spectrum_compare.rs"]
+mod compare_cmd;
 #[path = "spectrum_level.rs"]
 mod level;
 #[path = "spectrum_list.rs"]
@@ -20,6 +22,7 @@ mod list_cmd;
 mod minus;
 #[path = "spectrum_sum.rs"]
 mod sum;
+pub use compare_cmd::compare;
 pub use list_cmd::list;
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
@@ -400,6 +403,9 @@ fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
 #[cfg(test)]
 #[path = "spectrum_bins_tests.rs"]
 mod bins_tests;
+#[cfg(test)]
+#[path = "spectrum_compare_tests.rs"]
+mod compare_tests;
 #[cfg(test)]
 #[path = "spectrum_sum_tests.rs"]
 mod sum_tests;

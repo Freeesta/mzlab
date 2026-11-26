@@ -311,7 +311,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
     run,
 ), Entry::new(
     "table compare",
-    "mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products",
+    "mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank",
     crate::table_compare_cmd::run,
 )
 .schema("compare/1")
@@ -319,7 +319,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 .examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "quant targets",
-    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset, RT windows on an internal reference",
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")
@@ -334,7 +334,7 @@ Entry::new(
 .examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"]),
 Entry::new(
     "estimate",
-    "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data, with their evidence",
+    "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data",
     crate::estimate_cmd::run,
 )
 .schema("estimate/1")
