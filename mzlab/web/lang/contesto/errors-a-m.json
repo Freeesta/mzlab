@@ -147,6 +147,7 @@
   "err.cli.rawxic.needsIons": "CLI usage error of raw xic: a method value of the ion scale or --scan-type was given without --ions.",
   "err.cli.rawxic.limit": "CLI usage error of raw xic --limit; {value} = the word given after --limit.",
   "err.cli.rawxic.polarity": "CLI usage error of raw xic --polarity; {value} = the word given after --polarity.",
+  "err.cli.tracexic.needsIons": "CLI usage error of trace xic: a method value of the ion scale or --scan-type was given without --ions.",
   "err.cli.estimate.needsFile": "CLI usage error of estimate: no file was given.",
   "err.cli.estimate.axis": "CLI usage error of estimate; {value} = the word given after --axis.",
   "err.cli.estimate.polarity": "CLI usage error of estimate; {value} = the word given after --polarity.",

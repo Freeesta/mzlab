@@ -1,5 +1,5 @@
 // @ts-strict
-// `api/rawinfo`, `api/rawxic`, `api/specsum`, `api/rawscan` and `api/specpeak` in the worker of the engine (rust-worker.js, op "route"): the .wasm `raw` (crates/mzlab-raw-wasm; `rawxic`, crates/mzlab-rawxic-wasm, for `/api/rawxic` and `/api/specsum`; `rawscan`, crates/mzlab-rawscan-wasm, for `/api/rawscan`; `specpeak`, crates/mzlab-specpeak-wasm, for `/api/specpeak`) of wasm-feat/manifest.json
+// `api/rawinfo`, `api/rawxic`, `api/xicions`, `api/specsum`, `api/rawscan` and `api/specpeak` in the worker of the engine (rust-worker.js, op "route"): the .wasm `raw` (crates/mzlab-raw-wasm; `rawxic`, crates/mzlab-rawxic-wasm, for `/api/rawxic`, `/api/xicions` and `/api/specsum`; `rawscan`, crates/mzlab-rawscan-wasm, for `/api/rawscan`; `specpeak`, crates/mzlab-specpeak-wasm, for `/api/specpeak`) of wasm-feat/manifest.json
 // is fetched on the first request and reads the .mzidx of the file from OPFS itself; the members are those of `mzlab-cli raw info`, the rows those of `raw xic`.
 // The engine's .wasm has no room for it (docs/agenti/raw-access.md).
 
@@ -11,17 +11,17 @@ import { ionFacts } from "./rust-filemethod.js";
  * The answer of `Routes::raw_info_route` or, for `/api/rawxic` and `/api/rawscan`, `raw_xic_route` and `raw_scan_route` ("" = no index for the slot); a failure is thrown as the JSON string
  * `{error_key, params}` of the module.
  * @param {{slot: number, path?: string, query?: string}} m
- * `/api/rawxic?ions=1` also takes the ion-scale values of the file's own `method/1` (`methodOf`: the `lr_metodo` answer `{info: {source, method}}`) for each value the query leaves out, as `mzlab-cli raw xic --ions` does.
+ * `/api/rawxic?ions=1` and `/api/xicions?ions=1` also take the ion-scale values of the file's own `method/1` (`methodOf`: the `lr_metodo` answer `{info: {source, method}}`) for each value the query leaves out, as `mzlab-cli raw xic --ions` does.
  * @param {{nameOf: (slot: number) => string | undefined, polOf: (slot: number) => number, readerFor: (blob: Blob, held?: string[]) => any, methodOf?: (name: string) => Promise<any>}} env
  */
 export async function rawInfo(m, { nameOf, polOf, readerFor, methodOf }) {
   const name = nameOf(m.slot), blob = name ? await ARCH.get("idx", name + ".mzidx") : null;
   if (!blob || !name) return "";
-  const key = ({ "/api/rawxic": "rawxic", "/api/specsum": "rawxic", "/api/rawscan": "rawscan", "/api/specpeak": "specpeak" })[m.path ?? ""] ?? "raw";
+  const key = ({ "/api/rawxic": "rawxic", "/api/xicions": "rawxic", "/api/specsum": "rawxic", "/api/rawscan": "rawscan", "/api/specpeak": "specpeak" })[m.path ?? ""] ?? "raw";
   const mod = await load(key);
-  const ask = ({ raw: mod.raw_info, rawxic: m.path === "/api/specsum" ? mod.spec_sum : mod.raw_xic, rawscan: mod.raw_scan, specpeak: mod.spec_peak })[key];
+  const ask = ({ raw: mod.raw_info, rawxic: m.path === "/api/specsum" ? mod.spec_sum : m.path === "/api/xicions" ? mod.xic_ions : mod.raw_xic, rawscan: mod.raw_scan, specpeak: mod.spec_peak })[key];
   let query = m.query || "";
-  if (key === "rawxic" && m.path === "/api/rawxic" && methodOf) query = await withMethod(query, () => methodOf(name));
+  if (key === "rawxic" && (m.path === "/api/rawxic" || m.path === "/api/xicions") && methodOf) query = await withMethod(query, () => methodOf(name));
   return ask(blob.size, readerFor(blob, ["idx", name + ".mzidx"]), polOf(m.slot), query);
 }
 

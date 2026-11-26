@@ -33,6 +33,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
         "--mz-offset",
         "observed-true Da (|DA|<=0.6), or auto:MZ[@RT]",
     ),
+    ("--ions", "also in ions: factor and its source"),
+    ("--scan-type", "ems, epi, q1, sim or other"),
     ("--check", "exit 1 if changed"),
     ("--set", "NAME=VALUE"),
     ("--sample", "ids: 1,3,5 or 2-4"),

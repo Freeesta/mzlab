@@ -55,7 +55,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --ions: also in ions; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -69,7 +69,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N; --ions: ion scale too
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
@@ -181,7 +181,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --ions: also in ions; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -195,7 +195,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N; --ions: ion scale too
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)
@@ -307,7 +307,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --ions: also in ions; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -321,7 +321,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
-       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
+       mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N; --ions: ion scale too
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at or --step)

@@ -141,30 +141,17 @@ pub(crate) fn members_json(
             None => o.raw("null"),
         };
         o.raw(",\"ion_scale_choice\":")
-            .raw(&scale_choice(f, kind, named));
+            .raw(&crate::ionscale::choice_json(
+                f,
+                kind,
+                if named {
+                    "scan_type given"
+                } else {
+                    "the scans of the level"
+                },
+                "the ions_* keys are absent",
+            ));
     }
-    o.0
-}
-
-/// The log of the automatic choice behind `ion_scale`: how the scan type was found and which evidence gave the factor.
-fn scale_choice(f: Option<&Factor>, kind: crate::ionscale::ScanKind, named: bool) -> String {
-    let mut o = Out::default();
-    o.raw("{\"scan_type\":").str(kind.name());
-    o.raw(",\"scan_type_from\":").str(if named {
-        "scan_type given"
-    } else {
-        "the scans of the level"
-    });
-    o.raw(",\"evidence\":");
-    match f {
-        None => o.str(&format!("none: the {} scans need {} from the method and no ion quantum was accepted, the ions_* keys are absent", kind.name(), kind.needs())),
-        Some(f) => match (f.source, f.missing) {
-            (crate::ionscale::Source::Method, _) => o.str("method field(s) of the call; the data estimate is next to it"),
-            (_, Some(m)) => o.str(&format!("data estimate 1 / ion quantum: the method gave no {m}")),
-            _ => o.str("data estimate 1 / ion quantum"),
-        },
-    };
-    o.raw("}");
     o.0
 }
 

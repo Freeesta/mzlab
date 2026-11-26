@@ -129,14 +129,18 @@ fn the_documents_have_the_keys_of_their_schemas() {
     }
     let doc =
         |a: &[&str]| parse(String::from_utf8(run(a).stdout).unwrap().trim().as_bytes()).unwrap();
-    assert_eq!(
-        keys(&doc(&["trace", "chrom", &f, "--id", "tic"])),
-        props(include_bytes!("../../../docs/schemi/trace-1.json"))
-    );
+    // `ions` is the one member written only with `trace xic --ions`
+    let trace = props(include_bytes!("../../../docs/schemi/trace-1.json"));
+    let plain: Vec<String> = trace.iter().filter(|k| *k != "ions").cloned().collect();
+    assert_eq!(keys(&doc(&["trace", "chrom", &f, "--id", "tic"])), plain);
     assert_eq!(
         keys(&doc(&["trace", "xic", &f, "--mz", "241.3", "--ppm", "10"])),
-        props(include_bytes!("../../../docs/schemi/trace-1.json"))
+        plain
     );
+    let with = ["--ions", "--scan-type", "sim", "--set", "dwell_ms=5"];
+    let mut a = vec!["trace", "xic", &f, "--mz", "241.3", "--ppm", "10"];
+    a.extend(with);
+    assert_eq!(keys(&doc(&a)), trace);
     assert_eq!(
         keys(&doc(&["spectrum", "get", &f, "--rt", "3"])),
         props(include_bytes!("../../../docs/schemi/spectrum-1.json"))

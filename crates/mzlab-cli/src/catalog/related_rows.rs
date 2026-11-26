@@ -33,9 +33,10 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli quant targets --targets T.csv A.mzML B.mzML --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --rt-ref auto --log log.json"),
     r("dad delay", "delay lag detector pda uv dad ms offset flow cell tubing synchronise align uv to ms time shift correction", &["dad peaks", "dad ms-at", "file convert"]),
     r("table compare", "blank reference ratio subtraction candidate products background contaminant carryover matrix blank", &["table.filter", "tp.dig_lr"]),
-    r("trace xic", "extracted ion chromatogram eic xic many ions many masses list of ions every mass every m/z sweep range grid step from to scan masses loop tens of thousands of calls mz mass offset shift calibrate calibration wrong error mz-offset auto polarity", &["peak table", "trace chrom", "chrom.transitions", "raw xic", "quant targets"])
+    r("trace xic", "extracted ion chromatogram eic xic many ions many masses list of ions every mass every m/z sweep range grid step from to scan masses loop tens of thousands of calls mz mass offset shift calibrate calibration wrong error mz-offset auto polarity ion counts per point ions column cps to ions fill time dwell time", &["peak table", "trace chrom", "chrom.transitions", "raw xic", "quant targets", "peak noise"])
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
+    r("peak noise", "noise of an ion counting trace floor of one ion poisson s/n check ion scale cps to ions", &["trace xic", "raw xic", "peak table"]),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
     r("peak auto-lr", "integrate peaks one trace sim mrm area snr state detected absent", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
     r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
