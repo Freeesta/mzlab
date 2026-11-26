@@ -318,6 +318,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.align", "recenter") => r.screen.recenter = switch(step, k, v, false)?,
         ("features.align", "mz_offset") => set_mz_offset(r, step, k, v)?,
         ("features.gapfill", "dedup") => r.screen.dedup = switch(step, k, v, false)?,
+        ("features.gapfill", "dedup_overlap") => r.screen.dedup_overlap = Some(num()?),
         ("features.gapfill", "floor") => r.fill.floor = num()?,
         ("features.gapfill", "ppm") => r.fill.ppm = num()?,
         ("features.gapfill", "rt_tol") => r.fill.rt_tol = num()?,
@@ -437,6 +438,12 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
             ("max_gap", n(r.fill.max_gap as f64)),
             ("long_trace", n(r.fill.long_trace as f64)),
             ("dedup", Value::Str(r.screen.dedup.name().into())),
+            (
+                "dedup_overlap",
+                n(r.screen
+                    .dedup_overlap
+                    .unwrap_or(crate::lrscreen_dedup::DEFAULT_OVERLAP)),
+            ),
         ],
         "features.ms2_link" => vec![
             ("default_half_window", n(r.steps.ms2.default_half_window)),

@@ -19,7 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca, load as loadModule } from "./rust-msngrafo.js";
-import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js"; import { rawInfo } from "./rust-raw.js";
+import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js"; import { rawInfo } from "./rust-raw.js"; import { fileMethod } from "./rust-filemethod.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -463,7 +463,7 @@ async function handle(ev) {
         await ARCH.lease("idx", m.name + ".mzidx");
         const lr = lrSlot.get(m.name), reader = readerFor(blob, ["idx", m.name + ".mzidx"]); info = (lr !== undefined && lr !== m.slot && openGate.same(lr, blob) && engine.share_index(m.slot, lr, reader)) || engine.open_index(m.slot, blob.size, reader); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); tilePol.set(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;      // the same index already in the slot of the list: shared, not parsed again (one scan table per file)
       }
-      case "route": info = (m.path === "/api/rawinfo" || m.path === "/api/rawxic" || m.path === "/api/specsum" || m.path === "/api/specpeak") ? await rawInfo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }) : engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index; api/rawinfo and api/rawxic: the lazy module `raw`
+      case "route": info = (m.path === "/api/rawinfo" || m.path === "/api/rawxic" || m.path === "/api/specsum" || m.path === "/api/rawscan" || m.path === "/api/specpeak") ? await rawInfo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }) : engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index; api/rawinfo, api/rawxic, api/specsum and api/rawscan and api/specpeak: the lazy modules `raw`, `rawxic` and `rawscan`
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
       case "mzmlroute": case "specbg": case "scanbin": return scanOp(m);                            // api/spectra, scan, scanavg, scanbin, spectrum with a background: see scanOp
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML
@@ -471,7 +471,7 @@ async function handle(ev) {
       case "mrmchrom": info = engine.mrm_chrom(m.slot, m.blob.size, readerFor(m.blob), m.kind); break;   // api/chrom of an MRM file: a chromatogram of the mzML
       case "fileinfo": case "canali": info = (m.op === "canali" ? engine.canali : engine.fileinfo).call(engine, m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index; api/channels: the channels of its scans and chromatograms
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
-      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;   case "ticbg": info = await ticFondo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }); break;   // api/subxic of a high-resolution survey ("" = Python's); api/tic_background: the TIC/BPC without its chemical background
+      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;   case "filemethod": info = await fileMethod(m); break;   case "ticbg": info = await ticFondo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }); break;   // api/subxic of a high-resolution survey ("" = Python's); api/tic_background: the TIC/BPC without its chemical background
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error

@@ -1,0 +1,8 @@
+uscita = "wasm-feat/rawscan"
+pacchetto = "mzlab-rawscan-wasm"
+chiavi = { rawscan = 34 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 249856
+misura = 234594
+nota = "api/rawscan (`raw scan`: the mean spectrum of a window minus the mean of its two sides, per bin, with ion-count verdicts over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first scan request; a module of its own (new lazy module, owner decision NEW line); 234,594 B after wasm-opt (CI size step, 84d9370), cap = measurement x 1.05 rounded up to 4 KiB"

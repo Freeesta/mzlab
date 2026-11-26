@@ -117,6 +117,8 @@ pub struct LrDig {
     pub merged: Vec<merge::Merge>,
     /// The peak checks of the cells (`peakchk`): S/N per point and whether it is a detected peak.
     pub checks: std::sync::Arc<peakchk::Checks>,
+    /// The `pairing` array the files document carried (`samples::notes_json`: the automatic choices that paired the samples with the files), "" when there is none; copied to the summary.
+    pub pairing: String,
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -327,6 +329,7 @@ pub fn dig<R: ReadAt>(
     open: &mut dyn FnMut(usize) -> Res<Index<R>>,
 ) -> Res<LrDig> {
     let files = plan::files(files_json)?;
+    let pairing = plan::pairing(files_json);
     let parent = plan::parent(parent_json)?;
     let s = plan::settings(settings_json);
     let (mut t, _) = crate::store_read::read_table(table).map_err(|e| e.to_string())?;
@@ -390,5 +393,6 @@ pub fn dig<R: ReadAt>(
         unexpected_left,
         merged,
         checks: std::sync::Arc::new(chk),
+        pairing,
     })
 }

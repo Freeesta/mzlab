@@ -33,6 +33,10 @@ ASKS = [
     (["--mz", "305.3,500", "--rt", "13.5,16"], "mz=305.3,500&rt=13.5,16"),
     (["--mz", "229.1", "--rt", "6,8", "--da", "0.3", "--set", "min_sn=50,min_points=5,alpha=0.01"], "mz=229.1&rt=6,8&da=0.3&min_sn=50&min_points=5&alpha=0.01"),
     (["--mz", "229.0", "--rt", "6,8", "--da", "0.1", "--mz-offset", "0.1"], "mz=229.0&rt=6,8&da=0.1&mz_offset=0.1"),
+    # the opt-in ion scale: a scan type named, its method value, the factor and the ions_* keys of the row
+    (["--mz", "229.1", "--rt", "6,8", "--da", "0.3", "--ions", "--scan-type", "sim", "--set", "dwell_ms=5"], "mz=229.1&rt=6,8&da=0.3&ions=1&scan_type=sim&dwell_ms=5"),
+    (["--mz", "229.1", "--rt", "6,8", "--da", "0.3", "--ions", "--scan-type", "q1", "--set", "scan_s=2,step_da=0.1,mass_lo=100,mass_hi=200"], "mz=229.1&rt=6,8&da=0.3&ions=1&scan_type=q1&scan_s=2&step_da=0.1&mass_lo=100&mass_hi=200"),
+    (["--mz", "229.1", "--rt", "6,8", "--da", "0.3", "--ions"], "mz=229.1&rt=6,8&da=0.3&ions=1"),
 ]
 # questions both refuse: the same error key
 MANY = ",".join(str(100 + i * 0.01) for i in range(1001))  # one more than rawxic::MAX_MASSES
@@ -40,6 +44,8 @@ BAD = [
     (["--mz", "229.1", "--rt", "8,6"], "mz=229.1&rt=8,6", "err.raw.xic.param"),
     (["--mz", "229.1", "--rt", "6,8", "--da", "0"], "mz=229.1&rt=6,8&da=0", "err.raw.xic.param"),
     (["--mz", MANY, "--rt", "6,8"], f"mz={MANY}&rt=6,8", "err.raw.xic.many"),
+    (["--mz", "229.1", "--rt", "6,8", "--ions", "--scan-type", "ms"], "mz=229.1&rt=6,8&ions=1&scan_type=ms", "err.raw.xic.param"),
+    (["--mz", "229.1", "--rt", "6,8", "--ions", "--set", "fill_ms=-1"], "mz=229.1&rt=6,8&ions=1&fill_ms=-1", "err.raw.xic.param"),
 ]
 
 

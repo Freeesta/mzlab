@@ -32,6 +32,16 @@ pub fn quant_targets_step() -> Step {
                 .doc("A peak with fewer points between its edges is flagged bad_shape"),
             Param::number("min_shape", "Min. Gaussian shape").min(0.0).max(1.0).default_num(0.5)
                 .doc("A peak whose correlation with a Gaussian of the same apex and width is under this is flagged bad_shape"),
+            Param::integer("min_half", "Min. scans over half height").min(0.0).default_num(0.0)
+                .doc("A peak with fewer scans in an unbroken run at or over half its height is flagged bad_shape; 0 = off. Noise blips are one or two scans wide")
+                .tip("Shape gate: needs this many scans over half the peak height (0 = off)."),
+            Param::number("max_fwhm", "Max. width (FWHM)").min(0.0).default_num(0.0).unit("s")
+                .doc("A peak wider than this at half height is flagged bad_shape; 0 = off")
+                .advanced(),
+            Param::number("max_asym", "Max. asymmetry").min(0.0).default_num(0.0)
+                .doc("A peak whose right/left (or left/right) width at 10 % of the height is over this is flagged bad_shape; 1 or more, 0 = off")
+                .tip("Shape gate: widest left/right ratio at 10 % height (1 or more, 0 = off).")
+                .advanced(),
             Param::text("offset", "m/z offset").default_str("0")
                 .doc("Observed minus true m/z: 0, a number of Da (|D| <= 0.6), auto (measured in each file and polarity on the first standard or parent row; none: 0, logged) or auto:MZ[@RT]")
                 .tip("Observed minus true m/z: 0, a number of Da, or auto to measure it on a standard."),

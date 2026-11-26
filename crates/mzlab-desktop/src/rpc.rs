@@ -274,9 +274,9 @@ impl State {
                 }
             }
             "subxic" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?),
-                None => text(""),
+                Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?), None => text(""),
             },
+            "filemethod" => text(mzlab_core::filemethod::document(p["sample"].as_u64().map(|x| x as u32), Some(s("method")).filter(|m| !m.is_empty()), s("items"))?),
             "ticbg" => opt(mzlab_core::ticbg_route::route_files(&mut eng.idx, u("slot"), p["blank"].as_i64().unwrap_or(-1), &q())?),
             "map" => {
                 let metas = session_items(s("items"))?;

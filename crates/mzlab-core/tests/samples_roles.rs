@@ -110,3 +110,143 @@ fn the_evidence_of_a_lone_d_is_the_d_that_decided() {
         .expect("kind position");
     assert_eq!((kind.start, kind.end), (10, 11));
 }
+
+/// The two dark words written as one token are a dark control with the whole token as evidence; a longer word that only contains them is not.
+#[test]
+fn a_dark_control_written_as_one_token_is_dark() {
+    for (name, word) in [
+        ("Smp_darkcontrol", "darkcontrol"),
+        ("Smp_t30_darkCtrl", "darkCtrl"),
+        ("Smp_Ctrl-dark_2", "Ctrl"),
+        ("Smp_controldark", "controldark"),
+    ] {
+        let c = table(&[name]).remove(0);
+        assert_eq!(c.kind, "dark", "{name}");
+        let files = vec![(name.to_string(), String::new(), String::new())];
+        let p = &mzlab_core::samples::propose_explained(&files)[0];
+        let k = p.positions.iter().find(|x| x.field == "kind").expect(name);
+        let chars: Vec<char> = name.chars().collect();
+        assert_eq!(
+            chars[k.start..k.end].iter().collect::<String>(),
+            word,
+            "{name}"
+        );
+    }
+    for name in ["Smp_darkcontrolled", "Smp_undarkcontrol", "Smp_t30"] {
+        assert_ne!(table(&[name]).remove(0).kind, "dark", "{name}");
+    }
+}
+
+/// `order_for_roles`: the same files give the text of `order_like`; a sample the table lacks is left out; a table file with no sample takes its name's role.
+#[test]
+fn the_pairing_for_roles_never_stops_on_a_difference() {
+    use mzlab_core::samples::{order_for_roles, order_like};
+    let doc = mzlab_core::samples::to_json(&table(&["a_t0.mzML", "a_t10.mzML", "a_std.mzML"]));
+    let same: Vec<String> = ["a_t10.mzML", "a_t0.mzML", "a_std.mzML"]
+        .map(String::from)
+        .to_vec();
+    let p = order_for_roles(&doc, &same).unwrap();
+    assert_eq!(
+        (p.text, p.notes.len()),
+        (order_like(&doc, &same).unwrap(), 0)
+    );
+    let fewer: Vec<String> = ["a_t0.mzML", "a_t10.mzML"].map(String::from).to_vec();
+    assert!(order_like(&doc, &fewer).is_err());
+    let p = order_for_roles(&doc, &fewer).unwrap();
+    assert_eq!(
+        p.notes
+            .iter()
+            .map(|n| (n.action, n.file.as_str(), n.role.as_str()))
+            .collect::<Vec<_>>(),
+        [("left_out", "a_std.mzML", "std")]
+    );
+    assert_eq!(
+        mzlab_core::samples::from_json(p.text.as_bytes())
+            .unwrap()
+            .len(),
+        2
+    );
+    let more: Vec<String> = [
+        "a_t0.mzML",
+        "a_t10.mzML",
+        "a_std.mzML",
+        "a_blank.mzML",
+        "a_run.mzML",
+    ]
+    .map(String::from)
+    .to_vec();
+    let p = order_for_roles(&doc, &more).unwrap();
+    let got: Vec<_> = p
+        .notes
+        .iter()
+        .map(|n| {
+            (
+                n.action,
+                n.file.as_str(),
+                n.role.as_str(),
+                n.evidence.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        got,
+        [
+            ("proposed", "a_blank.mzML", "blank", "blank"),
+            ("proposed", "a_run.mzML", "sample", "")
+        ]
+    );
+    // a document that is not a samples/1 is still refused
+    assert!(order_for_roles("{\"schema\":\"x\"}", &more).is_err());
+}
+
+/// The lenient pairing edits the document as it was written, like the strict `order_like`: a field the model does not know stays, in the document and in each row.
+#[test]
+fn the_lenient_pairing_keeps_the_fields_it_does_not_know() {
+    use mzlab_core::json::parse;
+    use mzlab_core::samples::{order_for_roles, to_json};
+    let doc = to_json(&table(&["a_t0.mzML", "a_t10.mzML", "a_std.mzML"]))
+        .replacen('{', "{\"lab_note\":\"kept\",", 1)
+        .replacen("\"file\":", "\"free_text\":\"row\",\"file\":", 1);
+    let names: Vec<String> = ["a_t10.mzML", "a_t0.mzML", "a_dark.mzML"]
+        .map(String::from)
+        .to_vec();
+    let p = order_for_roles(&doc, &names).unwrap();
+    let v = parse(p.text.as_bytes()).unwrap();
+    assert_eq!(v.get("lab_note").and_then(|x| x.str()), Some("kept"));
+    let rows = v.get("samples").unwrap().arr();
+    let files: Vec<_> = rows
+        .iter()
+        .map(|r| r.get("file").and_then(|x| x.str()).unwrap())
+        .collect();
+    assert_eq!(files, ["a_t10.mzML", "a_t0.mzML", "a_dark.mzML"]);
+    let kept = rows.iter().filter(|r| r.get("free_text").is_some()).count();
+    assert_eq!(kept, 1, "the extra field of the row that is still there");
+    assert_eq!(rows[2].get("kind").and_then(|x| x.str()), Some("dark"));
+}
+
+/// The evidence of a proposal names the word that decided the role for every role a word gives, and the `pairing` array of a result has stable keys.
+#[test]
+fn the_pairing_array_has_stable_keys_and_evidence_for_every_word_role() {
+    use mzlab_core::samples::{notes_json, order_for_roles, to_json, with_pairing};
+    let doc = to_json(&table(&["a_t0.mzML"]));
+    let names: Vec<String> = ["a_t0.mzML", "a_infusion.mzML", "a_cal.mzML"]
+        .map(String::from)
+        .to_vec();
+    let p = order_for_roles(&doc, &names).unwrap();
+    let got: Vec<_> = p
+        .notes
+        .iter()
+        .map(|n| (n.role.as_str(), n.evidence.as_str()))
+        .collect();
+    assert_eq!(got, [("infusion", "infusion"), ("calibration", "cal")]);
+    assert_eq!(
+        notes_json(&p.notes),
+        "[{\"action\":\"proposed\",\"file\":\"a_infusion.mzML\",\"role\":\"infusion\",\"evidence\":\"infusion\"},{\"action\":\"proposed\",\"file\":\"a_cal.mzML\",\"role\":\"calibration\",\"evidence\":\"cal\"}]"
+    );
+    // no note: the result keeps its bytes; notes: the key goes at the end
+    assert_eq!(with_pairing("{\"a\":1}", &[]), "{\"a\":1}");
+    assert_eq!(
+        with_pairing("{\"a\":1}", &p.notes),
+        format!("{{\"a\":1,\"pairing\":{}}}", notes_json(&p.notes))
+    );
+}

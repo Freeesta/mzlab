@@ -169,6 +169,8 @@ pub struct FileRunner {
     pub(crate) dir: PathBuf,
     pub(crate) work: PathBuf,
     pub(crate) inputs: HashMap<String, PathBuf>,
+    /// The column label of each `NAME@ID` input of a file with several samples (`sample_label`), made once at the first use.
+    pub(crate) columns: std::sync::OnceLock<HashMap<String, String>>,
     meter: Option<Meter>,
     pub(crate) made: Mutex<HashMap<String, PathBuf>>,
     pub(crate) lineage: Mutex<trace::Traced>,
@@ -192,6 +194,7 @@ impl FileRunner {
             dir: dir.to_path_buf(),
             work: work.to_path_buf(),
             inputs: HashMap::new(),
+            columns: std::sync::OnceLock::new(),
             meter,
             made: Mutex::new(HashMap::new()),
             lineage: Mutex::default(),

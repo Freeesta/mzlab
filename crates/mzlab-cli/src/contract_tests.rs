@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::cmd::entries;
 use crate::{
     execute, pack_cmd_tests::MISSING as PACK, raw_cmd::tests::MISSING as RAW,
-    samples_import::tests::MISSING as IMPORT, Outcome,
+    samples_import::tests::MISSING as IMPORT, samples_pair::tests::MISSING as PAIR, Outcome,
 };
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
@@ -35,6 +35,7 @@ pub(crate) const MISSING: &[&[&str]] = &[
     &["file", "validate", "/nonexistent/x.mzML"],
     &["file", "channels", "/nonexistent/x.mzML"],
     &["file", "items", "/nonexistent/x.mzML"],
+    &["file", "method", "/nonexistent/x.mzML"],
     &["file", "info", "/nonexistent/x.mzML"],
     &[
         "file",
@@ -393,6 +394,7 @@ fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
         .chain(PACK)
         .chain(RAW)
         .chain(IMPORT)
+        .chain(PAIR)
         .collect();
     for a in &cases {
         let o = run(a);

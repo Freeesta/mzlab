@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raw-scan/1",
+  "title": "raw-scan/1: what is in the mean spectrum of a time window that is not in the background beside it? `mzlab-cli raw scan`",
+  "description": "Per file the mean spectrum of the scans of a window minus the mean of the scans on its two sides, per bin (whole masses or tenths of a dalton): rows by net intensity with the ratio, the net ion counts, their z and a verdict (peak, trace, nothing; null without an ion quantum). `summary` has one object per file and is whole; `rows` is cut at `top` per file and at `limit` in all (`n_total`, `truncated`); with `--full` the rows are in the CSV named in `full` and `rows` is empty. A `nothing` is an answer: exit 0. Code: crates/mzlab-core/src/rawscan.rs, crates/mzlab-cli/src/raw_scan_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "query",
+    "files",
+    "summary",
+    "rows",
+    "n_total",
+    "limit",
+    "truncated",
+    "full",
+    "warnings",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raw-scan/1"
+    },
+    "query": {
+      "type": "object"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "container",
+              "sha256",
+              "size_bytes",
+              "samples"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "container": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "ms_level",
+                    "n_level_scans",
+                    "channel",
+                    "bin",
+                    "mz_range",
+                    "ion_quantum",
+                    "counts",
+                    "mz_offset",
+                    "thresholds"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ms_level": {
+                      "type": "integer"
+                    },
+                    "n_level_scans": {
+                      "type": "integer"
+                    },
+                    "channel": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "bin": {
+                      "enum": [
+                        "nominal",
+                        "0.1"
+                      ]
+                    },
+                    "mz_range": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "ion_quantum": {
+                      "type": "object"
+                    },
+                    "counts": {
+                      "type": "boolean",
+                      "description": "true when the ion quantum is accepted, so counts and verdicts are given"
+                    },
+                    "mz_offset": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "required": [
+                        "min_z",
+                        "min_net",
+                        "alpha",
+                        "z_alpha",
+                        "side_min",
+                        "gap_min",
+                        "top"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "file",
+              "error"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "error": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sample",
+          "n_scans",
+          "n_side_scans",
+          "n_left_scans",
+          "n_right_scans",
+          "tic_mean",
+          "tic_side",
+          "n_bins",
+          "bins_with_peak",
+          "bins_with_trace"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "sample": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "n_scans": {
+            "type": "integer",
+            "description": "scans of the window"
+          },
+          "n_side_scans": {
+            "type": "integer"
+          },
+          "n_left_scans": {
+            "type": "integer"
+          },
+          "n_right_scans": {
+            "type": "integer"
+          },
+          "tic_mean": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tic_side": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "n_bins": {
+            "type": "integer",
+            "description": "bins with a signal in the window or on its sides, before `top`"
+          },
+          "bins_with_peak": {
+            "type": "integer"
+          },
+          "bins_with_trace": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sample",
+          "bin",
+          "mz_center",
+          "mean",
+          "background",
+          "net",
+          "ratio",
+          "background_zero",
+          "counts_net",
+          "z_counts",
+          "verdict"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "sample": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "bin": {
+            "type": "integer",
+            "description": "the bin in units of its width"
+          },
+          "mz_center": {
+            "type": "number"
+          },
+          "mean": {
+            "type": "number",
+            "description": "mean intensity of the window's scans"
+          },
+          "background": {
+            "type": "number",
+            "description": "mean intensity of the side scans (0 without any)"
+          },
+          "net": {
+            "type": "number"
+          },
+          "ratio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "mean / background; null when the background is 0"
+          },
+          "background_zero": {
+            "type": "boolean"
+          },
+          "counts_net": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "net ions summed over the window's scans; null without an ion quantum"
+          },
+          "z_counts": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "peak",
+              "trace",
+              "nothing",
+              null
+            ],
+            "description": "peak: z >= min_z and net >= min_net ions per scan; trace: net > 0 and z over the one-sided limit of alpha; null without an ion quantum"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "n_total": {
+      "type": "integer"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "full": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "rows",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "program",
+        "version",
+        "commit",
+        "engine",
+        "command",
+        "files",
+        "params",
+        "choices",
+        "cite"
+      ],
+      "properties": {
+        "program": {
+          "const": "mzLab"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "index_format",
+            "quantum"
+          ],
+          "properties": {
+            "index_format": {
+              "type": "integer"
+            },
+            "quantum": {
+              "const": "ionstat.quantum"
+            }
+          },
+          "additionalProperties": false
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "sha256",
+              "size",
+              "sample"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sample": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "value",
+              "why"
+            ],
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "value": {},
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "cite": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

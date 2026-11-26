@@ -32,6 +32,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
@@ -42,10 +43,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -60,7 +63,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV; --sum adds the scans of a window and counts them and the ions; or minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
@@ -154,6 +157,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
@@ -164,10 +168,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -182,7 +188,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV; --sum adds the scans of a window and counts them and the ions; or minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
@@ -276,6 +282,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
        mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
@@ -286,10 +293,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -304,7 +313,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]   one spectrum as JSON or mz,intensity CSV; --sum adds the scans of a window and counts them and the ions; or minus a blank
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
@@ -417,7 +426,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --sample LIST      of a file with several samples (.wiff) only these, by id: 1,3,5 or 2-4, each one a member of the series (the others are
-                     not read; an id the file does not have: exit 5); without it the first sample of such a file
+                     not read; an id the file does not have: exit 5); without it the first sample of such a file. A column is the sample name plus
+                     the file's extension (NAME.wiff); two equal names become NAME (FILESTEM #ID).wiff; stderr logs every column
   --centroid MODE    unit resolution: auto (default) centroids a file that is mostly profile scans before detecting, on does it for every such file, off
                      detects the profile points as they are; high-resolution files are never centroided here
   --mz-offset SPEC   the instrument's m/z offset (observed - true, |DA| <= 0.6) or auto:MZ[@RT], measured per file on that known ion: m/z is corrected before the
@@ -427,8 +437,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
   --dry-run          print features-plan/1 (members, unit/profile/centroid decision of each, recipe) and write nothing
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
-  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill", "dedup_overlap"}
   --help             this text
+
+one peak split in two rows (a shoulder, a broad top)? unit resolution merges them when their peaks overlap by 0.5 of the narrower one; each merge is in the --report
+(merged: rule, overlap, r, heights) and rows left close are in near. To change it: {"dedup_overlap": 0.3} in --params (0 = no overlap merge, as before);
+in a Flow plan --set gapfill1.dedup_overlap=0.3
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -803,6 +817,7 @@ usage: mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
        mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -955,7 +970,8 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|
                area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
                b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)
 
-Many traces or files: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
+Many targets (an m/z + RT window per row) or many files: `quant targets FILE... --targets T.csv` (every window in every full-scan file, one call, same engine);
+many traces: `peak table FILE... --auto` (every channel of every file, one call), `peak table --traces A.json --traces B.json --auto`
 (the trace xic answers of many files) or the Flow step chrom.transitions (a target list of SIM ions / SRM transitions with S/N); never one call per trace.
 --- stderr
 

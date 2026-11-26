@@ -39,7 +39,7 @@ impl Method {
                     }
                     o.raw("]");
                 }
-                Kind::Scan { range, ce } => {
+                Kind::Scan { range, ce, .. } => {
                     o.raw(",\"kind\":\"scan\",\"range\":");
                     match range {
                         Some(r) => o.raw("[").num(r[0]).raw(",").num(r[1]).raw("]"),

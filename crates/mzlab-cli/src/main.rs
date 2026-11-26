@@ -32,6 +32,10 @@ fn main() -> ExitCode {
     if cfg!(debug_assertions) && std::env::var_os("MZLAB_TEST_PANIC").is_some() {
         panic!("panic on purpose");
     }
-    let o = mzlab_cli::execute(&args);
+    let mut o = mzlab_cli::execute(&args);
+    // the hint of a loop of calls: stderr only, never stdout or the exit code
+    if let Some(h) = mzlab_cli::repeat_hint::hint(&args) {
+        o.stderr.push_str(&h);
+    }
     ExitCode::from(answer(&o))
 }

@@ -89,8 +89,11 @@ fn series_into(
     let lean = |k: usize| {
         mzlab_core::idxread::Index::open_lean(blocks_of(read, k, sizes[k], 1), sizes[k] as u64)
     };
+    // a file that is centroided before the fill needs its scan table, which the lean index lacks: those series fill file by file on the whole index,
+    // as the native build does, so the site and the app give the same cells
     #[cfg(target_family = "wasm")]
-    let fill: Option<&mzlab_feat::series::FillOpen<_>> = Some(&lean);
+    let fill: Option<&mzlab_feat::series::FillOpen<_>> =
+        (!(r.is_lr() && r.screen.centroid != mzlab_feat::lrscreen::Switch::Off)).then_some(&lean);
     #[cfg(not(target_family = "wasm"))]
     let fill = None;
     run::align_to_spilling(

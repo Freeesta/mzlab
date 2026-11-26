@@ -178,9 +178,13 @@ fn a_peak_in_a_blank_flags_the_samples() {
     );
     // a pattern no file matches is a warning, not an error
     let none = run_on(&[("s1.mzML", sample(), 7)], &[("blank_pattern", "qc*")]);
+    // (the sample's forced row adds the hint about the shape gates)
     assert_eq!(
         none.warnings,
-        vec!["warn.quant.targets.noBlank".to_string()]
+        vec![
+            "warn.quant.targets.noBlank".to_string(),
+            "warn.quant.targets.forced".to_string()
+        ]
     );
 }
 

@@ -1,8 +1,8 @@
-//! The help texts of `spectrum get` and `spectrum list` (the usage line of each is what `commands --json` reads its flags from).
+//! The help text of `spectrum get` (the usage line is what `commands --json` reads its flags from) and the flags of `spectrum get` that take a value.
 
 pub const HELP_GET: &str = "mzlab-cli spectrum get: one mass spectrum as JSON (spectrum/1) or CSV (mz,intensity), the answer of the page's api/spectrum.
 
-usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--peak auto [--set NAME=VALUE] [--precursor MZ]] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--format json|csv] [--out PATH]
+usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--peak auto [--set NAME=VALUE] [--precursor MZ]] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]
 
   --rt MIN    the scan nearest to MIN (minutes) at the level; the evidence names it
   --rt A,B    the mean spectrum of the scans between A and B (minutes)
@@ -26,17 +26,13 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
               another sample of FILE
   --minus-sample ID the sample of the blank (a file of several samples)
   --minus-rt A,B the blank's window in minutes; default the window of --rt, or the blank's scan nearest to a single --rt or --scan
+  --bin RULE  unit-resolution data cut into bins (`mzlab-cli spectrum get f.mzML --rt 6,7 --bin nominal --mz-offset 0.24`): the points are summed into
+              half-open bins [n - 0.5, n + 0.5) around integers (`nominal`) or [k/10 - 0.05, k/10 + 0.05) around tenths (`0.1`) AFTER the offset is taken off;
+              the output (spectrum-bins/1, or CSV bin,mz,counts,points) gives the bin, its centre of mass on the corrected scale (intensity-weighted) and the
+              counts summed; the rule and the offset (also 0) are in the document and on stderr; not with --minus, --sum or --peak; a high-resolution file is refused
+  --mz-offset DA|auto:MZ[@RT]  with --bin: the offset (observed - true, Da) taken off every m/z before the cut: a number (limit 0.6), or measured on the known ion MZ
+              (near RT min) as in `trace xic`; the evidence of an estimate is in the document
   --format F  json (default) or csv with the header mz,intensity
-  --out PATH  write there instead of the standard output";
-
-pub const HELP_LIST: &str = "mzlab-cli spectrum list: the scans of a file as JSON (scanlist/1) or CSV, the answer of the page's api/scanlist.
-
-usage: mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]
-
-  --ms-level N one level; default every level, in time order
-  --id CHANNEL only the scans of an ms:<key> or dd:<level> channel
-  --sample ID the sample of a file with several (.wiff); default the first
-  --format F  json (default) or csv: scan_id,scan_no,ms_level,rt_min,tic,precursor_mz,base_peak_mz,base_peak_intensity
   --out PATH  write there instead of the standard output";
 
 /// The flags of `spectrum get` that take a value.
@@ -50,6 +46,8 @@ pub(crate) const GET_VALUES: &[&str] = &[
     "--minus-sample",
     "--minus-rt",
     "--fill-ms",
+    "--bin",
+    "--mz-offset",
     "--peak",
     "--set",
     "--precursor",

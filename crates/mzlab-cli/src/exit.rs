@@ -32,6 +32,7 @@ const INPUT_KEYS: &[&str] = &[
     "err.msn.rules.document",
     "error.badIndex",
     "err.compare.input",
+    "err.compare.duplicate",
     "err.quant.targets.table",
     "err.quant.targets.empty",
     "err.quant.targets.noFiles",
@@ -101,6 +102,7 @@ const DATA_KEYS: &[&str] = &[
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
     "err.spectrum.minus",
+    "err.spectrum.rebin.hr",
     "err.noise.noBackground",
 ];
 

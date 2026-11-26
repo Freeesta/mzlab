@@ -47,6 +47,7 @@ mod ticbg_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
+pub mod nominalbin;
 pub mod hrscans;
 pub mod error;
 pub mod provenance;
@@ -110,8 +111,10 @@ pub mod msntree_build;
 pub mod msngraph;
 pub mod msnroute;
 pub mod msntree;
+pub mod filemethod;
 pub mod methodcheck;
 pub mod methodinfo;
+pub mod namemz;
 pub mod methodjson;
 pub mod readers;
 pub mod transport;
@@ -161,6 +164,7 @@ pub mod ionstat;
 pub mod rawinfo;
 pub mod rawxic;
 mod rawxic_judge;
+pub mod ionscale;
 mod specsum;
 mod specpeak;
 #[cfg(test)]
@@ -168,6 +172,7 @@ mod specpeak_tests;
 #[cfg(test)]
 mod specsum_tests;
 mod rawxic_json;
+pub mod rawscan;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

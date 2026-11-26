@@ -1,6 +1,6 @@
 uscita = "wasm-feat/specpeak"
 pacchetto = "mzlab-specpeak-wasm"
-chiavi = { specpeak = 34 }
+chiavi = { specpeak = 36 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 196608

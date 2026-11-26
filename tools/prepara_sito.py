@@ -65,11 +65,11 @@ def up_to_date() -> bool:
 
 
 def add_routes() -> None:
-    """The lazy modules `rotte` (statistics, molecules, Data and Flow routes, crates/mzlab-rotte-wasm) and `ticfondo` (api/tic_background) and `pack` (file pack/unpack/verify-pack) and `raw` (api/rawinfo) and `rawxic` (api/rawxic, api/specsum) and `specpeak` (api/specpeak) into
+    """The lazy modules `rotte` (statistics, molecules, Data and Flow routes, crates/mzlab-rotte-wasm) and `ticfondo` (api/tic_background) and `pack` (file pack/unpack/verify-pack) and `raw` (api/rawinfo) and `rawxic` (api/rawxic) and `rawscan` (api/rawscan) and `specpeak` (api/specpeak) into
     site/static/wasm-feat with their manifest entries; the rest of the manifest is the CI's."""
     mp = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
     m = json.loads(mp.read_text(encoding="utf-8")) if mp.exists() else {}
-    for key in ("rotte", "ticfondo", "pack", "raw", "rawxic", "specpeak"):
+    for key in ("rotte", "ticfondo", "pack", "raw", "rawxic", "rawscan", "specpeak"):
         mod = mp.parent / key
         run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(mod), str(WASM.with_name(f"mzlab_{key}_wasm.wasm"))])
         m[key] = {"js": f"{key}/mzlab_{key}_wasm.js", "wasm": f"{key}/mzlab_{key}_wasm_bg.wasm", "sha256": hashlib.sha256((mod / f"mzlab_{key}_wasm_bg.wasm").read_bytes()).hexdigest()}
@@ -89,7 +89,7 @@ def main() -> int:
         print("cargo not found: the e2e tests need the Rust toolchain (rustup show)")
         return 1
     run([sys.executable, "tools/build_site.py"])
-    run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm", "-p", "mzlab-ticfondo-wasm", "-p", "mzlab-pack-wasm", "-p", "mzlab-raw-wasm", "-p", "mzlab-rawxic-wasm", "-p", "mzlab-specpeak-wasm"], build_env("wasm32-unknown-unknown", commit=False))
+    run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm", "-p", "mzlab-ticfondo-wasm", "-p", "mzlab-pack-wasm", "-p", "mzlab-raw-wasm", "-p", "mzlab-rawxic-wasm", "-p", "mzlab-rawscan-wasm", "-p", "mzlab-specpeak-wasm"], build_env("wasm32-unknown-unknown", commit=False))
     have = subprocess.run(["wasm-bindgen", "--version"], capture_output=True, text=True).stdout if shutil.which("wasm-bindgen") else ""
     want = bindgen_version()
     if want and want not in have:

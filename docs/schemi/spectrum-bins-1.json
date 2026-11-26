@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spectrum-bins/1",
+  "title": "spectrum-bins/1: a unit-resolution spectrum cut into mass bins, `mzlab-cli spectrum get --bin`",
+  "description": "The points of a window summed into half-open bins [bin - width/2, bin + width/2) around integers (rule nominal) or tenths (rule 0.1), on the m/z minus the offset. CSV (`--format csv`) has the header bin,mz,counts,points. Code: crates/mzlab-cli/src/spectrum_bins.rs, crates/mzlab-core/src/nominalbin.rs (the route /api/spectrum with rebin= and mzoff=).",
+  "type": "object",
+  "required": [
+    "schema",
+    "file",
+    "sample",
+    "x_unit",
+    "y_unit",
+    "ms_level",
+    "rule",
+    "width_da",
+    "mz_offset_da",
+    "mz_offset",
+    "n_bins",
+    "bins",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "spectrum-bins/1"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "x_unit": {
+      "const": "m/z"
+    },
+    "y_unit": {
+      "type": "string"
+    },
+    "ms_level": {
+      "type": "integer"
+    },
+    "rule": {
+      "enum": [
+        "nominal",
+        "0.1"
+      ],
+      "description": "What the bins are around: whole numbers or multiples of 0.1."
+    },
+    "width_da": {
+      "type": "number",
+      "description": "Width of a bin: 1 or 0.1."
+    },
+    "mz_offset_da": {
+      "type": "number",
+      "description": "The offset (observed - true, Da) taken off every m/z before the cut; 0 when none was given."
+    },
+    "mz_offset": {
+      "type": "object",
+      "description": "{\"mode\":\"fixed\"} for a number (or none), or the evidence of an auto:MZ[@RT] estimate (mode auto, ion_mz, rt_min, status ok|wide|not_found, n_scans, apex_rt_min, apex_intensity, spread_da, snr)."
+    },
+    "n_bins": {
+      "type": "integer"
+    },
+    "bins": {
+      "type": "array",
+      "description": "The bins in order of m/z, those with no point left out.",
+      "items": {
+        "type": "object",
+        "required": [
+          "bin",
+          "mz",
+          "counts",
+          "points"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bin": {
+            "type": "number",
+            "description": "The integer (nominal) or multiple of 0.1 the bin is around."
+          },
+          "mz": {
+            "type": "number",
+            "description": "Centre of mass of the points on the corrected scale (m/z minus the offset), weighted by intensity."
+          },
+          "counts": {
+            "type": "number",
+            "description": "Intensity summed over the points (the mean over the scans of a window)."
+          },
+          "points": {
+            "type": "integer",
+            "description": "Profile points (or centroids) summed into the bin."
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "route (/api/spectrum), query (the route query with rebin and mzoff), scan (scan_id, scan_no, rt_min, ms_level; level_auto when the file's only level was chosen) and answer (the route's own scalar members: mode, rule, width_da, edges, mz_offset_da, mz_offset, scans, i0, i1, n, sid).",
+      "required": [
+        "route",
+        "query",
+        "scan",
+        "answer"
+      ]
+    }
+  }
+}

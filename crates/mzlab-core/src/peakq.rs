@@ -106,6 +106,43 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
     Quality { gaussian, asymmetry, noise_score }
 }
 
+/// How wide a peak is at half its height, the numbers a shape gate judges: the scans in an unbroken run around the apex at or over half the
+/// baseline-corrected height, and the full width at half maximum in the unit of `rt` (a side that does not come down inside the limits counts as
+/// its mirror image, as in `quality`). `(0, 0.0)` when the limits hold no peak.
+pub fn half_width(rt: &[f64], y: &[f64], lo: usize, hi: usize) -> (usize, f64) {
+    let n = y.len().min(rt.len());
+    if n < 3 || lo >= hi || hi >= n {
+        return (0, 0.0);
+    }
+    let c: Vec<f64> = (lo..=hi)
+        .map(|i| y[i] - base_at(rt, y, lo, hi, i))
+        .collect();
+    let t = &rt[lo..=hi];
+    let m = c.len();
+    let k = (0..m).fold(0, |k, j| if c[j] > c[k] { j } else { k });
+    let h = c[k];
+    if h <= 0.0 {
+        return (0, 0.0);
+    }
+    let (mut a, mut b) = (k, k);
+    while a > 0 && c[a - 1] >= h / 2.0 {
+        a -= 1;
+    }
+    while b + 1 < m && c[b + 1] >= h / 2.0 {
+        b += 1;
+    }
+    let fwhm = match (
+        crossing(t, &c, h / 2.0, k, 0),
+        crossing(t, &c, h / 2.0, k, m - 1),
+    ) {
+        (Some(l), Some(r)) => r - l,
+        (Some(l), None) => 2.0 * (t[k] - l),
+        (None, Some(r)) => 2.0 * (r - t[k]),
+        (None, None) => t[m - 1] - t[0],
+    };
+    (b - a + 1, fwhm)
+}
+
 /// Half width (points) of the window that measures the scatter of the raw points around a maximum.
 const LOCAL_NOISE_HALF: usize = 4;
 

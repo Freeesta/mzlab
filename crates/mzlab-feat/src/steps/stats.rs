@@ -159,7 +159,7 @@ pub(super) fn compare() -> Step {
         outs: vec![Port::new("report", DataType::Report, "Each feature against the reference and the blank (compare/1)")],
         params,
         runs_in: flowcompare(),
-        errors: vec!["error.badStatInput", "err.compare.input", "err.compare.param", "err.compare.selector", "err.compare.overlap", "err.compare.samples", "err.compare.quantity", "err.stat.ref.notreated"],
+        errors: vec!["error.badStatInput", "err.compare.input", "err.compare.param", "err.compare.selector", "err.compare.overlap", "err.compare.duplicate", "err.compare.samples", "err.compare.quantity", "err.stat.ref.notreated"],
         ..Step::core(
             "table.compare",
             "Compare to reference and blank",

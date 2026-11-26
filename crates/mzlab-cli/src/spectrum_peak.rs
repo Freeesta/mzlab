@@ -52,6 +52,9 @@ pub(crate) fn options(
     if !matches!(at, At::Window(..)) {
         return Err("--peak auto searches the apex between two times: give --rt A,B".into());
     }
+    if p.get("--bin").is_some() {
+        return Err("--peak auto is not for --bin: the sides are subtracted by nominal mass".into());
+    }
     if p.flag("--sum") {
         return Err("--peak auto sums the window by itself: drop --sum".into());
     }

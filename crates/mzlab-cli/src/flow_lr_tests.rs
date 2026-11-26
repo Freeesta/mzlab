@@ -3,6 +3,8 @@
 
 #[path = "flow_lr_floor_tests.rs"]
 mod floor;
+#[path = "flow_lr_roles_tests.rs"]
+mod roles;
 #[path = "flow_lr_tol_tests.rs"]
 mod tol;
 
