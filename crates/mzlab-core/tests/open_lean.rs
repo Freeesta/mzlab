@@ -86,3 +86,26 @@ fn open_lean_is_open_without_the_scan_table() {
     }
     assert!(!mz.0.is_empty() && mz.0 == mz.1);
 }
+
+#[test]
+fn load_scans_gives_a_lean_index_the_scan_table_of_open() {
+    let b = index();
+    let n = b.len() as u64;
+    let whole = Index::open(b.clone(), n).unwrap();
+    let mut lean = Index::open_lean(b, n).unwrap();
+    assert!(lean.scans.is_empty());
+    lean.load_scans().unwrap();
+    assert_eq!(
+        format!("{:?}", whole.scans),
+        format!("{:?}", lean.scans),
+        "the scan table of a lean index, once loaded, is the one `open` reads"
+    );
+    assert_eq!(lean.rows_bytes().unwrap(), {
+        let mut w = whole;
+        w.rows_bytes().unwrap()
+    });
+    // a second call, or one on an index that holds its table, changes nothing
+    let again = format!("{:?}", lean.scans);
+    lean.load_scans().unwrap();
+    assert_eq!(again, format!("{:?}", lean.scans));
+}
