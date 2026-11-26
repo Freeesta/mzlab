@@ -5,6 +5,7 @@ use crate::cmd::{entries, Entry};
 mod doc;
 mod find;
 pub(crate) mod related;
+mod related_rows;
 pub(crate) use doc::catalog_json;
 #[cfg(test)]
 pub(crate) use doc::exits_of;

@@ -1,5 +1,5 @@
 //! `commands --find`: the tasks of the agent audit (a low-resolution LC-MS campaign) find the command or step that does them among the
-//! first three, every command and step has a summary the search matches, and every row of `related.rs` names something that exists.
+//! first three, every command and step has a summary the search matches, and every row of `related_rows.rs` names something that exists.
 
 use super::{items, search, words};
 use crate::catalog::related::RELATED;
