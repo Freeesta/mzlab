@@ -184,31 +184,31 @@ fn warnings(a: &Side, b: &Side, ce_tol: f64) -> Vec<String> {
             w.push(o.0);
         }
     }
-    if let (Some(x), Some(y)) = (a.ce(), b.ce()) {
-        if (x - y).abs() > ce_tol {
-            let mut o = Out::default();
-            o.raw("{\"key\":")
-                .str(CE_DIFFER)
-                .raw(",\"a\":")
-                .num(x)
-                .raw(",\"b\":")
-                .num(y)
-                .raw("}");
-            w.push(o.0);
-        }
+    if let Some((x, y)) = a.ce().zip(b.ce()).filter(|(x, y)| (x - y).abs() > ce_tol) {
+        let mut o = Out::default();
+        o.raw("{\"key\":")
+            .str(CE_DIFFER)
+            .raw(",\"a\":")
+            .num(x)
+            .raw(",\"b\":")
+            .num(y)
+            .raw("}");
+        w.push(o.0);
     }
-    if let (Some(x), Some(y)) = (a.precursor, b.precursor) {
-        if (x - y).abs() > PRECURSOR_DA {
-            let mut o = Out::default();
-            o.raw("{\"key\":")
-                .str(PRECURSOR_DIFFER)
-                .raw(",\"a\":")
-                .num(x)
-                .raw(",\"b\":")
-                .num(y)
-                .raw("}");
-            w.push(o.0);
-        }
+    if let Some((x, y)) = a
+        .precursor
+        .zip(b.precursor)
+        .filter(|(x, y)| (x - y).abs() > PRECURSOR_DA)
+    {
+        let mut o = Out::default();
+        o.raw("{\"key\":")
+            .str(PRECURSOR_DIFFER)
+            .raw(",\"a\":")
+            .num(x)
+            .raw(",\"b\":")
+            .num(y)
+            .raw("}");
+        w.push(o.0);
     }
     w
 }

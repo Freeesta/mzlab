@@ -156,11 +156,7 @@ fn scans_of(s: &Sample, lo: f64, hi: f64, level: u8, want: Option<f64>) -> (Vec<
 
 /// What one side selected: the scans' precursor and collision energies, and the route's bins.
 fn side(s: &mut Sample, pk: &Pick, level: u8) -> Result<String> {
-    let mut at = match pk.at {
-        At::Scan(n) => At::Scan(n),
-        At::Window(a, b) => At::Window(a, b),
-        At::Nearest(rt) => At::Nearest(rt),
-    };
+    let mut at = pk.at;
     // a time with a precursor: the nearest scan of that precursor, taken by its number so the route answers that scan alone
     if let (At::Nearest(rt), Some(p)) = (&at, pk.precursor) {
         at = nearest_of(s, *rt, p, level)?;

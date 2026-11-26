@@ -83,6 +83,7 @@ fn text_of(pairs: &[(&str, String)]) -> String {
 }
 
 /// What the request asks for, after the file was read.
+#[derive(Clone, Copy)]
 pub(crate) enum At {
     Scan(i64),
     Nearest(f64),
