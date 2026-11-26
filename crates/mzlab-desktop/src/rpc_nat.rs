@@ -13,10 +13,14 @@ use crate::engine::{CountWrite, Picked, Progress, State};
 use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
-/// `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
+/// `natlabels {members: [{file, id, sample}]}` (the column labels, `readers::label`, the twin of `sample_labels`) / `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
 /// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli sample select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
 pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     use mzlab_core::readers::selection;
+    if op == "natlabels" {
+        let body = format!("{{\"members\":{}}}", p["members"]);
+        return text(mzlab_core::readers::label::labels_json(&body)?);
+    }
     let nums = |k: &str| -> Vec<f64> {
         p[k].as_array()
             .into_iter()

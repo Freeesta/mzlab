@@ -261,3 +261,7 @@ mod multi_tests;
 #[cfg(test)]
 #[path = "find_ions_tests.rs"]
 mod ions_tests;
+
+#[cfg(test)]
+#[path = "find_nominal_tests.rs"]
+mod nominal_tests;

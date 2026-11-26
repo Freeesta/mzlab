@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from cargo_util import build, cli, wasm_module
+from panel_recipe import PANEL_NOMINAL, PANEL_NOMINAL_TEXT
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")) and not os.environ.get("CI"), reason="cargo, wasm-bindgen or node not available")
@@ -71,3 +72,25 @@ def test_the_nominal_preset_gives_the_same_bytes_in_node_and_native_and_not_thos
         assert (nom_n / f).read_bytes() == (nom_w / f).read_bytes(), f
         assert (def_n / f).read_bytes() == (def_w / f).read_bytes(), f
     assert (nom_n / "series.mzfeat").read_bytes() != (def_n / "series.mzfeat").read_bytes()
+
+
+def test_the_recipe_the_panel_writes_gives_the_bytes_of_the_cli_recipe_in_node_and_native(built):
+    root, idx, pkg = built
+    page_n, page_w = both(root, idx, pkg, "page", PANEL_NOMINAL_TEXT)
+    cli_n, cli_w = both(root, idx, pkg, "clirecipe", json.dumps({"polarity": 1, "preset": "nominal"}))      # the panel always names the polarity; the profile is the only other difference
+    names = sorted(p.name for p in page_n.iterdir())
+    assert "series.mzfeat" in names and names == sorted(p.name for p in cli_n.iterdir())
+    for f in names:
+        assert (page_n / f).read_bytes() == (cli_n / f).read_bytes() == (page_w / f).read_bytes() == (cli_w / f).read_bytes(), f
+    # the profile's numbers are not overridden by the panel's: a recipe that also names the high-resolution height writes other bytes
+    over_n, _ = both(root, idx, pkg, "over", json.dumps({**PANEL_NOMINAL, "min_height": 2e5}))
+    assert (over_n / "series.mzfeat").read_bytes() != (page_n / "series.mzfeat").read_bytes()
+
+
+def test_the_features_command_gives_the_same_table_for_the_recipe_of_the_panel_and_for_the_profile_alone(built, tmp_path):
+    root, _, _ = built
+    files = sorted(str(p) for p in (root / "ser").glob("drift-s*.mzML"))
+    page, alone = tmp_path / "page.json", tmp_path / "alone.json"
+    page.write_text(PANEL_NOMINAL_TEXT, encoding="utf-8")
+    alone.write_text(json.dumps({"polarity": 1, "preset": "nominal"}), encoding="utf-8")
+    assert cli("features", *files, "--params", str(page)).stdout == cli("features", *files, "--params", str(alone)).stdout

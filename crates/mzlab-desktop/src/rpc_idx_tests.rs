@@ -96,4 +96,10 @@ fn the_chooser_answers_are_the_engines() {
         &serde_json::json!({"present": [1], "text": "9"})
     )
     .is_err());
+    // the column labels: the bytes of `mzlab_core::readers::label::labels_json` (the site's `sample_labels`, `mzlab-cli features --sample`)
+    let members = serde_json::json!([{"file": "a.wiff", "id": 1, "sample": "S"}, {"file": "b.wiff", "id": 2, "sample": "S"}, {"file": "a.wiff", "id": 3, "sample": "T"}]);
+    assert_eq!(
+        t("natlabels", serde_json::json!({ "members": members })),
+        "{\"schema\":\"sample-labels/1\",\"labels\":[{\"label\":\"S (a #1).wiff\",\"kind\":\"tie\"},{\"label\":\"S (b #2).wiff\",\"kind\":\"tie\"},{\"label\":\"T.wiff\",\"kind\":\"own\"}]}"
+    );
 }
