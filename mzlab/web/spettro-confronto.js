@@ -11,7 +11,7 @@ const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "
 const MATCH = 0.6;   // Da: two precursors this close are the one the file lists (the window of the route and of ms2_exps)
 
 const CSS = `<style>#spcmp{width:min(980px,96vw);max-width:96vw}#spcmp .sides{display:flex;gap:12px;flex-wrap:wrap}#spcmp fieldset{flex:1 1 300px;border:1px solid var(--line);border-radius:8px;margin:8px 0;display:flex;flex-direction:column;gap:6px}
-  #spcmp label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#spcmp input[data-num]{width:84px}#spcmp .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  #spcmp label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#spcmp input[data-num]{width:84px}#spcmp input[data-f=off]{width:150px}#spcmp .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}
   #spcmp table{border-collapse:collapse;width:100%}#spcmp td,#spcmp th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}#spcmp td.num,#spcmp th.num{text-align:right;font-variant-numeric:tabular-nums}
   #spcmp .tbl{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:6px}#spcmp .cos{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}#spcmp .warn{color:var(--warn)}#spcmp .err{color:var(--bad)}
   #spcmp .lists{display:flex;gap:12px;flex-wrap:wrap}#spcmp .lists>div{flex:1 1 280px}</style>`;
@@ -33,20 +33,20 @@ const text = (/** @type {number} */ x) => W_.I18N.num(+x.toFixed(4));
 /** a number, a string or a list of numbers as the words of a warning (as `spectrum compare` writes it on stderr) @param {any} x @returns {string} */
 const words = x => Array.isArray(x) ? x.map(words).join("/") : x == null ? "" : String(x);
 
-/** One side as the card holds it: file, precursor and time window. @param {HTMLElement} d @param {string} s */
+/** One side as the card holds it: file, precursor, time window and m/z offset text (empty = none; the route reads and checks it). @param {HTMLElement} d @param {string} s */
 const readSide = (d, s) => {
   const q = (/** @type {string} */ f) => /** @type {HTMLInputElement} */ (d.querySelector(`[data-s="${s}"] [data-f="${f}"]`));
   const f = E.files[+q("file").value], prec = parseFloat(q("prec").value), a = numIt(q("rt0").value), b = numIt(q("rt1").value);
-  return { f, prec, a: Math.min(a, b), b: Math.max(a, b) };
+  return { f, prec, a: Math.min(a, b), b: Math.max(a, b), off: q("off").value.trim() };
 };
 
 /** The route's answer for one side, with what the file states about the scans, as the `{"a": .., "b": ..}` member of the engine's request.
- * @param {{ f: any, prec: number, a: number, b: number }} x */
+ * @param {{ f: any, prec: number, a: number, b: number, off: string }} x */
 async function sideOf(x) {
-  const query = `k=${x.f.k}&rt0=${x.a}&rt1=${x.b}&level=2&precursor=${x.prec}&rebin=nominal`;
+  const query = `k=${x.f.k}&rt0=${x.a}&rt1=${x.b}&level=2&precursor=${x.prec}&rebin=nominal${x.off ? "&mzoff=" + encodeURIComponent(x.off) : ""}`;
   const body = await (await fetch("api/spectrum?" + query)).text();
   let j = null; try { j = JSON.parse(body); } catch (_) { /* not JSON: the engine is asked below and says so */ }
-  if (j && j.error) throw W_.I18N.err(j);
+  if (j && (j.error || j.error_key)) throw W_.I18N.err(j);
   return `{"name":${JSON.stringify(x.f.label || x.f.file)},"query":${JSON.stringify(query)},"precursor":${x.prec},"ce_values":${JSON.stringify(cesOf(x.f, x.prec))},"spectrum":${body}}`;
 }
 
@@ -68,10 +68,22 @@ function show(doc) {
   const sideRow = (/** @type {string} */ s) => { const x = side(s); return `<tr><th scope="row">${s.toUpperCase()}</th><td>${EHt(x.name)}</td><td class="num">${x.precursor == null ? "" : text(x.precursor)}</td><td class="num">${x.ce == null ? EHt(words(x.ce_values)) : text(x.ce)}</td>
     <td class="num">${x.scans ?? ""}</td><td class="num">${x.n_bins}</td><td class="num">${(x.explained * 100).toFixed(1)} %</td></tr>`; };
   const un = (/** @type {any[]} */ rows) => rows.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mz")}</th><th class="num">${t("spcmp.col.int")}</th></tr>${rows.map(r => `<tr><td class="num">${text(r.mz)}</td><td class="num">${text(r.y)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`;
+  /** the offset a side used: Da, and for an `auto` estimate the ion, the scans, the spread and the status, with the engine's warning text */
+  const evid = (/** @type {string} */ s) => {
+    const x = side(s), e = x.mz_offset || {}, who = s.toUpperCase(), da = text(x.mz_offset_da);
+    if (e.mode !== "auto") return `<li>${EHt(t("spcmp.off.used", { side: who, da }))}</li>`;
+    const w = e.status === "not_found" ? "warn.mz.offset.notFound" : e.status === "wide" ? "warn.mz.offset.wide" : "";
+    const detail = [e.apex_rt_min == null ? "" : t("spcmp.off.apex", { rt: text(e.apex_rt_min) }), e.spread_da == null ? "" : t("spcmp.off.spread", { da: text(e.spread_da) }),
+      t("spcmp.off.scans", { n: e.n_scans }), t("spcmp.off.snr", { snr: text(e.snr) })].filter(Boolean).join(t("spcmp.off.sep"));
+    const status = t(e.status === "ok" ? "spcmp.off.status.ok" : e.status === "wide" ? "spcmp.off.status.wide" : "spcmp.off.status.missing");
+    const line = t(e.rt_min == null ? "spcmp.off.auto" : "spcmp.off.autoNear", { side: who, da, mz: text(e.ion_mz), rt: e.rt_min == null ? "" : text(e.rt_min), status, detail });
+    return `<li${w ? ' class="warn"' : ""}>${EHt(w ? t("spcmp.off.warned", { line, warn: t(w) }) : line)}</li>`;
+  };
   const p = doc.params, dflt = (/** @type {string} */ k) => (p.default.includes(k) ? ` (${t("spcmp.default")})` : "");
   return `<div class="cos" role="status">${t("spcmp.cosine")} ${doc.cosine.toFixed(4)}</div>
     <p class="sm">${t("spcmp.summary", { n: doc.n_matched, tol: text(p.tol), ce: text(p.ce_tol) })} <span class="muted">${EHt(dflt("tol") + dflt("ce_tol"))}</span></p>
     ${warns ? `<ul>${warns}</ul>` : ""}
+    <h4>${t("spcmp.off.h")}</h4><ul class="sm" id="spcmp-offs">${evid("a")}${evid("b")}</ul>
     <div class="tbl"><table><caption class="sr-only">${t("spcmp.sides")}</caption><tr><th></th><th>${t("spcmp.col.file")}</th><th class="num">${t("spcmp.col.prec")}</th><th class="num">${t("spcmp.col.ce")}</th><th class="num">${t("spcmp.col.scans")}</th><th class="num">${t("spcmp.col.bins")}</th><th class="num">${t("spcmp.col.explained")}</th></tr>${sideRow("a")}${sideRow("b")}</table></div>
     <h4>${t("spcmp.matched")}</h4>${doc.matched.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mzA")}</th><th class="num">${t("spcmp.col.mzB")}</th><th class="num">${t("spcmp.col.intA")}</th><th class="num">${t("spcmp.col.intB")}</th></tr>${doc.matched.map((/** @type {any} */ m) => `<tr><td class="num">${text(m.mz_a)}</td><td class="num">${text(m.mz_b)}</td><td class="num">${text(m.a)}</td><td class="num">${text(m.b)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`}
     <div class="lists"><div><h4>${t("spcmp.onlyA")}</h4>${un(doc.only_a)}</div><div><h4>${t("spcmp.onlyB")}</h4>${un(doc.only_b)}</div></div>`;
@@ -91,6 +103,7 @@ function open(p) {
   const sideHtml = (s, f) => h`<fieldset data-s="${s}"><legend>${s === "a" ? t("spcmp.side.a") : t("spcmp.side.b")}</legend>
       <label>${t("spcmp.file")} <select data-f="file">${files.map((/** @type {any} */ x) => raw(h`<option value="${x.k}"${x === f ? " selected" : ""}>${x.label || x.file}</option>`))}</select></label>
       <label>${t("spcmp.prec")} <select data-f="prec"></select></label>
+      <label>${t("spcmp.off")} <input data-f="off" placeholder="${t("spcmp.off.ph")}" title="${t("spcmp.off.tip")}" autocomplete="off" spellcheck="false"></label>
       <label>${t("spcmp.time")} <input data-f="rt0" data-num="0:" value="${+from.toFixed(4)}" aria-label="${t("spcmp.time.from")}"> – <input data-f="rt1" data-num="0:" value="${+to.toFixed(4)}" aria-label="${t("spcmp.time.to")}"> ${t("spcmp.unit.min")}</label></fieldset>`;
   dlg.innerHTML = h`<div style="display:flex;align-items:center"><h3 id="spcmp-h" style="margin:0;flex:1">${t("spcmp.title")}</h3><button type="button" class="x" id="spcmp-x" aria-label="${t("common.close")}" title="${t("common.close")}">&times;</button></div>
     <div class="sides">${raw(sideHtml("a", own))}${raw(sideHtml("b", other))}</div>

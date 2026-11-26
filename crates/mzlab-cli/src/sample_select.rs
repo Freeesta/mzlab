@@ -99,6 +99,9 @@ pub(crate) fn fail(e: &Error) -> Outcome {
     }
 }
 
+#[path = "sample_members.rs"]
+pub(crate) mod members;
+
 #[cfg(test)]
 #[path = "sample_select_tests.rs"]
 mod tests;

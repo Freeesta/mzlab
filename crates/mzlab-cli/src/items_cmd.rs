@@ -105,6 +105,7 @@ fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<(Strin
             &crate::method_cmd::warning_lines(&format!("{{\"warnings\":[{}]}}", warns.join(",")));
     }
     notes += &crate::method_cmd::hint_line(&file.display().to_string(), "");
+    notes += &crate::sample_select::members::first_hint(file, "file items", false);
     Ok((doc, notes))
 }
 

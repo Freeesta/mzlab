@@ -26,7 +26,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-OFFSET | `docs/coda/prompt/SPECTRUM-COMPARE-OFFSET.md` | - | site card of `spectrum compare`: an m/z offset per side (fixed or `auto`), as the CLI flags |
 | SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
@@ -46,7 +45,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | UNION-WEB-TESTS | `docs/coda/prompt/UNION-WEB-TESTS.md` | - | AU-4: cache-hit path of flow-web-companions, real `lr_union` answer shape, module sizes |
 | BLANK-SUMMARY | `docs/coda/prompt/BLANK-SUMMARY.md` | - | AU-7: CLI summary line of the blank filter |
 | BLANK-FOLD-COLUMN | `docs/coda/prompt/BLANK-FOLD-COLUMN.md` | - | AU-7: `blank_fold` as an opt-in per-row export column |
-| FIRST-SAMPLE-HINTS | `docs/coda/prompt/FIRST-SAMPLE-HINTS.md` | - | follow-up of #3717: `quant targets --sample`; hint naming `--sample` for `items`, `background`, `dad_ms`, `peak` |
+| ITEMS-BACKGROUND-SAMPLE | `docs/coda/prompt/ITEMS-BACKGROUND-SAMPLE.md` | - | follow-up of FIRST-SAMPLE-HINTS: `file items` and `trace background` take `--sample ID` like `dad`, so their hint names the flag and not `file convert` |
 | RT-REF-OTHER-STEPS | `docs/coda/prompt/RT-REF-OTHER-STEPS.md` | - | an internal-reference RT mode (`rt_ref` of `quant.targets`) for `peak`, `trace xic` and the `features` alignment; reuse `quant_targets::rtref` |
 | MZ-OFFSET-POLARITY | `docs/coda/prompt/MZ-OFFSET-POLARITY.md` | - | per-polarity `--mz-offset` spec (`+:AUTO,-:AUTO`) for `trace xic` and `features`, as `quant targets --offset auto` already does per file and polarity |
 | DAD-DELAY-APPLY | `docs/coda/prompt/DAD-DELAY-APPLY.md` | - | opt-in PDA/UV detector delay applied at conversion from the `dad delay` estimate; `file convert` hints the command when UV and MS traces disagree |
