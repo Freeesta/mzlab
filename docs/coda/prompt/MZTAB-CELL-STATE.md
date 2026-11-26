@@ -10,7 +10,7 @@ Read docs/coda/BRIEF.md.
 
 **Already on main (checked 25 Nov, re-check before coding).** The `.mzfeat` store keeps the state of every cell in its state column; aligned CSV and xlsx carry `feature_state` in MZmine words. The mzTab export writes the abundance columns only.
 
-**Owner decision (26 Nov: "fino alla 3 ok").** Opt-in. A parameter of `export.mztab` adds the per-cell state column (optional `opt_` columns, which the mzTab format allows); without it the export bytes are unchanged.
+**Owner decision (26 Nov, approved).** Opt-in. A parameter of `export.mztab` adds the per-cell state column (optional `opt_` columns, which the mzTab format allows); without it the export bytes are unchanged.
 
 **Done means.** The parameter (default off, printed with the defaults); with it each abundance cell has its state word (detected, forced, filled, below_loq, absent, na); a test that the default bytes are unchanged; the schema and docs line; parity site=app=CLI byte for byte, with the parameter on and off.
 

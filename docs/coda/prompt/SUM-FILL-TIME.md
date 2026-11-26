@@ -10,7 +10,7 @@ Read docs/coda/BRIEF.md.
 
 **Already on main (checked 25 Nov, re-check before coding).** `/api/specsum` answers the same bytes in the site (`rawxic` `spec_sum`), the app and the CLI; `fill_time.note` is `note.spec.sum.noFill` and `--fill-ms T` states a fill time for every scan.
 
-**Owner decision (26 Nov: "fino alla 3 ok").** Yes: the index gains a fill-time column with a new index format version; old indexes stay readable, and the program hints to rebuild them.
+**Owner decision (26 Nov, approved).** Yes: the index gains a fill-time column with a new index format version; old indexes stay readable, and the program hints to rebuild them.
 
 **Done means.** A per-scan fill time read from the file (index column, new format version, old indexes still read; a hint on stderr and in `--json` says to rebuild the index to get `ions`; test it), used by `specsum.rs` per scan so `by_scan_type[].ions` is the sum of counts x time per scan; `--fill-ms` still overrides and says so (`source: user`); a file without it keeps `ions: null` with the note. Parity CLI = app = wasm (test `tests/test_spec_sum_wasm.py`); synthetic file written with `MzmlWriter` carrying the term. The `rawxic` growth is stated in the PR body (raw bytes before, after, %).
 
