@@ -51,7 +51,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list", "file method"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache", "trace xic"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
-    r("raw xic", "offset calibrate mz-offset peak trace nothing detected absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type", &["quant targets", "trace xic", "raw info"]),
+    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type", &["quant targets", "trace xic", "raw info"]),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
     r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
         .ex("mzlab-cli file method run.wiff --sample 1"),
@@ -75,12 +75,12 @@ pub(crate) static RELATED: &[Rel] = &[
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
-    r("peak auto-lr", "integrate peaks one trace sim mrm area snr", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
+    r("peak auto-lr", "integrate peaks one trace sim mrm area snr state detected absent", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
     r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
         .bulk("mzlab-cli features FILE... --out table.csv: every high-resolution peak of many files in one call (peak table --auto is the low-resolution engine)"),
     r("peak area", "integrate one peak area", &["peak table"])
         .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
-    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
+    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows state forced detected versus integrated absent column", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass", &["spectrum list", "raw xic", "spectra.centroid"])
         .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),
@@ -95,7 +95,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("flow steps", "plan template step parameters", &["flow defaults", "flow check", "flow run"]),
     r("flow defaults", "default parameter value limit unit set key off when empty what can i change", &["flow steps", "flow check", "estimate"]),
     r("commands", "find search help catalog task", &["schema", "flow steps"]),
-    r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
+    r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr state detected absent channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
     r("table.filter", "blank subtraction subtract threshold background ions remove drop ions also in the blank sample carryover contaminant matrix blank ratio filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
