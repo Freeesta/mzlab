@@ -7,7 +7,7 @@ name: app-main
 
 on:
   push:
-    branches: [main, claude/app-rolling]   # TEMPORARY: the second branch is only for the test run of the PR, removed before the PR is merged
+    branches: [main]
     paths:
       - "crates/**"
       - "mzlab/web/**"
@@ -25,24 +25,26 @@ on:
 permissions:
   contents: read
 
-# a newer push replaces a build in progress (the pre-release holds only the newest app); the publish job is not cancellable midway in a harmful way:
-# its uploads use --clobber and the notes are written last
-concurrency:
-  group: app-main
-  cancel-in-progress: true
-
+# Two groups, no workflow-level one (it would cancel a publish midway and leave files of two commits side by side): a newer push replaces a BUILD in progress
+# (the pre-release holds only the newest app), while a PUBLISH always runs to its end and the next one waits for it.
 jobs:
   build:
     name: installers (desktop.yml)
+    concurrency:
+      group: app-main-build
+      cancel-in-progress: true
     uses: ./.github/workflows/desktop.yml
 
   # The only job with write access: it runs on main only, executes no binary of the build and uses the job's own GITHUB_TOKEN.
   publish:
     name: pre-release app-prebuilt
     needs: build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/app-rolling'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    concurrency:
+      group: app-main-publish
+      cancel-in-progress: false
     permissions:
       contents: write
     env:
@@ -56,13 +58,13 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: mzlab-desktop-*
-          path: pezzi
+          path: parts
       - name: Give the files their fixed names (tools/note_app_main.py is the one list) and write SHA256SUMS
         run: |
           mkdir out
           python3 tools/note_app_main.py --names | while IFS='|' read -r art glob name; do
             # a single upload path is flat, two paths (Linux) keep their folders: search the whole artifact
-            f=$(find pezzi/"$art" -type f -name "$glob" | sort | head -n 1)
+            f=$(find parts/"$art" -type f -name "$glob" | sort | head -n 1)
             [ -n "$f" ] || { echo "::error::no $glob in the artifact $art"; exit 1; }
             cp "$f" "out/$name"
           done

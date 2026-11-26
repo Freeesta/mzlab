@@ -54,7 +54,13 @@ def test_artifacts_match_what_desktop_yml_uploads():
 def test_workflow_is_a_rolling_prerelease_not_a_release():
     assert "--prerelease --latest=false" in WF and "TAG: app-prebuilt" in WF
     assert not re.search(r"tags:|refs/tags|git tag|--latest(?!=false)|secrets\.", WF)
-    assert "cancel-in-progress: true" in WF and "uses: ./.github/workflows/desktop.yml" in WF
+    assert "uses: ./.github/workflows/desktop.yml" in WF
+    # only main triggers it and only main publishes (a leftover test branch would fail here)
+    assert re.search(r"^    branches: \[main\]$", WF, re.M) and "if: github.ref == 'refs/heads/main'\n" in WF and WF.count("refs/heads/") == 1
+    # a newer push cancels a build, never a publish: no workflow-level group, one group per job
+    assert not re.search(r"^concurrency:", WF, re.M)
+    build, publish = WF.split("  publish:")
+    assert "group: app-main-build\n      cancel-in-progress: true" in build and "group: app-main-publish\n      cancel-in-progress: false" in publish
     # only the publish job writes
     assert WF.count("contents: write") == 1 and WF.index("contents: write") > WF.index("  publish:")
 
