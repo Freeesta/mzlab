@@ -2,7 +2,12 @@ use super::*;
 
 /// A side as the callers send it: the `rebin=` answer of the route with the bins and intensities given (m/z = the bin plus `shift`).
 fn side(name: &str, precursor: f64, ces: &str, bins: &[(f64, f64)], shift: f64) -> String {
-    let col = |f: &dyn Fn(&(f64, f64)) -> f64| bins.iter().map(|b| f(b).to_string()).collect::<Vec<_>>().join(",");
+    let col = |f: &dyn Fn(&(f64, f64)) -> f64| {
+        bins.iter()
+            .map(|b| f(b).to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    };
     format!(
         "{{\"name\":\"{name}\",\"precursor\":{precursor},\"ce_values\":[{ces}],\"spectrum\":{{\"mode\":\"bins\",\"rule\":\"nominal\",\"bin\":[{}],\"mz\":[{}],\"y\":[{}]}}}}",
         col(&|b| b.0),
@@ -23,8 +28,20 @@ fn f(v: &Value, k: &str) -> f64 {
 #[test]
 fn a_known_cosine_of_square_root_intensities() {
     // A = (100: 4, 101: 9, 102: 16), B = (100: 4, 101: 9, 103: 25): the dot product is sqrt(16) + sqrt(81) = 13 over sqrt(29 * 38)
-    let a = side("a", 253.1, "35", &[(100.0, 4.0), (101.0, 9.0), (102.0, 16.0)], 0.0);
-    let b = side("b", 253.1, "35", &[(100.0, 4.0), (101.0, 9.0), (103.0, 25.0)], 0.0);
+    let a = side(
+        "a",
+        253.1,
+        "35",
+        &[(100.0, 4.0), (101.0, 9.0), (102.0, 16.0)],
+        0.0,
+    );
+    let b = side(
+        "b",
+        253.1,
+        "35",
+        &[(100.0, 4.0), (101.0, 9.0), (103.0, 25.0)],
+        0.0,
+    );
     let v = run("{}", a, b);
     assert_eq!(f(&v, "cosine"), round(13.0 / (29.0f64 * 38.0).sqrt(), 6));
     assert_eq!(f(&v, "n_matched"), 2.0);
@@ -52,11 +69,17 @@ fn the_tolerance_is_a_parameter_and_the_default_is_logged() {
     let b = side("b", 200.0, "20", &[(101.0, 4.0)], 0.0);
     let v = run("{}", a.clone(), b.clone());
     assert_eq!(f(&v, "cosine"), 0.0);
-    assert_eq!(v.get("params").unwrap().get("default").unwrap().arr().len(), 2);
+    assert_eq!(
+        v.get("params").unwrap().get("default").unwrap().arr().len(),
+        2
+    );
     let v = run("{\"tol\":1}", a, b);
     assert_eq!(f(&v, "cosine"), 1.0);
     assert_eq!(f(v.get("params").unwrap(), "tol"), 1.0);
-    assert_eq!(v.get("params").unwrap().get("default").unwrap().arr().len(), 1);
+    assert_eq!(
+        v.get("params").unwrap().get("default").unwrap().arr().len(),
+        1
+    );
 }
 
 #[test]
@@ -64,14 +87,36 @@ fn different_collision_energies_and_precursors_are_warned() {
     let a = side("a", 200.0, "20", &[(100.0, 4.0)], 0.0);
     let b = side("b", 205.0, "35", &[(100.0, 4.0)], 0.0);
     let v = run("{}", a.clone(), b.clone());
-    let keys: Vec<&str> = v.get("warnings").unwrap().arr().iter().map(|w| w.get("key").and_then(Value::str).unwrap()).collect();
-    assert_eq!(keys, ["warn.spectrum.ceDiffer", "warn.spectrum.precursorDiffer"]);
+    let keys: Vec<&str> = v
+        .get("warnings")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|w| w.get("key").and_then(Value::str).unwrap())
+        .collect();
+    assert_eq!(
+        keys,
+        ["warn.spectrum.ceDiffer", "warn.spectrum.precursorDiffer"]
+    );
     // within the tolerance, and a mixed or missing CE
-    assert!(run("{\"ce_tol\":20}", a.clone(), b.clone()).get("warnings").unwrap().arr().len() == 1);
+    assert!(
+        run("{\"ce_tol\":20}", a.clone(), b.clone())
+            .get("warnings")
+            .unwrap()
+            .arr()
+            .len()
+            == 1
+    );
     let mixed = side("m", 200.0, "20,35", &[(100.0, 4.0)], 0.0);
     let none = side("n", 200.0, "", &[(100.0, 4.0)], 0.0);
     let v = run("{}", mixed, none);
-    let keys: Vec<&str> = v.get("warnings").unwrap().arr().iter().map(|w| w.get("key").and_then(Value::str).unwrap()).collect();
+    let keys: Vec<&str> = v
+        .get("warnings")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|w| w.get("key").and_then(Value::str).unwrap())
+        .collect();
     assert_eq!(keys, ["warn.spectrum.ceMixed", "warn.spectrum.ceUnknown"]);
 }
 
@@ -91,9 +136,18 @@ fn bad_input_names_the_key() {
     let err = |p: &str, s: &str| compare_text(p, s).unwrap_err().key;
     assert_eq!(err("{\"nope\":1}", "{}"), "err.spectrum.compare.param");
     assert_eq!(err("{\"tol\":-1}", "{}"), "err.spectrum.compare.value");
-    assert_eq!(err("{}", &format!("{{\"a\":{ok}}}")), "err.spectrum.compare.input");
+    assert_eq!(
+        err("{}", &format!("{{\"a\":{ok}}}")),
+        "err.spectrum.compare.input"
+    );
     let empty = side("e", 200.0, "20", &[(100.0, 0.0)], 0.0);
-    assert_eq!(err("{}", &format!("{{\"a\":{ok},\"b\":{empty}}}")), "err.spectrum.compare.empty");
+    assert_eq!(
+        err("{}", &format!("{{\"a\":{ok},\"b\":{empty}}}")),
+        "err.spectrum.compare.empty"
+    );
     let raw = "{\"name\":\"r\",\"spectrum\":{\"mode\":\"profile\"}}";
-    assert_eq!(err("{}", &format!("{{\"a\":{ok},\"b\":{raw}}}")), "err.spectrum.compare.input");
+    assert_eq!(
+        err("{}", &format!("{{\"a\":{ok},\"b\":{raw}}}")),
+        "err.spectrum.compare.input"
+    );
 }

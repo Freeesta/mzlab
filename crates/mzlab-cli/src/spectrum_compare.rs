@@ -34,14 +34,29 @@ struct Pick {
 }
 
 fn pick(p: &Parsed, side: &str, files: &[String]) -> std::result::Result<Pick, String> {
-    let file = PathBuf::from(files.get(usize::from(side == "b")).or(files.first()).ok_or("spectrum compare needs a file")?);
+    let file = PathBuf::from(
+        files
+            .get(usize::from(side == "b"))
+            .or(files.first())
+            .ok_or("spectrum compare needs a file")?,
+    );
     let flag = |k: &str| format!("--{side}-{k}");
     let at = match (p.get(&flag("rt")), p.get(&flag("scan"))) {
-        (Some(_), Some(_)) => return Err(format!("give {} or {}, not both", flag("rt"), flag("scan"))),
+        (Some(_), Some(_)) => {
+            return Err(format!("give {} or {}, not both", flag("rt"), flag("scan")))
+        }
         (None, None) => return Err(format!("give {} or {}", flag("rt"), flag("scan"))),
-        (None, Some(n)) => At::Scan(n.parse().map_err(|_| format!("{} needs a scan number", flag("scan")))?),
+        (None, Some(n)) => At::Scan(
+            n.parse()
+                .map_err(|_| format!("{} needs a scan number", flag("scan")))?,
+        ),
         (Some(r), None) => {
-            let num = |x: &str| x.parse::<f64>().ok().filter(|v| v.is_finite()).ok_or(format!("{} needs minutes: A or A,B", flag("rt")));
+            let num = |x: &str| {
+                x.parse::<f64>()
+                    .ok()
+                    .filter(|v| v.is_finite())
+                    .ok_or(format!("{} needs minutes: A or A,B", flag("rt")))
+            };
             match r.split_once(',') {
                 Some((a, b)) => {
                     let (a, b) = (num(a)?, num(b)?);
@@ -51,9 +66,22 @@ fn pick(p: &Parsed, side: &str, files: &[String]) -> std::result::Result<Pick, S
             }
         }
     };
-    let precursor = p.get(&flag("precursor")).map(|v| v.parse::<f64>().ok().filter(|x| x.is_finite() && *x > 0.0).ok_or(format!("{} needs an m/z", flag("precursor")))).transpose()?;
+    let precursor = p
+        .get(&flag("precursor"))
+        .map(|v| {
+            v.parse::<f64>()
+                .ok()
+                .filter(|x| x.is_finite() && *x > 0.0)
+                .ok_or(format!("{} needs an m/z", flag("precursor")))
+        })
+        .transpose()?;
     let sample = p.sample_of(&flag("sample"), &file)?;
-    Ok(Pick { file, sample, at, precursor })
+    Ok(Pick {
+        file,
+        sample,
+        at,
+        precursor,
+    })
 }
 
 /// `--set tol=0.5,ce_tol=1` as the JSON object the engine takes; the engine refuses a name it does not know.
@@ -61,8 +89,14 @@ fn set_json(p: &Parsed) -> std::result::Result<String, String> {
     let mut items: Vec<(String, f64)> = Vec::new();
     for v in p.all("--set") {
         for item in v.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-            let (k, x) = item.split_once('=').ok_or(format!("--set needs NAME=VALUE: {item}"))?;
-            let x = x.parse::<f64>().ok().filter(|x| x.is_finite()).ok_or(format!("--set {k} needs a number"))?;
+            let (k, x) = item
+                .split_once('=')
+                .ok_or(format!("--set needs NAME=VALUE: {item}"))?;
+            let x = x
+                .parse::<f64>()
+                .ok()
+                .filter(|x| x.is_finite())
+                .ok_or(format!("--set {k} needs a number"))?;
             items.retain(|(n, _)| n != k);
             items.push((k.to_string(), x));
         }
@@ -75,6 +109,51 @@ fn set_json(p: &Parsed) -> std::result::Result<String, String> {
     Ok(o.raw("}").0.clone())
 }
 
+/// The scan nearest to `rt` among those of precursor `p`, by its number.
+fn nearest_of(s: &mut Sample, rt: f64, p: f64, level: u8) -> Result<At> {
+    let q = query(&[
+        ("rt", rt.to_string()),
+        ("level", level.to_string()),
+        ("precursor", p.to_string()),
+    ]);
+    let none = || {
+        Error::new("err.scan.unknown").with(
+            "id",
+            format!("nearest to {rt} min at MS level {level}, precursor {p}"),
+        )
+    };
+    let t = s.routes.handle("/api/nearest_scan", &q)?.ok_or_else(none)?;
+    let sid = parse(t.as_bytes())?
+        .get("sid")
+        .and_then(Value::f64)
+        .ok_or_else(none)? as usize;
+    Ok(At::Scan(s.routes.idx.scans[sid].number(sid)))
+}
+
+/// The distinct precursors and collision energies of the level-`level` scans in `lo..=hi` (of precursor `want`, when given).
+fn scans_of(s: &Sample, lo: f64, hi: f64, level: u8, want: Option<f64>) -> (Vec<f64>, Vec<f64>) {
+    let mut precursors: Vec<f64> = Vec::new();
+    let mut ces: Vec<f64> = Vec::new();
+    for c in s.routes.idx.scans.iter().filter(|c| {
+        c.level == level
+            && c.rt >= lo
+            && c.rt <= hi
+            && want.is_none_or(|p| (c.prec(-100.0) - p).abs() <= 0.6)
+    }) {
+        let pr = c.prec(-100.0);
+        if pr > 0.0 && !precursors.iter().any(|x| (x - pr).abs() <= 0.6) {
+            precursors.push(pr);
+        }
+        if let Some(e) = c
+            .collision_energy
+            .filter(|e| !ces.iter().any(|x| (x - e).abs() < 1e-9))
+        {
+            ces.push(e);
+        }
+    }
+    (precursors, ces)
+}
+
 /// What one side selected: the scans' precursor and collision energies, and the route's bins.
 fn side(s: &mut Sample, pk: &Pick, level: u8) -> Result<String> {
     let mut at = match pk.at {
@@ -84,11 +163,7 @@ fn side(s: &mut Sample, pk: &Pick, level: u8) -> Result<String> {
     };
     // a time with a precursor: the nearest scan of that precursor, taken by its number so the route answers that scan alone
     if let (At::Nearest(rt), Some(p)) = (&at, pk.precursor) {
-        let q = query(&[("rt", rt.to_string()), ("level", level.to_string()), ("precursor", p.to_string())]);
-        let none = || Error::new("err.scan.unknown").with("id", format!("nearest to {rt} min at MS level {level}, precursor {p}"));
-        let t = s.routes.handle("/api/nearest_scan", &q)?.ok_or_else(none)?;
-        let sid = parse(t.as_bytes())?.get("sid").and_then(Value::f64).ok_or_else(none)? as usize;
-        at = At::Scan(s.routes.idx.scans[sid].number(sid));
+        at = nearest_of(s, *rt, p, level)?;
     }
     let a = asked(s, &at, Some(level), None)?;
     let mut pairs = a.pairs;
@@ -97,40 +172,59 @@ fn side(s: &mut Sample, pk: &Pick, level: u8) -> Result<String> {
     match (pairs.iter().position(|(k, _)| *k == "precursor"), given) {
         (None, Some(p)) => pairs.push(("precursor", p.to_string())),
         (Some(i), Some(p)) if (pairs[i].1.parse::<f64>().unwrap_or(0.0) - p).abs() > 0.6 => {
-            return Err(Error::new("err.spectrum.compare.precursor").with("given", p.to_string()).with("found", pairs[i].1.clone()));
+            return Err(Error::new("err.spectrum.compare.precursor")
+                .with("given", p.to_string())
+                .with("found", pairs[i].1.clone()));
         }
         _ => {}
     }
     pairs.push(("rebin", "nominal".into()));
-    let text = s.routes.handle("/api/spectrum", &query(&pairs))?.ok_or_else(|| Error::new("err.scan.none"))?;
+    let text = s
+        .routes
+        .handle("/api/spectrum", &query(&pairs))?
+        .ok_or_else(|| Error::new("err.scan.none"))?;
     let (lo, hi) = a.window;
-    let want: Option<f64> = pairs.iter().find(|(k, _)| *k == "precursor").and_then(|(_, v)| v.parse().ok());
-    let chosen: Vec<&mzlab_core::idxread::Scan> = s.routes.idx.scans.iter().filter(|c| c.level == level && c.rt >= lo && c.rt <= hi && want.is_none_or(|p| (c.prec(-100.0) - p).abs() <= 0.6)).collect();
-    let mut precursors: Vec<f64> = Vec::new();
-    let mut ces: Vec<f64> = Vec::new();
-    for c in &chosen {
-        let pr = c.prec(-100.0);
-        if pr > 0.0 && !precursors.iter().any(|x| (x - pr).abs() <= 0.6) {
-            precursors.push(pr);
-        }
-        if let Some(e) = c.collision_energy.filter(|e| !ces.iter().any(|x| (x - e).abs() < 1e-9)) {
-            ces.push(e);
-        }
-    }
+    let want: Option<f64> = pairs
+        .iter()
+        .find(|(k, _)| *k == "precursor")
+        .and_then(|(_, v)| v.parse().ok());
+    let (precursors, ces) = scans_of(s, lo, hi, level, want);
     if want.is_none() && precursors.len() > 1 {
-        let list = precursors.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
+        let list = precursors
+            .iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
         return Err(Error::new("err.spectrum.compare.precursors").with("precursors", list));
     }
     let mut o = Out::default();
-    o.raw("{\"name\":").str(&s.name).raw(",\"query\":").str(&text_of(&pairs)).raw(",\"precursor\":");
-    o.opt(want.or(precursors.first().copied())).raw(",\"ce_values\":").floats(&ces);
+    o.raw("{\"name\":")
+        .str(&s.name)
+        .raw(",\"query\":")
+        .str(&text_of(&pairs))
+        .raw(",\"precursor\":");
+    o.opt(want.or(precursors.first().copied()))
+        .raw(",\"ce_values\":")
+        .floats(&ces);
     o.raw(",\"spectrum\":").raw(&text).raw("}");
     Ok(o.0)
 }
 
 pub fn compare(args: Vec<String>) -> Outcome {
     let go = || -> std::result::Result<_, String> {
-        let valued = ["--a-rt", "--a-scan", "--a-precursor", "--a-sample", "--b-rt", "--b-scan", "--b-precursor", "--b-sample", "--ms-level", "--set", "--out"];
+        let valued = [
+            "--a-rt",
+            "--a-scan",
+            "--a-precursor",
+            "--a-sample",
+            "--b-rt",
+            "--b-scan",
+            "--b-precursor",
+            "--b-sample",
+            "--ms-level",
+            "--set",
+            "--out",
+        ];
         let Some(p) = extract::parse(args, &valued, &[])? else {
             return Ok(Err(HELP));
         };
@@ -141,7 +235,13 @@ pub fn compare(args: Vec<String>) -> Outcome {
             None => 2,
             Some(_) => p.level()?,
         };
-        Ok(Ok((pick(&p, "a", &p.pos)?, pick(&p, "b", &p.pos)?, level, set_json(&p)?, p.out())))
+        Ok(Ok((
+            pick(&p, "a", &p.pos)?,
+            pick(&p, "b", &p.pos)?,
+            level,
+            set_json(&p)?,
+            p.out(),
+        )))
     };
     let (a, b, level, set, out) = match go() {
         Ok(Ok(x)) => x,
@@ -154,7 +254,10 @@ pub fn compare(args: Vec<String>) -> Outcome {
             let mut s = extract::open_sample(&pk.file, pk.sample, tmp)?;
             sides.push(side(&mut s, pk, level)?);
         }
-        let text = mzlab_lib::speccmp::compare_text(&set, &format!("{{\"a\":{},\"b\":{}}}", sides[0], sides[1]))?;
+        let text = mzlab_lib::speccmp::compare_text(
+            &set,
+            &format!("{{\"a\":{},\"b\":{}}}", sides[0], sides[1]),
+        )?;
         let note = notes(&text);
         Ok((text, note))
     };
@@ -182,12 +285,24 @@ fn text_of_value(x: &Value) -> String {
 
 /// The stderr lines: the cosine with its evidence, and each warning as the catalogue says it.
 fn notes(doc: &str) -> String {
-    let Ok(v) = parse(doc.as_bytes()) else { return String::new() };
+    let Ok(v) = parse(doc.as_bytes()) else {
+        return String::new();
+    };
     let num = |x: &Value, k: &str| x.get(k).and_then(Value::f64).unwrap_or(0.0);
-    let mut s = format!("note: cosine {} over {} matched bins (tolerance {} Da)\n", num(&v, "cosine"), num(&v, "n_matched"), v.get("params").map_or(0.0, |p| num(p, "tol")));
+    let mut s = format!(
+        "note: cosine {} over {} matched bins (tolerance {} Da)\n",
+        num(&v, "cosine"),
+        num(&v, "n_matched"),
+        v.get("params").map_or(0.0, |p| num(p, "tol"))
+    );
     for w in v.get("warnings").map_or(&[][..], Value::arr) {
         let key = w.get("key").and_then(Value::str).unwrap_or("");
-        let par = w.entries().iter().filter(|(k, _)| k != "key").map(|(k, x)| (k.clone(), text_of_value(x))).collect();
+        let par = w
+            .entries()
+            .iter()
+            .filter(|(k, _)| k != "key")
+            .map(|(k, x)| (k.clone(), text_of_value(x)))
+            .collect();
         s += &format!("warning: {}\n", crate::error_text::notice_text(key, par));
     }
     s

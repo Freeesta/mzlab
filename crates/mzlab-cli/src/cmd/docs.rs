@@ -15,7 +15,7 @@ fn run(args: Vec<String>) -> Outcome {
 }
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("commands", "mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task", crate::catalog::run)
+    Entry::new("commands", "mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes; --find: by task", crate::catalog::run)
         .schema("commands/1")
         .exits(&[0, 2, 5])
         .examples(&["mzlab-cli commands --json", "mzlab-cli commands --find sim snr --json"]),

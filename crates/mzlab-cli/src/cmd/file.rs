@@ -65,7 +65,7 @@ pub(crate) static TABLE: &[Entry] = &[
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("sample vars", "mzlab-cli sample vars NAME...   how file names split into variables", |a| crate::samples_cmd::run(pre("vars", a))),
     Entry::new("sample group", "mzlab-cli sample group NAME...   the file names' group name", |a| crate::samples_cmd::run(pre("group", a))),
-    Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   the sample table for the file names", |a| crate::samples_cmd::run(pre("table", a))),
+    Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   the sample table of file names", |a| crate::samples_cmd::run(pre("table", a))),
     Entry::new("sample import", "mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV", |a| crate::samples_cmd::run(pre("import", a))).schema("sample-import/1").exits(&[0, 1, 2, 3, 4, 6]),
     Entry::new("sample pair", "mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed", |a| crate::samples_cmd::run(pre("pair", a))).schema("sample-pair/1").exits(&[0, 1, 2, 3, 4]),
     Entry::new("sample list", "mzlab-cli sample list FILE...   what a file holds per sample", |a| crate::samples_cmd::run(pre("list", a))).schema("sample-list/1").exits(&[0, 1, 2, 4, 8]),
@@ -85,7 +85,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
-    Entry::new("trace xic", "mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace/1, trace-set/1, CSV; --dry-run xicplan/1", crate::trace_xic::xic)
+    Entry::new("trace xic", "mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1", crate::trace_xic::xic)
         .schema("trace/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("trace background", "mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON", crate::plain::background_cmd::run),
