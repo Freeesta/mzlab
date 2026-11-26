@@ -195,6 +195,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | .wasm ceilings: rules, where each ceiling and measurement lives (`tools/moduli/*.toml`), what costs most, move steps | `docs/agenti/wasm-caps.md` |
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
+| study of the plain-JS interface against the modern web platform (Safari 16.4 floor decides: popover, anchors, `<details name>` are above it), inventory by role, do-now / do-later / not-worth with tests, rows of the queue | `docs/agenti/web-modern.md` |
 | full binary specification and what a sample is made of (area: `.wiff` + `.wiff.scan` reader `crates/mzlab-core/src/wiff/`; read-only `file inventory|verify`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli file pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
 | copying only the byte ranges of the chosen samples of a big `.wiff.scan` into OPFS (`readers::ranges`, `sample select --ranges`, `sample_ranges`, `putSparse`, partial identity Q4 left open) | `docs/agenti/wiff-range-copy.md` |
