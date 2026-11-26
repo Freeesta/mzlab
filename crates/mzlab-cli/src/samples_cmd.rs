@@ -111,8 +111,7 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
-/// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
+/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 pub(crate) fn table(args: Vec<String>) -> Result<String, String> {
     let mut src = None;
     let mut paths = Vec::new();
@@ -407,6 +406,7 @@ fn list_run(args: Vec<String>) -> Outcome {
                 } else {
                     table += &list_table(&l.json, &f.display().to_string());
                 }
+                err += &crate::method_cmd::hint_line(&f.display().to_string(), " --sample ID");
                 if l.refused {
                     err += &format!(
                         "warning: {}: a sample is refused (see its `refused`)\n",
