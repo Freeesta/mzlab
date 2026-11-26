@@ -106,7 +106,6 @@ export function initAppunti(d, K, fr, deps = {}) {
   /** @type {AppState} */ const S = { clip: null, stamp: 0, lastWrite: 0, feeding: false, holdClick: 0 };
   capture(w, S);
   const remember = (/** @type {Record<string, string>} */ t) => { S.clip = t; S.stamp++; };
-  const wait = (/** @type {number} */ ms) => new Promise(r => setTimeout(r, ms));
   const selection = () => (K.editor.selection() || {});
   const hasSel = () => Object.values(selection()).some(v => Array.isArray(v) && v.length > 0);
   const mark = () => { const st = K.editor.struct(); return `${K.editor.historyPtr}:${st.atoms.size}:${st.bonds.size}`; };

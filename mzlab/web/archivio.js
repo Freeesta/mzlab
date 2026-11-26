@@ -31,11 +31,13 @@ const fail = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ 
 export async function locked(kind, name, fn) {
   const L = self.navigator && navigator.locks;
   if (!L) return fn();
-  const key = "mzlab-file:" + kind + "/" + name, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), WAIT_MS);
+  const key = "mzlab-file:" + kind + "/" + name;
+  // AbortSignal.timeout where it exists (its abort reason is a TimeoutError); a controller and a timer elsewhere (an AbortError)
+  const ctl = typeof AbortSignal.timeout === "function" ? null : new AbortController(), timer = ctl ? setTimeout(() => ctl.abort(), WAIT_MS) : 0, signal = ctl ? ctl.signal : AbortSignal.timeout(WAIT_MS);
   try {
-    return await L.request(key, { mode: "exclusive", signal: ctl.signal }, async () => { clearTimeout(timer); return fn(); });
+    return await L.request(key, { mode: "exclusive", signal }, async () => { clearTimeout(timer); return fn(); });
   } catch (e_) { const e = /** @type {Lanciato} */ (e_);
-    if (e && e.name === "AbortError") throw fail("error.fileInUse", { file: name });
+    if (e && (e.name === "TimeoutError" || e.name === "AbortError")) throw fail("error.fileInUse", { file: name });
     throw e;
   } finally { clearTimeout(timer); }
 }
