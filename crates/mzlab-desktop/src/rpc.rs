@@ -277,6 +277,7 @@ impl State {
                 Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?), None => text(""),
             },
             "filemethod" => text(mzlab_core::filemethod::document(p["sample"].as_u64().map(|x| x as u32), Some(s("method")).filter(|m| !m.is_empty()), s("items"))?),
+            "speccompare" => text(mzlab_lib::speccmp::compare_text(s("params"), s("sides"))?),
             "ticbg" => opt(mzlab_core::ticbg_route::route_files(&mut eng.idx, u("slot"), p["blank"].as_i64().unwrap_or(-1), &q())?),
             "map" => {
                 let metas = session_items(s("items"))?;
@@ -381,9 +382,7 @@ impl State {
             "lr_cancel" => {
                 // «Cancel» of the loading: the index builds of these files stop now (`IdxBuilder::cancel`); it does not wait for the engine
                 let b = self.indexer()?;
-                for n in p["names"].as_array().into_iter().flatten().filter_map(|n| n.as_str()) {
-                    b.cancel(n);
-                }
+                p["names"].as_array().into_iter().flatten().filter_map(|n| n.as_str()).for_each(|n| b.cancel(n));
                 return text("{}");
             }
             "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine

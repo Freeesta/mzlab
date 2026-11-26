@@ -126,6 +126,7 @@ embed!(
     "selection-1.json",
     "spectrum-1.json",
     "spectrum-bins-1.json",
+    "spectrum-compare-1.json",
     "step-params-1.json",
     "substructure-1.json",
     "substructure_db-1.json",

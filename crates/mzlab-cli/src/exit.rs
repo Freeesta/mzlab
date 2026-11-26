@@ -51,6 +51,8 @@ const SELECTOR_KEYS: &[&str] = &[
     "err.canali.unknown",
     "err.scan.unknown",
     "err.scan.level",
+    "err.spectrum.compare.precursors",
+    "err.spectrum.compare.precursor",
     "err.msn.node",
     "err.mol.draw.not_found",
     "err.mol.draw.not_found_bare",
@@ -103,6 +105,7 @@ const DATA_KEYS: &[&str] = &[
     "err.llm.replay.exhausted",
     "err.spectrum.minus",
     "err.spectrum.rebin.hr",
+    "err.spectrum.compare.empty",
     "err.noise.noBackground",
 ];
 

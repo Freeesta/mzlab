@@ -153,6 +153,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("is there a peak at this mass", "raw xic"),
     ("how many ions", "raw xic"),
     ("sum a split profile fragment into one nominal mass bin", "spectrum get"),
+    ("cosine of two ms2 spectra", "spectrum compare"),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.

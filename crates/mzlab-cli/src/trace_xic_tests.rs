@@ -310,6 +310,10 @@ fn an_empty_trace_is_named_and_not_silent() {
     let (doc, err) = run_ok(&["--mz", "9999", "--da", "0.2"]);
     assert_eq!(reason(&doc), (Some(true), Some("no_signal".into())));
     assert!(err.contains("xic:9999 is empty (no signal)"), "{err}");
+    // an empty trace with no offset names the flag that measures it, and not when an offset was given
+    assert!(err.contains("--mz-offset auto:MZ[@RT]"), "{err}");
+    let (_, err) = run_ok(&["--mz", "9999", "--da", "0.2", "--mz-offset", "0.1"]);
+    assert!(!err.contains("hint:"), "{err}");
     // a polarity none of the scans has
     let (doc, err) = run_ok(&["--mz", "241.3", "--da", "0.4", "--polarity", "-"]);
     assert_eq!(

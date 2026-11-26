@@ -67,6 +67,13 @@ pub fn flow_lookup(
         .map_err(|e| JsValue::from_str(&e))
 }
 
+/// `spectrum-compare/1` (`mzlab_lib::speccmp::compare_json`, the function `mzlab-cli spectrum compare` calls): the cosine of two MS2 spectra at nominal mass from the `rebin=nominal`
+/// answers of `/api/spectrum` that the page holds, with the matched ions and the warnings. The error is the JSON `{"error_key", "params"}` text.
+#[wasm_bindgen]
+pub fn spectrum_compare(params_json: &str, sides_json: &str) -> std::result::Result<String, JsValue> {
+    mzlab_lib::speccmp::compare_json(params_json, sides_json).map_err(|e| JsValue::from_str(&e))
+}
+
 /// Total bytes of block cache for all the open libraries: 64 MB, 32 MB on iPad and phones (the one place is `mzlab_lib::read`).
 #[wasm_bindgen]
 pub fn total_cache_budget(small_device: bool) -> f64 {

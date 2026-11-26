@@ -50,6 +50,9 @@ route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `
 - `--set`: `min_z` 3, `min_net` 1, `alpha` 0.05, `side_min` 0.3 min, `gap_min` 0.05 min (`--side` and `--gap` are the last two); out of range: `err.raw.scan.param`, exit 2. `--channel` takes an MS or DDA channel (`err.raw.scan.channel` otherwise, `err.canali.unknown` exit 5). `provenance.params` holds every value, `provenance.choices` the background and the quantum.
 - `warn.raw.oneSide`: a window at the start or end of the run has one side only (`side` left|right|none: none = a background of zero everywhere). `--dry-run`: `raw-plan/1`. Exit as `raw xic`. Route `/api/rawscan`, lazy `.wasm` `rawscan` (`mzlab-rawscan-wasm`).
 
+## Finding the m/z offset flag
+A peak off by a fraction of a Da is a shifted m/z axis: `commands --find mass shift` finds `trace xic`, `features` and `raw xic` (`--mz-offset DA|auto:MZ[@RT]`). Hints on stderr, never a changed value: an empty `trace xic` trace, or `raw xic` with nothing at any mass, with no offset given, names `--mz-offset`; `raw info --offset-ion` names the flag that applies the measured offset.
+
 ## Site, app, CLI
 - The page asks the route `/api/rawinfo?probe=N&offset_mz=M&offset_rt=T` of a slot: the site's worker sends it to the lazy `.wasm` `raw` (`mzlab-raw-wasm`, `rust-raw.js`,
   over the index in OPFS; the engine `.wasm` has no room), the app answers it natively (`rawinfo::handle`); the CLI prints the route's members inside each sample. `raw xic` is the route `/api/rawxic`, answered by the lazy `.wasm` `rawxic` (`mzlab-rawxic-wasm`; `raw` keeps its size); `raw scan` is the route `/api/rawscan`, answered by the lazy `.wasm` `rawscan` (`mzlab-rawscan-wasm`); `/api/specsum` (`spectrum get --sum`, `data-channels.md`) is answered by the same `rawxic` module (`spec_sum`); `raw cache` is native only: the site keeps its indexes in OPFS, not in a cache folder.

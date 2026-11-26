@@ -60,6 +60,20 @@ pub(crate) fn offset_note(answer: &str) -> String {
     }
 }
 
+/// The stderr line of `dad delay`: the estimate is evidence only, so say where a number of minutes is used (never a changed value of the answer).
+pub(crate) fn delay_note(answer: &str) -> String {
+    let min = mzlab_core::json::parse(answer.as_bytes())
+        .ok()
+        .and_then(|v| {
+            v.get("delay")
+                .and_then(|d| d.get("delay"))
+                .and_then(|x| x.f64())
+        });
+    min.map_or_else(String::new, |m| {
+        format!("dad: delay {m} min, not applied; use it with `dad ms-at FILE --rt T --offset {m}` (`dad peaks` applies it by default, --offset auto)\n")
+    })
+}
+
 /// `dad peaks --format csv`: a row per ion (a peak without ions has one row with the ion columns empty); the numbers are the answer's own.
 pub(crate) fn peaks_csv(answer: &str) -> Result<String> {
     let bad = || Error::new("error.badIndex");

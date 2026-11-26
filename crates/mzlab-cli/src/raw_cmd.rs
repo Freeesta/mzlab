@@ -280,6 +280,7 @@ fn one(f: &Path, sample: Option<u32>, a: &Ask) -> Result<(Answer, String)> {
             ));
         }
         let prov = prov_file(&s.name, &sha, size, s.sample);
+        let note = s.note.clone() + &offset_note(&s.name, &members, a.offset);
         Ok((
             Answer {
                 entry: o.0,
@@ -287,9 +288,27 @@ fn one(f: &Path, sample: Option<u32>, a: &Ask) -> Result<(Answer, String)> {
                 warnings,
                 choices,
             },
-            s.note,
+            note,
         ))
     })
+}
+
+/// A measured offset is evidence only: the stderr line that says which flag applies it.
+fn offset_note(name: &str, members: &str, asked: Option<(f64, Option<f64>)>) -> String {
+    let da = parse(format!("{{{members}}}").as_bytes())
+        .ok()
+        .and_then(|v| {
+            v.get("mass_offset")
+                .and_then(|m| m.get("da"))
+                .and_then(|d| d.f64())
+        });
+    match (da, asked) {
+        (Some(da), Some((mz, rt))) => {
+            let at = rt.map_or(String::new(), |t| format!("@{t}"));
+            format!("{name}: m/z offset {da} Da measured on {mz}; apply it with --mz-offset {da} or --mz-offset auto:{mz}{at} (trace xic, features, raw xic)\n")
+        }
+        _ => String::new(),
+    }
 }
 
 /// `raw-plan/1`: the resolved query and each file with its cache status; no peak is read.

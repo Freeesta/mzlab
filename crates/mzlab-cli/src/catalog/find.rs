@@ -245,3 +245,7 @@ pub(crate) fn run(query: &[String], json: bool) -> Outcome {
 #[cfg(test)]
 #[path = "find_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "find_offset_tests.rs"]
+mod offset_tests;

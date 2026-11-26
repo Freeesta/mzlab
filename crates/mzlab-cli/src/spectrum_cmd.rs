@@ -16,6 +16,8 @@ mod bins;
 mod help;
 use help::GET_VALUES;
 pub use help::HELP_GET;
+#[path = "spectrum_compare.rs"]
+mod compare_cmd;
 #[path = "spectrum_level.rs"]
 mod level;
 #[path = "spectrum_list.rs"]
@@ -26,6 +28,7 @@ mod minus;
 mod peak;
 #[path = "spectrum_sum.rs"]
 mod sum;
+pub use compare_cmd::compare;
 pub use list_cmd::list;
 fn finish(r: Result<(String, String)>, out: &Option<PathBuf>) -> Outcome {
     match r {
@@ -58,6 +61,7 @@ fn text_of(pairs: &[(&str, String)]) -> String {
 }
 
 /// What the request asks for, after the file was read.
+#[derive(Clone, Copy)]
 pub(crate) enum At {
     Scan(i64),
     Nearest(f64),
@@ -372,6 +376,9 @@ fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
 #[cfg(test)]
 #[path = "spectrum_bins_tests.rs"]
 mod bins_tests;
+#[cfg(test)]
+#[path = "spectrum_compare_tests.rs"]
+mod compare_tests;
 #[cfg(test)]
 #[path = "spectrum_peak_tests.rs"]
 mod peak_tests;

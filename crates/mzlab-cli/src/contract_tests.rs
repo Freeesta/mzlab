@@ -56,6 +56,15 @@ pub(crate) const MISSING: &[&[&str]] = &[
     ],
     &["spectrum", "get", "/nonexistent/x.mzML", "--rt", "1"],
     &["spectrum", "list", "/nonexistent/x.mzML"],
+    &[
+        "spectrum",
+        "compare",
+        "/nonexistent/x.mzML",
+        "--a-rt",
+        "1",
+        "--b-rt",
+        "1",
+    ],
     &["trace", "background", "/nonexistent/x.mzML"],
     &[
         "spectrum",

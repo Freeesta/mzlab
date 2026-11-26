@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spectrum-compare/1",
+  "title": "spectrum-compare/1: the cosine of two MS2 spectra at nominal mass, `mzlab-cli spectrum compare`",
+  "description": "Two spectra cut into nominal bins (`/api/spectrum` with rebin=nominal) and matched bin to bin within `params.tol` Da; the cosine is the engine's (square-root intensities, `mzlab_lib::scores::cosine_from_pairs`). Code: crates/mzlab-lib/src/speccmp.rs (the function the site .wasm, the app and the CLI call), crates/mzlab-cli/src/spectrum_compare.rs (the selection of the scans).",
+  "type": "object",
+  "required": [
+    "schema",
+    "bin",
+    "algorithm",
+    "params",
+    "cosine",
+    "n_matched",
+    "a",
+    "b",
+    "matched",
+    "only_a",
+    "only_b",
+    "warnings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "spectrum-compare/1"
+    },
+    "bin": {
+      "const": "nominal"
+    },
+    "algorithm": {
+      "type": "string",
+      "description": "How the cosine is computed."
+    },
+    "params": {
+      "type": "object",
+      "required": ["tol", "ce_tol", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "tol": {
+          "type": "number",
+          "description": "Largest distance between two bin centres that still match, Da; 0 = the same bin."
+        },
+        "ce_tol": {
+          "type": "number",
+          "description": "Collision energies that differ by more than this, eV, give the warning warn.spectrum.ceDiffer."
+        },
+        "default": {
+          "type": "array",
+          "items": { "enum": ["tol", "ce_tol"] },
+          "description": "The parameters that took their default (every automatic choice is logged)."
+        }
+      }
+    },
+    "cosine": {
+      "type": "number",
+      "description": "0 to 1, six decimals."
+    },
+    "n_matched": {
+      "type": "integer"
+    },
+    "a": { "$ref": "#/$defs/side" },
+    "b": { "$ref": "#/$defs/side" },
+    "matched": {
+      "type": "array",
+      "description": "The matched ions in the order of the bins of A, with both intensities.",
+      "items": {
+        "type": "object",
+        "required": ["bin", "bin_b", "mz_a", "mz_b", "a", "b"],
+        "additionalProperties": false,
+        "properties": {
+          "bin": { "type": "number", "description": "Bin centre of A." },
+          "bin_b": { "type": "number", "description": "Bin centre of B (differs from `bin` only with tol above 0)." },
+          "mz_a": { "type": "number", "description": "Centre of mass of the bin in A." },
+          "mz_b": { "type": "number" },
+          "a": { "type": "number", "description": "Counts of the bin in A." },
+          "b": { "type": "number" }
+        }
+      }
+    },
+    "only_a": { "$ref": "#/$defs/unmatched" },
+    "only_b": { "$ref": "#/$defs/unmatched" },
+    "warnings": {
+      "type": "array",
+      "description": "Each has `key` (warn.spectrum.ceDiffer, ceMixed, ceUnknown or precursorDiffer) and the values its text names.",
+      "items": {
+        "type": "object",
+        "required": ["key"],
+        "properties": { "key": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "side": {
+      "type": "object",
+      "required": ["name", "query", "scans", "precursor", "ce", "ce_values", "n_bins", "dropped_bins", "total", "matched", "explained"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "The file." },
+        "query": { "type": ["string", "null"], "description": "The `/api/spectrum` query that selected the scans." },
+        "scans": { "type": ["number", "null"], "description": "Scans the route averaged." },
+        "precursor": { "type": ["number", "null"] },
+        "ce": { "type": ["number", "null"], "description": "The collision energy, eV; null when the scans carry none or several." },
+        "ce_values": { "type": "array", "items": { "type": "number" }, "description": "The distinct collision energies of the scans." },
+        "n_bins": { "type": "integer" },
+        "dropped_bins": { "type": "integer", "description": "Bins with no intensity above zero, left out." },
+        "total": { "type": "number", "description": "Counts summed over the bins." },
+        "matched": { "type": "number", "description": "Counts in the matched bins." },
+        "explained": { "type": "number", "description": "matched / total: the share of this spectrum the other one accounts for." }
+      }
+    },
+    "unmatched": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bin", "mz", "y"],
+        "additionalProperties": false,
+        "properties": {
+          "bin": { "type": "number" },
+          "mz": { "type": "number" },
+          "y": { "type": "number" }
+        }
+      }
+    }
+  }
+}

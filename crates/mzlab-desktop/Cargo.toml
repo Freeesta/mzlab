@@ -27,6 +27,8 @@ mzlab-feat = { path = "../mzlab-feat", features = ["chem", "legacy", "untargeted
 mzlab-ops = { path = "../mzlab-ops", features = ["table", "detect", "proofs", "untargeted"] }
 # the engine of the plans of the graphical Flow (`flow/run`): the same one as `cargo run -p mzlab-cli --example flow`
 mzlab-cli = { path = "../mzlab-cli" }
+# `spectrum compare` (op `speccompare`): the function of the CLI and of the library .wasm
+mzlab-lib = { path = "../mzlab-lib", features = ["flow"] }
 # the assistant: providers, request and answer decoding (the key and the network stay in this crate)
 mzlab-llm = { path = "../mzlab-llm" }
 memmap2 = "0.9"
@@ -51,4 +53,3 @@ tauri-build = { version = "2", optional = true }
 tempfile = "3"
 libm = "0.2"
 serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
-mzlab-lib = { path = "../mzlab-lib" }

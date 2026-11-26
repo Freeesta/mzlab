@@ -354,6 +354,10 @@ fn run(j: &Job, tmp: &std::path::Path) -> Result<(String, String)> {
                 extract::jnum(mz),
                 why.replace('_', " ")
             );
+            // a systematic shift of the m/z axis looks like an absent ion: name the flag that measures and corrects it
+            if off.da == 0.0 && off.auto.is_none() {
+                s.note += &format!("hint: {}\n", crate::mz_offset::SHIFT_HINT);
+            }
         }
         answers.push((mz, a));
     }

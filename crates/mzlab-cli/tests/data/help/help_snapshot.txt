@@ -14,28 +14,28 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
-       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference
-       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
-       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data, with their evidence
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset, RT windows
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of several series as one target list
+       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
-       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
-       mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+       mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
-       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
+       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
-       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
+       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
-       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
-       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index
        mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
@@ -43,19 +43,19 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
-       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   the window's spectrum minus the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
-       mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
+       mzlab-cli sample table NAME... [--text]   the sample table of file names
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
-       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace/1, trace-set/1, CSV; --mz needs a tolerance; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -63,11 +63,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
-       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --minus a blank
+       mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--set tol=DA]   MS2 cosine at nominal mass
+       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
-       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace (many: peak table)
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
@@ -86,23 +87,23 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
        mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of structures and arrows
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
-       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists from official sources (native only)
+       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists (native only)
        mzlab-cli db normative pack ...   pack the regulatory lists (native only)
        mzlab-cli db normative listings ...   the regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import the user's official lists (native only)
@@ -117,8 +118,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
-       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes; --find: by task
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -139,28 +140,28 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
-       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference
-       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
-       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data, with their evidence
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset, RT windows
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of several series as one target list
+       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
-       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
-       mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+       mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
-       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
+       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
-       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
+       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
-       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
-       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index
        mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
@@ -168,19 +169,19 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
-       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   the window's spectrum minus the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
-       mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
+       mzlab-cli sample table NAME... [--text]   the sample table of file names
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
-       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace/1, trace-set/1, CSV; --mz needs a tolerance; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -188,11 +189,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
-       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --minus a blank
+       mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--set tol=DA]   MS2 cosine at nominal mass
+       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
-       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace (many: peak table)
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
@@ -211,23 +213,23 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
        mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of structures and arrows
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
-       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists from official sources (native only)
+       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists (native only)
        mzlab-cli db normative pack ...   pack the regulatory lists (native only)
        mzlab-cli db normative listings ...   the regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import the user's official lists (native only)
@@ -242,8 +244,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
-       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes; --find: by task
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -264,28 +266,28 @@ text on stderr); progress goes to stderr. Exit codes: 0 ok; 1 data or domain err
 integrity; 4 input missing or unreadable; 5 selector not found (sample, channel, node, step instance); 6 output write or external source failure; 7 internal error (a bug); 8 input still being written (retry when it ends).
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset DA|auto:MZ[@RT]] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   the non-targeted feature table, CSV
-       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs the reference and the blank: candidate products
-       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset per polarity, RT windows on an internal reference
-       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   the feature tables of several series as one target list
-       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data, with their evidence
+       mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file, mass offset, RT windows
+       mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   feature tables of several series as one target list
+       mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
-       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
-       mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+       mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
        mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
-       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels, proposed kind
+       mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds: container, samples, items, channels
        mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON
-       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample, SHA-256 and status
+       mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds per sample
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file: counts, ranges, ms2_exps with CE
-       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1; null + reason
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file
+       mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair found by name
-       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index and SHA-1
+       mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, vocabulary, index
        mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts
        mzlab-cli file unpack MANIFEST --out DIR [--parts DIR] [--dry-run] [--force]   rebuild files
        mzlab-cli file check-pack MANIFEST [--parts DIR]   parts to resend
@@ -293,19 +295,19 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli raw info FILE... [--sample ID] [--probe N] [--offset-ion MZ[@RT]] [--dry-run] [--out PATH]   data kind, ion quantum, grid, label check
        mzlab-cli raw cache FILE... [--sample ID] [--check] [--out PATH]   build or check the index cache entries
        mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]   peak, trace or nothing at a mass and time
-       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   what is in the window's spectrum that is not in the background
+       mzlab-cli raw scan FILE... --rt A,B [--side MIN] [--gap MIN] [--bin nominal|0.1] [--mz-range LO,HI] [--top N] [--channel ID] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--full DIR] [--dry-run] [--out PATH]   the window's spectrum minus the background
        mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
-       mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
+       mzlab-cli sample table NAME... [--text]   the sample table of file names
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
-       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   a channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace/1, trace-set/1, CSV; --mz needs a tolerance; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--dry-run]   XICs of m/z, lists in one call: trace-set/1, CSV; --dry-run xicplan/1
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
        mzlab-cli dad subtract FILE ...   the DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time
@@ -313,11 +315,12 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time
        mzlab-cli dad delay FILE ...   the delay between the DAD and the MS
        mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions
-       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --sum adds scans; --minus a blank
-       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
+       mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --minus a blank
+       mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--set tol=DA]   MS2 cosine at nominal mass
+       mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
-       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace (many: peak table)
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]   one-ion noise floor, peak S/N
        mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
@@ -336,23 +339,23 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn rules sum DOC...   the msn-rules/1 documents summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
        mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
        mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of structures and arrows
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
-       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors, formula analysis of a drawing
+       mzlab-cli mol measure REQUEST.json|-   logP, TPSA, H-bond counts, rotors of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene; --set edit=JSON|@PATH patches it
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   the text the editor reads for a file
        mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
-       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists from official sources (native only)
+       mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists (native only)
        mzlab-cli db normative pack ...   pack the regulatory lists (native only)
        mzlab-cli db normative listings ...   the regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import the user's official lists (native only)
@@ -367,8 +370,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes (commands/1); --find: by task (commands-find/1)
-       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list (schemas/1)
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command's arguments, flags, schema, exit codes; --find: by task
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -385,11 +388,11 @@ exit 0
 --- stdout
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
-       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
-       mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+       mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -400,11 +403,11 @@ exit 0
 --- stdout
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only; --template a one-step plan
-       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults, limits and the --set key
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   the Flow steps, native or page only
+       mzlab-cli flow defaults STEP[@V] [--json]   the parameters of a step with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run
-       mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+       mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
        mzlab-cli flow command PLAN.json [--json]   the rerun script
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -815,9 +818,9 @@ exit 0
 --- stdout
 usage: mzlab-cli sample vars NAME...   how file names split into variables
        mzlab-cli sample group NAME...   the file names' group name
-       mzlab-cli sample table NAME... [--text]   the sample table for the file names, roles logged on stderr
+       mzlab-cli sample table NAME... [--text]   the sample table of file names
        mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV
-       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed and samples left out
+       mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   how the samples pair with the files, roles proposed
        mzlab-cli sample list FILE...   what a file holds per sample
        mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
@@ -1099,7 +1102,7 @@ several files each line starts with `FILE: `. The summary of every file goes to 
 === mzlab-cli db normative --help
 exit 0
 --- stdout
-usage: mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists from official sources (native only)
+usage: mzlab-cli db normative build --cache DIR --out DIR   the EU and US regulatory lists (native only)
        mzlab-cli db normative pack ...   pack the regulatory lists (native only)
        mzlab-cli db normative listings ...   the regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import the user's official lists (native only)
@@ -1176,7 +1179,7 @@ If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/m
 === mzlab-cli flow verify --help
 exit 0
 --- stdout
-usage: mzlab-cli flow verify RECORD   whether an mzrun/1 record's fingerprints match its files
+usage: mzlab-cli flow verify RECORD   whether a record's fingerprints match its files
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
