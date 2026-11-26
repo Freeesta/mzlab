@@ -266,3 +266,6 @@ fn usage_errors_carry_their_keys() {
     }
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[path = "estimate_nominal_tests.rs"]
+mod nominal;
