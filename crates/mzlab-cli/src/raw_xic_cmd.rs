@@ -2,125 +2,36 @@
 //! rows and the members come from `mzlab_core::rawxic` (the `/api/rawxic` route the app and the site answer), so their bytes are the route's; this
 //! file only reads the flags, opens the samples and adds the cross-file `summary`, the cap and the `provenance` shared with `raw info`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::rawxic::Ask;
-use mzlab_core::routes::Query;
 
 use crate::extract::{self, jstr, Parsed};
 use crate::raw_cmd::{
     choice, error_entry, missing, name_of, prov_file, provenance, warnings_of, whole_run,
 };
+use crate::raw_plan::plan_of;
+use crate::raw_xic_ask::{xic_ask_of, XicAsk};
 use crate::Outcome;
 
 pub const XIC_HELP: &str = "mzlab-cli raw xic: at each mass and time, is there a peak, in each file? JSON (raw-xic/1): per file and mass a `verdict` (peak, trace,
 nothing, no_data) with its `rule`, the numbers of `quant targets` (area, height, S/N, shape) and the ion counts behind it (Poisson S/N with a one-ion
 floor, Currie levels, an upper limit for `nothing`); `provenance` names the files, thresholds and automatic choices.
 
-usage: mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--limit N] [--dry-run] [--out PATH]
+usage: mzlab-cli raw xic FILE... --mz LIST --rt A,B [--da D] [--ms-level N] [--polarity +|-] [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--ions [--scan-type ems|epi|q1|sim|other]] [--sample ID] [--limit N] [--dry-run] [--out PATH]
 
   FILE        an mzML, or any file the app reads; several files give one row per file and mass, in order
   --mz LIST   masses, comma separated; each is the centre of a window of +-D Da (default 0.5)
   --rt A,B    the retention-time window, min; the sides of it (the background) are read from the same trace
   --set       min_sn=3 (S/N on the one-ion floor), min_points=3 (scans in a row with an ion), alpha=0.05 (error of the Currie levels),
               side_min=0.3 (shortest side window, min), gap_min=0.05 (gap to a side, min); every value used is in `provenance.params`
+  --ions      opt-in: both scales, cps and ions. Each row gains `ions_*`, `cps_net`, `sn_ions`, `verdict_ions`, each sample an `ion_scale` (ions per cps and where it
+              comes from: the method fields given with --set, else 1 / ion quantum) and its `ion_scale_choice`. --scan-type names the scan type (default: read from the scans)
+  --set       (with --ions) fill_ms (ems, epi), dwell_ms (sim), scan_s + step_da + mass_lo + mass_hi (q1): the method values of the scan type; without them the data estimate is used
   --limit N   most rows printed (default 50); `n_total` and `truncated` say what was cut, `summary` is always whole
   --dry-run   the resolved query and each file with its cache status (raw-plan/1); reads no peak
 exit 0 answered (any verdict, `nothing` too), 1 a file could not be read or its rows are inconsistent (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out not writable";
-
-/// Rows printed by default.
-const LIMIT: usize = 50;
-/// The keys of `--set` and of the route.
-const SET_KEYS: &[&str] = &["min_sn", "min_points", "alpha", "side_min", "gap_min"];
-
-/// The question: the files, the route question (`mzlab_core::rawxic::Ask`), the cap and the polarity.
-pub(crate) struct XicAsk {
-    files: Vec<PathBuf>,
-    ask: Ask,
-    limit: usize,
-    pol: Option<i8>,
-}
-
-/// A query value with every byte but the unreserved ones percent-encoded (`auto:300@5` keeps its meaning through `Query::parse`).
-fn enc(v: &str) -> String {
-    v.bytes()
-        .map(|b| match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'.' | b'-' | b'_' => (b as char).to_string(),
-            _ => format!("%{b:02X}"),
-        })
-        .collect()
-}
-
-/// `--set a=1,b=2` (repeatable) as pairs; a name outside `SET_KEYS` is refused.
-fn set_of(p: &Parsed) -> std::result::Result<Vec<(String, String)>, Error> {
-    let mut out: Vec<(String, String)> = Vec::new();
-    for v in p.all("--set") {
-        for item in v.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-            let (k, val) = item
-                .split_once('=')
-                .filter(|(k, _)| SET_KEYS.contains(k))
-                .ok_or_else(|| {
-                    Error::new("err.cli.rawxic.set")
-                        .with("item", item)
-                        .with("names", SET_KEYS.join(", "))
-                })?;
-            out.retain(|(n, _)| n != k);
-            out.push((k.to_string(), val.to_string()));
-        }
-    }
-    Ok(out)
-}
-
-fn xic_ask_of(p: &Parsed) -> std::result::Result<XicAsk, Error> {
-    let files: Vec<PathBuf> = p.pos.iter().map(PathBuf::from).collect();
-    if files.is_empty() {
-        return Err(Error::new("err.cli.rawxic.needsFile"));
-    }
-    let mz = p
-        .get("--mz")
-        .ok_or_else(|| Error::new("err.cli.rawxic.needsMz"))?;
-    let rt = p
-        .get("--rt")
-        .ok_or_else(|| Error::new("err.cli.rawxic.needsRt"))?;
-    let set = set_of(p)?;
-    let mut query = format!("mz={}&rt={}", enc(mz), enc(rt));
-    for (flag, key) in [
-        ("--da", "da"),
-        ("--ms-level", "ms_level"),
-        ("--mz-offset", "mz_offset"),
-    ] {
-        if let Some(v) = p.get(flag) {
-            query += &format!("&{key}={}", enc(v));
-        }
-    }
-    for (k, v) in &set {
-        query += &format!("&{k}={}", enc(v));
-    }
-    let limit = match p.get("--limit") {
-        None => LIMIT,
-        Some(v) => v
-            .parse::<usize>()
-            .ok()
-            .filter(|n| *n >= 1)
-            .ok_or_else(|| Error::new("err.cli.rawxic.limit").with("value", v))?,
-    };
-    let pol = match p.get("--polarity") {
-        None => None,
-        Some("+") => Some(1),
-        Some("-") => Some(-1),
-        Some(v) => return Err(Error::new("err.cli.rawxic.polarity").with("value", v)),
-    };
-    // the route reads the same text, so a value the site would refuse is refused here before any file is opened
-    let ask = Ask::of(&Query::parse(&query))?;
-    Ok(XicAsk {
-        files,
-        ask,
-        limit,
-        pol,
-    })
-}
 
 /// What one file answered: its entry, its rows, the `provenance.files` member, warnings and automatic choices.
 struct Answer {
@@ -132,7 +43,7 @@ struct Answer {
 }
 
 /// The `files` entry of one file: what it is and, under `samples`, the members of the route.
-fn entry_json(
+pub(crate) fn entry_json(
     name: &str,
     container: &str,
     sha: &str,
@@ -161,7 +72,14 @@ fn entry_json(
 }
 
 /// The automatic choices of one file: the sample taken when none was named and the ion quantum read from the probe.
-fn choices_of(name: &str, sid: &str, first: bool, members: &str, level: u8) -> Vec<String> {
+pub(crate) fn choices_of(
+    name: &str,
+    sid: &str,
+    first: bool,
+    members: &str,
+    level: u8,
+    ions: bool,
+) -> Vec<String> {
     let mut choices = Vec::new();
     if first {
         choices.push(choice(
@@ -182,6 +100,9 @@ fn choices_of(name: &str, sid: &str, first: bool, members: &str, level: u8) -> V
         &cps.map_or("null".into(), |c| c.to_string()),
         &format!("the smallest positive intensity of {} probed scans of MS level {level} (null: not ion counts, the pipeline S/N decides)", mzlab_core::rawxic::PROBE),
     ));
+    if ions {
+        choices.push(crate::raw_xic_ions::scale_choice(name, members));
+    }
     choices
 }
 
@@ -230,6 +151,7 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
             sample.is_none() && s.sample.is_some(),
             &out.members,
             a.ask.level,
+            a.ask.ions.is_some(),
         );
         let prov = prov_file(&s.name, &sha, size, s.sample);
         Ok((
@@ -332,39 +254,10 @@ fn params_json(p: &Parsed, a: &XicAsk) -> String {
         .num(t.side_min)
         .raw(",\"gap_min\":")
         .num(t.gap_min);
-    o.raw("},\"limit\":").int(a.limit as i64).raw("}");
+    o.raw("},\"limit\":").int(a.limit as i64);
+    crate::raw_xic_ions::params_member(&mut o, k);
+    o.raw("}");
     o.0
-}
-
-/// `raw-plan/1`: the resolved query and each file with its cache status; no peak is read.
-fn plan(p: &Parsed, a: &XicAsk) -> Outcome {
-    let dir = crate::idx_cache::dir();
-    let mut rows = Vec::new();
-    for f in &a.files {
-        let label = match p.sample(f) {
-            Ok(s) => s.map_or(String::new(), |id| format!("{}@{id}", name_of(f))),
-            Err(m) => return Outcome::fail(&m),
-        };
-        let cache = match &dir {
-            None => "none".to_string(),
-            Some(d) => match crate::idx_cache::peek(d, f, &label) {
-                Ok((st, _, _)) => st.to_string(),
-                Err(e) => return crate::sample_select::fail(&e),
-            },
-        };
-        let size = std::fs::metadata(f).ok().map(|m| m.len());
-        rows.push(format!(
-            "{{\"file\":{},\"size_bytes\":{},\"cache\":\"{cache}\"}}",
-            jstr(&name_of(f)),
-            size.map_or("null".into(), |n| n.to_string())
-        ));
-    }
-    let text = format!(
-        "{{\"schema\":\"raw-plan/1\",\"command\":\"raw xic\",\"query\":{},\"files\":[{}]}}\n",
-        params_json(p, a),
-        rows.join(",")
-    );
-    crate::emit(text, &p.out())
 }
 
 /// What the files answered, in file order.
@@ -469,11 +362,12 @@ pub fn xic_run(args: Vec<String>) -> Outcome {
         "--polarity",
         "--mz-offset",
         "--set",
+        "--scan-type",
         "--sample",
         "--limit",
         "--out",
     ];
-    let p = match extract::parse(args, &valued, &["--dry-run"]) {
+    let p = match extract::parse(args, &valued, &["--dry-run", "--ions"]) {
         Ok(Some(p)) => p,
         Ok(None) => return Outcome::ok(format!("{XIC_HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
@@ -486,7 +380,7 @@ pub fn xic_run(args: Vec<String>) -> Outcome {
         return crate::sample_select::fail(&e);
     }
     if p.flag("--dry-run") {
-        return plan(&p, &a);
+        return plan_of(&p, &a.files, "raw xic", &params_json(&p, &a));
     }
     match gather(&p, &a) {
         Ok(g) => render(&p, &a, &command, g),

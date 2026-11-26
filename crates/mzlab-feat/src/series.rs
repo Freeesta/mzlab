@@ -402,6 +402,7 @@ pub(crate) fn finish<R: ReadAt>(
     if let Some((lo, hi)) = r.rt_range {
         table.retain_rt(lo, hi);
     }
+    let one_pol = crate::lrscreen_dedup::one_polarity(n, r, &mut open);
     let mut filled = 0;
     if let (true, Some(f)) = (r.fill_gaps, &r.peak_finder) {
         filled = peak_finder(&mut table, n, r, f, &mut open, prog)?;
@@ -409,7 +410,7 @@ pub(crate) fn finish<R: ReadAt>(
         #[cfg(not(target_family = "wasm"))]
         if let Some(po) = par_open {
             let filled = fill_threads(&mut table, n, map, r, po, prog)?;
-            crate::lrscreen_dedup::merge(&mut table, r);
+            crate::lrscreen_dedup::merge(&mut table, r, one_pol);
             table.sort_rows();
             return Ok((table, filled));
         }
@@ -423,7 +424,7 @@ pub(crate) fn finish<R: ReadAt>(
             prog.tick(1);
         }
     }
-    crate::lrscreen_dedup::merge(&mut table, r);
+    crate::lrscreen_dedup::merge(&mut table, r, one_pol);
     table.sort_rows();
     Ok((table, filled))
 }

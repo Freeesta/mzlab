@@ -1,5 +1,5 @@
 """The common routes answer the same in the desktop engine and in the engine .wasm (mzlab-wasm, through Node): crates/mzlab-desktop/tests/parity_routes.rs
-sends one plan of routes to both on the same example and index; profile_hr_spectrum.rs does the same on a high-resolution profile file, profile_sparse_wiff.rs on sparse product-ion scans of a .wiff, parity_ticbg.rs api/tic_background on a synthetic run with chemical background. Skipped without cargo, wasm-bindgen or node."""
+sends one plan of routes to both on the same example and index; profile_hr_spectrum.rs does the same on a high-resolution profile file, profile_sparse_wiff.rs on sparse product-ion scans of a .wiff, parity_nominal_bin.rs `/api/spectrum` with `rebin=` (`spectrum get --bin`) on a unit-resolution profile, parity_ticbg.rs api/tic_background on a synthetic run with chemical background. Skipped without cargo, wasm-bindgen or node."""
 import os
 import shutil
 import subprocess
@@ -20,7 +20,7 @@ def run(*a, env=None):
 
 
 def test_the_app_and_the_wasm_give_the_same_answers(tmp_path):
-    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm", "-p", "mzlab-ticfondo-wasm", "-p", "mzlab-raw-wasm", "-p", "mzlab-rawxic-wasm", runner=run)
-    for crate in ("mzlab_wasm", "mzlab_rotte_wasm", "mzlab_ticfondo_wasm", "mzlab_raw_wasm", "mzlab_rawxic_wasm"):   # the engine and its lazy modules (statistics, Data and Flow routes; api/tic_background; api/rawinfo, api/rawxic and api/specsum), side by side in one folder
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "-p", "mzlab-rotte-wasm", "-p", "mzlab-ticfondo-wasm", "-p", "mzlab-raw-wasm", "-p", "mzlab-rawxic-wasm", "-p", "mzlab-rawscan-wasm", runner=run)
+    for crate in ("mzlab_wasm", "mzlab_rotte_wasm", "mzlab_ticfondo_wasm", "mzlab_raw_wasm", "mzlab_rawxic_wasm", "mzlab_rawscan_wasm"):   # the engine and its lazy modules (statistics, Data and Flow routes; api/tic_background; api/rawinfo, api/rawxic, api/specsum and api/rawscan), side by side in one folder
         run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(tmp_path / "pkg"), f"target/wasm32-unknown-unknown/release/{crate}.wasm")
-    run("cargo", "test", "--locked", "-p", "mzlab-desktop", "--test", "parity_routes", "--test", "profile_hr_spectrum", "--test", "profile_sparse_wiff", "--test", "parity_ticbg", "--test", "parity_reflist", "--test", "parity_flow_defaults", "--test", "parity_estimate", "--test", "parity_union", env={**os.environ, "MZLAB_WASM_PKG": str(tmp_path / "pkg")})
+    run("cargo", "test", "--locked", "-p", "mzlab-desktop", "--test", "parity_routes", "--test", "profile_hr_spectrum", "--test", "profile_sparse_wiff", "--test", "parity_ticbg", "--test", "parity_reflist", "--test", "parity_flow_defaults", "--test", "parity_estimate", "--test", "parity_union", "--test", "parity_nominal_bin", env={**os.environ, "MZLAB_WASM_PKG": str(tmp_path / "pkg")})

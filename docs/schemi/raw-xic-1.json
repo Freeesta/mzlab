@@ -107,6 +107,17 @@
                         "smooth_half",
                         "valley_pct"
                       ]
+                    },
+                    "ion_scale": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "only with --ions: ions per cps of the scan type (`ions_per_cps`), its `source` (method or data), the `field` it came from, the data estimate beside it, `ratio` and `agree`; null when neither the method nor an accepted quantum gives a time"
+                    },
+                    "ion_scale_choice": {
+                      "type": "object",
+                      "description": "only with --ions: the scan type, how it was found and the evidence that gave the factor"
                     }
                   },
                   "additionalProperties": false
@@ -201,6 +212,7 @@
           "window",
           "rt_window",
           "verdict",
+          "state",
           "rule",
           "apex_rt",
           "height",
@@ -263,6 +275,15 @@
               "no_data"
             ],
             "description": "peak: the ions pass the detection limit, the S/N on the one-ion floor and the run of scans; trace: ions above the critical level but not a peak; nothing: neither (see ul_*); no_data: no scan in the window"
+          },
+          "state": {
+            "enum": [
+              "detected",
+              "forced",
+              "absent",
+              "na"
+            ],
+            "description": "the value state of the row (docs/agenti/value-states.md): detected = peak, forced = trace (signal under the thresholds, numbers kept), absent = nothing, na = no_data"
           },
           "rule": {
             "type": "string",
@@ -401,6 +422,85 @@
                 "offset_applied"
               ]
             }
+          },
+          "ions_gross": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: gross ions of the peak region at the ion scale of `ion_scale`"
+          },
+          "ions_net": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: net ions"
+          },
+          "ions_sigma": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: sigma of the net ions"
+          },
+          "ions_background_per_scan": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: background ions per scan"
+          },
+          "ions_l_c": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: Currie critical level, ions"
+          },
+          "ions_l_d": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: Currie detection limit, ions"
+          },
+          "ions_z": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: net ions over their sigma"
+          },
+          "sn_ions": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: S/N with a one-ion floor at the ion scale"
+          },
+          "cps_net": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: net ions as cps (ions over ions per cps)"
+          },
+          "cps_l_d": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "only with --ions: detection limit as cps"
+          },
+          "verdict_ions": {
+            "enum": [
+              "peak",
+              "trace",
+              "nothing",
+              "no_data"
+            ],
+            "description": "only with --ions: the verdict the ion-scale counts give; `verdict` is unchanged"
           }
         },
         "additionalProperties": false

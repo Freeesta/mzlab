@@ -185,6 +185,22 @@ def test_wasm_sizes(tmp_path):
     assert r["byte_totali"] == 1000 and r["margin_min_pct"] > 99
 
 
+def test_wasm_caps_follow_the_manifests(tmp_path, monkeypatch):
+    """The cap written next to a size is the `tetto` of the module's manifest: another value in the manifest gives another cap, a folder without one gives null."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import ci_wasm_dimensioni as w
+    import moduli
+    for folder in ("wasm-feat/hr", "wasm-feat/nocap"):
+        (tmp_path / folder).mkdir(parents=True)
+        (tmp_path / folder / "x.wasm").write_bytes(b"0" * 10)
+    real = moduli.load_manifests()
+    for tetto in (4096, 123456):
+        monkeypatch.setattr(moduli, "load_manifests", lambda t=tetto: {**real, "hr": {**real["hr"], "tetto": t}})
+        m = w.misura(tmp_path)
+        assert m["wasm-feat/hr/x.wasm"]["tetto"] == tetto
+        assert m["wasm-feat/nocap/x.wasm"]["tetto"] is None
+
+
 def test_recent_cursor_load_compact_export(tmp_path):
     dati = tmp_path / "eventi.jsonl"
     old = dict(RUN["workflow_run"], id=1, updated_at="2026-10-21T09:00:00Z")

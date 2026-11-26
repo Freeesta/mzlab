@@ -49,6 +49,13 @@ pub enum Kind {
     Scan {
         range: Option<[f64; 2]>,
         ce: Vec<f64>,
+        /// Collision energy spread (`CES`) and declustering potential (`DP`) of the ranges, distinct values (the 3200 scan and the X500R / ZenoTOF layouts carry them).
+        ces: Vec<f64>,
+        dp: Vec<f64>,
+        /// The fixed m/z the method isolates (product-ion codes 9 and 11); the precursor a dependent scan picks is not in the method.
+        precursor: Option<f64>,
+        /// `ExperimentHeader` +122: the scan type (`wiff::modes`); `None` when the header is missing.
+        code: Option<u32>,
     },
 }
 
@@ -56,7 +63,12 @@ pub enum Kind {
 pub struct Experiment {
     pub index: usize,
     pub kind: Kind,
+    /// The streams of the experiment that are damaged and so were not read (`DAMAGED_*`): counted and reported in `method/1`, never dropped silently.
+    pub damaged: Vec<&'static str>,
 }
+
+pub const DAMAGED_HEADER: &str = "experiment_header";
+pub const DAMAGED_RANGE: &str = "mass_range";
 
 #[derive(Debug, Clone, Default)]
 pub struct Pda {
@@ -204,6 +216,31 @@ fn scan_code(ole: &Ole, base: &str, i: usize) -> Option<u32> {
     })
 }
 
+/// The shortest `ExperimentHeader` that holds the scan-type code (+122, 4 bytes).
+const HEADER_MIN: usize = 126;
+
+/// The fixed m/z of a product-ion experiment (`ExperimentHeader` +42 f64, codes 9 and 11): the precursor the method isolates. `Some(None)`: no fixed
+/// precursor in this experiment; `None`: the header is too short, or the value is not a usable mass (damaged).
+fn fixed_mz(ole: &Ole, base: &str, i: usize) -> Option<Option<f64>> {
+    if !scan_code(ole, base, i).is_some_and(|c| matches!(c, 9 | 11)) {
+        return Some(None);
+    }
+    let h = ole.read(&format!(
+        "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
+    ))?;
+    let b: [u8; 8] = h.get(42..50)?.try_into().ok()?;
+    let v = f64::from_le_bytes(b);
+    (v.is_finite() && v > 0.0).then(|| Some(mass(v)))
+}
+
+/// Whether the `ExperimentHeader` of experiment `i` is there but too short to hold what is read from it.
+fn header_cut(ole: &Ole, base: &str, i: usize) -> bool {
+    ole.read(&format!(
+        "{base}DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
+    ))
+    .is_some_and(|h| h.len() < HEADER_MIN)
+}
+
 fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
     let mut out = Vec::new();
     for i in 0.. {
@@ -211,11 +248,36 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
         let Some(d) = ole.read(&key) else { break };
         // MRM (4) or SIM (Q1MI 1, Q3MI 3): a row of their table may have no name
         let is_mrm = scan_code(ole, base, i).is_some_and(|c| matches!(c, 1 | 3 | 4));
-        let kind = match mass_range::announced(ole, base, i) {
-            Some(n) => mass_range::counted(&d, n, is_mrm),
+        let mut damaged = Vec::new();
+        let mut kind = match mass_range::announced(ole, base, i) {
+            Some(n) => {
+                let (kind, cut) = mass_range::counted(&d, n, is_mrm);
+                if cut {
+                    damaged.push(DAMAGED_RANGE);
+                }
+                kind
+            }
             None => guessed(&d, is_mrm),
         };
-        out.push(Experiment { index: i, kind });
+        if header_cut(ole, base, i) {
+            damaged.push(DAMAGED_HEADER);
+        }
+        if let Kind::Scan {
+            precursor, code, ..
+        } = &mut kind
+        {
+            match fixed_mz(ole, base, i) {
+                Some(p) => *precursor = p,
+                None if !damaged.contains(&DAMAGED_HEADER) => damaged.push(DAMAGED_HEADER),
+                None => {}
+            }
+            *code = scan_code(ole, base, i);
+        }
+        out.push(Experiment {
+            index: i,
+            kind,
+            damaged,
+        });
     }
     out
 }
@@ -272,14 +334,24 @@ fn guessed(d: &[u8], is_mrm: bool) -> Kind {
             range = Some([round(a, 2), round(b, 2)]);
         }
     }
-    Kind::Scan { range, ce }
+    Kind::Scan {
+        range,
+        ce,
+        ces: Vec::new(),
+        dp: Vec::new(),
+        precursor: None,
+        code: None,
+    }
 }
 
 #[path = "methodinfo/mass_range.rs"]
 pub mod mass_range;
 
+#[path = "methodinfo/filerec.rs"]
+mod filerec;
 #[path = "methodinfo/lc.rs"]
 mod lc;
+use filerec::file_info;
 use lc::lc;
 
 fn named(id: &str) -> Option<&'static (&'static str, &'static str, &'static str)> {
@@ -342,100 +414,6 @@ fn compound(ole: &Ole, base: &str) -> Vec<Param> {
         at = end;
     }
     out
-}
-
-/// Runs of at least four printable ASCII characters in UTF-16 (`_strings`).
-fn strings(d: &[u8]) -> Vec<String> {
-    let (mut out, mut i) = (Vec::new(), 0);
-    while i + 1 < d.len() {
-        let mut j = i;
-        while j + 1 < d.len() && (0x20..=0x7e).contains(&d[j]) && d[j + 1] == 0 {
-            j += 2;
-        }
-        if (j - i) / 2 >= 4 {
-            out.push(ascii(&d[i..j]));
-            i = j;
-        } else {
-            i += 1;
-        }
-    }
-    out
-}
-
-const DAYS: [&str; 7] = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-];
-
-/// `[A-Z]:\\.*?\.dam`
-fn dam_path(t: &str) -> Option<&str> {
-    let b = t.as_bytes();
-    (0..b.len().saturating_sub(2))
-        .find(|&i| b[i].is_ascii_uppercase() && b[i + 1] == b':' && b[i + 2] == b'\\')
-        .and_then(|i| t[i + 3..].find(".dam").map(|j| &t[i..i + 3 + j + 4]))
-}
-
-/// `[A-Z][a-z]+day .*?[AP]M`
-fn stamp(t: &str) -> Option<&str> {
-    let b = t.as_bytes();
-    for i in 0..b.len() {
-        if !b[i].is_ascii_uppercase() {
-            continue;
-        }
-        let run = b[i + 1..]
-            .iter()
-            .take_while(|c| c.is_ascii_lowercase())
-            .count();
-        let Some(k) = (1..=run)
-            .rev()
-            .find(|&k| b[i + 1 + k..].starts_with(b"day "))
-        else {
-            continue;
-        };
-        let from = i + 1 + k + 4;
-        if let Some(j) = (from..b.len().saturating_sub(1))
-            .find(|&j| (b[j] == b'A' || b[j] == b'P') && b[j + 1] == b'M')
-        {
-            return Some(&t[i..j + 2]);
-        }
-    }
-    None
-}
-
-fn file_info(ole: &Ole, base: &str) -> Vec<(&'static str, String)> {
-    let mut f: Vec<(&'static str, String)> = Vec::new();
-    for fname in [
-        format!("{base}AcqMethodFileInfoStm"),
-        "FileRec_Str".to_string(),
-    ] {
-        let Some(d) = ole.read(&fname) else { continue };
-        for t in strings(&d) {
-            let tl = t.to_lowercase();
-            let has = |k: &str| f.iter().any(|x| x.0 == k);
-            if tl.contains(".dam") && !has("metodo") {
-                f.push(("metodo", dam_path(&t).unwrap_or(&t).to_string()));
-            } else if DAYS.iter().any(|d| tl.contains(d)) {
-                if !has("data") {
-                    f.push(("data", stamp(&t).unwrap_or(&t).replace(": ", ":")));
-                }
-            } else if tl.starts_with("analyst") {
-                if !has("software") {
-                    f.push(("software", t.trim().to_string()));
-                }
-            } else if (t.starts_with("LAB_") || t.ends_with("-PC")) && !has("computer") {
-                f.push(("computer", t.clone()));
-            }
-        }
-        if !f.is_empty() {
-            break;
-        }
-    }
-    f
 }
 
 fn method(ole: &Ole, base: &str) -> Method {
