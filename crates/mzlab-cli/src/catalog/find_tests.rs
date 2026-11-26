@@ -71,10 +71,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "sum the scans of an MS2 window and count the ions it rests on",
         "spectrum get",
     ),
-    (
-        "spectrum of the chromatographic peak of a product ion with the background of both sides subtracted",
-        "spectrum get",
-    ),
+    ("spectrum of a product-ion peak, background of both sides off", "spectrum get"),
     (
         "blank subtraction threshold on the feature table",
         "table.filter",
