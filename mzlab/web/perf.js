@@ -119,8 +119,7 @@
   }
   box.querySelector("#perf-copy").onclick = async () => {
     const t = text(false);
-    try { await navigator.clipboard.writeText(t); }
-    catch (_) { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e) { /* the text stays in the box */ } a.remove(); }
+    try { await clipboardCopy({ "text/plain": t }); } catch (_) { /* the text stays in the box */ }
     const b = box.querySelector("#perf-copy"); b.textContent = I18N.t("perf.copied"); setTimeout(() => { b.textContent = I18N.t("perf.copy"); }, 1500);
   };
   box.querySelector("#perf-clear").onclick = () => { rows.length = 0; for (const k of Object.keys(stat)) delete stat[k]; schedule(); };

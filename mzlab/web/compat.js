@@ -55,7 +55,7 @@ export function copyCommand(g, text) {
   const back = d.activeElement, t = d.createElement("textarea");
   t.value = text; t.setAttribute("readonly", ""); t.setAttribute("aria-hidden", "true");
   t.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px";
-  d.body.appendChild(t); t.select();
+  (d.querySelector("dialog[open]") || d.body).appendChild(t); t.select();      // inside an open modal: the rest of the page is inert
   let ok = false; try { ok = !!d.execCommand("copy"); } catch (_) { ok = false; }
   t.remove(); if (back && typeof back.focus === "function") try { back.focus({ preventScroll: true }); } catch (_) { /* gone */ }
   return ok;

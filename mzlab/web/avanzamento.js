@@ -72,7 +72,7 @@ export function avanza(box, o) {
       el.innerHTML = h`<p class="sm" data-r="sum"><b>${o.title}</b>: ${parts.join(", ")} · ${tempo(Date.now() - t0)} <button type="button" class="sec sm" data-r="close">${T("common.close")}</button></p>${raw(fails.length ? h`<ul class="sm">${li.map(raw)}</ul>` : "")}${raw(d && D ? D.html(d.diag, esc, T) : d ? h`<button type="button" class="sec sm" data-r="copy">${T("diag.copy")}</button>` : "")}`;
       if (!fails.length && !cancelled) q("sum").classList.add("cp-done");
       if (d && D) D.cabla(el, d.diag, w.MZLAB_VERSION || "", T);
-      else if (d) { const c = q("copy"); c.onclick = async () => { try { await navigator.clipboard.writeText(d.diag); c.textContent = T("diag.copied"); } catch (_) { c.textContent = T("diag.copyFail"); } }; }
+      else if (d) { const c = q("copy"); c.onclick = async () => { try { await clipboardCopy({ "text/plain": d.diag }); c.textContent = T("diag.copied"); } catch (_) { c.textContent = T("diag.copyFail"); } }; }
       q("close").onclick = () => el.remove();
       // `silent`: a clean finish leaves no summary: the panel fades away (at once with reduced motion); only a failure or a cancel stays on the page
       if (o.silent && !fails.length && !cancelled) { fadeOut(el); return; }

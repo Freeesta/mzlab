@@ -20,7 +20,7 @@ const baseName = (/** @type {any} */ f) => String((f && f.name) || "infusion").r
 export async function runExport(/** @type {any} */ file, /** @type {"csv" | "mgf" | "msp"} */ fmt, /** @type {boolean} */ clean, /** @type {string} */ node, /** @type {boolean} */ copy) {
   try {
     const text = await exportText(file.k, fmt, clean, node);
-    if (copy) { await navigator.clipboard.writeText(text); nearMsg(I18N.t("msngrafo.copied")); return; }
+    if (copy) { await clipboardCopy({ "text/plain": text }); nearMsg(I18N.t("msngrafo.copied")); return; }
     await dl(`${baseName(file)}_${node === "all" ? "tree" : node.replace(/\W+/g, "_")}${clean ? "" : "_all"}.${fmt}`, text, MIME[fmt]);
   } catch (e) { nearMsg(/** @type {any} */ (e).message || String(e)); }
 }

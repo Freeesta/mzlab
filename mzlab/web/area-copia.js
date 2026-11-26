@@ -22,17 +22,9 @@ function notice(/** @type {number} */ x, /** @type {number} */ y, /** @type {boo
   setTimeout(() => { el.textContent = I18N.t(ok ? "int.copy.done" : "bn.noClip"); el.classList.add("show"); }, 20);      // text set after the clear: a screen reader announces every copy
   clearTimeout(tm); tm = window.setTimeout(() => el.classList.remove("show"), 1200);
 }
-// fallback when the async API refuses (document without focus, insecure context): a hidden textarea and execCommand, the focus given back
-function legacy(/** @type {string} */ text) {
-  const prev = /** @type {HTMLElement | null} */ (document.activeElement), t = document.createElement("textarea");
-  t.value = text; t.setAttribute("readonly", ""); t.setAttribute("aria-hidden", "true"); t.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
-  (document.querySelector("dialog[open]") || document.body).appendChild(t); t.select();
-  let ok = false; try { ok = document.execCommand("copy"); } catch (_) { ok = false; }
-  t.remove(); if (prev && prev.focus) prev.focus(); return ok;
-}
 // puts a text on the clipboard (called in the click or key handler: Safari asks for the gesture) and says how it went at (x, y)
 async function put(/** @type {string} */ text, /** @type {number} */ x, /** @type {number} */ y) {
-  let ok = true; try { await navigator.clipboard.writeText(text); } catch (_) { ok = legacy(text); }
+  let ok = true; try { await clipboardCopy({ "text/plain": text }); } catch (_) { ok = false; }
   notice(x, y, ok); return ok;
 }
 // a label: by the pointer when there is one, else under the label
