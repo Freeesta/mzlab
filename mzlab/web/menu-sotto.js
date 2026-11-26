@@ -13,7 +13,7 @@ window.MENUSUB = {
       sm.innerHTML = "";
       it.sub().forEach((/** @type {Bag} */ r) => {
         const e = document.createElement("div"); e.tabIndex = -1; e.setAttribute("role", "menuitemcheckbox"); e.setAttribute("aria-checked", String(!!r.check)); e.setAttribute("aria-label", r.aria || r.name);
-        if (r.color) { const sw = document.createElement("span"); sw.className = r.check ? "sw" : "sw off"; sw.setAttribute("aria-hidden", "true"); sw.style.background = r.color; e.appendChild(sw); }
+        if (r.color) { const sw = document.createElement("span"); sw.className = r.check ? "sw" : "sw off"; sw.setAttribute("aria-hidden", "true"); sw.style.background = r.color; if (r.tone) sw.style.color = r.tone; e.appendChild(sw); }
         if (r.hover) { const on = (/** @type {boolean} */ v) => () => r.hover(v); e.onmouseenter = e.onfocus = on(true); e.onmouseleave = e.onblur = on(false); }
         e.appendChild(document.createTextNode(r.name));
         if (r.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; e.appendChild(ck); }

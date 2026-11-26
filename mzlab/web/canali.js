@@ -134,7 +134,7 @@
   /** @param {Nodo} n @param {string} et */
   const rowLabelOf = (n, et) => n.n ? T("canali.row", { et, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : et;
   /** the key a row has in p._look and on its trace (tk): a transition / SIM ion its own key, any other channel its group @param {Nodo} n @param {boolean} onlySrm */
-  const key = (n, onlySrm) => onlySrm ? nodeKey(n) : n.group;
+  const key = (/** @type {Nodo} */ n, /** @type {boolean} */ _o) => isTr(n) ? nodeKey(n) : n.group;
   /** the rows of the tree (a collapsed parent hides its descendants); a SIM picker (sim) shows the m/z alone, the rest in the hover text
    * @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles @param {boolean} [sim] */
   function rows(p, tree, sel, onlySrm, nfiles, sim = false) {
@@ -307,17 +307,18 @@
   async function series(p, files) {
     const list = chosen(p).filter((/** @type {string} */ o) => !(p.kind === "bpc" && o === "tic")), miss = [];
     await Promise.all(files.map((/** @type {any} */ f) => canali(f.k).catch(() => null)));
-    const one = list.length === 1, out = [], sims = window.SIMUI ? SIMUI : null, allSr = albero(files).filter(isTr).map(n => n.group);
-    // the place of a channel in the palette must not move when another is ticked or unticked: SIM / SRM = its place among all of them, the others = a slot kept by the panel (the first ticked takes the first colour)
+    const one = list.length === 1, out = [], sims = window.SIMUI ? SIMUI : null, tr = albero(files).filter(isTr), grpKey = new Map(tr.map(n => [n.group, nodeKey(n)])), allSr = tr.map(nodeKey);
+    // SIM / SRM: the colour is that of the ion, by its place among ALL the ions of the panel (SIMUI.style); the other channels keep a slot of the panel (the first ticked takes the first colour)
+    const ions = sims ? sims.ions(p).map((/** @type {any} */ x) => x.key) : [], keys = ions.length && allSr.every(k => ions.includes(k)) ? ions : allSr;
     const slots = /** @type {Map<string, number>} */ (p._slot ||= new Map()), slot = (/** @type {string} */ g) => { if (!slots.has(g)) slots.set(g, slots.size); return /** @type {number} */ (slots.get(g)); };
-    const sty = (/** @type {any} */ f, /** @type {number} */ fi, /** @type {string} */ g) => {
-      const si = allSr.indexOf(g);
-      if (si >= 0 && sims) return sims.style(f, si, allSr.length, files.length);
-      return { color: one ? f.color : PAL[slot(g) % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [], own: !one };
+    const sty = (/** @type {any} */ f, /** @type {number} */ fi, /** @type {string} */ g, /** @type {number | undefined} */ rank) => {
+      const k = grpKey.get(g);
+      if (k != null && sims) return sims.style(f, keys.indexOf(k), keys.length, rank);
+      return { color: one ? f.color : PAL[slot(g) % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
     };
     // the line of every row of the picker, written once here from the same call as the traces (the swatches of the rows read it)
     const look = /** @type {Record<string, any>} */ ({}), first = files[0];
-    if (first) [...new Set([...allSr, ...list, ...slots.keys()])].forEach(g => { look[g] = (sims || { lookOf: (/** @type {any} */ st) => ({ c: st.color, d: st.dash }) }).lookOf(sty(first, 0, g), files.length); });
+    if (first && sims) [...new Set([...tr.map(n => n.group), ...list, ...slots.keys()])].forEach(g => { look[grpKey.get(g) ?? g] = sims.lookOf(sty(first, 0, g, 0), grpKey.has(g) ? keys.length : one ? 1 : 2, files.length); });
     for (let ci = 0; ci < list.length; ci++) {
       const group = list[ci];
       const got = await Promise.all(files.map(async (/** @type {any} */ f, /** @type {number} */ fi) => {
@@ -325,7 +326,7 @@
         if (!c) { miss.push({ f, group }); return null; }
         const t = await traccia(f.k, c, { kind: p.kind, mz0: p.mz0, mz1: p.mz1 }); if (!t || !t.rt.length) return null;
         const et = c.label, sr = c.family === "sim" || c.family === "srm", st = sty(f, fi, group);
-        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${group}`, ion: et, tk: group, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
+        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${group}`, ion: et, tk: grpKey.get(group) ?? group, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
       }));
       got.forEach(s => { if (s) out.push(s); });
     }

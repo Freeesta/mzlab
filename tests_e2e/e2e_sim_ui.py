@@ -1,6 +1,6 @@
 """The SIM wording and controls of the Data view on the built site with the Rust engine (synthetic SIM .wiff pair of tools/wiff_sim.py, no laboratory data): the engine types every file «lc-sim», the
 experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, overlaid traces take
-the colour of their sample and a dash per ion, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
+the colour of their ion and a dash per sample, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
 of XIC, the «Area» toggle fills the traces (on by default), the Range popover has «Reset zoom» and no how-to sentence is on screen. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
 # covers: mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
@@ -39,23 +39,21 @@ try:
             pg.evaluate("(() => { E.files.forEach(f => { f.vis = true; }); const p = E.panels.find(p => p.type === 'mrm'); p.tr = SIMUI.ions(p).slice(0, 2).map(x => x.key); renderFileList(); draw(p); })()")
             wait_for_js(pg, "(() => { const a = E.panels.find(p => p.type === 'mrm')._a; return a && new Set(a.sr.map(s => s.k)).size === 2 && new Set(a.sr.map(s => s.ion)).size === 2; })()", timeout=30000)
             s = pg.evaluate("E.panels.find(p => p.type === 'mrm')._a.sr.map(s => [s.ion, s.color, s.k, JSON.stringify(s.dash)])")
-            square = pg.evaluate("Object.fromEntries(E.files.map(f => [f.k, getComputedStyle(document.querySelector(`#flst .fl .nm[data-k=\"${f.k}\"]`).closest('.fl').querySelector(':scope > i')).backgroundColor]))")
             css = lambda c: pg.evaluate("(c => { const e = document.createElement('i'); e.style.background = c; document.body.appendChild(e); const v = getComputedStyle(e).backgroundColor; e.remove(); return v; })(%s)" % json.dumps(c))
             by_ion, by_k = {}, {}
             for ion, col, k, dash in s: by_ion.setdefault(ion, set()).add(col); by_k.setdefault(k, []).append((col, dash))
             need(len(by_k) >= 2, by_k)
-            need(all(len(v) == len(by_k) for v in by_ion.values()), "two samples on one ion share a colour: %s" % by_ion)
-            for k, v in by_k.items():
-                need(len({c for c, _ in v}) == 1, "one sample, several colours: %s" % v)
-                need(css(v[0][0]) == square[str(k)], "trace %s vs file square %s" % (css(v[0][0]), square[str(k)]))
-                need(len({d for _, d in v}) == len(v), "two ions of one sample share a dash: %s" % v)
+            need(all(len(c) == 1 for c in by_ion.values()), "one ion, several colours (the colour is the ion's): %s" % by_ion)
+            need(len({next(iter(c)) for c in by_ion.values()}) == len(by_ion), "two ions share a colour: %s" % by_ion)
+            for k, v in by_k.items(): need(len({d for _, d in v}) == 1, "one sample, several dashes (the dash is the sample's): %s" % v)
+            need(len({v[0][1] for v in by_k.values()}) == len(by_k), "two samples share a dash: %s" % by_k)
             leg = pg.evaluate("[...E.panels.find(p => p.type === 'mrm').leg.querySelectorAll('.tg')].map(e => e.textContent)")
             names = pg.evaluate("E.files.map(f => f.label)")
             need(leg and all(any(x.startswith(n) for n in names) for x in leg), "legend does not lead with the sample: %s" % leg)
             tip = pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); const d = document.createElement('div'); d.innerHTML = p._a.hov(p._a.X ? p._a.X((p._a.x0 + p._a.x1) / 2) : 300, 50).html; return [...d.querySelectorAll('i')].map(i => i.style.background); })()")
             need(tip and set(map(css, tip)) <= {css(c) for _, c, _, _ in s}, "tooltip colours %s" % tip)
             pg.evaluate("(() => { E.files.forEach((f, i) => { f.vis = i === 0; }); const p = E.panels.find(p => p.type === 'mrm'); p.tr = ''; renderFileList(); draw(p); })()")
-        step("SIM overlay: colour = the sample (its file-list square), dash = the ion; legend and tooltip agree", colours)
+        step("SIM overlay: colour = the ion, dash = the sample; legend and tooltip agree", colours)
         def zoombar():
             pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'), [f0, f1] = p._a.full; zoomTo(p, f0 + (f1 - f0) / 4, f1 - (f1 - f0) / 4); })()")
             wait_for_js(pg, "(() => { const z = E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar'); return !!z && !z.hidden; })()", timeout=20000)

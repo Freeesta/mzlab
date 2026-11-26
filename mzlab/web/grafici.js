@@ -106,14 +106,14 @@ async function rawSeries(p) {
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
-  const idx = new Map(list.map((l, i) => [l.key, i])), styOf = (/** @type {any} */ f, /** @type {string} */ key) => window.SIMUI ? SIMUI.style(f, idx.get(key) ?? 0, list.length, mf.length) : { color: f.color, dash: fdash(f), own: false };   // the place among ALL ions: ticking one never recolours another
-  const lookNew = window.SIMUI && mf.length ? SIMUI.keep(p, Object.fromEntries(list.map(l => [l.key, SIMUI.lookOf(styOf(mf[0], l.key), mf.length)]))) : false;   // the lists beside the chart read this: one colour per ion, computed here once
+  const idx = new Map((window.SIMUI ? SIMUI.sortIons(list) : list).map((l, i) => [l.key, i])), styOf = (/** @type {any} */ f, /** @type {string} */ key, /** @type {number | undefined} */ rank) => window.SIMUI ? SIMUI.style(f, idx.get(key) ?? 0, list.length, rank) : { color: f.color, dash: fdash(f) };   // the place among ALL ions (in the order of the menu): ticking one never recolours another
+  const lookNew = window.SIMUI && mf.length ? SIMUI.keep(p, Object.fromEntries(list.map(l => [l.key, SIMUI.lookOf(styOf(mf[0], l.key, 0), list.length, mf.length)]))) : false;   // the lists beside the chart read this: one colour per ion, computed here once
   if (JSON.stringify(list) !== JSON.stringify(p._trs) || lookNew) { p._trs = list; ctl(p); }
   const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);
   const lab = key => window.SIMUI ? SIMUI.label(key) : key;
   data.forEach(({ f, tr }) => tr.forEach(t => {
     const key = trKey(t); if (!want(key)) return;
-    // colour = sample (as in the file list), dash = channel (sim-ui.js style)
+    // colour = the ion's own, dash = the sample (sim-ui.js style)
     const st = styOf(f, key);
     out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, tk: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: st.color, dash: st.dash,
       name: mf.length > 1 ? `${f.label} · ${lab(key)}` : `${lab(key)} ${t.name || ""}`.trim(), tid_label: `${lab(key)} ${t.name || ""}`.trim() });
