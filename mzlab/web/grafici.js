@@ -106,7 +106,7 @@ async function rawSeries(p) {
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
-  const idx = new Map((window.SIMUI ? SIMUI.sortIons(list) : list).map((l, i) => [l.key, i])), styOf = (/** @type {any} */ f, /** @type {string} */ key, /** @type {number | undefined} */ rank) => window.SIMUI ? SIMUI.style(f, idx.get(key) ?? 0, list.length, rank) : { color: f.color, dash: fdash(f) };   // the place among ALL ions (in the order of the menu): ticking one never recolours another
+  const idx = new Map((window.SIMUI ? SIMUI.sortIons(list) : list).map((l, i) => [l.key, i])), styOf = (/** @type {any} */ f, /** @type {string} */ key, /** @type {number | undefined} */ rank = undefined) => window.SIMUI ? SIMUI.style(f, idx.get(key) ?? 0, list.length, rank) : { color: f.color, dash: fdash(f) };   // the place among ALL ions (in the order of the menu): ticking one never recolours another
   const lookNew = window.SIMUI && mf.length ? SIMUI.keep(p, Object.fromEntries(list.map(l => [l.key, SIMUI.lookOf(styOf(mf[0], l.key, 0), list.length, mf.length)]))) : false;   // the lists beside the chart read this: one colour per ion, computed here once
   if (JSON.stringify(list) !== JSON.stringify(p._trs) || lookNew) { p._trs = list; ctl(p); }
   const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);

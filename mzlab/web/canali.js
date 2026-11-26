@@ -133,7 +133,7 @@
   /** the label of the row for screen readers @param {Nodo} n */
   /** @param {Nodo} n @param {string} et */
   const rowLabelOf = (n, et) => n.n ? T("canali.row", { et, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : et;
-  /** the key a row has in p._look and on its trace (tk): a transition / SIM ion its own key, any other channel its group @param {Nodo} n @param {boolean} onlySrm */
+  /** the key a row has in p._look and on its trace (tk): a transition / SIM ion its own key, any other channel its group @param {Nodo} n @param {any} [_o] */
   const key = (/** @type {Nodo} */ n, /** @type {boolean} */ _o) => isTr(n) ? nodeKey(n) : n.group;
   /** the rows of the tree (a collapsed parent hides its descendants); a SIM picker (sim) shows the m/z alone, the rest in the hover text
    * @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles @param {boolean} [sim] */
@@ -311,7 +311,7 @@
     // SIM / SRM: the colour is that of the ion, by its place among ALL the ions of the panel (SIMUI.style); the other channels keep a slot of the panel (the first ticked takes the first colour)
     const ions = sims ? sims.ions(p).map((/** @type {any} */ x) => x.key) : [], keys = ions.length && allSr.every(k => ions.includes(k)) ? ions : allSr;
     const slots = /** @type {Map<string, number>} */ (p._slot ||= new Map()), slot = (/** @type {string} */ g) => { if (!slots.has(g)) slots.set(g, slots.size); return /** @type {number} */ (slots.get(g)); };
-    const sty = (/** @type {any} */ f, /** @type {number} */ fi, /** @type {string} */ g, /** @type {number | undefined} */ rank) => {
+    const sty = (/** @type {any} */ f, /** @type {number} */ fi, /** @type {string} */ g, /** @type {number | undefined} */ rank = undefined) => {
       const k = grpKey.get(g);
       if (k != null && sims) return sims.style(f, keys.indexOf(k), keys.length, rank);
       return { color: one ? f.color : PAL[slot(g) % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
