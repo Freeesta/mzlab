@@ -51,7 +51,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list", "file method"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache", "trace xic"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
-    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type", &["quant targets", "trace xic", "raw info"]),
+    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type", &["quant targets", "trace xic", "raw info"])
+        .bulk("mzlab-cli raw xic FILE... --mz M1,M2,... --rt A,B: every mass in every file, one call; a list with an RT window per row: quant targets"),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
     r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
         .ex("mzlab-cli file method run.wiff --sample 1"),
@@ -71,7 +72,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli quant targets --targets T.csv A.mzML B.mzML --blank-pattern 'blank*' --min-sn 5 --set min_half=3 --rt-ref auto --log log.json"),
     r("dad delay", "delay lag detector pda uv dad ms offset flow cell tubing synchronise align uv to ms time shift correction", &["dad peaks", "dad ms-at", "file convert"]),
     r("table compare", "blank reference ratio subtraction candidate products background contaminant carryover matrix blank", &["table.filter", "tp.dig_lr"]),
-    r("trace xic", "extracted ion chromatogram eic xic many ions list mz mass offset shift calibrate calibration wrong error mz-offset auto polarity", &["peak table", "trace chrom", "chrom.transitions", "raw xic", "quant targets"])
+    r("trace xic", "extracted ion chromatogram eic xic many ions many masses list of ions every mass every m/z sweep range grid step from to scan masses loop tens of thousands of calls mz mass offset shift calibrate calibration wrong error mz-offset auto polarity", &["peak table", "trace chrom", "chrom.transitions", "raw xic", "quant targets"])
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),
     r("trace chrom", "chromatogram channel tic bpc sim srm trace csv", &["file channels", "peak table", "trace xic"]).bulk(PEAK_BULK),
@@ -99,7 +100,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("table.filter", "blank subtraction subtract threshold background ions remove drop ions also in the blank sample carryover contaminant matrix blank ratio filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
-    r("features.union", "union join series conditions replicates one target list many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
+    r("features.union", "union join series conditions replicates one target list all targets many masses every ion many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
     r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])
         .ex("mzlab-cli flow run plan.json --in files/ --out out/ --set gapfill1.dedup_overlap=0"),

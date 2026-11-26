@@ -253,3 +253,7 @@ mod offset_tests;
 #[cfg(test)]
 #[path = "find_states_tests.rs"]
 mod states_tests;
+
+#[cfg(test)]
+#[path = "find_multi_tests.rs"]
+mod multi_tests;
