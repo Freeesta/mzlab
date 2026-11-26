@@ -36,6 +36,9 @@ impl<R: ReadAt> Routes<R> {
         if q.some("bgk").is_some() || !hr.on || self.idx.scans.iter().any(|s| s.level == level && s.profile) {
             return Ok(None);
         }
+        if q.some("rebin").is_some() {
+            return Err(crate::error::Error::new("err.spectrum.rebin.hr"));
+        }
         let precursor = q.num("precursor")?;
         let (prec, _) = Self::hr_cells(level, precursor, &hr);
         let Some(sl) = self.select_scans(level, rt0.min(rt1), rt0.max(rt1), prec, q.some("filt"))? else {

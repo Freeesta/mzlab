@@ -19,6 +19,7 @@ impl<R: ReadAt> Routes<R> {
         }
         let level = q.level();
         let precursor = q.num("precursor")?;
+        let rebin = self.rebin_of(q)?;
         let bin = q.num("bin")?.unwrap_or(0.1);
         // merge=0 opts out, merge=1 forces; omitted is AUTO: unit-resolution centroids (this path) are merged per nominal mass
         let auto = !matches!(q.get("merge"), Some("0" | "1"));
@@ -36,18 +37,25 @@ impl<R: ReadAt> Routes<R> {
         let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
         if nprof != 0 {
             return match self.profile_level(level)? {
-                Some((_, step)) => Ok(Some(self.profile_spectrum(q, level, (lo, hi), step)?)),
+                Some((_, step)) => Ok(Some(self.profile_spectrum(q, level, (lo, hi), step, rebin.as_ref())?)),
                 None => Ok(None),
             };
         }
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
         if hr.on {
+            if rebin.is_some() {
+                return Err(Error::new("err.spectrum.rebin.hr"));
+            }
             return self.hr_spectrum(level, (lo, hi), precursor, filt, &hr);
         }
         if !(bin > 0.0) {
             return Ok(None);
         }
-        let Some(m) = self.binned(level, lo, hi, precursor, bin, filt)? else {
+        let m = self.binned(level, lo, hi, precursor, bin, filt)?;
+        if let Some(rb) = &rebin {
+            return Ok(Some(crate::nominalbin::bins_json(&m.unwrap_or_else(Binned::none), rb)));
+        }
+        let Some(m) = m else {
             return Ok(Some(EMPTY.into()));
         };
         Ok(Some(binned_json(m, 3, merge, auto)))
@@ -68,6 +76,13 @@ impl crate::msnroute::Filter<'_> {
 }
 
 pub(crate) const EMPTY: &str = "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
+
+impl Binned {
+    /// A window with no scan of the level: no points.
+    pub(crate) fn none() -> Binned {
+        Binned { mz: vec![], y: vec![], n: 0, sel: vec![], in_win: vec![], scan_ids: vec![] }
+    }
+}
 
 impl<R: ReadAt> Routes<R> {
     /// Positions (in the section) of the scans that pass the filter and the precursor of a request (`_scan_ids`).

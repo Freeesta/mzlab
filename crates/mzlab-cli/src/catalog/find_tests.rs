@@ -151,6 +151,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("targets from many series", "features.union"),
     ("is there a peak at this mass", "raw xic"),
     ("how many ions", "raw xic"),
+    ("sum a split profile fragment into one nominal mass bin", "spectrum get"),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.

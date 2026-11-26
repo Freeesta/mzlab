@@ -47,6 +47,7 @@ mod ticbg_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
+pub mod nominalbin;
 pub mod hrscans;
 pub mod error;
 pub mod provenance;

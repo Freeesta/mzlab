@@ -2,6 +2,6 @@ uscita = "wasm"
 pacchetto = "mzlab-wasm"
 wasm_opt = "@motore"
 parte = "core"
-tetto = 2350000
-misura = 2325254
-nota = "engine: mzlab-core at O3 leaves 1.3 % margin; every growth is recorded in the `misura` field of this file; dad peaks (UV peaks, lambda-max, MS ions at the corrected time) 2297674 -> 2319860 (+1.0 %), cap 2300000 -> 2350000 (+2.2 %); `mz_offset` (`mzcal`, `/api/xic?mzoff=`, `/api/mzcal`) 2319860 -> 2325254 (+0.23 %); `noise_floor` (`ionstat`, one-ion noise floor) 2325384 -> 2337655 (+0.53 %, local build with the binaryen of tools/wasm_opt.sh)"
+tetto = 2400000
+misura = 2352730
+nota = "engine: mzlab-core at O3 leaves 1.3 % margin; every growth is recorded in the `misura` field of this file; dad peaks (UV peaks, lambda-max, MS ions at the corrected time) 2297674 -> 2319860 (+1.0 %), cap 2300000 -> 2350000 (+2.2 %); `mz_offset` (`mzcal`, `/api/xic?mzoff=`, `/api/mzcal`) 2319860 -> 2325254 (+0.23 %); `noise_floor` (`ionstat`, one-ion noise floor) 2325384 -> 2337655 (+0.53 %, local build with the binaryen of tools/wasm_opt.sh); `rebin` (`nominalbin`, `/api/spectrum?rebin=&mzoff=`) 2348196 -> 2352730 (+0.19 %, CI), cap 2350000 -> 2400000 (+2.1 %)"

@@ -12,6 +12,8 @@
   "err.session.fileNotFound": "{name} = file name.",
   "err.scan.level": "CLI error of spectrum get: --ms-level is absent and the file has several MS levels, none of them 1; {levels} = the levels present, {hint} = the flag to give (--ms-level N).",
   "err.scan.unknown": "CLI error: no scan has the number given to --scan; {id} = that number.",
+  "err.spectrum.rebin": "Usage error of spectrum get --bin and of rebin= on api/spectrum: the value is neither nominal nor 0.1; {value} = the text given.",
+  "err.spectrum.rebin.hr": "spectrum get --bin or rebin= on api/spectrum asked of a high-resolution file, whose spectrum is not cut into nominal bins.",
   "err.scan.maxRequest": "API error; {n} = maximum number of scans per request.",
   "err.scan.outsideN": "API error; {n} = number of scans in the file.",
   "err.scan.maxAverage": "API error; {n} = maximum number of scans for an average.",

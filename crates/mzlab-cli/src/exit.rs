@@ -102,6 +102,7 @@ const DATA_KEYS: &[&str] = &[
     "err.llm.replay.mismatch",
     "err.llm.replay.exhausted",
     "err.spectrum.minus",
+    "err.spectrum.rebin.hr",
     "err.noise.noBackground",
 ];
 

@@ -61,6 +61,8 @@ I18N.add("en", {
   "err.origin.needFullScan": "Full scan files are needed.",
   "err.scan.none": "No scan in this file.",
   "err.spectrum.minus": "The engine cannot subtract the blank from this spectrum (a profile level its index cannot answer, or a bin of zero).",
+  "err.spectrum.rebin": "The bin rule «{value}» is not known: use nominal (bins around whole numbers) or 0.1 (bins around tenths).",
+  "err.spectrum.rebin.hr": "Bins around whole numbers are for unit-resolution spectra: this file is high resolution, so its spectrum keeps its own peaks.",
   "err.scan.unknown": "Scan {id} does not exist in this file.",
   "err.scan.level": "This file has scans at MS levels {levels} and none at level 1: choose one with {hint}.",
   "err.scan.mrm": "This file is MRM: it contains only transition chromatograms, no scans.",
