@@ -1,7 +1,7 @@
 // @ts-strict
 // The tandem-MS parameters of the open file in the Method window: `file_method/1` (docs/agenti/method.md, `mzlab-cli file method`) from /api/filemethod, one row per segment with the
 // precursor, CE, CES, DP, fill time and Q1 resolution as the file holds them. A value the file lacks shows its reason (`unavailable`, `damaged`), a name/precursor warning shows
-// its numbers and blocks nothing. Lazy module (loadScript("m:metodo-file.js")); every text from the file goes through EH().
+// its numbers and blocks nothing; `nameWarning` gives that warning alone to the scan list (banco.js). Lazy module (loadScript("m:metodo-file.js")); every text from the file goes through EH().
 
 /** @typedef {{ experiment: number | null, scan: string | null, ms_level: number | null, name: string | null, precursor_mz: number | null, q3_mz: number | null, mz_range: number[] | null, ce_eV: number | null, ce_list_eV: number[], ces_eV: number | null, dp_V: number | null, dwell_ms: number | null, fill_time_ms: number | null, q1_resolution: number | null }} Segment */
 
@@ -48,10 +48,13 @@ function acquired(/** @type {any} */ d) {
   return `<table data-mfile="acquired"><caption class="sm muted" style="text-align:left">${EH(t("method.file.acquired"))}</caption><tr><th scope="col" class="num">${EH(t("method.file.precursor"))}</th><th scope="col" class="num">${EH(t("method.file.ce"))}</th><th scope="col" class="num">${EH(t("method.file.scans"))}</th></tr>${rows}</table>`;
 }
 
+/** the texts of the warnings of `file_method/1`: the name/precursor warning with its numbers (`warn.file.nameMz`), any other by its generic text */
+const warnTexts = (/** @type {any} */ d) => /** @type {any[]} */ (d.warnings || []).map(w => w.key === "warn.file.nameMz"
+  ? t(w.key, { name: w.name, name_mz: n(w.nearest_name_mz), precursor: n(w.nearest_precursor), delta: n(w.delta_mz) }) : t("method.file.warnOther"));
+
 function notes(/** @type {any} */ d) {
   const bad = /** @type {any[]} */ (d.damaged || []).map(x => (x.part === "mass_range" ? t("method.file.damaged.mass_range", { experiment: x.experiment }) : t("method.file.damaged.experiment_header", { experiment: x.experiment })));
-  const warn = /** @type {any[]} */ (d.warnings || []).map(w => w.key === "warn.file.nameMz"
-    ? t(w.key, { name: w.name, name_mz: n(w.nearest_name_mz), precursor: n(w.nearest_precursor), delta: n(w.delta_mz) }) : t("method.file.warnOther"));
+  const warn = warnTexts(d);
   const all = bad.concat(warn);
   return all.length ? `<ul class="sm" role="note" data-mfile="notes" style="margin:4px 0 8px">${all.map(x => `<li>${EH(x)}</li>`).join("")}</ul>` : "";
 }
@@ -65,4 +68,13 @@ async function html(/** @type {{ k: number }} */ f) {
   return body ? `<h5 style="margin:8px 0 2px">${EH(t("method.file.title"))}</h5>${body}` : "";
 }
 
-/** @type {any} */ (window).METODO_FILE = { html };
+/** the name/precursor warning of the open item `f` for the scan list (an empty string when the name is fine or the document is not served; never blocks, never throws) */
+async function nameWarning(/** @type {{ k: number }} */ f) {
+  let d;
+  try { d = await J("api/filemethod?k=" + f.k); } catch (_) { return ""; }
+  if (!d || d.schema !== "file_method/1") return "";
+  const w = warnTexts({ warnings: (d.warnings || []).filter((/** @type {any} */ x) => x.key === "warn.file.nameMz") });
+  return w.length ? `<ul class="sm" role="note" data-mfile="namewarn" style="margin:0 0 6px;padding:0 0 0 16px">${w.map(x => `<li>${EH(x)}</li>`).join("")}</ul>` : "";
+}
+
+/** @type {any} */ (window).METODO_FILE = { html, nameWarning };
