@@ -8,7 +8,7 @@
 
   const hd = $("header"), nav = $("#nav");
   nav.insertAdjacentHTML("afterend", '<button id="phinfo" type="button" aria-label="' + I18N.t("phone.info") + '" title="' + I18N.t("phone.info") + '">i</button>');
-  $("#phinfo").onclick = () => { const m = $("#phmore"); m.hidden = !m.hidden; if (!m.hidden) m.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
+  $("#phinfo").onclick = () => { const m = $("#phmore"); m.hidden = !m.hidden; if (!m.hidden) m.scrollIntoView({ behavior: FRAME.behavior(), block: "nearest" }); };
   // "Apri comunque": the choice is kept for this tab (same key as telefono.js) and the page starts again as the full program
   $("#phopen").onclick = () => { try { sessionStorage.setItem(NOMI.KEY("phone"), "0"); } catch (_) { /* storage blocked: the URL decides */ } location.replace(location.pathname + "?telefono=0"); };
   let y0 = scrollY;

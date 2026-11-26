@@ -224,7 +224,7 @@ const WORKFLOW = (() => {
       const ppm = FILESICURI.num(p.ppm, 0, 1e4), dec = FILESICURI.num(p.dec, 0, 10);
       if (ppm != null) UIP.hrPpm = ppm; if (dec != null) UIP.hrDec = dec;
       if (["auto", "light", "dark"].includes(p.theme)) UIP.theme = p.theme;
-      if (typeof PALS !== "undefined" && typeof p.palette === "string" && Object.prototype.hasOwnProperty.call(PALS, p.palette)) UIP.pal = p.palette;
+      if (typeof PALS !== "undefined" && typeof p.palette === "string" && Object.hasOwn(PALS, p.palette)) UIP.pal = p.palette;
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
     }

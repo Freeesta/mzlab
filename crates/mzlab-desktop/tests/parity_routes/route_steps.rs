@@ -87,6 +87,15 @@ pub fn raw_steps() -> Vec<Value> {
         "?level=1",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/specsum", "query": q}));
+    // `spectrum get --peak auto` (`/api/specpeak`): a search range, changed window factor, side width and gap, a threshold no apex reaches, a bad value and a question with no range
+    let peak = [
+        "?rt0=1&rt1=5&level=1",
+        "?rt0=1&rt1=5&level=1&factor=3&side_min=0.2&gap_min=0.1&fill_ms=20",
+        "?rt0=1&rt1=5&level=1&min_sn=1000000",
+        "?rt0=1&rt1=5&level=1&factor=0",
+        "?level=1",
+    ]
+    .map(|q| json!({"op": "route", "slot": 0, "path": "/api/specpeak", "query": q}));
     let pol = |p: i32| json!({"op": "idxopen", "slot": 0, "name": super::NAME, "pol": p});
     let negative = [
         ("/api/rawinfo", "?probe=8"),
@@ -98,6 +107,7 @@ pub fn raw_steps() -> Vec<Value> {
         .chain(xic)
         .chain(scan)
         .chain(sum)
+        .chain(peak)
         .chain([pol(-1)])
         .chain(negative)
         .chain([pol(0)])

@@ -12,6 +12,21 @@
     "title": {"type": "string"},
     "instance": {"type": "string", "description": "Instance name used in set_key: the last part of the step id, as `flow steps --template` names it."},
     "citation": {"type": "string", "description": "CLI only."},
+    "presets": {
+      "type": "array",
+      "description": "Only when the step has named presets: the values each one writes with `--set INSTANCE.preset=ID`, one entry per parameter it sets.",
+      "items": {
+        "type": "object",
+        "required": ["id", "set_key", "title", "params", "evidence"],
+        "properties": {
+          "id": {"type": "string"},
+          "set_key": {"type": "string"},
+          "title": {"type": "string"},
+          "params": {"type": "array", "items": {"type": "object", "required": ["set_key", "value"], "properties": {"set_key": {"type": "string"}, "value": {}}}},
+          "evidence": {"type": "string"}
+        }
+      }
+    },
     "params": {
       "type": "array",
       "items": {

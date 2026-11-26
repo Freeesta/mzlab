@@ -4,6 +4,7 @@
 
 mod companions;
 mod detect;
+mod detect_presets;
 mod group;
 mod ident;
 mod ident_annot;
@@ -74,34 +75,4 @@ pub fn registry() -> Vec<Step> {
         table::export_mztab(),
     ]);
     all
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::recipe::Recipe;
-    use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_SNR};
-    use mzlab_core::step::find;
-
-    /// The two presets of `features.detect` hold the constants of the two profiles (`Params::default`, `LR_FLOOR`, `LR_MIN_HEIGHT`).
-    #[test]
-    fn presets_are_the_constants_of_the_two_profiles() {
-        let reg = registry();
-        let detect = find(&reg, "features.detect").unwrap();
-        let preset = |id: &str, n: &str| {
-            let p = &detect.presets.iter().find(|p| p.id == id).unwrap().params;
-            p.iter().find(|(k, _)| *k == n).unwrap().1.clone()
-        };
-        let hr = Recipe::default().detect;
-        assert_eq!(preset("hr", "floor").f64(), Some(hr.floor));
-        assert_eq!(preset("hr", "min_height").f64(), Some(hr.min_height));
-        assert_eq!(preset("hr", "axis").str(), Some("ppm"));
-        let lr = Recipe::lr(0.0, LR_FLOOR, LR_MIN_HEIGHT).detect;
-        assert_eq!(preset("lr", "floor").f64(), Some(lr.floor));
-        assert_eq!(preset("lr", "min_height").f64(), Some(lr.min_height));
-        assert!(lr.axis.is_da());
-        assert_eq!(preset("lr", "min_snr").f64(), Some(LR_MIN_SNR));
-        assert_eq!(preset("lr", "axis").str(), Some("Da"));
-        assert_eq!(detect.default_preset, Some("hr"));
-    }
 }

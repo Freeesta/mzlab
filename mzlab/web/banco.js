@@ -98,7 +98,7 @@ const BANCO = (() => {
     const base = rest.reduce((m, q) => Math.max(m, q.riga ?? -1), -1) + 1; c.riga = base; sp.riga = base + 1;
     const order = rest.slice(); order.splice(at, 0, c, sp);
     placeRows(order); E.panels.sort(LAYOUT.ordine); relayout(); fitHost(); setActive(c);
-    c.ready.then(() => { goScan(c, s.sid, s.rt, fk.k); c.el.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    c.ready.then(() => { goScan(c, s.sid, s.rt, fk.k); c.el.scrollIntoView({ block: "center", behavior: FRAME.behavior() }); });
     uiSave();
   }
   async function scanPicker(p, btn) {
@@ -321,7 +321,7 @@ const BANCO = (() => {
     const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + pnlGap()), 0), w = hostWidth();
     const o = { tab, x: 0, y: q, w, h: type === "map" ? 420 : 300, full: true };
     const n = openWithUndo(type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o));
-    relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+    relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: FRAME.behavior() }); uiSave();
   }
   function subXicCell() { let a = act(); if (!a || a.type !== "chrom") { addCell("chrom"); a = act(); } if (a && a.type === "chrom") subXic(a); }
   function retype(type) {
@@ -491,7 +491,7 @@ const BANCO = (() => {
     b.querySelector("#hri-new").onclick = async () => {
       if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (!o) return;
       const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
-      relayout(); fitHost(); await apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+      relayout(); fitHost(); await apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: FRAME.behavior() }); uiSave();
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { COMMANDS.run("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }

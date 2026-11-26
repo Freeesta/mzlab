@@ -204,9 +204,6 @@ const TOUR = (() => {
       return () => { if (!wasOpen) BARRA.close(false); };
     }
   }
-  const isReducedMotion = () => {
-    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  };
 
   let memState = null;   // fallback when localStorage is unavailable: the invitation must not return at every step
   const readState = () => {
@@ -394,7 +391,7 @@ const TOUR = (() => {
     const spot = getSpotlightEl();
     const dlg = getDialogEl();
 
-    if (isReducedMotion()) {
+    if (FRAME.calm()) {
       spot.style.transition = "none";
     } else {
       spot.style.transition = "top 150ms ease, left 150ms ease, width 150ms ease, height 150ms ease";
@@ -461,7 +458,7 @@ const TOUR = (() => {
     }
 
     currentTargetEl = targetEl;
-    targetEl.scrollIntoView({ block: "center", behavior: isReducedMotion() ? "auto" : "smooth" });
+    targetEl.scrollIntoView({ block: "center", behavior: FRAME.behavior() });
 
     const totalSteps = list.length;
     const stepNumber = curStep + 1;

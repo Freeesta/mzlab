@@ -11,7 +11,7 @@
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
-  const still = () => document.documentElement.hasAttribute("data-a11y-reduce") || !logo.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const still = () => !logo.animate || FRAME.calm();
   const root = document.documentElement;
   const store = { get() { try { return localStorage.getItem(GOLD_KEY) === "1"; } catch (_) { return false; } }, set(on) { try { if (on) localStorage.setItem(GOLD_KEY, "1"); else localStorage.removeItem(GOLD_KEY); } catch (_) { /* private mode: for this page only */ } } };
 

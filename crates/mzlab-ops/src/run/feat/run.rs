@@ -3,6 +3,8 @@
 
 #[path = "run_meta.rs"]
 pub mod meta;
+#[path = "run_preset.rs"]
+mod preset;
 
 use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::elements;
@@ -13,7 +15,7 @@ use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::lrscreen;
-use mzlab_feat::recipe::{Mode, Recipe};
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat::series::{align_and_fill, analyse_file_with, source_sha256, weak_candidates};
 use mzlab_feat::slabs::{align_and_fill_progress, Stored};
 use mzlab_feat::spill::Spill;
@@ -110,11 +112,7 @@ fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
         Some(_) => Some(1),
         None => None,
     };
-    match v.get("mode").and_then(Value::str) {
-        Some("ion") => r.mode = Mode::Ion,
-        Some("family") | None => {}
-        Some(_) => return Err(Error::new("error.badRecipe")),
-    }
+    preset::named(&mut r, &v)?;
     apply_params(&mut r, &v);
     Ok(r)
 }

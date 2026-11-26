@@ -27,7 +27,7 @@ fn pair() -> Vec<Row> {
 #[test]
 fn overlapping_scans_merge_only_when_asked() {
     let kept = |overlap| {
-        let keep = merge_grids(&pair(), MassAxis::Ppm, overlap).unwrap();
+        let keep = merge_grids(&pair(), MassAxis::Ppm, overlap, crate::axis::LR_TOUCH).unwrap();
         keep.iter().filter(|k| **k).count()
     };
     assert_eq!(kept(0.0), 2);

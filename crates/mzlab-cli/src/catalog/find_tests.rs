@@ -1,5 +1,5 @@
 //! `commands --find`: the tasks of the agent audit (a low-resolution LC-MS campaign) find the command or step that does them among the
-//! first three, every command and step has a summary the search matches, and every row of `related.rs` names something that exists.
+//! first three, every command and step has a summary the search matches, and every row of `related_rows.rs` names something that exists.
 
 use super::{items, search, words};
 use crate::catalog::related::RELATED;
@@ -67,10 +67,8 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "peak table",
     ),
     ("extract ion chromatograms of a list of m/z", "trace xic"),
-    (
-        "sum the scans of an MS2 window and count the ions it rests on",
-        "spectrum get",
-    ),
+    ("sum the scans of an MS2 window and count the ions it rests on", "spectrum get"),
+    ("spectrum of a product-ion peak, background of both sides off", "spectrum get"),
     (
         "blank subtraction threshold on the feature table",
         "table.filter",

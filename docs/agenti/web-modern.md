@@ -67,11 +67,9 @@ Each do-now candidate: where and what it does today, the replacement, support, r
 - Risk: very low; `structuredClone` throws on functions where JSON drops them, so check the value is plain data.
 - Tests: `tests/test_archivio.py`, `tests/test_file_sicuri.py`, `e2e_reset`, `e2e20`, `e2e23`.
 
-**CALM-MOTION-HELPER** (about 10 lines)
-- Today: 19 `matchMedia("(prefers-reduced-motion: reduce)")` sites (`area-lavoro.js`, `pannelli.js`, `tour.js`, `settings.js`, `mappa3d.js`, `avvio.js`, ...). Nine `scrollIntoView({behavior: "smooth"})` or `scrollTo` calls (`banco.js`, `infusione-albero.js`, `libreria.js`, `libreria-finestra.js`, `tabs.js`, `pannelli.js:90`, `telefono-scheda.js`) ignore reduced motion and the in-app `data-a11y-reduce` switch.
-- Replacement: one helper that reads both the system setting and `data-a11y-reduce` and returns `"auto"` or `"smooth"`; the nine calls use it. No new platform feature.
-- Risk: low; behaviour changes only under reduced motion (a fix).
-- Tests: `e2e_a11y_dati`, `e2e_scroll`, `e2e_tour`, `e2e_tema_impostazioni`, `e2e_pannelli_stabili`.
+**CALM-MOTION-HELPER** (done)
+- `FRAME.calm()` (system setting or `data-a11y-reduce`) and `FRAME.behavior()` (`"auto"` or `"smooth"`) in `frame.js` are the one check; every JS reduced-motion read and every smooth scroll uses them. Left on purpose: `settings.js` (reads the raw system setting to set the switch) and `transizioni.js` (a change listener).
+- Test: `e2e_a11y_dati` (scroll behavior under the system setting, the in-app switch alone, and neither).
 
 The three do-now rows remove about 40 lines and fix two small bugs (copy without fallback; smooth scroll under reduced motion). That is the honest size of what the floor allows.
 
