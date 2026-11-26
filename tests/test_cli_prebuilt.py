@@ -18,7 +18,8 @@ NAME = f"mzlab-cli-{SHA[:12]}-linux-x86_64"
 
 
 def fake(commit: str) -> bytes:
-    return f"#!/bin/sh\necho '{{\"name\": \"mzlab-cli\", \"commit\": \"{commit}\"}}'\n".encode()
+    """A shell script that reports `commit`; it also leaves a marker file, so a test sees whether the tool ran it."""
+    return f"#!/bin/sh\ntouch \"$(dirname \"$0\")/RAN\"\necho '{{\"name\": \"mzlab-cli\", \"commit\": \"{commit}\"}}'\n".encode()
 
 
 @pytest.fixture()
@@ -55,13 +56,14 @@ def test_newest_build_is_downloaded_verified_and_its_path_printed(tmp_path, serv
     out = capsys.readouterr()
     assert out.out.strip() == str(tmp_path / NAME) and (tmp_path / NAME).stat().st_mode & 0o111
     assert "downloading" in out.err
+    assert not (tmp_path / "RAN").exists()   # the downloaded file is never executed by default
 
 
 def test_explicit_commit_json_and_second_run_downloads_no_binary(tmp_path, server, capsys):
     files, seen = server
     assert cp.main(["--commit", SHA.upper(), "--dir", str(tmp_path), "--json"]) == 0
     d = json.loads(capsys.readouterr().out)
-    assert d["schema"] == "cli-prebuilt/1" and d["commit"] == SHA and d["sha256"] == hashlib.sha256(files[f"rel/{NAME}"]).hexdigest()
+    assert d["schema"] == "cli-prebuilt/1" and d["commit"] == SHA and d["run_verified"] is False and d["sha256"] == hashlib.sha256(files[f"rel/{NAME}"]).hexdigest()
     seen.clear()
     assert cp.main(["--commit", SHA, "--dir", str(tmp_path)]) == 0
     assert f"/rel/{NAME}" not in seen and "already present" in capsys.readouterr().err
@@ -79,12 +81,18 @@ def test_checksum_differs_exits_7_and_writes_nothing(tmp_path, server):
     assert not list(tmp_path.iterdir())
 
 
-def test_binary_of_another_commit_exits_7_and_is_deleted(tmp_path, server):
+def test_verify_run_executes_the_file_and_reports_the_commit(tmp_path, server, capsys):
+    assert cp.main(["--commit", SHA, "--dir", str(tmp_path), "--verify-run", "--json"]) == 0
+    assert (tmp_path / "RAN").exists() and json.loads(capsys.readouterr().out)["run_verified"] is True
+
+
+def test_verify_run_binary_of_another_commit_exits_7_and_is_deleted(tmp_path, server):
     files, _ = server
     files[f"rel/{NAME}"] = fake("f" * 40)
     files[f"rel/{NAME}.sha256"] = f"{hashlib.sha256(files[f'rel/{NAME}']).hexdigest()}  {NAME}\n".encode()
-    assert cp.main(["--commit", SHA, "--dir", str(tmp_path)]) == 7
+    assert cp.main(["--commit", SHA, "--dir", str(tmp_path), "--verify-run"]) == 7
     assert not (tmp_path / NAME).exists()
+    assert cp.main(["--commit", SHA, "--dir", str(tmp_path)]) == 0   # without --verify-run the same file is accepted: only the SHA-256 is checked
 
 
 def test_server_down_exits_6(tmp_path, server, monkeypatch):

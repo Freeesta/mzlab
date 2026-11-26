@@ -89,5 +89,5 @@ jobs:
             --jq '[.assets[] | select(.name | startswith("mzlab-cli-") and endswith("-linux-x86_64"))] | sort_by(.createdAt) | reverse | .['"$KEEP"':][].name' |
           while read -r n; do
             echo "delete $n"
-            for a in "$n" "$n.sha256"; do gh release delete-asset "$TAG" "$a" --yes --repo "$GITHUB_REPOSITORY" || true; done
+            for a in "$n" "$n.sha256"; do gh release delete-asset "$TAG" "$a" --yes --repo "$GITHUB_REPOSITORY" || echo "::warning::could not delete the old asset $a"; done
           done

@@ -4,11 +4,12 @@
     python3 tools/cli_prebuilt.py                       # the newest build of main
     python3 tools/cli_prebuilt.py --commit SHA          # the build of that commit (at least 12 hex digits)
     python3 tools/cli_prebuilt.py --dry-run --json      # only the URLs
+    python3 tools/cli_prebuilt.py --verify-run          # also RUNS the file once (--version --json) to check the commit it reports
 
 The builds come from .github/workflows/cli-main.yml (a pre-release called `cli-prebuilt`, the last 10 commits of main, not a release). The file is
-checked against its published SHA-256 and must report the commit it was named after (`--version --json`). stdout is the path of the binary (a `cli-prebuilt/1`
-object under --json), stderr is progress and errors. Stdlib only. Exit: 0 ok, 2 usage, 3 not Linux x86_64, 4 no build for that commit (too old, or main moved
-on: use the newest), 6 download failed, 7 checksum or commit differs (the file is deleted).
+checked against its published SHA-256, which proves the file arrived intact, not who built it, so the file is NOT executed unless you pass --verify-run. stdout is the
+path of the binary (a `cli-prebuilt/1` object under --json), stderr is progress and errors. Stdlib only. Exit: 0 ok, 2 usage, 3 not Linux x86_64, 4 no build for that
+commit (too old, or main moved on: use the newest), 6 download failed, 7 checksum differs (nothing is written) or, with --verify-run, the commit it reports differs (file deleted).
 """
 from __future__ import annotations
 
@@ -48,7 +49,7 @@ def get(url: str, what: str) -> bytes:
         raise Fail(6, f"{what}: {e} ({url})") from e
 
 
-def fetch(commit: str | None, out_dir: Path, base: str, dry: bool) -> dict:
+def fetch(commit: str | None, out_dir: Path, base: str, dry: bool, verify_run: bool = False) -> dict:
     if commit is not None and not re.fullmatch(r"[0-9a-f]{12,40}", commit):
         raise Fail(2, f"--commit wants at least 12 hex digits of a commit, got {commit!r}")
     urls = {"latest": f"{base}/LATEST"}
@@ -85,29 +86,32 @@ def fetch(commit: str | None, out_dir: Path, base: str, dry: bool) -> dict:
         os.replace(tmp, dest)
     else:
         print(f"cli_prebuilt: {dest} already present and verified", file=sys.stderr)
-    seen = subprocess.run([str(dest), "--version", "--json"], capture_output=True, text=True, timeout=60, check=False)
-    try:
-        built = json.loads(seen.stdout)["commit"]
-    except (ValueError, KeyError, TypeError):
-        built = None
-    if not built or not built.startswith(short):
-        dest.unlink(missing_ok=True)
-        raise Fail(7, f"the binary reports commit {built!r}, not {short}; deleted")
-    return {"schema": "cli-prebuilt/1", "dry_run": False, "commit": built, "path": str(dest), "sha256": want[0], "urls": urls}
+    built = None
+    if verify_run:   # opt-in: this executes the downloaded file
+        seen = subprocess.run([str(dest), "--version", "--json"], capture_output=True, text=True, timeout=60, check=False)
+        try:
+            built = json.loads(seen.stdout)["commit"]
+        except (ValueError, KeyError, TypeError):
+            built = None
+        if not built or not built.startswith(short):
+            dest.unlink(missing_ok=True)
+            raise Fail(7, f"the binary reports commit {built!r}, not {short}; deleted")
+    return {"schema": "cli-prebuilt/1", "dry_run": False, "commit": built or commit or short, "run_verified": bool(built), "path": str(dest), "sha256": want[0], "urls": urls}
 
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], epilog="Exit: 0 ok, 2 usage, 3 not Linux x86_64, 4 no build for that commit, 6 download failed, 7 checksum or commit differs.")
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], epilog="Exit: 0 ok, 2 usage, 3 not Linux x86_64, 4 no build for that commit, 6 download failed, 7 checksum or (with --verify-run) commit differs.")
     ap.add_argument("--commit", help="commit to fetch (at least 12 hex digits); default: the newest build of main")
     ap.add_argument("--dir", type=Path, default=ROOT / "target" / "cli-prebuilt", help="folder for the binary (default: target/cli-prebuilt)")
     ap.add_argument("--dry-run", action="store_true", help="print the URLs, download nothing")
+    ap.add_argument("--verify-run", action="store_true", help="also run the downloaded binary once (--version --json) and check the commit it reports; this executes the file")
     ap.add_argument("--json", action="store_true", help="print a cli-prebuilt/1 object instead of the path")
     try:
         a = ap.parse_args(argv)
     except SystemExit as e:
         return 0 if e.code == 0 else 2
     try:
-        r = fetch(a.commit.lower() if a.commit else None, a.dir, os.environ.get("MZLAB_BASE_URL", BASE).rstrip("/"), a.dry_run)
+        r = fetch(a.commit.lower() if a.commit else None, a.dir, os.environ.get("MZLAB_BASE_URL", BASE).rstrip("/"), a.dry_run, a.verify_run)
     except Fail as e:
         print(f"cli_prebuilt: error: {e}", file=sys.stderr)
         return e.code
