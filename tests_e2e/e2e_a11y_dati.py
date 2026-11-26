@@ -201,17 +201,17 @@ try:
         def scrolls():
             # every smooth scroll asks FRAME.behavior(): instant for the system setting and for the in-app switch alone, smooth for neither
             pg.evaluate("""() => { window.__sb = []; const o = Element.prototype.scrollIntoView, w = window.scrollTo;
-              Element.prototype.scrollIntoView = function (a) { __sb.push(a && a.behavior); return o.call(this, a); };
-              window.scrollTo = function (a, b) { __sb.push(a && a.behavior); return w.call(window, a, b); }; }""")
+              Element.prototype.scrollIntoView = function (a) { __sb.push(String(a && a.behavior)); return o.call(this, a); };
+              window.scrollTo = function (a, b) { if (a && typeof a === 'object') __sb.push(String(a.behavior)); return w.call(window, a, b); }; }""")
             def seen():
                 pg.evaluate("__sb.length = 0; reveal(E.panels[0]); tableToView()"); wait_for_js(pg, "__sb.length >= 2")
                 return pg.evaluate("[...new Set(__sb)]")
             try:
-                assert pg.evaluate("FRAME.behavior()") == "auto" and seen() == ["auto"], "system setting"
-                pg.emulate_media(reduced_motion="no-preference")
-                assert pg.evaluate("FRAME.behavior()") == "smooth" and seen() == ["smooth"], "no setting, no switch"
+                got = seen(); assert pg.evaluate("FRAME.behavior()") == "auto" and got == ["auto"], ("system setting", got)
+                pg.emulate_media(reduced_motion="no-preference"); pg.evaluate("document.documentElement.removeAttribute('data-a11y-reduce')")   # settings.js had set it at load
+                got = seen(); assert pg.evaluate("FRAME.behavior()") == "smooth" and got == ["smooth"], ("no setting, no switch", got)
                 pg.evaluate("document.documentElement.setAttribute('data-a11y-reduce', '')")
-                assert pg.evaluate("FRAME.behavior()") == "auto" and seen() == ["auto"], "in-app switch alone"
+                got = seen(); assert pg.evaluate("FRAME.behavior()") == "auto" and got == ["auto"], ("in-app switch alone", got)
             finally:
                 pg.evaluate("document.documentElement.removeAttribute('data-a11y-reduce')"); pg.emulate_media(reduced_motion="reduce")
         step("reduced motion (system setting or in-app switch): scrolls are instant", scrolls)
