@@ -156,6 +156,38 @@ fn nearest_apex(xs: &[f64], ys: &[f64], x: f64, reach: f64, pk: &LrParams) -> Op
     best.map(|(_, i)| i)
 }
 
+/// Points, area (counts x s), height over the edge line and S/N of the window [e0, e1]: the line joins the means of 3 points at each end (never below zero),
+/// as `integ()` of the page.
+fn measure(xs: &[f64], ys: &[f64], e0: f64, e1: f64, noise: f64) -> (usize, f64, f64, f64) {
+    let n = xs.len();
+    let (i0, i1) = (near_idx(xs, e0), near_idx(xs, e1));
+    let end = |i: usize| {
+        let (lo, hi) = (i.saturating_sub(1), (i + 1).min(n - 1));
+        (ys[lo..=hi].iter().sum::<f64>() / (hi - lo + 1) as f64).max(0.0)
+    };
+    let (ya, yb) = (end(i0), end(i1));
+    let span = (xs[i1] - xs[i0]).max(1e-12);
+    let mut top = f64::NEG_INFINITY;
+    let mut raw = 0.0;
+    for j in i0..=i1 {
+        let line = ya + (yb - ya) * (xs[j] - xs[i0]) / span;
+        if ys[j] - line > top {
+            top = ys[j] - line;
+        }
+        if j > i0 {
+            raw += (ys[j] + ys[j - 1]) / 2.0 * (xs[j] - xs[j - 1]) * 60.0;
+        }
+    }
+    let area = (raw - (ya + yb) / 2.0 * span * 60.0).max(0.0);
+    let height = top.max(0.0);
+    (
+        i1 + 1 - i0,
+        area,
+        height,
+        if noise > 0.0 { height / noise } else { 0.0 },
+    )
+}
+
 /// The click at `x` on the trace: the window of the peak whose apex is nearest, its evidence and the verdict of the guard.
 pub fn lr_click(xs: &[f64], ys: &[f64], x: f64, mrm: bool, pk: &LrParams, g: &ClickGuard) -> Click {
     let n = xs.len().min(ys.len());
@@ -201,34 +233,10 @@ pub fn lr_click(xs: &[f64], ys: &[f64], x: f64, mrm: bool, pk: &LrParams, g: &Cl
     };
     c.apex = apex.map(|i| xs[i]);
     c.edges = Some((e.e0, e.e1));
-    let (i0, i1) = (near_idx(xs, e.e0), near_idx(xs, e.e1));
-    c.points = i1 + 1 - i0;
+    let m = measure(xs, ys, e.e0, e.e1, e.noise);
+    (c.points, c.area, c.height, c.sn) = (m.0, m.1, m.2, m.3);
     c.noise = e.noise;
-    // area and height over the straight line between the two edges (mean of 3 points, never below zero), counts x s as `integ()` of the page
-    let end = |i: usize| {
-        let (lo, hi) = (i.saturating_sub(1), (i + 1).min(n - 1));
-        (ys[lo..=hi].iter().sum::<f64>() / (hi - lo + 1) as f64).max(0.0)
-    };
-    let (ya, yb) = (end(i0), end(i1));
-    let span = (xs[i1] - xs[i0]).max(1e-12);
-    let mut top = f64::NEG_INFINITY;
-    let mut raw = 0.0;
-    for j in i0..=i1 {
-        let line = ya + (yb - ya) * (xs[j] - xs[i0]) / span;
-        if ys[j] - line > top {
-            top = ys[j] - line;
-        }
-        if j > i0 {
-            raw += (ys[j] + ys[j - 1]) / 2.0 * (xs[j] - xs[j - 1]) * 60.0;
-        }
-    }
-    c.area = (raw - (ya + yb) / 2.0 * span * 60.0).max(0.0);
-    c.height = top.max(0.0);
-    c.sn = if e.noise > 0.0 {
-        c.height / e.noise
-    } else {
-        0.0
-    };
+    let span = (xs[near_idx(xs, e.e1)] - xs[near_idx(xs, e.e0)]).max(1e-12);
     let min_sn = g.min_sn.max(pk.sn_min);
     if c.points < g.min_points {
         c.refused.push("points");
