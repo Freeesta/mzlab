@@ -1,5 +1,5 @@
 """The colour key of the SIM / MRM ion lists on the built site (synthetic SIM .wiff files of tools/wiff_sim.py, no laboratory data). Rule under test: every ion has ITS OWN colour (its place among ALL ions
-of the panel in the palette), the samples are told apart by dash; the rows of the channel picker and of the «Extract ion ›» submenus (MRM panel and chromatogram panel) carry a swatch with the line of the
+of the panel in the palette), the samples are told apart by dash; the checkbox of each channel picker row is the key (coloured border unticked, filled ticked) and the rows of the «Extract ion ›» submenus (MRM panel and chromatogram panel) carry a swatch with the line of the
 trace, read from the one `p._look` the drawing writes from the same SIMUI.style() call as the traces; hollow and dimmed while the row is off; ticking, unticking, stacking, overlaying and moving a file
 never recolour a trace; hover or focus of a row lights its trace. Checked on 7 ions x 1 and 2 samples (sim3), 4 ions x 2 samples (sim), 3 ions x 4 samples (listab) and the palette order of 2..48 ions.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key.py"""
@@ -23,8 +23,8 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 P = "E.panels.find(p => p.type === 'mrm')"
 # rows of the picker (all of them, ticked or not) and the traces drawn, both with the colour as the browser computes it
 READ = """(() => { const p = %s, a = p._a, norm = c => { const e = document.createElement('i'); e.style.color = c; document.body.appendChild(e); const v = getComputedStyle(e).color; e.remove(); return v; };
-  const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.trsw'); return { label: r.querySelector('.can-et').textContent, on: r.getAttribute('aria-selected') === 'true',
-    sw: !!s && !s.classList.contains('none'), off: !!s && s.classList.contains('off'), color: s ? getComputedStyle(s).color : null, td: s ? s.dataset.td : null }; });
+  const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.can-ck[data-tc]'), on = r.getAttribute('aria-selected') === 'true'; return { label: r.querySelector('.can-et').textContent, on,
+    sw: !!s, off: !!s && !on, color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
   const tr = (a ? a.sr : []).map(s => ({ label: SIMUI.label(s.tk), color: norm(s.color), dash: s.dash.join(','), k: s.k }));
   return { rows, tr, hl: p._hl ?? null }; })()""" % P
 
@@ -38,8 +38,10 @@ def check(d, n, samples, ticked=None):
     need(all(len(c) == 1 for c in col.values()), "one ion, several colours: %s" % col)
     need(len({next(iter(c)) for c in col.values()}) == len(col), "two ions share a colour: %s" % col)
     for row in d["rows"]:
-        need(row["sw"], "row without a swatch: %s" % row)
-        need(row["off"] == (not row["on"]), "off class must follow the tick: %s" % row)
+        need(row["sw"], "row whose checkbox carries no colour: %s" % row)
+        need(not row["sep"], "the colour lives in the checkbox, no separate swatch: %s" % row)
+        need(row["off"] == (not row["on"]), "the checkbox must be empty (coloured border) when unticked: %s" % row)
+        need((row["bs"] == "dashed") == bool(row["td"]), "a dashed trace gets a dashed box border: %s" % row)
         if row["label"] in col: need(row["color"] == next(iter(col[row["label"]])), "row %s swatch %s, trace %s" % (row["label"], row["color"], col[row["label"]]))
     if samples > 1:
         for lab, per in dash.items(): need(len(set(per.values())) == len(per) >= 2, "samples must differ in dash on %s: %s" % (lab, per))

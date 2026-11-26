@@ -1,7 +1,7 @@
 """The colour key in the three trace lists the SIM/MRM key did not cover, on the built site with synthetic files only (tools/dati_sintetici.py, tools/wiff_dad_mrm.py):
 the MS2 transition select (a swatch strip beside it and a square on each option), the legend of the XIC list (traces and files) and the DAD curves on an MRM panel. Rule under test:
 a swatch has the colour and dash of its trace, read from the one `p._look` (or the one line function of dad-mrm.js) the drawing uses, hollow and dimmed while the trace is off, and
-hover or focus of a swatch draws its trace on and fades the others. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key_panels.py"""
+hover or focus of a swatch draws its trace on and fades the others; the first (tallest) row of the chromatogram hover tooltip is tinted in its trace colour. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key_panels.py"""
 # covers: mzlab/web/grafici.js, mzlab/web/pannelli.js, mzlab/web/dad-mrm.js, mzlab/web/sim-ui.js, mzlab/web/canali.css, tools/wiff_dad_mrm.py
 import subprocess, sys, os, tempfile
 from pathlib import Path
@@ -96,6 +96,20 @@ try:
             need(len(files) == 2 and files[0]["d"] != files[1]["d"], "the files must differ in dash: %s" % files)
             need(all(not x["off"] for x in d["rows"]), d["rows"])
         step("XIC legend: a trace entry has the colour of its trace; the files differ in dash", xic_leg)
+
+        def top_row():
+            """the tooltip row with the largest height carries the highlight class and the tint of its trace; the trace is drawn thicker only while the pointer is over the chart"""
+            away(pg2, XP)
+            box = pg2.evaluate("(() => { const r = %s.cv.getBoundingClientRect(), a = %s._a; return { x: r.left + a.X((a.x0 + a.x1) / 2), y: r.top + (r.height - 10) / 2 }; })()" % (XP, XP))
+            pg2.mouse.move(box["x"], box["y"]); wait_for_js(pg2, "!!%s.tip && !%s.tip.hidden && %s.tip.querySelector('div.top')" % (XP, XP, XP), timeout=10000)
+            d = pg2.evaluate("""(() => { const p = %s, n = %s, rows = [...p.tip.querySelectorAll('div')].filter(d => d.querySelector('i')), top = rows[0];
+              return { n: rows.length, tops: p.tip.querySelectorAll('div.top').length, first: top.classList.contains('top'), tint: getComputedStyle(top).backgroundColor, ink: n(top.querySelector('i').style.backgroundColor),
+                vals: rows.map(r => r.querySelector('b').textContent), lit: p._top, name: top.textContent }; })()""" % (XP, NORM))
+            need(d["n"] >= 2 and d["tops"] == 1 and d["first"], "exactly the first row is the top row: %s" % d)
+            need(d["tint"] not in ("rgba(0, 0, 0, 0)", "transparent"), "the top row has no tint: %s" % d)
+            need(d["lit"] and d["name"].startswith(d["lit"][:10].strip()), "the thick trace is the one of the top row: %s" % d)
+            pg2.mouse.move(5, 5); wait_for_js(pg2, "%s._top == null" % XP, timeout=10000)
+        step("hover tooltip: the tallest trace row is highlighted and its trace drawn a touch thicker, both cleared on leaving", top_row)
 
         def xic_off():
             PN = ".pnl:has(.leg .tg[data-lk^=t])"

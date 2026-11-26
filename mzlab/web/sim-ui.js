@@ -97,6 +97,20 @@
     FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
   }
 
+  /** the checkbox of a picker row carries the line of its trace: the box border (unticked) or fill (ticked) is the colour, a dashed border marks a dashed trace; "" for a channel never drawn
+   * @param {any} p @param {string} key */
+  function ckLook(p, key) {
+    const l = p._look && p._look[key]; if (!l) return "";
+    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="--tk:${EH(l.c || "currentColor")}"`;
+  }
+  /** the tallest trace under the mouse (its tooltip row is the first): drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {string | null} name */
+  function top(p, name) {
+    if ((p._top ?? null) === name) return "";
+    p._top = name; if (p._hlQ) return ""; p._hlQ = 1;
+    FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
+    return "";
+  }
+
   /** the keys of an XIC panel (traces t<id>, files f<k>) and of the MS2 transitions, written by the drawing from the same style() call as the traces; the legend and the select read them.
    * XIC: a lone trace keeps the colour of its file, several take the palette and the files tell apart by dash @param {any} p @param {any[]} ts the traces @param {any[]} sf the files drawn */
   function xicLook(p, ts, sf) {
@@ -207,5 +221,5 @@
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, top, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
 })();

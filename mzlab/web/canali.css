@@ -33,3 +33,10 @@
 .trsw.off,#ctx .sw.off{background:none!important;box-shadow:inset 0 0 0 1.5px currentColor;opacity:.6}
 .trkey{display:inline-flex;align-items:center;flex:none}.trkey .trk{display:inline-flex;align-items:center;min-width:24px;min-height:24px;justify-content:center;border-radius:4px}.trkey .trk:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .leg .tg:has(.trsw){display:inline-flex;align-items:center;min-height:24px}
+/* the tallest trace under the mouse: its tooltip row carries a soft tint of the trace colour */
+.tip div.top{background:color-mix(in srgb,var(--tc) 16%,transparent);border-radius:3px;margin:0 -4px;padding:0 4px;font-weight:600}
+/* the checkbox of a picker row is the colour key of its trace: coloured border when unticked, filled when ticked, dashed border for a dashed trace; the tick gets a halo to stay legible on any fill */
+.can-ck[data-tc]{border-color:var(--tk);forced-color-adjust:none}
+.can-ck[data-td]:not([data-td=""]){border-style:dashed}
+.can-row[aria-selected=true] .can-ck[data-tc]{background:var(--tk);border-color:var(--tk)}
+.can-row[aria-selected=true] .can-ck[data-tc]::after{filter:drop-shadow(0 0 1px var(--ink))}
