@@ -1,0 +1,28 @@
+# TEMPORARY probe (removed in the next commit): why did `gh release create` get a 403 on a branch run?
+name: app-probe-tmp
+on:
+  push:
+    branches: [claude/app-rolling]
+    paths: [.github/workflows/app-probe-tmp.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      T: app-probe-tmp
+    steps:
+      - name: Create with the target commit
+        run: |
+          gh release create "$T" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false --title probe --notes probe \
+            && echo "RESULT with-target: OK" || echo "RESULT with-target: FAIL"
+      - name: Create without a target (default branch head)
+        run: |
+          gh release view "$T" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && { echo "RESULT without-target: skipped, exists"; exit 0; }
+          gh release create "$T" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false --title probe --notes probe \
+            && echo "RESULT without-target: OK" || echo "RESULT without-target: FAIL"
+      - name: Remove the probe release and its tag
+        run: gh release delete "$T" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || echo "nothing to delete"
