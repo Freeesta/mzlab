@@ -289,6 +289,14 @@ impl<R: ReadAt> Routes<R> {
         let (mut mz, mut yy, mut n_win) = (Vec::new(), Vec::new(), scans_in(&rt, g.window));
         if let Some(c) = cells {
             (mz, yy, n_win) = self.net_spectrum(level, &g, precursor, n_side, c)?;
+            if let Cells::Hr(t) = c {
+                let by = if p.tol_ppm.is_none() {
+                    "default"
+                } else {
+                    "set"
+                };
+                rule += &format!("; high-resolution lines matched within {t} ppm ({by})");
+            }
         } else {
             rule += "; the level is profile and its point spacing is not in the index: no spectrum made, take the window with spectrum get --rt A,B --sum";
         }
@@ -369,7 +377,7 @@ fn per_nominal(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     (om, oy)
 }
 
-/// What the side lines `(m/z, intensity)` (in order of m/z) hold for a window line at `m`: the line of its own cell, or at high resolution the strongest
+/// What the side lines `(m/z, intensity)` (sorted by m/z: `cell_sum` emits its cells in order) hold for a window line at `m`: the line of its own cell, or at high resolution the strongest
 /// line within `tol_ppm`.
 fn at(side: &[(f64, f64)], m: f64, cells: Cells) -> f64 {
     if let Cells::Hr(ppm) = cells {
