@@ -38,6 +38,16 @@ const RULES: &[Rule] = &[
         key: "note.cli.repeat.dig",
         find: "dig kinetics series",
     },
+    Rule {
+        command: "trace xic",
+        key: "note.cli.repeat.xic",
+        find: "many masses sweep",
+    },
+    Rule {
+        command: "raw xic",
+        key: "note.cli.repeat.rawxic",
+        find: "many masses every file",
+    },
 ];
 
 /// The rule of a command line: `peak auto-lr ...`, or `flow run PLAN` whose plan holds a `tp.dig_lr` step.
@@ -52,8 +62,24 @@ pub fn rule_of(args: &[String]) -> Option<&'static Rule> {
                 .filter(|t| t.len() < 4_000_000)?;
             text.contains("\"tp.dig_lr@").then(|| &RULES[1])
         }
+        (Some("trace"), Some("xic")) => {
+            (one_mass(args) && !args.iter().any(|a| a == "--sweep")).then(|| &RULES[2])
+        }
+        (Some("raw"), Some("xic")) => one_mass(args).then(|| &RULES[3]),
         _ => None,
     }
+}
+
+/// The call names one mass (`--mz 364.4`, no comma): a list or a sweep is already the one call and is never counted.
+fn one_mass(args: &[String]) -> bool {
+    let v = args.iter().enumerate().find_map(|(i, a)| {
+        a.strip_prefix("--mz=").or_else(|| {
+            (a == "--mz")
+                .then(|| args.get(i + 1).map(String::as_str))
+                .flatten()
+        })
+    });
+    v.is_some_and(|m| !m.contains(','))
 }
 
 /// One counted call.
