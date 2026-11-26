@@ -2,7 +2,8 @@
 //! present (a value that does not apply is null), so a reader never meets a missing key.
 
 use crate::json::{round, Out};
-use crate::rawiso::{Ask, Expected, Found, Ion, Ratio, Test};
+use crate::rawiso::Ask;
+use crate::rawiso_found::{Expected, Found, Ion, Ratio, Region, Test};
 
 /// `r` of a ratio at 4 decimals, null when there is none.
 fn opt4(o: &mut Out, v: Option<f64>) {
@@ -125,19 +126,8 @@ fn test_json(o: &mut Out, t: &Test) {
         .raw("}");
 }
 
-/// The `result` object of one sample.
-pub(crate) fn result_json(ask: &Ask, f: &Found) -> String {
-    let mut o = Out::default();
-    o.raw("{\"mz\":")
-        .num(ask.mz)
-        .raw(",\"rt_window\":")
-        .floats(&[ask.rt.0, ask.rt.1]);
-    o.raw(",\"m\":{\"verdict\":")
-        .str(f.m_verdict)
-        .raw(",\"rule\":")
-        .str(&f.m_rule)
-        .raw("},\"region\":");
-    match &f.region {
+fn region_json(o: &mut Out, r: &Option<Region>) {
+    match r {
         Some(r) => {
             o.raw("{\"source\":")
                 .str(r.source)
@@ -156,41 +146,36 @@ pub(crate) fn result_json(ask: &Ask, f: &Found) -> String {
         }
         None => o.raw("null"),
     };
-    o.raw(",\"ions\":[");
-    for (i, x) in f.ions.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" });
-        ion_json(&mut o, x);
-    }
-    o.raw("],\"observed\":");
+}
+
+/// `observed`: the two ratios, null when no bin was counted.
+fn observed_json(o: &mut Out, f: &Found) {
     if f.ions.is_empty() {
         o.raw("null");
-    } else {
-        o.raw("{\"r1\":");
-        ratio_json(&mut o, f.r1);
-        o.raw(",\"r2\":");
-        ratio_json(&mut o, f.r2);
-        o.raw("}");
+        return;
     }
-    o.raw(",\"expected\":");
-    match &f.expected {
-        Some(e) => expected_json(&mut o, e),
-        None => {
-            o.raw("null");
-        }
-    }
-    o.raw(",\"tests\":");
-    match &f.tests {
+    o.raw("{\"r1\":");
+    ratio_json(o, f.r1);
+    o.raw(",\"r2\":");
+    ratio_json(o, f.r2);
+    o.raw("}");
+}
+
+fn tests_json(o: &mut Out, t: &Option<(Test, Test)>) {
+    match t {
         Some((a, b)) => {
             o.raw("{\"r1\":");
-            test_json(&mut o, a);
+            test_json(o, a);
             o.raw(",\"r2\":");
-            test_json(&mut o, b);
+            test_json(o, b);
             o.raw("}")
         }
         None => o.raw("null"),
     };
-    o.raw(",\"carbon_range\":");
-    match f.carbon {
+}
+
+fn carbon_json(o: &mut Out, ask: &Ask, c: Option<(f64, f64, f64)>) {
+    match c {
         Some((best, lo, hi)) => o
             .raw("{\"best\":")
             .num(best)
@@ -205,6 +190,58 @@ pub(crate) fn result_json(ask: &Ask, f: &Found) -> String {
             .raw("}"),
         None => o.raw("null"),
     };
+}
+
+fn interference_json(o: &mut Out, ask: &Ask, i: Option<(Option<f64>, Option<f64>, usize)>) {
+    match i {
+        Some((r1, r2, n)) => {
+            o.raw("{\"r_m1\":");
+            opt4(o, r1);
+            o.raw(",\"r_m2\":");
+            opt4(o, r2);
+            o.raw(",\"n_points\":").int(n as i64).raw(",\"min_r\":");
+            o.num(ask.p.min_r).raw(",\"possible\":");
+            match r1 {
+                Some(r) => o.raw(if r < ask.p.min_r { "true" } else { "false" }),
+                None => o.raw("null"),
+            };
+            o.raw("}")
+        }
+        None => o.raw("null"),
+    };
+}
+
+/// The `result` object of one sample.
+pub(crate) fn result_json(ask: &Ask, f: &Found) -> String {
+    let mut o = Out::default();
+    o.raw("{\"mz\":")
+        .num(ask.mz)
+        .raw(",\"rt_window\":")
+        .floats(&[ask.rt.0, ask.rt.1]);
+    o.raw(",\"m\":{\"verdict\":")
+        .str(f.m_verdict)
+        .raw(",\"rule\":")
+        .str(&f.m_rule)
+        .raw("},\"region\":");
+    region_json(&mut o, &f.region);
+    o.raw(",\"ions\":[");
+    for (i, x) in f.ions.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" });
+        ion_json(&mut o, x);
+    }
+    o.raw("],\"observed\":");
+    observed_json(&mut o, f);
+    o.raw(",\"expected\":");
+    match &f.expected {
+        Some(e) => expected_json(&mut o, e),
+        None => {
+            o.raw("null");
+        }
+    }
+    o.raw(",\"tests\":");
+    tests_json(&mut o, &f.tests);
+    o.raw(",\"carbon_range\":");
+    carbon_json(&mut o, ask, f.carbon);
     o.raw(",\"m2_hint\":");
     match &f.m2_hint {
         Some((h, rule)) => o
@@ -216,22 +253,7 @@ pub(crate) fn result_json(ask: &Ask, f: &Found) -> String {
         None => o.raw("null"),
     };
     o.raw(",\"interference\":");
-    match f.interference {
-        Some((r1, r2, n)) => {
-            o.raw("{\"r_m1\":");
-            opt4(&mut o, r1);
-            o.raw(",\"r_m2\":");
-            opt4(&mut o, r2);
-            o.raw(",\"n_points\":").int(n as i64).raw(",\"min_r\":");
-            o.num(ask.p.min_r).raw(",\"possible\":");
-            match r1 {
-                Some(r) => o.raw(if r < ask.p.min_r { "true" } else { "false" }),
-                None => o.raw("null"),
-            };
-            o.raw("}")
-        }
-        None => o.raw("null"),
-    };
+    interference_json(&mut o, ask, f.interference);
     o.raw(",\"flags\":[");
     for (i, fl) in f.flags.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(fl);
