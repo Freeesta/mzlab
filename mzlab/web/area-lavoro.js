@@ -96,8 +96,7 @@ function tableToView() {
     applyView(); window.scrollTo(0, 0);
   }
   h.tabIndex = -1;
-  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  t.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+  t.scrollIntoView({ behavior: FRAME.behavior(), block: "start" });
   h.focus({ preventScroll: true });
 }
 workQ("#samptab").onclick = tableToView;

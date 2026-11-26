@@ -121,7 +121,7 @@ const LIB = (() => {
     return [{ name: I18N.t("ctx.chrom.ms2AtRt"), tip: I18N.t("ctx.chrom.ms2AtRt.tip"), run: async () => {
       DDA.ensure(c.p); const s1 = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.link === c.p.id && q.el), s2 = s1 && E.panels.find((/** @type {Bag} */ q) => q.id === s1.duo && q.el); if (!s2) return;
       const D = await DDA.get(f.k), i = DDA.nearest(D.rt, c.x); if (i < 0) return;
-      await DDA.selectMs2(s2, D.sid[i]); s2.el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      await DDA.selectMs2(s2, D.sid[i]); s2.el.scrollIntoView({ block: "nearest", behavior: FRAME.behavior() });
     } }];
   } });
   let urlJs = false; try { urlJs = new URLSearchParams(location.search).get("libjs") === "1"; } catch (e) { /* no location */ }

@@ -34,7 +34,7 @@ function ldIon(on, mode) {
   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
   if (LD_ANALYSERS) for (const k of Object.keys(/** @type {any} */ (window).LDAN || {})) A[k] = /** @type {any} */ (window).LDAN[k](ctx);
   const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
+  const still = FRAME.calm(), t0 = performance.now();
   const frame = ms => {
     const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
     cx.clearRect(0, 0, W, H); cx.globalAlpha = 1; if (an.draw) an.draw(t);

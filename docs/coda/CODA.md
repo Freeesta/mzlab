@@ -69,4 +69,3 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | FILE-METHOD-WINDOW | `docs/coda/prompt/FILE-METHOD-WINDOW.md` | - | `file_method/1` in the site Method window and the name check beside the scan list of `sample list` |
 | CLIP-SAVE-UNIFY | `docs/coda/prompt/CLIP-SAVE-UNIFY.md` | - | web study: one copy path (`clipboardCopy`) and one download path (`saveBlob`) in the site JS, about 20 lines; copies without a Safari fallback gain one |
 | NATIVE-SWAPS-SMALL | `docs/coda/prompt/NATIVE-SWAPS-SMALL.md` | - | web study: `structuredClone`, `AbortSignal.timeout`, `Object.hasOwn` and one `wait` in place of hand-written code, about 10 lines, all inside the Safari floor |
-| CALM-MOTION-HELPER | `docs/coda/prompt/CALM-MOTION-HELPER.md` | - | web study: one reduced-motion helper (system setting and in-app switch) for 19 checks; nine smooth scrolls honour it |

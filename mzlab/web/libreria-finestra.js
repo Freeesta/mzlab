@@ -450,7 +450,7 @@ function gotoScan(/** @type {string | number} */ sid, /** @type {HTMLDialogEleme
   try {
     const s1 = E.panels.find((/** @type {any} */ q) => q.type === "spec" && q.duo != null && q.el), s2 = s1 && E.panels.find((/** @type {any} */ q) => q.id === s1.duo && q.el);
     if (!s2 || !W_.DDA) return toast(t("lib.all.needDda"));
-    d.close(); W_.DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
+    d.close(); W_.DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: FRAME.behavior() });
   } catch (_) { toast(t("lib.all.cantOpen")); }
 }
 

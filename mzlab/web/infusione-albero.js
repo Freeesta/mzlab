@@ -18,7 +18,7 @@
   /** Opens the node in a spectrum cell of its own (compare two energies side by side). */
   function inNewCell(/** @type {any} */ f, /** @type {any} */ n) {
     const c = addPanel("spec", { tab: "infusion", k: f.k, level: n.level, r0: n.rt0, r1: n.rt1, filt: "msn:" + n.id, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
-    relayout(); fitHost(); setActive(c); c.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+    relayout(); fitHost(); setActive(c); c.el.scrollIntoView({ block: "center", behavior: FRAME.behavior() }); uiSave();
   }
   function rowMenu(/** @type {MouseEvent} */ e, /** @type {any} */ f, /** @type {any} */ r, /** @type {any} */ p) {
     menu(e, [

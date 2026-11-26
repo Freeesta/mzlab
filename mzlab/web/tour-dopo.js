@@ -42,7 +42,7 @@ const TOURDOPO = (() => {
       document.removeEventListener("pointerdown", off, true);
       document.removeEventListener("keydown", onKey, true);
       b.classList.remove("on");
-      const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduced = FRAME.calm();
       setTimeout(() => b.remove(), reduced ? 0 : 320);
     };
     /** @param {KeyboardEvent} e */

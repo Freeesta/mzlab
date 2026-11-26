@@ -6,7 +6,7 @@ const TEMASOFT = (() => {
   const R = document.documentElement;
   let running = 0;
   const fadeMs = () => (parseFloat(getComputedStyle(R).getPropertyValue("--tema-durata")) || 700) + 100;
-  const still = () => R.classList.contains("no-tr") || R.hasAttribute("data-a11y-reduce") || !!(typeof window.matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const still = () => R.classList.contains("no-tr") || FRAME.calm();
   /** Applies `change` (sets the theme and redraws) with a short fade. @param {() => void} change */
   function run(change) {
     if (still()) { change(); return; }
