@@ -112,6 +112,9 @@ const LIB = (() => {
   // the action of the spectrum menu (registry actions/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
   if (typeof AZIONI !== "undefined") AZIONI.register({ id: "spec.lib", group: "lib", order: 1, views: ["spec"], visible: (/** @type {Bag} */ c) => c.p.level === 2,
     name: (/** @type {Bag} */ c) => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), run: (/** @type {Bag} */ c) => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
+  // two MS2 spectra of unit-resolution data against each other (`spectrum compare`): the card of spettro-confronto.js, loaded on first use
+  if (typeof AZIONI !== "undefined") AZIONI.register({ id: "spec.compare", group: "lib", order: 2, views: ["spec"], visible: (/** @type {Bag} */ c) => c.p.level === 2 && !isHr(c.p),
+    name: () => I18N.t("ctx.spec.compare"), run: async (/** @type {Bag} */ c) => { await loadScript("m:spettro-confronto.js"); /** @type {Bag} */ (window).SPCMP.open(c.p); } });
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.identAll", group: "lib", views: ["chrom"], name: () => I18N.t("ctx.chrom.identAll"),
     visible: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), run: (/** @type {Bag} */ c) => identifyAll(c.k) });

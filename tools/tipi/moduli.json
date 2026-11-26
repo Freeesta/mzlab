@@ -86,6 +86,7 @@
     "../../mzlab/web/conversione-carta.js",
     "../../mzlab/web/conv-names.js",
     "../../mzlab/web/libreria-finestra.js",
+    "../../mzlab/web/spettro-confronto.js",
     "../../mzlab/web/mol-svg.js",
     "../../mzlab/web/infusione-grafo.js",
     "../../mzlab/web/banco-file.js",

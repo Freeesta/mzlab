@@ -704,6 +704,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     index: indexCmd,
     remove: async m => { if (CARTELLA.isFolderId(m.id)) await foldRemove(m.id); else await removeLibrary(m.id); return {}; },
     search: m => runSearch(m),
+    compare: async m => { const w = await wasm(); if (!w) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" }); return { text: w.spectrum_compare(m.params, m.sides) }; },   // spectrum-compare/1, no JavaScript twin
     searchAll: (m, reqId) => runAll(m, reqId),
     analogs: m => runAnalogs(m),
   });
