@@ -187,3 +187,16 @@ fn scale_absent(v: &Value) -> bool {
         .get("ion_scale")
         .is_none()
 }
+
+#[test]
+fn a_read_error_of_the_method_has_its_own_message_not_no_method() {
+    let ask = mzlab_core::rawxic::Ask::of(&Query::parse(&format!("{Q}&ions=1"))).unwrap();
+    let err: mzlab_core::error::Result<Option<String>> =
+        Err(mzlab_core::error::Error::new("err.test.read"));
+    let (_, log) = crate::raw_xic_ions::with_method(&ask, &err, "a.mzML");
+    assert_eq!(log.len(), 1);
+    assert!(log[0].contains("reading the method of the file failed (err.test.read)"));
+    assert!(!log[0].contains("carries no method/1"));
+    let (_, none) = crate::raw_xic_ions::with_method(&ask, &Ok(None), "a.mzML");
+    assert!(none[0].contains("carries no method/1"));
+}

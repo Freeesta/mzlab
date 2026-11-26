@@ -1,6 +1,7 @@
 //! `raw xic --ions` in the CLI (`raw_xic_cmd`): the method values that are `--set` keys, the `ions` member of `query`, and the line of `provenance.choices`
 //! that says where the cps-to-ions factor of a file came from. The factor itself and the keys of the rows are the route's (`mzlab_core::ionscale`).
 
+use mzlab_core::error::Result;
 use mzlab_core::ionfacts::Read;
 use mzlab_core::ionscale::Facts;
 use mzlab_core::json::{parse, Out};
@@ -46,17 +47,29 @@ fn slot<'a>(f: &'a mut Facts, field: &str) -> Option<&'a mut Option<f64>> {
     })
 }
 
-/// The ask of one file with the method values the file's `method/1` gives (`method`: its text, `None` when it carries none) for every value `--set` left
-/// out, and the `provenance.choices` lines that say what was read, from which experiment, and what `--set` kept. A value given with `--set` always wins.
-pub(crate) fn with_method(ask: &Ask, method: Option<&str>, name: &str) -> (Ask, Vec<String>) {
+/// The ask of one file with the method values the file's `method/1` gives (`method`: its text, `Ok(None)` when it carries none, an error when reading it
+/// failed: logged under its own key, not as "no method/1") for every value `--set` left out, and the `provenance.choices` lines that say what was read, from which experiment, and what `--set` kept. A value given with `--set` always wins.
+pub(crate) fn with_method(
+    ask: &Ask,
+    method: &Result<Option<String>>,
+    name: &str,
+) -> (Ask, Vec<String>) {
     let mut ask = ask.clone();
     let Some((kind, set)) = ask.ions.as_mut() else {
         return (ask, Vec::new());
     };
     let what = format!("ion_method {name}");
-    let doc = method
-        .filter(|m| !m.is_empty())
-        .map(|m| parse(m.as_bytes()));
+    let text = match method {
+        Ok(t) => t.as_deref().filter(|m| !m.is_empty()),
+        Err(e) => {
+            let why = format!(
+                "reading the method of the file failed ({}); the values are --set or the data estimate",
+                e.key
+            );
+            return (ask, vec![choice(&what, "null", &why)]);
+        }
+    };
+    let doc = text.map(|m| parse(m.as_bytes()));
     let (_, read): (Facts, Vec<Read>) = match doc {
         Some(Ok(d)) => Facts::from_method(&d, *kind),
         Some(Err(_)) => {

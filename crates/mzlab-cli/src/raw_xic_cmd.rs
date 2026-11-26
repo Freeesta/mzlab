@@ -114,13 +114,10 @@ fn one(f: &Path, sample: Option<u32>, a: &XicAsk) -> Result<(Answer, String)> {
         let method = if a.ask.ions.is_some() {
             s.mzml
                 .method(&s.name, mzlab_core::method_fit::DOC_MAX as u64)
-                .ok()
-                .flatten()
         } else {
-            None
+            Ok(None)
         };
-        let (ask, method_choices) =
-            crate::raw_xic_ions::with_method(&a.ask, method.as_deref(), &s.name);
+        let (ask, method_choices) = crate::raw_xic_ions::with_method(&a.ask, &method, &s.name);
         let out = s.routes.raw_xic(&ask)?;
         let sha = s
             .routes
