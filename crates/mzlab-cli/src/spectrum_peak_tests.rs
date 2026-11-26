@@ -216,10 +216,62 @@ fn bad_requests_are_usage_errors_exit_2() {
             "--fill-ms",
             "0",
         ],
+        vec![
+            "--rt",
+            "2,6",
+            "--ms-level",
+            "2",
+            "--peak",
+            "auto",
+            "--set",
+            "tol_ppm=0",
+        ],
         vec!["--rt", "2,6", "--ms-level", "2", "--set", "factor=3"],
         vec!["--rt", "2,6", "--ms-level", "2", "--precursor", "250.3"],
     ] {
         assert_eq!(code(&a), 2, "{a:?}");
     }
+    let _ = std::fs::remove_dir_all(d);
+}
+
+/// The same peak as `mzml` read as high resolution (an `FTMS` filter): the lines are matched in ppm, the cell and the tolerance are named, `--set tol_ppm` changes it.
+#[test]
+fn a_high_resolution_level_names_its_cell_and_takes_a_tolerance() {
+    let d = dir("peak_hr");
+    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "r".into(), ..Default::default() }).unwrap();
+    w.open_spectra(300).unwrap();
+    for i in 0..300 {
+        let rt = 1.0 + i as f64 * 0.02;
+        let rise = (1000.0 * (-(rt - APEX).powi(2) / (2.0 * SIGMA * SIGMA)).exp()).round();
+        let s = Spectrum {
+            index: i,
+            id: format!("scan={}", i + 1),
+            level: 2,
+            rt,
+            polarity: 1,
+            filter: "FTMS + c ESI Full ms2 250.3@hcd30.00 [50.00-500.00]".into(),
+            precursor: Some(250.3),
+            mz: vec![100.3, 150.3],
+            intensity: vec![(20.0 + rise) as f32, 50.0],
+            ..Default::default()
+        };
+        w.spectrum(&s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    let f = d.join("a.mzML");
+    std::fs::write(&f, w.finish().unwrap()).unwrap();
+    let f = f.to_string_lossy().into_owned();
+    let peak = |extra: &[&str]| {
+        let mut a = vec!["spectrum", "get", f.as_str()];
+        a.extend(ARGS);
+        a.extend(extra);
+        let (v, _, _) = ok(&a);
+        (v.get("evidence").unwrap().get("peak").unwrap().clone(), v.get("points").unwrap().arr().len())
+    };
+    let ((p, n), (q, _)) = (peak(&[]), peak(&["--set", "tol_ppm=10"]));
+    let tol = |v: &Value| v.get("cell").unwrap().get("tol_ppm").unwrap().f64().unwrap();
+    assert_eq!(p.get("verdict").unwrap().str(), Some("peak"));
+    assert_eq!(p.get("cell").unwrap().get("kind").unwrap().str(), Some("hr_log"));
+    assert_eq!((tol(&p), tol(&q), n), (5.0, 10.0, 1));
     let _ = std::fs::remove_dir_all(d);
 }

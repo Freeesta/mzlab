@@ -169,6 +169,8 @@ pub mod ionfacts;
 mod specsum;
 mod specpeak;
 #[cfg(test)]
+mod specpeak_hr_tests;
+#[cfg(test)]
 mod specpeak_tests;
 #[cfg(test)]
 mod specsum_tests;

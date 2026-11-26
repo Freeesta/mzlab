@@ -23,6 +23,43 @@ const BIN: f64 = 0.1;
 /// How the background was made, named in the answer.
 const METHOD: &str = "mean spectrum of the scans of both side windows, scaled to the scans of the window, per nominal mass, lines above zero kept";
 
+/// Width of the log cells of a high-resolution centroid level (the cell `/api/spectrum` merges them in), ppm.
+const HR_CELL_PPM: f64 = 3.0;
+
+/// How the lines of the window and of the sides meet at a level: the nominal-mass bins of a unit-resolution centroid level, the cells of the
+/// profile spacing (`Profile(step)`, same cell) or, at a high-resolution centroid level, the strongest side line within `Hr(ppm)` of a window line.
+#[derive(Clone, Copy)]
+enum Cells {
+    Nominal,
+    Profile(f64),
+    Hr(f64),
+}
+
+impl Cells {
+    /// The cell of an m/z; ascending with m/z, so the cells of a spectrum in order of m/z come in order.
+    fn key(self, m: f64) -> i64 {
+        match self {
+            Cells::Nominal => (m / BIN).floor() as i64,
+            Cells::Profile(step) => (m / step).round_ties_even() as i64,
+            Cells::Hr(_) => (libm::log(m.max(1e-9)) / libm::log1p(HR_CELL_PPM * 1e-6)).floor() as i64,
+        }
+    }
+
+    /// The `cell` member of the answer: what a line is merged in and what it is matched with, so nothing is merged or matched unsaid.
+    fn json(self) -> String {
+        match self {
+            Cells::Nominal => format!("{{\"kind\":\"nominal\",\"bin_da\":{BIN},\"match\":\"same nominal mass\"}}"),
+            Cells::Profile(st) => format!("{{\"kind\":\"profile_step\",\"step_da\":{st},\"match\":\"same cell\"}}"),
+            Cells::Hr(t) => format!("{{\"kind\":\"hr_log\",\"width_ppm\":{HR_CELL_PPM},\"match\":\"strongest side line within tol_ppm\",\"tol_ppm\":{t}}}"),
+        }
+    }
+
+    /// The decimals of the m/z of the lines shown.
+    fn decimals(self) -> usize {
+        if matches!(self, Cells::Nominal) { 3 } else { 4 }
+    }
+}
+
 /// The thresholds and widths of a request (`--set`), with their defaults.
 struct Set {
     factor: f64,
@@ -30,6 +67,8 @@ struct Set {
     gap: f64,
     min_sn: f64,
     min_points: usize,
+    /// `--set tol_ppm=`: the match of a high-resolution line against the sides (`None` = the level's own, 5 ppm Orbitrap, 10 ppm TOF).
+    tol_ppm: Option<f64>,
 }
 
 fn bad(name: &str, v: &str) -> Error {
@@ -51,7 +90,7 @@ fn param(q: &Query, name: &str, d: f64, (lo, hi): (f64, f64), open: bool) -> Res
     }
 }
 
-/// `factor`, `side_min`, `gap_min`, `min_sn`, `min_points` of a request; a value out of its range is refused.
+/// `factor`, `side_min`, `gap_min`, `min_sn`, `min_points`, `tol_ppm` of a request; a value out of its range is refused.
 fn set_of(q: &Query) -> Result<Set> {
     let n = param(q, "min_points", MIN_POINTS as f64, (1.0, 1e6), false)?;
     if n.fract() != 0.0 {
@@ -63,6 +102,9 @@ fn set_of(q: &Query) -> Result<Set> {
         gap: param(q, "gap_min", GAP_MIN, (0.0, 1e4), false)?,
         min_sn: param(q, "min_sn", MIN_SN, (0.0, 1e6), false)?,
         min_points: n as usize,
+        tol_ppm: q.num("tol_ppm").map_err(|_| bad("tol_ppm", q.get("tol_ppm").unwrap_or("")))?
+            .map(|v| param(q, "tol_ppm", v, (0.0, 1e4), true))
+            .transpose()?,
     })
 }
 
@@ -112,13 +154,15 @@ impl<R: ReadAt> Routes<R> {
         Ok((rt, y))
     }
 
-    /// The sum (not the mean) of a window per nominal mass, and the scans it holds; the lines of one nominal mass are merged as `/api/spectrum` does.
-    /// It reads the scans of the level and the precursor only (no scan filter), so the module does not carry the filter code of `/api/spectrum`.
-    fn nominal_sum(
+    /// The sum (not the mean) of a window per cell of `cells`, and the scans it holds; each cell keeps its intensity-weighted m/z, and at a unit-resolution
+    /// level the cells of one nominal mass are merged as `/api/spectrum` does. It reads the scans of the level and the precursor only (no scan filter), so the
+    /// module does not carry the filter code of `/api/spectrum`.
+    fn cell_sum(
         &mut self,
         level: u8,
         (lo, hi): (f64, f64),
         precursor: Option<f64>,
+        cells: Cells,
     ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok((Vec::new(), Vec::new(), 0));
@@ -140,7 +184,7 @@ impl<R: ReadAt> Routes<R> {
         if n == 0 {
             return Ok((Vec::new(), Vec::new(), 0));
         }
-        // cells of `floor(mz / BIN)` come in order because the peaks do; each cell keeps its intensity-weighted m/z
+        // cells come in order because the peaks do
         let (mut cell, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);
         let (mut cm, mut cy) = (Vec::new(), Vec::new());
         let total = self.idx.sections[si].n_peaks;
@@ -148,7 +192,7 @@ impl<R: ReadAt> Routes<R> {
             if !ok[pos] {
                 return;
             }
-            let c = (m / BIN).floor() as i64;
+            let c = cells.key(m);
             if c != cell {
                 if cell != i64::MIN {
                     cm.push(smy / sy.max(1e-12));
@@ -163,8 +207,26 @@ impl<R: ReadAt> Routes<R> {
             cm.push(smy / sy.max(1e-12));
             cy.push(sy);
         }
-        let (mz, y) = per_nominal(&cm, &cy);
-        Ok((mz, y, n))
+        if matches!(cells, Cells::Nominal) {
+            let (mz, y) = per_nominal(&cm, &cy);
+            return Ok((mz, y, n));
+        }
+        Ok((cm, cy, n))
+    }
+
+    /// How the level's lines meet: `None` = the engine cannot answer (a profile level whose point spacing the index does not hold and that is not high resolution).
+    fn cells_of(&mut self, level: u8, p: &Set) -> Result<Option<Cells>> {
+        let scans = &self.idx.scans;
+        let is_profile = scans.iter().filter(|s| s.level == level).any(|s| s.profile);
+        let hr = hr_profile(scans, level == 1, true);
+        let tol = p.tol_ppm.unwrap_or(if hr.ppm > 0.0 { hr.ppm } else { 5.0 });
+        if is_profile {
+            return Ok(match self.profile_level(level)? {
+                Some((_, step)) => Some(Cells::Profile(step)),
+                None => hr.on.then_some(Cells::Hr(tol)),
+            });
+        }
+        Ok(Some(if hr.on { Cells::Hr(tol) } else { Cells::Nominal }))
     }
 
     /// `/api/specpeak?rt0=A&rt1=B[&level=N][&precursor=P][&factor=2&side_min=0.3&gap_min=0.05&min_sn=3&min_points=3][&fill_ms=T]`: `rt0`..`rt1` is where the
@@ -177,8 +239,9 @@ impl<R: ReadAt> Routes<R> {
         let win = (rt0.min(rt1), rt0.max(rt1));
         let (rt, y) = self.level_trace(level, precursor)?;
         let in_range = scans_in(&rt, win);
+        let cells = self.cells_of(level, &p)?;
         let mut o = Out::default();
-        head(&mut o, level, win, &p, (rt.len(), in_range));
+        head(&mut o, level, win, &p, (rt.len(), in_range), cells);
         if in_range == 0 {
             let rule = format!(
                 "no scan of MS level {level} between {} and {} min",
@@ -204,11 +267,6 @@ impl<R: ReadAt> Routes<R> {
         let n_side = side_l.0 + side_r.0;
         let background = background_json(n_side, side_l.1 + side_r.1);
         let sum = self.sum_evidence(level, g.window, precursor, fill, &background)?;
-        // a profile or high-resolution level: the window and the sides are given, no spectrum (the nominal-mass subtraction does not describe its lines)
-        let scans = &self.idx.scans;
-        let is_profile = scans.iter().filter(|s| s.level == level).any(|s| s.profile);
-        let hr = hr_profile(scans, level == 1, true).on;
-        let has_spectrum = !(is_profile || hr);
         let mut flags = g.flags.clone();
         if n_side == 0 {
             flags.push("no_background");
@@ -217,10 +275,10 @@ impl<R: ReadAt> Routes<R> {
         }
         let mut rule = g.rule(&hit, &p);
         let (mut mz, mut yy, mut n_win) = (Vec::new(), Vec::new(), scans_in(&rt, g.window));
-        if has_spectrum {
-            (mz, yy, n_win) = self.net_spectrum(level, &g, precursor, n_side)?;
+        if let Some(c) = cells {
+            (mz, yy, n_win) = self.net_spectrum(level, &g, precursor, n_side, c)?;
         } else {
-            rule += &format!("; the level is {}: no spectrum made, take the window with spectrum get --rt A,B --sum", if is_profile { "profile" } else { "high resolution" });
+            rule += "; the level is profile and its point spacing is not in the index: no spectrum made, take the window with spectrum get --rt A,B --sum";
         }
         let f = Found {
             g: &g,
@@ -230,14 +288,14 @@ impl<R: ReadAt> Routes<R> {
             sum: &sum,
             flags: &flags,
             rule: &rule,
-            has_spectrum,
+            cells,
             n_win,
             lines: (&mz, &yy),
         };
         Ok(Some(emit(o, &f)))
     }
 
-    /// The window's sum minus the mean of both sides scaled to the window's scans, per nominal mass, kept where the net (rounded as shown) is above zero;
+    /// The window's sum minus the mean of both sides scaled to the window's scans, per cell, kept where the net (rounded as shown) is above zero;
     /// with the scans of the window.
     fn net_spectrum(
         &mut self,
@@ -245,12 +303,13 @@ impl<R: ReadAt> Routes<R> {
         g: &Geometry,
         precursor: Option<f64>,
         n_side: usize,
+        cells: Cells,
     ) -> Result<(Vec<f64>, Vec<f64>, usize)> {
-        let (wm, wy, n) = self.nominal_sum(level, g.window, precursor)?;
+        let (wm, wy, n) = self.cell_sum(level, g.window, precursor, cells)?;
         let mut sides = Vec::new();
         for w in [g.left, g.right] {
-            let (sm, sy, _) = self.nominal_sum(level, w, precursor)?;
-            sides.push(sm.iter().map(|&m| nominal(m)).zip(sy).collect::<Vec<_>>());
+            let (sm, sy, _) = self.cell_sum(level, w, precursor, cells)?;
+            sides.push(sm.into_iter().zip(sy).collect::<Vec<_>>());
         }
         let scale = if n_side > 0 {
             n as f64 / n_side as f64
@@ -260,10 +319,7 @@ impl<R: ReadAt> Routes<R> {
         let (mut mz, mut yy) = (Vec::new(), Vec::new());
         for (m, v) in wm.iter().zip(&wy) {
             // rounded as it is shown: a mass whose net is a rounding error of the flat background is not a line
-            let net = round(
-                v - (at(&sides[0], nominal(*m)) + at(&sides[1], nominal(*m))) * scale,
-                1,
-            );
+            let net = round(v - (at(&sides[0], *m, cells) + at(&sides[1], *m, cells)) * scale, 1);
             if net > 0.0 {
                 mz.push(*m);
                 yy.push(net);
@@ -298,10 +354,17 @@ fn per_nominal(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     (om, oy)
 }
 
-/// What a sorted list of (nominal mass, intensity) holds at `k`.
-fn at(side: &[(i64, f64)], k: i64) -> f64 {
-    side.binary_search_by_key(&k, |p| p.0)
-        .map_or(0.0, |i| side[i].1)
+/// What the side lines `(m/z, intensity)` (in order of m/z) hold for a window line at `m`: the line of its own cell, or at high resolution the strongest
+/// line within `tol_ppm`.
+fn at(side: &[(f64, f64)], m: f64, cells: Cells) -> f64 {
+    if let Cells::Hr(ppm) = cells {
+        let w = m * ppm * 1e-6;
+        let (lo, hi) = (side.partition_point(|p| p.0 < m - w), side.partition_point(|p| p.0 <= m + w));
+        return side[lo.min(hi)..hi].iter().fold(0.0, |a, p| f64::max(a, p.1));
+    }
+    let k = cells.key(m);
+    let i = side.partition_point(|p| cells.key(p.0) < k);
+    side.get(i).filter(|p| cells.key(p.0) == k).map_or(0.0, |p| p.1)
 }
 
 /// The rule that refuses a candidate apex under `min_sn` or `min_points`, `None` when it meets both.

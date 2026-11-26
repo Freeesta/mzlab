@@ -1,7 +1,7 @@
 //! The JSON of `/api/specpeak`: the head, the answers that make no spectrum, the answer that found a window, the background member and the lines.
 //! Split from `specpeak.rs` for size; the members and their order are the contract in `docs/agenti/data-channels.md`.
 
-use super::{ions_of, quote, rd, Geometry, Set, METHOD};
+use super::{ions_of, quote, rd, Cells, Geometry, Set, METHOD};
 use crate::json::{round, Out};
 
 /// The start of every answer: the level, the parameters in force, the range searched and the chromatogram behind it.
@@ -11,12 +11,18 @@ pub(super) fn head(
     (lo, hi): (f64, f64),
     p: &Set,
     (n, in_range): (usize, usize),
+    cells: Option<Cells>,
 ) {
+    // the tolerance in force at a high-resolution level (the level's own when `--set` does not say), `null` where lines are not matched by ppm
+    let tol = match cells {
+        Some(Cells::Hr(t)) => t.to_string(),
+        _ => "null".to_string(),
+    };
     o.raw("{\"mode\":\"peak_auto\",\"ms_level\":")
         .int(i64::from(level));
     o.raw(&format!(
-        ",\"params\":{{\"factor\":{},\"side_min\":{},\"gap_min\":{},\"min_sn\":{},\"min_points\":{}}}",
-        p.factor, p.side, p.gap, p.min_sn, p.min_points
+        ",\"params\":{{\"factor\":{},\"side_min\":{},\"gap_min\":{},\"min_sn\":{},\"min_points\":{},\"tol_ppm\":{}}}",
+        p.factor, p.side, p.gap, p.min_sn, p.min_points, tol
     ));
     o.raw(&format!(",\"search_min\":[{lo},{hi}]"));
     let prec = if level > 1 { " and precursor" } else { "" };
@@ -42,7 +48,8 @@ pub(super) struct Found<'a> {
     pub(super) sum: &'a str,
     pub(super) flags: &'a [&'static str],
     pub(super) rule: &'a str,
-    pub(super) has_spectrum: bool,
+    /// How the lines were matched; `None` = no spectrum was made (`window_only`).
+    pub(super) cells: Option<Cells>,
     pub(super) n_win: usize,
     pub(super) lines: (&'a [f64], &'a [f64]),
 }
@@ -51,7 +58,7 @@ pub(super) struct Found<'a> {
 pub(super) fn emit(mut o: Out, f: &Found) -> String {
     let (g, (side_l, side_r)) = (f.g, f.sides);
     let flags: Vec<String> = f.flags.iter().map(|x| format!("\"{x}\"")).collect();
-    let verdict = if f.has_spectrum {
+    let verdict = if f.cells.is_some() {
         "peak"
     } else {
         "window_only"
@@ -76,8 +83,9 @@ pub(super) fn emit(mut o: Out, f: &Found) -> String {
         rd(g.anchored.1)
     ));
     o.raw(",\"background\":").raw(f.background);
+    o.raw(",\"cell\":").raw(&f.cells.map_or("null".to_string(), Cells::json));
     o.raw(",\"spectrum\":")
-        .raw(if f.has_spectrum { "true" } else { "false" });
+        .raw(if f.cells.is_some() { "true" } else { "false" });
     o.raw(",\"n_scans\":").int(f.n_win as i64);
     // the ions the window rests on: counts x fill time, null until the fill time is stated or known (`evidence.sum.ions`)
     o.raw(",\"total_ions\":")
@@ -86,7 +94,7 @@ pub(super) fn emit(mut o: Out, f: &Found) -> String {
         .raw(f.sum);
     // the lines last: a reader that wants the evidence alone cuts the answer at `,"mz":[`
     o.raw(",\"rule\":").str(f.rule);
-    lines(&mut o, f.lines.0, f.lines.1);
+    lines(&mut o, f.lines, f.cells.map_or(3, Cells::decimals));
     o.0
 }
 
@@ -100,7 +108,7 @@ pub(super) fn without(
 ) -> String {
     o.raw(",\"verdict\":\"").raw(verdict);
     o.raw("\",\"flags\":[],\"apex\":").raw(apex);
-    o.raw(",\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,");
+    o.raw(",\"fwhm_min\":null,\"window_min\":null,\"sides\":null,\"background\":null,\"cell\":null,");
     o.raw("\"spectrum\":false,\"n_scans\":")
         .int(in_range as i64);
     o.raw(",\"total_ions\":null,\"sum\":null,\"rule\":")
@@ -123,10 +131,10 @@ pub(super) fn background_json(n_side: usize, total: f64) -> String {
 }
 
 /// The lines of the spectrum, the last two members of the answer, and the closing brace.
-pub(super) fn lines(o: &mut Out, mz: &[f64], y: &[f64]) {
+pub(super) fn lines(o: &mut Out, (mz, y): (&[f64], &[f64]), nd: usize) {
     o.raw(",\"mz\":[");
     for (i, v) in mz.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 3));
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, nd));
     }
     o.raw("],\"y\":[");
     for (i, v) in y.iter().enumerate() {
