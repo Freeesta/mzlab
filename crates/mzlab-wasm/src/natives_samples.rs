@@ -60,3 +60,10 @@ pub fn sample_default(ids: &[u32], sizes: &[f64], budget_mb: f64) -> String {
         mzlab_core::readers::selection::budget_bytes(budget_mb),
     )
 }
+
+/// The column labels of `members` (`{"members":[{"file","id","sample"}]}`, in order) as `sample-labels/1`: `readers::label`, the very bytes of the CLI's `features --sample` and
+/// of the app. Where two samples share a name each is `NAME (FILESTEM #ID).ext`.
+#[wasm_bindgen]
+pub fn sample_labels(members: &str) -> Result<String, JsValue> {
+    mzlab_core::readers::label::labels_json(members).map_err(|e| crate::error_json(&e))
+}

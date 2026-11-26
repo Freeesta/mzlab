@@ -389,7 +389,7 @@ impl State {
             "lr_warm" => return self.lr_warm(p),                                            // the index of a file of the pointed folder, built ahead (`rpc_warm.rs`): it does not hold the engine
             "lr_warm_claim" => return self.lr_warm_claim(p),
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
-            "natdefault" | "natselect" => return crate::rpc_nat::nat_choose(op, p),                    // the sample chooser's engine answers (`readers::selection`), no file read
+            "natdefault" | "natselect" | "natlabels" => return crate::rpc_nat::nat_choose(op, p),                    // the sample chooser's engine answers (`readers::selection`), no file read
             "natsame" => return self.nat_same(p),                                           // the same dataset given again
             "nat2mzml" => return self.nat_to_mzml(p),
             "natregistro" => return self.nat_registry(p),                                   // one series of the instrument log of a .raw, read on request
