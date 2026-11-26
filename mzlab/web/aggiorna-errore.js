@@ -15,7 +15,7 @@ const DESKUPDERR = (() => {
     "key: " + String(last && last.error_key || ""), "detail: " + String(last && last.detail || "")].join("\n");
   async function copy() {
     const b = ctx && ctx.box() && ctx.box().querySelector("[data-a=copy]");
-    try { await navigator.clipboard.writeText(details()); if (b) b.textContent = I18N.t("update.copied"); } catch (_) { /* no clipboard: the text stays on screen */ }
+    try { await clipboardCopy({ "text/plain": details() }); if (b) b.textContent = I18N.t("update.copied"); } catch (_) { /* no clipboard: the text stays on screen */ }
   }
   return { fail, copy };
 })();

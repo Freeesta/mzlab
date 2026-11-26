@@ -24,7 +24,7 @@
     menu(e, [
       { label: I18N.t("inf.row.spec"), fn: () => { const c = target(p); if (c) INF.pick(c, r.n.id); } },
       { label: I18N.t("inf.row.new"), fn: () => inNewCell(f, r.n) },
-      { label: I18N.t("inf.row.copy"), fn: () => { try { navigator.clipboard.writeText(r.path).then(() => nearMsg(I18N.t("inf.row.copied"))); } catch (_) { /* no clipboard */ } } },
+      { label: I18N.t("inf.row.copy"), fn: () => { clipboardCopy({ "text/plain": r.path }).then(() => nearMsg(I18N.t("inf.row.copied")), () => { /* no clipboard */ }); } },
       { label: I18N.t("inf.row.formulas"), fn: () => { if (window.COMP) COMP.tree(f.k); } },
     ]);
   }
