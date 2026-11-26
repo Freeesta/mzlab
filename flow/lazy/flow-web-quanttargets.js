@@ -12,8 +12,11 @@
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   /** an error of a .wasm ({error_key, params} as text) as the page's {key, params} @param {any} e */
   const asError = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return j && j.error_key ? Object.assign(new Error(j.error_key), { key: j.error_key, params: j.params || {} }) : e; };
-  /** the words of the warnings of the step on its card, none when it has none @param {any} x @param {any} inst @param {string[] | undefined} w */
-  const note = (x, inst, w) => { if (w && w.length) x.notes.set(inst.id, w.map(k => F.message({ key: k, params: {} })).join(" ")); else x.notes.delete(inst.id); };
+  /** the words of the warnings and of the hints (`--offset auto`, `--rt-ref auto`: what the data point at) of the step on its card, none when it has none @param {any} x @param {any} inst @param {string[] | undefined} w @param {{key: string, params?: any}[] | undefined} hints */
+  const note = (x, inst, w, hints) => {
+    const t = (w || []).map(k => F.message({ key: k, params: {} })).concat((hints || []).map((/** @type {any} */ h) => F.message({ key: h.key, params: h.params || {} })));
+    if (t.length) x.notes.set(inst.id, t.join(" ")); else x.notes.delete(inst.id);
+  };
 
   /** the text on port `port`: a file of the plan, or the text an earlier step kept (null when neither is there) @param {any} x @param {any} inst @param {string} port */
   const portText = (x, inst, port) => {
@@ -40,7 +43,7 @@
       await F.webMsn.keep(r.name, r.text); await F.webMsn.keep(r.logName, r.log);
       x.files.set(inst.id, { id: inst.id, name: r.name, text: r.text }); x.files.set(inst.id + ".log", { id: inst.id, name: r.logName, text: r.log });
     };
-    if (hit && hitLog) { await keepBoth({ ...hit, logName: hitLog.name, log: hitLog.text }); note(x, inst, hit.warnings); await x.call("cached", { job: j }); return {}; }
+    if (hit && hitLog) { await keepBoth({ ...hit, logName: hitLog.name, log: hitLog.text }); note(x, inst, hit.warnings, hit.hints); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
@@ -48,10 +51,10 @@
       try {
         out = await p.ident("quanttargets", "flow_quant_targets", { paths: files.map((/** @type {any} */ f) => f.src.path), names: JSON.stringify(files.map((/** @type {any} */ f) => f.name)), targets: enc(targets), params }, true);
       } catch (e) { throw asError(e); }
-      const warnings = out.warnings || [], r = { name: inst.id + ".csv", text: out.text, logName: inst.id + ".log.json", log: out.log };
+      const warnings = out.warnings || [], hints = out.hints || [], r = { name: inst.id + ".csv", text: out.text, logName: inst.id + ".log.json", log: out.log };
       await keepBoth(r);
-      await J().remember(p, key, { name: r.name, text: r.text, warnings }); await J().remember(p, key + "-log", { name: r.logName, text: r.log });
-      note(x, inst, warnings);
+      await J().remember(p, key, { name: r.name, text: r.text, warnings, hints }); await J().remember(p, key + "-log", { name: r.logName, text: r.log });
+      note(x, inst, warnings, hints);
       await x.call("finished", { job: j, result: warnings.length ? { ms: performance.now() - t0, warnings } : { ms: performance.now() - t0 } });
     });
   };
