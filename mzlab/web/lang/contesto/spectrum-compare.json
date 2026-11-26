@@ -1,4 +1,10 @@
 {
   "spcmp.error": "Message of the card that compares two MS2 spectra when the spectrum or the comparison fails; {message} = the engine's text.",
+  "spcmp.off.apex": "Evidence of an automatic m/z offset in the comparison card; {rt} = retention time in minutes of the apex of the known ion.",
+  "spcmp.off.auto": "First part of the evidence of an automatic m/z offset in the comparison card; {mz} = the m/z of the known ion it was measured on.",
+  "spcmp.off.scans": "Evidence of an automatic m/z offset in the comparison card; {n} = number of scans the offset was measured on.",
+  "spcmp.off.snr": "Evidence of an automatic m/z offset in the comparison card; {snr} = apex signal as a multiple of the median of the ion's trace.",
+  "spcmp.off.spread": "Evidence of an automatic m/z offset in the comparison card; {da} = spread of the ion's m/z across its scans in Da.",
+  "spcmp.off.used": "Offset a side of the MS2 comparison card used, in the list of offsets; {da} = the offset in Da.",
   "spcmp.summary": "Line under the cosine of the card that compares two MS2 spectra; {n} = number of matched bins, {tol} = tolerance between bin centres in Da, {ce} = collision energy tolerance in eV."
 }
