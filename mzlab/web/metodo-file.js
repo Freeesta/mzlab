@@ -74,7 +74,7 @@ async function nameWarning(/** @type {{ k: number }} */ f) {
   try { d = await J("api/filemethod?k=" + f.k); } catch (_) { return ""; }
   if (!d || d.schema !== "file_method/1") return "";
   const w = warnTexts({ warnings: (d.warnings || []).filter((/** @type {any} */ x) => x.key === "warn.file.nameMz") });
-  return w.length ? `<ul class="sm" role="note" data-mfile="namewarn" style="margin:0 0 6px;padding:0 0 0 16px;max-height:8em;overflow:auto">${w.map(x => `<li>${EH(x)}</li>`).join("")}</ul>` : "";
+  return w.length ? `<ul class="sm" role="note" tabindex="0" data-mfile="namewarn" style="margin:0 0 6px;padding:0 0 0 16px;max-height:12em;overflow:auto">${w.map(x => `<li>${EH(x)}</li>`).join("")}</ul>` : "";
 }
 
 /** @type {any} */ (window).METODO_FILE = { html, nameWarning };
