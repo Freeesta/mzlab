@@ -5,6 +5,8 @@ use super::reader::WiffReader;
 use crate::mzml::Spectrum;
 
 /// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
+/// userParam of a product-ion spectrum: the collision energy spread (eV) of its experiment (`CES`), which no PSI-MS term covers.
+pub const CES_PARAM: &str = "collision energy spread (eV)";
 pub const PARENT_PARAM: &str = "ms3 first precursor m/z";
 
 /// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
@@ -40,6 +42,11 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
     };
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    if let Some(v) = e.ces {
+        extra.params.push((CES_PARAM.into(), v.to_string()));
+    }
+    // no CV term for a spread (the PSI-MS ramp terms are another thing); the declustering potential has one (`MS:1000875`, written in every build)
+    extra.declustering = e.dp;
     if let Some(p) = e.parent {
         extra.params.push((PARENT_PARAM.into(), p.to_string()));
     }

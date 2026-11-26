@@ -8,6 +8,14 @@ use crate::catalog::related::RELATED;
 pub(crate) const TASKS: &[(&str, &str)] = &[
     ("inventory of a folder of raw files", "file list"),
     (
+        "collision energy spread and declustering potential of a tandem file",
+        "file method",
+    ),
+    (
+        "sample name mass differs from the method precursor",
+        "file method",
+    ),
+    (
         "convert wiff files to mzML with their sample names",
         "file convert",
     ),

@@ -222,6 +222,9 @@ pub struct SpectrumExtra {
     /// `MS:1000504` / `MS:1000505` base peak (m/z, intensity) as the maker reports it; `None`: found in the points.
     #[cfg(feature = "precursori")]
     pub base_peak: Option<(f64, f64)>,
+    /// `MS:1000875` declustering potential (V) of the scan, written in `<scan>` in every build (unlike `scan_params`): the site, the app and the CLI
+    /// convert a `.wiff` to the same mzML.
+    pub declustering: Option<f64>,
     /// cvParams of `<scan>` (ion injection time, FAIMS voltage, ...) and of `<spectrum>` (any other term with an accession).
     #[cfg(feature = "precursori")]
     pub scan_params: Vec<CvPar>,
@@ -455,6 +458,10 @@ use spectrum::{params_into, precursor_list_into};
 fn scan_into(s: &mut String, extra: &SpectrumExtra) {
     #[cfg(feature = "precursori")]
     params_into(s, &extra.scan_params);
+    if let Some(v) = extra.declustering {
+        use std::fmt::Write;
+        let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"MS:1000875\" name=\"declustering potential\" value=\"{v}\" unitCvRef=\"UO\" unitAccession=\"UO:0000218\" unitName=\"volt\"/>");
+    }
     #[cfg(not(feature = "precursori"))]
     let _ = (s, extra);
 }

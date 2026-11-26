@@ -46,6 +46,7 @@ embed!(
     "features-plan-1.json",
     "features-report-1.json",
     "file_info-1.json",
+    "file_method-1.json",
     "filtri-1.json",
     "flowcheck-1.json",
     "flowcommand-1.json",

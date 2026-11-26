@@ -68,5 +68,6 @@
   "err.pack.path": "{path} = the path of the manifest or of the input that is not a plain relative name.",
   "err.pack.duplicate": "{path} = the second of two input or manifest paths that clash (equal, equal in lower case, or a file named like a folder of the other); {other} = the first.",
   "err.pack.exists": "{path} = the first existing file or part; {count} = how many already exist.",
-  "err.pack.growing": "{path} = the input whose size changed while it was read."
+  "err.pack.growing": "{path} = the input whose size changed while it was read.",
+  "warn.file.nameMz": "Warning of file items and file method (CLI, site, app): a mass in a sample or file name differs from every precursor the file holds. {name} = the name, {name_mz} = the nearest mass in it, {precursor} = the nearest precursor m/z, {delta} = precursor minus name mass; a notice, never a blocked result."
 }

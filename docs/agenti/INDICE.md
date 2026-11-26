@@ -99,7 +99,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
-| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
+| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema), `file method` (`file_method/1`, `filemethod.rs`, name-m/z warning) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | own 2D layout (`mzlab-mol::layout`), `mol draw`: molfile, `draw/1` scene, KET/CDXML, SVG/PNG pictures (`chem/draw*.rs`), edit patch `--set edit=` (`chem/edit*.rs`, `draw_edit/1`), RDKit quality gates, `draw_d1/d3.json` parity | `docs/agenti/mol-draw.md` |
 | tests and goldens of the `mol/1` record (`mzlab-mol` `tests/*.rs`, golden data from RDKit, intended limits, OpenChemLib trap): read only to change a test or regenerate a golden file | `docs/agenti/mol-tests.md` |

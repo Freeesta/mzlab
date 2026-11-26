@@ -43,6 +43,7 @@ const JSON_FLAG: &[&str] = &[
 
 /// Commands whose stdout is JSON anyway: `--json` changes nothing, except that a failure is an `error/1` as well.
 const JSON_DEFAULT: &[&str] = &[
+    "file method",
     "flow report",
     "flow record",
     "msn lib add",
