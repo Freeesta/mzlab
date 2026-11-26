@@ -127,7 +127,7 @@ impl Default for Thresholds {
     }
 }
 
-fn bad(name: &str, v: &str) -> Error {
+pub(crate) fn bad(name: &str, v: &str) -> Error {
     Error::new("err.raw.xic.param")
         .with("name", name.to_string())
         .with("value", v.to_string())
@@ -135,7 +135,7 @@ fn bad(name: &str, v: &str) -> Error {
 
 /// `ions=1[&scan_type=..][&fill_ms=..&dwell_ms=..&scan_s=..&step_da=..&mass_lo=..&mass_hi=..]`: the opt-in ion scale; `0` or no `ions` is off, any
 /// other value, an unknown scan type or a time that is not positive is refused.
-fn ions_of(
+pub(crate) fn ions_of(
     q: &Query,
     num: impl Fn(&str) -> Result<Option<f64>>,
 ) -> Result<Option<(Option<ScanKind>, Facts)>> {
@@ -310,9 +310,19 @@ impl<R: ReadAt> Routes<R> {
         ask: &Ask,
         q: Option<f64>,
     ) -> Option<(Option<ionscale::Factor>, ScanKind, bool)> {
-        let (named, facts) = ask.ions?;
-        let kind = named.unwrap_or_else(|| self.scan_kind(ask.level));
-        Some((ionscale::factor(kind, &facts, q), kind, named.is_some()))
+        Some(self.ion_scale_of(ask.ions.as_ref()?, ask.level, q))
+    }
+
+    /// The factor of the opt-in `ions` of a question at `level` (`q`: the accepted ion quantum), the scan type used and whether it was named.
+    pub(crate) fn ion_scale_of(
+        &mut self,
+        ions: &(Option<ScanKind>, Facts),
+        level: u8,
+        q: Option<f64>,
+    ) -> (Option<ionscale::Factor>, ScanKind, bool) {
+        let (named, facts) = ions;
+        let kind = named.unwrap_or_else(|| self.scan_kind(level));
+        (ionscale::factor(kind, facts, q), kind, named.is_some())
     }
 
     fn raw_xic_at(&mut self, ask: &Ask) -> Result<XicOut> {

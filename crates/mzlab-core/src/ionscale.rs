@@ -222,6 +222,33 @@ pub fn factor(kind: ScanKind, facts: &Facts, q: Option<f64>) -> Option<Factor> {
     }
 }
 
+/// The log of the automatic choice behind an `ion_scale` (`ion_scale_choice`): how the scan type was found (`from`) and which evidence gave the
+/// factor; `absent` names what the answer leaves out when there is no factor. One text for every command that offers `--ions`.
+pub fn choice_json(f: Option<&Factor>, kind: ScanKind, from: &str, absent: &str) -> String {
+    let mut o = Out::default();
+    o.raw("{\"scan_type\":").str(kind.name());
+    o.raw(",\"scan_type_from\":").str(from);
+    o.raw(",\"evidence\":");
+    match f {
+        None => o.str(&format!(
+            "none: the {} scans need {} from the method and no ion quantum was accepted, {absent}",
+            kind.name(),
+            kind.needs()
+        )),
+        Some(f) => match (f.source, f.missing) {
+            (Source::Method, _) => {
+                o.str("method field(s) of the call; the data estimate is next to it")
+            }
+            (_, Some(m)) => o.str(&format!(
+                "data estimate 1 / ion quantum: the method gave no {m}"
+            )),
+            _ => o.str("data estimate 1 / ion quantum"),
+        },
+    };
+    o.raw("}");
+    o.0
+}
+
 #[cfg(test)]
 #[path = "ionscale_tests.rs"]
 mod tests;

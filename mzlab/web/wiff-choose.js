@@ -90,7 +90,7 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
 /**
  * Asks which samples to open. `pairs` = [{ key, name, mem }] (`mem`: the members of the dataset as `rb.nativeSamples` takes them), `mode` = "several" | "always" | "never".
  * Resolves with `null` when nothing needs asking (the setting, one sample per file, a listing that failed: opening goes on as it always did), `{ cancelled: true }`,
- * or `{ picks: Map(key -> ids), total: Map(key -> samples in the file) }` for the files that were asked.
+ * or `{ picks: Map(key -> ids), total: Map(key -> samples in the file), names: Map(key -> listed samples) }` for the files that were asked.
  */
 async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string, blob: Blob }[] }[]} */ pairs, /** @type {any} */ rb, /** @type {string} */ mode) {
   if (mode === "never" || !rb || !rb.nativeSamples || !rb.nativeAsk) return null;
@@ -105,6 +105,6 @@ async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string
   }
   if (!entries.length || mode !== "always" && entries.every(e => e.samples.length < 2)) return null;
   const picks = await wcDialog(entries, rb);
-  return picks ? { picks, total: new Map(entries.map(e => [e.key, e.samples.length])) } : { cancelled: true };
+  return picks ? { picks, total: new Map(entries.map(e => [e.key, e.samples.length])), names: new Map(entries.map(e => [e.key, e.samples])) } : { cancelled: true };
 }
 const WIFFCHOOSE = { ask: wcAsk, dialog: wcDialog };

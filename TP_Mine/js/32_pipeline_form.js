@@ -90,10 +90,16 @@
     const n = nominal(steps);
     if (!n) return "";
     const why = Object.entries(n.params).map(([k, v]) => `${k} ${v}`).join(", ");
-    return `<div class="pf" id="pipe-nom" hidden><label class="ck" for="pipe-nominal"><input id="pipe-nominal" type="checkbox" aria-describedby="pipe-nominal-why">${esc(n.title)}</label><span class="why" id="pipe-nominal-why">Writes: ${esc(why)}</span></div>`;
+    return `<div class="pf" id="pipe-nom" hidden><label class="ck" for="pipe-nominal"><input id="pipe-nominal" type="checkbox" aria-describedby="pipe-nominal-why">${esc(n.title)}</label><span class="why" id="pipe-nominal-why">Writes: ${esc(why)}</span><p class="why" id="pipe-nominal-hint" role="status" hidden></p></div>`;
+  }
+  /** the parameters of the hint line from the `nominal` member of `estimates/1`, the numbers of the member as they are (shares as percent with one decimal), null when the member says no hint */
+  function nominalHint(/** @type {any} */ n) {
+    if (!n || n.hint !== true) return null;
+    const pct = (/** @type {number} */ x) => Math.round(x * 1000) / 10;
+    return { rows: n.rows, between: n.between, between_pct: pct(n.between_share), height_now: n.height_now, height_nominal: n.height_nominal, split: n.split, split_pct: pct(n.split_share), reach_now: n.reach_now, reach_nominal: n.reach_nominal, cut_between_pct: pct(n.cut_between), cut_split_pct: pct(n.cut_split) };
   }
   /** the values of the descriptors that the panel defaults must equal (the e2e compares them with PIPE.DEF) */
   function defaults(/** @type {any[]} */ steps) { const o = /** @type {Record<string, any>} */ ({}); for (const r of resolve(steps) || []) o[r.m.id] = r.p ? r.p.default : true; return o; }
 
-  /** @type {any} */ (window).PIPEFORM = { MAP, css: CSS, load, html, mount, defaults, nominal, nominalHtml };
+  /** @type {any} */ (window).PIPEFORM = { MAP, css: CSS, load, html, mount, defaults, nominal, nominalHtml, nominalHint };
 })();

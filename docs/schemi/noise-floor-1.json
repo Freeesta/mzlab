@@ -100,6 +100,21 @@
           }
         }
       ]
+    },
+    "ions": {
+      "type": "object",
+      "description": "Only with `peak noise --ions`: the second scale. The trace is measured again with one ion = one_ion_cps (1 / the factor), so noise_ions, S/N and the check are those of the ion scale; the cps members above are unchanged.",
+      "required": ["ion_scale", "ion_scale_choice", "one_ion_cps", "noise_ions", "estimator", "peak", "check"],
+      "additionalProperties": false,
+      "properties": {
+        "ion_scale": { "oneOf": [{ "type": "null" }, { "type": "object", "description": "The factor of ionscale::factor, ions = cps x ions_per_cps: scan_type, ions_per_cps, cps_per_ion, source (method|data), field, data_ions_per_cps, ratio, agree (within 5 %), missing." }] },
+        "ion_scale_choice": { "type": "object", "description": "The log of the automatic choice: scan_type, scan_type_from, evidence." },
+        "one_ion_cps": { "type": ["number", "null"], "description": "cps of one ion at the factor." },
+        "noise_ions": { "type": ["number", "null"] },
+        "estimator": { "enum": ["mad", "sd", "one_ion", "poisson", null] },
+        "peak": { "oneOf": [{ "type": "null" }, { "type": "object", "required": ["height_ions", "sn_ions"], "additionalProperties": false, "properties": { "height_ions": { "type": ["number", "null"] }, "sn_ions": { "type": ["number", "null"] } } }] },
+        "check": { "oneOf": [{ "type": "null" }, { "type": "object", "description": "As the check above, at the ion scale: id noise_floor, status, value (sn_ions), threshold, rule." }] }
+      }
     }
   }
 }

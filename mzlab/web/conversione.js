@@ -476,9 +476,9 @@ function freeMzml(/** @type {string} */ base, /** @type {string} */ ext, /** @ty
   }
 }
 // name of the mzML of a sample of a SCIEX .wiff: its DATA name, else "x.mzML" or "x_s3.mzML" (sample number, for a sample without a name in a .wiff with several);
-// a name already taken goes through the counter of freeMzml ("S.wiff.mzML", "S_2.wiff.mzML"), the same as a .raw
-function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sample, /** @type {boolean} */ several, /** @type {Iterable<string> | null | undefined} */ taken, /** @type {string | null | undefined} */ sampleName) {
-  const nm = sampleName == null ? null : String(sampleName);
+// a name taken by ANOTHER kind of file goes through the counter of freeMzml ("S.wiff.mzML"), as a .raw; `label` (the engine's `sample_labels`, the column of `features --sample`) replaces the cleaning for a file with several: the mzML is the label without its extension, "#" as "_" (`hashFree`)
+function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sample, /** @type {boolean} */ several, /** @type {Iterable<string> | null | undefined} */ taken, /** @type {string | null | undefined} */ sampleName, /** @type {string | null | undefined} */ label) {
+  if (label) return freeMzml(label.replace(/\.[^.]*$/, "").replace(/#/g, "_"), ".wiff", new Set([...(taken || [])].map(n => String(n).toLowerCase())));  const nm = sampleName == null ? null : String(sampleName);
   // the reader names a lone sample without a DATA name "<file> #<number>" (names.rs): the extension as the file has it, the number of the container
   const given = nm != null && !(nm.startsWith(stem) && /^\.wiff #\d+$/i.test(nm.slice(stem.length)));
   const clean = given ? String(nm).trim().replace(/[/\\:*?"<>|#]/g, "_").slice(0, 120) : "";

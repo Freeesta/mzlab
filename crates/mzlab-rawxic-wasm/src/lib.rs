@@ -83,3 +83,14 @@ pub fn spec_sum(size: f64, read: Function, pol: i32, query: &str) -> Result<Stri
         .map_err(|e| error_json(&e))?;
     Ok(out.unwrap_or_default())
 }
+
+/// `api/xicions?mz=LIST&tol=LIST&ions=1[&ms_level=..&smooth=..&mz_offset=..&scan_type=..&fill_ms=..]` (`Routes::xic_ions_route`, the ion scale of `mzlab-cli trace xic --ions`)
+/// over the `.mzidx` of `size` bytes read by `read`: `{ion_scale, ion_scale_choice, traces}`; `pol` as in `raw_xic`.
+#[wasm_bindgen]
+pub fn xic_ions(size: f64, read: Function, pol: i32, query: &str) -> Result<String, JsValue> {
+    let mut r = open(size, read, pol)?;
+    let out = r
+        .xic_ions_route(&Query::parse(query))
+        .map_err(|e| error_json(&e))?;
+    Ok(out.unwrap_or_default())
+}

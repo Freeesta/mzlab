@@ -8,8 +8,10 @@ use mzlab_core::flow::value_text;
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::axis::MassAxis;
 use mzlab_feat::lrscreen::{centroid_wanted, label_reason, LabelCheck, Log};
+use mzlab_feat::nominal_hint::{signature, Cuts, Signature};
 use mzlab_feat::recipe::Recipe;
 use mzlab_ops::run::feat::lr_note::{self, note_of, Note};
+use mzlab_ops::run::feat::nominal_note::sentence;
 
 use crate::convert::Notice;
 
@@ -20,9 +22,17 @@ struct Member {
     column: Option<String>,
     note: Note,
     centroid: bool,
+    /// The nominal-resolution signature (one more detection, so only for the report, never for the plan).
+    signature: Option<Signature>,
 }
 
-fn members(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[String]) -> Vec<Member> {
+fn members(
+    recipe: &Recipe,
+    idxs: &[PathBuf],
+    files: &[PathBuf],
+    labels: &[String],
+    measure: bool,
+) -> Vec<Member> {
     idxs.iter()
         .enumerate()
         .filter_map(|(k, idx)| {
@@ -40,10 +50,18 @@ fn members(recipe: &Recipe, idxs: &[PathBuf], files: &[PathBuf], labels: &[Strin
                 ),
                 _ => (files[k].display().to_string(), None),
             };
+            let signature = if measure {
+                signature(&mut index, recipe, Cuts::default())
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
             Some(Member {
                 column,
                 centroid: centroid_wanted(&mut index, recipe),
                 note: note_of(recipe, &mut index),
+                signature,
                 name,
             })
         })
@@ -162,7 +180,7 @@ pub(crate) fn plan_text(
     files: &[PathBuf],
     labels: &[String],
 ) -> Result<String> {
-    let m = members(recipe, idxs, files, labels);
+    let m = members(recipe, idxs, files, labels, false);
     let mut o = Out::default();
     o.raw("{\"schema\":\"features-plan/1\",\"recipe\":")
         .str(&recipe_line(recipe, m.first().map(|x| &x.note)));
@@ -322,6 +340,17 @@ fn choices_json(o: &mut Out, recipe: &Recipe, m: &[Member], log: &Log) {
             choice(o, "profile", if nominal { "nominal" } else { "lr" }, &why);
         }
     }
+    // the signature the `nominal` profile addresses, with its numbers; the profile is the user's choice, so nothing is applied
+    for x in m.iter() {
+        if let Some(sig) = x.signature.as_ref().filter(|s| s.hint()) {
+            choice(
+                o,
+                "nominal_hint",
+                "nominal",
+                &format!("{}: {}", x.name, sentence(sig)),
+            );
+        }
+    }
     for x in m.iter().filter(|x| x.note.unit) {
         let why = centroid_why(x);
         choice(o, "centroid", if x.centroid { "on" } else { "off" }, &why);
@@ -349,7 +378,7 @@ pub(crate) fn report_text(
     labels: &[String],
     rows: &[usize],
 ) -> String {
-    let m = members(recipe, idxs, files, labels);
+    let m = members(recipe, idxs, files, labels, true);
     let log: Log = recipe
         .screen
         .evidence

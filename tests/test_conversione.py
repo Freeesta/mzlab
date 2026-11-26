@@ -112,6 +112,13 @@ def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
     assert not any("_s" in n.replace("_spik", "") for n in got)
 
 
+def test_a_label_of_the_engine_names_the_mzml_of_a_sample_of_a_file_with_several():
+    """`label` (`sample_labels`, the column of `features --sample`): the mzML is the label without the extension of the file, `#` as `_`; another kind of file that took the name still gets the counter."""
+    got = run("""console.log(JSON.stringify([c.wiffName("a", 1, true, [], "S", "S (a #1).wiff"), c.wiffName("b", 1, true, ["S (a _1).mzML"], "S", "S (a #1).wiff"),
+        c.wiffName("a", 2, true, [], "T", "T.wiff"), c.wiffName("a", 2, true, ["t.mzML"], "T", "T.WIFF"), c.wiffName("a", 1, true, [], "S", "")]))""")
+    assert got == ["S (a _1).mzML", "S (a _1).wiff.mzML", "T.mzML", "T.wiff.mzML", "S.mzML"]
+
+
 def test_a_hash_in_a_file_name_becomes_an_underscore():
     # "#" separates a file from its items in the list: the name the file enters under; both files of a pair alike; another file takes a free name
     got = run("""console.log(JSON.stringify([c.hashFree("Q.mzML", []), c.hashFree("P#1.mzML", []), c.hashFree("P#1.mzML", ["p_1.mzml"]),

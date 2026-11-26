@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "estimates/1",
   "title": "estimates/1: what `features.estimate` measured on one file",
-  "description": "The file, the polarity and axis it was measured with, the measurements of `run::preview` that are numbers (each with the figures it comes from; their members are those of KEPT in crates/mzlab-ops/src/run/feat/run_estimate.rs and are not listed here) and, only when there are any, the `notices` of the file (crates/mzlab-ops/src/run/feat/lr_note.rs). The same text from the `flow_estimate` of the page and from `flow run`. Not to be confused with `estimate/1` (singular), the answer of `mzlab-cli estimate`, which puts the `estimates/1` of several files together (median, evidence, plan parameters).",
+  "description": "The file, the polarity and axis it was measured with, the measurements of `run::preview` that are numbers (each with the figures it comes from; their members are those of KEPT in crates/mzlab-ops/src/run/feat/run_estimate.rs and are not listed here) and, only when there are any, the `notices` of the file (crates/mzlab-ops/src/run/feat/lr_note.rs) and, on a unit-axis file, the `nominal` member (crates/mzlab-ops/src/run/feat/nominal_note.rs). The same text from the `flow_estimate` of the page and from `flow run`. Not to be confused with `estimate/1` (singular), the answer of `mzlab-cli estimate`, which puts the `estimates/1` of several files together (median, evidence, plan parameters).",
   "type": "object",
   "required": ["schema", "file", "polarity", "axis"],
   "properties": {
@@ -10,6 +10,26 @@
     "file": { "type": "string" },
     "polarity": { "enum": [-1, 0, 1], "description": "0 when the file did not decide" },
     "axis": { "enum": ["Da", "ppm"] },
+    "nominal": {
+      "type": "object",
+      "description": "Unit-axis file without the nominal profile in force: the signature that profile addresses, counted on one more detection with the profile's values and never applied. Candidate rows are those the profile keeps after its grid merge.",
+      "required": ["rows", "between", "between_share", "height_now", "height_nominal", "split", "split_share", "reach_now", "reach_nominal", "cut_between", "cut_split", "hint"],
+      "additionalProperties": false,
+      "properties": {
+        "rows": {"type": "integer", "minimum": 0, "description": "Candidate rows."},
+        "between": {"type": "integer", "minimum": 0, "description": "Candidate rows under the height in force (the lr height drops them) and over the nominal one."},
+        "between_share": {"type": "number", "minimum": 0, "maximum": 1},
+        "height_now": {"type": "number", "description": "min_height in force, counts."},
+        "height_nominal": {"type": "number", "description": "min_height of the nominal profile, counts."},
+        "split": {"type": "integer", "minimum": 0, "description": "Ions seen on both grids whose centroids lie farther apart than reach_now but within reach_nominal: one ion in two rows."},
+        "split_share": {"type": "number", "minimum": 0, "maximum": 1},
+        "reach_now": {"type": "number", "description": "grid_touch in force, Da."},
+        "reach_nominal": {"type": "number", "description": "grid_touch of the nominal profile, Da."},
+        "cut_between": {"type": "number", "description": "hint_between of features.estimate (default 0.1)."},
+        "cut_split": {"type": "number", "description": "hint_split of features.estimate (default 0.05)."},
+        "hint": {"type": "boolean", "description": "A share reaches its cut: the file looks like the data of the nominal profile."}
+      }
+    },
     "notices": {
       "type": "array",
       "minItems": 1,

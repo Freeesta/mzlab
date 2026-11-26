@@ -7,7 +7,8 @@
 use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
 use mzlab_core::baseline::{peak_area_json, Baseline};
 use mzlab_core::intwin::move_end_json;
-use mzlab_core::ionstat::{floor_json, measure, FloorAsk, FloorParams};
+use mzlab_core::ionstat::{FloorAsk, FloorParams};
+use mzlab_core::ionstat_ions::{floor_json_ions, measure_ions, IonsAsk};
 use mzlab_core::peakq_lrauto::{lr_auto_integrate as lr_auto, LrAutoParams};
 use wasm_bindgen::prelude::*;
 
@@ -49,18 +50,21 @@ pub fn lr_auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, params: &[f64]
 }
 
 /// The noise of the trace with a floor of one ion and the S/N of a peak (`ionstat::floor_json`, the bytes `mzlab-cli peak noise` prints):
-/// `ask` = [from, to, peak start, peak end] (min, NaN = not given), `params` = [one_ion (NaN or < 0 auto, 0 off, cps), sd_weight, min_sn];
+/// `ask` = [from, to, peak start, peak end] (min, NaN = not given), `params` = [one_ion (NaN or < 0 auto, 0 off, cps), sd_weight, min_sn] and, for
+/// the opt-in ion scale, [ions (> 0 on), scan type (1 ems, 2 epi, 3 q1, 4 sim, 5 other), fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi]
+/// (`IonsAsk::from_slice`; a shorter slice is the cps scale alone);
 /// "E" + `{"key"}` when no background point is left.
 #[wasm_bindgen]
 pub fn noise_floor(rt: &[f64], y: &[f64], ask: &[f64], params: &[f64]) -> String {
     let n = rt.len().min(y.len());
-    match measure(
+    match measure_ions(
         &rt[..n],
         &y[..n],
         FloorAsk::from_slice(ask),
         FloorParams::from_slice(params),
+        IonsAsk::from_slice(params),
     ) {
-        Ok(r) => floor_json(&r),
+        Ok((r, ions)) => floor_json_ions(&r, ions.as_ref()),
         Err(key) => format!("E{{\"key\":\"{key}\"}}"),
     }
 }

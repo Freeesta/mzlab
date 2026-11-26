@@ -2,26 +2,52 @@
 //! that peak (`mzlab_core::ionstat`, rule R1 of docs/studies/TP_SCREENING_RULES.md). Stdout is `noise-floor/1`, the bytes of mzlab-wasm
 //! `noise_floor`; the one log line of the choice goes to stderr as `note:`.
 
-use mzlab_core::ionstat::{floor_json, floor_log, measure, FloorAsk, FloorParams, OneIon};
+use mzlab_core::ionscale::{Facts, ScanKind};
+use mzlab_core::ionstat::{floor_log, FloorAsk, FloorParams, OneIon};
+use mzlab_core::ionstat_ions::{floor_json_ions, ions_log, measure_ions, IonsAsk};
 
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak noise: the noise of an ion-counting trace with a floor of one ion, and the S/N of a peak on it, as JSON (noise-floor/1).
 
-usage: mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...]
+usage: mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions [--scan-type ems|epi|q1|sim|other]]
 
   TRACE.csv    two columns, RT (min) and intensity (cps); - = the standard input
   --rt A,B     the peak window (min): left out of the background; its apex above the background median gives sn, sn_mad and the check
   --set        from, to (min: the stretch whose points are background, default the whole trace), one_ion (cps of one ion; auto = the quantum
                of the trace, the smallest positive value or step between values, when >= 90 % of the values are its multiples; 0 = off),
                sd_weight (0.5), min_sn (5)
+  --ions       opt-in: both scales. The cps-to-ions factor is the seconds one point accumulates ions (fill_ms for ems and epi, dwell_ms for sim,
+               scan_s * step_da / (mass_hi - mass_lo) for q1: --set values in the method's units), else 1 / the ion quantum of the trace; the trace is measured
+               again with one ion = 1 / that factor cps. --scan-type names the scan type (default other: only the data estimate can say)
   rule         noise = max(1.4826 MAD, sd_weight x SD, one_ion x sqrt(max(lambda, 1))), lambda = mean background counts per point; check pass
                (S/N >= min_sn), fail, or warn (no ion term, or noise 0)
   output       {\"schema\":\"noise-floor/1\",\"params\",\"background\":{n, median, mean},\"quantum\":{q, support, n_positive, accepted}|null,
                \"terms\":{mad, sd, sd_term, one_ion, one_ion_source, lambda, ion_term},\"noise\",\"estimator\":mad|sd|one_ion|poisson,
-               \"peak\":{from, to, apex_rt, height, sn, sn_mad, ions}|null,\"check\":{id, status, value, threshold, rule}|null}
-  exit         0 ok (whatever the check says), 1 no background point in the stretch, 2 usage, 4 missing trace";
+               \"peak\":{from, to, apex_rt, height, sn, sn_mad, ions}|null,\"check\":{id, status, value, threshold, rule}|null};
+               with --ions the member \"ions\":{ion_scale, ion_scale_choice, one_ion_cps, noise_ions, estimator, peak:{height_ions, sn_ions}|null, check|null} is appended
+  exit         0 ok (whatever the check says), 1 no background point in the stretch, 2 usage (also a method value or --scan-type without --ions), 4 missing trace";
+
+/// The method values of `--ions` (`ionscale::Facts`) among the `--set` names; a positive number.
+fn fact(f: &mut Facts, name: &str, v: &str) -> Result<bool, String> {
+    let slot = match name {
+        "fill_ms" => &mut f.fill_ms,
+        "dwell_ms" => &mut f.dwell_ms,
+        "scan_s" => &mut f.scan_s,
+        "step_da" => &mut f.step_da,
+        "mass_lo" => &mut f.mass_lo,
+        "mass_hi" => &mut f.mass_hi,
+        _ => return Ok(false),
+    };
+    *slot = Some(
+        v.parse::<f64>()
+            .ok()
+            .filter(|x| x.is_finite() && *x > 0.0)
+            .ok_or(format!("{name} must be a number above 0"))?,
+    );
+    Ok(true)
+}
 
 fn set(p: &mut FloorParams, ask: &mut FloorAsk, name: &str, v: &str) -> Result<(), String> {
     if name == "from" || name == "to" {
@@ -70,6 +96,7 @@ fn window(v: Option<String>) -> Result<(f64, f64), String> {
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let (mut src, mut ask, mut p) = (None, FloorAsk::default(), FloorParams::default());
+    let (mut ions, mut kind, mut facts, mut fact_given) = (false, None, Facts::default(), false);
     let res = (|| -> Result<(), String> {
         while let Some(a) = it.next() {
             match a.as_str() {
@@ -77,7 +104,21 @@ pub fn run(args: Vec<String>) -> Outcome {
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    set(&mut p, &mut ask, k, v)?;
+                    if fact(&mut facts, k, v)? {
+                        fact_given = true;
+                    } else {
+                        set(&mut p, &mut ask, k, v)?;
+                    }
+                }
+                "--ions" => ions = true,
+                "--scan-type" => {
+                    let v = it
+                        .next()
+                        .ok_or("--scan-type needs ems, epi, q1, sim or other")?;
+                    kind = Some(
+                        ScanKind::parse(&v)
+                            .ok_or("--scan-type needs ems, epi, q1, sim or other")?,
+                    );
                 }
                 "--help" | "-h" => return Err(String::new()),
                 o if o.starts_with("--") => return Err(format!("unknown option {o}")),
@@ -91,6 +132,12 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => return Outcome::fail(&e),
         Ok(()) => {}
     }
+    if !ions && (kind.is_some() || fact_given) {
+        return Outcome::fail(
+            "a method value (fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) or --scan-type needs --ions",
+        );
+    }
+    let ions = ions.then_some(IonsAsk { kind, facts });
     let Some(src) = src else {
         return Outcome::fail("peak noise needs a trace (see --help)");
     };
@@ -98,11 +145,14 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => return Outcome::fail(&e),
         Ok(t) => t,
     };
-    match measure(&x, &y, ask, p) {
+    match measure_ions(&x, &y, ask, p, ions) {
         Err(key) => Outcome::fail(&key),
-        Ok(r) => {
-            let mut o = Outcome::ok(format!("{}\n", floor_json(&r)).into_bytes());
+        Ok((r, i)) => {
+            let mut o = Outcome::ok(format!("{}\n", floor_json_ions(&r, i.as_ref())).into_bytes());
             o.stderr = format!("note: {}\n", floor_log(&r));
+            if let Some(i) = &i {
+                o.stderr += &format!("note: {}\n", ions_log(i));
+            }
             o
         }
     }

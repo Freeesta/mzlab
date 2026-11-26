@@ -11,10 +11,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "collision energy spread and declustering potential of a tandem file",
         "file method",
     ),
-    (
-        "sample name mass differs from the method precursor",
-        "file method",
-    ),
+    ("sample name differs from the method precursor", "file method"),
     (
         "convert wiff files to mzML with their sample names",
         "file convert",
@@ -69,6 +66,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("extract ion chromatograms of a list of m/z", "trace xic"),
     ("sum the scans of an MS2 window and count the ions it rests on", "spectrum get"),
     ("spectrum of a product-ion peak, background of both sides off", "spectrum get"),
+    ("net high-resolution or profile spectrum of a product-ion peak, ppm match against the sides", "spectrum get"),
     (
         "blank subtraction threshold on the feature table",
         "table.filter",
@@ -110,6 +108,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "mean spectrum of a window minus its sides per m/z bin",
         "raw scan",
     ),
+    ("does M+1 and M+2 fit this formula within counting error", "raw isotopes"),
     (
         "weak noise peaks forced into blanks and matrix: S/N and peak shape gates of a target list",
         "quant targets",

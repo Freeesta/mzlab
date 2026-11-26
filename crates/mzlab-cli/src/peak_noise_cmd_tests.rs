@@ -107,3 +107,88 @@ fn usage_data_and_input_errors_have_their_codes() {
     );
     let _ = std::fs::remove_file(f);
 }
+
+// the trace above is made of 2222-cps ions: a fill time of 1000 / 2222 ms is the same factor the data estimate gives
+#[test]
+fn ions_adds_the_ions_member_and_the_log_and_the_cps_members_keep_their_bytes() {
+    use mzlab_core::ionscale::{Facts, ScanKind};
+    use mzlab_core::ionstat_ions::{floor_json_ions, measure_ions, IonsAsk};
+    let (rt, y) = trace();
+    let f = write("ions", &rt, &y);
+    let p = f.to_str().unwrap();
+    let plain = String::from_utf8(run(args(&[p, "--rt", "1.95,2.05"])).stdout).unwrap();
+    let o = run(args(&[
+        p,
+        "--rt",
+        "1.95,2.05",
+        "--ions",
+        "--scan-type",
+        "ems",
+        "--set",
+        "fill_ms=0.45",
+    ]));
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let text = String::from_utf8(o.stdout).unwrap();
+    let ask = FloorAsk {
+        peak: Some((1.95, 2.05)),
+        ..FloorAsk::default()
+    };
+    let facts = Facts {
+        fill_ms: Some(0.45),
+        ..Facts::default()
+    };
+    let (r, i) = measure_ions(
+        &rt,
+        &y,
+        ask,
+        FloorParams::default(),
+        Some(IonsAsk {
+            kind: Some(ScanKind::Ems),
+            facts,
+        }),
+    )
+    .unwrap();
+    assert_eq!(text, format!("{}\n", floor_json_ions(&r, i.as_ref())));
+    assert!(text.starts_with(&plain[..plain.len() - 2]), "{text}");
+    assert!(
+        text.contains("\"ion_scale\":{\"scan_type\":\"ems\""),
+        "{text}"
+    );
+    assert!(text.contains("\"field\":\"fill_ms\""), "{text}");
+    assert_eq!(o.stderr.matches("note: ").count(), 2, "{}", o.stderr);
+    assert!(
+        o.stderr.contains("note: ion scale: 0.00045 ions per cps"),
+        "{}",
+        o.stderr
+    );
+    // no method value and no scan type: the data estimate of the trace (2222 cps per ion) is used and said so
+    let o = run(args(&[p, "--rt", "1.95,2.05", "--ions"]));
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let text = String::from_utf8(o.stdout).unwrap();
+    assert!(text.contains("\"source\":\"data\""), "{text}");
+    assert!(o.stderr.contains("data estimate"), "{}", o.stderr);
+    std::fs::remove_file(f).ok();
+}
+
+#[test]
+fn a_method_value_or_scan_type_without_ions_is_usage_and_a_bad_value_too() {
+    let (rt, y) = trace();
+    let f = write("ionsbad", &rt, &y);
+    let p = f.to_str().unwrap();
+    for extra in [&["--set", "fill_ms=0.5"][..], &["--scan-type", "ems"][..]] {
+        let mut a = vec![p];
+        a.extend_from_slice(extra);
+        let o = run(args(&a));
+        assert_eq!(o.code, 2, "{extra:?}");
+        assert!(o.stderr.contains("needs --ions"), "{}", o.stderr);
+    }
+    for extra in [
+        &["--ions", "--set", "fill_ms=0"][..],
+        &["--ions", "--scan-type", "tof"][..],
+    ] {
+        let mut a = vec![p];
+        a.extend_from_slice(extra);
+        assert_eq!(run(args(&a)).code, 2, "{extra:?}");
+    }
+    std::fs::remove_file(f).ok();
+}

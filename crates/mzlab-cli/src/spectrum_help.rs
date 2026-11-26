@@ -10,11 +10,12 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
               scans added, their counts (cps summed), the ions (counts x fill time) per scan type and the ion quantum, so a reader can judge whether the
               spectrum rests on enough ions; no background is subtracted (`evidence.sum.background`); not with --minus or --id
   --peak auto with --rt A,B: find the apex of the chromatogram of the level (of --precursor MZ at a product-ion level) between A and B, sum the scans of
-              a window of `factor` x FWHM around it and subtract the mean of the two side windows (`mzlab-cli spectrum get f.mzML --rt 4,9 --ms-level 2
+              a window of `factor` x FWHM around it and subtract the mean of the two side windows, per nominal mass, per profile point or per high-resolution line (`evidence.peak.cell` names which and how lines are matched) (`mzlab-cli spectrum get f.mzML --rt 4,9 --ms-level 2
               --precursor 250.3 --peak auto`); `evidence.peak` names the apex time, FWHM, window, side windows, background level, `n_scans`, `total_ions`
-              and the rule of the verdict (peak, no_apex, no_data, window_only); without an apex no spectrum is made (no points; the reason on stderr)
+              and the rule of the verdict (peak, no_apex, no_data, window_only: a profile level whose point spacing the index lacks); without an apex no spectrum is made (no points; the reason on stderr)
   --set N=V   with --peak auto: factor=2 (window = factor x FWHM), side_min=0.3 and gap_min=0.05 (minutes: width of each side, gap between window and side),
-              min_sn=3 and min_points=3 (the apex must reach them); repeatable or comma separated
+              min_sn=3 and min_points=3 (the apex must reach them), tol_ppm (a high-resolution line takes off the strongest side line within it; the level's own
+              5 or 10 ppm, printed in `evidence.peak.params`); repeatable or comma separated
   --precursor MZ the product-ion scans of this precursor only (with --peak auto)
   --fill-ms T the fill time of a scan in ms for --sum and --peak auto when the file does not give it (the ions are null without it; the user states it, it is never guessed)
   --scan NO   the scan with that number (`spectrum list` prints it as scan_no); its level and precursor are used; no such scan: exit 5

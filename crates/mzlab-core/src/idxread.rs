@@ -236,7 +236,7 @@ pub struct Index<R: ReadAt> {
 }
 
 /// Whether the header is of an index of a vendor file (version 3 with `READER_FLAG`) or of an mzML (version 3); `None` for any other, older versions included.
-fn nativo(h: &[u8]) -> Option<bool> {
+pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
     let w = |a: usize| {
         h.get(a..a + 4)
             .and_then(|b| b.try_into().ok())

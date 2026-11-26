@@ -113,12 +113,25 @@ pub fn detect_with<R: ReadAt>(
     p: &Params,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
+    let Some((rows, dt)) = grid_rows(index, p, progress)? else {
+        return Ok(FileFeatures::default());
+    };
+    finish(rows, dt, p.axis, (p.merge_overlap, p.grid_touch))
+}
+
+/// The rows of the two grids before they are merged and the median scan interval (seconds); `None` when the file has no MS1 scans of the polarity.
+/// `detect_with` finishes them; `nominal_hint` counts what a wider merge would change.
+pub(crate) fn grid_rows<R: ReadAt>(
+    index: &mut Index<R>,
+    p: &Params,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<Option<([Vec<Row>; 2], f64)>> {
     // the traces have no ADAP model: `detect_route` sends that recipe to `untargeted::flow`
     if let Peak::Adap(_) = &p.peak {
         return Err(Error::new("error.badRecipe"));
     }
     let Some(si) = index.section_of(1, p.polarity) else {
-        return Ok(FileFeatures::default());
+        return Ok(None);
     };
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let dt = median_interval(&rt);
@@ -128,7 +141,7 @@ pub fn detect_with<R: ReadAt>(
     each_slab(index, si, p, rt.len(), progress, &mut |slab| {
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
-    finish(rows, dt, p.axis, (p.merge_overlap, p.grid_touch))
+    Ok(Some((rows, dt)))
 }
 
 /// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of

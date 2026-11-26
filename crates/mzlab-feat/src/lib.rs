@@ -92,6 +92,7 @@ pub mod msnfigure;
 pub mod ms2;
 pub mod ms2spec;
 pub mod nature;
+pub mod nominal_hint;
 pub mod norm;
 mod histbin;
 #[cfg(feature = "chem")]

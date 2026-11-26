@@ -42,7 +42,22 @@ pub(super) fn estimate() -> Step {
             .many()
             .requires(ms1())],
         outs: vec![Port::new("estimates", DataType::Qc, "Measured parameters and their proofs").many()],
-        params: vec![polarity(), axis()],
+        params: vec![
+            polarity(),
+            axis(),
+            Param::number("hint_between", "Nominal hint: rows between heights")
+                .min(0.0)
+                .max(1.0)
+                .default_num(crate::nominal_hint::CUT_BETWEEN)
+                .doc("Unit axis only: names the nominal profile when this share of rows lies between the two heights.")
+                .advanced(),
+            Param::number("hint_split", "Nominal hint: ions split across grids")
+                .min(0.0)
+                .max(1.0)
+                .default_num(crate::nominal_hint::CUT_SPLIT)
+                .doc("Unit axis only: names the nominal profile when this share of rows is one ion split across the two grids.")
+                .advanced(),
+        ],
         runs_in: feat_runs_in(),
         errors: vec!["error.memoryBudget", "err.file.index"],
         per_item: true,

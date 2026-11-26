@@ -11,28 +11,38 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
+#[cfg(target_family = "wasm")]
+use crate::blocks_of;
 use crate::run::recipe_for;
-use crate::{
-    blocks_of, js_err, open_all, open_one, progress_js, run, spill_js, to_sink, JsSink, JsStored,
-};
+use crate::{js_err, open_one, progress_js, run, spill_js, to_sink, JsSink, JsStored};
 
 /// The recipe `text` on the first of the indexes `sizes` (read with `read(k, offset, length)`) and the facts of every file, or the refusal of a
-/// series that mixes polarities or resolutions. Each scan table is parsed once: the first index is taken again over a reader of its own (the block
-/// budget of a file open alone, as the recipe was always estimated) without parsing it a second time.
+/// series that mixes polarities or resolutions. One index is open at a time, each with the block budget of a file open alone: its facts, its kind and
+/// whether the recipe centroids it (`Screen::centroid_files`, which the gap fill reads without the scan table) are kept, and its scan table is freed.
 pub fn series_recipe(
     read: &Function,
     sizes: &[f64],
     text: &str,
 ) -> Result<(Recipe, Vec<FileFacts>)> {
-    let indexes = open_all(read, sizes)?;
-    mzlab_feat::nature::one_kind_of(&indexes)?;
-    let facts = indexes.iter().map(file_facts).collect();
-    let first = indexes
-        .first()
-        .ok_or_else(|| Error::new("error.badIndex"))?;
-    let mut first = first.over(blocks_of(read, 0, sizes[0], 1));
-    drop(indexes);
-    Ok((recipe_for(text, &mut first)?, facts))
+    if sizes.is_empty() {
+        return Err(Error::new("error.badIndex"));
+    }
+    let mut ix = open_one(read, 0, sizes[0])?;
+    let mut r = recipe_for(text, &mut ix)?;
+    let (mut facts, mut kinds, mut wanted) = (Vec::new(), Vec::new(), Vec::new());
+    for (k, &size) in sizes.iter().enumerate() {
+        if k > 0 {
+            ix = open_one(read, k, size)?;
+        }
+        let f = file_facts(&ix);
+        let name = ix.source.get("name").and_then(|v| v.str()).unwrap_or("");
+        kinds.push((name.to_string(), f.polarity, ix.hr1()));
+        wanted.push(mzlab_feat::lrscreen::centroid_wanted(&mut ix, &r));
+        facts.push(f);
+    }
+    mzlab_feat::nature::one_kind(&kinds)?;
+    r.screen.centroid_files = wanted;
+    Ok((r, facts))
 }
 
 /// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
@@ -89,11 +99,10 @@ fn series_into(
     let lean = |k: usize| {
         mzlab_core::idxread::Index::open_lean(blocks_of(read, k, sizes[k], 1), sizes[k] as u64)
     };
-    // a file that is centroided before the fill needs its scan table, which the lean index lacks: those series fill file by file on the whole index,
-    // as the native build does, so the site and the app give the same cells
+    // a file that is centroided before the fill gets its scan table loaded when its turn comes (`centroids_of_file`, on the decision `series_recipe`
+    // made), so the site and the app give the same cells
     #[cfg(target_family = "wasm")]
-    let fill: Option<&mzlab_feat::series::FillOpen<_>> =
-        (!(r.is_lr() && r.screen.centroid != mzlab_feat::lrscreen::Switch::Off)).then_some(&lean);
+    let fill: Option<&mzlab_feat::series::FillOpen<_>> = Some(&lean);
     #[cfg(not(target_family = "wasm"))]
     let fill = None;
     run::align_to_spilling(

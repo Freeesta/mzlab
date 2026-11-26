@@ -56,6 +56,9 @@ pub struct Screen {
     /// The offset of each file as resolved for the run in hand (empty: none), subtracted from the features' m/z and added to the fill windows. Set by
     /// `lrscreen_offset::resolve` at the start of a run; never part of the text.
     pub offsets: Offsets,
+    /// Whether `centroid_wanted` said yes to each file, decided where the whole index is open (`series_js::series_recipe`; the page's gap fill reads lean
+    /// indexes, which hold no scan table to decide on). Empty: each file decides for itself. Never part of the text.
+    pub centroid_files: Vec<bool>,
     pub evidence: Option<Evidence>,
 }
 
@@ -308,6 +311,27 @@ pub fn centroids_of<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Optio
     if !centroid_wanted(index, r) {
         return Ok(None);
     }
+    centroids_built(index)
+}
+
+/// `centroids_of` for file `k` of a series: the decision kept in `Screen::centroid_files` when there is one (so an index opened lean, with no scan table
+/// to decide on, gets the answer of the whole one), and the scan table loaded now for the file that is centroided.
+pub fn centroids_of_file<R: ReadAt>(
+    index: &mut Index<R>,
+    r: &Recipe,
+    k: usize,
+) -> Result<Option<Centroids>> {
+    let Some(&wanted) = r.screen.centroid_files.get(k) else {
+        return centroids_of(index, r);
+    };
+    if !wanted {
+        return Ok(None);
+    }
+    index.load_scans()?;
+    centroids_built(index)
+}
+
+fn centroids_built<R: ReadAt>(index: &mut Index<R>) -> Result<Option<Centroids>> {
     let Some(c) = centroid_index(index, Over::default())? else {
         return Ok(None);
     };
