@@ -28,6 +28,8 @@ try:
             # the build line (version, commit, date) and the link to the rolling app download
             assert ps.nth(3).inner_text().startswith("Version ") and "commit" in ps.nth(3).inner_text() and "{" not in ps.nth(3).inner_text()
             assert pg.get_attribute("#helppop a >> nth=1", "href") == "https://github.com/Freeesta/mzlab/releases/tag/app-prebuilt"
+            g = pg.evaluate("(() => { const p = document.querySelector('#helppop'), q = p.querySelector('p'); return [q.getBoundingClientRect().top - p.getBoundingClientRect().top, parseFloat(getComputedStyle(p).paddingTop) + parseFloat(getComputedStyle(p).borderTopWidth)]; })()")
+            assert abs(g[0] - g[1]) <= 3, ("gap above the first paragraph", g)
             pg.keyboard.press("Escape")
         step("the header info button opens the box with the mailto link", info)
         def centred():

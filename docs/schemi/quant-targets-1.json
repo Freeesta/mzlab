@@ -542,6 +542,44 @@
           }
         }
       }
+    },
+    "members": {
+      "type": "array",
+      "description": "Only with --sample: one entry per sample chosen of a file with several, in table order. `name` is the file name its rows carry (the label rule of features --sample: the sample name with the extension of its file, NAME (FILE #ID) when two names collide), `member` is FILE@ID, `label` how the name was made. The same words are on stderr (note.features.column*).",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "member",
+          "sample_id",
+          "sample",
+          "label"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "member": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sample": {
+            "type": "string",
+            "description": "The sample name the file gives."
+          },
+          "label": {
+            "enum": [
+              "own",
+              "tie",
+              "numbered"
+            ]
+          }
+        }
+      }
     }
   }
 }
