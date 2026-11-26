@@ -33,7 +33,7 @@ NODE = """const [dir, params, names, targets, ...paths] = process.argv.slice(1);
 const w = require(dir + '/mzlab_feat_wasm.js'), fs = require('fs');
 const fds = paths.map(p => fs.openSync(p, 'r')), sizes = paths.map(p => fs.statSync(p).size);
 const read = (k, off, len) => { const b = new Uint8Array(len); fs.readSync(fds[k], b, 0, len, off); return b; };
-try { const r = w.flow_quant_targets(read, sizes, names, fs.readFileSync(targets), params); process.stdout.write(JSON.stringify({ csv: r.csv(), log: r.log(), warnings: JSON.parse(r.warnings()) })); }
+try { const r = w.flow_quant_targets(read, sizes, names, fs.readFileSync(targets), params); process.stdout.write(JSON.stringify({ csv: r.csv(), log: r.log(), warnings: JSON.parse(r.warnings()), hints: JSON.parse(r.hints()) })); }
 catch (e) { process.stdout.write('ERROR ' + String(e)); }"""
 
 
@@ -179,7 +179,31 @@ def test_a_drifted_batch_a_rival_a_clipped_peak_and_a_blank_give_the_same_bytes_
     # --json: the site has no json export (its page reads the table and the log), so the CLI answer is compared member by member
     js = json.loads(cli(*args, "--json").stdout)
     assert js["log"] == json.loads(got["log"])
-    # the one hint of this data (the clipped file leaves its reference outside the window) is in the CLI answer only: the site has no hints
+    # the one hint of this data (the clipped file leaves its reference outside the window): the same key and params in the wasm and the CLI answer
     assert [h["key"] for h in js["hints"]] == ["note.quant.targets.offsetAuto"], js.get("hints")
+    assert got["hints"] == [{"key": h["key"], "params": h["params"]} for h in js["hints"]], got["hints"]
     shifts = [r["rt_shift_min"] for r in js["rows"]]
     assert shifts == [float(l.split(",")[-1]) for l in got["csv"].splitlines()[1:]], shifts
+
+
+def test_the_hints_are_the_same_key_and_params_in_the_wasm_and_the_cli_and_never_in_the_table_or_the_log(work, drift):
+    """The reference peaks 0.3 min apart between files with `rt_ref` off (and one file clips it out of the window): the hints name `--rt-ref auto`
+    and `--offset auto`; with `rt_ref` auto only the second stays; a data set that does not drift, none. The table and the log are the bytes they were without the hints."""
+    params = {**PARAMS, "blank_pattern": "RT_blank*"}
+    args = ("quant", "targets", "--targets", str(work / "drift_targets.csv"), *[str(work / n) for n in drift], "--blank-pattern", "RT_blank*")
+    got = wasm(work, work / "drift_targets.csv", params, drift, "run_drift")
+    assert not isinstance(got, str), got
+    js = json.loads(cli(*args, "--json").stdout)
+    assert [h["key"] for h in got["hints"]] == ["note.quant.targets.offsetAuto", "note.quant.targets.rtRef"], got["hints"]
+    assert got["hints"] == [{"key": h["key"], "params": h["params"]} for h in js["hints"]], (got["hints"], js["hints"])
+    assert got["hints"][1]["params"]["id"] == "std" and float(got["hints"][1]["params"]["spread"]) >= 0.1, got["hints"]
+    assert "hints" not in got["log"] and "note.quant.targets" not in got["csv"]
+    on = wasm(work, work / "drift_targets.csv", {**params, "rt_ref": "auto", "rt_span": 0.6}, drift, "run_drift")
+    assert [h["key"] for h in on["hints"]] == ["note.quant.targets.offsetAuto"], on["hints"]
+    # the synthetic bench series: the reference is missed in two files at offset 0, so the same one hint in both; with `offset auto` none
+    bench = ("quant", "targets", "--targets", str(work / "targets_ref.csv"), *[str(work / n) for n in NAMES], "--blank-pattern", BLANK)
+    one = wasm(work, work / "targets_ref.csv", PARAMS)
+    assert [h["key"] for h in one["hints"]] == ["note.quant.targets.offsetAuto"], one["hints"]
+    assert one["hints"] == [{"key": h["key"], "params": h["params"]} for h in json.loads(cli(*bench, "--json").stdout)["hints"]]
+    auto = wasm(work, work / "targets_ref.csv", {**PARAMS, "offset": "auto"})
+    assert auto["hints"] == [] and "hints" not in json.loads(cli(*bench, "--offset", "auto", "--json").stdout)

@@ -10,9 +10,7 @@ use mzlab_core::routes::Routes;
 
 use super::gates;
 use super::params::{OffsetMode, Params, RtRef};
-#[cfg(not(target_arch = "wasm32"))]
-use super::rtref::hints;
-use super::rtref::{measure, rt_choices, rt_reference, Hint, RtShift};
+use super::rtref::{hints, measure, rt_choices, rt_reference, Hint, RtShift};
 use super::targets::{parse, Role, Target};
 use super::text;
 
@@ -438,11 +436,8 @@ impl Job {
                 r.flags.push("in_blank");
             }
         }
-        // stderr pointers of the CLI: the site has no stderr, so they stay out of the .wasm (wasm-caps.md)
-        #[cfg(not(target_arch = "wasm32"))]
+        // pointers to a switch the data suggest: stderr of the CLI, the card of the Flow step on the site; never in the table or the log
         let hints = hints(&self.p, &self.targets, &rows, &self.blank);
-        #[cfg(target_arch = "wasm32")]
-        let hints = Vec::new();
         Outcome {
             hints,
             csv: text::table(
