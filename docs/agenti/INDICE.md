@@ -99,7 +99,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
-| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
+| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema), `file method` (`file_method/1`, `filemethod.rs`, name-m/z warning) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | own 2D layout (`mzlab-mol::layout`), `mol draw`: molfile, `draw/1` scene, KET/CDXML, SVG/PNG pictures (`chem/draw*.rs`), edit patch `--set edit=` (`chem/edit*.rs`, `draw_edit/1`), RDKit quality gates, `draw_d1/d3.json` parity | `docs/agenti/mol-draw.md` |
 | tests and goldens of the `mol/1` record (`mzlab-mol` `tests/*.rs`, golden data from RDKit, intended limits, OpenChemLib trap): read only to change a test or regenerate a golden file | `docs/agenti/mol-tests.md` |
@@ -116,7 +116,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzDraw, our own molecule editor in Rust (`crates/mzdraw`, `mzdraw-wasm`, page `mzlab/web/draw2/`): scope, architecture, `mzdraw/1` document, format conformity matrix, settings file, command log, build order | `docs/agenti/mzdraw.md` |
 | broad bands (`broad.rs`), targeted pass options (`target.rs`: estimated peaks, /\ shape check, merging overlapping rows), RT correction and alignment (`rtmap.rs`, `rtwarp.rs`), kinetics as evidence (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
 | layering of `crates/mzlab-feat` modules (base modules, feature gates, rules for a new dependency edge) | `docs/agenti/mzfeat-cycles.md` |
-| low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
+| low-resolution feature pipeline (full scan, Da axis, `lr` profile: `recipe_lr.rs`, `axis.rs`; duplicate rows: `dedup`, `dedup_overlap`, `near`) | `docs/agenti/mzfeat-lr.md` |
 | Feature table in the Pipeline (steps 5-6: QC, filter bar, `PIPET` with `TPTAB` and expanded row `TPRIGA`) | `docs/agenti/mzfeat-table-view.md` |
 | table, ids and samples (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-table.md` |
 | tests and measurements (area: HR feature pipeline in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-tests.md` |
@@ -153,7 +153,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progress.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-mass.md` |
 | target list over many files (`quant.targets`, `quant targets`: one sweep per file, `peak auto-lr` engine, flags, `--offset auto`, `--rt-ref`, `quant-targets-log/1`; `quant union` and step `features.union`: one list for many series, `union/1`, `rt_warp`, AU-4) | `docs/agenti/quant-targets.md` |
-| `raw info` / `raw cache` / `raw xic`: what a raw file holds and whether a peak is there (`raw-info/1`, `raw-cache/1`, `raw-xic/1`, `raw-plan/1`: grid, ion quantum, offset, cache, verdicts with ion counts; routes `/api/rawinfo`, `/api/rawxic`) | `docs/agenti/raw-access.md` |
+| `raw info` / `raw cache` / `raw xic` / `raw scan`: what a raw file holds, whether a peak is there, what a window holds (`raw-info/1`, `raw-cache/1`, `raw-xic/1`, `raw-scan/1`, `raw-plan/1`; routes `/api/rawinfo`, `/api/rawxic`, `/api/rawscan`) | `docs/agenti/raw-access.md` |
 | `.raw` → mzML conversion: bench `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, starting points V1-V9, causes of D8 and D11, synthetic dense case, parallel encoding (`convert_times`) | `docs/agenti/raw-mzml.md` |
 | register of raw-file fields: extracted or declared ("no loss" rule) | `docs/agenti/raw-not-extracted.md` |
 | validation on experimental sites and discarded experiments (area: parent reactivity engine (crates/mzlab-chem, .wasm chem,…) | `docs/agenti/reactivity-studies.md` |
@@ -191,7 +191,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | chemical background of the TIC/BPC (persistent background ions, per-ion baseline, quiet window, blank, excluded m/z windows: `ticbg.rs`, `api/tic_background`, `mzlab-cli trace background`) | `docs/agenti/tic-background.md` |
 | provisional TIC: zoom/pan of the RT axis while the index is being built, window handoff to the first panel | `docs/agenti/tic-provisional.md` |
 | SIM/MRM transition table of a triple quadrupole (`chrom.transitions`, `transitions/`, per-sample integration, RT candidates, example presets) | `docs/agenti/transitions.md` |
-| value states of reported quantities (AU-3): `value_state.rs` and `value_word.rs` vocabulary (detected, forced, filled, below_loq, absent, na), `state` + S/N in concentrations, Dig detail, `peak auto-lr`, `peak table`, `chrom.transitions`, follow-ups | `docs/agenti/value-states.md` |
+| value states of quantities (AU-3): vocabulary (detected, forced, filled, below_loq, absent, na), `state` + S/N in concentrations, Dig, `peak`, `chrom.transitions`, `raw xic`, audit of surfaces, `quant.targets` shape gates `min_half`, `max_fwhm`, `max_asym` | `docs/agenti/value-states.md` |
 | .wasm ceilings: rules, where each ceiling and measurement lives (`tools/moduli/*.toml`), what costs most, move steps | `docs/agenti/wasm-caps.md` |
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |

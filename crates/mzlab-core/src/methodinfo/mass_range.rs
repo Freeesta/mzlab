@@ -76,17 +76,23 @@ pub(super) fn mass(x: f64) -> f64 {
     }
 }
 
-/// The experiment read by the counted grammar; a stream that does not hold the announced entries keeps no table (the `.wiff` reader refuses the sample).
-pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
+/// The experiment read by the counted grammar, and whether its stream is damaged (it does not hold the announced entries): a damaged stream keeps no
+/// table (the `.wiff` reader refuses the sample) and the method document reports it as `damaged`.
+pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> (Kind, bool) {
     let Ok(entries) = parse(d, n) else {
-        return if is_mrm {
+        let kind = if is_mrm {
             Kind::Mrm(Vec::new())
         } else {
             Kind::Scan {
                 range: None,
                 ce: Vec::new(),
+                ces: Vec::new(),
+                dp: Vec::new(),
+                precursor: None,
+                code: None,
             }
         };
+        return (kind, true);
     };
     let value = |e: &Entry, id: &str| {
         e.params
@@ -97,7 +103,7 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
     };
     if is_mrm {
         let p = |e: &Entry, id: &str| value(e, id).map(|v| round(v, 2));
-        return Kind::Mrm(
+        let rows = Kind::Mrm(
             entries
                 .iter()
                 .map(|e| Transition {
@@ -113,25 +119,39 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
                 })
                 .collect(),
         );
+        return (rows, false);
     }
-    let mut ce: Vec<f64> = Vec::new();
-    for v in entries
-        .iter()
-        .filter_map(|e| value(e, "CE"))
-        .map(|v| round(v, 2))
-    {
-        if !ce.contains(&v) {
-            ce.push(v);
+    // distinct values of a parameter over the ranges, sorted
+    let distinct = |id: &str| {
+        let mut v: Vec<f64> = Vec::new();
+        for x in entries
+            .iter()
+            .filter_map(|e| value(e, id))
+            .map(|v| round(v, 2))
+        {
+            if !v.contains(&x) {
+                v.push(x);
+            }
         }
-    }
-    crate::sortc::by(&mut ce, |a, b| a.total_cmp(b));
+        crate::sortc::by(&mut v, |a, b| a.total_cmp(b));
+        v
+    };
+    let (ce, ces, dp) = (distinct("CE"), distinct("CES"), distinct("DP"));
     // the scan covers the first range's start to the last range's stop
     let (a, b) = match (entries.first(), entries.last()) {
         (Some(f), Some(l)) => (f64::from(f.m0), f64::from(l.m1)),
         _ => (f64::NAN, f64::NAN),
     };
     let range = (10.0 <= a && a < b && b <= 3000.0).then(|| [round(a, 2), round(b, 2)]);
-    Kind::Scan { range, ce }
+    let kind = Kind::Scan {
+        range,
+        ce,
+        ces,
+        dp,
+        precursor: None,
+        code: None,
+    };
+    (kind, false)
 }
 
 /// The `n` entries of `d`, or why the stream does not hold exactly `n` entries of the grammar (the text goes in the `detail` of the error).

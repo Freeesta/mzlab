@@ -43,6 +43,7 @@ pub(crate) const VERDICT: &[&str] = &[
     "raw info",
     "raw cache",
     "raw xic",
+    "raw scan",
     "sample list",
     "sample import",
     "sample pair",

@@ -107,6 +107,11 @@ pub fn warning(n: &crate::convert::Notice) -> String {
     render_params(n.key, n.key, par)
 }
 
+/// A notice of the engine documents (`warnings` of `file method`) as the terminal line: «text (key)».
+pub(crate) fn notice_text(key: &str, params: Vec<(String, String)>) -> String {
+    render_params(key, key, params)
+}
+
 /// An entry of `method/1.warnings` (key and place) as the Method window says it: «text (key)», or «key: place» for a key without a text.
 pub(crate) fn method_note(key: &str, place: &str) -> String {
     match text_of(key) {

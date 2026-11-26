@@ -132,6 +132,9 @@ fn weak_whole_counts_have_their_counts_and_the_rule_that_decided() {
     let rows = v["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 3);
     assert_eq!(rows[0]["verdict"], "peak", "{}", rows[0]);
+    // the value state beside the verdict (docs/agenti/value-states.md): peak detected, nothing absent
+    assert_eq!(rows[0]["state"], "detected", "{}", rows[0]);
+    assert_eq!(rows[2]["state"], "absent", "{}", rows[2]);
     assert!(rows[0]["counts_gross"].as_f64().unwrap() > 10.0);
     assert!(rows[0]["sn_floor"].as_f64().unwrap() >= 3.0);
     assert!(rows[0]["rule"].as_str().unwrap().ends_with("-> peak"));
@@ -204,6 +207,19 @@ fn the_exits_are_pinned_and_every_error_is_an_error_document() {
         vec!["--mz", "200", "--rt", "6,4"],
         vec!["--mz", "200", "--rt", "4,6", "--da", "9"],
         vec!["--mz", "200", "--rt", "4,6", "--set", "nope=1"],
+        // the ion scale: a method value or a scan type without --ions, a scan type that does not exist, a time that is not positive
+        vec!["--mz", "200", "--rt", "4,6", "--set", "dwell_ms=5"],
+        vec!["--mz", "200", "--rt", "4,6", "--scan-type", "sim"],
+        vec!["--mz", "200", "--rt", "4,6", "--ions", "--scan-type", "ms"],
+        vec![
+            "--mz",
+            "200",
+            "--rt",
+            "4,6",
+            "--ions",
+            "--set",
+            "dwell_ms=0",
+        ],
     ] {
         let mut a = vec!["raw", "xic", "S_01.mzML"];
         a.extend(bad.iter().copied());

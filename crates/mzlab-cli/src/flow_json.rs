@@ -154,13 +154,19 @@ pub(crate) fn fail(err: &Error, msg: &str, hint: &str) -> Outcome {
     o
 }
 
-/// The hint of an invalid plan: a step with no wired `samples` input names the commands that write one (discoverability of the roles), else the general one.
+/// The hint of an invalid plan: a step with no wired `samples` input names the commands that write one, a parameter problem names `estimate` and `flow defaults`, else the general one.
 fn invalid_hint(problems: &[Problem]) -> String {
     let no_samples = problems
         .iter()
         .any(|p| p.port == "samples" && p.error_key == "err.flow.port.missing");
+    // a parameter out of range, of the wrong type or unknown: the values the data suggest and the limits are one call away
+    let params = problems
+        .iter()
+        .any(|p| p.error_key.starts_with("err.flow.param."));
     if no_samples {
         crate::samples_import::say("err.cli.samples.missing", &[])
+    } else if params {
+        "fix the plan in the Flow page or with --set; values measured on your files: mzlab-cli estimate FILE... --emit-set PLAN.json; limits and defaults: mzlab-cli flow defaults STEP".to_string()
     } else {
         "fix the plan in the Flow page or with --set".to_string()
     }

@@ -5,6 +5,6 @@ senza_default = true
 chiavi = { quanttargets = 30 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 221184
-misura = 210630
+tetto = 237568
+misura = 225377
 nota = "quant.targets of the Flow (a target list integrated over the .mzidx of every file), loaded only by its executor; a module of its own so that flowtab, finder-lr, untargeted and interp do not grow (inside them +7.6 % to +19.3 %), decided by the Coordinator; cap = measurement x 1.05 rounded to 4 KiB"

@@ -39,11 +39,16 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Parsed>, String> {
     Ok(Some((file.ok_or("items needs a file")?, out, no_points)))
 }
 
-fn io(e: std::io::Error) -> Error {
+pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<String> {
+/// The items a file opens as and the `method/1` document it carries (`None`: none, or too large to read from the header).
+/// The third member is the name of the sample read (empty for an mzML).
+pub(crate) fn open_all(
+    file: &PathBuf,
+    tmp: &std::path::Path,
+) -> Result<(Vec<mzlab_core::lr::OpenItem>, Option<String>, String)> {
     let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -57,20 +62,50 @@ fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<String
         mzlab_core::budget_auto::native_index_budget(),
     )?;
     let mut r = Routes::new(crate::open(&idx)?);
-    let items = if mzml {
+    let doc_max = mzlab_core::method_fit::DOC_MAX as u64;
+    if mzml {
         let f = File::open(file).map_err(io)?;
         let size = f.metadata().map_err(io)?.len();
-        mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(f, size), &name, &sample)?
-    } else {
-        let mut l = mzlab_lettori::open(
-            crate::flow_set::file_set(file)?,
-            &mzlab_core::readers::Limits::desktop(),
-        )?;
-        let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), 0)?;
-        let size = shell.len() as u64;
-        mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(shell, size), &name, &sample)?
-    };
-    document(&items, no_points)
+        let mut m = Mzml::new(f, size);
+        let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, &name, &sample)?;
+        let method = m.method(&name, doc_max)?;
+        return Ok((items, method, String::new()));
+    }
+    let mut l = mzlab_lettori::open(
+        crate::flow_set::file_set(file)?,
+        &mzlab_core::readers::Limits::desktop(),
+    )?;
+    let sample_name = l
+        .samples()
+        .first()
+        .map_or(String::new(), |s| s.name.clone());
+    let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), 0)?;
+    let size = shell.len() as u64;
+    let mut m = Mzml::new(shell, size);
+    let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, &name, &sample)?;
+    let method = m.method(&name, doc_max)?;
+    Ok((items, method, sample_name))
+}
+
+/// The `items/1` text and the stderr notes: a mass in the file or sample name that no precursor has (the numbers, never a blocked result), and the
+/// pointer to `file method`.
+fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<(String, String)> {
+    let (items, method, sample_name) = open_all(file, tmp)?;
+    let doc = document(&items, no_points)?;
+    let name = file
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let mut notes = String::new();
+    if let Ok(v) = mzlab_core::json::parse(doc.as_bytes()) {
+        // the same precursor set as `file method` (the method's fixed precursors and the scans')
+        let precs = mzlab_core::filemethod::precursors_of(method.as_deref(), &v);
+        let warns =
+            mzlab_core::filemethod::name_warnings(&[name.as_str(), sample_name.as_str()], &precs);
+        notes +=
+            &crate::method_cmd::warning_lines(&format!("{{\"warnings\":[{}]}}", warns.join(",")));
+    }
+    notes += &crate::method_cmd::hint_line(&file.display().to_string(), "");
+    Ok((doc, notes))
 }
 
 /// `info` without its `ms2_events` (the only member that grows with the run: one point per MS2); every other member keeps its bytes.
@@ -123,7 +158,13 @@ pub fn run(args: Vec<String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail_error(&e),
-        Ok(t) => crate::emit(t + "\n", &out),
+        Ok((t, notes)) => {
+            let mut o = crate::emit(t + "\n", &out);
+            if o.code == 0 {
+                o.stderr = notes;
+            }
+            o
+        }
     }
 }
 
