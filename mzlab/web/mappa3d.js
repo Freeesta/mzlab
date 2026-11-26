@@ -8,7 +8,7 @@
 /** @param {string} k @param {Record<string, any>} [o] */
 const T = (k, o) => I18N.t(k, o);
 const PREF_KEY = "d3";                                   // inside MAPPA.prefs ("qqq.map")
-const REDUCED = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+const REDUCED = () => FRAME.calm();
 const SMALL = () => !!(window.MZLAB_PHONE || (matchMedia("(pointer:coarse)").matches && Math.min(screen.width, screen.height) < 900) || (/** @type {any} */ (navigator).deviceMemory && /** @type {any} */ (navigator).deviceMemory <= 4));
 const GRID = () => SMALL() ? 512 : 1024;                 // cells per side
 const STICKS = () => SMALL() ? 50000 : 200000;           // most points drawn as sticks

@@ -23,7 +23,7 @@ export function rimanente(frac, ms, min = 0.05) { return frac == null || frac < 
 export function avanza(box, o) {
   /** @param {HTMLElement} e */
   const fadeOut = e => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { e.remove(); return; }
+    if (FRAME.calm()) { e.remove(); return; }
     e.style.transition = "opacity .5s"; e.style.opacity = "0"; setTimeout(() => e.remove(), 550);
   };
   const w = /** @type {any} */ (globalThis), T = o.t || ((/** @type {string} */ k, /** @type {any} */ p = undefined) => w.I18N.t(k, p)), esc = (/** @type {any} */ s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c);

@@ -198,6 +198,23 @@ try:
             run = pg.evaluate("document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming().iterations === Infinity).map(a => (a.effect.target && (a.effect.target.id || a.effect.target.className)) + ':' + (a.animationName || a.transitionProperty))")
             assert not run, run
         step("prefers-reduced-motion: no looping animation after the actions", motion)
+        def scrolls():
+            # every smooth scroll asks FRAME.behavior(): instant for the system setting and for the in-app switch alone, smooth for neither
+            pg.evaluate("""() => { window.__sb = []; const o = Element.prototype.scrollIntoView, w = window.scrollTo;
+              Element.prototype.scrollIntoView = function (a) { __sb.push(a && a.behavior); return o.call(this, a); };
+              window.scrollTo = function (a, b) { __sb.push(a && a.behavior); return w.call(window, a, b); }; }""")
+            def seen():
+                pg.evaluate("__sb.length = 0; reveal(E.panels[0]); tableToView()"); wait_for_js(pg, "__sb.length >= 2")
+                return pg.evaluate("[...new Set(__sb)]")
+            try:
+                assert pg.evaluate("FRAME.behavior()") == "auto" and seen() == ["auto"], "system setting"
+                pg.emulate_media(reduced_motion="no-preference")
+                assert pg.evaluate("FRAME.behavior()") == "smooth" and seen() == ["smooth"], "no setting, no switch"
+                pg.evaluate("document.documentElement.setAttribute('data-a11y-reduce', '')")
+                assert pg.evaluate("FRAME.behavior()") == "auto" and seen() == ["auto"], "in-app switch alone"
+            finally:
+                pg.evaluate("document.documentElement.removeAttribute('data-a11y-reduce')"); pg.emulate_media(reduced_motion="reduce")
+        step("reduced motion (system setting or in-app switch): scrolls are instant", scrolls)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

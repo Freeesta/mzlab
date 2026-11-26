@@ -28,7 +28,7 @@ This document summarizes the accessibility conformance status (WCAG 2.1 level AA
 - **Layout adaptation and Reflow (WCAG 1.4.10)**:
   - Reflow support down to 320 CSS px (equivalent to 400% zoom on a standard desktop viewport) without horizontal scrolling of the main page.
 - **Reduced motion (WCAG 2.3.3)**:
-  - Respect for the `prefers-reduced-motion: reduce` media query and for the manual "Reduce animations" setting: CSS animations and transitions disabled or zeroed, spinners stopped, physics simulations started paused.
+  - Respect for the `prefers-reduced-motion: reduce` media query and for the manual "Reduce animations" setting: CSS animations and transitions disabled or zeroed, spinners stopped, physics simulations started paused. Scripts ask `FRAME.calm()` (`frame.js`): the system setting or the in-app switch; smooth scrolls take `FRAME.behavior()`.
 - **Touch target (WCAG 2.5.8)**:
   - Touch targets and panel controls of a minimum size of at least 24×24 px (expanding to 40–44 px on touch/coarse pointer devices).
 

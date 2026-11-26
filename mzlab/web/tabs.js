@@ -10,7 +10,7 @@ E.curBy = {};
 
 // the page goes to the first panel of an experiment type
 function scrollToBlock(/** @type {string} */ t) {
-  setTimeout(() => { const f = E.panels.filter((/** @type {Pannello} */ q) => q.tab === t && q.el).sort((/** @type {Pannello} */ u, /** @type {Pannello} */ v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 500);
+  setTimeout(() => { const f = E.panels.filter((/** @type {Pannello} */ q) => q.tab === t && q.el).sort((/** @type {Pannello} */ u, /** @type {Pannello} */ v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: FRAME.behavior() }); }, 500);
 }
 
 /** @param {string} t @param {boolean} [quiet] @param {string} [motivo] */
@@ -256,7 +256,7 @@ async function ms2Spectrum(/** @type {number | string} */ prec) {
 }
 function ms2Goto(/** @type {number | string} */ prec) {
   const c = ms2PairOf(prec); if (!c) return ms2Switch(/** @type {number} */ (prec));
-  setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - hdrH() - 12, behavior: "smooth" });
+  setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - hdrH() - 12, behavior: FRAME.behavior() });
 }
 // `show` = false keeps the other files hidden (the file just shown alone, ms2Follow)
 function ms2Switch(/** @type {number} */ prec, show = true) {

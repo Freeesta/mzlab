@@ -87,7 +87,7 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
   if (fsPanel()) return;
   const q = tabPanels().filter((/** @type {Pannello} */ x) => x.el).sort(LAYOUT.ordine)[Number(e.key) - 1]; if (!q) return;
-  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
+  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: FRAME.behavior() });
 });
 function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.ARRANGE) ARRANGE.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), tabPanels().length ? 0 : 520) + "px"; pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
@@ -119,9 +119,9 @@ const apply = (/** @type {Pannello} */ p) => { p.el.style.left = p.x + "px"; p.e
 // a panel just asked for may be below the fold: the page scrolls to it and its border flashes (only the scroll under reduced motion)
 function reveal(/** @type {Pannello} */ p) {
   if (!p || !p.el) return p;
-  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const calm = FRAME.calm();
   FRAME.next(() => FRAME.next(() => {
-    p.el.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
+    p.el.scrollIntoView({ block: "nearest", behavior: FRAME.behavior() });
     if (!calm) { p.el.classList.remove("flash"); void p.el.offsetWidth; p.el.classList.add("flash"); setTimeout(() => p.el.classList.remove("flash"), 1100); }
   }));
   return p;
