@@ -1092,11 +1092,25 @@
           {
             "properties":{
               "step":{"const":"features.estimate@1"},
-              "name":{"enum":["polarity","axis"]},
+              "name":{"enum":["polarity","axis","hint_between","hint_split"]},
               "value":{
                 "anyOf":[
                   {"enum":[1,-1,0],"default":1,"description":"1 positive, -1 negative, 0 all MS1 scans"},
-                  {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"}
+                  {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.1,
+                    "description":"Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows lies between the nominal height and the height in force"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.05,
+                    "description":"Unit axis only: the estimate names the nominal profile when at least this share of the candidate rows is one ion in two rows that the grid reach of the profile would merge"
+                  }
                 ]
               }
             },
