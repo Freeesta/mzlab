@@ -37,6 +37,8 @@ pub mod scores;
 pub mod search;
 pub mod sha256;
 pub mod spec;
+#[cfg(feature = "flow")]
+pub mod speccmp;
 pub mod stein;
 pub mod topk;
 pub mod util;
