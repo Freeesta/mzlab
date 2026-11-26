@@ -1,0 +1,93 @@
+# Rolling prebuilt mzlab-cli (Linux x86_64) for every commit of main, so a worker chat or an agent downloads a binary instead of compiling for minutes.
+# NOT a release: the assets live in a pre-release called `cli-prebuilt` (a pre-release never reaches releases/latest, so tools/install.sh, the app's update notice and
+# release.yml, which reacts only to `v*` tags, never see it). The tag is created once and never moves. Fetch with tools/cli_prebuilt.py (docs/agenti/cli-agenti.md).
+# The binary is the one release.yml ships (static musl, profile cli) and passes the same smoke test; a PR never runs this workflow, only the push to main does.
+name: cli-main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# one at a time and never cancelled, so a finished build is always published; a newer push waits behind it (GitHub keeps only the newest waiting run)
+concurrency:
+  group: cli-main
+  cancel-in-progress: false
+
+env:
+  TARGET: x86_64-unknown-linux-musl
+
+jobs:
+  build:
+    name: mzlab-cli Linux x86_64 (static musl)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml) + musl target and C compiler (ring)
+        run: |
+          rustup show
+          rustup target add "$TARGET"
+          sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools
+      - name: Build (profile cli, as in release.yml)
+        run: |
+          export "CC_${TARGET//-/_}=musl-gcc"
+          cargo build --locked --profile cli --target "$TARGET" -p mzlab-cli
+      - name: Smoke test (static executable, --version carries this commit, tools/cli_smoke.py)
+        run: |
+          b="target/$TARGET/cli/mzlab-cli"
+          file "$b" | grep -E 'statically linked|static-pie'
+          "$b" --version --json | python3 -c 'import json, os, sys; d = json.load(sys.stdin); assert d["commit"] == os.environ["GITHUB_SHA"], d'
+          python3 tools/cli_smoke.py "$b"
+      - name: Name the binary after the commit and write its SHA-256 file
+        run: |
+          n="mzlab-cli-${GITHUB_SHA:0:12}-linux-x86_64"
+          mkdir out
+          cp "target/$TARGET/cli/mzlab-cli" "out/$n"
+          (cd out && sha256sum "$n" > "$n.sha256" && cat "$n.sha256")
+          echo "$GITHUB_SHA" > out/LATEST
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cli-main
+          path: out/*
+          retention-days: 1
+          if-no-files-found: error
+
+  # The only job with write access: it runs on main only, executes no repository code (the binary is not run here) and uses the job's own GITHUB_TOKEN, no secret.
+  publish:
+    name: pre-release cli-prebuilt
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: cli-prebuilt
+      KEEP: "10"   # commits kept in the pre-release; older binaries are deleted
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cli-main
+          path: out
+      - name: Create the pre-release once (a pre-release, never "latest", with a note that it is not a release)
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "mzlab-cli built from main (NOT a release)" \
+            --notes "Not a release of mzLab. Rolling builds of mzlab-cli for Linux x86_64, one per commit of main, for agents and CI: fetch them with tools/cli_prebuilt.py (docs/agenti/cli-agenti.md). The tag does not move and its source archive is meaningless. For an installer or a release, see the Releases page."
+      - name: Upload this commit (the newest LATEST replaces the old one)
+        run: gh release upload "$TAG" out/* --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Delete the binaries of commits older than the newest KEEP
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '[.assets[] | select(.name | startswith("mzlab-cli-") and endswith("-linux-x86_64"))] | sort_by(.createdAt) | reverse | .['"$KEEP"':][].name' |
+          while read -r n; do
+            echo "delete $n"
+            for a in "$n" "$n.sha256"; do gh release delete-asset "$TAG" "$a" --yes --repo "$GITHUB_REPOSITORY" || echo "::warning::could not delete the old asset $a"; done
+          done
