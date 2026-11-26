@@ -126,7 +126,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("sim snr", "peak table"),
     ("integrate peaks", "peak table"),
     (
-        "convert cps to ions with the dwell or fill time of the scan type",
+        "convert cps to ions with the dwell or fill time of the scan type read from the method of the file",
         "raw xic",
     ),
     (
@@ -151,6 +151,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("how many ions", "raw xic"),
     ("sum a split profile fragment into one nominal mass bin", "spectrum get"),
     ("cosine of two ms2 spectra", "spectrum compare"),
+    ("compare ms2 spectra from different calibrations", "spectrum compare"),
 ];
 
 /// Short queries where a one-at-a-time command scores the same as the one call for many: the one call comes first.

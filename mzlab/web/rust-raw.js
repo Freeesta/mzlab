@@ -5,18 +5,32 @@
 
 import { load } from "./rust-msngrafo.js";
 import * as ARCH from "./archivio.js";
+import { ionFacts } from "./rust-filemethod.js";
 
 /**
  * The answer of `Routes::raw_info_route` or, for `/api/rawxic` and `/api/rawscan`, `raw_xic_route` and `raw_scan_route` ("" = no index for the slot); a failure is thrown as the JSON string
  * `{error_key, params}` of the module.
  * @param {{slot: number, path?: string, query?: string}} m
- * @param {{nameOf: (slot: number) => string | undefined, polOf: (slot: number) => number, readerFor: (blob: Blob, held?: string[]) => any}} env
+ * `/api/rawxic?ions=1` also takes the ion-scale values of the file's own `method/1` (`methodOf`: the `lr_metodo` answer `{info: {source, method}}`) for each value the query leaves out, as `mzlab-cli raw xic --ions` does.
+ * @param {{nameOf: (slot: number) => string | undefined, polOf: (slot: number) => number, readerFor: (blob: Blob, held?: string[]) => any, methodOf?: (name: string) => Promise<any>}} env
  */
-export async function rawInfo(m, { nameOf, polOf, readerFor }) {
+export async function rawInfo(m, { nameOf, polOf, readerFor, methodOf }) {
   const name = nameOf(m.slot), blob = name ? await ARCH.get("idx", name + ".mzidx") : null;
   if (!blob || !name) return "";
   const key = ({ "/api/rawxic": "rawxic", "/api/specsum": "rawxic", "/api/rawscan": "rawscan", "/api/specpeak": "specpeak" })[m.path ?? ""] ?? "raw";
   const mod = await load(key);
   const ask = ({ raw: mod.raw_info, rawxic: m.path === "/api/specsum" ? mod.spec_sum : mod.raw_xic, rawscan: mod.raw_scan, specpeak: mod.spec_peak })[key];
-  return ask(blob.size, readerFor(blob, ["idx", name + ".mzidx"]), polOf(m.slot), m.query || "");
+  let query = m.query || "";
+  if (key === "rawxic" && m.path === "/api/rawxic" && methodOf) query = await withMethod(query, () => methodOf(name));
+  return ask(blob.size, readerFor(blob, ["idx", name + ".mzidx"]), polOf(m.slot), query);
+}
+
+/** The query with the method values from `methodOf` (the `lr_metodo` answer `{info: {source, method}}`, asked only with `ions=1`) for every ion-scale value it leaves out (a value in the query wins); unchanged without `ions=1`. */
+async function withMethod(query, methodOf) {
+  const q = new URLSearchParams(query);
+  if (q.get("ions") !== "1") return query;
+  const doc = JSON.parse((await methodOf()).info).method, method = doc ? JSON.stringify(doc) : "";
+  const got = JSON.parse(await ionFacts({ method, scan_type: q.get("scan_type") })).query;
+  const add = got.split("&").filter(kv => kv && !q.has(kv.split("=")[0]));
+  return add.length ? query + (query && query !== "?" ? "&" : "") + add.join("&") : query;
 }

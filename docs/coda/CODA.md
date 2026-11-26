@@ -17,11 +17,10 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 ## Queue
 | id | prompt file | needs first | notes |
 |---|---|---|---|
-| ION-COUNTS-METHOD | `docs/coda/prompt/ION-COUNTS-METHOD.md` | - | correctness: read the fill time, dwell and Q1 scan values of `raw xic --ions` from the method itself, in the CLI, the app and the site |
 | ION-COUNTS-TRACE | `docs/coda/prompt/ION-COUNTS-TRACE.md` | - | opt-in ion-scale keys for `trace xic` and the peak outputs, with the factor of `ionscale` |
-| NOMINAL-PANEL | `docs/coda/prompt/NOMINAL-PANEL.md` | - | the Pipeline panel of the site offers the `nominal` profile of `features.detect` (a choice beside the unit-resolution switches); the recipe text carries `{"preset":"nominal"}` and the page, app and CLI give the same bytes |
+| ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
-| NOMINAL-HINT-PANEL | `docs/coda/prompt/NOMINAL-HINT-PANEL.md` | NOMINAL-PANEL | the Pipeline panel of the site shows the nominal-resolution hint (shares of rows between the two heights and of split ions, from the `nominal` member of `estimates/1`) beside its `nominal` profile choice; the user decides |
+| NOMINAL-HINT-PANEL | `docs/coda/prompt/NOMINAL-HINT-PANEL.md` | - | the Pipeline panel of the site shows the nominal-resolution hint (shares of rows between the two heights and of split ions, from the `nominal` member of `estimates/1`) beside its `nominal` profile choice; the user decides |
 | FILL-LEAN-CENTROID | `docs/coda/prompt/FILL-LEAN-CENTROID.md` | - | the page fills a centroided unit-resolution series on whole indexes; a lean index with the profile flag from the file facts would use less memory |
 | MS2-PEAK-HR | `docs/coda/prompt/MS2-PEAK-HR.md` | - | lost data: `spectrum get --peak auto` on profile and high-resolution levels (now `window_only`, no spectrum) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
@@ -29,7 +28,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES | `docs/coda/prompt/RAW-ISOTOPES.md` | - | lost data: `raw isotopes` (AU-18, study §7) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | RAW-ISOTOPES | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-OFFSET | `docs/coda/prompt/SPECTRUM-COMPARE-OFFSET.md` | - | `spectrum compare --a-mz-offset` / `--b-mz-offset`: the m/z offset of each side taken off before the nominal bins |
 | SPECTRUM-COMPARE-SITE | `docs/coda/prompt/SPECTRUM-COMPARE-SITE.md` | - | site: a card that compares two selected MS2 scans with `spectrum_compare` (`librerie`) and shows the matched ions |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |

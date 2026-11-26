@@ -149,6 +149,7 @@ fn the_minimum_height_is_ten_times_the_mode_of_the_noise() {
         da_n: 0,
         dead: None,
         defect: None,
+        unit: false,
     };
     let f = crate::table::FileFeatures::default();
     let with = preview_json(
@@ -192,10 +193,34 @@ fn an_estimate_at_its_ceiling_says_so() {
         da_n: 40,
         dead: None,
         defect: None,
+        unit: false,
     };
     let f = crate::table::FileFeatures::default();
     let capped = preview_json(&est(wide, DA_MAX), &f, &[]);
     assert_eq!(capped.matches("\"capped\":true").count(), 2, "{capped}");
     let free = preview_json(&est(narrow, DA_MAX / 2.0), &f, &[]);
     assert!(!free.contains("capped"), "{free}");
+}
+
+#[test]
+fn the_preview_says_unit_resolution_only_on_the_da_axis() {
+    let est = |unit| Estimate {
+        intensities: Hist::new(),
+        noise: None,
+        ppm: None,
+        ppm_sigma: 0.0,
+        ppm_n: 0,
+        fwhm: None,
+        fwhm_n: 0,
+        rt_tol: None,
+        da: None,
+        da_sigma: 0.0,
+        da_n: 0,
+        dead: None,
+        defect: None,
+        unit,
+    };
+    let f = crate::table::FileFeatures::default();
+    assert!(preview_json(&est(true), &f, &[]).contains("\"unit\":true"));
+    assert!(!preview_json(&est(false), &f, &[]).contains("\"unit\""));
 }

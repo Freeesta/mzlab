@@ -53,6 +53,9 @@ The method of ONE sample (instrument, source, experiments, LC, detectors, log) a
 
 - Shimadzu (`.qgd`, `.lcd`: `crates/mzlab-lettori/src/shimadzu/meta.rs`, `documento`): `instrument` from the name in the file, `sample` from `File Property`/properties XML, `ms` from the events seen (SIM/scan with m/z range) and from the MRM transitions; operator, user and paths are `identity`: they stay in the reader document and not in the `userParam` of the mzML. The rest, undecoded, is in `warnings` (`meta.notDecoded`); details in `docs/agenti/shimadzu.md`.
 
+## Ion-scale values
+`ionfacts.rs` (`Facts::from_method`, `read_json`) reads from the document what `raw xic --ions` needs (`raw-access.md`): `ms.periods[].experiments[].transitions[].dwell_ms`, equal in every experiment (several different values give none and say where each is). No label of the fill time of a trap scan or of the scan time, step and range of a Q1 scan is known, so none is read.
+
 ## Matching `.wiff` and mzML
 The ProteoWizard mzML have in `<sourceFile>` a SHA-1 cvParam (MS:1000569) equal to that of the `.wiff` (the name in the mzML may differ from the real file); the sample comes from the `nativeID` `sample=N`. `mzml_sources` reads the first MB of the mzML; `sha1_file` computes the fingerprint of the `.wiff`. A `.wiff` loaded alone with mzML already open with the same SHA-1 gives each its own document (note `load.note.wiffMethod`); without a match the error `err.file.wiffNoScan` remains.
 

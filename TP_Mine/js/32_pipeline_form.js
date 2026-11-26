@@ -80,8 +80,20 @@
     sync();
     return { sync };
   }
+  /** the `nominal` profile of `features.detect` as the descriptor writes it ({title, params}), null when the descriptor has none: the label, the hint and the numbers all come from it */
+  function nominal(/** @type {any[]} */ steps) {
+    const s = steps.find(x => x.id === "features.detect"), n = s && s.presets && s.presets.nominal;
+    return n && n.params ? { title: String(n.title), params: n.params } : null;
+  }
+  /** the switch of the profile (hidden until a file at unit resolution is previewed) with the values it writes as its hint */
+  function nominalHtml(/** @type {any[]} */ steps) {
+    const n = nominal(steps);
+    if (!n) return "";
+    const why = Object.entries(n.params).map(([k, v]) => `${k} ${v}`).join(", ");
+    return `<div class="pf" id="pipe-nom" hidden><label class="ck" for="pipe-nominal"><input id="pipe-nominal" type="checkbox" aria-describedby="pipe-nominal-why">${esc(n.title)}</label><span class="why" id="pipe-nominal-why">Writes: ${esc(why)}</span></div>`;
+  }
   /** the values of the descriptors that the panel defaults must equal (the e2e compares them with PIPE.DEF) */
   function defaults(/** @type {any[]} */ steps) { const o = /** @type {Record<string, any>} */ ({}); for (const r of resolve(steps) || []) o[r.m.id] = r.p ? r.p.default : true; return o; }
 
-  /** @type {any} */ (window).PIPEFORM = { MAP, css: CSS, load, html, mount, defaults };
+  /** @type {any} */ (window).PIPEFORM = { MAP, css: CSS, load, html, mount, defaults, nominal, nominalHtml };
 })();

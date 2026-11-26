@@ -12,7 +12,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("file info", "inventory what kind experiment sim mrm full scan", &["file channels", "file list", "file method"]),
     r("raw info", "profile centroid label ion counting quantum grid nominal stepped mass offset what kind of data", &["file info", "raw cache", "trace xic"]),
     r("raw cache", "index cache build check prebuild entries", &["file index", "raw info"]),
-    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type", &["quant targets", "trace xic", "raw info"])
+    r("raw xic", "is this real peak or noise blip verdict state offset calibrate mz-offset peak trace nothing detected forced absent present at this mass time many ions counted counts poisson detection limit upper limit carryover verdict cps ions factor dwell fill time scan type read from the method of the file", &["quant targets", "trace xic", "raw info"])
         .bulk("mzlab-cli raw xic FILE... --mz M1,M2,... --rt A,B: every mass in every file, one call; a list with an RT window per row: quant targets"),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
     r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
@@ -46,7 +46,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass peak apex fwhm background sides", &["spectrum list", "raw xic", "spectra.centroid"])
         .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),
-    r("spectrum compare", "compare two ms2 spectra cosine similarity match sample against standard reference library fragments matched ions explained unmatched collision energy same ce product ion spectrum identity confirm", &["spectrum get", "spectrum list", "spectra.match"]).ex("mzlab-cli spectrum compare sample.mzML std.mzML --a-rt 6.2 --b-rt 6.3 --a-precursor 253.1"),
+    r("spectrum compare", "compare two ms2 spectra cosine similarity match sample against standard reference library fragments matched ions explained unmatched collision energy same ce product ion spectrum identity confirm calibration", &["spectrum get", "spectrum list", "spectra.match"]).ex("mzlab-cli spectrum compare sample.mzML std.mzML --a-rt 6.2 --b-rt 6.3 --a-precursor 253.1"),
     r("ion pattern", "isotope pattern chlorine bromine", &["features.group", "ion mz"]),
     r("ion match", "adduct neutral loss contaminant", &["features.group", "features.companions", "ion mz"]),
     r("mol draw", "draw depict structure picture image figure svg png cdxml ket molfile smiles 2d", &["structure.render", "tp.network", "mol export"])
