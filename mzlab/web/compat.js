@@ -79,7 +79,7 @@ export function freeAccept(g, i) {
 export function copyNow(g, parts) {
   const cb = g.navigator && g.navigator.clipboard;
   if (!cb) return Promise.reject(new g.DOMException("no clipboard in this browser", "NotAllowedError"));
-  const plain = () => Promise.resolve(parts["text/plain"]).then(t => cb.writeText(String(t)));
+  const plain = () => Promise.resolve(parts["text/plain"]).then(t => cb.writeText(String(t)).catch((/** @type {any} */ e) => { if (copyCommand(g, String(t))) return; throw e; }));      // own fallback: also when the clipboard object is not the wrapped one
   if (typeof g.ClipboardItem !== "function" || typeof cb.write !== "function") return "text/plain" in parts ? plain() : Promise.reject(new g.DOMException("no ClipboardItem", "NotAllowedError"));
   /** @type {Promise<void>} */ let w;
   try {
