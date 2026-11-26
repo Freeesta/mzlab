@@ -76,7 +76,7 @@ fn num(q: &Query, k: &str) -> Result<Option<f64>> {
 fn range(q: &Query, k: &str, d: f64, lo: f64, hi: f64) -> Result<f64> {
     match num(q, k)? {
         None => Ok(d),
-        Some(x) if x >= lo && x <= hi => Ok(x),
+        Some(x) if (lo..=hi).contains(&x) => Ok(x),
         Some(x) => Err(bad(k, &x.to_string())),
     }
 }
@@ -84,7 +84,7 @@ fn range(q: &Query, k: &str, d: f64, lo: f64, hi: f64) -> Result<f64> {
 fn count(q: &Query, k: &str, d: usize) -> Result<usize> {
     match num(q, k)? {
         None => Ok(d),
-        Some(x) if x >= 1.0 && x <= 1e6 && x.fract() == 0.0 => Ok(x as usize),
+        Some(x) if (1.0..=1e6).contains(&x) && x.fract() == 0.0 => Ok(x as usize),
         Some(x) => Err(bad(k, &x.to_string())),
     }
 }
