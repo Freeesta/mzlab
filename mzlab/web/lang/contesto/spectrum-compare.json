@@ -1,10 +1,12 @@
 {
   "spcmp.error": "Message of the card that compares two MS2 spectra when the spectrum or the comparison fails; {message} = the engine's text.",
   "spcmp.off.apex": "Evidence of an automatic m/z offset in the comparison card; {rt} = retention time in minutes of the apex of the known ion.",
-  "spcmp.off.auto": "First part of the evidence of an automatic m/z offset in the comparison card; {mz} = the m/z of the known ion it was measured on.",
+  "spcmp.off.auto": "Line of the offsets list of the MS2 comparison card for a side whose offset was measured on a known ion; {side} = A or B, {da} = the offset in Da, {mz} = m/z of the ion, {status} = found, found but wide, or not found, {detail} = the evidence (apex time, spread, scans, signal).",
+  "spcmp.off.autoNear": "As the automatic-offset line when a time was given; {side} = A or B, {da} = the offset in Da, {mz} = m/z of the ion, {rt} = the time in minutes it was looked for near, {status} = found, found but wide, or not found, {detail} = the evidence.",
   "spcmp.off.scans": "Evidence of an automatic m/z offset in the comparison card; {n} = number of scans the offset was measured on.",
   "spcmp.off.snr": "Evidence of an automatic m/z offset in the comparison card; {snr} = apex signal as a multiple of the median of the ion's trace.",
   "spcmp.off.spread": "Evidence of an automatic m/z offset in the comparison card; {da} = spread of the ion's m/z across its scans in Da.",
-  "spcmp.off.used": "Offset a side of the MS2 comparison card used, in the list of offsets; {da} = the offset in Da.",
+  "spcmp.off.used": "Line of the offsets list of the MS2 comparison card for a side with a fixed offset; {side} = A or B, {da} = the offset in Da.",
+  "spcmp.off.warned": "An offset line of the MS2 comparison card followed by the engine's warning about it; {line} = the line, {warn} = the warning text.",
   "spcmp.summary": "Line under the cosine of the card that compares two MS2 spectra; {n} = number of matched bins, {tol} = tolerance between bin centres in Da, {ce} = collision energy tolerance in eV."
 }

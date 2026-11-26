@@ -70,13 +70,14 @@ function show(doc) {
   const un = (/** @type {any[]} */ rows) => rows.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mz")}</th><th class="num">${t("spcmp.col.int")}</th></tr>${rows.map(r => `<tr><td class="num">${text(r.mz)}</td><td class="num">${text(r.y)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`;
   /** the offset a side used: Da, and for an `auto` estimate the ion, the scans, the spread and the status, with the engine's warning text */
   const evid = (/** @type {string} */ s) => {
-    const x = side(s), e = x.mz_offset || {}, da = `${t("spcmp.off.used", { da: text(x.mz_offset_da) })}`;
-    if (e.mode !== "auto") return `<li><b>${s.toUpperCase()}</b> ${EHt(da)}</li>`;
+    const x = side(s), e = x.mz_offset || {}, who = s.toUpperCase(), da = text(x.mz_offset_da);
+    if (e.mode !== "auto") return `<li>${EHt(t("spcmp.off.used", { side: who, da }))}</li>`;
     const w = e.status === "not_found" ? "warn.mz.offset.notFound" : e.status === "wide" ? "warn.mz.offset.wide" : "";
-    const rt = e.rt_min == null ? "" : ` @ ${text(e.rt_min)} ${t("spcmp.unit.min")}`;
-    const at = e.apex_rt_min == null ? "" : `${t("spcmp.off.apex", { rt: text(e.apex_rt_min) })}, `;
-    const sp = e.spread_da == null ? "" : `${t("spcmp.off.spread", { da: text(e.spread_da) })}, `;
-    return `<li${w ? ' class="warn"' : ""}><b>${s.toUpperCase()}</b> ${EHt(da)} · ${EHt(t("spcmp.off.auto", { mz: text(e.ion_mz) }) + rt)}: ${EHt(t(e.status === "ok" ? "spcmp.off.status.ok" : e.status === "wide" ? "spcmp.off.status.wide" : "spcmp.off.status.missing"))}, ${EHt(at + sp + t("spcmp.off.scans", { n: e.n_scans }) + ", " + t("spcmp.off.snr", { snr: text(e.snr) }))}${w ? ` — ${EHt(t(w))}` : ""}</li>`;
+    const detail = [e.apex_rt_min == null ? "" : t("spcmp.off.apex", { rt: text(e.apex_rt_min) }), e.spread_da == null ? "" : t("spcmp.off.spread", { da: text(e.spread_da) }),
+      t("spcmp.off.scans", { n: e.n_scans }), t("spcmp.off.snr", { snr: text(e.snr) })].filter(Boolean).join(t("spcmp.off.sep"));
+    const status = t(e.status === "ok" ? "spcmp.off.status.ok" : e.status === "wide" ? "spcmp.off.status.wide" : "spcmp.off.status.missing");
+    const line = t(e.rt_min == null ? "spcmp.off.auto" : "spcmp.off.autoNear", { side: who, da, mz: text(e.ion_mz), rt: e.rt_min == null ? "" : text(e.rt_min), status, detail });
+    return `<li${w ? ' class="warn"' : ""}>${EHt(w ? t("spcmp.off.warned", { line, warn: t(w) }) : line)}</li>`;
   };
   const p = doc.params, dflt = (/** @type {string} */ k) => (p.default.includes(k) ? ` (${t("spcmp.default")})` : "");
   return `<div class="cos" role="status">${t("spcmp.cosine")} ${doc.cosine.toFixed(4)}</div>
@@ -102,7 +103,7 @@ function open(p) {
   const sideHtml = (s, f) => h`<fieldset data-s="${s}"><legend>${s === "a" ? t("spcmp.side.a") : t("spcmp.side.b")}</legend>
       <label>${t("spcmp.file")} <select data-f="file">${files.map((/** @type {any} */ x) => raw(h`<option value="${x.k}"${x === f ? " selected" : ""}>${x.label || x.file}</option>`))}</select></label>
       <label>${t("spcmp.prec")} <select data-f="prec"></select></label>
-      <label>${t("spcmp.off")} <input data-f="off" placeholder="0 | auto:MZ@RT" title="${t("spcmp.off.tip")}" autocomplete="off" spellcheck="false"></label>
+      <label>${t("spcmp.off")} <input data-f="off" placeholder="${t("spcmp.off.ph")}" title="${t("spcmp.off.tip")}" autocomplete="off" spellcheck="false"></label>
       <label>${t("spcmp.time")} <input data-f="rt0" data-num="0:" value="${+from.toFixed(4)}" aria-label="${t("spcmp.time.from")}"> – <input data-f="rt1" data-num="0:" value="${+to.toFixed(4)}" aria-label="${t("spcmp.time.to")}"> ${t("spcmp.unit.min")}</label></fieldset>`;
   dlg.innerHTML = h`<div style="display:flex;align-items:center"><h3 id="spcmp-h" style="margin:0;flex:1">${t("spcmp.title")}</h3><button type="button" class="x" id="spcmp-x" aria-label="${t("common.close")}" title="${t("common.close")}">&times;</button></div>
     <div class="sides">${raw(sideHtml("a", own))}${raw(sideHtml("b", other))}</div>
