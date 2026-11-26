@@ -151,14 +151,6 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("targets from many series", "features.union"),
     ("is there a peak at this mass", "raw xic"),
     ("how many ions", "raw xic"),
-    // a mass axis that is off by a fraction of a Da, and a UV trace that lags the MS: the flag and the estimate that exist
-    ("mass shift", "trace xic"),
-    ("mass calibration", "trace xic"),
-    ("mass shift", "features"),
-    ("calibrate m/z of the feature table", "features"),
-    ("wrong mass in the xic, the peak is shifted", "trace xic"),
-    ("mass shift in raw xic", "raw xic"),
-    ("time offset between uv and ms", "dad delay"),
     ("sum a split profile fragment into one nominal mass bin", "spectrum get"),
 ];
 
