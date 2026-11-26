@@ -87,6 +87,13 @@ fn the_chooser_answers_are_the_engines() {
     assert_eq!(
         t(
             "natdefault",
+            serde_json::json!({"ids": [1, 2], "sizes": [10, 0], "empty": [2], "budget_mb": 1})
+        ),
+        "{\"schema\":\"sample-select/1\",\"samples\":[1]}"
+    );
+    assert_eq!(
+        t(
+            "natdefault",
             serde_json::json!({"ids": [1], "sizes": [900000000], "budget_mb": 1024})
         ),
         "{\"schema\":\"sample-select/1\",\"samples\":[]}"

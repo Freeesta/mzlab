@@ -13,7 +13,7 @@ use crate::engine::{CountWrite, Picked, Progress, State};
 use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
-/// `natlabels {members: [{file, id, sample}]}` (the column labels, `readers::label`, the twin of `sample_labels`) / `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
+/// `natlabels {members: [{file, id, sample}]}` (the column labels, `readers::label`, the twin of `sample_labels`) / `natdefault {ids, sizes, empty?, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
 /// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli sample select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
 pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     use mzlab_core::readers::selection;
@@ -37,9 +37,11 @@ pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     }
     let ids: Vec<u32> = nums("ids").iter().map(|x| *x as u32).collect();
     let sizes: Vec<u64> = nums("sizes").iter().map(|x| x.max(0.0) as u64).collect();
+    let empty: Vec<u32> = nums("empty").iter().map(|x| *x as u32).collect();
     text(selection::suggest_json(
         &ids,
         &sizes,
+        &empty,
         selection::budget_bytes(
             p["budget_mb"]
                 .as_f64()
