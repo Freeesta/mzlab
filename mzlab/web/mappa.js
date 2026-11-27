@@ -215,7 +215,7 @@ window.MAPPA = (() => {
     const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
-      g.save(); g.strokeStyle = ecss("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
+      g.save(); MAPCURSORE.line(g, ecss, 1, !s.lock); s.cm = { ...s.cm, cross: { w: g.lineWidth, c: g.strokeStyle } };
       g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
       if (s.lock) lockDot(g, a.X(pt.rt), a.Y(pt.mz), s);                  // the locked point: a small dot exactly on it
       g.restore();
@@ -336,7 +336,7 @@ window.MAPPA = (() => {
   function show(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ pt) {
     const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
     const uv = !!(p._a && p._a.pda), sp = uv ? null : specFor(p, pt), xi = uv ? null : xicFor(p, pt), pv = uv || !sp || !xi ? preview(p, pt) : null;      // a DAD map: UV spectrum and trace read from its matrix (exact), never the MS routes
-    if (uv && p.stripMs === "ms" && window.MAPDAD) return window.MAPDAD.ms(p, pt, { st, canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MIRINO, axisWait, getScan }); if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
+    if (uv && p.stripMs === "ms" && window.MAPDAD) return window.MAPDAD.ms(p, pt, { st, canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MAPCURSORE, MIRINO, axisWait, getScan }); if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
     // what the two plots hold (read by e2e_mappa_mirino)
     s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null, uv: uv ? pv : null };
     drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp && !uv); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi && !uv);
@@ -456,12 +456,13 @@ window.MAPPA = (() => {
     const inWin = pt.mz >= a.y0 && pt.mz <= a.y1, gy = inWin ? Math.round(Y(pt.mz)) + .5 : 0, gEnd = mk >= 0 ? tipOf(mk) : x1;
     s.gd = inWin ? { y: gy, end: gEnd } : null;   // kept for the tests
     s.curPk = inWin && mk >= 0 ? sp.mz[mk].toFixed(mzd(p)) : null;   // the chip of the cursor names it
-    if (inWin) { g.save(); g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
-      if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - 4); g.lineTo(gEnd + .5, gy + 4); g.stroke(); }   // clear end mark at the tip
+    s.cm = { ...s.cm, guide: null, bar: null };
+    if (inWin) { g.save(); MAPCURSORE.line(g, ecss); s.cm.guide = { w: g.lineWidth, c: g.strokeStyle }; g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
+      if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - MAPCURSORE.TICK); g.lineTo(gEnd + .5, gy + MAPCURSORE.TICK); g.stroke(); }   // a small tick at the tip
       g.restore();
     }
-    // the peak under the cursor: its own bar, thicker and in the ink colour, over the others without covering them (2.5 px against 1 px)
-    if (inWin && mk >= 0) { const by = Math.round(Y(sp.mz[mk])) + .5; g.save(); g.strokeStyle = ecss("--ink"); g.lineWidth = 2.5; g.beginPath(); g.moveTo(x0, by); g.lineTo(tipOf(mk), by); g.stroke(); g.restore(); }
+    // the peak under the cursor: its own bar in the cursor colour, slightly thicker than the others (1.5 px against 1 px)
+    if (inWin && mk >= 0) { const by = Math.round(Y(sp.mz[mk])) + .5; g.save(); MAPCURSORE.line(g, ecss, MAPCURSORE.LW_BAR, false); s.cm.bar = { w: g.lineWidth, c: g.strokeStyle }; g.beginPath(); g.moveTo(x0, by); g.lineTo(tipOf(mk), by); g.stroke(); g.restore(); }
     sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: tipOf(i), t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit, inWin ? { y: gy, end: gEnd } : null, inWin ? mk : -1);
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
@@ -517,7 +518,7 @@ window.MAPPA = (() => {
     g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
     g.fillText(xi.uv ? T(sg ? "mappa.uv.botDiff" : "mappa.uv.bot", { lo: lo.toFixed(1), hi: hi.toFixed(1), max: fmt(ymax) }) : prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
-    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.save(); MAPCURSORE.line(g, ecss); s.cm = { ...s.cm, rt: { w: g.lineWidth, c: g.strokeStyle } }; g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.restore(); }
     liveSync(p);
   }
 

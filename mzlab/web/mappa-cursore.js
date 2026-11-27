@@ -4,6 +4,11 @@
 // Cursor of the RT x m/z map, the parts that draw nothing on the canvases (classic script, loaded before mappa.js): the chip with RT and m/z that follows
 // the pointer, the dot on the XIC at the cursor RT, and the label of the peak under the cursor in the side spectrum. All DOM / geometry; the data come from mappa.js.
 const MAPCURSORE = (() => {
+  /** One marker style wherever the cursor is drawn (cross over the map, guide and bar of the side spectrum, RT line of the XIC): the muted token, 1 px lines (the
+   * bar under the cursor 1.5 px), dashes, no heavy cap. Dark and light themes follow the token. `s.cm` keeps what was drawn, for the tests. */
+  const COL = "--muted", LW = 1, LW_BAR = 1.5, DASH = [4, 3], TICK = 2.5;
+  /** Sets the stroke of a cursor line on `g` (call between save and restore). @param {CanvasRenderingContext2D} g @param {(v: string) => string} ecss @param {number} [w] @param {boolean} [dashed] */
+  const line = (g, ecss, w = LW, dashed = true) => { g.strokeStyle = ecss(COL); g.lineWidth = w; g.globalAlpha = 1; g.setLineDash(dashed ? DASH : []); };
   /** The two decorative elements, in the grid of the map: absolute, pointer-events none (app.css), hidden until the cursor is over the map.
    * @param {HTMLElement} grid @returns {{ chip: HTMLElement, live: HTMLElement }} */
   const dom = grid => {
@@ -12,12 +17,14 @@ const MAPCURSORE = (() => {
     return { chip, live };
   };
 
-  /** The label of the peak under the cursor: bold, beyond the bar tip when it fits, otherwise above the bar and the guide, always inside the panel; returns its box.
+  /** The label of the peak under the cursor: medium weight, beyond the bar tip when it fits, otherwise above the bar and the guide (below them at the top edge), always inside the panel; returns its box.
    * @param {CanvasRenderingContext2D} g @param {number} W panel width @param {Record<string, any>} q {t, tip, y, i} @param {number} x0 @param {{ y: number, end: number } | null} guide
    * @param {number} px font size @param {number} asc @param {number} hh @param {(n: number, st?: string) => string} fpx */
   const label = (g, W, q, x0, guide, px, asc, hh, fpx) => {
-    g.font = fpx(12.5, "bold "); const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2;
-    const top = guide ? Math.min(q.y, guide.y) : q.y, by = right ? q.y + Math.round(px * .35) : top - 7, x = right ? q.tip + 5 : Math.min(W - 2 - w, Math.max(x0 + 2, q.tip - 3 - w));
+    g.font = fpx(11.5, "500 "); const w = g.measureText(q.t).width, right = q.tip + 4 + w <= W - 2;
+    const top = guide ? Math.min(q.y, guide.y) : q.y, bot = guide ? Math.max(q.y, guide.y) : q.y;
+    let by = right ? q.y + Math.round(px * .35) : top - 5; if (!right && by - asc < 1) by = bot + asc + 4;   // no room above the bar at the top edge: below it
+    const x = right ? q.tip + 4 : Math.min(W - 2 - w, Math.max(x0 + 2, q.tip - 3 - w));
     g.strokeText(q.t, x, by); g.fillText(q.t, x, by); g.font = fpx(12.5);
     return { t: q.t, x, y: by - asc, w, h: hh, ly: q.y, tip: q.tip, right, i: q.i, cur: true };
   };
@@ -43,5 +50,5 @@ const MAPCURSORE = (() => {
     const l = /** @type {HTMLElement} */ (live.firstElementChild), dot = /** @type {HTMLElement} */ (live.lastElementChild);
     l.style.height = (g.H - g.mb - g.mt) + "px"; l.hidden = !apart; dot.style.top = (g.Y(v) - g.mt).toFixed(1) + "px";
   };
-  return { dom, label, sync };
+  return { dom, label, sync, line, LW_BAR, TICK };
 })();

@@ -30,7 +30,7 @@ export function use(p) {
 /** A signed number of minutes for the strip titles. */
 const sgn = (/** @type {number} */ v) => (v < 0 ? "−" : "+") + " " + f2(Math.abs(v));
 
-/** Draws both strips in MS mode for the cursor `pt` and returns true. `K` carries the drawing helpers of mappa.js (canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, st). @param {any} p @param {any} pt @param {any} K */
+/** Draws both strips in MS mode for the cursor `pt` and returns true. `K` carries the drawing helpers of mappa.js (canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MAPCURSORE, st). @param {any} p @param {any} pt @param {any} K */
 export function ms(p, pt, K) {
   const s = K.st(p), a = p._a, f = file(p), o = offset(p), rt = pt.rt + o.v, key = `${f.k}|${rt.toFixed(3)}`;
   s.shown = { pt, uv: null, ms: { k: f.k, rt, off: o.v } };
@@ -85,7 +85,7 @@ function bottom(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ 
   g.strokeStyle = f.color || K.ecss("--accent"); g.beginPath();
   for (let i = 0; i < t.length; i++) { const x = X(t[i]); if (x < ml - 1 || x > mr + 1) continue; g.lineTo(x, Y(d.y[i])); if (i === 0) g.moveTo(x, Y(d.y[i])); }
   g.stroke();
-  const x = Math.round(X(pt.rt)) + .5; g.strokeStyle = K.ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x, mt); g.lineTo(x, H - mb); g.stroke(); g.setLineDash([]);
+  const x = Math.round(X(pt.rt)) + .5; g.save(); K.MAPCURSORE.line(g, K.ecss); g.beginPath(); g.moveTo(x, mt); g.lineTo(x, H - mb); g.stroke(); g.restore();
   g.fillStyle = ink; g.textAlign = "left"; g.fillText(T("mappa.ms.bot", { kind: tr === "xic" ? `${T("ctl.map.ms.xic")} ${(+p.msMz).toFixed(2)} ± ${XIC_TOL}` : T(tr === "bpc" ? "ctl.map.ms.bpc" : "ctl.map.ms.tic"), file: fname(f), off: f2(o.v) }), ml + 4, mt + 8);
 }
 
