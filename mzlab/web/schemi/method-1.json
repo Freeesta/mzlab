@@ -3,9 +3,7 @@
   "title": "method/1",
   "description": "Metodo di acquisizione di UN campione (o, per una cartella di metodo `.m` senza corsa, il metodo di analisi dei dati). Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
   "type": "object",
-  "required": [
-    "schema"
-  ],
+  "required": ["schema"],
   "properties": {
     "schema": {
       "const": "method/1"
@@ -244,10 +242,7 @@
                           },
                           "polarity": {
                             "type": "string",
-                            "enum": [
-                              "positive",
-                              "negative"
-                            ]
+                            "enum": ["positive", "negative"]
                           },
                           "t_start_min": {
                             "type": "number"
@@ -286,10 +281,7 @@
                           },
                           "polarity": {
                             "type": "string",
-                            "enum": [
-                              "positive",
-                              "negative"
-                            ]
+                            "enum": ["positive", "negative"]
                           },
                           "t_start_min": {
                             "type": "number"
@@ -307,9 +299,7 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "mz"
-                        ]
+                        "required": ["mz"]
                       }
                     }
                   }
@@ -334,10 +324,7 @@
                     "properties": {
                       "polarity": {
                         "type": "string",
-                        "enum": [
-                          "positive",
-                          "negative"
-                        ]
+                        "enum": ["positive", "negative"]
                       },
                       "name": {
                         "type": "string"
@@ -412,9 +399,7 @@
                 "type": "number"
               }
             },
-            "required": [
-              "t_min"
-            ]
+            "required": ["t_min"]
           }
         },
         "flow_mL_min": {
@@ -451,6 +436,77 @@
               "name": {
                 "type": "string"
               }
+            }
+          }
+        },
+        "sources": {
+          "type": "object",
+          "description": "The source of each part of the LC method, for the parts the reader can name.",
+          "properties": {
+            "gradient": {
+              "type": "object",
+              "required": ["kind", "at"],
+              "properties": {
+                "kind": {
+                  "enum": ["read", "inferred"]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
+            },
+            "run_time": {
+              "type": "object",
+              "required": ["kind", "at"],
+              "properties": {
+                "kind": {
+                  "enum": ["read", "inferred"]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
+            },
+            "flow": {
+              "type": "object",
+              "required": ["kind", "at"],
+              "properties": {
+                "kind": {
+                  "enum": ["read", "inferred"]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
+            },
+            "oven": {
+              "type": "object",
+              "required": ["kind", "at"],
+              "properties": {
+                "kind": {
+                  "enum": ["read", "inferred"]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
+            },
+            "solvents": {
+              "type": "object",
+              "required": ["kind", "at"],
+              "properties": {
+                "kind": {
+                  "enum": ["read", "inferred"]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
             }
           }
         }
@@ -512,6 +568,19 @@
                 }
               }
             }
+          },
+          "source": {
+            "type": "object",
+            "required": ["kind", "at"],
+            "properties": {
+              "kind": {
+                "enum": ["read", "inferred"]
+              },
+              "at": {
+                "type": "string"
+              }
+            },
+            "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read, at says how). Absent: the reader names no source."
           }
         }
       }
@@ -522,10 +591,7 @@
         "type": "object",
         "properties": {
           "when": {
-            "enum": [
-              "inizio",
-              "fine"
-            ]
+            "enum": ["inizio", "fine"]
           },
           "text": {
             "type": "string"
@@ -534,11 +600,7 @@
             "type": "number"
           },
           "level": {
-            "enum": [
-              "Info",
-              "Warning",
-              "Error"
-            ]
+            "enum": ["Info", "Warning", "Error"]
           }
         }
       }
@@ -778,11 +840,7 @@
             "description": "true: identifica una persona, un computer, un seriale o un percorso."
           }
         },
-        "required": [
-          "origin",
-          "key",
-          "value"
-        ]
+        "required": ["origin", "key", "value"]
       }
     }
   },

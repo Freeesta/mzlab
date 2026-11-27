@@ -41,6 +41,25 @@ fn same(what: &str, got: &Value, want: &Value) {
     }
 }
 
+/// `lc.view` (display text and sources for the Method window) exists only in Rust: the Python reference never computed it, and `methodview_tests.rs`
+/// covers it. Everything else in the document is still compared.
+fn without_view(mut v: Value) -> Value {
+    fn walk(v: &mut Value) {
+        match v {
+            Value::Object(m) => {
+                if let Some(Value::Object(lc)) = m.get_mut("lc") {
+                    lc.remove("view");
+                }
+                m.values_mut().for_each(walk);
+            }
+            Value::Array(a) => a.iter_mut().for_each(walk),
+            _ => {}
+        }
+    }
+    walk(&mut v);
+    v
+}
+
 fn parsed(text: &str) -> Value {
     serde_json::from_str(text).unwrap_or_else(|e| panic!("not JSON ({e}): {text}"))
 }
@@ -108,7 +127,7 @@ fn methods_match_python() {
         };
         let mut o = Out::default();
         m.write_json(&mut o);
-        same(&format!("{name} method"), &parsed(&o.0), &f["method"]);
+        same(&format!("{name} method"), &without_view(parsed(&o.0)), &f["method"]);
         assert_eq!(method_kind(m), f["kind"].as_str(), "{name}: kind");
         gradient_case(&format!("{name} gradient"), from_dam(m.lc.as_ref()), &f["gradient"]);
         for (i, d) in r["data"].as_array().unwrap().iter().enumerate() {
@@ -132,7 +151,7 @@ fn method_route_and_warnings_match_python() {
         }
         let labs: Vec<Lab> = c["labs"].as_array().unwrap().iter().map(|n| lab(&dir, n.as_str().unwrap())).collect();
         let got = method_json(&c["data"].to_string(), &labs, c["file"].as_str().unwrap()).unwrap();
-        same(&format!("method {i} ({})", c["file"]), &parsed(&got), &c["result"]);
+        same(&format!("method {i} ({})", c["file"]), &without_view(parsed(&got)), &c["result"]);
     }
 }
 

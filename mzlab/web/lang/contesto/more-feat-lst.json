@@ -36,7 +36,6 @@
   "leg.note.corr": "Note below the legend; {corr} = corrections applied (e.g. \"- internal blank\").",
   "leg.note.rowScale": "Note below the legend of the stacked charts; {h} = height of a row in cps.",
   "int.base.pt": "Accessible name of one of the two points of a custom baseline (button to drag with mouse, finger or pen, or to move with the arrow keys); {n} = 1 or 2, {rt} = time in minutes, {y} = intensity.",
-  "grad.src.dam": "Origin of the gradient shown in the Method window.",
   "gradient.err.point": "Error of a gradient point; {t} = time, {b} = %B.",
   "gradient.err.order": "Error of the gradient CSV; {line} = line number.",
   "gradient.err.row": "Error of the gradient CSV; {line} = line number.",

@@ -89,6 +89,22 @@ pub struct GPoint {
     pub flow: Option<f64>,
 }
 
+/// Where a value of the LC method comes from: `read` (a stream and field of the file, named in `at`) or `inferred` (computed from values read; `at` says how).
+#[derive(Debug, Clone)]
+pub struct Src {
+    pub kind: &'static str,
+    pub at: String,
+}
+
+impl Src {
+    pub fn read(at: &str) -> Self {
+        Src { kind: "read", at: at.into() }
+    }
+    pub fn inferred(at: &str) -> Self {
+        Src { kind: "inferred", at: at.into() }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Lc {
     pub gradient: Vec<GPoint>,
@@ -98,6 +114,8 @@ pub struct Lc {
     pub pda: Pda,
     pub channels: Vec<(f64, Option<f64>)>,
     pub oven: Option<f64>,
+    /// The source of each part (`gradient`, `run_time`, `flow`, `oven`, `pda`), only for the parts the reader can name; none for an unnamed one.
+    pub src: Vec<(&'static str, Src)>,
 }
 
 #[derive(Debug, Clone, Default)]

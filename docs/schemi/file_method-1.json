@@ -15,7 +15,9 @@
     "acquired",
     "damaged",
     "unavailable",
-    "warnings"
+    "warnings",
+    "lc",
+    "dad"
   ],
   "properties": {
     "schema": {
@@ -63,7 +65,8 @@
           "dp_V",
           "dwell_ms",
           "fill_time_ms",
-          "q1_resolution"
+          "q1_resolution",
+          "shown"
         ],
         "properties": {
           "experiment": {
@@ -160,6 +163,13 @@
             ],
             "description": "Fill (ion injection) time (ms)."
           },
+          "shown": {
+            "type": "object",
+            "description": "The values of the segment for display: two decimals (the numbers above keep their full precision), only the ones the segment holds. ce_eV joins several energies with a comma.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "q1_resolution": {
             "type": [
               "number",
@@ -179,7 +189,8 @@
         "required": [
           "precursor_mz",
           "ce_eV",
-          "scans"
+          "scans",
+          "shown"
         ],
         "properties": {
           "precursor_mz": {
@@ -199,6 +210,16 @@
               "number",
               "null"
             ]
+          },
+          "shown": {
+            "type": "object",
+            "description": "precursor_mz and ce_eV for display (two decimals), null when absent.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         }
       }
@@ -208,13 +229,19 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["experiment", "part"],
+        "required": [
+          "experiment",
+          "part"
+        ],
         "properties": {
           "experiment": {
             "type": "integer"
           },
           "part": {
-            "enum": ["experiment_header", "mass_range"]
+            "enum": [
+              "experiment_header",
+              "mass_range"
+            ]
           }
         }
       }
@@ -277,7 +304,8 @@
           "nearest_name_mz",
           "nearest_precursor",
           "delta_mz",
-          "tolerance_mz"
+          "tolerance_mz",
+          "shown"
         ],
         "properties": {
           "key": {
@@ -302,8 +330,410 @@
             "type": "number",
             "description": "Precursor minus name mass (Th)."
           },
+          "shown": {
+            "type": "object",
+            "description": "nearest_name_mz, nearest_precursor and delta_mz for display (two decimals).",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "tolerance_mz": {
             "type": "number"
+          }
+        }
+      }
+    },
+    "lc": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The pump program of the method as the Method window shows it. gradient[] are the points the file holds; hold is the last %B kept to the end of the run (inferred, never a point of the file). shown strings use two decimals; the numbers keep their full precision. eluents[] only lists what the file names (never filled in). sources.<part> says where each part comes from.",
+      "additionalProperties": false,
+      "required": [
+        "run_time_min",
+        "run_time_shown",
+        "gradient",
+        "hold",
+        "flow_mL_min",
+        "flow_shown",
+        "oven_C",
+        "oven_shown",
+        "eluents",
+        "sources"
+      ],
+      "properties": {
+        "run_time_min": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "run_time_shown": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gradient": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "t_min",
+              "B_pct",
+              "flow_mL_min",
+              "shown"
+            ],
+            "properties": {
+              "t_min": {
+                "type": "number"
+              },
+              "B_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "flow_mL_min": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "shown": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "t": {
+                    "type": "string"
+                  },
+                  "a": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "%A = 100 - %B (inferred)."
+                  },
+                  "b": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "flow": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "hold": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "from_min": {
+              "type": "number"
+            },
+            "to_min": {
+              "type": "number"
+            },
+            "B_pct": {
+              "type": "number"
+            },
+            "flow_mL_min": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "shown": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "flow_mL_min": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "flow_shown": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "oven_C": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "oven_shown": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "eluents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "channel": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "eluents": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "gradient": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "run_time": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "flow": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "oven": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "a_pct": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            },
+            "hold": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "at"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "read",
+                    "inferred"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              },
+              "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+            }
+          }
+        }
+      }
+    },
+    "dad": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The diode array as labelled rows: what the DAD header of the sample says first, then what the method's detector adds. id is the lang key suffix method.dad.<id>.",
+      "additionalProperties": false,
+      "required": [
+        "rows"
+      ],
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "value",
+              "shown",
+              "unit",
+              "source"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "value": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "shown": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "source": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "at"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "read",
+                      "inferred"
+                    ]
+                  },
+                  "at": {
+                    "type": "string"
+                  }
+                },
+                "description": "Where the value comes from: read (a stream and field of the file, named in at) or inferred (computed from values read; at says how). null: the reader of this format names no source."
+              }
+            }
           }
         }
       }

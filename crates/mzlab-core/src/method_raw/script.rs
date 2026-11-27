@@ -4,7 +4,7 @@
 
 use crate::agilent::meta::{self, Item};
 use crate::method::{num, obj, text, V};
-use crate::methodinfo::{GPoint, Lc};
+use crate::methodinfo::{GPoint, Lc, Src};
 
 /// A setting of the LC script: the time of its row (`None` before the first timed row), key, value, unit.
 pub type Pair = (Option<f64>, String, String, Option<String>);
@@ -161,6 +161,10 @@ pub fn lc_of(script: &str) -> Option<Lc> {
         gradient,
         pda: Default::default(),
         channels: vec![],
+        src: vec![
+            ("gradient", Src::read("LC script: the timed %B and flow statements of the pump module")),
+            ("run_time", Src::read("LC script: its Run Time line, else the time of its last timed statement")),
+        ],
     })
 }
 

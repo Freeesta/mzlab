@@ -116,6 +116,7 @@ pub mod methodcheck;
 pub mod methodinfo;
 pub mod namemz;
 pub mod methodjson;
+pub mod methodview;
 pub mod readers;
 pub mod transport;
 pub mod readers_centroids;

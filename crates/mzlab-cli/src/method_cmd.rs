@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use mzlab_core::error::Result;
-use mzlab_core::json::{fmt_g, parse, Value};
+use mzlab_core::json::{parse, Value};
 
 use crate::Outcome;
 
@@ -23,6 +23,8 @@ segments[]: experiment, scan, ms_level, precursor_mz, q3_mz, mz_range, ce_eV, ce
 A parameter the file does not give is null and `unavailable` says why: not_in_method (the method has no such parameter), not_in_file (the format
 has no field for it), unknown (not read for this format, not established that the file holds it), damaged (a damaged method stream, listed in `damaged[]`).
 `acquired` is what the scans hold (precursor, CE, scan count).
+`shown`: each number as the screen prints it (two decimals; the full value stays beside it).
+`lc` (pump program held to the end of the run) and `dad`: every value has a `source`, read (stream, field) or inferred; eluents only if the file names them.
 warnings[] names a mass in the file or sample name that is not within 1 m/z of any precursor (also on the standard error); nothing is blocked.
 exit codes: 0 ok, 2 usage, 4 file unreadable, 5 unknown sample, 6 no usable data";
 
@@ -91,7 +93,8 @@ pub(crate) fn warning_lines(doc: &str) -> String {
     let Ok(v) = parse(doc.as_bytes()) else {
         return String::new();
     };
-    let num = |w: &Value, k: &str| w.get(k).and_then(Value::f64).map_or(String::new(), fmt_g);
+    // the numbers of the line are the display strings of the document (two decimals), the same the Method window shows
+    let num = |w: &Value, k: &str| w.get("shown").and_then(|s| s.get(k)).and_then(Value::str).map_or(String::new(), String::from);
     v.get("warnings")
         .map(Value::arr)
         .unwrap_or_default()

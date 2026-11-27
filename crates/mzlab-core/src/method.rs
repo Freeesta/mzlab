@@ -249,12 +249,19 @@ pub fn lc_sections(lc: &Lc) -> (Option<V>, Option<V>) {
             ])
         })
         .collect();
+    let sources = obj(lc
+        .src
+        .iter()
+        .filter(|(k, _)| *k != "pda")
+        .map(|(k, s)| (*k, obj(vec![("kind", text(s.kind)), ("at", text(&s.at))])))
+        .collect());
     let lc_v = obj(vec![
         ("gradient", Some(V::Arr(grad))),
         ("flow_mL_min", num(lc.flow)),
         ("B_start_pct", num(lc.b0)),
         ("oven_C", num(lc.oven)),
         ("duration_min", num(lc.run_time)),
+        ("sources", sources),
     ]);
     let p = &lc.pda;
     let channels: Vec<V> = lc
@@ -275,9 +282,16 @@ pub fn lc_sections(lc: &Lc) -> (Option<V>, Option<V>) {
         ("cell_C", num(p.cell)),
         ("slit_nm", num(p.slit)),
         ("channels", Some(V::Arr(channels))),
+        (
+            "source",
+            lc.src
+                .iter()
+                .find(|(k, _)| *k == "pda")
+                .and_then(|(_, s)| obj(vec![("kind", text(s.kind)), ("at", text(&s.at))])),
+        ),
     ]);
     // a detector with only its type is no information: it exists when the method says something about it
-    let det = det.filter(|d| matches!(d, V::Obj(f) if f.len() > 1));
+    let det = det.filter(|d| matches!(d, V::Obj(f) if f.iter().filter(|(k, _)| *k != "source").count() > 1));
     (lc_v, det.map(|d| V::Arr(vec![d])))
 }
 
