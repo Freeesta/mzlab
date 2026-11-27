@@ -13,7 +13,7 @@
   "ctx.map.where": "First (grey) row of the right-click menu on the map; {rt} = RT, {mz} = m/z, {file} = sample.",
   "ctx.map.xic": "Right-click menu on the map; {mz} = m/z.",
   "ctx.map.addTo": "Right-click menu on the map; {mz} = m/z, {panel} = title of the XIC panel.",
-  "ctx.spec.cont.aria": "Accessible name of the \"Is it a known contaminant?\" entry of the spectrum menu; {mz} = peak m/z.",
+  "ctx.spec.cont.aria": "Accessible name of the \"Check contaminant\" entry of the spectrum menu; {mz} = peak m/z.",
   "ctx.spec.copy.aria": "\"Copy value\" entry of the right-click menu on the spectrum; {mz} = peak m/z.",
   "ctx.spec.xic": "Right-click menu on the spectrum; {mz} = peak m/z.",
   "ctx.spec.knownMore": "Tail of the \"Known contaminant\" entry; {n} = how many other contaminants match.",

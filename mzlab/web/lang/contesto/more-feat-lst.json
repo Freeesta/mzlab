@@ -109,5 +109,5 @@
   "int.why.points": "Reason of a refused click; {n} = points in the window, {min} = fewest allowed.",
   "int.why.area": "Reason of a refused click; {area} = the window's area in counts x s, not above the noise of the same width.",
   "int.why.sn": "Reason of a refused click; {sn} = measured signal/noise, {minSn} = smallest allowed.",
-  "int.atrt.note": "Notice after \"Integrate all channels at this time\"; {n} integrated of {m} channels, {names} = the channels with no peak there."
+  "int.atrt.note": "Notice after \"Integrate all channels at RT\"; {n} integrated of {m} channels, {names} = the channels with no peak there."
 }

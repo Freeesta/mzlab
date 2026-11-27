@@ -94,7 +94,7 @@ fn damaged(idx: &[u8], version: Option<u32>, rename: Option<(&[u8], &[u8])>) -> 
 #[test]
 fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
     let (_, idx, _) = index_of(srm_like(4), "srm_old.mzML");
-    assert_eq!(u32::from_le_bytes(idx[8..12].try_into().unwrap()), 3);
+    assert_eq!(u32::from_le_bytes(idx[8..12].try_into().unwrap()), 4);
     let open = |b: Vec<u8>| Index::open(b.clone(), b.len() as u64).err().map(|e| e.key);
     assert_eq!(open(idx.clone()), None);
     for old in [1, 2] {
@@ -115,7 +115,7 @@ fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
     );
     // a newer one is still `error.newerFormat`
     assert_eq!(
-        open(damaged(&idx, Some(4), None)),
+        open(damaged(&idx, Some(5), None)),
         Some("error.newerFormat")
     );
 }

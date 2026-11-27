@@ -124,11 +124,11 @@ try:
             a = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return [q.left+a.X(194.2),q.top+a.Y(a.ymax*0.1)]}})()")
             pg.mouse.click(a[0], a[1], button="right"); pg.wait_for_timeout(300)
             its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
-            assert "Search 170.2 in the neutral losses" in its, its
+            assert "Search 170.2 in neutral losses" in its, its
             pg.locator("#ctx div", has_text="Search 170.2").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#calcin") == "170.2"
             shut(pg, "#refx")
-        step("4.7: from the ruler: «Search 170.2 in the neutral losses»", ruler)
+        step("4.7: from the ruler: «Search 170.2 in neutral losses»", ruler)
         def ruler_label():
             def lbl_pos(a_, b_):
                 pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:{a_},list:[{{a:{a_},b:{b_}}}]}};draw(p)}})()"); pg.wait_for_timeout(500)

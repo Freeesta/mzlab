@@ -1,5 +1,5 @@
 """User groups of the side file list: three ticked files, right click, «Group files» -> header «Group 1» at once; rename from the header (double click),
-Shift+F10 opens the header menu, ungroup, undo, a reload restores the group; «Remove group from the session» takes its files away with one undo."""
+Shift+F10 opens the header menu, ungroup, undo, a reload restores the group; «Remove group from session» takes its files away with one undo."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import re
@@ -63,7 +63,7 @@ try:
             drawer(pg); pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("Remove group")).click()
             wait_for_js(pg, "E.files.every(f => f.gone)", 5000)
             pg.evaluate("HISTORY.undo()"); wait_for_js(pg, "E.files.filter(f => !f.gone).length === 3", 5000)
-        step("«Remove group from the session» takes the files away with one undo", remove)
+        step("«Remove group from session» takes the files away with one undo", remove)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

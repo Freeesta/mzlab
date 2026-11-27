@@ -148,7 +148,7 @@ try:
         lb = pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'spec'); const q = p.cv.getBoundingClientRect(); const l = p._a && p._a.lbls && p._a.lbls.filter(x => x.m != null)[0]; return l ? { x: q.left + l.x + l.w / 2, y: q.top + l.y + l.h / 2 } : { x: q.left + q.width / 2, y: q.top + q.height / 2 }; })()")
         pg.mouse.click(lb["x"], lb["y"], button="right")
         pg.wait_for_selector("#ctx", timeout=3000)
-        pg.locator("#ctx div", has_text="Extract the XIC").first.click()
+        pg.locator("#ctx div", has_text="Extract XIC").first.click()
 
         # Step 6 auto-advances to Step 7 when XIC panel is created
         pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.textContent.includes('Step 7')", timeout=5000)

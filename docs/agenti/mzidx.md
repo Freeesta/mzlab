@@ -3,7 +3,7 @@ A `.mzidx` is written once per file (`build(run, out)`) and read in slices (`ope
 
 ## Format (all little-endian, no compression)
 ```
-0      HEADER, 64 bytes:  "MZIDX001"(8) | u32 version=3 | u32 flags=0 (bit 0 = READER_FLAG, a vendor file) | u64 meta_off | u64 meta_len | u64 scans_off | u64 scans_len | u64 total | 8 zero bytes
+0      HEADER, 64 bytes:  "MZIDX001"(8) | u32 version=4 | u32 flags=0 (bit 0 = READER_FLAG, a vendor file) | u64 meta_off | u64 meta_len | u64 scans_off | u64 scans_len | u64 total | 8 zero bytes
 64     for each section, in the order of meta.sections, seven arrays each aligned to 64 bytes (zero padding):
          rt        n_scans × f8   minutes
          tic       n_scans × f8   TIC declared by the file
@@ -16,14 +16,14 @@ A `.mzidx` is written once per file (`build(run, out)`) and read in slices (`ope
          inten     n_peaks × T    intensity, in the same order
          pos       n_peaks × i4   position of the owning scan inside rt/tic/scan_ids
 scans_off  JSON UTF-8 (compact separators): list of rows, one per scan, in file order, with the columns of SCAN_COLUMNS:
-         start,end (mzML bytes),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native[,kind[,mob]]
+         start,end (mzML bytes),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native[,kind[,mob[,fill]]]
 meta_off   JSON UTF-8: {format:"mzidx", version, block, source:{name,size,mtime_ns,probe,sha256}, run:{nce,hr1,n_chromatograms[,scan_window][,chromatograms (mzML only)]},
                         keys:{"<level>/<all|+|->": section index}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos},crc32?}]}
 total      file size: a file of a different size (truncated) does not open
 ```
 - **`run.chromatograms`** (mzML index only; Rust builder and Python reference write it; empty when the file has none): the header of each `<chromatogram>` in file order, `[id, start, end, kind, q1, q3, ce, name, dwell, n]` (`start`/`end` = mzML bytes, `kind`: `tic`, `bpc`, `pda`, `pressure`, `srm`, `analog`, `other`; unknown numbers `null`).
   `chromlist.rs`: `scantable::read_in` reads them in the pass over the tail that counts them; `Index::open` seeds the `Layout`, so `lr_entry` does not scan the tail. An mzML index without a valid list is `error.badIndex`; nothing falls back to the file.
-- **Versions**: 3 for an mzML and for a vendor file (3 with `READER_FLAG`). Versions 1 and 2 are `error.badIndex` and the site makes them again from the source (`manifesto.js`: `CORRENTI.idx`, `vecchio`); no converter.
+- **Versions**: 4 for an mzML and for a vendor file (4 with `READER_FLAG`); 3 is still read, and the `fill` column is in `idx-fill-time.md`. Versions 1 and 2 are `error.badIndex` and the site makes them again from the source (`manifesto.js`: `CORRENTI.idx`, `vecchio`); no converter.
 - **`kind`** (21st column, only if the scan has a type): `PREC` (precursor ion, `MS:1000341` or `pr` of the Thermo filter), `NL` (`MS:1000326`, `cnl`), `NG` (`MS:1000325`, `cng`), `EMC` (`MS:1000789`), `TDF` (`MS:1000790`), `ER` (`MS:1000791`), only for MS2 scans or higher (`scantable::kind_of`); at every level `EPI`, `PI`, `EMS`, `Q1` from the `analyst scan type` userParam of the `.wiff` reader. `Scan::kind_name` gives the first six (a part of their own), `Scan::scan_type` the SCIEX experiments (any MS1/MS2 scan).
   An index with no types or mobility has 20 columns, as before; `idxread::Scan.kind`.
 - **`mob`** (22nd column, only if the scan has a mobility as a scan attribute; the 21st is `null` if the type is missing): `[value, unit]` with unit `k0` (`MS:1002815`, 1/K0 in V·s/cm²) or `ms` (`MS:1002476`, drift time); `idxread::Scan.mob`. Per-point mobility arrays are not in the index: they are read from the scan (`Scansioni::mobilita`).
@@ -34,7 +34,7 @@ total      file size: a file of a different size (truncated) does not open
 
 ## Index of a vendor file (version 3 with `READER_FLAG`)
 A `.raw`, a `.wiff` (one index per sample) or a `.D` folder are indexed directly from the `Lettore` (`readers.rs`), without writing and rereading an mzML. Code: `crates/mzlab-core/src/mzidx_reader.rs`, `upload::prepare_lettore`, `mzidx::build_lettore`; test: `crates/mzlab-core/tests/readers_mzidx.rs`.
-- **Head**: `u32 version = 3`, `flags` with bit 0 (`idxread::READER_FLAG`: the rows point to the members of the set, not to an mzML), other bits zero; in the meta `"version":3`. `idxread::Index::open` accepts only 3/0 (mzML) and 3/bit 0 (vendor file), anything else is `error.badIndex`; the Python reader only 3/0.
+- **Head**: `u32 version = 4`, `flags` with bit 0 (`idxread::READER_FLAG`: the rows point to the members of the set, not to an mzML), other bits zero; in the meta `"version":4`. `idxread::Index::open` accepts version 3 or 4 with flags 0 (mzML) or bit 0 (vendor file), anything else is `error.badIndex`; the Python reader only 3/0.
 - **Rows**: the 20 columns of `SCAN_COLUMNS` except the first two: in place of `start,end` there are the position `[member,offset,length]` (`Posizione` of `Lettore::index`, `null` if the reader does not give it) and `k`, the scan number in `indice(c)`; the nativeID stays in `native`. `scanrow::scan_of_row` carries them into `posizione` and `k` of `idxread::Scan` (`start`, `end` = 0).
 - **`source`**: the mzML keys (`name` = `upload::set_name`: `X.raw`, `X.wiff`, `X.D`; `size` = sum of the members, `mtime_ns`, `probe`, `sha256`) plus `members: [{name,size,sha256,probe}]` in `FileSet` order, `reader` (`upload::READERS_GENERATION`; older or missing: `native_attach` refuses it and it is rebuilt) and `sample: {id, nome}`; `lost: {declared, read, cause}` only on partial reading (`Losses::note`).
   With one member `sha256` and `probe` are its own; with several members they are the SHA-256 (SHA-1 for `probe`) of the member values, each followed by a newline, and then of the sample `id`. Fingerprints from `upload::impronte` before `readers::open`.
@@ -97,4 +97,4 @@ The result is identical to the in-memory table (`Run.table_reference`): `tests/t
 - **Ion mobility in mzML**: `info.acq` adds "IMS" and `info.ims` ({unit, min, max, n}) when the file has a mobility (scan attribute or array, `Facts.ims`); `/api/scan` carries `mob`, `mob_unit` (per-point array) and `mob_scan` only for scans that have it.
 - **Label of the parts of a mixed file** (`x.mzML#MS1`): written by the engine (`part_label` in `iteminfo.rs`, used by `lr.rs`): "Full Scan", "DDA" (MS2 all tied to a precursor), "MS2", "Precursor ion", "Neutral loss", "Neutral gain", "EMC", "TDF", "ER" (scans with a type, `Scan.kind`, form parts of their own; `acq` lists them before DDA/MS2) or "MRM", with the polarity suffix; saved notebooks with labels "· MS1" are converted there.
 
-- **Proposal (to decide): optional `exp` column for `.wiff`**. The nativeID `sample= period= cycle= experiment=` gives the experiment but not its scan code (EPI, PI, EMS and Q1 are carried by the `kind` column, Prec and NL by their CV term; MS3, ER, Q3 are not) and the period is always 1 (the reader reads only `Period0`). An `exp` column (u16 period, u16 experiment, u8 code of `modes.rs`; 0xFF = absent) in the version 2 index would give the channels the periods > 0 and the codes without a term.
+- **Proposal (to decide): optional `exp` column for `.wiff`**. The nativeID `sample= period= cycle= experiment=` gives the experiment but not its scan code (`kind` carries EPI, PI, EMS, Q1; a CV term, Prec and NL; MS3, ER, Q3 have none) and the period is always 1 (the reader reads only `Period0`). An `exp` column (u16 period, u16 experiment, u8 code of `modes.rs`; 0xFF = absent) would give the channels the periods > 0 and the codes without a term.

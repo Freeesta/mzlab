@@ -70,38 +70,90 @@ def top_row(pg, P, label):
     return d
 
 
-# fixtures: a picker row of every palette colour, ticked and not, with and without a dashed trace, inside a real .can-pop so the page CSS applies
+# fixtures: a picker row of every palette colour, ticked and not, with and without a dashed trace, inside a real .can-pop so the page CSS applies.
+# STATE reads one row as the browser computes it: the box border, the fill, the tick and the background the row has in that state
 FIXTURE = """(() => {
   document.getElementById('tk-fix')?.remove();
-  const box = document.createElement('div'); box.id = 'tk-fix'; box.className = 'can-pop'; box.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;width:300px';
+  const box = document.createElement('div'); box.id = 'tk-fix'; box.className = 'can-pop'; box.style.cssText = 'position:fixed;left:8px;top:8px;z-index:2147483000;width:300px;max-height:90vh;background:var(--panel)';
   for (const c of PAL) for (const on of [false, true]) for (const d of ['', '4,3']) box.insertAdjacentHTML('beforeend',
-    `<div class="can-row" role="treeitem" aria-selected="${on}" data-fix="1"><span class="can-in"><span class="can-ck"${SIMUI.ckLook({ _look: { k: { c, d: d ? [4, 3] : [] } } }, 'k')}></span><span class="can-et">x</span></span></div>`);
-  document.body.appendChild(box);
-  const T = window.__tk, out = [];
-  for (const row of box.querySelectorAll('.can-row')) {
-    const ck = row.querySelector('.can-ck'), on = row.getAttribute('aria-selected') === 'true', cs = getComputedStyle(ck), a = getComputedStyle(ck, '::after'), b = getComputedStyle(ck, '::before');
-    const under = T.rgb(T.panel()), rowBg = T.rgb(getComputedStyle(row).backgroundColor, T.panel()), ring = (cs.boxShadow.match(/rgba?\\([^)]*\\)/) || [''])[0];
-    out.push({ c: ck.dataset.tc, d: ck.dataset.td, on, border: cs.borderTopStyle, fill: cs.backgroundColor, ringRatio: ring ? T.ratio(T.rgb(ring), rowBg) : 0, tick: on ? T.ratio(T.rgb(a.borderRightColor), T.rgb(cs.backgroundColor, T.panel())) : null,
-      ringOn: on && ck.dataset.td ? { style: b.borderTopStyle, content: b.content, ratio: T.ratio(T.rgb(b.borderTopColor), T.rgb(cs.backgroundColor, T.panel())) } : null, off: on ? null : { ratio: T.ratio(T.rgb(cs.borderTopColor), rowBg) } });
-  }
-  box.remove(); return out;
+    `<div class="can-row" role="treeitem" tabindex="-1" aria-selected="${on}" data-fix="1"><span class="can-in"><span class="can-ck"${SIMUI.ckLook({ _look: { k: { c, d: d ? [4, 3] : [] } } }, 'k')}></span><span class="can-et">x</span></span></div>`);
+  document.body.appendChild(box); return box.querySelectorAll('.can-row').length;
 })()"""
+STATE = """(i => {
+  const T = window.__tk, row = document.querySelectorAll('#tk-fix .can-row')[i], ck = row.querySelector('.can-ck'), on = row.getAttribute('aria-selected') === 'true', cs = getComputedStyle(ck), a = getComputedStyle(ck, '::after'), b = getComputedStyle(ck, '::before');
+  const rowBg = T.rgb(getComputedStyle(row).backgroundColor, T.panel()), panel = T.rgb(T.panel()), border = T.rgb(cs.borderTopColor, T.panel()), key = T.rgb(ck.dataset.tc), ink = T.rgb(getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#000');
+  return { c: ck.dataset.tc, d: ck.dataset.td, on, bstyle: cs.borderTopStyle, bw: parseFloat(cs.borderTopWidth), border, key, panel, shadow: cs.boxShadow, fill: T.rgb(cs.backgroundColor, T.panel()), rowBg,
+    keyVsPanel: T.ratio(key, panel), borderVsRow: T.ratio(border, rowBg), borderVsPanel: T.ratio(border, panel), tick: on ? T.ratio(T.rgb(a.borderRightColor), T.rgb(cs.backgroundColor, T.panel())) : null,
+    ringOn: on && ck.dataset.td ? { style: b.borderTopStyle, content: b.content, ratio: T.ratio(T.rgb(b.borderTopColor), T.rgb(cs.backgroundColor, T.panel())) } : null, ink };
+})"""
+
+
+def _lum(c):
+    f = lambda v: v / 255 / 12.92 if v / 255 <= 0.03928 else ((v / 255 + 0.055) / 1.055) ** 2.4
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+
+
+def _ratio(a, b):
+    x, y = _lum(a), _lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def rgb_of(css):
+    """'rgb(1, 2, 3)' as the browser serialises a colour -> [1, 2, 3]"""
+    return [int(v) for v in css[css.index("(") + 1:css.index(")")].split(",")[:3]]
+
+
+def expected_border(key, ink, panel):
+    """what the border of a key box must be, worked out here independently of the page: the key colour itself when it holds 3:1 against the popup, else the key moved toward the text colour in
+    5% steps (channels rounded half up) to the FIRST step that holds 3:1, so the key colour is kept as far as the contrast allows"""
+    for t in range(0, 101, 5):
+        m = [int(k + (i - k) * t / 100 + 0.5) for k, i in zip(key, ink)]
+        if t == 100 or _ratio(m, panel) >= 3: return m
+    return key
+
+
+def border_rule(label, state, r):
+    """the box border is the key colour of the trace in every state: exactly expected_border (the key itself, or, only for a colour under 3:1 against the popup such as a pale yellow, the key moved
+    toward the text colour to the first 5% step that holds 3:1); never black or grey (unless the key is black), and no outer ring"""
+    where = "%s [%s] %s" % (label, state, r["c"])
+    need(r["bw"] >= 2 and r["bstyle"] in ("solid", "dashed"), "%s: the box border must be at least 2 px: %s" % (where, r))
+    need(r["shadow"] == "none", "%s: no outer ring is allowed on the key box (it read as a dark border): %s" % (where, r))
+    need(r["borderVsPanel"] >= 3, "%s: the border has contrast %.2f against the popup, under 3: %s" % (where, r["borderVsPanel"], r))
+    want = expected_border(r["key"], r["ink"], r["panel"])
+    need(r["border"] == want, "%s: the border %s is not the expected %s (key %s, text %s, popup %s)" % (where, r["border"], want, r["key"], r["ink"], r["panel"]))
+    if r["border"] != r["key"]: need(r["keyVsPanel"] < 3, "%s: the border %s differs from the key %s though the key already holds 3:1: %s" % (where, r["border"], r["key"], r))
+    if state in ("on", "off"):
+        if r["on"]: need(r["fill"] == r["key"], "%s: the ticked box is filled with the exact key colour: %s" % (where, r))
+        else: need(r["fill"] == r["rowBg"], "%s: an unticked box is empty: %s" % (where, r))
 
 
 def picker_fixture(pg, label):
-    """every palette colour: the box keeps a 3:1 ring against the row, the tick (and the inner ring of a dashed trace) 3:1 against the fill, a dashed trace shows its dash both unticked
-    (dashed border) and ticked (inner dashed ring); ticked boxes are filled with the exact colour of the trace"""
+    """every palette colour, ticked and not, solid and dashed, in each state: unticked, ticked, hover (real mouse), keyboard focus, selected row. The box border is the key colour in all of them
+    (border_rule); the tick and the inner ring of a dashed trace keep 3:1 against the fill; a dashed trace shows its dash unticked (dashed border) and ticked (inner dashed ring)"""
     pg.evaluate(PAGE)
-    rows = pg.evaluate(FIXTURE)
-    need(len(rows) >= 16, "%s: fixture rows %d" % (label, len(rows)))
-    for r in rows:
-        need(r["ringRatio"] >= 3, "%s: %s ring contrast %.2f < 3: %s" % (label, r["c"], r["ringRatio"], r))
-        if r["d"]: need(r["border"] == "dashed", "%s: a dashed trace needs a dashed border: %s" % (label, r))
-        else: need(r["border"] == "solid", "%s: a solid trace needs a solid border: %s" % (label, r))
+    n = pg.evaluate(FIXTURE)
+    need(n >= 16, "%s: fixture rows %d" % (label, n))
+    pg.mouse.move(700, 5)
+    states = {}
+    for i in range(n):
+        r = pg.evaluate(STATE + "(%d)" % i); border_rule(label, "on" if r["on"] else "off", r); states[i] = r
+        if r["d"]: need(r["bstyle"] == "dashed", "%s: a dashed trace needs a dashed border: %s" % (label, r))
+        else: need(r["bstyle"] == "solid", "%s: a solid trace needs a solid border: %s" % (label, r))
         if r["on"]:
             need(r["tick"] >= 3, "%s: tick on %s has contrast %.2f < 3" % (label, r["c"], r["tick"]))
             if r["d"]: need(r["ringOn"]["style"] == "dashed" and r["ringOn"]["content"] not in ("none", "normal") and r["ringOn"]["ratio"] >= 3, "%s: ticked dashed trace shows no dash cue: %s" % (label, r))
-    return len(rows)
+    pg.keyboard.press("Shift")                       # keyboard modality, so the focus below is a :focus-visible one
+    for i in range(n):
+        bb = pg.evaluate("(i => { const e = document.querySelectorAll('#tk-fix .can-row')[i]; e.scrollIntoView({ block: 'nearest' }); const b = e.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })(%d)" % i)
+        pg.mouse.move(bb[0], bb[1])                  # the real pointer over the row: :hover applies without any actionability wait
+        need(pg.evaluate("document.querySelectorAll('#tk-fix .can-row')[%d].matches(':hover')" % i), "%s: the pointer is not over fixture row %d" % (label, i))
+        r = pg.evaluate(STATE + "(%d)" % i); border_rule(label, "hover", r)
+        need(r["border"] == states[i]["border"], "%s: hover changed the border of row %d: %s -> %s" % (label, i, states[i]["border"], r["border"]))
+        pg.evaluate("document.querySelectorAll('#tk-fix .can-row')[%d].focus()" % i)
+        r = pg.evaluate(STATE + "(%d)" % i); border_rule(label, "focus", r)
+        need(r["border"] == states[i]["border"], "%s: focus changed the border of row %d: %s -> %s" % (label, i, states[i]["border"], r["border"]))
+    pg.mouse.move(700, 5); pg.evaluate("document.getElementById('tk-fix').remove()")
+    return n
 
 
 def picker_focus(pg, P, label):

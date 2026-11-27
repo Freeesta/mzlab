@@ -137,7 +137,7 @@ function sync(/** @type {Bag} */ p) {
     }
   }
   old.forEach(n => n.remove()); say(p);
-  const W = /** @type {any} */ (window);                          // the drop lines and the proposal of «Split at the valleys» (integra-valli.js)
+  const W = /** @type {any} */ (window);                          // the drop lines and the proposal of «Split at valleys» (integra-valli.js)
   if (W.INTVALLI) W.INTVALLI.sync(p); else if (p._split || p.ints.some((/** @type {Bag} */ i) => i.splits)) loadScript("m:integra-valli.js").then(() => draw(p));
 }
 {                                                                  // the look of the handles: a ring on the baseline (colours from the CSS variables)
@@ -152,7 +152,7 @@ function sync(/** @type {Bag} */ p) {
     "@media (prefers-reduced-motion:reduce){.iep{transition:none}}@media (forced-colors:active){.iep::after{border-color:CanvasText;background:Canvas}.iep:focus-visible{outline-color:Highlight}.iep.on{background:Highlight}}";
   document.head.appendChild(st);
 }
-// «Split at the valleys» of a window drawn on a SIM/MRM trace (key V): registered here, loaded with the first integration of a panel; drop lines proposed
+// «Split at valleys» of a window drawn on a SIM/MRM trace (key V): registered here, loaded with the first integration of a panel; drop lines proposed
 // by the engine, moved and confirmed in integra-valli.js
 const splittable = (/** @type {Bag} */ c) => { const l = AREACOPY.target(c.p, c.x, c.px, c.py), it = l && l.int; return it && !it.fol && /^m\|/.test(it.key || "") && it.bm ? it : null; };
 AZIONI.register({ id: "int.split", group: "tools", order: 0, views: ["mrm"], shortcut: { key: "v", where: "chart", label: "int.split.menu" },

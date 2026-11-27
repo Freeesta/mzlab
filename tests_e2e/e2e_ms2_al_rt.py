@@ -1,4 +1,4 @@
-"""«MS2 at this RT…» in the TIC menu of a DDA file: it is there, and it puts the MS2 scan nearest in time in the MS2 panel; a file without MS2 does not show it."""
+"""«MS2 at RT…» in the TIC menu of a DDA file: it is there, and it puts the MS2 scan nearest in time in the MS2 panel; a file without MS2 does not show it."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -19,4 +19,4 @@ try:
         assert not pg.evaluate(f"!!({ROW})"), "hidden without MS2"
 finally:
     r.close(); r.report()
-print("\nSTEPS\n  MS2 at this RT: ok")
+print("\nSTEPS\n  MS2 at RT: ok")

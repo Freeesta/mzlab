@@ -116,7 +116,7 @@ try:
             pg.evaluate(f"setActive(E.panels.find(q=>q.id=={sid}))"); pg.click("#cx-apply"); pg.wait_for_timeout(500)
             fm = pg.evaluate(f"E.panels.find(q=>q.id=={sid}).fm"); assert fm and abs(fm[0]["m"] - xy["m"]) < 1e-4 and fm[0]["text"], fm
             xy = peak_xy(); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            assert "Remove the formulas written" in pg.inner_text("#ctx"); pg.keyboard.press("Escape")
+            assert "Remove chart formulas" in pg.inner_text("#ctx"); pg.keyboard.press("Escape")
         step("«Apply» writes the formula (candidate) on the spectrum under the peak", apply)
         def expand():
             pg.click("#cx-exp"); pg.wait_for_selector("#cmp-els", timeout=5000)

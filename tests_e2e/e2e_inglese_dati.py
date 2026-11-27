@@ -82,7 +82,7 @@ try:
             it = italian(pg); assert not it, it
             items = pg.evaluate("[...document.querySelectorAll('#ctx button, #ctx div, #ctx a')].map(e => e.textContent.trim()).filter(Boolean)")
             assert any("Integrate" in x for x in items), items
-            pg.locator("#ctx").get_by_text("Integrate the peak").first.click(); frames(pg, 3)
+            pg.locator("#ctx").get_by_text("Integrate peak").first.click(); frames(pg, 3)
             it = italian(pg); assert not it, it
         step("XIC extraction and integration menu", xic_integrate)
         b.close()

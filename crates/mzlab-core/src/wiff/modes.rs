@@ -117,6 +117,27 @@ pub(crate) fn scan_type_named(v: &str) -> Option<&'static str> {
     KINDS.iter().skip(SPECIAL).find(|k| **k == v).copied()
 }
 
+/// The label of an experiment's scan type in the sample list (`types` of `samples_list/1`), from its scan-type code alone. Level-1 scans are all a
+/// `Full scan` (Q1, Q3, EMS, TOF MS, `?`); a code outside the table is `Unknown`, never a guess.
+pub fn type_label(code: Option<u32>) -> &'static str {
+    let Some(m) = code.and_then(mode) else {
+        return "Unknown";
+    };
+    match (m.output, m.code) {
+        (Output::Sim, _) => "SIM",
+        (Output::Srm, _) => "MRM",
+        (_, CODE_PRECURSOR_ION) => "Precursor ion",
+        (_, CODE_NEUTRAL_LOSS) => "Neutral loss",
+        (_, CODE_PRODUCT_ION | 9) => "Product ion",
+        (_, CODE_PRODUCT) => "Enhanced product ion",
+        (_, CODE_MS3) => "MS3",
+        (_, 12) => "Enhanced resolution",
+        (_, 14) => "Time-delayed fragmentation",
+        (_, 16) => "Enhanced multiply charged",
+        _ => "Full scan",
+    }
+}
+
 /// The CV term of the spectrum type of an experiment: `None` for the types that need none (full scan, product-ion scan).
 pub fn spectrum_term(code: Option<u32>) -> Option<(&'static str, &'static str)> {
     code.and_then(mode).and_then(|x| x.term)
