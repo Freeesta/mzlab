@@ -268,10 +268,6 @@ const ms2Chrom = p => p.type === "chrom" && (p.tab || E.tab) === ESP.ms2 && !/^(
 const tabNuovo = (scan = false) => tabFiles().some((/** @type {MzFile} */ f) => f.vis) ? E.tab : (E.files.find((/** @type {MzFile} */ f) => f.vis && !f.gone && ESP.ids.includes(f.kind) && !(scan && f.kind === "mrm")) || { kind: E.tab }).kind;
 /** @param {string} t */
 const suTab = t => { if (t !== E.tab) window.setTab?.(t, true, "new-panel"); return t; };
-/** A panel width that differs from the host is a hand on the resize corner only when the host has not moved since the last fit (p._hw, set by fitWidth): when the window or the file list moved it,
- * the panel is a frame behind and follows (fitWidth) instead of staying at its old width for good. @param {any} p */
-function hostMovedSinceFit(p) { return p._hw != null && Math.abs(Q("#dpanels").clientWidth - p._hw) > 1; }
-
 /** @param {string} type @param {Bag} o @param {Pannello} [after] */
 function addPanel(type, o, after) {
   // the panel is completed field by field below, by type: it only satisfies Pannello at the end
@@ -341,7 +337,7 @@ function addPanel(type, o, after) {
   let skip = 2;  // the first notification of each of the two watched elements is the initial size
   const onSize = () => {
     if (skip > 0) { skip--; return; }
-    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) { if (hostMovedSinceFit(p)) fitWidth(); else p.full = false; } if (p.full) relayout(); fitHost(); uiSave(); }
+    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) { if (p._hw != null && Math.abs(Q("#dpanels").clientWidth - p._hw) > 1) fitWidth(); else p.full = false; } if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
     if (p._fitW !== el.offsetWidth) { p._fitW = el.offsetWidth; fitHdNow(p); }  // both observers fire: one fit per width
   };
