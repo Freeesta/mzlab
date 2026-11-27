@@ -80,5 +80,6 @@ pub(crate) static RELATED: &[Rel] = &[
     r("tp.network", "pathway network scheme products draw", &["mol draw", "structure.render"]),
     r("structure.render", "draw modification structure product", &["mol draw", "tp.network"]),
     r("export.table_csv", "export table csv", &["export.mztab", "features"]),
+    r("mol find", "compound name synonym formula mass look up built-in catalogue list pesticide herbicide fungicide insecticide pharmaceutical contaminant is this compound in the list m/z of a compound", &["mol search", "ion mz", "mol label"]),
     r("quant.curve", "calibration curve quantification lod loq", &["quant.calibrate", "peak table", "chrom.transitions"]),
 ];

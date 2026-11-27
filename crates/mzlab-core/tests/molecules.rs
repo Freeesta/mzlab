@@ -1,12 +1,12 @@
 //! `molecules/1`: the CSV and canonical JSON round trips, one error per wrong row, the search (mass in ppm, formula, text), the levels, the catalogue (written
-//! back to the same bytes) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/name_box_gold.json`, written once; the script and the page are gone).
+//! back to the same bytes; the catalogue is in `molecules_catalogue.rs`) and the parity of the search with the frozen answers of the former Tabui name box (`tests/data/name_box_gold.json`, written once; the script and the page are gone).
 //! The molecules of the tests are invented.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::molecules::{
-    digest, from_csv, from_json, merge, route, search, to_csv, to_json, Molecule,
+    digest, from_csv, from_json, merge, route, search, table, to_csv, to_json, Molecule,
 };
 
 const LOOSE: &str = "\
@@ -30,13 +30,6 @@ static ARCHIVE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn catalogue() -> (String, Vec<Molecule>) {
-    let text = std::fs::read_to_string(root().join("mzlab/web/molecules/catalogue.csv")).unwrap();
-    let all =
-        from_csv(&text, "catalog", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
-    (text, all)
 }
 
 #[test]
@@ -247,22 +240,6 @@ fn levels_replace_by_id_and_come_back() {
     assert!(route("search", "{\"q\":\"nuova\"}").unwrap() == "[]");
 }
 
-#[test]
-fn the_catalogue_is_canonical_and_complete() {
-    let (text, all) = catalogue();
-    // the last record (timolol) was added after the two old lists
-    assert_eq!(all.len(), 625 + 645 - 43 + 1);
-    assert_eq!(to_csv(&all), text, "mzlab/web/molecules/catalogue.csv is not in the canonical form: run tools/generate_molecules.py");
-    let both = all.iter().filter(|m| m.origin.catalog.len() == 2).count();
-    assert_eq!(both, 43 + 1);
-    assert_eq!(
-        all.iter()
-            .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
-            .count(),
-        625 + 1
-    );
-}
-
 /// The queries of the frozen answers: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
 fn queries(tabui: &[&Molecule]) -> Vec<String> {
     let mut names: Vec<&str> = Vec::new();
@@ -294,15 +271,41 @@ fn queries(tabui: &[&Molecule]) -> Vec<String> {
     out
 }
 
-/// The 625 compounds of the old Tabui list, in its order (timolol came after).
+/// A cell of a `;` CSV, quoted when it needs it.
+fn cell(s: &str) -> String {
+    if s.contains([';', '"', '\n']) {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+/// The 625 compounds of the Tabui list (`TP_Mine/data/composti.csv`, in its order); the 43 that are also in the HRMS list (same InChIKey) carry both tags.
 fn old_tabui_compounds() -> Vec<Molecule> {
-    let (_, all) = catalogue();
-    let mut tabui: Vec<Molecule> = all
-        .into_iter()
-        .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
+    let read = |p: &str| table(&std::fs::read_to_string(root().join(p)).unwrap());
+    let hrms: Vec<String> = read("tests/data/liste/sostanze_hrms.csv")
+        .iter()
+        .skip(1)
+        .map(|(_, r)| r[9].clone())
         .collect();
-    tabui.truncate(625);
-    tabui
+    let mut csv = String::from("name;synonyms;molecular_formula;smiles;inchikey;catalog\n");
+    for (_, r) in read("TP_Mine/data/composti.csv").iter().skip(1) {
+        let names: Vec<&str> = r[0].split(';').map(str::trim).collect();
+        let tags = if hrms.contains(&r[4]) {
+            "tabui|hrms"
+        } else {
+            "tabui"
+        };
+        csv += &format!(
+            "{};{};{};{};{};{tags}\n",
+            cell(names[0]),
+            cell(&names[1..].join("|")),
+            r[1],
+            cell(&r[3]),
+            r[4]
+        );
+    }
+    from_csv(&csv, "catalog", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]))
 }
 
 #[test]
@@ -434,52 +437,6 @@ fn a_suspect_list_becomes_a_collection() {
     assert_eq!(back[hits[0].0].name, "Provolone B");
 }
 
-/// The screening list (`list` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
-#[test]
-fn hrms_list_keeps_the_mz_of_the_old_csv() {
-    let (text, _) = catalogue();
-    let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
-    route("load", &format!("{{\"catalog\":{}}}", quoted(&text))).unwrap();
-    let gold =
-        parse(&std::fs::read(root().join("tests/data/molecules_hrms_gold.json")).unwrap()).unwrap();
-    let ads: Vec<String> = gold
-        .get("adducts")
-        .unwrap()
-        .arr()
-        .iter()
-        .map(|a| format!("{:?}", a.str().unwrap()))
-        .collect();
-    let out = route(
-        "list",
-        &format!("{{\"catalog\":\"hrms\",\"adducts\":[{}]}}", ads.join(",")),
-    )
-    .unwrap();
-    let list = parse(out.as_bytes()).unwrap();
-    let mols: Vec<Vec<f64>> = list
-        .arr()
-        .iter()
-        .map(|m| {
-            m.get("mz")
-                .unwrap()
-                .arr()
-                .iter()
-                .map(|x| x.f64().unwrap_or(f64::NAN))
-                .collect()
-        })
-        .collect();
-    let rows = gold.get("rows").unwrap().arr();
-    assert!(mols.len() >= rows.len());
-    for r in rows {
-        let r: Vec<f64> = r.arr().iter().map(|x| x.f64().unwrap()).collect();
-        assert!(
-            mols.iter()
-                .any(|m| m.iter().zip(&r[1..]).all(|(a, b)| (a - b).abs() <= 1e-5)),
-            "no molecule with the m/z of {r:?}"
-        );
-    }
-}
-
-/// A document that is not `molecules/1` with its list is a bad document, never read as empty.
 #[test]
 fn a_document_without_the_molecules_list_is_a_bad_document() {
     let e = mzlab_core::molecules::from_json(br#"{"schema":"molecules/1"}"#).unwrap_err();

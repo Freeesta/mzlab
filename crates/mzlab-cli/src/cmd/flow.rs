@@ -40,9 +40,9 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("flow check", "mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files", crate::flow_json::check).schema("flowcheck/1"),
     Entry::new("flow steps", "mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only", crate::steps_cmd::run),
     Entry::new("flow tables", "mzlab-cli flow tables RUNDIR [--json]   feature tables of a run", crate::flow_report::tables::run).schema("tables/1").exits(&[0, 1, 2, 4]),
-    Entry::new("flow defaults", "mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits", crate::flow_defaults::run).schema("step-params/1").exits(&[0, 2, 5]),
+    Entry::new("flow defaults", "mzlab-cli flow defaults STEP[@V] [--json]   step parameters, defaults, limits", crate::flow_defaults::run).schema("step-params/1").exits(&[0, 2, 5]),
     Entry::new("flow report", "mzlab-cli flow report RUNDIR [--out FILE]   a run's report", report).exits(&[0, 2, 3, 4, 6]).schema("run-report/2"),
     Entry::new("flow record", "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run", crate::flow_mzrun::record).schema("mzrun/2"),
-    Entry::new("flow verify", "mzlab-cli flow verify RECORD   do a record's fingerprints match its files", crate::flow_mzrun::check).schema("verify/1"),
+    Entry::new("flow verify", "mzlab-cli flow verify RECORD   do a record's fingerprints match", crate::flow_mzrun::check).schema("verify/1"),
     Entry::new("flow command", "mzlab-cli flow command PLAN.json [--json]   rerun script", command).schema("flowcommand/1").exits(&[0, 2, 3, 4]),
 ];

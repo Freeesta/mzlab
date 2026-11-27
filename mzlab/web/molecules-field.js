@@ -16,14 +16,16 @@ const CSS = `.molc{position:relative;display:flex;flex-direction:column;gap:4px;
 .molc label{font-size:.875rem;font-weight:600;color:var(--ink)}
 .molc input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-height:32px;box-sizing:border-box;width:100%}
 .molc input:focus-visible,.molc .molc-man:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.molc ul{position:absolute;top:100%;left:0;right:0;z-index:6100;margin:2px 0 0;padding:0;list-style:none;max-height:260px;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.molc ul{position:absolute;top:100%;left:0;right:0;z-index:6100;margin:2px 0 0;min-width:0;box-sizing:border-box;padding:0;list-style:none;max-height:260px;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
 .molc ul[hidden]{display:none}
-.molc li{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:6px 10px;min-height:24px;cursor:pointer}
+.molc li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 10px;align-items:baseline;padding:6px 10px;min-height:24px;cursor:pointer}
+.molc .molc-n{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .molc li[aria-selected=true]{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}
 .molc .molc-f,.molc .molc-m{color:var(--muted);font-size:.8125rem;white-space:nowrap}
 .molc .molc-man{align-self:flex-start;background:none;border:0;padding:4px 0;min-height:24px;font:inherit;font-size:.8125rem;color:var(--accent);text-decoration:underline;cursor:pointer}
 .molc .molc-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .molc.molc-existing{flex:1;min-width:0;max-width:none}
+@media (max-width:480px){.molc li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n n" "f m"}.molc .molc-n{grid-area:n}.molc .molc-f{grid-area:f}.molc .molc-m{grid-area:m}}
 @media (pointer:coarse){.molc li{min-height:40px}.molc input{min-height:40px}.molc .molc-man{min-height:40px}}`;
 
 let seq = 0;
@@ -100,7 +102,7 @@ export function field(host, opts) {
       const li = document.createElement("li");
       li.id = `${id}-o${i}`; li.setAttribute("role", "option"); li.setAttribute("aria-selected", "false");
       const n = document.createElement("span"), f = document.createElement("span"), z = document.createElement("span");
-      n.textContent = display(m.name); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.mass.toFixed(4);
+      n.textContent = display(m.name); n.className = "molc-n"; li.title = display(m.name); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.mass.toFixed(4);
       li.append(n, f, z);
       li.onmousedown = ev => ev.preventDefault();
       li.onclick = () => pick(i);

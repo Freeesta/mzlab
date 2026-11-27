@@ -35,6 +35,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | products of a parent, unit resolution (kinetics) | Flow step `tp.dig_lr`: ONE run over the whole series (every file in `index`); other settings: rerun the same `--out` with `--set` (cached) |
 | kinetic LR campaign: names, roles, targets, products per condition | the 9-call recipe and plan template of `recipes.md` (`docs/recipes/kinetic-lr.mzflow.json`) |
 | hypotheses of the products | Flow step `tp.generate` |
+| a compound by name, synonym, formula or mass (pesticides, pharmaceuticals, contaminants) | `mol find dimethomorph` |
 | structure picture (SVG, PNG, CDXML, KET, molfile) | `mol draw SMILES --format svg --out a.svg`; pathway: Flow step `tp.network` |
 | calibration curve, LOD, LOQ | Flow step `quant.curve` |
 | export | `export.table_csv`, `export.mztab`, `export.annotations` (steps); `peak table --columns sn,fig,quality` |
