@@ -1,5 +1,5 @@
 //! The compound search (`molecules/1`, op `lr_molecules`) over the one built-in catalogue in the core, the app, the CLI (`mzlab-cli mol find`) and, when
-//! `MZLAB_WASM_PKG` names the built `.wasm` (see `parity_routes.rs`), the module of the site: the same file gives the same answer bytes everywhere.
+//! `MZLAB_WASM_PKG` names the built `.wasm` (see `parity_routes.rs`), the module of the site: the same file gives the same answer bytes everywhere. The wasm leg is run, and must pass, by `tests/test_parita_rotte_app.py`.
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -96,14 +96,11 @@ fn a_body_that_is_not_json_is_the_same_error_key_in_the_core_and_the_app() {
     assert_eq!(on_app(&st, "search", "not json"), core);
 }
 
-/// In CI the wasm leg is not optional: a missing package is a failure there.
+/// The wasm leg runs inside `tests/test_parita_rotte_app.py`, which builds the package and sets `MZLAB_WASM_PKG`; a plain `cargo test` has no package and
+/// leaves it to that test, as every other parity test of this folder does.
 #[test]
 fn the_app_gives_the_same_bytes_as_the_wasm() {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
-        assert!(
-            std::env::var_os("CI").is_none(),
-            "MZLAB_WASM_PKG is not set: the wasm leg of the parity test did not run"
-        );
         return;
     };
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
