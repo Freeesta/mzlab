@@ -25,7 +25,7 @@ import numpy as np
 from .mzml import PeakTable, Scan
 
 MAGIC = b"MZIDX001"
-VERSION = 3
+VERSION = 4                                     # 4 = 3 plus the optional column 23 `fill` (ion injection time); 3 is still read
 HEADER = struct.Struct("<8sIIQQQQQ8x")          # magic, version, flags, meta_off, meta_len, scans_off, scans_len, total_size  (64 bytes)
 BLOCK = 16384                                   # elements per block (also the spacing of the fence values)
 ALIGN = 64
@@ -218,7 +218,7 @@ class MzIdx:
             if len(head) < HEADER.size:
                 raise ValueError("mzidx: file too short")
             magic, ver, _flags, self._moff, self._mlen, self._soff, self._slen, total = HEADER.unpack(head)
-            if magic != MAGIC or ver != VERSION:
+            if magic != MAGIC or ver not in (3, VERSION):
                 raise ValueError("mzidx: not an index of this version")
             if self._fh.seek(0, os.SEEK_END) != total:
                 raise ValueError("mzidx: file truncated")
@@ -243,6 +243,7 @@ class MzIdx:
         out = []
         for i, r in enumerate(rows):
             d = dict(zip(SCAN_COLUMNS, r))
+            d["fill"] = r[22] if len(r) > 22 else None
             d["iso"] = tuple(d["iso"]) if d["iso"] is not None else None
             d["path"] = tuple(tuple(x) for x in d["path"]) if d["path"] is not None else None
             out.append(Scan(index=i, **d))
@@ -422,7 +423,8 @@ def selections(run) -> list[tuple]:
 
 def scans_blob(run) -> bytes:
     """The scan table of `run` as the compact JSON rows of SCAN_COLUMNS."""
-    rows = [[getattr(sc, c) for c in SCAN_COLUMNS] for sc in run.scans]
+    # columns 21 (type) and 22 (mobility) are `null` here: only the Rust reader knows them; 23 (fill time) only for a scan that states one
+    rows = [[getattr(sc, c) for c in SCAN_COLUMNS] + ([None, None, sc.fill] if sc.fill else []) for sc in run.scans]
     return json.dumps(rows, separators=(",", ":")).encode("utf-8")
 
 

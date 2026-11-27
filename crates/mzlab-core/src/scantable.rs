@@ -103,6 +103,8 @@ pub struct Row {
     pub kind: Option<&'static str>,
     /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
     pub mob: Option<(f64, &'static str)>,
+    /// The ion injection (fill) time of the scan in ms (`MS:1000927`), when the file states one: column 23 of the row.
+    pub fill: Option<f32>,
     detail: Option<Box<Detail>>,
 }
 
@@ -201,6 +203,13 @@ pub(crate) fn mobility_of_terms(t: &crate::spechead::Terms) -> Option<(f64, &'st
     [("MS:1002815", "k0"), ("MS:1002476", "ms")]
         .into_iter()
         .find_map(|(acc, u)| t.float(acc).map(|v| (v, u)))
+}
+
+/// The ion injection time of a scan in ms (`MS:1000927`): a positive, finite number, else none (a zero or negative time states nothing).
+pub(crate) fn fill_of_terms(t: &crate::spechead::Terms) -> Option<f32> {
+    t.float("MS:1000927")
+        .filter(|v| *v > 0.0 && v.is_finite())
+        .map(|v| v as f32)
 }
 
 fn float(s: &str) -> Option<f64> {

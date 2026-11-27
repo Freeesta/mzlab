@@ -10,6 +10,9 @@ use crate::json::Out;
 pub struct Summary {
     /// `ms`, `ms2`, `sim`, `mrm`, `dad`, in that order.
     pub kinds: Vec<&'static str>,
+    /// The scan types the sample's experiments acquire as readable labels (`Full scan`, `SIM`, `MRM`, `Product ion`, ..., `DAD`), each once, in the order of the
+    /// experiments; the text the chooser and `sample list` show.
+    pub types: Vec<&'static str>,
     /// `+`, `-` or `both`.
     pub polarity: Option<&'static str>,
     /// First and last retention time (minutes).
@@ -41,7 +44,7 @@ pub fn samples_json(l: &mut dyn Reader) -> String {
     write(l, false)
 }
 
-/// The superset `samples_list/1`: `samples_json` plus `schema`, `bytes`, `scan` and, per sample, `kinds`, `polarity`, `rt`, `tic`, `method`, `missing`.
+/// The superset `samples_list/1`: `samples_json` plus `schema`, `bytes`, `scan` and, per sample, `kinds`, `types`, `polarity`, `rt`, `tic`, `method`, `missing`.
 /// A reader that opened the dataset without reading its data file (`readers::open_listing`) lists from the index alone.
 pub fn list_samples(l: &mut dyn Reader) -> String {
     write(l, true)
@@ -163,11 +166,18 @@ fn write(l: &mut dyn Reader, rich: bool) -> String {
     o.0
 }
 
-/// `kinds`, `polarity`, `rt`, `tic`, `method` and `missing` of a sample, each only when known (`missing` only when above 0).
+/// `kinds`, `types`, `polarity`, `rt`, `tic`, `method` and `missing` of a sample, each only when known (`missing` only when above 0).
 fn summary_json(o: &mut Out, s: &Summary) {
     if !s.kinds.is_empty() {
         o.raw(",\"kinds\":[");
         for (i, k) in s.kinds.iter().enumerate() {
+            o.raw(if i > 0 { "," } else { "" }).str(k);
+        }
+        o.raw("]");
+    }
+    if !s.types.is_empty() {
+        o.raw(",\"types\":[");
+        for (i, k) in s.types.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(k);
         }
         o.raw("]");

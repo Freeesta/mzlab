@@ -1,7 +1,7 @@
 //! What a `.wiff` says of each sample from the container and the `Idx` rows alone (`Reader::listing`): counts, times, TIC, section bytes, experiment kinds,
 //! polarity and the method file. The `.wiff.scan` is never read here; a copy cut short shows as index rows lying past its end (`missing`).
 
-use super::modes::{mode, Output};
+use super::modes::{mode, type_label, Output};
 use super::reader::{member, wiff_member, WiffReader, SCAN};
 use super::Wiff;
 use crate::error::{Error, Result};
@@ -72,6 +72,17 @@ fn summary(w: &Wiff, method: Option<String>) -> Summary {
         ("mrm", has(&|e| out(e).is_some_and(|x| x.0 == Output::Srm))),
         ("dad", w.dad.is_some()),
     ];
+    // the label of every used experiment (`modes::type_label` from its scan-type code), each once in experiment order, then the detector
+    let mut types: Vec<&'static str> = Vec::new();
+    for e in &used {
+        let t = type_label(e.code);
+        if !types.contains(&t) {
+            types.push(t);
+        }
+    }
+    if w.dad.is_some() {
+        types.push("DAD");
+    }
     let signs: Vec<i8> = used
         .iter()
         .map(|e| w.polarity_of(e))
@@ -90,6 +101,7 @@ fn summary(w: &Wiff, method: Option<String>) -> Summary {
     });
     Summary {
         kinds: kinds.iter().filter(|k| k.1).map(|k| k.0).collect(),
+        types,
         polarity,
         rt: rows.clone().map(|r| r.time_min).fold(None, |a, t| match a {
             None => Some((t, t)),

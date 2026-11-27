@@ -120,3 +120,29 @@ def test_app_name_fills_in_without_parameters():
     r = node("globalThis.APP_NAME='NameTest'; I.add('en', {'k.a': '{app} is free', 'k.b': '{app} and {n}'});"
              "console.log(JSON.stringify([I.t('k.a'), I.t('k.a', {}), I.t('k.b', {n: 2}), I.t('k.a', {app: 'Other'})]))")
     assert r == ["NameTest is free", "NameTest is free", "NameTest and 2", "Other is free"]
+
+
+def test_menu_labels_have_no_articles():
+    """House style: menu labels are short imperatives without articles or demonstratives (docs/agenti/languages.md)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import controlla_menu as c
+    cat = {"ctx.resetZoom": "Reset the zoom", "ctx.annotate.point": "Annotate this point…", "ctx.chrom.etpk": "Peak labels",
+           "cmd.maplock.name": "Lock sight", "cmd.hdr.name": "Header of the scan", "ctx.spec.xic.aria": "Extract the XIC of m/z {mz}",
+           "ctx.map.xic": "Extract XIC of m/z {mz}...", "int.menu.del": "Delete a peak"}
+    errs: list = []
+    c.check_menu_labels(cat, errs)
+    flagged = {e.split(": ")[1] for e in errs}
+    assert flagged == {"ctx.resetZoom", "ctx.annotate.point", "int.menu.del"}, errs      # aria is a sentence; cmd.hdr.name is allow-listed
+    assert all(k in c.MENU_ARTICLE_OK and c.MENU_ARTICLE_OK[k] for k in c.MENU_ARTICLE_OK)   # every exception has a reason
+
+
+def test_menu_label_key_families_are_recognised():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import controlla_i18n
+    import controlla_menu as c
+    cat = controlla_i18n.load_catalog("en")
+    keys = c.menu_keys(cat)
+    for k in ("ctx.resetZoom", "ctx.chrom.xic", "int.menu.zoomSel", "ibk.menu.sub", "files.ctx.remove", "cmd.xic.name"):
+        assert k in keys, k
+    assert not any(k.endswith((".aria", ".prompt")) for k in keys)
+    assert cat["ctx.resetZoom"] == "Reset zoom" and cat["int.menu.zoomSel"] == "Zoom to interval"      # the owner's examples

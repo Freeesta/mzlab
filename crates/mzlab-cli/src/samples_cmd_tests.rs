@@ -227,6 +227,23 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// The type text of a sample is the engine's `types`: the JSON carries the list, the table the same labels joined by a comma (what the page dialog shows).
+#[test]
+fn list_shows_the_scan_types_as_the_engine_words_them() {
+    let d = pairs("types");
+    let file = d.join("epi3200.wiff").to_str().unwrap().to_string();
+    let (code, out, err) = run(&["sample", "list", &file, "--json"]);
+    assert_eq!(code, 0, "{err}");
+    assert!(
+        out.contains(r#""kinds":["ms","ms2"],"types":["Full scan","Enhanced product ion"]"#),
+        "{out}"
+    );
+    let (code, table, err) = run(&["sample", "list", &file]);
+    assert_eq!(code, 0, "{err}");
+    assert!(table.contains("Full scan, Enhanced product ion"), "{table}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
 /// Every key of a JSON document, whatever its depth.
 fn keys_of(v: &mzlab_core::json::Value, out: &mut std::collections::BTreeSet<String>) {
     use mzlab_core::json::Value;

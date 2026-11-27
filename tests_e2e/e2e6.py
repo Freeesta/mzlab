@@ -205,7 +205,7 @@ try:
             xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
             pg.mouse.click(xy[0], xy[1], button="right"); hole()
             t = pg.inner_text("#ctx"); print(t)
-            assert "Copy the formula (C8H10NO2+)" in t and "Copy the mass (m/z 152)" in t, t
+            assert "Copy formula (C8H10NO2+)" in t and "Copy mass (m/z 152)" in t, t
             pg.keyboard.press("Escape")
         step("right click on the label under a molecule: copy formula and mass", labelmenu)
         def side():

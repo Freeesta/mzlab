@@ -267,7 +267,7 @@ const DDA = (() => {
     return (/** @type {number} */ i) => D.pint[i] ?? m.get(D.sid[i]) ?? 0;
   }
   const top = (/** @type {number[]} */ idx, /** @type {(i: number) => number} */ v) => idx.reduce((b, i) => (v(i) > v(b) ? i : b), idx[0]);
-  // "Follow this ion in the MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
+  // "Follow ion in MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
   async function follow(/** @type {Bag} */ s1, /** @type {number} */ mz) {
     try {
       const s2 = byId(s1.duo), c = s1.link != null ? byId(s1.link) : null, f = E.files[s1.k]; if (!s2 || !c) return false;

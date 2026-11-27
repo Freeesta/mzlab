@@ -89,6 +89,9 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
             .map_or(0, |i| i as u8 + 1),
         mob,
         mob_unit,
+        fill: f(22)
+            .filter(|v| *v > 0.0 && v.is_finite())
+            .map_or(f32::NAN, |v| v as f32),
     })
 }
 

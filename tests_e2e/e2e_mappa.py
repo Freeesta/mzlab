@@ -92,7 +92,7 @@ try:
         step("arrows: next scan, one bin, Shift = apex of the XIC / next peak of the spectrum", keys)
         def lock():
             x, y = at(.4, .5); rclick(x, y)
-            pg.click("#ctx [role=menuitemcheckbox]"); wait_for_js(pg, f"!!{M}._mz.lock")                  # right click = the menu; «Lock the sight» is in it
+            pg.click("#ctx [role=menuitemcheckbox]"); wait_for_js(pg, f"!!{M}._mz.lock")                  # right click = the menu; «Lock sight» is in it
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk, lk
             pg.mouse.move(x + 80, y + 40); frames(pg, 4); assert pg.evaluate(f"MAPPA.point({M})") == lk          # the mouse is free, the point stays
             assert pg.evaluate(f"!!{M}._mz.lock && !!{M}._mz.dot")

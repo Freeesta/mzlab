@@ -8,7 +8,7 @@ import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-from trace_tip import top_row, picker_fixture, picker_focus
+from trace_tip import top_row, picker_fixture, picker_focus, expected_border, rgb_of
 
 steps = []
 def step(name, fn):
@@ -25,7 +25,7 @@ P = "E.panels.find(p => p.type === 'mrm')"
 # rows of the picker (all of them, ticked or not) and the traces drawn, both with the colour as the browser computes it
 READ = """(() => { const p = %s, a = p._a, norm = c => { const e = document.createElement('i'); e.style.color = c; document.body.appendChild(e); const v = getComputedStyle(e).color; e.remove(); return v; };
   const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.can-ck[data-tc]'), on = r.getAttribute('aria-selected') === 'true'; return { label: r.querySelector('.can-et').textContent, on,
-    sw: !!s, off: !!s && !on, moved: !!s && s.style.getPropertyValue('--tkb') !== s.style.getPropertyValue('--tk'), color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
+    sw: !!s, off: !!s && !on, key: s ? norm(s.dataset.tc) : null, ink: norm(getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()), panel: norm(getComputedStyle(document.documentElement).getPropertyValue('--panel').trim()), color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
   const tr = (a ? a.sr : []).map(s => ({ label: SIMUI.label(s.tk), color: norm(s.color), dash: s.dash.join(','), k: s.k }));
   return { rows, tr, hl: p._hl ?? null }; })()""" % P
 
@@ -43,7 +43,11 @@ def check(d, n, samples, ticked=None):
         need(not row["sep"], "the colour lives in the checkbox, no separate swatch: %s" % row)
         need(row["off"] == (not row["on"]), "the checkbox must be empty (coloured border) when unticked: %s" % row)
         need((row["bs"] == "dashed") == bool(row["td"]), "a dashed trace gets a dashed box border: %s" % row)
-        if row["label"] in col: need(row["color"] == next(iter(col[row["label"]])) or (not row["on"] and row["moved"]), "row %s swatch %s, trace %s" % (row["label"], row["color"], col[row["label"]]))
+        if row["label"] in col:
+            trace = next(iter(col[row["label"]]))
+            need(row["key"] == trace, "row %s key colour %s, trace %s" % (row["label"], row["key"], trace))
+            want = trace if row["on"] else "rgb(%d, %d, %d)" % tuple(expected_border(rgb_of(row["key"]), rgb_of(row["ink"]), rgb_of(row["panel"])))      # ticked: the fill is the trace colour; unticked: the border is its expected form
+            need(row["color"] == want, "row %s swatch %s, expected %s (trace %s)" % (row["label"], row["color"], want, trace))
     if samples > 1:
         for lab, per in dash.items(): need(len(set(per.values())) == len(per) >= 2, "samples must differ in dash on %s: %s" % (lab, per))
     return {k: next(iter(v)) for k, v in col.items()}

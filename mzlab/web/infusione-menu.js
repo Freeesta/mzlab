@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// Right click on a peak of an MSn infusion spectrum: «Fragment this ion» (the child node with that precursor), «Back to the precursor», Mean | Sum. Needs infusione.js.
+// Right click on a peak of an MSn infusion spectrum: «Fragment ion» (the child node with that precursor), «Back to precursor», Mean | Sum. Needs infusione.js.
 (() => {
   const { O, isInf, tree, cells, pick, setOpt, node } = INF;
   /** The node a cell shows, from the tree already fetched: null when the cell shows the survey or another file. */

@@ -60,8 +60,8 @@ try:
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close()); BARRA.close(false)")
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
-            pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000)
+            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Identify in libraries\")")
+            pg.click("#ctx >> text=Identify in libraries"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000)
             pg.click("#lw-opt summary"); pg.wait_for_selector("#lw-tol", state="visible")
             assert sweep(pg, "#libwhat", "localStorage.getItem('mzlab.lib.thresholds')") >= 10
         step("«What is it?»: precursor, tolerances and thresholds refuse garbage", what_is)

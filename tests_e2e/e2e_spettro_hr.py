@@ -43,12 +43,12 @@ try:
             labs = [i[0] for i in items]; print(labs)
             assert "Copy value" in labs, labs          # the copy of the value works in high resolution too
             first = [i for i in items if not i[0].startswith(("m/z", "Reset", "Copy value"))]
-            assert first[0][0].startswith("Open the MS² scan") and first[0][1], first[:2]
+            assert first[0][0].startswith("Open MS² scan") and first[0][1], first[:2]
             assert "ormula" in first[1][0], first[:3]
             # the item reads «Options…» (disp.menu); the long wording lives in its aria-label (disp.menu.aria)
             assert any("display options" in (i[1] or "") for i in first[:8]) and hrs >= 3, (first, hrs)
             assert pg.evaluate(f"DDA.ms2For({S1}, {S1}._pm).length") >= 1
-            pg.click("#ctx [role^=menuitem]:has-text('Open the MS² scan')"); ready(pg); pg.wait_for_timeout(800)
+            pg.click("#ctx [role^=menuitem]:has-text('Open MS² scan')"); ready(pg); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.dda!=null).sid") is not None
         step("right click on a peak: open the MS2 scan first, groups, aria-labels", menu)
         def cont():

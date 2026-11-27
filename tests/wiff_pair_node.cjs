@@ -11,7 +11,7 @@ global.memDesc = () => "";
 const held = new Set();      // × on a row of the side list (OPENNOW.hold)
 global.OPENNOW = { held: n => held.has(n) };
 const rows = [];
-global.CONVROWS = { add: (...a) => rows.push(["add", ...a]), finish: (...a) => rows.push(["finish", ...a]), drop: (...a) => rows.push(["drop", ...a]) };
+global.CONVROWS = { add: (...a) => rows.push(["add", ...a]), set: (...a) => rows.push(["set", ...a]), finish: (...a) => rows.push(["finish", ...a]), drop: (...a) => rows.push(["drop", ...a]) };
 const src = fs.readFileSync(process.argv[2], "utf8");
 global.WIFF_WAIT = new Map();
 global.ST = { files: [] };
