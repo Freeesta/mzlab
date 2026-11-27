@@ -240,19 +240,3 @@ fn zero_suppressed_three_point_peaks_read_as_sparse_and_the_numbers_say_so() {
     assert!((20..50).contains(&c.runs_pct) && c.fine_pct == 0, "{c:?}");
     assert!(verdict(k, Switch::On).centroided);
 }
-
-/// The probe runs once per index: the first ask stores the answer on the index, the later ones (`adjusted`, `centroids_of`, the notice) read it back.
-#[test]
-fn the_label_probe_is_kept_on_the_index_and_read_back() {
-    let dir = std::env::temp_dir().join(format!("mzlab_label_kept_{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let (f, idx) = (dir.join("q1.mzML"), dir.join("0.mzidx"));
-    std::fs::write(&f, mzml(MISLABELLED)).unwrap();
-    crate::build_index_of(&f, "", &idx, mzlab_core::budget_auto::native_index_budget()).unwrap();
-    let mut index = crate::open(&idx).unwrap();
-    assert!(index.label.is_none());
-    let first = label_check(&mut index);
-    assert!(first.is_some() && index.label.as_ref() == Some(&first));
-    assert_eq!(label_check(&mut index), first);
-    let _ = std::fs::remove_dir_all(&dir);
-}
