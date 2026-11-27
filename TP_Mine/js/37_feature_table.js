@@ -82,13 +82,15 @@
   }
   /** the open row: `row/2` and `row_traces/2` once per row (cache) and the model TpRiga built from them */
   function rowModels(/** @type {any} */ o, /** @type {any} */ cols, /** @type {(r: FtRow) => string} */ identText, /** @type {(r: FtRow) => any} */ levelOf, /** @type {(t: string) => void} */ warn) {
-    /** @type {Map<number, { row?: any, rowErr?: string, interp?: any, interpErr?: string, tr?: any, trErr?: string, rowP?: Promise<void>, trP?: Promise<void> }>} */ const cache = new Map();
+    /** @type {Map<number, { row?: any, rowErr?: string, interp?: any, interpErr?: string, tr?: any, trErr?: string, slots?: any, slotsErr?: string, rowP?: Promise<void>, trP?: Promise<void>, slP?: Promise<void> }>} */ const cache = new Map();
     const entry = (/** @type {number} */ id) => { let e = cache.get(id); if (!e) cache.set(id, e = {}); return e; };
     const msg = (/** @type {any} */ e) => (o.say ? o.say(e) : String((e && e.message) || e));
     const loadRow = (/** @type {number} */ id) => { const e = entry(id); return e.rowP || (e.rowP = Promise.all([Promise.resolve(o.session.row(id)).then((/** @type {any} */ v) => { e.row = v; }, (/** @type {any} */ x) => { e.rowErr = msg(x); }), loadInterp(e, id)]).then(() => undefined)); };
     /** the `interp/1` row of the series (`session.interp`, when the series has the block); a failure leaves the tab with its reason */
     const loadInterp = (/** @type {any} */ e, /** @type {number} */ id) => (o.session.interp ? Promise.resolve(o.session.interp(id)).then((/** @type {any} */ v) => { e.interp = v; }, (/** @type {any} */ x) => { e.interpErr = msg(x); }) : Promise.resolve());
     const loadTr = (/** @type {number} */ id) => { const e = entry(id); return e.trP || (e.trP = Promise.resolve(o.session.traces(id, o.ppm())).then((/** @type {any} */ v) => { e.tr = v; }, (/** @type {any} */ x) => { e.trErr = msg(x); })); };
+    /** the `feature-slots/1` of the row (`session.slots`): the states and sources are the engine's; a failure leaves the tab with its reason */
+    const loadSlots = (/** @type {number} */ id) => { const e = entry(id); return e.slP || (e.slP = o.session.slots ? Promise.resolve(o.session.slots(id)).then((/** @type {any} */ v) => { e.slots = v; }, (/** @type {any} */ x) => { e.slotsErr = msg(x); }) : Promise.resolve()); };
     /** the cells of the row (typed and timed) by file @param {FtRow} r @param {any} e */
     const sampleOf = (r, e, j) => { const c = e.row && e.row.cells && e.row.cells[j]; return { file: o.names[j], type: c ? c.type : (o.cs && o.cs[j] ? o.cs[j].kind : undefined), time: c ? c.time : (o.cs && o.cs[j] ? o.cs[j].time_min : null), area: c ? c.area : r.areas[j] || null, state: c ? c.state : r.states[j],
       apexRt: c ? c.apex_rt : null, lo: null, hi: null }; };
@@ -152,7 +154,7 @@
       } catch (/** @type {any} */ e) { warn(String(e.message || e)); }
     }
 
-    return { model, loadRow, loadTr };
+    return { model, loadRow, loadTr, loadSlots, slotsOf: (/** @type {number} */ id) => ({ doc: entry(id).slots, err: entry(id).slotsErr }) };
   }
 
   /** «Compare with library» under the MS2 of the open row: the search runs on request in the installed libraries (LIB, the same call as the untargeted detail), the best 5 are picked by a button group and drawn by LIB.mirror.
@@ -196,8 +198,13 @@
     const hasBlank = !!(o.cs && o.cs.some((/** @type {any} */ c) => c.kind === "blank" || c.kind === "dark"));
     if (!hasBlank) { const b = q('[data-fc="blank"]'); b.disabled = true; b.setAttribute("aria-disabled", "true"); }
     const TT = G.TPTAB, { cols, identText, levelOf } = columns(o, n, esc);
-    const { model, loadRow, loadTr } = rowModels(o, cols, identText, levelOf, t => { q("#ft-why").textContent = t; });
-    const hook = G.TPRIGA.hook(model, o.extraTabs);
+    const { model, loadRow, loadTr, loadSlots, slotsOf } = rowModels(o, cols, identText, levelOf, t => { q("#ft-why").textContent = t; });
+    // the «Slots» tab (after the built-in tabs and the ones of the caller): the fixed slots of `feature-slots/1`, drawn by TPSLOTS with the charts of TPRIGA
+    const slotsTab = { key: "slots", label: "Slots", help: "ft.tab.slots", fill: (/** @type {HTMLElement} */ p, /** @type {FtRow} */ r) => {
+      const { doc, err } = slotsOf(r.id);
+      if (doc && G.TPSLOTS) G.TPSLOTS.fill(p, doc, model(r)); else p.textContent = err || (o.session.slots ? "Reading the slots…" : "The slots are not available for this table.");
+    } };
+    const hook = G.TPRIGA.hook(model, [...(o.extraTabs || []), slotsTab]);
     /** @type {Map<number, any>} */ const cmp = new Map();
     /** @type {any} */ let T = null;
     /** @type {FtRow[]} */ let last = [];
@@ -210,7 +217,8 @@
         const open = () => { hook.onOpen(r, p, tab); if (tab === "overview") compare(p, r, model(r), o, cmp); };
         open();
         const again = () => { if (T.openId === r.id && T.tab === tab && p.isConnected) open(); };
-        loadRow(r.id).then(again); if (tab === "overview") loadTr(r.id).then(again);
+        loadRow(r.id).then(again); if (tab === "overview" || tab === "slots") loadTr(r.id).then(again);
+        if (tab === "slots") loadSlots(r.id).then(again);
       },
     });
     q("#ft-host").insertAdjacentHTML("beforeend", TT.legend(["detected", "filled", "targeted", "absent"]));

@@ -10,7 +10,7 @@ Read docs/coda/BRIEF.md.
 
 **Already on main (checked 26 Nov, re-check before coding).** Phones get one card today.
 
-**Done means.** 1. Only viewer modules load; no runs. 2. e2e test at 390 px. 3. No new logic (the data come from the routes of FLOW-TABLE-LIST and FEATURE-DETAIL), stated in the PR body.
+**Done means.** 1. Only viewer modules load; no runs. 2. e2e test at 390 px. 3. No new logic (the data come from the routes `flow tables` and `table slots`), stated in the PR body.
 
 **Out of scope.** Editing on the phone.
 

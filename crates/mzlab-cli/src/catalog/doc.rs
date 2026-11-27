@@ -356,7 +356,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
             .put("detail", text("commands --json PATH... gives each in full"))
             .put("flag_help", shared)
             .put("flag_type", types_json)
-            .put("flag_help_note", text("left out = derived: flag_help, flag_type (else string); required = outside [ ] ( ); repeat = value ends `...`; enum = synopsis `a|b`; arg kind = path (`...` rest), required unless `optional`; args = operands when all paths; stdin = `NAME|-`; flags = none; --json, optional --out: synopsis only"))
+            .put("flag_help_note", text("left out = derived: help, type = flag_help, flag_type (else string); required = outside [ ] ( ); repeat = value ends `...`; enum = synopsis `a|b`; arg kind = path (`...` rest), required unless `optional`; args = synopsis path operands; stdin = `NAME|-`; flags = none; --json, optional --out: synopsis only"))
             .put("exit_codes_note", text("no exit_codes: 0, 1, 2; +3 `flow ` path or VERDICT; +4 path or rest argument, path flag but --out; +5 --sample, --id, `sample `, `dad ` or `msn graph` path; +6 --out"))
             .put("examples_note", text("no examples: `mzlab-cli ` + synopsis minus [optional] groups and `...`"))
             .put("stdout_note", text("no stdout format: json, or text with json_flag; no stdout: json, no schema"));

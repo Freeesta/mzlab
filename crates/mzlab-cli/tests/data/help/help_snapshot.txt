@@ -16,6 +16,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
        mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
+       mzlab-cli table slots TABLE.mzfeat --id N [--samples FILE.json] [--out PATH]   a feature's slots
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -77,7 +78,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
        mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
-       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
+       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
        mzlab-cli msn figure GRAPH.json ...   figure of a graph
@@ -85,14 +86,14 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules vs library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures, arrows
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures
        mzlab-cli mol anal REQUEST.json|-   average mass, mass %, isotope pattern
        mzlab-cli mol check REQUEST.json|- [--out PATH]   drawing faults (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   R/S and E/Z of a drawing
@@ -100,11 +101,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol hilite REQUEST.json|-   atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms, rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or scene
        mzlab-cli mol export MOLFILE|-   drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   text the editor reads for a file
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic or +H cut
-       mzlab-cli mol mech REQUEST.json|-   are a mechanism's curved arrows well formed
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic, +H cut
+       mzlab-cli mol mech REQUEST.json|-   mechanism curved arrows well formed
        mzlab-cli mol find QUERY [--db FILE] [--out PATH]   compound by name, formula or mass
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   EU and US regulatory lists (native only)
@@ -146,6 +147,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
        mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
+       mzlab-cli table slots TABLE.mzfeat --id N [--samples FILE.json] [--out PATH]   a feature's slots
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -207,7 +209,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
        mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
-       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
+       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
        mzlab-cli msn figure GRAPH.json ...   figure of a graph
@@ -215,14 +217,14 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules vs library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures, arrows
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures
        mzlab-cli mol anal REQUEST.json|-   average mass, mass %, isotope pattern
        mzlab-cli mol check REQUEST.json|- [--out PATH]   drawing faults (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   R/S and E/Z of a drawing
@@ -230,11 +232,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol hilite REQUEST.json|-   atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms, rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or scene
        mzlab-cli mol export MOLFILE|-   drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   text the editor reads for a file
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic or +H cut
-       mzlab-cli mol mech REQUEST.json|-   are a mechanism's curved arrows well formed
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic, +H cut
+       mzlab-cli mol mech REQUEST.json|-   mechanism curved arrows well formed
        mzlab-cli mol find QUERY [--db FILE] [--out PATH]   compound by name, formula or mass
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   EU and US regulatory lists (native only)
@@ -276,6 +278,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
        mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
+       mzlab-cli table slots TABLE.mzfeat --id N [--samples FILE.json] [--out PATH]   a feature's slots
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -337,7 +340,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
        mzlab-cli peak table (FILE... | --traces PATH...) (--auto | --windows PATH) [--columns sn,fig,quality,state] [--max-shift MIN] [--json]   SIM/MRM/XIC peaks of many files, CSV
-       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   the fragmentation graph of an MSn infusion
+       mzlab-cli msn graph FILE.mzML [--formula ION] [--summary] [...]   fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
        mzlab-cli msn figure GRAPH.json ...   figure of a graph
@@ -345,14 +348,14 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules vs library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   unit-resolution isotope pattern of an ion
        mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts
        mzlab-cli ion elements [--json]   periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures, arrows
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge, masses of structures
        mzlab-cli mol anal REQUEST.json|-   average mass, mass %, isotope pattern
        mzlab-cli mol check REQUEST.json|- [--out PATH]   drawing faults (valence, charge)
        mzlab-cli mol cip REQUEST.json|-   R/S and E/Z of a drawing
@@ -360,11 +363,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli mol hilite REQUEST.json|-   atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms, rings of a selection
        mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs
-       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or --json scene
+       mzlab-cli mol draw SPEC [--format molfile|scene|ket|cdxml|svg|png] [--set NAME=VALUE...] [--out PATH]   molfile, KET, CDXML, picture or scene
        mzlab-cli mol export MOLFILE|-   drawing as .mol or .sdf
        mzlab-cli mol open FILE|- [--check]   text the editor reads for a file
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic or +H cut
-       mzlab-cli mol mech REQUEST.json|-   are a mechanism's curved arrows well formed
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   pieces of a homolytic, heterolytic, +H cut
+       mzlab-cli mol mech REQUEST.json|-   mechanism curved arrows well formed
        mzlab-cli mol find QUERY [--db FILE] [--out PATH]   compound by name, formula or mass
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   EU and US regulatory lists (native only)
