@@ -33,7 +33,7 @@ try:
         def lock_y_only():
             pg.keyboard.press("ArrowRight"); wait_for_js(pg, SPEC + ".si != null")
             assert pg.evaluate(f"!{SPEC}.lock"), "open by default, the arrows do not close it"
-            pg.click(".pnl.spec [data-a=lock]"); wait_for_js(pg, SPEC + ".lock")
+            bar(pg, ".pnl.spec", "lock"); wait_for_js(pg, SPEC + ".lock")
             assert pg.evaluate(f"!!{SPEC}.lock")
             lk = pg.evaluate(f"(()=>{{const s={SPEC};return Object.keys(s.lock)}})()"); assert "x0" not in lk and "ymax" in lk, lk
             b = pg.evaluate(f"(()=>{{const s={SPEC},e=s.el.querySelector('[data-a=lock]'),c=s.cv.getBoundingClientRect(),r=e.getBoundingClientRect();return {{bar:!!e.closest('.tbs,.hmore'),pressed:e.getAttribute('aria-pressed'),on:e.classList.contains('on'),label:!!e.getAttribute('aria-label'),above:r.bottom<=c.top+1}}}})()")
@@ -44,13 +44,13 @@ try:
         step("no 'y x10' button", no_yz)
         def box_xy():
             a0 = pg.evaluate(f"(()=>{{const p={CH};return {{x0:p._a.x0,x1:p._a.x1,ym:p._a.ymax}}}})()")
-            pg.click(".pnl.chrom [data-a=izoom] >> nth=0"); frames(pg, 3)
+            bar(pg, ".pnl.chrom", "izoom"); frames(pg, 3)
             u = pt(CH, "14.0", "p._a.ymax*0.9"); v = pt(CH, "14.6", "p._a.ymax*0.2")
             pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up(); wait_for_js(pg, CH + ".zoom && " + CH + ".zoomY"); ready(pg)
             a = pg.evaluate(f"(()=>{{const p={CH};return {{z:p.zoom,zy:p.zoomY,ym:p._a.ymax}}}})()")
             assert a["z"] and abs(a["z"][0] - 14.0) < 0.1 and abs(a["z"][1] - 14.6) < 0.1, a
             assert a["zy"] and abs(a["ym"] - 0.9 * a0["ym"]) / a0["ym"] < 0.05 and a["zy"][0] > 0.1 * a0["ym"], (a, a0)
-            pg.click(".pnl.chrom [data-a=izoom] >> nth=0")                                    # lens off
+            bar(pg, ".pnl.chrom", "izoom")                                    # lens off
         step("lens + box zooms x and y together", box_xy)
         def line_y():
             bar(pg, ".pnl.chrom", "fit"); wait_for_js(pg, CH + ".zoom == null && " + CH + ".zoomY == null"); frames(pg, 3)

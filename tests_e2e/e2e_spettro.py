@@ -66,14 +66,14 @@ try:
         step("G1: ruler button: first click = reference, second = measure", ruler_btn)
         def params():
             assert pg.evaluate(f"{SPEC}.level") == 1 and pg.evaluate(f"specRel({SPEC})") is False, "Full Scan: absolute"
-            pg.click(".pnl.spec [data-a=par]"); pg.wait_for_selector(".pnl.spec .sp-pop"); assert pg.locator(".pnl.spec .sp-pop").count() == 1
+            bar(pg, ".pnl.spec", "par"); pg.wait_for_selector(".pnl.spec .sp-pop"); assert pg.locator(".pnl.spec .sp-pop").count() == 1
             n0 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length")
             pg.fill(".sp-pop [data-s=thr]", "60"); pg.press(".sp-pop [data-s=thr]", "Tab"); wait_for_js(pg, f"{n0} <= 1 || {SPEC}._a.lbls.filter(l=>!l.ann).length < {n0}")
             n1 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length"); assert n1 < n0 or n0 <= 1, (n0, n1)
-            pg.keyboard.press("Escape"); pg.click(".pnl.spec [data-a=rel]"); wait_for_js(pg, f"{SPEC}._a.ymax < 200 && {SPEC}._a.yfull[1] < 200")      # since 8/10 the % axis is the «%» button of the panel, not a field of the popover
+            pg.keyboard.press("Escape"); bar(pg, ".pnl.spec", "rel"); wait_for_js(pg, f"{SPEC}._a.ymax < 200 && {SPEC}._a.yfull[1] < 200")      # since 8/10 the % axis is the «%» button of the panel, not a field of the popover
             assert pg.evaluate(f"{SPEC}._a.ymax") < 200 and pg.evaluate(f"{SPEC}._a.yfull[1]") < 200, "y axis in %"
-            ypct = pg.evaluate(f"{SPEC}._a.ymax"); pg.click(".pnl.spec [data-a=rel]"); wait_for_js(pg, f"specRel({SPEC}) === false && {SPEC}._a.ymax !== {ypct}"); ready(pg); assert pg.evaluate(f"specRel({SPEC})") is False
-            pg.click(".pnl.spec [data-a=par]"); pg.wait_for_selector(".pnl.spec .sp-pop")
+            ypct = pg.evaluate(f"{SPEC}._a.ymax"); bar(pg, ".pnl.spec", "rel"); wait_for_js(pg, f"specRel({SPEC}) === false && {SPEC}._a.ymax !== {ypct}"); ready(pg); assert pg.evaluate(f"specRel({SPEC})") is False
+            bar(pg, ".pnl.spec", "par"); pg.wait_for_selector(".pnl.spec .sp-pop")
             pg.select_option(".sp-pop [data-s=dec]", "2"); frames(pg, 2)
             pg.click(".sp-pop [data-s=reset]"); wait_for_js(pg, f"{SPEC}.thr === 5")
             assert pg.evaluate(f"{SPEC}.thr") == 5

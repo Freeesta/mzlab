@@ -493,4 +493,4 @@ def axe_path():
     except ImportError:
         return None
 
-from lib_barra import bar, bar_loc  # noqa: E402,F401  (the shared panel bar helpers live in their own file: this one is at its size limit)
+from lib_barra import bar, bar_loc, bar_pick  # noqa: E402,F401  (the shared panel bar helpers live in their own file: this one is at its size limit)
