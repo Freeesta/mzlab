@@ -95,7 +95,7 @@ try:
                 pg.evaluate(f"INTCLICK.go({P},{APEX[ION_B]},null,true,false).then(()=>1)"); frames(pg, 2)
                 assert len(ints()) == n0, ("a window was made without edges", ints())
                 assert pg.evaluate("I18N.t('int.noWin',{why:'@'})").split("@")[0] in note(), note()
-            finally: pg.evaluate("QUALITA.click=window.__qc")
+            finally: pg.evaluate("(()=>{QUALITA.click=window.__qc})()")
         step("an answer without a window (edges null) makes no row and says why, forced or not", no_window)
         def all_channels():
             pg.evaluate(f"(()=>{{const p={P};p.ints=[];p.isel=null;draw(p)}})()"); frames(pg, 2)
