@@ -133,6 +133,7 @@ embed!(
     "substructure-1.json",
     "substructure_db-1.json",
     "tabcheck-1.json",
+    "tables-1.json",
     "tools-compact-1.json",
     "tools-schema-1.json",
     "tp-2.json",

@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build
+from cargo_util import build, cli
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
@@ -110,3 +110,26 @@ def test_wasm_and_native_give_the_same_blank_evidence_for_the_plain_ratio_filter
     for rid, value, level, fold in blank["dropped"]:
         assert level > 0 and fold == pytest.approx(value / level) and fold < ratio, (rid, value, level, fold)
     assert blank["fallback_all"] == {"total": 0, "files": []} and "ungrouped_all" not in blank
+
+
+def test_the_wasm_the_native_example_and_the_cli_give_the_same_tables_entry(built):
+    """`tables/1`: the entry of the table is the same text from the .wasm (OPFS-style reads), the native function and `mzlab-cli flow tables` over a run folder whose
+    `prov.json` names the same step as the one the page passes."""
+    root, idx, pkg, table = built
+    args = [str(table), str(root / "samples.json"), "-", "1", *idx]
+    entries = {}
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+        out = root / f"{name}-entry"
+        out.mkdir()
+        run(*cmd, str(out), *args)
+        entries[name] = (out / "entry.json").read_text()
+    assert entries["nat"] == entries["wasm"]
+    folder = root / "run"
+    folder.mkdir()
+    (folder / "series.mzfeat").write_bytes(table.read_bytes())
+    prov = {"schema": "prov/1", "entity": {}, "activity": {"series": {"step": "features.gapfill@1", "ms": 12.34, "warnings": []}}}
+    (folder / "prov.json").write_text(json.dumps(prov))
+    got = cli("flow", "tables", str(folder), "--json")
+    assert '"tables":[' + entries["nat"] + "]" in got
+    entry = json.loads(entries["nat"])
+    assert entry["name"] == "series.mzfeat" and entry["rows"] > 0 and entry["step"] == "features.gapfill@1" and entry["ms"] == 12.3

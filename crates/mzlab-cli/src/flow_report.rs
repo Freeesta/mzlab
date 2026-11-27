@@ -8,6 +8,10 @@ use mzlab_core::json::parse;
 
 use crate::Outcome;
 
+/// `flow tables`: the feature tables of the same run folder.
+#[path = "flow_tables.rs"]
+pub mod tables;
+
 /// A file or folder that cannot be read: the input failure of the contract (`err.cli.file`, exit 4) naming the path.
 fn io(path: &Path) -> impl Fn(std::io::Error) -> Error + '_ {
     move |e| Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
