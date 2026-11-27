@@ -469,7 +469,7 @@ $("#hrmix-lr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(false);els
 // «Back to work!» (and Esc) leave the landing reopened by «+» or left by closing every panel: the panels come back as they were, the scroll too; with no panel left the first file is shown
 function backToWork(){if(!WORKBACK.on())return;const y=_addY;STATO.aggiunta(false,"back-to-work");
   workClosedAll(false);if(!E.panels.some((/** @type {Pannello} */ p)=>p.el)){const f=E.files.find((/** @type {FileAperto} */ g)=>!g.gone&&g.k===E.cur)||E.files.find((/** @type {FileAperto} */ g)=>!g.gone);if(f)soloFile(f)}
-  applyView();if(y!=null)setTimeout(()=>window.scrollTo(0,y),0)}
+  applyView();if(y!=null)window.scrollTo(0,y)}
 const WORKBACK={on:()=>!!(S.sess&&S.view==="data"&&!S.opening&&typeof E!=="undefined"&&E.files.some((/** @type {FileAperto} */ f)=>!f.gone)&&["add","landing"].includes($("#v-workspace").dataset.work||""))};
 $("#backwork").onclick=backToWork;
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||e.defaultPrevented||!WORKBACK.on())return;const a=document.activeElement;
