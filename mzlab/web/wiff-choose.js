@@ -80,6 +80,7 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
     const upd = () => {
       const on = boxes.filter(b => b.cb.checked).length;
       status.textContent = wcT("pick.sel", { n: on, total });
+      status.setAttribute("aria-label", wcT("pick.sel.aria", { n: on, total }));
       ok.disabled = !on;
     };
     // the copy ahead is silent: a row being copied carries aria-busy (no visible text), cleared when its copy is done, stopped or never started
@@ -132,7 +133,7 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
  * Resolves with `null` when nothing needs asking (the setting, one sample per file, a listing that failed: opening goes on as it always did), `{ cancelled: true }`,
  * or `{ picks: Map(key -> ids), total: Map(key -> samples in the file), names: Map(key -> listed samples), plans: Map(key -> Map(id -> { ranges, tag })) (the plans made for the prefetch), prefetch: whether the dialog copies ticked samples ahead }` for the files that were asked.
  */
-async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string, blob: Blob }[], nkey: string, cached?: (j: unknown) => Promise<boolean> }[]} */ pairs, /** @type {any} */ rb, /** @type {string} */ mode) {
+async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string, blob: Blob }[], nkey: string, cached?: (j: unknown) => Promise<boolean> }[]} */ pairs, /** @type {any} */ rb, /** @type {string} */ mode, /** @type {{ show?: () => void } | undefined} */ hooks) {
   if (mode === "never" || !rb || !rb.nativeSamples || !rb.nativeAsk) return null;
   /** @type {Entry[]} */ const entries = [];
   for (const p of pairs) {
@@ -144,6 +145,7 @@ async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string
     } catch (_) { /* the normal opening reports a file that cannot be read */ }
   }
   if (!entries.length || mode !== "always" && entries.every(e => e.samples.length < 2)) return null;
+  if (hooks && hooks.show) hooks.show();      // the dialog is about to wait for the user
   const picks = await wcDialog(entries, rb);
   return picks ? { picks, total: new Map(entries.map(e => [e.key, e.samples.length])), names: new Map(entries.map(e => [e.key, e.samples])), plans: new Map(entries.map(e => [e.key, e.plans || new Map()])), prefetch: !!(rb.nativePrefetch && !window.MZLAB_DESKTOP) } : { cancelled: true };
 }

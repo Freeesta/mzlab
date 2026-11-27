@@ -732,7 +732,7 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .wiffchoose .wc-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.wiffchoose h2{margin:0}
 .wiffchoose .wc-x{font-size:20px;line-height:1;padding:0 10px;min-height:32px;min-width:32px}
 .wiffchoose .wc-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.wiffchoose .wc-sel{margin:0 0 0 auto}.wiffchoose .wc-act{display:flex;justify-content:center;margin:12px 0 0}
-.wiffchoose button{min-height:28px;min-width:28px}.wiffchoose input[type=checkbox]{width:24px;height:24px}
+.wiffchoose button{min-height:28px;min-width:28px}.wiffchoose .wc-act .go{min-height:44px;min-width:min(220px,100%);padding:10px 32px;font-size:1.1em;box-sizing:border-box}.wiffchoose input[type=checkbox]{width:24px;height:24px}
 .wiffchoose .wc-scroll{overflow:auto;max-height:50vh;margin:8px 0}.wiffchoose .wc-tab{border-collapse:collapse;width:100%}.wiffchoose label{cursor:pointer;overflow-wrap:anywhere}.wiffchoose .wc-empty{color:var(--muted);font-style:italic}
 .wiffchoose caption{text-align:left;font-weight:600;padding:4px 0}.wiffchoose th,.wiffchoose td{padding:2px 6px;text-align:left;border-bottom:1px solid var(--line)}.wiffchoose .n{text-align:right;white-space:nowrap}
 /* live cursor of the 2D map: the coordinate chip and the dot on the XIC (decorative, never take a click, colours from the theme) */

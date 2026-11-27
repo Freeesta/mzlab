@@ -25,6 +25,9 @@ DLG = "dialog#wiffchoose[open]"
 def rows(pg): return pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=use]')).length")
 def dlg(pg): pg.wait_for_selector(DLG, timeout=60000)
 def ticked(pg): return pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose tbody input:checked')).length")
+def neutral(pg):
+    t = pg.evaluate("document.querySelector('#fl-up [data-cvhead]')?.textContent || ''"); body = pg.evaluate("document.querySelector('#fl-up')?.innerText || ''")
+    return t == "Choose samples" and "Opening" not in body and not __import__("re").search(r"\d:\d\d", body)
 def settle(pg): pg.wait_for_function("!document.querySelector('dialog#wiffchoose')", timeout=30000)
 
 try:
@@ -40,7 +43,7 @@ try:
             assert ticked(pg) == 3, ticked(pg)
             assert pg.get_attribute("#wiffchoose", "aria-labelledby") == "wc-title" and pg.evaluate("document.querySelector('#wiffchoose').matches(':modal')")
             assert pg.get_attribute("#wiffchoose .wc-sel", "role") == "status" and pg.evaluate("document.querySelectorAll('#wiffchoose tbody input[aria-label]').length") == 3
-            assert pg.inner_text("#wiffchoose .wc-sel") == "3 of 3 ticked", pg.inner_text("#wiffchoose .wc-sel")
+            assert pg.inner_text("#wiffchoose .wc-sel") == "3/3" and pg.get_attribute("#wiffchoose .wc-sel", "aria-label") == "3 of 3 samples ticked", pg.inner_text("#wiffchoose .wc-sel")
             # the simple layout: no number box, no Cancel, no "No." column; X at the top right; Open selected centred at the bottom
             assert not pg.query_selector("#wiffchoose .wc-intro") and "Ticked samples start loading" not in pg.inner_text("#wiffchoose")      # no line about the loading
             assert not pg.query_selector("#wc-ids") and not pg.query_selector("#wiffchoose button:text('Cancel')") and not pg.query_selector("#wiffchoose button:text('Tick numbers')")
@@ -48,16 +51,21 @@ try:
             assert pg.evaluate("""() => { const d = document.querySelector('#wiffchoose').getBoundingClientRect(), x = document.querySelector('#wiffchoose .wc-x').getBoundingClientRect(), o = document.querySelector('#wiffchoose button.go').getBoundingClientRect();
               return x.right > d.right - 40 && x.top < d.top + 60 && Math.abs((o.left + o.right) / 2 - (d.left + d.right) / 2) < 12 }""")
             assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose button, #wiffchoose input')).every(e => e.getBoundingClientRect().height >= 24 && e.getBoundingClientRect().width >= 24)")
+            assert pg.evaluate("document.querySelector('#wiffchoose button.go').getBoundingClientRect().height >= 44")      # a large, easy target
+            # the Files list while the dialog waits: a neutral «Choose samples», no clock and no «Opening»
+            assert neutral(pg), pg.evaluate("document.querySelector('#fl-up')?.innerText")
             shot = os.environ.get("MZLAB_SHOTS")
             if shot: Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-dialog.png"))
         step("several samples: the dialog opens with every sample ticked and is accessible", several)
         def none_then_all():
-            pg.click("#wiffchoose button:text('Select none')"); assert ticked(pg) == 0 and pg.is_disabled("#wiffchoose button.go") and pg.inner_text("#wiffchoose .wc-sel") == "0 of 3 ticked"
+            pg.click("#wiffchoose button:text('Select none')"); assert ticked(pg) == 0 and pg.is_disabled("#wiffchoose button.go") and pg.inner_text("#wiffchoose .wc-sel") == "0/3" and pg.get_attribute("#wiffchoose .wc-sel", "aria-label") == "0 of 3 samples ticked"
             pg.click("#wiffchoose button:text('Select all')"); assert ticked(pg) == 3 and not pg.is_disabled("#wiffchoose button.go")
         step("Select none disables Open, Select all ticks every sample again", none_then_all)
         def phone():
             pg.set_viewport_size({"width": 390, "height": 780})
             assert pg.evaluate("() => { const d = document.querySelector('#wiffchoose'); return d.scrollWidth <= d.clientWidth + 1 && d.getBoundingClientRect().right <= innerWidth && d.getBoundingClientRect().left >= 0 }")
+            big = pg.evaluate("() => { const o = document.querySelector('#wiffchoose button.go').getBoundingClientRect(), d = document.querySelector('#wiffchoose').getBoundingClientRect(); return [o.height, o.left - d.left, d.right - o.right] }")      # Open selected stays large and inside the dialog
+            assert big[0] >= 44 and big[1] >= 0 and big[2] >= 0, big
             assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose button, #wiffchoose input')).every(e => e.getBoundingClientRect().height >= 24 && e.getBoundingClientRect().width >= 24)")
             shot = os.environ.get("MZLAB_SHOTS")
             if shot: Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-phone.png"))
@@ -69,7 +77,11 @@ try:
         def close_x():
             pg.set_input_files("#pick", pair("multi")); dlg(pg)
             pg.click("#wiffchoose .wc-x"); settle(pg); assert rows(pg) == 0, rows(pg)
-        step("the X at the top right closes the dialog and opens nothing", close_x)
+            # a deliberate cancel is no news: no «was not opened» notice, no row of the file, no store left of it
+            pg.wait_for_function("!document.querySelector('#fl-up [data-cvhead]') && !(document.getElementById('flist')?.innerText || '').includes('multi.wiff')", timeout=30000)
+            assert "was not opened" not in pg.evaluate("document.body.innerText")
+            pg.wait_for_function("""async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.includes('~multi.wiff')) out.push(n); } }; await walk(await navigator.storage.getDirectory()); return out.length === 0; }""", timeout=30000)
+        step("the X at the top right closes the dialog and opens nothing: no notice, no row, no store", close_x)
         def open_some():
             pg.set_input_files("#pick", pair("multi")); dlg(pg)
             pg.click("#wiffchoose tbody tr:nth-child(2) input"); assert ticked(pg) == 2
@@ -131,7 +143,7 @@ try:
             assert [c["on"] for c in cells] == [True, True, False], cells
             assert cells[0]["t"][1:3] == ["Full scan", "5"] and cells[1]["t"][1:3] == ["SIM", "7"], cells
             assert cells[2]["t"][2] == "empty" and cells[2]["t"][1] == "", cells
-            assert pg.inner_text("#wiffchoose .wc-sel") == "2 of 3 ticked" and pg.evaluate("document.querySelector('#wiffchoose tbody tr.wc-empty') !== null")
+            assert pg.inner_text("#wiffchoose .wc-sel") == "2/3" and pg.get_attribute("#wiffchoose .wc-sel", "aria-label") == "2 of 3 samples ticked" and pg.evaluate("document.querySelector('#wiffchoose tbody tr.wc-empty') !== null")
             shot = os.environ.get("MZLAB_SHOTS")
             if shot:
                 Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-kinds.png"))
