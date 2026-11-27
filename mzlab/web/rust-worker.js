@@ -118,7 +118,7 @@ async function fileOf(name) {
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
 // size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
 const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, sample_ranges, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m) });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, sample_ranges, native_to_mzml, native_srm, native_external, impronte, pool: () => idxPool(), post: m => postMessage(m), idxConf: () => ({ cap: BUDGET_MB, budget: idxBudget(), isolated: ISOLATED }) });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
 const openGate = createOpenGate();
@@ -273,13 +273,12 @@ const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await A
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
+  const ad = !m.cen && await nativo.adopt(m.name); if (ad) return lrIndexOpened(m, ad, performance.now(), true);      // built while the «Choose samples» dialog was open (rust-index-ahead.js): moved to its name now, neither read nor built again
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
-  if (CANCELLED.has(m.name)) throw cancelled();
+  if (CANCELLED.has(m.name)) throw cancelled(); if (job) nativo.ahead.atOpen++;
   const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
-  const early_tic = earlyTicOf(job);
-  if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
-  // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
-  if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
+  const early_tic = earlyTicOf(job); if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
+  if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });      // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   const res = (!job && await una.result(m.name, onProgress)) || await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
     : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress, stages: true });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
@@ -292,10 +291,12 @@ async function lrIndexOwn(m) {
     if (key) throw res.text;
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
   }
-  await ARCH.promote("idx", part, m.name + ".mzidx");
+  await ARCH.promote("idx", part, m.name + ".mzidx"); return lrIndexOpened(m, res.stats, t0);
+}
+async function lrIndexOpened(m, stats, t0, adopted) {                         // the index is in place: open it
   const opened = await openStored(() => lrOpen(m.name), async () => { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); });      // an index that does not open (incomplete, damaged) is not kept; one refused for memory is (rust-carica.js)
   if (!opened) jerr("err.engine.index", { name: m.name });
-  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0, cause: (res.stats && res.stats.cause) || "" }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
+  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (stats && stats.missing) || 0, cause: (stats && stats.cause) || "", adopted: adopted || undefined }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
 }
 let flowCenOps;
 const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));
@@ -443,7 +444,7 @@ async function handle(ev) {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "natsamples": info = await nativo.samples(m.members, m.listing); break; case "natplan": info = await nativo.plan(m.members, m.text); break; case "natlabels": info = sample_labels(JSON.stringify({ members: m.members })); break; case "natdefault": info = sample_default(Uint32Array.from(m.ids), Float64Array.from(m.sizes), Uint32Array.from(m.empty || []), BUDGET_MB); break; case "natsame": info = await natSame(m); break; case "natprefetch": case "natunprefetch": info = (await nativo.pre(m, copies, cancelled, postMessage)).info; break;   // a ticked sample copied while the dialog is open (rust-prefetch.js) · the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS · the chooser: first ticks and «1,3,5» are the engine's
+      case "natsamples": info = await nativo.samples(m.members, m.listing); break; case "natstats": info = JSON.stringify(nativo.ahead); break; case "natplan": info = await nativo.plan(m.members, m.text); break; case "natlabels": info = sample_labels(JSON.stringify({ members: m.members })); break; case "natdefault": info = sample_default(Uint32Array.from(m.ids), Float64Array.from(m.sizes), Uint32Array.from(m.empty || []), BUDGET_MB); break; case "natsame": info = await natSame(m); break; case "natprefetch": case "natunprefetch": info = (await nativo.pre(m, copies, cancelled, postMessage)).info; break;   // a ticked sample copied while the dialog is open (rust-prefetch.js) · the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS · the chooser: first ticks and «1,3,5» are the engine's
       case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
         const sink = await nativo.toMzml({ ...m, cap: BUDGET_MB }, p => postMessage({ op: "progress", id, ...p }));
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
