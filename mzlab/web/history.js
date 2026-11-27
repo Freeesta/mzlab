@@ -60,7 +60,7 @@ const HISTORY = typeof document === "undefined" ? null : (() => {
     if (e.kind === "removed") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.data; }
     const p = e.p, cur = e.kind === "cmd" ? "" : capture(p, e.kind), o = e.kind === "cmd" ? null : JSON.parse(st);
     if (e.kind === "int") { p.ints = Array.isArray(o) ? o : o.i; p.noise = Array.isArray(o) ? p.noise : o.n; p.isel = null; }
-    else if (e.kind === "fields") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
+    else if (e.kind === "fields") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); AZIONI.refresh({ view: p.type, p }); }
     else if (e.kind === "cmd") { const g = COMMANDS.handlerOf(e.cmd); const prev = g.read(p); COMMANDS.restore(e.cmd, p, st); if (!p.global) draw(p); uiSave(); return prev; }
     else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;

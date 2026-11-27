@@ -12,13 +12,13 @@
 
 // TAB-BEGIN
 const COMMANDS_TAB = [
-  { id: "view.zoom", name: "history.zoom", module: "eventi.js", where: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js", "zoom-reset.js"], fields: ["zoom", "zoomY", "lock"],
+  { id: "view.zoom", name: "history.zoom", module: "eventi.js", where: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js", "zoom-reset.js", "azioni-barra.js"], fields: ["zoom", "zoomY", "lock"],
     params: "m/z or RT interval, intensity interval", key: "wheel, Backspace, double click, Shift+drag", merge: "a burst of wheel steps, a drag and a pan are one step", undo: "snapshot" },
   { id: "peaks.integration", name: "history.int", module: "picchi.js", where: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "panels-undo.js", "integra-estremi.js", "integra-valli.js", "integra-tutti.js", "integra-clic.js"], fields: ["ints", "isel"],
     params: "limits of the integrated peak", key: "I, Del", merge: "an edge drag is one step", undo: "snapshot" },
-  { id: "panel.fields", name: "history.fields", module: "grafici.js", where: ["grafici.js", "pannelli.js", "fondo-spettro.js", "fondo-piatto.js", "sottrazione.js", "mappa.js", "barra.js"], fields: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
+  { id: "panel.fields", name: "history.fields", module: "grafici.js", where: ["grafici.js", "pannelli.js", "fondo-spettro.js", "fondo-piatto.js", "sottrazione.js", "mappa.js", "barra.js", "azioni-barra.js"], fields: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
     params: "blank, background, smoothing, correction, reference", key: "", merge: "", undo: "snapshot" },
-  { id: "spec.ruler", name: "cmd.spec.ruler", module: "spettro.js", where: ["spettro.js", "pannelli.js", "eventi.js", "banco.js"], fields: ["meas", "rul"],
+  { id: "spec.ruler", name: "cmd.spec.ruler", module: "spettro.js", where: ["spettro.js", "pannelli.js", "eventi.js", "banco.js", "azioni-barra.js"], fields: ["meas", "rul"],
     params: "the reference peak and the second peak of each measure", key: "R, Esc", merge: "", undo: "command" },
   { id: "files.remove", name: "history.panel", module: "lista-file.js", where: ["lista-file.js"], fields: [],
     params: "the file", key: "", merge: "", undo: "removed" },
@@ -30,10 +30,10 @@ const COMMANDS_TAB = [
     params: "position and size of the panels", key: "Alt+arrows", merge: "", undo: "layout" },
 
   // ---- panel.source (a command) and the actions that are not undoable by design ("none" + motivo, enforced by tests/test_comandi.py); "to-port" stays at zero
-  { id: "panel.source", name: "cmd.source", module: "pannelli.js", where: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js", "eventi.js", "sim-ui.js", "canali.js", "xic-bordi.js", "xwc.js"], fields: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "xw", "tr", "mapKind", "norm", "scale", "gamma", "log"],
+  { id: "panel.source", name: "cmd.source", module: "pannelli.js", where: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js", "eventi.js", "sim-ui.js", "canali.js", "xic-bordi.js", "xwc.js", "azioni-barra.js"], fields: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "xw", "tr", "mapKind", "norm", "scale", "gamma", "log"],
     params: "file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale", key: "", merge: "", undo: "command" },
   { id: "spec.annotation", name: "cmd.annotation", module: "eventi.js", where: ["spettro.js", "eventi.js"], fields: ["anns"], params: "add, edit, delete a note", key: "", merge: "", undo: "command" },
-  { id: "spec.display", name: "cmd.display", module: "visualizza.js", where: ["visualizza.js", "spettro.js", "pannelli.js", "barra.js", "gradiente.js", "etichette-picchi.js", "dad-mrm.js", "peak-info.js"], fields: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk", "lblOn", "lblOff"],
+  { id: "spec.display", name: "cmd.display", module: "visualizza.js", where: ["visualizza.js", "spettro.js", "pannelli.js", "barra.js", "gradiente.js", "etichette-picchi.js", "dad-mrm.js", "peak-info.js", "azioni-barra.js"], fields: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk", "lblOn", "lblOff"],
     params: "threshold, labels, decimals, sticks, dots, markers, contaminants, gradient overlay", key: "", merge: "", undo: "command" },
   { id: "spec.isotopes", name: "history.fields", module: "spettro.js", where: ["spettro.js", "banco.js", "picchi.js"], fields: ["iso"], params: "isotope simulation and resolution", key: "", merge: "", undo: "command" },
   { id: "spec.background", name: "history.background", module: "fondo-spettro.js", where: ["fondo-spettro.js", "pannelli.js", "grafici.js", "sottrazione.js"], fields: ["bg", "bw0", "bw1", "bwi"], params: "background window of the spectrum", key: "", merge: "", undo: "command" },
