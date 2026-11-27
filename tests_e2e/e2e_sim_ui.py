@@ -98,7 +98,7 @@ try:
             need(len(t) == N and all(not any(w in x for w in ("ms", "SIM", "«")) for x in t), t)
             mixed = len({i["polarita"] for i in TRUE["ioni"]}) > 1                  # the polarity is printed only when the file holds both
             need(all(x.endswith(("(+)", "(−)")) for x in t) if mixed else not any("(" in x for x in t), t)
-            need(pg.evaluate("[...%s.querySelectorAll('.can-hd span')].length" % Q) == 1, "extra columns")
+            need(pg.evaluate("%s.querySelectorAll('.can-hd').length" % Q) == 0, "a SIM list has one column: no «Channel» header row")
             need(pg.evaluate("[...%s.querySelectorAll('.can-row')].every(e => /ms/.test(e.title) && /\\d+ (punti|points)/.test(e.title))" % Q), "details not in the hover text")
         step("the picker names each ion by its m/z alone; dwell, mode and points go to the hover text", short_labels)
         def single():
