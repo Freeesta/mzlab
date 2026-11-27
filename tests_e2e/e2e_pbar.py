@@ -39,7 +39,8 @@ try:
                 assert pg.evaluate("!!document.querySelector('#pbar [data-a=fit]')"), (how, "no fit button")
             for i in range(3):
                 pg.evaluate(f"({ORD})[{i}].el.scrollIntoView({{block:'center'}})")
-                pg.locator(f".pnl >> nth={pg.evaluate(f'[...document.querySelectorAll(\".pnl\")].indexOf(({ORD})[{i}].el)')}").locator(".hd").click(position={"x": 4, "y": 4})
+                idx = pg.evaluate("p=>[...document.querySelectorAll('.pnl')].indexOf(p.el)", pg.evaluate_handle(f"({ORD})[{i}]"))
+                pg.locator(".pnl").nth(idx).locator(".hd").click(position={"x": 4, "y": 4})
                 check(i, "click")
             for i in (2, 0, 1):
                 pg.evaluate("document.activeElement.blur()"); pg.keyboard.press(str(i + 1)); check(i, "key")
