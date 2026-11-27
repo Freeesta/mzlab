@@ -37,16 +37,21 @@ try:
         wait_for_js(pg, f"{P}._a.sr.length===4 && !{P}._a.stk")
         def xy(i, x):
             """Screen position of the trace i at time x (min): the point a user clicks."""
-            return pg.evaluate(f"(()=>{{const p={P},a=p._a,s=a.sr[{i}],q=p.cv.getBoundingClientRect(),j=nearIdx(s.x,{x});return {{x:q.left+a.X({x}),y:q.top+a.Y(a.U(s,s.ys[j]))}}}})()")
+            return pg.evaluate(f"(()=>{{const p={P},a=p._a,s=a.sr[{i}],q=p.cv.getBoundingClientRect(),j=nearIdx(s.x,{x});return {{x:q.left+a.X({x}),y:q.top+a.Y(a.U(s,s.ys[j])),strip:q.top+a.H-M.b}}}})()")
         pg.evaluate("(()=>{const f=QUALITA.click;window.__ck=0;QUALITA.click=async(...a)=>{try{return await f.apply(QUALITA,a)}finally{window.__ck++}}})()")      # counts the answers of the engine
         def click(i, x, alt=False):
             c = xy(i, x); k0 = pg.evaluate("window.__ck")
-            # a real mouse gives whole CSS pixels and Chromium snaps a fractional position (down locally, to the nearest in other builds): the click is placed on the pixel itself, on the plot side,
-            # because a flat trace sits 0.14 px above the x-axis strip (py > H - M.b, a drag there zooms the axis and never calls the engine) and one pixel more would land in it
+            # a real mouse gives whole CSS pixels and Chromium snaps a fractional position (down or to the nearest, by build); a flat trace sits a fraction of a pixel above the x-axis strip
+            # (py > H - M.b, where a drag zooms the axis and never calls the engine), so the click is kept 4 px inside the plot: the trace nearest the pointer is still a flat one
+            cx, cy = round(c["x"]), min(math.floor(c["y"]), math.floor(c["strip"]) - 4)
             if alt: pg.keyboard.down("Alt")
-            pg.mouse.click(round(c["x"]), math.floor(c["y"]))
+            pg.mouse.click(cx, cy)
             if alt: pg.keyboard.up("Alt")
-            wait_for_js(pg, f"window.__ck>{k0}", timeout=60000); frames(pg, 4)        # the engine (a first call starts its worker) answered, the page drew
+            try: wait_for_js(pg, f"window.__ck>{k0}", timeout=60000)
+            except Exception as e:                                           # the evidence a red run needs: where the click fell and what was under it
+                top = pg.evaluate("([x,y])=>{const e=document.elementFromPoint(x,y);return e?e.tagName+'#'+e.id+'.'+e.className:null}", [cx, cy])
+                raise AssertionError(f"the click reached no engine answer: at ({cx}, {cy}), trace {c}, viewport {pg.viewport_size}, under the pointer {top}") from e
+            frames(pg, 4)        # the engine (a first call starts its worker) answered, the page drew
         ints = lambda: pg.evaluate(f"{P}.ints.map(i=>({{key:i.key,a:i.a,b:i.b,id:i.id,click:i.click||null}}))")
         key = lambda i: pg.evaluate(f"{P}._a.sr[{i}].key")
         note = lambda: pg.evaluate("(()=>{const n=document.querySelector('#qnote');return n&&!n.hidden?n.textContent:''})()")

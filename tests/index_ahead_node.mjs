@@ -19,7 +19,8 @@ function world({ two = false } = {}) {
   const dirs = { files, idx };
   const ARCH = {
     get: async (k, n) => dirs[k].get(n) || null,
-    remove: async (k, n) => { dirs[k].delete(n); },
+    remove: async (k, n) => { dirs[k].delete(n); return true; },
+    removeHeld: async (k, n) => { dirs[k].delete(n); },
     list: async k => [...dirs[k].keys()].map(name => ({ name })),
     promote: async (k, from, to) => { if (fail.promote && k === "idx" && (fail.promote === "any" || from.endsWith(fail.promote))) throw new Error("QuotaExceededError"); const f = dirs[k].get(from); assert.ok(f, "promote of a missing file " + from); dirs[k].delete(to); dirs[k].set(to, f); dirs[k].delete(from); return f; },      // a move: the same object, no copy
   };
