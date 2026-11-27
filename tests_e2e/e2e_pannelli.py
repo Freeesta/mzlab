@@ -20,7 +20,7 @@ try:
             pg.click("#np-chrom"); pg.wait_for_timeout(900)
             chroms = pg.evaluate("E.panels.filter(p => p.type === 'chrom').map(p => p.id)"); assert len(chroms) >= 2, chroms
             o0 = order(); first = pg.evaluate("stackOrder().find(p => p.type === 'chrom').id"); i0 = [x for x in o0].index("chrom:%d" % first)
-            pg.locator(f'.pnl.chrom >> nth=0').locator('[data-a="xic"]').click(); pg.wait_for_timeout(500)
+            bar(pg, ".pnl.chrom", "xic"); pg.wait_for_timeout(500)
             pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
             o1 = order(); j = [x for x in o1 if x.startswith("xic:")]; assert j, o1
             assert o1.index(j[0]) == i0 + 1, (o0, o1)          # right under the chromatogram it came from, the others slid down

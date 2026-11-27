@@ -19,7 +19,7 @@ try:
         open_kind(pg, "full"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
-            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
+            bar(pg, ".pnl.chrom", "xic"); assert dlg()
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
             t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "an m/z or a neutral formula" in t and "decimal digit" not in t and "m/z or formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.3" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
@@ -32,7 +32,7 @@ try:
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
         step("XIC window: one m/z value, or, neutral formula, unit window around the nominal mass", window_)
         def noadduct_():
-            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
+            bar(pg, ".pnl.chrom", "xic"); assert dlg()
             opts = pg.evaluate("[...document.querySelectorAll('#xic-ad option')].map(o => [o.value || o.textContent, o.textContent])")
             assert opts[-1] == ["none", "No adduct"] and len(opts) == 8, opts
             pg.fill("#xic-mz", ""); pg.select_option("#xic-ad", "none")
@@ -47,7 +47,7 @@ try:
         step("XIC window: «No adduct» in the menu of every row (the text is already the ion)", noadduct_)
         def enter_():
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
-            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
+            bar(pg, ".pnl.chrom", "xic"); assert dlg()
             pg.fill("#xic-mz", ""); pg.press("#xic-mz", "Enter"); assert dlg() and pg.inner_text("#xic-err").strip(), "empty field: no extraction, a message"
             pg.fill("#xic-mz", "364"); pg.press("#xic-mz", "Shift+Enter"); assert dlg(), "Shift+Enter only moves to the next field"
             pg.press("#xic-mz", "Enter"); ready(pg)
@@ -61,20 +61,20 @@ try:
             assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]')") is None, "no zoom yet: the entry is not shown"
             pg.locator("#ctx div", has_text="Extract ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
-            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
+            bar(pg, ".pnl.chrom", "izoom"); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); wait_for_js(pg, f"!!E.panels[{ci}].zoom")
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0][0].startswith("RT") and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", items          # with a zoom it works
             pg.locator("#ctx div", has_text="Reset zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
-            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
+            bar(pg, ".pnl.chrom", "izoom")
         step("right click on the chromatogram: Extract ion (same window), Reset zoom", chrom_menu)
         def guard():
-            c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
+            bar(pg, ".pnl.chrom", "iauto")
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); wait_for_js(pg, "!!document.querySelector('#askdlg').open")
             pg.screenshot(path=SH + "181_guard.png"); pg.click("#askok"); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
-            assert dlg(); pg.click("#xic-no"); c.click()
+            assert dlg(); pg.click("#xic-no"); bar(pg, ".pnl.chrom", "iauto")
         step("integrating from the TIC offers the same XIC window", guard)
         def spec_menu():
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")

@@ -82,8 +82,8 @@ try:
         step("«Reset zoom» in the Range popover: tab-reachable, back to the whole run, fields show the full range, then disabled; Esc closes", zreset)
         step("«Area» is on by default and the traces are filled", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area !== false") and pg.evaluate("document.querySelector('[data-a=area]').getAttribute('aria-pressed')") == "true", "area"))
         def toggle():
-            pg.click("[data-a=area]"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is False, "off")
-            pg.click("[data-a=area]"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is True, "on")
+            bar(pg, ".pnl.mrm", "area"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is False, "off")
+            bar(pg, ".pnl.mrm", "area"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is True, "on")
         step("the Area button turns the fill off and on", toggle)
         def picker():
             pg.click(".can-b, .canb"); pg.wait_for_selector(".can-row", state="visible")

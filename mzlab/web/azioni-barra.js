@@ -1,11 +1,15 @@
 // @ts-strict
 "use strict";
 // Panel header buttons as registry actions (barra, scope "panel") and ONE renderer, AZIONI.bar; AZIONI.refresh (was syncTb) redraws their state from the panel p.
+// The shared panel bar (pbar.js) draws the same actions with AZIONI.bar(c, host, pb): `pb` groups them; rows with `bonly` exist only there.
 (() => {
   const T = (/** @type {string} */ k) => I18N.t(k), G = ["xb", "v", "l", "s", "i", "t", "x", "o"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
+  /** map zoom and gestures: the commands of mappa.js (the header keeps its .mznav) @param {string} id */
+  const nav = id => ({ bonly: 1, run: (/** @type {Ctx} */ c) => MAPPA.runCmd(id, MAPPA.ad2(c.p, null)) });
+  const navIc = (/** @type {string} */ id) => () => MAPPA.SV(MAPPA.ICO[/** @type {any} */ (AZIONI.get(id)).ic]);
   const mode = (/** @type {string} */ m) => (/** @type {Ctx} */ c) => c.p._mode(m);
   /** @typedef {any} Ctx
-   * @typedef {{ toggle?: number, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
+   * @typedef {{ toggle?: number, bonly?: number, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
   // [data-a, views, header group, title key, aria key ("=": the title), text or icon, class, Opt]
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
@@ -13,6 +17,9 @@
     ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: ' hidden aria-haspopup="dialog" aria-expanded="false"' }],
     ["izoom", LENS, "v", "panel.izoom.title", "", () => IC_ZOOM, "bt", { checked: c => c.p.imode === "zoom", run: mode("zoom") }],
     ["fit", ALL, "v", "panel.fit.title", "", () => IC_FIT, "bt", { at: " disabled", run: c => { const p = c.p; pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); } }],
+    ["mapzin", ["map"], "v", "cmd.mapzin.tip", "cmd.mapzin.name", navIc("mapzin"), "bt", nav("mapzin")],
+    ["mapzout", ["map"], "v", "cmd.mapzout.tip", "cmd.mapzout.name", navIc("mapzout"), "bt", nav("mapzout")],
+    ["maphelp", ["map"], "v", "cmd.maphelp.tip", "cmd.maphelp.name", navIc("maphelp"), "bt", nav("maphelp")],
     ["tlink", LENS, "l", "panel.tlink.title", "panel.tlink.aria", () => IC_SYNC, "bt", { toggle: 1, checked: c => !!c.p.tl, run: c => toggleTl(c.p) }],
     ["rul", ["spec"], "s", "panel.rul.title", "", () => IC_RULER, "bt", { checked: c => !!c.p.rul, run: c => { const p = c.p; COMMANDS.run("spec.ruler", p, () => { p.rul = !p.rul; if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); AZIONI.refresh(c); } }],
     ["par", ["spec"], "s", "panel.par.title", "panel.par.aria", "&#9662;", "bt", { run: c => specParams(c.p, c.b) }],
@@ -36,14 +43,21 @@
   ];
   for (const [id, views, bar, ti, al, tx, cl, o] of ROWS) AZIONI.register({ id: "panel." + id, group: "tools", views, menu: false, barra: true, scope: "panel", bar, bid: id, ti, al, tx, cl, name: () => T(ti), svg: () => "", ...o });
   /** the attributes and the content of one button @param {any} a @param {any} c */
-  const html = (a, c) => {
+  const html = (a, c, shared) => {
     const ok = !a.available || a.available(c), on = a.checked ? !!a.checked(c) : false, tip = (a.tip || a.ti0 || (() => T(a.ti)))(c), al = a.al === "=" ? tip : a.al ? T(a.al) : "", tag = a.tag || "button", tx = typeof a.tx === "function" ? a.tx(c) : a.tx;
-    return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
+    return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : shared ? " hidden" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
   };
-  /** writes the buttons of the panel header into `host` (the `.tbs` span) and wires them to the actions; `skip` leaves out one header group: the shared panel bar (pbar.js) skips «e» but for expand (close and «⋯» stay in the header, expand is in both) @param {any} c {view, p} @param {HTMLElement} host @param {string} [skip] */
-  AZIONI.bar = (c, host, skip) => {
-    const l = AZIONI.list(c, "barra").filter(a => a.bar !== skip || a.bid === "max"), g = (/** @type {string} */ k) => l.filter(a => a.bar === k).map(a => html(a, c)).join("");
-    host.innerHTML = G.concat(skip === "e" ? ["e"] : []).map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + (skip === "e" ? "" : g("e"));
+  /** wires the buttons of the actions `l` found in `host` @param {any[]} l @param {any} c @param {HTMLElement} host */
+  const wire = (l, c, host) => {
+    for (const a of l) {
+      const b = /** @type {HTMLElement | null} */ (host.querySelector(a.nodata ? ".x" : `[data-a="${a.bid}"]`));
+      if (b && a.run) b[a.tag ? "onchange" : "onclick"] = (/** @type {Event} */ e) => AZIONI.run(a.id, { ...c, e, b });
+    }
+  };
+  /** the buttons of the panel header into `host` (the `.tbs` span), wired to the actions; with `pb` ({of: action → group, groups: [[key, text]], wrap}) the groups of the shared bar, hiding what is unavailable @param {any} c {view, p} @param {HTMLElement} host @param {any} [pb] */
+  AZIONI.bar = (c, host, pb) => {
+    const l = AZIONI.list(c, "barra").filter(a => pb ? pb.of(a) : !a.bonly), g = (/** @type {string} */ k) => l.filter(a => (pb ? pb.of(a) : a.bar) === k).map(a => html(a, c, pb)).join("");
+    host.innerHTML = pb ? pb.groups.map((/** @type {string[]} */ [k, t]) => { const s = g(k); return s ? pb.wrap(k, t, s) : ""; }).join("") : G.map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + g("e");
     for (const a of l) {
       const b = /** @type {HTMLElement | null} */ (host.querySelector(a.nodata ? ".x" : `[data-a="${a.bid}"]`));
       if (b && a.run) b[a.tag ? "onchange" : "onclick"] = (/** @type {Event} */ e) => AZIONI.run(a.id, { ...c, e, b });

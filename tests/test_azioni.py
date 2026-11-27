@@ -158,14 +158,16 @@ HEADER = {
     "spec": "xicb xicl fit rul par rel lock dl more max close",
     "map": "fit dl more max close",
 }
+# the actions drawn only by the shared panel bar (AZIONI.pbar): the zoom and gestures buttons of the map, whose header keeps its own .mznav group
+BAR_ONLY = {"map": "mapzin mapzout maphelp"}
 
 
-def bar(view, extra=""):
+def bar(view, extra="", fn="bar"):
     js = ("const fs=require('fs');const AZIONI=new Function(fs.readFileSync(%r,'utf8')+';return AZIONI;')();" % str(WEB / "azioni.js")
           + "global.AZIONI=AZIONI;global.I18N={t:k=>k};global.EH=s=>s;for(const k of ['ZOOM','FIT','SYNC','RULER','UNLOCK','AUTO','MAN','DEL_INT','SMOOTH','DL','FS'])global['IC_'+k]='<svg/>';"
-          + "global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
+          + "global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
           + "const host={innerHTML:'',querySelector:()=>null};const p={type:%r,tl:true,smooth:true,log:false,imode:null};" % view + extra
-          + "AZIONI.bar({view:%r,p},host);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id)}));" % (view, view))
+          + "AZIONI.bar({view:%r,p},host%s);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id)}));" % (view, "," + fn if fn != "bar" else "", view))
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
@@ -174,7 +176,7 @@ def test_header_buttons_are_registry_actions_drawn_in_order(view):
     r = bar(view)
     ids = re.findall(r'data-a="(\w+)"', r["html"]) + (["close"] if 'class="x"' in r["html"] else [])
     assert ids == HEADER[view].split(), "the ids and the order of the old header"
-    assert sorted(i[len("panel."):] for i in r["ids"]) == sorted(HEADER[view].split())
+    assert sorted(i[len("panel."):] for i in r["ids"]) == sorted(HEADER[view].split() + BAR_ONLY.get(view, "").split())
     assert all(i.startswith("panel.") for i in r["ids"])
 
 
@@ -185,3 +187,25 @@ def test_header_button_state_comes_from_the_panel():
     assert 'aria-pressed="false"' in tag(r["html"], "tlink") and 'class="bt tgs on"' in tag(r["html"], "smooth")
     r = bar("chrom")
     assert "disabled" not in tag(r["html"], "log") and 'aria-pressed="true"' in tag(r["html"], "tlink")
+
+
+# the shared panel bar (AZIONI.bar with groups, as pbar.js passes them): bar-only rows are drawn, an unavailable action is hidden (not greyed), a group is drawn only when it has a button
+PB = "{of:a=>a.bid==='more'||a.nodata?'':a.bar==='o'||a.bar==='e'?'o':a.bar==='i'?'a':'v',groups:[['v','V'],['a','A'],['o','O']],wrap:(k,t,s)=>`<g ${k}>${s}</g>`}"
+
+
+def test_shared_bar_draws_groups_with_the_bar_only_buttons():
+    group = lambda html, g: re.search(r"<g %s>(.*?)</g>" % g, html, re.S)
+    ids = lambda html, g: re.findall(r'data-a="(\w+)"', group(html, g).group(1))
+    m = bar("map", fn=PB)["html"]
+    assert ids(m, "v") == ["fit", "mapzin", "mapzout", "maphelp"] and ids(m, "o") == ["dl", "max"] and not group(m, "a"), "the map zoom buttons go through the same renderer; no empty group"
+    assert 'data-a="close"' not in m and 'data-a="more"' not in m, "close and the overflow stay in the header"
+    c = bar("chrom", fn=PB)["html"]
+    assert ids(c, "a") == ["iauto", "iall", "iman", "idel", "intf", "iclr"] and ids(c, "o") == ["dl", "max"]
+
+
+def test_shared_bar_hides_what_is_unavailable():
+    tag = lambda html, i: re.search(r'<button[^>]*data-a="%s"[^>]*>' % i, html).group(0)
+    h = bar("chrom", "p.ms2=true;", fn=PB)["html"]
+    assert " hidden" in tag(h, "log") and "disabled" not in tag(h, "log")
+    h = bar("chrom", fn=PB)["html"]
+    assert " hidden" not in tag(h, "log")

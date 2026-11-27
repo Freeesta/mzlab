@@ -1,13 +1,19 @@
 // @ts-strict
 "use strict";
 // Shared panel bar #pbar (study docs/studies/PANEL_TOOLBAR_STUDY.md §3), lazy, loaded only when the setting «Panel bar» is on (settings.js, localStorage mzlab.pbar = "1").
-// One row under the header: a chip with the number, kind and file of the selected panel (E.active) and the tools of that panel, drawn by AZIONI.bar (azioni-barra.js).
+// One row under the header: a chip with the number, kind and file of the selected panel (E.active) and the tools of that panel, drawn by AZIONI.bar (azioni-barra.js) in the groups View, Analyse, Extract, Output.
+// A group shows only when the kind has an action in it, and an action that is not available for the panel is hidden, never greyed (the rule of AZIONI.clean for the menus).
 // The header buttons of every panel stay in the DOM (hidden by CSS, html[data-pbar]): their state is copied to the bar, and a button without its own action runs the header one.
-// Expand is in the bar and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
+// Expand is in the bar (Output) and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
 // Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, fitHdSoon, fitHdNow, LAYOUT, AZIONI, I18N, FRAME, ESP.
 (() => {
   /** @typedef {any} Pannello */
   const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a), KEY = NOMI.KEY("pbar");
+  /** group of the bar for each header group («s», the spectrum tools, splits by action: peak picking is Analyse); more and close stay in the header */
+  const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o" });
+  /** the groups of the bar: View, Analyse, Extract, Output, each labelled, drawn only when the kind has an action in it */
+  const GRP = { of: (/** @type {any} */ a) => a.bid === "more" || a.nodata ? "" : a.bid === "par" ? "a" : PB[a.bar] || "", groups: [["v", "pbar.g.view"], ["a", "pbar.g.analyse"], ["x", "pbar.g.extract"], ["o", "pbar.g.output"]],
+    wrap: (/** @type {string} */ k, /** @type {string} */ t, /** @type {string} */ s) => h`<span class="tbg" role="group" data-pg="${k}" aria-label="${T(t)}"><span class="tbl" aria-hidden="true">${T(t)}</span>${raw(s)}</span>` };
   /** @type {Pannello | null} */ let shown = null;
   /** @type {MutationObserver | null} */ let mo = null;
   let on = false, raf = 0, said = "";
@@ -32,10 +38,12 @@
       if (t.className !== s.className) t.className = s.className;
       if (t.innerHTML !== s.innerHTML) t.innerHTML = s.innerHTML;
       for (const k of ["title", "aria-label", "aria-pressed", "aria-expanded"]) { const v = s.getAttribute(k); if (v == null) t.removeAttribute(k); else if (t.getAttribute(k) !== v) t.setAttribute(k, v); }
-      if (t.hidden !== s.hidden) t.hidden = s.hidden;
+      const act = AZIONI.get("panel." + t.dataset.a), gone = s.hidden || !!(act && act.available && !act.available({ view: p.type, p }));
+      if (t.hidden !== gone) t.hidden = gone;
       if ("disabled" in s && /** @type {HTMLButtonElement} */ (t).disabled !== /** @type {HTMLButtonElement} */ (s).disabled) /** @type {HTMLButtonElement} */ (t).disabled = /** @type {HTMLButtonElement} */ (s).disabled;
       if (s.tagName === "SELECT") /** @type {HTMLSelectElement} */ (t).value = /** @type {HTMLSelectElement} */ (s).value;
     }
+    for (const g of /** @type {NodeListOf<HTMLElement>} */ (b.querySelectorAll(".pbtools .tbg"))) { const e = ![...g.querySelectorAll("[data-a]")].some(x => !(/** @type {HTMLElement} */ (x)).hidden); if (g.hidden !== e) g.hidden = e; }   // a group with nothing to show is not drawn
   }
   /** the states that differ from the default, as [id, text key]: smoothing is on by default but for the SIM/MRM panels @param {Pannello} p */
   const odd = p => {
@@ -72,7 +80,7 @@
     shown = p; said = p ? said : "";
     if (!p) { b.innerHTML = h`<span class="pbhint">${T("pbar.hint")}</span>`; b.setAttribute("aria-label", T("pbar.aria.none")); delete b.dataset.pair; return; }
     b.innerHTML = h`<span class="pbchip" title="${T("pbar.chip.title")}"></span><span class="pbtools"></span>`;
-    AZIONI.bar({ view: p.type, p }, /** @type {HTMLElement} */ (b.querySelector(".pbtools")), "e");
+    AZIONI.bar({ view: p.type, p }, /** @type {HTMLElement} */ (b.querySelector(".pbtools")), GRP);
     const tb = /** @type {HTMLElement} */ (b.querySelector(".pbtools"));
     for (const t of /** @type {NodeListOf<HTMLElement>} */ (tb.querySelectorAll("[data-a]"))) {   // a button without its own action runs the header twin (the XIC button of a spectrum)
       const s = /** @type {HTMLElement | null} */ (hdr(p)?.querySelector(`[data-a="${t.dataset.a}"]`));

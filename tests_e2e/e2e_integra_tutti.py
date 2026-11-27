@@ -28,7 +28,7 @@ try:
         wait_for_js(pg, f"(()=>{{const p={M};return !!(p&&p._a&&p._a.sr&&p._a.sr.length>=1)}})()")
         pg.evaluate(f"{M}.ints=[]")
         def every_peak():
-            hd_click(pg, ".pnl.mrm [data-a=iall]", keep=True)
+            bar(pg, ".pnl.mrm", "iall", keep=True)
             pg.locator("#ctx >> text=" + pg.evaluate("I18N.t('int.menu.all')")).first.click()
             wait_for_js(pg, f"{M}.ints.length>0", timeout=30000)
             assert pg.evaluate(f"{M}._a.sr[0].name").endswith("triple")
@@ -82,7 +82,7 @@ try:
             assert pg.evaluate(f"{M}.ints.length") == n                                     # a second run adds nothing over the peaks already there
         step("one undo removes all of them; a second run adds no overlapping window", undo_again)
         def dialog():
-            hd_click(pg, ".pnl.mrm [data-a=iall]", keep=True)        # a narrow header moves it into «⋯»
+            bar(pg, ".pnl.mrm", "iall", keep=True)        # a narrow header moves it into «⋯»
             pg.locator("#ctx >> text=" + pg.evaluate("I18N.t('int.menu.params')")).first.click()
             pg.wait_for_selector("#bigdlg [data-pk=lrSmooth]")
             box = pg.evaluate("(()=>{const r=document.querySelector('#bigdlg').getBoundingClientRect();return [r.bottom,innerHeight]})()")

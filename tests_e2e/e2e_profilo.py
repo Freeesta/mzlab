@@ -43,7 +43,7 @@ try:
         def switch():
             ink = lambda: pg.evaluate(f"{SPEC}.cv.toDataURL().length")
             a = ink()
-            pg.click(f"{SPEC.replace('E.panels.find', 'xx')}" if False else ".pnl.spec [data-a=par]"); pg.wait_for_timeout(300)
+            bar(pg, ".pnl.spec", "par"); pg.wait_for_timeout(300)
             pg.select_option(".sp-pop select[data-s=sticks]", "1"); pg.wait_for_timeout(1200)
             assert pg.evaluate(f"{SPEC}.sticks") is True
             b = ink(); print("ink line/sticks", a, b); assert a != b

@@ -16,7 +16,7 @@ try:
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.click("text=Load data"); ready(pg)
         def lockclick():             # the click on the lock makes the spectrum the active panel: give the chromatogram the focus back
-            pg.click(".pnl.spec [data-a=lock]"); pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
+            bar(pg, ".pnl.spec", "lock"); pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
         st = lambda: pg.evaluate(f"(()=>{{const s={SPEC};return {{si:s.si,x0:s._a&&s._a.x0,x1:s._a&&s._a.x1,ymax:s._a&&s._a.ymax,lock:!!s.lock,r0:s.r0,r1:s.r1,cur:E.active&&E.active.cur,leg:s.leg.textContent}}}})()")
         # cursor a little before the peak (14.3 min) in the first full-scan chromatogram
         def put_cursor(rt=14.0):

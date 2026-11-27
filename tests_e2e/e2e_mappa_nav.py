@@ -89,12 +89,12 @@ try:
             assert [b[0] for b in btns] == ["mapzin", "mapzout", "maphelp"], btns
             assert all(b[1] for b in btns), btns
             zoom_in(); bar(pg, ".pnl.map", "fit"); wait_for_js(pg, ZNULL); assert z() == [None, None]
-            pg.click(".pnl.map [data-nav=mapzin]"); wait_for_js(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
-            pg.click(".pnl.map [data-nav=mapzout]"); changed(zz)
+            bar(pg, ".pnl.map", "mapzin"); wait_for_js(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
+            bar(pg, ".pnl.map", "mapzout"); changed(zz)
             pg.evaluate("MAPPA.whole(" + M + ")"); wait_for_js(pg, ZNULL)
         step("bar on the map: reset, +, −, gestures (no padlock)", nav_bar)
         def sheet():
-            pg.click(".pnl.map [data-nav=maphelp]"); wait_for_js(pg, "document.getElementById('bigdlg').open")
+            bar(pg, ".pnl.map", "maphelp"); wait_for_js(pg, "document.getElementById('bigdlg').open")
             assert pg.evaluate("document.getElementById('bigdlg').open")
             assert pg.evaluate("document.querySelectorAll('#bigdlg table.mzhelp tbody tr').length") >= 12
             heads = pg.evaluate("[...document.querySelectorAll('#bigdlg table.mzhelp thead th')].map(t=>t.textContent)"); assert heads == ["Action", "Mouse", "Trackpad", "Touch", "Keyboard"], heads

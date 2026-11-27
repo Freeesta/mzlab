@@ -38,7 +38,7 @@ for kind in ("hr", "lr"):
                 xic(pg, "305.0702")          # 5 ppm: the ion at RT 9.0 and its copy at 11.5
                 def all_peaks():
                     assert pg.evaluate("hrTrace(E.panels.find(q=>q.type==='xic')._a.sr[0])")
-                    pg.locator(".pnl.xic [data-a=iauto]").first.click(); click_at(pg, 10.2)
+                    bar(pg, ".pnl.xic", "iauto"); click_at(pg, 10.2)
                     wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length>=2")
                     w = pg.evaluate(WINS); assert len(w) == 2, w
                     assert w[0][0] < 9.0 < w[0][1] and w[1][0] < 11.5 < w[1][1] and w[0][1] <= w[1][0], w
@@ -74,7 +74,7 @@ for kind in ("hr", "lr"):
                 xic(pg, "364")
                 def lr_one():
                     assert not pg.evaluate("hrTrace(E.panels.find(q=>q.type==='xic')._a.sr[0])")
-                    pg.locator(".pnl.xic [data-a=iauto]").first.click(); click_at(pg, 14.3)
+                    bar(pg, ".pnl.xic", "iauto"); click_at(pg, 14.3)
                     wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
                     w = pg.evaluate(WINS); assert len(w) == 1, w
                     ed = pg.evaluate("(async()=>{const p=E.panels.find(q=>q.type==='xic'),i=p.ints[0];const e=await autoEdges(p._a.sr[0],14.3);return [Math.abs(e[0]-i.a),Math.abs(e[1]-i.b)]})()")
