@@ -20,23 +20,43 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-PEAK-TABLE | `docs/coda/prompt/ION-COUNTS-PEAK-TABLE.md` | - | opt-in ion-scale columns for `peak table` (area, height, noise and S/N in ions), with the factor of `ionscale` per file |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
-| FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | needs owner decision: which side changes bytes, the CLI (first-file recipe) or the browser runner (per-file recipe) | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; on files whose estimates differ the two give other bytes |
+| FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
 | LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-OFFSET | `docs/coda/prompt/SPECTRUM-COMPARE-OFFSET.md` | - | site card of `spectrum compare`: an m/z offset per side (fixed or `auto`), as the CLI flags |
 | SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
+| TABLE-ROW-CLI | `docs/coda/prompt/TABLE-ROW-CLI.md` | - | mzflow 1: `table row`, the `row/2` and `row_traces/2` of one row from the CLI (site and app have them) |
+| FLOW-TABLE-LIST | `docs/coda/prompt/FLOW-TABLE-LIST.md` | - | mzflow 2: the list of feature tables on the right of the Flow; `flow tables` over a run folder |
+| FEATURE-DETAIL | `docs/coda/prompt/FEATURE-DETAIL.md` | TABLE-ROW-CLI | mzflow 3: the feature view with fixed slots; `feature-slots/1`, `table slots` |
+| PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
+| KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
+| FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | FEATURE-DETAIL | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
+| ROW-ORIGIN | `docs/coda/prompt/ROW-ORIGIN.md` | - | mzflow 7: opt-in origin of each row of `features.union` |
+| FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | FEATURE-DETAIL | mzflow 8: the UV-Vis slot, `table uv` |
+| MS2-LINK-FILES | `docs/coda/prompt/MS2-LINK-FILES.md` | - | mzflow 9: an executor for `features.ms2_link`, dedicated MS2 files, manual link and unlink |
+| LINK-PILLARS | `docs/coda/prompt/LINK-PILLARS.md` | KINETIC-CLASS | mzflow 10: step `tp.pillars`, the three pillars of the parent-TP link |
+| FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | FEATURE-DETAIL | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
+| INSTRUMENT-PRESETS | `docs/coda/prompt/INSTRUMENT-PRESETS.md` | - | mzflow 12: detection presets named after the instrument (+-0.5 Da, +-5 ppm) |
+| POLPAIR-CLI | `docs/coda/prompt/POLPAIR-CLI.md` | - | mzflow 13: CLI and app route for the wasm `cross_polarity` (`polpair/1`) |
+| AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
+| TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
+| AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
+| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FLOW-TABLE-LIST, FEATURE-DETAIL | mzflow 17 (v2): a read-only phone view of tables and one feature |
+| SUSPECT-GEN3 | `docs/coda/prompt/SUSPECT-GEN3.md` | - | mzflow 18 (v2): `tp.generate` up to 3 generations, editable rule list |
+| BIOTRANSFORMER-IO | `docs/coda/prompt/BIOTRANSFORMER-IO.md` | - | mzflow 19 (v2): BioTransformer by file exchange |
+| ECOSAR-IO | `docs/coda/prompt/ECOSAR-IO.md` | - | mzflow 20 (v2): ECOSAR by file exchange |
+| RAW-VERSIONS | `docs/coda/prompt/RAW-VERSIONS.md` | needs owner decision: the version numbers of the owner's Thermo `.raw` files (format facts only) | mzflow 21: Thermo `.raw` versions beyond 57, 63, 64, 66 |
 | BLANK-CONTAMINANTS | `docs/coda/prompt/BLANK-CONTAMINANTS.md` | - | flag contaminant ions seen in blanks before an acquisition slot is spent; builds on AU-7 |
 | STATES-PROV | `docs/coda/prompt/STATES-PROV.md` | - | AU-3: `table.stats` and `quant.curve` name the states they used in `prov/1` |
-| NA-CELL-STATE | `docs/coda/prompt/NA-CELL-STATE.md` | needs owner decision: printing `NA` for `na` changes an existing cell value; opt-in step parameter or not | AU-3: aligned CSV `na` versus `absent`, Dig points, per-cell S/N |
+| NA-CELL-STATE | `docs/coda/prompt/NA-CELL-STATE.md` | - | AU-3: aligned CSV `na` versus `absent`, Dig points; decided 26 Nov: opt-in step parameter prints `NA`, default bytes unchanged; per-cell S/N not decided |
 | SHAPE-GATES-OTHER | `docs/coda/prompt/SHAPE-GATES-OTHER.md` | - | the `quant targets` peak-shape gates (`min_half`, `max_fwhm`, `max_asym`) and the six-check decision log in `peak auto-lr`, `peak table --auto`, `chrom.transitions`, Dig and `raw xic` |
-| MZTAB-CELL-STATE | `docs/coda/prompt/MZTAB-CELL-STATE.md` | needs owner decision: a state column in `export.mztab` adds a column to an existing export; opt-in parameter or not | AU-3: per-cell value state in `export.mztab` (areas only today) |
+| MZTAB-CELL-STATE | `docs/coda/prompt/MZTAB-CELL-STATE.md` | - | AU-3: per-cell value state in `export.mztab` (areas only today); decided 26 Nov: opt-in parameter, default bytes unchanged |
 | BLANK-BAND | `docs/coda/prompt/BLANK-BAND.md` | - | AU-6: blank level per m/z band in `estimate`; `rotte` must not grow |
 | RT-DRIFT-PROPOSAL | `docs/coda/prompt/RT-DRIFT-PROPOSAL.md` | - | AU-6: `estimate` proposes `rt_warp=piecewise` from measured drift |
 | LLM-PARAMS-RULES | `docs/coda/prompt/LLM-PARAMS-RULES.md` | - | AU-6 and AU-7: merge the rules of `llm params` with `estimate`; fix the R-blank-1 text |
@@ -46,7 +66,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | UNION-WEB-TESTS | `docs/coda/prompt/UNION-WEB-TESTS.md` | - | AU-4: cache-hit path of flow-web-companions, real `lr_union` answer shape, module sizes |
 | BLANK-SUMMARY | `docs/coda/prompt/BLANK-SUMMARY.md` | - | AU-7: CLI summary line of the blank filter |
 | BLANK-FOLD-COLUMN | `docs/coda/prompt/BLANK-FOLD-COLUMN.md` | - | AU-7: `blank_fold` as an opt-in per-row export column |
-| FIRST-SAMPLE-HINTS | `docs/coda/prompt/FIRST-SAMPLE-HINTS.md` | - | follow-up of #3717: `quant targets --sample`; hint naming `--sample` for `items`, `background`, `dad_ms`, `peak` |
+| ITEMS-BACKGROUND-SAMPLE | `docs/coda/prompt/ITEMS-BACKGROUND-SAMPLE.md` | - | follow-up of FIRST-SAMPLE-HINTS: `file items` and `trace background` take `--sample ID` like `dad`, so their hint names the flag and not `file convert` |
 | RT-REF-OTHER-STEPS | `docs/coda/prompt/RT-REF-OTHER-STEPS.md` | - | an internal-reference RT mode (`rt_ref` of `quant.targets`) for `peak`, `trace xic` and the `features` alignment; reuse `quant_targets::rtref` |
 | MZ-OFFSET-POLARITY | `docs/coda/prompt/MZ-OFFSET-POLARITY.md` | - | per-polarity `--mz-offset` spec (`+:AUTO,-:AUTO`) for `trace xic` and `features`, as `quant targets --offset auto` already does per file and polarity |
 | DAD-DELAY-APPLY | `docs/coda/prompt/DAD-DELAY-APPLY.md` | - | opt-in PDA/UV detector delay applied at conversion from the `dad delay` estimate; `file convert` hints the command when UV and MS traces disagree |
@@ -58,10 +78,13 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
-| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | needs owner decision: the index gains a fill-time column (index format version) | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states |
+| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | - | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states; decided 26 Nov: new index format version with a fill-time column, old indexes readable plus a rebuild hint |
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
-| FILE-METHOD-SITE-NAMES | `docs/coda/prompt/FILE-METHOD-SITE-NAMES.md` | - | the name/precursor check of `sample list` beside the scan list of the site, with the numbers of `warn.file.nameMz` |
 | MS2-PEAK-HR-NOISE | `docs/coda/prompt/MS2-PEAK-HR-NOISE.md` | - | `spectrum get --peak auto` at a high-resolution level keeps every unmatched noise line above zero (about 1,600 lines on a synthetic Orbitrap parent peak); a net-intensity floor as a `--set` parameter with its default printed |
+| WIFF-PICK-PREFETCH | `docs/coda/prompt/WIFF-PICK-PREFETCH.md` | - | owner request (relayed by the Coordinator), its own PR after #3763: start loading a sample as soon as it is ticked in the sample dialog, cancel on untick or X, reuse on Open |
+| WIFF-NATSELECT-DEAD | `docs/coda/prompt/WIFF-NATSELECT-DEAD.md` | - | the `natselect` worker op and `sample_selection` export lost their only page caller; remove or re-home them |
+| APP-SIGN-NOTARISE | `docs/coda/prompt/APP-SIGN-NOTARISE.md` | needs owner decision: Apple Developer account and notarisation credentials, Windows signing service | sign and notarise the Mac app (and sign the Windows installer) of `app-prebuilt` in the same build |
+| APP-ROLLING-NOTICE | `docs/coda/prompt/APP-ROLLING-NOTICE.md` | - | an installed app says when `app-prebuilt` holds a newer commit than the running binary (opt-in, once a day, silent on error) |
 | PICKER-POPUP-PHONE | `docs/coda/prompt/PICKER-POPUP-PHONE.md` | - | the channel picker popup (`.can-pop`) is wider than a 390 px screen and runs off the right edge: keep it inside the viewport, scrollable, with its buttons reachable |
 | LEGEND-CHIP-CLIP | `docs/coda/prompt/LEGEND-CHIP-CLIP.md` | - | the list of a legend chip (more than 4 entries, `.leg .lgl`) is clipped by the panel edge when the legend sits near the bottom: open it where it fits and keep every entry reachable |

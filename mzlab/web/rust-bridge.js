@@ -152,7 +152,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   async function indexRoute(s, k, path, u, t0) {
     let r = await rpc(path === "/api/channels" && s.blob ? { op: "canali", slot: k, name: base(s.name).split("#")[0], blob: s.blob } : { op: "route", slot: k, path, query: u.search });      // the channels also read the chromatograms of the mzML (SRM, UV)
     if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // what the index alone cannot answer: one scan of a centroid HR file (exact peaks), a single-precision profile level (its spacing)
-    if (r.dead || r.error || !r.info) return null;
+    if (r.dead || r.error || !r.info) return path === "/api/spectrum" && r.error && u.searchParams.has("mzoff") ? refusal(r) : null;   // a bad m/z offset: the engine's worded refusal (err.mz.offset.*), not "unavailable"
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }

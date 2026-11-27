@@ -222,7 +222,7 @@ pub struct ChromatogramEntry {
     pub unita: String,
 }
 
-pub use listing::{list_samples, samples_json, Listing, Summary};
+pub use listing::{empty_ids, list_samples, samples_json, Listing, Summary};
 pub use outcome::{
     cause_key, Losses, ReadOutcome, ReadOutcomes, AGILENT_DAMAGED, BRUKER_CUT_BIN,
     BRUKER_NO_CALIBRATION, CYCLES, DAMAGED, EVENTS_REFUSED, MEMBER_MISSING, RAW_DAMAGED,

@@ -1,7 +1,6 @@
 //! `features`: the feature table of LC-MS files as CSV; the arguments are parsed here.
 
 use super::Entry;
-use crate::sample_label::Kind;
 use crate::{features_full, features_plan_of, Outcome};
 use std::path::PathBuf;
 
@@ -88,99 +87,26 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
     Ok(Some(r))
 }
 
-/// The files and the labels of the series: with `--sample`, a file with several samples gives one member per selected sample, labelled `COLUMN@ID` where
-/// COLUMN is the sample name (`sample_label`: the file name only breaks a tie) and ID the sample id; any other file is one member as it is (empty label, its
-/// own name). With no file of several samples the selection has nothing to apply to. Without `--sample`, a file with several samples is its first sample and
-/// the output says how to choose.
+/// The files and the labels of the series (`sample_members`): with `--sample`, one member per chosen sample of a file with several; without it, a file with several
+/// samples is its first sample and the output says how to choose.
 fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>, String)> {
     let Some(want) = &a.sample else {
-        let notes = a.files.iter().map(|f| first_sample_note(f)).collect();
+        let notes = a
+            .files
+            .iter()
+            .map(|f| {
+                crate::sample_select::members::first_sample_note(f, "note.features.firstSample")
+            })
+            .collect();
         return Ok((a.files.clone(), vec![String::new(); a.files.len()], notes));
     };
-    let (mut files, mut ids, mut applied) = (Vec::new(), Vec::new(), false);
-    let mut names: Vec<(usize, String)> = Vec::new();
-    for f in &a.files {
-        let present = crate::sample_select::named(f)?;
-        if present.len() < 2 {
-            files.push(f.clone());
-            ids.push(None);
-            continue;
-        }
-        applied = true;
-        let have: Vec<u32> = present.iter().map(|(i, _)| *i).collect();
-        for id in mzlab_core::readers::selection::resolve(&have, want)? {
-            names.push((
-                files.len(),
-                present
-                    .iter()
-                    .find(|(i, _)| *i == id)
-                    .map(|(_, n)| n.clone())
-                    .unwrap_or_default(),
-            ));
-            files.push(f.clone());
-            ids.push(Some(id));
-        }
-    }
-    if !applied {
-        return Err(mzlab_core::error::Error::new("err.sample.single"));
-    }
-    let file_of = |k: usize| {
-        files[k]
-            .file_name()
-            .map_or(String::new(), |n| n.to_string_lossy().into_owned())
-    };
-    let fnames: Vec<String> = names.iter().map(|(k, _)| file_of(*k)).collect();
-    let members: Vec<crate::sample_label::Member> = names
-        .iter()
-        .zip(&fnames)
-        .map(|((k, n), f)| crate::sample_label::Member {
-            file: f,
-            id: ids[*k].unwrap_or(0),
-            sample: n,
-        })
-        .collect();
-    let columns = crate::sample_label::labels(&members);
-    let mut labels = vec![String::new(); files.len()];
-    let mut notes = String::new();
-    for (((k, sample), (column, tie)), f) in names.iter().zip(&columns).zip(&fnames) {
-        let id = ids[*k].unwrap_or(0);
-        labels[*k] = format!("{column}@{id}");
-        let key = match tie {
-            Kind::Own => "note.features.column",
-            Kind::Tie => "note.features.columnTie",
-            Kind::Numbered => "note.features.columnNumbered",
-        };
-        notes += &format!(
-            "note: {}\n",
-            crate::error_text::warning(&crate::convert::Notice {
-                key,
-                params: vec![
-                    ("column", column.clone()),
-                    ("id", id.to_string()),
-                    ("sample", sample.clone()),
-                    ("file", f.clone()),
-                ],
-            })
-        );
-    }
-    Ok((files, labels, notes))
-}
-
-/// Without `--sample` a file with several samples gives its first sample only: the note names the command that chooses (empty when there is nothing to say).
-fn first_sample_note(f: &std::path::Path) -> String {
-    let Some(count) = crate::sample_select::several(f) else {
-        return String::new();
-    };
-    format!(
-        "note: {}\n",
-        crate::error_text::warning(&crate::convert::Notice {
-            key: "note.features.firstSample",
-            params: vec![
-                ("file", f.display().to_string()),
-                ("count", count.to_string()),
-            ],
-        })
-    )
+    let m = crate::sample_select::members::expand(&a.files, want)?;
+    let notes = crate::sample_select::members::notes(&m);
+    Ok((
+        m.iter().map(|x| x.path.clone()).collect(),
+        m.into_iter().map(|x| x.label).collect(),
+        notes,
+    ))
 }
 
 /// `params` (the JSON text of the recipe, empty for the defaults) with the string key `key` set to `mode` (`--centroid`, `--mz-offset`).
@@ -319,7 +245,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 .examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "quant targets",
-    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
+    "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
     crate::quant_targets_cmd::run,
 )
 .schema("quant-targets/1")

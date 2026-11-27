@@ -1,6 +1,6 @@
-"""«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4; the range copy of a partial choice, wiff-range-copy.md): shown only when the file has several samples, all ticked for a small
-set, Select none / numbers field (the engine's `sample_selection`), Open selected opens only the ticked ones, Cancel opens nothing, the setting «never» and «always». Synthetic pairs of
-tools/wiff_grande.py. Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
+"""«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4; the range copy of a partial choice, wiff-range-copy.md): shown only when the file has several samples, every non-empty sample ticked for a small
+set and an empty one (acquired nothing) not, a SIM-only sample listed with its cycles, Select all / Select none, Open selected (Enter too) opens only the ticked ones, X and Escape open nothing,
+phone width, the setting «never» and «always». Synthetic pairs of tools/wiff_grande.py and the `tipi` pair of tools/wiff_tipi.py (MS, SIM-only and empty sample). Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
 # covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, crates/mzlab-core/src/readers/selection
 import os, subprocess, sys, tempfile
 from pathlib import Path
@@ -18,6 +18,7 @@ if not (ROOT / "site" / "index.html").exists() or not wasm.exists():
 D = Path(tempfile.mkdtemp(prefix="wiffchoose_e2e_"))
 for name, n in (("multi", 3), ("solo", 1)):
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D / name), "--name", name, "--samples", str(n), "--scans", "40", "--points", "50"], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_tipi.py"), str(D / "tipi")], check=True, capture_output=True)
 def pair(name): return [str(D / name / f"{name}.wiff"), str(D / name / f"{name}.wiff.scan")]
 run = Run(); PORT = run.port
 DLG = "dialog#wiffchoose[open]"
@@ -39,20 +40,35 @@ try:
             assert ticked(pg) == 3, ticked(pg)
             assert pg.get_attribute("#wiffchoose", "aria-labelledby") == "wc-title" and pg.evaluate("document.querySelector('#wiffchoose').matches(':modal')")
             assert pg.get_attribute("#wiffchoose .wc-sel", "role") == "status" and pg.evaluate("document.querySelectorAll('#wiffchoose tbody input[aria-label]').length") == 3
+            assert pg.inner_text("#wiffchoose .wc-sel") == "3 of 3 ticked", pg.inner_text("#wiffchoose .wc-sel")
+            # the simple layout: no number box, no Cancel, no "No." column; X at the top right; Open selected centred at the bottom
+            assert not pg.query_selector("#wc-ids") and not pg.query_selector("#wiffchoose button:text('Cancel')") and not pg.query_selector("#wiffchoose button:text('Tick numbers')")
+            assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose thead th')).map(h => h.textContent).join('|')") == "Open|Sample|Type|Scans|Size"
+            assert pg.evaluate("""() => { const d = document.querySelector('#wiffchoose').getBoundingClientRect(), x = document.querySelector('#wiffchoose .wc-x').getBoundingClientRect(), o = document.querySelector('#wiffchoose button.go').getBoundingClientRect();
+              return x.right > d.right - 40 && x.top < d.top + 60 && Math.abs((o.left + o.right) / 2 - (d.left + d.right) / 2) < 12 }""")
             assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose button, #wiffchoose input')).every(e => e.getBoundingClientRect().height >= 24 && e.getBoundingClientRect().width >= 24)")
             shot = os.environ.get("MZLAB_SHOTS")
             if shot: Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-dialog.png"))
         step("several samples: the dialog opens with every sample ticked and is accessible", several)
-        def none_then_numbers():
-            pg.click("#wiffchoose button:text('Select none')"); assert ticked(pg) == 0 and pg.is_disabled("#wiffchoose button.go")
-            pg.fill("#wc-ids", "2-3"); pg.click("#wiffchoose button:text('Tick numbers')"); pg.wait_for_function("document.querySelectorAll('#wiffchoose tbody input:checked').length === 2"); assert ticked(pg) == 2
-            pg.fill("#wc-ids", "9"); pg.click("#wiffchoose button:text('Tick numbers')")
-            pg.wait_for_function("document.querySelector('#wiffchoose .wc-msg').textContent.includes('no sample number 9')")
-            pg.fill("#wc-ids", "x"); pg.click("#wiffchoose button:text('Tick numbers')"); pg.wait_for_function("document.querySelector('#wiffchoose .wc-msg').textContent.includes('Not a list')")
-        step("Select none disables Open; numbers go through the engine (2-3 ticks two, 9 and x are told)", none_then_numbers)
+        def none_then_all():
+            pg.click("#wiffchoose button:text('Select none')"); assert ticked(pg) == 0 and pg.is_disabled("#wiffchoose button.go") and pg.inner_text("#wiffchoose .wc-sel") == "0 of 3 ticked"
+            pg.click("#wiffchoose button:text('Select all')"); assert ticked(pg) == 3 and not pg.is_disabled("#wiffchoose button.go")
+        step("Select none disables Open, Select all ticks every sample again", none_then_all)
+        def phone():
+            pg.set_viewport_size({"width": 390, "height": 780})
+            assert pg.evaluate("() => { const d = document.querySelector('#wiffchoose'); return d.scrollWidth <= d.clientWidth + 1 && d.getBoundingClientRect().right <= innerWidth && d.getBoundingClientRect().left >= 0 }")
+            assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose button, #wiffchoose input')).every(e => e.getBoundingClientRect().height >= 24 && e.getBoundingClientRect().width >= 24)")
+            shot = os.environ.get("MZLAB_SHOTS")
+            if shot: Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-phone.png"))
+            pg.set_viewport_size({"width": 1300, "height": 900})
+        step("phone width: the dialog fits the screen and its controls stay tappable", phone)
         def cancel():
             pg.keyboard.press("Escape"); settle(pg); assert rows(pg) == 0, rows(pg)
         step("Escape cancels: nothing is opened", cancel)
+        def close_x():
+            pg.set_input_files("#pick", pair("multi")); dlg(pg)
+            pg.click("#wiffchoose .wc-x"); settle(pg); assert rows(pg) == 0, rows(pg)
+        step("the X at the top right closes the dialog and opens nothing", close_x)
         def open_some():
             pg.set_input_files("#pick", pair("multi")); dlg(pg)
             pg.click("#wiffchoose tbody tr:nth-child(2) input"); assert ticked(pg) == 2
@@ -85,7 +101,7 @@ try:
         def always():
             pg.evaluate(f"localStorage.setItem({key()!r}, 'always')")
             pg.set_input_files("#pick", pair("solo")); dlg(pg); assert ticked(pg) == 1
-            pg.click("#wiffchoose button:text('Cancel')"); settle(pg)
+            pg.click("#wiffchoose .wc-x"); settle(pg)
         step("setting «always»: a file with one sample is asked too", always)
         # last: it needs the pair opened by the first choice and must not change the row counts the settings steps rely on
         pg.evaluate("localStorage.removeItem(NOMI.KEY('pick'))")
@@ -97,8 +113,8 @@ try:
             before = {g["n"]: g for g in pg.evaluate(js, src) if "multi" in g["n"]}
             assert before, before
             n = rows(pg); pg.set_input_files("#pick", pair("multi")); dlg(pg)
-            pg.click("#wiffchoose button:text('Select none')"); pg.fill("#wc-ids", "2"); pg.click("#wiffchoose button:text('Tick numbers')")
-            pg.wait_for_function("document.querySelectorAll('#wiffchoose tbody input:checked').length === 1"); assert ticked(pg) == 1
+            pg.click("#wiffchoose button:text('Select none')"); pg.click("#wiffchoose tbody tr:nth-child(2) input")
+            assert ticked(pg) == 1
             pg.click("#wiffchoose button.go"); settle(pg)
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n}", timeout=120000)
             after = {g["n"]: g for g in pg.evaluate(js, src) if "multi" in g["n"]}
@@ -107,6 +123,27 @@ try:
             assert all(g["bad"] == 0 and g["nz"] > 0 for g in new), new
             assert all(g["digest"] != b["digest"] for g in new for b in before.values()), (new, before)
         step("another sample of the same file gets its own partial copy (sample 2 after samples 1 and 3)", second_choice)
+        def kinds_and_empty():
+            # MS sample, SIM-only sample (its cycles are its scans, type SIM), a sample that acquired nothing: only that one is unticked and says «empty»
+            n = rows(pg); pg.set_input_files("#pick", pair("tipi")); dlg(pg)
+            cells = pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose tbody tr')).map(r => ({ on: r.querySelector('input').checked, t: Array.from(r.querySelectorAll('td')).slice(1).map(c => c.textContent) }))")
+            assert [c["on"] for c in cells] == [True, True, False], cells
+            assert cells[0]["t"][1:3] == ["MS", "5"] and cells[1]["t"][1:3] == ["SIM", "7"], cells
+            assert cells[2]["t"][2] == "empty" and cells[2]["t"][1] == "", cells
+            assert pg.inner_text("#wiffchoose .wc-sel") == "2 of 3 ticked" and pg.evaluate("document.querySelector('#wiffchoose tbody tr.wc-empty') !== null")
+            shot = os.environ.get("MZLAB_SHOTS")
+            if shot:
+                Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-kinds.png"))
+                pg.set_viewport_size({"width": 390, "height": 780}); pg.screenshot(path=str(Path(shot) / "wiff-choose-kinds-phone.png")); pg.set_viewport_size({"width": 1300, "height": 900})
+            pg.keyboard.press("Enter"); settle(pg)     # focus starts on Open selected, and Enter opens
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 2", timeout=120000)
+            assert rows(pg) == n + 2, (n, rows(pg))
+        step("a SIM sample lists its cycles and type SIM, an empty one is unticked and says empty; Enter opens the ticked ones", kinds_and_empty)
+        def enter_from_a_row():
+            pg.set_input_files("#pick", pair("multi")); dlg(pg)
+            pg.focus("#wiffchoose tbody tr:nth-child(1) input"); pg.keyboard.press("Enter"); settle(pg)
+            assert not pg.query_selector("dialog#wiffchoose")
+        step("Enter pressed on a checkbox opens too", enter_from_a_row)
         b.close()
 finally:
     srv = run.srv; srv.terminate(); import shutil; shutil.rmtree(D, ignore_errors=True)

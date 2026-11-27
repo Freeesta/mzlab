@@ -9,15 +9,28 @@ use crate::ole::Ole;
 use crate::readers::{FileSet, Limits, Listing, Summary};
 
 /// Scans the index places in the data file, and the bytes of the section: the numbers the sample list holds before any block is read. A block counts as a scan
-/// when its row holds points, or (IDA: the rows hold no count) when its experiment acquires scans.
+/// when its row holds points, or (IDA: the rows hold no count) when its experiment acquires scans. A sample with no scan at all but MRM or SIM blocks (one
+/// block per cycle, which the index gives no point count for) counts those cycles instead, so that a SIM sample never lists as having nothing.
 pub(super) fn counts(w: &Wiff) -> (usize, u64) {
     let scan = |r: &super::Record| {
         !r.cut(w.scan_len)
             && (r.points > 0.0
                 || (r.points.is_nan() && r.size > 0 && w.scan_experiment(r.experiment)))
     };
+    let cycle = |r: &super::Record| {
+        !r.cut(w.scan_len)
+            && r.size > 0
+            && !w.scan_experiment(r.experiment)
+            && (r.points.is_nan() || r.points <= 0.0)
+    };
     let size = w.records.iter().map(|r| u64::from(r.size)).sum();
-    (w.records.iter().filter(|r| scan(r)).count(), size)
+    let scans = w.records.iter().filter(|r| scan(r)).count();
+    let n = if scans > 0 {
+        scans
+    } else {
+        w.records.iter().filter(|r| cycle(r)).count()
+    };
+    (n, size)
 }
 
 /// The scan count and the index bytes of a sample as `open_with` lists it: the index's for a listing, the built scans' (no size) otherwise.
