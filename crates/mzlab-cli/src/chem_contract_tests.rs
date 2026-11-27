@@ -122,10 +122,7 @@ fn every_chemistry_entry_with_one_schema_names_it() {
     {
         assert!(!e.exits.is_empty(), "{}: no exit list", e.name);
         // mol export is text; mol search and mol draw have two documents; mol find is a bare list: the others carry one tag
-        if !matches!(
-            e.name,
-            "mol export" | "mol search" | "mol draw" | "mol find"
-        ) {
+        if !["mol export", "mol search", "mol draw", "mol find"].contains(&e.name) {
             assert!(!e.schema.is_empty(), "{}: no schema", e.name);
         }
     }
