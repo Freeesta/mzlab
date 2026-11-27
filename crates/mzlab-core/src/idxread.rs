@@ -2,6 +2,7 @@
 //! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS callback).
 
 use crate::error::{Error, Result};
+use crate::idxrows::nativo;
 use crate::idxscan::{key_prefix, strip_range};
 use crate::json::{self, Value};
 use crate::readers::Position;
@@ -212,20 +213,8 @@ pub struct Index<R: ReadAt> {
     pub(crate) crcs: Vec<f64>, // the `crc32` of the 10 arrays of each section in turn (NaN when the section has none)
     /// The chromatogram list and facts of the mzML, read once for all the open routes (`entry`, `items`, `canali`): see `layout.rs`.
     pub layout: crate::layout::Layout,
-}
-
-/// Whether the header is of an index of a vendor file (version 3 or 4 with `READER_FLAG`) or of an mzML (version 3 or 4); `None` for any other, older versions included.
-pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
-    let w = |a: usize| {
-        h.get(a..a + 4)
-            .and_then(|b| b.try_into().ok())
-            .map(u32::from_le_bytes)
-    };
-    match (w(8)?, w(12)?) {
-        (3 | 4, 0) => Some(false),
-        (3 | 4, READER_FLAG) => Some(true),
-        _ => None,
-    }
+    /// The label check of this index (`lrscreen::label_check`), probed at the first ask; `Some(None)`: nothing to check.
+    pub label: Option<Option<crate::rawinfo::LabelCheck>>,
 }
 
 /// The `len` bytes at `off`.
@@ -378,6 +367,7 @@ impl<R: ReadAt> Index<R> {
             fences: vec![None; n],
             crcs,
             layout,
+            label: None,
         })
     }
 
@@ -399,6 +389,7 @@ impl<R: ReadAt> Index<R> {
             fences: vec![None; n],
             crcs: self.crcs.clone(),
             layout: self.layout.clone(),
+            label: None,
         }
     }
 
