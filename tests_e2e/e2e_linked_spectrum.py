@@ -1,6 +1,6 @@
 """A UV spectrum opened by a double click on the MRM panel says where it comes from, at 1400 and 390 px: the subtitle names the source panel and the way it
 was asked for, the «→ n» / «← n» badges say what they link, hovering a badge or the spectrum lights the dashed cursor of the source, and the cursor dot has a
-tooltip naming the spectrum. «Allinea» adds the delay between the chart time and the DAD time. Synthetic MRM `.wiff` of tools/wiff_dad_mrm.py. With
+tooltip naming the spectrum. «Align DAD and mass» adds the delay between the chart time and the DAD time. Synthetic MRM `.wiff` of tools/wiff_dad_mrm.py. With
 MZLAB_SHOTS=<dir> the screenshots (device scale factor 2) are written there. Run from the repo root: python3 tests_e2e/e2e_linked_spectrum.py"""
 # covers: mzlab/web/uv-spettro.js, mzlab/web/pannelli.js, mzlab/web/scroll.js
 import json, subprocess, sys, os, tempfile
@@ -80,7 +80,7 @@ def run(width, port):
             t = pg.evaluate(f"{UV}.leg2.textContent")
             assert "DAD delay 0.50 min" in t and "DAD time" in t, t
             pg.evaluate(f"{MRM}.pdaAlign = false; {MRM}.pdaDelay = null; drawSoon({UV})"); frames(pg, 3)
-        step(f"{width}px: with «Allinea» the subtitle gives chart time, delay and DAD time", align)
+        step(f"{width}px: with «Align DAD and mass» the subtitle gives chart time, delay and DAD time", align)
         def fits():
             ov = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
             lg = pg.evaluate(f"(() => {{ const e = {UV}.leg2.getBoundingClientRect(), q = {UV}.el.getBoundingClientRect(); return e.right - q.right; }})()")

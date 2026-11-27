@@ -57,7 +57,7 @@ export async function open(from, k, r0, r1, via) {
   const link = from && ["chrom", "xic", "mrm"].includes(from.type) ? from.id : null;
   return newSpec(from, r0, r1, k, link, { uv: true, via, title: "@uv", ks: pdaKs(from, k), wl: from && from.kind === "pda" && from.mz0 != null ? [from.mz0, from.mz1 ?? from.mz0] : null });
 }
-/** Where the spectrum comes from (the boxed legend `leg2`, wrapped inside the plot): the source panel, how it was asked for and, when the source is shown later by «Allinea», the delay between the two clocks. @param {any} p @param {number} rt DAD time of the spectrum */
+/** Where the spectrum comes from (the boxed legend `leg2`, wrapped inside the plot): the source panel, how it was asked for and, when the source is shown later by «Align DAD and mass», the delay between the two clocks. @param {any} p @param {number} rt DAD time of the spectrum */
 function provenance(p, rt) {
   const src = p.src != null ? E.panels.find((/** @type {any} */ q) => q.id === p.src) : null;
   if (!src) return "";
