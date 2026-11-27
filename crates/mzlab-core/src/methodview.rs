@@ -108,6 +108,11 @@ pub fn write_lc(o: &mut Out, doc: Option<&Value>) {
     num_or_null(o, oven);
     o.raw(",\"oven_shown\":");
     shown_or_null(o, oven);
+    write_eluents_and_sources(o, lc);
+}
+
+/// `"eluents":[…],"sources":{…}` of the LC view: the eluents exist only when the file names them (Thermo script); nothing is ever filled in.
+fn write_eluents_and_sources(o: &mut Out, lc: &Value) {
     // the eluents exist only when the file names them (Thermo script); nothing is ever filled in
     o.raw(",\"eluents\":[");
     for (i, s) in lc.get("solvents").map(Value::arr).unwrap_or_default().iter().enumerate() {
