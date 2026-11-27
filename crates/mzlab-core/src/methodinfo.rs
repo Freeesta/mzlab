@@ -98,10 +98,16 @@ pub struct Src {
 
 impl Src {
     pub fn read(at: &str) -> Self {
-        Src { kind: "read", at: at.into() }
+        Src {
+            kind: "read",
+            at: at.into(),
+        }
     }
     pub fn inferred(at: &str) -> Self {
-        Src { kind: "inferred", at: at.into() }
+        Src {
+            kind: "inferred",
+            at: at.into(),
+        }
     }
 }
 

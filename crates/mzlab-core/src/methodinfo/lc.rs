@@ -167,10 +167,18 @@ pub(super) fn lc(ole: &Ole, base: &str) -> Option<Lc> {
 }
 
 /// The pump program of a Shimadzu Time Program: the point at 0 min from the Pumps category, then one point per B.Conc / T.Flow event (events at the same time merge), and the Stop event.
-fn pump_program(events: Vec<(f64, String, Option<f64>)>, flow0: Option<f64>, b0: Option<f64>) -> (Vec<GPoint>, Option<f64>) {
+fn pump_program(
+    events: Vec<(f64, String, Option<f64>)>,
+    flow0: Option<f64>,
+    b0: Option<f64>,
+) -> (Vec<GPoint>, Option<f64>) {
     let (mut grad, mut flow, mut bconc, mut stop) = (Vec::new(), flow0, b0, None);
     if b0.is_some() {
-        grad.push(GPoint { t: 0.0, b: b0, flow });
+        grad.push(GPoint {
+            t: 0.0,
+            b: b0,
+            flow,
+        });
     }
     for (t, name, val) in events {
         match (name.as_str(), val) {
@@ -194,15 +202,25 @@ fn pump_program(events: Vec<(f64, String, Option<f64>)>, flow0: Option<f64>, b0:
 }
 
 /// Where each value of a Shimadzu/Analyst XML method was read: `has` = (flow, oven, PDA start) found.
-fn shimadzu_sources(stop: bool, run_pda: bool, has: (bool, bool, bool)) -> Vec<(&'static str, Src)> {
+fn shimadzu_sources(
+    stop: bool,
+    run_pda: bool,
+    has: (bool, bool, bool),
+) -> Vec<(&'static str, Src)> {
     let mut src = vec![(
         "gradient",
         Src::read("VendorAppMethod/System Controller/Time Program (events B.Conc and T.Flow) with Pumps/B Concentration and Total Flow as the point at 0 min"),
     )];
     if stop {
-        src.push(("run_time", Src::read("VendorAppMethod/System Controller/Time Program (the Stop event)")));
+        src.push((
+            "run_time",
+            Src::read("VendorAppMethod/System Controller/Time Program (the Stop event)"),
+        ));
     } else if run_pda {
-        src.push(("run_time", Src::read("VendorAppMethod/PDA Detector/Run Time")));
+        src.push((
+            "run_time",
+            Src::read("VendorAppMethod/PDA Detector/Run Time"),
+        ));
     }
     if has.0 {
         src.push(("flow", Src::read("VendorAppMethod/Pumps/Total Flow")));
@@ -253,7 +271,11 @@ fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
     let run_pda = num(pv("Run Time"));
     let oven = num(par("Oven", "Temperature"));
     let pda_start = num(pv("Start WL"));
-    let src = shimadzu_sources(stop.is_some(), run_pda.is_some(), (flow0.is_some(), oven.is_some(), pda_start.is_some()));
+    let src = shimadzu_sources(
+        stop.is_some(),
+        run_pda.is_some(),
+        (flow0.is_some(), oven.is_some(), pda_start.is_some()),
+    );
     Some(Lc {
         gradient: grad,
         flow: flow0,

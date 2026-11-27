@@ -412,7 +412,9 @@ fn lc_with_script_values(mut v: V, pairs: &[script::Pair]) -> V {
             f.push(("solvents", s));
             let at = "LC script: the %A_Equate and %B_Equate lines of the pump module";
             if let Some((_, V::Obj(src))) = f.iter_mut().find(|(k, _)| *k == "sources") {
-                src.extend(obj(vec![("kind", text("read")), ("at", text(at))]).map(|v| ("solvents", v)));
+                src.extend(
+                    obj(vec![("kind", text("read")), ("at", text(at))]).map(|v| ("solvents", v)),
+                );
             }
         }
     }

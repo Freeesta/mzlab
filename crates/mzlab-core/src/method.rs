@@ -291,7 +291,8 @@ pub fn lc_sections(lc: &Lc) -> (Option<V>, Option<V>) {
         ),
     ]);
     // a detector with only its type is no information: it exists when the method says something about it
-    let det = det.filter(|d| matches!(d, V::Obj(f) if f.iter().filter(|(k, _)| *k != "source").count() > 1));
+    let det = det
+        .filter(|d| matches!(d, V::Obj(f) if f.iter().filter(|(k, _)| *k != "source").count() > 1));
     (lc_v, det.map(|d| V::Arr(vec![d])))
 }
 

@@ -94,7 +94,12 @@ pub(crate) fn warning_lines(doc: &str) -> String {
         return String::new();
     };
     // the numbers of the line are the display strings of the document (two decimals), the same the Method window shows
-    let num = |w: &Value, k: &str| w.get("shown").and_then(|s| s.get(k)).and_then(Value::str).map_or(String::new(), String::from);
+    let num = |w: &Value, k: &str| {
+        w.get("shown")
+            .and_then(|s| s.get(k))
+            .and_then(Value::str)
+            .map_or(String::new(), String::from)
+    };
     v.get("warnings")
         .map(Value::arr)
         .unwrap_or_default()

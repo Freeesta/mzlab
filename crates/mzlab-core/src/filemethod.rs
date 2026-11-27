@@ -207,7 +207,13 @@ fn write_shown(o: &mut Out, s: &Segment) {
         parts.push(("mz_hi", shown(r[1])));
     }
     if !s.ce.is_empty() {
-        parts.push(("ce_eV", s.ce.iter().map(|v| shown(*v)).collect::<Vec<_>>().join(", ")));
+        parts.push((
+            "ce_eV",
+            s.ce.iter()
+                .map(|v| shown(*v))
+                .collect::<Vec<_>>()
+                .join(", "),
+        ));
     }
     for (k, v) in [("ces_eV", s.ces), ("dp_V", s.dp), ("fill_time_ms", s.fill)] {
         if let Some(v) = v {
@@ -318,9 +324,17 @@ fn write_acquired(o: &mut Out, items: &Value) {
         for e in info.get("ms2_exps").map(Value::arr).unwrap_or_default() {
             o.raw(if first { "" } else { "," });
             first = false;
-            let (prec, ce) = (e.get("prec").and_then(Value::f64), e.get("ce").and_then(Value::f64));
-            o.raw("{\"precursor_mz\":").opt(prec).raw(",\"ce_eV\":").opt(ce);
-            o.raw(",\"scans\":").opt(e.get("n").and_then(Value::f64)).raw(",\"shown\":{\"precursor_mz\":");
+            let (prec, ce) = (
+                e.get("prec").and_then(Value::f64),
+                e.get("ce").and_then(Value::f64),
+            );
+            o.raw("{\"precursor_mz\":")
+                .opt(prec)
+                .raw(",\"ce_eV\":")
+                .opt(ce);
+            o.raw(",\"scans\":")
+                .opt(e.get("n").and_then(Value::f64))
+                .raw(",\"shown\":{\"precursor_mz\":");
             match prec {
                 Some(v) => o.str(&crate::methodview::shown(v)),
                 None => o.raw("null"),

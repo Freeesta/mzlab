@@ -162,8 +162,16 @@ pub fn lc_of(script: &str) -> Option<Lc> {
         pda: Default::default(),
         channels: vec![],
         src: vec![
-            ("gradient", Src::read("LC script: the timed %B and flow statements of the pump module")),
-            ("run_time", Src::read("LC script: its Run Time line, else the time of its last timed statement")),
+            (
+                "gradient",
+                Src::read("LC script: the timed %B and flow statements of the pump module"),
+            ),
+            (
+                "run_time",
+                Src::read(
+                    "LC script: its Run Time line, else the time of its last timed statement",
+                ),
+            ),
         ],
     })
 }
