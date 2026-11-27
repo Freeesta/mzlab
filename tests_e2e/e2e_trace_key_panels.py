@@ -25,7 +25,8 @@ LEGBOX = """([P, low]) => { const p = eval(P), L = p.leg, c = L.querySelector('.
   if (c.getAttribute('aria-expanded') === 'true') c.click();
   L.style.top = (low ? p.cv.offsetTop + p.cv.offsetHeight - L.offsetHeight - 30 : p.cv.offsetTop + 8) + 'px'; c.click();
   const r = e => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, h: b.height, sh: e.scrollHeight, ch: e.clientHeight }; };
-  return { n: l.querySelectorAll('.tg').length, up: l.classList.contains('up'), panel: r(p.el), list: r(l), chip: r(c) }; }"""
+  const b = l.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+  return { shown: !!hit && l.contains(hit), n: l.querySelectorAll('.tg').length, up: l.classList.contains('up'), panel: r(p.el), list: r(l), chip: r(c) }; }"""
 def legend_inside(pg, P, what):
     """a legend chip near the bottom and near the top of the panel: its list is inside the panel, on the side with room, and scrolls when taller than the room"""
     for low in (True, False):
@@ -33,6 +34,7 @@ def legend_inside(pg, P, what):
         need(d, "%s: the legend is not a chip (more than 4 entries needed)" % what)
         q, l = d["panel"], d["list"]
         need(l["l"] >= q["l"] - 1 and l["r"] <= q["r"] + 1 and l["t"] >= q["t"] - 1 and l["b"] <= q["b"] + 1, "%s (%s): the list %s is outside the panel %s" % (what, "low" if low else "high", l, q))
+        need(d["shown"], "%s: the list is not painted at its place (clipped by an ancestor): %s" % (what, d))
         need(d["up"] == low, "%s: the list opens on the wrong side (low=%s): %s" % (what, low, d))
         need(l["t"] >= d["chip"]["b"] - 1 or l["b"] <= d["chip"]["t"] + 1, "%s: the list covers its chip: %s" % (what, d))
         pg.mouse.move(5, 5)
