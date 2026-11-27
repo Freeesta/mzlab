@@ -2,9 +2,23 @@
 //! columns (`centroids::index`), and for a lean index (`Index::open_lean`) that needs its scan table after all (`load_scans`).
 
 use crate::error::{Error, Result};
-use crate::idxread::{nativo, u64_at, Head, Index, ReadAt, HEADER};
+use crate::idxread::{u64_at, Head, Index, ReadAt, HEADER, READER_FLAG};
 use crate::json;
 use crate::readat::index_bytes;
+
+/// Whether the header is of an index of a vendor file (version 3 with `READER_FLAG`) or of an mzML (version 3); `None` for any other, older versions included.
+pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
+    let w = |a: usize| {
+        h.get(a..a + 4)
+            .and_then(|b| b.try_into().ok())
+            .map(u32::from_le_bytes)
+    };
+    match (w(8)?, w(12)?) {
+        (3, 0) => Some(false),
+        (3, READER_FLAG) => Some(true),
+        _ => None,
+    }
+}
 
 impl<R: ReadAt> Index<R> {
     /// The rows of the scan table (`SCAN_COLUMNS`), as the file has them.
