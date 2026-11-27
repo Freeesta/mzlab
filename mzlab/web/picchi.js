@@ -86,7 +86,7 @@ const intClash = (p, key, a, b, skip) => p.ints.find((/** @type {Bag} */ i) => i
 function nearMsg(/** @type {string} */ t) {                                                     // short notice next to the mouse (role=status; Esc, pointer moving away or 2.5 s dismiss it)
   let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite"); d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
   const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false; d._at = { x: m.x, y: m.y, t: performance.now() }; d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px";
-  // on the other side of the pointer from the hover box (the readout opens above it, a label's below)
+  // opposite the hover box: the readout opens above the pointer, a label's below
   const tip = document.querySelector(".pnl .tip:not([hidden])"), y = tip && tip.getBoundingClientRect().top < m.y ? m.y + 22 : m.y - d.offsetHeight - 16; d.style.top = Math.max(6, Math.min(innerHeight - 60, y)) + "px";
   clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 2500);
 }
