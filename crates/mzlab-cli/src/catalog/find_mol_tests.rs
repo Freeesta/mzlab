@@ -20,3 +20,21 @@ fn a_compound_lookup_is_found_from_the_task() {
         );
     }
 }
+
+#[test]
+fn the_compounds_a_lab_added_are_found_from_the_task() {
+    for q in [
+        "search my own compounds together with the built-in list",
+        "find a molecule the user added and see its origin level",
+    ] {
+        let got: Vec<String> = search(&words(q))
+            .into_iter()
+            .take(3)
+            .map(|(it, _, _)| it.name)
+            .collect();
+        assert!(
+            got.iter().any(|g| g == "mol find"),
+            "{q:?}: mol find not in {got:?}"
+        );
+    }
+}

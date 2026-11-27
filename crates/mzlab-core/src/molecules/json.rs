@@ -133,8 +133,9 @@ pub fn errors_json(errs: &[RowError]) -> String {
     j.0
 }
 
-/// The search answer: `[{id, name, formula, charge, mass, smiles, adducts, score}]`.
-pub fn hits_json(ms: &[Molecule], hits: &[(usize, f64)]) -> String {
+/// The search answer: `[{id, name, formula, charge, mass, smiles, adducts, score}]`; with `levels` every hit also says where it comes from
+/// (`level`: `catalog`, `imported` or `user`), so the default bytes stay what they were.
+pub fn hits_json(ms: &[Molecule], hits: &[(usize, f64)], levels: bool) -> String {
     let mut j = Out::default();
     j.raw("[");
     for (i, &(k, score)) in hits.iter().enumerate() {
@@ -145,9 +146,11 @@ pub fn hits_json(ms: &[Molecule], hits: &[(usize, f64)]) -> String {
             .int(i64::from(m.load))
             .raw(",\"formula\":")
             .str(&m.formula);
-        j.raw(",\"id\":")
-            .str(&m.id)
-            .raw(",\"mass\":")
+        j.raw(",\"id\":").str(&m.id);
+        if levels {
+            j.raw(",\"level\":").str(&m.origin.kind);
+        }
+        j.raw(",\"mass\":")
             .num(m.mass)
             .raw(",\"name\":")
             .str(&m.name);

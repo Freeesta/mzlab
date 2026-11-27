@@ -36,7 +36,7 @@ export function drawField(/** @type {HTMLElement} */ host, /** @type {any} */ fi
   ion.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); commit(ion); go(); } });
   field(/** @type {HTMLElement} */ (host.querySelector("#ig-mol")), {
     display: nomeMaiuscolo,
-    texts: { label: I18N.t("msngrafo.mol"), placeholder: I18N.t("msngrafo.mol.ph"), none: I18N.t("msngrafo.mol.none"), count: n => I18N.t("msngrafo.mol.count", { n }), manage: I18N.t("msngrafo.mol.manage") },
+    texts: { label: I18N.t("msngrafo.mol"), placeholder: I18N.t("msngrafo.mol.ph"), none: I18N.t("msngrafo.mol.none"), count: n => I18N.t("msngrafo.mol.count", { n }), manage: I18N.t("msngrafo.mol.manage"), levels: { imported: I18N.t("mol.level.imported"), user: I18N.t("mol.level.user") } },
     onPick: async row => {
       const m = /** @type {Molecola} */ (/** @type {unknown} */ ((await getMolecule(row.id)) || row));
       // a mass-only entry has no formula to write: the graph then shows masses only

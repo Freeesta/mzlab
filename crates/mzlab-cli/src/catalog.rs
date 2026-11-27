@@ -49,6 +49,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--tables", "JSON tables"),
     ("--sub", "substructure query"),
     ("--db", "catalogue CSV"),
+    ("--user", "your molecules/1 JSON or CSV"),
     ("--dry-run", "check only"),
     ("--summary", "numbers only, msn-summary/1"),
     ("--strict", "also check hashes"),
