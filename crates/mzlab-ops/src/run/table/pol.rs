@@ -5,17 +5,15 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::samples as core_samples;
 use mzlab_feat::facts::file_facts;
 use mzlab_feat::store::read_table_from;
+use mzlab_feat::tables::recipe_polarity;
 
 /// `-1` or `1`; `indexes` are the `.mzidx` of the files the table was made from (none when they are not at hand).
 pub fn of_table<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, indexes: &[Index<I>]) -> Result<i32> {
     let (_, meta) = read_table_from(r, size)?;
     let recipe = meta.get("recipe").and_then(|v| v.str()).unwrap_or("");
-    if recipe.contains("polarity: Some(") && !recipe.contains("polarity: Some(0)") {
-        return Ok(if recipe.contains("polarity: Some(-1)") {
-            -1
-        } else {
-            1
-        });
+    match recipe_polarity(recipe) {
+        0 => {}
+        p => return Ok(p),
     }
     let sum: i64 = indexes
         .iter()

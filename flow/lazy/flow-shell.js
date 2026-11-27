@@ -144,7 +144,10 @@
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
     const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 500 });
-    const body = el("div", { class: "flx-body" }, palHost, cv.root, split, inspHost);
+    // the right column: the settings of the step, and under them the feature tables (flow-tables.js, one of the late modules)
+    const tablesHost = el("div", { class: "flx-tabs-host" }), right = el("div", { class: "flx-right" }, tablesHost, inspHost);   // the list first: the inspector (up to 70vh, the whole column on a phone) would push it below the fold
+    const body = el("div", { class: "flx-body" }, palHost, cv.root, split, right);
+    Promise.resolve(F.whenLate).then(() => { if (F.tablesPanel && !tablesHost.firstChild) tablesHost.append(F.tablesPanel(S).root); }).catch(() => {});
     // starts at half of the body (--insp: 50%), at most 70 %; the width chosen stays for the session of the page
     const setWidth = (/** @type {number} */ w) => { const v = Math.max(240, Math.min(Math.max(240, Math.round(body.getBoundingClientRect().width * 0.7)), Math.round(w))); F.inspWidth = v; body.style.setProperty("--insp", v + "px"); syncSplit(); };
     function syncSplit() {

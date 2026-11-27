@@ -3,6 +3,6 @@ pacchetto = "mzlab-feat-table-wasm"
 chiavi = { table = 3 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 737280
-misura = 736130
-nota = "tabcheck/1 with all fifteen checks (Kendrick and PCA included); +20 % over 512000, decided on 22 Oct 2026"
+tetto = 741376
+misura = 738315
+nota = "tabcheck/1 with all fifteen checks (Kendrick and PCA included); +20 % over 512000, decided on 22 Oct 2026; table_entry (tables/1 of the Flow list) +2185 B, cap 737,280 -> 741,376 (+0.55 %) on 27 Nov 2026"

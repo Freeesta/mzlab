@@ -31,7 +31,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
-| FLOW-TABLE-LIST | `docs/coda/prompt/FLOW-TABLE-LIST.md` | - | mzflow 2: the list of feature tables on the right of the Flow; `flow tables` over a run folder |
+| FLOW-TABLE-DISK | `docs/coda/prompt/FLOW-TABLE-DISK.md` | - | the facts (rows, files, polarity) of a `.mzfeat` opened from disk in the Flow list, from a head slice and `table_entry` |
+| FLOW-TABLE-FINAL | `docs/coda/prompt/FLOW-TABLE-FINAL.md` | - | mzflow 2b: mark one feature table of the Flow list as the final one; the choice is kept and logged |
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
 | KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
 | FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | - | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
@@ -46,7 +47,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
 | TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
 | AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
-| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FLOW-TABLE-LIST | mzflow 17 (v2): a read-only phone view of tables and one feature |
+| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | - | mzflow 17 (v2): a read-only phone view of tables and one feature |
 | SUSPECT-GEN3 | `docs/coda/prompt/SUSPECT-GEN3.md` | - | mzflow 18 (v2): `tp.generate` up to 3 generations, editable rule list |
 | BIOTRANSFORMER-IO | `docs/coda/prompt/BIOTRANSFORMER-IO.md` | - | mzflow 19 (v2): BioTransformer by file exchange |
 | ECOSAR-IO | `docs/coda/prompt/ECOSAR-IO.md` | - | mzflow 20 (v2): ECOSAR by file exchange |
@@ -85,8 +86,5 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | CLICK-DRAG-ONE-TRACE | `docs/coda/prompt/CLICK-DRAG-ONE-TRACE.md` | - | a manual drag window on a SIM/MRM panel integrates only the trace under the pointer, as the click does; all channels become an explicit action |
 | CLICK-HR-GUARD | `docs/coda/prompt/CLICK-HR-GUARD.md` | - | the click on a high-resolution trace gets the same refusal guard and evidence as the low-resolution click, and the guard S/N matches the S/N of the table |
 | CLICK-LABEL-HOVER | `docs/coda/prompt/CLICK-LABEL-HOVER.md` | needs owner decision: whether overlaid panels label only the selected or hovered integration | hover shows the area label of an integration on crowded overlaid traces (owner decides: selected-only labels), and a keyboard action integrates all channels at the cursor time |
-| WIFF-NATSELECT-DEAD | `docs/coda/prompt/WIFF-NATSELECT-DEAD.md` | - | the `natselect` worker op and `sample_selection` export lost their only page caller; remove or re-home them |
 | APP-SIGN-NOTARISE | `docs/coda/prompt/APP-SIGN-NOTARISE.md` | needs owner decision: Apple Developer account and notarisation credentials, Windows signing service | sign and notarise the Mac app (and sign the Windows installer) of `app-prebuilt` in the same build |
 | APP-ROLLING-NOTICE | `docs/coda/prompt/APP-ROLLING-NOTICE.md` | - | an installed app says when `app-prebuilt` holds a newer commit than the running binary (opt-in, once a day, silent on error) |
-| PICKER-POPUP-PHONE | `docs/coda/prompt/PICKER-POPUP-PHONE.md` | - | the channel picker popup (`.can-pop`) is wider than a 390 px screen and runs off the right edge: keep it inside the viewport, scrollable, with its buttons reachable |
-| LEGEND-CHIP-CLIP | `docs/coda/prompt/LEGEND-CHIP-CLIP.md` | - | the list of a legend chip (more than 4 entries, `.leg .lgl`) is clipped by the panel edge when the legend sits near the bottom: open it where it fits and keep every entry reachable |

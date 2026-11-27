@@ -4,7 +4,7 @@ Part of the Rust engine (`rust.md`). Native binary `mzlab-cli` (never in the sit
 ## Commands
 Generated list (`python3 tools/cli_doc.py`):
 <!--cli-->
-`features`, `table compare|row|slots`, `quant targets|union`, `estimate`, `flow run|check|steps|defaults|report|record|verify|command`, `file list|info|index|inventory|verify|items|method|channels|pair|validate|pack|unpack|check-pack|convert`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`
+`features`, `table compare|row|slots`, `quant targets|union`, `estimate`, `flow run|check|steps|tables|defaults|report|record|verify|command`, `file list|info|index|inventory|verify|items|method|channels|pair|validate|pack|unpack|check-pack|convert`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`
 `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window|split|table`, `msn graph|complete|compare|figure`, `msn lib add|build|export|search`, `msn rules`, `msn rules sum`, `raw isotopes`, `ion mz|pattern|match|elements`, `mol label|anal|check|cip|measure|hilite|sel|link|draw|export|open|cut|mech|search`, `db normative build|pack|listings|import-official`, `db insilico pack`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`
 `completions bash|zsh|fish`, `commands`, `schema`
 <!--/cli-->

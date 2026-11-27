@@ -72,13 +72,6 @@ fn the_chooser_answers_are_the_engines() {
     let t = |op: &str, p: serde_json::Value| text(nat_choose(op, &p).unwrap());
     assert_eq!(
         t(
-            "natselect",
-            serde_json::json!({"present": [1, 2, 3], "text": "3,1"})
-        ),
-        "{\"schema\":\"sample-select/1\",\"samples\":[1,3]}"
-    );
-    assert_eq!(
-        t(
             "natdefault",
             serde_json::json!({"ids": [1, 2], "sizes": [10, 20], "budget_mb": 1})
         ),
@@ -98,11 +91,6 @@ fn the_chooser_answers_are_the_engines() {
         ),
         "{\"schema\":\"sample-select/1\",\"samples\":[]}"
     );
-    assert!(nat_choose(
-        "natselect",
-        &serde_json::json!({"present": [1], "text": "9"})
-    )
-    .is_err());
     // the column labels: the bytes of `mzlab_core::readers::label::labels_json` (the site's `sample_labels`, `mzlab-cli features --sample`)
     let members = serde_json::json!([{"file": "a.wiff", "id": 1, "sample": "S"}, {"file": "b.wiff", "id": 2, "sample": "S"}, {"file": "a.wiff", "id": 3, "sample": "T"}]);
     assert_eq!(

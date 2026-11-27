@@ -32,6 +32,7 @@
     if (!a || typeof a.base64 !== "string") throw new Error("not base64");
     return new File([Uint8Array.from(atob(a.base64), c => c.charCodeAt(0))], name);
   };
+  F.desktopFile = readFile;
   F.runners.desktop = { name: "This computer", available, run, report: () => post("flow/report", {}) };
 
   /** the run box of the desktop: a button and one slot per step (waiting, done with its time, or the reason it failed) @param {any} S */

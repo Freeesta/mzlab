@@ -40,6 +40,7 @@ impl State {
     pub(crate) fn flow_live(&self, op: &str, p: &Value) -> Result<Answer> {
         match op {
             "start" | "new" => return self.live_start(p, default_workers()),
+            "tables" => return self.flow_tables(), // the feature tables of the last run (`flow_tables.rs`)
             "drop" => {
                 *lock() = None;
                 return text("{}");

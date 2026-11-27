@@ -130,3 +130,26 @@ def test_cli_table_row_gives_the_bytes_of_the_app_and_of_the_wasm(built):
     assert row["schema"] == "row/2" and row["id"] == 3 and len(row["cells"]) == len(idx)
     bad = subprocess.run([*cli_argv("table", "row", str(table), "--id", "99999999")], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert bad.returncode == 5 and json.loads(bad.stdout)["error_key"] == "error.rowNotFound"
+
+
+def test_the_wasm_the_native_example_and_the_cli_give_the_same_tables_entry(built):
+    """`tables/1`: the entry of the table is the same text from the .wasm (OPFS-style reads), the native function and `mzlab-cli flow tables` over a run folder whose
+    `prov.json` names the same step as the one the page passes."""
+    root, idx, pkg, table = built
+    args = [str(table), str(root / "samples.json"), "-", "1", *idx]
+    entries = {}
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+        out = root / f"{name}-entry"
+        out.mkdir()
+        run(*cmd, str(out), *args)
+        entries[name] = (out / "entry.json").read_text()
+    assert entries["nat"] == entries["wasm"]
+    folder = root / "run"
+    folder.mkdir()
+    (folder / "series.mzfeat").write_bytes(table.read_bytes())
+    prov = {"schema": "prov/1", "entity": {}, "activity": {"series": {"step": "features.gapfill@1", "ms": 12.34, "warnings": []}}}
+    (folder / "prov.json").write_text(json.dumps(prov))
+    got = cli("flow", "tables", str(folder), "--json").stdout
+    assert '"tables":[' + entries["nat"] + "]" in got
+    entry = json.loads(entries["nat"])
+    assert entry["name"] == "series.mzfeat" and entry["rows"] > 0 and entry["step"] == "features.gapfill@1" and entry["ms"] == 12.3

@@ -8,13 +8,14 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use wasm_bindgen::prelude::*;
 
+mod entry;
 // plain-Rust modules live in `mzlab-ops`; re-exported under their old paths
 pub use mzlab_ops::run::table::{core, filterspec, pol, rows_mgf};
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
 
-fn js_err(e: Error) -> JsValue {
+pub(crate) fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
 }
 
@@ -56,7 +57,7 @@ impl ReadAt for JsReader {
     }
 }
 
-fn table_reader(read: Function) -> JsReader {
+pub(crate) fn table_reader(read: Function) -> JsReader {
     JsReader { read, k: 0 }
 }
 
