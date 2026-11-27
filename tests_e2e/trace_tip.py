@@ -39,8 +39,10 @@ def top_row(pg, P, label):
     need(len(rest) > 2, "%s: no stroke recorded at rest" % label)
     pg.evaluate("%s.cv.scrollIntoView({ block: 'center' })" % P); frames(pg, 2)
     pos = pg.evaluate("(() => { const p = %s, r = p.cv.getBoundingClientRect(), a = p._a; const s = a.sr[0], k = Math.max(0, Math.min(s.x.length - 2, s.x.findIndex(v => v >= (a.x0 + a.x1) / 2))); return { x: r.left + a.X(s.x[k] + 0.25 * (s.x[k + 1] - s.x[k])), y: r.top + (a.H - 10) / 2 }; })()" % P)   # a quarter of a step past a sample: no tie between two samples, whatever the grid
+    pg.evaluate("(() => { if (window.putHover.__w) return; const o = window.putHover; window.putHover = function (p, h, px, py) { window.__hv = { p, px, py, rt: h.rt, html: h.html }; return o.apply(this, arguments); }; window.putHover.__w = 1; })()")   # the product's own call: the very point and tooltip it showed
+    pg.evaluate("window.__hv = null")
     def hover():
-        pg.mouse.move(pos["x"] - 3, pos["y"]); pg.mouse.move(pos["x"], pos["y"])
+        pg.mouse.move(pos["x"], pos["y"])      # one move: the tooltip read below is that of this very point
         wait_for_js(pg, "!!%s.tip && !%s.tip.hidden && !!%s.tip.querySelector('div.top')" % (P, P, P), timeout=10000)
     lit = _record(pg, P, hover)
     need(len(lit) >= len(rest), "%s: the hover did not redraw (%d strokes, %d at rest)" % (label, len(lit), len(rest)))
@@ -50,12 +52,14 @@ def top_row(pg, P, label):
     a, b = rest[diff[0]], lit[diff[0]]
     need(abs(b["w"] - a["w"] - 1) < 1e-6 and a["c"] == b["c"] and a["d"] == b["d"], "%s: the thick stroke must be the same line 1 px wider: %s -> %s" % (label, a, b))
     d = pg.evaluate("""(() => { const p = %s, a = p._a, T = window.__tk, top = p.tip.querySelector('div.top'), i = +top.dataset.i, rows = [...p.tip.querySelectorAll('div')].filter(d => d.querySelector('i'));
-      const r = p.cv.getBoundingClientRect(), h = a.hov(%f - r.left, %f - r.top), at = s => { let k = 0, best = 1e99; for (let j = 0; j < s.x.length; j++) { const e = Math.abs(s.x[j] - h.rt); if (e < best) { best = e; k = j; } } return s.ys[k]; };
-      const v = a.sr.map(at), tall = Math.max(...v), cs = getComputedStyle(top), under = T.rgb(T.panel()), tint = T.rgb(cs.backgroundColor, T.panel());
-      return { n: a.sr.length, rows: rows.length, tops: p.tip.querySelectorAll('div.top').length, first: rows[0] === top, i, vi: v[i], tall, ties: v.filter(x => x === tall).length, tc: T.norm(top.style.getPropertyValue('--tc')), color: T.norm(a.sr[i].color),
-        alpha: cs.backgroundColor, weight: +cs.fontWeight, text: T.ratio(T.rgb(cs.color), tint), stroke: %s, thick: T.rgb(a.sr[i].color).join() === T.rgb(%s).join() }; })()""" % (P, pos["x"], pos["y"], json.dumps(b["c"]), json.dumps(b["c"])))
+      const h = window.__hv && window.__hv.p === p ? window.__hv : null; if (!h) return { none: true }; const at = s => s.ys[nearIdx(s.x, h.rt)];
+      const hi = +(/data-i="([0-9]+)"/.exec(h.html) || [0, -1])[1], v = a.sr.map(at), tall = Math.max(...v), cs = getComputedStyle(top), under = T.rgb(T.panel()), tint = T.rgb(cs.backgroundColor, T.panel());
+      return { rt: h.rt, vals: v, n: a.sr.length, rows: rows.length, tops: p.tip.querySelectorAll('div.top').length, first: rows[0] === top, dom: i, i: hi, vi: v[hi], tall, ties: v.filter(x => x === tall).length, tc: T.norm(top.style.getPropertyValue('--tc')), color: T.norm(a.sr[i].color),
+        alpha: cs.backgroundColor, weight: +cs.fontWeight, text: T.ratio(T.rgb(cs.color), tint), stroke: %s, thick: T.rgb(a.sr[i].color).join() === T.rgb(%s).join() }; })()""" % (P, json.dumps(b["c"]), json.dumps(b["c"])))
+    need(not d.get("none"), "%s: the product showed no tooltip for this panel" % label)
     need(d["tops"] == 1 and d["first"], "%s: exactly the first row is the highlighted one: %s" % (label, d))
-    need(d["vi"] == d["tall"], "%s: the highlighted row (series %d, value %s) is not the tallest (%s)" % (label, d["i"], d["vi"], d["tall"]))
+    need(d["dom"] == d["i"], "%s: the tooltip on screen (series %d) is not the one of this point (series %d)" % (label, d["dom"], d["i"]))
+    need(d["vi"] == d["tall"], "%s: the highlighted row (series %d, value %s) is not the tallest (%s): rt %s, values %s" % (label, d["i"], d["vi"], d["tall"], d["rt"], d["vals"]))
     need(d["tc"] == d["color"], "%s: the tint colour %s is not the colour of series %d (%s)" % (label, d["tc"], d["i"], d["color"]))
     need(d["alpha"] not in ("rgba(0, 0, 0, 0)", "transparent") and d["weight"] >= 600, "%s: the highlighted row has no tint or weight: %s" % (label, d))
     need(d["text"] >= 4.5, "%s: the text on the tint has contrast %.2f" % (label, d["text"]))
