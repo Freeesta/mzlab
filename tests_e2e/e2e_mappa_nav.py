@@ -84,7 +84,7 @@ try:
             x, y = at(.5, .5); pg.mouse.move(x, y); frames(pg, 2); rclick(x, y); pick("Copy coordinates")
             wait_for_js(pg, "navigator.clipboard.readText().then(t => t.startsWith('RT '))"); t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("RT ") and "m/z" in t, t
         step("Copy coordinates", copy)
-        def bar():
+        def nav_bar():
             btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
             assert [b[0] for b in btns] == ["mapzin", "mapzout", "maphelp"], btns
             assert all(b[1] for b in btns), btns
@@ -92,7 +92,7 @@ try:
             pg.click(".pnl.map [data-nav=mapzin]"); wait_for_js(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
             pg.click(".pnl.map [data-nav=mapzout]"); changed(zz)
             pg.evaluate("MAPPA.whole(" + M + ")"); wait_for_js(pg, ZNULL)
-        step("bar on the map: reset, +, −, gestures (no padlock)", bar)
+        step("bar on the map: reset, +, −, gestures (no padlock)", nav_bar)
         def sheet():
             pg.click(".pnl.map [data-nav=maphelp]"); wait_for_js(pg, "document.getElementById('bigdlg').open")
             assert pg.evaluate("document.getElementById('bigdlg').open")

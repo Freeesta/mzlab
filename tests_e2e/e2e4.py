@@ -63,7 +63,7 @@ try:
             pg.keyboard.down("Shift"); pg.mouse.down(); pg.mouse.move(c["px"] + 80, c["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Shift"); pg.wait_for_timeout(500)
             z2 = pg.evaluate("E.panels[0].zoom"); print("zoom after pan:", z2); assert z2[0] < z0 - 0.01
             pg.screenshot(path=SH + "46_zoom_pan.png")
-            pg.click("#dpanels .pnl >> nth=0 >> [data-a=fit]"); pg.wait_for_timeout(500); assert pg.evaluate("E.panels[0].zoom") is None
+            bar(pg, "#dpanels .pnl", "fit"); pg.wait_for_timeout(500); assert pg.evaluate("E.panels[0].zoom") is None
         step("ctrl+wheel zoom, shift pan, fit button reset", wheelpan)
         # --- ion map
         def mapadd():
