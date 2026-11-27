@@ -1,13 +1,12 @@
 // @ts-strict
 "use strict";
-// The header buttons of every panel as actions of the registry (barra, scope "panel") and the ONE renderer AZIONI.bar that draws and wires them; AZIONI.refresh replaces the old syncTb.
-// Their state (checked, available, tip) is read from the panel p; the DOM, the data-a ids and the order are those of the hand-written header.
+// Panel header buttons as registry actions (barra, scope "panel") and ONE renderer, AZIONI.bar; AZIONI.refresh (was syncTb) redraws their state from the panel p.
 (() => {
   const T = (/** @type {string} */ k) => I18N.t(k), G = ["xb", "v", "l", "s", "i", "t", "x", "o"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
   const mode = (/** @type {string} */ m) => (/** @type {Ctx} */ c) => c.p._mode(m);
   /** @typedef {any} Ctx
    * @typedef {{ toggle?: number, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
-  // one row per button: [data-a, views, group of the header, title key, aria key ("=" the title), text or icon, class, Opt]
+  // [data-a, views, header group, title key, aria key ("=": the title), text or icon, class, Opt]
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
     ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1 }],
@@ -25,27 +24,26 @@
     ["idel", LENS, "i", "panel.idel.title", "", () => IC_DEL_INT, "bt", { checked: c => c.p.imode === "idel", run: mode("idel") }],
     ["intf", LENS, "i", "panel.intf.title", "", "", "bt", { tag: "select", at: " hidden", run: c => { c.p.intf = c.e.target.value; } }],
     ["iclr", LENS, "i", "panel.iclr.title", "", () => T("panel.iclr"), "bt", { at: " hidden", run: c => { if (c.p.ints.length) delInts(c.p, [...c.p.ints]); } }],
-    ["smooth", LENS, "t", "ctl.smooth.title", "ctl.smooth", () => IC_SMOOTH, "bt tgs", { toggle: 1, at: ' type="button"', checked: c => !!c.p.smooth, tip: c => T(c.p.type === "mrm" ? "ctl.mrm.smooth.title" : "ctl.smooth.title"),
+    ["smooth", LENS, "t", "ctl.smooth.title", "ctl.smooth", () => IC_SMOOTH, "bt tgs", { toggle: 1, at: ' type="button"', checked: c => !!c.p.smooth, tip: c => T(ESP.mrm({ type: c.p.type }) ? "ctl.mrm.smooth.title" : "ctl.smooth.title"),
       run: c => { const p = c.p; pushFields(p, "history.smooth"); p.smooth = !p.smooth; AZIONI.refresh(c); draw(p); uiSave(); } }],
     ["log", LENS, "t", "ctl.log.title", "ctl.log.aria", () => T("ctl.log"), "bt tgl", { toggle: 1, at: ' type="button"', checked: c => !!c.p.log, available: c => !(MS(c) || (c.p.type === "chrom" && c.p.kind === "pda")), tip: c => T(MS(c) ? "ctl.noMs2" : "ctl.log.title"),
       run: c => { const p = c.p; COMMANDS.run("panel.source", p, () => { p.log = !p.log; }); AZIONI.refresh(c); draw(p); uiSave(); } }],
     ["xic", ["chrom"], "x", "panel.xic.title", "", "XIC", "bt", { available: c => !MS(c), ti0: c => T(MS(c) ? "panel.xic.off" : "panel.xic.title"), run: c => c.p.kind === "pda" ? wlOpen(c.p) : openXic(null, { after: c.p }) }],
     ["dl", ALL, "o", "panel.dl.title", "=", () => IC_DL.replace(";margin-right:4px", ""), "bt", { run: c => dlMenu(c.p, c.e) }],
-    ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: ' type="button" hidden aria-haspopup="true" aria-expanded="false"', after: () => `<span class="hmore" hidden role="group" aria-label="${EH(T("panel.more.title"))}"></span>` }],
+    ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: ' type="button" hidden aria-haspopup="true" aria-expanded="false"', after: () => h`<span class="hmore" hidden role="group" aria-label="${T("panel.more.title")}"></span>` }],
     ["max", ALL, "e", "panel.max.title", "", () => IC_FS, "bt fsb", { run: c => c.p._setMax(!c.p.el.classList.contains("max")) }],
     ["close", ALL, "e", "panel.close", "", "&times;", "x", { nodata: 1, run: c => closePanelWithUndo(c.p) }],
   ];
-  // group `bar` of every action of the header; the id of an action is "panel." + the data-a of its button
   for (const [id, views, bar, ti, al, tx, cl, o] of ROWS) AZIONI.register({ id: "panel." + id, group: "tools", views, menu: false, barra: true, scope: "panel", bar, bid: id, ti, al, tx, cl, name: () => T(ti), svg: () => "", ...o });
   /** the attributes and the content of one button @param {any} a @param {any} c */
   const html = (a, c) => {
     const ok = !a.available || a.available(c), on = a.checked ? !!a.checked(c) : false, tip = (a.tip || a.ti0 || (() => T(a.ti)))(c), al = a.al === "=" ? tip : a.al ? T(a.al) : "", tag = a.tag || "button", tx = typeof a.tx === "function" ? a.tx(c) : a.tx;
-    return `<${tag} class="${a.cl}${on ? " on" : ""}"${a.nodata ? "" : ` data-a="${a.bid}"`}${a.toggle ? ` aria-pressed="${on}"` : ""}${al ? ` aria-label="${EH(al)}"` : ""}${a.at || ""}${ok ? "" : " disabled"} title="${EH(tip)}">${tx}</${tag}>${a.after ? a.after() : ""}`;
+    return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
   };
   /** writes the buttons of the panel header into `host` (the `.tbs` span) and wires them to the actions @param {any} c {view, p} @param {HTMLElement} host */
   AZIONI.bar = (c, host) => {
     const l = AZIONI.list(c, "barra"), g = (/** @type {string} */ k) => l.filter(a => a.bar === k).map(a => html(a, c)).join("");
-    host.innerHTML = G.map(k => { const s = g(k); return s ? `<span class="tbg">${s}</span>` : ""; }).join("") + g("e");
+    host.innerHTML = G.map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + g("e");
     for (const a of l) {
       const b = /** @type {HTMLElement | null} */ (host.querySelector(a.nodata ? ".x" : `[data-a="${a.bid}"]`));
       if (b && a.run) b[a.tag ? "onchange" : "onclick"] = (/** @type {Event} */ e) => AZIONI.run(a.id, { ...c, e, b });
