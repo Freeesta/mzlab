@@ -36,6 +36,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("table compare", "blank reference ratio subtraction candidate products background contaminant carryover matrix blank", &["table.filter", "tp.dig_lr"]),
     r("table row", "one feature row of the table detail page xic of every file ms1 ms2 identity cells quality row/2 id", &["table compare", "spectrum get", "file index"])
         .ex("mzlab-cli table row t.mzfeat --id 3 --traces --index idx/"),
+    r("table slots", "feature view slots one row what is missing structure xic kinetics ms2 isotopes uv sim filled empty fill step source feature-slots/1 id", &["table row", "dad spectrum", "features.ms2_link"])
+        .ex("mzlab-cli table slots t.mzfeat --id 3"),
     r("trace xic", "extracted ion chromatogram eic xic many ions many masses list of ions every mass every m/z sweep range grid step from to scan masses loop tens of thousands of calls mz mass offset shift calibrate calibration wrong error mz-offset auto polarity ion counts per point ions column cps to ions fill time dwell time", &["peak table", "trace chrom", "chrom.transitions", "raw xic", "quant targets", "peak noise"])
         .bulk("one call per file: --mz M1,M2,... (or --sweep) gives every ion; never one call per ion")
         .ex("mzlab-cli trace xic s.mzML --mz 364.4,194.2 --da 0.3 --out xic.json"),

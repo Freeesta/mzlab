@@ -67,13 +67,13 @@ fn job(args: Vec<String>) -> std::result::Result<std::result::Result<Job, &'stat
     }))
 }
 
-fn read(path: &std::path::Path) -> Result<Vec<u8>> {
+pub(super) fn read(path: &std::path::Path) -> Result<Vec<u8>> {
     std::fs::read(path)
         .map_err(|e| Error::new("err.cli.file").with("path", format!("{}: {e}", path.display())))
 }
 
 /// The `samples/1` text and whether it was proposed: the given file, else `propose` over the names and SHA-256 of the files the table records.
-fn samples_of(given: Option<&std::path::Path>, table: &[u8]) -> Result<(String, bool)> {
+pub(super) fn samples_of(given: Option<&std::path::Path>, table: &[u8]) -> Result<(String, bool)> {
     if let Some(p) = given {
         let text = String::from_utf8(read(p)?)
             .map_err(|_| Error::new("err.cli.file").with("path", p.display().to_string()))?;

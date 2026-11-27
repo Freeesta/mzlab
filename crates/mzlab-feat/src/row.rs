@@ -142,6 +142,36 @@ fn write_family(o: &mut Out, t: &Aligned, r: usize) {
     o.raw("]}");
 }
 
+/// The words of the sources of a row (`detected`, `hypothesis`, then the kinds of hypothesis).
+fn source_words(src: u8) -> Vec<&'static str> {
+    let hyp = src >> 1;
+    let mut words: Vec<&str> = Vec::new();
+    if src & SRC_DETECTED != 0 {
+        words.push("detected");
+    }
+    if hyp != 0 {
+        words.push("hypothesis");
+    }
+    let names = [
+        (SRC_RULE, "rule"),
+        (SRC_SUSPECT, "suspect"),
+        (SRC_FAMILY, "family"),
+        (SRC_IMPORTED, "imported"),
+        (SRC_CLEAVAGE, "cleavage"),
+        (SRC_NETWORK, "network"),
+    ];
+    words.extend(names.iter().filter(|(b, _)| hyp & b != 0).map(|(_, w)| *w));
+    words
+}
+
+/// The kinds of hypothesis behind a row (`rule`, `suspect`, ...), without `detected`.
+pub fn hypothesis_words(src: u8) -> Vec<&'static str> {
+    source_words(src)
+        .into_iter()
+        .filter(|w| !matches!(*w, "detected" | "hypothesis"))
+        .collect()
+}
+
 /// `"ident":{...}` (`null` when the table has no identity).
 fn write_ident(o: &mut Out, t: &Aligned, r: usize) {
     o.raw(",\"ident\":");
@@ -159,24 +189,7 @@ fn write_ident(o: &mut Out, t: &Aligned, r: usize) {
             None => o.raw("null"),
         };
         o.raw(",\"sources\":[");
-        let src = t.ident.src[r];
-        let hyp = src >> 1;
-        let mut words: Vec<&str> = Vec::new();
-        if src & SRC_DETECTED != 0 {
-            words.push("detected");
-        }
-        if hyp != 0 {
-            words.push("hypothesis");
-        }
-        let names = [
-            (SRC_RULE, "rule"),
-            (SRC_SUSPECT, "suspect"),
-            (SRC_FAMILY, "family"),
-            (SRC_IMPORTED, "imported"),
-            (SRC_CLEAVAGE, "cleavage"),
-            (SRC_NETWORK, "network"),
-        ];
-        words.extend(names.iter().filter(|(b, _)| hyp & b != 0).map(|(_, w)| *w));
+        let words = source_words(t.ident.src[r]);
         for (i, w) in words.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(w);
         }
