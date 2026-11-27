@@ -114,7 +114,7 @@ function arrLiveEnd(/** @type {boolean} */ settle) {
   const host = Q("#dpanels"); if (settle) host.classList.add("arrange-settle");
   E.panels.forEach((/** @type {any} */ q) => { if (q.el) { q.el.style.transform = ""; q.el.style.transformOrigin = ""; } });
   const off = () => host.classList.remove("arrange-live", "arrange-settle");
-  if (settle) requestAnimationFrame(() => requestAnimationFrame(off)); else setTimeout(off, 260);
+  if (settle) FRAME.next(() => FRAME.next(off)); else setTimeout(off, 260);
 }
 /** Where the keys can put `p`: slots between the rows of the others (reading order, `n` = after the last row), or beside a row. */
 function arrKeySlots(/** @type {any} */ p) {
