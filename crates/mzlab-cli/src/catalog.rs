@@ -48,6 +48,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--turn", "turn"),
     ("--tables", "JSON tables"),
     ("--sub", "substructure query"),
+    ("--db", "catalogue CSV"),
     ("--dry-run", "check only"),
     ("--summary", "numbers only, msn-summary/1"),
     ("--strict", "also check hashes"),
@@ -173,16 +174,13 @@ const CSV: &[&str] = &["features", "peak table"];
 /// What the exit codes mean (`exit.rs`).
 pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::OK, "ok"),
-    (exit::DATA, "data error, partial outputs written"),
+    (exit::DATA, "data error; partial output"),
     (exit::USAGE, "usage"),
     (exit::INTEGRITY, "plan, schema or integrity"),
     (exit::INPUT, "input missing or unreadable"),
-    (
-        exit::SELECTOR,
-        "selector not found (sample, channel, node, step)",
-    ),
+    (exit::SELECTOR, "selector not found"),
     (exit::OUTPUT, "output write or external source failure"),
-    (exit::INTERNAL, "internal error (a bug): any command"),
+    (exit::INTERNAL, "internal error (a bug)"),
     (exit::GROWING, "input still being written"),
 ];
 

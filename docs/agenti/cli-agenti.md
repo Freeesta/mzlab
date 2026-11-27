@@ -77,13 +77,13 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 | code | meaning |
 |---|---|
 | 0 | ok |
-| 1 | data error, partial outputs written |
+| 1 | data error; partial output |
 | 2 | usage |
 | 3 | plan, schema or integrity |
 | 4 | input missing or unreadable |
-| 5 | selector not found (sample, channel, node, step) |
+| 5 | selector not found |
 | 6 | output write or external source failure |
-| 7 | internal error (a bug): any command |
+| 7 | internal error (a bug) |
 | 8 | input still being written |
 <!--/exits-->
   A bug never ends as signal 134 (the release profile aborts on a panic): `main` answers first with its own exit 7 (in no `exit_codes`: any command can end so), `err.run.internal` (the panic message and position in `params.detail`) and, under `--json`, one `error/1`; the test `no_command_panics_on_an_empty_or_garbage_input` runs every command on empty and garbage files. Bad or empty input is still exit 2 or 4 with its own key.
@@ -111,7 +111,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 <!--json-->
 - JSON already (`--json` only makes a failure an `error/1`):
 `table row|slots`, `flow report|record`, `file info|index|inventory|verify|items|method|channels`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`
-`raw isotopes`, `ion mz|pattern|match`, `mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
+`raw isotopes`, `ion mz|pattern|match`, `mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|find|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
 `table compare`, `quant targets|union`, `estimate`, `flow run|check|steps|tables|defaults|verify|command`, `file list|pair|validate|pack|unpack|check-pack|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):

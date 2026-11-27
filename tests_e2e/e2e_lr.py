@@ -39,6 +39,34 @@ def json_close(a, b, tol=1e-9, path=""):
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
         assert abs(a - b) <= tol * max(1.0, abs(a), abs(b)), f"{path}: {a} against {b}"
     else: assert a == b, f"{path}: {a!r} against {b!r}"
+def split_view(j, path=""):
+    """`lc.view` (display text and sources of the Method window, `methodview.rs`) exists only in Rust: the reference never computed it. Takes it out of every
+    `lc` of the payload (so the rest is compared with the reference at full strength) and checks it strictly against the `lc` it sits in: the same points,
+    run time, flow and oven, every shown text the two-decimal text of its number (Python rounds the exact value half to even, as the Rust rule does), every source named."""
+    if isinstance(j, dict):
+        if path.endswith(".lc") and "view" in j:
+            check_view(path, j, j.pop("view"))
+        for k, v in j.items(): split_view(v, f"{path}.{k}")
+    elif isinstance(j, list):
+        for i, v in enumerate(j): split_view(v, f"{path}[{i}]")
+    return j
+def two(x): return None if x is None else f"{x:.2f}"
+def check_view(path, lc, view):
+    assert set(view) == {"lc", "dad"}, (path, sorted(view))
+    v = view["lc"]
+    assert v is not None, path                      # an lc with a program, flow, oven or run time (what the lab methods carry)
+    assert [(g["t_min"], g["B_pct"], g["flow_mL_min"]) for g in v["gradient"]] == [(g["t"], g["b"], g["flow"]) for g in lc["gradient"]], path
+    for g in v["gradient"]:
+        sh = g["shown"]
+        assert sh == {"t": two(g["t_min"]), "a": two(None if g["B_pct"] is None else 100 - g["B_pct"]), "b": two(g["B_pct"]), "flow": two(g["flow_mL_min"])}, (path, sh)
+    assert (v["run_time_min"], v["run_time_shown"]) == (lc["run_time"], two(lc["run_time"])), path
+    assert (v["flow_mL_min"], v["flow_shown"], v["oven_C"], v["oven_shown"]) == (lc["flow"], two(lc["flow"]), lc["oven"], two(lc["oven"])), path
+    assert set(v["sources"]) == {"eluents", "gradient", "run_time", "flow", "oven", "a_pct", "hold"}, (path, sorted(v["sources"]))
+    assert v["sources"]["a_pct"]["kind"] == v["sources"]["hold"]["kind"] == "inferred", path
+    assert v["eluents"] == [] and v["sources"]["eluents"] is None, (path, v["eluents"])      # a .dam names no eluent: none is shown
+    if v["hold"] is not None: assert lc["run_time"] is not None and v["hold"]["to_min"] == lc["run_time"] and v["hold"]["from_min"] == lc["gradient"][-1]["t"], path
+    d = view["dad"]
+    assert d is None or all(set(r) == {"id", "value", "shown", "unit", "source"} for r in d["rows"]), (path, d)
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
 def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
 
@@ -300,7 +328,7 @@ try:
             for u in gets:
                 a, b2 = pa.evaluate(JSON, u), pb.evaluate(JSON, u)
                 assert a["status"] == b2["status"], (u, a["status"], b2["status"])
-                if a["status"] == 200: json_close(a["j"], b2["j"], path=u)
+                if a["status"] == 200: json_close(split_view(a["j"], u), b2["j"], path=u)
                 else: assert a["j"].get("error_key") == b2["j"].get("error_key"), (u, a["j"], b2["j"])
                 assert a["eng"] == "rust", (u, a["eng"], why(pa))
             texts = [("gradient_parse", {"fmt": "csv", "text": "0,5\n5,95\n10,95\n11,5"}), ("gradient_parse", {"fmt": "csv", "text": "x"}), ("gradient_parse", {"fmt": "course"}),
@@ -333,7 +361,7 @@ try:
             for u in ["api/method?k=0", "api/method_warnings", "api/analog?k=0&i=999", "api/delay?k=0", "api/chrom?k=0&kind=pda", "api/gradient?k=0"]:
                 a, b2 = pa.evaluate(JSON, u), pb.evaluate(JSON, u)
                 assert a["status"] == b2["status"], (u, a["status"], b2["status"])
-                if a["status"] == 200: json_close(a["j"], b2["j"], path=u)
+                if a["status"] == 200: json_close(split_view(a["j"], u), b2["j"], path=u)
                 else: assert a["j"].get("error_key") == b2["j"].get("error_key"), (u, a["j"], b2["j"])
                 assert a["eng"] == "rust", (u, a["eng"], why(pa))
             assert "scan_params" in pa.evaluate(JSON, "api/method?k=0")["j"]

@@ -404,6 +404,23 @@ fn trailer_pass<R: Read + Seek>(
 }
 
 /// The `method/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
+/// The LC section of a Thermo method with what only its script gives: the pump pressure limit and, when the script names them, the eluents (with the lines they were read from).
+fn lc_with_script_values(mut v: V, pairs: &[script::Pair]) -> V {
+    if let V::Obj(f) = &mut v {
+        f.extend(pressure(pairs).map(|p| ("pressure_max", p)));
+        if let Some(s) = settings::solvents(pairs) {
+            f.push(("solvents", s));
+            let at = "LC script: the %A_Equate and %B_Equate lines of the pump module";
+            if let Some((_, V::Obj(src))) = f.iter_mut().find(|(k, _)| *k == "sources") {
+                src.extend(
+                    obj(vec![("kind", text("read")), ("at", text(at))]).map(|v| ("solvents", v)),
+                );
+            }
+        }
+    }
+    v
+}
+
 pub fn from_raw<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
@@ -429,13 +446,7 @@ pub fn from_raw<R: Read + Seek>(
         .map(|x| script::xml_items(script::xml_of(x)))
         .unwrap_or_default();
     let (lc, _) = script::lc_of(script_text).map_or((None, None), |l| lc_sections(&l));
-    let lc = lc.map(|mut v| {
-        if let V::Obj(f) = &mut v {
-            f.extend(pressure(&pairs).map(|p| ("pressure_max", p)));
-            f.extend(settings::solvents(&pairs).map(|s| ("solvents", s)));
-        }
-        v
-    });
+    let lc = lc.map(|v| lc_with_script_values(v, &pairs));
     warn.extend(file_warnings(raw, notes));
     warn.extend(skipped_warnings(&unread));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);

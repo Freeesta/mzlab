@@ -11,8 +11,15 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
 D = HERE / "shots" / "gradiente_metodo_tmp"; D.mkdir(parents=True, exist_ok=True)
 F = D / "GRADM_t0.mzML"; ds.full_scan(F, 0, np.random.default_rng(3))
-STUB = """window.__gm = null; const f0 = window.fetch; window.fetch = (u, o) => String(u).startsWith('api/metodo') && window.__gm
-  ? Promise.resolve(new Response(JSON.stringify({method: {lc: window.__gm}}), {headers: {'content-type': 'application/json'}})) : f0(u, o); 0"""
+# api/metodo feeds GRADIENTE.get (the overlay); api/filemethod feeds the Method window (its `lc` view is made in Rust: the real chain is tested in e2e_metodo_onesto)
+STUB = """window.__gm = null; window.__gf = null; const f0 = window.fetch; window.fetch = (u, o) => {
+  const j = x => Promise.resolve(new Response(JSON.stringify(x), {headers: {'content-type': 'application/json'}}));
+  if (String(u).startsWith('api/metodo') && window.__gm) return j({method: {lc: window.__gm}});
+  if (String(u).startsWith('api/filemethod') && window.__gf) return j(window.__gf);
+  return f0(u, o); }; 0"""
+GF = """({schema: 'file_method/1', segments: [], lc: {run_time_min: 15, run_time_shown: '15.00', flow_mL_min: 0.3, flow_shown: '0.30', oven_C: null, oven_shown: null, eluents: [], hold: {from_min: 12, to_min: 15, B_pct: 90, flow_mL_min: 0.3, shown: {from: '12.00', to: '15.00', a: '10.00', b: '90.00', flow: '0.30'}},
+  gradient: [[0, 10], [2, 10], [12, 90]].map(([t, b]) => ({t_min: t, B_pct: b, flow_mL_min: 0.3, shown: {t: t.toFixed(2), a: (100 - b).toFixed(2), b: b.toFixed(2), flow: '0.30'}})),
+  sources: {gradient: {kind: 'read', at: 'test stream'}, run_time: {kind: 'read', at: 'test stream'}, flow: {kind: 'read', at: 'test stream'}, a_pct: {kind: 'inferred', at: '100 - %B'}, hold: {kind: 'inferred', at: 'held'}, eluents: null, oven: null}}, dad: null})"""
 LC = "{gradient: [{t_min: 0, B_pct: 10, flow_mL_min: 0.3}, {t_min: 2, B_pct: 10, flow_mL_min: 0.3}, {t_min: 12, B_pct: 90, flow_mL_min: 0.3}], duration_min: 15}"
 r = Run(port=8866, wd="/tmp/wd_gradiente_metodo")
 try:
@@ -27,7 +34,7 @@ try:
             assert not pg.query_selector("#grad-sec")
         step("a method without pump program: no gradient and no gradient section", none)
         def has():
-            pg.evaluate("GRADIENTE.forget(); window.__gm = " + LC + "; 0")
+            pg.evaluate("GRADIENTE.forget(); window.__gm = " + LC + "; window.__gf = " + GF + "; 0")
             g = pg.evaluate("(async () => await GRADIENTE.get(E.files[0]))()")
             assert g and g["source"] == "file" and [q["b"] for q in g["points"]] == [10, 10, 90] and g["run_time"] == 15, g
         step("a method with a pump program: gradient read from the file", has)

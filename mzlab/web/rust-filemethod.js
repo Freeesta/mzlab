@@ -1,6 +1,7 @@
 // @ts-strict
 // `file method` in the worker of the engine (rust-worker.js, op "filemethod"): the .wasm `filemethod` of wasm-feat/manifest.json (crates/mzlab-filemethod-wasm) is
-// fetched on the first request and gives `file_method/1` from the `method/1` and `items/1` texts the page already holds, the bytes `mzlab-cli file method` prints.
+// fetched on the first request and gives `file_method/1` from the `method/1` and `items/1` texts the page already holds; the lazy .wasm `methodview`
+// (crates/mzlab-methodview-wasm) adds its `lc` and `dad` views, so the two give the bytes `mzlab-cli file method` prints.
 
 import { load } from "./rust-msngrafo.js";
 
@@ -10,7 +11,8 @@ import { load } from "./rust-msngrafo.js";
  */
 export async function fileMethod(m) {
   const mod = await load("filemethod");
-  return mod.file_method(m.sample ?? -1, m.method || "", m.items);
+  const head = mod.file_method(m.sample ?? -1, m.method || "", m.items);
+  return (await load("methodview")).attach_view(head, m.method || "");
 }
 
 /**

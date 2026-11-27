@@ -24,10 +24,11 @@ pub fn start() {
     }));
 }
 
-/// `file_method/1` of sample `sample` (negative: an mzML, no sample id); `method` is the `method/1` text, empty when the file carries none.
+/// `file_method/1` of sample `sample` (negative: an mzML, no sample id) without its `lc` and `dad` views, which the lazy module `methodview` adds (`attach_view`);
+/// `method` is the `method/1` text, empty when the file carries none.
 #[wasm_bindgen]
 pub fn file_method(sample: i32, method: &str, items: &str) -> Result<String, JsValue> {
     let id = u32::try_from(sample).ok();
     let m = (!method.is_empty()).then_some(method);
-    mzlab_core::filemethod::document(id, m, items).map_err(|e| JsValue::from_str(&e.to_json()))
+    mzlab_core::filemethod::document_head(id, m, items).map_err(|e| JsValue::from_str(&e.to_json()))
 }

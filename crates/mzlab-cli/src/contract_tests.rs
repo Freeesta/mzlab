@@ -265,6 +265,7 @@ const NO_FILE: &[&str] = &[
     "ion pattern",
     "ion mz",
     "mol search",
+    "mol find",
     "help-md",
     "commands",
     "schema",
