@@ -1,6 +1,6 @@
 /* Channel picker of the chromatogram (what to plot: channels of scans, detectors, log) and MRM panels (canali.js): a button and a popover with grouped rows; colours only from the page variables. */
 .can{position:relative;display:inline-flex}
-.can-pop{min-width:440px;max-width:min(560px,92vw);max-height:60vh;overflow:auto;padding:6px 8px;gap:2px}
+.can-pop{min-width:min(440px,96vw);max-width:min(560px,96vw);max-height:60vh;overflow:auto;padding:6px 8px;gap:2px}
 .can-hd,.can-row{display:grid;grid-template-columns:minmax(120px,1fr) 88px 56px 84px;gap:6px;align-items:center}.can-hd>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .can-pop:has(.can-fl) .can-hd,.can-pop:has(.can-fl) .can-row{grid-template-columns:minmax(120px,1fr) 88px 56px 84px 32px}
 .can-hd{color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);padding:0 4px 3px}
@@ -26,7 +26,7 @@
 .ibkc{display:inline-flex;align-items:center;gap:2px}.ibkc button{min-height:24px;min-width:24px;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0 4px}.ibkc button:focus-visible{outline:2px solid var(--accent)}
 .can-hit{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;margin:0 -5px;cursor:pointer}
 .can-tb{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 4px 6px}.can-all,.can-none{min-height:24px;min-width:24px}
-.can-pop.can-sim{min-width:280px;max-width:min(360px,92vw)}.can-pop.can-sim .can-hd,.can-pop.can-sim .can-row{grid-template-columns:1fr}
+.can-pop.can-sim{min-width:min(280px,96vw);max-width:min(360px,96vw)}.can-pop.can-sim .can-hd,.can-pop.can-sim .can-row{grid-template-columns:1fr}
 /* the key of a trace beside its row: the line as drawn (colour, dash); a row that is off shows it hollow and dimmed. The text stays: colour is never the only mark */
 .trsw{display:inline-block;flex:none;width:18px;height:8px;border-radius:2px;margin:0 2px;forced-color-adjust:none}
 .trsw.none{background:none}
