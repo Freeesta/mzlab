@@ -17,7 +17,10 @@ const { held, copyMember, storeOf, partOf } = await import(root + "/rust-nativo.
 function world() {
   const files = new Map([["nat~k~a.wiff", { size: 10 }]]), gates = new Map(), stubs = new Map(), writing = new Map();
   let live = 0, peak = 0, sparseCalls = 0; const started = [];
-  const ARCH = { get: async (_k, n) => files.get(n) || null, remove: async (_k, n) => { files.delete(n); }, list: async () => [...files.keys()].map(name => ({ name })) };
+  // as archivio.js: `remove` never throws, it answers false while a handle still holds the entry (the index build's, closing a moment after its cancel); `removeHeld` tries again
+  const busy = new Set(); let removeFalse = 0;
+  const remove = async (_k, n) => { if (busy.has(n)) { removeFalse++; return false; } files.delete(n); return true; };
+  const ARCH = { get: async (_k, n) => files.get(n) || null, remove, removeHeld: async (k, n) => { for (let i = 0; i < 200; i++) { if (await remove(k, n) || !files.has(n)) return; await new Promise(r => setTimeout(r, 2)); } }, list: async () => [...files.keys()].map(name => ({ name })) };
   const open = n => { if (!gates.has(n)) { let go; const p = new Promise(r => { go = r; }); gates.set(n, { p, go }); } return gates.get(n); };
   // a sparse copy creates its store at once (as putSparse does) and fills it when the gate opens, in chunks that report to `bump`
   const sparse = async (_kind, store, size, _ranges, chunk) => {
@@ -31,7 +34,7 @@ function world() {
   const blob = size => ({ size, slice: (o, e) => ({ arrayBuffer: async () => new ArrayBuffer(e - o) }) });
   const m = (sid, op = "natprefetch") => ({ op, id: sid, key: "k", sid, tag: String(sid), ranges: { "a.wiff.scan": [[0, 50]] }, members: [{ name: "a.wiff", blob: blob(10) }, { name: "a.wiff.scan", blob: blob(100) }] });
   const run = sid => pf.op(m(sid), copies, cancelled, o => posted.push(o)).then(() => "done", e => String(e.message));
-  return { files, gates, stubs, pf, copies, cancelled, posted, started, run, m, deps, blob, peak: () => peak, sparseCalls: () => sparseCalls, open };
+  return { busy, removeFalse: () => removeFalse, files, gates, stubs, pf, copies, cancelled, posted, started, run, m, deps, blob, peak: () => peak, sparseCalls: () => sparseCalls, open };
 }
 const tick = () => new Promise(r => setTimeout(r, 5));
 
@@ -63,6 +66,14 @@ const tick = () => new Promise(r => setTimeout(r, 5));
   w.stubs.set("one.mzML", { members: [{ store: "nat~k~1~a.wiff.scan" }, { store: "nat~k~a.wiff" }] }); w.files.set("one.mzML", { size: 1 }); w.pf.landed(w.stubs.get("one.mzML").members);      // putHeld tells the prefetch when it writes the stub
   await w.pf.unprefetch({ key: "k", sids: null, end: true });
   assert.ok(w.files.has("nat~k~1~a.wiff.scan"), "a store a stub uses stays"); assert.ok(!w.files.has("nat~k~2~a.wiff.scan"), "an unused one goes"); assert.strictEqual(w.pf.holds.size, 0);
+}
+{ // X while the index build of a finished sample still holds its store (the handle closes a moment after the cancel): the removal waits for it, nothing is left in the browser storage
+  const w = world(); const r1 = w.run(1), r2 = w.run(2); await tick(); w.open("nat~k~1~a.wiff.scan").go(); w.open("nat~k~2~a.wiff.scan").go(); await Promise.all([r1, r2]);
+  for (const n of ["nat~k~1~a.wiff.scan", "nat~k~2~a.wiff.scan"]) w.busy.add(n);
+  setTimeout(() => w.busy.clear(), 30);
+  await w.pf.unprefetch({ key: "k", sids: [1], end: false }); await w.pf.unprefetch({ key: "k", sids: null, end: true });
+  assert.ok(w.removeFalse() > 0, "the stores were held when the removal first tried");
+  assert.ok(![...w.files.keys()].some(n => n.endsWith(".scan")), [...w.files.keys()]); assert.strictEqual(w.pf.holds.size, 0);
 }
 { // Open while the copy is still running: the opening's copy of the same store waits for it (`writing`), writes nothing again and reports the whole member as done
   const w = world(); const r1 = w.run(1); await tick();

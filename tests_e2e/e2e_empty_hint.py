@@ -84,6 +84,25 @@ try:
             pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 6); near(pg, "back at 390 px")
         step("a very narrow screen (320 px): «Choose a channel above», no arrow, still a button", narrow)
 
+        def behind():
+            # the window grows while the panel is still a frame behind (no refit yet) and a size notification of the panel comes in that frame: a panel that follows the window
+            # must not take it for a hand on the resize corner (full = false) and keep its old width for good (the red of the CI: the panel kept 312 px at every later width)
+            st = "(() => { const q = %s; return [q.full, q.el.offsetWidth, document.querySelector('#dpanels').clientWidth]; })()" % P
+            pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 6)
+            pg.set_viewport_size({"width": 320, "height": 700}); frames(pg, 6)
+            pg.evaluate("window.__fw = window.fitWidth; window.fitWidth = () => {}")      # the refit of the window is held back: the panel is a frame behind
+            try:
+                pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 3)
+                need(pg.evaluate(st)[1] < pg.evaluate(st)[2] - 8, "the probe needs a panel behind the window: %s" % pg.evaluate(st))
+                pg.evaluate("(() => { const q = %s; q.el.style.height = (q.el.offsetHeight - 10) + 'px'; })()" % P); frames(pg, 4)
+                need(pg.evaluate(st)[0], "a size notification of a panel that is a frame behind the window made it a hand-sized panel: %s" % pg.evaluate(st))
+            finally:
+                pg.evaluate("window.fitWidth = window.__fw; dispatchEvent(new Event('resize'))"); frames(pg, 6)
+            pg.evaluate("(() => { const q = %s; q.el.style.height = ''; })()" % P); frames(pg, 4)
+            f, w, h = pg.evaluate(st); need(f and abs(w - h) <= 1, "the panel does not follow the window: full %s, panel %s px, host %s px" % (f, w, h))
+            near(pg, "after the frame behind")
+        step("a panel a frame behind the window follows it: a size notification in that frame does not detach it", behind)
+
         def opens():
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 4)
             pg.click(".pnl.mrm .eh-go"); wait_for_js(pg, "document.querySelector('.pnl.mrm .can-pop:not([hidden])')", timeout=10000)

@@ -9,7 +9,9 @@ from lib import ROOT, Run
 
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
-    except Exception as e: print("  ", (name, "FAIL " + str(e)[:1500]))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_wiff_choose.py")][-1]      # the line of a bare assert is the only clue of a red CI run
+        print("  ", (name, "FAIL line %d: " % ln + str(e)[:1500]))
 
 wasm = ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js"
 if not (ROOT / "site" / "index.html").exists() or not wasm.exists():
@@ -53,6 +55,8 @@ try:
             assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose button, #wiffchoose input')).every(e => e.getBoundingClientRect().height >= 24 && e.getBoundingClientRect().width >= 24)")
             assert pg.evaluate("document.querySelector('#wiffchoose button.go').getBoundingClientRect().height >= 44")      # a large, easy target
             # the Files list while the dialog waits: a neutral «Choose samples», no clock and no «Opening»
+            try: pg.wait_for_function("(() => { const t = document.querySelector('#fl-up [data-cvhead]')?.textContent || '', b = document.querySelector('#fl-up')?.innerText || ''; return t === 'Choose samples' && !b.includes('Opening') && !/\\d:\\d\\d/.test(b) })()", timeout=10000)
+            except Exception: pass      # the assert below says what the list shows
             assert neutral(pg), pg.evaluate("document.querySelector('#fl-up')?.innerText")
             shot = os.environ.get("MZLAB_SHOTS")
             if shot: Path(shot).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(shot) / "wiff-choose-dialog.png"))

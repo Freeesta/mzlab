@@ -4,7 +4,7 @@ peak) is refused with the evidence and a way to keep it (Alt+click, logged in th
 (QUALITA.click, the .wasm) gives the bytes of `mzlab-cli peak edges --set click=1`, and the CLI exits 0 / 1 for a kept / refused window.
 Needs the site and the .wasm (python3 tools/prepara_sito.py) and the CLI (cargo). Run from the repo root: python3 tests_e2e/e2e_integra_clic.py"""
 # covers: tools/wiff_sim.py, mzlab/web/integra-clic.js, mzlab/web/area-etichette.js, mzlab/web/picchi.js, mzlab/web/qualita.js, crates/mzlab-core/src/peakq_click.rs
-import sys, os, json, subprocess, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, json, math, subprocess, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *
 sys.path.insert(0, str(ROOT / "tests"))
@@ -22,6 +22,7 @@ TRUE = json.loads((D / "sim3.json").read_text())
 P = "E.panels.find(p=>p.type==='mrm')"
 APEX = [pk[0] for pk in TRUE["picchi"][TRUE["campioni"].index("Sample_A")][:4]]            # the apex (min) of ions A to D of Sample_A (the isomer pair of ion C is not used)
 ION_A, ION_B, ION_C, ION_D = range(4)
+JUNK = (APEX[ION_B] + APEX[ION_C]) / 2          # a time 1.1 min from every peak of the four ions: all four traces are flat there, and no window label (they sit at the peaks) can cover the point
 
 r = Run(port=8988, wd="/tmp/wd_integra_clic")
 try:
@@ -37,14 +38,25 @@ try:
         wait_for_js(pg, f"{P}._a.sr.length===4 && !{P}._a.stk")
         def xy(i, x):
             """Screen position of the trace i at time x (min): the point a user clicks."""
-            return pg.evaluate(f"(()=>{{const p={P},a=p._a,s=a.sr[{i}],q=p.cv.getBoundingClientRect(),j=nearIdx(s.x,{x});return {{x:q.left+a.X({x}),y:q.top+a.Y(a.U(s,s.ys[j]))}}}})()")
+            return pg.evaluate(f"(()=>{{const p={P},a=p._a,s=a.sr[{i}],q=p.cv.getBoundingClientRect(),j=nearIdx(s.x,{x});return {{x:q.left+a.X({x}),y:q.top+a.Y(a.U(s,s.ys[j])),strip:q.top+a.H-M.b}}}})()")
         pg.evaluate("(()=>{const f=QUALITA.click;window.__ck=0;QUALITA.click=async(...a)=>{try{return await f.apply(QUALITA,a)}finally{window.__ck++}}})()")      # counts the answers of the engine
         def click(i, x, alt=False):
             c = xy(i, x); k0 = pg.evaluate("window.__ck")
+            # a real mouse gives whole CSS pixels and Chromium snaps a fractional position (down or to the nearest, by build); a flat trace sits a fraction of a pixel above the x-axis strip
+            # (py > H - M.b, where a drag zooms the axis and never calls the engine), so the click is kept 4 px inside the plot: the trace nearest the pointer is still a flat one
+            cx, cy = round(c["x"]), min(math.floor(c["y"]), math.floor(c["strip"]) - 4)
+            # a window label (a button, drawn over the plot at the baseline of its peak) can sit on the click point and takes the click for itself (CI fonts size the labels differently):
+            # the click moves along the time axis to the nearest point whose topmost element is the plot canvas, a time where the ion still has no peak
+            for dx in [0] + [d * k for k in range(1, 9) for d in (12, -12)]:
+                if pg.evaluate("([x,y])=>document.elementFromPoint(x,y)===%s.cv" % P, [cx + dx, cy]): cx += dx; break
             if alt: pg.keyboard.down("Alt")
-            pg.mouse.click(c["x"], c["y"])
+            pg.mouse.click(cx, cy)
             if alt: pg.keyboard.up("Alt")
-            wait_for_js(pg, f"window.__ck>{k0}", timeout=60000); frames(pg, 4)        # the engine (a first call starts its worker) answered, the page drew
+            try: wait_for_js(pg, f"window.__ck>{k0}", timeout=60000)
+            except Exception as e:                                           # the evidence a red run needs: where the click fell and what was under it
+                top = pg.evaluate("([x,y])=>{const e=document.elementFromPoint(x,y);return e?e.tagName+'#'+e.id+'.'+e.className:null}", [cx, cy])
+                raise AssertionError(f"the click reached no engine answer: at ({cx}, {cy}), trace {c}, viewport {pg.viewport_size}, under the pointer {top}") from e
+            frames(pg, 4)        # the engine (a first call starts its worker) answered, the page drew
         ints = lambda: pg.evaluate(f"{P}.ints.map(i=>({{key:i.key,a:i.a,b:i.b,id:i.id,click:i.click||null}}))")
         key = lambda i: pg.evaluate(f"{P}._a.sr[{i}].key")
         note = lambda: pg.evaluate("(()=>{const n=document.querySelector('#qnote');return n&&!n.hidden?n.textContent:''})()")
@@ -75,14 +87,14 @@ try:
         step("four windows at one time: the labels stack and never overlap, the selected one is drawn", labels)
         pg.screenshot(path=str(HERE / "shots" / "integra_clic_one.png"))
         def junk_refused():
-            n0 = len(ints()); click(ION_C, APEX[ION_B])                    # ion C has no peak at the time of the peak of ion B
+            n0 = len(ints()); click(ION_C, JUNK)                    # no ion has a peak at that time
             assert len(ints()) == n0, ("a window was made where no ion has a peak", ints())
             assert refused_text in note(), note()
             assert pg.evaluate("I18N.t('int.why.noPeak',{reach:0.25})") in note(), note()
         step("a click where the trace has no peak is refused with the reason and the way to keep it", junk_refused)
         pg.screenshot(path=str(HERE / "shots" / "integra_clic_refused.png"))
         def force():
-            n0 = len(ints()); click(ION_C, APEX[ION_B], alt=True)
+            n0 = len(ints()); click(ION_C, JUNK, alt=True)
             w = ints(); assert len(w) == n0 + 1 and w[-1]["key"] != key(ION_B), ([(i["key"], i["a"], i["b"]) for i in w], note())
             c = w[-1]["click"]; assert c["forced"] is True and c["refused"], c                 # the override and the reasons it overrode are in the record
             assert pg.evaluate("I18N.t('int.forced',{why:'@'})").split("@")[0] in note(), note()

@@ -506,7 +506,7 @@ function hostWidth() {
 function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
   const st = stackOrder();
-  E.panels.forEach((/** @type {Pannello} */ p) => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+  E.panels.forEach((/** @type {Pannello} */ p) => { p._hw = w; if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });      // _hw: the host width of the last fit; a size notice (pannelli.js onSize) that sees the host moved since is a panel a frame behind, not a hand on the resize corner
   // panels side by side follow the width too (and stack when it is too narrow)
   const rows = st.some((/** @type {Bag} */ q) => LAYOUT.inRiga(q, st));
   // Full Scan and MS2 of a DDA file side by side only when the page is wide enough

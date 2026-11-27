@@ -325,7 +325,7 @@ function addPanel(type, o, after) {
   let skip = 2;  // the first notification of each of the two watched elements is the initial size
   const onSize = () => {
     if (skip > 0) { skip--; return; }
-    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
+    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) { if (p._hw != null && Math.abs(Q("#dpanels").clientWidth - p._hw) > 1) fitWidth(); else p.full = false; } if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
     if (p._fitW !== el.offsetWidth) { p._fitW = el.offsetWidth; fitHdNow(p); }  // both observers fire: one fit per width
   };
