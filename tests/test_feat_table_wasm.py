@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from cargo_util import build, cli
+from cargo_util import build, cli, cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
@@ -110,6 +110,26 @@ def test_wasm_and_native_give_the_same_blank_evidence_for_the_plain_ratio_filter
     for rid, value, level, fold in blank["dropped"]:
         assert level > 0 and fold == pytest.approx(value / level) and fold < ratio, (rid, value, level, fold)
     assert blank["fallback_all"] == {"total": 0, "files": []} and "ungrouped_all" not in blank
+
+
+def test_cli_table_row_gives_the_bytes_of_the_app_and_of_the_wasm(built):
+    """TABLE-ROW-CLI: `mzlab-cli table row` prints row/2 and row_traces/2 (one per line) with the bytes of the native example (the app function) and of the .wasm, and an id the table
+    does not have is exit 5."""
+    root, idx, pkg, table = built
+    args = [str(table), str(root / "samples.json"), "-", "1", *idx]
+    outs = {}
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+        out = root / f"{name}-row"
+        out.mkdir()
+        run(*cmd, str(out), *args)
+        outs[name] = (out / "row.json").read_text() + "\n" + (out / "row_traces.json").read_text() + "\n"
+    assert outs["nat"] == outs["wasm"]
+    got = cli("table", "row", str(table), "--id", "3", "--samples", str(root / "samples.json"), "--traces", "--index", str(Path(idx[0]).parent), runner=run)
+    assert got == outs["nat"]
+    row = json.loads(got.split("\n")[0])
+    assert row["schema"] == "row/2" and row["id"] == 3 and len(row["cells"]) == len(idx)
+    bad = subprocess.run([*cli_argv("table", "row", str(table), "--id", "99999999")], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert bad.returncode == 5 and json.loads(bad.stdout)["error_key"] == "error.rowNotFound"
 
 
 def test_the_wasm_the_native_example_and_the_cli_give_the_same_tables_entry(built):

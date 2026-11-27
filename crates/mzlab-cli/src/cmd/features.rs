@@ -4,6 +4,10 @@ use super::Entry;
 use crate::{features_full, features_plan_of, Outcome};
 use std::path::PathBuf;
 
+// declared here, not in lib.rs, which is at its line limit
+#[path = "../table_row_cmd.rs"]
+mod table_row_cmd;
+
 struct Args {
     files: Vec<PathBuf>,
     out: Option<PathBuf>,
@@ -242,7 +246,14 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 )
 .schema("compare/1")
 .exits(&[0, 2, 4, 5, 6])
-.examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
+.examples(&["mzlab-cli table compare f.csv --ref t0* --blank MQ*"]),
+Entry::new(
+    "table row",
+    "mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2",
+    table_row_cmd::run,
+)
+.schema("row/2")
+.exits(&[0, 2, 4, 5, 6]),
 Entry::new(
     "quant targets",
     "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
@@ -257,7 +268,7 @@ Entry::new(
 )
 .schema("union/1")
 .exits(&[0, 2, 3, 4, 6])
-.examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"]),
+.examples(&["mzlab-cli quant union a.csv b.csv --rt-warp piecewise --out t.csv"]),
 Entry::new(
     "estimate",
     "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data",

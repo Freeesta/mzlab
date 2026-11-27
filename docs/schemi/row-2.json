@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "row/2",
+  "title": "row/2: one row of a feature table",
+  "description": "The answer of `mzlab-cli table row`, `table_row` of the site and `feat/table` `row` of the app, byte for byte. Everything the .mzfeat knows about one row; a summary that was not computed is null, never a made-up number. Code: crates/mzlab-feat/src/row.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "mz",
+    "rt",
+    "rt_lo",
+    "rt_hi",
+    "charge",
+    "quality",
+    "iso_m1",
+    "ms2",
+    "ident",
+    "family",
+    "cells"
+  ],
+  "properties": {
+    "schema": {
+      "const": "row/2"
+    },
+    "id": {
+      "type": "integer"
+    },
+    "mz": {
+      "type": "number"
+    },
+    "rt": {
+      "type": "number",
+      "description": "Minutes."
+    },
+    "rt_lo": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Left edge of the peak, minutes."
+    },
+    "rt_hi": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Right edge of the peak, minutes."
+    },
+    "charge": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "quality": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "snr",
+            "fwhm",
+            "flags"
+          ],
+          "properties": {
+            "shape": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "snr": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "fwhm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "flags": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "shape",
+                  "snr",
+                  "points"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "iso_m1": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "ms2": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "purity"
+          ],
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "purity": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "The file whose MS2 the exports use."
+    },
+    "ident": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "neutral",
+            "adduct",
+            "sources"
+          ],
+          "properties": {
+            "neutral": {
+              "type": "number"
+            },
+            "adduct": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "detected, hypothesis, rule, suspect, family, imported, cleavage or network."
+              }
+            }
+          }
+        }
+      ]
+    },
+    "family": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "members"
+          ],
+          "properties": {
+            "size": {
+              "type": "integer"
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mz",
+                  "rt",
+                  "role"
+                ],
+                "properties": {
+                  "mz": {
+                    "type": "number"
+                  },
+                  "rt": {
+                    "type": "number"
+                  },
+                  "role": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "The ions the row is made of, the reference first; null in the per-ion table."
+    },
+    "cells": {
+      "type": "array",
+      "description": "One per file, in the order of the table.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "type",
+          "time",
+          "area",
+          "height",
+          "apex_rt",
+          "width",
+          "state"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of the file in samples/1 (sample, blank, dark, t0, qc, std, calibration)."
+          },
+          "time": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Minutes; null when unknown."
+          },
+          "area": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apex_rt": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Minutes."
+          },
+          "width": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Minutes."
+          },
+          "state": {
+            "enum": [
+              "detected",
+              "filled",
+              "targeted",
+              "na",
+              "absent"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

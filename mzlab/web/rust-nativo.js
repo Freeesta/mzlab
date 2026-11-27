@@ -2,7 +2,8 @@
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/natives.rs).
-import { putChunks, putSparse, ensureRoom, ROOM } from "./archivio.js";
+import { putChunks, putSparse, ensureRoom, release, ROOM } from "./archivio.js";
+import { createPrefetch } from "./rust-prefetch.js";
 import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
@@ -143,12 +144,12 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
 
 /** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass, or, for a member already there that this worker did not copy, read from a stub of another sample (`known`).
  *  With `hashing` the copy waits for the SHA-1 only (`free` of impronta.js): the rest of the hash goes on and `hashing` holds its promise until it ends */
-async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null, file?: (file: Blob, onRead?: (n: number) => void) => { sha1: Promise<string | null>, all: Promise<string[] | null> } | null }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, hashing?: Map<string, Promise<string[] | null>>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null> }} */ { ARCH, impronte, writing, taken, hashing, known }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump, /** @type {number[][] | undefined} */ ranges = undefined) {
+export async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null, file?: (file: Blob, onRead?: (n: number) => void) => { sha1: Promise<string | null>, all: Promise<string[] | null> } | null }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, hashing?: Map<string, Promise<string[] | null>>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null>, sparse?: typeof putSparse }} */ { ARCH, impronte, writing, taken, hashing, known, sparse = putSparse }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump, /** @type {number[][] | undefined} */ ranges = undefined) {
   const have = await ARCH.get("files", store);
   if (writing.has(store)) { await writing.get(store); bump(blob.size); return; }
   if (have && have.size === blob.size) { bump(blob.size); if (!taken.has(store) && known) { const o = await known(store, blob.size, /** @type {any} */ (blob).lastModified || 0); if (o) taken.set(store, o); } return; }
   // only some byte ranges are wanted (the sample chosen in a big .wiff.scan, `nat.ranges` of the engine's copy plan): a sparse file, no fingerprints taken from the copy
-  if (ranges) { const job = putSparse("files", store, blob.size, ranges, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }).then(() => {}); writing.set(store, job); try { await job; } finally { writing.delete(store); } return; }
+  if (ranges) { const job = sparse("files", store, blob.size, ranges, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }).then(() => {}); writing.set(store, job); try { await job; } finally { writing.delete(store); } return; }
   const free = hashing && impronte?.free ? impronte.free(blob.size, blob) : null, pass = free || (impronte ? impronte.start(blob.size) : null);      // each piece goes to the hash once written
   const job = putChunks("files", store, blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }, pass ? b => pass.add(b) : undefined)
     .then(async (/** @type {File} */ f) => {
@@ -259,7 +260,7 @@ async function orphansDi(/** @type {any} */ ARCH, /** @type {(n: string) => Prom
 }
 
 /** runs fn while holding the dataset's shared Web Lock (directly where the browser has none) */
-const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
+export const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
 
 /** The writer of «Download .mzML» for a stub: a .wiff sample is written by the `sciex` module with the options of `mzlab-cli file convert` (no optical matrix), the engine alone
  * leaves out what `estesi` writes (SRM dwell and energy, isolation offsets, TIC and BPC of a Full Scan); the other samples by the engine. Rejects with `err.file.moduleLoad`. */
@@ -289,7 +290,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const taken = new Map(), hashing = new Map();          // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples find it again); -> Promise of them while the hash goes on after the copy
   const posto = new Map(), stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);      // posto: store name -> the user's File of a member read in place, gone with the tab
-
+  const pre = createPrefetch({ ARCH, jerr, held, copy: copyMember, deps: { ARCH, impronte, writing, taken, hashing, known: (/** @type {string} */ st, /** @type {number} */ size, /** @type {number} */ mtime) => known(ARCH, stubOf, st, size, mtime) }, storeOf, partOf, workOf, missing: (/** @type {any} */ nat) => missing(ARCH, writing, nat), ensureRoom, release, stubOf });      // the samples ticked in the «Choose samples» dialog are copied ahead (rust-prefetch.js), into the stores `putHeld` finds
   /** the Files of the members of a stub (read from OPFS) */
   async function memberFiles(/** @type {Stub} */ st) {
     const out = [];
@@ -300,9 +301,9 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   async function attach(/** @type {any} */ engine, /** @type {string} */ name, /** @type {number} */ slot) {
     const st = await stubOf(name);
     if (!st) return false;
-    const files = await memberFiles(st);
+    const files = await memberFiles(st);      // the engine keeps ONE open reader per dataset key: samples copied apart (other byte ranges, other stores) need a key of their own, so it names the stores too
     await ext.prepara(st.members.map(m => m.name), st.members);
-    engine.native_attach(slot, st.ds, st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid);
+    engine.native_attach(slot, st.ds + "|" + st.members.map(m => m.store).join(","), st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid);
     return true;
   }
 
@@ -324,7 +325,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
     /** @type {Stub} */
     const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (post) post({ op: "notice", key: "load.sulPosto", params: { name: m.name } }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
     stubs.delete(m.name);
-    return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
+    return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st))).then(f => { pre.landed(members); return f; });      // a stub points to its members now: the sweep keeps them (pre)
   }
 
   /** the message of the index builder for a native sample (idx-worker.js); progress comes back as { frac, phase } */
@@ -338,7 +339,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   async function sweep(/** @type {Iterable<string>} */ keep) {
     const used = new Set();
     for (const n of keep) { const st = await stubOf(n); if (st) st.members.forEach(m => used.add(m.store)); }
-    for (const e of await ARCH.list("files")) if (e.name.startsWith(PREFIX) && !used.has(e.name)) await ARCH.remove("files", e.name);
+    for (const e of await ARCH.list("files")) if (e.name.startsWith(PREFIX) && !used.has(e.name) && !pre.holds.has(e.name)) await ARCH.remove("files", e.name);
   }
 
   /** «Scarica .mzML»: the mzML of a sample written to a file of OPFS (`dest` in conv/) */
@@ -361,5 +362,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {boolean | undefined} */ listing) => samplesDi(native_samples, ext, members, listing), plan = (/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ text) => planDi(sample_ranges, ext, members, text);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, plan, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, pre: pre.op, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })).catch((/** @type {unknown} */ e) => { pre.landed(m.nat.members.map((/** @type {any} */ x) => ({ store: storeOf(m.nat, x) }))); throw e; }); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, plan, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }

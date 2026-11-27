@@ -167,6 +167,7 @@
     "../../mzlab/web/integrazioni-manuali.js",
     "../../mzlab/web/integrazioni-tracce.js",
     "../../mzlab/web/rust-nativo.js",
+    "../../mzlab/web/rust-prefetch.js",
     "../../mzlab/web/riscalda.js",
     "../../mzlab/web/lettore-esterno.js",
     "../../mzlab/web/impronta.js",

@@ -122,6 +122,8 @@ embed!(
     "sample-pair-1.json",
     "sample-select-1.json",
     "samples-1.json",
+    "row-2.json",
+    "row_traces-2.json",
     "scanlist-1.json",
     "schemas-1.json",
     "screen-1.json",

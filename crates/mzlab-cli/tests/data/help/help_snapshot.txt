@@ -15,6 +15,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -117,9 +118,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   a run folder's context
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   replay a recording
        mzlab-cli llm eval CASES_DIR --replay DIR   score the cases
-       mzlab-cli completions bash   bash completion script on stdout
-       mzlab-cli completions zsh   zsh completion script on stdout
-       mzlab-cli completions fish   fish completion script on stdout
+       mzlab-cli completions bash   bash completion script
+       mzlab-cli completions zsh   zsh completion script
+       mzlab-cli completions fish   fish completion script
        mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
@@ -143,6 +144,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -245,9 +247,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   a run folder's context
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   replay a recording
        mzlab-cli llm eval CASES_DIR --replay DIR   score the cases
-       mzlab-cli completions bash   bash completion script on stdout
-       mzlab-cli completions zsh   zsh completion script on stdout
-       mzlab-cli completions fish   fish completion script on stdout
+       mzlab-cli completions bash   bash completion script
+       mzlab-cli completions zsh   zsh completion script
+       mzlab-cli completions fish   fish completion script
        mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
@@ -271,6 +273,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 
 usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz-offset OFFSET] [--report PATH] [--dry-run] [--out PATH] [--notes PATH] [--preset auto|pos|neg | --params FILE.json]   non-targeted feature table, CSV
        mzlab-cli table compare TABLE --ref SEL --blank SEL [--samples FILE.json] [--quantity area|height] [--factor F] [--pseudocount auto|N] [--format json|csv] [--json] [--dry-run] [--out PATH]   each feature vs reference and blank
+       mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2
        mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file
        mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN] [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]   series feature tables as one target list
        mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data
@@ -373,9 +376,9 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   a run folder's context
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   replay a recording
        mzlab-cli llm eval CASES_DIR --replay DIR   score the cases
-       mzlab-cli completions bash   bash completion script on stdout
-       mzlab-cli completions zsh   zsh completion script on stdout
-       mzlab-cli completions fish   fish completion script on stdout
+       mzlab-cli completions bash   bash completion script
+       mzlab-cli completions zsh   zsh completion script
+       mzlab-cli completions fish   fish completion script
        mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
