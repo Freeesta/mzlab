@@ -17,8 +17,15 @@ const wcEl = (/** @type {string} */ tag, /** @type {Record<string, any>} */ a = 
 const WC_KIND = /** @type {Record<string, string>} */ ({ ms: "pick.kind.ms", ms2: "pick.kind.ms2", sim: "pick.kind.sim", mrm: "pick.kind.mrm", dad: "pick.kind.dad" });
 const WC_WHY = /** @type {Record<string, string>} */ ({ inferred: "pick.why.inferred", refused: "pick.why.refused" });
 /** @typedef {{ id: number, name: string, scans: number, size?: number, kinds?: string[], why?: string }} Smp */
-/** @typedef {{ key: string, name: string, samples: Smp[], ticked: Set<number>, mem?: { name: string, blob: Blob }[], nkey?: string, plans?: Map<number, { ranges: Record<string, number[][]>, tag: string }> }} Entry */
+/** @typedef {{ key: string, name: string, samples: Smp[], ticked: Set<number>, mem?: { name: string, blob: Blob }[], nkey?: string, plans?: Map<number, { ranges: Record<string, number[][]>, tag: string, whole: boolean }>, noPre?: boolean }} Entry */
 /** @typedef {{ cb: HTMLInputElement, e: Entry, s: Smp, st?: HTMLElement, pre?: { live: boolean }, last?: Promise<any> }} Box */
+
+/** the plan of ONE sample (`nativePlan`) as the stub keeps it; `whole`: it leaves nothing out, so copying it apart per sample would copy the whole file once per sample */
+async function wcPlan(/** @type {any} */ rb, /** @type {{ name: string, blob: Blob }[]} */ mem, /** @type {number} */ id) {
+  const pl = await rb.nativePlan(mem, String(id));
+  return { ranges: /** @type {Record<string, number[][]>} */ (Object.fromEntries(pl.members.map((/** @type {any} */ m) => [m.name, m.ranges]))), tag: String(pl.tag || ""),
+    whole: pl.members.every((/** @type {{ size: number, ranges: number[][] }} */ m) => m.ranges.length === 1 && m.ranges[0][0] === 0 && m.ranges[0][1] >= m.size) };
+}
 
 /**
  * The prefetch of the ticked samples: the engine plans the byte ranges of ONE sample (`nativePlan`, the same plan the opening uses), the worker copies them (`nativePrefetch`, at most 2 at once);
@@ -26,7 +33,6 @@ const WC_WHY = /** @type {Record<string, string>} */ ({ inferred: "pick.why.infe
  */
 function wcPrefetch(/** @type {any} */ rb, /** @type {(b: Box, state: string | number) => void} */ mark) {
   let closed = false;
-  const whole = (/** @type {{ size: number, ranges: number[][] }} */ m) => m.ranges.length === 1 && m.ranges[0][0] === 0 && m.ranges[0][1] >= m.size;
   return {
     start(/** @type {Box} */ b) {
       const live = { live: true }, before = b.last || Promise.resolve();
@@ -35,10 +41,10 @@ function wcPrefetch(/** @type {any} */ rb, /** @type {(b: Box, state: string | n
         await before;
         if (!live.live || closed) return;
         try {
-          const e = b.e, pl = await rb.nativePlan(e.mem, String(b.s.id)), ranges = Object.fromEntries(pl.members.map((/** @type {any} */ m) => [m.name, m.ranges])), tag = String(pl.tag || "");
+          const e = b.e, g = await wcPlan(rb, e.mem || [], b.s.id), { ranges, tag } = g;
           if (!live.live) return;
-          (e.plans || (e.plans = new Map())).set(b.s.id, { ranges, tag });
-          if (closed || pl.members.every(whole)) { mark(b, ""); return; }
+          (e.plans || (e.plans = new Map())).set(b.s.id, g);
+          if (closed || g.whole) { mark(b, ""); return; }
           const ok = await rb.nativePrefetch(e.mem, e.nkey, b.s.id, ranges, tag, (/** @type {number} */ f) => { if (live.live) mark(b, f < 0 ? "wait" : f); });
           if (live.live) mark(b, ok ? "done" : "");
         } catch (_) { if (live.live) mark(b, ""); }
@@ -80,7 +86,7 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
     // the mark of a row: «Waiting», «Loading 40%», «Loaded» (nothing when the sample is not copied ahead)
     const mark = (/** @type {Box} */ b, /** @type {string | number} */ state) => { if (b.st) b.st.textContent = state === "" ? "" : state === "wait" ? wcT("pick.pre.wait") : state === "done" ? wcT("pick.pre.done") : wcT("pick.pre.run", { pc: Math.min(99, Math.floor(+state * 100)) }); };
     const pf = rb && rb.nativePrefetch && rb.nativePlan && rb.nativeUnprefetch && !window.MZLAB_DESKTOP ? wcPrefetch(rb, mark) : null;
-    const sync = (/** @type {Box} */ b) => { if (!pf) return; if (b.cb.checked) { if (!b.pre || !b.pre.live) pf.start(b); } else pf.stop(b); };
+    const sync = (/** @type {Box} */ b) => { if (!pf || b.e.noPre) return; if (b.cb.checked) { if (!b.pre || !b.pre.live) pf.start(b); } else pf.stop(b); };
     const setAll = (/** @type {boolean} */ v) => { boxes.forEach(b => { b.cb.checked = v; sync(b); }); upd(); };
     const all = wcEl("button", { type: "button", text: wcT("pick.all") }), none = wcEl("button", { type: "button", text: wcT("pick.none") });
     all.onclick = () => setAll(true); none.onclick = () => setAll(false);
@@ -126,7 +132,7 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
  * Resolves with `null` when nothing needs asking (the setting, one sample per file, a listing that failed: opening goes on as it always did), `{ cancelled: true }`,
  * or `{ picks: Map(key -> ids), total: Map(key -> samples in the file), names: Map(key -> listed samples), plans: Map(key -> Map(id -> { ranges, tag })) (the plans made for the prefetch), prefetch: whether the dialog copies ticked samples ahead }` for the files that were asked.
  */
-async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string, blob: Blob }[], nkey: string }[]} */ pairs, /** @type {any} */ rb, /** @type {string} */ mode) {
+async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string, blob: Blob }[], nkey: string, cached?: (j: unknown) => Promise<boolean> }[]} */ pairs, /** @type {any} */ rb, /** @type {string} */ mode) {
   if (mode === "never" || !rb || !rb.nativeSamples || !rb.nativeAsk) return null;
   /** @type {Entry[]} */ const entries = [];
   for (const p of pairs) {
@@ -134,11 +140,11 @@ async function wcAsk(/** @type {{ key: string, name: string, mem: { name: string
       const j = await rb.nativeSamples(p.mem, true), samples = /** @type {Smp[]} */ (j.samples || []);
       if (!samples.length) continue;
       const d = await rb.nativeAsk({ op: "natdefault", ids: samples.map(s => s.id), sizes: samples.map(s => s.size || 0), empty: samples.filter(s => s.why === "empty").map(s => s.id) });
-      entries.push({ key: p.key, name: p.name, samples, ticked: new Set(d.samples), mem: p.mem, nkey: p.nkey });
+      entries.push({ key: p.key, name: p.name, samples, ticked: new Set(d.samples), mem: p.mem, nkey: p.nkey, noPre: !!p.cached && await p.cached(j) });      // a pair the cache already holds (dropped again) is never copied ahead
     } catch (_) { /* the normal opening reports a file that cannot be read */ }
   }
   if (!entries.length || mode !== "always" && entries.every(e => e.samples.length < 2)) return null;
   const picks = await wcDialog(entries, rb);
   return picks ? { picks, total: new Map(entries.map(e => [e.key, e.samples.length])), names: new Map(entries.map(e => [e.key, e.samples])), plans: new Map(entries.map(e => [e.key, e.plans || new Map()])), prefetch: !!(rb.nativePrefetch && !window.MZLAB_DESKTOP) } : { cancelled: true };
 }
-const WIFFCHOOSE = { ask: wcAsk, dialog: wcDialog };
+const WIFFCHOOSE = { ask: wcAsk, dialog: wcDialog, plan: wcPlan };

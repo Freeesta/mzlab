@@ -177,6 +177,21 @@ try:
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 4", timeout=120000)
             assert scans() == before, (before, scans())      # the opening reused the copies: same stores, same bytes, never written again
         step("Open selected reuses what is loaded: the stores are not written again and the rows open", prefetch_reuse)
+        NZ = """async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.includes('~pre.wiff.scan')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let nz = 0; for (const v of b) if (v !== 0) nz++; out.push([n, nz]); } } }; await walk(await navigator.storage.getDirectory()); return out; }"""
+        def prefetch_bytes():
+            # every sample ticked: the copies made ahead hold the sections once and the head and tail of the .wiff.scan once per sample, nothing else
+            got = pg.evaluate(NZ); src = (D / "pre" / "pre.wiff.scan").read_bytes(); whole = sum(1 for v in src if v != 0)
+            total = sum(g[1] for g in got); assert len(got) == 4, got
+            own = sorted(g[1] for g in got); extra = total - whole      # what is copied twice: the head and tail shared by the samples
+            assert 0 <= extra <= (len(got) - 1) * (own[0] if own else 0), (total, whole, own)
+            assert total < 2 * whole, (total, whole)
+        step("every sample ticked: the copies hold the file once plus the head and tail once per extra sample, never twice the file", prefetch_bytes)
+        def prefetch_cached():
+            # the same pair dropped again, its samples already open with their index: the dialog opens with no row marked (a copy that started marks its row «Waiting» at once)
+            n = rows(pg); before = scans(); pg.set_input_files("#pick", pair("pre")); dlg(pg)
+            assert states() == [""] * 4, states(); assert scans() == before, (before, scans())
+            pg.click("#wiffchoose .wc-x"); settle(pg); assert rows(pg) == n, rows(pg)
+        step("a pair already loaded is not copied ahead when it is dropped again", prefetch_cached)
         b.close()
 finally:
     srv = run.srv; srv.terminate(); import shutil; shutil.rmtree(D, ignore_errors=True)

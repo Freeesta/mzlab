@@ -1,12 +1,8 @@
-"""Copy ahead of the «Choose samples» dialog (mzlab/web/rust-prefetch.js), run by node with a fake OPFS and the engine's copy gate: at most 2 copies at once, untick, X with queued samples, stores kept for a stub."""
-import shutil
+"""Copy ahead of the «Choose samples» dialog (mzlab/web/rust-prefetch.js), run by node with a fake OPFS and the engine's copy gate: at most 2 copies at once, untick, X with queued samples, stores kept for a stub, an opening that waits for a copy running. Node is required: the test fails, it never skips."""
 import subprocess
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
-pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 
 def test_prefetch_gate_untick_and_close():

@@ -59,7 +59,7 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
 
   return {
     holds,
-    /** the stub of a sample is written: its stores are no longer the prefetch's */
+    /** the stub of a sample is written (or its opening failed): its stores are no longer the prefetch's, the sweep may free an unused one */
     landed: (/** @type {{ store: string }[]} */ members) => { for (const x of members) { holds.delete(x.store); fresh.delete(x.store); } },
     /**
      * the worker's request: `natprefetch` copies one sample behind the copy gate (`copies.through`, at most 2 at once with the other copies), `natunprefetch` stops and discards
