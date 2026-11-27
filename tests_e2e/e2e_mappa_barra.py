@@ -42,13 +42,13 @@ try:
             pg.click(".pnl.map [data-nav=mapzin]"); settle(); z2 = z(); assert z2[0][1] - z2[0][0] < zz[0][1] - zz[0][0], (zz, z2)
             pg.click(".pnl.map [data-nav=mapzout]"); settle(); z3 = z(); assert not z3[0] or z3[0][1] - z3[0][0] > z2[0][1] - z2[0][0], z3
             pg.click(".pnl.map [data-nav=mapzin]"); settle()
-            pg.click(".pnl.map [data-a=fit]"); settle(); assert z() == [None, None], z()
+            bar(pg, ".pnl.map", "fit"); settle(); assert z() == [None, None], z()
             assert pg.locator(".pnl.map [data-nav=maplock]").count() == 0                  # no padlock button on the 2D map: the lock is in the menu and on L
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("l"); settle(); assert pg.evaluate(f"!!{M}._mz.lock")
             pg.keyboard.press("l"); settle(); assert not pg.evaluate(f"!!{M}._mz.lock")
             w0 = pg.evaluate(f"{M}.el.getBoundingClientRect().width")
-            pg.click(".pnl.map [data-a=max]"); settle(); assert pg.evaluate(f"{M}.el.getBoundingClientRect().width") > w0 + 50
-            pg.click(".pnl.map [data-a=max]"); settle()
+            bar(pg, ".pnl.map", "max"); settle(); assert pg.evaluate(f"{M}.el.getBoundingClientRect().width") > w0 + 50
+            bar(pg, ".pnl.map", "max"); settle()
         step("zoom, reset, lock (L) and full screen still work", works)
         b.close()
     r.close()

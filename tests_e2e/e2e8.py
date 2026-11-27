@@ -45,7 +45,7 @@ try:
             assert pg.evaluate(f"E.panels[{i}].zoom!==null") and pg.evaluate(f"E.panels[{i}].el.querySelector('.zr').hidden")
             assert pg.evaluate(f"E.panels[{i}].el.querySelector('[data-a=fit]').disabled")==False
             pg.screenshot(path=SH + "81_zoomed.png")
-            pg.locator(f".pnl.spec [data-a=fit]").first.click(); pg.wait_for_timeout(600)
+            bar(pg, ".pnl.spec", "fit"); pg.wait_for_timeout(600)
             assert pg.evaluate(f"E.panels[{i}].zoom===null")
         step("spectrum zoom: rectangle while dragging, bar, Whole view", zoom)
         def names():

@@ -57,7 +57,7 @@ try:
             a0 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.ymax")
             c = chrom(pg); pg.mouse.move(c["l"] + 30, c["t"] + c["h"] / 2); pg.keyboard.down("Control"); pg.mouse.wheel(0, -200); pg.keyboard.up("Control"); pg.wait_for_timeout(500)
             z = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').zoomY"); assert z and z[1] < a0, (z, a0)
-            pg.click("#dpanels .pnl.chrom [data-a=fit]"); pg.wait_for_timeout(300)
+            bar(pg, "#dpanels .pnl.chrom", "fit"); pg.wait_for_timeout(300)
         step("B-7 Ctrl+wheel on the y axis zooms only y (the y x10 button is gone)", yz)
         def hover():
             c = chrom(pg); pg.mouse.move(c["l"] + c["w"] / 2, c["t"] + c["h"] / 2); pg.wait_for_timeout(200)

@@ -200,7 +200,7 @@ Finding: the header buttons are hand-written HTML, **not** registry entries; the
 Slices are independent PRs; the setting `qqq.pbar` keeps the old header until the last one.
 1. `PBAR-REGISTRY-BUTTONS`: header buttons become registry actions, one renderer; no visible change. Useful with any design.
 2. `PBAR-SKELETON`: `#pbar` and selection model, off by default.
-3. `PBAR-MOVE-COMMON`: fit, download, ruler, log, smoothing, link, expand.
+3. `PBAR-MOVE-COMMON` (done): fit, download, ruler, log, smoothing, link, expand.
 4. `PBAR-MOVE-SPECIFIC`: integration, XIC, peak picking, lock, %, area.
 5. `PBAR-MENU-SCOPE`: right-click menu with `scope`, per kind.
 6. `PBAR-PHONE-KEYS`: 390 px and keyboard.

@@ -3,6 +3,7 @@
 // Shared panel bar #pbar (study docs/studies/PANEL_TOOLBAR_STUDY.md §3), lazy, loaded only when the setting «Panel bar» is on (settings.js, localStorage mzlab.pbar = "1").
 // One row under the header: a chip with the number, kind and file of the selected panel (E.active) and the tools of that panel, drawn by AZIONI.bar (azioni-barra.js).
 // The header buttons of every panel stay in the DOM (hidden by CSS, html[data-pbar]): their state is copied to the bar, and a button without its own action runs the header one.
+// Expand is in the bar and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
 // Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, LAYOUT, AZIONI, I18N, FRAME.
 (() => {
   /** @typedef {any} Pannello */
@@ -36,6 +37,22 @@
       if (s.tagName === "SELECT") /** @type {HTMLSelectElement} */ (t).value = /** @type {HTMLSelectElement} */ (s).value;
     }
   }
+  /** the states that differ from the default, as [id, text key]: smoothing is on by default but for the SIM/MRM panels @param {Pannello} p */
+  const odd = p => {
+    const l = /** @type {[string, string, string][]} */ ([]); if (!["chrom", "xic", "mrm"].includes(p.type)) return l;
+    if (!!p.smooth !== (p.type !== "mrm")) l.push(p.smooth ? ["smooth", "pbar.dot.smoothon", "pbar.dot.smoothon.title"] : ["smooth", "pbar.dot.smoothoff", "pbar.dot.smoothoff.title"]);
+    if (p.log) l.push(["log", "pbar.dot.log", "pbar.dot.log.title"]);
+    if (p.tl) l.push(["tl", "pbar.dot.tl", "pbar.dot.tl.title"]);
+    return l;
+  };
+  /** the dot chips of the header of p (none when the bar is off or the panel has the defaults); written only when they changed @param {Pannello} p */
+  function dots(p) {
+    const hd = p.el?.querySelector(".hd"); if (!hd) return;
+    let d = /** @type {HTMLElement | null} */ (hd.querySelector(".pdots")); const l = on ? odd(p) : [], sig = l.map(x => x[1]).join();
+    if (!l.length) { d?.remove(); return; }
+    if (!d) { d = document.createElement("span"); d.className = "pdots"; d.setAttribute("role", "group"); d.setAttribute("aria-label", T("pbar.dot.group")); hd.insertBefore(d, hd.querySelector(".tbs")); }
+    if (d.dataset.sig !== sig) { d.dataset.sig = sig; d.innerHTML = l.map(([id, k, t]) => h`<span class="pdot" data-d="${id}" title="${T(t)}">${T(k)}</span>`).join(""); fitHdSoon(p); }
+  }
   /** the chip: number, kind, file; the text is rewritten only when it changed @param {Pannello} p */
   function paintChip(p) {
     const b = host(), c = b && b.querySelector(".pbchip"); if (!b || !c) return;
@@ -67,6 +84,7 @@
   /** follows E.active: the first panel when none is; the bar is rebuilt only when the selected panel changes */
   function sync() {
     if (!on) return;
+    for (const q of E.panels) dots(q);
     let p = E.active && E.panels.includes(E.active) && E.active.el ? E.active : null;
     if (!p) { const q = first(); if (q) { setActive(q); return; } }
     if (p !== shown || !host()?.firstElementChild) render(p); else if (p) { paintChip(p); mirror(p); rove(/** @type {HTMLElement | null} */ (document.activeElement)); }
@@ -76,7 +94,8 @@
     on = v; document.documentElement.toggleAttribute("data-pbar", v);
     const b = host(); if (!b) return;
     b.hidden = !v; shown = null; if (mo) { mo.disconnect(); mo = null; }
-    if (v) sync(); else b.textContent = "";
+    if (v) sync(); else { b.textContent = ""; for (const q of E.panels) dots(q); }
+    for (const q of E.panels) if (q.el) fitHdNow(q);   // the tool groups leave the header or come back: fit it again
   }
   const key = (/** @type {KeyboardEvent} */ e) => {   // arrows, Home and End move inside the bar (one Tab stop)
     const l = tools(), i = l.indexOf(/** @type {HTMLElement} */ (document.activeElement)); if (i < 0 || /SELECT/.test(document.activeElement?.tagName || "")) return;
@@ -84,6 +103,8 @@
     if (j < 0) return; e.preventDefault(); rove(l[j]); l[j].focus();
   };
   host()?.addEventListener("keydown", key);
+  // a state button of any panel changed (the header twins keep their class): redraw the dot chips; a new panel joins as a child of #dpanels
+  { const st = document.getElementById("dpanels"); if (st) new MutationObserver(() => later()).observe(st, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-pressed"] }); }
   document.addEventListener("focusin", e => {   // focus inside a panel selects it
     if (!on) return; const el = /** @type {Element} */ (e.target).closest?.(".pnl"); if (!el) return;
     const q = E.panels.find((/** @type {Pannello} */ x) => x.el === el); if (q && q !== E.active) setActive(q);

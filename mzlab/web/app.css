@@ -759,3 +759,4 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 @media (pointer:coarse){#pbar{min-height:44px}#pbar .bt,#pbar select{min-height:44px;min-width:44px}}
 #v-workspace:not([data-work=panels]) #pbar{display:none}
 html[data-pbar] .pnl .tbs .tbg{display:none}
+.pnl .hd .pdots{display:inline-flex;flex:none;align-items:center;gap:4px;margin-left:6px;white-space:nowrap}.pdot{font-size:11px;line-height:16px;padding:0 6px;border:1px solid var(--line);border-radius:10px;color:var(--muted)}.pdot::before{content:"\25CF";margin-right:3px;font-size:8px;color:var(--accent)}

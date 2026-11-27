@@ -58,7 +58,7 @@ try:
             pg.keyboard.press("Backspace"); wait_for_js(pg, M + ".zoom===null")
             pg.keyboard.press("0"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
             pg.mouse.move(*at(.5, .5)); ctrl_wheel(pg, 0, -300); wait_for_js(pg, f"{M}.zoom"); assert z()[0]
-            hd_click(pg, ".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
+            bar(pg, ".pnl.map", "fit"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
         step("box zoom, Backspace = whole view, 0 and the button = whole view", boxz)
         def full():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")

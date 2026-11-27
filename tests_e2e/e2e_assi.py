@@ -53,7 +53,7 @@ try:
             pg.click(".pnl.chrom [data-a=izoom] >> nth=0")                                    # lens off
         step("lens + box zooms x and y together", box_xy)
         def line_y():
-            pg.click(".pnl.chrom [data-a=fit] >> nth=0"); wait_for_js(pg, CH + ".zoom == null && " + CH + ".zoomY == null"); frames(pg, 3)
+            bar(pg, ".pnl.chrom", "fit"); wait_for_js(pg, CH + ".zoom == null && " + CH + ".zoomY == null"); frames(pg, 3)
             x0 = pg.evaluate(f"{CH}._a.x0"); ym = pg.evaluate(f"{CH}._a.ymax")
             u = pt(CH, "p._a.x0", "p._a.ymax*0.8"); v = pt(CH, "p._a.x0", "p._a.ymax*0.1")
             pg.mouse.move(u["x"] - 30, u["y"]); pg.mouse.down(); pg.mouse.move(v["x"] - 30, v["y"], steps=5)
@@ -63,14 +63,14 @@ try:
             assert a["z"] is None and a["zy"] and abs(a["zy"][1] - 0.8 * ym) / ym < 0.06, a
         step("drag on the numbers left of the y axis: line, only y", line_y)
         def line_x():
-            pg.click(".pnl.chrom [data-a=fit] >> nth=0"); wait_for_js(pg, CH + ".zoom == null && " + CH + ".zoomY == null"); frames(pg, 3)
+            bar(pg, ".pnl.chrom", "fit"); wait_for_js(pg, CH + ".zoom == null && " + CH + ".zoomY == null"); frames(pg, 3)
             b = rect(CH); u = pt(CH, "14.0", "0"); v = pt(CH, "14.8", "0"); yy = b["t"] + b["h"] - 14
             pg.mouse.move(u["x"], yy); pg.mouse.down(); pg.mouse.move(v["x"], yy, steps=5)
             assert pg.evaluate(f"(()=>{{const z={CH}.el.querySelector('.zl');return !z.hidden&&z.classList.contains('h')}})()"), "a horizontal line while dragging"
             pg.mouse.up(); wait_for_js(pg, CH + ".zoom"); ready(pg)
             a = pg.evaluate(f"(()=>{{const p={CH};return {{z:p.zoom,zy:p.zoomY}}}})()")
             assert a["z"] and abs(a["z"][0] - 14.0) < 0.1 and abs(a["z"][1] - 14.8) < 0.1 and a["zy"] is None, a
-            pg.click(".pnl.chrom [data-a=fit] >> nth=0")
+            bar(pg, ".pnl.chrom", "fit")
         step("drag on the numbers under the x axis: line, only x", line_x)
         def spec_zoom():
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
@@ -80,7 +80,7 @@ try:
             wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY"); ready(pg)
             a = pg.evaluate(f"(()=>{{const s={SPEC};return {{z:s.zoom,zy:s.zoomY,x0:s._a.x0,x1:s._a.x1}}}})()")
             assert a["z"] and a["zy"] and a["x0"] > s0["x0"] and a["x1"] < s0["x1"], a
-            pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, SPEC + ".zoom == null && " + SPEC + ".zoomY == null")
+            bar(pg, ".pnl.spec", "fit"); wait_for_js(pg, SPEC + ".zoom == null && " + SPEC + ".zoomY == null")
             assert pg.evaluate(f"{SPEC}.zoomY") is None and pg.evaluate(f"{SPEC}.zoom") is None
         step("spectrum: box zoom x+y, reset", spec_zoom)
         def old_notebook():

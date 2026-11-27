@@ -32,7 +32,7 @@ try:
             pg.evaluate("document.querySelector('.pnl.chrom canvas').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); pg.keyboard.press("Escape")
         step("no visible table button; T on the chart still opens the table", buttons)
         def csv():
-            pg.locator(".pnl.chrom [data-a=dl]").first.click()
+            bar(pg, ".pnl.chrom", "dl")
             with pg.expect_download() as d: pg.locator("#ctx div", has_text="CSV").first.click()
             f = d.value; assert f.suggested_filename.endswith(".csv"), f.suggested_filename
             b = open(f.path(), "rb").read(); assert b[:3] == b"\xef\xbb\xbf", "BOM"
