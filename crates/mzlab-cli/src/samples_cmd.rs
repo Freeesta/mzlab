@@ -286,7 +286,7 @@ usage: mzlab-cli sample select FILE (--sample LIST [--ranges] | --default [--bud
   --ranges     with --sample: also the byte ranges of every member that those samples need (`bytes`, `total`, `tag`, `members[].ranges`, `[start, end)`): what the site copies into OPFS, the head of the .wiff.scan, the chosen sections and what follows the indexed part; any other member whole (the same bytes as the site's `sample_ranges`)
   --default    the samples the site's chooser ticks at the start (`sample_default`): every sample with data when their section bytes are small against the budget, none otherwise
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
-  --json       {\"schema\":\"sample-select/1\",\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
+  --json       {\"schema\":\"sample-select/1\",\"samples\":[ids]} on stdout, the ids in the order of the file: `--default` gives the same bytes as the site's `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
 Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, --ranges without --sample, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
