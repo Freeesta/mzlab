@@ -29721,3 +29721,5 @@
 {"v":1,"ts_utc":"2026-11-27T11:23:26Z","azione":"push","titolo":"Picker polish: ratio counter, larger Open selected, silent cancel, neutral Files-list state","merge_main":false,"aree":{"docs":1,"web":8,"test":1},"tipo":"pr","pr":3774,"sha":"5b6908b07c928cbacadcfa9e0e0c71ea4cd68eea"}
 {"v":1,"ts_utc":"2026-11-27T11:39:34Z","azione":"push","titolo":"Record the reader wasm sizes of the honest Method view and move three caps","merge_main":false,"aree":{"docs":1,"tools":3},"tipo":"pr","pr":3786,"sha":"0eec2b87f1c3d5858e1f401cd16afe428e52729d"}
 {"v":1,"ts_utc":"2026-11-27T12:35:25Z","azione":"push","titolo":"Give the wiff pair node test a CONVROWS.set stub","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":3774,"sha":"502c2eda868a1f7d62ee616a2b13415e319a79aa"}
+{"v":1,"ts_utc":"2026-11-27T12:48:54Z","tipo":"conflitto_risolto","pr":3783,"sha":"b0ad5d772d67fdb1df011703b446e01f425e4132"}
+{"v":1,"ts_utc":"2026-11-27T12:53:20Z","tipo":"coda","k":"2026-11-27T12:53:20Z","aperte":12,"indietro":7,"sporche":5,"verdi_in_attesa":0,"piu_vecchia_aperta_s":26005,"piu_vecchia_verde_s":null}
