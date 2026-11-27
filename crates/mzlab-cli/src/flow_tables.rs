@@ -27,8 +27,11 @@ fn unreadable(path: &Path, e: std::io::Error) -> Outcome {
     )
 }
 
+/// `(name, text)` pairs: a table's entry, or the error key of a file that is not a table.
+pub type Named = Vec<(String, String)>;
+
 /// What `flow tables` finds in `dir`: `(name, entry)` of every table and, for files that are not tables, `(name, error_key)`.
-pub fn scan(dir: &Path) -> std::io::Result<(Vec<(String, String)>, Vec<(String, String)>)> {
+pub fn scan(dir: &Path) -> std::io::Result<(Named, Named)> {
     let prov: Option<Value> = std::fs::read(dir.join("prov.json"))
         .ok()
         .and_then(|b| parse(&b).ok());
@@ -53,7 +56,7 @@ pub fn scan(dir: &Path) -> std::io::Result<(Vec<(String, String)>, Vec<(String, 
 }
 
 /// The `tables/1` document of `dir` and the files that could not be read (the app's route `flow/live/tables` answers it; no citation, as the other routes).
-pub fn document_of(dir: &Path) -> std::io::Result<(String, Vec<(String, String)>)> {
+pub fn document_of(dir: &Path) -> std::io::Result<(String, Named)> {
     let (tables, skipped) = scan(dir)?;
     let texts: Vec<String> = tables.into_iter().map(|(_, e)| e).collect();
     Ok((document(&texts, &skipped), skipped))
