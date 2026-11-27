@@ -225,16 +225,14 @@
   }
   /** the saved value of the «Area» toggle of a panel (undefined for the other types) @param {any} p */
   const areaOf = p => panelTr(p) ? p.area !== false : undefined;
-  /** the «Area» button of the toolbar of an MRM / SIM panel @param {string} type */
-  const areaBtn = type => !ESP.mrm({ type }) ? "" : `<button type="button" class="bt tgl" data-a="area" aria-pressed="true" aria-label="${EH(I18N.t("ctl.area.title"))}" title="${EH(I18N.t("ctl.area.title"))}">${EH(I18N.t("ctl.area"))}</button>`;
-  /** @param {any} p */
-  function syncArea(p) { const b = p.el && p.el.querySelector('[data-a="area"]'); if (b) { b.classList.toggle("on", p.area !== false); b.setAttribute("aria-pressed", String(p.area !== false)); } }
-  /** @param {any} p */
-  function wireArea(p) { const b = p.el.querySelector('[data-a="area"]'); if (b) b.onclick = () => { p.area = p.area === false; syncArea(p); draw(p); uiSave(); }; }
+  // the «Area» toggle of the header of an MRM / SIM panel (drawn by AZIONI.bar, azioni-barra.js)
+  AZIONI.register({ id: "panel.area", group: "tools", views: ["chrom", "xic", "mrm"], menu: false, barra: true, scope: "panel", bar: "t", bid: "area", ti: "ctl.area.title", al: "=", tx: () => EH(I18N.t("ctl.area")), cl: "bt tgl", toggle: 1, at: ' type="button"',
+    visible: (/** @type {any} */ c) => !!ESP.mrm({ type: c.view }), checked: (/** @type {any} */ c) => c.p.area !== false, name: () => I18N.t("ctl.area.title"), svg: () => "",
+    run: (/** @type {any} */ c) => { c.p.area = c.p.area === false; AZIONI.refresh(c); draw(c.p); uiSave(); } });
 
   // a file of transitions or SIM ions has no XIC: the same place of the menu holds the ions to extract (a submenu, a check mark each)
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, top, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, top, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
 })();

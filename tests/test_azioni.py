@@ -148,3 +148,40 @@ def test_downloads_of_a_view_come_from_the_registry_not_from_the_menu():
       reg('d1',{menu:false,download:true});reg('d2',{menu:false,download:true,available:c=>c.ok});reg('m');
       console.log(JSON.stringify({menu:AZIONI.forContext({view:'v',ok:true}).map(i=>i.id),dl:AZIONI.downloads({view:'v',ok:false}).map(i=>i.label),dl2:AZIONI.downloads({view:'v',ok:true}).map(i=>i.label)}))""")
     assert r == {"menu": ["m"], "dl": ["d1"], "dl2": ["d1", "d2"]}
+
+
+# the header buttons of a panel (azioni-barra.js): the ids and the order of every kind are those of the old hand-written header
+HEADER = {
+    "chrom": "izoom fit tlink iauto iall iman idel intf iclr smooth log xic dl more max close",
+    "xic": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
+    "mrm": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
+    "spec": "xicb xicl fit rul par rel lock dl more max close",
+    "map": "fit dl more max close",
+}
+
+
+def bar(view, extra=""):
+    js = ("const fs=require('fs');const AZIONI=new Function(fs.readFileSync(%r,'utf8')+';return AZIONI;')();" % str(WEB / "azioni.js")
+          + "global.AZIONI=AZIONI;global.I18N={t:k=>k};global.EH=s=>s;for(const k of ['ZOOM','FIT','SYNC','RULER','UNLOCK','AUTO','MAN','DEL_INT','SMOOTH','DL','FS'])global['IC_'+k]='<svg/>';"
+          + "global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
+          + "const host={innerHTML:'',querySelector:()=>null};const p={type:%r,tl:true,smooth:true,log:false,imode:null};" % view + extra
+          + "AZIONI.bar({view:%r,p},host);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id)}));" % (view, view))
+    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
+
+
+@pytest.mark.parametrize("view", sorted(HEADER))
+def test_header_buttons_are_registry_actions_drawn_in_order(view):
+    r = bar(view)
+    ids = re.findall(r'data-a="(\w+)"', r["html"]) + (["close"] if 'class="x"' in r["html"] else [])
+    assert ids == HEADER[view].split(), "the ids and the order of the old header"
+    assert sorted(i[len("panel."):] for i in r["ids"]) == sorted(HEADER[view].split())
+    assert all(i.startswith("panel.") for i in r["ids"])
+
+
+def test_header_button_state_comes_from_the_panel():
+    tag = lambda html, i: re.search(r'<button[^>]*data-a="%s"[^>]*>' % i, html).group(0)
+    r = bar("chrom", "p.ms2=true;p.log=true;p.tl=false;")
+    assert "disabled" in tag(r["html"], "log") and "disabled" in tag(r["html"], "xic")
+    assert 'aria-pressed="false"' in tag(r["html"], "tlink") and 'class="bt tgs on"' in tag(r["html"], "smooth")
+    r = bar("chrom")
+    assert "disabled" not in tag(r["html"], "log") and 'aria-pressed="true"' in tag(r["html"], "tlink")

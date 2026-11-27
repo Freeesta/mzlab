@@ -20,7 +20,7 @@ const DISP = (() => {
   const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk", "lblOn", "lblOff"];
   COMMANDS.handler("spec.display", {
     read: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
-    apply: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
+    apply: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); AZIONI.refresh({ view: p.type, p }); },
   });
 
   // ---- spectrum: what the ▾ button of the spectrum and the decimals field of the bar had (the low-resolution popover is in spettro.js)
