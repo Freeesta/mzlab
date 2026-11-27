@@ -126,3 +126,13 @@ def test_a_sim_sample_lists_its_cycles_and_only_the_empty_one_says_empty_on_the_
     smp = json.loads(out)["samples"]
     assert [(s["scans"], s.get("kinds"), s.get("why")) for s in smp] == [(5, ["ms"], None), (7, ["sim"], None), (0, None, "empty")], out
     assert smp[1]["size"] > 0
+    assert [s.get("types") for s in smp] == [["Full scan"], ["SIM"], None], out  # the type text of the dialog and of `sample list`: the engine's, the same bytes on both routes
+
+
+def test_a_sample_with_two_scan_types_shows_both_labels_with_the_same_bytes_on_the_site_and_in_the_app(work):
+    """Pair `epi3200` (full scan code 15, enhanced product ion code 11 in ONE sample): `types` lists both once, in experiment order; the wasm leg fails, never skips, in CI."""
+    wiff = work / "ref" / "epi3200.wiff"
+    code, out = site(work, wiff)
+    rc, text, _ = app(wiff)
+    assert code == 0 and rc == 0 and text == out, (code, rc, out, text)
+    assert json.loads(out)["samples"][0]["types"] == ["Full scan", "Enhanced product ion"], out

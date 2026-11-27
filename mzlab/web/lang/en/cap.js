@@ -5,5 +5,16 @@ I18N.add("en", {
   "cap.fn.motore": "Calculation engine",
   "cap.fn.cartella": "Folder of the computer",
   "cap.fn.mappa3d": "3D map",
-  "cap.fn.indiceParallelo": "Parallel indexing of a large file"
+  "cap.fn.indiceParallelo": "Parallel indexing of a large file",
+  "cap.browser.name.safari": "Safari",
+  "cap.browser.name.firefox": "Firefox",
+  "cap.browser.name.other": "this browser",
+  "cap.browser.folder.title": "You are on {browser}: some functions work better in Chrome or Edge",
+  "cap.browser.folder.text": "mzLab runs here, but {browser} cannot keep a pointed folder of your computer, so files are uploaded by hand each time. Chrome and Edge can keep the folder. Everything else works as usual.",
+  "cap.browser.engine.title": "The calculation engine cannot run in {browser}",
+  "cap.browser.engine.text": "The engine needs WebAssembly SIMD and the browser file storage. Update the browser, leave a private window, or use Chrome, Firefox or Edge. The app also works.",
+  "cap.browser.get.chrome": "Download Chrome",
+  "cap.browser.get.firefox": "Download Firefox",
+  "cap.browser.get.edge": "Download Edge",
+  "cap.browser.close": "Close this notice"
 });

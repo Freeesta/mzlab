@@ -55,7 +55,7 @@ try:
             assert "Family" not in heads, heads
             pg.click("#ex-host #ft-t tbody tr"); pg.wait_for_selector("#ex-host .tpt-tabs", timeout=20000)
             tabs = pg.evaluate("[...document.querySelectorAll('#ex-host .tpt-tabs button')].map(t => t.textContent.trim())")
-            assert tabs == ["Overview", "Samples", "Identity", "Quality", "Structure"], tabs
+            assert tabs == ["Overview", "Samples", "Identity", "Quality", "Structure", "Slots"], tabs
         step("without the options the columns and the tabs of the row are the built-in ones", plain)
         pg.context.close()
         pg = fresh(True)
@@ -72,7 +72,7 @@ try:
         def tab():
             pg.click("#ex-host #ft-t tbody tr"); pg.wait_for_selector("#ex-host .tpt-tabs", timeout=20000)
             tabs = pg.evaluate("[...document.querySelectorAll('#ex-host .tpt-tabs button')].map(t => t.textContent.trim())")
-            assert tabs[-1] == "Family" and len(tabs) == 6, tabs
+            assert tabs[-2] == "Family" and tabs[-1] == "Slots" and len(tabs) == 7, tabs
             pg.click("#ex-host .tpt-tabs button[data-tab=fam]")
             lib.wait_for_js(pg, "/family of row \\d/.test(document.querySelector('#ex-host .tpt-body').textContent)")
             pg.click("#ex-host .tpt-tabs button[data-tab=samples]")

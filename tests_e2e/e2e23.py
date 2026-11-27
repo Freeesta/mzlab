@@ -59,7 +59,7 @@ try:
         def menu():
             box = pg.locator("#dpanels .pnl >> nth=0 >> canvas").bounding_box()
             pg.mouse.click(box["x"] + 400, box["y"] + 100, button="right"); pg.wait_for_selector("#ctx:not([hidden])")
-            t = pg.inner_text("#ctx"); assert "Subtract the background of this stretch" in t or "Remove the background of the stretch" in t, t
+            t = pg.inner_text("#ctx"); assert "Subtract background" in t or "Remove background" in t, t
             pg.keyboard.press("Escape")
         step("right-click menu offers the internal blank", menu)
         def spec():

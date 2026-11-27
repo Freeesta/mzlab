@@ -417,5 +417,5 @@
   }
 
   if (!document.getElementById("tpr-css")) { const s = document.createElement("style"); s.id = "tpr-css"; s.textContent = CSS; document.head.appendChild(s); }
-  G.TPRIGA = { tabs: TABS, head, fill, slot, hook, details, texts: TXT, toData: { xic: toDataXic, ms2: toDataMs2 } };
+  G.TPRIGA = { tabs: TABS, head, fill, slot, hook, details, texts: TXT, toData: { xic: toDataXic, ms2: toDataMs2 }, parts: { xic: xicChart, spec: specChart } };
 })();

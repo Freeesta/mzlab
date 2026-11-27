@@ -124,6 +124,7 @@ try:
             wait_for_js(pg, "document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1")
             assert pg.evaluate("document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1"), "the plots are not covered by the target strip"
             pg.mouse.move(750, 300, steps=4); wait_for_js(pg, "document.querySelectorAll('.sb-dz.hot').length === 0")
+            assert pg.locator(".sb-ghost.no").count() == 0 and "Release outside" not in pg.inner_text("body"), "no red cancel tag outside the strips"
             assert pg.evaluate("document.body.dataset.sbShift") == "", "outside the strips: preview back, nothing to drop"
             pg.mouse.up(); wait_for_js(pg, "document.querySelectorAll('.sb-dz').length === 0")
             assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "release outside the strips cancels"
@@ -352,11 +353,11 @@ try:
             assert "Isotope simulation" in pg.inner_text("#pal-l") and "High resolution" in pg.inner_text("#pal-l")
             pg.keyboard.press("Enter"); shown("#hrinfo"); wait_for_js(pg, "BARRA.curTab === 'iso'")
             assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
-            close_side(pg); pg.keyboard.press("Control+k"); pg.keyboard.type("panel on the left"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'left'")
+            close_side(pg); pg.keyboard.press("Control+k"); pg.keyboard.type("panel on left"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'left'")
             assert pg.evaluate("BARRA.side") == "left"
-            pg.keyboard.press("Control+k"); pg.keyboard.type("panel on the right"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
+            pg.keyboard.press("Control+k"); pg.keyboard.type("panel on right"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
             pg.evaluate("BARRA.setSide('left')")
-        step("palette in HR: the HR items are there («Panel on the left / right» too), Enter opens the panel", palette_hr)
+        step("palette in HR: the HR items are there («Panel on left / right» too), Enter opens the panel", palette_hr)
 
         def tastiera():
             pg.evaluate("BARRA.close(false)")

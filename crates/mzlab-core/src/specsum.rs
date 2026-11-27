@@ -1,5 +1,6 @@
 //! `/api/specsum` (`spectrum get --sum`): what a summed spectrum is made of, so that a reader can judge whether it is credible: the scans added, their
-//! total counts (cps summed over scans) per scan type, the ions (counts x fill time, only when the fill time is known) and the ion quantum of the level
+//! total counts (cps summed over scans) per scan type, the ions (counts x fill time: the time `--fill-ms` states for every scan, else the one the file states
+//! for each scan (index version 4, `Scan::fill_ms`), only when every scan has one) and the ion quantum of the level
 //! (`ionstat::quantum`, the one of `raw info`). Read from the index only (the arrays of the section), so the site (the lazy `rawxic` `.wasm`), the app and
 //! the CLI answer the same bytes. Nothing is subtracted: the answer says so (`background.applied`). The scans are chosen here from the section's arrays
 //! (window, level, precursor within 0.6 Da), not by `select_scans`: its filters (`msn:` tree, channels) would add ~65 KB to the lazy `.wasm`, so a channel is not asked of this route.
@@ -12,6 +13,8 @@ use crate::routes::{Query, Routes};
 
 /// The key of the note that says why `ions` is null.
 pub const NO_FILL: &str = "note.spec.sum.noFill";
+/// `NO_FILL` for an index of version 3, which has no fill-time column: the note asks for the index to be built again.
+pub const NO_FILL_OLD: &str = "note.spec.sum.noFillOld";
 /// The key of the note that says why `ions_by_quantum` is null.
 pub const NO_QUANTUM: &str = "note.spec.sum.noQuantum";
 
@@ -27,8 +30,44 @@ pub(crate) fn fill_of(q: &Query) -> Result<Option<f64>> {
     }
 }
 
-/// Per scan type: its key, the scans of that type and their counts.
-type Types = Vec<(String, usize, f64)>;
+/// What a set of scans adds up to: scans, counts (cps), the ions of the scans that state a fill time and how many do.
+#[derive(Default, Clone, Copy)]
+struct Sum {
+    n: usize,
+    cps: f64,
+    ions: f64,
+    timed: usize,
+}
+
+impl Sum {
+    fn add(&mut self, cps: f64, fill_ms: Option<f64>) {
+        self.n += 1;
+        self.cps += cps;
+        if let Some(t) = fill_ms {
+            self.ions += cps * t / 1000.0;
+            self.timed += 1;
+        }
+    }
+
+    /// The ions when every scan states its fill time (`user` states one for all), else none: a part of the scans would understate them.
+    fn ions(&self, user: Option<f64>) -> Option<f64> {
+        match user {
+            Some(t) => Some(self.cps * t / 1000.0),
+            None => (self.n > 0 && self.timed == self.n).then_some(self.ions),
+        }
+    }
+}
+
+/// Per scan type: its key and its sum.
+type Types = Vec<(String, Sum)>;
+
+/// The scans of a window as `tally` finds them: all together, per scan type, and the fill times the file states (count, smallest, largest, total in ms).
+#[derive(Default)]
+pub(crate) struct Tally {
+    all: Sum,
+    types: Types,
+    fills: (f64, f64, f64),
+}
 
 impl<R: ReadAt> Routes<R> {
     /// `/api/specsum?rt0=A&rt1=B[&level=N][&precursor=P][&fill_ms=T]`: the evidence of the summed spectrum of the window, `None` when
@@ -63,14 +102,10 @@ impl<R: ReadAt> Routes<R> {
         let prec = (precursor, 0.6);
         let probe = self.probe(level, crate::rawxic::PROBE)?;
         let quant = crate::rawinfo::quantum_of(Some(&probe)).filter(|q| q.accepted);
-        let (n, total, types) = self.tally(level, (lo, hi), prec)?;
-        Ok(answer(
-            level,
-            fill,
-            (n, total, &types),
-            (&probe, quant),
-            background,
-        ))
+        let t = self.tally(level, (lo, hi), prec)?;
+        // an index of version 3 has no fill-time column: the note asks for it to be built again
+        let old = self.idx.version < 4;
+        Ok(answer(level, (fill, old), &t, (&probe, quant), background))
     }
 
     /// The scans of a window of one level (inside it and, for a product-ion level, near the precursor): how many, their counts, and the same per scan type
@@ -80,11 +115,13 @@ impl<R: ReadAt> Routes<R> {
         level: u8,
         (lo, hi): (f64, f64),
         (precursor, tol): (Option<f64>, f64),
-    ) -> Result<(usize, f64, Types)> {
-        let mut types: Types = Vec::new();
-        let (mut n, mut total) = (0usize, 0.0f64);
+    ) -> Result<Tally> {
+        let mut t = Tally {
+            fills: (f64::INFINITY, 0.0, 0.0),
+            ..Tally::default()
+        };
         let Some(si) = self.idx.section_of(level, self.pol) else {
-            return Ok((n, total, types));
+            return Ok(t);
         };
         let want = if level > 1 { precursor } else { None };
         let (ar, scans) = self.idx.arrays_scans(si)?;
@@ -96,18 +133,21 @@ impl<R: ReadAt> Routes<R> {
             {
                 continue;
             }
-            let (key, c) = (scan_type(s), ar.sumint[j]);
-            n += 1;
-            total += c;
-            match types.iter_mut().find(|t| t.0 == key) {
-                Some(t) => {
-                    t.1 += 1;
-                    t.2 += c;
+            let (key, c, f) = (scan_type(s), ar.sumint[j], s.fill_ms());
+            t.all.add(c, f);
+            if let Some(f) = f {
+                t.fills = (t.fills.0.min(f), t.fills.1.max(f), t.fills.2 + f);
+            }
+            match t.types.iter_mut().find(|k| k.0 == key) {
+                Some(k) => k.1.add(c, f),
+                None => {
+                    let mut m = Sum::default();
+                    m.add(c, f);
+                    t.types.push((key, m));
                 }
-                None => types.push((key, 1, c)),
             }
         }
-        Ok((n, total, types))
+        Ok(t)
     }
 }
 
@@ -150,15 +190,14 @@ pub(crate) fn scan_type(s: &Scan) -> String {
     o
 }
 
-/// The answer text (see the module header for the keys).
+/// The answer text (see the module header for the keys). `fill`: the time the user states (ms) and whether the index is of version 3.
 fn answer(
     level: u8,
-    fill: Option<f64>,
-    (n, total, types): (usize, f64, &Types),
+    (fill, old): (Option<f64>, bool),
+    t: &Tally,
     (probe, quant): (&crate::rawinfo::Probe, Option<crate::ionstat::Quantum>),
     background: &str,
 ) -> String {
-    let ions = |counts: f64, ms: Option<f64>| ms.map(|t| counts * t / 1000.0);
     let opt = |o: &mut Out, v: Option<f64>| match v {
         Some(v) => {
             o.num(round(v, 1));
@@ -170,29 +209,49 @@ fn answer(
     let mut o = Out::default();
     o.raw("{\"mode\":\"sum\",\"ms_level\":")
         .int(i64::from(level));
-    o.raw(",\"n_scans\":").int(n as i64);
-    o.raw(",\"counts_cps\":").num(round(total, 1));
+    o.raw(",\"n_scans\":").int(t.all.n as i64);
+    o.raw(",\"counts_cps\":").num(round(t.all.cps, 1));
     o.raw(",\"fill_time\":{\"ms\":");
+    let ions = t.all.ions(fill);
     match fill {
-        Some(t) => o.num(t).raw(",\"source\":\"user\",\"note\":null"),
-        None => o.raw("null,\"source\":\"none\",\"note\":").str(NO_FILL),
+        Some(f) => o.num(f).raw(",\"source\":\"user\",\"note\":null"),
+        // the file's times: the mean, the range and how many scans state one; the note says why when some or all lack it
+        None if t.all.timed > 0 => {
+            let (lo, hi, sum) = t.fills;
+            o.num(round(sum / t.all.timed as f64, 3))
+                .raw(",\"source\":\"file\",\"min_ms\":")
+                .num(round(lo, 3))
+                .raw(",\"max_ms\":")
+                .num(round(hi, 3))
+                .raw(",\"n_timed\":")
+                .int(t.all.timed as i64)
+                .raw(",\"note\":");
+            match ions {
+                Some(_) => o.raw("null"),
+                None => o.str(NO_FILL),
+            }
+        }
+        None => {
+            o.raw("null,\"source\":\"none\",\"note\":")
+                .str(if old { NO_FILL_OLD } else { NO_FILL })
+        }
     };
     o.raw("},\"ions\":");
-    opt(&mut o, ions(total, fill));
+    opt(&mut o, ions);
     o.raw(",\"by_scan_type\":[");
-    for (i, (k, c, s)) in types.iter().enumerate() {
+    for (i, (k, m)) in t.types.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).raw("{\"scan_type\":");
-        o.str(k).raw(",\"n_scans\":").int(*c as i64);
+        o.str(k).raw(",\"n_scans\":").int(m.n as i64);
         o.raw(",\"counts_cps\":")
-            .num(round(*s, 1))
+            .num(round(m.cps, 1))
             .raw(",\"ions\":");
-        opt(&mut o, ions(*s, fill));
+        opt(&mut o, m.ions(fill));
         o.raw("}");
     }
     o.raw("],\"ion_quantum\":")
         .raw(&crate::rawinfo::quantum_json(Some(probe)));
     o.raw(",\"ions_by_quantum\":");
-    opt(&mut o, quant.map(|q| total / q.q));
+    opt(&mut o, quant.map(|q| t.all.cps / q.q));
     o.raw(",\"ions_by_quantum_note\":");
     match quant {
         Some(_) => o.raw("null"),

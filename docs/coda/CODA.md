@@ -22,7 +22,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
-| LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
@@ -33,21 +32,21 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | FLOW-TABLE-DISK | `docs/coda/prompt/FLOW-TABLE-DISK.md` | - | the facts (rows, files, polarity) of a `.mzfeat` opened from disk in the Flow list, from a head slice and `table_entry` |
 | FLOW-TABLE-FINAL | `docs/coda/prompt/FLOW-TABLE-FINAL.md` | - | mzflow 2b: mark one feature table of the Flow list as the final one; the choice is kept and logged |
-| FEATURE-DETAIL | `docs/coda/prompt/FEATURE-DETAIL.md` | - | mzflow 3: the feature view with fixed slots; `feature-slots/1`, `table slots` |
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
 | KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
-| FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | FEATURE-DETAIL | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
+| FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | - | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
 | ROW-ORIGIN | `docs/coda/prompt/ROW-ORIGIN.md` | - | mzflow 7: opt-in origin of each row of `features.union` |
-| FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | FEATURE-DETAIL | mzflow 8: the UV-Vis slot, `table uv` |
+| FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | - | mzflow 8: the UV-Vis slot, `table uv` |
 | MS2-LINK-FILES | `docs/coda/prompt/MS2-LINK-FILES.md` | - | mzflow 9: an executor for `features.ms2_link`, dedicated MS2 files, manual link and unlink |
 | LINK-PILLARS | `docs/coda/prompt/LINK-PILLARS.md` | KINETIC-CLASS | mzflow 10: step `tp.pillars`, the three pillars of the parent-TP link |
-| FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | FEATURE-DETAIL | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
+| FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | - | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
+| SLOTS-SOURCE-STEP | `docs/coda/prompt/SLOTS-SOURCE-STEP.md` | - | `feature-slots/1` names the exact step and output of each slot, not the step by kind; the page passes the table name |
 | INSTRUMENT-PRESETS | `docs/coda/prompt/INSTRUMENT-PRESETS.md` | - | mzflow 12: detection presets named after the instrument (+-0.5 Da, +-5 ppm) |
 | POLPAIR-CLI | `docs/coda/prompt/POLPAIR-CLI.md` | - | mzflow 13: CLI and app route for the wasm `cross_polarity` (`polpair/1`) |
 | AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
 | TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
 | AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
-| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FEATURE-DETAIL | mzflow 17 (v2): a read-only phone view of tables and one feature |
+| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | - | mzflow 17 (v2): a read-only phone view of tables and one feature |
 | SUSPECT-GEN3 | `docs/coda/prompt/SUSPECT-GEN3.md` | - | mzflow 18 (v2): `tp.generate` up to 3 generations, editable rule list |
 | BIOTRANSFORMER-IO | `docs/coda/prompt/BIOTRANSFORMER-IO.md` | - | mzflow 19 (v2): BioTransformer by file exchange |
 | ECOSAR-IO | `docs/coda/prompt/ECOSAR-IO.md` | - | mzflow 20 (v2): ECOSAR by file exchange |
@@ -78,13 +77,24 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
-| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | - | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states; decided 26 Nov: new index format version with a fill-time column, old indexes readable plus a rebuild hint |
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
 | MS2-PEAK-HR-NOISE | `docs/coda/prompt/MS2-PEAK-HR-NOISE.md` | - | `spectrum get --peak auto` at a high-resolution level keeps every unmatched noise line above zero (about 1,600 lines on a synthetic Orbitrap parent peak); a net-intensity floor as a `--set` parameter with its default printed |
-| WIFF-PICK-INDEX-AHEAD | `docs/coda/prompt/WIFF-PICK-INDEX-AHEAD.md` | - | follow-up of the sample copy-ahead: build the `.mzidx` of a ticked sample while the dialog is open (needs an index name that does not depend on the final choice, or a rename op) |
 | CLICK-DRAG-ONE-TRACE | `docs/coda/prompt/CLICK-DRAG-ONE-TRACE.md` | - | a manual drag window on a SIM/MRM panel integrates only the trace under the pointer, as the click does; all channels become an explicit action |
 | CLICK-HR-GUARD | `docs/coda/prompt/CLICK-HR-GUARD.md` | - | the click on a high-resolution trace gets the same refusal guard and evidence as the low-resolution click, and the guard S/N matches the S/N of the table |
 | CLICK-LABEL-HOVER | `docs/coda/prompt/CLICK-LABEL-HOVER.md` | needs owner decision: whether overlaid panels label only the selected or hovered integration | hover shows the area label of an integration on crowded overlaid traces (owner decides: selected-only labels), and a keyboard action integrates all channels at the cursor time |
+| PANEL-DRAG-SCROLL | `docs/coda/prompt/PANEL-DRAG-SCROLL.md` | - | the page scrolls near the window edge while a panel handle is dragged, so a panel can be dropped past the visible part of a long stack |
 | APP-SIGN-NOTARISE | `docs/coda/prompt/APP-SIGN-NOTARISE.md` | needs owner decision: Apple Developer account and notarisation credentials, Windows signing service | sign and notarise the Mac app (and sign the Windows installer) of `app-prebuilt` in the same build |
 | APP-ROLLING-NOTICE | `docs/coda/prompt/APP-ROLLING-NOTICE.md` | - | an installed app says when `app-prebuilt` holds a newer commit than the running binary (opt-in, once a day, silent on error) |
+| BROWSER-NOTICE-REAL | `docs/coda/prompt/BROWSER-NOTICE-REAL.md` | needs owner decision: a real Safari test needs Federico's Mac (and a Firefox install) | try the closable browser notice in real Safari and Firefox, not only Chromium with `?cap-off=` |
+| EMPTY-HINT-FILES | `docs/coda/prompt/EMPTY-HINT-FILES.md` | - | follow-up of the empty-panel hint: the arrow also points at the side-bar file list (no file ticked) and at the XIC input; `empty-hint.js` accepts a control outside the panel |
+| EMPTY-HINT-SPECTRUM | `docs/coda/prompt/EMPTY-HINT-SPECTRUM.md` | - | follow-up of the empty-panel hint: spectrum («choose a time range») and map (no scans) panels use the same prompt, with an arrow to the chromatogram that holds the choice |
+| MENU-LABELS-LEFTOVERS | `docs/coda/prompt/MENU-LABELS-LEFTOVERS.md` | - | short wording (no articles) for aria names of menu entries, dialog and side-panel button labels, and help text that quotes an old entry name |
+| WIFF-OPEN-INSTANT | `docs/coda/prompt/WIFF-OPEN-INSTANT.md` | - | after the index ahead, Open selected still opens each index in the engine (`lrOpen`, `native_attach`, about 240 ms for 4 samples): open it while the dialog is open so Open is instant |
+| PBAR-REGISTRY-BUTTONS | `docs/coda/prompt/PBAR-REGISTRY-BUTTONS.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: every panel header button becomes an action of the `actions/1` registry, drawn by one renderer, the header looking and testing exactly as today |
+| PBAR-SKELETON | `docs/coda/prompt/PBAR-SKELETON.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: a shared panel bar `#pbar` and the selection model, behind an off-by-default setting `qqq.pbar` |
+| PBAR-MOVE-COMMON | `docs/coda/prompt/PBAR-MOVE-COMMON.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: the buttons common to all kinds (fit, download, ruler, log, smoothing, zoom link, expand) work from `#pbar` and leave the header when the setting is on |
+| PBAR-MOVE-SPECIFIC | `docs/coda/prompt/PBAR-MOVE-SPECIFIC.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: the kind-specific buttons (integration set, XIC, peak picking, axis lock, % and the SIM area) move to `#pbar`, grouped per kind |
+| PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
+| PBAR-PHONE-KEYS | `docs/coda/prompt/PBAR-PHONE-KEYS.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: the bar at 390 px and its keyboard use |
+| PBAR-MENU-SCOPE | `docs/coda/prompt/PBAR-MENU-SCOPE.md` | needs owner decision: panel toolbar design (docs/studies/PANEL_TOOLBAR_STUDY.md) | panel toolbar slice: one right-click menu per panel kind built from the registry with `scope` (point or panel), groups, keys and the same commands as the bar |

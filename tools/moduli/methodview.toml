@@ -1,6 +1,6 @@
 uscita = "wasm-feat/methodview"
 pacchetto = "mzlab-methodview-wasm"
-chiavi = { methodview = 39 }
+chiavi = { methodview = 40 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 98304

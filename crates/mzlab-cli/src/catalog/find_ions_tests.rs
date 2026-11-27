@@ -13,6 +13,10 @@ fn the_ions_of_a_trace_and_its_noise_are_found_from_the_task() {
             "noise of an ion counting trace with a floor of one ion",
             "peak noise",
         ),
+        (
+            "how many ions is this summed ms2 spectrum made of, the fill time is in the file",
+            "spectrum get",
+        ),
     ] {
         let got: Vec<String> = search(&words(q))
             .into_iter()

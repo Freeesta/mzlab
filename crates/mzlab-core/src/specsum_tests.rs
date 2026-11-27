@@ -5,13 +5,18 @@
 use crate::idxread::Index;
 use crate::json::{parse, Value};
 use crate::mzml::Spectrum;
-use crate::mzmlwrite::{Header, MzmlWriter};
+use crate::mzmlwrite::{CvPar, Header, MzmlWriter, SpectrumExtra};
 use crate::routes::{Query, Routes};
 
 const Q: f64 = 200.0;
 
 /// 100 product-ion scans (precursor 250.3) every 0.02 min from 1.0: ions of `Q` cps, 1 at m/z 100.3 and 2 more at m/z 150.3 on every second scan.
 fn routes() -> Routes<Vec<u8>> {
+    routes_with(|_| None)
+}
+
+/// `routes` where scan `i` states the fill time `fill(i)` (ms) as `MS:1000927` of its scan, as a Thermo mzML does.
+fn routes_with(fill: impl Fn(usize) -> Option<f64>) -> Routes<Vec<u8>> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -33,7 +38,14 @@ fn routes() -> Routes<Vec<u8>> {
             intensity: vec![Q as f32, if i % 2 == 0 { 2.0 * Q as f32 } else { 0.0 }],
             ..Default::default()
         };
-        w.spectrum(&s).unwrap();
+        let extra = SpectrumExtra {
+            scan_params: fill(i)
+                .map(|t| CvPar::new("MS:1000927", "ion injection time", t))
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        };
+        w.spectrum_with(&s, &extra).unwrap();
     }
     w.close_spectra().unwrap();
     let b = w.finish().unwrap();
@@ -194,4 +206,83 @@ fn the_scan_type_of_the_split_is_the_key_of_the_scan() {
             s.filter
         );
     }
+}
+
+/// Scans 25..49 of `routes` are in the window below: 12 even ones of 600 cps and 13 odd ones of 200 cps.
+const WIN: &str = "rt0=1.49&rt1=1.99&level=2";
+
+#[test]
+fn the_ions_come_from_the_fill_time_each_scan_states_and_fill_ms_overrides_it() {
+    let mut r = routes_with(|i| Some(if i % 2 == 0 { 10.0 } else { 50.0 }));
+    let v = ask(&mut r, "/api/specsum", WIN).unwrap();
+    // 12 scans of 600 cps x 10 ms and 13 of 200 cps x 50 ms
+    assert_eq!(v.get("ions").unwrap().f64(), Some(12.0 * 6.0 + 13.0 * 10.0));
+    let f = v.get("fill_time").unwrap();
+    assert_eq!(f.get("source").unwrap().str(), Some("file"));
+    assert_eq!(f.get("note"), Some(&Value::Null));
+    assert_eq!(
+        f.get("ms").unwrap().f64(),
+        Some((12.0 * 10.0 + 13.0 * 50.0) / 25.0)
+    );
+    assert_eq!(
+        (
+            f.get("min_ms").unwrap().f64(),
+            f.get("max_ms").unwrap().f64(),
+            f.get("n_timed").unwrap().f64()
+        ),
+        (Some(10.0), Some(50.0), Some(25.0))
+    );
+    let t = &v.get("by_scan_type").unwrap().arr()[0];
+    assert_eq!(t.get("ions").unwrap().f64(), Some(202.0));
+    // the user's time wins for every scan and says so
+    let v = ask(&mut r, "/api/specsum", &format!("{WIN}&fill_ms=100")).unwrap();
+    let total = 12.0 * 600.0 + 13.0 * 200.0;
+    assert_eq!(v.get("ions").unwrap().f64(), Some(total * 0.1));
+    let f = v.get("fill_time").unwrap();
+    assert_eq!(
+        (f.get("source").unwrap().str(), f.get("ms").unwrap().f64()),
+        (Some("user"), Some(100.0))
+    );
+}
+
+#[test]
+fn ions_are_not_counted_when_only_some_scans_state_a_fill_time() {
+    let mut r = routes_with(|i| (i % 2 == 0).then_some(10.0));
+    let v = ask(&mut r, "/api/specsum", WIN).unwrap();
+    assert_eq!(v.get("ions"), Some(&Value::Null));
+    let f = v.get("fill_time").unwrap();
+    assert_eq!(f.get("source").unwrap().str(), Some("file"));
+    assert_eq!(f.get("n_timed").unwrap().f64(), Some(12.0));
+    assert_eq!(f.get("note").unwrap().str(), Some(super::specsum::NO_FILL));
+}
+
+#[test]
+fn an_index_of_version_3_keeps_ions_null_and_asks_for_a_rebuild() {
+    // what the writer of version 3 gave: the same rows with no fill-time column, and the version 3 header
+    let mut old = routes().idx.r.clone();
+    assert_eq!(old[8..12], 4u32.to_le_bytes());
+    old[8..12].copy_from_slice(&3u32.to_le_bytes());
+    let n = old.len() as u64;
+    let mut r = Routes::new(Index::open(old, n).unwrap());
+    assert_eq!(r.idx.version, 3);
+    let v = ask(&mut r, "/api/specsum", WIN).unwrap();
+    assert_eq!(v.get("ions"), Some(&Value::Null));
+    let f = v.get("fill_time").unwrap();
+    assert_eq!(f.get("source").unwrap().str(), Some("none"));
+    assert_eq!(
+        f.get("note").unwrap().str(),
+        Some(super::specsum::NO_FILL_OLD)
+    );
+    // and --fill-ms still counts them
+    let v = ask(&mut r, "/api/specsum", &format!("{WIN}&fill_ms=50")).unwrap();
+    assert!(v.get("ions").unwrap().f64().is_some());
+}
+
+#[test]
+fn a_file_without_fill_times_has_a_version_4_index_and_the_plain_note() {
+    let mut r = routes();
+    assert_eq!(r.idx.version, 4);
+    let v = ask(&mut r, "/api/specsum", WIN).unwrap();
+    let f = v.get("fill_time").unwrap();
+    assert_eq!(f.get("note").unwrap().str(), Some(super::specsum::NO_FILL));
 }

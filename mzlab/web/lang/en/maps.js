@@ -64,7 +64,7 @@ I18N.add("en", {
   "mapnav.h.2d.sight": "Sight (crosshair, XIC and spectrum at the margins)|Move the pointer; Shift held while you move it (no button down) locks it on a row (same m/z) or a column (same RT) picked by the first pixels|Move the pointer|Tap|M; arrows move it (Shift = next apex or peak)",
   "mapnav.h.2d.lock": "Lock or unlock the sight|Padlock button; menu|Padlock button; menu|Padlock button; long press = menu|L; Esc unlocks",
   "mapnav.h.2d.menu": "Menu with every command|Right click|Click with two fingers|Long press|Menu key or Shift + F10",
-  "mapnav.h.2d.extract": "Extract the XIC or the spectrum|Menu: XIC or Spectrum from the point|Menu|Menu (long press)|Ctrl/⌘ K: «XIC from the map»; Shift + right click = XIC with its own window",
+  "mapnav.h.2d.extract": "Extract the XIC or the spectrum|Menu: XIC or Spectrum from the point|Menu|Menu (long press)|Ctrl/⌘ K: «XIC from map»; Shift + right click = XIC with its own window",
   "mapnav.h.2d.interval": "Spectrum of an RT interval|Alt + drag|Alt + drag|–|–",
   "mapnav.h.2d.axis": "Move along one axis only|Hold Shift while dragging a box or a marked point; to move the view Ctrl/⌘ + Shift + drag: the axis is chosen from the first pixels|Same as the mouse|–|X or Shift + X = RT only, Y or Shift + Y = m/z only (again or Esc = free)",
   "mapnav.h.2d.mark": "Mark a point|«Mark», then click|«Mark», then click|«Mark», then tap|S; Delete removes",

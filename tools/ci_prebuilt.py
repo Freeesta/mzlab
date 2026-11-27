@@ -24,6 +24,7 @@ GROUPS = {
         "build -p mzlab-core --example mzidx",
         "build -p mzlab-feat-wasm --example native",
         "build -p mzlab-feat-table-wasm --example table",
+        "build -p mzlab-feat-slots-wasm --example slots",
         "build -p mzlab-feat-wasm --example estimate_detect",
         "build -p mzlab-feat-wasm --example read_estimate",
         "build -p mzlab-lettori --features tutte --example synthetic",
@@ -32,7 +33,7 @@ GROUPS = {
     ],
     "wasm-a": [f"build --target {WASM} -p {p}" for p in (
         "mzlab-wasm", "mzlab-rotte-wasm", "mzlab-feat-wasm", "mzlab-feat-table-wasm", "mzlab-feat-grafo-wasm", "mzlab-feat-import-wasm", "mzlab-lib-wasm", "mzlab-llm-wasm",
-        "mzlab-mol-wasm", "mzlab-msngrafo-wasm", "mzlab-msnregole-wasm", "mzlab-normative-wasm", "mzlab-ticfondo-wasm", "mzlab-pack-wasm", "mzlab-raw-wasm", "mzlab-rawxic-wasm", "mzlab-rawscan-wasm", "mzlab-rawiso-wasm", "mzlab-specpeak-wasm", "mzlab-flowcal-wasm", "mzlab-filemethod-wasm", "mzlab-ionfacts-wasm", "mzlab-methodview-wasm")] + [
+        "mzlab-mol-wasm", "mzlab-msngrafo-wasm", "mzlab-msnregole-wasm", "mzlab-normative-wasm", "mzlab-ticfondo-wasm", "mzlab-pack-wasm", "mzlab-raw-wasm", "mzlab-rawxic-wasm", "mzlab-rawscan-wasm", "mzlab-rawiso-wasm", "mzlab-specpeak-wasm", "mzlab-flowcal-wasm", "mzlab-filemethod-wasm", "mzlab-ionfacts-wasm", "mzlab-methodview-wasm", "mzlab-feat-slots-wasm")] + [
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features finder",
         f"build --target {WASM} -p mzlab-feat-wasm --features untargeted",
         f"build --target {WASM} -p mzlab-feat-wasm --no-default-features --features flow_compare",

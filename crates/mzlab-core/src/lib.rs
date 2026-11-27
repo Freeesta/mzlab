@@ -60,6 +60,7 @@ pub mod blocks;
 mod idxcheck;
 pub mod idxread;
 mod idxrows;
+mod idxscan;
 mod readat;
 pub mod idxsearch;
 pub mod idxsource;

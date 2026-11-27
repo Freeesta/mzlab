@@ -2436,6 +2436,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-feat-slots-wasm"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "mzlab-feat",
+ "mzlab-ops",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-feat-table-wasm"
 version = "1.0.0"
 dependencies = [

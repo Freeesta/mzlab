@@ -97,12 +97,26 @@
     FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
   }
 
+  /** WCAG relative luminance and contrast of [r,g,b] triples (0-255) @param {number[]} a */
+  const lumOf = a => a.map((v, k) => { v /= 255; return (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][k]; }).reduce((x, y) => x + y);
+  /** @param {number[]} a @param {number[]} b */
+  const crOf = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  /** @param {string} s */
+  const hexOf = s => { const m = /^#([0-9a-f]{6})$/i.exec((s || "").trim()); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+  /** the border of a key box is the key colour itself; only a colour under 3:1 against the popup (a pale yellow in light mode) is moved toward the text colour in 5% steps, as little as it takes
+   * @param {string} c a #rrggbb key colour @returns {string} */
+  function keyBorder(c) {
+    const k = hexOf(c), cs = getComputedStyle(document.documentElement), pn = hexOf(cs.getPropertyValue("--panel")), ink = hexOf(cs.getPropertyValue("--ink"));
+    if (!k || !pn || !ink) return c;
+    for (let t = 0; t <= 100; t += 5) { const m = k.map((v, i) => Math.round(v + (ink[i] - v) * t / 100)); if (t === 100 || crOf(m, pn) >= 3) return t ? "#" + m.map(v => v.toString(16).padStart(2, "0")).join("") : c; }
+    return c;
+  }
   /** the checkbox of a picker row carries the line of its trace: the box border (unticked) or fill (ticked) is the colour, a dashed border marks a dashed trace, a light colour is flagged (data-lt) so the tick is dark; "" for a channel never drawn
    * @param {any} p @param {string} key */
   function ckLook(p, key) {
     const l = p._look && p._look[key]; if (!l) return "";
-    const m = /^#([0-9a-f]{6})$/i.exec(l.c || ""), lum = m ? [0, 2, 4].map((i, k) => { const v = parseInt(m[1].slice(i, i + 2), 16) / 255; return (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][k]; }).reduce((a, b) => a + b) : 0;
-    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}"${lum > 0.179 ? " data-lt" : ""} style="--tk:${EH(l.c || "currentColor")}"`;      // a light fill (WCAG luminance above 0.179) takes a dark tick
+    const k = hexOf(l.c || ""), lum = k ? lumOf(k) : 0;
+    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}"${lum > 0.179 ? " data-lt" : ""} style="--tk:${EH(l.c || "currentColor")};--tkb:${EH(k ? keyBorder(l.c) : l.c || "currentColor")}"`;      // a light fill (WCAG luminance above 0.179) takes a dark tick
   }
   /** the tallest trace under the mouse (its tooltip row is the first), by its place among the series of the drawing: drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {number | null} idx */
   function top(p, idx) {

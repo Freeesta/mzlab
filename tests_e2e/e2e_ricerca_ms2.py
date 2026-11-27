@@ -1,4 +1,4 @@
-"""«What is it?»: the voice of the menu exists only for high-resolution MS2 spectra; identity and analogs together, level and evidence, stereoisomer groups,
+"""«Identify in libraries»: the voice of the menu exists only for high-resolution MS2 spectra; identity and analogs together, level and evidence, stereoisomer groups,
 the decision of the chemist (2b only there), the lines of the mirror (pairs of the golden file of Attributio), the thresholds; the master/detail window (layout at
 1280 px, sorting, Options, download, 2D structure, hover, keyboard, axe)."""
 # covers: mzlab/web/libreria, mzlab/web/mol-svg.js, mzlab/web/livelli
@@ -32,11 +32,11 @@ try:
         def open_menu():
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
-            assert "What is it?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
-        step("the MS2 panel of the DDA trio has the voice «What is it? (search the libraries)»", open_menu)
+            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Identify in libraries\")")
+            assert "Identify in libraries" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+        step("the MS2 panel of the DDA trio has the voice «Identify in libraries»", open_menu)
         def result():
-            pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analogs \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
+            pg.click("#ctx >> text=Identify in libraries"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analogs \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
             t = pg.inner_text("#libwhat")
             assert "Candidates (" in t and "Analogs (" in t, t[:300]
             names = pg.locator("#libwhat tr.row[data-k=id]:not([hidden]) td:nth-child(1)").all_inner_texts()
@@ -181,8 +181,8 @@ try:
             assert pg.evaluate(f"LIB.isHr({SPEC})") is False
             c = pg.evaluate(f"(() => {{ const p = {SPEC}; p.el.scrollIntoView({{block:'center'}}); const q = p.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             pg.mouse.click(c["x"], c["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.trim() !== ''")
-            t = pg.inner_text("#ctx"); assert "What is it?" not in t, t
-        step("low resolution: the voice «What is it?» does not exist (the program gives no answers)", lr_none)
+            t = pg.inner_text("#ctx"); assert "Identify in libraries" not in t, t
+        step("low resolution: the voice «Identify in libraries» does not exist (the program gives no answers)", lr_none)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

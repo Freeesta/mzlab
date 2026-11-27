@@ -21,9 +21,16 @@ function css() {
 // the line for one function: "{function}: not available in this browser. Use the app" + the link
 const line = (/** @type {string} */ funzione) => `${ESC(t("cap.missing", { funzione: t(`cap.fn.${funzione}`) }))} <a href="${APP}" target="_blank" rel="noopener noreferrer">${ESC(t("cap.app"))}</a>`;
 
+/** The closable browser notice (avviso-browser.js, lazy): loaded only when the engine or the folder picker is missing, never in the app.
+ * Called at load by capacita.js and by `segnala` (a capacity a worker reports later). */
+export function aviso(/** @type {any} */ cap) {
+  if (!g.MZLAB_DESKTOP && cap && (cap.stato("motore") === "no" || cap.stato("cartella") === "no")) import("./avviso-browser.js").then(m => m.valuta(cap)).catch(() => {});
+}
+
 /** Shows the notice for `funzione`; `comando` (if any) is marked aria-disabled and gets the note right after it. */
 export function segnala(/** @type {string} */ funzione, /** @type {HTMLElement | null} */ comando = null) {
   if (typeof document === "undefined" || !document.body) return;
+  aviso(g.CAPACITA);
   css();
   const id = "cap-note-" + funzione;
   if (comando) {

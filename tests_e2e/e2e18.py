@@ -1,4 +1,4 @@
-"""One XIC window (from/to with automatic "to", "or", neutral formula), right-click menu with "Reset the zoom", header button groups, xlsx exports."""
+"""One XIC window (from/to with automatic "to", "or", neutral formula), right-click menu with "Reset zoom", header button groups, xlsx exports."""
 # covers: mzlab/web/xlsx.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -57,19 +57,19 @@ try:
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_function("document.querySelectorAll('#ctx div').length>0", timeout=5000)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
-            assert any(i[0] == "Extract an ion (XIC)…" for i in items), items
+            assert any(i[0] == "Extract ion (XIC)…" for i in items), items
             assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]')") is None, "no zoom yet: the entry is not shown"
-            pg.locator("#ctx div", has_text="Extract an ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
+            pg.locator("#ctx div", has_text="Extract ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); wait_for_js(pg, f"!!E.panels[{ci}].zoom")
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0][0].startswith("RT") and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", items          # with a zoom it works
-            pg.locator("#ctx div", has_text="Reset the zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
+            pg.locator("#ctx div", has_text="Reset zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
-        step("right click on the chromatogram: Extract an ion (same window), Reset the zoom", chrom_menu)
+        step("right click on the chromatogram: Extract ion (same window), Reset zoom", chrom_menu)
         def guard():
             c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); wait_for_js(pg, "!!document.querySelector('#askdlg').open")
@@ -80,7 +80,7 @@ try:
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
             pg.mouse.click(a["px"], a["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            pg.locator("#ctx div", has_text="Extract the XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            pg.locator("#ctx div", has_text="Extract XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not dlg(), "no dialog: the XIC appears at once"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)

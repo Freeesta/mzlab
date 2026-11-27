@@ -318,10 +318,10 @@ async function drawLines(p) {
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
   if (!sr.length) {
-    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : ESP.mrm(p) && Array.isArray(p.tr) && !p.tr.length ? I18N.t("canali.pick.none.msg") : msgOf(p), M.l, 30);
+    g.clearRect(0, 0, W, H); ((/** @type {any} */ (window)).EMPTYHINT ||= await import("./empty-hint.js")).empty(p, g, all.length, msgOf(p), M.l);      // all hidden: a line on the canvas; else a prompt and an arrow to what to choose
     p._a = null; if (all.length) legend(p, all); else { p.leg.innerHTML = ""; if (p.corrbar) p.corrbar.innerHTML = ""; } return;
   }
-  let lo = Infinity, hi = -Infinity;
+  /** @type {any} */ (window).EMPTYHINT?.clear(p); let lo = Infinity, hi = -Infinity;
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
   p._own = [lo, hi];
   if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own

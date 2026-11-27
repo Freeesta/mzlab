@@ -182,15 +182,23 @@
     if (only && !raw.length) return "";
     const tree = only ? raw : msTree(raw, cx || null), sel = ticked(p, tree), open = !!p._canOpen, sim = only && isSim(tree);
     // the how-to reaches screen readers (aria-describedby) and the hover text of the list; on screen the rows speak for themselves
-    const hint = `can-hint-${EH(String(p.id))}`, nTr = tree.filter(isTr).length, tools = only ? `<div class="can-tb"><span class="can-hint sr-only" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === nTr}">${EH(T("canali.pick.all"))}</button><button type="button" class="sec sm can-none" aria-label="${EH(T("canali.pick.none.aria"))}" aria-pressed="${!sel.size}">${EH(T("canali.pick.none"))}</button></div>` : "";
-    const head = sim || ms2 ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
+    const hint = `can-hint-${EH(String(p.id))}`, nTr = tree.filter(isTr).length;
+    // All / None: one slim row between the trees (buttons are not tree children), with the name of the ion group at its left when other kinds (PDA, DAD) stand above it
+    const tools = (/** @type {string} */ name) => only ? `<div class="can-tb${name ? " can-dv" : ""}">${name ? `<span class="can-gh" aria-hidden="true">${EH(name)}</span>` : ""}<span class="can-hint sr-only" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === nTr}">${EH(T("canali.pick.all"))}</button><button type="button" class="sec sm can-none" aria-label="${EH(T("canali.pick.none.aria"))}" aria-pressed="${!sel.size}">${EH(T("canali.pick.none"))}</button></div>` : "";
+    // a SIM list has one column: no header row; the other lists name their columns
+    const head = sim ? "" : ms2 ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
-    const [uv, det, log] = cx ? others(cx) : [[], [], []], c0 = ms2 ? "ms2" : p.kind, kinds = grp(T("canali.grp.uv"), kindRows(p, uv, c0)) + grp(T("canali.grp.det"), kindRows(p, det, c0));
+    // a transition / SIM picker names its groups for screen readers only: no header row on screen
+    const quiet = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}">${body}</div>` : "";
+    const [uv, det, log] = cx ? others(cx) : [[], [], []], c0 = ms2 ? "ms2" : p.kind, sec = only ? quiet : grp, kinds = sec(T("canali.grp.uv"), kindRows(p, uv, c0)) + sec(T("canali.grp.det"), kindRows(p, det, c0));
     const ms = ms2 ? kindRows(p, [["ms2", T("ctl.ms2scans"), T("ctl.noMs2")]], c0) : rows(p, tree, sel, only, files.length, only && sim);
-    const body = only && !kinds ? ms : grp(T("canali.grp.ms"), ms) + kinds + grp(T("canali.grp.log"), kindRows(p, log));
+    // PDA / DAD and the detectors first (one tree, one choice), then the ions under a slim divider that carries All / None (a second tree, many choices)
+    const tree1 = (/** @type {string} */ b, /** @type {string} */ more = " aria-multiselectable=\"true\"") => `<div role="tree" aria-label="${EH(T("canali.btn"))}"${more} class="can-tree">${b}</div>`;
+    const ions = tree1(kinds ? quiet(T("canali.grp.ms"), ms) : ms, ` aria-multiselectable="true" aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"`);
+    const pop = only ? (kinds ? tree1(kinds, "") + tools(T("canali.grp.ms")) + ions : tools("") + ions) : tree1(grp(T("canali.grp.ms"), ms) + kinds + grp(T("canali.grp.log"), kindRows(p, log)));
     const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size, v: txt }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
-      `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"` : ""} class="can-tree">${body}</div></div></span>`;
+      `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${head}${pop}</div></span>`;
   }
 
   /** a picker of SIM ions only (no MRM transition) @param {Nodo[]} tree */
@@ -244,7 +252,7 @@
   }
   /** the focus moves among the visible rows @param {HTMLElement} row @param {number} d */
   function moveFocus(row, d) {
-    const all = [...(row.closest("[role=tree]") || document).querySelectorAll(".can-row")], i = all.indexOf(row), t = /** @type {HTMLElement | undefined} */ (all[Math.max(0, Math.min(all.length - 1, i + d))]);
+    const all = [...(row.closest(".can-pop") || document).querySelectorAll(".can-row")], i = all.indexOf(row), t = /** @type {HTMLElement | undefined} */ (all[Math.max(0, Math.min(all.length - 1, i + d))]);
     if (t) { all.forEach(r => r.setAttribute("tabindex", "-1")); t.setAttribute("tabindex", "0"); t.focus(); }
   }
   /** the events of the control of a panel (after ctl() wrote it) @param {any} p @param {HTMLElement} c */

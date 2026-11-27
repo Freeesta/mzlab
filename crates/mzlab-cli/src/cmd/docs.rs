@@ -18,7 +18,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("commands", "mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task", crate::catalog::run)
         .schema("commands/1")
         .exits(&[0, 2, 5])
-        .examples(&["mzlab-cli commands --find sim snr --json"]),
+        .examples(&["mzlab-cli commands --find sim snr"]),
     Entry::new("schema", "mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list", crate::schema_cmd::run)
         .schema("schemas/1")
         .exits(&[0, 2, 5])

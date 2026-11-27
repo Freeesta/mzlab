@@ -60,3 +60,4 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 ## Priorities
 - In order: conversion parity for every readers module; missing branches in the app for the page engine ops; site <-> app route parity route by route; `prov/1` in the site Flow; table and export steps in the site; centroids of a profile mzML in the site Flow; Attributio steps in the site; plan check in Rust instead of `flow-check.js`; direct reading in the site of the other families; a single "where it runs" registry (`runs_in` of the descriptor aligned with the real executors).
 - **Declared impossible**: threads inside a file and over 4 GiB in the site, app update from the site.
+- **Site only by nature**: the closable browser notice (`avviso-browser.js`): the app is not a browser, `MZLAB_DESKTOP` shows nothing; no op, no CLI route, nothing to compare byte for byte (`capabilities.md`).
