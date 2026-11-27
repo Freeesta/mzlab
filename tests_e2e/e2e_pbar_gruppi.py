@@ -2,7 +2,7 @@
 A chromatogram has all four (integration set in Analyse, XIC in Extract), a spectrum has no integration (peak picking is its Analyse, the XIC button its Extract), a SIM/MRM panel adds the area toggle to View,
 the RT x m/z map has View (fit, zoom in and out, gestures) and Output only; an action that is not available is hidden, never greyed; a group with nothing to show is not drawn; the buttons work on the selected panel."""
 # covers: mzlab/web/azioni-barra.js, mzlab/web/pbar.js, mzlab/web/sim-ui.js, mzlab/web/mappa.js, tests_e2e/lib_barra.py
-import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import json, os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
 steps = []
