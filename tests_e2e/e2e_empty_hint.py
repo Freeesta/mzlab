@@ -29,6 +29,11 @@ READ = """(() => { const p = %s, root = p.el.querySelector('.eh'); if (!root) re
 def state(pg): return pg.evaluate(READ)
 
 def near(pg, label):
+    # the host refits a panel (and its toolbar) a moment after a resize: wait until the arrow rests under the button, then check
+    for _ in range(40):
+        s = state(pg)
+        if s and s["arrow"] and s["picker"] and abs(s["end"][0] - s["picker"][0]) <= 3: break
+        frames(pg, 3)
     s = state(pg); need(s and s["vis"] and s["arrow"] and s["picker"], "%s: no prompt or no arrow: %s" % (label, s))
     dx, dy = abs(s["end"][0] - s["picker"][0]), s["end"][1] - s["picker"][1]
     need(dx <= 3 and 0 <= dy <= 14, "%s: the arrow ends %.1f px beside and %.1f px under the picker button (want <= 3 and 0..14): %s" % (label, dx, dy, s))

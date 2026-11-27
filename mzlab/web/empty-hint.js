@@ -5,7 +5,7 @@
 // prompt and the control, so a resize, a wrapped toolbar or a re-rendered control redraws it. grafici.js drawLines calls sync(p, spec) / clear(p).
 
 /** @typedef {{ key: string, above?: string, target?: string, alt?: string }} Spec  key: i18n key of the prompt; above: the same without the arrow; target: selector (inside the panel) of the control; alt: text when that control is absent */
-/** @typedef {{ spec: Spec, root: HTMLElement, box: HTMLElement, go: HTMLElement, tx: HTMLElement, ln: SVGPathElement, hd: SVGPathElement, ro: ResizeObserver, mo: MutationObserver, raf: number, tab: boolean }} State */
+/** @typedef {{ spec: Spec, root: HTMLElement, box: HTMLElement, go: HTMLElement, tx: HTMLElement, ln: SVGPathElement, hd: SVGPathElement, stops: (() => void)[], mo: MutationObserver, raf: number }} State */
 
 const NARROW = 320;      // a panel narrower than this (px; the CSS minimum is 300, so a 320 px phone) gets the plain «… above» line, no arrow
 const GAP = 14;          // least vertical room (px) between the control and the prompt for an arrow
@@ -38,7 +38,7 @@ export function empty(p, g, hidden, say, x) {
 /** @param {any} p */
 export function clear(p) {
   const s = /** @type {State | undefined} */ (p._eh); if (!s) return;
-  s.ro.disconnect(); s.mo.disconnect(); cancelAnimationFrame(s.raf); s.root.remove(); p._eh = undefined;
+  s.stops.forEach(f => f()); s.mo.disconnect(); FRAME.cancel(s.raf); s.root.remove(); p._eh = undefined;
 }
 
 /** show (or update) the empty state of panel p; spec = null removes it @param {any} p @param {Spec | null} spec */
@@ -54,11 +54,11 @@ export function sync(p, spec) {
   const go = /** @type {HTMLElement} */ (q(".eh-go"));
   go.addEventListener("click", () => { const t = target(p); if (t) /** @type {HTMLElement} */ (t).click(); });
   p.el.appendChild(root);
-  const redo = () => { if (s) { cancelAnimationFrame(s.raf); s.raf = requestAnimationFrame(() => layout(p)); } };
-  const ro = new ResizeObserver(redo), mo = new MutationObserver(redo);
-  s = p._eh = { spec, root, box: q(".eh-box"), go, tx: q(".eh-tx"), ln: q(".eh-ln"), hd: q(".eh-hd"), ro, mo, raf: 0, tab: false };
-  for (const e of [p.el, p.cv, p.el.querySelector(".hd"), go]) if (e) ro.observe(e);
-  const ctl = p.el.querySelector(".ctl"); if (ctl) mo.observe(ctl, { childList: true, subtree: true });      // the toolbar is rebuilt as a whole: its control is another element each time
+  const redo = () => { if (s) { FRAME.cancel(s.raf); s.raf = FRAME.next(() => layout(p)); } };
+  const mo = new MutationObserver(redo);
+  s = p._eh = { spec, root, box: q(".eh-box"), go, tx: q(".eh-tx"), ln: q(".eh-ln"), hd: q(".eh-hd"), stops: [], mo, raf: 0 };
+  s.stops = [p.el, p.cv, go, ...[".hd", ".ttl", ".ctl"].map(q => p.el.querySelector(q))].map(e => FRAME.ro(e, redo));
+  const hd = p.el.querySelector(".hd"); if (hd) mo.observe(hd, { childList: true, subtree: true, attributes: true });      // the toolbar is rebuilt as a whole, and its fit moves controls with a class or a style: its control is not where it was
   layout(p);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layout(p));
 }
