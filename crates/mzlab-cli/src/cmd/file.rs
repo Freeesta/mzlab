@@ -72,8 +72,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("sample select", "mzlab-cli sample select FILE --sample LIST   which samples LIST picks", |a| crate::samples_cmd::run(pre("select", a))).schema("sample-select/1").exits(&[0, 2, 4, 5]),
     Entry::new("sample design propose", "mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names", |a| crate::design_cmd::run(pre("propose", a)))
         .schema("design_proposal/1")
-        .exits(&[0, 2, 3, 4, 6])
-        .examples(&["mzlab-cli sample design propose f.mzML"]),
+        .exits(&[0, 2, 3, 4, 6]),
     Entry::new("sample design validate", "mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys", |a| crate::design_cmd::run(pre("validate", a)))
         .schema("design_check/1")
         .exits(&[0, 2, 3, 4]),

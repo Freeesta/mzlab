@@ -32,21 +32,21 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | FLOW-TABLE-LIST | `docs/coda/prompt/FLOW-TABLE-LIST.md` | - | mzflow 2: the list of feature tables on the right of the Flow; `flow tables` over a run folder |
-| FEATURE-DETAIL | `docs/coda/prompt/FEATURE-DETAIL.md` | - | mzflow 3: the feature view with fixed slots; `feature-slots/1`, `table slots` |
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
 | KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
-| FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | FEATURE-DETAIL | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
+| FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | - | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
 | ROW-ORIGIN | `docs/coda/prompt/ROW-ORIGIN.md` | - | mzflow 7: opt-in origin of each row of `features.union` |
-| FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | FEATURE-DETAIL | mzflow 8: the UV-Vis slot, `table uv` |
+| FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | - | mzflow 8: the UV-Vis slot, `table uv` |
 | MS2-LINK-FILES | `docs/coda/prompt/MS2-LINK-FILES.md` | - | mzflow 9: an executor for `features.ms2_link`, dedicated MS2 files, manual link and unlink |
 | LINK-PILLARS | `docs/coda/prompt/LINK-PILLARS.md` | KINETIC-CLASS | mzflow 10: step `tp.pillars`, the three pillars of the parent-TP link |
-| FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | FEATURE-DETAIL | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
+| FEATURE-CARD-EXPORT | `docs/coda/prompt/FEATURE-CARD-EXPORT.md` | - | mzflow 11: `table card`, one HTML page per feature with SVG charts and provenance |
+| SLOTS-SOURCE-STEP | `docs/coda/prompt/SLOTS-SOURCE-STEP.md` | - | `feature-slots/1` names the exact step and output of each slot, not the step by kind; the page passes the table name |
 | INSTRUMENT-PRESETS | `docs/coda/prompt/INSTRUMENT-PRESETS.md` | - | mzflow 12: detection presets named after the instrument (+-0.5 Da, +-5 ppm) |
 | POLPAIR-CLI | `docs/coda/prompt/POLPAIR-CLI.md` | - | mzflow 13: CLI and app route for the wasm `cross_polarity` (`polpair/1`) |
 | AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
 | TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
 | AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
-| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FLOW-TABLE-LIST, FEATURE-DETAIL | mzflow 17 (v2): a read-only phone view of tables and one feature |
+| PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | FLOW-TABLE-LIST | mzflow 17 (v2): a read-only phone view of tables and one feature |
 | SUSPECT-GEN3 | `docs/coda/prompt/SUSPECT-GEN3.md` | - | mzflow 18 (v2): `tp.generate` up to 3 generations, editable rule list |
 | BIOTRANSFORMER-IO | `docs/coda/prompt/BIOTRANSFORMER-IO.md` | - | mzflow 19 (v2): BioTransformer by file exchange |
 | ECOSAR-IO | `docs/coda/prompt/ECOSAR-IO.md` | - | mzflow 20 (v2): ECOSAR by file exchange |

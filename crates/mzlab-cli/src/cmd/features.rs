@@ -7,6 +7,8 @@ use std::path::PathBuf;
 // declared here, not in lib.rs, which is at its line limit
 #[path = "../table_row_cmd.rs"]
 mod table_row_cmd;
+#[path = "../table_slots_cmd.rs"]
+mod table_slots_cmd;
 
 struct Args {
     files: Vec<PathBuf>,
@@ -255,6 +257,13 @@ Entry::new(
 .schema("row/2")
 .exits(&[0, 2, 4, 5, 6]),
 Entry::new(
+    "table slots",
+    "mzlab-cli table slots TABLE.mzfeat --id N [--samples FILE.json] [--out PATH]   a feature's slots",
+    table_slots_cmd::run,
+)
+.schema("feature-slots/1")
+.exits(&[0, 2, 4, 5, 6]),
+Entry::new(
     "quant targets",
     "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
     crate::quant_targets_cmd::run,
@@ -276,4 +285,4 @@ Entry::new(
 )
 .schema("estimate/1")
 .exits(&[0, 1, 2, 3, 4, 5, 6])
-.examples(&["mzlab-cli estimate MZML/*.mzML --axis da --json"])];
+.examples(&["mzlab-cli estimate MZML/*.mzML --axis da"])];

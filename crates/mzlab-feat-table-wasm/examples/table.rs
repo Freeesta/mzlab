@@ -79,6 +79,10 @@ fn main() {
         core::row_json(&mut r(), size, &samples, 3).expect("row"),
     );
     put(
+        "slots.json",
+        core::slots_json(&mut r(), size, &samples, 3, "table.mzfeat").expect("slots"),
+    );
+    put(
         "row_traces.json",
         core::row_traces_json(&mut r(), size, &samples, 3, 5.0, open).expect("traces"),
     );

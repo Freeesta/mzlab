@@ -123,6 +123,7 @@ pub mod network;
 pub mod row;
 pub mod rowident;
 pub mod rowmeta;
+pub mod slots;
 pub mod rtmap;
 pub mod rtwarp;
 pub mod runorder;

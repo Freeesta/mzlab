@@ -130,3 +130,24 @@ def test_cli_table_row_gives_the_bytes_of_the_app_and_of_the_wasm(built):
     assert row["schema"] == "row/2" and row["id"] == 3 and len(row["cells"]) == len(idx)
     bad = subprocess.run([*cli_argv("table", "row", str(table), "--id", "99999999")], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert bad.returncode == 5 and json.loads(bad.stdout)["error_key"] == "error.rowNotFound"
+
+
+def test_cli_table_slots_gives_the_bytes_of_the_app_and_of_the_wasm(built):
+    """FEATURE-DETAIL: `mzlab-cli table slots` prints feature-slots/1 with the bytes of the native example (the app function) and of the .wasm (`table_slots`), and an id the table
+    does not have is exit 5."""
+    root, idx, pkg, table = built
+    args = [str(table), str(root / "samples.json"), "-", "1", *idx]
+    outs = {}
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+        out = root / f"{name}-slots"
+        out.mkdir()
+        run(*cmd, str(out), *args)
+        outs[name] = (out / "slots.json").read_text() + "\n"
+    assert outs["nat"] == outs["wasm"]
+    got = cli("table", "slots", str(table), "--id", "3", "--samples", str(root / "samples.json"), runner=run)
+    # the example names the table "table.mzfeat"; the CLI names it after the file it was given
+    assert got.replace(f'"output":"{table.name}"', '"output":"table.mzfeat"') == outs["nat"]
+    doc = json.loads(got)
+    assert doc["schema"] == "feature-slots/1" and doc["id"] == 3 and [s["slot"] for s in doc["slots"]][:3] == ["structure", "xic", "kinetics"]
+    bad = subprocess.run([*cli_argv("table", "slots", str(table), "--id", "99999999")], cwd=ROOT, capture_output=True, encoding="utf-8")
+    assert bad.returncode == 5 and json.loads(bad.stdout)["error_key"] == "error.rowNotFound"

@@ -6,7 +6,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("raw isotopes", "mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula", crate::raw_iso_cmd::iso_run)
         .schema("raw-isotopes/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
-    Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run).examples(&["mzlab-cli ion mz \"C6H12O6\" --adduct +H"]).schema("ion_mz/1").exits(&[0, 1, 2, 6]),
+    Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run).examples(&["mzlab-cli ion mz C6H12O6 --adduct +H"]).schema("ion_mz/1").exits(&[0, 1, 2, 6]),
     Entry::new("ion pattern", "mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion", crate::ion_pattern_cmd::run).schema("ion_pattern/1").exits(&[0, 1, 2, 6]),
     Entry::new("ion match", "mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number may be: losses, adducts", crate::plain::match_mz_cmd::run).schema("mz-match/1").exits(&[0, 2, 4, 6]),
     Entry::new("ion elements", "mzlab-cli ion elements [--json]   periodic table (elements/1)", crate::plain::elements_cmd::run).schema("elements/1").exits(&[0, 2, 6]),
