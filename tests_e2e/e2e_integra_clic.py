@@ -44,6 +44,10 @@ try:
             # a real mouse gives whole CSS pixels and Chromium snaps a fractional position (down or to the nearest, by build); a flat trace sits a fraction of a pixel above the x-axis strip
             # (py > H - M.b, where a drag zooms the axis and never calls the engine), so the click is kept 4 px inside the plot: the trace nearest the pointer is still a flat one
             cx, cy = round(c["x"]), min(math.floor(c["y"]), math.floor(c["strip"]) - 4)
+            # a window label (a button, drawn over the plot at the baseline of its peak) can sit on the click point and takes the click for itself (CI fonts size the labels differently):
+            # the click moves along the time axis to the nearest point whose topmost element is the plot canvas, a time where the ion still has no peak
+            for dx in [0] + [d * k for k in range(1, 9) for d in (12, -12)]:
+                if pg.evaluate("([x,y])=>document.elementFromPoint(x,y)===%s.cv" % P, [cx + dx, cy]): cx += dx; break
             if alt: pg.keyboard.down("Alt")
             pg.mouse.click(cx, cy)
             if alt: pg.keyboard.up("Alt")
