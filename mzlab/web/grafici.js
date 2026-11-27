@@ -288,7 +288,17 @@ function legend(p, all, note = "") {
 function legCollapse(p) {
   const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
   const lst = document.createElement("div"); lst.className = "lgl"; lst.append(...L.children);
-  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); }; L.append(chip, lst);
+  // the list opens on the side of the legend that has room inside the panel (up when the legend sits low), is as wide and as tall as the room, and scrolls
+  const fit = () => {
+    const P = p.el.getBoundingClientRect(), B = L.getBoundingClientRect(), g = 6;
+    lst.style.maxWidth = Math.max(120, Math.min(480, P.width - 2 * g)) + "px";
+    const need = Math.min(260, lst.scrollHeight + 2 || 260), below = P.bottom - B.bottom - g, above = B.top - P.top - g, up = below < need && above > below;
+    lst.classList.toggle("up", up); lst.style.maxHeight = Math.max(48, Math.min(260, up ? above : below)) + "px";
+    const w = lst.offsetWidth, x = Math.min(Math.max(B.right - w, P.left + g), P.right - g - w);
+    lst.style.right = "auto"; lst.style.left = x - B.left - L.clientLeft + "px";
+  };
+  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); if (on) fit(); }; L.append(chip, lst);
+  chip.onmouseenter = lst.onmouseenter = chip.onfocus = fit;
   chip.type = "button"; chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n }); set(false); chip.onclick = () => set(!chip.classList.contains("on")); chip.onkeydown = lst.onkeydown = e => { if (e.key === "Escape" && chip.classList.contains("on")) { e.stopPropagation(); set(false); chip.focus(); } };
 }
 
