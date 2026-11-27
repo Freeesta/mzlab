@@ -52,10 +52,10 @@ function numberPanels() {
 // a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other.
 // the spectrum's tag («⊘»: follows nothing) is the button of the follow menu; the MS2 tab follows by precursor
 function markPairs(/** @type {Pannello[]} */ st) {
-  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip, /** @type {Pannello} */ on) => {
+  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip, /** @type {Pannello | null} */ on = null) => {
     const fo = a.type === "spec" && (a.tab || E.tab) !== "ms2", t = document.createElement(fo ? "button" : "span"); t.className = fo ? "ppair fol" : "ppair"; t.textContent = txt; t.title = tip; t.setAttribute("aria-label", tip);
     if (fo) { /** @type {HTMLButtonElement} */ (t).type = "button"; t.setAttribute("aria-haspopup", "menu"); t.onclick = (/** @type {MouseEvent} */ e) => followMenu(a, e); }
-    for (const [ev, v] of /** @type {[string, boolean][]} */ ([["mouseenter", true], ["focus", true], ["mouseleave", false], ["blur", false]])) t.addEventListener(ev, () => on.el.classList.toggle("pair-cur", v));  // a badge lights the dashed cursor it stands for
+    if (on) for (const [ev, v] of /** @type {[string, boolean][]} */ ([["mouseenter", true], ["focus", true], ["mouseleave", false], ["blur", false]])) t.addEventListener(ev, () => /** @type {Pannello} */ (on).el.classList.toggle("pair-cur", v));  // a badge lights the dashed cursor it stands for
     (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
   };
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
