@@ -73,8 +73,8 @@ fn the_exit_codes_are_pinned() {
     std::fs::write(&p, "name;molecular_formula\nOk;CH4\nBad;Xx9\n").unwrap();
     let o = run(&["xx", "--db", p.to_str().unwrap()]);
     assert_eq!(o.code, 1, "{}", o.stderr);
-    std::fs::write(&p, "name;molecular_formula\nEsempina;C10H15NO\n").unwrap();
-    let o = run(&["esemp", "--db", p.to_str().unwrap()]);
-    assert_eq!(names(&o), ["Esempina"]);
+    std::fs::write(&p, "name;molecular_formula\nExampline;C10H15NO\n").unwrap();
+    let o = run(&["examp", "--db", p.to_str().unwrap()]);
+    assert_eq!(names(&o), ["Exampline"]);
     std::fs::remove_file(&p).ok();
 }

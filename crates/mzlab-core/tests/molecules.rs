@@ -11,7 +11,7 @@ use mzlab_core::molecules::{
 
 const LOOSE: &str = "\
 name;molecular_formula;inchikey;synonyms;charge;prop:rt[min];prop:rt:source;prop:logp[1];prop:logp:source
-Esempina;c10h15no;ABCDEFGHIJKLMN-OPQRSTUVWX-Y;Esempina HCl|esempina|Ex-1;;4.25;method A;1.8;calculated
+Exampline;c10h15no;ABCDEFGHIJKLMN-OPQRSTUVWX-Y;Exampline HCl|exampline|Ex-1;;4.25;method A;1.8;calculated
 \"Provolone B\";C12H20N2O3;;\"B, Provolone\";;;;;
 Cationina;C8H12N;AAAAAAAAAAAAAA-BBBBBBBBBB-C;;1;;;;
 ";
@@ -59,13 +59,13 @@ fn mixed_columns_give_the_same_json() {
     let a = to_json(&ms(LOOSE));
     let shuffled = "\
 inchikey;prop:logp:source;name;prop:rt:source;charge;synonyms;prop:logp[1];molecular_formula;prop:rt[min]
-ABCDEFGHIJKLMN-OPQRSTUVWX-Y;calculated;Esempina;method A;;esempina|Ex-1|Esempina HCl;1.8;C10H15NO;4.25
+ABCDEFGHIJKLMN-OPQRSTUVWX-Y;calculated;Exampline;method A;;exampline|Ex-1|Exampline HCl;1.8;C10H15NO;4.25
 ;;Provolone B;;;B, Provolone;;C12H20N2O3;
 AAAAAAAAAAAAAA-BBBBBBBBBB-C;;Cationina;;1;;;C8H12N;
 ";
     assert_eq!(to_json(&ms(shuffled)), a);
     // the other delimiters, comments and empty lines
-    let tabs = "# list\n\nname\tmolecular_formula\nEsempina\tC10H15NO\n";
+    let tabs = "# list\n\nname\tmolecular_formula\nExampline\tC10H15NO\n";
     assert_eq!(ms(tabs)[0].formula, "C10H15NO");
 }
 
@@ -130,11 +130,11 @@ fn quoted(s: &str) -> String {
 
 const SEARCH: &str = "\
 name;synonyms;molecular_formula;inchikey
-Esempina;Ex-1|Provola;C10H15NO;AAAAAAAAAAAAAA-AAAAAAAAAA-A
-Esempinolo;;C10H15NO2;AAAAAAAAAAAAAA-AAAAAAAAAA-B
-Alfa Esempina;;C11H17NO;AAAAAAAAAAAAAA-AAAAAAAAAA-C
-Anti-esempina;;C12H19NO;AAAAAAAAAAAAAA-AAAAAAAAAA-D
-Paresempina;;C13H21NO;AAAAAAAAAAAAAA-AAAAAAAAAA-E
+Exampline;Ex-1|Provola;C10H15NO;AAAAAAAAAAAAAA-AAAAAAAAAA-A
+Examplinol;;C10H15NO2;AAAAAAAAAAAAAA-AAAAAAAAAA-B
+Alfa Exampline;;C11H17NO;AAAAAAAAAAAAAA-AAAAAAAAAA-C
+Anti-exampline;;C12H19NO;AAAAAAAAAAAAAA-AAAAAAAAAA-D
+Parexampline;;C13H21NO;AAAAAAAAAAAAAA-AAAAAAAAAA-E
 Lattosio;;C12H22O11;AAAAAAAAAAAAAA-AAAAAAAAAA-F
 ";
 
@@ -146,27 +146,32 @@ fn names(ms: &[Molecule], hits: &[(usize, f64)]) -> Vec<String> {
 fn search_by_text_formula_and_mass() {
     let v = ms(SEARCH);
     // equal, starts with, starts a word (after a space or a hyphen), contains
-    let t = search(&v, "esempina", 8, 10.0);
+    let t = search(&v, "exampline", 8, 10.0);
     assert_eq!(
         names(&v, &t),
-        ["Esempina", "Alfa Esempina", "Anti-esempina", "Paresempina"]
+        [
+            "Exampline",
+            "Alfa Exampline",
+            "Anti-exampline",
+            "Parexampline"
+        ]
     );
     assert_eq!(
         t.iter().map(|h| h.1).collect::<Vec<_>>(),
         [0.0, 2.0, 2.0, 3.0]
     );
-    // a synonym counts, a prefix of "Esempina" also matches "Esempinolo" (same score, the shorter name first)
-    assert_eq!(names(&v, &search(&v, "ex-1", 8, 10.0)), ["Esempina"]);
+    // a synonym counts, a prefix of "Exampline" also matches "Examplinol" (same score, the shorter name first)
+    assert_eq!(names(&v, &search(&v, "ex-1", 8, 10.0)), ["Exampline"]);
     assert_eq!(
-        names(&v, &search(&v, "esempin", 2, 10.0)),
-        ["Esempina", "Esempinolo"]
+        names(&v, &search(&v, "examplin", 2, 10.0)),
+        ["Exampline", "Examplinol"]
     );
     assert!(search(&v, "e", 8, 10.0).is_empty());
     // a formula (any order of writing) comes first
     assert_eq!(names(&v, &search(&v, "c12h22o11", 8, 10.0)), ["Lattosio"]);
     assert_eq!(
         names(&v, &search(&v, "H19NOC12", 8, 10.0)),
-        ["Anti-esempina"]
+        ["Anti-exampline"]
     );
     // the mass: 9.99 ppm in, 10.01 ppm out, nearest first
     let m = v[0].mass;
@@ -186,22 +191,22 @@ fn levels_replace_by_id_and_come_back() {
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
     let cat = from_csv(SEARCH, "catalog", None).unwrap();
     let mut mine = cat[1].clone();
-    mine.name = "Esempinolo mio".into();
+    mine.name = "Examplinol mio".into();
     mine.origin.kind = "user".into();
     let all = merge(&cat, &[mine.clone()]);
     assert_eq!(all.len(), cat.len());
-    assert_eq!(all[1].name, "Esempinolo mio");
+    assert_eq!(all[1].name, "Examplinol mio");
     // an imported copy does not beat the user one, in any order
     let mut imported = mine.clone();
-    imported.name = "Esempinolo importato".into();
+    imported.name = "Examplinol importato".into();
     imported.origin.kind = "imported".into();
     assert_eq!(
         merge(&cat, &[mine.clone(), imported.clone()])[1].name,
-        "Esempinolo mio"
+        "Examplinol mio"
     );
-    assert_eq!(merge(&cat, &[imported, mine])[1].name, "Esempinolo mio");
+    assert_eq!(merge(&cat, &[imported, mine])[1].name, "Examplinol mio");
     // taking the copy away brings the catalogue record back
-    assert_eq!(merge(&cat, &[])[1].name, "Esempinolo");
+    assert_eq!(merge(&cat, &[])[1].name, "Examplinol");
     // the same through the bindings
     let doc = route(
         "to_json",

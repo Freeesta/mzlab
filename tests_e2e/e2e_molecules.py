@@ -28,12 +28,12 @@ try:
         assert any(h["name"] == "dimethomorph" for h in json.loads(call("search", {"q": "dimeth"}))[:5])
         print("OK  catalogue loaded (1058), found by name, formula and mass")
 
-        csv = "name;molecular_formula;synonyms\nEsempina;C10H15NO;Ex-1\n"
+        csv = "name;molecular_formula;synonyms\nExampline;C10H15NO;Ex-1\n"
         doc = call("from_csv", {"csv": csv, "file": "mine.csv"})
         assert json.loads(doc)["molecules"][0]["origin"]["type"] == "imported", doc
         assert call("load", {"user": doc}).count('"others":1') == 1
-        mine = json.loads(call("search", {"q": "esempina"}))
-        assert mine and mine[0]["name"] == "Esempina" and mine[0]["id"].startswith("u:"), mine[:1]
+        mine = json.loads(call("search", {"q": "exampline"}))
+        assert mine and mine[0]["name"] == "Exampline" and mine[0]["id"].startswith("u:"), mine[:1]
         again = call("to_csv", json.loads(doc))
         assert call("to_csv", json.loads(call("from_csv", {"csv": again, "file": "mine.csv"}))) == again
         bad = json.loads(call("validate", {"csv": "name;molecular_formula\nOk;CH4\nBad;Xx9\n"}))
