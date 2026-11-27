@@ -291,7 +291,11 @@ fn old_tabui_compounds() -> Vec<Molecule> {
     let mut csv = String::from("name;synonyms;molecular_formula;smiles;inchikey;catalog\n");
     for (_, r) in read("TP_Mine/data/composti.csv").iter().skip(1) {
         let names: Vec<&str> = r[0].split(';').map(str::trim).collect();
-        let tags = if hrms.contains(&r[4]) { "tabui|hrms" } else { "tabui" };
+        let tags = if hrms.contains(&r[4]) {
+            "tabui|hrms"
+        } else {
+            "tabui"
+        };
         csv += &format!(
             "{};{};{};{};{};{tags}\n",
             cell(names[0]),

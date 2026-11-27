@@ -11,7 +11,11 @@ fn run(a: &[&str]) -> crate::Outcome {
 
 fn names(o: &crate::Outcome) -> Vec<String> {
     let j: Value = serde_json::from_slice(&o.stdout).unwrap();
-    j.as_array().unwrap().iter().map(|m| m["name"].as_str().unwrap().to_string()).collect()
+    j.as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["name"].as_str().unwrap().to_string())
+        .collect()
 }
 
 #[test]
@@ -19,7 +23,11 @@ fn a_name_a_synonym_a_formula_and_a_mass_find_dimethomorph() {
     for q in ["dimethomorph", "dimeth", "C21H22ClNO4", "387.1237"] {
         let o = run(&[q]);
         assert_eq!(o.code, 0, "{q}");
-        assert!(names(&o).iter().any(|n| n == "dimethomorph"), "{q}: {:?}", names(&o));
+        assert!(
+            names(&o).iter().any(|n| n == "dimethomorph"),
+            "{q}: {:?}",
+            names(&o)
+        );
     }
     assert_eq!(names(&run(&["paracetamol"]))[0], "acetaminophen");
 }
@@ -30,9 +38,17 @@ fn the_answer_keys_are_stable_and_the_limit_counts() {
     let j: Value = serde_json::from_slice(&o.stdout).unwrap();
     let rows = j.as_array().unwrap();
     assert_eq!(rows.len(), 3);
-    let mut keys: Vec<&str> = rows[0].as_object().unwrap().keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = rows[0]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
-    assert_eq!(keys, ["adducts", "charge", "formula", "id", "mass", "name", "score", "smiles"]);
+    assert_eq!(
+        keys,
+        ["adducts", "charge", "formula", "id", "mass", "name", "score", "smiles"]
+    );
     assert!(o.stdout.ends_with(b"\n"));
 }
 

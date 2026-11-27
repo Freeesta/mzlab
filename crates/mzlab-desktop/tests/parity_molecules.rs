@@ -14,8 +14,23 @@ const CATALOGUE: &str = include_str!("../../../mzlab/web/molecules/catalogue.csv
 
 /// What a person types: names, prefixes, a formula, a mass, a removed code, a typing slip, nothing.
 const QUERIES: &[&str] = &[
-    "dimeth", "dimethomorph", "sd", "azoxystrobin", "tebuconazole", "imidacloprid", "atrazine", "carbamazepine", "diclofenac", "bisphenol",
-    "C21H22ClNO4", "387.1237", "paracetamol", "LSD", "dimethomorf", "zzzzqq", "x",
+    "dimeth",
+    "dimethomorph",
+    "sd",
+    "azoxystrobin",
+    "tebuconazole",
+    "imidacloprid",
+    "atrazine",
+    "carbamazepine",
+    "diclofenac",
+    "bisphenol",
+    "C21H22ClNO4",
+    "387.1237",
+    "paracetamol",
+    "LSD",
+    "dimethomorf",
+    "zzzzqq",
+    "x",
 ];
 
 fn ask(q: &str, wide: bool) -> String {
@@ -50,17 +65,26 @@ fn the_app_and_the_cli_give_the_bytes_of_the_core() {
             let body = ask(q, wide);
             let core = on_core("search", &body);
             assert_eq!(on_app(&st, "search", &body), core, "app {q} wide={wide}");
-            let mut args: Vec<String> = ["mol", "find", q, "--set", "limit=8"].map(String::from).to_vec();
+            let mut args: Vec<String> = ["mol", "find", q, "--set", "limit=8"]
+                .map(String::from)
+                .to_vec();
             if wide {
                 args.extend(["--set".into(), "wide=1".into()]);
             }
             let o = mzlab_cli::execute(&args);
             assert_eq!(o.code, 0, "cli {q}: {}", o.stderr);
-            assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{}\n", core.as_ref().unwrap()), "cli {q} wide={wide}");
+            assert_eq!(
+                String::from_utf8(o.stdout).unwrap(),
+                format!("{}\n", core.as_ref().unwrap()),
+                "cli {q} wide={wide}"
+            );
             found += (core.unwrap() != "[]") as usize;
         }
     }
-    assert!(found >= 20, "the queries that name a compound of the catalogue find it ({found})");
+    assert!(
+        found >= 20,
+        "the queries that name a compound of the catalogue find it ({found})"
+    );
 }
 
 #[test]
@@ -76,7 +100,10 @@ fn a_body_that_is_not_json_is_the_same_error_key_in_the_core_and_the_app() {
 #[test]
 fn the_app_gives_the_same_bytes_as_the_wasm() {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
-        assert!(std::env::var_os("CI").is_none(), "MZLAB_WASM_PKG is not set: the wasm leg of the parity test did not run");
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "MZLAB_WASM_PKG is not set: the wasm leg of the parity test did not run"
+        );
         return;
     };
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());
@@ -88,7 +115,11 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         }
     }
     bodies.push("not json".to_string());
-    plan.extend(bodies.iter().map(|b| json!({"op": "lr_molecules", "mop": "search", "body": b})));
+    plan.extend(
+        bodies
+            .iter()
+            .map(|b| json!({"op": "lr_molecules", "mop": "search", "body": b})),
+    );
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("plan.json");
     std::fs::write(&file, serde_json::to_string(&plan).unwrap()).unwrap();
@@ -102,7 +133,11 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
         .arg(&file)
         .output()
         .expect("node runs");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let wasm: Vec<Value> = serde_json::from_slice(&out.stdout).unwrap();
     assert!(wasm[0]["s"].is_string(), "load: {}", wasm[0]);
     let st = State::new();
@@ -113,7 +148,10 @@ fn the_app_gives_the_same_bytes_as_the_wasm() {
             Some(s) => Ok(s.to_string()),
             None => {
                 let e = w["e"].as_str().unwrap_or("");
-                Err(serde_json::from_str::<Value>(e).ok().and_then(|j| j["error_key"].as_str().map(String::from)).unwrap_or_else(|| e.to_string()))
+                Err(serde_json::from_str::<Value>(e)
+                    .ok()
+                    .and_then(|j| j["error_key"].as_str().map(String::from))
+                    .unwrap_or_else(|| e.to_string()))
             }
         };
         assert_eq!(app, site, "{}", &body[..body.len().min(60)]);

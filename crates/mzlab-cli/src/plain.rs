@@ -14,12 +14,12 @@ pub(crate) mod match_mz_cmd;
 pub(crate) mod mol_check_cmd;
 #[path = "mol_cip_cmd.rs"]
 pub(crate) mod mol_cip_cmd;
-#[path = "mol_find_cmd.rs"]
-pub(crate) mod mol_find_cmd;
 #[path = "mol_draw_cmd.rs"]
 pub(crate) mod mol_draw_cmd;
 #[path = "mol_export_cmd.rs"]
 pub(crate) mod mol_export_cmd;
+#[path = "mol_find_cmd.rs"]
+pub(crate) mod mol_find_cmd;
 #[path = "mol_hilite_cmd.rs"]
 pub(crate) mod mol_hilite_cmd;
 #[path = "mol_link_cmd.rs"]

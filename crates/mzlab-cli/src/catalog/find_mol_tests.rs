@@ -14,6 +14,9 @@ fn a_compound_lookup_is_found_from_the_task() {
             .take(3)
             .map(|(it, _, _)| it.name)
             .collect();
-        assert!(got.iter().any(|g| g == "mol find"), "{q:?}: mol find not in {got:?}");
+        assert!(
+            got.iter().any(|g| g == "mol find"),
+            "{q:?}: mol find not in {got:?}"
+        );
     }
 }

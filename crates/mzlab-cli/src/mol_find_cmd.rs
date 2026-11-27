@@ -57,13 +57,19 @@ pub fn run(args: Vec<String>) -> Outcome {
                 },
                 Some(("ppm", v)) => match v.parse::<f64>() {
                     Ok(x) if x.is_finite() && x > 0.0 => ppm = v.to_string(),
-                    _ => return Outcome::fail(&format!("--set ppm needs a positive number, not {v:?}")),
+                    _ => {
+                        return Outcome::fail(&format!(
+                            "--set ppm needs a positive number, not {v:?}"
+                        ))
+                    }
                 },
                 Some(("wide", v)) => match number(v, "wide", 0, 1) {
                     Ok(n) => wide = n == 1,
                     Err(e) => return Outcome::fail(&e),
                 },
-                Some((k, _)) => return Outcome::fail(&format!("unknown setting {k} (limit, ppm, wide)")),
+                Some((k, _)) => {
+                    return Outcome::fail(&format!("unknown setting {k} (limit, ppm, wide)"))
+                }
                 None => return Outcome::fail("--set needs NAME=VALUE"),
             },
             o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
@@ -91,7 +97,13 @@ pub fn run(args: Vec<String>) -> Outcome {
             };
             if let Err(rows) = from_csv(&own, "catalog", None) {
                 let e = &rows[0];
-                return Outcome::fail(&format!("{} line {}: the catalogue has {} wrong rows ({})", e.key, e.line, rows.len(), e.detail));
+                return Outcome::fail(&format!(
+                    "{} line {}: the catalogue has {} wrong rows ({})",
+                    e.key,
+                    e.line,
+                    rows.len(),
+                    e.detail
+                ));
             }
             &own
         }
@@ -99,8 +111,10 @@ pub fn run(args: Vec<String>) -> Outcome {
     let mut load = Out::default();
     load.raw("{\"catalog\":").str(csv).raw("}");
     let mut ask = Out::default();
-    ask.raw("{\"q\":").str(query).raw(&format!(",\"limit\":{limit},\"ppm\":{ppm},\"wide\":{wide}}}"));
-    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner());       // the archive of the engine is one per process
+    ask.raw("{\"q\":").str(query).raw(&format!(
+        ",\"limit\":{limit},\"ppm\":{ppm},\"wide\":{wide}}}"
+    ));
+    let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner()); // the archive of the engine is one per process
     if let Err(e) = route("load", &load.0) {
         return Outcome::fail_error(&e);
     }

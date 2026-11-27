@@ -1,5 +1,5 @@
 """The compound search box over the built-in catalogue (molecules-field.js), at 1400 px and at 390 px: typing «dimeth» lists dimethomorph first (a name that starts with
-the text comes before one that only contains it), typing «sd» lists names that do not break inside a word, no row is wider than the list, and the page does not scroll
+the text comes before one that only contains it), typing «hydroxy» lists long names that do not break inside a word, typing «sd» finds nothing (the codes it used to list are gone), no row is wider than the list, and the page does not scroll
 sideways. MZLAB_SHOTS=DIR also writes the screenshots (device scale factor 2). Needs the built site (tools/prepara_sito.py). Run from the repo root."""
 # covers: mzlab/web/molecules-field.js, mzlab/web/molecules/catalogue.csv
 import os, sys
@@ -25,18 +25,25 @@ try:
             pg.wait_for_function("window.MOLDB", timeout=60000)
             pg.evaluate(HOST)
             i = "#molc-host input"
-            for text, first in (("dimeth", "dimethomorph"), ("sd", None)):
+            for text, first in (("dimeth", "dimethomorph"), ("hydroxy", None), ("sd", "")):
                 pg.fill(i, ""); pg.click(i); pg.keyboard.type(text)
+                if first == "":        # the designer-drug codes that «sd» used to list are gone: nothing is found, the box says so
+                    pg.wait_for_function("document.querySelector('#molc-host [role=status]').textContent === 'No compound found'", timeout=20000)
+                    assert pg.locator("#molc-host [role=option]").count() == 0 and pg.get_attribute(i, "aria-expanded") == "false", (width, text)
+                    if SHOTS:
+                        pg.screenshot(path=f"{SHOTS}/compound-list-{text}-{width}.png", clip={"x": 0, "y": 0, "width": width, "height": 200})
+                    print(f"OK  {width} px, «{text}»: nothing found, as the box says")
+                    continue
                 pg.wait_for_selector("#molc-host [role=option]", timeout=20000)
                 rows = pg.evaluate(ROWS)
                 assert rows, (width, text)
                 assert all(x["oneLine"] and x["fits"] and x["inside"] for x in rows), (width, text, [x for x in rows if not (x["oneLine"] and x["fits"] and x["inside"])])
                 if first:
-                    assert rows[0]["name"] == first, (width, rows[:3])
-                    assert rows[0]["whole"], (width, "the first name is cut", rows[0])
+                    names = [x["name"] for x in rows]
+                    assert first in names and all(n.lower().startswith(text) for n in names[:3]), (width, names)
+                    assert all(x["whole"] for x in rows[:3]), (width, "a name is cut", rows[:3])
                 else:
-                    starts = [x["name"] for x in rows if x["name"].lower().startswith("sd")]
-                    assert [x["name"] for x in rows[:len(starts)]] == starts, (width, "names that start with the text come first", [x["name"] for x in rows])
+                    assert rows[0]["name"].lower().startswith(text), (width, "a name that starts with the text comes first", [x["name"] for x in rows])
                 assert not pg.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth"), (width, text, "the page scrolls sideways")
                 assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
                 if SHOTS:

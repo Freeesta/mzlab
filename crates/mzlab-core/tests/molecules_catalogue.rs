@@ -33,7 +33,9 @@ fn the_catalogue_is_canonical_and_complete() {
     let (text, all) = catalogue();
     assert_eq!(to_csv(&all), text, "mzlab/web/molecules/catalogue.csv is not in the canonical form: run tools/generate_molecules.py");
     assert!(all.iter().all(|m| m.origin.catalog == ["hrms"]));
-    assert!(all.iter().all(|m| !m.formula.is_empty() && m.smiles.as_deref().is_some_and(|s| !s.is_empty())));
+    assert!(all
+        .iter()
+        .all(|m| !m.formula.is_empty() && m.smiles.as_deref().is_some_and(|s| !s.is_empty())));
 }
 
 fn list_of(file: &str) -> Vec<String> {
@@ -48,9 +50,8 @@ fn list_of(file: &str) -> Vec<String> {
 
 fn carries(all: &[Molecule], name: &str) -> bool {
     let w = name.to_lowercase();
-    all.iter().any(|m| {
-        m.name.to_lowercase() == w || m.synonyms.iter().any(|s| s.to_lowercase() == w)
-    })
+    all.iter()
+        .any(|m| m.name.to_lowercase() == w || m.synonyms.iter().any(|s| s.to_lowercase() == w))
 }
 
 /// The catalogue is environmental: every name of the must-have list (common EU pesticides, pharmaceuticals, contaminants) is there and found by a search, and none
@@ -62,13 +63,17 @@ fn the_catalogue_has_the_must_have_names_and_none_of_the_removed_codes() {
         .into_iter()
         .filter(|n| !carries(&all, n))
         .collect();
-    assert!(missing.is_empty(), "missing from the catalogue: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "missing from the catalogue: {missing:?}"
+    );
     for n in list_of("catalogue_must_have.txt") {
         let hits = search(&all, &n, 8, 10.0);
         assert!(
             hits.iter().any(|h| {
                 let m = &all[h.0];
-                m.name.eq_ignore_ascii_case(&n) || m.synonyms.iter().any(|s| s.eq_ignore_ascii_case(&n))
+                m.name.eq_ignore_ascii_case(&n)
+                    || m.synonyms.iter().any(|s| s.eq_ignore_ascii_case(&n))
             }),
             "{n:?} is not in the first 8 answers"
         );
@@ -92,8 +97,14 @@ fn prefix_matches_come_first_and_the_formula_finds_the_compound() {
     assert!(names.iter().any(|n| n == "dimethomorph"), "{names:?}");
     let hits = search(&all, "dimeth", usize::MAX, 10.0);
     let scores: Vec<f64> = hits.iter().map(|h| h.1).collect();
-    assert!(scores.windows(2).all(|w| w[0] <= w[1]), "not ordered by rank");
-    assert!(hits.iter().take_while(|h| h.1 <= 1.0).any(|h| all[h.0].name == "dimethomorph"));
+    assert!(
+        scores.windows(2).all(|w| w[0] <= w[1]),
+        "not ordered by rank"
+    );
+    assert!(hits
+        .iter()
+        .take_while(|h| h.1 <= 1.0)
+        .any(|h| all[h.0].name == "dimethomorph"));
     let by_formula = search(&all, "C21H22ClNO4", 8, 10.0);
     assert!(by_formula.iter().any(|h| all[h.0].name == "dimethomorph"));
 }
@@ -114,9 +125,14 @@ fn the_screening_list_gives_the_mz_of_every_record() {
     assert_eq!(rows.len(), all.len());
     const PROTON: f64 = 1.007276466;
     for (r, m) in rows.iter().zip(&all) {
-        let mz: Vec<f64> = r.get("mz").unwrap().arr().iter().map(|x| x.f64().unwrap()).collect();
+        let mz: Vec<f64> = r
+            .get("mz")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|x| x.f64().unwrap())
+            .collect();
         assert!((mz[0] - (m.mass + PROTON)).abs() <= 1e-5, "{}", m.name);
         assert!((mz[1] - (m.mass - PROTON)).abs() <= 1e-5, "{}", m.name);
     }
 }
-

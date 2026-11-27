@@ -178,10 +178,7 @@ pub(crate) const EXIT_MEANING: &[(u8, &str)] = &[
     (exit::USAGE, "usage"),
     (exit::INTEGRITY, "plan, schema or integrity"),
     (exit::INPUT, "input missing or unreadable"),
-    (
-        exit::SELECTOR,
-        "selector not found",
-    ),
+    (exit::SELECTOR, "selector not found"),
     (exit::OUTPUT, "output write or external source failure"),
     (exit::INTERNAL, "internal error (a bug)"),
     (exit::GROWING, "input still being written"),
