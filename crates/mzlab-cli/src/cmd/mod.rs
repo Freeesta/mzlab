@@ -46,6 +46,7 @@ const JSON_FLAG: &[&str] = &[
 const JSON_DEFAULT: &[&str] = &[
     "file method",
     "table row",
+    "table slots",
     "flow report",
     "flow record",
     "msn lib add",

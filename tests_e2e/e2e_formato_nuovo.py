@@ -26,18 +26,18 @@ try:
         pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
             pg.goto(pg.url); wait_for_js(pg, "document.querySelector('#pick')")
-            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /format 4/.test(document.body.innerText)", timeout=60000)
+            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /format 5/.test(document.body.innerText)", timeout=60000)
         def newer():
-            before = pg.evaluate(HASH); pg.evaluate(VERSION, 4); patched = pg.evaluate(HASH); assert patched != before
+            before = pg.evaluate(HASH); pg.evaluate(VERSION, 5); patched = pg.evaluate(HASH); assert patched != before
             again()
-            wait_for_js(pg, "/format 4/.test(document.body.innerText)", timeout=60000)
+            wait_for_js(pg, "/format 5/.test(document.body.innerText)", timeout=60000)
             assert pg.evaluate(HASH) == patched, "the index of the newer program was not touched"
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route unavailable"
         step("a newer index: warning, index untouched", newer)
         def known():
             pg.evaluate(VERSION, 3); again()
             wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
-            assert "format 4" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
+            assert "format 5" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
             assert pg.evaluate(HEADER) == 3
         step("a known version: no warning", known)
         def older():

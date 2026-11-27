@@ -37,7 +37,7 @@ window.MAPPA = (() => {
     /** @type {any} */ (window).requestIdleCallback ? /** @type {any} */ (window).requestIdleCallback(go, { timeout: 8000 }) : setTimeout(go, 2000);
   }
 
-  // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
+  // -------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
   function init(/** @type {Pannello} */ p) {
     if (p._mzInit || !p.cv) return; p._mzInit = true;
     preload3d(); /** @type {any} */ (window).MAPPA_WARM?.();
@@ -91,13 +91,13 @@ window.MAPPA = (() => {
   }
   const is2dView = (/** @type {Pannello} */ p) => p.type === "map";
 
-  // ---------------------------------------------------------------- the true zoom: the region in view on new bins, asked 150 ms after the last change
+  // -------- the true zoom: the region in view on new bins, asked 150 ms after the last change
   function normFactor(/** @type {ArrayLike<number>} */ m, /** @type {string} */ norm) {
     if (norm !== "max" && norm !== "tic") return 1;
     let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
     return t > 0 ? (norm === "max" ? 1 : 1000) / t : 1;
   }
-  // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
+  // -------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
   const diffOpt = (diff = true) => ({ show: PREF.neg === false ? "up" : "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1, fix: !!PREF.fix });
@@ -191,7 +191,7 @@ window.MAPPA = (() => {
   }
   const binDa = (/** @type {Pannello} */ p) => { const s = st(p), a = p._a; if (s.reg && (p.zoom || p.zoomY)) return s.reg.dmz; return a && a.dmz ? a.dmz : 1; };
 
-  // ---------------------------------------------------------------- after the map is drawn: overlay and margins
+  // -------- after the map is drawn: overlay and margins
   function after(/** @type {Pannello} */ p) {
     init(p); layout(p);
     const s = st(p), a = p._a; if (!a || !s.ov) return;
@@ -215,7 +215,7 @@ window.MAPPA = (() => {
     const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
-      g.save(); g.strokeStyle = ecss("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
+      g.save(); MAPCURSORE.line(g, ecss, s, "cross", 1, !s.lock);
       g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
       if (s.lock) lockDot(g, a.X(pt.rt), a.Y(pt.mz), s);                  // the locked point: a small dot exactly on it
       g.restore();
@@ -232,7 +232,7 @@ window.MAPPA = (() => {
   }
   const liveSync = (/** @type {Pannello} */ p) => MAPCURSORE.sync(p, { st, is2d, point, mzd, T, MIRINO });   // chip and XIC dot of the cursor (mappa-cursore.js)
 
-  // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
+  // -------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
   // Asked only for what the point needs and the page does not hold: the scan is found in the page on the RT axis of the file (/api/scan_axis, once), the
   // spectrum comes from /api/spectra by position and only when the scan changes, the XIC only when the window changes. One request at a time, the newest
   // point wins (MIRINO.latest, at most once per frame); what has not arrived yet is a preview read from the matrix of the map, marked as such.
@@ -336,7 +336,7 @@ window.MAPPA = (() => {
   function show(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ pt) {
     const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
     const uv = !!(p._a && p._a.pda), sp = uv ? null : specFor(p, pt), xi = uv ? null : xicFor(p, pt), pv = uv || !sp || !xi ? preview(p, pt) : null;      // a DAD map: UV spectrum and trace read from its matrix (exact), never the MS routes
-    if (uv && p.stripMs === "ms" && window.MAPDAD) return window.MAPDAD.ms(p, pt, { st, canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MIRINO, axisWait, getScan }); if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
+    if (uv && p.stripMs === "ms" && window.MAPDAD) return window.MAPDAD.ms(p, pt, { st, canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MAPCURSORE, MIRINO, axisWait, getScan }); if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
     // what the two plots hold (read by e2e_mappa_mirino)
     s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null, uv: uv ? pv : null };
     drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp && !uv); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi && !uv);
@@ -377,8 +377,7 @@ window.MAPPA = (() => {
   const xicTol = (/** @type {MzFile} */ f, /** @type {number} */ mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;
   const xicCentre = (/** @type {MzFile} */ f, /** @type {number} */ mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
   const canvasOf = (/** @type {Record<string, any>} */ c) => MAPMARGINI.sized(c, devicePixelRatio);
-  // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
-  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
+  // m/z labels of the side spectrum: beyond the bar tip with a panel-colour halo, else above the bar; never on another label (by S/N, MAPREND.pick). s.lbls keeps the boxes.
   function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8, /** @type {{y: number, end: number} | null} */ guide = null, /** @type {number} */ cur = -1) {
     /** @type {Record<string, any>[]} */ const out = []; s.lbls = out; g.font = fpx(12.5); g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3.5; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
     const px = parseFloat(g.font) || 12.5, asc = Math.round(px * .8), hh = Math.round(px * 1.05);
@@ -456,12 +455,12 @@ window.MAPPA = (() => {
     const inWin = pt.mz >= a.y0 && pt.mz <= a.y1, gy = inWin ? Math.round(Y(pt.mz)) + .5 : 0, gEnd = mk >= 0 ? tipOf(mk) : x1;
     s.gd = inWin ? { y: gy, end: gEnd } : null;   // kept for the tests
     s.curPk = inWin && mk >= 0 ? sp.mz[mk].toFixed(mzd(p)) : null;   // the chip of the cursor names it
-    if (inWin) { g.save(); g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
-      if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - 4); g.lineTo(gEnd + .5, gy + 4); g.stroke(); }   // clear end mark at the tip
+    if (inWin) { g.save(); MAPCURSORE.line(g, ecss, s, "guide"); g.beginPath(); g.moveTo(x0, gy); g.lineTo(gEnd, gy); g.stroke(); g.setLineDash([]);
+      if (mk >= 0) { g.beginPath(); g.moveTo(gEnd + .5, gy - 2.5); g.lineTo(gEnd + .5, gy + 2.5); g.stroke(); }   // small tick at the tip
       g.restore();
     }
-    // the peak under the cursor: its own bar, thicker and in the ink colour, over the others without covering them (2.5 px against 1 px)
-    if (inWin && mk >= 0) { const by = Math.round(Y(sp.mz[mk])) + .5; g.save(); g.strokeStyle = ecss("--ink"); g.lineWidth = 2.5; g.beginPath(); g.moveTo(x0, by); g.lineTo(tipOf(mk), by); g.stroke(); g.restore(); }
+    // the peak under the cursor: its own bar, 1.5 px against 1 px
+    if (inWin && mk >= 0) { const by = Math.round(Y(sp.mz[mk])) + .5; g.save(); MAPCURSORE.line(g, ecss, s, "bar", 1.5, false); g.beginPath(); g.moveTo(x0, by); g.lineTo(tipOf(mk), by); g.stroke(); g.restore(); }
     sideLabels(g, W, kept.map((/** @type {Record<string, any>} */ c) => c.i), (/** @type {number} */ i) => ({ y: Y(sp.mz[i]), tip: tipOf(i), t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit, inWin ? { y: gy, end: gEnd } : null, inWin ? mk : -1);
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
@@ -517,11 +516,11 @@ window.MAPPA = (() => {
     g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
     g.fillText(xi.uv ? T(sg ? "mappa.uv.botDiff" : "mappa.uv.bot", { lo: lo.toFixed(1), hi: hi.toFixed(1), max: fmt(ymax) }) : prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
-    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.save(); MAPCURSORE.line(g, ecss, s, "rt"); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.restore(); }
     liveSync(p);
   }
 
-  // ---------------------------------------------------------------- mouse
+  // -------- mouse
   // Shift held while the pointer moves with no button down: the sight is held on the line or the column picked by the first pixels (same m/z or same RT),
   // so the spectrum and the XIC at the margins follow a straight line; releasing Shift frees it. s.sl = { ax, rt, mz, x, y } (anchor point and pixel); s.lpx = last pixel
   function shiftSight(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ s, /** @type {number} */ px, /** @type {number} */ py) {
@@ -595,7 +594,7 @@ window.MAPPA = (() => {
     showMenu(ad2(p, pt), { preventDefault() {}, clientX: r.left + (kbd ? r.width / 2 : 0), clientY: kbd ? r.top + r.height / 2 : r.bottom + 4, kbd: !!kbd });
   }
 
-  // ---------------------------------------------------------------- keyboard (focus on the map, or the expanded map; never inside a text field)
+  // -------- keyboard (focus on the map, or the expanded map; never inside a text field)
   function key(/** @type {Pannello} */ p, /** @type {KeyboardEvent} */ e) {
     if (p.type !== "map" || /** @type {Element} */ (e.target).closest && /** @type {Element} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
     if (e.ctrlKey || e.metaKey) return;
@@ -662,7 +661,7 @@ window.MAPPA = (() => {
   }
 
 
-  // ---------------------------------------------------------------- marked points (variant A, for everybody): the student marks, the program MEASURES.
+  // -------- marked points (variant A, for everybody): the student marks, the program MEASURES.
   // Tool «Segna» (button or S): a click adds a numbered point on the local maximum (+-0.2 min, +-1 bin); Canc removes the chosen one; a point can be
   // dragged. Saved in the notebook (NB.mappaPunti) for each pair of files. Table under the map: numbers only, never a name or a verdict.
   const pairKey = (/** @type {Pannello} */ p) => { const a = p._a; if (!a || !a.f) return null; return `${a.f.file}|${a.ref ? a.ref.file : ""}|${a.f.lv || 1}`; };
@@ -743,7 +742,7 @@ window.MAPPA = (() => {
     newSpec(p, r0, r1, f.k);
   }
 
-  // ---------------------------------------------------------------- navigation: ONE list of commands (CMDS) for the right-click menu of the 2D map and of the 3D viewer,
+  // -------- navigation: ONE list of commands (CMDS) for the right-click menu of the 2D map and of the 3D viewer,
   // the bar on the map, the command palette (barra.js reads CMDS) and the sheet of gestures. An «adapter» says where a command acts:
   //   { kind: "2d" | "3d", p, pt() -> {rt, mz, v?} | null, locked(), toggleLock(), resetAll(), zoomBy(f), view?(n), after?() }
   const SV = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -967,7 +966,7 @@ window.MAPPA = (() => {
     cv.addEventListener("touchend", end); cv.addEventListener("touchcancel", () => { clearTimeout(lp); g = null; });
   }
 
-  // ---------------------------------------------------------------- buttons in the controls of the map: mark, snap, sight, 3D
+  // -------- buttons in the controls of the map: mark, snap, sight, 3D
   function decorate(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ c) {
     if (p.type !== "map") return;
     const hasRef = corrState(p).now[0] === "f", o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";

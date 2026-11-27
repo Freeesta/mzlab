@@ -69,7 +69,7 @@ export async function go(p, x, py, force, mouse) {
   return autoInt(p, s, x, force);
 }
 
-/** "Integrate all channels at this time": every visible trace (or `list`) that has a peak at x, in one undoable step; the others are named in the notice, never integrated. */
+/** "Integrate all channels at RT": every visible trace (or `list`) that has a peak at x, in one undoable step; the others are named in the notice, never integrated. */
 export async function atRt(p, x, list = null) {
   const a = p._a; if (!a || !a.sr) return;
   const all = list || a.sr.filter(s => !isHid(p, s)), res = await Promise.all(all.map(async s => [s, await ask(s, x, false)]));

@@ -1,14 +1,10 @@
 {
-  "pick.intro": "Single line under the title of the dialog: ticked samples are copied ahead while it is open; no placeholders.",
-  "pick.pre.run": "Per-row state of a sample being copied ahead in the dialog: {pc} = percent done, 0 to 100.",
-  "pick.pre.wait": "Per-row state of a ticked sample queued for the copy ahead; no placeholders.",
-  "pick.pre.done": "Per-row state of a sample already copied ahead; no placeholders.",
   "pick.mb": "A size in megabytes: {n} = the number, already rounded.",
   "pick.kb": "A size in kilobytes: {n} = the number, already rounded.",
   "pick.note": "Reason shown after a sample name, in brackets, with a leading space: {why} = the reason.",
   "pick.table": "Accessible name of the sample table: {name} = file name.",
-  "pick.sel": "Live count in the dialog bar: {n} = samples ticked, {total} = all samples listed.",
+  "pick.sel": "Live count in the dialog bar, shown as a fraction: {n} = samples ticked, {total} = all samples listed.",
+  "pick.sel.aria": "Same count, read by screen readers: {n} = samples ticked, {total} = all samples listed.",
   "pick.failed": "Note when the chooser fails before it can ask: {reason} = the error text. Every sample of the files is opened then.",
-  "pick.rangeFailed": "Note when the byte ranges of the chosen samples cannot be planned: {name} = the .wiff, {reason} = the error text. The whole pair is copied then, as without a choice.",
-  "pick.cancelled": "Note when the dialog is cancelled: {name} = the file that was not opened."
+  "pick.rangeFailed": "Note when the byte ranges of the chosen samples cannot be planned: {name} = the .wiff, {reason} = the error text. The whole pair is copied then, as without a choice."
 }

@@ -29,7 +29,7 @@ try:
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("before: raw traces, no chip", raw)
         def cmd():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract the reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); wait_for_js(pg, "document.querySelectorAll('.subchip').length >= 2")
+            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); wait_for_js(pg, "document.querySelectorAll('.subchip').length >= 2")
             assert pg.locator(".subchip").count() >= 2, pg.locator(".subchip").count()
             t = pg.locator(".subchip [data-s=pop]").first.inner_text()
             assert "SUB_t0" in t and "(auto)" in t and "×" in t and "not normalized" in t, t
@@ -134,7 +134,7 @@ try:
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("× goes back to the raw data", off)
         def saved():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract the reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg)
+            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg)
             pg.evaluate("uiSave(true)"); wait_for_js(pg, "NB.ui.ref.on[E.tab] === true")
             assert pg.evaluate("NB.ui.ref.on[E.tab]") is True and pg.evaluate("NB.ui.ref.k") == "auto"
         step("the reference is saved with the session", saved)

@@ -4,7 +4,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | If you touch… | Read |
 |---|---|
 | accessibility of the whole application (WCAG 2.1/2.2 AA, axe-core, controls, known gaps and tolerated rules) | `docs/agenti/accessibility.md` |
-| panel actions (`actions/1` registry, right-click menu, Shift+F10) | `docs/agenti/actions.md` |
+| panel actions (`actions/1` registry, right-click menu, Shift+F10); study of a shared panel bar: `docs/studies/PANEL_TOOLBAR_STUDY.md` | `docs/agenti/actions.md` |
 | headless 2D depiction for agents (`mol draw` study: own Rust layout vs RDKit MinimalLib, Indigo, Rust crates; sizes, licences, quality on a synthetic set with RDKit as oracle, gates) | `docs/agenti/agent-draw.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profile/centroids/MS2, LC/MS method, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
 | Agilent `.D` folder reader (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
@@ -71,6 +71,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | statistics in HR: feature table, blank, difference from the reference, PCA; `table compare` (each feature against reference and blank, candidate products, `compare/1`) | `docs/agenti/high-resolution-statistics.md` |
 | HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/high-resolution.md` |
 | registry of state-changing actions (`commands.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `HISTORY` entries) | `docs/agenti/history-removed.md` |
+| fill time per scan (`MS:1000927`): `.mzidx` version 4 column 23, version 3 still read, the ions of `spectrum get --sum` without `--fill-ms`, rebuild hint (`specsum.rs`, `idxread::Scan::fill_ms`) | `docs/agenti/idx-fill-time.md` |
 | "XIC" button and XIC lens off on infusion files, `infusion.rs` data rule (keys, blocks, name), `infusion_diagnosis` command, drawing traces from the window (`decima.js`); "Fragmentation graph" tab in the Data view | `docs/agenti/infusion-graph.md` |
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |

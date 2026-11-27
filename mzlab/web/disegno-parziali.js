@@ -249,7 +249,7 @@ export async function partialExport(K, molfile, v2000) {
 /** @typedef {{ text: string, title?: string, run?: () => void }} Item */
 
 /**
- * Rows of the context menu: on a partial structure its formula, mass and m/z with the delta (a click copies) and «Remove the brackets»; with atoms selected
+ * Rows of the context menu: on a partial structure its formula, mass and m/z with the delta (a click copies) and «Remove brackets»; with atoms selected
  * in one piece and outside other brackets, «Brackets with delta…».
  * @returns {Promise<Item[]>}
  */

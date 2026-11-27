@@ -44,9 +44,9 @@ try:
         def search():
             c = pg.evaluate(f"(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); p.el.scrollIntoView({{block:'center'}}); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search in the libraries")
-            assert "Search in the libraries" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Search in the libraries"); wait_for_js(pg, "document.querySelector('#libres') && document.querySelector('#libres').open && document.querySelectorAll('#libres tr.row').length >= 3")
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search libraries")
+            assert "Search libraries" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Search libraries"); wait_for_js(pg, "document.querySelector('#libres') && document.querySelector('#libres').open && document.querySelectorAll('#libres tr.row').length >= 3")
             assert pg.evaluate("document.querySelector('#libres').open")
             names = pg.locator("#libres tr.row td:nth-child(2)").all_inner_texts(); print("   ", names)
             assert names[0] == "Match" and "Negativo" not in names and "Lontano" not in names and {"Spostato", "Parziale"} <= set(names), names
@@ -72,7 +72,7 @@ try:
             pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_selector("#lib-list [data-rm]")
             pg.click("#lib-list [data-rm]"); wait_for_js(pg, LIST_EMPTY); assert "No library loaded" in pg.inner_text("#lib-list"); pg.click("#lib-x")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search in the libraries"); pg.click("#ctx >> text=Search in the libraries"); wait_for_js(pg, "document.querySelector('#lr-body') && document.querySelector('#lr-body').innerText.includes('Load a library')")
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search libraries"); pg.click("#ctx >> text=Search libraries"); wait_for_js(pg, "document.querySelector('#lr-body') && document.querySelector('#lr-body').innerText.includes('Load a library')")
             assert "Load a library" in pg.inner_text("#lr-body"), pg.inner_text("#libres")
         step("no library: «Load a library (gear → Libraries)»", none)
         def unsupported():

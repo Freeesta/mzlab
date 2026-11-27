@@ -254,6 +254,7 @@ I18N.add("en", {
   "warn.raw.oneSide": "{file}: the scan window has scans on one side only ({side}; none means neither), so its background is the mean of that side or zero.",
   "err.spec.fill": "The fill time cannot be used: give a number of milliseconds above zero.",
   "note.spec.sum.noFill": "The file does not give the fill time (ms) per scan, so the ions are not counted and the counts stay in cps summed over the scans; --fill-ms T states it.",
+  "note.spec.sum.noFillOld": "The index of this file was written by an older mzLab and has no fill time per scan, so the ions are not counted; build the index again from the file to get them, or state the time with --fill-ms T.",
   "note.spec.sum.noQuantum": "The intensities are not multiples of one ion (an analog detector or processed data), so the ions cannot be counted from the counts.",
   "note.spec.mean.sumHint": "This is the mean of the scans; --sum adds them instead and states how many scans and ions the spectrum rests on."
 });

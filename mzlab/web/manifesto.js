@@ -3,11 +3,11 @@
 // What the derived files of the archive say about themselves (docs/agenti/memory.md): the format version, the crate that wrote them and the SHA-256 of the source.
 // The values are read from the file itself (the meta of `.mzidx` and of `.mzfeatf`/`.mzfeat`), so every producer is covered, also the one that writes OPFS without the archive.
 
-/** the format versions that the readers of this page understand: `idx` = version of the `.mzidx` header, `feat` = `feat_version` of the meta (crates/mzlab-feat/src/lib.rs) */
+/** the format versions that the readers of this page understand: `idx` = version of the `.mzidx` header, `feat` = `feat_version` of the meta (crates/mzlab-feat/src/lib.rs); idx stays 3 on purpose: a version 3 index is still read (no fill times, the sum's note asks for a rebuild), not made again on its own */
 export const CORRENTI = { idx: 3, feat: 3 };
 
-/** the highest versions that the readers of this page understand (the idx header knows 3: an mzML with its chromatogram list, or a vendor file; older ones are made again); a file above them was written by a newer program and is left as it is */
-export const MASSIMI = { idx: 3, feat: 3 };
+/** the highest versions that the readers of this page understand (the idx header knows 4: version 3 plus the fill-time column, 3 is still read, without fill times; older ones are made again); a file above them was written by a newer program and is left as it is */
+export const MASSIMI = { idx: 4, feat: 3 };
 
 const MAX_META = 16 << 20;
 /** @typedef {{ versione_formato: number | null, crate: string | null, sorgente_sha256: string | null }} Info */

@@ -1,6 +1,5 @@
 I18N.add("en", {
   "pick.title": "Choose samples",
-  "pick.intro": "Ticked samples start loading now; unticked ones are not read.",
   "pick.close": "Close",
   "pick.mb": "{n} MB",
   "pick.kb": "{n} KB",
@@ -13,20 +12,12 @@ I18N.add("en", {
   "pick.col.size": "Size",
   "pick.all": "Select all",
   "pick.none": "Select none",
-  "pick.sel": "{n} of {total} ticked",
+  "pick.sel": "{n}/{total}",
+  "pick.sel.aria": "{n} of {total} samples ticked",
   "pick.open": "Open selected",
   "pick.failed": "The sample chooser could not be shown, so every sample is opened: {reason}",
   "pick.rangeFailed": "{name}: only the chosen samples could not be copied, so the whole file pair is copied: {reason}",
-  "pick.cancelled": "{name} was not opened: no samples were chosen.",
   "pick.empty": "empty",
-  "pick.pre.wait": "Waiting",
-  "pick.pre.run": "Loading {pc}%",
-  "pick.pre.done": "Loaded",
   "pick.why.inferred": "found in the data file, not in the index",
-  "pick.why.refused": "cannot be read",
-  "pick.kind.ms": "MS",
-  "pick.kind.ms2": "MS²",
-  "pick.kind.sim": "SIM",
-  "pick.kind.mrm": "MRM",
-  "pick.kind.dad": "DAD"
+  "pick.why.refused": "cannot be read"
 });

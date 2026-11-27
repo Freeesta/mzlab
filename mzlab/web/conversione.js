@@ -252,7 +252,7 @@ const CONVROWS = {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
     if (r.mono && pc != null) pc = Math.max(pc, r.pc || 0, r.floor || 0);
     const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
-    r.state = state; r.pc = pc == null ? null : pc; if (r.pc != null) r.bar = r.pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
+    r.state = state; if (was === "choose" && state !== "choose") r.t0 = now; r.pc = pc == null ? null : pc; if (r.pc != null) r.bar = r.pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
     if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub || det) r.seen = now;
     if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.fill(r); } else if (r.seen === now) this.queue(r);
   },
@@ -342,14 +342,14 @@ const CONVROWS = {
   },
   // the one summary of the loading: «3 of 5 ready · 0:12»; the screen readers hear it (a polite region of its own) only when the count of the ready files changes, never the clock
   ready() {
-    const n = this.rows.length, done = n - this.running().length, t0 = minOf(this.rows.map(r => r.t0 || Date.now()));
+    const n = this.rows.length, done = n - this.running().length, going = this.rows.filter(r => r.state !== "choose"), t0 = minOf(going.map(r => r.t0 || Date.now()));
     if (typeof document !== "undefined" && this.liveN !== done + "/" + n) {
       this.liveN = done + "/" + n;
       let el = document.getElementById("cvlive");
       if (!el) { el = document.createElement("div"); el.id = "cvlive"; el.className = "sr-only"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el); }
       el.textContent = I18N.t("load.prog.count", { done, n });
     }
-    return I18N.t("conv.row.ready", { done, n, time: convElapsed(Date.now() - t0) });
+    return going.length ? I18N.t("conv.row.ready", { done, n, time: convElapsed(Date.now() - t0) }) : I18N.t("conv.row.choosing");      // every file waits for the user's choice: no count, no clock
   },
   // the bar over the table: the buttons of the converted files and the options. It is always there while a table is, so nothing appears or goes away at the phases; what is not
   // needed is invisible (data-off) and cannot be reached
@@ -487,9 +487,9 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
   return freeMzml(base, ".wiff", used);
 }
 // the short word of the state of a row (CONVROWS.short): the phase without numbers
-function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", engine: "conv.st.engine", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
+function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ choose: "conv.st.choose", open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", engine: "conv.st.engine", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", engine: "conv.row.engine", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
+function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ choose: "conv.row.choose", open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", engine: "conv.row.engine", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(/** @type {number} */ ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;

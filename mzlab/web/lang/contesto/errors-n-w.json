@@ -145,6 +145,7 @@
   "warn.raw.oneSide": "raw scan warning: the window has scans on one side only; {file} = the file, {side} = the side that has scans (left, right, or none for neither).",
   "err.spec.fill": "Usage error of spectrum get --sum --fill-ms and of api/specsum: the fill time is not a positive number (no placeholder: the route does not carry the value).",
   "note.spec.sum.noFill": "spectrum get --sum note (stderr and the evidence): the file has no fill time per scan, so ions is null and counts are cps summed over scans; no placeholders.",
+  "note.spec.sum.noFillOld": "spectrum get --sum note (stderr and the evidence): the index was built by an older version (format 3) and has no fill time per scan, so ions is null; rebuild the index or use --fill-ms; no placeholders.",
   "note.spec.sum.noQuantum": "spectrum get --sum note: the probed intensities have no ion quantum, so ions_by_quantum is null; no placeholders.",
   "note.spec.mean.sumHint": "spectrum get hint (stderr) in the mean mode of a window: --sum is the way to add the scans and see their number and ions; no placeholders."
 }

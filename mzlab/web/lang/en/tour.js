@@ -44,7 +44,7 @@ I18N.add("en", {
   "tour.spectrum.text": "The ions present at the chosen time: m/z across, intensity up. The panel title shows the time and the file.",
   "tour.xic.title": "Extract one ion (XIC)",
   "tour.xic.text": "An XIC is the chromatogram of a single m/z: it shows when that ion comes out.",
-  "tour.xic.try": "right-click a peak in the spectrum → «Extract the XIC».",
+  "tour.xic.try": "right-click a peak in the spectrum → «Extract XIC».",
   "tour.xicpanel.title": "The XIC you extracted",
   "tour.xicpanel.text": "The window is 1 m/z unit wide, because the instrument has unit resolution. Peaks are integrated here, not on the TIC. With «+ XIC» you type an m/z or a formula.",
   "tour.zoom.title": "Zoom in and back out",

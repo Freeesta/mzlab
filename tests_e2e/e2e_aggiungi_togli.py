@@ -88,11 +88,11 @@ try:
             pg.evaluate("document.getElementById('ctx').hidden = true")
             n = pg.evaluate("E.files.filter(f => !f.gone).length")
             pg.evaluate("E.files.forEach(f => { if (!f.gone) f.vis = true; })")
-            pg.click("#flst .fl .nm >> nth=0", button="right"); assert re.search(r"Remove the \d+ shown files|Remove the \d+ shown files", pg.inner_text("#ctx"))
+            pg.click("#flst .fl .nm >> nth=0", button="right"); assert re.search(r"Remove \d+ shown files|Remove \d+ shown file", pg.inner_text("#ctx"))
             pg.evaluate("document.getElementById('ctx').hidden = true")
             pg.evaluate("removeAllFiles(E.files.filter(f => !f.gone && f.vis))"); wait_for_js(pg, f"{WORK} === 'landing'")
             pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.files.filter(f => !f.gone).length === {n}"); wait_for_js(pg, f"{WORK} === 'panels'")
-        step("the row menu offers «Remove the N shown files» and «Remove all files»", menu_entries)
+        step("the row menu offers «Remove N shown files» and «Remove all files»", menu_entries)
         def drop_overlay():
             pg.evaluate("() => { window.__up = []; window.upload = (f, into) => { window.__up.push([f.length, into]); }; }")
             pg.evaluate("""() => { const dt = new DataTransfer(); dt.items.add(new File(['x'], 'new.mzML'));

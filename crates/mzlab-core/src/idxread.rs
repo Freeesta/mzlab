@@ -2,6 +2,8 @@
 //! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS callback).
 
 use crate::error::{Error, Result};
+use crate::idxrows::nativo;
+use crate::idxscan::{key_prefix, strip_range};
 use crate::json::{self, Value};
 use crate::readers::Position;
 
@@ -63,6 +65,8 @@ pub struct Scan {
     /// The mobility of the whole scan (a scan attribute, as `f32`, `NaN` for none), and its unit: 0 none, 1 `k0`, 2 `ms` (column 22 of the row).
     pub mob: f32,
     pub mob_unit: u8,
+    /// The ion injection (fill) time of the scan in ms (column 23 of the row, `MS:1000927`), `NaN` when the file states none or the index is of version 3.
+    pub fill: f32,
 }
 
 /// The scan types as the row of the index names them: the first `SPECIAL` are not a plain full or product-ion scan (a part of their own); the
@@ -81,6 +85,12 @@ impl Scan {
             _ => return None,
         };
         (!self.mob.is_nan()).then_some((f64::from(self.mob), unit))
+    }
+
+    /// The ion injection (fill) time of the scan in ms, `None` when the file states none (or the index is of version 3).
+    pub fn fill_ms(&self) -> Option<f64> {
+        let f = f64::from(self.fill);
+        (f > 0.0 && f.is_finite()).then_some(f)
     }
 
     /// `PREC`, `NL`, `NG`, `EMC`, `TDF` or `ER`, `None` for an ordinary scan.
@@ -162,38 +172,6 @@ impl Scan {
     }
 }
 
-/// `re.sub(r"\s*\[[^\]]*\]\s*$", "", f)`: the scan range in square brackets at the end of a filter.
-fn strip_range(f: &str) -> &str {
-    let t = f.trim_end();
-    if t.ends_with(']')
-        && let Some(p) = t.rfind('[')
-        && !t[p + 1..t.len() - 1].contains(']')
-    {
-        return t[..p].trim_end();
-    }
-    f
-}
-
-/// `^(\w+)\s+([+-])\s` of the filter: the analyzer and the polarity sign.
-fn key_prefix(f: &str) -> Option<(&str, char)> {
-    let w = f.find(|c: char| !(c.is_alphanumeric() || c == '_'))?;
-    if w == 0 {
-        return None;
-    }
-    let rest = &f[w..];
-    let t = rest.trim_start();
-    if t.len() == rest.len() {
-        return None;
-    }
-    let sign = t.chars().next().filter(|c| *c == '+' || *c == '-')?;
-    let after = &t[1..];
-    if after.chars().next().is_some_and(char::is_whitespace) {
-        Some((&f[..w], sign))
-    } else {
-        None
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Section {
     pub level: u8,
@@ -224,6 +202,8 @@ pub struct Index<R: ReadAt> {
     pub scans: std::sync::Arc<Vec<Scan>>,
     pub keys: Vec<(String, usize)>,
     pub sections: Vec<Section>,
+    /// The version of the header: 4 has the fill-time column (23) in its rows, 3 does not (`Scan::fill_ms` is then `None` for every scan).
+    pub version: u32,
     pub source: Value,
     pub run: Value,
     pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
@@ -233,20 +213,8 @@ pub struct Index<R: ReadAt> {
     pub(crate) crcs: Vec<f64>, // the `crc32` of the 10 arrays of each section in turn (NaN when the section has none)
     /// The chromatogram list and facts of the mzML, read once for all the open routes (`entry`, `items`, `canali`): see `layout.rs`.
     pub layout: crate::layout::Layout,
-}
-
-/// Whether the header is of an index of a vendor file (version 3 with `READER_FLAG`) or of an mzML (version 3); `None` for any other, older versions included.
-pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
-    let w = |a: usize| {
-        h.get(a..a + 4)
-            .and_then(|b| b.try_into().ok())
-            .map(u32::from_le_bytes)
-    };
-    match (w(8)?, w(12)?) {
-        (3, 0) => Some(false),
-        (3, READER_FLAG) => Some(true),
-        _ => None,
-    }
+    /// The label check of this index (`lrscreen::label_check`), probed at the first ask; `Some(None)`: nothing to check.
+    pub label: Option<Option<crate::rawinfo::LabelCheck>>,
 }
 
 /// The `len` bytes at `off`.
@@ -390,6 +358,7 @@ impl<R: ReadAt> Index<R> {
             scans: std::sync::Arc::new(scans),
             keys,
             sections,
+            version: u32::from_le_bytes(head.h[8..12].try_into().unwrap()),
             source,
             run,
             cache: Vec::new(),
@@ -398,6 +367,7 @@ impl<R: ReadAt> Index<R> {
             fences: vec![None; n],
             crcs,
             layout,
+            label: None,
         })
     }
 
@@ -410,6 +380,7 @@ impl<R: ReadAt> Index<R> {
             scans: self.scans.clone(),
             keys: self.keys.clone(),
             sections: self.sections.clone(),
+            version: self.version,
             source: self.source.clone(),
             run: self.run.clone(),
             cache: Vec::new(),
@@ -418,6 +389,7 @@ impl<R: ReadAt> Index<R> {
             fences: vec![None; n],
             crcs: self.crcs.clone(),
             layout: self.layout.clone(),
+            label: None,
         }
     }
 

@@ -217,7 +217,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   const kinds=new Set(),twins=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};if(kinds.has(k+sc))twins.add(k);kinds.add(k+sc);e[sc?"scan":"wiff"]=f;if(!sc)e.stem=stem;WIFF_WAIT.set(k,e);dropped.add(k)}
   for(const k of twins){const e=WIFF_WAIT.get(k);WIFF_WAIT.delete(k);dropped.delete(k);res.errs.push([T("load.wiffTwin"),e.stem+".wiff"])}
-  const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=[];
+  const taken=[...res.files.map((/** @type {FileRiga} */ x)=>x.name),...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name)],pairs=/** @type {any[]} */ ([]);
   // a pair is in the list as soon as its two files are together, before anything is read
   for(const [k,e] of [...WIFF_WAIT]){
     // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
@@ -227,7 +227,8 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   let pick=/** @type {any} */ (null);const pickMode=typeof uipPickMode==="function"?uipPickMode():"several";
   for(const e of pairs)e.nkey=NATIVO.key(e.stem);      // ONE key per dataset: the dialog's copies ahead and the opening land on the same stores
   const unpre=(/** @type {{ nkey: string }} */ e)=>{if(pick&&pick.prefetch)Promise.resolve(rb.nativeUnprefetch(e.nkey,null,true)).catch(()=>{})};      // the dialog's copies of a pair no sample will use: holds go, unused stores are removed
-  if(pairs.length&&!(signal&&signal.aborted)&&pickMode!=="never"){try{await loadScript("wiff-choose.js");pick=await WIFFCHOOSE.ask(pairs.map(e=>({key:e.row,name:e.wiff.name,nkey:e.nkey,mem:[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],cached:(/** @type {unknown} */ j)=>NATIVO.cached(rb,[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],ST.files||[],async()=>j).then((/** @type {unknown} */ h)=>!!h,()=>false)})),rb,pickMode)}catch(x){pick=null;(res.notes=res.notes||[]).push(T("pick.failed",{reason:String(x&&/** @type {any} */ (x).message||x)}))}}
+  if(pairs.length&&!(signal&&signal.aborted)&&pickMode!=="never"){try{await loadScript("wiff-choose.js");pick=await WIFFCHOOSE.ask(pairs.map(e=>({key:e.row,name:e.wiff.name,nkey:e.nkey,mem:[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],cached:(/** @type {unknown} */ j)=>NATIVO.cached(rb,[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],ST.files||[],async()=>j).then((/** @type {unknown} */ h)=>!!h,()=>false)})),rb,pickMode,{show:()=>pairs.forEach(e=>CONVROWS.set(e.row,"choose"))})}catch(x){pick=null;(res.notes=res.notes||[]).push(T("pick.failed",{reason:String(x&&/** @type {any} */ (x).message||x)}))}}
+  for(const e of pairs)CONVROWS.set(e.row,"open");      // the dialog is gone: the neutral «Choose samples» ends and the clock of the opening starts
   // the name of each chosen sample of a file with several: the engine's column label (`sample_labels`, the one of `features --sample`), over every chosen sample of the loading at once so that
   // two samples of one name, in one file or two, are told apart by their file and number; without a choice (setting "never") the samples of the pair alone
   const LB=/** @type {Map<string, string>} */ (new Map());
@@ -237,7 +238,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   for(const e of pairs){
     if(signal&&signal.aborted){unpre(e);CONVROWS.finish(e.row,"cancel");continue}
     const want=/** @type {number[] | null} */ (pick&&pick.picks?pick.picks.get(e.row)||null:null),partial=!!want&&want.length<(pick.total.get(e.row)||0);
-    if(pick&&(pick.cancelled||(want&&!want.length))){unpre(e);CONVROWS.finish(e.row,"cancel");(res.notes=res.notes||[]).push(T("pick.cancelled",{name:e.wiff.name}));continue}
+    if(pick&&(pick.cancelled||(want&&!want.length))){unpre(e);CONVROWS.drop(e.row);continue}      // a deliberate cancel is no news: no notice
     // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variant» pair drops the parse
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=partial?null:await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}unpre(e);CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again (the copies the dialog made ahead go)
