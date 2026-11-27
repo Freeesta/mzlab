@@ -40,7 +40,7 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
         owned.set(tag, mine);
         if (withIndex && !cut.has(tag)) await /** @type {NonNullable<typeof ahead>} */ (ahead).build(nat, /** @type {number} */ (m.c), m.sid, f => { if (!cut.has(tag)) tell(share + (1 - share) * f); });      // a build that fails leaves the opening to index as before
       } catch (e) {
-        for (const st of mine) { holds.delete(st); fresh.delete(st); await ARCH.remove("files", st).catch(() => {}); }      // a stopped or refused copy leaves nothing of its own
+        for (const st of mine) { holds.delete(st); fresh.delete(st); await ARCH.removeHeld("files", st).catch(() => {}); }      // a stopped or refused copy leaves nothing of its own
         throw e;
       } finally { release(room); }
     });
@@ -56,11 +56,11 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
     if (ahead) ahead.cancel(tags);      // a long build is stopped at once, not waited for
     await Promise.all(tags.map(t => running.get(t)));
     if (ahead) await Promise.all(tags.map(t => ahead.drop(t)));
-    for (const t of tags) { for (const st of owned.get(t) || []) { holds.delete(st); if (fresh.delete(st)) await ARCH.remove("files", st).catch(() => {}); } owned.delete(t); cut.delete(t); }      // a store a stub took over (`landed`) is no longer fresh: it stays
+    for (const t of tags) { for (const st of owned.get(t) || []) { holds.delete(st); if (fresh.delete(st)) await ARCH.removeHeld("files", st).catch(() => {}); } owned.delete(t); cut.delete(t); }      // a store a stub took over (`landed`) is no longer fresh: it stays
     if (!m.end) return;
     const used = new Set();
     for (const e of await ARCH.list("files")) { if (!/\.mzml$/i.test(e.name)) continue; const st = await stubOf(e.name); if (st) st.members.forEach((/** @type {{ store: string }} */ y) => used.add(y.store)); }
-    for (const [st, k] of [...holds]) if (k === m.key) { holds.delete(st); if (fresh.has(st) && !used.has(st)) { fresh.delete(st); await ARCH.remove("files", st).catch(() => {}); } }
+    for (const [st, k] of [...holds]) if (k === m.key) { holds.delete(st); if (fresh.has(st) && !used.has(st)) { fresh.delete(st); await ARCH.removeHeld("files", st).catch(() => {}); } }
   }
 
   return {

@@ -4,7 +4,7 @@ peak) is refused with the evidence and a way to keep it (Alt+click, logged in th
 (QUALITA.click, the .wasm) gives the bytes of `mzlab-cli peak edges --set click=1`, and the CLI exits 0 / 1 for a kept / refused window.
 Needs the site and the .wasm (python3 tools/prepara_sito.py) and the CLI (cargo). Run from the repo root: python3 tests_e2e/e2e_integra_clic.py"""
 # covers: tools/wiff_sim.py, mzlab/web/integra-clic.js, mzlab/web/area-etichette.js, mzlab/web/picchi.js, mzlab/web/qualita.js, crates/mzlab-core/src/peakq_click.rs
-import sys, os, json, subprocess, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, json, math, subprocess, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *
 sys.path.insert(0, str(ROOT / "tests"))
@@ -41,8 +41,10 @@ try:
         pg.evaluate("(()=>{const f=QUALITA.click;window.__ck=0;QUALITA.click=async(...a)=>{try{return await f.apply(QUALITA,a)}finally{window.__ck++}}})()")      # counts the answers of the engine
         def click(i, x, alt=False):
             c = xy(i, x); k0 = pg.evaluate("window.__ck")
+            # a real mouse gives whole CSS pixels and Chromium snaps a fractional position (down locally, to the nearest in other builds): the click is placed on the pixel itself, on the plot side,
+            # because a flat trace sits 0.14 px above the x-axis strip (py > H - M.b, a drag there zooms the axis and never calls the engine) and one pixel more would land in it
             if alt: pg.keyboard.down("Alt")
-            pg.mouse.click(c["x"], c["y"])
+            pg.mouse.click(round(c["x"]), math.floor(c["y"]))
             if alt: pg.keyboard.up("Alt")
             wait_for_js(pg, f"window.__ck>{k0}", timeout=60000); frames(pg, 4)        # the engine (a first call starts its worker) answered, the page drew
         ints = lambda: pg.evaluate(f"{P}.ints.map(i=>({{key:i.key,a:i.a,b:i.b,id:i.id,click:i.click||null}}))")
