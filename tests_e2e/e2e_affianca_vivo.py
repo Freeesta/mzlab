@@ -40,7 +40,7 @@ try:
                 shot(f"drag-{W}")
                 pg.mouse.up(); wait_for_js(pg, settled)
                 assert order() == [bot, top], order()
-                assert abs(rect(1)[1] - (b0[1] + b0[3] + (b0[1] - t0[1] - t0[3]))) < 3, ("the panel did not land at the placeholder", rect(1))
+                assert abs(rect(1)[1] - prev[1]) < 3, ("the panel did not land at the placeholder", rect(1))
             step(tag + "TIC dragged below its spectrum: the spectrum moves up during the drag, the placeholder is at the final position, the drop lands there", lower)
             def back():
                 wait_for_js(pg, settled); b0 = rect(1); g = grip(0)       # now the spectrum is first
@@ -62,19 +62,19 @@ try:
             def keys():
                 wait_for_js(pg, settled); b0 = rect(1)
                 pg.evaluate("stackOrder()[0].el.querySelector('.arrange-grip').focus()"); pg.keyboard.press("Space")
-                assert "picked up" in live(), live()
+                wait_for_js(pg, "document.querySelector('#arrange-live').textContent.includes('picked up')")
                 assert not pg.evaluate("document.querySelector('.arrange-menu')"), "Space opened the menu"
                 pg.keyboard.press("ArrowDown"); wait_for_js(pg, "document.querySelector('.arrange-prev') !== null")
                 assert rect(1)[1] < b0[1] - 5, ("the other panel did not move up", b0, rect(1))
                 wait_for_js(pg, "document.querySelector('#arrange-live').textContent.includes('row')")
                 shot(f"keys-{W}")
                 pg.keyboard.press("Escape"); wait_for_js(pg, settled)
-                assert order() == [top, bot], order(); assert "cancelled" in live(), live()
+                assert order() == [top, bot], order(); wait_for_js(pg, "document.querySelector('#arrange-live').textContent.includes('cancelled')")
                 pg.keyboard.press("Space"); pg.keyboard.press("ArrowDown"); wait_for_js(pg, "document.querySelector('.arrange-prev') !== null"); pg.keyboard.press("Space")
                 wait_for_js(pg, f"stackOrder()[0].id === {bot}"); wait_for_js(pg, settled)
                 assert order() == [bot, top], order()
                 assert pg.evaluate("document.activeElement.classList.contains('arrange-grip')"), "focus lost"
-                pg.keyboard.press("Space"); pg.keyboard.press("ArrowDown"); wait_for_js(pg, "document.querySelector('.arrange-prev') !== null"); pg.keyboard.press("Space")
+                pg.keyboard.press("Space"); pg.keyboard.press("ArrowUp"); wait_for_js(pg, "document.querySelector('.arrange-prev') !== null"); pg.keyboard.press("Space")
                 wait_for_js(pg, f"stackOrder()[0].id === {top}"); wait_for_js(pg, settled)
             step(tag + "keyboard: Space picks up (no menu), ArrowDown moves with the preview and an announcement, Escape cancels, Space drops", keys)
             def calm():
