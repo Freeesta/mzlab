@@ -14,6 +14,5 @@ function openingView(/** @type {boolean} */ on){const v=$("#v-data");$("#opening
   for(const id of ["#tools","#dfiles"])$(id).inert=on;v.setAttribute("aria-busy",String(on));if(on)openingRender();
   else if(OPEN.on&&!v.hidden){v.classList.add("opn-rev");clearTimeout(OPEN.tm);OPEN.tm=setTimeout(()=>endReveal(v),400)}
   OPEN.on=on}
-// «opn-rev» switches the entry animation of the panels off (transizioni.css). Removing it would start that animation (the animation name goes from none to tr-drop) and every panel
-// on show would fade in and drop a second time: they are marked as seen first, in the same style recalculation
+// leaving opn-rev would start the entry animation again: mark the panels seen first
 function endReveal(/** @type {HTMLElement} */ v){document.querySelectorAll("#dpanels .pnl").forEach(p=>p.setAttribute("data-seen",""));v.classList.remove("opn-rev")}
