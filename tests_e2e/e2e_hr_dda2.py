@@ -39,8 +39,8 @@ try:
             show_scan(pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2._scan.rt})()") + 0.15)
             right_click("t.s1._a.lbls.find(l=>l.nb&&Math.abs(l.ion-364.0737)<0.002)")
             t = pg.inner_text("#ctx"); print(t)
-            assert "Average of the MS2 of this ion" in t and "Follow this ion in the MS2" in t, t
-            pg.click("#ctx >> text=Average of the MS2 of this ion"); pg.wait_for_timeout(2500)
+            assert "Average MS2 of ion" in t and "Follow ion in MS2" in t, t
+            pg.click("#ctx >> text=Average MS2 of ion"); pg.wait_for_timeout(2500)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {n:t.s2.avg&&t.s2.avg.length,title:t.s2.title,cap:t.s2.leg.textContent,pk:t.s2._a.data[0].d.mz.length}})()"); print(v)
             assert v["n"] and 2 <= v["n"] <= 5 and v["title"].startswith("Average of ") and "364.073" in v["title"] and "average of " in v["cap"], v
         step("right click: average of the MS2 of that ion (at most 5, within ±1 min)", average)
@@ -49,8 +49,8 @@ try:
             right_click("(()=>{const a=t.s1._a;const s=a.data[0].d;let j=0;s.mz.forEach((m,i)=>{if(Math.abs(m-305.0702)<0.003)j=i});const X=a.X(s.mz[j]);return {x:X-4,y:20,w:8,h:a.H-60}})()")
             pg.wait_for_timeout(200)
             t = pg.inner_text("#ctx"); print(t.replace("\n", " | ")[:300])
-            assert "Follow this ion in the MS2" in t, t
-            pg.click("#ctx >> text=Follow this ion in the MS2"); pg.wait_for_timeout(4000)
+            assert "Follow ion in MS2" in t, t
+            pg.click("#ctx >> text=Follow ion in MS2"); pg.wait_for_timeout(4000)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";const x=E.panels.find(p=>p.id===t.s1.link),c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');return {type:x.type,follow:!!x.ddaFollow,ion:t.s2.ion,sid:t.s2.sid,tri:x._a.tri.map(q=>q.prec),y:[c.y,x.y,t.s1.y],h:[c.h,x.h],ms2tri:[c.ms2tri,x.ms2tri],prec:t.s2._scan&&t.s2._scan.prec,title:x.title}})()"); print(v)
             assert v["type"] == "xic" and v["follow"] and abs(v["ion"] - 305.0702) < 0.003 and v["sid"] is not None, v
             assert v["tri"] and all(abs(q - 305.0702) < 0.003 for q in v["tri"]), v                  # only the triangles of that ion

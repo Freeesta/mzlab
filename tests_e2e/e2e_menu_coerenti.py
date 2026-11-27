@@ -86,8 +86,8 @@ try:
             assert not any(t in " ".join(tic) for t in (pg.evaluate("I18N.t('ctx.spec.avgSel')"), pg.evaluate("I18N.t('ctx.spec.atRt')"))), tic
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})")
             XP = "E.panels.find(q=>q.type==='xic')"; wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
-            assert auto in labels(XP), "an XIC keeps «Integrate the peak»"
-        step("TIC: no «Integrate the peak», no spectrum entries; XIC keeps the integration", tic_vs_xic)
+            assert auto in labels(XP), "an XIC keeps «Integrate peak»"
+        step("TIC: no «Integrate peak», no spectrum entries; XIC keeps the integration", tic_vs_xic)
         def every_action():
             r = pg.evaluate("""(()=>{const none=AZIONI.actions.filter(a=>!a.svg&&!(a.iconKey&&AZIONI_ICONE.DISEGNI[a.iconKey])).map(a=>a.id);
               const bad=AZIONI.actions.filter(a=>a.iconKey&&!AZIONI_ICONE.DISEGNI[a.iconKey]).map(a=>a.id);
