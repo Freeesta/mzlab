@@ -351,7 +351,10 @@ function inline(/** @type {Element} */ parent, /** @type {string} */ text, /** @
 function drawNode(/** @type {Element} */ g, /** @type {any} */ j, /** @type {any} */ n, /** @type {any} */ x, /** @type {Box} */ b, /** @type {Layout} */ L, /** @type {Opts} */ o, /** @type {boolean} */ isSel, /** @type {boolean} */ hot, /** @type {number} */ hiddenBelow) {
   const t = o.t, m = boxModel(j, n, x, o, L.mode === "radial");
   const isRoot = !x.best.from, drawingText = isRoot ? o.root || (o.drawing && o.drawing(n.id)) : o.drawing && o.drawing(n.id);
-  const aria = m.aria.concat(hiddenBelow ? [t("msngrafo.v.aria.collapsed", { n: hiddenBelow })] : []);
+  const mzText = `m/z ${n.mz.toFixed(4)}` + (m.rel != null ? `  ·  ${m.rel.toFixed(1)} %` : ""), lvText = levelsText(x) + (hiddenBelow ? `  ·  ${t("msngrafo.v.hidden", { n: hiddenBelow })}` : "");
+  // The accessible name starts with the text the box shows, in the order it shows it (WCAG 2.5.3 label in name), then says what the numbers mean.
+  const shown = [x.common ? `×${x.incoming}` : "", mzText, lvText, ...m.lines.map((/** @type {any} */ l) => `${l.plain}  ${l.ppm}` + (l.proofs.length ? "  " + l.proofs.join(" ") : "")), m.more].filter(Boolean).join(" ");
+  const aria = [shown].concat(m.aria.slice(1), hiddenBelow ? [t("msngrafo.v.aria.collapsed", { n: hiddenBelow })] : []);
   const box = el("g", { class: "ig-node" + (isSel ? " sel" : "") + (hot ? " hot" : "") + (n.isolated ? " iso" : "") + (x.common ? " common" : ""), "data-id": n.id, tabindex: -1, role: "button", transform: `translate(${b.x},${b.y})`,
     "aria-pressed": String(isSel), "aria-label": aria.join(", ") }, g);
   box.appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: nodeTip(j, n, x) }));
@@ -360,8 +363,8 @@ function drawNode(/** @type {Element} */ g, /** @type {any} */ j, /** @type {any
     el("rect", { x: 3, y: 3, width: b.w - 6, height: b.h - 6, rx: 4, class: "ig-box2" }, box);
     el("text", { x: b.w - 36, y: 17, class: "ig-com", "text-anchor": "end" }, box, `×${x.incoming}`).appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: t("msngrafo.v.common", { n: x.incoming }) }));
   }
-  el("text", { x: 8, y: 17, class: "ig-mz" }, box, `m/z ${n.mz.toFixed(4)}` + (m.rel != null ? `  ·  ${m.rel.toFixed(1)} %` : ""));
-  el("text", { x: 8, y: 31, class: "ig-lvl" }, box, levelsText(x) + (hiddenBelow ? `  ·  ${t("msngrafo.v.hidden", { n: hiddenBelow })}` : ""));
+  el("text", { x: 8, y: 17, class: "ig-mz" }, box, mzText);
+  el("text", { x: 8, y: 31, class: "ig-lvl" }, box, lvText);
   if (m.amb) el("path", { d: `M${b.w - 16},8 l5,9 l-10,0 z`, class: "ig-amb" }, box).appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: t("msngrafo.amb") }));
   let y = 48;
   m.lines.forEach(l => {
