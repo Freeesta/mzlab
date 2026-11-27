@@ -34,7 +34,7 @@ try:
         step("1.0: right click on the label / on the bar gives the label's peak", pick_label)
         def xic_direct():
             lb = label_box(0); n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
-            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Extract the XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Extract XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not pg.evaluate("document.querySelector('#xicdlg').open"), "no dialog"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces[0]"); n = round(lb["m"] - 0.25)
@@ -45,7 +45,7 @@ try:
             lb = label_box(1); its = ctx_items(lb["x"], lb["y"]); print(its)
             assert any(i.startswith("Overlay on XIC of m/z ") and "(panel " in i for i in its) and not any("Add to" in i for i in its), its
             tip = pg.evaluate("[...document.querySelectorAll('#ctx div')].find(d=>d.textContent.startsWith('Overlay'))?.title"); assert "same chart" in tip, tip
-            pg.locator("#ctx div", has_text="Overlay on the XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
+            pg.locator("#ctx div", has_text="Overlay on XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces.length") == 2
         step("1.4: 'Overlay on XIC of m/z … (panel n)' adds a trace", overlay)
         def live():

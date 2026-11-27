@@ -33,7 +33,7 @@ try:
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
             pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
-            assert "What is it?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+            assert "Identify in libraries" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
         step("the MS2 panel of the DDA trio has the voice «Identify in libraries»", open_menu)
         def result():
             pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analogs \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")

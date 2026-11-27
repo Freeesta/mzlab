@@ -12,7 +12,7 @@ WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 # House style (docs/agenti/languages.md): menu items, palette commands and button labels are short imperative phrases, verb + object,
 # without articles or demonstratives («Reset zoom», not «Reset the zoom»). Menu keys: these families, plus every key a script
 # passes as `label:` / `name:` / `menuLabel:` of an entry.
-MENU_KEY_RE = re.compile(r"^(ctx\.(?!.*\.(aria|prompt|tip|where|fail|number)$)|cmd\..*\.name$|files\.ctx\.|.*\.menu(\.|$)|.*\.menu[A-Z])")
+MENU_KEY_RE = re.compile(r"^(ctx\.(?!.*\.(aria|prompt|tip|where|fail|number)$)|cmd\..*\.name$|files\.ctx\.|draw\.(sub\.)?ctx\.|draw\.(part|multi)\.remove$|.*\.menu(\.|$)|.*\.menu[A-Z])")
 MENU_LABEL_RE = re.compile(r"""\b(?:label|name|menuLabel)\s*[:=(]\s*[^"'`\n]{0,50}?(?:I18N\.t|\bT|\bt)\(\s*["']([A-Za-z0-9_.]+)["']""")
 MENU_ARTICLE_RE = re.compile(r"(?<![\w'’-])(the|this|that|these|those|a|an)(?![\w'’-])", re.I)
 # key -> why a determiner is right there (the text is not a menu label, or a fixed section name shared with tabs)

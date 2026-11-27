@@ -80,7 +80,7 @@ try:
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
             pg.mouse.click(a["px"], a["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            pg.locator("#ctx div", has_text="Extract the XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            pg.locator("#ctx div", has_text="Extract XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not dlg(), "no dialog: the XIC appears at once"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)

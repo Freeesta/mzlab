@@ -1,6 +1,6 @@
 """The click of the automatic tool on four overlaid SIM ions (synthetic SIM .wiff of tools/wiff_sim.py, `sim3`, sample Sample_A: one peak per ion at its own time): one click
 integrates ONE trace (the one under the pointer) and the peak nearest the click, never one window per channel; labels never overlap; a junk click (a time where the ion has no
-peak) is refused with the evidence and a way to keep it (Alt+click, logged in the record); "all channels at this time" leaves the channels without a peak out; the page engine
+peak) is refused with the evidence and a way to keep it (Alt+click, logged in the record); "all channels at RT" leaves the channels without a peak out; the page engine
 (QUALITA.click, the .wasm) gives the bytes of `mzlab-cli peak edges --set click=1`, and the CLI exits 0 / 1 for a kept / refused window.
 Needs the site and the .wasm (python3 tools/prepara_sito.py) and the CLI (cargo). Run from the repo root: python3 tests_e2e/e2e_integra_clic.py"""
 # covers: tools/wiff_sim.py, mzlab/web/integra-clic.js, mzlab/web/area-etichette.js, mzlab/web/picchi.js, mzlab/web/qualita.js, crates/mzlab-core/src/peakq_click.rs

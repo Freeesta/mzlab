@@ -43,7 +43,7 @@ try:
             labs = [i[0] for i in items]; print(labs)
             assert "Copy value" in labs, labs          # the copy of the value works in high resolution too
             first = [i for i in items if not i[0].startswith(("m/z", "Reset", "Copy value"))]
-            assert first[0][0].startswith("Open the MS² scan") and first[0][1], first[:2]
+            assert first[0][0].startswith("Open MS² scan") and first[0][1], first[:2]
             assert "ormula" in first[1][0], first[:3]
             # the item reads «Options…» (disp.menu); the long wording lives in its aria-label (disp.menu.aria)
             assert any("display options" in (i[1] or "") for i in first[:8]) and hrs >= 3, (first, hrs)
