@@ -8,6 +8,7 @@ fn main() {
     let table = std::fs::read(&a[0]).expect("table");
     let samples = std::fs::read_to_string(&a[1]).expect("samples");
     let id: u32 = a[2].parse().expect("id");
-    let out = core::slots_json(&mut Slice(&table), table.len() as u64, &samples, id, &a[3]).expect("slots");
+    let out = core::slots_json(&mut Slice(&table), table.len() as u64, &samples, id, &a[3])
+        .expect("slots");
     print!("{out}");
 }

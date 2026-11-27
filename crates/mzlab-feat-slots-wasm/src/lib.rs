@@ -49,6 +49,12 @@ pub fn table_slots(
     id: u32,
     output: &str,
 ) -> std::result::Result<String, JsValue> {
-    core::slots_json(&mut JsReader(table_read), size as u64, samples_json, id, output)
-        .map_err(|e| JsValue::from_str(&e.to_json()))
+    core::slots_json(
+        &mut JsReader(table_read),
+        size as u64,
+        samples_json,
+        id,
+        output,
+    )
+    .map_err(|e| JsValue::from_str(&e.to_json()))
 }
