@@ -129,7 +129,7 @@ def test_the_wasm_the_native_example_and_the_cli_give_the_same_tables_entry(buil
     (folder / "series.mzfeat").write_bytes(table.read_bytes())
     prov = {"schema": "prov/1", "entity": {}, "activity": {"series": {"step": "features.gapfill@1", "ms": 12.34, "warnings": []}}}
     (folder / "prov.json").write_text(json.dumps(prov))
-    got = cli("flow", "tables", str(folder), "--json")
+    got = cli("flow", "tables", str(folder), "--json").stdout
     assert '"tables":[' + entries["nat"] + "]" in got
     entry = json.loads(entries["nat"])
     assert entry["name"] == "series.mzfeat" and entry["rows"] > 0 and entry["step"] == "features.gapfill@1" and entry["ms"] == 12.3
