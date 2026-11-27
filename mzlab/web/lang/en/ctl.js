@@ -50,7 +50,7 @@ I18N.add("en", {
   "ctl.smooth.title": "Smooths the curve shown",
   "ctl.files.aria": "{n}/{tot} files shown",
   "ctl.smooth": "Smoothing",
-  "ctl.range.clear": "Clear the range",
+  "ctl.range.clear": "Clear range",
   "ctl.range.num": "Write a positive number, or leave it empty for no limit: the previous values are back.",
   "ctl.range.order": "«from» must be lower than «to»: the previous values are back.",
   "ctl.range.set": "set",

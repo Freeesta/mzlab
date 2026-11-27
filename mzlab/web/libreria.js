@@ -118,7 +118,7 @@ const LIB = (() => {
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.identAll", group: "lib", views: ["chrom"], name: () => I18N.t("ctx.chrom.identAll"),
     visible: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), run: (/** @type {Bag} */ c) => identifyAll(c.k) });
-  // «MS2 at this RT…» on a total trace of a DDA file: the MS2 scan nearest in time goes to the MS2 panel (hidden when the file has no MS2)
+  // «MS2 at RT…» on a total trace of a DDA file: the MS2 scan nearest in time goes to the MS2 panel (hidden when the file has no MS2)
   if (typeof AZIONI !== "undefined") AZIONI.register({ id: "chrom.ms2AtRt", group: "extract", order: 2, views: ["chrom"], rows: (/** @type {Bag} */ c) => {
     const f = E.files[c.k]; if (!f || !f.dda || !window.DDA || !DDA.ms2Item(f) || c.x == null) return [];
     return [{ name: I18N.t("ctx.chrom.ms2AtRt"), tip: I18N.t("ctx.chrom.ms2AtRt.tip"), run: async () => {

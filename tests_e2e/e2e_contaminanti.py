@@ -1,7 +1,7 @@
 """WP-H11 + Binario B: reference lists and contaminants engine.
 - High resolution: known contaminants only in the box that opens on a peak (same pixels with switch on and off), series of a polymer, laboratory contaminants, user suspect lists (CSV with semicolon and decimal comma).
 - Header button: #np-liste opens the lists dialog.
-- Low resolution (unit resolution): NO automatic annotations on spectra or on hover; right-click context menu has «Search the contaminant lists…» which opens filtered on nominal m/z (±0.5 Da) ordered by proximity; educational introductory text.
+- Low resolution (unit resolution): NO automatic annotations on spectra or on hover; right-click context menu has «Search contaminant lists…» which opens filtered on nominal m/z (±0.5 Da) ordered by proximity; educational introductory text.
 """
 # covers: mzlab/web/liste.js, mzlab/web/barra.js, mzlab/web/picchi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -237,7 +237,7 @@ try:
         step("low resolution: NO automatic annotations or hover tips", lr_no_auto_annotations)
 
         def lr_context_menu_search():
-            # Right click on a peak in LR spectrum opens context menu with "Search the contaminant lists…"
+            # Right click on a peak in LR spectrum opens context menu with "Search contaminant lists…"
             m0 = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='spec'&&p._a);return p._a.data[0].d.mz[0]})()")
             # Open the search via LISTE.open directly or menu click
             pg.evaluate(f"LISTE.open({{ mz: {m0}, polarity: 'positive', hr: false }})")

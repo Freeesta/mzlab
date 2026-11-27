@@ -330,6 +330,7 @@ impl Rows {
                         .and_then(crate::wiff::modes::scan_type_named)
                 }),
             mob: super::mobility_of_terms(t),
+            fill: super::fill_of_terms(t),
             filter: self.intern(filt),
             profile: sh.profile(),
             parent: None,
@@ -404,6 +405,7 @@ impl Rows {
             res,
             native: self.native_id(&native, level),
             mob: None,
+            fill: None,
             detail: (!detail.is_empty()).then(|| Box::new(detail)),
         };
         self.rows.push(row);

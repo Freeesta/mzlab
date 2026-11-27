@@ -45,7 +45,7 @@ try:
             # the engine route is still there: a gradient it holds for the file (as a .dam would give) is drawn
             pg.evaluate("(async () => { await post('api/gradient', {k: 0, model: {source: 'dam', points: [{t:0,b:10},{t:2,b:10},{t:12,b:60},{t:15,b:70},{t:20,b:100},{t:25,b:100},{t:25.1,b:10},{t:30,b:10}]}}); GRADIENTE.forget(); })()")
             pg.evaluate("redrawAll()"); ready(pg)
-            labs = ctx_items(); assert any("Show the gradient" in l for l in labs), labs
+            labs = ctx_items(); assert any("Show gradient" in l for l in labs), labs
             pg.evaluate(f"(()=>{{const p={TIC};p.cv.dispatchEvent(new MouseEvent('contextmenu',{{bubbles:true,clientX:300,clientY:300}}))}})()")
             pg.click("#ctx [role=menuitemcheckbox]:has-text('gradient')"); ready(pg)
             assert pg.evaluate(f"{TIC}.overlay") == "grad"

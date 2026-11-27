@@ -36,7 +36,7 @@ I18N.add("en", {
   "draw.sub.empty": "Nothing to search: the canvas is empty.",
   "draw.sub.query.sel": "Query: the selection ({n} atoms).",
   "draw.sub.query.whole": "Query: the whole drawing ({n} atoms).",
-  "draw.sub.ctx.sel": "Find this substructure in the catalogue or a list",
-  "draw.sub.ctx.whole": "Find this structure as a substructure in the catalogue or a list",
+  "draw.sub.ctx.sel": "Find substructure in catalogue or list",
+  "draw.sub.ctx.whole": "Find structure as substructure in catalogue or list",
   "draw.sub.ctx.title": "Opens the substructure search with this query"
 });

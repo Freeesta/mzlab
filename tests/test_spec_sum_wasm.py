@@ -33,6 +33,9 @@ ASKS = [
     ("MS2.mzML", ["--rt", "5,9", "--ms-level", "2"], "rt0=5&rt1=9&level=2"),
     ("MS2.mzML", ["--rt", "5,9", "--ms-level", "2", "--fill-ms", "50"], "rt0=5&rt1=9&level=2&fill_ms=50"),
     ("MS2.mzML", ["--rt", "100,101", "--ms-level", "2"], "rt0=100&rt1=101&level=2"),
+    # the file states a fill time per scan (index version 4): ions without `--fill-ms`, `source` `file`; `--fill-ms` still overrides
+    ("MS2_fill.mzML", ["--rt", "5,9", "--ms-level", "2"], "rt0=5&rt1=9&level=2"),
+    ("MS2_fill.mzML", ["--rt", "5,9", "--ms-level", "2", "--fill-ms", "50"], "rt0=5&rt1=9&level=2&fill_ms=50"),
 ]
 
 
@@ -54,6 +57,7 @@ def work(tmp_path_factory):
     d.full_scan(w / "FS.mzML", 3.0, r)
     d.full_scan_profile(w / "FS_profile.mzML", 3.0, r)
     d.ms2(w / "MS2.mzML", r, 15)
+    d.ms2(w / "MS2_fill.mzML", r, 15, fill_ms=(20.0, 40.0))
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-rawxic-wasm")))
     build("-p", "mzlab-cli")
     (w / "run.js").write_text(NODE, encoding="utf-8")
@@ -67,7 +71,7 @@ def answers(work, name, queries):
     return json.loads(subprocess.run(["node", str(work / "run.js"), str(work / "pkg"), str(cache / key), "0", *queries], capture_output=True, encoding="utf-8", check=True).stdout)
 
 
-@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML"])
+@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "MS2_fill.mzML"])
 def test_the_wasm_evidence_is_inside_the_cli_document_byte_for_byte(work, name):
     asks = [a for a in ASKS if a[0] == name]
     for (_, flags, query), got in zip(asks, answers(work, name, [q for _, _, q in asks])):
@@ -83,3 +87,13 @@ def test_a_refused_fill_time_has_the_same_error_key(work):
     r = cli("spectrum", "get", str(work / "MS2.mzML"), "--rt", "5,9", "--ms-level", "2", "--sum", "--fill-ms", "0", runner=lambda *a: subprocess.run(a, capture_output=True, encoding="utf-8"))
     doc = json.loads(r.stdout)
     assert r.returncode == 2 and doc["schema"] == "error/1" and doc["error_key"] == "err.spec.fill", r.stdout[:300]
+
+
+def test_a_fill_time_in_the_file_counts_the_ions_in_the_wasm_and_the_cli(work):
+    (got,) = answers(work, "MS2_fill.mzML", ["rt0=5&rt1=9&level=2"])
+    s = json.loads(got["s"])
+    assert s["fill_time"]["source"] == "file" and s["fill_time"]["note"] is None, s["fill_time"]
+    assert (s["fill_time"]["min_ms"], s["fill_time"]["max_ms"]) == (20.0, 40.0)
+    assert s["ions"] is not None and s["ions"] > 0
+    doc = json.loads(cli("spectrum", "get", str(work / "MS2_fill.mzML"), "--rt", "5,9", "--ms-level", "2", "--sum").stdout)
+    assert doc["evidence"]["sum"]["ions"] == s["ions"]

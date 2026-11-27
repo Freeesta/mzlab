@@ -6,7 +6,7 @@ use crate::idxread::{u64_at, Head, Index, ReadAt, HEADER, READER_FLAG};
 use crate::json;
 use crate::readat::index_bytes;
 
-/// Whether the header is of an index of a vendor file (version 3 with `READER_FLAG`) or of an mzML (version 3); `None` for any other, older versions included.
+/// Whether the header is of an index of a vendor file (version 3 or 4 with `READER_FLAG`) or of an mzML (version 3 or 4); `None` for any other, older versions included.
 pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
     let w = |a: usize| {
         h.get(a..a + 4)
@@ -14,8 +14,8 @@ pub(crate) fn nativo(h: &[u8]) -> Option<bool> {
             .map(u32::from_le_bytes)
     };
     match (w(8)?, w(12)?) {
-        (3, 0) => Some(false),
-        (3, READER_FLAG) => Some(true),
+        (3 | 4, 0) => Some(false),
+        (3 | 4, READER_FLAG) => Some(true),
         _ => None,
     }
 }

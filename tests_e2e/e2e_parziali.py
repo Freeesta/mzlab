@@ -1,8 +1,8 @@
 """Drawing: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
 the label under the structure counts the delta too (formula and nominal mass of structure + Δ, the same values as the bracket's menu line); the delta shows once,
-also after a selection change; a click on the bracket line picks it, Delete removes it and undo brings it back; right click on the line offers «Remove the brackets»;
-TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3, info: formula and m/z with the delta}; «Remove the brackets» takes them away. Multicentre: ring atoms +
+also after a selection change; a click on the bracket line picks it, Delete removes it and undo brings it back; right click on the line offers «Remove brackets»;
+TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3, info: formula and m/z with the delta}; «Remove brackets» takes them away. Multicentre: ring atoms +
 the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
 positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
@@ -74,12 +74,12 @@ try:
             x, y, fx, fy = on_line()
             for i in range(20):
                 pg.evaluate("""([x,y])=>{const d=document.querySelector('#kframe').contentDocument;(d.elementFromPoint(x,y)||d.body).dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:x,clientY:y}))}""", [x, y])
-                try: pg.locator("#ctx div", has_text="Remove the brackets").first.wait_for(state="visible", timeout=1500); break
+                try: pg.locator("#ctx div", has_text="Remove brackets").first.wait_for(state="visible", timeout=1500); break
                 except Exception: pg.keyboard.press("Escape")
-            pg.locator("#ctx div", has_text="Remove the brackets").first.wait_for(state="visible", timeout=5000)
+            pg.locator("#ctx div", has_text="Remove brackets").first.wait_for(state="visible", timeout=5000)
             assert "With +O: C8H10O2 · 138" in pg.inner_text("#ctx")                        # the same line as on an atom
             pg.keyboard.press("Escape")
-        step("right click on the bracket line offers «Remove the brackets»", ctx_line)
+        step("right click on the bracket line offers «Remove brackets»", ctx_line)
         NS = f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n}})()"
         def pick_delete():
             x, y, fx, fy = on_line(); pg.mouse.click(fx + x, fy + y)
@@ -108,11 +108,11 @@ try:
             assert t.count("MZLAB") == 0, "DAT text of Ketcher left in the image"
         step("exported SVG has the brackets and the delta", export_svg)
         def remove():
-            menu_on_atom(2); pg.locator("#ctx div", has_text="Remove the brackets").first.click()
+            menu_on_atom(2); pg.locator("#ctx div", has_text="Remove brackets").first.click()
             pg.wait_for_function(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n===0}})()", timeout=8000)
             pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-parentesi')", timeout=5000)
             o = call("TPDraw.partial()"); assert o["delta"] == "" and o["level"] is None, o
-        step("«Remove the brackets» removes them", remove)
+        step("«Remove brackets» removes them", remove)
         def bad():
             bracket("+Qq"); pg.wait_for_timeout(800)
             n = pg.evaluate(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n}})()"); assert n == 0, n
@@ -135,12 +135,12 @@ try:
         def multi_off():
             for i in range(10):
                 pg.keyboard.press("Escape"); menu_on_atom(6)
-                if pg.locator("#ctx div", has_text="Remove the variable attachment").count(): break
+                if pg.locator("#ctx div", has_text="Remove variable attachment").count(): break
                 pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Remove the variable attachment").first.click()
+            pg.locator("#ctx div", has_text="Remove variable attachment").first.click()
             pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro')", timeout=8000)
             o = call("TPDraw.partial()"); assert o["positionUnknown"] is False and o["level"] is None and o["molfile"] == "", o
-        step("«Remove the variable attachment» removes it", multi_off)
+        step("«Remove variable attachment» removes it", multi_off)
 finally:
     r.close()
 r.report()

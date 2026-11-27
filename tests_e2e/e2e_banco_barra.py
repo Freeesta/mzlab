@@ -57,7 +57,7 @@ try:
         def copy_xls():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             pg.evaluate("window.__clip=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__clip=t;return Promise.resolve()}},configurable:true})")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy the data"); pg.wait_for_timeout(800)
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy data"); pg.wait_for_timeout(800)
             t = pg.evaluate("window.__clip"); assert t and "\t" in t and t.startswith("# mzLab ") and "RT" in t.split("\n")[1], (t or "")[:120]      # first line = provenance
             with pg.expect_download(timeout=15000) as d: (pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
@@ -70,7 +70,7 @@ try:
                 writeText: () => Promise.reject(new DOMException('not allowed', 'NotAllowedError')),
                 write: items => { if (!live) { window.__clipNo = true; return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); }
                   return items[0].getType('image/png').then(b => { window.__clipT = [items[0].types, b.size]; }); } } }); })()""")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy the image")
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy image")
             wait_for_js(pg, "window.__clipT !== null || window.__clipNo", 15000)
             assert not pg.evaluate("window.__clipNo"), "the image reached the clipboard after the click was over (Safari refuses it and the PNG is downloaded instead)"
             types, size = pg.evaluate("window.__clipT"); assert types == ["image/png"] and size > 1000, (types, size)

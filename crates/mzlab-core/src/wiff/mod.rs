@@ -32,6 +32,8 @@ mod losses;
 mod mass_check;
 mod method_name;
 pub mod modes;
+#[cfg(test)]
+mod modes_labels_tests;
 pub mod names;
 pub mod reader;
 mod reader_extra;
