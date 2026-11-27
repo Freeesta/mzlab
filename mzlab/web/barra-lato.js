@@ -13,8 +13,8 @@ const el = (cls, text) => {
 const inside = (z, x, y) => { const b = z.getBoundingClientRect(); return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom; };
 
 /**
- * Updates strips, ghost and preview for the pointer at (x, y); returns the side under it, or null (a release there cancels).
- * @param {{ x: number, y: number, width: number, sheet: boolean, side: string, title: string, texts: { l: string, r: string, no: string } }} o
+ * Updates strips, ghost and preview for the pointer at (x, y); returns the side under it, or null (a release there cancels, silently).
+ * @param {{ x: number, y: number, width: number, sheet: boolean, side: string, title: string, texts: { l: string, r: string } }} o
  * @returns {"left" | "right" | null}
  */
 function show(o) {
@@ -27,8 +27,7 @@ function show(o) {
   const side = inside(l, o.x, o.y) ? "left" : inside(r, o.x, o.y) ? "right" : null;
   l.classList.toggle("hot", side === "left");
   r.classList.toggle("hot", side === "right");
-  g.classList.toggle("no", !side);
-  g.textContent = side ? o.title : o.texts.no;
+  g.textContent = o.title;
   /** @type {HTMLElement} */ (g).style.transform = `translate(${Math.round(o.x + 14)}px,${Math.round(o.y + 14)}px)`;
   document.body.dataset.sbShift = !o.sheet && side && side !== o.side ? (side === "right" ? "l" : "r") : "";
   return side;
