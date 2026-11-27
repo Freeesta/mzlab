@@ -52,9 +52,10 @@ function numberPanels() {
 // a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other.
 // the spectrum's tag («⊘»: follows nothing) is the button of the follow menu; the MS2 tab follows by precursor
 function markPairs(/** @type {Pannello[]} */ st) {
-  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip) => {
+  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip, /** @type {Pannello} */ on) => {
     const fo = a.type === "spec" && (a.tab || E.tab) !== "ms2", t = document.createElement(fo ? "button" : "span"); t.className = fo ? "ppair fol" : "ppair"; t.textContent = txt; t.title = tip; t.setAttribute("aria-label", tip);
     if (fo) { /** @type {HTMLButtonElement} */ (t).type = "button"; t.setAttribute("aria-haspopup", "menu"); t.onclick = (/** @type {MouseEvent} */ e) => followMenu(a, e); }
+    for (const [ev, v] of /** @type {[string, boolean][]} */ ([["mouseenter", true], ["focus", true], ["mouseleave", false], ["blur", false]])) t.addEventListener(ev, () => on.el.classList.toggle("pair-cur", v));  // a badge lights the dashed cursor it stands for
     (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
   };
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
@@ -65,7 +66,7 @@ function markPairs(/** @type {Pannello[]} */ st) {
     const c = (idx.get(src) - 1) % 4 + 1;
     /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "spec.follow.aria"]]).forEach(([a, arrow, b, key]) => {
       a.el.dataset.pair = String(c);
-      tag(a, `${arrow} ${b.num}`, I18N.t(key, { n: b.num }));
+      tag(a, `${arrow} ${b.num}`, I18N.t(sp.uv ? (a === sp ? "spec.follow.uv.aria" : "panel.pair.to.uv") : key, { n: b.num }), src);
       if (!(/** @type {Bag} */ (a.el))._pairBound) {
         /** @type {Bag} */ (a.el)._pairBound = true;
         const lit = (/** @type {boolean} */ on) => { const m = a._mate; if (m && m.el) m.el.classList.toggle("pair-hi", on); };
@@ -74,6 +75,7 @@ function markPairs(/** @type {Pannello[]} */ st) {
       }
       a._mate = b;
     });
+    if (sp.uv && src.cur != null && typeof cursorLine === "function") cursorLine(src);  // the cursor dot's tooltip names the linked spectrum
   });
   paintScanOf();
 }

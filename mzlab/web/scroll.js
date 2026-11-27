@@ -143,7 +143,7 @@ function cursorLine(p) {
   c.style.maskImage = c.style.webkitMaskImage = gaps.length ? `linear-gradient(to bottom, ${gaps.map((/** @type {any} */ l) => `#000 ${Math.max(0, l.y - M.t)}px, transparent ${Math.max(0, l.y - M.t)}px, transparent ${l.y + l.h - M.t}px, #000 ${l.y + l.h - M.t}px`).join(", ")})` : "";
   if (!h) return;
   h.hidden = !!p._exp || p.imode === "man" || p.imode === "auto" || p.imode === "idel"; h.style.left = c.style.left; h.style.top = p.cv.offsetTop + M.t + "px";
-  const t = I18N.t("cursor.handle"); h.setAttribute("aria-label", t); h.title = t;
+  const sp = E.panels.find((/** @type {any} */ s) => s.type === "spec" && s.link === p.id && s.num), t = sp ? I18N.t("cursor.handle.linked", { rt: p.cur.toFixed(2), n: sp.num }) : I18N.t("cursor.handle"); h.setAttribute("aria-label", t); h.title = t;
   if (a.full) { h.setAttribute("aria-valuemin", a.full[0].toFixed(2)); h.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
   h.setAttribute("aria-valuenow", p.cur.toFixed(2)); h.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: p.cur.toFixed(2) }) + (window.GRADIENTE && p.overlay ? GRADIENTE.cursorText(p) : ""));
 }

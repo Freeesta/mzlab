@@ -45,16 +45,25 @@ const reason = j => (j && j.error_key ? I18N.t(j.error_key, j.params || {}) : T(
 
 /**
  * A new UV spectrum under the panel `from`: the mean spectrum of the times r0..r1 (minutes of the DAD) of file `k`; a message and no panel when the file has no matrix.
- * @param {any} from @param {number} k @param {number} r0 @param {number} r1
+ * `via` ("dbl" or "menu") is only the words of the subtitle: how the spectrum was asked for.
+ * @param {any} from @param {number} k @param {number} r0 @param {number} r1 @param {string} [via]
  */
-export async function open(from, k, r0, r1) {
+export async function open(from, k, r0, r1, via) {
   // the held matrix answers at once; without it one request reads it (the engine keeps it), and api/uvspec only words a file that has none
   const slow = MAT[k] || !from || typeof stepMsg !== "function" ? null : setTimeout(() => { stepMsg(from, T("uv.reading"), false, true); from.el.setAttribute("aria-busy", "true"); }, 150);
   const has = await ensureMat(k);
   if (slow) { clearTimeout(slow); if (from.el.getAttribute("aria-busy")) { stepMsg(from, "", false, false); from.el.removeAttribute("aria-busy"); } }
   if (!has) try { await load(k, r0, r1); } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
   const link = from && ["chrom", "xic", "mrm"].includes(from.type) ? from.id : null;
-  return newSpec(from, r0, r1, k, link, { uv: true, title: "@uv", ks: pdaKs(from, k), wl: from && from.kind === "pda" && from.mz0 != null ? [from.mz0, from.mz1 ?? from.mz0] : null });
+  return newSpec(from, r0, r1, k, link, { uv: true, via, title: "@uv", ks: pdaKs(from, k), wl: from && from.kind === "pda" && from.mz0 != null ? [from.mz0, from.mz1 ?? from.mz0] : null });
+}
+/** Where the spectrum comes from: the source panel, how it was asked for and, when the source is shown later by «Allinea», the delay between the two clocks. @param {any} p @param {number} rt DAD time of the spectrum */
+function provenance(p, rt) {
+  const src = p.src != null ? E.panels.find((/** @type {any} */ q) => q.id === p.src) : null;
+  if (!src) return "";
+  const how = p.via === "dbl" ? T("uv.how.dbl") : p.via === "menu" ? T("uv.how.menu") : "", sh = window.DISP ? DISP.pdaShift(src) : 0, live = p.link === src.id;
+  const where = T("uv.leg.from", { n: src.num || "?", title: src.title && window.TITOLI ? TITOLI.di(src) : String(src.title || ""), how: how ? ` · ${how}` : "", live: T(live ? "uv.leg.live" : "uv.leg.fixed") });
+  return h` · <span class="uvsrc">${where}</span>` + (sh ? h` · <span class="uvsrc">${T("uv.leg.shift", { t: (rt + sh).toFixed(2), d: sh.toFixed(2), rt: rt.toFixed(2) })}</span>` : "");
 }
 /** The PDA files the panel `src` shows (its overlaid samples), `k` first; just [k] for a map or a lone file. @param {any} src @param {number} k @returns {number[]} */
 function pdaKs(src, k) {
@@ -132,7 +141,7 @@ export async function draw(p) {
       const rows = ser.length > 1 ? ser.map(s => `<div><i style="background:${s.f.color}"></i>${EH(s.f.label)} <b>${T("hov.mau", { v: s.y[near(s.nm, w)].toFixed(2) })}</b></div>`).join("") : `<div>${T("map.hov.mean")}: <b>${T("hov.mau", { v: y[i].toFixed(2) })}</b></div>`;
       return { px: X(nm[i]), html: `<b>${T("hov.nm", { v: nm[i].toFixed(0) })}</b>${rows}` }; } };
   if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima of the first sample (etichette-picchi.js)
-  p.leg.innerHTML = ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" ") + h` · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
+  p.leg.innerHTML = ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" ") + h` · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>` + provenance(p, d.rt0);
   if (p.leg2) p.leg2.innerHTML = "";
   p.r0 = d.rt0; p.r1 = d.rt1;
 }

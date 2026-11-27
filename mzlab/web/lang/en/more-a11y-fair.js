@@ -261,6 +261,7 @@ I18N.add("en", {
   "calc.delta.none": "no pair of adducts within {tol} ppm",
   "calc.err.sign": "I do not understand this sign",
   "cursor.handle": "Current position in the chromatogram: drag the dot with a finger or a pen, or use the arrow keys to move one scan (Shift: five)",
+  "cursor.handle.linked": "Cursor of the chromatogram at {rt} min: the spectrum of panel {n} is read here. The other dashed line only follows the pointer. Drag the dot or use the arrow keys to move it",
   "cursor.handle.value": "{rt} min",
   "int.bar.a": "Left integration bar: {rt} min",
   "int.bar.b": "Right integration bar: {rt} min",

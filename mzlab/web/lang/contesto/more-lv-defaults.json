@@ -22,6 +22,7 @@
   "panel.num.title": "Tooltip on the panel number; {n} = number (1-9), it is also the key to press.",
   "panel.rt.held": "Retention time label next to the title of a frozen spectrum (not following the cursor); {rt} = already formatted time, e.g. \"12.34 min\" or \"12.30-12.50 min\".",
   "panel.pair.to": "Tooltip on the \"→ n\" label of the source chart; {n} = number of the panel (spectrum) that follows it.",
+  "panel.pair.to.uv": "Tag on a chromatogram that has a linked UV spectrum below it; {n} = panel number.",
   "panel.scanOf": "Label in the header of a chromatogram with several overlaid files that drives a spectrum: {f} = name of the active file, whose scans these are.",
   "map.hov.bin": "Mouse box on the 2D map; {lo} and {hi} = ends of the cell in m/z.",
   "map.leg2d.mean": "Legend of the 2D map; {scale} = color scale (square root/linear/log).",

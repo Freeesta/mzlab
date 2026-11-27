@@ -89,7 +89,7 @@ AZIONI.register({ id: "mrm.uvAtRt", group: "extract", views: ["mrm"], visible: h
   run: async (/** @type {any} */ c) => {
     const p = c.p, k = E.files[c.k] && E.files[c.k].pda ? c.k : dadOf(p)[0].k, t = c.x - shift(p);
     if (c.dbl) { p.sel = null; p.cur = c.x; draw0(p); }
-    return (g.UVSPEC ||= await import("./uv-spettro.js")).open(p, k, t, t);
+    return (g.UVSPEC ||= await import("./uv-spettro.js")).open(p, k, t, t, c.dbl ? "dbl" : "menu");
   } });
 /** a check of the view group, undoable like the other display options @param {string} id @param {string} name @param {string} aria @param {(p: any) => boolean} on @param {(p: any) => void} flip */
 const check = (id, name, aria, on, flip) => AZIONI.register({ id, group: "view", views: ["mrm"], visible: here, checked: (/** @type {any} */ c) => on(c.p), name: () => T(name), aria: () => T(aria),
