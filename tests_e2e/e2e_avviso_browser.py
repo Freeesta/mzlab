@@ -42,7 +42,7 @@ try:
             assert not pg.evaluate("document.getElementById('bn-css')"), "module loaded without a notice due"
         step("Chromium with every capacity: no notice", chrome_none)
         def folder():
-            pg = load(b, "?cap-off=cartellaLocale"); wait_for_js(pg, f"document.querySelector('{N}')")
+            pg = load(b, "?cap-off=cartellaLocale", device_scale_factor=2); wait_for_js(pg, f"document.querySelector('{N}')")
             assert pg.get_attribute(N, "data-kind") == "folder"
             assert pg.evaluate(LINKS) == [CHROME, EDGE], "Firefox must not be suggested for the folder: " + str(pg.evaluate(LINKS))
             assert all(a == "_blank" and "noopener" in (rel or "") for a, rel in pg.evaluate(f"[...document.querySelectorAll('{N} a')].map(a => [a.target, a.rel])")), "links must open in a new tab with rel=noopener"
