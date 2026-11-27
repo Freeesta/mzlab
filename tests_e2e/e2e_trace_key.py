@@ -1,13 +1,14 @@
 """The colour key of the SIM / MRM ion lists on the built site (synthetic SIM .wiff files of tools/wiff_sim.py, no laboratory data). Rule under test: every ion has ITS OWN colour (its place among ALL ions
-of the panel in the palette), the samples are told apart by dash; the rows of the channel picker and of the «Extract ion ›» submenus (MRM panel and chromatogram panel) carry a swatch with the line of the
+of the panel in the palette), the samples are told apart by dash; the checkbox of each channel picker row is the key (coloured border unticked, filled ticked) and the rows of the «Extract ion ›» submenus (MRM panel and chromatogram panel) carry a swatch with the line of the
 trace, read from the one `p._look` the drawing writes from the same SIMUI.style() call as the traces; hollow and dimmed while the row is off; ticking, unticking, stacking, overlaying and moving a file
 never recolour a trace; hover or focus of a row lights its trace. Checked on 7 ions x 1 and 2 samples (sim3), 4 ions x 2 samples (sim), 3 ions x 4 samples (listab) and the palette order of 2..48 ions.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key.py"""
-# covers: mzlab/web/sim-ui.js, mzlab/web/canali.js, mzlab/web/canali.css, mzlab/web/menu-sotto.js, mzlab/web/grafici.js, tools/wiff_sim.py
+# covers: tests_e2e/trace_tip.py, mzlab/web/sim-ui.js, mzlab/web/canali.js, mzlab/web/canali.css, mzlab/web/menu-sotto.js, mzlab/web/grafici.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from trace_tip import top_row, picker_fixture, picker_focus
 
 steps = []
 def step(name, fn):
@@ -23,8 +24,8 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 P = "E.panels.find(p => p.type === 'mrm')"
 # rows of the picker (all of them, ticked or not) and the traces drawn, both with the colour as the browser computes it
 READ = """(() => { const p = %s, a = p._a, norm = c => { const e = document.createElement('i'); e.style.color = c; document.body.appendChild(e); const v = getComputedStyle(e).color; e.remove(); return v; };
-  const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.trsw'); return { label: r.querySelector('.can-et').textContent, on: r.getAttribute('aria-selected') === 'true',
-    sw: !!s && !s.classList.contains('none'), off: !!s && s.classList.contains('off'), color: s ? getComputedStyle(s).color : null, td: s ? s.dataset.td : null }; });
+  const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.can-ck[data-tc]'), on = r.getAttribute('aria-selected') === 'true'; return { label: r.querySelector('.can-et').textContent, on,
+    sw: !!s, off: !!s && !on, color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
   const tr = (a ? a.sr : []).map(s => ({ label: SIMUI.label(s.tk), color: norm(s.color), dash: s.dash.join(','), k: s.k }));
   return { rows, tr, hl: p._hl ?? null }; })()""" % P
 
@@ -38,8 +39,10 @@ def check(d, n, samples, ticked=None):
     need(all(len(c) == 1 for c in col.values()), "one ion, several colours: %s" % col)
     need(len({next(iter(c)) for c in col.values()}) == len(col), "two ions share a colour: %s" % col)
     for row in d["rows"]:
-        need(row["sw"], "row without a swatch: %s" % row)
-        need(row["off"] == (not row["on"]), "off class must follow the tick: %s" % row)
+        need(row["sw"], "row whose checkbox carries no colour: %s" % row)
+        need(not row["sep"], "the colour lives in the checkbox, no separate swatch: %s" % row)
+        need(row["off"] == (not row["on"]), "the checkbox must be empty (coloured border) when unticked: %s" % row)
+        need((row["bs"] == "dashed") == bool(row["td"]), "a dashed trace gets a dashed box border: %s" % row)
         if row["label"] in col: need(row["color"] == next(iter(col[row["label"]])), "row %s swatch %s, trace %s" % (row["label"], row["color"], col[row["label"]]))
     if samples > 1:
         for lab, per in dash.items(): need(len(set(per.values())) == len(per) >= 2, "samples must differ in dash on %s: %s" % (lab, per))
@@ -109,6 +112,25 @@ try:
             need(check(read(pg), N3, 2) == base, "a second sample changed the colour of an ion")
         step("2 samples x 7 ions: the ion keeps its colour, the samples differ by dash, the swatch is the ion's colour", two_samples)
 
+        step("SIM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg, P, "SIM"))
+
+        def contrast():
+            n = picker_fixture(pg, "palette")
+            popup(); d = picker_focus(pg, P, "picker"); need(d["w"] >= 2, d)
+            pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 2)
+        step("picker checkbox: every palette colour keeps 3:1 (box ring, tick, dash cue when ticked), a dashed trace shows its dash, keyboard focus ring on the row", contrast)
+
+        def phone():
+            pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 4)
+            popup()
+            rows = pg.evaluate("[...%s.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const k = r.querySelector('.can-ck[data-tc]'), h = r.querySelector('.can-hit').getBoundingClientRect(), b = r.getBoundingClientRect(); return { ck: !!k, sep: !!r.querySelector('.trsw'), w: h.width, h: h.height, rh: b.height }; })" % P)
+            need(len(rows) == N3 and all(x["ck"] and not x["sep"] and x["w"] >= 24 and x["h"] >= 24 for x in rows), "390 px: every row needs a coloured checkbox and a 24 px target: %s" % rows)
+            picker_fixture(pg, "390 px"); picker_focus(pg, P, "390 px")
+            pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 3)
+            top_row(pg, P, "SIM 390 px")
+            pg.set_viewport_size({"width": 1280, "height": 900}); frames(pg, 3)
+        step("390 px: the checkbox is the key (coloured, no separate swatch, 24 px target), focus ring and tooltip highlight hold", phone)
+
         def submenus():
             show(pg, [0], N3, 1)
             pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 2)
@@ -146,7 +168,14 @@ try:
             need(pg.evaluate("E.files[0].label") != first, "the file did not move in the list")
             show(pg, [0, 1], 2 * N3, 2)
             need(check(read(pg), N3, 2) == base, "moving a file in the list recoloured an ion")
-        step("moving a file in the list does not recolour an ion", reorder)
+            # the ion list is kept (it was keyed by the file's position) and so is the «Extract ion ›» entry of the menu
+            need(pg.evaluate("SIMUI.ions(%s).length" % P) == N3, "the ion list is empty after the move")
+            pg.evaluate("%s.cv.scrollIntoView({ block: 'center' })" % P); frames(pg, 2)
+            b = pg.evaluate("(() => { const b = %s.cv.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()" % P)
+            pg.mouse.click(b[0], b[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
+            need(pg.locator("#ctx .hsub").count() == 1, "the «Extract ion ›» entry disappeared after the move")
+            pg.keyboard.press("Escape")
+        step("moving a file in the list does not recolour an ion and keeps the ion list and its menu entry", reorder)
 
         def palette():
             o = pg.evaluate("(() => { const f = { color: '#123456', k: 0 }, r = {}; for (const n of [2, 3, 4, 7, 17, 48]) { r[n] = []; for (let i = 0; i < n; i++) { const st = SIMUI.style(f, i, n, 0); r[n].push([st.color, st.dash.join(',')]); } } return { r, pal: PAL.slice() }; })()")

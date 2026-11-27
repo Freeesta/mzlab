@@ -5,11 +5,10 @@
 // Classic helpers used by name: E, J, I18N, PAL, DASHES, fdash, getMrm, shownFor, ctl, draw, uiSave, COMMANDS, addPanel, reveal, openWithUndo, renderFiles, renderFileList, toolbar.
 (() => {
   /** @typedef {{ key: string, name: string, sim: boolean }} Ione */
-  /** transitions of a file, read once: k|file -> list @type {Map<string, Ione[]>} */
-  const LIST = new Map();
+  /** transitions of a file, read once, by the file object itself (never by its position k: moving a file in the list renumbers k) @type {WeakMap<object, Ione[]>} */
+  const LIST = new WeakMap();
   /** a file of an experiment made of transitions (no spectra), the engine's «empty» kind (no experiment) and a panel of transitions: read from ESP, never by name */
   const isTr = (/** @type {any} */ f) => ESP.voce(f.kind)?.spettri === false, isNone = (/** @type {any} */ f) => !ESP.voce(f.kind), panelTr = (/** @type {any} */ p) => ESP.mrm(p), tabTr = (/** @type {any} */ p) => ESP.voce(p.tab)?.spettri === false;
-  const keyOf = (/** @type {number} */ k) => `${k}|${E.files[k] ? E.files[k].file : ""}`;
   const trKey = (/** @type {{q1?: any, q3?: any, idx?: number}} */ t) => t.q3 == null ? (t.q1 == null ? `i${t.idx}` : String(t.q1)) : `${t.q1}>${t.q3}`;
   /** the key of a SIM channel from its id: the Q1 m/z, or «i<N>» (its place in the experiment) when the reader gave no Q1 @param {string} id */
   const chKey = id => { const q = /Q1=([\d.]+)/.exec(id), t = /transition=(\d+)/.exec(id); return q ? String(+q[1]) : t ? `i${t[1]}` : ""; };
@@ -38,7 +37,7 @@
           ions = c.channels.filter((/** @type {any} */ x) => x.family === "sim").map((/** @type {any} */ x) => ({ key: chKey(x.id), name: "", sim: true }));
         }
       } catch (e) { return; }
-      LIST.set(keyOf(f.k), ions);
+      LIST.set(E.files[f.k] || f, ions);
       const s = ions.length && ions.every(x => x.sim) ? ions.length : 0;
       if (f.sim !== s) { f.sim = s; changed = true; }
     }));
@@ -56,7 +55,7 @@
   /** the transitions (or ions) of the MRM-kind files in view, merged by key, in the order of the files: [{ key, name, sim }] @param {any} p */
   function ions(p) {
     /** @type {Map<string, Ione>} */ const m = new Map();
-    (panelTr(p) ? filesOf(p) : !tabTr(p) ? [] : E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
+    (panelTr(p) ? filesOf(p) : !tabTr(p) ? [] : E.files.filter((/** @type {any} */ f) => isTr(f) && f.vis && !f.gone)).forEach((/** @type {any} */ f) => (LIST.get(f) || []).forEach(x => { if (!m.has(x.key)) m.set(x.key, x); }));
     return sortIons([...m.values()]);
   }
   /** transitions of one precursor keep the order they come in but the quantifier comes first (its name, from the method, starts with «Quant»); the order of the list AND the place of an ion in the palette @param {Ione[]} l */
@@ -84,8 +83,9 @@
   const lookOf = (st, nCh, nFiles) => ({ c: nCh > 1 || nFiles === 1 ? st.color : null, d: st.dash });
   /** the swatch of a row of a list: the line of its trace, dimmed while the row is unticked; the text stays beside it (colour is never the only mark). Nothing known (a channel never drawn): an empty box of the same width
    * @param {any} p @param {string} key @param {boolean} on */
-  function swatch(p, key, on) {
-    const l = p._look && p._look[key];
+  function swatch(p, key, on) { return swatchOf(p._look && p._look[key], on); }
+  /** the same swatch from a line {c, d} (c null: the colour of the text); a list whose line is not an ion's (the DAD curve of a file) builds it with this too @param {{ c: string | null, d: number[] } | undefined} l @param {boolean} on */
+  function swatchOf(l, on) {
     if (!l) return `<span class="trsw none" aria-hidden="true"></span>`;
     const c = l.c || "currentColor";
     return `<span class="trsw${on ? "" : " off"}" aria-hidden="true" data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="color:${EH(c)};background:${EH(paint(c, l.d))}"></span>`;
@@ -95,6 +95,50 @@
     if ((p._hl ?? null) === key) return;
     p._hl = key; if (p._hlQ) return; p._hlQ = 1;
     FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
+  }
+
+  /** the checkbox of a picker row carries the line of its trace: the box border (unticked) or fill (ticked) is the colour, a dashed border marks a dashed trace, a light colour is flagged (data-lt) so the tick is dark; "" for a channel never drawn
+   * @param {any} p @param {string} key */
+  function ckLook(p, key) {
+    const l = p._look && p._look[key]; if (!l) return "";
+    const m = /^#([0-9a-f]{6})$/i.exec(l.c || ""), lum = m ? [0, 2, 4].map((i, k) => { const v = parseInt(m[1].slice(i, i + 2), 16) / 255; return (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][k]; }).reduce((a, b) => a + b) : 0;
+    return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}"${lum > 0.179 ? " data-lt" : ""} style="--tk:${EH(l.c || "currentColor")}"`;      // a light fill (WCAG luminance above 0.179) takes a dark tick
+  }
+  /** the tallest trace under the mouse (its tooltip row is the first), by its place among the series of the drawing: drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {number | null} idx */
+  function top(p, idx) {
+    if ((p._top ?? null) === idx) return "";
+    p._top = idx; if (p._hlQ) return ""; p._hlQ = 1;
+    FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
+    return "";
+  }
+
+  /** the keys of an XIC panel (traces t<id>, files f<k>) and of the MS2 transitions, written by the drawing from the same style() call as the traces; the legend and the select read them.
+   * XIC: a lone trace keeps the colour of its file, several take the palette and the files tell apart by dash @param {any} p @param {any[]} ts the traces @param {any[]} sf the files drawn */
+  function xicLook(p, ts, sf) {
+    const n = ts.length; if (!sf.length) return;
+    keep(p, { ...Object.fromEntries(ts.map((t, ti) => ["t" + t.id, lookOf(style(sf[0], ti, n, 0), n, sf.length)])), ...Object.fromEntries(sf.map((f, fi) => ["f" + f.k, { c: n > 1 ? "var(--muted)" : f.color, d: style(f, 0, n, fi).dash }])) });
+  }
+  /** the line of every MS2 transition (place among ALL listed, never among the drawn); true when it or the set drawn changed (the select and its key must be written again)
+   * @param {any} p @param {string[]} keys @param {any[]} mf the files @param {number} max cap of «every transition» @returns {boolean} */
+  function ms2Look(p, keys, mf, max) {
+    const sh = ms2Shown(p, max).join("|"), moved = sh !== p._shS; p._shS = sh;
+    return (!!mf.length && keep(p, Object.fromEntries(keys.map((k, i) => [k, lookOf(style(mf[0], i, keys.length, 0), keys.length, mf.length)])))) || moved;
+  }
+  /** the transitions the MS2 select draws now: one, every one up to max, or none @param {any} p @param {number} max @returns {string[]} */
+  const ms2Shown = (p, max) => !p.tr ? [] : p.tr === "__all" ? (p._trs || []).slice(0, max).map((/** @type {any} */ t) => t.key) : [p.tr];
+  /** the square before the text of an option of the select, filled while its trace is drawn @param {any} p @param {string} key @param {number} max */
+  const ms2Mark = (p, key, max) => I18N.t(ms2Shown(p, max).includes(key) ? "ctl.ms2tr.mark.on" : "ctl.ms2tr.mark.off");
+  /** the colour of that square (the trace's, dimmed while it is not drawn) as a style attribute; nothing while no colour is known @param {any} p @param {string} key @param {number} max */
+  const ms2Tone = (p, key, max) => { const c = p._look && p._look[key] && p._look[key].c; return c ? ` style="color:${ms2Shown(p, max).includes(key) ? EH(c) : `color-mix(in srgb, ${EH(c)} 55%, transparent)`}"` : ""; };
+  /** the key beside the MS2 select: one swatch per transition drawn, from the same p._look @param {any} p @param {number} max */
+  const ms2Key = (p, max) => { const k = ms2Shown(p, max).filter(x => p._look && p._look[x]); return k.length ? `<span class="trkey">${k.map(x => `<span class="trk" tabindex="0" data-lk="${EH(x)}" title="${EH(x)}" aria-label="${EH(x)}">${swatch(p, x, true)}</span>`).join("")}</span>` : ""; };
+  /** hover or focus of an entry with data-lk draws its trace on, the others fade (the select: the one it has chosen) @param {any} p @param {Element} box @param {string} sel */
+  function wireLit(p, box, sel) {
+    box.querySelectorAll(sel).forEach((/** @type {HTMLElement} */ e) => {
+      const key = () => e.dataset.lk || (e.tagName === "SELECT" && p.tr && p.tr !== "__all" ? p.tr : null), set = (/** @type {boolean} */ on) => () => lit(p, on ? key() : null);
+      for (const [a, b] of [["pointerenter", "pointerleave"], ["focus", "blur"]]) { e.addEventListener(a, set(true)); e.addEventListener(b, set(false)); }
+      if (e.tabIndex >= 0 && e.tagName !== "SELECT") e.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); e.click(); } });
+    });
   }
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
@@ -178,5 +222,5 @@
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, lit };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, top, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
 })();
