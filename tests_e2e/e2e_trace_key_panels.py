@@ -175,10 +175,21 @@ try:
             pg3.mouse.move(5, 5); wait_for_js(pg3, "%s._hl == null" % MR, timeout=10000); frames(pg3, 3)
         step("DAD curves: hover of the entry lights the curve", twc_hover)
 
+        # several files in one MRM panel with the DAD curve: 13 entries, a chip
+        pg4 = r.page(p); pg4.set_viewport_size({"width": 1400, "height": 1000})
+        pg4.set_input_files("#pick", [str(D / "dadmrm.wiff"), str(D / "dadmrm.wiff.scan")] + [mz("B_MRM-t%d" % t) for t in (0, 5, 10, 15)])
+        wait_for_js(pg4, "document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=90000)
+        pg4.click("text=Load data"); ready(pg4); open_first(pg4)
+        pg4.click("#np-mrm"); wait_for_js(pg4, "E.panels.some(q => q.type === 'mrm' && q._a)", timeout=60000)
+        M4 = "E.panels.find(q => q.type === 'mrm')"
+        pg4.evaluate("(() => { E.files.forEach(f => { f.vis = true; }); renderFileList(); const p = %s; ctl(p); draw(p); })()" % M4); frames(pg4, 4)
+        pg4.evaluate("(() => { const p = %s; p.overlay = 'twc'; draw(p); })()" % M4)
+        wait_for_js(pg4, "%s.leg.querySelectorAll('[data-lk^=twc]').length >= 1 && %s.leg.querySelector('.lgc')" % (M4, M4), timeout=60000)
+
         def mrm_clip():
             for w in (1400, 390):
-                pg3.set_viewport_size({"width": w, "height": 1000}); frames(pg3, 4)
-                legend_inside(pg3, MR, "MRM with the DAD curves at %d px" % w)
+                pg4.set_viewport_size({"width": w, "height": 1000}); frames(pg4, 4)
+                legend_inside(pg4, M4, "MRM with the DAD curve at %d px" % w)
         step("MRM and DAD legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", mrm_clip)
 
         def mrm_tip():
