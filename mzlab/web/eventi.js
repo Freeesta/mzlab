@@ -540,7 +540,8 @@ const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 let rzRaf = 0; addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
-document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
+// back on the Data view: only a panel whose canvas size changed (or was cleared while hidden: draw() empties _sz) is drawn; a forced redraw here drew each panel a second time after the one of barra.js
+document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); tabPanels().forEach(drawSized); }, 0); });
 
 // ------------------------------------------------------------------ formula -> m/z calculator (like «mass from formula» of Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
