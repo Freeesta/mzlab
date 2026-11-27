@@ -65,7 +65,7 @@ function markPairs(/** @type {Pannello[]} */ st) {
     const c = (idx.get(src) - 1) % 4 + 1;
     /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "spec.follow.aria"]]).forEach(([a, arrow, b, key]) => {
       a.el.dataset.pair = String(c);
-      tag(a, `${arrow} ${b.num}`, I18N.t(key, { n: b.num }));
+      tag(a, `${arrow} ${b.num}`, I18N.t(sp.uv ? (a === sp ? "spec.follow.uv.aria" : "panel.pair.to.uv") : key, { n: b.num }));
       if (!(/** @type {Bag} */ (a.el))._pairBound) {
         /** @type {Bag} */ (a.el)._pairBound = true;
         const lit = (/** @type {boolean} */ on) => { const m = a._mate; if (m && m.el) m.el.classList.toggle("pair-hi", on); };
@@ -74,6 +74,7 @@ function markPairs(/** @type {Pannello[]} */ st) {
       }
       a._mate = b;
     });
+    if (sp.uv && src.cur != null) cursorLine(src);
   });
   paintScanOf();
 }

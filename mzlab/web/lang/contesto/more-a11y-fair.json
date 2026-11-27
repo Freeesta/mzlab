@@ -34,6 +34,7 @@
   "axis.logSuffix": "Title of the y axis with a logarithmic scale; {base} = normal title (\"Intensity (cps)\").",
   "int.bar.a": "Accessible name of the left edge of an integration window (handle to drag with finger, pen or keyboard); {rt} = time in minutes.",
   "int.bar.b": "Accessible name of the right edge of an integration window; {rt} = time in minutes.",
+  "cursor.handle.linked": "Tooltip and label of the cursor dot when a spectrum is linked to the chromatogram; {rt} = cursor time (min), {n} = panel number of the spectrum.",
   "cursor.handle.value": "Value read by a screen reader on the dot of the chromatogram cursor; {rt} = retention time in minutes.",
   "disp.gdelay": "Row of the Display options; {input} = numeric field of the delay in minutes.",
   "disp.pdaDelay": "Row of the Display options; {input} = field of the delay in minutes.",

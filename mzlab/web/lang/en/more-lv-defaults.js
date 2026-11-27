@@ -112,6 +112,7 @@ I18N.add("en", {
   "panel.close": "Close panel",
   "panel.num.title": "Key {n}: activates the panel",
   "panel.pair.to": "Panel {n} follows this graph",
+  "panel.pair.to.uv": "Panel {n} is the UV spectrum read at this chart's dashed cursor. Hover to see the line it uses",
   "panel.scanOf": "spectrum of {f}",
   "panel.pairArrow.title": "The spectrum below belongs to the precursor chosen above",
   "panel.rt.held": "held at {rt}",

@@ -254,10 +254,10 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
     drawSoon(s);
   });
 }
-/** A UV spectrum of the DAD under panel `from` (module loaded on first use). @param {any} from @param {number} k @param {number} r0 @param {number} r1 */
-async function uvOpen(from, k, r0, r1) {
+/** A UV spectrum of the DAD under panel `from` (module loaded on first use). @param {any} from @param {number} k @param {number} r0 @param {number} r1 @param {string} [via] */
+async function uvOpen(from, k, r0, r1, via) {
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
-  return window.UVSPEC.open(from, k, r0, r1);
+  return window.UVSPEC.open(from, k, r0, r1, via);
 }
 /** The controls of a DAD chromatogram: the XWC split button (xwc.js) instead of "XIC", and the band of the trace in nm. @param {any} p @returns {string} */
 function wlCtl(p) {
@@ -403,7 +403,7 @@ function ctxFor(p, e, x, px, py) {
   const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
   reg({ id: "chrom.uvAtRt", group: "extract", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", name: () => T("ctx.uv.atRt"), doubleClickOrder: 3,
     doubleClick: /** @param {any} c */ c => c.p.kind === "pda" && !!c.p._a && !c.p.el.classList.contains("max"),
-    run: /** @param {any} c */ c => { if (c.dbl) { c.p.sel = null; c.p.cur = c.x; draw(c.p); } return uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p)); } });
+    run: /** @param {any} c */ c => { if (c.dbl) { c.p.sel = null; c.p.cur = c.x; draw(c.p); } return uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p), c.dbl ? "dbl" : "menu"); } });
   reg({ id: "chrom.uvAvgSel", group: "extract", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", available: /** @param {any} c */ c => !!c.p.sel, name: () => T("ctx.uv.avgSel"),
     run: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
   reg({ id: "chrom.wl", group: "xic", views: ["chrom"], visible: /** @param {any} c */ c => c.p.kind === "pda", shortcut: { key: "x", where: "chart", label: "scorc.wl" }, name: () => T("ctx.chrom.wl"), run: /** @param {any} c */ c => wlOpen(c.p) });
