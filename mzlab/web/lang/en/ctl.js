@@ -26,6 +26,8 @@ I18N.add("en", {
   "ctl.ms2tr.grp": "Fragments of precursor {q1}",
   "ctl.ms2tr.opt": "fragment {q3} (from {q1})",
   "ctl.ms2tr.more": "{n} more fragments not listed",
+  "ctl.ms2tr.mark.on": "\u25A0",
+  "ctl.ms2tr.mark.off": "\u25A1",
   "ctl.prec.all": "all",
   "ctl.prec.one": "prec. {v}",
   "ctl.map.diff.none": "none",

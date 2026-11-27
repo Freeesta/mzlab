@@ -42,6 +42,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("peak auto-lr", "integrate peaks one trace sim mrm area snr state detected absent", &["quant targets", "peak table", "chrom.transitions"]).bulk(LR_BULK),
     r("peak auto", "integrate peaks one trace high resolution", &["features", "features.detect", "peak auto-lr"])
         .bulk("mzlab-cli features FILE... --out table.csv: every high-resolution peak of many files in one call (peak table --auto is the low-resolution engine)"),
+    r("peak edges", "click on a trace nearest apex window junk refused guard force points s/n manual", &["peak area", "peak auto-lr", "peak table"]),
     r("peak area", "integrate one peak area", &["peak table"])
         .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
     r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows state forced detected versus integrated absent column", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])

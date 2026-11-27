@@ -149,6 +149,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("is there a peak at this mass", "raw xic"),
     ("how many ions", "raw xic"),
     ("sum a split profile fragment into one nominal mass bin", "spectrum get"),
+    ("a click on a trace, the junk window is refused", "peak edges"),
     ("cosine of two ms2 spectra", "spectrum compare"),
     ("compare ms2 spectra from different calibrations", "spectrum compare"),
 ];

@@ -147,9 +147,9 @@
     return vis.map(n => {
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.group), et = sim && n.family === "sim" ? simShort(n, mixed) : label(n);
       const t = sim ? (n.n ? T("canali.row", { et: n.label, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : n.label) : tip(n);
-      const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"></span></span>` : `<span class="can-ck" aria-hidden="true"></span>`;
+      const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"${SIMUI.ckLook(p, key(n, onlySrm))}></span></span>` : `<span class="can-ck" aria-hidden="true"${SIMUI.ckLook(p, key(n, onlySrm))}></span>`;
       const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-group="${EH(n.group)}" ${sim ? ` aria-label="${EH(rowLabelOf(n, et))}"` : n.n ? ` aria-description="${EH(T("canali.row.desc", { n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }))}"` : ""}${t ? ` title="${EH(t)}"` : ""}>` +
-        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}${key(n, onlySrm) in (p._look || {}) || onlySrm ? SIMUI.swatch(p, key(n, onlySrm), sel.has(n.group)) : ""}<span class="can-et">${EH(et)}</span></span>`;
+        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}<span class="can-et">${EH(et)}</span></span>`;
       if (sim) return head + `</div>`;
       return head + `<span class="can-sg" aria-hidden="true"${sgTitle(n.code)}>${EH(sgShort(n.code))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt_start_min.toFixed(1)}–${+n.rt_end_min.toFixed(1)}` : ""}</span>` +
         (many ? `<span class="can-fl" aria-hidden="true" title="${EH(T("canali.files.title"))}">${n.files}</span>` : "") + `</div>`;
