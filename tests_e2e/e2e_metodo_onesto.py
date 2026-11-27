@@ -92,7 +92,7 @@ def tandem_checks(pg, w):
         assert "n/r" in t and "not read for this format" not in t and "not in the method" not in t, t
         leg = pg.inner_text("#bigdlg [data-mfile=legend]")
         assert "n/r = not read by mzLab for this format" in leg, leg
-        cell = pg.query_selector("#bigdlg [data-mfile=segments] td[aria-label]")
+        cell = pg.query_selector("#bigdlg [data-mfile=segments] td[aria-label]:has-text('n/r')")
         assert cell, "no coded cell with an aria-label"
         assert len(cell.get_attribute("aria-label")) > 20 and cell.get_attribute("title") == cell.get_attribute("aria-label")
         for want in ("253.10", "35.00 eV", "15.00 eV", "60.00 V"):

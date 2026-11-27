@@ -42,7 +42,7 @@ try:
                 assert want in t, (want, t)
             assert "not read for this format" not in t, t
             assert "n/r = not read by mzLab for this format" in pg.inner_text("#bigdlg [data-mfile=legend]")
-            long = pg.get_attribute("#bigdlg [data-mfile=segments] td[aria-label]", "aria-label")
+            long = pg.get_attribute("#bigdlg [data-mfile=segments] td[aria-label]:has-text('n/r')", "aria-label")
             assert long and "not read" in long.lower(), long
         step("the Method window lists precursor, CE, CES, DP and the reason fill time and Q1 resolution are missing", window)
         def warning():
