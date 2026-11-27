@@ -171,6 +171,7 @@ def _start_prefs(k):
     js = ""
     if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
     # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
+    if os.environ.get("MZLAB_PBAR") == "1": js += "if(!localStorage.getItem('mzlab.pbar'))localStorage.setItem('mzlab.pbar','1');"   # the whole run with the shared panel bar on
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "en-US")
@@ -477,7 +478,7 @@ def xlsx_openpyxl(path):
 
 def dlmenu(pg, scope, kind):
     """«Scarica ▾» of a panel: open the menu, then choose the PNG image or the Excel data (kind = 'png' | 'xlsx')."""
-    pg.locator(f"{scope} [data-a=dl]").first.click()
+    bar(pg, scope, "dl")
     pg.locator("#ctx div", has_text="Image" if kind == "png" else "Excel").first.click()
 
 
@@ -491,3 +492,5 @@ def axe_path():
         return q if os.path.exists(q) else None
     except ImportError:
         return None
+
+from lib_barra import bar, bar_loc  # noqa: E402,F401  (the shared panel bar helpers live in their own file: this one is at its size limit)

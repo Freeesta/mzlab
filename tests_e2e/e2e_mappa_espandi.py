@@ -19,8 +19,8 @@ try:
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
         pg.click("#opbtn"); ready(pg); pg.click("#np-chrom"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, M + "._a && " + C + ".el")
         box = lambda P: pg.evaluate(f"(()=>{{const r={P}.el.getBoundingClientRect();return [r.left+scrollX,r.top+scrollY,r.width,r.height].map(Math.round)}})()")
-        expand = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), wait_for_js(pg, f"document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
-        collapse = lambda P: (pg.click(f".pnl.{P} [data-a=max]"), wait_for_js(pg, f"!document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
+        expand = lambda P: (bar(pg, f".pnl.{P}", "max"), wait_for_js(pg, f"document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
+        collapse = lambda P: (bar(pg, f".pnl.{P}", "max"), wait_for_js(pg, f"!document.querySelector('.pnl.{P}').classList.contains('max')"), ready(pg))
         vbox = lambda P: pg.evaluate(f"(()=>{{const r={P}.el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(Math.round)}})()")        # viewport box: an expanded panel is fixed
         ref = {}
         def other_panel():

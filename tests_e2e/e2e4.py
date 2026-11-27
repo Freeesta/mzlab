@@ -41,9 +41,9 @@ try:
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)
         def logv():
-            pg.locator('.pnl.chrom [data-o="mode"]').first.select_option("ovl"); pg.locator('.pnl.chrom [data-a="log"]').first.click(); pg.wait_for_timeout(800)
+            pg.locator('.pnl.chrom [data-o="mode"]').first.select_option("ovl"); bar(pg, ".pnl.chrom", "log"); pg.wait_for_timeout(800)
             pg.screenshot(path=SH + "44_log.png"); assert pg.evaluate("E.panels[0]._a.logy === true")
-            pg.locator('.pnl.chrom [data-a="log"]').first.click(); pg.wait_for_timeout(300)
+            bar(pg, ".pnl.chrom", "log"); pg.wait_for_timeout(300)
         step("log scale", logv)
         def legtoggle():
             n0 = pg.evaluate("E.panels[0]._a.sr.length")   # full-scan and MS2 files (MRM files have their own panel)
@@ -63,7 +63,7 @@ try:
             pg.keyboard.down("Shift"); pg.mouse.down(); pg.mouse.move(c["px"] + 80, c["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Shift"); pg.wait_for_timeout(500)
             z2 = pg.evaluate("E.panels[0].zoom"); print("zoom after pan:", z2); assert z2[0] < z0 - 0.01
             pg.screenshot(path=SH + "46_zoom_pan.png")
-            pg.click("#dpanels .pnl >> nth=0 >> [data-a=fit]"); pg.wait_for_timeout(500); assert pg.evaluate("E.panels[0].zoom") is None
+            bar(pg, "#dpanels .pnl", "fit"); pg.wait_for_timeout(500); assert pg.evaluate("E.panels[0].zoom") is None
         step("ctrl+wheel zoom, shift pan, fit button reset", wheelpan)
         # --- ion map
         def mapadd():

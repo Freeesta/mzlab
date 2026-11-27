@@ -43,7 +43,7 @@ try:
             pg.evaluate("document.activeElement&&document.activeElement.blur()")
         def ruler_keys():
             reset()
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4); click_peak(152.2)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4); click_peak(152.2)
             assert rul() and meas()["ref"] is not None and meas()["n"] == 1
             undo(); assert meas()["n"] == 0 and meas()["ref"] is not None, "Ctrl+Z takes back the measure, keeps the reference"
             undo(); assert meas() is None, "Ctrl+Z takes back the reference"
@@ -55,7 +55,7 @@ try:
         def ruler_button():
             reset()
             assert pg.evaluate("document.getElementById('np-undo').disabled") is True
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4); click_peak(152.2)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4); click_peak(152.2)
             assert pg.evaluate("document.getElementById('np-undo').disabled") is False, "the button is enabled after a ruler action"
             undo("button"); assert meas()["n"] == 0
             assert pg.evaluate("document.getElementById('np-redo').disabled") is False, "the redo button is enabled after an undo"
@@ -65,7 +65,7 @@ try:
         step("ruler: undo and redo buttons, enabled state", ruler_button)
         def ruler_esc():
             reset()
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4); click_peak(152.2)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4); click_peak(152.2)
             pg.keyboard.press("Escape"); tick()
             assert meas() is None and not rul(), "Esc clears the ruler"
             undo(); assert meas() and meas()["n"] == 1 and rul(), "Ctrl+Z puts the whole ruler back"
@@ -73,14 +73,14 @@ try:
         step("ruler: Esc is undoable in one step", ruler_esc)
         def ruler_zoom():
             reset()
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4); click_peak(152.2)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4); click_peak(152.2)
             pg.evaluate(f"(()=>{{const p={SPEC};pushZh(p);p.zoom=[100,400];draw(p)}})()"); tick()
             assert meas() is None, "a new zoom cancels the measure"
             undo(); assert pg.evaluate(f"{SPEC}.zoom") is None and meas() and meas()["n"] == 1, "undoing the zoom brings the measure of that view back"
         step("ruler: undo of a zoom brings back the measure it cancelled", ruler_zoom)
         def focus_controls():
             reset()
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4)
             for html in ["<input type=checkbox id=tmpc>", "<input type=range id=tmpc>", "<select id=tmpc><option>a</select>", "<button id=tmpc>b</button>"]:
                 pg.evaluate("h=>{document.getElementById('tmpc')?.remove();document.body.insertAdjacentHTML('beforeend',h);document.getElementById('tmpc').focus()}", html)
                 pg.keyboard.press(f"{mod}+z"); tick()
@@ -90,7 +90,7 @@ try:
         step("keys: Ctrl+Z works with the focus on a checkbox, a range, a select, a button", focus_controls)
         def text_field():
             reset()
-            pg.click(".pnl.spec [data-a=rul]"); click_peak(364.4)
+            bar(pg, ".pnl.spec", "rul"); click_peak(364.4)
             pg.evaluate("(()=>{const i=document.createElement('input');i.id='tmpt';document.body.appendChild(i);i.focus()})()")
             pg.keyboard.press(f"{mod}+z"); tick()
             assert meas() is not None, "inside a text field the browser keeps Ctrl+Z"

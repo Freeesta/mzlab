@@ -40,10 +40,10 @@
     const ok = !a.available || a.available(c), on = a.checked ? !!a.checked(c) : false, tip = (a.tip || a.ti0 || (() => T(a.ti)))(c), al = a.al === "=" ? tip : a.al ? T(a.al) : "", tag = a.tag || "button", tx = typeof a.tx === "function" ? a.tx(c) : a.tx;
     return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
   };
-  /** writes the buttons of the panel header into `host` (the `.tbs` span) and wires them to the actions; `skip` leaves out one header group (the shared panel bar, pbar.js, has no «e» group) @param {any} c {view, p} @param {HTMLElement} host @param {string} [skip] */
+  /** writes the buttons of the panel header into `host` (the `.tbs` span) and wires them to the actions; `skip` leaves out one header group: the shared panel bar (pbar.js) skips «e» but for expand (close and «⋯» stay in the header, expand is in both) @param {any} c {view, p} @param {HTMLElement} host @param {string} [skip] */
   AZIONI.bar = (c, host, skip) => {
-    const l = AZIONI.list(c, "barra").filter(a => a.bar !== skip), g = (/** @type {string} */ k) => l.filter(a => a.bar === k).map(a => html(a, c)).join("");
-    host.innerHTML = G.map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + (skip === "e" ? "" : g("e"));
+    const l = AZIONI.list(c, "barra").filter(a => a.bar !== skip || a.bid === "max"), g = (/** @type {string} */ k) => l.filter(a => a.bar === k).map(a => html(a, c)).join("");
+    host.innerHTML = G.concat(skip === "e" ? ["e"] : []).map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + (skip === "e" ? "" : g("e"));
     for (const a of l) {
       const b = /** @type {HTMLElement | null} */ (host.querySelector(a.nodata ? ".x" : `[data-a="${a.bid}"]`));
       if (b && a.run) b[a.tag ? "onchange" : "onclick"] = (/** @type {Event} */ e) => AZIONI.run(a.id, { ...c, e, b });

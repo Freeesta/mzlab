@@ -59,10 +59,10 @@ try:
             pg.keyboard.press("Escape"); wait_for_js(pg, f"{SPEC}.meas==null"); assert pg.evaluate(f"{SPEC}.meas") is None
         step("G1: ruler: reference, second peak fixes delta m/z (about 170, shown without sign), Esc removes", ruler)
         def ruler_btn():
-            pg.click(".pnl.spec [data-a=rul]"); a = peak_x(364.4); pg.mouse.click(a["x"], a["y"] + 3); wait_for_js(pg, f"{SPEC}.meas&&{SPEC}.meas.ref!=null")
+            bar(pg, ".pnl.spec", "rul"); a = peak_x(364.4); pg.mouse.click(a["x"], a["y"] + 3); wait_for_js(pg, f"{SPEC}.meas&&{SPEC}.meas.ref!=null")
             assert pg.evaluate(f"{SPEC}.meas.ref") is not None
             b = peak_x(152.2); pg.mouse.click(b["x"], b["y"] + 3); wait_for_js(pg, f"{SPEC}.meas.list.length===1"); assert len(pg.evaluate(f"{SPEC}.meas.list")) == 1
-            pg.click(".pnl.spec [data-a=rul]"); pg.evaluate(f"(()=>{{const p={SPEC};p.meas=null;draw(p)}})()")
+            bar(pg, ".pnl.spec", "rul"); pg.evaluate(f"(()=>{{const p={SPEC};p.meas=null;draw(p)}})()")
         step("G1: ruler button: first click = reference, second = measure", ruler_btn)
         def params():
             assert pg.evaluate(f"{SPEC}.level") == 1 and pg.evaluate(f"specRel({SPEC})") is False, "Full Scan: absolute"

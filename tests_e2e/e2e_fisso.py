@@ -49,7 +49,7 @@ try:
             maxz = pg.evaluate("Math.max(...E.panels.map(p => +p.el.style.zIndex || 0))"); assert maxz < z[1], (maxz, z)
         step("menus above the header, panels below it", layers)
         def full():
-            pg.evaluate("window.scrollTo(0, 300)"); pg.locator('.pnl [data-a="max"]').first.click(); wait_for_js(pg, "!!Q('.pnl.max')"); frames(pg, 3)
+            pg.evaluate("window.scrollTo(0, 300)"); bar(pg, ".pnl", "max"); wait_for_js(pg, "!!Q('.pnl.max')"); frames(pg, 3)
             t = pg.evaluate("Q('.pnl.max').getBoundingClientRect().top"); hh = pg.evaluate("document.querySelector('header').getBoundingClientRect().bottom")
             assert t >= hh - 1 and top() == 0, (t, hh)
             pg.keyboard.press("Escape"); wait_for_js(pg, "!Q('.pnl.max')"); frames(pg, 3)
