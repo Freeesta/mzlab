@@ -25,6 +25,10 @@ def load(b, q="", w=1440, h=950, init=None, **ctx):
     pg = c.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.goto(f"http://127.0.0.1:{r.port}/{q}"); ready(pg); return pg
 
+def settled(pg):
+    """The page knows its capacities (the engine worker told opfsSync) and has drawn: the point where a notice, if due, would be there."""
+    wait_for_js(pg, "window.CAPACITA && CAPACITA.statoCap('opfsSync') !== 'verifica'"); frames(pg, 3)
+
 def shot(pg, name):
     if SHOTS: os.makedirs(SHOTS, exist_ok=True); pg.screenshot(path=os.path.join(SHOTS, name + ".png"))
 
@@ -33,7 +37,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
         def chrome_none():
-            pg = load(b); pg.wait_for_timeout(800)
+            pg = load(b); settled(pg)
             assert pg.locator(N).count() == 0, "notice in a normal Chromium"
             assert not pg.evaluate("document.getElementById('bn-css')"), "module loaded without a notice due"
         step("Chromium with every capacity: no notice", chrome_none)
@@ -53,7 +57,7 @@ try:
             pg = load(b, "?cap-off=cartellaLocale"); wait_for_js(pg, f"document.querySelector('{N}')")
             pg.click(f"{N} .bn-x"); assert pg.locator(N).count() == 0
             assert pg.evaluate("localStorage.getItem('mzlab.browserNotice')") == "1"
-            pg.reload(); ready(pg); pg.wait_for_timeout(800); assert pg.locator(N).count() == 0, "shown again after closing"
+            pg.reload(); ready(pg); settled(pg); assert pg.locator(N).count() == 0, "shown again after closing"
         step("closing is remembered across loads", close_click)
         def keyboard():
             pg = load(b, "?cap-off=cartellaLocale"); wait_for_js(pg, f"document.querySelector('{N}')")
@@ -77,6 +81,8 @@ try:
             bx = pg.evaluate(f"(() => {{ const r = document.querySelector('{N}').getBoundingClientRect(); return [r.left, r.right, innerWidth, document.documentElement.scrollWidth]; }})()")
             assert bx[0] >= 0 and bx[1] <= bx[2] and bx[3] <= bx[2], f"notice or page wider than 390 px: {bx}"
             assert pg.evaluate(f"[...document.querySelectorAll('{N} a, {N} button')].every(e => {{ const q = e.getBoundingClientRect(); return q.width >= 24 && q.height >= 24; }})"), "target under 24 px"
+            top = pg.evaluate(f"(() => {{ const n = document.querySelector('{N}').getBoundingClientRect(), l = document.getElementById('cap-live'); return [n.top, l ? l.getBoundingClientRect().bottom : null]; }})()")
+            assert top[1] is None or top[1] <= top[0], f"the capacity line is hidden under the notice: {top}"
             shot(pg, "engine-390")
             pg.click(f"{N} .bn-x"); assert pg.locator(N).count() == 0
         step("engine missing at 390 px: notice with Chrome, Firefox, Edge, fits, targets >= 24 px", phone)
@@ -87,13 +93,13 @@ try:
             shot(pg, "folder-390")
         step("folder missing at 390 px (mouse): fits, no sideways scroll", phone_folder)
         def touch_device():
-            pg = load(b, "?cap-off=cartellaLocale", w=390, h=780, has_touch=True, is_mobile=True); pg.wait_for_timeout(800)
+            pg = load(b, "?cap-off=cartellaLocale", w=1024, h=768, has_touch=True); settled(pg)
             assert pg.locator(N).count() == 0, "folder notice on a touch device, where another browser does not help"
-            pg = load(b, "?cap-off=simd128", w=390, h=780, has_touch=True, is_mobile=True); wait_for_js(pg, f"document.querySelector('{N}')")
+            pg = load(b, "?cap-off=simd128", w=1024, h=768, has_touch=True); wait_for_js(pg, f"document.querySelector('{N}')")
             assert pg.evaluate(LINKS) == [], "download links on a touch device"
-        step("touch device: no folder notice; engine notice without download links", touch_device)
+        step("touch tablet: no folder notice; engine notice without download links", touch_device)
         def desktop():
-            pg = load(b, "?cap-off=simd128", init="window.MZLAB_DESKTOP = true;"); pg.wait_for_timeout(800)
+            pg = load(b, "?cap-off=simd128", init="window.MZLAB_DESKTOP = true;"); settled(pg)
             assert pg.locator(N).count() == 0, "notice in the desktop app"
         step("desktop app: no notice", desktop)
         def late_engine():
