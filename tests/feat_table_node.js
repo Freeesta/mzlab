@@ -29,4 +29,5 @@ for (const [name, kind] of [["full.csv", "full"], ["full_mzmine.csv", "full_mzmi
 for (const [name, kind] of [["ms2.mgf", "mgf"], ["sirius.ms", "sirius"]])
   put(name, w.export_ms2(readTable, bytes.length, samples, spec, sha, pol, kind, readIdx, sizes));
 put("row.json", w.table_row(readTable, bytes.length, samples, 3));
+put("slots.json", w.table_slots(readTable, bytes.length, samples, 3, "table.mzfeat"));
 put("row_traces.json", w.table_row_traces(readTable, bytes.length, samples, 3, readIdx, sizes, 5.0));
