@@ -207,6 +207,20 @@ fn write_eluents_and_sources(o: &mut Out, lc: &Value) {
     o.raw("}}");
 }
 
+/// `head` (the `file_method/1` document without its views, `filemethod::document_head`) with `"lc":…,"dad":…` before its closing brace; `method` is the
+/// `method/1` text the head was made from (`None`: the file carries none).
+pub fn attach(head: &str, method: Option<&str>) -> crate::error::Result<String> {
+    let doc = method.map(|m| crate::json::parse(m.as_bytes())).transpose()?;
+    let body = head.strip_suffix('}').unwrap_or(head);
+    let mut o = Out::default();
+    o.raw(body).raw(",\"lc\":");
+    write_lc(&mut o, doc.as_ref());
+    o.raw(",\"dad\":");
+    write_dad(&mut o, doc.as_ref());
+    o.raw("}");
+    Ok(o.0)
+}
+
 /// `"view":{"lc":…,"dad":…}` of the LC method of a `.dam` (the same two views `file_method/1` writes for a `method/1` document), for the Method window of a file whose
 /// method comes from a loaded `.dam`.
 pub fn write_view_of(o: &mut Out, lc: &crate::methodinfo::Lc) {

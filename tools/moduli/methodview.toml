@@ -1,0 +1,7 @@
+uscita = "wasm-feat/methodview"
+pacchetto = "mzlab-methodview-wasm"
+chiavi = { methodview = 39 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 90112
+nota = "lc and dad views of `file_method/1` (`methodview::attach`: gradient with hold, flow, oven, run time, eluents, DAD rows, each value with its source and its two-decimal display); lazy, loaded by rust-filemethod.js after `filemethod`; a module of its own because inside `filemethod` the view code grew that module +21,660 B (+18.3 %, over the 5 % rule); provisional cap until the CI size step measures it (cap = measurement x 1.05 rounded up to 4 KiB)"

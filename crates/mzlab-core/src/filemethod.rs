@@ -387,8 +387,15 @@ pub fn precursors_of(method: Option<&str>, items: &Value) -> Vec<f64> {
     name_precursors(&segs, items)
 }
 
-/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text.
+/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text:
+/// the head (everything but the `lc` and `dad` views) with the views of `methodview::attach` after it.
 pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
+    crate::methodview::attach(&document_head(sample, method, items)?, method)
+}
+
+/// The document without its `lc` and `dad` views (a closed object): the site's `.wasm` `filemethod` gives this and the lazy `.wasm` `methodview` adds the
+/// views, so that the view code is not part of a module with a tight cap; `document` joins the two and is the bytes of the CLI and the app.
+pub fn document_head(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
     let items = parse(items.as_bytes())?;
     let doc = match method {
         Some(m) => Some(parse(m.as_bytes())?),
@@ -444,11 +451,7 @@ pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Resul
     let precs = name_precursors(&segs, &items);
     o.raw("},\"warnings\":[")
         .raw(&name_warnings(&[file, sample_name], &precs).join(","))
-        .raw("],\"lc\":");
-    crate::methodview::write_lc(&mut o, doc.as_ref());
-    o.raw(",\"dad\":");
-    crate::methodview::write_dad(&mut o, doc.as_ref());
-    o.raw("}");
+        .raw("]}");
     Ok(o.0)
 }
 
