@@ -16,6 +16,8 @@ SITE_ONLY = {
     "lr_cen_have": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "lr_cen_adopt": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "natplan": "the byte ranges the site copies into OPFS for the chosen samples of a .wiff.scan; the app reads in place and copies nothing (the same plan is `sample select --ranges` in the CLI)",
+    "natprefetch": "a ticked sample copied into OPFS while the chooser dialog is open (rust-prefetch.js); the app reads in place and copies nothing, so there is nothing to copy ahead",
+    "natunprefetch": "stops and discards the copies of natprefetch; the app makes none",
     "lr_flow_line": "the app's page posts flow/line (flow-terminal.js)",
     "lr_flow_sched": "the app's page posts flow/live/<op> (flow-live-desktop.js)",
 }

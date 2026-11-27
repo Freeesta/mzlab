@@ -734,7 +734,7 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .wiffchoose .wc-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.wiffchoose .wc-sel{margin:0 0 0 auto}.wiffchoose .wc-act{display:flex;justify-content:center;margin:12px 0 0}
 .wiffchoose button{min-height:28px;min-width:28px}.wiffchoose input[type=checkbox]{width:24px;height:24px}
 .wiffchoose .wc-scroll{overflow:auto;max-height:50vh;margin:8px 0}.wiffchoose .wc-tab{border-collapse:collapse;width:100%}.wiffchoose label{cursor:pointer;overflow-wrap:anywhere}.wiffchoose .wc-empty{color:var(--muted);font-style:italic}
-.wiffchoose caption{text-align:left;font-weight:600;padding:4px 0}.wiffchoose th,.wiffchoose td{padding:2px 6px;text-align:left;border-bottom:1px solid var(--line)}.wiffchoose .n{text-align:right;white-space:nowrap}
+.wiffchoose caption{text-align:left;font-weight:600;padding:4px 0}.wiffchoose th,.wiffchoose td{padding:2px 6px;text-align:left;border-bottom:1px solid var(--line)}.wiffchoose .n{text-align:right;white-space:nowrap}.wiffchoose .wc-st{display:block;font-size:.8em;color:var(--muted)}
 /* live cursor of the 2D map: the coordinate chip and the dot on the XIC (decorative, never take a click, colours from the theme) */
 .mzchip{position:absolute;z-index:4;pointer-events:none;white-space:nowrap;padding:1px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);opacity:.88;font:11px/1.45 system-ui;font-variant-numeric:tabular-nums}
 .mzlive{position:absolute;z-index:4;pointer-events:none;width:0;height:0}.mzlive>i{position:absolute;display:block}

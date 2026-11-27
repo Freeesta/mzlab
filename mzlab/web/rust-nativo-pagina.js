@@ -3,6 +3,20 @@
 // and «Download .mzML» (the mzML of one sample written on request to a file of OPFS). `h` = { rpc, base, current, abort } of the bridge (rust-bridge.js).
 import { ensureRoom } from "./archivio.js";
 
+/** the calls of the sample chooser that copy ahead (rust-prefetch.js in the worker) */
+function prefetchApi(/** @type {any} */ h) {
+  return {
+    /** copies the byte ranges of sample `sid` of a dataset (`key`: NATIVO.key of its stem) to the browser storage ahead of its opening (rust-prefetch.js); `ranges`/`tag` are the engine's plan of that one sample (`nativePlan`);
+     *  `onProgress(frac)`; resolves true when the copy is in place, false when it was stopped, refused or the engine stopped: the opening then copies as it always did */
+    async nativePrefetch(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ key, /** @type {number} */ sid, /** @type {Record<string, number[][]>} */ ranges, /** @type {string} */ tag, /** @type {((f: number) => void) | undefined} */ onProgress) {
+      const r = await h.rpc({ op: "natprefetch", key, sid, members, ranges, tag }, onProgress ? (/** @type {any} */ p) => { if (p && p.wait) onProgress(-1); else if (p && typeof p.frac === "number") onProgress(p.frac); } : undefined);
+      return !(r.dead || r.error);
+    },
+    /** stops and discards the prefetch of samples `sids` of dataset `key` (all of them when null); `end`: nothing more of this dataset is to be opened */
+    async nativeUnprefetch(/** @type {string} */ key, /** @type {number[] | null} */ sids, /** @type {boolean | undefined} */ end) { await h.rpc({ op: "natunprefetch", key, sids, end: !!end }); },
+  };
+}
+
 /** @param {{ rpc: (m: any, onp?: (p: any) => void) => Promise<any>, base: (n: string) => string, current: () => any, abort: (w: any) => void }} h */
 export function makeNativo(h) {
   // the files of the session that are samples of a maker's file
@@ -36,6 +50,7 @@ export function makeNativo(h) {
     },
     /** the engine's answer for the sample chooser: `{ op: "natdefault", ids, sizes, empty }` (the ids ticked first: all but the `empty` ones) or `{ op: "natlabels", members: [{ file, id, sample }] }` (the column labels of the samples, `sample-labels/1`), or `{ op: "natselect", present, text }` (`1,3,5`, `2-4`); its refusal is thrown (`err.sample.unknown`, `err.sample.list`) */
     async nativeAsk(/** @type {any} */ m) { const r = await h.rpc(m); if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", ""); return JSON.parse(r.info); },
+    ...prefetchApi(h),      // nativePrefetch / nativeUnprefetch
     /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again (the blob: the desktop app knows a file by its number) */
     async nativeSame(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string[]} */ names) {
       const r = await h.rpc({ op: "natsame", members: members.map(m => ({ name: m.name, size: m.blob.size, mtime: /** @type {any} */ (m.blob).lastModified || 0, blob: m.blob })), names: names.map(h.base) });

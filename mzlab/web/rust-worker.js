@@ -92,7 +92,6 @@ function readerFor(blob, held) {
   };
 }
 
-
 // ---- the flow of the page (lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
 // session and the state of the page come from here. The slots of these files are numbered above LR_BASE, apart from the ones of the session (k).
 const LR_BASE = 1000000;
@@ -444,7 +443,7 @@ async function handle(ev) {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "natsamples": info = await nativo.samples(m.members, m.listing); break; case "natplan": info = await nativo.plan(m.members, m.text); break; case "natlabels": info = sample_labels(JSON.stringify({ members: m.members })); break; case "natdefault": case "natselect": info = m.op === "natdefault" ? sample_default(Uint32Array.from(m.ids), Float64Array.from(m.sizes), Uint32Array.from(m.empty || []), BUDGET_MB) : sample_selection(Uint32Array.from(m.present), m.text); break; case "natsame": info = await natSame(m); break;   // the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS · the chooser: first ticks and «1,3,5» are the engine's
+      case "natsamples": info = await nativo.samples(m.members, m.listing); break; case "natplan": info = await nativo.plan(m.members, m.text); break; case "natlabels": info = sample_labels(JSON.stringify({ members: m.members })); break; case "natdefault": case "natselect": info = m.op === "natdefault" ? sample_default(Uint32Array.from(m.ids), Float64Array.from(m.sizes), Uint32Array.from(m.empty || []), BUDGET_MB) : sample_selection(Uint32Array.from(m.present), m.text); break; case "natsame": info = await natSame(m); break; case "natprefetch": case "natunprefetch": info = (await nativo.pre(m, copies, cancelled, postMessage)).info; break;   // a ticked sample copied while the dialog is open (rust-prefetch.js) · the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS · the chooser: first ticks and «1,3,5» are the engine's
       case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
         const sink = await nativo.toMzml({ ...m, cap: BUDGET_MB }, p => postMessage({ op: "progress", id, ...p }));
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);

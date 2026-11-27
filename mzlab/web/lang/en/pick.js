@@ -1,6 +1,6 @@
 I18N.add("en", {
   "pick.title": "Choose samples",
-  "pick.intro": "Samples you leave unticked are not read.",
+  "pick.intro": "Ticked samples start loading now; unticked ones are not read.",
   "pick.close": "Close",
   "pick.mb": "{n} MB",
   "pick.kb": "{n} KB",
@@ -19,6 +19,9 @@ I18N.add("en", {
   "pick.rangeFailed": "{name}: only the chosen samples could not be copied, so the whole file pair is copied: {reason}",
   "pick.cancelled": "{name} was not opened: no samples were chosen.",
   "pick.empty": "empty",
+  "pick.pre.wait": "Waiting",
+  "pick.pre.run": "Loading {pc}%",
+  "pick.pre.done": "Loaded",
   "pick.why.inferred": "found in the data file, not in the index",
   "pick.why.refused": "cannot be read",
   "pick.kind.ms": "MS",
