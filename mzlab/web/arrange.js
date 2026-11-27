@@ -5,8 +5,11 @@ const ARR_T = (/** @type {string} */ k, /** @type {any} */ v = undefined) => I18
 const arrCss = document.createElement("style");
 arrCss.textContent = ".arrange-grip{flex:none;min-width:24px;min-height:24px;padding:0 2px;margin-right:2px;border:0;background:transparent;color:var(--muted);cursor:grab;touch-action:none;opacity:0;line-height:1;font-size:14px}" +
   ".pnl:hover .arrange-grip,.arrange-grip:focus-visible,.arrange-grip[aria-expanded=true]{opacity:1}.arrange-grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.arrange-grip{opacity:1;min-width:44px;min-height:44px}}" +
-  ".pnl.arrange-drag{opacity:.45}.arrange-prev{position:absolute;z-index:5001;box-sizing:border-box;pointer-events:none;border:2px dashed var(--accent);background:var(--sel);opacity:.8;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:600}" +
+  ".pnl.arrange-drag{opacity:.7}.arrange-prev{position:absolute;z-index:5001;box-sizing:border-box;pointer-events:none;border:2px dashed var(--accent);background:var(--sel);opacity:.8;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:600}" +
   ".arrange-prev.no{border-color:var(--muted);background:var(--soft);color:var(--muted)}" +
+  // live preview: the others slide with a transform (no redraw), the held panel floats; reduced motion = the jump, no animation
+  "#dpanels.arrange-live .pnl{transition:transform .2s cubic-bezier(.4,0,.2,1)}#dpanels.arrange-live .pnl.arrange-drag{transition:none;opacity:.7;box-shadow:0 6px 18px rgba(30,40,60,.25)}#dpanels.arrange-live .pnl.arrange-kb{opacity:.85}#dpanels.arrange-settle .pnl{transition:none!important}" +
+  "@media (prefers-reduced-motion:reduce){#dpanels.arrange-live .pnl{transition:none}}:root[data-a11y-reduce] #dpanels.arrange-live .pnl{transition:none}" +
   ".arrange-menu{position:fixed;z-index:10005;min-width:200px;max-width:min(320px,94vw);max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:4px}" +
   ".arrange-menu button{display:block;width:100%;min-height:28px;text-align:left;border:0;background:transparent;color:var(--ink);padding:3px 8px;border-radius:4px}.arrange-menu button:hover,.arrange-menu button:focus-visible{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}.arrange-menu button[aria-disabled=true]{color:var(--muted);cursor:default}" +
   ".arrange-menu .aff-lbl{display:block;padding:4px 8px 2px;font-size:11px;color:var(--muted)}" +
@@ -58,8 +61,8 @@ const arrRelay = (/** @type {any} */ keep) => { placeRows(arrStack()); E.panels.
 
 const arrLive = document.createElement("div"); arrLive.id = "arrange-live"; arrLive.setAttribute("role", "status"); arrLive.setAttribute("aria-live", "polite"); document.body.appendChild(arrLive);
 const arrSay = (/** @type {string} */ m) => { arrLive.textContent = ""; setTimeout(() => { arrLive.textContent = m; }, 30); };
-function arrWhere(/** @type {any} */ p) {
-  const rows = LAYOUT.righeDi(arrStack()), r = rows.find(x => x.includes(p));
+function arrWhere(/** @type {any} */ p, /** @type {any[]} */ order = arrStack()) {
+  const rows = LAYOUT.righeDi(order), r = rows.find(x => x.includes(p));
   return r ? ARR_T("arrange.where", { n: p.num ?? "", r: rows.indexOf(r) + 1, t: rows.length, i: r.indexOf(p) + 1, m: r.length }) : "";
 }
 
@@ -94,9 +97,74 @@ const arrShowPrev = (/** @type {{x:number,y:number,w:number,h:number} | null} */
   Object.assign(arrPrev.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px" }); arrPrev.textContent = arrLabel;
 };
 const arrLabel = (/** @type {any} */ d) => ARR_T(d.k === "sx" ? "arrange.zone.left" : d.k === "dx" ? "arrange.zone.right" : d.k === "su" ? "arrange.zone.above" : "arrange.zone.below");
+/** Live preview of a move `res` (copies from arrRedo): every other panel slides to where it would land (transform only: no redraw); returns the rectangle of `p`. `self` also slides p (keyboard). */
+function arrSlide(/** @type {any[]} */ order, /** @type {any[]} */ res, /** @type {any} */ p, /** @type {boolean} */ self) {
+  const gm = LAYOUT.colloca(res, hostWidth(), pnlGap(), minW);
+  Q("#dpanels").classList.add("arrange-live");
+  res.forEach(c => {
+    const q = order.find(o => o.id === c.id), r = gm.pos.get(c); if (!q || !r || (q === p && !self)) return;
+    const sw = r.w / q.w, sh = r.h / q.h, same = Math.abs(sw - 1) < 0.005 && Math.abs(sh - 1) < 0.005;
+    q.el.style.transformOrigin = "0 0";
+    q.el.style.transform = r.x === q.x && r.y === q.y && same ? "" : `translate(${r.x - q.x}px,${r.y - q.y}px)` + (same ? "" : ` scale(${sw},${sh})`);
+  });
+  return gm.pos.get(res.find(c => c.id === p.id)) || null;
+}
+/** Everything back where it is (a cancel slides back); `settle` = about to apply the real move: no transition, so nothing flickers. */
+function arrLiveEnd(/** @type {boolean} */ settle) {
+  const host = Q("#dpanels"); if (settle) host.classList.add("arrange-settle");
+  E.panels.forEach((/** @type {any} */ q) => { if (q.el) { q.el.style.transform = ""; q.el.style.transformOrigin = ""; } });
+  const off = () => host.classList.remove("arrange-live", "arrange-settle");
+  if (settle) requestAnimationFrame(() => requestAnimationFrame(off)); else setTimeout(off, 260);
+}
+/** Where the keys can put `p`: slots between the rows of the others (reading order, `n` = after the last row), or beside a row. */
+function arrKeySlots(/** @type {any} */ p) {
+  const order = arrStack(), rows = LAYOUT.righeDi(order.filter(q => q !== p)), grp = blockOf(p).grp.map((/** @type {any} */ q) => q.id), ids0 = order.map(q => q.id).join();
+  const i0 = rows.filter(r => order.indexOf(r[0]) < order.indexOf(p)).length;
+  const fit = (/** @type {any} */ d) => { const wide = d.k !== "sx" && d.k !== "dx", res = arrRedo(arrKeys(order), p.id, wide && !d.solo ? grp : [p.id], d, hostWidth()); return res ? { d, res } : null; };
+  const slot = (/** @type {number} */ i) => {
+    const t = rows[i] ? rows[i][0] : null, d = t ? { k: "su", t: t.id, solo: grp.includes(t.id) || undefined } : { k: "fine" }, a = fit(d);
+    // moving the block past its own spectrum changes nothing: the panel goes alone then
+    return a && i !== i0 && a.res.map((/** @type {any} */ q) => q.id).join() === ids0 ? fit({ ...d, solo: true }) : a;
+  };
+  return { rows, i0, slot, side: (/** @type {number} */ j, /** @type {string} */ k) => fit({ k, t: rows[j][0].id }) };
+}
+/** Keyboard drag: Space picks the panel up, arrows move it, Space drops it, Escape (or leaving the handle) cancels; every step is announced. */
+function arrKeyDrag(/** @type {any} */ p, /** @type {any} */ g) {
+  const K = arrKeySlots(p), order = arrStack(), n = K.rows.length;
+  let i = K.i0, j = 0, side = "", cur = /** @type {any} */ (null);
+  const z0 = p.el.style.zIndex; p.el.classList.add("arrange-kb"); p.el.style.zIndex = "5000";
+  const show = (/** @type {any} */ a) => {
+    const r = arrSlide(order, a.res, p, true), me = a.res.find((/** @type {any} */ q) => q.id === p.id); cur = a;
+    arrShowPrev(r, arrLabel(a.d)); me.num = p.num; arrSay(arrWhere(me, a.res));
+  };
+  const end = (/** @type {boolean} */ commit) => {
+    g.removeEventListener("keydown", key, true); g.removeEventListener("blur", blur);
+    arrShowPrev(null, ""); p.el.classList.remove("arrange-kb");
+    const d = commit && cur && (side || i !== K.i0) ? cur.d : null;
+    if (d) { arrLiveEnd(true); arrRun(p, d, d.k !== "sx" && d.k !== "dx"); } else { p.el.style.zIndex = z0; arrLiveEnd(false); arrSay(ARR_T(commit ? "arrange.drop.same" : "arrange.cancel")); }
+    g.focus();
+  };
+  const key = (/** @type {KeyboardEvent} */ e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); end(false); return; }
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopImmediatePropagation(); g._space = true; end(true); return; }
+    const v = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0, h = e.key === "ArrowLeft" ? "sx" : e.key === "ArrowRight" ? "dx" : "";
+    if (!v && !h) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    let a = null, ni = i, nj = j;
+    if (v) { ni = side ? (v < 0 ? j : j + 1) : Math.max(0, Math.min(n, i + v)); a = K.slot(ni); }
+    else if (n) { nj = side ? j : Math.min(i, n - 1); a = K.side(nj, h); }
+    if (!a) { arrSay(ARR_T("arrange.zone.nospace")); return; }
+    if (v) { i = ni; side = ""; } else { j = nj; side = h; }
+    show(a);
+  };
+  const blur = () => end(false);
+  g.addEventListener("keydown", key, true); g.addEventListener("blur", blur);
+  arrSay(ARR_T("arrange.pick", { n: p.num ?? "" }));
+}
 function arrDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @type {any} */ g) {
   const coarse = e0.pointerType !== "mouse", sx = e0.clientX, sy = e0.clientY;
-  let on = false, key = "", d = /** @type {any} */ (null);
+  let on = false, key = "", d = /** @type {any} */ (null); const z0 = p.el.style.zIndex;
   const grpOf = (/** @type {any} */ d0) => (d0 && (d0.k === "sx" || d0.k === "dx" || d0.solo) ? [p.id] : blockOf(p).grp.map((/** @type {any} */ q) => q.id));
   const upd = (/** @type {PointerEvent} */ ev) => {
     const h = Q("#dpanels").getBoundingClientRect(), px = ev.clientX - h.left, py = ev.clientY - h.top, order = arrStack();
@@ -105,20 +173,22 @@ function arrDragGrip(/** @type {any} */ p, /** @type {PointerEvent} */ e0, /** @
     if (z.k !== "sx" && z.k !== "dx") { if (z.t != null && grpOf(null).includes(z.t)) z.solo = true; else z = arrZona(order, grpOf(z), px, py); }
     const kk = z.k + ":" + z.t + (z.solo ? "s" : ""); if (kk === key) return; key = kk; d = z;
     const cp = arrKeys(order), grp = grpOf(z), res = arrRedo(cp, p.id, grp, z, hostWidth());
-    if (!res) { const t = order.find(q => q.id === z.t); arrShowPrev(t ? { x: t.x, y: t.y, w: t.w, h: t.h } : null, ARR_T("arrange.zone.nospace")); d = null; return; }
-    const gm = LAYOUT.colloca(res, hostWidth(), pnlGap(), minW), r = gm.pos.get(res.find(q => q.id === p.id));
-    arrShowPrev(r || null, arrLabel(z));
+    if (!res) { const t = order.find(q => q.id === z.t); arrLiveEnd(false); arrShowPrev(t ? { x: t.x, y: t.y, w: t.w, h: t.h } : null, ARR_T("arrange.zone.nospace")); d = null; return; }
+    arrShowPrev(arrSlide(order, res, p, false), arrLabel(z));
   };
   const stop = (/** @type {boolean} */ commit) => {
     g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); g.removeEventListener("pointercancel", cancel); document.removeEventListener("keydown", esc, true);
     try { g.releasePointerCapture(e0.pointerId); } catch (_) { /* already released */ }
     p.el.classList.remove("arrange-drag"); arrShowPrev(null, "");
     if (on) { g._drag = true; setTimeout(() => { g._drag = false; }, 0); }
-    if (commit && on && d) arrRun(p, d, d.k !== "sx" && d.k !== "dx");
+    const go = commit && on && d;
+    if (!on) return;
+    if (go) arrLiveEnd(true); else { p.el.style.zIndex = z0; arrLiveEnd(false); }
+    if (go) arrRun(p, d, d.k !== "sx" && d.k !== "dx");
   };
   const mv = (/** @type {PointerEvent} */ ev) => {
-    if (!on && (coarse || Math.hypot(ev.clientX - sx, ev.clientY - sy) >= 6)) { on = true; p.el.classList.add("arrange-drag"); }
-    if (on) upd(ev);
+    if (!on && (coarse || Math.hypot(ev.clientX - sx, ev.clientY - sy) >= 6)) { on = true; p.el.classList.add("arrange-drag"); p.el.style.zIndex = "5000"; Q("#dpanels").classList.add("arrange-live"); }
+    if (on) { p.el.style.transform = `translate(${ev.clientX - sx}px,${ev.clientY - sy}px)`; upd(ev); }
   };
   const up = () => stop(true), cancel = () => stop(false);
   const esc = (/** @type {KeyboardEvent} */ ev) => { if (ev.key === "Escape") { ev.stopPropagation(); stop(false); } };
@@ -182,8 +252,11 @@ function arrGrip(/** @type {any} */ p) {
   /** @type {any} */ const g = document.createElement("button"); g.type = "button"; g.className = "arrange-grip"; g.textContent = "⠿";
   g.title = ARR_T("arrange.grip"); g.setAttribute("aria-label", ARR_T("arrange.grip")); g.setAttribute("aria-haspopup", "menu"); g.setAttribute("aria-expanded", "false");
   g.addEventListener("pointerdown", e => { if (e.button === 0 && arrEligible(p)) { setActive(p); front(p.el); arrDragGrip(p, e, g); } });
-  g.addEventListener("click", () => { if (!g._drag) arrOpenMenu(p, g); });
+  g.addEventListener("click", () => { if (!g._drag && !g._space) arrOpenMenu(p, g); });
+  // Space picks the panel up (arrKeyDrag); Enter still opens the menu. Space would click the button on key-up: swallowed
+  g.addEventListener("keyup", e => { if (e.key === " ") { e.preventDefault(); setTimeout(() => { g._space = false; }, 0); } });
   g.addEventListener("keydown", e => {
+    if (e.key === " " && !e.altKey && !e.ctrlKey && !e.metaKey && !e.repeat) { e.preventDefault(); g._space = true; if (arrEligible(p)) { setActive(p); arrKeyDrag(p, g); } return; }
     if (!e.altKey || !/^Arrow/.test(e.key)) return;
     e.preventDefault();
     const d = e.key === "ArrowUp" ? arrVertical(p, -1) : e.key === "ArrowDown" ? arrVertical(p, 1) : arrNeighbour(p, e.key === "ArrowLeft" ? -1 : 1);
