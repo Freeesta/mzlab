@@ -138,6 +138,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--blank-pattern", "blank file name globs"),
     ("--rt-ref", "RT reference: off, auto, target id"),
     ("--log", "log file"),
+    ("--index", "folder of .mzidx files"),
     ("--workers", "files at once"),
     ("--rt-warp", "RT map: off or piecewise"),
     ("--rt-gap", "max anchor-pair RT gap, min"),

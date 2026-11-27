@@ -28,7 +28,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("db normative import-official", "mzlab-cli db normative import-official ...   import user's official lists (native only)", |a| normative(pre("import-official", a))).exits(&[0, 2, 3, 4, 6]),
     Entry::new("db insilico pack", "mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)", insilico).schema("insilico/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("db ref-list", "mzlab-cli db ref-list FILE.csv [--name N] [--match X]   reference-ion CSV as JSON (reflist/1)", crate::plain::ref_list_cmd::run).schema("reflist/1"),
-    Entry::new("llm tools", "mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)", |a| crate::llm::run(pre("tools", a))).examples(&["mzlab-cli llm tools --compact"]).schema("tools/1"),
+    Entry::new("llm tools", "mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)", |a| crate::llm::run(pre("tools", a))).schema("tools/1"),
     Entry::new("llm inspect", "mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   inspect mzML files", |a| crate::llm::run(pre("inspect", a))).schema("inspection/1").exits(&[0, 2, 4]),
     Entry::new("llm params", "mzlab-cli llm params [FILE|DIR...] [--inspection FILE|-] [--answers FILE] [--budget N] [--hide-names]   propose parameters by rules", |a| crate::llm::run(pre("params", a))).schema("param-proposal/1").exits(&[0, 2, 4]),
     Entry::new("llm context", "mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   a run folder's context", |a| crate::llm::run(pre("context", a))).schema("context/1").exits(&[0, 2, 4]),

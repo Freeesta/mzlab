@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "row_traces/2",
+  "title": "row_traces/2: the traces of one row",
+  "description": "Printed by `mzlab-cli table row --traces` on the line after row/2; the same bytes as `table_row_traces` of the site and `row_traces` of the app. Read from the .mzidx of every file. XIC: the edges of the peak plus 3 widths on each side, at most 400 points that keep the maximum of each group. MS1: the scan nearest the apex of the file with the largest area, from 1 Da below to 4 Da above the m/z. MS2: the one the MGF export chooses. Code: crates/mzlab-feat/src/row.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "mz",
+    "ppm",
+    "xic",
+    "ms1",
+    "ms2"
+  ],
+  "properties": {
+    "schema": {
+      "const": "row_traces/2"
+    },
+    "id": {
+      "type": "integer"
+    },
+    "mz": {
+      "type": "number"
+    },
+    "ppm": {
+      "type": "number",
+      "description": "The window of the XIC around the m/z, as asked (default 5)."
+    },
+    "xic": {
+      "type": "array",
+      "description": "One per file.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "rt",
+          "y"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "rt": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "y": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "ms1": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "rt",
+            "mz",
+            "y"
+          ],
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "rt": {
+              "type": "number",
+              "description": "Minutes of the scan."
+            },
+            "mz": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "y": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ms2": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "prec",
+            "mz",
+            "y"
+          ],
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "prec": {
+              "type": "number",
+              "description": "Precursor m/z."
+            },
+            "mz": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "y": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

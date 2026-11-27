@@ -5,7 +5,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Cite mzLab (rule)
 - mzLab must be cited when it is used. The text is written ONCE, in `crates/mzlab-cli/src/citation.rs` (name, version of the build, `https://github.com/Freeesta/mzlab`, `DOI: to be added`). There is no DOI yet and none is invented: when it exists, set `DOI` in that file and in `CITATION.cff` (the comment there says where); nothing else changes.
 - Where the agent sees it: the footer of `mzlab-cli --help` and the output of `mzlab-cli --version`; a `"citation"` field in `mzlab-cli flow steps --json` (every step object) and in `mzlab-cli llm tools` (top level of the catalog); a top-level `"citation"` key in the `prov.json` that `flow run` writes (`report.json` and the `mzrun/2` of `flow record` do not: their schemas are shared with the page).
-- Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
+- Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent adds the citation to its own report (`CITATION.cff` has the reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
 ## Which build is this
@@ -110,8 +110,8 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 `--json` is accepted by every command; the generated list says what it does for each (`python3 tools/cli_doc.py`, from the tables the contract reads):
 <!--json-->
 - JSON already (`--json` only makes a failure an `error/1`):
-`flow report|record`, `file info|index|inventory|verify|items|method|channels`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`, `raw isotopes`
-`ion mz|pattern|match`, `mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
+`table row`, `flow report|record`, `file info|index|inventory|verify|items|method|channels`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`, `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window`, `msn graph|complete|compare|figure`, `msn lib add|build|search`, `msn rules`, `msn rules sum`
+`raw isotopes`, `ion mz|pattern|match`, `mol label|anal|check|cip|measure|hilite|sel|link|open|cut|mech|search`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`, `schema`
 - text or CSV, `--json` gives the document:
 `table compare`, `quant targets|union`, `estimate`, `flow run|check|steps|defaults|verify|command`, `file list|pair|validate|pack|unpack|check-pack|convert`, `peak table`, `msn lib export`, `ion elements`, `mol draw`, `db normative build`, `db insilico pack`, `commands`
 - no JSON form (`--json` is exit 2, `err.cli.json.unsupported`):

@@ -31,9 +31,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
-| TABLE-ROW-CLI | `docs/coda/prompt/TABLE-ROW-CLI.md` | - | mzflow 1: `table row`, the `row/2` and `row_traces/2` of one row from the CLI (site and app have them) |
 | FLOW-TABLE-LIST | `docs/coda/prompt/FLOW-TABLE-LIST.md` | - | mzflow 2: the list of feature tables on the right of the Flow; `flow tables` over a run folder |
-| FEATURE-DETAIL | `docs/coda/prompt/FEATURE-DETAIL.md` | TABLE-ROW-CLI | mzflow 3: the feature view with fixed slots; `feature-slots/1`, `table slots` |
+| FEATURE-DETAIL | `docs/coda/prompt/FEATURE-DETAIL.md` | - | mzflow 3: the feature view with fixed slots; `feature-slots/1`, `table slots` |
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
 | KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
 | FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | FEATURE-DETAIL | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
