@@ -284,7 +284,7 @@ usage: mzlab-cli sample select FILE (--sample LIST [--ranges] | --default [--bud
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `sample list`, not positions)
   --ranges     with --sample: also the byte ranges of every member that those samples need (`bytes`, `total`, `tag`, `members[].ranges`, `[start, end)`): what the site copies into OPFS, the head of the .wiff.scan, the chosen sections and what follows the indexed part; any other member whole (the same bytes as the site's `sample_ranges`)
-  --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
+  --default    the samples the site's chooser ticks at the start (`sample_default`): every sample with data when their section bytes are small against the budget, none otherwise
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
   --json       {\"schema\":\"sample-select/1\",\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
@@ -353,12 +353,9 @@ fn select_ids(file: &Path, text: Option<&str>, budget: f64, json: bool) -> Outco
         Some(t) => {
             crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(file, &w))
         }
-        None => crate::sample_select::sized(file).map(|(ids, sizes)| {
-            mzlab_core::readers::selection::suggest(
-                &ids,
-                &sizes,
-                mzlab_core::readers::selection::budget_bytes(budget),
-            )
+        None => crate::sample_select::sized(file).map(|(ids, sizes, empty)| {
+            let max = mzlab_core::readers::selection::budget_bytes(budget);
+            mzlab_core::readers::selection::suggest(&ids, &sizes, &empty, max)
         }),
     };
     match chosen {

@@ -44,6 +44,7 @@ fn pairs() -> PathBuf {
         N.fetch_add(1, Ordering::SeqCst)
     ));
     python("wiff_riferimento.py", &[&out.join("ref")]);
+    python("wiff_tipi.py", &[&out.join("ref")]);
     python(
         "wiff_grande.py",
         &[
@@ -193,5 +194,56 @@ fn a_cut_scan_file_shows_as_missing_rows_and_a_short_data_file() {
         "{v}"
     );
     assert_eq!(reads.load(Ordering::SeqCst), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// One MS sample, one SIM-only sample and one that acquired nothing (`tools/wiff_tipi.py`): the SIM sample lists its cycles as scans and
+/// is never `empty`; only the sample with no data is, and it is the only one the chooser leaves unticked. Fails, never skips, without python3.
+#[test]
+fn a_sim_sample_lists_its_cycles_and_only_a_sample_with_no_data_is_empty() {
+    let dir = pairs();
+    let (cheap, reads) = json(&dir.join("ref"), "tipi", true);
+    assert_eq!(reads, 0);
+    let v: serde_json::Value = serde_json::from_str(&cheap.unwrap()).unwrap();
+    let s = v["samples"].as_array().unwrap();
+    assert_eq!(s.len(), 3, "{v}");
+    assert_eq!(
+        (s[0]["scans"].as_u64(), &s[0]["kinds"]),
+        (Some(5), &serde_json::json!(["ms"])),
+        "{v}"
+    );
+    assert_eq!(
+        (s[1]["scans"].as_u64(), &s[1]["kinds"]),
+        (Some(7), &serde_json::json!(["sim"])),
+        "{v}"
+    );
+    assert!(
+        s[1]["size"].as_u64().unwrap() > 0 && s[1].get("why").is_none(),
+        "{v}"
+    );
+    assert_eq!(
+        (s[2]["scans"].as_u64(), s[2]["why"].as_str()),
+        (Some(0), Some("empty")),
+        "{v}"
+    );
+    assert!(s[0].get("why").is_none(), "{v}");
+    let mut l = readers::open_listing(
+        set(
+            &dir.join("ref"),
+            "tipi",
+            None,
+            &Arc::new(AtomicUsize::new(0)),
+        ),
+        &Limits::sito(),
+    )
+    .unwrap();
+    let empty = readers::empty_ids(&mut *l);
+    assert_eq!(empty, [3]);
+    let ids: Vec<u32> = s.iter().map(|x| x["id"].as_u64().unwrap() as u32).collect();
+    let sizes: Vec<u64> = s.iter().map(|x| x["size"].as_u64().unwrap_or(0)).collect();
+    assert_eq!(
+        readers::selection::suggest(&ids, &sizes, &empty, 1 << 30),
+        [1, 2]
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }

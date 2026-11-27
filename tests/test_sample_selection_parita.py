@@ -54,7 +54,7 @@ def test_the_site_and_the_cli_select_the_same_samples(work):
 
 
 DEFAULT = """const w = require(process.argv[2]);
-console.log(w.sample_default(Uint32Array.from(JSON.parse(process.argv[3])), Float64Array.from(JSON.parse(process.argv[4])), Number(process.argv[5])));"""
+console.log(w.sample_default(Uint32Array.from(JSON.parse(process.argv[3])), Float64Array.from(JSON.parse(process.argv[4])), Uint32Array.from(JSON.parse(process.argv[5])), Number(process.argv[6])));"""
 
 
 def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
@@ -64,7 +64,22 @@ def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
     smp = json.loads(sized.stdout)["files"][0]["samples"]
     ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
     for mb in (1024, 0.0001, 0):                   # 0 is the default budget: the same answer from both
-        site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+        site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), "[]", str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
         cli_out = subprocess.run(cli_argv("sample", "select", str(work / "big" / "grande.wiff"), "--default", "--budget-mb", str(mb), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
         assert site_out == cli_out, (mb, site_out, cli_out)
         assert json.loads(cli_out)["samples"] == ([] if mb == 0.0001 else ids), (mb, cli_out)       # a tiny budget ticks nothing, the real and the default ones tick the small set
+
+
+def test_a_sample_that_acquired_nothing_is_not_ticked_on_the_site_and_in_the_cli(work):
+    """`sample_default(.., empty, ..)` (site) and `sample select --default` (CLI) leave the empty sample of pair `tipi` unticked and tick the MS and the SIM sample."""
+    (work / "d.js").write_text(DEFAULT, encoding="utf-8")
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_tipi.py"), str(work / "ref")], check=True, capture_output=True)
+    wiff = work / "ref" / "tipi.wiff"
+    sized = subprocess.run(cli_argv("sample", "list", str(wiff), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
+    smp = json.loads(sized.stdout)["files"][0]["samples"]
+    ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
+    empty = [x["id"] for x in smp if x.get("why") == "empty"]
+    assert empty == [3]
+    site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), json.dumps(empty), "0"], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+    cli_out = subprocess.run(cli_argv("sample", "select", str(wiff), "--default", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+    assert site_out == cli_out == '{"schema":"sample-select/1","samples":[1,2]}', (site_out, cli_out)
