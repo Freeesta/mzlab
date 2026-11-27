@@ -85,7 +85,7 @@ function bottom(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ 
   g.strokeStyle = f.color || K.ecss("--accent"); g.beginPath();
   for (let i = 0; i < t.length; i++) { const x = X(t[i]); if (x < ml - 1 || x > mr + 1) continue; g.lineTo(x, Y(d.y[i])); if (i === 0) g.moveTo(x, Y(d.y[i])); }
   g.stroke();
-  const x = Math.round(X(pt.rt)) + .5; g.save(); K.MAPCURSORE.line(g, K.ecss); g.beginPath(); g.moveTo(x, mt); g.lineTo(x, H - mb); g.stroke(); g.restore();
+  const x = Math.round(X(pt.rt)) + .5; g.save(); K.MAPCURSORE.line(g, K.ecss, s, "rt"); g.beginPath(); g.moveTo(x, mt); g.lineTo(x, H - mb); g.stroke(); g.restore();
   g.fillStyle = ink; g.textAlign = "left"; g.fillText(T("mappa.ms.bot", { kind: tr === "xic" ? `${T("ctl.map.ms.xic")} ${(+p.msMz).toFixed(2)} ± ${XIC_TOL}` : T(tr === "bpc" ? "ctl.map.ms.bpc" : "ctl.map.ms.tic"), file: fname(f), off: f2(o.v) }), ml + 4, mt + 8);
 }
 

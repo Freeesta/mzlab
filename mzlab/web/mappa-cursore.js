@@ -1,14 +1,12 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// Cursor of the RT x m/z map, the parts that draw nothing on the canvases (classic script, loaded before mappa.js): the chip with RT and m/z that follows
-// the pointer, the dot on the XIC at the cursor RT, and the label of the peak under the cursor in the side spectrum. All DOM / geometry; the data come from mappa.js.
+// Cursor of the RT x m/z map, the parts that draw nothing on the canvases (classic script, loaded before mappa.js): the chip with RT and m/z, the dot on the XIC
+// at the cursor RT, the label of the peak under the cursor and the line style shared by every cursor line. DOM / geometry; the data come from mappa.js.
 const MAPCURSORE = (() => {
-  /** One marker style wherever the cursor is drawn (cross over the map, guide and bar of the side spectrum, RT line of the XIC): the muted token, 1 px lines (the
-   * bar under the cursor 1.5 px), dashes, no heavy cap. Dark and light themes follow the token. `s.cm` keeps what was drawn, for the tests. */
-  const COL = "--muted", LW = 1, LW_BAR = 1.5, DASH = [4, 3], TICK = 2.5;
-  /** Sets the stroke of a cursor line on `g` (call between save and restore). @param {CanvasRenderingContext2D} g @param {(v: string) => string} ecss @param {number} [w] @param {boolean} [dashed] */
-  const line = (g, ecss, w = LW, dashed = true) => { g.strokeStyle = ecss(COL); g.lineWidth = w; g.globalAlpha = 1; g.setLineDash(dashed ? DASH : []); };
+  // One cursor style wherever the cursor is drawn: muted token, 1 px dashed lines (bar 1.5 px); `s.cm[key]` keeps what was drawn, for the tests.
+  /** @param {any} g @param {any} ecss @param {any} s @param {string} key @param {number} [w] @param {boolean} [dash] */
+  const line = (g, ecss, s, key, w = 1, dash = true) => { g.strokeStyle = ecss("--muted"); g.lineWidth = w; g.globalAlpha = 1; g.setLineDash(dash ? [4, 3] : []); (s.cm || (s.cm = {}))[key] = { w, c: g.strokeStyle }; };
   /** The two decorative elements, in the grid of the map: absolute, pointer-events none (app.css), hidden until the cursor is over the map.
    * @param {HTMLElement} grid @returns {{ chip: HTMLElement, live: HTMLElement }} */
   const dom = grid => {
@@ -17,20 +15,19 @@ const MAPCURSORE = (() => {
     return { chip, live };
   };
 
-  /** The label of the peak under the cursor: medium weight, beyond the bar tip when it fits, otherwise above the bar and the guide (below them at the top edge), always inside the panel; returns its box.
+  /** The label of the peak under the cursor: beyond the bar tip when it fits, else above the bar, inside the panel; returns its box.
    * @param {CanvasRenderingContext2D} g @param {number} W panel width @param {Record<string, any>} q {t, tip, y, i} @param {number} x0 @param {{ y: number, end: number } | null} guide
    * @param {number} px font size @param {number} asc @param {number} hh @param {(n: number, st?: string) => string} fpx */
   const label = (g, W, q, x0, guide, px, asc, hh, fpx) => {
     g.font = fpx(11.5, "500 "); const w = g.measureText(q.t).width, right = q.tip + 4 + w <= W - 2;
-    const top = guide ? Math.min(q.y, guide.y) : q.y, bot = guide ? Math.max(q.y, guide.y) : q.y;
-    let by = right ? q.y + Math.round(px * .35) : top - 5; if (!right && by - asc < 1) by = bot + asc + 4;   // no room above the bar at the top edge: below it
+    const by = right ? q.y + Math.round(px * .35) : Math.max(asc + 1, Math.min(q.y, guide ? guide.y : q.y) - 5);   // above the bar and the guide, never past the top edge
     const x = right ? q.tip + 4 : Math.min(W - 2 - w, Math.max(x0 + 2, q.tip - 3 - w));
     g.strokeText(q.t, x, by); g.fillText(q.t, x, by); g.font = fpx(12.5);
     return { t: q.t, x, y: by - asc, w, h: hh, ly: q.y, tip: q.tip, right, i: q.i, cur: true };
   };
 
-  /** Shows or hides both elements for the cursor of panel `p`. The cursor is the pointer or the key-moved point; the locked point only while the map has the keyboard focus.
-   * The chip flips to the other side near the edges; on the XIC the dot rides the trace (s.xg, set by drawBottom) at the cursor RT, with a thin line when the sight is held elsewhere.
+  /** Shows or hides both elements for the cursor of panel `p` (the pointer or the key-moved point; the locked point only while the map has the focus).
+   * The chip flips near the edges; the dot rides the XIC trace (s.xg from drawBottom) at the cursor RT, with a thin line when the sight is held elsewhere.
    * @param {any} p @param {{ st: (p: any) => Record<string, any>, is2d: (p: any) => boolean, point: (p: any) => any, mzd: (p: any) => number, T: (k: string, v?: any) => string, MIRINO: any }} c */
   const sync = (p, c) => {
     const s = c.st(p), a = p._a, chip = s.chip, live = s.live; if (!chip || !live) return;
@@ -50,5 +47,5 @@ const MAPCURSORE = (() => {
     const l = /** @type {HTMLElement} */ (live.firstElementChild), dot = /** @type {HTMLElement} */ (live.lastElementChild);
     l.style.height = (g.H - g.mb - g.mt) + "px"; l.hidden = !apart; dot.style.top = (g.Y(v) - g.mt).toFixed(1) + "px";
   };
-  return { dom, label, sync, line, LW_BAR, TICK };
+  return { dom, label, sync, line };
 })();
