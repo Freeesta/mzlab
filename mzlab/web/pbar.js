@@ -25,9 +25,9 @@
   };
   /** the state of each header button (class, disabled, hidden, title, aria, content) copied to its twin in the bar @param {Pannello} p */
   function mirror(p) {
-    const h = hdr(p), b = host(); if (!h || !b) return;
+    const hd = hdr(p), b = host(); if (!hd || !b) return;
     for (const t of /** @type {NodeListOf<HTMLElement>} */ (b.querySelectorAll(".pbtools [data-a]"))) {
-      const s = /** @type {HTMLElement | null} */ (h.querySelector(`[data-a="${t.dataset.a}"]`)); if (!s) continue;
+      const s = /** @type {HTMLElement | null} */ (hd.querySelector(`[data-a="${t.dataset.a}"]`)); if (!s) continue;
       if (t.className !== s.className) t.className = s.className;
       if (t.innerHTML !== s.innerHTML) t.innerHTML = s.innerHTML;
       for (const k of ["title", "aria-label", "aria-pressed", "aria-expanded"]) { const v = s.getAttribute(k); if (v == null) t.removeAttribute(k); else if (t.getAttribute(k) !== v) t.setAttribute(k, v); }
@@ -62,7 +62,7 @@
       if (!t.onclick && !t.onchange && s) t.onclick = e => s.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: e.shiftKey }));
     }
     paintChip(p); mirror(p); rove(null);
-    const h = hdr(p); if (h) { mo = new MutationObserver(() => later()); mo.observe(p.el.querySelector(".hd") || h, { subtree: true, childList: true, attributes: true, characterData: true }); }
+    const hd = hdr(p); if (hd) { mo = new MutationObserver(() => later()); mo.observe(p.el.querySelector(".hd") || hd, { subtree: true, childList: true, attributes: true, characterData: true }); }
   }
   /** follows E.active: the first panel when none is; the bar is rebuilt only when the selected panel changes */
   function sync() {
