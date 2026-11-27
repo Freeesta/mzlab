@@ -128,6 +128,7 @@
     "../../mzlab/web/msn-elenco.js",
     "../../mzlab/web/masscal.js",
     "../../mzlab/web/decima.js",
+    "../../mzlab/web/empty-hint.js",
     "../../mzlab/web/mappa3d.js",
     "../../mzlab/web/migra.js",
     "../../mzlab/web/export-pezzi.js",
