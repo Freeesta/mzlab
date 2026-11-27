@@ -28,19 +28,6 @@ const any = () => [...cache.values()].some(Boolean);
 const forget = () => cache.clear();
 document.addEventListener("nbreset", () => { forget(); });
 
-// ---- the read-only section in the Method window (files without a gradient in the .dam): the gradient comes only from the file's own metadata
-const SRC = { dam: "grad.src.dam", raw: "grad.src.raw", file: "grad.src.file" };
-
-async function html(/** @type {FileAperto} */ f) {
-  const g = await get(f);
-  if (!g) return "";
-  let h = `<section class="msec" id="grad-sec"><h4>${T("grad.title")}</h4>`;
-  h += `<div class="sm" style="margin:0 0 6px">${T((/** @type {Record<string, string>} */ (SRC))[g.source] || "grad.src.file")}${g.nonlinear ? " · " + T("grad.nonlinear") : ""}</div>`;
-  h += typeof lcHtml === "function" ? lcHtml({ gradient: g.points, run_time: g.run_time }, () => "") : "";
-  return h + "</section>";
-}
-
-
 // ---- the gradient drawn over a chromatogram: right axis 0-100 %B, ramps, area at 10 %, dashed (never colour alone)
 const pending = new Set();
 const filesOf = (/** @type {Bag} */ p) => (typeof shownFor === "function" ? shownFor(p) : []);
@@ -184,4 +171,4 @@ if (typeof AZIONI !== "undefined") {
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
 }
-window.GRADIENTE = { pressHave, get, html, any, forget, ensure, have, curve, at, reading, draw, hover, needR, rightLayout, fitTitle, cursorText, colorOf };
+window.GRADIENTE = { pressHave, get, any, forget, ensure, have, curve, at, reading, draw, hover, needR, rightLayout, fitTitle, cursorText, colorOf };

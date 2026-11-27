@@ -1,4 +1,4 @@
-"""`file method` in the site: the lazy .wasm `filemethod` (mzlab-filemethod-wasm, through Node: `file_method(sample, method, items)`, the call rust-filemethod.js
+"""`file method` in the site: the lazy .wasm `filemethod` (mzlab-filemethod-wasm, through Node: `file_method(sample, method, items)` and the lazy .wasm `methodview` (mzlab-methodview-wasm) `attach_view(head, method)`, the two calls rust-filemethod.js
 makes with the `method/1` and `items/1` texts the page holds) gives byte for byte what `mzlab-cli file method` prints, on a synthetic .wiff converted to mzML
 (`tools/wiff_riferimento.py` `dispersione`: product ion 253.1, CE 35, CES 15, DP 60, a sample named for 237.1); a synthetic mzML (precursors 229.1 and 305.0) named
 for 237.1 gives the name warning with no method. A file with no method and a broken items text give the engine's error. The desktop answers the same op (`crates/mzlab-desktop/tests/parity_filemethod.rs`).
@@ -24,9 +24,9 @@ CI = bool(os.environ.get("GITHUB_ACTIONS"))
 pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
 
 NODE = """const [dir, sample, methodPath, itemsPath] = process.argv.slice(2);
-const { file_method } = require(dir + '/mzlab_filemethod_wasm.js'), fs = require('fs');
+const { file_method } = require(dir + '/mzlab_filemethod_wasm.js'), { attach_view } = require(dir + '/view/mzlab_methodview_wasm.js'), fs = require('fs');
 const text = p => p === '-' ? '' : fs.readFileSync(p, 'utf8');
-let out; try { out = { s: file_method(Number(sample), text(methodPath), text(itemsPath)) }; } catch (x) { out = { e: String(x) }; }
+let out; try { out = { s: attach_view(file_method(Number(sample), text(methodPath), text(itemsPath)), text(methodPath)) }; } catch (x) { out = { e: String(x) }; }
 process.stdout.write(JSON.stringify(out));"""
 
 
@@ -49,6 +49,7 @@ def work(tmp_path_factory):
     build("-p", "mzlab-cli")
     cli("file", "convert", str(w / "wiff" / "dispersione.wiff"), "--out", str(w / "conv"), "--json")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-filemethod-wasm")))
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(w / "pkg" / "view"), str(wasm_module("--target", "wasm32-unknown-unknown", "-p", "mzlab-methodview-wasm")))
     (w / "run.js").write_text(NODE, encoding="utf-8")
     return w
 

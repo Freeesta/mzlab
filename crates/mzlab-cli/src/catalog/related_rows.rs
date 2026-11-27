@@ -16,7 +16,7 @@ pub(crate) static RELATED: &[Rel] = &[
         .bulk("mzlab-cli raw xic FILE... --mz M1,M2,... --rt A,B: every mass in every file, one call; a list with an RT window per row: quant targets"),
     r("raw scan", "spectrum mean window background subtracted what is in the spectrum here that is not in the background ions masses bins net unknown contaminant interference ratio", &["raw xic", "spectrum get", "raw info"]),
     r("raw isotopes", "isotope pattern ratio m+1 m+2 carbon count formula check counting error sigma z score chlorine bromine sulfur interference coelution agrees with the formula 13c", &["ion pattern", "raw xic", "raw scan"]),
-    r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label", &["file items", "file info", "sample list"])
+    r("file method", "method acquisition parameters collision energy spread ces declustering potential dp fill time q1 resolution precursor tandem msms ms2 name mismatch wrong label lc gradient dad source", &["file items", "file info", "sample list"])
         .ex("mzlab-cli file method run.wiff --sample 1"),
     r("file channels", "sim srm mrm channel list transitions", &["trace chrom", "peak table"]),
     r("file convert", "convert mzml vendor wiff raw sample names", &["sample list", "sample select", "file validate", "convert.mzml"])
@@ -80,5 +80,6 @@ pub(crate) static RELATED: &[Rel] = &[
     r("tp.network", "pathway network scheme products draw", &["mol draw", "structure.render"]),
     r("structure.render", "draw modification structure product", &["mol draw", "tp.network"]),
     r("export.table_csv", "export table csv", &["export.mztab", "features"]),
+    r("mol find", "compound name synonym formula mass look up built-in catalogue list pesticide herbicide fungicide insecticide pharmaceutical contaminant is this compound in the list m/z of a compound", &["mol search", "ion mz", "mol label"]),
     r("quant.curve", "calibration curve quantification lod loq", &["quant.calibrate", "peak table", "chrom.transitions"]),
 ];

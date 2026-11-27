@@ -187,7 +187,42 @@ fn write_segment(o: &mut Out, s: &Segment) {
         .opt(s.dwell)
         .raw(",\"fill_time_ms\":")
         .opt(s.fill)
-        .raw(",\"q1_resolution\":null}");
+        .raw(",\"q1_resolution\":null,\"shown\":{");
+    write_shown(o, s);
+    o.raw("}}");
+}
+
+/// The values of a segment for display (two decimals, `crate::methodview::shown`), only the ones it holds; the numbers above keep their full precision.
+fn write_shown(o: &mut Out, s: &Segment) {
+    use crate::methodview::shown;
+    let mut parts: Vec<(&str, String)> = Vec::new();
+    if let Some(p) = s.precursor {
+        parts.push(("precursor_mz", shown(p)));
+    }
+    if let Some(q) = s.q3 {
+        parts.push(("q3_mz", shown(q)));
+    }
+    if let Some(r) = s.range {
+        parts.push(("mz_lo", shown(r[0])));
+        parts.push(("mz_hi", shown(r[1])));
+    }
+    if !s.ce.is_empty() {
+        parts.push((
+            "ce_eV",
+            s.ce.iter()
+                .map(|v| shown(*v))
+                .collect::<Vec<_>>()
+                .join(", "),
+        ));
+    }
+    for (k, v) in [("ces_eV", s.ces), ("dp_V", s.dp), ("fill_time_ms", s.fill)] {
+        if let Some(v) = v {
+            parts.push((k, shown(v)));
+        }
+    }
+    for (i, (k, v)) in parts.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
+    }
 }
 
 fn present(s: &Segment, key: &str) -> bool {
@@ -223,11 +258,19 @@ pub fn write_name_warning(o: &mut Out, name: &str, m: &crate::namemz::Mismatch) 
         .num(m.nearest_name_mz)
         .raw(",\"nearest_precursor\":")
         .num(m.nearest_precursor);
+    // the numbers for display (two decimals), the full ones stay above
+    let shown = crate::methodview::shown;
     o.raw(",\"delta_mz\":")
         .num(m.delta)
         .raw(",\"tolerance_mz\":")
         .num(NAME_TOL_MZ)
-        .raw("}");
+        .raw(",\"shown\":{\"nearest_name_mz\":")
+        .str(&shown(m.nearest_name_mz))
+        .raw(",\"nearest_precursor\":")
+        .str(&shown(m.nearest_precursor))
+        .raw(",\"delta_mz\":")
+        .str(&shown(m.delta))
+        .raw("}}");
 }
 
 /// The warnings of `names` (a file name, a sample name) against `precursors`, one per distinct name that carries a mass the precursors do not hold.
@@ -281,13 +324,27 @@ fn write_acquired(o: &mut Out, items: &Value) {
         for e in info.get("ms2_exps").map(Value::arr).unwrap_or_default() {
             o.raw(if first { "" } else { "," });
             first = false;
+            let (prec, ce) = (
+                e.get("prec").and_then(Value::f64),
+                e.get("ce").and_then(Value::f64),
+            );
             o.raw("{\"precursor_mz\":")
-                .opt(e.get("prec").and_then(Value::f64))
+                .opt(prec)
                 .raw(",\"ce_eV\":")
-                .opt(e.get("ce").and_then(Value::f64));
+                .opt(ce);
             o.raw(",\"scans\":")
                 .opt(e.get("n").and_then(Value::f64))
-                .raw("}");
+                .raw(",\"shown\":{\"precursor_mz\":");
+            match prec {
+                Some(v) => o.str(&crate::methodview::shown(v)),
+                None => o.raw("null"),
+            };
+            o.raw(",\"ce_eV\":");
+            match ce {
+                Some(v) => o.str(&crate::methodview::shown(v)),
+                None => o.raw("null"),
+            };
+            o.raw("}}");
         }
     }
 }
@@ -330,8 +387,15 @@ pub fn precursors_of(method: Option<&str>, items: &Value) -> Vec<f64> {
     name_precursors(&segs, items)
 }
 
-/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text.
+/// The `file_method/1` document of sample `sample` (`None` for an mzML) from its `method/1` text (`None`: the file carries none) and its `items/1` text:
+/// the head (everything but the `lc` and `dad` views) with the views of `methodview::attach` after it.
 pub fn document(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
+    crate::methodview::attach(&document_head(sample, method, items)?, method)
+}
+
+/// The document without its `lc` and `dad` views (a closed object): the site's `.wasm` `filemethod` gives this and the lazy `.wasm` `methodview` adds the
+/// views, so that the view code is not part of a module with a tight cap; `document` joins the two and is the bytes of the CLI and the app.
+pub fn document_head(sample: Option<u32>, method: Option<&str>, items: &str) -> Result<String> {
     let items = parse(items.as_bytes())?;
     let doc = match method {
         Some(m) => Some(parse(m.as_bytes())?),

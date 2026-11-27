@@ -106,7 +106,7 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     st.set_data_folder(data.path().join("app"));
     let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
     assert!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("\"molecules\":[]"));
-    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Esempina","formula":"C10H15NO"}]}"#;
+    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Exampline","formula":"C10H15NO"}]}"#;
     assert_eq!(r("lr_molecules_archive", json!({"mop": "write", "body": doc})), "{}");
     r("lr_clear", json!({}));
     let file = std::fs::read_to_string(data.path().join("app/molecules.json")).unwrap();
@@ -253,7 +253,7 @@ fn the_reset_files_backstop_forgets_the_files_and_keeps_the_drawing() {
     r("lr_index", json!({"name": "FullScan_t10.mzML"}));
     r("lr_kv_set", json!({"key": "notebook", "value": "{\"ket\":\"K\",\"session\":[\"FullScan_t10.mzML\"],\"sampleCols\":{}}"}));
     r("lr_kv_set", json!({"key": "cartella.puntata", "value": "x"}));
-    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Esempina","formula":"C10H15NO"}]}"#;
+    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Exampline","formula":"C10H15NO"}]}"#;
     r("lr_molecules_archive", json!({"mop": "write", "body": doc}));
     let drop = json!({"stores": ["files", "manifest"], "kv": ["cartella.puntata"], "notebook": ["session", "ui", "sampleCols", "sampleEx"]});
     r("lr_clear", json!({"scope": "files", "drop": drop}));
@@ -263,6 +263,6 @@ fn the_reset_files_backstop_forgets_the_files_and_keeps_the_drawing() {
     assert_eq!(nb["ket"], "K", "the drawing stays: {nb}");
     assert!(nb.get("session").is_none() && nb.get("sampleCols").is_none(), "{nb}");
     assert_eq!(r("lr_kv_get", json!({"key": "cartella.puntata"})), "{\"value\":null}");
-    assert!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("Esempina"), "the molecules stay");
+    assert!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})).contains("Exampline"), "the molecules stay");
     assert!(ex.exists(), "the file of the student is never touched");
 }

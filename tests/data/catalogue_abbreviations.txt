@@ -1,0 +1,28 @@
+# names shown as an abbreviation or code because that is the standard name (the full name is a synonym); a new one is a conscious choice
+2,4,5-T
+2,4-D
+2,4-DB
+AMPA
+DCOIT
+DEET
+EDDP
+EDTA
+HFPO-DA (GenX)
+MCPA
+MCPB
+PFBA
+PFBS
+PFHxA
+PFHxS
+PFNA
+PFOA
+PFOS
+TBEP
+TCEP
+TCPP
+TDCPP
+TPHP
+TnBP
+UV-326
+UV-328
+UV-329

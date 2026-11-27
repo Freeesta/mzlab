@@ -22,7 +22,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | smeared peaks: synthetic batch, MZmine default/wide configurations, comparison table (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-wide-peaks.md` |
 | Bruker timsTOF `.d` reader (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, `tdf_bin`/`tsf_bin`, m/z calibration, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
 | calibration curve on integrated peaks (`quant.curve`: 1/x..1/y² weights, QR, internal standard, ICH LOD/LOQ and S/N, logged exclusions, `calibration/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibration.md` |
-| browser capabilities, feature detection, "not available in this browser: use the app" notice (`capacita.js`, `?cap-off=`) | `docs/agenti/capabilities.md` |
+| browser capabilities, feature detection, "not available in this browser: use the app" notice (`capacita.js`, `?cap-off=`), closable "better in Chrome or Edge" browser notice (`avviso-browser.js`) | `docs/agenti/capabilities.md` |
 | conditional GitHub workflows (concurrency, pages, skipped jobs) | `docs/agenti/ci-fast.md` |
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
@@ -100,7 +100,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
-| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema), `file method` (`file_method/1`, `filemethod.rs`, name-m/z warning) | `docs/agenti/method.md` |
+| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema), `file method` (`file_method/1`, `filemethod.rs`, name-m/z warning), Method window honest view (`methodview.rs`: sources, hold, two-decimal `shown`, DAD rows) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | own 2D layout (`mzlab-mol::layout`), `mol draw`: molfile, `draw/1` scene, KET/CDXML, SVG/PNG pictures (`chem/draw*.rs`), edit patch `--set edit=` (`chem/edit*.rs`, `draw_edit/1`), RDKit quality gates, `draw_d1/d3.json` parity | `docs/agenti/mol-draw.md` |
 | tests and goldens of the `mol/1` record (`mzlab-mol` `tests/*.rs`, golden data from RDKit, intended limits, OpenChemLib trap): read only to change a test or regenerate a golden file | `docs/agenti/mol-tests.md` |

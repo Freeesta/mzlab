@@ -25,7 +25,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("db normative build", "mzlab-cli db normative build --cache DIR --out DIR   EU and US regulatory lists (native only)", |a| normative(pre("build", a))).schema("normative-build/1").exits(&[0, 1, 2, 3, 4, 6]),
     Entry::new("db normative pack", "mzlab-cli db normative pack ...   pack regulatory lists (native only)", |a| normative(pre("pack", a))).exits(&[0, 2, 4, 6]),
     Entry::new("db normative listings", "mzlab-cli db normative listings ...   regulatory lists built (native only)", |a| normative(pre("listings", a))).exits(&[0, 2, 4]),
-    Entry::new("db normative import-official", "mzlab-cli db normative import-official ...   import user's official lists (native only)", |a| normative(pre("import-official", a))).exits(&[0, 2, 3, 4, 6]),
+    Entry::new("db normative import-official", "mzlab-cli db normative import-official ...   import official lists (native only)", |a| normative(pre("import-official", a))).exits(&[0, 2, 3, 4, 6]),
     Entry::new("db insilico pack", "mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)", insilico).schema("insilico/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("db ref-list", "mzlab-cli db ref-list FILE.csv [--name N] [--match X]   reference-ion CSV as JSON (reflist/1)", crate::plain::ref_list_cmd::run).schema("reflist/1"),
     Entry::new("llm tools", "mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)", |a| crate::llm::run(pre("tools", a))).schema("tools/1"),

@@ -82,8 +82,8 @@ fn a_name_mass_that_is_not_the_precursor_is_a_warning_with_the_numbers_and_nothi
         (Some(237.1), Some(253.1))
     );
     assert!(
-        o.stderr.contains("237.1")
-            && o.stderr.contains("253.1")
+        o.stderr.contains("237.10")
+            && o.stderr.contains("253.10")
             && o.stderr.contains("(warn.file.nameMz)"),
         "{}",
         o.stderr

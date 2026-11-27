@@ -45,11 +45,10 @@ def test_a_smiles_it_cannot_read_is_an_error():
 
 def test_the_catalogue_carries_the_rules_and_a_closed_vocabulary():
     rows = list(csv.DictReader(CATALOGUE.open(encoding="utf-8"), delimiter=";"))
-    closed = {"chemical", "effect", "psychoactive", "role", "structure"}
+    closed = {"chemical", "group", "parent", "structure", "use"}
     for r in rows:
         tags = [t for t in r["classes"].split("|") if t]
         assert {t.split(":")[0] for t in tags} <= closed, r["id"]
         assert [t for t in tags if t.startswith("structure:")] == classes(r["smiles"]), r["id"]
         assert all(t[len("structure:"):] in VOCABULARY for t in tags if t.startswith("structure:"))
-    tabui = [r for r in rows if "tabui" in r["catalog"].split("|")]
-    assert sum(1 for r in tabui if r["classes"]) >= 390
+    assert all(r["classes"] for r in rows)

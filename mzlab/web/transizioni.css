@@ -8,7 +8,7 @@
 @keyframes tr-fade{from{opacity:0}}
 /* the work area replaces the opening skeleton: the toolbar, the panels and the side list fade in once (opacity only, nothing moves) */
 #v-data.opn-rev :is(#tools,#dpanels,#sb-panels){animation:tr-fade var(--t-med) var(--ease-out)}
-#v-data.opn-rev #dpanels .pnl{animation:none}
+#v-data.opn-rev #dpanels .pnl,.pnl[data-seen]:not(.flash){animation:none}
 /* menus, popovers, drop-downs: appear in --t-fast with a slight scale */
 #stmenu,#fpop,#colpop,#helppop,.sp-pop:not([hidden]),.subpop,.cpop,.hmore:not([hidden]),.corrm:not([hidden]){animation:tr-pop var(--t-fast) var(--ease-out);transform-origin:top left}
 /* dialogs, command palette, calculator: fade plus 6 px */
