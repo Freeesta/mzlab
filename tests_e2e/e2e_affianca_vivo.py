@@ -1,6 +1,6 @@
 # e2e_affianca_vivo: live reorder preview of the panel grip: the other panels slide aside while a panel is dragged (mouse, touch, keyboard), a dashed box marks
 # the drop, Esc cancels and everything returns; at 1400 and 390 px. MZLAB_SHOT_DIR=dir also writes the mid-drag screenshots (deviceScaleFactor 2) there.
-# covers: mzlab/web/arrange.js
+# covers: mzlab/web/arrange.js, mzlab/web/arrange-tasti.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
