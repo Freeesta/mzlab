@@ -62,12 +62,12 @@ try:
         step("integration and XIC buttons of the bar act on the chromatogram", chrom_work)
         def hidden_not_grey():
             pick(pg, ".pnl.chrom")
-            pg.evaluate("(()=>{const p=E.active;p.ms2=true;draw(p)})()")   # an MS2 chromatogram: no log, no XIC (ctl.noMs2)
+            pg.evaluate("(()=>{const p=E.active;p._tab0=p.tab;p.tab=ESP.ms2;AZIONI.refresh({view:p.type,p})})()")   # a chromatogram of the MS2 tab: no log, no XIC (ctl.noMs2)
             wait_for_js(pg, "(()=>{const b=document.querySelector('#pbar [data-a=log]');return !b||b.hidden})()")
-            assert pg.evaluate("[...document.querySelectorAll('#pbar .pbtools [data-a]')].every(b=>!b.disabled||b.dataset.a==='fit'||b.hidden)") or True
             assert pg.evaluate("!document.querySelector('#pbar .pbtools [data-a=xic]:not([hidden])')"), "XIC is hidden on an MS2 chromatogram"
             assert pg.evaluate(GROUPS)[2:] == ["o:Output"], pg.evaluate(GROUPS)   # no Extract group at all
-            pg.evaluate("(()=>{const p=E.active;p.ms2=false;draw(p)})()")
+            pg.evaluate("(()=>{const p=E.active;p.tab=p._tab0;AZIONI.refresh({view:p.type,p})})()")
+            wait_for_js(pg, "!document.querySelector('#pbar [data-a=log]').hidden && !document.querySelector('#pbar [data-a=xic]').hidden")
         step("an action that is not available is hidden, and a group with nothing in it is not drawn", hidden_not_grey)
         def map2d():
             pick(pg, ".pnl.map")
@@ -84,7 +84,6 @@ try:
             wait_for_js(pg, "E.panels.some(q=>q.type==='mrm')"); pick(pg, ".pnl.mrm")
             v = pg.evaluate(IDS + "('v')"); assert "area" in v, v
             on = pg.evaluate("E.active.area!==false"); bar(pg, ".pnl.mrm", "area"); wait_for_js(pg, f"(E.active.area!==false)===({str(not on).lower()})")
-            assert pg.evaluate("document.querySelector('.pnl.mrm .ctl [data-a=area], .pnl.mrm .hd select')===null || true")
         step("SIM/MRM: the area toggle sits in View and works", mrm)
         pg.context.close()
     r.close()
