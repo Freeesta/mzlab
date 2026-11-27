@@ -1,5 +1,5 @@
 """The DAD on the MRM panel, on the built site with the Rust engine and the synthetic MRM `.wiff` of tools/wiff_dad_mrm.py (no laboratory data): the right-click
-menu of the MRM panel has «UV spectrum at this RT», «TWC» and «Allinea»; a double click opens the UV spectrum at that time linked to the panel (its band at
+menu of the MRM panel has «UV spectrum at RT», «TWC» and «Allinea»; a double click opens the UV spectrum at that time linked to the panel (its band at
 274 nm at compound A), moved back by the DAD → MS delay when «Allinea» is on; the «TWC» check draws the TWC on a right axis, with the hover and cursor
 readings and its column in the data table, survives a reload, and a file with no DAD offers none of it. axe on the menu and the table. WebKit-safe
 (mouse and keyboard only). Run from the repo root: python3 tests_e2e/e2e_dad_mrm_overlay.py"""
@@ -52,7 +52,7 @@ try:
             labs = menu(pg); pg.keyboard.press("Escape")
             assert any(l[1] == T["uv"] for l in labs), labs
             assert ["menuitemcheckbox", T["twc"], "false"] in labs and any(l[0] == "menuitemcheckbox" and l[1] == T["al"] for l in labs), labs
-        step("the MRM panel of a file with a DAD: «UV spectrum at this RT», «TWC» and «Allinea» in its menu", entries)
+        step("the MRM panel of a file with a DAD: «UV spectrum at RT», «TWC» and «Allinea» in its menu", entries)
         def menu_axe():
             menu(pg); axe_ok(pg, "#ctx"); pg.keyboard.press("Escape")
         step("axe: the menu of the MRM panel", menu_axe)

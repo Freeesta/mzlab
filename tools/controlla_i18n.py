@@ -13,7 +13,7 @@ What is checked:
  6. lang/contesto/<area>.json (same stem as lang/en/<area>.js) describes every key that has parameters, each in the file of its key's area;
  7. every `err.*` / `error.*` / `warn.*` / `note.*` key a web crate can send (literals in crates/, see CRATE_*) has a text
     (the allow list CRATES_WITHOUT_TEXT says why a key never reaches a student);
- 8. names of other programs, vendors and people stay out of the texts.
+ 8. names of other programs, vendors and people stay out of the texts; 9. menu labels have no articles (tools/controlla_menu.py).
 The catalog is plain JSON inside `I18N.add("en", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
 """
 from __future__ import annotations
@@ -25,6 +25,7 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
+import controlla_menu
 import lang_catalog
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -479,6 +480,7 @@ def run(listing: bool = False) -> list[str]:
     check_catalog_italian(cat, errs)
     check_glossary(cat, errs)
     check_names({"en": cat}, errs)
+    controlla_menu.check_menu_labels(cat, errs)
     errs += lang_catalog.contesto_problems(cat)
     return errs
 

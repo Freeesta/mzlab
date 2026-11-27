@@ -1,5 +1,5 @@
 """INF_B: a direct-infusion MSn file is ONE item «MSn infusion» with the tree of its precursors: the nodes are the filters of the cells, the spectrum of a node is its
-mean (or sum), «Fragment this ion» goes to the child node. Synthetic file of TP_Mine/tests/msn_synth.py (no real data); a DDA file stays «Full Scan + DDA»."""
+mean (or sum), «Fragment ion» goes to the child node. Synthetic file of TP_Mine/tests/msn_synth.py (no real data); a DDA file stays «Full Scan + DDA»."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -64,7 +64,7 @@ try:
               return {root:root.id, kid:j.nodes.filter(n=>n.parent===root.id).map(n=>n.id), after, again:spec().filt}})()""")
             assert r0["after"][4:] in r0["kid"], r0
             assert r0["again"] == "msn:" + r0["root"], r0
-        step("«Fragment this ion» goes to the child node, «Back to the precursor» returns", frag)
+        step("«Fragment ion» goes to the child node, «Back to precursor» returns", frag)
         def frag_two():
             # two children of one parent inside the tolerance (same precursor, two energies): the nearest precursor wins, never an undefined order
             r1 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
@@ -76,7 +76,7 @@ try:
               const best=Math.min(...near.map(n=>Math.abs(n.precursor-m)));
               return {near:near.length, ok:near.some(n=>'msn:'+n.id===spec().filt&&Math.abs(n.precursor-m)===best)}})()""")
             assert r1["near"] >= 2 and r1["ok"], r1
-        step("«Fragment this ion» with two children in tolerance picks the nearest precursor", frag_two)
+        step("«Fragment ion» with two children in tolerance picks the nearest precursor", frag_two)
         def total():
             q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_tree?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
               const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.level}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;

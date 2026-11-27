@@ -1,4 +1,4 @@
-"""H4: «MSn tree of the file…» on the direct-infusion MSn file of the private data repository (skipped without it): the tree, the formulas, the peaks of a node, a wrong formula."""
+"""H4: «MSn tree of file…» on the direct-infusion MSn file of the private data repository (skipped without it): the tree, the formulas, the peaks of a node, a wrong formula."""
 # covers: mzlab/web/composizione.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

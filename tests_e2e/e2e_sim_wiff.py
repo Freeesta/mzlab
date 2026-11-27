@@ -3,7 +3,7 @@ samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laborato
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
 height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli peak table` on the same .wiff and windows (after the provenance line);
-a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak split`), moved by mouse, keys and finger and
+a row's Delete removes the integration; «Split at valleys» (V) proposes the engine's drop line (`mzlab-cli peak split`), moved by mouse, keys and finger and
 confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli file channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, mzlab/web/integra-valli.js, mzlab/web/sim-ui.js, tools/wiff_sim.py
@@ -402,7 +402,7 @@ try:
             need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "no drop line: whole again")
             menu = pg.evaluate("AZIONI.actions.find(a => a.id === 'int.split')")
             need(menu and menu["shortcut"]["key"] == "v", menu)
-        step("«Split at the valleys»: the engine's drop line (= peak split), moved by mouse, keys and finger, confirmed into one row per part (= peak table), undo, depth, Esc", split)
+        step("«Split at valleys»: the engine's drop line (= peak split), moved by mouse, keys and finger, confirmed into one row per part (= peak table), undo, depth, Esc", split)
         def split_hand():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"

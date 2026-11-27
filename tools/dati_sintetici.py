@@ -51,7 +51,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{b}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None, fill=None) -> str:
     p = ""
     if prec is not None:
         w = ""
@@ -71,6 +71,7 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
             f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/>' + (f'<cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="{filt}"/>' if filt else '')
+            + (f'<cvParam cvRef="MS" accession="MS:1000927" name="ion injection time" value="{fill}" unitCvRef="UO" unitAccession="UO:0000028" unitName="millisecond"/>' if fill else '')
             + f'</scan></scanList>{p}<binaryDataArrayList count="2">'
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
@@ -139,7 +140,8 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool | str
         sys.path.insert(0, str(Path(__file__).resolve().parent)); from synthetic_data_dad import inject_dad; inject_dad(path, t)
 
 
-def ms2(path: Path, rng, t: float = 15) -> None:
+def ms2(path: Path, rng, t: float = 15, fill_ms: tuple[float, float] | None = None) -> None:
+    """`fill_ms`: the ion injection time (ms, `MS:1000927`) of the scans of the first and of the second precursor; none states no time."""
     f = (1 - _exp(-0.04 * t)) / (1 - _exp(-0.6))                 # products grow with the treatment time
     prods = {229.1: ([123.1, 171.2, 211.1, 229.1], [0.05, 0.8, 0.25, 1.0], 7.07, 9e5 * f),
              305.0: ([152.2, 194.2, 263.1, 305.2], [0.3, 1.0, 0.2, 0.6], 14.7, 7e5 * f)}
@@ -155,7 +157,7 @@ def ms2(path: Path, rng, t: float = 15) -> None:
             mz = np.array(mzs) + rng.normal(0, 0.03, len(mzs)); it = np.array(rel) * max(sig, 300) * rng.normal(1, 0.05, len(mzs))
             noise_mz = rng.uniform(60, prec, 6); noise = rng.lognormal(_log(150), 0.6, 6)
             mz = np.concatenate([mz, noise_mz]); it = np.concatenate([it, noise]); o = np.argsort(mz); mz, it = mz[o], it[o]
-        specs.append(_spec(i, rt, mz, it, level=2, prec=prec, ce=10.0)); tic.append(float(np.sum(it))); bpc.append(float(np.max(it)) if len(it) else 0.0)
+        specs.append(_spec(i, rt, mz, it, level=2, prec=prec, ce=10.0, fill=fill_ms[i % 2] if fill_ms else None)); tic.append(float(np.sum(it))); bpc.append(float(np.max(it)) if len(it) else 0.0)
     tp, yp = _pda(rng, 0.6, 20.0)
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)])
 

@@ -1,5 +1,5 @@
 """Right click on the RT x m/z map (mappa.js): the sight (spectrum + XIC) stays on the clicked point while the menu is open, even if the pointer leaves
-the map towards the menu; «Lock the sight» keeps it after the menu closes (Esc unlocks); closing the menu without a choice gives the sight back to the pointer."""
+the map towards the menu; «Lock sight» keeps it after the menu closes (Esc unlocks); closing the menu without a choice gives the sight back to the pointer."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -38,7 +38,7 @@ try:
             pg.mouse.move(c[0] + c[2] + 30, ay, steps=4); settle(); assert shown() == ref
         step("menu open: the spectrum stays on the clicked point", held)
         def choose_lock():
-            pg.click("#ctx [aria-label='Lock the sight']"); settle(); assert not menu_open() and lock()
+            pg.click("#ctx [aria-label='Lock sight']"); settle(); assert not menu_open() and lock()
             pg.mouse.move(c[0] + c[2] * .2, c[1] + c[3] * .7, steps=5); settle(); assert shown() == ref and lock()
             assert pg.evaluate(f"!!{M}._mz.lock && !!{M}._mz.dot")
         step("Lock keeps the sight after the menu closes", choose_lock)
@@ -55,7 +55,7 @@ try:
             pg.mouse.move(c[0] + c[2] * .3, c[1] + c[3] * .8, steps=5); settle(); assert shown() != r0
         step("closing the menu without a choice: the sight follows the pointer again", dismiss)
         def dot():
-            pg.mouse.click(ax, ay, button="right"); settle(); pg.click("#ctx [aria-label='Lock the sight']"); settle(); assert lock(), 'lock'
+            pg.mouse.click(ax, ay, button="right"); settle(); pg.click("#ctx [aria-label='Lock sight']"); settle(); assert lock(), 'lock'
             def off():
                 return pg.evaluate(f"(()=>{{const s={M}._mz,a={M}._a,q=s.lock;return s.dot?[s.dot.x-a.X(q.rt),s.dot.y-a.Y(q.mz)]:null}})()")
             o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ('dot', o)
@@ -70,12 +70,12 @@ try:
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("0"); settle()
             n = lambda: pg.evaluate(f"MAPPA.pts({M}).length")
             n0 = n(); mx, my = c[0] + c[2] * .6, c[1] + c[3] * .55
-            pg.mouse.move(mx, my); settle(); pg.mouse.click(mx, my, button="right"); settle(); pg.click("#ctx [aria-label='Mark the point']"); settle()
+            pg.mouse.move(mx, my); settle(); pg.mouse.click(mx, my, button="right"); settle(); pg.click("#ctx [aria-label='Mark point']"); settle()
             assert n() == n0 + 1, (n0, n())
             pg.mouse.move(c[0] + c[2] * .3, c[1] + c[3] * .3, steps=4); settle(); assert n() == n0 + 1
             mp = pg.evaluate(f"(()=>{{const a={M}._a,q=MAPPA.pts({M})[{n0}],r={M}.cv.getBoundingClientRect();return [r.left+a.X(q.rt),r.top+a.Y(q.mz)]}})()")
             pg.mouse.click(mp[0], mp[1], button="right"); settle(); assert not lock()
-            pg.click("#ctx [aria-label='Unmark the point']"); settle(); assert n() == n0, (n0, n())
+            pg.click("#ctx [aria-label='Unmark point']"); settle(); assert n() == n0, (n0, n())
         step("Mark / Unmark from the menu, independent of the lock", mark)
         b.close()
     r.close()

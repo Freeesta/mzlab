@@ -31,6 +31,14 @@ _RX_PREC = re.compile(r"<precursor\b([^>]*)>(.*?)</precursor>", re.S)      # not
 _RX_SREF = re.compile(r'spectrumRef="([^"]*)"')
 
 
+def _fill_ms(header: str):
+    """The ion injection time (MS:1000927, ms) as the index stores it: a positive finite number kept as its float32 (the shortest text of it), else None."""
+    v = _float(_cv(header, "MS:1000927"))
+    if v is None or not v > 0.0 or v == float("inf"):
+        return None
+    return float(str(np.float32(v)))
+
+
 def _cv(header: str, accession: str):
     """The value of the cvParam with this accession, or None."""
     rx = _CV.get(accession)
@@ -190,6 +198,7 @@ class Scan:
     path: tuple | None = None          # ((m/z, "HCD"|"CID"|..., collision energy), ...) from the filter string, one item per stage; None = the filter has none
     precursors: list = field(default_factory=list)   # every <precursor>, in file order: {target, lo, hi, selected, charge, ref, act, ce, pint}
     charge: int | None = None          # charge of the immediate precursor, when the file says it
+    fill: float | None = None          # ion injection time of the scan in ms (MS:1000927), as a float32; None = the file does not say
 
 
 @dataclass
@@ -297,6 +306,9 @@ class Run:
         except Exception:                                 # noqa: BLE001 -- a broken or old index is simply not used
             return False
         st, src = self.path.stat(), ix.source
+        if ix.meta.get("version", 0) < mzidx.VERSION:      # a version 3 index has no fill times: build it again, as the CLI does
+            ix.close()
+            return False
         by_date = self.index_path is None and not mzidx.FLAT and path.name not in mzidx.REGISTRY.values()
         if src.get("size") != st.st_size or src.get("probe") != mzidx.probe(self) or (by_date and src.get("mtime_ns") and st.st_mtime_ns and src["mtime_ns"] != st.st_mtime_ns):
             ix.close()
@@ -534,7 +546,7 @@ class Run:
                 collision_energy=ce, filter=filt,
                 profile='accession="MS:1000128"' in h, iso=iso, act=act, res=_resolution(h, hs), pint=pint,
                 an=self._analyzer(filt, mi.group(1) if mi else None),
-                path=path, precursors=precs, charge=imm["charge"] if imm else None))
+                path=path, precursors=precs, charge=imm["charge"] if imm else None, fill=_fill_ms(h)))
             if m:
                 level_of[m.group(1)] = lvl_i
         self._link_parents(refs)

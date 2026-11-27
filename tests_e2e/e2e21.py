@@ -36,7 +36,7 @@ try:
         def files():
             drawer(pg); nm = pg.locator("#flst .fl .nm").first
             nm.click(button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            assert pg.locator("#ctx div", has_text="Rename").count() == 1 and pg.locator("#ctx div", has_text="Change color").count() == 1 and pg.locator("#ctx div", has_text="Remove from the session").count() == 1
+            assert pg.locator("#ctx div", has_text="Rename").count() == 1 and pg.locator("#ctx div", has_text="Change color").count() == 1 and pg.locator("#ctx div", has_text="Remove from session").count() == 1
             pg.locator("#ctx div", has_text="Rename").click(); pg.wait_for_selector("#askin")
             pg.fill("#askin", "Test sample"); pg.click("#askok"); wait_for_js(pg, "document.querySelector('#flst').innerText.includes('Test sample')")
             assert "Test sample" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
@@ -44,7 +44,7 @@ try:
             pg.locator("#colpop [data-c]").nth(3).click(); wait_for_js(pg, "E.files[0].color==='#D55E00'")
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
             n0 = pg.locator("#flst .fl").count()
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Remove from the session").click(); wait_for_js(pg, "!!E.files[0].gone")
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Remove from session").click(); wait_for_js(pg, "!!E.files[0].gone")
             # no confirmation and no notice: the removal is done at once and Undo / Ctrl+Z take it back
             assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('removed-box')") is None
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")

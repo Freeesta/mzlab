@@ -31,7 +31,7 @@ I18N.add("en", {
   "bn.stack": "Stacked charts",
   "bn.stack.title": "One chart for each chromatogram type",
   "bn.norm.title": "0–100 scale for each chart; the maximum stays written as NL",
-  "bn.drop": "Remove the chart: {name}",
+  "bn.drop": "Remove chart: {name}",
   "bn.pin.on": "Cell pinned: click to unpin it",
   "bn.pin.off": "Pin the cell: the spectrum stops following the cursor",
   "bn.copied.img": "Image copied to the clipboard.",
