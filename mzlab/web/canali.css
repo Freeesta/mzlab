@@ -37,11 +37,11 @@
 .leg .tg:has(.trsw){display:inline-flex;align-items:center;min-height:24px}
 /* the tallest trace under the mouse: its tooltip row carries a soft tint of the trace colour */
 .tip div.top{background:color-mix(in srgb,var(--tc) 16%,transparent);border-radius:3px;margin:0 -4px;padding:0 4px;font-weight:600}
-/* the checkbox of a picker row is the colour key of its trace: coloured border when unticked, filled when ticked; a dashed trace gets a dashed border and, ticked, an inner dashed ring.
-   The muted outer ring keeps the box 3:1 against the row for any colour (a pale yellow included); the tick and the ring are white, or near black on a light fill (data-lt, set by SIMUI.ckLook from the colour) */
-.can-ck[data-tc]{--tkt:#fff;border-color:var(--tk);box-shadow:0 0 0 1px var(--muted);forced-color-adjust:none}
+/* the checkbox of a picker row is the colour key of its trace: its border is that colour in every state (unticked, ticked, hover, focus, selected row), never black or grey; ticked it is also filled with it. A dashed trace gets a dashed border and, ticked, an inner dashed ring.
+   --tkb is the key colour, moved toward the text colour only when a pale one (yellow) would fall under 3:1 against the popup (SIMUI.ckLook); the tick and the ring are white, or near black on a light fill (data-lt) */
+.can-ck[data-tc]{--tkt:#fff;border:2px solid var(--tkb,var(--tk));box-sizing:border-box;forced-color-adjust:none}
 .can-ck[data-lt]{--tkt:#111}
 .can-ck[data-td]:not([data-td=""]){border-style:dashed}
-.can-row[aria-selected=true] .can-ck[data-tc]{background:var(--tk);border-color:var(--tk)}
-.can-row[aria-selected=true] .can-ck[data-tc]::after{border-color:var(--tkt)}
-.can-row[aria-selected=true] .can-ck[data-td]:not([data-td=""])::before{content:"";position:absolute;inset:1px;border:1px dashed var(--tkt);border-radius:1px}
+.can-row[aria-selected=true] .can-ck[data-tc]{background:var(--tk);border-color:var(--tkb,var(--tk))}
+.can-row[aria-selected=true] .can-ck[data-tc]::after{left:2px;top:-1px;border-color:var(--tkt)}
+.can-row[aria-selected=true] .can-ck[data-td]:not([data-td=""])::before{content:"";position:absolute;inset:0;border:1px dashed var(--tkt);border-radius:1px}
