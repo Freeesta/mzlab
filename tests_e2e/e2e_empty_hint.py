@@ -110,6 +110,13 @@ try:
             s = state(pg); need(s["vis"] and s["text"].strip() and s["inCanvas"], s)
             need(pg.evaluate("getComputedStyle(%s.el.querySelector('.eh-go')).borderTopStyle" % P) == "dashed", "prompt styling")
         step("the empty panel is never plain blank", not_blank)
+        def words():
+            # a panel with no control to point at shows the words of its message: a missing-key warning means a text went through the catalog twice
+            pg.evaluate("(() => { E.files.forEach(f => f.vis = false); renderFileList(); E.panels.forEach(q => draw(q)); })()"); frames(pg, 8)
+            t = pg.evaluate("E.panels.map(q => (q.el.querySelector('.eh-go') || {}).textContent)")
+            need(all(x and "msg." not in x and "empty." not in x for x in t), "no file shown: the prompts must read as sentences: %s" % t)
+            bad = [x for x in r.errs if "missing key" in str(x)]; need(not bad, bad)
+        step("no file shown: the panels say their message, no missing i18n key", words)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:

@@ -79,7 +79,7 @@ function layout(p) {
   const t = target(p), sp = s.spec, narrow = pr.width < NARROW;
   const go = /** @type {HTMLButtonElement} */ (s.go);
   go.disabled = !t; go.classList.toggle("eh-txt", !t);
-  s.tx.textContent = T(!t ? sp.alt || sp.key : narrow && sp.above ? sp.above : sp.key);
+  s.tx.textContent = !t && sp.alt ? sp.alt : T(!t ? sp.key : narrow && sp.above ? sp.above : sp.key);      // alt is words already translated (msgOf), the rest are keys
   const clearArrow = () => { s.ln.removeAttribute("d"); s.hd.removeAttribute("d"); };
   if (!t || narrow) return clearArrow();
   const tb = t.getBoundingClientRect(), gr = go.getBoundingClientRect();
