@@ -1,5 +1,5 @@
 """Shared checks of the colour key (e2e_trace_key.py, e2e_trace_key_panels.py): the highlighted row of the chromatogram hover tooltip, and the contrast and focus of the picker checkbox.
-Everything is read as the browser computes it; the drawing is observed through the canvas stroke calls, so «the trace is exactly 1 px thicker and only that trace» is measured, not assumed."""
+Everything is read as the browser computes it; the drawing is observed through the canvas stroke calls, so «no trace changes its line width under the pointer» is measured, not assumed."""
 import json
 from lib import frames, wait_for_js
 
@@ -32,9 +32,9 @@ def _record(pg, P, act):
 
 def top_row(pg, P, label):
     """hover the middle of the chart: exactly the first tooltip row carries the highlight, it is the series with the tallest value, its tint is that series' colour with readable text,
-    and while the pointer is there ONLY that series is stroked 1 px thicker (every other stroke is unchanged); leaving restores the drawing"""
+    and a redraw while the pointer is there strokes every line exactly as at rest (no trace changes its width); leaving keeps the drawing"""
     pg.evaluate(PAGE)
-    pg.mouse.move(5, 5); wait_for_js(pg, "%s._top == null" % P, timeout=10000); frames(pg, 3)
+    pg.mouse.move(5, 5); frames(pg, 3)
     rest = _record(pg, P, lambda: pg.evaluate("draw(%s)" % P))
     need(len(rest) > 2, "%s: no stroke recorded at rest" % label)
     pg.evaluate("%s.cv.scrollIntoView({ block: 'center' })" % P); frames(pg, 2)
@@ -44,18 +44,14 @@ def top_row(pg, P, label):
     def hover():
         pg.mouse.move(pos["x"], pos["y"])      # one move: the tooltip read below is that of this very point
         wait_for_js(pg, "!!%s.tip && !%s.tip.hidden && !!%s.tip.querySelector('div.top')" % (P, P, P), timeout=10000)
-    lit = _record(pg, P, hover)
-    need(len(lit) >= len(rest), "%s: the hover did not redraw (%d strokes, %d at rest)" % (label, len(lit), len(rest)))
-    lit = lit[-len(rest):]
-    diff = [i for i, (a, b) in enumerate(zip(rest, lit)) if a != b]
-    need(len(diff) == 1, "%s: exactly one stroke must change while hovering, got %d: %s" % (label, len(diff), [(rest[i], lit[i]) for i in diff][:4]))
-    a, b = rest[diff[0]], lit[diff[0]]
-    need(abs(b["w"] - a["w"] - 1) < 1e-6 and a["c"] == b["c"] and a["d"] == b["d"], "%s: the thick stroke must be the same line 1 px wider: %s -> %s" % (label, a, b))
+    hover(); frames(pg, 3)
+    lit = _record(pg, P, lambda: pg.evaluate("draw(%s)" % P))      # a redraw with the pointer on the chart
+    need(lit == rest, "%s: a stroke changes while the pointer is over the chart (%d strokes at rest, %d now): %s" % (label, len(rest), len(lit), [(a, b) for a, b in zip(rest, lit) if a != b][:3]))
     d = pg.evaluate("""(() => { const p = %s, a = p._a, T = window.__tk, top = p.tip.querySelector('div.top'), i = +top.dataset.i, rows = [...p.tip.querySelectorAll('div')].filter(d => d.querySelector('i'));
       const h = window.__hv && window.__hv.p === p ? window.__hv : null; if (!h) return { none: true }; const at = s => s.ys[nearIdx(s.x, h.rt)];
       const hi = +(/data-i="([0-9]+)"/.exec(h.html) || [0, -1])[1], v = a.sr.map(at), tall = Math.max(...v), cs = getComputedStyle(top), under = T.rgb(T.panel()), tint = T.rgb(cs.backgroundColor, T.panel());
       return { rt: h.rt, vals: v, n: a.sr.length, rows: rows.length, tops: p.tip.querySelectorAll('div.top').length, first: rows[0] === top, dom: i, i: hi, vi: v[hi], tall, ties: v.filter(x => x === tall).length, tc: T.norm(top.style.getPropertyValue('--tc')), color: T.norm(a.sr[i].color),
-        alpha: cs.backgroundColor, weight: +cs.fontWeight, text: T.ratio(T.rgb(cs.color), tint), stroke: %s, thick: T.rgb(a.sr[i].color).join() === T.rgb(%s).join() }; })()""" % (P, json.dumps(b["c"]), json.dumps(b["c"])))
+        alpha: cs.backgroundColor, weight: +cs.fontWeight, text: T.ratio(T.rgb(cs.color), tint) }; })()""" % P)
     need(not d.get("none"), "%s: the product showed no tooltip for this panel" % label)
     need(d["tops"] == 1 and d["first"], "%s: exactly the first row is the highlighted one: %s" % (label, d))
     need(d["dom"] == d["i"], "%s: the tooltip on screen (series %d) is not the one of this point (series %d)" % (label, d["dom"], d["i"]))
@@ -63,8 +59,7 @@ def top_row(pg, P, label):
     need(d["tc"] == d["color"], "%s: the tint colour %s is not the colour of series %d (%s)" % (label, d["tc"], d["i"], d["color"]))
     need(d["alpha"] not in ("rgba(0, 0, 0, 0)", "transparent") and d["weight"] >= 600, "%s: the highlighted row has no tint or weight: %s" % (label, d))
     need(d["text"] >= 4.5, "%s: the text on the tint has contrast %.2f" % (label, d["text"]))
-    need(d["thick"], "%s: the thick stroke is %s, the colour of series %d is %s" % (label, d["stroke"], d["i"], d["color"]))
-    pg.mouse.move(5, 5); wait_for_js(pg, "%s._top == null" % P, timeout=10000)
+    pg.mouse.move(5, 5); frames(pg, 3)
     back = _record(pg, P, lambda: pg.evaluate("draw(%s)" % P))
     need(back == rest, "%s: the drawing did not come back after the mouse left" % label)
     return d

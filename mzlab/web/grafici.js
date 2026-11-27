@@ -400,8 +400,8 @@ async function drawLines(p) {
   } else for (const s of sr) {
     const V = (/** @type {number} */ val) => Y(U(s, val));
     const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
-    const lit = !EXPORTING && p._hl != null && sr.some(q => q.tk === p._hl || q.tf === p._hl), faded = lit && s.tk !== p._hl && s.tf !== p._hl;      // a row of a list under the mouse: its trace is drawn on, the others fade
-    if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX() + (lit && !faded ? 1.5 : !EXPORTING && p._top != null && sr.indexOf(s) === p._top ? 1 : 0); g.setLineDash(s.dash); g.beginPath();
+    const lit = !EXPORTING && p._hl != null && sr.some(q => q.tk === p._hl || q.tf === p._hl), faded = lit && s.tk !== p._hl && s.tf !== p._hl;      // a row of a list under the mouse: the others fade (the line width never changes)
+    if (window.SIMUI && !faded) SIMUI.fill(g, p, s, v, V, EXPORTING, lightTint); g.strokeStyle = s.color; g.globalAlpha = faded ? 0.18 : 1; g.lineWidth = (thin || DC.hairline(s.x, x0, x1, X) ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     const w = DC.clipY(v, M.t - 9, H + 9); for (let k = 0; k < w.length; k += 2) if (k) g.lineTo(w[k], w[k + 1]); else g.moveTo(w[0], w[1]);
     g.stroke(); g.globalAlpha = 1;
   }
@@ -453,7 +453,7 @@ async function drawLines(p) {
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v), ch = sr.length > 1 ? " · " + sr[0].name.split(" · ").pop() : "", one = !oneFile() && ch && sr.every(s => s.name.endsWith(ch) && s.name !== ch.slice(3)), nm = s => one ? s.name.slice(0, -ch.length) : hovName(s, sr.length);      // one channel over several samples: named once, in the first line
-    return { px, rt: x, html: `${window.SIMUI ? SIMUI.top(p, rows[0] ? sr.indexOf(rows[0].s) : null) : ""}<b>${I18N.t("hov.time", { v: x.toFixed(2) })}${one ? EH(ch) : ""}</b>` + rows.slice(0, 8).map((r, k) => `<div${k ? "" : ` class="top" data-i="${sr.indexOf(r.s)}" style="--tc:${EH(r.s.color)}"`}><i style="background:${r.s.color}"></i>${EH(nm(r.s).length > 30 ? nm(r.s).slice(0, 29) + "…" : nm(r.s))} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `<b>${I18N.t("hov.time", { v: x.toFixed(2) })}${one ? EH(ch) : ""}</b>` + rows.slice(0, 8).map((r, k) => `<div${k ? "" : ` class="top" data-i="${sr.indexOf(r.s)}" style="--tc:${EH(r.s.color)}"`}><i style="background:${r.s.color}"></i>${EH(nm(r.s).length > 30 ? nm(r.s).slice(0, 29) + "…" : nm(r.s))} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
@@ -461,7 +461,7 @@ async function drawLines(p) {
 // ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis
 const xOf = (p, px) => { const a = p._a; return a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); }; const oneFile = () => E.files.filter((/** @type {Bag} */ f) => !f.gone).length < 2, hovName = (/** @type {Bag} */ s, /** @type {number} */ n) => oneFile() ? s.tid_label ?? (n > 1 ? s.ion : "") : s.name;      // hover box: file name only with 2+ files loaded; else the trace label (the ion if several) or nothing
 function hideHover(p) {
-  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true; if (window.SIMUI) SIMUI.top(p, null); if (window.PEAKINFO) PEAKINFO.stick(p, null);
+  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true; if (window.PEAKINFO) PEAKINFO.stick(p, null);
   E.panels.forEach(q => { if (q.vl && q !== p) q.vl.hidden = true; });
 }
 function showHover(p, px, py) {

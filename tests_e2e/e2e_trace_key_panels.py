@@ -1,7 +1,7 @@
 """The colour key in the three trace lists the SIM/MRM key did not cover, on the built site with synthetic files only (tools/dati_sintetici.py, tools/wiff_dad_mrm.py):
 the MS2 transition select (a swatch strip beside it and a square on each option), the legend of the XIC list (traces and files) and the DAD curves on an MRM panel. Rule under test:
 a swatch has the colour and dash of its trace, read from the one `p._look` (or the one line function of dad-mrm.js) the drawing uses, hollow and dimmed while the trace is off, and
-hover or focus of a swatch draws its trace on and fades the others; the first (tallest) row of the chromatogram hover tooltip is tinted in its trace colour. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key_panels.py"""
+hover or focus of a swatch fades the other traces; the first (tallest) row of the chromatogram hover tooltip is tinted in its trace colour. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_trace_key_panels.py"""
 # covers: tests_e2e/trace_tip.py, mzlab/web/grafici.js, mzlab/web/pannelli.js, mzlab/web/dad-mrm.js, mzlab/web/sim-ui.js, mzlab/web/canali.css, tools/wiff_dad_mrm.py
 import subprocess, sys, os, tempfile
 from pathlib import Path
@@ -123,7 +123,7 @@ try:
             need(all(not x["off"] for x in d["rows"]), d["rows"])
         step("XIC legend: a trace entry has the colour of its trace; the files differ in dash", xic_leg)
 
-        step("XIC hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg2, XP, "XIC"))
+        step("XIC hover tooltip: the tallest series row is highlighted, no trace changes width, tint and text are readable", lambda: top_row(pg2, XP, "XIC"))
 
         def xic_off():
             PN = ".pnl:has(.leg .tg[data-lk^=t])"
@@ -139,7 +139,7 @@ try:
             need(pg2.evaluate("%s.cv.toDataURL()" % XP) != before, "hovering an entry did not change the drawing")
             pg2.mouse.move(5, 5); wait_for_js(pg2, "%s._hl == null" % XP, timeout=10000); frames(pg2, 3)
             need(pg2.evaluate("%s.cv.toDataURL()" % XP) == before, "the drawing did not come back")
-        step("XIC legend: hover of an entry draws its trace on, leaving restores the drawing", xic_hover)
+        step("XIC legend: hover of an entry fades the other traces, leaving restores the drawing", xic_hover)
 
         def xic_clip():
             pg2.evaluate("(() => { const p = %s; addTrace(p, 400.0); ctl(p); draw(p); })()" % XP); frames(pg2, 3)
@@ -173,9 +173,9 @@ try:
             away(pg3, MR); before = pg3.evaluate("%s.cv.toDataURL()" % MR)
             pg3.locator(".leg [data-lk^=twc]").first.hover()
             wait_for_js(pg3, "%s._hl != null" % MR, timeout=10000); frames(pg3, 3)
-            need(pg3.evaluate("%s.cv.toDataURL()" % MR) != before, "hover did not change the drawing")
+            need(pg3.evaluate("%s.cv.toDataURL()" % MR) == before, "hovering the entry of a lone curve changed the drawing (no width change, nothing to fade)")
             pg3.mouse.move(5, 5); wait_for_js(pg3, "%s._hl == null" % MR, timeout=10000); frames(pg3, 3)
-        step("DAD curves: hover of the entry lights the curve", twc_hover)
+        step("DAD curves: hover of the entry of the only curve changes no line width", twc_hover)
 
         # several files in one MRM panel with the DAD curve: 13 entries, a chip
         pg4 = r.page(p); pg4.set_viewport_size({"width": 1400, "height": 1000})
@@ -197,7 +197,7 @@ try:
         def mrm_tip():
             pg3.evaluate("(() => { const p = %s; p.overlay = null; draw(p); })()" % MR); frames(pg3, 4)
             top_row(pg3, MR, "MRM")
-        step("MRM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", mrm_tip)
+        step("MRM hover tooltip: the tallest series row is highlighted, no trace changes width, tint and text are readable", mrm_tip)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
