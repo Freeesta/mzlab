@@ -90,7 +90,7 @@
     const c = l.c || "currentColor";
     return `<span class="trsw${on ? "" : " off"}" aria-hidden="true" data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}" style="color:${EH(c)};background:${EH(paint(c, l.d))}"></span>`;
   }
-  /** a row of a list or a trace under the mouse or the focus: its trace is drawn on, the others fade (cleared with null); one redraw per frame @param {any} p @param {string | null} key */
+  /** a row of a list or a trace under the mouse or the focus: the others fade, no line changes width (cleared with null); one redraw per frame @param {any} p @param {string | null} key */
   function lit(p, key) {
     if ((p._hl ?? null) === key) return;
     p._hl = key; if (p._hlQ) return; p._hlQ = 1;
@@ -118,14 +118,6 @@
     const k = hexOf(l.c || ""), lum = k ? lumOf(k) : 0;
     return ` data-tc="${EH(l.c || "")}" data-td="${l.d.join(",")}"${lum > 0.179 ? " data-lt" : ""} style="--tk:${EH(l.c || "currentColor")};--tkb:${EH(k ? keyBorder(l.c) : l.c || "currentColor")}"`;      // a light fill (WCAG luminance above 0.179) takes a dark tick
   }
-  /** the tallest trace under the mouse (its tooltip row is the first), by its place among the series of the drawing: drawn a touch thicker, cleared with null; one redraw per frame; returns "" so the tooltip can start with it @param {any} p @param {number | null} idx */
-  function top(p, idx) {
-    if ((p._top ?? null) === idx) return "";
-    p._top = idx; if (p._hlQ) return ""; p._hlQ = 1;
-    FRAME.next(() => { p._hlQ = 0; if (p.el && p.el.isConnected) draw(p); });
-    return "";
-  }
-
   /** the keys of an XIC panel (traces t<id>, files f<k>) and of the MS2 transitions, written by the drawing from the same style() call as the traces; the legend and the select read them.
    * XIC: a lone trace keeps the colour of its file, several take the palette and the files tell apart by dash @param {any} p @param {any[]} ts the traces @param {any[]} sf the files drawn */
   function xicLook(p, ts, sf) {
@@ -234,5 +226,5 @@
   AZIONI.register({ id: "mrm.estrai", group: "xic", views: ["chrom", "mrm"], visible: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     name: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), submenu: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, top, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, n, mark, filesOf, panelSim, allSim, ions, sortIons, rankOf, style, rows, area, trKey, paint, keep, lookOf, swatch, swatchOf, lit, ckLook, xicLook, ms2Look, ms2Mark, ms2Tone, ms2Key, wireLit };
 })();
