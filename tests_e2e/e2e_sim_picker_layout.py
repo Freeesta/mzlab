@@ -55,6 +55,12 @@ def check(pg, tag, dad):
     assert d["bt"] <= d["H"] + 1 or d["oy"] in ("auto", "scroll"), "%s: the popup runs below the screen and does not scroll: %s" % (tag, d)
     return d
 
+AXE = axe_path()       # axe-core (axe-playwright-python): the axe steps run when it is installed, as in e2e_dad_mrm
+def axe_ok(pg, sel):
+    v = pg.evaluate("""(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
+      .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))""", sel)
+    assert not v, v
+
 def shot(pg, name):
     if not SHOTS: return
     Path(SHOTS).mkdir(parents=True, exist_ok=True)
@@ -67,10 +73,12 @@ try:
             word = "with a DAD" if dad else "without a DAD"
             pg = r.page(p, viewport={"width": 1400, "height": 900}, device_scale_factor=2)
             load(pg, files)
+            if AXE: pg.add_script_tag(path=AXE)
             for w, h in ((1400, 900), (390, 844)):
                 pg.set_viewport_size({"width": w, "height": h}); frames(pg, 4)       # loaded wide, then narrowed: the phone layout hides the data view behind the sidebar sheet while it opens
                 open_picker(pg)
                 step("SIM picker %s at %d px: no Channel header, %s, the popup fits the screen" % (word, w, "PDA / DAD first, ions below" if dad else "ions first"), lambda: check(pg, "%d px" % w, dad))
+                if AXE: step("axe: the open SIM picker %s at %d px" % (word, w), lambda: axe_ok(pg, ".pnl.mrm .can-pop"))
                 shot(pg, "sim-picker-%s-%d.png" % ("dad" if dad else "plain", w))
                 if dad:
                     def keys():

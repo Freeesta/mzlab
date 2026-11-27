@@ -66,7 +66,7 @@ try:
             open_kind(pg, "mrm"); wait_for_js(pg, f"!!{MRM} && !!{MRM}.el.querySelector('[data-o=canali]')", timeout=30000)
             pg.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()")
             wait_for_js(pg, f"!!{MRM}.el.querySelector('.can-pop:not([hidden]) [data-kind=pda]')")
-            got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]:not(.can-tb)')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
+            got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
             assert [g[0] for g in got] == ["UV/Vis", "Mass spectrometry"] and got[0][1] == 1 and got[1][1] >= 2, got       # the DAD row stands above the ions
             assert pg.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').getAttribute('title')") == pg.evaluate("I18N.t('ctl.kind.pda.title')")
         step("MRM tab: the transition picker has the DAD row above the transitions", mrm_row)
@@ -111,7 +111,7 @@ try:
             def alone(q=q, want=want, name=names[0]):
                 q.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()"); wait_for_js(q, f"!{MRM}.el.querySelector('.can-pop').hidden")
                 has = q.evaluate(f"!!{MRM}.el.querySelector('.can-pop [data-kind=pda]')")
-                assert has == want and q.evaluate(f"{MRM}.el.querySelectorAll('.can-pop [role=group]:not(.can-tb)').length") == (2 if want else 0), (name, has)
+                assert has == want and q.evaluate(f"{MRM}.el.querySelectorAll('.can-pop [role=group]').length") == (2 if want else 0), (name, has)
                 if want:
                     q.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').click()")
                     wait_for_js(q, f"!!{UV('mrm')} && !!{UV('mrm')}._a && {UV('mrm')}._a.sr.length === 1", timeout=60000)
