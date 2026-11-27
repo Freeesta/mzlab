@@ -1,7 +1,7 @@
 """Flow, the column «Feature tables» on the right of the scheme (docs/agenti/flow-graphics.md): the column is there before any run with its empty line and the button «Open .mzfeat…»;
 the answer of the native route `flow/live/tables` (`tables/1`, stubbed here: the entries are written by Rust, proved by tests/test_feat_table_wasm.py and the CLI tests) becomes one
-button per table with rows · files, polarity, state and time, reachable and opened with the keyboard; a file that is no table is named; a .mzfeat chosen from disk joins the list and opens.
-No screenshot: the assertions are the evidence. Run from the repo root: python3 tests_e2e/e2e_flow_tables.py"""
+button per table with rows · files, polarity, state and time, reachable and opened with the keyboard; a file that is no table is named; a .mzfeat chosen from disk joins the list and opens; at phone width the list stays above the inspector and Space opens a row.
+Screenshots (desktop and phone, with and without a step selected): branch claude/flow-table-list-shots. Run from the repo root: python3 tests_e2e/e2e_flow_tables.py"""
 # covers: flow/
 import json, subprocess, sys, tempfile
 from pathlib import Path
@@ -90,6 +90,26 @@ try:
             assert made["step"].startswith("features.gapfill@") and made["status"] == "cached" and made["instance"] == call["name"][:-7], made
             wait_for_js(pg, "[...document.querySelectorAll('.flx-tab')].some(b => /5 rows · 2 files/.test(b.textContent) && /up to date/.test(b.textContent))")
         step("this browser: a step the scheduler finished is listed from OPFS through table_entry with the step that made it", browser)
+        def phone():
+            # a phone: the column is under the scheme, and the inspector (the whole column height there) must not push the list away; the list is first and Space opens a row
+            ph = b.new_context(viewport={"width": 390, "height": 844}).new_page()
+            ph.on("pageerror", lambda e: errs.append(str(e)))
+            ph.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
+            ph.goto(f"http://127.0.0.1:{PORT}/"); ph.wait_for_selector("#drop", timeout=120000)
+            ph.wait_for_selector('#nav button[data-v="flow"]', timeout=60000); ph.click('#nav button[data-v="flow"]'); ph.wait_for_selector("#flx-root", timeout=30000)
+            wait_for_js(ph, "window.FLOW && FLOW.tablesPanel && document.querySelector('.flx-tabs')")
+            where = "() => { const t = document.querySelector('.flx-tabs').getBoundingClientRect(), i = document.querySelector('.fl-insp'); return { top: Math.round(t.top + scrollY), bottom: Math.round(t.bottom + scrollY), insp: i ? Math.round(i.getBoundingClientRect().top + scrollY) : null, vh: innerHeight }; }"
+            before = ph.evaluate(where)
+            ph.click('.fln:has-text("Import data")'); wait_for_js(ph, "document.querySelector('.fl-insp h3')")
+            after = ph.evaluate(where)
+            assert abs(after["top"] - before["top"]) <= 4, (before, after)
+            assert after["insp"] > after["bottom"], ("the inspector is under the list", after)
+            assert after["bottom"] < 2 * after["vh"], ("the list is within one scroll of the top", after)
+            ph.evaluate(STUB, DOC); wait_for_js(ph, "document.querySelectorAll('.flx-tab').length === 2")
+            ph.locator(".flx-tab").nth(1).scroll_into_view_if_needed(); ph.locator(".flx-tab").nth(1).focus(); ph.keyboard.press("Space")
+            wait_for_js(ph, "window.__opened.length === 1"); got = ph.evaluate("window.__opened[0]"); assert got["label"] == "neg.mzfeat" and got["type"] == "table", got
+            assert ph.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no sideways scroll"
+        step("phone width: the list is under the scheme, above the inspector, with or without a step selected; Space opens a row", phone)
         b.close()
 finally:
     srv.terminate()

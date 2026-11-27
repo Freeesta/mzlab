@@ -18,3 +18,7 @@ impl State {
         text(doc)
     }
 }
+
+#[cfg(test)]
+#[path = "flow_tables_tests.rs"]
+mod tests;
