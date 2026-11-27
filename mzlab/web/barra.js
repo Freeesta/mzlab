@@ -835,7 +835,7 @@ const BARRA = (() => {
     // two edge strips as wide as the panel really is (barra-lato.js): the one under the pointer is the target, anywhere else cancels
     const hot = (/** @type {number} */ x, /** @type {number} */ y) => BARRA_LATO.show({
       x, y, width: effW(), sheet: sheet(), side: _side, title: (Q1("#sb-title") || {}).textContent || "",
-      texts: { l: t("side.dropLeft"), r: t("side.dropRight"), no: t("side.dropCancel") },
+      texts: { l: t("side.dropLeft"), r: t("side.dropRight") },
     });
     const end = () => {
       document.body.classList.remove("sb-dragging");

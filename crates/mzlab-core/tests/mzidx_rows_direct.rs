@@ -340,3 +340,41 @@ fn the_source_of_a_vendor_index_is_the_dataset_name() {
         }
     }
 }
+
+/// The index of a sample of a vendor set is the same BYTES whatever name the caller gives its list entry: the site builds it while the «Choose samples» dialog is open under a name that
+/// does not depend on the final selection and only moves it to the final name (`mzlab/web/rust-index-ahead.js`), so a name that reached the bytes would make that move wrong.
+#[test]
+fn the_index_bytes_do_not_depend_on_the_list_entry_name() {
+    let imp = |name: &str, n: u64| upload::Fingerprint {
+        name: name.into(),
+        dim: n,
+        sha256: format!("{n:064x}"),
+        sha1: format!("{n:040x}"),
+        probe: format!("p{n}"),
+    };
+    let members = || vec![imp("X.wiff", 1000), imp("X.wiff.scan", 90_000)];
+    let build = |name: &str| {
+        let mut l = Finto::vario(40, 8, 11);
+        let mut out = std::io::Cursor::new(Vec::new());
+        upload::index_reader_with(
+            &mut l,
+            0,
+            &mut || Ok(members()),
+            name,
+            &mut out,
+            BIG,
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        out.into_inner()
+    };
+    let first = build("nat~k~1~pre");
+    assert!(!first.is_empty());
+    for name in ["S (FILE _1).mzML", "X.wiff.mzML", "other name.mzML", ""] {
+        assert!(
+            build(name) == first,
+            "the index bytes changed with the name {name:?}"
+        );
+    }
+}

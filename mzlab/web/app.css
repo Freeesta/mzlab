@@ -113,7 +113,6 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;-webkit-user-selec
 .sb-dz.l{left:0}.sb-dz.r{right:0}
 .sb-dz.hot{background:color-mix(in srgb,var(--accent) 22%,transparent);border-style:solid;color:var(--accent);opacity:1}
 .sb-ghost{position:fixed;left:0;top:0;z-index:5300;max-width:220px;padding:4px 10px;border:1px solid var(--accent);border-radius:999px;background:var(--panel);color:var(--ink);font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-ghost.no{border-style:dashed;border-color:var(--bad);color:var(--bad)}
 body.sb-dragging #dfiles{opacity:.3}
 body.sb-dragging #v-data.sb-open:not(.sb-sheet) #v-workspace{position:relative;z-index:50}
 body[data-sb-shift=l] #v-workspace{transform:translateX(calc(-1 * var(--sb-dz-w,0px)))}
