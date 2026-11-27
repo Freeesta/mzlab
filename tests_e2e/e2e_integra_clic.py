@@ -87,6 +87,16 @@ try:
             c = w[-1]["click"]; assert c["forced"] is True and c["refused"], c                 # the override and the reasons it overrode are in the record
             assert pg.evaluate("I18N.t('int.forced',{why:'@'})").split("@")[0] in note(), note()
         step("Alt+click keeps the refused window and logs the reasons that were overridden", force)
+        def no_window():
+            # an engine answer with no window at all (edges null, even "forced"): the page never reads edges[0], makes no row and says why
+            n0 = len(ints())
+            pg.evaluate("(()=>{window.__qc=QUALITA.click;QUALITA.click=async()=>JSON.stringify({ok:true,edges:null,apex:null,points:0,area:0,height:0,noise:0,sn:0,refused:['no_edges'],forced:true,params:{min_points:5,min_sn:3,reach:0.25,force:true}})})()")
+            try:
+                pg.evaluate(f"INTCLICK.go({P},{APEX[ION_B]},null,true,false).then(()=>1)"); frames(pg, 2)
+                assert len(ints()) == n0, ("a window was made without edges", ints())
+                assert pg.evaluate("I18N.t('int.noWin',{why:'@'})").split("@")[0] in note(), note()
+            finally: pg.evaluate("QUALITA.click=window.__qc")
+        step("an answer without a window (edges null) makes no row and says why, forced or not", no_window)
         def all_channels():
             pg.evaluate(f"(()=>{{const p={P};p.ints=[];p.isel=null;draw(p)}})()"); frames(pg, 2)
             pg.evaluate(f"INTCLICK.atRt({P}, {APEX[ION_B]})"); wait_for_js(pg, f"{P}.ints.length>0")

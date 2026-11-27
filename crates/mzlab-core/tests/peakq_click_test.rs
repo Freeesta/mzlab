@@ -148,4 +148,15 @@ fn a_low_sn_hump_is_refused_by_sn_until_the_limit_is_lowered() {
 fn a_short_trace_has_no_peak() {
     let c = click(&[1.0, 2.0], &[1.0, 2.0], 1.5, ClickGuard::default());
     assert!(!c.ok() && c.refused == ["no_peak"]);
+    // nothing to keep without a window: forcing cannot make it ok
+    let f = click(
+        &[1.0, 2.0],
+        &[1.0, 2.0],
+        1.5,
+        ClickGuard {
+            force: true,
+            ..ClickGuard::default()
+        },
+    );
+    assert!(!f.ok() && !f.forced && f.edges.is_none(), "{f:?}");
 }

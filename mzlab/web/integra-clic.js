@@ -46,11 +46,11 @@ function mark(p, s) {
   setTimeout(() => { if (p._hl === s.tk) { p._hl = null; draw(p); } }, 2500);
 }
 
-const WHY = { no_peak: "int.why.noPeak", points: "int.why.points", area: "int.why.area", sn: "int.why.sn" };      // the engine's refusal codes (peakq_click.rs)
+const WHY = { no_peak: "int.why.noPeak", no_edges: "int.why.noEdges", points: "int.why.points", area: "int.why.area", sn: "int.why.sn" };      // the engine's refusal codes (peakq_click.rs)
 const why = r => r.refused.map(k => T(WHY[k], { n: r.points, min: r.params.min_points, sn: r.sn.toFixed(1), minSn: r.params.min_sn, reach: r.params.reach, area: I18N.sciE(r.area) })).join("; ");
 
 /** The click is refused: which trace was looked at, and why, with how to keep it. */
-export function refuse(p, s, r) { mark(p, s); nearMsg(T("int.refused", { why: why(r) })); }
+export function refuse(p, s, r) { mark(p, s); nearMsg(T(r.edges ? "int.refused" : "int.noWin", { why: why(r) })); }
 
 /** A window was made from the click: it is the selected one, its record logs what the engine measured and the guard used (and what was forced). */
 export function done(p, s, r) {
@@ -74,8 +74,9 @@ export async function atRt(p, x, list = null) {
   const a = p._a; if (!a || !a.sr) return;
   const all = list || a.sr.filter(s => !isHid(p, s)), res = await Promise.all(all.map(async s => [s, await ask(s, x, false)]));
   if (res.some(q => !q[1])) { nearMsg(T("int.autoOff")); return; }
-  const adds = [], skipped = res.filter(q => !q[1].ok).map(q => q[0].name);
-  for (const [s, r] of res.filter(q => q[1].ok)) { const w = clickWin(p, s, x, r.edges[0], r.edges[1]); if (w) adds.push([s, w, r]); else skipped.push(s.name); }
+  const kept = q => q[1].ok && q[1].edges;                    // a click with no window (edges null) is never integrated, forced or not
+  const adds = [], skipped = res.filter(q => !kept(q)).map(q => q[0].name);
+  for (const [s, r] of res.filter(kept)) { const w = clickWin(p, s, x, r.edges[0], r.edges[1]); if (w) adds.push([s, w, r]); else skipped.push(s.name); }
   const note = T("int.atrt.note", { n: adds.length, m: all.length, names: skipped.join(", ") });
   if (adds.length) { const run = () => adds.forEach(([s, w, r]) => { if (addInt(p, s, w[0], w[1])) done(p, s, r); }); if (HISTORY) HISTORY.group(run); else run(); }
   if (skipped.length || !adds.length) nearMsg(note);

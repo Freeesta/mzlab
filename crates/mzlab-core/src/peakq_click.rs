@@ -53,16 +53,16 @@ pub struct Click {
     pub height: f64,
     pub noise: f64,
     pub sn: f64,
-    /// Why the guard refused (`no_peak`, `points`, `area`, `sn`); with `force` the reasons that were overridden.
+    /// Why the guard refused (`no_peak`, `no_edges`, `points`, `area`, `sn`); with `force` the reasons that were overridden.
     pub refused: Vec<&'static str>,
     pub forced: bool,
     pub guard: ClickGuard,
 }
 
 impl Click {
-    /// The window is kept: nothing refused, or the user forced it.
+    /// The window is kept: it exists, and nothing was refused or the user forced it. Without edges there is nothing to keep, forced or not.
     pub fn ok(&self) -> bool {
-        self.refused.is_empty() || self.forced
+        self.edges.is_some() && (self.refused.is_empty() || self.forced)
     }
 
     /// The one JSON text of site, app and CLI (keys never move; `null` for what was not measured).
@@ -206,7 +206,6 @@ pub fn lr_click(xs: &[f64], ys: &[f64], x: f64, mrm: bool, pk: &LrParams, g: &Cl
     };
     if n < 9 {
         c.refused.push("no_peak");
-        c.forced = g.force;
         return c;
     }
     let apex = nearest_apex(xs, ys, x, g.reach, pk);
@@ -228,7 +227,7 @@ pub fn lr_click(xs: &[f64], ys: &[f64], x: f64, mrm: bool, pk: &LrParams, g: &Cl
         ..*pk
     };
     let Some(e) = lr_edges_detail(xs, ys, at, 0.0, mrm, &search) else {
-        c.forced = g.force;
+        c.refused.push("no_edges");
         return c;
     };
     c.apex = apex.map(|i| xs[i]);

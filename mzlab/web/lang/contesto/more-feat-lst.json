@@ -101,6 +101,8 @@
   "files.up.close": "× of a failed progress row: removes the row; {name} = file name.",
   "int.refused": "Notice next to the pointer when a click integration is refused; {why} = the reasons (keys int.why.*), joined by semicolons.",
   "int.forced": "Notice next to the pointer when a refused click was kept anyway; {why} = the reasons that were overridden.",
+  "int.why.noEdges": "Reason of a refused click when the engine found no window at all (nothing to keep, so it cannot be forced).",
+  "int.noWin": "Notice next to the pointer when a click gives no window to integrate; {why} = the reasons (keys int.why.*).",
   "int.why.noPeak": "Reason of a refused click; {reach} = how far from the click (min) an apex was looked for.",
   "int.why.points": "Reason of a refused click; {n} = points in the window, {min} = fewest allowed.",
   "int.why.area": "Reason of a refused click; {area} = the window's area in counts x s, not above the noise of the same width.",

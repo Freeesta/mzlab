@@ -1,0 +1,10 @@
+at=1.02 mrm=1 force=0 ok=true
+{"ok":true,"edges":[0.85,1.15],"apex":1,"points":13,"area":35847.45149999999,"height":4902.582833333334,"noise":18.316930024116328,"sn":267.6530852538348,"refused":[],"forced":false,"params":{"min_points":5,"min_sn":3,"reach":0.25,"force":false}}
+at=1.6 mrm=1 force=0 ok=false
+{"ok":false,"edges":[1.725,1.775],"apex":null,"points":3,"area":8.016750000000002,"height":4.501999999999981,"noise":24.0113156903353,"sn":0.18749493189213548,"refused":["no_peak","points","area","sn"],"forced":false,"params":{"min_points":5,"min_sn":3,"reach":0.25,"force":false}}
+at=1.6 mrm=1 force=1 ok=true
+{"ok":true,"edges":[1.725,1.775],"apex":null,"points":3,"area":8.016750000000002,"height":4.501999999999981,"noise":24.0113156903353,"sn":0.18749493189213548,"refused":["no_peak","points","area","sn"],"forced":true,"params":{"min_points":5,"min_sn":3,"reach":0.25,"force":true}}
+at=2.2 mrm=1 force=0 ok=true
+{"ok":true,"edges":[2.1,2.275],"apex":2.2,"points":8,"area":529.7090000000012,"height":123.63566666666668,"noise":17.137456248982136,"sn":7.2143534530692035,"refused":[],"forced":false,"params":{"min_points":5,"min_sn":3,"reach":0.25,"force":false}}
+at=1.02 mrm=0 force=0 ok=true
+{"ok":true,"edges":[0.85,1.15],"apex":1,"points":13,"area":35847.45149999999,"height":4902.582833333334,"noise":18.316930024116328,"sn":267.6530852538348,"refused":[],"forced":false,"params":{"min_points":5,"min_sn":3,"reach":0.25,"force":false}}

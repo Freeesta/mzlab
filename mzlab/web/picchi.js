@@ -156,7 +156,7 @@ async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {nu
   if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
   const IC = await intClickMod();
   const r = await IC.ask(s, x, force); if (!r) { nearMsg(I18N.t("int.autoOff")); return; }
-  if (!r.ok) { IC.refuse(p, s, r); return; }
+  if (!r.ok || !r.edges) { IC.refuse(p, s, r); return; }
   const w = clickWin(p, s, x, r.edges[0], r.edges[1]);
   if (w && addInt(p, s, w[0], w[1])) IC.done(p, s, r);
 }

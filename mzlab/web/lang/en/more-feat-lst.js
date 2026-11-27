@@ -105,6 +105,8 @@ I18N.add("en", {
   "int.refused": "Not integrated: {why}. Alt+click or «Integrate anyway» in the menu keeps it",
   "int.forced": "Integrated anyway: {why}",
   "int.why.noPeak": "no peak within {reach} min of the click",
+  "int.why.noEdges": "no window could be found at the click",
+  "int.noWin": "Nothing to integrate: {why}",
   "int.why.points": "{n} points (least {min})",
   "int.why.area": "area {area} under the noise",
   "int.why.sn": "S/N {sn} (least {minSn})",
