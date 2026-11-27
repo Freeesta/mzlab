@@ -479,6 +479,9 @@ function placeLeg(/** @type {Pannello} */ p) {
   if (p.type === "spec") {
     const right = p.el.clientWidth - p.cv.offsetLeft - p.cv.offsetWidth + M.r + 6;
     p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + p.cv.offsetHeight - 17 + "px";
+    const tw = /** @type {any} */ (p.cv)._xtw || 0;      // right of the x axis title, never over it: what does not fit is cut (the file name first, uv-spettro.js)
+    p.leg.style.maxWidth = tw ? Math.max(0, p.cv.offsetWidth - M.r - 6 - ((M.l + p.cv.offsetWidth - M.r) / 2 + tw / 2 + 8)) + "px" : "";
+    p.leg.classList.remove("uvnarrow"); if (tw && p.leg.querySelector(".uvfl") && [...p.leg.children].some(c => c.scrollWidth > c.clientWidth + 1)) p.leg.classList.add("uvnarrow");      // no room for the file name beside the title: the time stays
   }
   const el = p.type === "spec" ? p.leg2 : p.leg;
   if (el && LEGENDE.place(p, el)) drawSoon(p);

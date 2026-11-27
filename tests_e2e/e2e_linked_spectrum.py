@@ -86,6 +86,21 @@ def run(width, port):
             lg = pg.evaluate(f"(() => {{ const e = {UV}.leg2.getBoundingClientRect(), q = {UV}.el.getBoundingClientRect(); return e.right - q.right; }})()")
             assert ov <= 1 and lg <= 1, (ov, lg)
         step(f"{width}px: nothing overflows the screen", fits)
+        def clear():
+            # both legends stay clear of the x axis title and of the curve: boxes in canvas CSS pixels, the ink of the curve read back from the canvas
+            r = pg.evaluate(f"""(() => {{ const p = {UV}, cv = p.cv, c = cv.getBoundingClientRect(), a = p._a, g = cv.getContext('2d'), s = cv.width / c.width;
+              const box = e => {{ const b = e.getBoundingClientRect(); return {{ l: b.left - c.left, r: b.right - c.left, t: b.top - c.top, b: b.bottom - c.top, w: b.width, h: b.height }}; }};
+              g.font = getComputedStyle(cv).font; const title = document.createElement('canvas').getContext('2d'); title.font = '12px ' + getComputedStyle(cv).fontFamily;
+              const tw = title.measureText(I18N.t('uv.axis.x')).width, cx = (M.l + a.W - M.r) / 2;
+              const ink = b => {{ const w = Math.max(1, Math.round((b.r - b.l) * s)), h = Math.max(1, Math.round((b.b - b.t) * s)), d = g.getImageData(Math.max(0, Math.round(b.l * s)), Math.max(0, Math.round(b.t * s)), w, h).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 40) n++; return n; }};
+              const l1 = p.leg.textContent.trim() ? box(p.leg) : null, l2 = p.leg2.textContent.trim() ? box(p.leg2) : null;
+              return {{ W: a.W, tl: cx - tw / 2, tr: cx + tw / 2, tt: a.H - 6 - 12, l1, l2, ink2: l2 ? ink(l2) : 0, L1: l1 ? p.leg.textContent : '', ov: l1 ? p.leg.scrollWidth - p.leg.clientWidth : 0 }}; }})()""")
+            assert r["l1"] and r["l2"], r
+            l1 = r["l1"]
+            assert l1["r"] <= r["tl"] - 4 or l1["l"] >= r["tr"] + 4 or l1["b"] <= r["tt"], ("the bottom legend overlaps the axis title", r)
+            assert r["ink2"] <= 3, ("the boxed legend sits over the curve", r)
+            if SHOTS: pg.evaluate(f"{UV}.el.scrollIntoView({{block: 'center'}})"); frames(pg, 2); pg.screenshot(path=f"{SHOTS}/uv-legends-{width}.png")
+        step(f"{width}px: the legends stay clear of the axis title and of the curve", clear)
         step(f"{width}px: no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
     return r
