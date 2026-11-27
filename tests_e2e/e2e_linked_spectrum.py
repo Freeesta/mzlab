@@ -60,11 +60,15 @@ def run(width, port):
         def light():
             lw = lambda: pg.evaluate(f"getComputedStyle({MRM}.cl).borderLeftWidth")
             assert lw() == "1px", lw()
-            b = pg.locator(f"#dpanels .pnl:has(.ppair.fol) .ppair.fol").first; b.hover()
-            assert pg.evaluate(f"{MRM}.el.classList.contains('pair-cur')") and lw() == "2px", lw()
+            pg.locator(f"#dpanels .pnl:has(.ppair.fol) .ppair.fol").first.hover()            # the badge of the spectrum lights the source
+            assert pg.evaluate(f"{MRM}.el.classList.contains('pair-hi')") and lw() == "2px", lw()
             if SHOTS: pg.evaluate(f"{MRM}.el.scrollIntoView({{block: 'start'}})"); frames(pg, 2); pg.screenshot(path=f"{SHOTS}/linked-badge-{width}.png")
             pg.mouse.move(2, 2); frames(pg, 2)
-            assert not pg.evaluate(f"{MRM}.el.classList.contains('pair-cur')") and lw() == "1px"
+            assert not pg.evaluate(f"{MRM}.el.classList.contains('pair-hi')") and lw() == "1px"
+            bx = pg.evaluate(f"(() => {{ const r = {MRM}.el.querySelector('.ppair').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()")
+            pg.mouse.move(*bx); frames(pg, 2)                                                  # the badge of the source itself (CSS :has)
+            assert lw() == "2px", lw()
+            pg.mouse.move(2, 2); frames(pg, 2)
             bb = pg.evaluate(f"(() => {{ const r = {UV}.el.getBoundingClientRect(); return [r.x + r.width / 2, r.y + 40]; }})()")
             pg.mouse.move(*bb); frames(pg, 2)
             assert pg.evaluate(f"{MRM}.el.classList.contains('pair-hi')") and lw() == "2px", lw()
