@@ -6,6 +6,8 @@
 const UIP_KEY = NOMI.KEY("prefs"); // kept from the old name: renaming it would lose the users' data
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
+const PBAR_KEY = NOMI.KEY("pbar");   // the shared panel bar (pbar.js, lazy): off unless this is "1"
+if (uipRead(PBAR_KEY) === "1") loadScript("pbar.js");
 function a11yRead() { return lsObj(NOMI.KEY("a11y")); }
 function a11yApply(o) {
   const r = document.documentElement;
@@ -141,7 +143,7 @@ function uipOpen(btn) {
   const font = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font"), "", "uip-font-l"), "uip-font-l");
   const rows = `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal"><span class="ic">${C.GICON.pal}</span>${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`
     + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion")
-    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
+    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side") + C.sw(T("settings.pbar"), T("settings.pbar.title"), 'id="uip-pbar"', uipRead(PBAR_KEY) === "1", "side");
   const list = `<div class="imp-list" id="uip-list">${theme}${font}<div class="imp-rows">${rows}</div></div>`;
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
@@ -188,6 +190,7 @@ function uipOpen(btn) {
   pal.onchange = () => { uipDo(() => setPal(pal.value)); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
   const pickBox = /** @type {HTMLSelectElement | null} */ (d.querySelector("#uip-pick"));
   if (pickBox) { pickBox.value = uipPickMode(); pickBox.onchange = () => { if (pickBox.value === "several") { try { localStorage.removeItem(PICK_KEY); } catch (_) { /* not remembered */ } } else uipWrite(PICK_KEY, pickBox.value); }; }
+  on("#uip-pbar", "change", e => { const v = e.target.checked; uipWrite(PBAR_KEY, v ? "1" : "0"); loadScript("pbar.js").then(() => PBAR.set(v)); });
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

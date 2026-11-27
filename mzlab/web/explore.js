@@ -888,7 +888,7 @@ function renderNav() {
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = (/** @type {Event & { target: HTMLSelectElement }} */ e) => activeFile(+e.target.value);
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
-document.addEventListener("pointerdown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
+document.addEventListener("pointerdown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl") && !(window.PBAR && PBAR.on())) setActive(null); });   // the panel bar keeps the last selection
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
