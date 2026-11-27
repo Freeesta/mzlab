@@ -232,6 +232,8 @@ I18N.add("en", {
   "warn.quant.targets.rtRefAmbiguous": "RT reference on: in some files the search window holds a second peak of at least half the height of the reference, so no shift was applied there: name where the reference is expected with --rt-ref ID@RT or narrow rt_span (the log has both apexes).",
   "note.quant.targets.offsetAuto": "The reference row {id} was not detected in {count} of {files} files while the m/z offset is 0. One possible cause is the offset: --offset auto measures it in each file and polarity on that row. The others are a retention-time drift (--rt-ref auto) or a window that does not hold the peak (check rt_min, rt_max and --da).",
   "note.quant.targets.rtRef": "The reference row {id} peaks between RT {min} and {max} min across files ({spread} min apart) while the windows stay fixed: --rt-ref auto moves the windows of each file by the shift of that row.",
+  "note.sample.firstChoose": "{file} holds {count} samples and {command} reads only the first one: choose another with --sample ID (the ids come from mzlab-cli sample list {file}).",
+  "note.sample.firstOnly": "{file} holds {count} samples and {command} reads only the first one: for another, run mzlab-cli file convert {file} --sample LIST --out DIR (the ids come from mzlab-cli sample list {file}) and give that mzML here.",
   "warn.quant.targets.noScans": "Some files have no scan of that MS level and polarity (for example SIM or SRM stored only as chromatograms): their rows are flagged no_scans.",
   "err.raw.probe": "The probe takes a whole number of scans from 1 to {max}.",
   "err.raw.isotopes.adductNeedsFormula": "An adduct needs a formula: give --formula (or formula=) with it, or leave the adduct out to count M, M+1 and M+2 alone.",

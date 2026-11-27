@@ -6,6 +6,7 @@ A professional, free LC-MS analysis program, in the browser and as a desktop/CLI
 
 Open **https://freeesta.github.io/mzlab/** in a recent browser (Chrome, Edge, Firefox, Safari) on a computer or tablet. Nothing to install: the calculation runs **inside the browser**. The first time about 10-15 MB are downloaded; after that it also works without internet and it can be installed as an app (Chrome/Edge: «Install» in the address bar; Safari: Add to Dock or to the Home screen).
 
+- **Desktop app, newest build of `main`** (Mac, Windows, Linux; unsigned, not a release): <https://github.com/Freeesta/mzlab/releases/tag/app-prebuilt>; how to open it on a Mac: [`docs/download-app.md`](docs/download-app.md).
 - **Your files never leave your computer**: the page sends them to no server and collects no visitor data. Session, drawings and progress stay in the browser's storage and are restored when you reopen the page (same computer, same browser).
 - Drag the `.mzML` files (and, if you like, the method `.dam`) onto the page, or use «Load more files»; check times and types in the file table. With no files: **«Try the example files»**.
 - Thermo `.raw`, SCIEX `.wiff` (with its `.wiff.scan`) and Agilent `.D` folders also open directly, in the site and in the desktop app. Waters (`.raw` folders), Shimadzu (`.qgd`/`.lcd`) and Bruker (`.d` timsTOF/TSF folders) files are supported through dedicated native Rust reader modules (`crates/mzlab-lettori/`), fetched on demand in the browser or built into the desktop app.

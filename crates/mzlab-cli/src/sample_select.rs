@@ -53,14 +53,16 @@ pub(crate) fn named(path: &Path) -> Result<Vec<(u32, String)>> {
     Ok(l.samples().iter().map(|s| (s.id, s.name.clone())).collect())
 }
 
-/// The ids and section bytes (0 when the reader gives none) of the samples of `path`, from the container and index alone.
-pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
+/// The ids, section bytes (0 when the reader gives none) and the ids that acquired nothing of the samples of `path`, from the container and index alone.
+pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>, Vec<u32>)> {
     let fs = crate::flow_set::file_set(path)?;
-    let l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
+    let mut l = mzlab_lettori::open_listing(fs, &Limits::desktop())?;
+    let empty = mzlab_core::readers::empty_ids(&mut *l);
     let s = l.samples();
     Ok((
         s.iter().map(|x| x.id).collect(),
         s.iter().map(|x| x.size.unwrap_or(0)).collect(),
+        empty,
     ))
 }
 
@@ -98,6 +100,9 @@ pub(crate) fn fail(e: &Error) -> Outcome {
         o
     }
 }
+
+#[path = "sample_members.rs"]
+pub(crate) mod members;
 
 #[cfg(test)]
 #[path = "sample_select_tests.rs"]

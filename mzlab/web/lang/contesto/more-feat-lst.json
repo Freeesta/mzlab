@@ -1,4 +1,6 @@
 {
+  "help.header.build": "Last line of the (i) box in the header: which build this is, so a build of main can be told from another; {version} = X.Y.Z, {commit} = first 12 hex of the commit, {date} = commit date YYYY-MM-DD (\"?\" when unknown).",
+  "help.header.app": "Link in the (i) box of the header to the rolling pre-release of the desktop app built from main (docs/download-app.md); the link text only.",
   "help.header.body": "Box of the (i) button in the header: free, open source, no data uploaded, version in progress, address for suggestions (three paragraphs, only these); {app} = program name.",
   "header.about": "Title and alternative text of the \"i\" button at the top right; {app} = program name.",
   "files.row.remove": "Label and tooltip of the × on a file row of the file list; {name} = the label of the file it removes.",

@@ -415,6 +415,11 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);
             o.stderr += &notes;
+            // the MS side reads the first sample unless --sample is given
+            if c.sample.is_none() && ["ms-at", "delay", "peaks"].contains(&c.verb.as_str()) {
+                let cmd = format!("dad {}", c.verb);
+                o.stderr += &crate::sample_select::members::first_hint(&c.files[0], &cmd, true);
+            }
             o
         }
         Err(e) => Outcome::fail_error(&e).with_hint(match e.key {

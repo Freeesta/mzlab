@@ -425,6 +425,12 @@ const BANCO = (() => {
     L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(true); }; });
     paint();
     if (cur != null) { const i0 = t.rt.findIndex(v => v >= cur - 1e-4); if (i0 >= 0) { L.scrollTop = Math.max(0, i0 * H - 40); paint(); } }
+    // the name/precursor warning of the file (file_method/1, docs/agenti/method.md) above the list; it never blocks the list
+    const warn = await loadScript("m:metodo-file.js").then(() => /** @type {any} */ (window).METODO_FILE.nameWarning(f), () => "");
+    if (!warn || tok !== ist.tok || !L.isConnected) return;
+    b.insertAdjacentHTML("afterbegin", warn);
+    const w = /** @type {HTMLElement} */ (b.firstElementChild);
+    L.style.height = `calc(100% - ${w.offsetHeight + 6}px)`; paint(true);
   }
   async function tFil(b, p, tok) {
     const f = cFile(p); if (!f) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.pickCell")}</div>`);

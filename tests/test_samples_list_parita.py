@@ -35,6 +35,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
     build("-p", "mzlab-cli")
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_tipi.py"), str(d / "ref")], check=True, capture_output=True)
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(d / "big"), "--samples", "3", "--scans", "40", "--points", "50"], check=True, capture_output=True)
     (d / "l.js").write_text(LIST, encoding="utf-8")
     return d
@@ -113,3 +114,15 @@ def test_the_probe_adds_the_size_of_the_scan_file_and_a_cut_copy_exits_1(work):
     assert missing.returncode == 4 and "error/1" in missing.stdout
     usage = subprocess.run(cli_argv("sample", "list", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert usage.returncode == 2
+
+
+def test_a_sim_sample_lists_its_cycles_and_only_the_empty_one_says_empty_on_the_site_and_in_the_app(work):
+    """Pair `tipi`: a full-scan sample, a SIM-only sample (7 cycles) and one that acquired nothing: the same bytes from the engine .wasm and the CLI, the wasm leg
+    fails (never skips) in CI when its tools are missing (`test_the_tools_are_there_in_ci`)."""
+    wiff = work / "ref" / "tipi.wiff"
+    code, out = site(work, wiff)
+    rc, text, _ = app(wiff)
+    assert code == 0 and rc == 0 and text == out, (code, rc, out, text)
+    smp = json.loads(out)["samples"]
+    assert [(s["scans"], s.get("kinds"), s.get("why")) for s in smp] == [(5, ["ms"], None), (7, ["sim"], None), (0, None, "empty")], out
+    assert smp[1]["size"] > 0

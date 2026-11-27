@@ -42,10 +42,10 @@ pub fn sample_selection(present: &[u32], text: &str) -> Result<String, JsValue> 
     mzlab_core::readers::selection::selection_json(present, text).map_err(|e| crate::error_json(&e))
 }
 
-/// The ids the chooser ticks at the start (`readers::selection::suggest`): all when the section bytes `sizes` of the samples `ids` are small against `budget_mb`, none
-/// otherwise; `{"samples":[..]}`.
+/// The ids the chooser ticks at the start (`readers::selection::suggest`): all but `empty` (the ids that acquired nothing) when the section bytes `sizes` of the samples
+/// `ids` are small against `budget_mb`, none otherwise; `{"samples":[..]}`.
 #[wasm_bindgen]
-pub fn sample_default(ids: &[u32], sizes: &[f64], budget_mb: f64) -> String {
+pub fn sample_default(ids: &[u32], sizes: &[f64], empty: &[u32], budget_mb: f64) -> String {
     let bytes = |x: f64| {
         if x.is_finite() && x > 0.0 {
             x as u64
@@ -57,6 +57,7 @@ pub fn sample_default(ids: &[u32], sizes: &[f64], budget_mb: f64) -> String {
     mzlab_core::readers::selection::suggest_json(
         ids,
         &sizes,
+        empty,
         mzlab_core::readers::selection::budget_bytes(budget_mb),
     )
 }

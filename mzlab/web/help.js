@@ -22,7 +22,8 @@ const HELP = {
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
-  "header": ["", I18N.t("help.header.body")],
+  // the build line: version, short commit and commit date (a build of main says which main it is)
+  "header": ["", I18N.t("help.header.body") + `<p style="margin:8px 0 0" class="muted">${I18N.t("help.header.build", { version: window.MZLAB_VERSION || "?", commit: (window.MZLAB_COMMIT || "dev").slice(0, 12), date: window.MZLAB_DATE || "?" })}<br><a href="https://github.com/Freeesta/mzlab/releases/tag/app-prebuilt" target="_blank" rel="noopener">${I18N.t("help.header.app")}</a></p>`],
 };
 
 (() => {
@@ -36,9 +37,9 @@ const HELP = {
     if (cur === b) return close();
     const key = /** @type {string} */ (b.dataset.help), mk = /^modo-(full|ms2|mrm)$/.exec(key);
     const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[ESP.didattica(mk[1])].name, QMODI.html(ESP.didattica(mk[1]))] : HELP[key]; if (!h) return;
-    pop.classList.toggle("wide", !!mk); pop.classList.remove("guide");
+    pop.classList.toggle("wide", !!mk); pop.classList.remove("guide"); pop.classList.toggle("nt", !h[0]);
     // no title for the "Informazioni" box (key header)
-    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;
+    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}" aria-label="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;
     pop.querySelector(".x").onclick = close;
     pop.hidden = false; cur = b;
     const r = b.getBoundingClientRect(), w = pop.offsetWidth, hgt = pop.offsetHeight;

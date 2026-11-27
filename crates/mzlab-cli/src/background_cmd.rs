@@ -111,7 +111,16 @@ pub fn run(args: Vec<String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail_error(&e),
-        Ok(t) => crate::emit(t + "\n", &c.out),
+        Ok(t) => {
+            let mut o = crate::emit(t + "\n", &c.out);
+            if o.code == 0 {
+                for f in std::iter::once(&c.file).chain(c.blank.iter()) {
+                    o.stderr +=
+                        &crate::sample_select::members::first_hint(f, "trace background", false);
+                }
+            }
+            o
+        }
     }
 }
 

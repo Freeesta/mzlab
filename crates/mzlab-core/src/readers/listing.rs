@@ -67,6 +67,45 @@ fn head(o: &mut Out, l: &dyn Reader, rich: bool, facts: &Listing) {
     }
 }
 
+/// Why sample `i` has nothing to show (`refused`, `inferred`, `empty`), or `None`. `(found, n)`: the samples the index lists and all of them; `sum` its summary.
+fn why_of(
+    l: &mut dyn Reader,
+    i: usize,
+    (found, n): (usize, usize),
+    sum: &Summary,
+) -> Option<&'static str> {
+    let refused = l.refused(i).is_some();
+    // a reader that listed without reading its data file says it itself: its chromatograms would be read from that file
+    let none = !refused
+        && l.samples()[i].scansioni == 0
+        && sum
+            .empty
+            .unwrap_or_else(|| l.chromatograms(i).is_ok_and(|v| v.is_empty()));
+    [
+        (refused, "refused"),
+        (i + found >= n && found > 0, "inferred"),
+        (none, "empty"),
+    ]
+    .into_iter()
+    .find(|w| w.0)
+    .map(|w| w.1)
+}
+
+/// The ids of the samples that acquired nothing (`why` = `empty` of `list_samples`): the ones a chooser never ticks. Read from the same listing as the page's.
+pub fn empty_ids(l: &mut dyn Reader) -> Vec<u32> {
+    let (found, _) = l.unindexed();
+    let n = l.samples().len();
+    let facts = l.listing();
+    let mut ids = Vec::new();
+    for i in 0..n {
+        let sum = facts.samples.get(i).cloned().unwrap_or_default();
+        if why_of(l, i, (found, n), &sum) == Some("empty") {
+            ids.push(l.samples()[i].id);
+        }
+    }
+    ids
+}
+
 /// JSON `{"format", "samples": [{"id", "name", "scans", "size"?, "why"?, "refused"?}], "unindexed"?: {"recovered", "skipped"}}`. `why` is `refused`
 /// (with the error as `refused`), `inferred` (rebuilt from sections the index does not list: the last `recovered` samples) or `empty` (no scans, no chromatograms).
 fn write(l: &mut dyn Reader, rich: bool) -> String {
@@ -89,19 +128,7 @@ fn write(l: &mut dyn Reader, rich: bool) -> String {
         } else {
             facts.samples.get(i).cloned().unwrap_or_default()
         };
-        // a reader that listed without reading its data file says it itself: its chromatograms would be read from that file
-        let none = refused.is_none()
-            && l.samples()[i].scansioni == 0
-            && sum
-                .empty
-                .unwrap_or_else(|| l.chromatograms(i).is_ok_and(|v| v.is_empty()));
-        let why = [
-            (refused.is_some(), "refused"),
-            (i + found >= n && found > 0, "inferred"),
-            (none, "empty"),
-        ]
-        .into_iter()
-        .find(|w| w.0);
+        let why = why_of(l, i, (found, n), &sum);
         let s = &l.samples()[i];
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(s.id))
@@ -115,7 +142,7 @@ fn write(l: &mut dyn Reader, rich: bool) -> String {
         if rich {
             summary_json(&mut o, &sum);
         }
-        if let Some((_, w)) = why {
+        if let Some(w) = why {
             o.raw(",\"why\":").str(w);
         }
         if let Some(e) = refused {
