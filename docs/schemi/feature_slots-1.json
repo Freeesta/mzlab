@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "feature-slots/1",
+  "title": "feature-slots/1: the fixed slots of the feature view of one row",
+  "description": "Printed by `mzlab-cli table slots`; the same bytes as `table_slots` of the site and `slots` of the app. Seven slots in a fixed order: structure, xic, kinetics, ms2, isotopes, uv, sim. A filled slot has evidence and its source; an empty or na slot has `fill`, the Flow step and the command that fill it, never a made-up value. `source.step` is the step that normally writes that evidence: the .mzfeat records its recipe, not one step per column. Code: crates/mzlab-feat/src/slots.rs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "mz",
+    "rt",
+    "output",
+    "slots"
+  ],
+  "properties": {
+    "schema": {
+      "const": "feature-slots/1"
+    },
+    "id": {
+      "type": "integer"
+    },
+    "mz": {
+      "type": "number"
+    },
+    "rt": {
+      "type": "number"
+    },
+    "output": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The name of the table the row is read from (the file name on the CLI); null when none was given."
+    },
+    "slots": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot",
+          "state",
+          "reason",
+          "evidence",
+          "source",
+          "fill"
+        ],
+        "properties": {
+          "slot": {
+            "enum": [
+              "structure",
+              "xic",
+              "kinetics",
+              "ms2",
+              "isotopes",
+              "uv",
+              "sim"
+            ]
+          },
+          "state": {
+            "enum": [
+              "filled",
+              "empty",
+              "na"
+            ],
+            "description": "filled: the table holds evidence. empty: nothing yet, `fill` says what fills it. na: this table cannot hold it, `reason` says why."
+          },
+          "reason": {
+            "enum": [
+              "no_identity",
+              "files_do_not_cover",
+              "no_time_axis",
+              "not_a_transition_table",
+              null
+            ],
+            "description": "Why a slot is na; null otherwise."
+          },
+          "evidence": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The numbers the table has for the slot (keys by slot: structure neutral, adduct, sources; xic files, detected, filled, targeted, absent, na, rt_lo, rt_hi; kinetics points, times_min; ms2 file, purity; isotopes iso_m1, adduct, family_size; sim q1, q3); null unless filled."
+          },
+          "source": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "output",
+              "step",
+              "files"
+            ],
+            "description": "Where the evidence comes from; null unless filled.",
+            "properties": {
+              "output": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "step": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "files": {
+                "type": "array",
+                "description": "The input files behind the evidence, with their SHA-256 (empty for evidence that belongs to the table as a whole).",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "fill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "step",
+              "command"
+            ],
+            "description": "What fills a slot that is not filled; null when filled.",
+            "properties": {
+              "step": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "command": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

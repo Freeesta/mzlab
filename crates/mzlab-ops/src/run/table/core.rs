@@ -349,6 +349,18 @@ pub fn row_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32) ->
     row::row(&t, &s, id)
 }
 
+/// The `feature-slots/1` of the row with `id`: what fills each slot of the feature view (`output` names the table, empty for none).
+pub fn slots_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    id: u32,
+    output: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    mzlab_feat::slots::slots(&t, &s, id, output)
+}
+
 /// The `row_traces/2` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
 pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     r: &mut R,

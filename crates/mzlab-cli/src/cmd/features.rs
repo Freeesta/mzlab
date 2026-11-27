@@ -7,6 +7,8 @@ use std::path::PathBuf;
 // declared here, not in lib.rs, which is at its line limit
 #[path = "../table_row_cmd.rs"]
 mod table_row_cmd;
+#[path = "../table_slots_cmd.rs"]
+mod table_slots_cmd;
 
 struct Args {
     files: Vec<PathBuf>,
@@ -246,13 +248,20 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 )
 .schema("compare/1")
 .exits(&[0, 2, 4, 5, 6])
-.examples(&["mzlab-cli table compare f.csv --ref t0* --blank MQ*"]),
+.examples(&["mzlab-cli table compare f.csv --ref t0*"]),
 Entry::new(
     "table row",
     "mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2",
     table_row_cmd::run,
 )
 .schema("row/2")
+.exits(&[0, 2, 4, 5, 6]),
+Entry::new(
+    "table slots",
+    "mzlab-cli table slots TABLE.mzfeat --id N [--samples FILE.json] [--out PATH]   a feature's slots",
+    table_slots_cmd::run,
+)
+.schema("feature-slots/1")
 .exits(&[0, 2, 4, 5, 6]),
 Entry::new(
     "quant targets",
@@ -268,7 +277,7 @@ Entry::new(
 )
 .schema("union/1")
 .exits(&[0, 2, 3, 4, 6])
-.examples(&["mzlab-cli quant union a.csv b.csv --rt-warp piecewise --out t.csv"]),
+.examples(&["mzlab-cli quant union a.csv b.csv --rt-warp piecewise"]),
 Entry::new(
     "estimate",
     "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data",
@@ -276,4 +285,4 @@ Entry::new(
 )
 .schema("estimate/1")
 .exits(&[0, 1, 2, 3, 4, 5, 6])
-.examples(&["mzlab-cli estimate MZML/*.mzML --axis da --json"])];
+.examples(&["mzlab-cli estimate MZML/*.mzML --axis da"])];
