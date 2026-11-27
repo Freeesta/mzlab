@@ -35,13 +35,6 @@ pub fn sample_ranges(
     Ok(plan.json())
 }
 
-/// The ids `text` (`1,3,5`, `2-4`) selects among the `present` ids of a dataset, as `{"samples":[..]}` in the order of the file: what `--sample` of the
-/// CLI answers (`readers::selection`). An id the file does not have is an error naming the ids it has.
-#[wasm_bindgen]
-pub fn sample_selection(present: &[u32], text: &str) -> Result<String, JsValue> {
-    mzlab_core::readers::selection::selection_json(present, text).map_err(|e| crate::error_json(&e))
-}
-
 /// The ids the chooser ticks at the start (`readers::selection::suggest`): all but `empty` (the ids that acquired nothing) when the section bytes `sizes` of the samples
 /// `ids` are small against `budget_mb`, none otherwise; `{"samples":[..]}`.
 #[wasm_bindgen]
