@@ -22,6 +22,7 @@ TRUE = json.loads((D / "sim3.json").read_text())
 P = "E.panels.find(p=>p.type==='mrm')"
 APEX = [pk[0] for pk in TRUE["picchi"][TRUE["campioni"].index("Sample_A")][:4]]            # the apex (min) of ions A to D of Sample_A (the isomer pair of ion C is not used)
 ION_A, ION_B, ION_C, ION_D = range(4)
+JUNK = (APEX[ION_B] + APEX[ION_C]) / 2          # a time 1.1 min from every peak of the four ions: all four traces are flat there, and no window label (they sit at the peaks) can cover the point
 
 r = Run(port=8988, wd="/tmp/wd_integra_clic")
 try:
@@ -86,14 +87,14 @@ try:
         step("four windows at one time: the labels stack and never overlap, the selected one is drawn", labels)
         pg.screenshot(path=str(HERE / "shots" / "integra_clic_one.png"))
         def junk_refused():
-            n0 = len(ints()); click(ION_C, APEX[ION_B])                    # ion C has no peak at the time of the peak of ion B
+            n0 = len(ints()); click(ION_C, JUNK)                    # no ion has a peak at that time
             assert len(ints()) == n0, ("a window was made where no ion has a peak", ints())
             assert refused_text in note(), note()
             assert pg.evaluate("I18N.t('int.why.noPeak',{reach:0.25})") in note(), note()
         step("a click where the trace has no peak is refused with the reason and the way to keep it", junk_refused)
         pg.screenshot(path=str(HERE / "shots" / "integra_clic_refused.png"))
         def force():
-            n0 = len(ints()); click(ION_C, APEX[ION_B], alt=True)
+            n0 = len(ints()); click(ION_C, JUNK, alt=True)
             w = ints(); assert len(w) == n0 + 1 and w[-1]["key"] != key(ION_B), ([(i["key"], i["a"], i["b"]) for i in w], note())
             c = w[-1]["click"]; assert c["forced"] is True and c["refused"], c                 # the override and the reasons it overrode are in the record
             assert pg.evaluate("I18N.t('int.forced',{why:'@'})").split("@")[0] in note(), note()
