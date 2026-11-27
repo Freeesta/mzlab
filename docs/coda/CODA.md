@@ -22,7 +22,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
 | REPEAT-HINT-FLOW | `docs/coda/prompt/REPEAT-HINT-FLOW.md` | - | the repeat hint for other repeated `flow run` plans, not only `tp.dig_lr`; Unix-only state today |
-| LABEL-CHECK-CACHE | `docs/coda/prompt/LABEL-CHECK-CACHE.md` | - | the profile-label check is probed once per `centroids_of` call; probe once per file |
 | LABEL-PEAK-WIDTH | `docs/coda/prompt/LABEL-PEAK-WIDTH.md` | - | zero-suppressed profile peaks of 3 points read as sparse in the label check; decide on a peak-width cue |
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
