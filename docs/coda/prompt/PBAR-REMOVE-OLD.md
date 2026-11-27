@@ -4,9 +4,9 @@ Read docs/coda/BRIEF.md.
 
 **Goal.** Default `qqq.pbar` on and delete the per-panel tool rows and their overflow code.
 
-**Why.** Only after the owner has used the bar for some time. Removes `fitHd` machinery for tools and the e2e that guard it. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4 code facts, §5 slices).
+**Why.** Only after the owner has used the bar for some time. Removes `fitHd` machinery for tools and the e2e that guard it. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
-**Read first.** Study §5; `pannelli.js` `fitHd`, `hdRestore`, `fitHdNow`; tests `e2e_intestazioni*`, `e2e_pannelli_stabili`, `e2e_xic_stretto`, `e2e_intestazione_cromato`.
+**Read first.** Study §4.3 (risks), §4.4 (slices); `pannelli.js` `fitHd`, `hdRestore`, `fitHdNow`; tests `e2e_intestazioni*`, `e2e_pannelli_stabili`, `e2e_xic_stretto`, `e2e_intestazione_cromato`.
 
 **Already on main (re-check before coding).** The `actions/1` registry, the right-click menu, Shift+F10, long press and the active panel (`E.active`, `.act`) exist; no shared panel bar exists. Check `origin/main` first: another PR may have moved part of this.
 

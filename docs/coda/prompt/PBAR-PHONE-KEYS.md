@@ -4,7 +4,7 @@ Read docs/coda/BRIEF.md.
 
 **Goal.** The bar at 390 px and its keyboard use.
 
-**Why.** Study §3.5-3.6: on a phone the bar is one scrollable row with a More sheet; with the keyboard it is a toolbar reached by one key. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4 code facts, §5 slices).
+**Why.** Study §3.5-3.6: on a phone the bar is one scrollable row with a More sheet; with the keyboard it is a toolbar reached by one key. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
 **Read first.** Study §3.5-3.6; `barra.js` (`SHEET`, `PHONE_W`), `accessibility.md`, `azioni-tasti.js` (`KEYS`, no duplicate key), `e2e_scorciatoie`.
 

@@ -4,9 +4,9 @@ Read docs/coda/BRIEF.md.
 
 **Goal.** The kind-specific buttons (integration set, XIC, peak picking, axis lock, % and the SIM area) move to `#pbar`, grouped per kind.
 
-**Why.** Second move: what only some kinds have. The bar shows a group only when the selected panel has it. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4 code facts, §5 slices).
+**Why.** Second move: what only some kinds have. The bar shows a group only when the selected panel has it. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
-**Read first.** Study §3.2 mockups and §4 counts; `picchi.js`, `xic-spettro.js`, `sim-ui.js` (`areaBtn`), `xwc.js`, `dad-mrm.js`, `mappa.js` (`CMDS`).
+**Read first.** Study §3.2 mockups and §4.2 counts; `picchi.js`, `xic-spettro.js`, `sim-ui.js` (`areaBtn`), `xwc.js`, `dad-mrm.js`, `mappa.js` (`CMDS`).
 
 **Already on main (re-check before coding).** The `actions/1` registry, the right-click menu, Shift+F10, long press and the active panel (`E.active`, `.act`) exist; no shared panel bar exists. Check `origin/main` first: another PR may have moved part of this.
 

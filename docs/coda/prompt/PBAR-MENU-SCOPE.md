@@ -4,7 +4,7 @@ Read docs/coda/BRIEF.md.
 
 **Goal.** One right-click menu per panel kind built from the registry with `scope` (point or panel), groups, keys and the same commands as the bar.
 
-**Why.** Study §3.7: the menu holds what is under the pointer (point scope) then a «Panel» tail repeating the bar's actions, so touch and keyboard users never need the bar. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4 code facts, §5 slices).
+**Why.** Study §3.7: the menu holds what is under the pointer (point scope) then a «Panel» tail repeating the bar's actions, so touch and keyboard users never need the bar. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
 **Read first.** `docs/agenti/actions.md` (menu, Shift+F10, long press 550 ms), `explore.js` `menu()`, `eventi.js` `ctxFor`, `azioni.js` `GROUPS`, study §3.7 table.
 

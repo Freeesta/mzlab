@@ -55,7 +55,7 @@ Status: V = a page was opened and says it, P = partial (page read, or source cod
 2. **Two families.** Shared contextual toolbar: FreeStyle, Office, Figma, Bokeh. One toolbar per pane: SCIEX OS, MassLynx, MZmine, Agilent. SCIEX OS does both (pane icons plus a master bar for the active pane) and MZmine repeats the toolbar in the menu: duplication is tolerated when one list feeds both. mzLab's registry makes this cheap.
 3. **Right-click menus are about operations at the pointer**: extract, integrate, subtract a range, set ranges, copy, export. That supports the split in 3.7 (menu = at the pointer plus a panel tail; bar = panel-wide view and output).
 4. **Linked panes**: FreeStyle gives linked actions to the last selected view of each type; Skyline panes follow the selected tree node. A badge-based link as in mzLab is in line with this.
-5. **Multi-pane actions** exist (SCIEX OS Ctrl-click applies to all panes, Analytics «Active Graph or All Graphs»): precedent for slice 7.
+5. **Multi-pane actions** exist (SCIEX OS Ctrl-click applies to all panes, Analytics «Active Graph or All Graphs»): precedent for the optional multi-select slice.
 6. **Nothing selected**: Figma shows page-level items; follow this (3.3).
 7. **Hover-only controls** (Plotly, Grafana) fail on touch and for keyboard users unless a visible trigger and a key path exist; NN/g: click or tap is the clearest signal of intent, hover reveals need about 0.3-0.5 s (V [20]). Never hover-only.
 8. **Menus**: NN/g (V [21]): about 10-12 items, every contextual command also in a main place, show shortcuts, give non-gesture alternatives. Accessibility: APG toolbar (one Tab stop, arrows, optional jump key, label) V [22]; targets at least 24 px, WCAG 2.2 SC 2.5.8 V [23]; keyboard operable, SC 2.1.1 V [24]. Right-click also on the Menu key V (MDN [25]); long press and Shift+F10 are U outside the repo (mzLab implements both).
@@ -124,7 +124,7 @@ Phone, 390 px (44 px targets, one scrollable row, priority order, rest in a bott
 ### 3.3 Selection
 - Shown by what exists today: left bar on the panel (`.pnl.act`, coupling colour if paired) **plus** the number chip at the left of `#pbar` in the same colour. Not colour alone: the chip carries number, kind and file.
 - **Nothing selected**: the first panel is selected when the stack opens, and a click on empty space keeps the last selection (today it clears `E.active`, `explore.js`). If no panel exists the bar shows the global actions (open file, undo, redo, show/hide panels) and the hint «Click a panel to see its tools».
-- **Several selected** (slice 7, optional): Shift-click on number chips; the bar shows only actions all selected kinds have and applies them to all (fit, download zip, close, link zoom). v1 is single selection.
+- **Several selected** (optional later slice): Shift-click on number chips; the bar shows only actions all selected kinds have and applies them to all (fit, download zip, close, link zoom). v1 is single selection.
 - Selection follows keys: 1-9 (exists), Tab into a panel, and focus inside a panel selects it.
 - Linked spectrum (`←1`): selecting it never selects its chromatogram; the bar chip says «follows ①» and the existing `followMenu` stays on the badge.
 

@@ -4,9 +4,9 @@ Read docs/coda/BRIEF.md.
 
 **Goal.** The buttons common to all kinds (fit, download, ruler, log, smoothing, zoom link, expand) work from `#pbar` and leave the header when the setting is on.
 
-**Why.** First real move of the buttons; the panel-specific ones stay in the header until the next slice. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4 code facts, §5 slices).
+**Why.** First real move of the buttons; the panel-specific ones stay in the header until the next slice. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
-**Read first.** Study §4 table (shared vs specific), `pannelli.js` `fitHd` and `hdRestore`, `zoom-reset.js`, `e2e_intestazioni*.py`.
+**Read first.** Study §4.2 table (shared vs specific), `pannelli.js` `fitHd` and `hdRestore`, `zoom-reset.js`, `e2e_intestazioni*.py`.
 
 **Already on main (re-check before coding).** The `actions/1` registry, the right-click menu, Shift+F10, long press and the active panel (`E.active`, `.act`) exist; no shared panel bar exists. Check `origin/main` first: another PR may have moved part of this.
 
