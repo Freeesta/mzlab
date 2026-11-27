@@ -69,8 +69,10 @@ def test_every_record_is_consistent(r):
     assert {t.split(":")[0] for t in tags} <= KEYS
     assert [t for t in tags if t.startswith("structure:")] == structure_classes(r["smiles"])
     assert any(t.startswith("group:") and t[6:] in GROUPS for t in tags)
-    # a real name: words of lower-case letters, or an acronym that carries its full name as a synonym (PFOA, 2,4,5-T)
-    assert any(re.search(r"[a-z]{4}", n) for n in [r["name"], *r["synonyms"].split("|")]), "a code-only entry"
+    # a real name: a word of lower-case letters, or a listed standard abbreviation (PFOA, 2,4,5-T) that carries its spelled-out name as a synonym
+    if not re.search(r"[a-z]{4}", r["name"]):
+        assert r["name"] in lines("catalogue_abbreviations.txt"), "an abbreviation that is not on the accepted list"
+        assert any(re.search(r"[a-z]{6}", n) for n in r["synonyms"].split("|")), "an abbreviation without its full name"
 
 
 def test_the_must_have_names_are_there_and_the_removed_codes_are_gone():
@@ -88,3 +90,8 @@ def test_the_generator_gives_the_file_in_the_repo():
     before = (ROOT / "mzlab/web/molecules/catalogue.csv").read_bytes()
     subprocess.run([sys.executable, str(ROOT / "tools/generate_molecules.py")], check=True, capture_output=True)
     assert (ROOT / "mzlab/web/molecules/catalogue.csv").read_bytes() == before
+
+
+def test_the_accepted_abbreviations_are_all_in_use():
+    shown = {r["name"] for r in CAT if not re.search(r"[a-z]{4}", r["name"])}
+    assert shown == set(lines("catalogue_abbreviations.txt"))
