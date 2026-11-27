@@ -109,14 +109,14 @@ try:
             need(pg.evaluate("%s.cv.toDataURL()" % P) != before, "hovering a row did not change the drawing")
             pg.mouse.move(5, 5); wait_for_js(pg, "%s._hl == null" % P, timeout=10000); frames(pg, 3)
             need(pg.evaluate("%s.cv.toDataURL()" % P) == before, "the drawing did not come back after the mouse left")
-        step("hovering a row draws its trace on and fades the others; leaving restores the drawing", hover)
+        step("hovering a row fades the other traces; leaving restores the drawing", hover)
 
         def two_samples():
             show(pg, [0, 1], 2 * N3, 2)
             need(check(read(pg), N3, 2) == base, "a second sample changed the colour of an ion")
         step("2 samples x 7 ions: the ion keeps its colour, the samples differ by dash, the swatch is the ion's colour", two_samples)
 
-        step("SIM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg, P, "SIM"))
+        step("SIM hover tooltip: the tallest series row is highlighted, no trace changes width, tint and text are readable", lambda: top_row(pg, P, "SIM"))
 
         def contrast():
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 3)

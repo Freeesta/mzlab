@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Study §3: one bar above the panel stack shows the tools of the selected panel. `E.active` and the `.act` left bar already exist (`setActive`, `stato.js`); nothing reads them to build a bar yet. Study: `docs/studies/PANEL_TOOLBAR_STUDY.md` (§3 design, §4.1-4.3 code facts and risks, §4.4 slices).
 
-**Read first.** Study §3.2-3.4, `pannelli.js` `setActive`, `explore.js` (click outside clears the selection), `barra.js` (`SHEET`, `PHONE_W`), `PBAR-REGISTRY-BUTTONS` result (`AZIONI.bar`).
+**Read first.** Study §3.2-3.4, `pannelli.js` `setActive`, `explore.js` (click outside clears the selection), `barra.js` (`SHEET`, `PHONE_W`), `azioni-barra.js` (`AZIONI.bar`, `AZIONI.refresh`: the header buttons are registry actions).
 
 **Already on main (re-check before coding).** The `actions/1` registry, the right-click menu, Shift+F10, long press and the active panel (`E.active`, `.act`) exist; no shared panel bar exists. Check `origin/main` first: another PR may have moved part of this.
 

@@ -299,23 +299,10 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" tabindex="0" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
-    // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] | [PNG / Excel] □ ×
-    const lens = type === "chrom" || type === "xic" || type === "mrm";
-    const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
-    const gv = `<span class="tbg">${lens ? `<button class="bt" data-a="izoom" title="${I18N.t("panel.izoom.title")}">${IC_ZOOM}</button>` : ""}${fit}</span>`;
-    const gxb = type === "spec" ? `<span class="tbg"><button class="bt xbb" data-a="xicb" aria-pressed="false" title="${I18N.t("xicbtn.title")}" aria-label="${I18N.t("xicbtn.aria")}">XIC</button><button class="bt xbl" data-a="xicl" hidden aria-haspopup="dialog" aria-expanded="false" title="${I18N.t("xicbtn.ion.title")}"></button></span>` : "";
-    const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${specRel(p) ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button><button class="bt" data-a="lock" aria-pressed="false" title="${I18N.t("lock.off.title")}" aria-label="${I18N.t("lock.off.title")}">${IC_UNLOCK}</button></span>` : "";
-    const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
-    const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt iall" type="button" data-a="iall" aria-haspopup="true" title="${I18N.t("panel.iall.title")}" aria-label="${I18N.t("panel.iall.title")}">&#9662;</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button></span>` : "";
-    const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.aria")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
-    const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${ms2Chrom(p) ? "disabled " : ""}title="${I18N.t(ms2Chrom(p) ? "panel.xic.off" : "panel.xic.title")}">XIC</button></span>` : "";
-    const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
-    const more = `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
-    return `<span class="tbs">${gxb + gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
-  })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" tabindex="0" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}<span class="tbs"></span></div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
+  AZIONI.bar({ view: type, p }, /** @type {HTMLElement} */ (el.querySelector(".tbs")));
   Q("#dpanels").appendChild(el);
   STATO.aggiungi(p, "open"); apply(p); fitHost();
   // move (drag the header), bring to front, resize (handle at the bottom right), maximize
@@ -353,51 +340,13 @@ function addPanel(type, o, after) {
     if (on) front(el);
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => { draw(p); setTimeout(() => draw(p), 120); });
   };
-  fsB.onclick = () => p._setMax(!el.classList.contains("max"));
   hdMoreInit(p);
   ARRANGE.grip(p);
-  el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
-  const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
-  const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMMANDS.run("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
   if (p.type === "spec") { if (window.XICBTN) XICBTN.wire(p); if (window.TABPICCHI) TABPICCHI.wire(p); }
-  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMMANDS.run("spec.display", p, () => { relB.classList.toggle("on", p.rel = !specRel(p)); }); draw(p); uiSave(); };
-  const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushFields(p, "history.smooth"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); }; if (window.SIMUI) SIMUI.wireArea(p);
-  const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMMANDS.run("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
-  const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
-  const dlB = el.querySelector('[data-a="dl"]');
-  if (dlB) dlB.onclick = (/** @type {MouseEvent} */ e) => {
-    e.stopPropagation();  // else the click reaches the document and closes the menu at once
-    menu(e, [
-      { label: I18N.t("panel.dl.png"), icon: IC_DL, fn: async () => {
-        let cvs; p._exp = true; EXPORTING = true; paintFiles();  // light palette for the image, whatever the theme
-        try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
-        cvs.toBlob(async b => {
-          let out = b; try { out = await (await import("./png-meta.js")).pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
-          saveBlob(out, plotName(p) + ".png");
-        });
-      }},
-      ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
-        const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
-      }}]),
-      ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.csv"), icon: IC_DL, fn: () => {
-        const t = plotSheets(p); if (t) dlc(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
-      }}]),
-      ...(p.type === "spec" ? [...(window.TABPICCHI && !p.uv ? [TABPICCHI.item(p, IC_DL)] : []), ...AZIONI.downloads({ view: "spec", p, a: p._a })] : []),
-      ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
-    ]);
-  };
-  const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bX = el.querySelector('[data-a="xic"]');
-  if (bA) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak)
-    const /** @type {Record<string, Element | null>} */ btns = { zoom: bZ, auto: bA, man: bM, idel: bD };
-    const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); cursorLine(p); };
-    if (p.imode && btns[p.imode]) { /** @type {Element} */ (btns[p.imode]).classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }  // MRM panels open with the manual integration tool ready
-    bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel");
-    el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); }; el.querySelector('[data-a="iall"]').onclick = (/** @type {MouseEvent} */ e) => intMenu(p, e);
-    el.querySelector('[data-a="intf"]').onchange = (/** @type {Event} */ e) => { p.intf = /** @type {HTMLSelectElement} */ (e.target).value; };
+  if (el.querySelector('[data-a="iauto"]')) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak); the buttons follow p.imode (AZIONI.refresh)
+    p._mode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); AZIONI.refresh({ view: p.type, p }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); cursorLine(p); };
+    if (p.imode) p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell";  // MRM panels open with the manual integration tool ready
   }
-  if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });  // under this chromatogram (xwc.js on a DAD)
-  el.querySelector(".x").onclick = () => closePanelWithUndo(p);
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { COMMANDS.run("panel.rename", p, () => { p.title = v === ptitle(p.title) ? p.title : v; }); ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -690,6 +639,27 @@ function corrInfoWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ b) {
 }
 /** MS2 scans of file x whose precursor is v (the 0.6 Da window of the unit-resolution experiments). */
 const ms2Scans = (/** @type {MzFile} */ x, /** @type {number} */ v) => (x.ms2_exps || []).filter((/** @type {Bag} */ e) => e.prec != null && Math.abs(e.prec - v) < 0.6).reduce((/** @type {number} */ t, /** @type {Bag} */ e) => t + e.n, 0);
+function dlMenu(/** @type {Pannello} */ p, /** @type {MouseEvent} */ e) {
+  e.stopPropagation();  // else the click reaches the document and closes the menu at once
+  menu(e, [
+    { label: I18N.t("panel.dl.png"), icon: IC_DL, fn: async () => {
+      let cvs; p._exp = true; EXPORTING = true; paintFiles();  // light palette for the image, whatever the theme
+      try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
+      cvs.toBlob(async b => {
+        let out = b; try { out = await (await import("./png-meta.js")).pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
+        saveBlob(out, plotName(p) + ".png");
+      });
+    }},
+    ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
+      const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
+    }}]),
+    ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.csv"), icon: IC_DL, fn: () => {
+      const t = plotSheets(p); if (t) dlc(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
+    }}]),
+    ...(p.type === "spec" ? [...(window.TABPICCHI && !p.uv ? [TABPICCHI.item(p, IC_DL)] : []), ...AZIONI.downloads({ view: "spec", p, a: p._a })] : []),
+    ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
+  ]);
+}
 function ctl(/** @type {Pannello} */ p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
@@ -811,23 +781,12 @@ function ctl(/** @type {Pannello} */ p) {
   if (p.type === "chrom") SIMUI.wireLit(p, c, ".trkey [data-lk], select[data-o=tr]");
   window.CANALI?.wire(p, c);
   if (window.REGISTRO && p.kind === "reg") REGISTRO.wire(p, c);  // registro-serie.js: the search box of the channels
-  syncTb(p);
+  AZIONI.refresh({ view: p.type, p });
   fitHdSoon(p);
 }
 function rngIsOn(/** @type {Pannello} */ p) {
   const ms2c = ms2Chrom(p);
   return (p.type !== "mrm" && !(p.type === "chrom" && p.kind === "pda") && (p.mz0 != null || p.mz1 != null)) || !!p.zoom || (p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" && !ms2c);
-}
-// state of the smoothing and log buttons of the right-hand group (they live in the static header, not in ctl)
-function syncTb(/** @type {Pannello} */ p) {
-  const el = p.el; if (!el) return;
-  const ms2c = ms2Chrom(p);
-  const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]'); if (window.SIMUI) SIMUI.syncArea(p);
-  if (sm) { const tip = I18N.t(p.type === "mrm" ? "ctl.mrm.smooth.title" : "ctl.smooth.title"); sm.classList.toggle("on", !!p.smooth); sm.setAttribute("aria-pressed", String(!!p.smooth)); sm.title = tip; }
-  if (lg) {
-    const off = ms2c || (p.type === "chrom" && p.kind === "pda"); if (ms2c) p.log = false;
-    lg.disabled = off; lg.classList.toggle("on", !!p.log && !off); lg.setAttribute("aria-pressed", String(!!p.log && !off)); lg.title = off && ms2c ? I18N.t("ctl.noMs2") : I18N.t("ctl.log.title");
-  }
 }
 // ---- one header row: what does not fit goes into «⋯» (nodes moved with their handlers, put back when there is room); nothing wraps or is cut.
 // Order: the NL note, then the icon groups from the right, then the controls from the right.
@@ -1070,5 +1029,5 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
 const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "channels", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi", "xw"];
 COMMANDS.handler("panel.source", {
   read: (/** @type {Pannello} */ p) => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
-  apply: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
+  apply: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); },
 });
