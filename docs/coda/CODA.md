@@ -78,7 +78,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-COMPANIONS | `docs/coda/prompt/RAW-COMPANIONS.md` | - | AU-16: `raw companions` (study §5); new lazy module |
 | RAW-PROFILE | `docs/coda/prompt/RAW-PROFILE.md` | - | AU-17: `raw profile` (study §6); new lazy module |
 | RAW-MS2 | `docs/coda/prompt/RAW-MS2.md` | - | AU-15: `raw ms2` list, spectrum, xic (study §8); new lazy module |
-| SUM-FILL-TIME | `docs/coda/prompt/SUM-FILL-TIME.md` | - | `spectrum get --sum`: ions without `--fill-ms`, from the fill time the file states; decided 26 Nov: new index format version with a fill-time column, old indexes readable plus a rebuild hint |
 | SUM-CHANNEL | `docs/coda/prompt/SUM-CHANNEL.md` | - | `spectrum get --sum --id`: a channel's scans in the sum evidence without growing `rawxic` over 5 % |
 | FILE-METHOD-FIELDS | `docs/coda/prompt/FILE-METHOD-FIELDS.md` | needs owner decision: counts and format facts of the real `.wiff` method streams (which field holds fill time and Q1 resolution, how many samples and experiments carry them), never file names or data | `file method`: decode fill time and Q1 resolution of `.wiff`; then write MS:1000927 in the mzML |
 | MS2-PEAK-HR-NOISE | `docs/coda/prompt/MS2-PEAK-HR-NOISE.md` | - | `spectrum get --peak auto` at a high-resolution level keeps every unmatched noise line above zero (about 1,600 lines on a synthetic Orbitrap parent peak); a net-intensity floor as a `--set` parameter with its default printed |

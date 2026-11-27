@@ -5,7 +5,7 @@ use crate::mzml::Spectrum;
 use crate::mzmlwrite::SpectrumExtra;
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
-const READ_ONES: [&str; 26] = [
+const READ_ONES: [&str; 27] = [
     "MS:1000341",
     "MS:1000326",
     "MS:1000325",
@@ -32,6 +32,7 @@ const READ_ONES: [&str; 26] = [
     "MS:1000422",
     "MS:1000133",
     "MS:1000598",
+    "MS:1000927",
 ];
 
 /// True when nothing in the scan or its extras can make the header text say more than the row `lettore` builds: no `MS:1000...` accession in the id, the
