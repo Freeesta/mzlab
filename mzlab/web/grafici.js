@@ -288,8 +288,8 @@ function legend(p, all, note = "") {
 function legCollapse(p) {
   const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
   const lst = document.createElement("div"); lst.className = "lgl"; lst.append(...L.children);
-  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); }; L.append(chip, lst);
-  chip.type = "button"; chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n }); set(false); chip.onclick = () => set(!chip.classList.contains("on")); chip.onkeydown = lst.onkeydown = e => { if (e.key === "Escape" && chip.classList.contains("on")) { e.stopPropagation(); set(false); chip.focus(); } };
+  const chip = document.createElement("button"), set = (/** @type {boolean} */ on) => { chip.classList.toggle("on", on); chip.setAttribute("aria-expanded", String(on)); if (on) LEGENDE.fit(p, L, lst); }; L.append(chip, lst);      // the list opens inside the panel (legende.js)
+  chip.onmouseenter = lst.onmouseenter = chip.onfocus = () => LEGENDE.fit(p, L, lst); chip.type = "button"; chip.className = "lgc"; chip.textContent = I18N.t("leg.traces", { n }); set(false); chip.onclick = () => set(!chip.classList.contains("on")); chip.onkeydown = lst.onkeydown = e => { if (e.key === "Escape" && chip.classList.contains("on")) { e.stopPropagation(); set(false); chip.focus(); } };
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it

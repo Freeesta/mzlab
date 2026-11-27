@@ -1,5 +1,5 @@
-//! Which samples of a multi-sample file to open (`--sample 1,3,5`, `2-4`): one parser and one check against the ids the reader lists, used by the CLI,
-//! the app and the site's engine route (`sample_selection`), so the three give the same answer for the same text.
+//! Which samples of a multi-sample file to open (`--sample 1,3,5`, `2-4`): one parser and one check against the ids the reader lists, used by the CLI
+//! (`--sample`, `sample select`); the page chooser has no text box, so the site and the app have no route for it.
 
 use crate::error::{Error, Result};
 use crate::json::Out;

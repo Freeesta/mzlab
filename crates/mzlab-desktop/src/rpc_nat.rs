@@ -13,8 +13,8 @@ use crate::engine::{CountWrite, Picked, Progress, State};
 use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
-/// `natlabels {members: [{file, id, sample}]}` (the column labels, `readers::label`, the twin of `sample_labels`) / `natdefault {ids, sizes, empty?, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
-/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli sample select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
+/// `natlabels {members: [{file, id, sample}]}` (the column labels, `readers::label`, the twin of `sample_labels`) / `natdefault {ids, sizes, empty?, budget_mb?}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
+/// site worker's ops; the same bytes as `sample_default` and `mzlab-cli sample select --default`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
 pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     use mzlab_core::readers::selection;
     if op == "natlabels" {
@@ -28,13 +28,6 @@ pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
             .filter_map(Value::as_f64)
             .collect()
     };
-    if op == "natselect" {
-        let present: Vec<u32> = nums("present").iter().map(|x| *x as u32).collect();
-        return text(selection::selection_json(
-            &present,
-            p["text"].as_str().unwrap_or(""),
-        )?);
-    }
     let ids: Vec<u32> = nums("ids").iter().map(|x| *x as u32).collect();
     let sizes: Vec<u64> = nums("sizes").iter().map(|x| x.max(0.0) as u64).collect();
     let empty: Vec<u32> = nums("empty").iter().map(|x| *x as u32).collect();

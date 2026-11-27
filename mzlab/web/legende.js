@@ -40,6 +40,15 @@ function legPlace(/** @type {any} */ p, /** @type {HTMLElement} */ el) {
   p._legPad = Math.min(0.4, (h + 12) / Math.max(60, H - M.t - M.b));
   return true;
 }
-const LEGENDE = { place: legPlace };
+/** The list `lst` of the chip of legend `L` opens on the side that has room inside the panel (up when the legend sits low), is as tall and as wide as that room and scrolls. */
+function legFit(/** @type {any} */ p, /** @type {HTMLElement} */ L, /** @type {HTMLElement} */ lst) {
+  const P = p.el.getBoundingClientRect(), B = L.getBoundingClientRect(), g = 6;
+  lst.style.maxWidth = Math.max(120, Math.min(480, P.width - 2 * g)) + "px";
+  const need = Math.min(260, lst.scrollHeight + 2 || 260), below = P.bottom - B.bottom - g, above = B.top - P.top - g, up = below < need && above > below;
+  lst.classList.toggle("up", up); lst.style.maxHeight = Math.max(48, Math.min(260, up ? above : below)) + "px";
+  const w = lst.offsetWidth, x = Math.min(Math.max(B.right - w, P.left + g), P.right - g - w);
+  lst.style.right = "auto"; lst.style.left = x - B.left - L.clientLeft + "px";
+}
+const LEGENDE = { place: legPlace, fit: legFit };
 // saved kind "pda": its TWC or XWC on screen
 const kindUp = (/** @type {Bag} */ p) => p.kind === "pda" ? p.mz0 != null ? "XWC" : "TWC" : (p.kind || "").toUpperCase();

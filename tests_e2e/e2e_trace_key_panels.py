@@ -20,6 +20,24 @@ def away(pg, P):
     """the pointer leaves the legend and the drawing is at rest: the picture taken next is the one without a highlight"""
     pg.mouse.move(5, 5); wait_for_js(pg, "%s._hl == null" % P, timeout=10000); frames(pg, 4)
 def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
+# the legend moved to the bottom (or the top) of the panel with its chip open: the rectangles of the panel, the list and the chip
+LEGBOX = """([P, low]) => { const p = eval(P), L = p.leg, c = L.querySelector('.lgc'), l = L.querySelector('.lgl'); if (!c) return null;
+  if (c.getAttribute('aria-expanded') === 'true') c.click();
+  L.style.top = (low ? p.cv.offsetTop + p.cv.offsetHeight - L.offsetHeight - 30 : p.cv.offsetTop + 8) + 'px'; c.click();
+  const r = e => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, h: b.height, sh: e.scrollHeight, ch: e.clientHeight }; };
+  const b = l.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+  return { shown: !!hit && l.contains(hit), n: l.querySelectorAll('.tg').length, up: l.classList.contains('up'), panel: r(p.el), list: r(l), chip: r(c) }; }"""
+def legend_inside(pg, P, what):
+    """a legend chip near the bottom and near the top of the panel: its list is inside the panel, on the side with room, and scrolls when taller than the room"""
+    for low in (True, False):
+        d = pg.evaluate(LEGBOX, [P, low])
+        need(d, "%s: the legend is not a chip (more than 4 entries needed)" % what)
+        q, l = d["panel"], d["list"]
+        need(l["l"] >= q["l"] - 1 and l["r"] <= q["r"] + 1 and l["t"] >= q["t"] - 1 and l["b"] <= q["b"] + 1, "%s (%s): the list %s is outside the panel %s" % (what, "low" if low else "high", l, q))
+        need(d["shown"], "%s: the list is not painted at its place (clipped by an ancestor): %s" % (what, d))
+        need(d["up"] == low, "%s: the list opens on the wrong side (low=%s): %s" % (what, low, d))
+        need(l["t"] >= d["chip"]["b"] - 1 or l["b"] <= d["chip"]["t"] + 1, "%s: the list covers its chip: %s" % (what, d))
+        pg.mouse.move(5, 5)
 
 D = Path(tempfile.mkdtemp(prefix="trace_key_panels_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_dad_mrm.py"), str(D)], check=True, capture_output=True)
@@ -77,6 +95,13 @@ try:
             pg.select_option("select[data-o=tr]", ""); wait_for_js(pg, "%s.el.querySelectorAll('.trkey').length === 0" % MS, timeout=15000)
         step("MS2 select, none: no key", none_row)
 
+        def ms2_clip():
+            pg.select_option("select[data-o=tr]", "__all"); wait_for_js(pg, "%s._a && %s._a.sr.length > 1" % (MS, MS), timeout=30000)
+            for w in (1400, 390):
+                pg.set_viewport_size({"width": w, "height": 1000}); frames(pg, 4)
+                legend_inside(pg, MS, "MS2 chromatogram at %d px" % w)
+        step("MS2/SIM legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", ms2_clip)
+
         # ------------------------------------------------------------------ the XIC list legend (traces and files)
         pg2 = r.page(p); pg2.set_viewport_size({"width": 1400, "height": 1000})
         pg2.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
@@ -116,6 +141,13 @@ try:
             need(pg2.evaluate("%s.cv.toDataURL()" % XP) == before, "the drawing did not come back")
         step("XIC legend: hover of an entry draws its trace on, leaving restores the drawing", xic_hover)
 
+        def xic_clip():
+            pg2.evaluate("(() => { const p = %s; addTrace(p, 400.0); ctl(p); draw(p); })()" % XP); frames(pg2, 3)
+            for w in (1400, 390):
+                pg2.set_viewport_size({"width": w, "height": 1000}); frames(pg2, 4)
+                legend_inside(pg2, XP, "XIC at %d px" % w)
+        step("XIC legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", xic_clip)
+
         # ------------------------------------------------------------------ the DAD curves on an MRM panel
         pg3 = r.page(p); pg3.set_viewport_size({"width": 1400, "height": 1000})
         pg3.set_input_files("#pick", [str(D / "dadmrm.wiff"), str(D / "dadmrm.wiff.scan")])
@@ -144,6 +176,23 @@ try:
             need(pg3.evaluate("%s.cv.toDataURL()" % MR) != before, "hover did not change the drawing")
             pg3.mouse.move(5, 5); wait_for_js(pg3, "%s._hl == null" % MR, timeout=10000); frames(pg3, 3)
         step("DAD curves: hover of the entry lights the curve", twc_hover)
+
+        # several files in one MRM panel with the DAD curve: 13 entries, a chip
+        pg4 = r.page(p); pg4.set_viewport_size({"width": 1400, "height": 1000})
+        pg4.set_input_files("#pick", [str(D / "dadmrm.wiff"), str(D / "dadmrm.wiff.scan")] + [mz("B_MRM-t%d" % t) for t in (0, 5, 10, 15)])
+        wait_for_js(pg4, "document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=90000)
+        pg4.click("text=Load data"); ready(pg4); open_first(pg4)
+        pg4.click("#np-mrm"); wait_for_js(pg4, "E.panels.some(q => q.type === 'mrm' && q._a)", timeout=60000)
+        M4 = "E.panels.find(q => q.type === 'mrm')"
+        pg4.evaluate("(() => { E.files.forEach(f => { f.vis = true; }); renderFileList(); const p = %s; ctl(p); draw(p); })()" % M4); frames(pg4, 4)
+        pg4.evaluate("(() => { const p = %s; p.overlay = 'twc'; draw(p); })()" % M4)
+        wait_for_js(pg4, "%s.leg.querySelectorAll('[data-lk^=twc]').length >= 1 && %s.leg.querySelector('.lgc')" % (M4, M4), timeout=60000)
+
+        def mrm_clip():
+            for w in (1400, 390):
+                pg4.set_viewport_size({"width": w, "height": 1000}); frames(pg4, 4)
+                legend_inside(pg4, M4, "MRM with the DAD curve at %d px" % w)
+        step("MRM and DAD legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", mrm_clip)
 
         def mrm_tip():
             pg3.evaluate("(() => { const p = %s; p.overlay = null; draw(p); })()" % MR); frames(pg3, 4)
