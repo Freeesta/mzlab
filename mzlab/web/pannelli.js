@@ -416,7 +416,7 @@ function front(/** @type {HTMLElement} */ el) {
   if (E.z > 5000) { E.panels.slice().sort((/** @type {Pannello} */ a, /** @type {Pannello} */ b) => (+a.el.style.zIndex || 0) - (+b.el.style.zIndex || 0)).forEach((/** @type {Pannello} */ q, /** @type {number} */ i) => { q.el.style.zIndex = String(10 + i); }); E.z = 10 + E.panels.length; el.style.zIndex = String(++E.z); }
 }
 // active panel (outlined): its cursor can be moved scan by scan with the arrow keys
-function setActive(/** @type {Pannello | null} */ p) { STATO.attiva(p, "activate"); E.panels.forEach((/** @type {Pannello} */ q) => q.el.classList.toggle("act", q === p)); if (window.BANCO) BANCO.sync2(); }
+function setActive(/** @type {Pannello | null} */ p) { STATO.attiva(p, "activate"); E.panels.forEach((/** @type {Pannello} */ q) => q.el.classList.toggle("act", q === p)); if (window.BANCO) BANCO.sync2(); if (window.PBAR) PBAR.sync(); }
 // MS2 precursor chromatograms: scans are sparse (one every few cycles) and many are empty. Nearest scan WITH data, either around x (d = 0)
 // or strictly beyond x in the direction d; g = half the smaller gap to its neighbours, so the spectrum window holds that scan and no other.
 function ms2Near(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type {number} */ d) {

@@ -750,3 +750,12 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .fcount{white-space:nowrap;flex:0 0 auto}
 #fpop{box-sizing:border-box;max-width:calc(100vw - 16px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 @media (pointer:coarse){#fpop label,#fpop .fpb button{min-height:44px;box-sizing:border-box}#fpop .fn{flex:1;align-self:stretch;display:flex;align-items:center}}
+/* shared panel bar (pbar.js, setting «Panel bar»): one row under the header, the tools of the selected panel; with it on, the tool groups of every panel header are hidden (expand and close stay) */
+#pbar{position:sticky;top:var(--hh,40px);z-index:40;box-sizing:border-box;display:flex;align-items:center;gap:8px;min-height:40px;margin:0 0 var(--sp-3);padding:0 8px;border:1px solid var(--line);border-left:3px solid var(--pc,var(--accent));border-radius:6px;background:var(--panel);overflow-x:auto;white-space:nowrap}
+#pbar[hidden]{display:none}#pbar[data-pair="1"]{--pc:var(--accent)}#pbar[data-pair="2"]{--pc:var(--grad)}
+#pbar .pbchip{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--ink)}#pbar .pbhint{color:var(--muted)}
+#pbar .pbtools{display:flex;align-items:center;gap:6px;min-width:0}#pbar .tbg{display:inline-flex;align-items:center;gap:2px;padding:0 6px;border-left:1px solid var(--line)}#pbar .tbg:first-child{border-left:0}
+#pbar button:focus-visible,#pbar select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (pointer:coarse){#pbar{min-height:44px}#pbar .bt,#pbar select{min-height:44px;min-width:44px}}
+#v-workspace:not([data-work=panels]) #pbar{display:none}
+html[data-pbar] .pnl .tbs .tbg{display:none}

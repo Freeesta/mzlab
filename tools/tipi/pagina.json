@@ -92,6 +92,7 @@
     "../../mzlab/web/panels-undo.js",
     "../../mzlab/web/arrange.js",
     "../../mzlab/web/arrange-tasti.js",
+    "../../mzlab/web/pbar.js",
     "../../mzlab/web/legende.js",
     "../../mzlab/web/grafici.js",
     "../../mzlab/web/picchi.js",

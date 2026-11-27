@@ -11,5 +11,8 @@
   "settings.cen.stopped": "Reduction cancelled by the user; {n} = copies already created.",
   "settings.cen.fail": "Error on a file of the reduction; {name} = file name.",
   "settings.mem.status": "Status line of the memory budget in the settings; {mb} = budget in MB, {scans} = approximate maximum scans, {reason} = reason for the choice, {conf} = reliability.",
-  "settings.mem.inputs": "Machine data used to choose the budget; {gb} = device memory in GB, {cores} = logical cores, {hard} = hard limit in MB."
+  "settings.mem.inputs": "Machine data used to choose the budget; {gb} = device memory in GB, {cores} = logical cores, {hard} = hard limit in MB.",
+  "pbar.aria": "Accessible name of the shared panel bar; {n} = panel number, {name} = kind and file of the panel.",
+  "pbar.files": "File part of the panel bar chip when the panel shows several files; {n} = number of files.",
+  "pbar.say": "Spoken when the selected panel changes; {n} = panel number, {name} = kind and file of the panel."
 }
