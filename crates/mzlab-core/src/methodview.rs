@@ -210,7 +210,9 @@ fn write_eluents_and_sources(o: &mut Out, lc: &Value) {
 /// `head` (the `file_method/1` document without its views, `filemethod::document_head`) with `"lc":…,"dad":…` before its closing brace; `method` is the
 /// `method/1` text the head was made from (`None`: the file carries none).
 pub fn attach(head: &str, method: Option<&str>) -> crate::error::Result<String> {
-    let doc = method.map(|m| crate::json::parse(m.as_bytes())).transpose()?;
+    let doc = method
+        .map(|m| crate::json::parse(m.as_bytes()))
+        .transpose()?;
     let body = head.strip_suffix('}').unwrap_or(head);
     let mut o = Out::default();
     o.raw(body).raw(",\"lc\":");
