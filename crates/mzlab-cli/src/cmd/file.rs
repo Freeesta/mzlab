@@ -44,7 +44,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file method", "mzlab-cli file method FILE [--sample LIST] [--out PATH]   segment precursor, CE, CES, DP, fill time, Q1", crate::method_cmd::run)
         .schema("file_method/1")
         .exits(&[0, 2, 4, 5, 6]),
-    Entry::new("file channels", "mzlab-cli file channels FILE [--sample LIST] [--out PATH]   channels of a file as JSON", crate::channels_cmd::run).schema("channels/1").examples(&["mzlab-cli file channels sample.mzML"]),
+    Entry::new("file channels", "mzlab-cli file channels FILE [--sample LIST] [--out PATH]   channels of a file as JSON", crate::channels_cmd::run).schema("channels/1"),
     Entry::new("file pair", "mzlab-cli file pair FILE... [--json]   other half of a SCIEX pair, found by name", crate::pair_cmd::run).exits(&[0, 1, 2]),
     Entry::new("file validate", "mzlab-cli file validate FILE.mzML... [--json]   mzML validity: structure, vocabulary, index", validate).schema("mzml-validation/1").exits(&[0, 1, 2, 4]),
     Entry::new("file pack", "mzlab-cli file pack PATH... --out DIR [--part-size SIZE] [--name NAME] [--dry-run] [--force]   split into parts", pack_run).schema("pack-run/1").exits(&[0, 2, 3, 4, 6, 8]),
@@ -76,12 +76,10 @@ pub(crate) static TABLE: &[Entry] = &[
         .examples(&["mzlab-cli sample design propose f.mzML"]),
     Entry::new("sample design validate", "mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys", |a| crate::design_cmd::run(pre("validate", a)))
         .schema("design_check/1")
-        .exits(&[0, 2, 3, 4])
-        .examples(&["mzlab-cli sample design validate d.json"]),
+        .exits(&[0, 2, 3, 4]),
     Entry::new("sample design canonical", "mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256", |a| crate::design_cmd::run(pre("canonical", a)))
         .schema("design_canonical/1")
-        .exits(&[0, 2, 3, 4, 6])
-        .examples(&["mzlab-cli sample design canonical d.json"]),
+        .exits(&[0, 2, 3, 4, 6]),
     Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),

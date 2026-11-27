@@ -48,6 +48,7 @@ const OUTPUT_KEYS: &[&str] = &[
 const SELECTOR_KEYS: &[&str] = &[
     "err.sample.unknown",
     "err.compare.selector",
+    "error.rowNotFound",
     "err.canali.unknown",
     "err.scan.unknown",
     "err.scan.level",
