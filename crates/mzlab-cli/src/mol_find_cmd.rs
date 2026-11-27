@@ -2,6 +2,7 @@
 //! name, a synonym, a formula or a mass; the answer is the JSON of the route `api/molecules/search` (`molecules::route`), byte for byte what the `.wasm` and the app give.
 //! Without `--db` the built-in environmental catalogue is searched (the file the pages load, compiled in).
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 use mzlab_core::json::Out;
@@ -35,6 +36,51 @@ fn number(v: &str, name: &str, lo: u32, hi: u32) -> Result<u32, String> {
         .ok_or_else(|| format!("--set {name} needs a whole number from {lo} to {hi}, not {v:?}"))
 }
 
+/// The catalogue to search: the one built into the binary, or the CSV of `--db` (a path, or `-` for the standard input), checked row by row.
+fn catalogue_text(db: Option<&str>) -> Result<Cow<'static, str>, Outcome> {
+    let Some(path) = db else {
+        return Ok(Cow::Borrowed(CATALOGUE));
+    };
+    let mut text = String::new();
+    if path == "-" {
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut text)
+            .map_err(|e| Outcome::fail(&e.to_string()))?;
+    } else {
+        text = std::fs::read_to_string(path).map_err(|e| Outcome::fail(&format!("{path}: {e}")))?;
+    }
+    if let Err(rows) = from_csv(&text, "catalog", None) {
+        let e = &rows[0];
+        return Err(Outcome::fail(&format!(
+            "{} line {}: the catalogue has {} wrong rows ({})",
+            e.key,
+            e.line,
+            rows.len(),
+            e.detail
+        )));
+    }
+    Ok(Cow::Owned(text))
+}
+
+/// One `--set NAME=VALUE`: limit, ppm or wide.
+fn setting(
+    kv: Option<&str>,
+    limit: &mut u32,
+    ppm: &mut String,
+    wide: &mut bool,
+) -> Result<(), String> {
+    match kv.and_then(|kv| kv.split_once('=')) {
+        Some(("limit", v)) => *limit = number(v, "limit", 1, 1000)?,
+        Some(("ppm", v)) => match v.parse::<f64>() {
+            Ok(x) if x.is_finite() && x > 0.0 => *ppm = v.to_string(),
+            _ => return Err(format!("--set ppm needs a positive number, not {v:?}")),
+        },
+        Some(("wide", v)) => *wide = number(v, "wide", 0, 1)? == 1,
+        Some((k, _)) => return Err(format!("unknown setting {k} (limit, ppm, wide)")),
+        None => return Err("--set needs NAME=VALUE".to_string()),
+    }
+    Ok(())
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let (mut pos, mut out, mut db) = (Vec::new(), None, None);
     let (mut limit, mut ppm, mut wide) = (8u32, "10".to_string(), false);
@@ -50,28 +96,11 @@ pub fn run(args: Vec<String>) -> Outcome {
                 Some(p) => out = Some(PathBuf::from(p)),
                 None => return Outcome::fail("--out needs a path"),
             },
-            "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
-                Some(("limit", v)) => match number(v, "limit", 1, 1000) {
-                    Ok(n) => limit = n,
-                    Err(e) => return Outcome::fail(&e),
-                },
-                Some(("ppm", v)) => match v.parse::<f64>() {
-                    Ok(x) if x.is_finite() && x > 0.0 => ppm = v.to_string(),
-                    _ => {
-                        return Outcome::fail(&format!(
-                            "--set ppm needs a positive number, not {v:?}"
-                        ))
-                    }
-                },
-                Some(("wide", v)) => match number(v, "wide", 0, 1) {
-                    Ok(n) => wide = n == 1,
-                    Err(e) => return Outcome::fail(&e),
-                },
-                Some((k, _)) => {
-                    return Outcome::fail(&format!("unknown setting {k} (limit, ppm, wide)"))
+            "--set" => {
+                if let Err(e) = setting(it.next().as_deref(), &mut limit, &mut ppm, &mut wide) {
+                    return Outcome::fail(&e);
                 }
-                None => return Outcome::fail("--set needs NAME=VALUE"),
-            },
+            }
             o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
             _ => pos.push(a),
         }
@@ -79,37 +108,12 @@ pub fn run(args: Vec<String>) -> Outcome {
     let [query] = pos.as_slice() else {
         return Outcome::fail("mol find needs one query (a name, a formula or a mass)");
     };
-    let own;
-    let csv = match db.as_deref() {
-        None => CATALOGUE,
-        Some(path) => {
-            own = if path == "-" {
-                let mut t = String::new();
-                match std::io::Read::read_to_string(&mut std::io::stdin(), &mut t) {
-                    Ok(_) => t,
-                    Err(e) => return Outcome::fail(&e.to_string()),
-                }
-            } else {
-                match std::fs::read_to_string(path) {
-                    Ok(t) => t,
-                    Err(e) => return Outcome::fail(&format!("{path}: {e}")),
-                }
-            };
-            if let Err(rows) = from_csv(&own, "catalog", None) {
-                let e = &rows[0];
-                return Outcome::fail(&format!(
-                    "{} line {}: the catalogue has {} wrong rows ({})",
-                    e.key,
-                    e.line,
-                    rows.len(),
-                    e.detail
-                ));
-            }
-            &own
-        }
+    let csv = match catalogue_text(db.as_deref()) {
+        Ok(c) => c,
+        Err(o) => return o,
     };
     let mut load = Out::default();
-    load.raw("{\"catalog\":").str(csv).raw("}");
+    load.raw("{\"catalog\":").str(&csv).raw("}");
     let mut ask = Out::default();
     ask.raw("{\"q\":").str(query).raw(&format!(
         ",\"limit\":{limit},\"ppm\":{ppm},\"wide\":{wide}}}"
