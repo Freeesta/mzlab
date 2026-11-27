@@ -70,7 +70,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   peaks of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N
-       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   peak limits; --set click=1: guarded click
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at/--step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
@@ -197,7 +197,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   peaks of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N
-       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   peak limits; --set click=1: guarded click
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at/--step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
@@ -324,7 +324,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every high-resolution peak
        mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   peaks of one low-resolution SIM/MRM trace
        mzlab-cli peak noise TRACE.csv|- [--rt A,B] [--set NAME=VALUE...] [--ions] [--scan-type K]   one-ion noise floor, peak S/N
-       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   limits of a low-resolution peak
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   peak limits; --set click=1: guarded click
        mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
        mzlab-cli peak window TRACE.csv|- --end MIN --other MIN [--at MIN] [--step N]   where a dragged window end goes (--at/--step)
        mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
@@ -849,6 +849,8 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--noise ma
   --mrm        the trace is an MRM transition
   --noise MODE the noise estimate: mad (default), rms or manual
   --set        numbers only; the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, min_half, constrain, nr0, nr1
+  --set click=1  the page click: the apex nearest --at, evidence and guard {ok,edges,apex,points,area,height,noise,sn,refused,forced,params}; exit 1 when refused;
+                 guard min_points=5 min_sn=3 reach=0.25 (min); force=1 keeps a refused window (reasons stay in refused)
   output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
 --- stderr
 
@@ -865,6 +867,8 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--noise ma
   --mrm        the trace is an MRM transition
   --noise MODE the noise estimate: mad (default), rms or manual
   --set        numbers only; the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, min_half, constrain, nr0, nr1
+  --set click=1  the page click: the apex nearest --at, evidence and guard {ok,edges,apex,points,area,height,noise,sn,refused,forced,params}; exit 1 when refused;
+                 guard min_points=5 min_sn=3 reach=0.25 (min); force=1 keeps a refused window (reasons stay in refused)
   output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
 --- stderr
 

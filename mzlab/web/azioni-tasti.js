@@ -15,7 +15,7 @@
   // integration at the cursor: the automatic one, as the entry «Integrate automatically» of the menu
   reg({ id: "chrom.intAuto", group: "tools", order: 1, views: V, iconKey: "area", shortcut: { key: "i", where: "chart", label: "scorc.integra" },
     name: () => T("scorc.integra"), tip: () => T("scorc.integra.tip"), available: (/** @type {any} */ c) => typeof autoInt === "function" && typeof intTargets === "function" && !!c.p._a,
-    run: (/** @type {any} */ c) => { if (!guardInt(c.p)) return; intTargets(c.p, c.x, c.py).forEach((/** @type {any} */ s) => autoInt(c.p, s, c.x)); } });
+    run: (/** @type {any} */ c) => { if (guardInt(c.p)) intClick(c.p, c.x, c.py); } });
   // measure from the highest visible peak (like «Measure from this peak» of the menu)
   reg({ id: "spec.measureKey", group: "tools", views: ["spec"], iconKey: "measure", shortcut: { key: "r", where: "chart", label: "scorc.misura" },
     name: () => T("scorc.misura"), tip: () => T("scorc.misura.tip"), available: (/** @type {any} */ c) => c.has && typeof measSet === "function", run: (/** @type {any} */ c) => measSet(c.p, c.m) });

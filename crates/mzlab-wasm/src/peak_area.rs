@@ -2,13 +2,16 @@
 //! bytes as `mzlab-cli peak area`; the page reaches it through `peaks-worker.js` (`QUALITA.peakArea`). `window_end`: where a dragged end of the window
 //! goes (`mzlab_core::intwin`, the bytes of `mzlab-cli peak window`, `QUALITA.windowEnd`). `lr_auto_integrate`: every peak of a low-resolution trace
 //! (`mzlab_core::peakq_lrauto`, the bytes of `mzlab-cli peak auto-lr`, `QUALITA.lrAuto`). `noise_floor`: the noise with a floor of one ion
-//! (`mzlab_core::ionstat`, the bytes of `mzlab-cli peak noise`, `QUALITA.noiseFloor`).
+//! (`mzlab_core::ionstat`, the bytes of `mzlab-cli peak noise`, `QUALITA.noiseFloor`). `lr_click`: one click on a trace, the nearest apex with its
+//! evidence and the junk guard (`mzlab_core::peakq_click`, the bytes of `mzlab-cli peak edges --set click=1`, `QUALITA.click`).
 
 use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
 use mzlab_core::baseline::{peak_area_json, Baseline};
 use mzlab_core::intwin::move_end_json;
 use mzlab_core::ionstat::{FloorAsk, FloorParams};
 use mzlab_core::ionstat_ions::{floor_json_ions, measure_ions, IonsAsk};
+use mzlab_core::peakq_click::{lr_click as click, ClickGuard};
+use mzlab_core::peakq_lr::LrParams;
 use mzlab_core::peakq_lrauto::{lr_auto_integrate as lr_auto, LrAutoParams};
 use wasm_bindgen::prelude::*;
 
@@ -82,3 +85,22 @@ pub fn manual_auto(files: &str, params: &str) -> String {
 #[cfg(test)]
 #[path = "peak_area_tests.rs"]
 mod tests;
+
+/// The click at `at` (min) on a low-resolution trace: the JSON of `peakq_click::Click::to_json`, the bytes `mzlab-cli peak edges --set click=1`
+/// prints. `params` = the 5 numbers of the page dialog (`LrParams::from_dialog`), `guard` = [min_points, min_sn, reach, force 0|1]; empty when
+/// either slice is short.
+#[wasm_bindgen]
+pub fn lr_click(
+    rt: &[f64],
+    y: &[f64],
+    at: f64,
+    mrm: bool,
+    params: &[f64],
+    guard: &[f64],
+) -> String {
+    let (Some(pk), Some(g)) = (LrParams::from_dialog(params), ClickGuard::from_slice(guard)) else {
+        return String::new();
+    };
+    let n = rt.len().min(y.len());
+    click(&rt[..n], &y[..n], at, mrm, &pk, &g).to_json()
+}

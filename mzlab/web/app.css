@@ -439,7 +439,7 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 
 /* Peak detection dialog (picchi.js) */
 .pk-intro{margin:0 0 6px}.pk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 12px;align-items:start}
-.pk-sec{border:1px solid var(--line);border-radius:6px;margin:0;padding:2px 10px 6px;min-width:0}
+.pk-stack{display:flex;flex-direction:column;gap:6px;min-width:0}.pk-sec{border:1px solid var(--line);border-radius:6px;margin:0;padding:2px 10px 6px;min-width:0}
 .pk-sec legend{font-weight:600;padding:0 4px}
 /* a field sits next to its label: the label column is as wide as the longest label of the section (subgrid), up to 18rem, never the whole dialog */
 .pk-row{display:grid;grid-template-columns:minmax(0,16rem) 72px;justify-content:start;gap:0 10px;align-items:center;margin:5px 0;padding:0}

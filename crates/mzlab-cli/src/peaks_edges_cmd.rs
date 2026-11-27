@@ -1,6 +1,7 @@
 //! `mzlab-cli peak edges TRACE.csv --at T`: the limits of the low-resolution peak under a click, from `mzlab_core::peakq_lr::lr_edges`, the same
 //! function the page asks through `QUALITA.edges`. The trace is two columns (RT in min, intensity), comma, tab or space separated, header optional.
 
+use mzlab_core::peakq_click::{lr_click, ClickGuard};
 use mzlab_core::peakq_lr::{lr_edges, LrParams, NoiseMode};
 
 use crate::Outcome;
@@ -15,7 +16,16 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--noise ma
   --mrm        the trace is an MRM transition
   --noise MODE the noise estimate: mad (default), rms or manual
   --set        numbers only; the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, min_half, constrain, nr0, nr1
+  --set click=1  the page click: the apex nearest --at, evidence and guard {ok,edges,apex,points,area,height,noise,sn,refused,forced,params}; exit 1 when refused;
+                 guard min_points=5 min_sn=3 reach=0.25 (min); force=1 keeps a refused window (reasons stay in refused)
   output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min";
+
+/// The click mode of `--set click=1` and its guard.
+#[derive(Default)]
+struct Click {
+    on: bool,
+    guard: ClickGuard,
+}
 
 pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     let text = if src == "-" {
@@ -42,9 +52,14 @@ pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     Ok((x, y))
 }
 
-fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
+fn set(p: &mut LrParams, g: &mut Click, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
     match name {
+        "click" => g.on = n != 0.0,
+        "force" => g.guard.force = n != 0.0,
+        "min_points" => g.guard.min_points = n.max(0.0) as usize,
+        "min_sn" => g.guard.min_sn = n,
+        "reach" => g.guard.reach = n,
         "win" => p.win = n,
         "area_noise" => p.area_noise = n,
         "edge_frac" => p.edge_frac = n,
@@ -60,10 +75,44 @@ fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// The click of the page: JSON on stdout, the automatic choice and the guard numbers on stderr; a refused window exits 1 and says how to keep it.
+fn click_outcome(
+    x: &[f64],
+    y: &[f64],
+    at: f64,
+    mrm: bool,
+    p: &LrParams,
+    g: &ClickGuard,
+) -> Outcome {
+    let c = lr_click(x, y, at, mrm, p, g);
+    let mut o = Outcome::ok(format!("{}\n", c.to_json()).into_bytes());
+    let forced = if c.forced {
+        format!("; forced past {:?}", c.refused)
+    } else {
+        String::new()
+    };
+    o.stderr = format!(
+        "note: click at {at} min: apex {}, window {:?}, {} points, S/N {:.1}; guard min_points={} min_sn={} reach={}{forced}\n",
+        c.apex.map_or("none".to_string(), |a| a.to_string()),
+        c.edges,
+        c.points,
+        c.sn,
+        g.min_points,
+        g.min_sn,
+        g.reach
+    );
+    if !c.ok() {
+        o.code = crate::exit::DATA;
+        o.stderr += &format!("refused: {:?}; --set force=1 keeps the window\n", c.refused);
+    }
+    o
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let (mut src, mut at, mut reference, mut mrm, mut p) =
         (None, None, 0.0, false, LrParams::default());
+    let mut click = Click::default();
     let res = (|| -> Result<(), String> {
         while let Some(a) = it.next() {
             match a.as_str() {
@@ -96,7 +145,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    set(&mut p, k, v)?;
+                    set(&mut p, &mut click, k, v)?;
                 }
                 "--help" | "-h" => return Err(String::new()),
                 o if o.starts_with("--") => return Err(format!("unknown option {o}")),
@@ -115,6 +164,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match trace(&src) {
         Err(e) => Outcome::fail(&e),
+        Ok((x, y)) if click.on => click_outcome(&x, &y, at, mrm, &p, &click.guard),
         Ok((x, y)) => {
             let body = match lr_edges(&x, &y, at, reference, mrm, &p) {
                 Some((a, b)) => format!("{{\"edges\":[{a},{b}]}}\n"),

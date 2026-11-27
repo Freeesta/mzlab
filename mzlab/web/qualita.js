@@ -53,6 +53,12 @@ window.QUALITA = {
     const params = [pk.win, pk.edgeFrac, pk.snMin, pk.multi, pk.tail];
     return call({ op: "edges", rt: f64(x), y: f64(y), at, mrm: !!mrm, params: f64(params) });
   },
+  /** One click on a low-resolution trace (peakq_click.rs, the bytes of `mzlab-cli peak edges --set click=1`): the JSON text of { ok, edges, apex, points, area, height, noise, sn, refused, forced, params };
+   * pk = PK of picchi.js (win, edgeFrac, snMin, multi, tail, minPts, minSn), force = keep a refused window; null without the engine. */
+  click(x, y, at, mrm, pk, force) {
+    const params = [pk.win, pk.edgeFrac, pk.snMin, pk.multi, pk.tail];
+    return call({ op: "click", rt: f64(x), y: f64(y), at, mrm: !!mrm, params: f64(params), guard: f64([pk.minPts, pk.minSn, 0.25, force ? 1 : 0]) });
+  },
   /** Every low-resolution peak with its apex between x0 and x1 (min) by the engine (peakq_lrauto.rs): detection on a smoothed copy, valleys by depth, areas on the raw
    * trace. pk = PK of picchi.js (lrHalf, lrValley, lrSn, lrSplit). The JSON text of `mzlab-cli peak auto-lr` ({ params, peaks }); null without the engine. */
   lrAuto(x, y, x0, x1, pk) {

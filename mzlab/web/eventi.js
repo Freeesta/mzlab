@@ -167,7 +167,7 @@ function attach(p) {
         if (Math.abs(d.x - d.x0) > 4) { if (canYZ(a) && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); zoomTo(p, Math.min(x0, x1), Math.max(x0, x1)); } else draw(p);
         return;
       }
-      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => hrTrace(s) ? autoAll(p, s) : autoInt(p, s, x0)); return; }
+      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intClick(p, x0, d.y0, !!(e && e.altKey), true); return; }
       if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) { const go = () => t.forEach(s => addInt(p, s, x0, x1, true, true)); if (HISTORY) HISTORY.group(go); else go(); } else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {

@@ -105,3 +105,60 @@ fn noise_floor_is_the_core_text() {
         "E{\"key\":\"err.noise.noBackground\"}"
     );
 }
+
+#[test]
+fn lr_click_is_the_core_text() {
+    use mzlab_core::peakq_click::{lr_click, ClickGuard};
+    use mzlab_core::peakq_lr::LrParams;
+    let (rt, y) = trace();
+    let want = lr_click(
+        &rt,
+        &y,
+        2.02,
+        true,
+        &LrParams::default(),
+        &ClickGuard::default(),
+    )
+    .to_json();
+    let d = LrParams::default();
+    let params = [d.win, d.edge_frac, d.sn_min, d.multi, d.tail];
+    assert_eq!(
+        super::lr_click(&rt, &y, 2.02, true, &params, &[5.0, 3.0, 0.25, 0.0]),
+        want
+    );
+    assert!(want.starts_with("{\"ok\":true,\"edges\":["), "{want}");
+    assert_eq!(super::lr_click(&rt, &y, 2.02, true, &params, &[5.0]), "");
+}
+
+/// The golden of `mzlab-core` (tests/data/click_golden.*): the page engine gives its exact bytes for every case, kept, refused and forced.
+#[test]
+fn lr_click_matches_the_golden_bytes() {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../mzlab-core/tests/data");
+    let csv = std::fs::read_to_string(format!("{dir}/click_golden.csv")).unwrap();
+    let golden = std::fs::read_to_string(format!("{dir}/click_golden.txt")).unwrap();
+    let (rt, y): (Vec<f64>, Vec<f64>) = csv
+        .lines()
+        .skip(1)
+        .map(|l| {
+            let (a, b) = l.split_once(',').unwrap();
+            (a.parse::<f64>().unwrap(), b.parse::<f64>().unwrap())
+        })
+        .unzip();
+    let d = mzlab_core::peakq_lr::LrParams::default();
+    let params = [d.win, d.edge_frac, d.sn_min, d.multi, d.tail];
+    let mut lines = golden.lines();
+    let mut cases = 0;
+    while let (Some(head), Some(want)) = (lines.next(), lines.next()) {
+        let f: Vec<&str> = head.split(' ').collect();
+        let at: f64 = f[0].trim_start_matches("at=").parse().unwrap();
+        let (mrm, force) = (f[1] == "mrm=1", f[2] == "force=1");
+        let g = [5.0, 3.0, 0.25, if force { 1.0 } else { 0.0 }];
+        assert_eq!(
+            super::lr_click(&rt, &y, at, mrm, &params, &g),
+            want,
+            "{head}"
+        );
+        cases += 1;
+    }
+    assert_eq!(cases, 5);
+}
