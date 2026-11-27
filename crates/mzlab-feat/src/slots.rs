@@ -150,29 +150,43 @@ fn xic<'a>(t: &Aligned, s: &'a [Sample], r: usize) -> Slot<'a> {
     }
 }
 
+/// Adds a time to a sorted list of distinct times (a tiny insert: a sort would cost several KB in the .wasm).
+fn add_time(v: &mut Vec<f64>, m: f64) {
+    let i = v.iter().position(|x| *x >= m).unwrap_or(v.len());
+    if v.get(i) != Some(&m) {
+        v.insert(i, m);
+    }
+}
+
 /// Kinetics needs a time axis: two or more distinct times with a measured area.
 fn kinetics<'a>(t: &Aligned, s: &'a [Sample], r: usize) -> Slot<'a> {
-    let mut times: Vec<f64> = s.iter().filter_map(|x| x.time_min).collect();
-    times.sort_by(f64::total_cmp);
-    times.dedup();
-    if times.len() < 2 {
+    let mut axis = Vec::new();
+    for m in s
+        .iter()
+        .filter_map(|x| x.time_min)
+        .filter(|m| m.is_finite())
+    {
+        add_time(&mut axis, m);
+    }
+    if axis.len() < 2 {
         return Slot::na("no_time_axis");
     }
-    let timed: Vec<(&Sample, f64)> = s
-        .iter()
-        .enumerate()
-        .filter(|(k, _)| measured(t, r, *k).is_some() && !no_peak(t.state[t.cell(r, *k)]))
-        .filter_map(|(_, x)| x.time_min.map(|m| (x, m)))
-        .collect();
-    let mut seen: Vec<f64> = timed.iter().map(|(_, m)| *m).collect();
-    seen.sort_by(f64::total_cmp);
-    seen.dedup();
+    let (mut seen, mut files) = (Vec::new(), Vec::new());
+    for (k, x) in s.iter().enumerate() {
+        let m = x.time_min.filter(|m| m.is_finite());
+        if let Some(m) =
+            m.filter(|_| measured(t, r, k).is_some() && !no_peak(t.state[t.cell(r, k)]))
+        {
+            add_time(&mut seen, m);
+            files.push(x);
+        }
+    }
     if seen.len() < 2 {
         return Slot::empty();
     }
     let mut o = Out::default();
     o.raw("{\"points\":")
-        .int(timed.len() as i64)
+        .int(files.len() as i64)
         .raw(",\"times_min\":");
     o.floats(&seen);
     o.raw("}");
@@ -180,7 +194,7 @@ fn kinetics<'a>(t: &Aligned, s: &'a [Sample], r: usize) -> Slot<'a> {
         state: "filled",
         reason: None,
         evidence: Some(o.0),
-        files: timed.into_iter().map(|(x, _)| x).collect(),
+        files,
     }
 }
 
