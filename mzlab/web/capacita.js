@@ -3,7 +3,7 @@
 // by itself with the common notice (avviso-capacita.js) and comes back by itself when the browser has it: nothing is saved, the probes run at every load.
 // Used by the engine bridge, the folder pickers, the 3D map; classic scripts read it as window.CAPACITA.
 import "./compat.js";
-import { segnala } from "./avviso-capacita.js";
+import { segnala, aviso } from "./avviso-capacita.js";
 
 /** @typedef {"simd128" | "opfs" | "opfsSync" | "cartellaLocale" | "webgl2" | "isolamento"} Nome */
 
@@ -61,7 +61,6 @@ export function nota(/** @type {Partial<Record<Nome, boolean>>} */ cap) {
   Object.assign(state.found, cap); state.done = null; rileva();
   // only the functions that depend on what the worker just told (the others are reported where they are used)
   for (const f of Object.keys(REQUISITI)) if (REQUISITI[f].some(n => n in cap) && stato(f) === "no") segnala(f);
-  avisoBrowser();
 }
 
 /** "si" | "no" | "verifica" (a worker has not told yet: the function stays on). The app (desktop) has the native engine: everything is "si". */
@@ -92,11 +91,6 @@ export function serve(/** @type {string} */ funzione, /** @type {HTMLElement | n
 /** The capacities a function lacks (for the technical line of a notice). */
 export const mancano = (/** @type {string} */ funzione) => (REQUISITI[funzione] || []).filter(n => statoCap(n) === "no");
 
-// closable browser notice: loaded only when the engine or the folder picker is missing (never in the app)
-function avisoBrowser() {
-  if (!g.MZLAB_DESKTOP && (stato("motore") === "no" || stato("cartella") === "no")) import("./avviso-browser.js").then(m => m.valuta(g.CAPACITA)).catch(() => {});
-}
-
 rileva();
 window.CAPACITA = { rileva, snapshot, nota, ha, stato, statoCap, serve, mancano, REQUISITI };
-avisoBrowser();
+aviso(window.CAPACITA);
