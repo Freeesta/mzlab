@@ -301,9 +301,9 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   async function attach(/** @type {any} */ engine, /** @type {string} */ name, /** @type {number} */ slot) {
     const st = await stubOf(name);
     if (!st) return false;
-    const files = await memberFiles(st);
+    const files = await memberFiles(st);      // the engine keeps ONE open reader per dataset key: samples copied apart (other byte ranges, other stores) need a key of their own, so it names the stores too
     await ext.prepara(st.members.map(m => m.name), st.members);
-    engine.native_attach(slot, st.ds, st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid);
+    engine.native_attach(slot, st.ds + "|" + st.members.map(m => m.store).join(","), st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid);
     return true;
   }
 
