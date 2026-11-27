@@ -25,7 +25,7 @@ def widths(pg, panel):
     """redraws the panel once (the pointer stays where it is) and returns the sorted line widths of its strokes and a digest of its canvas pixels"""
     return pg.evaluate(
         f"""async () => {{ const p = {panel}, L = window.__lw; L.w = []; L.on = true; try {{ await draw(p); }} finally {{ L.on = false; }}
-      const c = p.cv, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 7) h = (h * 31 + d[i]) | 0;
+      const d = p.cv.toDataURL('image/png'); let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0;
       return {{ w: L.w.slice().sort(), px: h }}; }}""")
 def over(pg, panel):
     """moves the real mouse onto the highest visible point of the first trace of the panel (it comes in from the side, so the tooltip logic runs)"""
