@@ -1,7 +1,7 @@
 """«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4; the range copy of a partial choice, wiff-range-copy.md): shown only when the file has several samples, every non-empty sample ticked for a small
 set and an empty one (acquired nothing) not, a SIM-only sample listed with its cycles, Select all / Select none, Open selected (Enter too) opens only the ticked ones, X and Escape open nothing,
-phone width, the setting «never» and «always». Synthetic pairs of tools/wiff_grande.py and the `tipi` pair of tools/wiff_tipi.py (MS, SIM-only and empty sample). Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
-# covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, crates/mzlab-core/src/readers/selection
+phone width, the setting «never» and «always»; the ticked samples are copied ahead while the dialog is open (start, untick, X, reuse by Open selected; mzlab/web/rust-prefetch.js). Synthetic pairs of tools/wiff_grande.py and the `tipi` pair of tools/wiff_tipi.py (MS, SIM-only and empty sample). Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
+# covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, mzlab/web/rust-prefetch, crates/mzlab-core/src/readers/selection
 import os, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -16,7 +16,7 @@ if not (ROOT / "site" / "index.html").exists() or not wasm.exists():
     print("  ", ("site", "FAIL site/ or its .wasm missing: python tools/build_site.py, then build mzlab-wasm")); sys.exit(0)
 
 D = Path(tempfile.mkdtemp(prefix="wiffchoose_e2e_"))
-for name, n in (("multi", 3), ("solo", 1)):
+for name, n in (("multi", 3), ("solo", 1), ("pre", 4)):
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D / name), "--name", name, "--samples", str(n), "--scans", "40", "--points", "50"], check=True, capture_output=True)
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_tipi.py"), str(D / "tipi")], check=True, capture_output=True)
 def pair(name): return [str(D / name / f"{name}.wiff"), str(D / name / f"{name}.wiff.scan")]
@@ -144,6 +144,39 @@ try:
             pg.focus("#wiffchoose tbody tr:nth-child(1) input"); pg.keyboard.press("Enter"); settle(pg)
             assert not pg.query_selector("dialog#wiffchoose")
         step("Enter pressed on a checkbox opens too", enter_from_a_row)
+        # the copy ahead (rust-prefetch.js): the ticked samples of the `pre` pair (4 samples) are copied into OPFS while the dialog is open
+        STORES = """async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.includes('~pre.wiff')) { const f = await h.getFile(); out.push([n, f.lastModified, f.size]); } } }; await walk(await navigator.storage.getDirectory()); return out.sort(); }"""
+        def scans(): return [x for x in pg.evaluate(STORES) if x[0].endswith(".wiff.scan")]
+        def wait_scans(n): pg.wait_for_function(f"({STORES})().then(a => a.filter(x => x[0].endsWith('.wiff.scan')).length === {n})", timeout=60000)
+        def states(): return pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose .wc-st')).map(e => e.textContent)")
+        def wait_loaded(n): pg.wait_for_function(f"Array.from(document.querySelectorAll('#wiffchoose .wc-st')).filter(e => e.textContent === 'Loaded').length === {n}", timeout=60000)
+        def prefetch_start():
+            pg.set_input_files("#pick", pair("pre")); dlg(pg)
+            assert ticked(pg) == 4, ticked(pg)
+            assert pg.is_enabled("#wiffchoose button.go")      # the dialog is never blocked by the loading
+            wait_loaded(4); wait_scans(4)                      # before pressing Open: one store of the .wiff.scan per ticked sample
+            assert states() == ["Loaded"] * 4, states()
+        step("ticked samples start loading when the dialog opens: a store per sample before Open, each row says Loaded", prefetch_start)
+        def prefetch_untick():
+            pg.click("#wiffchoose tbody tr:nth-child(2) input")
+            wait_scans(3); st = states()
+            assert st[1] == "" and st.count("Loaded") == 3, st
+            pg.click("#wiffchoose tbody tr:nth-child(2) input")      # ticked again: loaded again
+            wait_loaded(4); wait_scans(4)
+        step("unticking a sample discards its copy and clears its mark; ticking it again copies it again", prefetch_untick)
+        def prefetch_x():
+            pg.click("#wiffchoose .wc-x"); settle(pg)
+            pg.wait_for_function(f"({STORES})().then(a => a.length === 0)", timeout=60000)
+            assert rows(pg) == n_rows_before_pre, rows(pg)
+        n_rows_before_pre = rows(pg)
+        step("the X cancels everything and frees the copies: no store of the pair is left", prefetch_x)
+        def prefetch_reuse():
+            n = rows(pg); pg.set_input_files("#pick", pair("pre")); dlg(pg)
+            wait_loaded(4); wait_scans(4); before = scans()
+            pg.click("#wiffchoose button.go"); settle(pg)
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 4", timeout=120000)
+            assert scans() == before, (before, scans())      # the opening reused the copies: same stores, same bytes, never written again
+        step("Open selected reuses what is loaded: the stores are not written again and the rows open", prefetch_reuse)
         b.close()
 finally:
     srv = run.srv; srv.terminate(); import shutil; shutil.rmtree(D, ignore_errors=True)

@@ -2,7 +2,8 @@
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/natives.rs).
-import { putChunks, putSparse, ensureRoom, ROOM } from "./archivio.js";
+import { putChunks, putSparse, ensureRoom, release, ROOM } from "./archivio.js";
+import { createPrefetch } from "./rust-prefetch.js";
 import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
@@ -289,7 +290,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const taken = new Map(), hashing = new Map();          // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples find it again); -> Promise of them while the hash goes on after the copy
   const posto = new Map(), stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);      // posto: store name -> the user's File of a member read in place, gone with the tab
-
+  const pre = createPrefetch({ ARCH, jerr, held, copy: copyMember, deps: { ARCH, impronte, writing, taken, hashing, known: (/** @type {string} */ st, /** @type {number} */ size, /** @type {number} */ mtime) => known(ARCH, stubOf, st, size, mtime) }, storeOf, partOf, workOf, missing: (/** @type {any} */ nat) => missing(ARCH, writing, nat), ensureRoom, release, stubOf });      // the samples ticked in the «Choose samples» dialog are copied ahead (rust-prefetch.js), into the stores `putHeld` finds
   /** the Files of the members of a stub (read from OPFS) */
   async function memberFiles(/** @type {Stub} */ st) {
     const out = [];
@@ -324,7 +325,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
     /** @type {Stub} */
     const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (post) post({ op: "notice", key: "load.sulPosto", params: { name: m.name } }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
     stubs.delete(m.name);
-    return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
+    return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st))).then(f => { pre.landed(members); return f; });      // a stub points to its members now: the sweep keeps them (pre)
   }
 
   /** the message of the index builder for a native sample (idx-worker.js); progress comes back as { frac, phase } */
@@ -338,7 +339,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
   async function sweep(/** @type {Iterable<string>} */ keep) {
     const used = new Set();
     for (const n of keep) { const st = await stubOf(n); if (st) st.members.forEach(m => used.add(m.store)); }
-    for (const e of await ARCH.list("files")) if (e.name.startsWith(PREFIX) && !used.has(e.name)) await ARCH.remove("files", e.name);
+    for (const e of await ARCH.list("files")) if (e.name.startsWith(PREFIX) && !used.has(e.name) && !pre.holds.has(e.name)) await ARCH.remove("files", e.name);
   }
 
   /** «Scarica .mzML»: the mzML of a sample written to a file of OPFS (`dest` in conv/) */
@@ -361,5 +362,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, sa
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {boolean | undefined} */ listing) => samplesDi(native_samples, ext, members, listing), plan = (/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ text) => planDi(sample_ranges, ext, members, text);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, plan, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, pre: pre.op, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, plan, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }

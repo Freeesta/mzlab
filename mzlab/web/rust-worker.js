@@ -92,7 +92,6 @@ function readerFor(blob, held) {
   };
 }
 
-
 // ---- the flow of the page (lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
 // session and the state of the page come from here. The slots of these files are numbered above LR_BASE, apart from the ones of the session (k).
 const LR_BASE = 1000000;
@@ -317,6 +316,7 @@ async function lrOp(m) {
     }
     case "lr_gunzip": { CANCELLED.delete(m.name); await ARCH.ensureRoom(await gzRoom(m.blob), m.name); return { info: "{}", files: [[m.dest, await plain.gunzipTo(m)]] }; }      // a .mzXML.gz: its mzXML into conv/ for the readers module (gz-flusso.js)
     case "lr_put": return copies.through(m.name, m.copies | 0, m.rank ?? -1, () => postMessage({ op: "progress", id: m.id, frac: 0, phase: m.nat ? "read" : "load", wait: true, copies: m.copies | 0 }), () => lrPut(m)); case "lr_warm": case "lr_warm_claim": return (await scalda())[m.op](m);      // lr_put queued behind the copies running: the row says «Queued»
+    case "natprefetch": case "natunprefetch": return nativo.pre(m, copies, cancelled, postMessage);      // wiff-choose.js: a ticked sample copied while the dialog is open (rust-prefetch.js)
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); copies.drop(n, cancelled()); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
