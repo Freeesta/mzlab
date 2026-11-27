@@ -48,7 +48,7 @@ try:
               let best = -1, at = mz; for (let q = 0; q < sj.mz.length; q++) if (Math.abs(sj.mz[q] - mz) <= m.dmz && sj.y[q] > best) { best = sj.y[q]; at = sj.mz[q]; }
               return [a.X(rt), a.Y(at), a.W, a.H]; })()""" % M)
             c = box(); pg.mouse.move(c[0] + px * c[2] / cw, c[1] + py * c[3] / ch); ready(pg)
-            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
+            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("(() => { const n = window.MAPEX && MAPEX.numbers(" + M + "); return !!n && n.area != null && n.mzMax != null; })()", timeout=15000); ready(pg)     # the XIC and the spectrum arrive apart: wait for both
             assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
             n = win(); assert abs(n["win"]["mz1"] - n["win"]["mz0"] - 0.5) < 1e-6 and n["win"]["rt1"] > n["win"]["rt0"], n
