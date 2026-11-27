@@ -82,23 +82,46 @@ FIXTURE = """(() => {
 STATE = """(i => {
   const T = window.__tk, row = document.querySelectorAll('#tk-fix .can-row')[i], ck = row.querySelector('.can-ck'), on = row.getAttribute('aria-selected') === 'true', cs = getComputedStyle(ck), a = getComputedStyle(ck, '::after'), b = getComputedStyle(ck, '::before');
   const rowBg = T.rgb(getComputedStyle(row).backgroundColor, T.panel()), panel = T.rgb(T.panel()), border = T.rgb(cs.borderTopColor, T.panel()), key = T.rgb(ck.dataset.tc), ink = T.rgb(getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#000');
-  return { c: ck.dataset.tc, d: ck.dataset.td, on, bstyle: cs.borderTopStyle, bw: parseFloat(cs.borderTopWidth), border, key, shadow: cs.boxShadow, fill: T.rgb(cs.backgroundColor, T.panel()), rowBg,
+  return { c: ck.dataset.tc, d: ck.dataset.td, on, bstyle: cs.borderTopStyle, bw: parseFloat(cs.borderTopWidth), border, key, panel, shadow: cs.boxShadow, fill: T.rgb(cs.backgroundColor, T.panel()), rowBg,
     keyVsPanel: T.ratio(key, panel), borderVsRow: T.ratio(border, rowBg), borderVsPanel: T.ratio(border, panel), tick: on ? T.ratio(T.rgb(a.borderRightColor), T.rgb(cs.backgroundColor, T.panel())) : null,
     ringOn: on && ck.dataset.td ? { style: b.borderTopStyle, content: b.content, ratio: T.ratio(T.rgb(b.borderTopColor), T.rgb(cs.backgroundColor, T.panel())) } : null, ink };
 })"""
 
 
+def _lum(c):
+    f = lambda v: v / 255 / 12.92 if v / 255 <= 0.03928 else ((v / 255 + 0.055) / 1.055) ** 2.4
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+
+
+def _ratio(a, b):
+    x, y = _lum(a), _lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def rgb_of(css):
+    """'rgb(1, 2, 3)' as the browser serialises a colour -> [1, 2, 3]"""
+    return [int(v) for v in css[css.index("(") + 1:css.index(")")].split(",")[:3]]
+
+
+def expected_border(key, ink, panel):
+    """what the border of a key box must be, worked out here independently of the page: the key colour itself when it holds 3:1 against the popup, else the key moved toward the text colour in
+    5% steps (channels rounded half up) to the FIRST step that holds 3:1, so the key colour is kept as far as the contrast allows"""
+    for t in range(0, 101, 5):
+        m = [int(k + (i - k) * t / 100 + 0.5) for k, i in zip(key, ink)]
+        if t == 100 or _ratio(m, panel) >= 3: return m
+    return key
+
+
 def border_rule(label, state, r):
-    """the box border is the key colour of the trace in every state: exactly it, or, only for a colour under 3:1 against the popup (a pale yellow), the key moved toward the text colour
-    until it holds 3:1 against the popup; never black or grey (unless the key is black), and no outer ring"""
+    """the box border is the key colour of the trace in every state: exactly expected_border (the key itself, or, only for a colour under 3:1 against the popup such as a pale yellow, the key moved
+    toward the text colour to the first 5% step that holds 3:1); never black or grey (unless the key is black), and no outer ring"""
     where = "%s [%s] %s" % (label, state, r["c"])
     need(r["bw"] >= 2 and r["bstyle"] in ("solid", "dashed"), "%s: the box border must be at least 2 px: %s" % (where, r))
     need(r["shadow"] == "none", "%s: no outer ring is allowed on the key box (it read as a dark border): %s" % (where, r))
     need(r["borderVsPanel"] >= 3, "%s: the border has contrast %.2f against the popup, under 3: %s" % (where, r["borderVsPanel"], r))
-    if r["border"] != r["key"]:
-        need(r["keyVsPanel"] < 3, "%s: the border %s differs from the key %s though the key already holds 3:1: %s" % (where, r["border"], r["key"], r))
-        need(r["border"] != [0, 0, 0] and r["border"] != r["ink"], "%s: the border fell back to black or the text colour: %s" % (where, r))
-        need(max(abs(x - y) for x, y in zip(r["border"], r["key"])) <= 200, "%s: the border %s is no longer the key colour %s: %s" % (where, r["border"], r["key"], r))
+    want = expected_border(r["key"], r["ink"], r["panel"])
+    need(r["border"] == want, "%s: the border %s is not the expected %s (key %s, text %s, popup %s)" % (where, r["border"], want, r["key"], r["ink"], r["panel"]))
+    if r["border"] != r["key"]: need(r["keyVsPanel"] < 3, "%s: the border %s differs from the key %s though the key already holds 3:1: %s" % (where, r["border"], r["key"], r))
     if state in ("on", "off"):
         if r["on"]: need(r["fill"] == r["key"], "%s: the ticked box is filled with the exact key colour: %s" % (where, r))
         else: need(r["fill"] == r["rowBg"], "%s: an unticked box is empty: %s" % (where, r))
