@@ -93,6 +93,13 @@ try:
             pg.select_option("select[data-o=tr]", ""); wait_for_js(pg, "%s.el.querySelectorAll('.trkey').length === 0" % MS, timeout=15000)
         step("MS2 select, none: no key", none_row)
 
+        def ms2_clip():
+            pg.select_option("select[data-o=tr]", "__all"); wait_for_js(pg, "%s._a && %s._a.sr.length > 1" % (MS, MS), timeout=30000)
+            for w in (1400, 390):
+                pg.set_viewport_size({"width": w, "height": 1000}); frames(pg, 4)
+                legend_inside(pg, MS, "MS2 chromatogram at %d px" % w)
+        step("MS2/SIM legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", ms2_clip)
+
         # ------------------------------------------------------------------ the XIC list legend (traces and files)
         pg2 = r.page(p); pg2.set_viewport_size({"width": 1400, "height": 1000})
         pg2.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
@@ -167,6 +174,12 @@ try:
             need(pg3.evaluate("%s.cv.toDataURL()" % MR) != before, "hover did not change the drawing")
             pg3.mouse.move(5, 5); wait_for_js(pg3, "%s._hl == null" % MR, timeout=10000); frames(pg3, 3)
         step("DAD curves: hover of the entry lights the curve", twc_hover)
+
+        def mrm_clip():
+            for w in (1400, 390):
+                pg3.set_viewport_size({"width": w, "height": 1000}); frames(pg3, 4)
+                legend_inside(pg3, MR, "MRM with the DAD curves at %d px" % w)
+        step("MRM and DAD legend chip: the list stays inside the panel, up when the legend is low, at 1400 and 390 px", mrm_clip)
 
         def mrm_tip():
             pg3.evaluate("(() => { const p = %s; p.overlay = null; draw(p); })()" % MR); frames(pg3, 4)
