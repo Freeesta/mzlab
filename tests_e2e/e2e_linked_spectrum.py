@@ -29,8 +29,10 @@ def load(pg):
 def run(width, port):
     r = Run(port=port, wd=f"/tmp/wd_linkedsp{width}")
     with sync_playwright() as p:
-        pg = r.page(p, viewport={"width": width, "height": 1400 if width > 600 else 1200}, device_scale_factor=2 if SHOTS else 1)
-        load(pg)
+        pg = r.page(p, viewport={"width": 1400, "height": 1400}, device_scale_factor=2 if SHOTS else 1)
+        load(pg)       # loaded wide, then narrowed: the file picker of a phone-sized page is another test's business
+        pg.set_viewport_size({"width": width, "height": 1400 if width > 600 else 1200}); frames(pg, 8)
+        wait_for_js(pg, f"{MRM}.el.getBoundingClientRect().width > 0", timeout=30000)
         def at(rt):
             return pg.evaluate(f"(() => {{ const p = {MRM}, b = p.cv.getBoundingClientRect(), a = p._a; return [b.x + a.X({rt}), b.y + M.t + (a.H - M.t - M.b) / 2]; }})()")
         def open_uv():
@@ -40,7 +42,7 @@ def run(width, port):
             pg.evaluate(f"{UV}.el.scrollIntoView({{block: 'center'}})"); frames(pg, 3)
         def legend():
             open_uv()
-            t = pg.evaluate(f"{UV}.leg.textContent"); n = pg.evaluate(f"{MRM}.num"); rt = f"{TRUE['a']['rt']:.2f}"
+            t = pg.evaluate(f"{UV}.leg2.textContent"); n = pg.evaluate(f"{MRM}.num"); rt = f"{TRUE['a']['rt']:.2f}"
             assert "double click" in t and f"panel {n}" in t and "follows its dashed cursor" in t, t
             assert pg.evaluate(f"{UV}.r0.toFixed(2)") == pg.evaluate(f"{MRM}.cur.toFixed(2)") == rt or abs(pg.evaluate(f"{UV}.r0 - {MRM}.cur")) < 0.05, t
         step(f"{width}px: the subtitle of the UV spectrum names its source panel, the double click and the cursor", legend)
@@ -71,13 +73,13 @@ def run(width, port):
         step(f"{width}px: hovering the badge or the spectrum lights the dashed cursor of the source", light)
         def align():
             pg.evaluate(f"{MRM}.pdaDelay = 0.5; {MRM}.pdaAlign = true; DISP.redraw ? 0 : 0; {UV}.r0 = {UV}.r0; drawSoon({UV}); drawSoon({MRM})"); frames(pg, 4)
-            t = pg.evaluate(f"{UV}.leg.textContent")
+            t = pg.evaluate(f"{UV}.leg2.textContent")
             assert "DAD delay 0.50 min" in t and "DAD time" in t, t
             pg.evaluate(f"{MRM}.pdaAlign = false; {MRM}.pdaDelay = null; drawSoon({UV})"); frames(pg, 3)
         step(f"{width}px: with «Allinea» the subtitle gives chart time, delay and DAD time", align)
         def fits():
             ov = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
-            lg = pg.evaluate(f"(() => {{ const e = {UV}.leg.getBoundingClientRect(), q = {UV}.el.getBoundingClientRect(); return e.right - q.right; }})()")
+            lg = pg.evaluate(f"(() => {{ const e = {UV}.leg2.getBoundingClientRect(), q = {UV}.el.getBoundingClientRect(); return e.right - q.right; }})()")
             assert ov <= 1 and lg <= 1, (ov, lg)
         step(f"{width}px: nothing overflows the screen", fits)
         step(f"{width}px: no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
