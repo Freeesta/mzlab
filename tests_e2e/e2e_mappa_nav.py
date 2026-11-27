@@ -162,7 +162,7 @@ try:
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(400)      # kept: the point under the pointer is lost when the palette covers the map (mouseleave), so the typing races with it
-            pg.keyboard.type("xic from the map"); pg.wait_for_timeout(300)
+            pg.keyboard.type("xic from map"); pg.wait_for_timeout(300)
             assert "XIC from map" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
             n0 = npan("xic"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.getElementById('paletta').hidden")
             assert npan("xic") == n0 + 1 or pg.evaluate("!document.getElementById('paletta').hidden") is False
