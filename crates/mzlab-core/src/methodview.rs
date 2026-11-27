@@ -367,22 +367,17 @@ fn rows_of_detector(d: &Value, rows: &mut Vec<Row>, header_range: bool) {
             s.get("at")?.str()?.to_string(),
         ))
     });
-    if let [a, b, ..] = d.get("nm").map(Value::arr).unwrap_or_default() {
-        if let (Some(a), Some(b)) = (a.f64(), b.f64()) {
-            let t = format!("{}\u{2013}{}", shown(a), shown(b));
-            if !rows.iter().any(|r| r.id == "range" && r.text == t) {
-                rows.push(row(
-                    if header_range {
-                        "range_method"
-                    } else {
-                        "range"
-                    },
-                    None,
-                    t,
-                    "nm",
-                    dsrc.clone(),
-                ));
-            }
+    if let [a, b, ..] = d.get("nm").map(Value::arr).unwrap_or_default()
+        && let (Some(a), Some(b)) = (a.f64(), b.f64())
+    {
+        let t = format!("{}\u{2013}{}", shown(a), shown(b));
+        if !rows.iter().any(|r| r.id == "range" && r.text == t) {
+            let id = if header_range {
+                "range_method"
+            } else {
+                "range"
+            };
+            rows.push(row(id, None, t, "nm", dsrc.clone()));
         }
     }
     for (key, id, unit) in [
@@ -391,10 +386,10 @@ fn rows_of_detector(d: &Value, rows: &mut Vec<Row>, header_range: bool) {
         ("cell_C", "cell", "\u{b0}C"),
         ("slit_nm", "slit", "nm"),
     ] {
-        if rows.iter().all(|r| r.id != id) {
-            if let Some(v) = d.get(key).and_then(Value::f64) {
-                rows.push(row(id, Some(v), shown(v), unit, dsrc.clone()));
-            }
+        if rows.iter().all(|r| r.id != id)
+            && let Some(v) = d.get(key).and_then(Value::f64)
+        {
+            rows.push(row(id, Some(v), shown(v), unit, dsrc.clone()));
         }
     }
     if let Some(l) = d.get("lamp").and_then(Value::str) {
