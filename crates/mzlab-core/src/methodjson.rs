@@ -76,6 +76,8 @@ impl Lc {
         for (i, (w, bw)) in self.channels.iter().enumerate() {
             o.raw(if i > 0 { ",{\"wl\":" } else { "{\"wl\":" }).num(*w).raw(",\"bw\":").opt(*bw).raw("}");
         }
-        o.raw("],\"oven\":").opt(self.oven).raw("}");
+        o.raw("],\"oven\":").opt(self.oven).raw(",\"view\":");
+        crate::methodview::write_view_of(o, self);
+        o.raw("}");
     }
 }

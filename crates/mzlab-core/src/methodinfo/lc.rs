@@ -1,6 +1,6 @@
 //! LC method extraction (`VendorAppMethod` XML for Shimadzu and Waters Acquity, plus binary `LCPumpStep` streams) for `methodinfo.rs`.
 
-use super::{f32_at, find, round, GPoint, Lc, Pda};
+use super::{f32_at, find, round, GPoint, Lc, Pda, Src};
 use crate::ole::Ole;
 use crate::xmltree::{self, El};
 
@@ -99,6 +99,14 @@ fn acquity_lc(cats: &[Cat]) -> Option<Lc> {
         pda: Pda::default(),
         channels: Vec::new(),
         oven,
+        src: vec![
+            ("gradient", Src::read("VendorAppMethod/ACQUITY BSM Method/Gradient Table (time, flow and %B of each row)")),
+            ("run_time", Src::inferred("time of the last row of the Gradient Table")),
+            ("flow", Src::read("VendorAppMethod/ACQUITY BSM Method/Gradient Table (flow of the first row)")),
+        ]
+        .into_iter()
+        .chain(oven.map(|_| ("oven", Src::read("VendorAppMethod/ACQUITY SM Method/Target Column Temperature"))))
+        .collect(),
     })
 }
 
@@ -137,6 +145,11 @@ fn binary_pump_steps(ole: &Ole, base: &str) -> Option<Lc> {
         pda: Pda::default(),
         channels: Vec::new(),
         oven: None,
+        src: vec![
+            ("gradient", Src::read("DeviceMethod1/LCPumpStepK/LCPumpStep (time f32 at byte 54, flow f32 at 58, %B f32 at 70 of each step)")),
+            ("run_time", Src::inferred("time of the last pump step")),
+            ("flow", Src::read("DeviceMethod1/LCPumpStep0/LCPumpStep (flow of the first step)")),
+        ],
     })
 }
 
@@ -153,28 +166,12 @@ pub(super) fn lc(ole: &Ole, base: &str) -> Option<Lc> {
     acquity_lc(&cats).or_else(|| shimadzu_lc(&cats))
 }
 
-fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
-    let cat = |title: &str| cats.iter().rev().find(|c| c.0 == title);
-    let par = |title: &str, name: &str| {
-        cat(title)
-            .and_then(|c| c.1.iter().rev().find(|p| p.0 == name))
-            .map(|p| p.1 .0.as_str())
-            .unwrap_or("")
-    };
-    let (flow0, b0) = (
-        num(par("Pumps", "Total Flow")),
-        num(par("Pumps", "B Concentration")),
-    );
-    let tp = cat("System Controller")
-        .and_then(|c| c.2.iter().rev().find(|t| t.0 == "Time Program"))
-        .map(|t| t.1.iter().skip(1).cloned().collect::<Vec<_>>())
-        .unwrap_or_default();
-    let mut events: Vec<(f64, String, Option<f64>)> = tp
-        .iter()
-        .filter(|r| r.len() >= 5)
-        .filter_map(|r| num(&r[0]).map(|t| (t, r[3].clone(), num(&r[4]))))
-        .collect();
-    crate::sortc::any_by(&mut events, |a, b| a.0.total_cmp(&b.0));
+/// The pump program of a Shimadzu Time Program: the point at 0 min from the Pumps category, then one point per B.Conc / T.Flow event (events at the same time merge), and the Stop event.
+fn pump_program(
+    events: Vec<(f64, String, Option<f64>)>,
+    flow0: Option<f64>,
+    b0: Option<f64>,
+) -> (Vec<GPoint>, Option<f64>) {
     let (mut grad, mut flow, mut bconc, mut stop) = (Vec::new(), flow0, b0, None);
     if b0.is_some() {
         grad.push(GPoint {
@@ -201,6 +198,65 @@ fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
             _ => grad.push(GPoint { t, b: bconc, flow }),
         }
     }
+    (grad, stop)
+}
+
+/// Where each value of a Shimadzu/Analyst XML method was read: `has` = (flow, oven, PDA start) found.
+fn shimadzu_sources(
+    stop: bool,
+    run_pda: bool,
+    has: (bool, bool, bool),
+) -> Vec<(&'static str, Src)> {
+    let mut src = vec![(
+        "gradient",
+        Src::read("VendorAppMethod/System Controller/Time Program (events B.Conc and T.Flow) with Pumps/B Concentration and Total Flow as the point at 0 min"),
+    )];
+    if stop {
+        src.push((
+            "run_time",
+            Src::read("VendorAppMethod/System Controller/Time Program (the Stop event)"),
+        ));
+    } else if run_pda {
+        src.push((
+            "run_time",
+            Src::read("VendorAppMethod/PDA Detector/Run Time"),
+        ));
+    }
+    if has.0 {
+        src.push(("flow", Src::read("VendorAppMethod/Pumps/Total Flow")));
+    }
+    if has.1 {
+        src.push(("oven", Src::read("VendorAppMethod/Oven/Temperature")));
+    }
+    if has.2 {
+        src.push(("pda", Src::read("VendorAppMethod/PDA Detector (Start WL, Stop WL, Wave Step, Sampling Frequency, Lamp, Cell Temperature, Slit Width)")));
+    }
+    src
+}
+
+fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
+    let cat = |title: &str| cats.iter().rev().find(|c| c.0 == title);
+    let par = |title: &str, name: &str| {
+        cat(title)
+            .and_then(|c| c.1.iter().rev().find(|p| p.0 == name))
+            .map(|p| p.1 .0.as_str())
+            .unwrap_or("")
+    };
+    let (flow0, b0) = (
+        num(par("Pumps", "Total Flow")),
+        num(par("Pumps", "B Concentration")),
+    );
+    let tp = cat("System Controller")
+        .and_then(|c| c.2.iter().rev().find(|t| t.0 == "Time Program"))
+        .map(|t| t.1.iter().skip(1).cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let mut events: Vec<(f64, String, Option<f64>)> = tp
+        .iter()
+        .filter(|r| r.len() >= 5)
+        .filter_map(|r| num(&r[0]).map(|t| (t, r[3].clone(), num(&r[4]))))
+        .collect();
+    crate::sortc::any_by(&mut events, |a, b| a.0.total_cmp(&b.0));
+    let (grad, stop) = pump_program(events, flow0, b0);
     let pv = |k: &str| par("PDA Detector", k);
     let channels = cat("PDA Detector")
         .and_then(|c| c.2.iter().rev().find(|t| t.0 == "DA Channel Array"))
@@ -212,13 +268,21 @@ fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
                 .collect()
         })
         .unwrap_or_default();
+    let run_pda = num(pv("Run Time"));
+    let oven = num(par("Oven", "Temperature"));
+    let pda_start = num(pv("Start WL"));
+    let src = shimadzu_sources(
+        stop.is_some(),
+        run_pda.is_some(),
+        (flow0.is_some(), oven.is_some(), pda_start.is_some()),
+    );
     Some(Lc {
         gradient: grad,
         flow: flow0,
         b0,
-        run_time: stop.or_else(|| num(pv("Run Time"))),
+        run_time: stop.or(run_pda),
         pda: Pda {
-            start: num(pv("Start WL")),
+            start: pda_start,
             stop: num(pv("Stop WL")),
             step: num(pv("Wave Step")),
             freq: num(pv("Sampling Frequency")),
@@ -227,6 +291,7 @@ fn shimadzu_lc(cats: &[Cat]) -> Option<Lc> {
             slit: num(pv("Slit Width")),
         },
         channels,
-        oven: num(par("Oven", "Temperature")),
+        oven,
+        src,
     })
 }

@@ -89,6 +89,8 @@ pub struct GPoint {
     pub flow: Option<f64>,
 }
 
+pub use crate::methodview::Src;
+
 #[derive(Debug, Clone)]
 pub struct Lc {
     pub gradient: Vec<GPoint>,
@@ -98,6 +100,8 @@ pub struct Lc {
     pub pda: Pda,
     pub channels: Vec<(f64, Option<f64>)>,
     pub oven: Option<f64>,
+    /// The source of each part (`gradient`, `run_time`, `flow`, `oven`, `pda`), only for the parts the reader can name; none for an unnamed one.
+    pub src: Vec<(&'static str, Src)>,
 }
 
 #[derive(Debug, Clone, Default)]

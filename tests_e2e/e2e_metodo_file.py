@@ -1,6 +1,5 @@
 """The Method window shows `file_method/1` (docs/agenti/method.md) on the built site: a synthetic .wiff pair (tools/wiff_riferimento.py `dispersione`: product ion 253.1, CE 35,
-CES 15, DP 60, a sample named for 237.1) is opened; /api/filemethod gives the document, the window lists the segment with its values, says why fill time and Q1 resolution are
-missing and shows the name/precursor warning with its numbers, and nothing is blocked. Needs the site and the .wasm (python tools/build_site.py)."""
+CES 15, DP 60, a sample named for 237.1) is opened; /api/filemethod gives the document, the window lists the segment with its values (two decimals), marks fill time and Q1 resolution n/r with a legend and the reason as tooltip and aria-label and shows the name/precursor warning with its numbers, and nothing is blocked. Needs the site and the .wasm (python tools/build_site.py)."""
 # covers: mzlab/web/metodo-file.js, mzlab/web/metodo-doc.js, mzlab/web/lr-method.js
 import shutil, subprocess, sys, tempfile
 from pathlib import Path
@@ -39,12 +38,16 @@ try:
             pg.click("#np-method")
             pg.wait_for_selector("#bigdlg [data-mfile=segments]", timeout=60000)
             t = pg.inner_text("#bigdlg [data-mfile=segments]")
-            for want in ("253.1", "35 eV", "15 eV", "60 V", "not read for this format"):
+            for want in ("253.10", "35.00 eV", "15.00 eV", "60.00 V", "n/r"):
                 assert want in t, (want, t)
+            assert "not read for this format" not in t, t
+            assert "n/r = not read by mzLab for this format" in pg.inner_text("#bigdlg [data-mfile=legend]")
+            long = pg.get_attribute("#bigdlg [data-mfile=segments] td[aria-label]:has-text('n/r')", "aria-label")
+            assert long and "not read" in long.lower(), long
         step("the Method window lists precursor, CE, CES, DP and the reason fill time and Q1 resolution are missing", window)
         def warning():
             t = pg.inner_text("#bigdlg [data-mfile=notes]")
-            assert "237.1" in t and "253.1" in t and "16" in t, t
+            assert "237.10" in t and "253.10" in t and "16.00" in t, t
             pg.keyboard.press("Escape")
         step("the name/precursor warning shows its numbers and blocks nothing", warning)
         def noerr():

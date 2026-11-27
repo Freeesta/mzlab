@@ -434,26 +434,6 @@ async function editAnn(p, ann) {
     name: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), run: /** @param {any} c */ c => { COMMANDS.run("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
-// LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
-function lcHtml(lc, row) {
-  const g = lc.gradient || [], T = lc.run_time || (g.length ? g[g.length - 1].t : 22), RH = 27;       // the figure is as tall as the table (rows of 27 px)
-  const w = 440, hh = Math.max(160, (g.length + 1) * RH), l = 40, r = 10, t = 10, b = 34, X = v => l + v / T * (w - l - r), Y = v => t + (100 - v) / 100 * (hh - t - b);
-  const pts = g.map(q => [q.t, q.b]), ink = css("--muted"), acc = css("--accent");
-  let svg = `<svg viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" style="background:#fff;border:1px solid ${css("--line")};border-radius:6px;flex:none;max-width:100%" font-family="system-ui" font-size="11"><path d="M${l} ${t}V${hh - b}H${w - r}" fill="none" stroke="${ink}"/>`;
-  for (const v of [0, 25, 50, 75, 100]) svg += `<path d="M${l - 3} ${Y(v)}H${l}" stroke="${ink}"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="${ink}">${v}</text>`;
-  for (let v = 0; v <= T; v += 5) svg += `<path d="M${X(v)} ${hh - b}v3" stroke="${ink}"/><text x="${X(v)}" y="${hh - b + 15}" text-anchor="middle" fill="${ink}">${v}</text>`;
-  svg += `<polyline fill="none" stroke="${acc}" stroke-width="2" points="${pts.map(q => X(q[0]) + "," + Y(q[1])).join(" ")}"/>${pts.map(q => `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="2.6" fill="${acc}"/>`).join("")}`;
-  svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">${I18N.t("method.time")}</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
-  const pda = lc.pda || {};
-  const tbl = `<table class="lct"><tr><th class="num">${I18N.t("method.time")}</th><th class="num">% A</th><th class="num">% B</th><th class="num">${I18N.t("method.flow")}</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  const chips = /** @type {string[][]} */ ([lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean));
-  return `<section class="msec"><h4>${I18N.t("method.lc.title")}</h4>
-   <div class="sm" style="margin:0 0 8px">A = H<sub>2</sub>O + 0.1% FA &nbsp;&middot;&nbsp; B = ACN + 0.1% FA</div>
-   <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">${svg}<div style="flex:1 1 300px;max-width:520px">${tbl}</div></div>
-   ${chips.length ? `<div class="mchips">${chips.map(c => `<span><span class="muted">${c[0]}</span> <b>${c[1]}</b></span>`).join("")}</div>` : ""}</section>
-   ${pda.start != null ? `<section class="msec"><h4>${I18N.t("method.pda.title")}</h4><table>${row(I18N.t("method.pda.range"), I18N.t("method.pda.value", { start: pda.start, stop: pda.stop, step: pda.step }))}</table></section>` : ""}`;
-}
-
 // ------------------------------------------------------------------ acquisition method (read from the mzML)
 async function showMethod(sel) {
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
@@ -466,16 +446,17 @@ async function showMethod(sel) {
   let h = "";
   const sec = (title, body, extra = "") => `<section class="msec"><h4>${title}${extra}</h4>${body}</section>`;
 
+  const N = (/** @type {any} */ v) => METODO_DOC.shown(v);       // every number of this window: two decimals (the rule of crates/mzlab-core/src/methodview.rs)
   const scanLike = m.kind === "full" || m.kind === "ms2";
-  const expTbl = `<table>${row(I18N.t("method.row.polarity"), pol)}${scanLike ? row(I18N.t("method.row.massRange"), m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "") : ""}${row(I18N.t("method.row.duration"), m.rt_max > 0 ? `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min` : "")}${scanLike ? row(I18N.t("method.row.scans"), m.scans || "") + row(I18N.t("method.row.cycle"), m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "") : ""}${m.kind === "ms2" ? row(I18N.t("method.row.precursors"), m.precursors.join(", ")) + row(I18N.t("method.row.ce"), m.ce.length ? m.ce.join(", ") + " eV" : "") : ""}</table>`;
+  const expTbl = `<table>${row(I18N.t("method.row.polarity"), pol)}${scanLike ? row(I18N.t("method.row.massRange"), m.scan_window ? `m/z ${N(m.scan_window[0])}-${N(m.scan_window[1])}` : "") : ""}${row(I18N.t("method.row.duration"), m.rt_max > 0 ? `${N(m.rt_min)}-${N(m.rt_max)} min` : "")}${scanLike ? row(I18N.t("method.row.scans"), m.scans || "") + row(I18N.t("method.row.cycle"), m.cycle_s ? N(m.cycle_s) + " s" : "") : ""}${m.kind === "ms2" ? row(I18N.t("method.row.precursors"), m.precursors.map(N).join(", ")) + row(I18N.t("method.row.ce"), m.ce.length ? m.ce.map(N).join(", ") + " eV" : "") : ""}</table>`;
   const labName = x => x.sample ? I18N.t("method.name", { n: x.sample }) : x.name;       // «Metodo 1»: the .dam holds several methods, one per sample
-  const trTbl = (window.SIMUI && SIMUI.methodTable(m.transitions)) ?? (m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1 ?? "—"))}</td><td class="num">${EH(String(t.q3 ?? "—"))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "");
+  const trTbl = (window.SIMUI && SIMUI.methodTable(m.transitions)) ?? (m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(t.q1 == null ? "—" : N(t.q1))}</td><td class="num">${EH(t.q3 == null ? "—" : N(t.q3))}</td><td class="num">${EH(t.ce == null ? "" : N(t.ce))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "");
   h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span>${labs.length || sp ? "" : ` <button type="button" class="go" id="m-load">${I18N.t("method.loadDam")}</button>`}</div><div class="mgrid">`;
   h += sec(I18N.t("method.sec.experiment"), `${expTbl}${trTbl}`);
   if (sp && !lab) {
     const n1 = sp.ms1, n2 = sp.ms2, nf = (v, d = 0) => v == null ? "" : (+v).toFixed(d), join = a => a.join(", ");
-    const t1 = `<table>${row(I18N.t("method.row.analyzer"), n1.an)}${row(I18N.t("method.row.massRange"), n1.window ? `m/z ${n1.window[0]}-${n1.window[1]}` : "")}${row(I18N.t("method.row.resolution"), n1.res ? nf(n1.res) : "")}${row(I18N.t("method.row.inject"), n1.inject != null ? nf(n1.inject, 1) + " ms" : "")}${row(I18N.t("method.row.scansN"), nf(n1.n))}</table>`;
-    const t2 = n2 ? `<table>${row(I18N.t("method.row.activation"), join(n2.act))}${row(I18N.t(n2.nce ? "method.row.ceNce" : "method.row.ce"), n2.ce.length ? join(n2.ce) + (n2.nce ? "" : " eV") : "")}${row(I18N.t("method.row.isolation"), n2.iso.length ? "±" + join(n2.iso) + " m/z" : "")}${row(I18N.t("method.row.analyzer"), n2.an)}${row(I18N.t("method.row.resolution"), n2.res ? nf(n2.res) : "")}${row(I18N.t("method.row.inject"), n2.inject != null ? nf(n2.inject, 1) + " ms" : "")}${row("MS2", I18N.t("method.row.ms2n", { n: nf(n2.n), per: n2.per_cycle }))}</table>` : "";
+    const t1 = `<table>${row(I18N.t("method.row.analyzer"), n1.an)}${row(I18N.t("method.row.massRange"), n1.window ? `m/z ${N(n1.window[0])}-${N(n1.window[1])}` : "")}${row(I18N.t("method.row.resolution"), n1.res ? nf(n1.res) : "")}${row(I18N.t("method.row.inject"), n1.inject != null ? N(n1.inject) + " ms" : "")}${row(I18N.t("method.row.scansN"), nf(n1.n))}</table>`;
+    const t2 = n2 ? `<table>${row(I18N.t("method.row.activation"), join(n2.act))}${row(I18N.t(n2.nce ? "method.row.ceNce" : "method.row.ce"), n2.ce.length ? n2.ce.map(N).join(", ") + (n2.nce ? "" : " eV") : "")}${row(I18N.t("method.row.isolation"), n2.iso.length ? "±" + n2.iso.map(N).join(", ") + " m/z" : "")}${row(I18N.t("method.row.analyzer"), n2.an)}${row(I18N.t("method.row.resolution"), n2.res ? nf(n2.res) : "")}${row(I18N.t("method.row.inject"), n2.inject != null ? N(n2.inject) + " ms" : "")}${row("MS2", I18N.t("method.row.ms2n", { n: nf(n2.n), per: n2.per_cycle }))}</table>` : "";
     h += sec(I18N.t("method.sec.scanParams"), `<div class="sm hw"><b>Full Scan (MS1)</b></div>${t1}${n2 ? `<div class="sm hw" style="margin-top:8px"><b>MS2</b></div>${t2}` : ""}`);
   }
   if (lab && lab.check && lab.check.length) {
@@ -490,13 +471,11 @@ async function showMethod(sel) {
     h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : ""));
   }
   h += "</div>";
-  if (lab) {
-    if (lab.lc) h += lcHtml(lab.lc, row);
-  }
-  const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
-  if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the one of the file's own method, read-only
+  // one fetch of file_method/1 (lazy): the LC program and the diode array come from the .dam when it has a gradient, else from the file's own method; both say where each value comes from
+  const fm = await loadScript("m:metodo-file.js").then(async () => { const d = await METODO_FILE.load(f); return METODO_FILE.parts(d, lab && lab.lc ? lab.lc.view : null); }, () => ({ seg: "", lc: "", dad: "" }));
+  h += fm.lc + fm.dad;
   if (held) h += await METODO_M.html();
-  h += await METODO_DOC.html(f);       // what the file itself says (method/1)
+  h += await METODO_DOC.html(f, fm.seg);       // what the file itself says (method/1)
   h = h.replace(/m\/z/g, "<i>m/z</i>");   // m/z is always in italics
   const d = Q("#bigdlg"); if (d.open) d.close();
   big(I18N.t("method.dialog.title"), h, () => {
