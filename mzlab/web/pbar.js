@@ -4,7 +4,7 @@
 // One row under the header: a chip with the number, kind and file of the selected panel (E.active) and the tools of that panel, drawn by AZIONI.bar (azioni-barra.js).
 // The header buttons of every panel stay in the DOM (hidden by CSS, html[data-pbar]): their state is copied to the bar, and a button without its own action runs the header one.
 // Expand is in the bar and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
-// Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, LAYOUT, AZIONI, I18N, FRAME.
+// Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, fitHdSoon, fitHdNow, LAYOUT, AZIONI, I18N, FRAME, ESP.
 (() => {
   /** @typedef {any} Pannello */
   const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a), KEY = NOMI.KEY("pbar");
@@ -40,7 +40,7 @@
   /** the states that differ from the default, as [id, text key]: smoothing is on by default but for the SIM/MRM panels @param {Pannello} p */
   const odd = p => {
     const l = /** @type {[string, string, string][]} */ ([]); if (!["chrom", "xic", "mrm"].includes(p.type)) return l;
-    if (!!p.smooth !== (p.type !== "mrm")) l.push(p.smooth ? ["smooth", "pbar.dot.smoothon", "pbar.dot.smoothon.title"] : ["smooth", "pbar.dot.smoothoff", "pbar.dot.smoothoff.title"]);
+    if (!!p.smooth !== !ESP.mrm(p)) l.push(p.smooth ? ["smooth", "pbar.dot.smoothon", "pbar.dot.smoothon.title"] : ["smooth", "pbar.dot.smoothoff", "pbar.dot.smoothoff.title"]);
     if (p.log) l.push(["log", "pbar.dot.log", "pbar.dot.log.title"]);
     if (p.tl) l.push(["tl", "pbar.dot.tl", "pbar.dot.tl.title"]);
     return l;
