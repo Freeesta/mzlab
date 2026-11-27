@@ -89,27 +89,7 @@ pub struct GPoint {
     pub flow: Option<f64>,
 }
 
-/// Where a value of the LC method comes from: `read` (a stream and field of the file, named in `at`) or `inferred` (computed from values read; `at` says how).
-#[derive(Debug, Clone)]
-pub struct Src {
-    pub kind: &'static str,
-    pub at: String,
-}
-
-impl Src {
-    pub fn read(at: &str) -> Self {
-        Src {
-            kind: "read",
-            at: at.into(),
-        }
-    }
-    pub fn inferred(at: &str) -> Self {
-        Src {
-            kind: "inferred",
-            at: at.into(),
-        }
-    }
-}
+pub use crate::methodview::Src;
 
 #[derive(Debug, Clone)]
 pub struct Lc {

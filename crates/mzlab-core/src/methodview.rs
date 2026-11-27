@@ -5,6 +5,28 @@
 
 use crate::json::{Out, Value};
 
+/// Where a value of the LC method comes from: `read` (a stream and field of the file, named in `at`) or `inferred` (computed from values read; `at` says how).
+#[derive(Debug, Clone)]
+pub struct Src {
+    pub kind: &'static str,
+    pub at: String,
+}
+
+impl Src {
+    pub fn read(at: &str) -> Self {
+        Src {
+            kind: "read",
+            at: at.into(),
+        }
+    }
+    pub fn inferred(at: &str) -> Self {
+        Src {
+            kind: "inferred",
+            at: at.into(),
+        }
+    }
+}
+
 /// A number for display: two decimals, never `-0.00`. The same rule for every number of the Method window; the document keeps the full value beside it.
 pub fn shown(v: f64) -> String {
     let s = format!("{v:.2}");
@@ -60,6 +82,37 @@ fn write_named(o: &mut Out, s: Option<(String, String)>) {
     }
 }
 
+/// The last %B held to the end of the run: drawn, never added to the points; `null` when the program already ends at the run time.
+fn write_hold(o: &mut Out, last: Option<&(f64, Option<f64>, Option<f64>)>, run: Option<f64>) {
+    match (last, run) {
+        (Some((t, Some(b), f)), Some(r)) if r > *t => {
+            o.raw("{\"from_min\":")
+                .num(*t)
+                .raw(",\"to_min\":")
+                .num(r)
+                .raw(",\"B_pct\":")
+                .num(*b)
+                .raw(",\"flow_mL_min\":");
+            num_or_null(o, *f);
+            o.raw(",\"shown\":{\"from\":")
+                .str(&shown(*t))
+                .raw(",\"to\":")
+                .str(&shown(r))
+                .raw(",\"a\":")
+                .str(&shown(100.0 - *b))
+                .raw(",\"b\":")
+                .str(&shown(*b));
+            if let Some(f) = f.filter(|x| x.is_finite()) {
+                o.raw(",\"flow\":").str(&shown(f));
+            }
+            o.raw("}}");
+        }
+        _ => {
+            o.raw("null");
+        }
+    }
+}
+
 /// `"lc":{…}` of `file_method/1`, `null` when the method has no pump program, flow, oven or run time.
 pub fn write_lc(o: &mut Out, doc: Option<&Value>) {
     let Some(lc) = doc.and_then(|d| d.get("lc")) else {
@@ -102,35 +155,8 @@ pub fn write_lc(o: &mut Out, doc: Option<&Value>) {
         shown_or_null(o, *f);
         o.raw("}}");
     }
-    // the last %B held to the end of the run: drawn, never added to the points
     o.raw("],\"hold\":");
-    match (pts.last(), run) {
-        (Some((t, Some(b), f)), Some(r)) if r > *t => {
-            o.raw("{\"from_min\":")
-                .num(*t)
-                .raw(",\"to_min\":")
-                .num(r)
-                .raw(",\"B_pct\":")
-                .num(*b)
-                .raw(",\"flow_mL_min\":");
-            num_or_null(o, *f);
-            o.raw(",\"shown\":{\"from\":")
-                .str(&shown(*t))
-                .raw(",\"to\":")
-                .str(&shown(r))
-                .raw(",\"a\":")
-                .str(&shown(100.0 - *b))
-                .raw(",\"b\":")
-                .str(&shown(*b));
-            if let Some(f) = f.filter(|x| x.is_finite()) {
-                o.raw(",\"flow\":").str(&shown(f));
-            }
-            o.raw("}}");
-        }
-        _ => {
-            o.raw("null");
-        }
-    }
+    write_hold(o, pts.last(), run);
     o.raw(",\"flow_mL_min\":");
     num_or_null(o, flow);
     o.raw(",\"flow_shown\":");
@@ -244,111 +270,15 @@ pub fn write_dad(o: &mut Out, doc: Option<&Value>) {
         return;
     };
     let head = header_rows(doc);
+    let mut rows = rows_of_header(&head);
     let det = doc
         .get("detectors")
         .map(Value::arr)
         .unwrap_or_default()
         .iter()
         .find(|d| d.get("type").and_then(Value::str) == Some("PDA"));
-    struct Row {
-        id: &'static str,
-        value: Option<f64>,
-        text: String,
-        unit: &'static str,
-        source: Option<(String, String)>,
-    }
-    let mut rows: Vec<Row> = Vec::new();
-    let from_header = |id: &str| head.iter().find(|h| h.0 == id);
-    let push = |rows: &mut Vec<Row>,
-                id: &'static str,
-                value: Option<f64>,
-                text: String,
-                unit: &'static str,
-                source: Option<(String, String)>| {
-        rows.push(Row {
-            id,
-            value,
-            text,
-            unit,
-            source,
-        })
-    };
-    let hsrc =
-        |h: &(&str, f64, String, String)| Some(("read".to_string(), format!("{} / {}", h.2, h.3)));
-    for (id, unit) in [("points", ""), ("channels", ""), ("duration", "min")] {
-        if let Some(h) = from_header(id) {
-            let t = if unit.is_empty() {
-                count(h.1)
-            } else {
-                shown(h.1)
-            };
-            push(&mut rows, id, Some(h.1), t, unit, hsrc(h));
-        }
-    }
-    let (lo, hi) = (from_header("wl_min"), from_header("wl_max"));
-    if let (Some(a), Some(b)) = (lo, hi) {
-        push(
-            &mut rows,
-            "range",
-            None,
-            format!("{}\u{2013}{}", shown(a.1), shown(b.1)),
-            "nm",
-            Some((
-                "read".into(),
-                format!("{} / wavelength_min, wavelength_max", a.2),
-            )),
-        );
-    }
-    if let Some(h) = from_header("step") {
-        push(&mut rows, "step", Some(h.1), shown(h.1), "nm", hsrc(h));
-    }
     if let Some(d) = det {
-        let dsrc = d.get("source").and_then(|s| {
-            Some((
-                s.get("kind")?.str()?.to_string(),
-                s.get("at")?.str()?.to_string(),
-            ))
-        });
-        let nm = d.get("nm").map(Value::arr).unwrap_or_default();
-        if let [a, b, ..] = nm {
-            if let (Some(a), Some(b)) = (a.f64(), b.f64()) {
-                let t = format!("{}\u{2013}{}", shown(a), shown(b));
-                let id = if lo.is_some() {
-                    "range_method"
-                } else {
-                    "range"
-                };
-                if !rows.iter().any(|r| r.id == "range" && r.text == t) {
-                    push(&mut rows, id, None, t, "nm", dsrc.clone());
-                }
-            }
-        }
-        for (key, id, unit) in [
-            ("step_nm", "step", "nm"),
-            ("frequency_Hz", "frequency", "Hz"),
-            ("cell_C", "cell", "\u{b0}C"),
-            ("slit_nm", "slit", "nm"),
-        ] {
-            if rows.iter().all(|r| r.id != id) {
-                if let Some(v) = d.get(key).and_then(Value::f64) {
-                    push(&mut rows, id, Some(v), shown(v), unit, dsrc.clone());
-                }
-            }
-        }
-        if let Some(l) = d.get("lamp").and_then(Value::str) {
-            push(&mut rows, "lamp", None, l.to_string(), "", dsrc.clone());
-        }
-        let n = d.get("channels").map(Value::arr).unwrap_or_default().len();
-        if n > 0 && rows.iter().all(|r| r.id != "channels") {
-            push(
-                &mut rows,
-                "channels",
-                Some(n as f64),
-                count(n as f64),
-                "",
-                dsrc,
-            );
-        }
+        rows_of_detector(d, &mut rows, head.iter().any(|h| h.0 == "wl_min"));
     }
     if rows.is_empty() {
         o.raw("null");
@@ -369,6 +299,111 @@ pub fn write_dad(o: &mut Out, doc: Option<&Value>) {
         o.raw("}");
     }
     o.raw("]}");
+}
+
+/// One labelled row of the diode array: `id` is the catalog key `method.dad.<id>`.
+struct Row {
+    id: &'static str,
+    value: Option<f64>,
+    text: String,
+    unit: &'static str,
+    source: Option<(String, String)>,
+}
+
+fn row(
+    id: &'static str,
+    value: Option<f64>,
+    text: String,
+    unit: &'static str,
+    source: Option<(String, String)>,
+) -> Row {
+    Row {
+        id,
+        value,
+        text,
+        unit,
+        source,
+    }
+}
+
+type Head = (&'static str, f64, String, String);
+
+/// The rows the file's DAD header gives (acquired), each with its stream and field as the source.
+fn rows_of_header(head: &[Head]) -> Vec<Row> {
+    let from = |id: &str| head.iter().find(|h| h.0 == id);
+    let hsrc = |h: &Head| Some(("read".to_string(), format!("{} / {}", h.2, h.3)));
+    let mut rows = Vec::new();
+    for (id, unit) in [("points", ""), ("channels", ""), ("duration", "min")] {
+        if let Some(h) = from(id) {
+            let t = if unit.is_empty() {
+                count(h.1)
+            } else {
+                shown(h.1)
+            };
+            rows.push(row(id, Some(h.1), t, unit, hsrc(h)));
+        }
+    }
+    if let (Some(a), Some(b)) = (from("wl_min"), from("wl_max")) {
+        let at = format!("{} / wavelength_min, wavelength_max", a.2);
+        rows.push(row(
+            "range",
+            None,
+            format!("{}\u{2013}{}", shown(a.1), shown(b.1)),
+            "nm",
+            Some(("read".into(), at)),
+        ));
+    }
+    if let Some(h) = from("step") {
+        rows.push(row("step", Some(h.1), shown(h.1), "nm", hsrc(h)));
+    }
+    rows
+}
+
+/// What the detector of the method (programmed) adds to the rows the header gave; it keeps its own source.
+fn rows_of_detector(d: &Value, rows: &mut Vec<Row>, header_range: bool) {
+    let dsrc = d.get("source").and_then(|s| {
+        Some((
+            s.get("kind")?.str()?.to_string(),
+            s.get("at")?.str()?.to_string(),
+        ))
+    });
+    if let [a, b, ..] = d.get("nm").map(Value::arr).unwrap_or_default() {
+        if let (Some(a), Some(b)) = (a.f64(), b.f64()) {
+            let t = format!("{}\u{2013}{}", shown(a), shown(b));
+            if !rows.iter().any(|r| r.id == "range" && r.text == t) {
+                rows.push(row(
+                    if header_range {
+                        "range_method"
+                    } else {
+                        "range"
+                    },
+                    None,
+                    t,
+                    "nm",
+                    dsrc.clone(),
+                ));
+            }
+        }
+    }
+    for (key, id, unit) in [
+        ("step_nm", "step", "nm"),
+        ("frequency_Hz", "frequency", "Hz"),
+        ("cell_C", "cell", "\u{b0}C"),
+        ("slit_nm", "slit", "nm"),
+    ] {
+        if rows.iter().all(|r| r.id != id) {
+            if let Some(v) = d.get(key).and_then(Value::f64) {
+                rows.push(row(id, Some(v), shown(v), unit, dsrc.clone()));
+            }
+        }
+    }
+    if let Some(l) = d.get("lamp").and_then(Value::str) {
+        rows.push(row("lamp", None, l.to_string(), "", dsrc.clone()));
+    }
+    let n = d.get("channels").map(Value::arr).unwrap_or_default().len();
+    if n > 0 && rows.iter().all(|r| r.id != "channels") {
+        rows.push(row("channels", Some(n as f64), count(n as f64), "", dsrc));
+    }
 }
 
 #[cfg(test)]
