@@ -34,8 +34,10 @@ try:
             return pg.evaluate(f"(()=>{{const s={XP}._a.sr[0];let k=0;s.y.forEach((v,i)=>{{if(v>s.y[k])k=i}});return s.x[k]}})()")
         def columns():
             x = apex()
-            pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],{x})}})()"); pg.wait_for_timeout(300)
-            assert pg.evaluate(f"{XP}.ints.length") == 1
+            pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],{x})}})()")
+            # autoInt is async (lazy module + engine round trip): wait for the integration, not a fixed 300 ms that a loaded CI runner overruns
+            wait_for_js(pg, f"{XP}.ints.length >= 1", timeout=60000)
+            assert pg.evaluate(f"{XP}.ints.length") == 1, "the click did not create exactly one integration"
             wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
             pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
             pg.wait_for_selector("#manint input[data-opt=q]", timeout=10000); pg.evaluate("document.querySelector('#manint input[data-opt=q]').click()")
