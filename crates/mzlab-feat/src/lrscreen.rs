@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use mzlab_core::centroids::{centroid_index, Over};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
+pub use mzlab_core::rawinfo::LabelCheck;
 
 use crate::recipe::Recipe;
 
@@ -225,23 +226,6 @@ fn ms1_share<R: ReadAt>(index: &Index<R>) -> (usize, usize) {
     (ms1().filter(|s| s.profile).count(), ms1().count())
 }
 
-/// What the points of a file labelled profile say about the label (`spectrum_type::Runs` on up to `PROBE` MS1 scans, the detector of `raw info`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct LabelCheck {
-    /// MS1 scans labelled profile and all MS1 scans.
-    pub profile: usize,
-    pub scans: usize,
-    /// Scans probed, and the points and neighbour spacings they hold.
-    pub probed: usize,
-    pub points: usize,
-    pub spacings: usize,
-    /// Share of the probed points that sit in runs of a profile peak, and of the neighbour spacings of a fine grid, in whole percent.
-    pub runs_pct: usize,
-    pub fine_pct: usize,
-    /// The points are sparse ion counts (no run, no fine grid): centroids under a profile label.
-    pub sparse: bool,
-}
-
 /// The cut-offs behind `LabelCheck::sparse`, the ones of `raw info` (`spectrum_type`): whole numbers for the notice, the report and the log.
 pub struct Cuts {
     /// Sparse below this share of the points in runs (percent); a fine grid from this share of the spacings (percent).
@@ -272,6 +256,16 @@ pub fn label_check<R: ReadAt>(index: &mut Index<R>) -> Option<LabelCheck> {
     if !is_profile(profile, scans) {
         return None;
     }
+    // probed once per index (a read of up to 64 scans); the share above is cheap and decides first, as a lean index has no scans yet
+    if let Some(done) = &index.label {
+        return done.clone();
+    }
+    let got = probed(index, profile, scans);
+    index.label = Some(got.clone());
+    got
+}
+
+fn probed<R: ReadAt>(index: &mut Index<R>, profile: usize, scans: usize) -> Option<LabelCheck> {
     let p = mzlab_core::rawinfo::probe_index(index, 1, None, mzlab_core::rawinfo::PROBE).ok()?;
     let (_, _, runs) = mzlab_core::rawinfo::spectrum_type(Some(&p));
     let pct = |v: Option<f64>| v.map_or(0, |v| (v * 100.0).round() as usize);

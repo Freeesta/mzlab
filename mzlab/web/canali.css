@@ -25,8 +25,10 @@
 .can-row[aria-selected=true] .can-rd::after{left:2px;top:2px;width:6px;height:6px;border:0;border-radius:50%;background:var(--panel);transform:none}
 .ibkc{display:inline-flex;align-items:center;gap:2px}.ibkc button{min-height:24px;min-width:24px;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0 4px}.ibkc button:focus-visible{outline:2px solid var(--accent)}
 .can-hit{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;margin:0 -5px;cursor:pointer}
-.can-tb{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 4px 6px}.can-all,.can-none{min-height:24px;min-width:24px}
-.can-pop.can-sim{min-width:min(280px,96vw);max-width:min(360px,96vw)}.can-pop.can-sim .can-hd,.can-pop.can-sim .can-row{grid-template-columns:1fr}
+.can-tb{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:1px 4px}.can-all,.can-none{min-height:24px;min-width:24px;padding:0 8px}
+/* the name of the ion group sits in the same slim row as All / None, as a divider under the PDA / DAD rows */
+.can-tb .can-gh{flex:1;padding:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.can-dv{border-top:1px solid var(--line);margin-top:2px;padding-top:3px}
+.can-pop.can-sim{min-width:min(280px,96vw);max-width:min(360px,96vw)}.can-pop.can-sim .can-row{grid-template-columns:1fr}
 /* the key of a trace beside its row: the line as drawn (colour, dash); a row that is off shows it hollow and dimmed. The text stays: colour is never the only mark */
 .trsw{display:inline-block;flex:none;width:18px;height:8px;border-radius:2px;margin:0 2px;forced-color-adjust:none}
 .trsw.none{background:none}

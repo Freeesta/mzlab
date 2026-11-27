@@ -124,6 +124,7 @@ try:
             wait_for_js(pg, "document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1")
             assert pg.evaluate("document.querySelector('#v-workspace').getBoundingClientRect().right <= document.querySelector('.sb-dz.r').getBoundingClientRect().left + 1"), "the plots are not covered by the target strip"
             pg.mouse.move(750, 300, steps=4); wait_for_js(pg, "document.querySelectorAll('.sb-dz.hot').length === 0")
+            assert pg.locator(".sb-ghost.no").count() == 0 and "Release outside" not in pg.inner_text("body"), "no red cancel tag outside the strips"
             assert pg.evaluate("document.body.dataset.sbShift") == "", "outside the strips: preview back, nothing to drop"
             pg.mouse.up(); wait_for_js(pg, "document.querySelectorAll('.sb-dz').length === 0")
             assert pg.evaluate("BARRA.side") == "left" and pg.locator(".sb-dz").count() == 0, "release outside the strips cancels"

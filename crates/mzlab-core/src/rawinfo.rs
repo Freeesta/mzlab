@@ -237,6 +237,23 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
+/// What the points of a file labelled profile say about the label (`spectrum_type::Runs` on up to `PROBE` MS1 scans, the detector of `raw info`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LabelCheck {
+    /// MS1 scans labelled profile and all MS1 scans.
+    pub profile: usize,
+    pub scans: usize,
+    /// Scans probed, and the points and neighbour spacings they hold.
+    pub probed: usize,
+    pub points: usize,
+    pub spacings: usize,
+    /// Share of the probed points that sit in runs of a profile peak, and of the neighbour spacings of a fine grid, in whole percent.
+    pub runs_pct: usize,
+    pub fine_pct: usize,
+    /// The points are sparse ion counts (no run, no fine grid): centroids under a profile label.
+    pub sparse: bool,
+}
+
 /// `Routes::probe` on any index: the one probe of `raw info`, `raw xic` and the label check of the feature recipe (`lrscreen::label_check`).
 pub fn probe_index<R: ReadAt>(
     idx: &mut Index<R>,
