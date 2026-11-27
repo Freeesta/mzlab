@@ -66,10 +66,10 @@ try:
             open_kind(pg, "mrm"); wait_for_js(pg, f"!!{MRM} && !!{MRM}.el.querySelector('[data-o=canali]')", timeout=30000)
             pg.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()")
             wait_for_js(pg, f"!!{MRM}.el.querySelector('.can-pop:not([hidden]) [data-kind=pda]')")
-            got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
-            assert [g[0] for g in got] == ["Mass spectrometry", "UV/Vis"] and got[0][1] >= 2 and got[1][1] == 1, got
+            got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]:not(.can-tb)')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
+            assert [g[0] for g in got] == ["UV/Vis", "Mass spectrometry"] and got[0][1] == 1 and got[1][1] >= 2, got       # the DAD row stands above the ions
             assert pg.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').getAttribute('title')") == pg.evaluate("I18N.t('ctl.kind.pda.title')")
-        step("MRM tab: the transition picker has a «UV/Vis» group with the DAD row", mrm_row)
+        step("MRM tab: the transition picker has the DAD row above the transitions", mrm_row)
         if AXE:
             pg.add_script_tag(path=AXE)
             step("axe: the open MRM picker with the UV/Vis group", lambda: axe_ok(pg, ".pnl.mrm .can-pop"))
@@ -77,11 +77,11 @@ try:
             pg.keyboard.press("Escape"); wait_for_js(pg, f"{MRM}.el.querySelector('.can-pop').hidden")
             assert pg.evaluate("document.activeElement.dataset.o") == "canali"
             pg.keyboard.press("ArrowDown"); wait_for_js(pg, f"!{MRM}.el.querySelector('.can-pop').hidden && document.activeElement.classList.contains('can-row')")
-            pg.keyboard.press("End"); assert pg.evaluate("document.activeElement.dataset.kind") == "pda"
-            pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.dataset.group || ''").startswith("srm"), pg.evaluate("document.activeElement.outerHTML.slice(0, 200)")
-            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
+            pg.keyboard.press("Home"); assert pg.evaluate("document.activeElement.dataset.kind") == "pda"
+            pg.keyboard.press("ArrowDown"); assert pg.evaluate("document.activeElement.dataset.group || ''").startswith("srm"), pg.evaluate("document.activeElement.outerHTML.slice(0, 200)")
+            pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter")
             wait_for_js(pg, f"!!{UV('mrm')} && !!{UV('mrm')}._a && {UV('mrm')}._a.sr.length === shownFor({UV('mrm')}).length", timeout=60000)
-        step("keyboard: Esc closes, ArrowDown opens, End reaches the DAD row, Enter opens the DAD panel", mrm_keys)
+        step("keyboard: Esc closes, ArrowDown opens, Home reaches the DAD row, Enter opens the DAD panel", mrm_keys)
         def mrm_panel():
             got = pg.evaluate(f"(() => {{ const m = {MRM}, q = {UV('mrm')}, st = stackOrder(); return {{ tab: E.tab, n: E.panels.filter(x => x.tab === 'mrm' && x.type === 'chrom').length, after: st.indexOf(q) === st.indexOf(m) + 1, tl: q.tl, kind: q.kind, max: q._a.sr.map(s => Math.max(...s.y)), focus: q.el.contains(document.activeElement), btn: q.el.querySelector('[data-o=kind]').textContent }}; }})()")
             assert got["tab"] == "mrm" and got["n"] == 1 and got["after"] and got["tl"] and got["kind"] == "pda" and got["focus"], got
@@ -111,7 +111,7 @@ try:
             def alone(q=q, want=want, name=names[0]):
                 q.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()"); wait_for_js(q, f"!{MRM}.el.querySelector('.can-pop').hidden")
                 has = q.evaluate(f"!!{MRM}.el.querySelector('.can-pop [data-kind=pda]')")
-                assert has == want and q.evaluate(f"{MRM}.el.querySelectorAll('.can-pop [role=group]').length") == (2 if want else 0), (name, has)
+                assert has == want and q.evaluate(f"{MRM}.el.querySelectorAll('.can-pop [role=group]:not(.can-tb)').length") == (2 if want else 0), (name, has)
                 if want:
                     q.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').click()")
                     wait_for_js(q, f"!!{UV('mrm')} && !!{UV('mrm')}._a && {UV('mrm')}._a.sr.length === 1", timeout=60000)
