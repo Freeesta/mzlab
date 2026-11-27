@@ -53,8 +53,8 @@
     const b = host(); if (!b) return;
     if (mo) { mo.disconnect(); mo = null; }
     shown = p; said = p ? said : "";
-    if (!p) { b.innerHTML = `<span class="pbhint">${EH(T("pbar.hint"))}</span>`; b.setAttribute("aria-label", T("pbar.aria.none")); delete b.dataset.pair; return; }
-    b.innerHTML = `<span class="pbchip" title="${EH(T("pbar.chip.title"))}"></span><span class="pbtools"></span>`;
+    if (!p) { b.innerHTML = h`<span class="pbhint">${T("pbar.hint")}</span>`; b.setAttribute("aria-label", T("pbar.aria.none")); delete b.dataset.pair; return; }
+    b.innerHTML = h`<span class="pbchip" title="${T("pbar.chip.title")}"></span><span class="pbtools"></span>`;
     AZIONI.bar({ view: p.type, p }, /** @type {HTMLElement} */ (b.querySelector(".pbtools")), "e");
     const tb = /** @type {HTMLElement} */ (b.querySelector(".pbtools"));
     for (const t of /** @type {NodeListOf<HTMLElement>} */ (tb.querySelectorAll("[data-a]"))) {   // a button without its own action runs the header twin (the XIC button of a spectrum)
