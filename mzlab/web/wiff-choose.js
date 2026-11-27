@@ -2,8 +2,8 @@
 "use strict";
 // «Choose samples»: when a SCIEX .wiff holds several samples the page lists them (engine listing `samples_list/1`, container and index only, the .wiff.scan is not read) and
 // the user ticks which to open (docs/agenti/wiff-sample-choice.md). No sample logic here: the list (kinds, scan counts, `why`) and the first ticks (`sample_default`,
-// empty samples left out) are the engine's; this file draws a dialog and reports the ticked ids. A ticked sample is copied to the browser storage while the dialog is open (prefetch,
-// rust-prefetch.js): unticking it or closing the dialog stops that, «Open selected» finds the copies in place. Lazy (loadScript("wiff-choose.js")), called by wiffToMzml (shell.js).
+// empty samples left out) are the engine's; this file draws a dialog and reports the ticked ids. A ticked sample is copied to the browser storage and indexed while the dialog is open (prefetch,
+// rust-prefetch.js, rust-index-ahead.js): unticking it or closing the dialog stops that and removes it, «Open selected» finds the copies and indexes in place. Lazy (loadScript("wiff-choose.js")), called by wiffToMzml (shell.js).
 
 const wcT = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 const wcMb = (/** @type {number} */ n) => n >= 1 << 20 ? wcT("pick.mb", { n: (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) }) : wcT("pick.kb", { n: Math.max(n > 0 ? 1 : 0, Math.round(n / 1024)) });
@@ -45,7 +45,7 @@ function wcPrefetch(/** @type {any} */ rb, /** @type {(b: Box, state: string | n
           if (!live.live) return;
           (e.plans || (e.plans = new Map())).set(b.s.id, g);
           if (closed || g.whole) { mark(b, ""); return; }
-          const ok = await rb.nativePrefetch(e.mem, e.nkey, b.s.id, ranges, tag, (/** @type {number} */ f) => { if (live.live) mark(b, f < 0 ? "wait" : f); });
+          const ok = await rb.nativePrefetch(e.mem, e.nkey, b.s.id, ranges, tag, (/** @type {number} */ f) => { if (live.live) mark(b, f < 0 ? "wait" : f); }, e.samples.indexOf(b.s));      // the position of the sample: its index is built right after its copy
           if (live.live) mark(b, ok ? "done" : "");
         } catch (_) { if (live.live) mark(b, ""); }
       })();
