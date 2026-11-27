@@ -169,9 +169,35 @@ fn the_listing_never_reads_the_scan_file_and_says_what_the_full_open_says() {
     assert!(
         s.iter().all(|x| x["scans"] == 40
             && x["kinds"] == serde_json::json!(["ms"])
+            && x["types"] == serde_json::json!(["Full scan"])
             && x["polarity"] == "+"
             && x["tic"]["apex"].as_f64().unwrap() > 0.0),
         "{big}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A sample whose method holds two experiments (full scan code 15, enhanced product ion code 11) lists both labels once each, in experiment order, from the
+/// scan-type codes of the method alone (`wiff::modes::type_label`); the coarse `kinds` stays `ms`, `ms2`. A sample the engine reader refuses (precursor ion,
+/// neutral loss: the readers module reads those) has no type, only its `why`.
+#[test]
+fn a_sample_with_several_scan_types_lists_each_label_once_in_experiment_order() {
+    let dir = pairs();
+    let (cheap, reads) = json(&dir.join("ref"), "epi3200", true);
+    assert_eq!(reads, 0);
+    let v: serde_json::Value = serde_json::from_str(&cheap.unwrap()).unwrap();
+    let s = &v["samples"][0];
+    assert_eq!(
+        s["types"],
+        serde_json::json!(["Full scan", "Enhanced product ion"]),
+        "{v}"
+    );
+    assert_eq!(s["kinds"], serde_json::json!(["ms", "ms2"]), "{v}");
+    let (refused, _) = json(&dir.join("ref"), "variante", true);
+    let r: serde_json::Value = serde_json::from_str(&refused.unwrap()).unwrap();
+    assert!(
+        r["samples"][0].get("types").is_none() && r["samples"][0]["why"] == "refused",
+        "{r}"
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -215,6 +241,14 @@ fn a_sim_sample_lists_its_cycles_and_only_a_sample_with_no_data_is_empty() {
     assert_eq!(
         (s[1]["scans"].as_u64(), &s[1]["kinds"]),
         (Some(7), &serde_json::json!(["sim"])),
+        "{v}"
+    );
+    assert_eq!(
+        (&s[0]["types"], &s[1]["types"]),
+        (
+            &serde_json::json!(["Full scan"]),
+            &serde_json::json!(["SIM"])
+        ),
         "{v}"
     );
     assert!(

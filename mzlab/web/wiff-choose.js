@@ -1,7 +1,7 @@
 // @ts-check
 "use strict";
 // «Choose samples»: when a SCIEX .wiff holds several samples the page lists them (engine listing `samples_list/1`, container and index only, the .wiff.scan is not read) and
-// the user ticks which to open (docs/agenti/wiff-sample-choice.md). No sample logic here: the list (kinds, scan counts, `why`) and the first ticks (`sample_default`,
+// the user ticks which to open (docs/agenti/wiff-sample-choice.md). No sample logic here: the list (scan types, scan counts, `why`) and the first ticks (`sample_default`,
 // empty samples left out) are the engine's; this file draws a dialog and reports the ticked ids. A ticked sample is copied to the browser storage while the dialog is open (prefetch,
 // rust-prefetch.js): unticking it or closing the dialog stops that, «Open selected» finds the copies in place. Lazy (loadScript("wiff-choose.js")), called by wiffToMzml (shell.js).
 
@@ -14,11 +14,10 @@ const wcEl = (/** @type {string} */ tag, /** @type {Record<string, any>} */ a = 
   return e;
 };
 // literal keys (tools/controlla_i18n.py finds a key by its text)
-const WC_KIND = /** @type {Record<string, string>} */ ({ ms: "pick.kind.ms", ms2: "pick.kind.ms2", sim: "pick.kind.sim", mrm: "pick.kind.mrm", dad: "pick.kind.dad" });
 const WC_WHY = /** @type {Record<string, string>} */ ({ inferred: "pick.why.inferred", refused: "pick.why.refused" });
-/** @typedef {{ id: number, name: string, scans: number, size?: number, kinds?: string[], why?: string }} Smp */
+/** @typedef {{ id: number, name: string, scans: number, size?: number, types?: string[], why?: string }} Smp */
 /** @typedef {{ key: string, name: string, samples: Smp[], ticked: Set<number>, mem?: { name: string, blob: Blob }[], nkey?: string, plans?: Map<number, { ranges: Record<string, number[][]>, tag: string, whole: boolean }>, noPre?: boolean }} Entry */
-/** @typedef {{ cb: HTMLInputElement, e: Entry, s: Smp, st?: HTMLElement, pre?: { live: boolean }, last?: Promise<any> }} Box */
+/** @typedef {{ cb: HTMLInputElement, e: Entry, s: Smp, tr?: HTMLElement, pre?: { live: boolean }, last?: Promise<any> }} Box */
 
 /** the plan of ONE sample (`nativePlan`) as the stub keeps it; `whole`: it leaves nothing out, so copying it apart per sample would copy the whole file once per sample */
 async function wcPlan(/** @type {any} */ rb, /** @type {{ name: string, blob: Blob }[]} */ mem, /** @type {number} */ id) {
@@ -29,7 +28,7 @@ async function wcPlan(/** @type {any} */ rb, /** @type {{ name: string, blob: Bl
 
 /**
  * The prefetch of the ticked samples: the engine plans the byte ranges of ONE sample (`nativePlan`, the same plan the opening uses), the worker copies them (`nativePrefetch`, at most 2 at once);
- * `mark(box, state)` draws the row's state ("" nothing, "wait", a fraction 0..1, "done"). A plan that leaves nothing out (a reader with no section positions) is not copied ahead: it would copy the whole file once per sample.
+ * `mark(box, state)` reports the row's state ("" nothing, "wait", a fraction 0..1, "done"); the dialog shows none of it. A plan that leaves nothing out (a reader with no section positions) is not copied ahead: it would copy the whole file once per sample.
  */
 function wcPrefetch(/** @type {any} */ rb, /** @type {(b: Box, state: string | number) => void} */ mark) {
   let closed = false;
@@ -83,8 +82,8 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
       status.textContent = wcT("pick.sel", { n: on, total });
       ok.disabled = !on;
     };
-    // the mark of a row: «Waiting», «Loading 40%», «Loaded» (nothing when the sample is not copied ahead)
-    const mark = (/** @type {Box} */ b, /** @type {string | number} */ state) => { if (b.st) b.st.textContent = state === "" ? "" : state === "wait" ? wcT("pick.pre.wait") : state === "done" ? wcT("pick.pre.done") : wcT("pick.pre.run", { pc: Math.min(99, Math.floor(+state * 100)) }); };
+    // the copy ahead is silent: a row being copied carries aria-busy (no visible text), cleared when its copy is done, stopped or never started
+    const mark = (/** @type {Box} */ b, /** @type {string | number} */ state) => { if (b.tr) { if (state === "" || state === "done") b.tr.removeAttribute("aria-busy"); else b.tr.setAttribute("aria-busy", "true"); } };
     const pf = rb && rb.nativePrefetch && rb.nativePlan && rb.nativeUnprefetch && !window.MZLAB_DESKTOP ? wcPrefetch(rb, mark) : null;
     const sync = (/** @type {Box} */ b) => { if (!pf || b.e.noPre) return; if (b.cb.checked) { if (!b.pre || !b.pre.live) pf.start(b); } else pf.stop(b); };
     const setAll = (/** @type {boolean} */ v) => { boxes.forEach(b => { b.cb.checked = v; sync(b); }); upd(); };
@@ -101,19 +100,20 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
       for (const s of e.samples) {
         const cb = /** @type {HTMLInputElement} */ (wcEl("input", { type: "checkbox", checked: e.ticked.has(s.id), id: `wc-${boxes.length}` }));
         cb.setAttribute("aria-label", s.name);
-        const st = wcEl("span", { className: "wc-st" }), box = /** @type {Box} */ ({ cb, e, s, st });
+        const box = /** @type {Box} */ ({ cb, e, s });
         cb.onchange = () => { sync(box); upd(); };
         boxes.push(box);
         // `why` is the engine's: an `empty` sample acquired nothing (drawn dim, «empty» in place of a count); a refused or rebuilt one keeps its reason next to the name
-        const empty = s.why === "empty", note = s.why && !empty ? wcT("pick.note", { why: wcT(WC_WHY[s.why] || "pick.why.refused") }) : "", kinds = (s.kinds || []).map(k => wcT(WC_KIND[k] || k)).join(", ");
-        tbody.append(wcEl("tr", { className: empty ? "wc-empty" : "" }, [wcEl("td", {}, [cb]), wcEl("td", {}, [wcEl("label", { htmlFor: cb.id, text: s.name + note }), st]), wcEl("td", { text: kinds }), wcEl("td", { className: "n", text: empty ? wcT("pick.empty") : s.scans.toLocaleString("en") }), wcEl("td", { className: "n", text: s.size ? wcMb(s.size) : "" })]));
+        const empty = s.why === "empty", note = s.why && !empty ? wcT("pick.note", { why: wcT(WC_WHY[s.why] || "pick.why.refused") }) : "", types = (s.types || []).join(", ");      // the engine's own text of the scan types (`types` of samples_list/1)
+        const tr = wcEl("tr", { className: empty ? "wc-empty" : "" }, [wcEl("td", {}, [cb]), wcEl("td", {}, [wcEl("label", { htmlFor: cb.id, text: s.name + note })]), wcEl("td", { text: types }), wcEl("td", { className: "n", text: empty ? wcT("pick.empty") : s.scans.toLocaleString("en") }), wcEl("td", { className: "n", text: s.size ? wcMb(s.size) : "" })]);
+        box.tr = tr; tbody.append(tr);
       }
       tb.append(tbody); body.append(wcEl("div", { className: "wc-scroll" }, [tb]));
     }
     const x = wcEl("button", { type: "button", className: "wc-x", text: "\u00d7" });
     x.setAttribute("aria-label", wcT("pick.close"));
     const head = wcEl("div", { className: "wc-head" }, [wcEl("h2", { id: "wc-title", text: wcT("pick.title") }), x]);
-    dlg.append(head, wcEl("p", { className: "wc-intro", text: wcT("pick.intro") }), wcEl("div", { className: "wc-bar" }, [all, none, status]), body, wcEl("div", { className: "wc-act" }, [ok]));
+    dlg.append(head, wcEl("div", { className: "wc-bar" }, [all, none, status]), body, wcEl("div", { className: "wc-act" }, [ok]));
     let result = /** @type {Map<string, number[]> | null} */ (null);
     const finish = () => { dlg.close(); dlg.remove(); if (prior && prior.isConnected) prior.focus(); if (pf && !result) pf.stopAll(boxes, entries); done(result); };
     ok.onclick = () => { result = new Map(entries.map(e => [e.key, boxes.filter(b => b.e === e && b.cb.checked).map(b => b.s.id)])); if (pf) pf.keep(); finish(); };

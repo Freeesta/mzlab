@@ -42,6 +42,7 @@ try:
             assert pg.get_attribute("#wiffchoose .wc-sel", "role") == "status" and pg.evaluate("document.querySelectorAll('#wiffchoose tbody input[aria-label]').length") == 3
             assert pg.inner_text("#wiffchoose .wc-sel") == "3 of 3 ticked", pg.inner_text("#wiffchoose .wc-sel")
             # the simple layout: no number box, no Cancel, no "No." column; X at the top right; Open selected centred at the bottom
+            assert not pg.query_selector("#wiffchoose .wc-intro") and "Ticked samples start loading" not in pg.inner_text("#wiffchoose")      # no line about the loading
             assert not pg.query_selector("#wc-ids") and not pg.query_selector("#wiffchoose button:text('Cancel')") and not pg.query_selector("#wiffchoose button:text('Tick numbers')")
             assert pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose thead th')).map(h => h.textContent).join('|')") == "Open|Sample|Type|Scans|Size"
             assert pg.evaluate("""() => { const d = document.querySelector('#wiffchoose').getBoundingClientRect(), x = document.querySelector('#wiffchoose .wc-x').getBoundingClientRect(), o = document.querySelector('#wiffchoose button.go').getBoundingClientRect();
@@ -128,7 +129,7 @@ try:
             n = rows(pg); pg.set_input_files("#pick", pair("tipi")); dlg(pg)
             cells = pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose tbody tr')).map(r => ({ on: r.querySelector('input').checked, t: Array.from(r.querySelectorAll('td')).slice(1).map(c => c.textContent) }))")
             assert [c["on"] for c in cells] == [True, True, False], cells
-            assert cells[0]["t"][1:3] == ["MS", "5"] and cells[1]["t"][1:3] == ["SIM", "7"], cells
+            assert cells[0]["t"][1:3] == ["Full scan", "5"] and cells[1]["t"][1:3] == ["SIM", "7"], cells
             assert cells[2]["t"][2] == "empty" and cells[2]["t"][1] == "", cells
             assert pg.inner_text("#wiffchoose .wc-sel") == "2 of 3 ticked" and pg.evaluate("document.querySelector('#wiffchoose tbody tr.wc-empty') !== null")
             shot = os.environ.get("MZLAB_SHOTS")
@@ -147,23 +148,24 @@ try:
         # the copy ahead (rust-prefetch.js): the ticked samples of the `pre` pair (4 samples) are copied into OPFS while the dialog is open
         STORES = """async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.includes('~pre.wiff')) { const f = await h.getFile(); out.push([n, f.lastModified, f.size]); } } }; await walk(await navigator.storage.getDirectory()); return out.sort(); }"""
         def scans(): return [x for x in pg.evaluate(STORES) if x[0].endswith(".wiff.scan")]
-        def wait_scans(n): pg.wait_for_function(f"({STORES})().then(a => a.filter(x => x[0].endsWith('.wiff.scan')).length === {n})", timeout=60000)
-        def states(): return pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose .wc-st')).map(e => e.textContent)")
-        def wait_loaded(n): pg.wait_for_function(f"Array.from(document.querySelectorAll('#wiffchoose .wc-st')).filter(e => e.textContent === 'Loaded').length === {n}", timeout=60000)
+        # the loading is silent: no text in the dialog says anything about it; a row being copied only carries aria-busy, so «done» is a store per sample and no busy row
+        BUSY = "document.querySelectorAll('#wiffchoose tbody tr[aria-busy=true]').length"
+        def silent(): return pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose tbody tr')).every(r => !/wait|load|%/i.test(r.textContent)) && !document.querySelector('#wiffchoose .wc-st, #wiffchoose .wc-intro')")
+        def wait_loaded(n): pg.wait_for_function(f"{BUSY} === 0 && ({STORES})().then(a => a.filter(x => x[0].endsWith('.wiff.scan')).length === {n})", timeout=60000)
         def prefetch_start():
             pg.set_input_files("#pick", pair("pre")); dlg(pg)
             assert ticked(pg) == 4, ticked(pg)
             assert pg.is_enabled("#wiffchoose button.go")      # the dialog is never blocked by the loading
-            wait_loaded(4); wait_scans(4)                      # before pressing Open: one store of the .wiff.scan per ticked sample
-            assert states() == ["Loaded"] * 4, states()
-        step("ticked samples start loading when the dialog opens: a store per sample before Open, each row says Loaded", prefetch_start)
+            wait_loaded(4)                                     # before pressing Open: one finished store of the .wiff.scan per ticked sample
+            assert len(scans()) == 4 and pg.evaluate(BUSY) == 0 and silent()
+        step("ticked samples start loading when the dialog opens: a store per sample before Open, and the dialog says nothing about it", prefetch_start)
         def prefetch_untick():
             pg.click("#wiffchoose tbody tr:nth-child(2) input")
-            wait_scans(3); st = states()
-            assert st[1] == "" and st.count("Loaded") == 3, st
-            pg.click("#wiffchoose tbody tr:nth-child(2) input")      # ticked again: loaded again
-            wait_loaded(4); wait_scans(4)
-        step("unticking a sample discards its copy and clears its mark; ticking it again copies it again", prefetch_untick)
+            wait_loaded(3)
+            assert pg.evaluate("document.querySelectorAll('#wiffchoose tbody tr[aria-busy]').length") == 0 and silent()
+            pg.click("#wiffchoose tbody tr:nth-child(2) input")      # ticked again: copied again
+            wait_loaded(4)
+        step("unticking a sample discards its copy; ticking it again copies it again", prefetch_untick)
         def prefetch_x():
             pg.click("#wiffchoose .wc-x"); settle(pg)
             pg.wait_for_function(f"({STORES})().then(a => a.length === 0)", timeout=60000)
@@ -172,7 +174,7 @@ try:
         step("the X cancels everything and frees the copies: no store of the pair is left", prefetch_x)
         def prefetch_reuse():
             n = rows(pg); pg.set_input_files("#pick", pair("pre")); dlg(pg)
-            wait_loaded(4); wait_scans(4); before = scans()
+            wait_loaded(4); before = scans()
             pg.click("#wiffchoose button.go"); settle(pg)
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 4", timeout=120000)
             assert scans() == before, (before, scans())      # the opening reused the copies: same stores, same bytes, never written again
@@ -187,9 +189,9 @@ try:
             assert total < 2 * whole, (total, whole)
         step("every sample ticked: the copies hold the file once plus the head and tail once per extra sample, never twice the file", prefetch_bytes)
         def prefetch_cached():
-            # the same pair dropped again, its samples already open with their index: the dialog opens with no row marked (a copy that started marks its row «Waiting» at once)
+            # the same pair dropped again, its samples already open with their index: nothing is copied ahead (no row busy, no store written; a copy that started marks its row busy at once)
             n = rows(pg); before = scans(); pg.set_input_files("#pick", pair("pre")); dlg(pg)
-            assert states() == [""] * 4, states(); assert scans() == before, (before, scans())
+            assert pg.evaluate(BUSY) == 0 and scans() == before, (before, scans())
             pg.click("#wiffchoose .wc-x"); settle(pg); assert rows(pg) == n, rows(pg)
         step("a pair already loaded is not copied ahead when it is dropped again", prefetch_cached)
         b.close()

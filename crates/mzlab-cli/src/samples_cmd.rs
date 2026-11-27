@@ -164,7 +164,7 @@ usage: mzlab-cli sample list FILE... [--json] [--probe]
   --json   one sample-list/1 document on stdout, {\"schema\",\"files\":[samples_list/1 per FILE, in order]}; a file the reader refuses has its error/1 in its place (exit 1); without it, a table
   --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
            (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
-Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
+Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad) and types (the scan types as text: Full scan, SIM, MRM, Product ion, ...; what the page chooser shows), polarity, rt [min, max] and
 tic {apex_rt, apex, sum} (minutes), method (the .dam file), missing (index rows past the end of the data file), why (refused | inferred | empty),
 refused. Per file: format, bytes, scan {bytes, indexed_end}, and only when the pair disagrees with itself consistency {status short|unlisted, scan_bytes, indexed_end, wiff_bytes, samples_listed, sections_unlisted, age_s, recent_s, still_writing}. No hashes, no log text, no operator. Nothing is written.
 Streams: data on stdout; progress (one line per file) and warnings on stderr.
@@ -233,7 +233,7 @@ fn list_table(json: &str, file: &str) -> String {
     );
     for s in v.get("samples").map_or(&[][..], Value::arr) {
         let kinds: Vec<&str> = s
-            .get("kinds")
+            .get("types")
             .map_or(&[][..], Value::arr)
             .iter()
             .filter_map(Value::str)
@@ -267,7 +267,7 @@ fn list_table(json: &str, file: &str) -> String {
             if kinds.is_empty() {
                 "-".to_string()
             } else {
-                kinds.join("+")
+                kinds.join(", ")
             },
             s.get("polarity").and_then(Value::str).unwrap_or("-"),
             apex.map_or("-".to_string(), |a| format!("{a:.2}")),
