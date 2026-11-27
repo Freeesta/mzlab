@@ -131,6 +131,20 @@ try:
             pg.set_viewport_size({"width": 1280, "height": 900}); frames(pg, 3)
         step("390 px: the checkbox is the key (coloured, no separate swatch, 24 px target), focus ring and tooltip highlight hold", phone)
 
+        def fits_phone():
+            # the popup must lie inside the viewport at phone width, scroll when taller, and keep every button reachable
+            pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 4)
+            popup()
+            m = pg.evaluate("""(() => { const q = %s.el.querySelector('.can-pop'), b = q.getBoundingClientRect(), W = document.documentElement.clientWidth, H = window.innerHeight;
+              const btn = [...q.querySelectorAll('.can-all,.can-none')].map(x => { const r = x.getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width, h: r.height }; });
+              return { l: b.left, r: b.right, t: b.top, bt: b.bottom, W, H, sh: q.scrollHeight, ch: q.clientHeight, ov: getComputedStyle(q).overflowY, btn }; })()""" % P)
+            need(m["l"] >= 0 and m["r"] <= m["W"], "390 px: the popup runs off the screen: %s" % m)
+            need(len(m["btn"]) == 2 and all(x["l"] >= 0 and x["r"] <= m["W"] and x["w"] >= 24 and x["h"] >= 24 for x in m["btn"]), "390 px: All / None must be inside the screen with 24 px targets: %s" % m)
+            need(m["sh"] <= m["ch"] + 1 or m["ov"] in ("auto", "scroll"), "390 px: a popup taller than its box must scroll: %s" % m)
+            pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 3)
+            pg.set_viewport_size({"width": 1280, "height": 900}); frames(pg, 3)
+        step("390 px: the channel picker popup lies inside the viewport, scrolls when taller, All / None reachable", fits_phone)
+
         def submenus():
             show(pg, [0], N3, 1)
             pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 2)

@@ -84,10 +84,10 @@ try:
         step("MS2 select, one transition: its swatch alone, the other options hollow squares", one_row)
 
         def hover_ms2():
-            before = pg.evaluate("%s.cv.toDataURL()" % MS)
+            away(pg, MS); before = pg.evaluate("%s.cv.toDataURL()" % MS)       # at rest, as the XIC and DAD steps: the redraw of the select just changed is not a difference of the hover
             pg.locator("%s" % ".trkey .trk").first.hover()
             wait_for_js(pg, "%s._hl != null" % MS, timeout=10000); frames(pg, 3)
-            pg.mouse.move(5, 5); wait_for_js(pg, "%s._hl == null" % MS, timeout=10000); frames(pg, 3)
+            away(pg, MS)
             need(pg.evaluate("%s.cv.toDataURL()" % MS) == before, "the drawing did not come back after the mouse left")
         step("MS2 select: hover of the key lights its trace, leaving restores the drawing", hover_ms2)
 
