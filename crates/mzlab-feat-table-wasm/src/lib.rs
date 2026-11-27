@@ -13,7 +13,6 @@ pub use mzlab_ops::run::table::{core, filterspec, pol, rows_mgf};
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
-mod slots;
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())

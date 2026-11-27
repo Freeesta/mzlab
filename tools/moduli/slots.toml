@@ -1,0 +1,8 @@
+uscita = "wasm-feat/slots"
+pacchetto = "mzlab-feat-slots-wasm"
+chiavi = { slots = 39 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 262144
+misura = 246600
+nota = "feature-slots/1 (`slots_json`: state, evidence, source and filling step of each slot of a feature row) for the Slots tab; lazy, loaded by 36_feature_qc.js at the first Slots tab; a module of its own because inside `table` it took that module over its cap (737,280 B, not raised: Coordinator decision COO16); misura is an ESTIMATE (352,167 B pre-opt local x 0.70, the post/pre ratio of table) until the CI size step measures it; cap = estimate x 1.05 rounded up to 4 KiB"

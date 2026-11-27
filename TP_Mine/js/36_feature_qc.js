@@ -16,19 +16,17 @@
     report: ["crate", "table_sha256", "samples_sha256", "rows", "file", "cells", "view", "qc"], cells: ["detected", "targeted", "filled", "absent"], reportView: ["params", "counts"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
-  /** @type {any} */ let mod = null;
-
-  /** the .wasm of the table, verified against the SHA-256 of wasm-feat/manifest.json */
-  async function engine(/** @type {string} */ base) {
-    if (mod) return mod;
-    const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, base).href, man = await (await fetch(u("manifest.json"))).json(), t = man.table;
+  /** @type {Record<string, any>} */ const mods = {};
+  /** a .wasm of wasm-feat/manifest.json (`table`, or `slots` for the Slots tab), verified against its SHA-256 and loaded once */
+  async function engine(/** @type {string} */ base, /** @type {string} */ key = "table") {
+    if (mods[key]) return mods[key];
+    const u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, base).href, man = await (await fetch(u("manifest.json"))).json(), t = man[key];
     if (!t) throw Object.assign(new Error("error.featFailed"), { key: "error.featFailed" });
     const bytes = await (await fetch(u(t.wasm))).arrayBuffer();
     if (t.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== t.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
     const m = await import(u(t.js));
     await m.default({ module_or_path: bytes });
-    mod = m;
-    return m;
+    return (mods[key] = m);
   }
   /** an error of the engine is a JSON text `{error_key, params}`: becomes an Error with `key` and `params` */
   const fail = (/** @type {any} */ e) => {
@@ -92,7 +90,7 @@
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
-      slots: (/** @type {number} */ id) => JSON.parse(run(() => m.table_slots(read, size, samples, id, a.output || ""))),
+      slots: async (/** @type {number} */ id) => { const sl = await engine(a.base, "slots"); return JSON.parse(run(() => sl.table_slots(read, size, samples, id, a.output || ""))); },   // its own .wasm, fetched at the first Slots tab
       tpTable: () => JSON.parse(run(() => m.tp_table(read, size, samples, ""))),
       plausible: () => JSON.parse(run(() => m.table_plausible(read, size, plausibleOptions(a)))),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
