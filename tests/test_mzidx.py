@@ -227,23 +227,23 @@ def test_rounded_is_round_for_every_value():
             assert [repr(x) for x in ref] == [repr(x) for x in rounded(a, nd)]
 
 
-def test_the_reference_writes_version_3_with_the_chromatogram_list(synth, tmp_path):
+def test_the_reference_writes_version_4_with_the_chromatogram_list(synth, tmp_path):
     f = synth[0]
-    p = tmp_path / "v3.mzidx"
+    p = tmp_path / "v4.mzidx"
     run = Run(f, index_path=p)
     run.table(1)
     run.close()
     blob = p.read_bytes()
     magic, ver, flags, meta_off, meta_len, *_ = mzidx.HEADER.unpack_from(blob)
-    assert (ver, flags) == (3, 0)
+    assert (ver, flags) == (4, 0)
     meta = json.loads(blob[meta_off:meta_off + meta_len])
-    assert meta["version"] == 3
+    assert meta["version"] == 4
     rows = meta["run"]["chromatograms"]
     assert len(rows) == meta["run"]["n_chromatograms"]
     assert all(len(r) == 10 for r in rows), rows[:2]
 
 
-@pytest.mark.parametrize("version", [1, 2, 4])
+@pytest.mark.parametrize("version", [1, 2, 5])
 def test_the_reference_refuses_other_versions(synth, tmp_path, version):
     p = tmp_path / "other.mzidx"
     run = Run(synth[0], index_path=p)
@@ -254,3 +254,26 @@ def test_the_reference_refuses_other_versions(synth, tmp_path, version):
     p.write_bytes(bytes(blob))
     with pytest.raises(ValueError):
         mzidx.open(p)
+
+
+def test_the_reference_stores_the_fill_time_as_a_float32_and_still_reads_version_3(tmp_path):
+    import numpy as np
+    f = tmp_path / "fill.mzML"
+    ds.ms2(f, np.random.default_rng(2), 15, fill_ms=(2.7393153, 40.0))
+    p = tmp_path / "fill.mzidx"
+    run = Run(f, index_path=p)
+    run.table(2)
+    run.close()
+    blob = p.read_bytes()
+    _, _, _, _, _, soff, slen, _ = mzidx.HEADER.unpack_from(blob)
+    rows = json.loads(blob[soff:soff + slen])
+    assert rows[0][20:] == [None, None, 2.7393153] and rows[1][22] == 40.0
+    ix = mzidx.open(p)
+    assert [s.fill for s in ix.scans()[:2]] == [2.7393153, 40.0]
+    ix.close()
+    # a header of version 3 still opens
+    old = bytearray(blob)
+    old[8:12] = struct.pack("<I", 3)
+    q = tmp_path / "v3.mzidx"
+    q.write_bytes(bytes(old))
+    assert mzidx.open(q).scans()[0].native

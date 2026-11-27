@@ -4,9 +4,10 @@
 use super::{Row, Table};
 use crate::json::Out;
 
-/// Columns 21 (type) and 22 (mobility `[value, unit]`) only for the scans that have one, so an index without any stays as it was.
+/// Columns 21 (type), 22 (mobility `[value, unit]`) and 23 (fill time in ms) only for the scans that have one, so an index without any stays as it was:
+/// a column before the last one that is set is written as `null`.
 fn tail_columns(o: &mut Out, r: &Row) {
-    if r.kind.is_none() && r.mob.is_none() {
+    if r.kind.is_none() && r.mob.is_none() && r.fill.is_none() {
         return;
     }
     o.raw(",");
@@ -14,10 +15,22 @@ fn tail_columns(o: &mut Out, r: &Row) {
         Some(k) => o.str(k),
         None => o.raw("null"),
     };
-    if let Some((v, u)) = r.mob {
-        o.raw(",[");
-        py_float(o, v);
-        o.raw(",").str(u).raw("]");
+    if r.mob.is_none() && r.fill.is_none() {
+        return;
+    }
+    match r.mob {
+        Some((v, u)) => {
+            o.raw(",[");
+            py_float(o, v);
+            o.raw(",").str(u).raw("]");
+        }
+        None => {
+            o.raw(",null");
+        }
+    }
+    if let Some(f) = r.fill {
+        // the `f32` as its shortest text (12.5, not 12.5000000149): the reader parses it back to the same `f32`
+        o.raw(&format!(",{f:?}"));
     }
 }
 
