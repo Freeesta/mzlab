@@ -7,9 +7,9 @@ import { ensureRoom } from "./archivio.js";
 function prefetchApi(/** @type {any} */ h) {
   return {
     /** copies the byte ranges of sample `sid` of a dataset (`key`: NATIVO.key of its stem) to the browser storage ahead of its opening (rust-prefetch.js); `ranges`/`tag` are the engine's plan of that one sample (`nativePlan`);
-     *  `onProgress(frac)`; resolves true when the copy is in place, false when it was stopped, refused or the engine stopped: the opening then copies as it always did */
-    async nativePrefetch(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ key, /** @type {number} */ sid, /** @type {Record<string, number[][]>} */ ranges, /** @type {string} */ tag, /** @type {((f: number) => void) | undefined} */ onProgress) {
-      const r = await h.rpc({ op: "natprefetch", key, sid, members, ranges, tag }, onProgress ? (/** @type {any} */ p) => { if (p && p.wait) onProgress(-1); else if (p && typeof p.frac === "number") onProgress(p.frac); } : undefined);
+     *  `onProgress(frac)`; `c`: the position of the sample in the dataset, given it the index is built right after the copy (rust-index-ahead.js); resolves true when the copy (and index) is in place, false when it was stopped, refused or the engine stopped: the opening then copies as it always did */
+    async nativePrefetch(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string} */ key, /** @type {number} */ sid, /** @type {Record<string, number[][]>} */ ranges, /** @type {string} */ tag, /** @type {((f: number) => void) | undefined} */ onProgress, /** @type {number | undefined} */ c) {
+      const r = await h.rpc({ op: "natprefetch", key, sid, c, members, ranges, tag }, onProgress ? (/** @type {any} */ p) => { if (p && p.wait) onProgress(-1); else if (p && typeof p.frac === "number") onProgress(p.frac); } : undefined);
       return !(r.dead || r.error);
     },
     /** stops and discards the prefetch of samples `sids` of dataset `key` (all of them when null); `end`: nothing more of this dataset is to be opened */

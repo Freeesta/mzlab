@@ -1,7 +1,7 @@
 """«Choose samples» dialog of a .wiff with several samples (wiff-choose.js, docs/agenti/wiff-sample-choice.md PR 4; the range copy of a partial choice, wiff-range-copy.md): shown only when the file has several samples, every non-empty sample ticked for a small
 set and an empty one (acquired nothing) not, a SIM-only sample listed with its cycles, Select all / Select none, Open selected (Enter too) opens only the ticked ones, X and Escape open nothing,
 phone width, the setting «never» and «always»; the ticked samples are copied ahead while the dialog is open (start, untick, X, reuse by Open selected; mzlab/web/rust-prefetch.js). Synthetic pairs of tools/wiff_grande.py and the `tipi` pair of tools/wiff_tipi.py (MS, SIM-only and empty sample). Needs the site and the .wasm: python tools/build_site.py, and the .wasm built here when cargo and wasm-bindgen exist."""
-# covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, mzlab/web/rust-prefetch, crates/mzlab-core/src/readers/selection
+# covers: mzlab/web/archivio, crates/mzlab-core/src/readers/ranges, mzlab/web/wiff-choose, mzlab/web/settings, mzlab/web/shell, mzlab/web/rust-nativo, mzlab/web/rust-worker, mzlab/web/rust-prefetch, mzlab/web/rust-index-ahead, crates/mzlab-core/src/readers/selection
 import os, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -150,33 +150,50 @@ try:
         def wait_scans(n): pg.wait_for_function(f"({STORES})().then(a => a.filter(x => x[0].endsWith('.wiff.scan')).length === {n})", timeout=60000)
         def states(): return pg.evaluate("Array.from(document.querySelectorAll('#wiffchoose .wc-st')).map(e => e.textContent)")
         def wait_loaded(n): pg.wait_for_function(f"Array.from(document.querySelectorAll('#wiffchoose .wc-st')).filter(e => e.textContent === 'Loaded').length === {n}", timeout=60000)
+        # the index ahead (rust-index-ahead.js): the index of a ticked sample is built while the dialog is open, under a name of the pair and the sample (not of the final selection), and Open only moves it
+        IDXS = """async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.endsWith('.mzidx') && (n.startsWith('nat~') || n.endsWith('.mzML.mzidx'))) { const f = await h.getFile(); const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await f.arrayBuffer()))).map(v => v.toString(16).padStart(2, '0')).join(''); out.push([n, f.size, hash]); } } }; await walk(await navigator.storage.getDirectory()); return out.sort(); }"""
+        def aheads(): return [x for x in pg.evaluate(IDXS) if x[0].startswith("nat~") and x[0].endswith("~pre.mzidx")]
+        def wait_aheads(n): pg.wait_for_function(f"({IDXS})().then(a => a.filter(x => x[0].startsWith('nat~') && x[0].endsWith('~pre.mzidx')).length === {n})", timeout=60000)
+        def finals(): return [x for x in pg.evaluate(IDXS) if not x[0].startswith("nat~")]
+        def stats(): return pg.evaluate("window.MZLAB_RUST.rpc({ op: 'natstats' }).then(r => JSON.parse(r.info))")
         def prefetch_start():
             pg.set_input_files("#pick", pair("pre")); dlg(pg)
             assert ticked(pg) == 4, ticked(pg)
             assert pg.is_enabled("#wiffchoose button.go")      # the dialog is never blocked by the loading
             wait_loaded(4); wait_scans(4)                      # before pressing Open: one store of the .wiff.scan per ticked sample
             assert states() == ["Loaded"] * 4, states()
-        step("ticked samples start loading when the dialog opens: a store per sample before Open, each row says Loaded", prefetch_start)
+            assert len(aheads()) == 4, aheads()                # Loaded is true: the index of each ticked sample is there too, before Open
+        step("ticked samples start loading when the dialog opens: a store and an index per sample before Open, each row says Loaded", prefetch_start)
         def prefetch_untick():
             pg.click("#wiffchoose tbody tr:nth-child(2) input")
-            wait_scans(3); st = states()
+            wait_scans(3); wait_aheads(3); st = states()
             assert st[1] == "" and st.count("Loaded") == 3, st
             pg.click("#wiffchoose tbody tr:nth-child(2) input")      # ticked again: loaded again
-            wait_loaded(4); wait_scans(4)
-        step("unticking a sample discards its copy and clears its mark; ticking it again copies it again", prefetch_untick)
+            wait_loaded(4); wait_scans(4); wait_aheads(4)
+        step("unticking a sample discards its copy and its index and clears its mark; ticking it again loads it again", prefetch_untick)
         def prefetch_x():
             pg.click("#wiffchoose .wc-x"); settle(pg)
             pg.wait_for_function(f"({STORES})().then(a => a.length === 0)", timeout=60000)
+            wait_aheads(0); assert not [x for x in pg.evaluate(IDXS) if x[0].startswith("nat~")], pg.evaluate(IDXS)      # no index of the pair is left either
             assert rows(pg) == n_rows_before_pre, rows(pg)
         n_rows_before_pre = rows(pg)
         step("the X cancels everything and frees the copies: no store of the pair is left", prefetch_x)
         def prefetch_reuse():
             n = rows(pg); pg.set_input_files("#pick", pair("pre")); dlg(pg)
-            wait_loaded(4); wait_scans(4); before = scans()
+            wait_loaded(4); wait_scans(4); before = scans(); ahead = aheads(); s0 = stats()
+            assert len(ahead) == 4 and s0["built"] >= 4, (ahead, s0)
+            t0 = pg.evaluate("performance.now()")
             pg.click("#wiffchoose button.go"); settle(pg)
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} + 4", timeout=120000)
+            took = pg.evaluate("performance.now()") - t0
             assert scans() == before, (before, scans())      # the opening reused the copies: same stores, same bytes, never written again
-        step("Open selected reuses what is loaded: the stores are not written again and the rows open", prefetch_reuse)
+            # ... and the indexes: moved to the names of the samples (same bytes, same sizes), none built at the opening, none left under the neutral names
+            s1 = stats(); done = [x for x in finals() if x[0].startswith("pre_")]      # the indexes of the samples of the pair, under the names of the list
+            assert s1["adopted"] - s0["adopted"] == 4 and s1["atOpen"] == s0["atOpen"] and s1["built"] == s0["built"], (s0, s1)
+            assert len(done) == 4 and sorted(x[2] for x in done) == sorted(x[2] for x in ahead) and sorted(x[1] for x in done) == sorted(x[1] for x in ahead), ([x[1:] for x in ahead], done)
+            assert not aheads(), aheads()
+            print("   Open selected -> 4 rows listed in", round(took), "ms (indexes adopted, not built)")
+        step("Open selected reuses what is loaded: the stores and the indexes are not written or built again (moved, same bytes) and the rows open", prefetch_reuse)
         NZ = """async () => { const out = []; const walk = async (d) => { for await (const [n, h] of d.entries()) { if (h.kind === 'directory') await walk(h); else if (n.startsWith('nat~') && n.includes('~pre.wiff.scan')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let nz = 0; for (const v of b) if (v !== 0) nz++; out.push([n, nz]); } } }; await walk(await navigator.storage.getDirectory()); return out; }"""
         def prefetch_bytes():
             # every sample ticked: the copies made ahead hold the sections once and the head and tail of the .wiff.scan once per sample, nothing else
