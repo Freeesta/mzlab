@@ -246,7 +246,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
 )
 .schema("compare/1")
 .exits(&[0, 2, 4, 5, 6])
-.examples(&["mzlab-cli table compare features.csv --ref t0* --blank MQ*"]),
+.examples(&["mzlab-cli table compare f.csv --ref t0* --blank MQ*"]),
 Entry::new(
     "table row",
     "mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2",
@@ -268,7 +268,7 @@ Entry::new(
 )
 .schema("union/1")
 .exits(&[0, 2, 3, 4, 6])
-.examples(&["mzlab-cli quant union pos_a.csv pos_b.csv --rt-warp piecewise --out targets.csv"]),
+.examples(&["mzlab-cli quant union a.csv b.csv --rt-warp piecewise --out t.csv"]),
 Entry::new(
     "estimate",
     "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data",

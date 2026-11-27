@@ -144,6 +144,7 @@ pub mod steps;
 pub mod store;
 mod store_base;
 mod store_read;
+pub mod tables;
 pub mod suspects;
 pub mod suspects_listings;
 mod sweep;

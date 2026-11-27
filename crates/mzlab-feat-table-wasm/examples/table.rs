@@ -9,6 +9,18 @@ use mzlab_core::idxread::Index;
 use mzlab_feat::store::Slice;
 use mzlab_ops::run::table::core;
 
+/// The step the entry names (the Node script passes the same text, the CLI test writes it as a `prov.json`).
+const MADE: &str =
+    r#"{"instance":"series","step":"features.gapfill@1","status":"ok","ms":12.34,"warnings":0}"#;
+
+/// The `tables/1` entry of the table, as the page asks the wasm for it.
+fn entry(table: &[u8], size: u64) -> String {
+    let made = mzlab_core::json::parse(MADE.as_bytes()).expect("made");
+    let made = mzlab_feat::tables::Made::from_json(&made);
+    mzlab_feat::tables::entry("series.mzfeat", &mut Slice(table), size, made.as_ref())
+        .expect("entry")
+}
+
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     let (out, table, samples) = (
@@ -74,6 +86,7 @@ fn main() {
             core::ms2_file(&mut r(), size, &samples, &spec, &sha, pol, kind, open).expect("ms2"),
         );
     }
+    put("entry.json", entry(&table, size));
     put(
         "row.json",
         core::row_json(&mut r(), size, &samples, 3).expect("row"),

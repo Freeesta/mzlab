@@ -22,6 +22,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only
+       mzlab-cli flow tables RUNDIR [--json]   feature tables of a run
        mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run
@@ -56,7 +57,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists: trace-set/1, CSV; --ions adds ions; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists; --ions adds ions; --dry-run: plan
        mzlab-cli trace background FILE [--set NAME=VALUE...]   a file's background trace as JSON
        mzlab-cli dad subtract FILE ...   DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   UV spectrum at a time
@@ -84,7 +85,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
@@ -109,7 +110,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli db normative pack ...   pack regulatory lists (native only)
        mzlab-cli db normative listings ...   regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import user's official lists (native only)
-       mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)
+       mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   reference-ion CSV as JSON (reflist/1)
        mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)
        mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   inspect mzML files
@@ -120,7 +121,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   bash completion script
        mzlab-cli completions zsh   zsh completion script
        mzlab-cli completions fish   fish completion script
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema, codes; --find by task
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -150,6 +151,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only
+       mzlab-cli flow tables RUNDIR [--json]   feature tables of a run
        mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run
@@ -184,7 +186,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists: trace-set/1, CSV; --ions adds ions; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists; --ions adds ions; --dry-run: plan
        mzlab-cli trace background FILE [--set NAME=VALUE...]   a file's background trace as JSON
        mzlab-cli dad subtract FILE ...   DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   UV spectrum at a time
@@ -212,7 +214,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
@@ -237,7 +239,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli db normative pack ...   pack regulatory lists (native only)
        mzlab-cli db normative listings ...   regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import user's official lists (native only)
-       mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)
+       mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   reference-ion CSV as JSON (reflist/1)
        mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)
        mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   inspect mzML files
@@ -248,7 +250,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   bash completion script
        mzlab-cli completions zsh   zsh completion script
        mzlab-cli completions fish   fish completion script
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema, codes; --find by task
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -278,6 +280,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only
+       mzlab-cli flow tables RUNDIR [--json]   feature tables of a run
        mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run
@@ -312,7 +315,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   channel trace as JSON or rt_min,intensity CSV
-       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists: trace-set/1, CSV; --ions adds ions; --dry-run xicplan/1
+       mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists; --ions adds ions; --dry-run: plan
        mzlab-cli trace background FILE [--set NAME=VALUE...]   a file's background trace as JSON
        mzlab-cli dad subtract FILE ...   DAD matrix A minus B
        mzlab-cli dad spectrum FILE ...   UV spectrum at a time
@@ -340,7 +343,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli msn lib build MANIFEST.tsv [--dry-run]   build the MSn library
        mzlab-cli msn lib export LIB.json   export the library spectra
        mzlab-cli msn lib search ...   search the library of MSn trees
-       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
+       mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   fragmentation rules judged on library spectra
        mzlab-cli msn rules sum DOC...   msn-rules/1 documents summed
        mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula
        mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift
@@ -365,7 +368,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli db normative pack ...   pack regulatory lists (native only)
        mzlab-cli db normative listings ...   regulatory lists built (native only)
        mzlab-cli db normative import-official ...   import user's official lists (native only)
-       mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)
+       mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   reference-ion CSV as JSON (reflist/1)
        mzlab-cli llm tools [--out FILE] [--demo] [--compact]   assistant tools (tools/1)
        mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   inspect mzML files
@@ -376,7 +379,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--centroid auto|on|off] [--mz
        mzlab-cli completions bash   bash completion script
        mzlab-cli completions zsh   zsh completion script
        mzlab-cli completions fish   fish completion script
-       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema, codes; --find by task
+       mzlab-cli commands [--json] [PATH... | --find WORDS...]   every command: arguments, flags, schema; --find by task
        mzlab-cli schema [--list | NAME]   JSON Schema NAME (error/1, ...) or the list
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
@@ -395,6 +398,7 @@ exit 0
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only
+       mzlab-cli flow tables RUNDIR [--json]   feature tables of a run
        mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run
@@ -410,6 +414,7 @@ exit 0
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   plan validity, without the input files
        mzlab-cli flow steps [--json] [--compact] [--id ID[@V] [--template]]   Flow steps, native or page only
+       mzlab-cli flow tables RUNDIR [--json]   feature tables of a run
        mzlab-cli flow defaults STEP[@V] [--json]   step parameters with defaults and limits
        mzlab-cli flow report RUNDIR [--out FILE]   a run's report
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   mzrun/2 record of a run
@@ -1126,7 +1131,7 @@ If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/m
 === mzlab-cli db insilico --help
 exit 0
 --- stdout
-usage: mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)
+usage: mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -1397,7 +1402,7 @@ exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json 
 === mzlab-cli db insilico pack --help
 exit 0
 --- stdout
-usage: mzlab-cli db insilico pack CSV OUT   spectra.insilico candidate package (native only)
+usage: mzlab-cli db insilico pack CSV OUT   insilico candidate package (native only)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr

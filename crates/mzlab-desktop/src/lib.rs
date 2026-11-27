@@ -26,6 +26,7 @@ mod flow_progress;
 mod flow_reuse;
 mod flow_run;
 mod flow_stage;
+mod flow_tables;
 pub mod folder;
 pub mod idxbuild;
 mod idxbuild_nat;

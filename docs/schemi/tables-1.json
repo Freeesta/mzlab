@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tables/1",
+  "title": "tables/1: the feature tables of a run folder",
+  "description": "The answer of `mzlab-cli flow tables RUNDIR --json`: one entry per `.mzfeat` of the folder, sorted by file name, each read from its meta alone (`mzlab_feat::tables::entry`, the function the Flow column of the site calls over the same bytes). The step that made a table (instance, step, status, ms, warnings) comes from the `prov.json` beside it and is left out when there is none. A file that cannot be read is under `skipped` with its error key and the exit code is 1 (the document is then the `report` of an error/1 answer). Code: crates/mzlab-feat/src/tables.rs, crates/mzlab-cli/src/flow_tables.rs.",
+  "type": "object",
+  "required": ["schema", "tables", "skipped"],
+  "properties": {
+    "schema": {"const": "tables/1"},
+    "citation": {"type": "string"},
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "bytes", "rows", "files", "identity", "tp", "recipe_hash", "crate"],
+        "properties": {
+          "name": {"type": "string", "description": "file name in the folder"},
+          "bytes": {"type": "integer"},
+          "rows": {"type": "integer", "description": "features"},
+          "files": {"type": "integer", "description": "file columns"},
+          "polarity": {"enum": [-1, 1], "description": "only when the recipe of the table says (`polarity: Some(..)`, not both)"},
+          "identity": {"type": "boolean", "description": "the table carries ion identities"},
+          "tp": {"type": "boolean", "description": "the table carries a product view (tp/2)"},
+          "recipe_hash": {"type": "string"},
+          "crate": {"type": "string", "description": "version of the crate that wrote the table"},
+          "instance": {"type": "string", "description": "the plan instance that made the table"},
+          "step": {"type": "string", "description": "id@version"},
+          "status": {"enum": ["ok", "cached"]},
+          "ms": {"type": "number", "minimum": 0},
+          "warnings": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "error_key"],
+        "properties": {"name": {"type": "string"}, "error_key": {"type": "string"}}
+      }
+    }
+  }
+}

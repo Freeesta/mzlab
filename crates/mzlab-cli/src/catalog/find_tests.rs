@@ -99,6 +99,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("centroid profile spectra", "spectra.centroid"),
     ("export the feature table as CSV", "export.table_csv"),
     ("record the provenance of a run", "flow record"),
+    ("list the feature tables a run made", "flow tables"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
     (
         "what is in the spectrum of a time window that is not in the background",
