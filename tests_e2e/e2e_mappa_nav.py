@@ -49,7 +49,7 @@ try:
         def menu():
             x, y = at(.4, .5); rclick(x, y)
             its = menu_items(); names = [i[0] for i in its]
-            for want in ["XIC", "Spectrum", "Lock the sight", "Mark the point", "Reset zoom", "Copy coordinates", "Gestures"]:
+            for want in ["XIC", "Spectrum", "Lock sight", "Mark point", "Reset zoom", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
             assert not any("both" in n or "axis only" in n or "selection" in n or "How it is" in n or "Extract" in n for n in names), names     # a short menu: no duplicates, no teaching view in it
             assert sum(1 for i in its if i[1]) >= 7 and len([n for n in names]) <= 8, its                # seven commands with an aria-label (plus the line of the point)
@@ -66,14 +66,14 @@ try:
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         step("XIC and Spectrum from the menu: new panels", extract)
         def locked():
-            x, y = at(.45, .4); rclick(x, y); pick("Lock the sight", f"{M}._mz.lock")
+            x, y = at(.45, .4); rclick(x, y); pick("Lock sight", f"{M}._mz.lock")
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk
             x2, y2 = at(.7, .6); rclick(x2, y2)
-            its = menu_items(); assert any("Unlock the sight" in i[0] and i[3] == "true" for i in its), its
+            its = menu_items(); assert any("Unlock sight" in i[0] and i[3] == "true" for i in its), its
             assert "Locked sight" in its[0][0]
             n0 = npan("xic"); pick("XIC", nxic(n0 + 1)); assert npan("xic") == n0 + 1               # still works with the sight locked, on the locked point
             mz = pg.evaluate("E.panels.filter(q=>q.type==='xic').sort((a,b)=>b.id-a.id)[0].traces[0].mz"); assert abs(mz - lk["mz"]) < 1.0, (mz, lk)
-            rclick(x2, y2); pick("Unlock the sight", f"{M}._mz.lock == null")
+            rclick(x2, y2); pick("Unlock sight", f"{M}._mz.lock == null")
             assert pg.evaluate(f"{M}._mz.lock") is None
         step("lock from the menu: state on the bar (aria-pressed), commands still work, unlock", locked)
         def resets():
@@ -163,7 +163,7 @@ try:
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(400)      # kept: the point under the pointer is lost when the palette covers the map (mouseleave), so the typing races with it
             pg.keyboard.type("xic from the map"); pg.wait_for_timeout(300)
-            assert "XIC from the map" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
+            assert "XIC from map" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
             n0 = npan("xic"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.getElementById('paletta').hidden")
             assert npan("xic") == n0 + 1 or pg.evaluate("!document.getElementById('paletta').hidden") is False
             for q in ["unlock", "gestures", "reset zoom", "copy coord"]:

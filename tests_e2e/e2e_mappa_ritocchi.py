@@ -44,7 +44,7 @@ try:
         step("no «Data» buttons on the axes", no_data_buttons)
         def no_lock_btn():
             assert pg.locator(".pnl.map [data-nav=maplock]").count() == 0
-        step("no «Lock the sight» button on the 2D map", no_lock_btn)
+        step("no «Lock sight» button on the 2D map", no_lock_btn)
         pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, "!" + M + ".el.classList.contains('max')"); ready(pg)          # back to the page: the panel grows only outside full screen
         def selector():
             def sel(): return pg.locator(".pnl.map select[data-o=k]")

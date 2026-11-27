@@ -46,7 +46,7 @@ try:
             open3d(); pt = spot(); assert pt
             rclick(pt[0], pt[1])
             its = items(); names = [i[0] for i in its]
-            for want in ["XIC", "Spectrum", "Lock the sight", "Reset zoom", "From above", "Side RT", "Side m/z", "Copy coordinates", "Gestures"]:
+            for want in ["XIC", "Spectrum", "Lock sight", "Reset zoom", "From above", "Side RT", "Side m/z", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
             assert not any("axis" in n or "selection" in n or "both" in n for n in names), names                 # a short menu
             assert pg.evaluate("document.getElementById('ctx').closest('dialog.m3d') !== null"), "the menu is inside the modal dialog"
@@ -80,7 +80,7 @@ try:
             assert pg.get_attribute(".m3d-side [data-nav=maplock]", "aria-pressed") == "true" and pg.evaluate("window.__m3d.V.lock")
             pt2 = spot(); pg.mouse.move(pt2[0] + 40, pt2[1] + 20); frames(pg, 6); assert pg.evaluate("window.__m3d.V.cur") == cur, "locked: the cursor stays"
             rclick(pt2[0] + 40, pt2[1] + 20)
-            its = items(); assert any("Unlock the sight" in i[0] and i[2] == "true" for i in its), its
+            its = items(); assert any("Unlock sight" in i[0] and i[2] == "true" for i in its), its
             pg.keyboard.press("Escape"); pg.keyboard.press("l"); wait_for_js(pg, "!window.__m3d.V.lock && document.querySelector('.m3d-side [data-nav=maplock]').getAttribute('aria-pressed') === 'false'"); assert not pg.evaluate("window.__m3d.V.lock")
             assert pg.get_attribute(".m3d-side [data-nav=maplock]", "aria-pressed") == "false"
         step("3D: lock freezes the cursor, state on the bar and in the menu, L toggles", lock)

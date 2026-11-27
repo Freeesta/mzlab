@@ -16,7 +16,7 @@ I18N.add("en", {
   "m3d.err.range": "Invalid range: RT and m/z must increase (m/z above 0).",
   "m3d.err.small": "The region is too small for a surface: widen it.",
   "m3d.side.aria": "3D viewer controls",
-  "m3d.side.toggle": "Show or hide the side bar",
+  "m3d.side.toggle": "Show or hide side bar",
   "m3d.g.data": "Data",
   "m3d.g.rep": "Representation",
   "m3d.g.bg": "Background",

@@ -69,7 +69,7 @@ I18N.add("en", {
   "conv.sum.cached": "{n} from cache",
   "conv.sum.missing": "{n} with a partial read",
   "conv.dl": "Download mzML",
-  "conv.dl.title": "Save the converted mzML",
+  "conv.dl.title": "Save converted mzML",
   "conv.dlall": "Download all the mzML files",
   "conv.fmt.mzml": "mzML",
   "conv.fmt.numpress": "mzML + Numpress",

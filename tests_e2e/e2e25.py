@@ -76,9 +76,9 @@ try:
         step("a colour chosen by hand is not overwritten; 'restore colors' brings the scale back", manual)
         def menu_entry():
             drawer(pg); pg.click("#flst .fl .nm >> nth=0", button="right"); pg.wait_for_timeout(300)
-            assert "Restore the automatic colors" in pg.inner_text("body")
+            assert "Restore automatic colors" in pg.inner_text("body")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
-        step("the file menu has 'Restore the automatic colors'", menu_entry)
+        step("the file menu has 'Restore automatic colors'", menu_entry)
         def palettes():
             seen = {}
             for k in ("time", "cb", "hc", "rainbow"):

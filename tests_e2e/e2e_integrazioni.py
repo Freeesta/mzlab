@@ -68,7 +68,7 @@ try:
         step("a grouped gesture is one undo step", gesture)
         def menu():
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
-            assert labs[0] == "Delete this integration" and "Delete all the integrations of this panel" in labs, labs
+            assert labs[0] == "Delete integration" and "Delete all integrations in panel" in labs, labs
         step("context menu: delete this one first, then all", menu)
         def opencard():
             wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)

@@ -156,7 +156,7 @@ try:
             pg.wait_for_timeout(1500)
             after = pg.evaluate(STATE)["mzlab"]; assert not any(k in n for n in after), ("the file and its index are freed", k, after)
             assert pg.evaluate("E.files.filter(f => !f.gone).length") >= 1
-        step("«Remove from the session» also frees the file and its indexes in OPFS", remove_one)
+        step("«Remove from session» also frees the file and its indexes in OPFS", remove_one)
         def clear_all():
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
             load_files()

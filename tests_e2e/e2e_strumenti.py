@@ -356,7 +356,7 @@ try:
             assert pg.evaluate("BARRA.side") == "left"
             pg.keyboard.press("Control+k"); pg.keyboard.type("panel on the right"); pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.side === 'right'"); assert pg.evaluate("BARRA.side") == "right"
             pg.evaluate("BARRA.setSide('left')")
-        step("palette in HR: the HR items are there («Panel on the left / right» too), Enter opens the panel", palette_hr)
+        step("palette in HR: the HR items are there («Panel on left / right» too), Enter opens the panel", palette_hr)
 
         def tastiera():
             pg.evaluate("BARRA.close(false)")
