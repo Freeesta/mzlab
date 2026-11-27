@@ -25,7 +25,7 @@ P = "E.panels.find(p => p.type === 'mrm')"
 # rows of the picker (all of them, ticked or not) and the traces drawn, both with the colour as the browser computes it
 READ = """(() => { const p = %s, a = p._a, norm = c => { const e = document.createElement('i'); e.style.color = c; document.body.appendChild(e); const v = getComputedStyle(e).color; e.remove(); return v; };
   const rows = [...p.el.querySelectorAll('.can-pop .can-row[data-group]')].map(r => { const s = r.querySelector('.can-ck[data-tc]'), on = r.getAttribute('aria-selected') === 'true'; return { label: r.querySelector('.can-et').textContent, on,
-    sw: !!s, off: !!s && !on, color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
+    sw: !!s, off: !!s && !on, moved: !!s && s.style.getPropertyValue('--tkb') !== s.style.getPropertyValue('--tk'), color: s ? getComputedStyle(s)[on ? 'backgroundColor' : 'borderTopColor'] : null, td: s ? s.dataset.td : null, bs: s ? getComputedStyle(s).borderTopStyle : null, sep: !!r.querySelector('.trsw') }; });
   const tr = (a ? a.sr : []).map(s => ({ label: SIMUI.label(s.tk), color: norm(s.color), dash: s.dash.join(','), k: s.k }));
   return { rows, tr, hl: p._hl ?? null }; })()""" % P
 
@@ -43,7 +43,7 @@ def check(d, n, samples, ticked=None):
         need(not row["sep"], "the colour lives in the checkbox, no separate swatch: %s" % row)
         need(row["off"] == (not row["on"]), "the checkbox must be empty (coloured border) when unticked: %s" % row)
         need((row["bs"] == "dashed") == bool(row["td"]), "a dashed trace gets a dashed box border: %s" % row)
-        if row["label"] in col: need(row["color"] == next(iter(col[row["label"]])), "row %s swatch %s, trace %s" % (row["label"], row["color"], col[row["label"]]))
+        if row["label"] in col: need(row["color"] == next(iter(col[row["label"]])) or (not row["on"] and row["moved"]), "row %s swatch %s, trace %s" % (row["label"], row["color"], col[row["label"]]))
     if samples > 1:
         for lab, per in dash.items(): need(len(set(per.values())) == len(per) >= 2, "samples must differ in dash on %s: %s" % (lab, per))
     return {k: next(iter(v)) for k, v in col.items()}
@@ -115,10 +115,15 @@ try:
         step("SIM hover tooltip: the tallest series row is highlighted, only its trace is 1 px thicker, tint and text are readable", lambda: top_row(pg, P, "SIM"))
 
         def contrast():
-            n = picker_fixture(pg, "palette")
+            pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 3)
+            n = picker_fixture(pg, "palette 1400 px")
+            pg.evaluate("document.documentElement.dataset.theme = 'dark'"); frames(pg, 2)
+            picker_fixture(pg, "palette 1400 px dark")
+            pg.evaluate("document.documentElement.dataset.theme = 'light'"); frames(pg, 2)
+            pg.set_viewport_size({"width": 1280, "height": 900}); frames(pg, 3)
             popup(); d = picker_focus(pg, P, "picker"); need(d["w"] >= 2, d)
             pg.evaluate("%s._canOpen = false; ctl(%s)" % (P, P)); pg.keyboard.press("Escape"); frames(pg, 2)
-        step("picker checkbox: every palette colour keeps 3:1 (box ring, tick, dash cue when ticked), a dashed trace shows its dash, keyboard focus ring on the row", contrast)
+        step("picker checkbox: every palette colour has a border in its own key colour in every state (unticked, ticked, hover, focus, selected row), 3:1 against the popup (light and dark), tick and dash cue 3:1 when ticked, a dashed trace shows its dash, keyboard focus ring on the row", contrast)
 
         def phone():
             pg.set_viewport_size({"width": 390, "height": 844}); frames(pg, 4)
