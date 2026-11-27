@@ -2,7 +2,7 @@
 // A closable notice (never a block) for a browser that runs the site worse: decided by feature checks of capacita.js, never by the user agent
 // (the agent string only names the browser in the text). Two cases: the engine cannot run (SIMD128 or OPFS missing: update, or Chrome, Firefox,
 // Edge), or the browser cannot point a folder (showDirectoryPicker: only Chrome and Edge have it, Firefox lacks it too, so it is NOT suggested).
-// Closing is remembered in localStorage (in try). Loaded lazily by capacita.js, which makes the feature checks (none in the desktop app, no folder notice on phones/tablets).
+// Closing is remembered in localStorage (in try). Loaded lazily by capacita.js only when the engine or the folder picker is missing (never in the desktop app); `valuta` picks the case (no folder notice on phones/tablets).
 const KEY = "mzlab.browserNotice";
 const URL_OF = { chrome: "https://www.google.com/chrome/", firefox: "https://www.mozilla.org/firefox/new/", edge: "https://www.microsoft.com/edge" };
 const g = /** @type {any} */ (globalThis);
@@ -62,4 +62,11 @@ export function mostra(/** @type {string} */ kind, /** @type {boolean} */ touch 
   if (!old) document.body.insertBefore(n, document.body.firstChild);
   const h = () => document.documentElement.style.setProperty("--bn-h", n.offsetHeight + "px");
   h(); if (!old && g.ResizeObserver) new g.ResizeObserver(h).observe(n);
+}
+
+/** Which notice this browser needs, by feature checks of `cap` (CAPACITA): the engine first; the folder one not on a touch device (another browser does not help there). */
+export function valuta(/** @type {any} */ cap) {
+  const touch = !!(g.matchMedia && g.matchMedia("(hover: none) and (pointer: coarse)").matches);
+  const kind = cap.stato("motore") === "no" ? "engine" : !touch && cap.stato("cartella") === "no" ? "folder" : "";
+  if (kind) mostra(kind, touch);
 }

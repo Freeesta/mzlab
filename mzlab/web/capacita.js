@@ -92,12 +92,9 @@ export function serve(/** @type {string} */ funzione, /** @type {HTMLElement | n
 /** The capacities a function lacks (for the technical line of a notice). */
 export const mancano = (/** @type {string} */ funzione) => (REQUISITI[funzione] || []).filter(n => statoCap(n) === "no");
 
-/** The closable browser notice: feature checks only; the module (avviso-browser.js) is loaded only when a notice is due. None in the desktop app. */
+// closable browser notice: loaded only when the engine or the folder picker is missing (never in the app)
 function avisoBrowser() {
-  if (g.MZLAB_DESKTOP) return;
-  const touch = !!(g.matchMedia && g.matchMedia("(hover: none) and (pointer: coarse)").matches);   // another browser does not help on a phone or tablet
-  const kind = stato("motore") === "no" ? "engine" : !touch && stato("cartella") === "no" ? "folder" : "";
-  if (kind) import("./avviso-browser.js").then(m => m.mostra(kind, touch)).catch(() => { /* the notice is a courtesy */ });
+  if (!g.MZLAB_DESKTOP && (stato("motore") === "no" || stato("cartella") === "no")) import("./avviso-browser.js").then(m => m.valuta(g.CAPACITA)).catch(() => {});
 }
 
 rileva();
