@@ -22,7 +22,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | smeared peaks: synthetic batch, MZmine default/wide configurations, comparison table (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-wide-peaks.md` |
 | Bruker timsTOF `.d` reader (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, `tdf_bin`/`tsf_bin`, m/z calibration, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
 | calibration curve on integrated peaks (`quant.curve`: 1/x..1/y² weights, QR, internal standard, ICH LOD/LOQ and S/N, logged exclusions, `calibration/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibration.md` |
-| browser capabilities, feature detection, "not available in this browser: use the app" notice (`capacita.js`, `?cap-off=`) | `docs/agenti/capabilities.md` |
+| browser capabilities, feature detection, "not available in this browser: use the app" notice (`capacita.js`, `?cap-off=`), closable "better in Chrome or Edge" browser notice (`avviso-browser.js`) | `docs/agenti/capabilities.md` |
 | conditional GitHub workflows (concurrency, pages, skipped jobs) | `docs/agenti/ci-fast.md` |
 | CI pytest shards (`target` cache, `doppi`, `aree`, `prebuilt`, order and halves of slow tests) | `docs/agenti/ci-selection.md` |
 | chemical classes from rules (`crates/mzlab-feat/src/classes/`, table `data/classi-1.json`, `classi/1`: diagnostic fragments and neutral losses) | `docs/agenti/classes.md` |
