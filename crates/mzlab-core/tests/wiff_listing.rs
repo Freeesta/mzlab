@@ -179,7 +179,7 @@ fn the_listing_never_reads_the_scan_file_and_says_what_the_full_open_says() {
 
 /// A sample whose method holds two experiments (full scan code 15, enhanced product ion code 11) lists both labels once each, in experiment order, from the
 /// scan-type codes of the method alone (`wiff::modes::type_label`); the coarse `kinds` stays `ms`, `ms2`. A sample the engine reader refuses (precursor ion,
-/// neutral loss: the readers module reads those) has no type, only its `why`.
+/// neutral loss, where the readers module is not built in) has no type, only its `why`.
 #[test]
 fn a_sample_with_several_scan_types_lists_each_label_once_in_experiment_order() {
     let dir = pairs();
@@ -193,12 +193,24 @@ fn a_sample_with_several_scan_types_lists_each_label_once_in_experiment_order() 
         "{v}"
     );
     assert_eq!(s["kinds"], serde_json::json!(["ms", "ms2"]), "{v}");
-    let (refused, _) = json(&dir.join("ref"), "variante", true);
-    let r: serde_json::Value = serde_json::from_str(&refused.unwrap()).unwrap();
-    assert!(
-        r["samples"][0].get("types").is_none() && r["samples"][0]["why"] == "refused",
-        "{r}"
-    );
+    // precursor-ion and neutral-loss scans: read where the readers module is built in (all four labels, in experiment order), refused by the engine reader alone (no types, only `why`)
+    let (four, _) = json(&dir.join("ref"), "variante", true);
+    let r: serde_json::Value = serde_json::from_str(&four.unwrap()).unwrap();
+    let x = &r["samples"][0];
+    if x["why"] == "refused" {
+        assert!(x.get("types").is_none(), "{r}");
+    } else {
+        assert_eq!(
+            x["types"],
+            serde_json::json!([
+                "Full scan",
+                "Enhanced product ion",
+                "Precursor ion",
+                "Neutral loss"
+            ]),
+            "{r}"
+        );
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 
