@@ -277,8 +277,10 @@ async function lrIndexOwn(m) {
   const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".mzidx.part", partCen = job && m.cen ? m.name + ".cen.mzidx.part" : undefined;
   if (CANCELLED.has(m.name)) throw cancelled(); if (job) nativo.ahead.atOpen++;
   const onProgress = p => { nativo.early.tell(m.name, m.id, p); postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase, done: p.done, total: p.total, wait: p.wait, early_tic: p.early_tic }); };      // wait: the pool has no free worker yet
-  const early_tic = earlyTicOf(job); if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
-  if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });      // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
+  const early_tic = earlyTicOf(job);
+  if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
+  // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
+  if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
   const res = (!job && await una.result(m.name, onProgress)) || await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
     : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress, stages: true });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
@@ -293,10 +295,8 @@ async function lrIndexOwn(m) {
   }
   await ARCH.promote("idx", part, m.name + ".mzidx"); return lrIndexOpened(m, res.stats, t0);
 }
-async function lrIndexOpened(m, stats, t0, adopted) {                         // the index is in place: open it
-  const opened = await openStored(() => lrOpen(m.name), async () => { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); });      // an index that does not open (incomplete, damaged) is not kept; one refused for memory is (rust-carica.js)
-  if (!opened) jerr("err.engine.index", { name: m.name });
-  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (stats && stats.missing) || 0, cause: (stats && stats.cause) || "", adopted: adopted || undefined }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
+async function lrIndexOpened(m, stats, t0, adopted) { const opened = await openStored(() => lrOpen(m.name), async () => { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); });      // the index is in place, open it: one that does not open (incomplete, damaged) is not kept; one refused for memory is (rust-carica.js)
+  if (!opened) jerr("err.engine.index", { name: m.name }); nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (stats && stats.missing) || 0, cause: (stats && stats.cause) || "", adopted: adopted || undefined }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
 }
 let flowCenOps;
 const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));

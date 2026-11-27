@@ -16,9 +16,9 @@ SITE_ONLY = {
     "lr_cen_have": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "lr_cen_adopt": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "natplan": "the byte ranges the site copies into OPFS for the chosen samples of a .wiff.scan; the app reads in place and copies nothing (the same plan is `sample select --ranges` in the CLI)",
-    "natprefetch": "a ticked sample copied into OPFS while the chooser dialog is open (rust-prefetch.js); the app reads in place and copies nothing, so there is nothing to copy ahead",
-    "natunprefetch": "stops and discards the copies of natprefetch and of the index built ahead; the app makes none",
-    "natstats": "test hook: counts of the indexes the site built ahead, adopted and built at the opening (rust-index-ahead.js); the app reads in place and builds nothing ahead",
+    "natprefetch": "a ticked sample copied into OPFS, and its index built ahead (rust-index-ahead.js), while the chooser dialog is open (rust-prefetch.js); the app and CLI read in place, copy and index nothing ahead (technical limit); the index bytes are the same under any list name: Rust test `the_index_bytes_do_not_depend_on_the_list_entry_name`",
+    "natunprefetch": "stops and discards the copies of natprefetch and of the index built ahead; the app makes none (technical limit: OPFS and the site worker only; the app and CLI read in place)",
+    "natstats": "test hook: counts of the indexes the site built ahead, adopted and built at the opening (rust-index-ahead.js); site only because OPFS has no rename (the index is moved to its final name, `ARCH.promote`) and the app and CLI read in place and build nothing ahead; the byte guarantee is the Rust test `the_index_bytes_do_not_depend_on_the_list_entry_name`",
     "lr_flow_line": "the app's page posts flow/line (flow-terminal.js)",
     "lr_flow_sched": "the app's page posts flow/live/<op> (flow-live-desktop.js)",
 }

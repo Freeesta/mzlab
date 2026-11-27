@@ -24,6 +24,7 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
     cut.delete(tag);
     const work = nat.members.reduce((a, x) => a + workOf(nat, x), 0);
     const withIndex = !!ahead && typeof m.c === "number", share = withIndex ? 0.3 : 1;      // the copy is the first 30 % of the row when the index follows
+    if (withIndex) /** @type {NonNullable<typeof ahead>} */ (ahead).begin(m.key, m.sid);      // from the start of the copy: an opening in that phase takes the sample by itself and nothing is built behind it
     let done = 0, last = 0;
     // only the ranged copy of this sample stops when it is unticked: the container is shared by the samples being copied
     const bump = (/** @type {boolean} */ own) => (/** @type {number} */ n) => { if (own && cut.has(tag)) jerr("err.load.cancelled"); done += n; const t = now(); if (t - last > TICK || done >= work) { last = t; tell(share * (work ? Math.min(1, done / work) : 1)); } };
@@ -44,7 +45,7 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
       } finally { release(room); }
     });
     running.set(tag, job.then(() => {}, () => {}));
-    try { await job; } finally { running.delete(tag); }
+    try { await job; } finally { running.delete(tag); if (withIndex) /** @type {NonNullable<typeof ahead>} */ (ahead).abort(tag); }
   }
 
   /** stops and discards the prefetch of samples `sids` of dataset `key` (all of its samples when null); `end`: the dataset is done with it, the holds go and a copy no stub uses is removed */
@@ -63,7 +64,7 @@ export function createPrefetch({ ARCH, jerr, held, copy, deps, storeOf, partOf, 
   }
 
   return {
-    holds,
+    holds, ahead: /** @type {NonNullable<typeof ahead>} */ (ahead),
     /** the stub of a sample is written (or its opening failed): its stores are no longer the prefetch's, the sweep may free an unused one */
     landed: (/** @type {{ store: string }[]} */ members) => { for (const x of members) { holds.delete(x.store); fresh.delete(x.store); } },
     /**

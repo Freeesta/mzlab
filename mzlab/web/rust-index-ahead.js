@@ -12,22 +12,35 @@ export const sigOf = st => JSON.stringify([st.ds, st.c, st.id, !!st.centroid, st
  * @param {{ ARCH: any, pool: () => any, conf: () => { cap: number, budget: number | undefined, isolated: boolean }, taken: Map<string, string[]>, lateJob: (job: any, isolated: boolean) => Promise<any>, storeOf: (nat: any, x: any) => string, prefix: string, magic: string }} d
  */
 export function createIndexAhead({ ARCH, pool, conf, taken, lateJob, storeOf, prefix, magic }) {
-  /** @typedef {{ name: string, sig: string, cut: boolean, job: Promise<{ missing: number, cause: string } | null> }} Ahead */
-  const rows = /** @type {Map<string, Ahead>} */ (new Map());         // `key#id` -> the index being built or built
+  /** @typedef {{ name: string, sig: string, state: "copy" | "index", cut: boolean, job: Promise<{ missing: number, cause: string } | null>, settle: (v: any) => void }} Ahead */
+  const rows = /** @type {Map<string, Ahead>} */ (new Map());         // `key#id` -> the index being built or built (from the start of the copy, so an opening in the copy phase finds it)
   const stats = { built: 0, adopted: 0, missed: 0, atOpen: 0 };                    // read by the test hook `natstats`
   const files = (/** @type {string} */ n) => [n + ".mzidx", n + ".mzidx.part", n + ".mzidx.sp.part"];
   const wipe = async (/** @type {string} */ n) => { for (const f of files(n)) await ARCH.remove("idx", f).catch(() => {}); };
 
+  /** a sample starts its copy: its row exists from now on, in the copy phase */
+  function begin(/** @type {string} */ key, /** @type {number} */ id) {
+    let settle = /** @type {(v: any) => void} */ (() => {});
+    const job = /** @type {Ahead["job"]} */ (new Promise(r => { settle = r; }));
+    rows.set(key + "#" + id, { name: prefix + key + "~" + id + "~pre", sig: "", state: "copy", cut: false, job, settle });
+  }
+  /** the copy ended without an index (failed, stopped): a row still in the copy phase goes */
+  function abort(/** @type {string} */ tag) {
+    const row = rows.get(tag);
+    if (row && row.state === "copy") { rows.delete(tag); row.settle(null); }
+  }
+
   /** builds the index of sample `id` (position `c`) whose stores are in place; `tell(f)` 0..1; resolves true when the file is there, false when it was cut, refused or failed (Open then builds as it always did) */
   async function build(/** @type {any} */ nat, /** @type {number} */ c, /** @type {number} */ id, /** @type {(f: number) => void} */ tell) {
-    const tag = nat.key + "#" + id, name = prefix + nat.key + "~" + id + "~pre";
+    const tag = nat.key + "#" + id, row = rows.get(tag);
+    if (!row || row.cut) return false;                               // the opening took the sample during its copy (`adopt`) or it was unticked
+    const name = row.name;
     const members = nat.members.map((/** @type {any} */ x) => { const store = storeOf(nat, x), o = taken.get(store); return { name: x.name, store, size: x.blob.size, mtime: x.blob.lastModified || 0, ...(o ? { sha256: o[0], sha1: o[1], probe: o[2] } : {}) }; });
     const got = await Promise.all(members.map((/** @type {any} */ m) => ARCH.get("files", m.store)));
-    if (got.some((/** @type {any} */ f, /** @type {number} */ i) => !f || f.size !== members[i].size)) return false;
+    if (row.cut || got.some((/** @type {any} */ f, /** @type {number} */ i) => !f || f.size !== members[i].size)) { if (rows.get(tag) === row) rows.delete(tag); row.settle(null); return false; }
     const st = { mzlab: magic, ds: nat.key, c, id, centroid: false, members, size: members.reduce((/** @type {number} */ a, /** @type {any} */ m) => a + m.size, 0), dim: null };
-    const row = /** @type {Ahead} */ ({ name, sig: sigOf(st), cut: false, job: Promise.resolve(null) });
-    rows.set(tag, row);
-    row.job = (async () => {
+    row.sig = sigOf(st); row.state = "index";
+    row.settle((async () => {
       const k = conf(), part = name + ".mzidx.part";
       await wipe(name);
       const job = await lateJob({ st, files: got }, k.isolated);
@@ -37,7 +50,7 @@ export function createIndexAhead({ ARCH, pool, conf, taken, lateJob, storeOf, pr
       await ARCH.promote("idx", part, name + ".mzidx");
       stats.built++;
       return { missing: (res.stats && res.stats.missing) || 0, cause: (res.stats && res.stats.cause) || "" };
-    })().catch(async () => { await wipe(name); return null; });
+    })().catch(async () => { await wipe(name); return null; }));
     return !!(await row.job);
   }
 
@@ -45,25 +58,27 @@ export function createIndexAhead({ ARCH, pool, conf, taken, lateJob, storeOf, pr
   async function drop(/** @type {string} */ tag) {
     const row = rows.get(tag);
     if (!row) return;
-    row.cut = true; rows.delete(tag); pool().cancel(row.name);
+    row.cut = true; rows.delete(tag);
+    if (row.state === "copy") row.settle(null); else pool().cancel(row.name);
     await row.job; await wipe(row.name);
   }
 
   return {
-    build, drop, stats,
+    begin, abort, build, drop, stats,
     /** the tags (`key#id`) being built or built, of dataset `key` */
     tags: (/** @type {string} */ key) => [...rows.keys()].filter(t => t.startsWith(key + "#")),
     /** stops (without waiting) the builds of `tags`: an unticked sample must not wait for a long build */
-    cancel: (/** @type {string[]} */ tags) => { for (const t of tags) { const r = rows.get(t); if (r) { r.cut = true; pool().cancel(r.name); } } },
+    cancel: (/** @type {string[]} */ tags) => { for (const t of tags) { const r = rows.get(t); if (r) { r.cut = true; if (r.state === "index") pool().cancel(r.name); } } },
     /** the stub `st` of the final name is written: when its index was built ahead (waiting for one still running) it moves to `name` and its statistics come back, else null (the index is built now) */
     async adopt(/** @type {string} */ name, /** @type {any} */ st) {
       const tag = st.ds + "#" + st.id, row = rows.get(tag);
       if (!row) { stats.missed++; return null; }
+      if (row.state === "copy") { row.cut = true; rows.delete(tag); row.settle(null); stats.missed++; return null; }      // the opening came during the copy: it indexes by itself, nothing is built ahead behind it
       if (row.sig !== sigOf(st)) { stats.missed++; await drop(tag); return null; }
       const o = await row.job;
       rows.delete(tag);
       if (!o || !(await ARCH.get("idx", row.name + ".mzidx"))) { stats.missed++; await wipe(row.name); return null; }
-      await ARCH.promote("idx", row.name + ".mzidx", name + ".mzidx");
+      try { await ARCH.promote("idx", row.name + ".mzidx", name + ".mzidx"); } catch (_) { stats.missed++; await wipe(row.name); return null; }      // the move failed (storage full, name taken): the opening indexes by itself
       stats.adopted++;
       return o;
     },
