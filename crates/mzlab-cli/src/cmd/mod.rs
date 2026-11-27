@@ -68,6 +68,7 @@ const JSON_DEFAULT: &[&str] = &[
     "mol link",
     "mol cut",
     "mol mech",
+    "mol find",
     "mol search",
     "file channels",
     "file items",

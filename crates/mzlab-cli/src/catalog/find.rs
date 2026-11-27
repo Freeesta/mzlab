@@ -13,6 +13,10 @@ use crate::Outcome;
 #[path = "find_ions_tests.rs"]
 mod ions_tests;
 
+#[cfg(test)]
+#[path = "find_mol_tests.rs"]
+mod mol_tests;
+
 /// How many matches the answer lists at most.
 const TOP: usize = 5;
 

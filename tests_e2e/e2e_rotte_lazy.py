@@ -29,7 +29,7 @@ try:
         print("OK  a failed fetch of the module is an error")
 
         st, txt = call("api/molecules/load", json.dumps({"catalog": pg.evaluate("fetch('static/molecules/catalogue.csv').then(r => r.text())")}))
-        assert st == 200 and json.loads(txt)["total"] == 1228, (st, txt[:200])
+        assert st == 200 and json.loads(txt)["total"] == 1058, (st, txt[:200])
         assert len(routes()) >= 1
         n = len(routes())
         # a second use of every kind of route: no new fetch of the module

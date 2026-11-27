@@ -31,8 +31,8 @@ fn verify_run(_: Vec<String>) -> Outcome {
 }
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("file list", "mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D/.raw included", |a| crate::folder_cmd::run(pre("list", a))).schema("folder/1"),
-    Entry::new("file info", "mzlab-cli file info FILE... [--sample LIST] [--out PATH]   container, samples, items, channels of a file", crate::file_info_cmd::run)
+    Entry::new("file list", "mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists", |a| crate::folder_cmd::run(pre("list", a))).schema("folder/1"),
+    Entry::new("file info", "mzlab-cli file info FILE... [--sample LIST] [--out PATH]   container, samples, items, channels", crate::file_info_cmd::run)
         .schema("file_info/1")
         .exits(&[0, 2, 4, 5]),
     Entry::new("file index", "mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON", crate::file_index_cmd::run)
@@ -66,7 +66,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("sample vars", "mzlab-cli sample vars NAME...   how file names split into variables", |a| crate::samples_cmd::run(pre("vars", a))),
     Entry::new("sample group", "mzlab-cli sample group NAME...   file names' group name", |a| crate::samples_cmd::run(pre("group", a))),
     Entry::new("sample table", "mzlab-cli sample table NAME... [--text]   sample table of file names", |a| crate::samples_cmd::run(pre("table", a))),
-    Entry::new("sample import", "mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   file -> sample name, role, group from a CSV", |a| crate::samples_cmd::run(pre("import", a))).schema("sample-import/1").exits(&[0, 1, 2, 3, 4, 6]),
+    Entry::new("sample import", "mzlab-cli sample import META.csv FILE|DIR... [--dry-run]   sample name, role, group from a CSV", |a| crate::samples_cmd::run(pre("import", a))).schema("sample-import/1").exits(&[0, 1, 2, 3, 4, 6]),
     Entry::new("sample pair", "mzlab-cli sample pair SAMPLES.json [FILE...] [--table T.mzfeat]   sample-file pairs, roles proposed", |a| crate::samples_cmd::run(pre("pair", a))).schema("sample-pair/1").exits(&[0, 1, 2, 3, 4]),
     Entry::new("sample list", "mzlab-cli sample list FILE...   what a file holds per sample", |a| crate::samples_cmd::run(pre("list", a))).schema("sample-list/1").exits(&[0, 1, 2, 4, 8]),
     Entry::new("sample select", "mzlab-cli sample select FILE --sample LIST   which samples LIST picks", |a| crate::samples_cmd::run(pre("select", a))).schema("sample-select/1").exits(&[0, 2, 4, 5]),
@@ -83,7 +83,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("trace chrom", "mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   channel trace as JSON or rt_min,intensity CSV", crate::trace_cmd::chrom)
         .schema("trace/1")
         .exits(&[0, 2, 4, 5, 6]),
-    Entry::new("trace xic", "mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists; --ions adds ions; --dry-run: plan", crate::trace_xic::xic)
+    Entry::new("trace xic", "mzlab-cli trace xic FILE (--mz M[,M..] | --sweep LO:HI:STEP) [--ppm P | --da D | --tol T] [--smooth 3|5] [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH] [--ions] [--scan-type K] [--set NAME=VALUE...] [--dry-run]   XICs of m/z lists; --ions adds ions", crate::trace_xic::xic)
         .schema("trace/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("trace background", "mzlab-cli trace background FILE [--set NAME=VALUE...]   a file's background trace as JSON", crate::plain::background_cmd::run),
@@ -93,7 +93,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("dad ms-at", "mzlab-cli dad ms-at FILE ...   MS linked to a DAD time", |a| crate::dad_cmd::run(pre("ms-at", a))),
     Entry::new("dad delay", "mzlab-cli dad delay FILE ...   DAD-to-MS delay", |a| crate::dad_cmd::run(pre("delay", a))),
     Entry::new("dad peaks", "mzlab-cli dad peaks FILE ...   UV peaks, lambda-max, MS ions", |a| crate::dad_cmd::run(pre("peaks", a))),
-    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset OFFSET]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV; --minus a blank", crate::spectrum_cmd::get)
+    Entry::new("spectrum get", "mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--sum] [--fill-ms T] [--minus FILE] [--minus-sample ID] [--minus-rt A,B] [--bin nominal|0.1 [--mz-offset OFFSET]] [--format json|csv] [--out PATH]   one spectrum as JSON or CSV", crate::spectrum_cmd::get)
         .schema("spectrum/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("spectrum compare", "mzlab-cli spectrum compare FILE [FILE_B] (--a-rt MIN|A,B | --a-scan NO) (--b-rt MIN|A,B | --b-scan NO) [--a-precursor MZ] [--b-precursor MZ] [--a-mz-offset OFF] [--b-mz-offset OFF] [--set tol=DA]   MS2 cosine at nominal mass", crate::spectrum_cmd::compare)

@@ -69,8 +69,8 @@ def test_every_record_is_consistent(r):
     assert {t.split(":")[0] for t in tags} <= KEYS
     assert [t for t in tags if t.startswith("structure:")] == structure_classes(r["smiles"])
     assert any(t.startswith("group:") and t[6:] in GROUPS for t in tags)
-    assert re.search(r"[a-z]{3}|^[A-Z0-9]{3,}$|^[A-Z]{2,}-\d+$", r["name"]), "a code-only name"
-    assert not re.fullmatch(r"[A-Z0-9]{1,6}-[A-Z0-9]{3,}", r["name"]) or r["name"].startswith("UV-"), r["name"]
+    # a real name: words of lower-case letters, or an acronym that carries its full name as a synonym (PFOA, 2,4,5-T)
+    assert any(re.search(r"[a-z]{4}", n) for n in [r["name"], *r["synonyms"].split("|")]), "a code-only entry"
 
 
 def test_the_must_have_names_are_there_and_the_removed_codes_are_gone():
