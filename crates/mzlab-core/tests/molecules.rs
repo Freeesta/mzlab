@@ -6,7 +6,7 @@
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::molecules::{
-    digest, from_csv, from_json, merge, route, search, to_csv, to_json, Molecule,
+    digest, from_csv, from_json, merge, route, search, table, to_csv, to_json, Molecule,
 };
 
 const LOOSE: &str = "\
@@ -250,17 +250,71 @@ fn levels_replace_by_id_and_come_back() {
 #[test]
 fn the_catalogue_is_canonical_and_complete() {
     let (text, all) = catalogue();
-    // the last record (timolol) was added after the two old lists
-    assert_eq!(all.len(), 625 + 645 - 43 + 1);
     assert_eq!(to_csv(&all), text, "mzlab/web/molecules/catalogue.csv is not in the canonical form: run tools/generate_molecules.py");
-    let both = all.iter().filter(|m| m.origin.catalog.len() == 2).count();
-    assert_eq!(both, 43 + 1);
-    assert_eq!(
-        all.iter()
-            .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
-            .count(),
-        625 + 1
-    );
+    assert!(all.iter().all(|m| m.origin.catalog == ["hrms"]));
+    assert!(all.iter().all(|m| !m.formula.is_empty() && !m.smiles.is_empty()));
+}
+
+fn list_of(file: &str) -> Vec<String> {
+    std::fs::read_to_string(root().join("tests/data").join(file))
+        .unwrap()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(str::to_string)
+        .collect()
+}
+
+fn carries(all: &[Molecule], name: &str) -> bool {
+    let w = name.to_lowercase();
+    all.iter().any(|m| {
+        m.name.to_lowercase() == w || m.synonyms.iter().any(|s| s.to_lowercase() == w)
+    })
+}
+
+/// The catalogue is environmental: every name of the must-have list (common EU pesticides, pharmaceuticals, contaminants) is there and found by a search, and none
+/// of the removed designer-drug and forensic codes is left (as a name or as a synonym).
+#[test]
+fn the_catalogue_has_the_must_have_names_and_none_of_the_removed_codes() {
+    let (_, all) = catalogue();
+    let missing: Vec<String> = list_of("catalogue_must_have.txt")
+        .into_iter()
+        .filter(|n| !carries(&all, n))
+        .collect();
+    assert!(missing.is_empty(), "missing from the catalogue: {missing:?}");
+    for n in list_of("catalogue_must_have.txt") {
+        let hits = search(&all, &n, 8, 10.0);
+        assert!(
+            hits.iter().any(|h| {
+                let m = &all[h.0];
+                m.name.eq_ignore_ascii_case(&n) || m.synonyms.iter().any(|s| s.eq_ignore_ascii_case(&n))
+            }),
+            "{n:?} is not in the first 8 answers"
+        );
+    }
+    let kept: Vec<String> = list_of("catalogue_removed.txt")
+        .into_iter()
+        .filter(|n| carries(&all, n))
+        .collect();
+    assert!(kept.is_empty(), "removed codes still there: {kept:?}");
+}
+
+/// A typed prefix gives the whole names first (equal, then starts with, then a word start, then contains), so «dimeth» lists dimethomorph and its neighbours
+/// before any name that merely contains it; and the formula of a pesticide finds it.
+#[test]
+fn prefix_matches_come_first_and_the_formula_finds_the_compound() {
+    let (_, all) = catalogue();
+    let names: Vec<String> = search(&all, "dimeth", 8, 10.0)
+        .iter()
+        .map(|h| all[h.0].name.clone())
+        .collect();
+    assert!(names.iter().any(|n| n == "dimethomorph"), "{names:?}");
+    let hits = search(&all, "dimeth", usize::MAX, 10.0);
+    let scores: Vec<f64> = hits.iter().map(|h| h.1).collect();
+    assert!(scores.windows(2).all(|w| w[0] <= w[1]), "not ordered by rank");
+    assert!(hits.iter().take_while(|h| h.1 <= 1.0).any(|h| all[h.0].name == "dimethomorph"));
+    let by_formula = search(&all, "C21H22ClNO4", 8, 10.0);
+    assert!(by_formula.iter().any(|h| all[h.0].name == "dimethomorph"));
 }
 
 /// The queries of the frozen answers: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
@@ -294,15 +348,37 @@ fn queries(tabui: &[&Molecule]) -> Vec<String> {
     out
 }
 
-/// The 625 compounds of the old Tabui list, in its order (timolol came after).
+/// A cell of a `;` CSV, quoted when it needs it.
+fn cell(s: &str) -> String {
+    if s.contains([';', '"', '\n']) {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+/// The 625 compounds of the Tabui list (`TP_Mine/data/composti.csv`, in its order); the 43 that are also in the HRMS list (same InChIKey) carry both tags.
 fn old_tabui_compounds() -> Vec<Molecule> {
-    let (_, all) = catalogue();
-    let mut tabui: Vec<Molecule> = all
-        .into_iter()
-        .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
+    let read = |p: &str| table(&std::fs::read_to_string(root().join(p)).unwrap());
+    let hrms: Vec<String> = read("tests/data/liste/sostanze_hrms.csv")
+        .iter()
+        .skip(1)
+        .map(|(_, r)| r[9].clone())
         .collect();
-    tabui.truncate(625);
-    tabui
+    let mut csv = String::from("name;synonyms;molecular_formula;smiles;inchikey;catalog\n");
+    for (_, r) in read("TP_Mine/data/composti.csv").iter().skip(1) {
+        let names: Vec<&str> = r[0].split(';').map(str::trim).collect();
+        let tags = if hrms.contains(&r[4]) { "tabui|hrms" } else { "tabui" };
+        csv += &format!(
+            "{};{};{};{};{};{tags}\n",
+            cell(names[0]),
+            cell(&names[1..].join("|")),
+            r[1],
+            cell(&r[3]),
+            r[4]
+        );
+    }
+    from_csv(&csv, "catalog", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]))
 }
 
 #[test]
@@ -434,52 +510,28 @@ fn a_suspect_list_becomes_a_collection() {
     assert_eq!(back[hits[0].0].name, "Provolone B");
 }
 
-/// The screening list (`list` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
+/// The screening list (`list` on the `hrms` catalogue) has every record of the catalogue, with the m/z of each adduct computed by the engine from the formula.
 #[test]
-fn hrms_list_keeps_the_mz_of_the_old_csv() {
-    let (text, _) = catalogue();
+fn the_screening_list_gives_the_mz_of_every_record() {
+    let (text, all) = catalogue();
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
     route("load", &format!("{{\"catalog\":{}}}", quoted(&text))).unwrap();
-    let gold =
-        parse(&std::fs::read(root().join("tests/data/molecules_hrms_gold.json")).unwrap()).unwrap();
-    let ads: Vec<String> = gold
-        .get("adducts")
-        .unwrap()
-        .arr()
-        .iter()
-        .map(|a| format!("{:?}", a.str().unwrap()))
-        .collect();
     let out = route(
         "list",
-        &format!("{{\"catalog\":\"hrms\",\"adducts\":[{}]}}", ads.join(",")),
+        "{\"catalog\":\"hrms\",\"adducts\":[\"[M+H]+\",\"[M-H]-\"]}",
     )
     .unwrap();
     let list = parse(out.as_bytes()).unwrap();
-    let mols: Vec<Vec<f64>> = list
-        .arr()
-        .iter()
-        .map(|m| {
-            m.get("mz")
-                .unwrap()
-                .arr()
-                .iter()
-                .map(|x| x.f64().unwrap_or(f64::NAN))
-                .collect()
-        })
-        .collect();
-    let rows = gold.get("rows").unwrap().arr();
-    assert!(mols.len() >= rows.len());
-    for r in rows {
-        let r: Vec<f64> = r.arr().iter().map(|x| x.f64().unwrap()).collect();
-        assert!(
-            mols.iter()
-                .any(|m| m.iter().zip(&r[1..]).all(|(a, b)| (a - b).abs() <= 1e-5)),
-            "no molecule with the m/z of {r:?}"
-        );
+    let rows = list.arr();
+    assert_eq!(rows.len(), all.len());
+    const PROTON: f64 = 1.007276466;
+    for (r, m) in rows.iter().zip(&all) {
+        let mz: Vec<f64> = r.get("mz").unwrap().arr().iter().map(|x| x.f64().unwrap()).collect();
+        assert!((mz[0] - (m.mass + PROTON)).abs() <= 1e-5, "{}", m.name);
+        assert!((mz[1] - (m.mass - PROTON)).abs() <= 1e-5, "{}", m.name);
     }
 }
 
-/// A document that is not `molecules/1` with its list is a bad document, never read as empty.
 #[test]
 fn a_document_without_the_molecules_list_is_a_bad_document() {
     let e = mzlab_core::molecules::from_json(br#"{"schema":"molecules/1"}"#).unwrap_err();
